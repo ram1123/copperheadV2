@@ -3,6 +3,7 @@ import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
 from corrections.rochester import apply_roccor
+from corrections.fsr_recovery import fsr_recovery
 
 coffea_event = TypeVar('coffea_event') # a variation of coffea.event instance
 
@@ -19,7 +20,8 @@ class EventProcessor(processor.ProcessorABC):
         self.config = {
             "HLT" :["IsoMu24"],
             "do_trigger_match" : False,
-            "do_roccor" : True,
+            "do_roccor" : False,# True
+            "do_fsr" : True,
             "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             
         }
@@ -104,6 +106,13 @@ class EventProcessor(processor.ProcessorABC):
         if self.config["do_roccor"]:
             apply_roccor(events, self.config["rocorr_file_path"], True)
             events["Muon", "pt"] = events.Muon.pt_roch
+        # FSR recovery
+        if self.config["do_fsr"]:
+            recovered_fsrPhotons = fsr_recovery(events)
+            # events["Muon", "pt"] = events.Muon.pt_fsr
+            # events["Muon", "eta"] = events.Muon.eta_fsr
+            # events["Muon", "phi"] = events.Muon.phi_fsr
+            # events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
         
         return events
     def postprocess(self, accumulator):

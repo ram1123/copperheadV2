@@ -10,8 +10,8 @@ import sys
 np.set_printoptions(threshold=sys.maxsize)
 
 cluster_on = False
-test_size = 50
-# test_size = 10000
+# test_size = 50
+test_size = 5000
 
 xrootd_path = "root://eos.cms.rcac.purdue.edu/"
 # fname = "/store/mc/RunIISummer20UL18NanoAODv9/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v2/230000/1A909DE6-CA08-434B-BDBB-B648B95BEFDF.root"
