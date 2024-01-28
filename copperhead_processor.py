@@ -91,10 +91,19 @@ class EventProcessor(processor.ProcessorABC):
         events = events[event_filter]
         print(f"copperhead2 EventProcessor len(events) after: {len(events)}")
         """
+
+        
+        # Save raw variables before computing any corrections
+        # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
+        events["Muon", "pt_raw"] = events.Muon.pt
+        events["Muon", "eta_raw"] = events.Muon.eta
+        events["Muon", "phi_raw"] = events.Muon.phi
+        events["Muon", "pfRelIso04_all_raw"] = events.Muon.pfRelIso04_all
         
         # Apply Rochester correction
         if self.config["do_roccor"]:
             apply_roccor(events, self.config["rocorr_file_path"], True)
+            events["Muon", "pt"] = events.Muon.pt_roch
         
         return events
     def postprocess(self, accumulator):
