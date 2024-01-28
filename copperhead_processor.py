@@ -5,28 +5,33 @@ from typing import Union, TypeVar, Tuple
 from corrections.rochester import apply_roccor
 from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
+import json
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 
 
 class EventProcessor(processor.ProcessorABC):
-    def __init__(self, **kwargs):
+    def __init__(self, config_path: str,**kwargs):
         """
         TODO: replace all of these with self.config dict variable which is taken from a
         pre-made json file
         """
-        # self.do_trigger_match = False
-        # self.do_roccor = True
-        # self.HLT = ["IsoMu24"]
-        self.config = {
-            "HLT" :["IsoMu24"],
+        with open(config_path) as file:
+            self.config = json.loads(file.read())
+
+        # self.config = json.loads(config_path)
+        # print(f"copperhead proccesor self.config b4 update: \n {self.config}")
+        dict_update = {
+            # "hlt" :["IsoMu24"],
             "do_trigger_match" : False,
             "do_roccor" : False,# True
             "do_fsr" : True,
             "do_geofit" : True,
             "year" : "2018",
             "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
-            
         }
+        self.config.update(dict_update)
+        # print(f"copperhead proccesor self.config after update: \n {self.config}")
+        
     def process(self, events: coffea_nanoevent):
         """
         TODO: do LHE cut after HLT and trigger match event filtering to save computation
@@ -82,7 +87,7 @@ class EventProcessor(processor.ProcessorABC):
 
         print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
         # Apply HLT to both Data and MC
-        for HLT_str in self.config["HLT"]:
+        for HLT_str in self.config["hlt"]:
             event_filter = event_filter & events.HLT[HLT_str]
         # event_filter = event_filter & events.HLT.IsoMu24
         print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
