@@ -6,10 +6,10 @@ def fsr_recovery(events):
     print(f"fsr_recovery type(events): {type(events)}")
     fsrPhotonsToRecover = (
         (events.Muon.fsrPhotonIdx >= 0)
-        # & (events.Muon.matched_fsrPhoton.relIso03 < 1.8)
-        # & (events.Muon.matched_fsrPhoton.dROverEt2 < 0.012)
-        # & (events.Muon.matched_fsrPhoton.pt / events.Muon.pt < 0.4)
-        # & (abs(events.Muon.matched_fsrPhoton.eta) < 2.4)
+        & (events.Muon.matched_fsrPhoton.relIso03 < 1.8)
+        & (events.Muon.matched_fsrPhoton.dROverEt2 < 0.012)
+        & (events.Muon.matched_fsrPhoton.pt / events.Muon.pt < 0.4)
+        & (abs(events.Muon.matched_fsrPhoton.eta) < 2.4)
     ) # loosen the condition for more yields during testing
     fsrPhotonsToRecover = ak.fill_none(fsrPhotonsToRecover, False) 
     # add mass and charge as otherwise you can't add two lorentzvectors
@@ -34,12 +34,12 @@ def fsr_recovery(events):
         (ak.sum(events.Muon[fsrPhotonsToRecover].pt_fsr== events.Muon[fsrPhotonsToRecover].pt)) 
     )
 
-    print(f"fsr_recovery events.Muon.pt_fsr[fsrPhotonsToRecover]: \n {ak.flatten(events.Muon.pt_fsr[fsrPhotonsToRecover])}")
-    print(f"fsr_recovery events.Muon.eta_fsr[fsrPhotonsToRecover]: \n {ak.flatten(events.Muon.eta_fsr[fsrPhotonsToRecover])}")
-    print(f"fsr_recovery events.Muon.phi_fsr[fsrPhotonsToRecover]: \n {ak.flatten(events.Muon.phi_fsr[fsrPhotonsToRecover])}")
-    print(f"fsr_recovery events.Muon.mass_fsr:[fsrPhotonsToRecover] \n {ak.flatten(events.Muon.mass_fsr[fsrPhotonsToRecover])}")
-    print(f"fsr_recovery events.Muon.iso_fsr[fsrPhotonsToRecover]: \n {ak.flatten(events.Muon.iso_fsr[fsrPhotonsToRecover])}")
-    print(f"fsr_recovery ak.where(ak.sum(fsrPhotonsToRecover, axis=1)>0): \n {ak.where(ak.sum(fsrPhotonsToRecover, axis=1)>0)}")
+    print(f"fsr_recovery events.Muon.pt_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.pt_fsr[fsrPhotonsToRecover]))}")
+    print(f"fsr_recovery events.Muon.eta_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.eta_fsr[fsrPhotonsToRecover]))}")
+    print(f"fsr_recovery events.Muon.phi_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.phi_fsr[fsrPhotonsToRecover]))}")
+    print(f"fsr_recovery events.Muon.mass_fsr:[fsrPhotonsToRecover] \n {ak.to_numpy(ak.flatten(events.Muon.mass_fsr[fsrPhotonsToRecover]))}")
+    print(f"fsr_recovery events.Muon.iso_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.iso_fsr[fsrPhotonsToRecover]))}")
+    print(f"fsr_recovery ak.where(ak.sum(fsrPhotonsToRecover, axis=1)>0): \n {ak.to_numpy(ak.where(ak.sum(fsrPhotonsToRecover, axis=1)>0))}")
 
 
 
