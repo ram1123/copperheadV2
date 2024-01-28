@@ -14,19 +14,21 @@ def apply_roccor(events, roccor_file_path: str, is_mc:bool):
         np.random.seed(0) # random seed for testing and developing
         # print(f"rochester apply roccor ak.count(events.Muon.pt, axis=None): {ak.count(events.Muon.pt, axis=None)}")
         print(f"rochester apply roccor events.Muon.pt: {events.Muon.pt}")
-        mc_rand_size = ak.count(events.Muon.pt[~hasgen], axis=None)
+        # mc_rand_size = ak.count(events.Muon.pt[~hasgen], axis=None)
+        mc_rand_size = ak.count(events.Muon.pt, axis=None)
         print(f"mc_rand_size : {mc_rand_size}")
         mc_rand = np.random.rand(mc_rand_size) # ak doesn't have rand function
         print(f"rochester apply roccor mc_rand shape b4 unflatten: {mc_rand.shape}")
         print(f"rochester apply roccor mc_rand b4 unflatten: {mc_rand}")
-        mc_rand = ak.unflatten(mc_rand, ak.num(events.Muon.pt[~hasgen], axis=1))
+        # mc_rand = ak.unflatten(mc_rand, ak.num(events.Muon.pt[~hasgen], axis=1))
+        mc_rand = ak.unflatten(mc_rand, ak.num(events.Muon.pt, axis=1))
         print(f"rochester apply roccor mc_rand after unflatten: {mc_rand}")
         
         # corrections = ak.ones_like(events.Muon.pt)
         # errors = ak.ones_like(events.Muon.pt)
-        mu_count = ak.count(events.Muon.pt, axis=None)
-        corrections = np.ones(mu_count)
-        errors = np.ones(mu_count)
+        # mu_count = ak.count(events.Muon.pt, axis=None)
+        # corrections = np.ones(mu_count)
+        # errors = np.ones(mu_count)
 
         """
         Observed slight discrepencies (order of 0.0001) between results from coffea0.7 and coffea2024
@@ -46,42 +48,80 @@ def apply_roccor(events, roccor_file_path: str, is_mc:bool):
         print(f"rochester apply roccor events.Muon.pt.type: {events.Muon.pt.type.content}")
         print(f"rochester apply roccor df.Muon.pt.type: {mc_rand.type.content}")
         
+        # mc_kspread = roccor_lookup.kSpreadMC(
+        #     events.Muon.charge[hasgen],
+        #     events.Muon.pt[hasgen],
+        #     events.Muon.eta[hasgen],
+        #     events.Muon.phi[hasgen],
+        #     events.Muon.matched_gen.pt[hasgen],
+        # )
+        # # print(f"rochester apply roccor mc_kspread: {mc_kspread}")
+        # print(f"rochester apply roccor mc_kspread: {ak.to_numpy(ak.flatten(mc_kspread))}")
+        # mc_ksmear = roccor_lookup.kSmearMC(
+        #     events.Muon.charge[~hasgen],
+        #     events.Muon.pt[~hasgen],
+        #     events.Muon.eta[~hasgen],
+        #     events.Muon.phi[~hasgen],
+        #     events.Muon.nTrackerLayers[~hasgen],
+        #     mc_rand,
+        # )
+        # # print(f"rochester apply roccor mc_ksmear: {mc_ksmear}")
+        # print(f"rochester apply roccor mc_ksmear: {ak.to_numpy(ak.flatten(mc_ksmear))}")
+        # errspread = roccor_lookup.kSpreadMCerror(
+        #     events.Muon.charge[hasgen],
+        #     events.Muon.pt[hasgen],
+        #     events.Muon.eta[hasgen],
+        #     events.Muon.phi[hasgen],
+        #     events.Muon.matched_gen.pt[hasgen],
+        # )
+        # # print(f"rochester apply roccor errspread: {errspread}")
+        # print(f"rochester apply roccor errspread: {ak.to_numpy(ak.flatten(errspread))}")
+        # errsmear = roccor_lookup.kSmearMCerror(
+        #     events.Muon.charge[~hasgen],
+        #     events.Muon.pt[~hasgen],
+        #     events.Muon.eta[~hasgen],
+        #     events.Muon.phi[~hasgen],
+        #     events.Muon.nTrackerLayers[~hasgen],
+        #     mc_rand,
+        # )
+
         mc_kspread = roccor_lookup.kSpreadMC(
-            events.Muon.charge[hasgen],
-            events.Muon.pt[hasgen],
-            events.Muon.eta[hasgen],
-            events.Muon.phi[hasgen],
-            events.Muon.matched_gen.pt[hasgen],
+            events.Muon.charge,
+            events.Muon.pt,
+            events.Muon.eta,
+            events.Muon.phi,
+            events.Muon.matched_gen.pt,
         )
         # print(f"rochester apply roccor mc_kspread: {mc_kspread}")
         print(f"rochester apply roccor mc_kspread: {ak.to_numpy(ak.flatten(mc_kspread))}")
         mc_ksmear = roccor_lookup.kSmearMC(
-            events.Muon.charge[~hasgen],
-            events.Muon.pt[~hasgen],
-            events.Muon.eta[~hasgen],
-            events.Muon.phi[~hasgen],
-            events.Muon.nTrackerLayers[~hasgen],
+            events.Muon.charge,
+            events.Muon.pt,
+            events.Muon.eta,
+            events.Muon.phi,
+            events.Muon.nTrackerLayers,
             mc_rand,
         )
         # print(f"rochester apply roccor mc_ksmear: {mc_ksmear}")
         print(f"rochester apply roccor mc_ksmear: {ak.to_numpy(ak.flatten(mc_ksmear))}")
         errspread = roccor_lookup.kSpreadMCerror(
-            events.Muon.charge[hasgen],
-            events.Muon.pt[hasgen],
-            events.Muon.eta[hasgen],
-            events.Muon.phi[hasgen],
-            events.Muon.matched_gen.pt[hasgen],
+            events.Muon.charge,
+            events.Muon.pt,
+            events.Muon.eta,
+            events.Muon.phi,
+            events.Muon.matched_gen.pt,
         )
         # print(f"rochester apply roccor errspread: {errspread}")
         print(f"rochester apply roccor errspread: {ak.to_numpy(ak.flatten(errspread))}")
         errsmear = roccor_lookup.kSmearMCerror(
-            events.Muon.charge[~hasgen],
-            events.Muon.pt[~hasgen],
-            events.Muon.eta[~hasgen],
-            events.Muon.phi[~hasgen],
-            events.Muon.nTrackerLayers[~hasgen],
+            events.Muon.charge,
+            events.Muon.pt,
+            events.Muon.eta,
+            events.Muon.phi,
+            events.Muon.nTrackerLayers,
             mc_rand,
         )
+        
         # print(f"rochester apply roccor errsmear: {errsmear}")
         print(f"rochester apply roccor errsmear: {ak.to_numpy(ak.flatten(errsmear))}")
         # corrections[hasgen] = mc_kspread
@@ -90,19 +130,23 @@ def apply_roccor(events, roccor_file_path: str, is_mc:bool):
         # errors[~hasgen] = errsmear
         
         hasgen_flat = np.array(ak.flatten(hasgen))
-        """
-        in-place assignments are not supported by awkward afaik, so this long winded
-        way to defining np arrays and later turning into awkward array is used
-        """
-        corrections[hasgen_flat] = np.array(ak.flatten(mc_kspread))
-        corrections[~hasgen_flat] = np.array(ak.flatten(mc_ksmear))
-        errors[hasgen_flat] = np.array(ak.flatten(errspread))
-        errors[~hasgen_flat] = np.array(ak.flatten(errsmear))
+        # """
+        # in-place assignments are not supported by awkward afaik, so this long winded
+        # way to defining np arrays and later turning into awkward array is used
+        # """
+        # corrections[hasgen_flat] = np.array(ak.flatten(mc_kspread))
+        # corrections[~hasgen_flat] = np.array(ak.flatten(mc_ksmear))
+        # errors[hasgen_flat] = np.array(ak.flatten(errspread))
+        # errors[~hasgen_flat] = np.array(ak.flatten(errsmear))
 
-        # corrections and errors back to awkard 
-        mu_num = ak.num(events.Muon.pt, axis=1)
-        corrections = ak.unflatten(corrections, mu_num)
-        errors = ak.unflatten(errors, mu_num)
+        # # corrections and errors back to awkard 
+        # mu_num = ak.num(events.Muon.pt, axis=1)
+        # corrections = ak.unflatten(corrections, mu_num)
+        # errors = ak.unflatten(errors, mu_num)
+
+        # spread for matched gen, smear for no matched gen
+        corrections = ak.where(hasgen, mc_kspread, mc_ksmear)
+        errors = ak.where(hasgen, errspread, errsmear)
 
 
     else: # if data

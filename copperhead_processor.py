@@ -20,7 +20,7 @@ class EventProcessor(processor.ProcessorABC):
         self.config = {
             "HLT" :["IsoMu24"],
             "do_trigger_match" : False,
-            "do_roccor" : False,# True
+            "do_roccor" : True,# True
             "do_fsr" : True,
             "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             
