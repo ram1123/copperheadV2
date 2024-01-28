@@ -4,8 +4,8 @@ import numpy as np
 from typing import Union, TypeVar, Tuple
 from corrections.rochester import apply_roccor
 from corrections.fsr_recovery import fsr_recovery
-
-coffea_event = TypeVar('coffea_event') # a variation of coffea.event instance
+from corrections.geofit import apply_geofit
+coffea_nanoevent = TypeVar('coffea_nanoevent') 
 
 
 class EventProcessor(processor.ProcessorABC):
@@ -20,12 +20,14 @@ class EventProcessor(processor.ProcessorABC):
         self.config = {
             "HLT" :["IsoMu24"],
             "do_trigger_match" : False,
-            "do_roccor" : True,# True
+            "do_roccor" : False,# True
             "do_fsr" : True,
+            "do_geofit" : True,
+            "year" : "2018",
             "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             
         }
-    def process(self, events: coffea_event):
+    def process(self, events: coffea_nanoevent):
         """
         TODO: do LHE cut after HLT and trigger match event filtering to save computation
         """
@@ -108,11 +110,15 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "pt"] = events.Muon.pt_roch
         # FSR recovery
         if self.config["do_fsr"]:
-            recovered_fsrPhotons = fsr_recovery(events)
-            # events["Muon", "pt"] = events.Muon.pt_fsr
-            # events["Muon", "eta"] = events.Muon.eta_fsr
-            # events["Muon", "phi"] = events.Muon.phi_fsr
-            # events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
+            applied_fsr = fsr_recovery(events)
+            events["Muon", "pt"] = events.Muon.pt_fsr
+            events["Muon", "eta"] = events.Muon.eta_fsr
+            events["Muon", "phi"] = events.Muon.phi_fsr
+            events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
+        # geofit
+        if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
+            apply_geofit(events, self.config["year"], ~applied_fsr)
+            events["Muon", "pt"] = events.Muon.pt_gf
         
         return events
     def postprocess(self, accumulator):
