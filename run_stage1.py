@@ -41,7 +41,7 @@ if __name__ == "__main__":
     """
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
-    metadata = {"dataset": "dy_M-50"}
+    metadata = {"dataset": "dy_M-50", "is_mc": True}
     if cluster_on:
         events = NanoEventsFactory.from_root(
             {xrootd_path+fname : {"object_path": "Events", "steps": [[0, 50]]}},

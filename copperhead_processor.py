@@ -7,7 +7,7 @@ from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
 import json
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
-
+import pandas as pd # just for debugging
 
 class EventProcessor(processor.ProcessorABC):
     def __init__(self, config_path: str,**kwargs):
@@ -31,15 +31,16 @@ class EventProcessor(processor.ProcessorABC):
         }
         self.config.update(dict_update)
         # print(f"copperhead proccesor self.config after update: \n {self.config}")
+        self.test = True
         
     def process(self, events: coffea_nanoevent):
         """
-        TODO: do LHE cut after HLT and trigger match event filtering to save computation
+        TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
-
-        print(f"copperhead2 events muon pt: {ak.to_dataframe(events.Muon.pt)}")
-        print(f"copperhead2 type(events): {type(events)}")
-        print(f"copperhead2 events.metadata: {events.metadata}")
+        if self.test:
+            print(f"copperhead2 events muon pt: {ak.to_dataframe(events.Muon.pt)}")
+            print(f"copperhead2 type(events): {type(events)}")
+            print(f"copperhead2 events.metadata: {events.metadata}")
         """
         Apply LHE cuts for DY sample stitching
         Basically remove events that has dilepton mass between 100 and 200 GeV
@@ -49,11 +50,12 @@ class EventProcessor(processor.ProcessorABC):
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
             LHE_leptons = LHE_particles[bool_filter]
-            
-            # check LHE muons maintain the same event length
-            print(f"copperhead2 EventProcessor LHE_particles: {len(LHE_particles)}")
-            print(f"copperhead2 EventProcessor LHE_leptons: {len(LHE_leptons)}")
-            print(f"copperhead2 EventProcessor LHE_leptons.pdgId: {LHE_leptons.pdgId}")
+
+            if self.test:
+                # check LHE muons maintain the same event length
+                print(f"copperhead2 EventProcessor LHE_particles: {len(LHE_particles)}")
+                print(f"copperhead2 EventProcessor LHE_leptons: {len(LHE_leptons)}")
+                print(f"copperhead2 EventProcessor LHE_leptons.pdgId: {LHE_leptons.pdgId}")
 
             """
             TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
@@ -70,6 +72,7 @@ class EventProcessor(processor.ProcessorABC):
             LHE_filter = ak.flatten(((LHE_dilepton_mass > 100) & (LHE_dilepton_mass < 200)))
             LHE_filter = ak.fill_none(LHE_filter, value=False) 
             LHE_filter = (LHE_filter== False) # we want True to indicate that we want to keep the event
+            # print(f"copperhead2 EventProcessor LHE_filter[32]: \n{ak.to_numpy(LHE_filter[32])}")
             print(f"copperhead2 EventProcessor LHE_filter: \n{ak.to_numpy(LHE_filter)}")
             event_filter = event_filter & LHE_filter
         
@@ -92,6 +95,15 @@ class EventProcessor(processor.ProcessorABC):
         # event_filter = event_filter & events.HLT.IsoMu24
         print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
 
+        if events.metadata["is_mc"]:
+            lumi_mask = ak.ones_like(event_filter)
+
+        # ------------------------------------------------------------#
+        # Apply lumimask, genweights, PU weights
+        # and L1 prefiring weights
+        # ------------------------------------------------------------#
+
+        
         # NOTE: this portion of code below is commented out bc original copperhead doesn't filter out event until the very end.
         # however, once everything is validated, filtering out events b4 any events would save computational time
         """
@@ -124,10 +136,106 @@ class EventProcessor(processor.ProcessorABC):
         if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
             apply_geofit(events, self.config["year"], ~applied_fsr)
             events["Muon", "pt"] = events.Muon.pt_gf
+
+
+        # --------------------------------------------------------#
+        # Select muons that pass pT, eta, isolation cuts,
+        # muon ID and quality flags
+        # Select events with 2 OS muons, no electrons,
+        # passing quality cuts and at least one good PV
+        # --------------------------------------------------------#
+
+        # Apply event quality flags
+        evnt_qual_flg_selection = ak.ones_like(event_filter)
+        for evt_qual_flg in self.config["event_flags"]:
+            evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
+
+        print(f"copperhead2 EventProcessor evnt_qual_flg_selection long: \n {ak.to_numpy((evnt_qual_flg_selection))}")
+        
+        # muon_id = "mediumId" if "medium" in self.config["muon_id"] else "looseId"
+        # print(f"copperhead2 EventProcessor muon_id: {muon_id}")
+        muon_selection = (
+            (events.Muon.pt_raw > self.config["muon_pt_cut"])
+            & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+            & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
+            # & events.Muon[muon_id]
+            & events.Muon[self.config["muon_id"]]
+        )
+        print(f"copperhead2 EventProcessor muon_selection[44]: \n {muon_selection[44]}")
+        print(f"copperhead2 EventProcessor muon_selection: \n {muon_selection}")
+        print(f"copperhead2 EventProcessor muon_selection long: \n {ak.to_numpy(ak.flatten(muon_selection))}")
+        
+        # count muons that pass the general cut
+        nmuons = ak.num(events.Muon[muon_selection], axis=1)
+        print(f"copperhead2 EventProcessor nmuons long: \n {pd.DataFrame(ak.to_numpy(nmuons)).to_string()}")
+        # Find opposite-sign muons
+        mm_charge = ak.prod(events.Muon.charge, axis=1)
+        print(f"copperhead2 EventProcessor mm_charge long: \n {ak.to_numpy(mm_charge)}")
+
+        # Veto events with good quality electrons; VBF and ggH categories need zero electrons
+        electron_selection = (
+            (events.Electron.pt > self.config["electron_pt_cut"])
+            & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
+            & events.Electron[self.config["electron_id"]]
+        )
+        print(f'processor electron_selection : \n {((electron_selection))}')
+        print(f'processor electron_selection long: \n {ak.to_numpy(ak.flatten(electron_selection))}')
+        electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0)
+        print(f"copperhead2 EventProcessor electron_veto long: \n {pd.DataFrame(ak.to_numpy(electron_veto)).to_string()}")
+
+
+
+        event_filter = (
+                event_filter
+                & lumi_mask
+                & (evnt_qual_flg_selection > 0)
+                & (nmuons == 2)
+                & (mm_charge == -1)
+                & electron_veto
+                & (events.PV.npvsGood > 0) # number of good primary vertex cut
+
+        )
+        print(f"copperhead2 EventProcessor b4 leading pt cut event_filter long: \n {pd.DataFrame(ak.to_numpy(event_filter)).to_string()}")
+
+        # --------------------------------------------------------#
+        # Select events with muons passing leading pT cut
+        # --------------------------------------------------------#
+
+        # Events where there is at least one muon passing
+        # leading muon pT cut
+        pass_leading_pt = events.Muon[:,:1].pt_raw > self.config["muon_leading_pt"]
+        pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
+        pass_leading_pt = ak.sum(pass_leading_pt, axis=1)
+        print(f"copperhead2 EventProcessor pass_leading_pt: \n {pass_leading_pt}")
+
+        event_filter = event_filter & (pass_leading_pt >0)
+        
+        print(f"copperhead2 EventProcessor after leading pt cut event_filter long: \n {ak.to_dataframe(event_filter)}")
+        
+        # filter out bad events since we're calculating delta_r
+        events = events[event_filter]
+        
+        # --------------------------------------------------------#
+        # Fill dimuon and muon variables
+        # --------------------------------------------------------#
+
+        """
+        TODO: find out why we don't filter out bad events right now via
+        even_selection column, since fill muon is computationally exp
+        Last time I checked there was some errors on LHE correction shape mismatch
+        """
+        # fill_muons(self, output, mu1, mu2, is_mc)
+        mu1 = events.Muon[:,0]
+        mu2 = events.Muon[:,1]
+        delta_r = mu1.delta_r(mu2)
+        delta_eta = abs(mu1.eta -mu2.eta)
+        delta_phi = abs(mu1.phi -mu2.phi)
         
         return events
+        
     def postprocess(self, accumulator):
         """
         Arbitrary postprocess function that's required to run the processor
         """
         pass
+
