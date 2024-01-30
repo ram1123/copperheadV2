@@ -34,7 +34,7 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"copperhead proccesor self.config b4 update: \n {self.config}")
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : False,
+            "do_trigger_match" : True,
             "do_roccor" : False,# True
             "do_fsr" : True,
             "do_geofit" : True,
@@ -111,8 +111,34 @@ class EventProcessor(processor.ProcessorABC):
             
             TODO: The impact this operation has onto the statistics is supposedly very low, but I have to check that
             """
-            # event_filter = event_filter & trigger_match
-            pass # to be filled in later
+            isoMu_filterbit = 2
+            mu_id = 13
+            pt_threshold = 24 
+            dr_threshold = 0.1
+            IsoMu24_muons = (events.TrigObj.id == mu_id) &  \
+                    ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
+                    (events.TrigObj.pt > pt_threshold)
+            #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
+            padded_muons = ak.pad_none(events.Muon, 2) # pad in case we have only one muon or zero in an event
+            print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
+            mu1 = padded_muons[:,0]
+            mu2 = padded_muons[:,1]
+            mu1_match = (mu1.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+                (mu1.pt > pt_threshold)
+            mu1_match = ak.sum(mu1_match, axis=1)
+            mu1_match = ak.fill_none(mu1_match, value=False)
+            mu2_match = (mu2.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+                (mu2.pt > pt_threshold)
+            mu2_match =  ak.sum(mu2_match, axis=1)
+            mu2_match = ak.fill_none(mu2_match, value=False)
+            
+            trigger_match = (mu1_match >0) | (mu2_match > 0)
+            print(f"copperhead2 EventProcessor mu1_match: \n {mu1_match}")
+            print(f"copperhead2 EventProcessor mu2_match: \n {mu2_match}")
+            print(f"copperhead2 EventProcessor trigger_match: \n {trigger_match}")
+            print(f"copperhead2 EventProcessor events.HLT.IsoMu24 and trigger_match mismatch count: \n {ak.sum(events.HLT.IsoMu24 != trigger_match)}")
+            event_filter = event_filter & trigger_match
+
 
         print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
         # Apply HLT to both Data and MC
@@ -240,7 +266,8 @@ class EventProcessor(processor.ProcessorABC):
         print(f"copperhead2 EventProcessor ak.sum(event_filter): \n {ak.sum(event_filter)}")
         
         # filter out bad events since we're calculating delta_r
-        events = events[event_filter]
+        events = events[event_filter==True]
+        print(f"copperhead2 EventProcessor events.Muon: \n {ak.num(events.Muon, axis=1)}")
         
         # --------------------------------------------------------#
         # Fill dimuon and muon variables
@@ -279,11 +306,12 @@ class EventProcessor(processor.ProcessorABC):
             print(f"fill_gen_jets isolated: \n {isolated}")
             print(f"fill_gen_jets isolated long: \n {ak.to_numpy(ak.flatten(isolated))}")
             # I suppose we assume there's at least two jets
-            # gjet1 = gjets[isolated][:,0]
-            # print(f"fill_gen_jets gjet1: \n {gjet1}")
-            # gjet2 = gjets[isolated][:,1:2] 
-            # gjj = gjet1 + gjet2
-        
+            padded_iso_gjet = ak.pad_none(gjets[isolated],2) # pad with none val to ensure that events have at least two columns each event
+            gjet1 = padded_iso_gjet[:,0]
+            print(f"fill_gen_jets gjet1: \n {gjet1}")
+            gjet2 = padded_iso_gjet[:,1] 
+            gjj = gjet1 + gjet2
+            print(f"fill_gen_jets gjj: \n {gjj}")
 
         placeholder =  pd.DataFrame({
             'mu1_pt': ak.to_numpy((mu1.pt)),
@@ -308,11 +336,15 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_dR": ak.to_numpy(delta_r),
             "dimuon_cos_theta_cs": ak.to_numpy(dimuon_cos_theta_cs), 
             "dimuon_phi_cs": ak.to_numpy(dimuon_phi_cs), 
-            # "gjj_mass":  ak.to_numpy(gjj.mass),
-            # "gjet1_mass":  ak.to_numpy(gjet1.mass),
-            # "gjet1_pt":  ak.to_numpy(gjet1.pt),
-            # "gjet1_eta":  ak.to_numpy(gjet1.eta),
-            # "gjet1_phi":  ak.to_numpy(gjet1.phi),
+            "gjj_mass":  ak.to_numpy(gjj.mass),
+            "gjet1_mass":  ak.to_numpy(gjet1.mass),
+            "gjet1_pt":  ak.to_numpy(gjet1.pt),
+            "gjet1_eta":  ak.to_numpy(gjet1.eta),
+            "gjet1_phi":  ak.to_numpy(gjet1.phi),
+            "gjet2_mass":  ak.to_numpy(gjet2.mass),
+            "gjet2_pt":  ak.to_numpy(gjet2.pt),
+            "gjet2_eta":  ak.to_numpy(gjet2.eta),
+            "gjet2_phi":  ak.to_numpy(gjet2.phi),
             
         })
         print(f"copperhead2 EventProcessor after leading pt cut placeholder: \n {placeholder.to_string()}")
