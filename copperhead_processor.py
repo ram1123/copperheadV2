@@ -1,4 +1,5 @@
 import coffea.processor as processor
+from coffea.lookup_tools import extractor
 import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
@@ -6,8 +7,19 @@ from corrections.rochester import apply_roccor
 from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
 import json
-coffea_nanoevent = TypeVar('coffea_nanoevent') 
 import pandas as pd # just for debugging
+
+coffea_nanoevent = TypeVar('coffea_nanoevent') 
+ak_array = TypeVar('ak_array')
+
+def cs_variables(
+        mu1: coffea_nanoevent,
+        mu2: coffea_nanoevent
+    ) -> Tuple[ak_array]: 
+    dphi = abs(np.mod(mu1.phi - mu2.phi + np.pi, 2 * np.pi) - np.pi)
+    theta_cs = np.arccos(np.tanh((mu1.eta - mu2.eta) / 2))
+    phi_cs = np.tan((np.pi - np.abs(dphi)) / 2) * np.sin(theta_cs)
+    return np.cos(theta_cs), phi_cs
 
 class EventProcessor(processor.ProcessorABC):
     def __init__(self, config_path: str,**kwargs):
@@ -32,7 +44,21 @@ class EventProcessor(processor.ProcessorABC):
         self.config.update(dict_update)
         # print(f"copperhead proccesor self.config after update: \n {self.config}")
         self.test = True
-        
+
+        # --- Evaluator
+        extractor_instance = extractor()
+        # Calibration of event-by-event mass resolution
+        for mode in ["Data", "MC"]:
+            if "2016" in self.config["year"]:
+                yearstr = "2016"
+            else:
+                yearstr=self.config["year"] #Work around before there are seperate new files for pre and postVFP
+            label = f"res_calib_{mode}_{yearstr}"
+            path = self.config["res_calib_path"]
+            file_path = f"{path}/{label}.root"
+            extractor_instance.add_weight_sets([f"{label} {label} {file_path}"])
+        extractor_instance.finalize()
+        self.evaluator = extractor_instance.make_evaluator()
     def process(self, events: coffea_nanoevent):
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
@@ -211,6 +237,7 @@ class EventProcessor(processor.ProcessorABC):
         event_filter = event_filter & (pass_leading_pt >0)
         
         print(f"copperhead2 EventProcessor after leading pt cut event_filter long: \n {ak.to_dataframe(event_filter)}")
+        print(f"copperhead2 EventProcessor ak.sum(event_filter): \n {ak.sum(event_filter)}")
         
         # filter out bad events since we're calculating delta_r
         events = events[event_filter]
@@ -230,6 +257,66 @@ class EventProcessor(processor.ProcessorABC):
         delta_r = mu1.delta_r(mu2)
         delta_eta = abs(mu1.eta -mu2.eta)
         delta_phi = abs(mu1.phi -mu2.phi)
+        dimuon = mu1+mu2
+        # fill in pd Dataframe as placeholder. Should be fine since we don't need jagged arrays
+        dimuon_mass_resolution = self.mass_resolution(events)
+        rel_dimuon_ebe_mass_res = dimuon_mass_resolution/dimuon.mass
+        dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
+
+        #fill jets
+        
+        if events.metadata["is_mc"]:
+            #fill gen jets for VBF filter on postprocess
+            gjets = events.GenJet
+            gleptons = events.GenPart[
+                (abs(events.GenPart.pdgId) == 13)
+                | (abs(events.GenPart.pdgId) == 11)
+                | (abs(events.GenPart.pdgId) == 15)
+            ]
+            gl_pair = ak.cartesian({"jet": gjets, "lepton": gleptons}, axis=1, nested=True)
+            dr_gl = gl_pair["jet"].delta_r(gl_pair["lepton"])
+            isolated = ak.all((dr_gl > 0.3), axis=-1) # this also returns true if there's no leptons near the gjet
+            print(f"fill_gen_jets isolated: \n {isolated}")
+            print(f"fill_gen_jets isolated long: \n {ak.to_numpy(ak.flatten(isolated))}")
+            # I suppose we assume there's at least two jets
+            # gjet1 = gjets[isolated][:,0]
+            # print(f"fill_gen_jets gjet1: \n {gjet1}")
+            # gjet2 = gjets[isolated][:,1:2] 
+            # gjj = gjet1 + gjet2
+        
+
+        placeholder =  pd.DataFrame({
+            'mu1_pt': ak.to_numpy((mu1.pt)),
+            'mu2_pt': ak.to_numpy(mu2.pt),
+            'mu1_eta': ak.to_numpy(mu1.eta),
+            'mu2_eta': ak.to_numpy(mu2.eta),
+            'mu1_phi': ak.to_numpy(mu1.phi),
+            'mu2_phi': ak.to_numpy(mu2.phi),
+            'mu1_iso': ak.to_numpy(mu1.pfRelIso04_all),
+            'mu2_iso': ak.to_numpy(mu2.pfRelIso04_all),
+            'mu1_pt_over_mass': ak.to_numpy(mu1.pt/dimuon.mass),
+            'mu2_pt_over_mass': ak.to_numpy(mu2.pt/dimuon.mass),
+            "dimuon_mass": ak.to_numpy(dimuon.mass),
+            "dimuon_ebe_mass_res": ak.to_numpy(dimuon_mass_resolution),
+            "dimuon_ebe_mass_res_rel": ak.to_numpy(rel_dimuon_ebe_mass_res),
+            "dimuon_pt": ak.to_numpy(dimuon.pt),
+            "dimuon_pt_log": ak.to_numpy(np.log(dimuon.pt)), # np functions are compatible with ak if input is ak array 
+            "dimuon_eta": ak.to_numpy(dimuon.eta),
+            "dimuon_phi": ak.to_numpy(dimuon.phi),
+            "dimuon_dEta": ak.to_numpy(delta_eta),
+            "dimuon_dPhi": ak.to_numpy(delta_phi),
+            "dimuon_dR": ak.to_numpy(delta_r),
+            "dimuon_cos_theta_cs": ak.to_numpy(dimuon_cos_theta_cs), 
+            "dimuon_phi_cs": ak.to_numpy(dimuon_phi_cs), 
+            # "gjj_mass":  ak.to_numpy(gjj.mass),
+            # "gjet1_mass":  ak.to_numpy(gjet1.mass),
+            # "gjet1_pt":  ak.to_numpy(gjet1.pt),
+            # "gjet1_eta":  ak.to_numpy(gjet1.eta),
+            # "gjet1_phi":  ak.to_numpy(gjet1.phi),
+            
+        })
+        print(f"copperhead2 EventProcessor after leading pt cut placeholder: \n {placeholder.to_string()}")
+        placeholder.to_csv("./test.csv")
         
         return events
         
@@ -239,3 +326,29 @@ class EventProcessor(processor.ProcessorABC):
         """
         pass
 
+    
+    def mass_resolution(self, events):
+        # Returns absolute mass resolution!
+        mu1 = events.Muon[:,0]
+        mu2 = events.Muon[:,1]
+        muon_E = (mu1+mu2).mass /2
+        dpt1 = (mu1.ptErr / mu1.pt) * muon_E
+        dpt2 = (mu2.ptErr / mu2.pt) * muon_E
+        print(f"muons mass_resolution dpt1: {dpt1}")
+        if "2016" in self.config["year"]:
+            yearstr = "2016"
+        else:
+            yearstr=self.config["year"] #Work around before there are seperate new files for pre and postVFP
+        if events.metadata["is_mc"]:
+            label = f"res_calib_MC_{yearstr}"
+        else:
+            label = f"res_calib_Data_{yearstr}"
+        calibration =  self.evaluator[label]( # this is a coffea.dense_lookup instance
+            mu1.pt, 
+            abs(mu1.eta), 
+            abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
+        )
+    
+        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
+    
+    
