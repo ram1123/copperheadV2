@@ -48,7 +48,7 @@ def apply_geofit(
     print(f"apply_geofit pt_corr: {pt_corr}")
     print(f"apply_geofit events.Muon.pt: {events.Muon.pt}")
     print(f"apply_geofit events.Muon.pt_gf: {events.Muon.pt_gf}")
-    print(f"apply_geofit events.Muon.pt_gf long: {ak.to_numpy(ak.flatten(events.Muon.pt_gf))}")
-    print(f"apply_geofit ak.sum(events.Muon.pt_gf != events.Muon.pt): {ak.sum(events.Muon.pt_gf != events.Muon.pt)}")
+    # print(f"apply_geofit events.Muon.pt_gf long: {ak.to_numpy(ak.flatten(events.Muon.pt_gf))}")
+    # print(f"apply_geofit ak.sum(events.Muon.pt_gf != events.Muon.pt): {ak.sum(events.Muon.pt_gf != events.Muon.pt)}")
     print(f"apply_geofit ak.sum(mask): {ak.sum(mask)}")
     return

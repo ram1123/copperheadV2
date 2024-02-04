@@ -37,13 +37,13 @@ def fsr_recovery(events: coffea_nanoevent) -> ak_array:
         (ak.sum(events.Muon[fsrPhotonsToRecover].pt_fsr== events.Muon[fsrPhotonsToRecover].pt)) 
     )
 
-    print(f"fsr_recovery events.Muon.pt_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.pt_fsr[fsrPhotonsToRecover]))}")
-    print(f"fsr_recovery events.Muon.eta_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.eta_fsr[fsrPhotonsToRecover]))}")
-    print(f"fsr_recovery events.Muon.phi_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.phi_fsr[fsrPhotonsToRecover]))}")
-    print(f"fsr_recovery events.Muon.mass_fsr:[fsrPhotonsToRecover] \n {ak.to_numpy(ak.flatten(events.Muon.mass_fsr[fsrPhotonsToRecover]))}")
-    print(f"fsr_recovery events.Muon.iso_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.iso_fsr[fsrPhotonsToRecover]))}")
-    print(f"fsr_recovery ak.where(ak.sum(fsrPhotonsToRecover, axis=1)>0): \n {ak.to_numpy(ak.where(ak.sum(fsrPhotonsToRecover, axis=1)>0))}")
-    print(f"fsr_recovery ak.sum(fsrPhotonsToRecover): {ak.sum(fsrPhotonsToRecover)}")
+    # print(f"fsr_recovery events.Muon.pt_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.pt_fsr[fsrPhotonsToRecover]))}")
+    # print(f"fsr_recovery events.Muon.eta_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.eta_fsr[fsrPhotonsToRecover]))}")
+    # print(f"fsr_recovery events.Muon.phi_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.phi_fsr[fsrPhotonsToRecover]))}")
+    # print(f"fsr_recovery events.Muon.mass_fsr:[fsrPhotonsToRecover] \n {ak.to_numpy(ak.flatten(events.Muon.mass_fsr[fsrPhotonsToRecover]))}")
+    # print(f"fsr_recovery events.Muon.iso_fsr[fsrPhotonsToRecover]: \n {ak.to_numpy(ak.flatten(events.Muon.iso_fsr[fsrPhotonsToRecover]))}")
+    # print(f"fsr_recovery ak.where(ak.sum(fsrPhotonsToRecover, axis=1)>0): \n {ak.to_numpy(ak.where(ak.sum(fsrPhotonsToRecover, axis=1)>0))}")
+    # print(f"fsr_recovery ak.sum(fsrPhotonsToRecover): {ak.sum(fsrPhotonsToRecover)}")
     
     return fsrPhotonsToRecover
 

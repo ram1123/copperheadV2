@@ -16,10 +16,12 @@ def cs_variables(
         mu1: coffea_nanoevent,
         mu2: coffea_nanoevent
     ) -> Tuple[ak_array]: 
-    dphi = abs(np.mod(mu1.phi - mu2.phi + np.pi, 2 * np.pi) - np.pi)
+    dphi = abs(mu1.delta_phi(mu2))
     theta_cs = np.arccos(np.tanh((mu1.eta - mu2.eta) / 2))
     phi_cs = np.tan((np.pi - np.abs(dphi)) / 2) * np.sin(theta_cs)
     return np.cos(theta_cs), phi_cs
+
+
 
 class EventProcessor(processor.ProcessorABC):
     def __init__(self, config_path: str,**kwargs):
@@ -43,7 +45,7 @@ class EventProcessor(processor.ProcessorABC):
         }
         self.config.update(dict_update)
         # print(f"copperhead proccesor self.config after update: \n {self.config}")
-        self.test = True
+        self.test = False
 
         # --- Evaluator
         extractor_instance = extractor()
@@ -59,6 +61,7 @@ class EventProcessor(processor.ProcessorABC):
             extractor_instance.add_weight_sets([f"{label} {label} {file_path}"])
         extractor_instance.finalize()
         self.evaluator = extractor_instance.make_evaluator()
+
     def process(self, events: coffea_nanoevent):
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
@@ -92,14 +95,17 @@ class EventProcessor(processor.ProcessorABC):
             min_idxs = ak.argmin(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for anti lepton
             LHE_lepton_barless = LHE_leptons[max_idxs]
             LHE_lepton_bar = LHE_leptons[min_idxs]
-            print(f"copperhead2 EventProcessor LHE_lepton_bar: {LHE_lepton_bar}")
+            if self.test:
+                print(f"copperhead2 EventProcessor LHE_lepton_bar: {LHE_lepton_bar}")
             LHE_dilepton_mass =  (LHE_lepton_barless +LHE_lepton_bar).mass
-            print(f"copperhead2 EventProcessor LHE_dilepton_mass: \n{ak.to_numpy(LHE_dilepton_mass)}")
+            if self.test:
+                print(f"copperhead2 EventProcessor LHE_dilepton_mass: \n{ak.to_numpy(LHE_dilepton_mass)}")
             LHE_filter = ak.flatten(((LHE_dilepton_mass > 100) & (LHE_dilepton_mass < 200)))
             LHE_filter = ak.fill_none(LHE_filter, value=False) 
             LHE_filter = (LHE_filter== False) # we want True to indicate that we want to keep the event
             # print(f"copperhead2 EventProcessor LHE_filter[32]: \n{ak.to_numpy(LHE_filter[32])}")
-            print(f"copperhead2 EventProcessor LHE_filter: \n{ak.to_numpy(LHE_filter)}")
+            if self.test:
+                print(f"copperhead2 EventProcessor LHE_filter: \n{ak.to_numpy(LHE_filter)}")
             event_filter = event_filter & LHE_filter
         
         if self.config["do_trigger_match"]:
@@ -133,19 +139,20 @@ class EventProcessor(processor.ProcessorABC):
             mu2_match = ak.fill_none(mu2_match, value=False)
             
             trigger_match = (mu1_match >0) | (mu2_match > 0)
-            print(f"copperhead2 EventProcessor mu1_match: \n {mu1_match}")
-            print(f"copperhead2 EventProcessor mu2_match: \n {mu2_match}")
-            print(f"copperhead2 EventProcessor trigger_match: \n {trigger_match}")
+            if self.test:
+                print(f"copperhead2 EventProcessor mu1_match: \n {mu1_match}")
+                print(f"copperhead2 EventProcessor mu2_match: \n {mu2_match}")
+                print(f"copperhead2 EventProcessor trigger_match: \n {trigger_match}")
             print(f"copperhead2 EventProcessor events.HLT.IsoMu24 and trigger_match mismatch count: \n {ak.sum(events.HLT.IsoMu24 != trigger_match)}")
             event_filter = event_filter & trigger_match
 
-
-        print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
+            
         # Apply HLT to both Data and MC
         for HLT_str in self.config["hlt"]:
             event_filter = event_filter & events.HLT[HLT_str]
-        # event_filter = event_filter & events.HLT.IsoMu24
-        print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
+        if self.test:
+            print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
+            print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
 
         if events.metadata["is_mc"]:
             lumi_mask = ak.ones_like(event_filter)
@@ -175,7 +182,7 @@ class EventProcessor(processor.ProcessorABC):
         
         # Apply Rochester correction
         if self.config["do_roccor"]:
-            apply_roccor(events, self.config["rocorr_file_path"], True)
+            apply_roccor(events, self.config["rocorr_file_path"], events.metadata["is_mc"])
             events["Muon", "pt"] = events.Muon.pt_roch
         # FSR recovery
         if self.config["do_fsr"]:
@@ -202,7 +209,6 @@ class EventProcessor(processor.ProcessorABC):
         for evt_qual_flg in self.config["event_flags"]:
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
 
-        print(f"copperhead2 EventProcessor evnt_qual_flg_selection long: \n {ak.to_numpy((evnt_qual_flg_selection))}")
         
         # muon_id = "mediumId" if "medium" in self.config["muon_id"] else "looseId"
         # print(f"copperhead2 EventProcessor muon_id: {muon_id}")
@@ -213,16 +219,18 @@ class EventProcessor(processor.ProcessorABC):
             # & events.Muon[muon_id]
             & events.Muon[self.config["muon_id"]]
         )
-        print(f"copperhead2 EventProcessor muon_selection[44]: \n {muon_selection[44]}")
-        print(f"copperhead2 EventProcessor muon_selection: \n {muon_selection}")
-        print(f"copperhead2 EventProcessor muon_selection long: \n {ak.to_numpy(ak.flatten(muon_selection))}")
+        if self.test:
+            print(f"copperhead2 EventProcessor evnt_qual_flg_selection long: \n {ak.to_numpy((evnt_qual_flg_selection))}")
+            print(f"copperhead2 EventProcessor muon_selection[44]: \n {muon_selection[44]}")
+            print(f"copperhead2 EventProcessor muon_selection: \n {muon_selection}")
+            print(f"copperhead2 EventProcessor muon_selection long: \n {ak.to_numpy(ak.flatten(muon_selection))}")
         
         # count muons that pass the general cut
         nmuons = ak.num(events.Muon[muon_selection], axis=1)
-        print(f"copperhead2 EventProcessor nmuons long: \n {pd.DataFrame(ak.to_numpy(nmuons)).to_string()}")
+        
         # Find opposite-sign muons
         mm_charge = ak.prod(events.Muon.charge, axis=1)
-        print(f"copperhead2 EventProcessor mm_charge long: \n {ak.to_numpy(mm_charge)}")
+        
 
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
         electron_selection = (
@@ -230,13 +238,31 @@ class EventProcessor(processor.ProcessorABC):
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
             & events.Electron[self.config["electron_id"]]
         )
-        print(f'processor electron_selection : \n {((electron_selection))}')
-        print(f'processor electron_selection long: \n {ak.to_numpy(ak.flatten(electron_selection))}')
         electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0)
-        print(f"copperhead2 EventProcessor electron_veto long: \n {pd.DataFrame(ak.to_numpy(electron_veto)).to_string()}")
 
+        
+        if self.test:
+            print(f"copperhead2 EventProcessor nmuons long: \n {pd.DataFrame(ak.to_numpy(nmuons)).to_string()}")
+            print(f"copperhead2 EventProcessor mm_charge long: \n {ak.to_numpy(mm_charge)}")
+            print(f'processor electron_selection : \n {((electron_selection))}')
+            print(f'processor electron_selection long: \n {ak.to_numpy(ak.flatten(electron_selection))}')
+        
+        
+            # print(f'processor electron_selection long: \n {ak.to_numpy(ak.flatten(electron_selection))}')
+            print(f"copperhead2 EventProcessor electron_veto long: \n {pd.DataFrame(ak.to_numpy(electron_veto)).to_string()}")
 
-
+        if self.test:
+            # save electrons in for plotting
+            electrons = events.Electron[electron_selection]
+            placeholder =  pd.DataFrame({
+                'el_pt': ak.to_numpy(ak.flatten(electrons.pt)),
+                'el_eta': ak.to_numpy(ak.flatten(electrons.eta)),
+                'el_phi': ak.to_numpy(ak.flatten(electrons.phi)),
+                'el_charge': ak.to_numpy(ak.flatten(electrons.charge)),
+            })
+            placeholder.to_csv("./V2electrons.csv")
+        
+        
         event_filter = (
                 event_filter
                 & lumi_mask
@@ -247,7 +273,7 @@ class EventProcessor(processor.ProcessorABC):
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
 
         )
-        print(f"copperhead2 EventProcessor b4 leading pt cut event_filter long: \n {pd.DataFrame(ak.to_numpy(event_filter)).to_string()}")
+        
 
         # --------------------------------------------------------#
         # Select events with muons passing leading pT cut
@@ -258,16 +284,21 @@ class EventProcessor(processor.ProcessorABC):
         pass_leading_pt = events.Muon[:,:1].pt_raw > self.config["muon_leading_pt"]
         pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
         pass_leading_pt = ak.sum(pass_leading_pt, axis=1)
-        print(f"copperhead2 EventProcessor pass_leading_pt: \n {pass_leading_pt}")
+        
 
         event_filter = event_filter & (pass_leading_pt >0)
         
-        print(f"copperhead2 EventProcessor after leading pt cut event_filter long: \n {ak.to_dataframe(event_filter)}")
-        print(f"copperhead2 EventProcessor ak.sum(event_filter): \n {ak.sum(event_filter)}")
+        
         
         # filter out bad events since we're calculating delta_r
         events = events[event_filter==True]
-        print(f"copperhead2 EventProcessor events.Muon: \n {ak.num(events.Muon, axis=1)}")
+
+        if self.test:
+            print(f"copperhead2 EventProcessor b4 leading pt cut event_filter long: \n {pd.DataFrame(ak.to_numpy(event_filter)).to_string()}")
+            print(f"copperhead2 EventProcessor pass_leading_pt: \n {pass_leading_pt}")
+            print(f"copperhead2 EventProcessor after leading pt cut event_filter long: \n {ak.to_dataframe(event_filter)}")
+            print(f"copperhead2 EventProcessor ak.sum(event_filter): \n {ak.sum(event_filter)}")
+            print(f"copperhead2 EventProcessor events.Muon: \n {ak.num(events.Muon, axis=1)}")
         
         # --------------------------------------------------------#
         # Fill dimuon and muon variables
@@ -283,14 +314,14 @@ class EventProcessor(processor.ProcessorABC):
         mu2 = events.Muon[:,1]
         delta_r = mu1.delta_r(mu2)
         delta_eta = abs(mu1.eta -mu2.eta)
-        delta_phi = abs(mu1.phi -mu2.phi)
+        delta_phi = abs(mu1.delta_phi(mu2))
         dimuon = mu1+mu2
         # fill in pd Dataframe as placeholder. Should be fine since we don't need jagged arrays
         dimuon_mass_resolution = self.mass_resolution(events)
         rel_dimuon_ebe_mass_res = dimuon_mass_resolution/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
 
-        #fill jets
+        #fill genjets
         
         if events.metadata["is_mc"]:
             #fill gen jets for VBF filter on postprocess
@@ -303,52 +334,71 @@ class EventProcessor(processor.ProcessorABC):
             gl_pair = ak.cartesian({"jet": gjets, "lepton": gleptons}, axis=1, nested=True)
             dr_gl = gl_pair["jet"].delta_r(gl_pair["lepton"])
             isolated = ak.all((dr_gl > 0.3), axis=-1) # this also returns true if there's no leptons near the gjet
-            print(f"fill_gen_jets isolated: \n {isolated}")
-            print(f"fill_gen_jets isolated long: \n {ak.to_numpy(ak.flatten(isolated))}")
+            
             # I suppose we assume there's at least two jets
             padded_iso_gjet = ak.pad_none(gjets[isolated],2) # pad with none val to ensure that events have at least two columns each event
             gjet1 = padded_iso_gjet[:,0]
-            print(f"fill_gen_jets gjet1: \n {gjet1}")
+            
             gjet2 = padded_iso_gjet[:,1] 
             gjj = gjet1 + gjet2
-            print(f"fill_gen_jets gjj: \n {gjj}")
-
-        placeholder =  pd.DataFrame({
-            'mu1_pt': ak.to_numpy((mu1.pt)),
-            'mu2_pt': ak.to_numpy(mu2.pt),
-            'mu1_eta': ak.to_numpy(mu1.eta),
-            'mu2_eta': ak.to_numpy(mu2.eta),
-            'mu1_phi': ak.to_numpy(mu1.phi),
-            'mu2_phi': ak.to_numpy(mu2.phi),
-            'mu1_iso': ak.to_numpy(mu1.pfRelIso04_all),
-            'mu2_iso': ak.to_numpy(mu2.pfRelIso04_all),
-            'mu1_pt_over_mass': ak.to_numpy(mu1.pt/dimuon.mass),
-            'mu2_pt_over_mass': ak.to_numpy(mu2.pt/dimuon.mass),
-            "dimuon_mass": ak.to_numpy(dimuon.mass),
-            "dimuon_ebe_mass_res": ak.to_numpy(dimuon_mass_resolution),
-            "dimuon_ebe_mass_res_rel": ak.to_numpy(rel_dimuon_ebe_mass_res),
-            "dimuon_pt": ak.to_numpy(dimuon.pt),
-            "dimuon_pt_log": ak.to_numpy(np.log(dimuon.pt)), # np functions are compatible with ak if input is ak array 
-            "dimuon_eta": ak.to_numpy(dimuon.eta),
-            "dimuon_phi": ak.to_numpy(dimuon.phi),
-            "dimuon_dEta": ak.to_numpy(delta_eta),
-            "dimuon_dPhi": ak.to_numpy(delta_phi),
-            "dimuon_dR": ak.to_numpy(delta_r),
-            "dimuon_cos_theta_cs": ak.to_numpy(dimuon_cos_theta_cs), 
-            "dimuon_phi_cs": ak.to_numpy(dimuon_phi_cs), 
-            "gjj_mass":  ak.to_numpy(gjj.mass),
-            "gjet1_mass":  ak.to_numpy(gjet1.mass),
-            "gjet1_pt":  ak.to_numpy(gjet1.pt),
-            "gjet1_eta":  ak.to_numpy(gjet1.eta),
-            "gjet1_phi":  ak.to_numpy(gjet1.phi),
-            "gjet2_mass":  ak.to_numpy(gjet2.mass),
-            "gjet2_pt":  ak.to_numpy(gjet2.pt),
-            "gjet2_eta":  ak.to_numpy(gjet2.eta),
-            "gjet2_phi":  ak.to_numpy(gjet2.phi),
             
-        })
-        print(f"copperhead2 EventProcessor after leading pt cut placeholder: \n {placeholder.to_string()}")
-        placeholder.to_csv("./test.csv")
+            gjj_dEta = abs(gjet1.eta - gjet2.eta)
+            gjj_dPhi = abs(gjet1.delta_phi(gjet2))
+            gjj_dR = gjet1.delta_r(gjet2)
+            if self.test:
+                print(f"fill_gen_jets isolated: \n {isolated}")
+                print(f"fill_gen_jets isolated long: \n {ak.to_numpy(ak.flatten(isolated))}")
+                print(f"fill_gen_jets gjet1: \n {gjet1}")
+                print(f"fill_gen_jets gjj: \n {gjj}")
+                print(f"fill_gen_jets gjj_dEta: \n {gjj_dEta}")
+                print(f"fill_gen_jets gjj_dPhi: \n {gjj_dPhi}")
+                print(f"fill_gen_jets gjj_dR: \n {gjj_dR}")
+
+        self.prepare_jets(events)
+        
+
+        if self.test:
+            print(f"copperhead2 EventProcessor events.Jet.rho: \n {events.Jet.rho}")
+            print(f"copperhead2 EventProcessor events.Jet.rho long: \n {ak.to_numpy(ak.flatten(events.Jet.rho))}")
+            placeholder =  pd.DataFrame({
+                'mu1_pt': ak.to_numpy((mu1.pt)),
+                'mu2_pt': ak.to_numpy(mu2.pt),
+                'mu1_eta': ak.to_numpy(mu1.eta),
+                'mu2_eta': ak.to_numpy(mu2.eta),
+                'mu1_phi': ak.to_numpy(mu1.phi),
+                'mu2_phi': ak.to_numpy(mu2.phi),
+                'mu1_iso': ak.to_numpy(mu1.pfRelIso04_all),
+                'mu2_iso': ak.to_numpy(mu2.pfRelIso04_all),
+                'mu1_pt_over_mass': ak.to_numpy(mu1.pt/dimuon.mass),
+                'mu2_pt_over_mass': ak.to_numpy(mu2.pt/dimuon.mass),
+                "dimuon_mass": ak.to_numpy(dimuon.mass),
+                "dimuon_ebe_mass_res": ak.to_numpy(dimuon_mass_resolution),
+                "dimuon_ebe_mass_res_rel": ak.to_numpy(rel_dimuon_ebe_mass_res),
+                "dimuon_pt": ak.to_numpy(dimuon.pt),
+                "dimuon_pt_log": ak.to_numpy(np.log(dimuon.pt)), # np functions are compatible with ak if input is ak array 
+                "dimuon_eta": ak.to_numpy(dimuon.eta),
+                "dimuon_phi": ak.to_numpy(dimuon.phi),
+                "dimuon_dEta": ak.to_numpy(delta_eta),
+                "dimuon_dPhi": ak.to_numpy(delta_phi),
+                "dimuon_dR": ak.to_numpy(delta_r),
+                "dimuon_cos_theta_cs": ak.to_numpy(dimuon_cos_theta_cs), 
+                "dimuon_phi_cs": ak.to_numpy(dimuon_phi_cs), 
+                "gjj_mass":  ak.to_numpy(gjj.mass),
+                "gjet1_mass":  ak.to_numpy(gjet1.mass),
+                "gjet1_pt":  ak.to_numpy(gjet1.pt),
+                "gjet1_eta":  ak.to_numpy(gjet1.eta),
+                "gjet1_phi":  ak.to_numpy(gjet1.phi),
+                "gjet2_mass":  ak.to_numpy(gjet2.mass),
+                "gjet2_pt":  ak.to_numpy(gjet2.pt),
+                "gjet2_eta":  ak.to_numpy(gjet2.eta),
+                "gjet2_phi":  ak.to_numpy(gjet2.phi),
+                "gjj_dEta": ak.to_numpy(gjj_dEta),
+                "gjj_dPhi": ak.to_numpy(gjj_dPhi),
+                "gjj_dR": ak.to_numpy(gjj_dR),
+                
+            })
+            # print(f"copperhead2 EventProcessor after leading pt cut placeholder: \n {placeholder.to_string()}")
+            placeholder.to_csv("./V2placeholder.csv")
         
         return events
         
@@ -383,4 +433,18 @@ class EventProcessor(processor.ProcessorABC):
     
         return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
     
+    def prepare_jets(self, events): # analogous to add_jec_variables function in boosted higgs
+        # Initialize missing fields (needed for JEC)
+        events["Jet", "pt_raw"] = (1 - events.Jet.rawFactor) * events.Jet.pt
+        events["Jet", "mass_raw"] = (1 - events.Jet.rawFactor) * events.Jet.mass
+        events["Jet", "rho"] = ak.broadcast_arrays(events.fixedGridRhoFastjetAll, events.Jet.pt)[0]
+    
+        if events.metadata["is_mc"]:
+            # comment off pt_gen assignment bc I don't see it being used anywhere
+            # events["Jet", "pt_gen"] = events.Jet.matched_gen.pt 
+            events["Jet", "has_matched_gen"] = events.Jet.genJetIdx > 0
+        else:
+            events["Jet", "has_matched_gen"] = False
+
+        return
     

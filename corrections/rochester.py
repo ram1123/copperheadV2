@@ -1,12 +1,29 @@
 import numpy as np
 import awkward as ak
 from coffea.lookup_tools import txt_converters, rochester_lookup
+import pandas as pd
 
 def apply_roccor(events, roccor_file_path: str, is_mc:bool):
     rochester_data = txt_converters.convert_rochester_file(
         roccor_file_path, loaduncs=True
     )
     roccor_lookup = rochester_lookup.rochester_lookup(rochester_data)
+
+    padded_muon = ak.pad_none(events.Muon, 2)
+    mu1 = padded_muon[:,0]
+    mu2 = padded_muon[:,1]
+    placeholder =  pd.DataFrame({
+            'mu1_pt': ak.to_numpy((mu1.pt)),
+            'mu2_pt': ak.to_numpy(mu2.pt),
+            'mu1_eta': ak.to_numpy(mu1.eta),
+            'mu2_eta': ak.to_numpy(mu2.eta),
+            'mu1_phi': ak.to_numpy(mu1.phi),
+            'mu2_phi': ak.to_numpy(mu2.phi),
+            'mu1_matched_gen_pt': ak.to_numpy(mu1.matched_gen.pt),
+            'mu2_matched_gen_pt': ak.to_numpy(mu2.matched_gen.pt),
+    })
+    # print(f"rochester apply roccor placeholder: {placeholder.to_string()}")
+    placeholder.to_csv("./rochester_test.csv")
     if is_mc:
         hasgen = ak.is_none(events.Muon.matched_gen.pt, axis=1) == False
         print(f"ak.sum(~hasgen) : {ak.sum(~hasgen)}")
@@ -150,13 +167,15 @@ def apply_roccor(events, roccor_file_path: str, is_mc:bool):
 
 
     else: # if data
-        corrections = rochester.kScaleDT(
+        corrections = roccor_lookup.kScaleDT(
             events.Muon.charge, events.Muon.pt, events.Muon.eta, events.Muon.phi
         )
-        errors = rochester.kScaleDTerror(
+        errors = roccor_lookup.kScaleDTerror(
             events.Muon.charge, events.Muon.pt, events.Muon.eta, events.Muon.phi
         )
 
+    print(f'rochester apply roccor corrections: {ak.to_numpy(ak.flatten(corrections))}')
+    print(f'rochester apply roccor errors: {ak.to_numpy(ak.flatten(errors))}')
     events["Muon", "pt_roch"] = events.Muon.pt * corrections
     events["Muon", "pt_roch_up"] = events.Muon.pt_roch + events.Muon.pt * errors
     events["Muon", "pt_roch_down"] = events.Muon.pt_roch - events.Muon.pt * errors

@@ -1,6 +1,4 @@
 conda activate /depot/cms/kernels/coffea2024
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-source /cvmfs/cms.cern.ch/rucio/setup-py3.sh
 voms-proxy-init -voms cms -rfc -valid 192:00
 export RUCIO_ACCOUNT=hyeonseo
 export VOMS_PATH=$(echo $(voms-proxy-info | grep path) | sed 's/path.*: //')
