@@ -38,7 +38,7 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"copperhead proccesor self.config b4 update: \n {self.config}")
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : True,
+            "do_trigger_match" : False, #True
             "do_roccor" : False,# True
             "do_fsr" : True,
             "do_geofit" : True,
@@ -157,6 +157,7 @@ class EventProcessor(processor.ProcessorABC):
             event_filter = event_filter & events.HLT[HLT_str]
         if self.test:
             print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
+            print(f"copperhead2 EventProcessor ak.sum(events.HLT.IsoMu24): \n {ak.sum(events.HLT.IsoMu24)}")
             print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
 
         if events.metadata["is_mc"]:
@@ -238,7 +239,7 @@ class EventProcessor(processor.ProcessorABC):
         nmuons = ak.num(events.Muon[muon_selection], axis=1)
         
         # Find opposite-sign muons
-        mm_charge = ak.prod(events.Muon.charge, axis=1)
+        mm_charge = ak.prod(events.Muon.charge[muon_selection], axis=1)
         
 
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
@@ -259,6 +260,13 @@ class EventProcessor(processor.ProcessorABC):
         
             # print(f'processor electron_selection long: \n {ak.to_numpy(ak.flatten(electron_selection))}')
             print(f"copperhead2 EventProcessor electron_veto long: \n {pd.DataFrame(ak.to_numpy(electron_veto)).to_string()}")
+            print(f"copperhead2 EventProcessor b4 selection ak.sum(event_filter): \n {ak.sum(event_filter)}")
+            print(f"copperhead2 EventProcessor b4 selection ak.sum((nmuons == 2)): \n {ak.sum((nmuons == 2))}")
+            print(f"copperhead2 EventProcessor b4 selection ak.sum(lumi_mask): \n {ak.sum(lumi_mask)}")
+            print(f"copperhead2 EventProcessor b4 selection ak.sum((evnt_qual_flg_selection > 0)): \n {ak.sum((evnt_qual_flg_selection > 0))}")
+            print(f"copperhead2 EventProcessor b4 selection ak.sum((mm_charge == -1): \n {ak.sum((mm_charge == -1))}")
+            print(f"copperhead2 EventProcessor b4 selection ak.sum(electron_veto: \n {ak.sum(electron_veto)}")
+            print(f"copperhead2 EventProcessor b4 selection ak.sum(good_pv: \n {ak.sum((events.PV.npvsGood > 0))}")
 
         # if self.test:
         #     # save electrons in for plotting
@@ -283,7 +291,9 @@ class EventProcessor(processor.ProcessorABC):
 
         )
         
-
+        if self.test:
+            # print(f"copperhead2 EventProcessor b4 leading pt cut event_filter long: \n {pd.DataFrame(ak.to_numpy(event_filter)).to_string()}")
+            print(f"copperhead2 EventProcessor b4 leading pt cut event_filter sum:  {ak.sum(event_filter)}")
         # --------------------------------------------------------#
         # Select events with muons passing leading pT cut
         # --------------------------------------------------------#
@@ -303,10 +313,10 @@ class EventProcessor(processor.ProcessorABC):
         events = events[event_filter==True]
 
         if self.test:
-            print(f"copperhead2 EventProcessor b4 leading pt cut event_filter long: \n {pd.DataFrame(ak.to_numpy(event_filter)).to_string()}")
+            
             print(f"copperhead2 EventProcessor pass_leading_pt: \n {pass_leading_pt}")
-            print(f"copperhead2 EventProcessor after leading pt cut event_filter long: \n {ak.to_dataframe(event_filter)}")
-            print(f"copperhead2 EventProcessor ak.sum(event_filter): \n {ak.sum(event_filter)}")
+            print(f"copperhead2 EventProcessor after leading pt cut event_filter long: \n {ak.to_dataframe(event_filter).to_string()}")
+            print(f"copperhead2 EventProcessor after leading pt cut ak.sum(event_filter): \n {ak.sum(event_filter)}")
             print(f"copperhead2 EventProcessor events.Muon: \n {ak.num(events.Muon, axis=1)}")
         
         # --------------------------------------------------------#
