@@ -7,6 +7,7 @@ from corrections.rochester import apply_roccor
 from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
 import json
+from corrections.jet import get_jec_factories
 import pandas as pd # just for debugging
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
@@ -45,7 +46,7 @@ class EventProcessor(processor.ProcessorABC):
         }
         self.config.update(dict_update)
         # print(f"copperhead proccesor self.config after update: \n {self.config}")
-        self.test = False
+        self.test = True# False
 
         # --- Evaluator
         extractor_instance = extractor()
@@ -61,6 +62,9 @@ class EventProcessor(processor.ProcessorABC):
             extractor_instance.add_weight_sets([f"{label} {label} {file_path}"])
         extractor_instance.finalize()
         self.evaluator = extractor_instance.make_evaluator()
+
+        # # prepare lookup tables for all kinds of corrections
+        # self.prepare_lookups()
 
     def process(self, events: coffea_nanoevent):
         """
@@ -251,16 +255,16 @@ class EventProcessor(processor.ProcessorABC):
             # print(f'processor electron_selection long: \n {ak.to_numpy(ak.flatten(electron_selection))}')
             print(f"copperhead2 EventProcessor electron_veto long: \n {pd.DataFrame(ak.to_numpy(electron_veto)).to_string()}")
 
-        if self.test:
-            # save electrons in for plotting
-            electrons = events.Electron[electron_selection]
-            placeholder =  pd.DataFrame({
-                'el_pt': ak.to_numpy(ak.flatten(electrons.pt)),
-                'el_eta': ak.to_numpy(ak.flatten(electrons.eta)),
-                'el_phi': ak.to_numpy(ak.flatten(electrons.phi)),
-                'el_charge': ak.to_numpy(ak.flatten(electrons.charge)),
-            })
-            placeholder.to_csv("./V2electrons.csv")
+        # if self.test:
+        #     # save electrons in for plotting
+        #     electrons = events.Electron[electron_selection]
+        #     placeholder =  pd.DataFrame({
+        #         'el_pt': ak.to_numpy(ak.flatten(electrons.pt)),
+        #         'el_eta': ak.to_numpy(ak.flatten(electrons.eta)),
+        #         'el_phi': ak.to_numpy(ak.flatten(electrons.phi)),
+        #         'el_charge': ak.to_numpy(ak.flatten(electrons.charge)),
+        #     })
+        #     placeholder.to_csv("./V2electrons.csv")
         
         
         event_filter = (
@@ -312,9 +316,9 @@ class EventProcessor(processor.ProcessorABC):
         # fill_muons(self, output, mu1, mu2, is_mc)
         mu1 = events.Muon[:,0]
         mu2 = events.Muon[:,1]
-        delta_r = mu1.delta_r(mu2)
-        delta_eta = abs(mu1.eta -mu2.eta)
-        delta_phi = abs(mu1.delta_phi(mu2))
+        dimuon_dR = mu1.delta_r(mu2)
+        dimuon_dEta = abs(mu1.eta -mu2.eta)
+        dimuon_dPhi = abs(mu1.delta_phi(mu2))
         dimuon = mu1+mu2
         # fill in pd Dataframe as placeholder. Should be fine since we don't need jagged arrays
         dimuon_mass_resolution = self.mass_resolution(events)
@@ -355,52 +359,150 @@ class EventProcessor(processor.ProcessorABC):
                 print(f"fill_gen_jets gjj_dR: \n {gjj_dR}")
 
         self.prepare_jets(events)
-        
 
         if self.test:
             print(f"copperhead2 EventProcessor events.Jet.rho: \n {events.Jet.rho}")
-            print(f"copperhead2 EventProcessor events.Jet.rho long: \n {ak.to_numpy(ak.flatten(events.Jet.rho))}")
-            placeholder =  pd.DataFrame({
-                'mu1_pt': ak.to_numpy((mu1.pt)),
-                'mu2_pt': ak.to_numpy(mu2.pt),
-                'mu1_eta': ak.to_numpy(mu1.eta),
-                'mu2_eta': ak.to_numpy(mu2.eta),
-                'mu1_phi': ak.to_numpy(mu1.phi),
-                'mu2_phi': ak.to_numpy(mu2.phi),
-                'mu1_iso': ak.to_numpy(mu1.pfRelIso04_all),
-                'mu2_iso': ak.to_numpy(mu2.pfRelIso04_all),
-                'mu1_pt_over_mass': ak.to_numpy(mu1.pt/dimuon.mass),
-                'mu2_pt_over_mass': ak.to_numpy(mu2.pt/dimuon.mass),
-                "dimuon_mass": ak.to_numpy(dimuon.mass),
-                "dimuon_ebe_mass_res": ak.to_numpy(dimuon_mass_resolution),
-                "dimuon_ebe_mass_res_rel": ak.to_numpy(rel_dimuon_ebe_mass_res),
-                "dimuon_pt": ak.to_numpy(dimuon.pt),
-                "dimuon_pt_log": ak.to_numpy(np.log(dimuon.pt)), # np functions are compatible with ak if input is ak array 
-                "dimuon_eta": ak.to_numpy(dimuon.eta),
-                "dimuon_phi": ak.to_numpy(dimuon.phi),
-                "dimuon_dEta": ak.to_numpy(delta_eta),
-                "dimuon_dPhi": ak.to_numpy(delta_phi),
-                "dimuon_dR": ak.to_numpy(delta_r),
-                "dimuon_cos_theta_cs": ak.to_numpy(dimuon_cos_theta_cs), 
-                "dimuon_phi_cs": ak.to_numpy(dimuon_phi_cs), 
-                "gjj_mass":  ak.to_numpy(gjj.mass),
-                "gjet1_mass":  ak.to_numpy(gjet1.mass),
-                "gjet1_pt":  ak.to_numpy(gjet1.pt),
-                "gjet1_eta":  ak.to_numpy(gjet1.eta),
-                "gjet1_phi":  ak.to_numpy(gjet1.phi),
-                "gjet2_mass":  ak.to_numpy(gjet2.mass),
-                "gjet2_pt":  ak.to_numpy(gjet2.pt),
-                "gjet2_eta":  ak.to_numpy(gjet2.eta),
-                "gjet2_phi":  ak.to_numpy(gjet2.phi),
-                "gjj_dEta": ak.to_numpy(gjj_dEta),
-                "gjj_dPhi": ak.to_numpy(gjj_dPhi),
-                "gjj_dR": ak.to_numpy(gjj_dR),
-                
-            })
-            # print(f"copperhead2 EventProcessor after leading pt cut placeholder: \n {placeholder.to_string()}")
-            placeholder.to_csv("./V2placeholder.csv")
+            print(f"copperhead2 EventProcessor events.Jet.rho long: \n {ak.to_numpy(ak.flatten(events.Jet.rho))}")    
         
-        return events
+        jets = events.Jet
+        self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
+            self.config["jec_parameters"], 
+            # self.config["year"]
+        )
+        
+        do_jec = False
+
+        # We only need to reapply JEC for 2018 data
+        # (unless new versions of JEC are released)
+        is_data = not events.metadata["is_mc"]
+        if is_data and ("2018" in self.config["year"]):
+            do_jec = True
+
+        # jec_pars = {k: v[self.config["year"]] for k, v in self.config["jec_parameters"].items()}
+        # jec_pars = self.config["jec_parameters"]
+        
+        # do_jecunc = False
+        # do_jerunc = False
+        # pt_variations = (
+        #     ["nominal"]
+        #     + jec_pars["jec_variations"]
+        #     + jec_pars["jer_variations"]
+        # )
+        # for ptvar in self.pt_variations:
+        #     if ptvar in jec_pars["jec_variations"]:
+        #         do_jecunc = True
+        #     if ptvar in jec_pars["jer_variations"]:
+        #         do_jerunc = True
+        do_jecunc = self.config["do_jecunc"]
+        do_jerunc = self.config["do_jerunc"]
+        
+        
+        # apply General jet energy correction (JEC)
+        # jets = apply_jec(
+        #     events,
+        #     jets,
+        #     dataset,
+        #     is_mc,
+        #     self.year,
+        #     self.do_jec,
+        #     self.do_jecunc,
+        #     self.do_jerunc,
+        #     self.jec_factories,
+        #     self.jec_factories_data,
+        # )
+        if do_jec:
+            if events.metadata["is_mc"]:
+                factory = self.jec_factories["jec"]
+            else:
+                for run in jec_parameters["runs"][year]:
+                    if run in dataset:
+                        factory = self.jec_factories_data[run]
+            jets = factory.build(jets)
+        # TODO: only consider nuisances that are defined in run parameters
+        # Compute JEC uncertainties
+        if events.metadata["is_mc"] and do_jecunc:
+            jets = self.jec_factories["junc"].build(jets)
+    
+        # Compute JER uncertainties
+        if events.metadata["is_mc"] and do_jerunc:
+            jets = self.jec_factories["jer"].build(jets)
+    
+        # TODO: JER nuisances
+
+        if self.test:
+            print(f'copperheadV2 EventProcessor jets.pt long: \n {ak.to_numpy(ak.flatten(jets.pt))}')
+        print(f'copperheadV2 EventProcessor jets.eta long: \n {ak.to_numpy(ak.flatten(jets.eta))}')
+        print(f'copperheadV2 EventProcessor jets.phi long: \n {ak.to_numpy(ak.flatten(jets.phi))}')
+            # placeholder =  pd.DataFrame({
+            #     'mu1_pt': ak.to_numpy((mu1.pt)),
+            #     'mu2_pt': ak.to_numpy(mu2.pt),
+            #     'mu1_eta': ak.to_numpy(mu1.eta),
+            #     'mu2_eta': ak.to_numpy(mu2.eta),
+            #     'mu1_phi': ak.to_numpy(mu1.phi),
+            #     'mu2_phi': ak.to_numpy(mu2.phi),
+            #     'mu1_iso': ak.to_numpy(mu1.pfRelIso04_all),
+            #     'mu2_iso': ak.to_numpy(mu2.pfRelIso04_all),
+            #     'mu1_pt_over_mass': ak.to_numpy(mu1.pt/dimuon.mass),
+            #     'mu2_pt_over_mass': ak.to_numpy(mu2.pt/dimuon.mass),
+            #     "dimuon_mass": ak.to_numpy(dimuon.mass),
+            #     "dimuon_ebe_mass_res": ak.to_numpy(dimuon_mass_resolution),
+            #     "dimuon_ebe_mass_res_rel": ak.to_numpy(rel_dimuon_ebe_mass_res),
+            #     "dimuon_pt": ak.to_numpy(dimuon.pt),
+            #     "dimuon_pt_log": ak.to_numpy(np.log(dimuon.pt)), # np functions are compatible with ak if input is ak array 
+            #     "dimuon_eta": ak.to_numpy(dimuon.eta),
+            #     "dimuon_phi": ak.to_numpy(dimuon.phi),
+            #     "dimuon_dEta": ak.to_numpy(dimuon_dEta),
+            #     "dimuon_dPhi": ak.to_numpy(dimuon_dPhi),
+            #     "dimuon_dR": ak.to_numpy(dimuon_dR),
+            #     "dimuon_cos_theta_cs": ak.to_numpy(dimuon_cos_theta_cs), 
+            #     "dimuon_phi_cs": ak.to_numpy(dimuon_phi_cs), 
+            #     "gjj_mass":  ak.to_numpy(gjj.mass),
+            #     "gjet1_mass":  ak.to_numpy(gjet1.mass),
+            #     "gjet1_pt":  ak.to_numpy(gjet1.pt),
+            #     "gjet1_eta":  ak.to_numpy(gjet1.eta),
+            #     "gjet1_phi":  ak.to_numpy(gjet1.phi),
+            #     "gjet2_mass":  ak.to_numpy(gjet2.mass),
+            #     "gjet2_pt":  ak.to_numpy(gjet2.pt),
+            #     "gjet2_eta":  ak.to_numpy(gjet2.eta),
+            #     "gjet2_phi":  ak.to_numpy(gjet2.phi),
+            #     "gjj_dEta": ak.to_numpy(gjj_dEta),
+            #     "gjj_dPhi": ak.to_numpy(gjj_dPhi),
+            #     "gjj_dR": ak.to_numpy(gjj_dR),
+                
+            # })
+            # # print(f"copperhead2 EventProcessor after leading pt cut placeholder: \n {placeholder.to_string()}")
+            # placeholder.to_csv("./V2placeholder.csv")
+        
+        out_dict = {
+            "mu_pt" : events.Muon.pt,
+            "mu_eta" : events.Muon.eta,
+            "mu_phi" : events.Muon.phi,
+            "mu_iso" : events.Muon.pfRelIso04_all,
+            "dimuon_mass": dimuon.mass,
+            "dimuon_pt" : dimuon.pt,
+            "dimuon_eta" : dimuon.eta,
+            "dimuon_phi" : dimuon.phi,
+            "dimuon_dEta" : dimuon_dEta,
+            "dimuon_dPhi" : dimuon_dPhi,
+            "dimuon_dR" : dimuon_dR,
+            "dimuon_ebe_mass_res": dimuon_mass_resolution,
+            "dimuon_ebe_mass_res_rel": rel_dimuon_ebe_mass_res,
+            "mu_pt_over_mass" : events.Muon.pt / dimuon.mass,
+            "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
+            "dimuon_phi_cs" : dimuon_phi_cs,
+            "gjet_pt" : padded_iso_gjet.pt,
+            "gjet_eta" : padded_iso_gjet.eta,
+            "gjet_phi" : padded_iso_gjet.phi,
+            "gjet_mass" : padded_iso_gjet.mass,
+            "gjj_mass": gjj.mass,
+            "gjj_pt" : gjj.pt,
+            "gjj_eta" : gjj.eta,
+            "gjj_phi" : gjj.phi,
+            "gjj_dEta" : gjj_dEta,
+            "gjj_dPhi" : gjj_dPhi,
+            "gjj_dR" : gjj_dR,
+        }
+        return out_dict
         
     def postprocess(self, accumulator):
         """
@@ -445,6 +547,62 @@ class EventProcessor(processor.ProcessorABC):
             events["Jet", "has_matched_gen"] = events.Jet.genJetIdx > 0
         else:
             events["Jet", "has_matched_gen"] = False
+
+        return
+
+
+    # def prepare_lookups(self):
+        # JEC, JER and uncertainties
+        # self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
+        #     self.config["jec_parameters"], 
+        #     self.year
+        # )
+
+        # # Muon scale factors
+        # self.musf_lookup = musf_lookup(self.parameters)
+        # # Pile-up reweighting
+        # #self.pu_lookups = pu_lookups(self.parameters)
+        # # Btag weights
+        # #self.btag_csv = BTagScaleFactor(
+        #     #self.parameters["btag_sf_csv"],
+        #     #BTagScaleFactor.RESHAPE,
+        #     #"iterativefit,iterativefit,iterativefit",
+        # #)
+        # self.btag_json =  correctionlib.CorrectionSet.from_file(self.parameters["btag_sf_json"],)
+
+        # # STXS VBF cross-section uncertainty
+        # self.stxs_acc_lookups, self.powheg_xsec_lookup = stxs_lookups()
+
+        # # --- Evaluator
+        # self.extractor = extractor()
+
+        # # Z-pT reweigting (disabled)
+        # zpt_filename = self.parameters["zpt_weights_file"]
+        # self.extractor.add_weight_sets([f"* * {zpt_filename}"])
+        # if "2016" in self.year:
+        #     self.zpt_path = "zpt_weights/2016_value"
+        # else:
+        #     self.zpt_path = "zpt_weights/2017_value"
+        # # PU ID weights
+        # puid_filename = self.parameters["puid_sf_file"]
+        # self.extractor.add_weight_sets([f"* * {puid_filename}"])
+        # # Calibration of event-by-event mass resolution
+        # for mode in ["Data", "MC"]:
+        #     if "2016" in self.year:
+        #         yearstr = "2016"
+        #     else:
+        #         yearstr=self.year #Work around before there are seperate new files for pre and postVFP
+        #     label = f"res_calib_{mode}_{yearstr}"
+        #     path = self.parameters["res_calib_path"]
+        #     file_path = f"{path}/{label}.root"
+        #     self.extractor.add_weight_sets([f"{label} {label} {file_path}"])
+        # # Mass resolution - Pisa implementation
+        # self.extractor.add_weight_sets(["* * data/mass_res_pisa/muonresolution.root"])
+        # self.extractor.finalize()
+        # self.evaluator = self.extractor.make_evaluator()
+        # print(f"processor self.evaluator: {self.evaluator}")
+
+        # self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]
 
         return
     
