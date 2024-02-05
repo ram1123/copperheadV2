@@ -8,6 +8,7 @@ from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
 import json
 from corrections.jet import get_jec_factories
+from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
@@ -160,6 +161,10 @@ class EventProcessor(processor.ProcessorABC):
 
         if events.metadata["is_mc"]:
             lumi_mask = ak.ones_like(event_filter)
+        else:
+            lumi_info = LumiMask(self.config["lumimask"])
+            lumi_mask = lumi_info(events.run, events.luminosityBlock)
+            print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
         # ------------------------------------------------------------#
         # Apply lumimask, genweights, PU weights
@@ -362,7 +367,10 @@ class EventProcessor(processor.ProcessorABC):
 
         if self.test:
             print(f"copperhead2 EventProcessor events.Jet.rho: \n {events.Jet.rho}")
-            print(f"copperhead2 EventProcessor events.Jet.rho long: \n {ak.to_numpy(ak.flatten(events.Jet.rho))}")    
+            print(f"copperhead2 EventProcessor events.Jet.rho long: \n {ak.to_numpy(ak.flatten(events.Jet.rho))}")   
+            print(f'copperheadV2 EventProcessor jets.pt b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.pt))}')
+        print(f'copperheadV2 EventProcessor jets.eta b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.eta))}')
+        print(f'copperheadV2 EventProcessor jets.phi b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.phi))}')
         
         jets = events.Jet
         self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
@@ -414,9 +422,10 @@ class EventProcessor(processor.ProcessorABC):
             if events.metadata["is_mc"]:
                 factory = self.jec_factories["jec"]
             else:
-                for run in jec_parameters["runs"][year]:
-                    if run in dataset:
+                for run in self.config["jec_parameters"]["runs"]:
+                    if run in events.metadata["dataset"]:
                         factory = self.jec_factories_data[run]
+            print("jets build")
             jets = factory.build(jets)
         # TODO: only consider nuisances that are defined in run parameters
         # Compute JEC uncertainties
@@ -430,9 +439,10 @@ class EventProcessor(processor.ProcessorABC):
         # TODO: JER nuisances
 
         if self.test:
-            print(f'copperheadV2 EventProcessor jets.pt long: \n {ak.to_numpy(ak.flatten(jets.pt))}')
-        print(f'copperheadV2 EventProcessor jets.eta long: \n {ak.to_numpy(ak.flatten(jets.eta))}')
-        print(f'copperheadV2 EventProcessor jets.phi long: \n {ak.to_numpy(ak.flatten(jets.phi))}')
+            print(f'copperheadV2 EventProcessor after apply_jec jets.pt short: \n {jets.pt}')
+            print(f'copperheadV2 EventProcessor after apply_jec jets.pt long: \n {ak.to_numpy(ak.flatten(jets.pt.compute()))}')
+        print(f'copperheadV2 EventProcessor after apply_jec jets.eta long: \n {ak.to_numpy(ak.flatten(jets.eta.compute()))}')
+        print(f'copperheadV2 EventProcessor after apply_jec jets.phi long: \n {ak.to_numpy(ak.flatten(jets.phi.compute()))}')
             # placeholder =  pd.DataFrame({
             #     'mu1_pt': ak.to_numpy((mu1.pt)),
             #     'mu2_pt': ak.to_numpy(mu2.pt),
@@ -604,5 +614,271 @@ class EventProcessor(processor.ProcessorABC):
 
         # self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]
 
-        return
+        # return
+
+    # def jet_loop(
+    #     self,
+    #     variation,
+    #     is_mc,
+    #     df,
+    #     dataset,
+    #     mask,
+    #     muons,
+    #     mu1,
+    #     mu2,
+    #     jets,
+    #     weights,
+    #     numevents,
+    #     output,
+    # ):
+    #     # weights = copy.deepcopy(weights)
+
+    #     if not is_mc and variation != "nominal":
+    #         return
+
+    #     variables = pd.DataFrame(index=output.index)
+    #     # print(f"variables: {variables}")
+        
+    #     jet_columns = [
+    #         "pt",
+    #         "eta",
+    #         "phi",
+    #         "jetId",
+    #         "qgl",
+    #         "puId",
+    #         "mass",
+    #         "btagDeepB",
+    #         "has_matched_gen",
+    #     ]
+    #     if "puId17" in df.Jet.fields:
+    #         jet_columns += ["puId17"]
+    #     if is_mc:
+    #         jet_columns += ["partonFlavour", "hadronFlavour"]
+    #     if variation == "nominal":
+    #         if self.do_jec:
+    #             jet_columns += ["pt_jec", "mass_jec"]
+    #         if is_mc and self.do_jerunc:
+    #             jet_columns += ["pt_orig", "mass_orig"]
+
+    #     # Find jets that have selected muons within dR<0.4 from them
+    #     # print(f"jets.matched_muons: {jets.matched_muons}")
+    #     # print(f"type(jets.matched_muons): {type(jets.matched_muons)}")
+    #     # print(f"type(jets.matched_muons.pt_fsr): {type(jets.matched_muons.pt_fsr)}")
+    #     # print(f"(jets.matched_muons.pt_fsr): {(jets.matched_muons.pt_fsr)}")
+    #     # print(f"ak.to_pandas(jets.matched_muons.pt_fsr): {ak.to_pandas(jets.matched_muons.pt_fsr)}")
+    #     matched_mu_pt = jets.matched_muons.pt_fsr
+    #     matched_mu_iso = jets.matched_muons.pfRelIso04_all
+    #     matched_mu_id = jets.matched_muons[self.parameters["muon_id"]]
+    #     matched_mu_pass = (
+    #         (matched_mu_pt > self.parameters["muon_pt_cut"])
+    #         & (matched_mu_iso < self.parameters["muon_iso_cut"])
+    #         & matched_mu_id
+    #     )
+    #     # print(f"matched_mu_pass: {matched_mu_pass}")
+    #     # print(f"type(matched_mu_pass): {type(matched_mu_pass)}")
+    #     # print(f"ak.to_pandas(matched_mu_pass): {ak.to_pandas(matched_mu_pass)}")
+    #     clean = ~(
+    #         ak.to_pandas(matched_mu_pass)
+    #         .astype(float)
+    #         .fillna(0.0)
+    #         .groupby(level=[0, 1])
+    #         .sum()
+    #         .astype(bool)
+    #     )
+    #     # print(f"~clean: {~clean}")
+    #     # Select particular JEC variation
+    #     if "_up" in variation:
+    #         unc_name = "JES_" + variation.replace("_up", "")
+    #         if unc_name not in jets.fields:
+    #             return
+    #         jets = jets[unc_name]["up"][jet_columns]
+    #     elif "_down" in variation:
+    #         unc_name = "JES_" + variation.replace("_down", "")
+    #         if unc_name not in jets.fields:
+    #             return
+    #         jets = jets[unc_name]["down"][jet_columns]
+    #     else:
+    #         jets = jets[jet_columns]
+
+    #     # --- conversion from awkward to pandas --- #
+    #     jets = ak.to_pandas(jets)
+    #     # print(f"jets ak to pandas: \n {jets.head()}")
+    #     # print(f"jets.index.nlevels : \n {jets.index.nlevels }")
+        
+
+    #     if jets.index.nlevels == 3:
+    #         # sometimes there are duplicates?
+    #         jets = jets.loc[pd.IndexSlice[:, :, 0], :]
+    #         jets.index = jets.index.droplevel("subsubentry")
+
+    #     if variation == "nominal":
+    #         # Update pt and mass if JEC was applied
+    #         if self.do_jec:
+    #             jets["pt"] = jets["pt_jec"]
+    #             jets["mass"] = jets["mass_jec"]
+
+    #         # We use JER corrections only for systematics, so we shouldn't
+    #         # update the kinematics. Use original values,
+    #         # unless JEC were applied.
+    #         if is_mc and self.do_jerunc and not self.do_jec:
+    #             jets["pt"] = jets["pt_orig"]
+    #             jets["mass"] = jets["mass_orig"]
+
+    #     # ------------------------------------------------------------#
+    #     # Apply jetID and PUID
+    #     # ------------------------------------------------------------#
+
+    #     pass_jet_id = jet_id(jets, self.parameters, self.year)
+    #     pass_jet_puid = jet_puid(jets, self.parameters, self.year)
+
+    #     # Jet PUID scale factors
+    #     # if is_mc and False:  # disable for now
+    #     #     puid_weight = puid_weights(
+    #     #         self.evaluator, self.year, jets, pt_name,
+    #     #         jet_puid_opt, jet_puid, numevents
+    #     #     )
+    #     #     weights.add_weight('puid_wgt', puid_weight)
+
+    #     # ------------------------------------------------------------#
+    #     # Select jets
+    #     # ------------------------------------------------------------#
+    #     jets["clean"] = clean
+
+    #     jet_selection = (
+    #         pass_jet_id
+    #         & pass_jet_puid
+    #         & (jets.qgl > -2)
+    #         & jets.clean
+    #         & (jets.pt > self.parameters["jet_pt_cut"])
+    #         & (abs(jets.eta) < self.parameters["jet_eta_cut"])
+    #     )
+
+    #     jets = jets[jet_selection]
+
+    #     # ------------------------------------------------------------#
+    #     # Fill jet-related variables
+    #     # ------------------------------------------------------------#
+
+    #     njets = jets.reset_index().groupby("entry")["subentry"].nunique()
+    #     variables["njets"] = njets
+
+    #     # one_jet = (njets > 0)
+    #     two_jets = njets > 1
+
+    #     # Sort jets by pT and reset their numbering in an event
+    #     jets = jets.sort_values(["entry", "pt"], ascending=[True, False])
+    #     jets.index = pd.MultiIndex.from_arrays(
+    #         [jets.index.get_level_values(0), jets.groupby(level=0).cumcount()],
+    #         names=["entry", "subentry"],
+    #     )
+
+    #     # Select two jets with highest pT
+    #     try:
+    #         jet1 = jets.loc[pd.IndexSlice[:, 0], :]
+    #         jet2 = jets.loc[pd.IndexSlice[:, 1], :]
+    #         # print(f"jet1 b4 droplevel: \n {jet1}")
+    #         jet1.index = jet1.index.droplevel("subentry")
+    #         jet2.index = jet2.index.droplevel("subentry")
+    #         # print(f"jet1 after droplevel: \n {jet1}")
+    #     except Exception:
+    #         return
+
+    #     fill_jets(output, variables, jet1, jet2)
+
+    #     # ------------------------------------------------------------#
+    #     # Fill soft activity jet variables
+    #     # ------------------------------------------------------------#
+
+    #     # Effect of changes in jet acceptance should be negligible,
+    #     # no need to calcluate this for each jet pT variation
+    #     if variation == "nominal":
+    #         fill_softjets(df, output, variables, 2)
+    #         fill_softjets(df, output, variables, 5)
+
+    #     # ------------------------------------------------------------#
+    #     # Apply remaining cuts
+    #     # ------------------------------------------------------------#
+
+    #     # Cut has to be defined here because we will use it in
+    #     # b-tag weights calculation
+    #     vbf_cut = (variables.jj_mass > 400) & (variables.jj_dEta > 2.5) & (jet1.pt > 35)
+
+    #     # ------------------------------------------------------------#
+    #     # Calculate QGL weights, btag SF and apply btag veto
+    #     # ------------------------------------------------------------#
+
+    #     if is_mc and variation == "nominal":
+    #         # --- QGL weights --- #
+    #         isHerwig = "herwig" in dataset
+
+    #         qgl_wgts = qgl_weights(jet1, jet2, isHerwig, output, variables, njets)
+    #         weights.add_weight("qgl_wgt", qgl_wgts, how="all")
+    #         # print(f"type(qgl_wgts) : \n {type(qgl_wgts)}")
+    #         # print(f"qgl_wgts : \n {qgl_wgts}")
+
+    #         # --- Btag weights --- #
+    #         bjet_sel_mask = output.event_selection #& two_jets & vbf_cut
+
+    #         btag_wgt, btag_syst = btag_weights_json(
+    #             self, self.btag_systs, jets, weights, bjet_sel_mask, self.btag_json
+    #         )
+    #         weights.add_weight("btag_wgt", btag_wgt)
+
+    #         # --- Btag weights variations --- #
+    #         for name, bs in btag_syst.items():
+    #             weights.add_weight(f"btag_wgt_{name}", bs, how="only_vars")
+
+    #     # Separate from ttH and VH phase space
+        
+    #     # print(f'self.parameters["btag_medium_wp"] : {self.parameters["btag_medium_wp"]}')
+    #     # print(f'jets  \n: {jets}')
+    #     # print(f'jets.btagDeepB  \n: {jets.btagDeepB}')
+    #     # test = jets[
+    #     #         (jets.btagDeepB > self.parameters["btag_loose_wp"])
+    #     #         & (abs(jets.eta) < 2.5)
+    #     #     ]
+    #     # print(f'jets btag_loose_wp test \n: {test.btagDeepB[:50]}')
+    #     # test = test.reset_index().groupby("entry")["subentry"]
+    #     # print(f'nBtagLoose test nunique \n: {test.nunique()[:50]}')
+    #     # print(f'nBtagLoose test sum \n: {test.sum()[:50]}')
+        
+    #     variables["nBtagLoose"] = (
+    #         jets[
+    #             (jets.btagDeepB > self.parameters["btag_loose_wp"])
+    #             & (abs(jets.eta) < 2.5)
+    #         ]
+    #         .reset_index()
+    #         .groupby("entry")["subentry"]
+    #         .nunique()
+    #     )
+    #     # print(f'variables["nBtagLoose"] : {variables["nBtagLoose"] }')
+        
+    #     variables["nBtagMedium"] = (
+    #         jets[
+    #             (jets.btagDeepB > self.parameters["btag_medium_wp"])
+    #             & (abs(jets.eta) < 2.5)
+    #         ]
+    #         .reset_index()
+    #         .groupby("entry")["subentry"]
+    #         .nunique()
+    #     )
+    #     variables.nBtagLoose = variables.nBtagLoose.fillna(0.0)
+    #     variables.nBtagMedium = variables.nBtagMedium.fillna(0.0)
+
+    #     # --------------------------------------------------------------#
+    #     # Fill outputs
+    #     # --------------------------------------------------------------#
+
+    #     variables.update({"wgt_nominal": weights.get_weight("nominal")})
+
+    #     # All variables are affected by jet pT because of jet selections:
+    #     # a jet may or may not be selected depending on pT variation.
+
+    #     for key, val in variables.items():
+    #         output.loc[:, pd.IndexSlice[key, variation]] = val
+
+    #     print("done jet loop")
+    #     # print(f'output : \n {output.head()}')
+    #     # print(f'output["dimuon_mass"] : \n {output["dimuon_mass"].head()}')
+    #     return output
     
