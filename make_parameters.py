@@ -6,6 +6,13 @@ def for_all_years(value):
     out = {k: value for k in ["2016preVFP","2016postVFP", "2017", "2018"]}
     return out
 
+def get_variations(sources):
+    result = []
+    for v in sources:
+        result.append(v + "_up")
+        result.append(v + "_down")
+    return result
+
 
 parameters = {}
 
@@ -240,6 +247,197 @@ parameters["n_pdf_variations"] = {"2016preVFP": 100, "2016postVFP": 100, "2017":
 parameters["dnn_max"] = {"2016preVFP": 1.75, "2016postVFP": 1.75, "2017": 2.0, "2018": 2.35}
 
 
+cross_sections = {
+    "test": 6200.0,
+    "dy_M-50": 6195.8, #UL, fromXSDB (averaged)
+    "dy_M-50_nocut": 6450.0,
+    "dy_M-100To200": 254.2,  #UL, fromXSDB
+    "dy_0j": 4620.52,
+    "dy_1j": 922.5,  #UL, fromXSDB
+    "dy_2j": 293.6,  #UL, fromXSDB
+    "dy_m105_160_mg": 47.17,
+    "dy_m105_160_vbf_mg": {"2016": 1.77, "2017": 2.04, "2018": 2.03},
+    "dy_m105_160_amc": 47.17,
+    "dy_m105_160_vbf_amc": {"2016": 1.77, "2017": 2.04, "2018": 2.03},
+    "ewk_lljj_mll105_160": {"2016": 0.0508896, "2017": 0.0508896, "2018": 0.0508896},
+    "ewk_lljj_mll105_160_py": {"2016": 0.0508896, "2017": 0.0508896, "2018": 0.0508896},
+    "ewk_lljj_mll105_160_ptj0": {"2016": 0.07486, "2017": 0.0789, "2018": 0.0789},
+    "ewk_lljj_mll50_mjj120":1.719,
+    "ewk_lljj_mll105_160_py_dipole": {"2016": 0.07486, "2017": 0.0789, "2018": 0.0789},
+    "ewk_m50": 3.998,
+    "st_top": 136.02,
+    "st_t_top": 3.40,
+    "st_t_antitop": 80.95,
+    "st_tw_top": 32.51, #UL, fromXSDB
+    "st_tw_antitop": 32.45, #UL, fromXSDB
+    "ttjets_dl": 86.65,
+    "ttjets_sl": 358.57,
+    "ww_2l2nu": 11.09, #UL, fromXSDB
+    "wz_3lnu": 5.22, #UL, fromXSDB (averaged)
+    "wz_2l2q": 6.45, #UL, fromXSDB (averaged)
+    "wz_1l1nu2q": 9.12, #UL, fromXSDB
+    "zz": 12.17, #UL, fromXSDB
+    "ttw": 0.2001,
+    "ttz": 0.2529,
+    "www": 0.2086,
+    "wwz": 0.1651,
+    "wzz": 0.05565,
+    "zzz": 0.01398,
+    "ggh_powheg": 0.01057,
+    "ggh_powhegPS": 0.01057,
+    "ggh_amcPS": 0.01057,
+    "ggh_amcPS_TuneCP5down": 0.01057,
+    "ggh_amcPS_TuneCP5up": 0.01057,
+    "ggh_amc": 0.01057,
+    "ggh_localTest": 0.01057,
+    "vbf": 0.0008210722,
+    "vbf_sync": 0.0008210722,
+    "vbf_powheg": 0.0008210722,
+    "vbf_powheg_herwig": 0.0008210722,
+    "vbf_powheg_dipole": 0.0008210722,
+    "vbf_powheg": 0.0008210722,
+    "vbf_powhegPS": 0.0008210722,
+    "vbf_amc_herwig": 0.0008210722,
+    "vbf_amcPS_TuneCP5down": 0.0008210722,
+    "vbf_amcPS_TuneCP5up": 0.0008210722,
+    "vbf_amcPS": 0.0008210722,
+    "vbf_amc": 0.0008210722,
+    "ggh_powhegPS_m120": 0.012652906,
+    "ggh_amcPS_m120": 0.012652906,
+    "vbf_powhegPS_m120": 0.0009534505,
+    "vbf_amcPS_m120": 0.0009534505,
+    "ggh_powhegPS_m130": 0.008504687,
+    "ggh_amcPS_m130": 0.008504687,
+    "vbf_powhegPS_m130": 0.0006826649,
+    "vbf_amcPS_m130": 0.0006826649,
+    "wmh": 0.000116,
+    "wph": 0.000183,
+    "zh": 0.000192,
+    "tth": 0.000110,
+}
+
+parameters["cross_sections"] = cross_sections
+
+
+jec_parameters = {}
+
+jec_unc_to_consider = {
+    "2016preVFP": [
+        "Absolute",
+        "Absolute2016",
+        "BBEC1",
+        "BBEC12016",
+        "EC2",
+        "EC22016",
+        "HF",
+        "HF2016",
+        "RelativeBal",
+        "RelativeSample2016",
+        "FlavorQCD",
+    ],
+    "2016postVFP": [
+        "Absolute",
+        "Absolute2016",
+        "BBEC1",
+        "BBEC12016",
+        "EC2",
+        "EC22016",
+        "HF",
+        "HF2016",
+        "RelativeBal",
+        "RelativeSample2016",
+        "FlavorQCD",
+    ],
+    "2017": [
+        "Absolute",
+        "Absolute2017",
+        "BBEC1",
+        "BBEC12017",
+        "EC2",
+        "EC22017",
+        "HF",
+        "HF2017",
+        "RelativeBal",
+        "RelativeSample2017",
+        "FlavorQCD",
+    ],
+    "2018": [
+        "Absolute",
+        "Absolute2018",
+        "BBEC1",
+        "BBEC12018",
+        "EC2",
+        "EC22018",
+        "HF",
+        "HF2018",
+        "RelativeBal",
+        "RelativeSample2018",
+        "FlavorQCD",
+    ],
+}
+
+jec_parameters["jec_variations"] = {
+    year: get_variations(jec_unc_to_consider[year]) for year in ["2016preVFP","2016postVFP", "2017", "2018"]
+}
+
+jec_parameters["runs"] = {
+    "2016preVFP": ["B", "C", "D", "E", "F"],
+    "2016postVFP": ["F", "G", "H"],
+    "2017": ["B", "C", "D", "E", "F"],
+    "2018": ["A", "B", "C", "D"],
+}
+
+jec_parameters["jec_levels_mc"] = for_all_years(
+    ["L1FastJet", "L2Relative", "L3Absolute"]
+)
+jec_parameters["jec_levels_data"] = for_all_years(
+    ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"]
+)
+
+jec_parameters["jec_tags"] = {
+    "2016preVFP": "Summer16_07Aug2017_V11_MC",
+    "2016postVFP": "Summer16_07Aug2017_V11_MC",
+    "2017": "Fall17_17Nov2017_V32_MC",
+    "2018": "Autumn18_V19_MC",
+}
+
+jec_parameters["jer_tags"] = {
+    "2016preVFP": "Summer16_25nsV1_MC",
+    "2016postVFP": "Summer16_25nsV1_MC",
+    "2017": "Fall17_V3_MC",
+    "2018": "Autumn18_V7_MC",
+}
+
+jec_parameters["jec_data_tags"] = {
+    "2016preVFP": {
+        "Summer16_07Aug2017BCD_V11_DATA": ["B", "C", "D"],
+        "Summer16_07Aug2017EF_V11_DATA": ["E", "F"],
+    },
+    "2016postVFP": {
+        "Summer16_07Aug2017EF_V11_DATA": ["F"],
+        "Summer16_07Aug2017GH_V11_DATA": ["G", "H"],
+    },
+    "2017": {
+        "Fall17_17Nov2017B_V32_DATA": ["B"],
+        "Fall17_17Nov2017C_V32_DATA": ["C"],
+        "Fall17_17Nov2017DE_V32_DATA": ["D", "E"],
+        "Fall17_17Nov2017F_V32_DATA": ["F"],
+    },
+    "2018": {
+        "Autumn18_RunA_V19_DATA": ["A"],
+        "Autumn18_RunB_V19_DATA": ["B"],
+        "Autumn18_RunC_V19_DATA": ["C"],
+        "Autumn18_RunD_V19_DATA": ["D"],
+    },
+}
+
+jer_variations = ["jer1", "jer2", "jer3", "jer4", "jer5", "jer6"]
+jec_parameters["jer_variations"] = {
+    year: get_variations(jer_variations) for year in ["2016preVFP","2016postVFP", "2017", "2018"]
+}
+
+parameters["jec_parameters"] = jec_parameters
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -254,10 +452,24 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config_to_save = {}
     for key, val in parameters.items():
-        config_to_save[key] = val[args.year]
+        print(f"make parameters key: {key}")
+        if "cross_sections" in key:
+            config_to_save[key] = val
+        elif "jec" in key: # if jec, then do it separately
+            sub_jec_pars = {}
+            for sub_key, sub_val in val.items():
+                sub_jec_pars[sub_key] = sub_val[args.year]
+            print(f"make parameters sub_jec_pars: {sub_jec_pars}")
+            config_to_save[key] = sub_jec_pars
+            # config_to_save[key] = val
+        else:
+            config_to_save[key] = val[args.year]
     config_to_save["do_roccor"] = True
     config_to_save["do_fsr"] = True
     config_to_save["do_geofit"] = True
+    config_to_save["year"] = args.year
+    config_to_save["do_jecunc"] = False
+    config_to_save["do_jerunc"] = False
     print(f"make_parameters config_to_save: \n {config_to_save}")
 
     #save config as json
