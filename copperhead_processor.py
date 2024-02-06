@@ -379,8 +379,9 @@ class EventProcessor(processor.ProcessorABC):
             print(f"copperhead2 EventProcessor events.Jet.rho: \n {events.Jet.rho}")
             print(f"copperhead2 EventProcessor events.Jet.rho long: \n {ak.to_numpy(ak.flatten(events.Jet.rho))}")   
             print(f'copperheadV2 EventProcessor jets.pt b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.pt))}')
-        print(f'copperheadV2 EventProcessor jets.eta b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.eta))}')
-        print(f'copperheadV2 EventProcessor jets.phi b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.phi))}')
+            print(f'copperheadV2 EventProcessor jets.eta b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.eta))}')
+            print(f'copperheadV2 EventProcessor jets.phi b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.phi))}')
+            print(f'copperheadV2 EventProcessor jets.mass b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.mass))}')
         
         jets = events.Jet
         self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
@@ -445,53 +446,49 @@ class EventProcessor(processor.ProcessorABC):
         # Compute JER uncertainties
         if events.metadata["is_mc"] and do_jerunc:
             jets = self.jec_factories["jer"].build(jets)
-    
+        
         # TODO: JER nuisances
+        
+        # # update with JECed pt
+        if self.test:
+            events["Jet","pt_b4_jec"] = events.Jet.pt
+            events["Jet","pt"] = jets.pt.compute()
+        else:
+            events["Jet","pt_b4_jec"] = events.Jet.pt
+            events["Jet","pt"] = jets.pt
+        # jet_loop
+        
 
         if self.test:
             print(f'copperheadV2 EventProcessor after apply_jec jets.pt short: \n {jets.pt}')
             print(f'copperheadV2 EventProcessor after apply_jec jets.pt long: \n {ak.to_numpy(ak.flatten(jets.pt.compute()))}')
-        print(f'copperheadV2 EventProcessor after apply_jec jets.eta long: \n {ak.to_numpy(ak.flatten(jets.eta.compute()))}')
-        print(f'copperheadV2 EventProcessor after apply_jec jets.phi long: \n {ak.to_numpy(ak.flatten(jets.phi.compute()))}')
-            # placeholder =  pd.DataFrame({
-            #     'mu1_pt': ak.to_numpy((mu1.pt)),
-            #     'mu2_pt': ak.to_numpy(mu2.pt),
-            #     'mu1_eta': ak.to_numpy(mu1.eta),
-            #     'mu2_eta': ak.to_numpy(mu2.eta),
-            #     'mu1_phi': ak.to_numpy(mu1.phi),
-            #     'mu2_phi': ak.to_numpy(mu2.phi),
-            #     'mu1_iso': ak.to_numpy(mu1.pfRelIso04_all),
-            #     'mu2_iso': ak.to_numpy(mu2.pfRelIso04_all),
-            #     'mu1_pt_over_mass': ak.to_numpy(mu1.pt/dimuon.mass),
-            #     'mu2_pt_over_mass': ak.to_numpy(mu2.pt/dimuon.mass),
-            #     "dimuon_mass": ak.to_numpy(dimuon.mass),
-            #     "dimuon_ebe_mass_res": ak.to_numpy(dimuon_mass_resolution),
-            #     "dimuon_ebe_mass_res_rel": ak.to_numpy(rel_dimuon_ebe_mass_res),
-            #     "dimuon_pt": ak.to_numpy(dimuon.pt),
-            #     "dimuon_pt_log": ak.to_numpy(np.log(dimuon.pt)), # np functions are compatible with ak if input is ak array 
-            #     "dimuon_eta": ak.to_numpy(dimuon.eta),
-            #     "dimuon_phi": ak.to_numpy(dimuon.phi),
-            #     "dimuon_dEta": ak.to_numpy(dimuon_dEta),
-            #     "dimuon_dPhi": ak.to_numpy(dimuon_dPhi),
-            #     "dimuon_dR": ak.to_numpy(dimuon_dR),
-            #     "dimuon_cos_theta_cs": ak.to_numpy(dimuon_cos_theta_cs), 
-            #     "dimuon_phi_cs": ak.to_numpy(dimuon_phi_cs), 
-            #     "gjj_mass":  ak.to_numpy(gjj.mass),
-            #     "gjet1_mass":  ak.to_numpy(gjet1.mass),
-            #     "gjet1_pt":  ak.to_numpy(gjet1.pt),
-            #     "gjet1_eta":  ak.to_numpy(gjet1.eta),
-            #     "gjet1_phi":  ak.to_numpy(gjet1.phi),
-            #     "gjet2_mass":  ak.to_numpy(gjet2.mass),
-            #     "gjet2_pt":  ak.to_numpy(gjet2.pt),
-            #     "gjet2_eta":  ak.to_numpy(gjet2.eta),
-            #     "gjet2_phi":  ak.to_numpy(gjet2.phi),
-            #     "gjj_dEta": ak.to_numpy(gjj_dEta),
-            #     "gjj_dPhi": ak.to_numpy(gjj_dPhi),
-            #     "gjj_dR": ak.to_numpy(gjj_dR),
-                
-            # })
-            # # print(f"copperhead2 EventProcessor after leading pt cut placeholder: \n {placeholder.to_string()}")
-            # placeholder.to_csv("./V2placeholder.csv")
+            print(f'copperheadV2 EventProcessor jets.pt_jec b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.pt_jec.compute()))}')
+            print(f'copperheadV2 EventProcessor after apply_jec jets.pt_orig long: \n {ak.to_numpy(ak.flatten(jets.pt_orig.compute()))}')
+            print(f'copperheadV2 EventProcessor after apply_jec jets.eta long: \n {ak.to_numpy(ak.flatten(jets.eta.compute()))}')
+            print(f'copperheadV2 EventProcessor after apply_jec jets.phi long: \n {ak.to_numpy(ak.flatten(jets.phi.compute()))}')
+            print(f'copperheadV2 EventProcessor jets.mass b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass.compute()))}')
+            print(f'copperheadV2 EventProcessor jets.mass_jec b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass_jec.compute()))}')
+            print(f'copperheadV2 EventProcessor jets.mass_orig b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass_orig.compute()))}')
+        # print(f'copperheadV2 EventProcessor jets.fields: \n {jets.fields}')
+
+        # ------------------------------------------------------------#
+        # Loop over JEC variations and fill jet variables
+        # ------------------------------------------------------------#
+        pt_variations = (
+            ["nominal"]
+            # + jec_pars["jec_variations"]
+            # + jec_pars["jer_variations"]
+        )
+        for variation in pt_variations:
+            self.jet_loop(
+                events, 
+                # jets, 
+                variation,
+                do_jec = do_jec,
+                do_jecunc = do_jecunc,
+                do_jerunc = do_jerunc,
+            )
+
         
         out_dict = {
             "mu_pt" : events.Muon.pt,
@@ -626,76 +623,82 @@ class EventProcessor(processor.ProcessorABC):
 
         # return
 
-    # def jet_loop(
-    #     self,
-    #     variation,
-    #     is_mc,
-    #     df,
-    #     dataset,
-    #     mask,
-    #     muons,
-    #     mu1,
-    #     mu2,
-    #     jets,
-    #     weights,
-    #     numevents,
-    #     output,
-    # ):
-    #     # weights = copy.deepcopy(weights)
-
-    #     if not is_mc and variation != "nominal":
-    #         return
-
-    #     variables = pd.DataFrame(index=output.index)
-    #     # print(f"variables: {variables}")
+    def jet_loop(
+        self,
+        events,
+        # jets,
+        variation,
+        do_jec = True,
+        do_jecunc = False,
+        do_jerunc = False,
+        # dataset,
+        # mask,
+        # muons,
+        # mu1,
+        # mu2,
+        # jets,
+        # weights,
+        # numevents,
+        # output,
+    ):
+        # weights = copy.deepcopy(weights)
+        is_mc = events.metadata["is_mc"]
+        if (not is_mc) and variation != "nominal":
+            return
+        jets= events.Jet
+        # variables = pd.DataFrame(index=output.index)
+        # print(f"variables: {variables}")
         
-    #     jet_columns = [
-    #         "pt",
-    #         "eta",
-    #         "phi",
-    #         "jetId",
-    #         "qgl",
-    #         "puId",
-    #         "mass",
-    #         "btagDeepB",
-    #         "has_matched_gen",
-    #     ]
-    #     if "puId17" in df.Jet.fields:
-    #         jet_columns += ["puId17"]
-    #     if is_mc:
-    #         jet_columns += ["partonFlavour", "hadronFlavour"]
-    #     if variation == "nominal":
-    #         if self.do_jec:
-    #             jet_columns += ["pt_jec", "mass_jec"]
-    #         if is_mc and self.do_jerunc:
-    #             jet_columns += ["pt_orig", "mass_orig"]
+        jet_columns = [
+            "pt",
+            "eta",
+            "phi",
+            "jetId",
+            "qgl",
+            "puId",
+            "mass",
+            "btagDeepB",
+            "has_matched_gen",
+        ]
+        if "puId17" in events.Jet.fields:
+            jet_columns += ["puId17"]
+        
+        if is_mc:
+            jet_columns += ["partonFlavour", "hadronFlavour"]
+        if variation == "nominal":
+            # pt_jec and mass_jec are same as pt and mass
+            # if do_jec:
+                # jet_columns += ["pt_jec", "mass_jec"] 
+            if is_mc and do_jerunc:
+                jet_columns += ["pt_orig", "mass_orig"]
 
-    #     # Find jets that have selected muons within dR<0.4 from them
-    #     # print(f"jets.matched_muons: {jets.matched_muons}")
-    #     # print(f"type(jets.matched_muons): {type(jets.matched_muons)}")
-    #     # print(f"type(jets.matched_muons.pt_fsr): {type(jets.matched_muons.pt_fsr)}")
-    #     # print(f"(jets.matched_muons.pt_fsr): {(jets.matched_muons.pt_fsr)}")
-    #     # print(f"ak.to_pandas(jets.matched_muons.pt_fsr): {ak.to_pandas(jets.matched_muons.pt_fsr)}")
-    #     matched_mu_pt = jets.matched_muons.pt_fsr
-    #     matched_mu_iso = jets.matched_muons.pfRelIso04_all
-    #     matched_mu_id = jets.matched_muons[self.parameters["muon_id"]]
-    #     matched_mu_pass = (
-    #         (matched_mu_pt > self.parameters["muon_pt_cut"])
-    #         & (matched_mu_iso < self.parameters["muon_iso_cut"])
-    #         & matched_mu_id
-    #     )
-    #     # print(f"matched_mu_pass: {matched_mu_pass}")
-    #     # print(f"type(matched_mu_pass): {type(matched_mu_pass)}")
-    #     # print(f"ak.to_pandas(matched_mu_pass): {ak.to_pandas(matched_mu_pass)}")
-    #     clean = ~(
-    #         ak.to_pandas(matched_mu_pass)
-    #         .astype(float)
-    #         .fillna(0.0)
-    #         .groupby(level=[0, 1])
-    #         .sum()
-    #         .astype(bool)
-    #     )
-    #     # print(f"~clean: {~clean}")
+        # Find jets that have selected muons within dR<0.4 from them
+        if self.test:
+            print(f"jets.matched_muons: {jets.matched_muons}")
+            print(f"type(jets.matched_muons): {type(jets.matched_muons)}")
+            print(f"type(jets.matched_muons.pt_fsr): {type(jets.matched_muons.pt_fsr)}")
+            print(f"(jets.matched_muons.pt_fsr): {(jets.matched_muons.pt_fsr)}")
+            print(f"ak.to_dataframe(jets.matched_muons.pt_fsr): {ak.to_dataframe(jets.matched_muons.pt_fsr)}")
+        matched_mu_pt = jets.matched_muons.pt_fsr
+        matched_mu_iso = jets.matched_muons.pfRelIso04_all
+        matched_mu_id = jets.matched_muons[self.config["muon_id"]]
+        matched_mu_pass = (
+            (matched_mu_pt > self.config["muon_pt_cut"])
+            & (matched_mu_iso < self.config["muon_iso_cut"])
+            & matched_mu_id
+        )
+        if self.test:
+            print(f"jet loop jets.matched_muons: {jets.matched_muons}")
+            print(f"jet loop matched_mu_pt: {matched_mu_pt}")
+            print(f"jet loop matched_mu_iso: {matched_mu_iso}")
+            print(f"jet loop matched_mu_id: {matched_mu_id}")
+            # print(f"matched_mu_pass: {matched_mu_pass}")
+            # print(f"type(matched_mu_pass): {type(matched_mu_pass)}")
+            # print(f"ak.to_dataframe(matched_mu_pass): {ak.to_dataframe(matched_mu_pass)}")
+            print(f"jet loop matched_mu_pass: {matched_mu_pass}")
+        clean = ~(ak.fill_none(matched_mu_pass, value=False))
+        print(f"jet loop clean: {clean}")
+        # print(f"jet loop clean: {ak.to_numpy(ak.flatten(clean))}")
     #     # Select particular JEC variation
     #     if "_up" in variation:
     #         unc_name = "JES_" + variation.replace("_up", "")
@@ -723,14 +726,14 @@ class EventProcessor(processor.ProcessorABC):
 
     #     if variation == "nominal":
     #         # Update pt and mass if JEC was applied
-    #         if self.do_jec:
+    #         if do_jec:
     #             jets["pt"] = jets["pt_jec"]
     #             jets["mass"] = jets["mass_jec"]
 
     #         # We use JER corrections only for systematics, so we shouldn't
     #         # update the kinematics. Use original values,
     #         # unless JEC were applied.
-    #         if is_mc and self.do_jerunc and not self.do_jec:
+    #         if is_mc and do_jerunc and not do_jec:
     #             jets["pt"] = jets["pt_orig"]
     #             jets["mass"] = jets["mass_orig"]
 
@@ -890,5 +893,5 @@ class EventProcessor(processor.ProcessorABC):
     #     print("done jet loop")
     #     # print(f'output : \n {output.head()}')
     #     # print(f'output["dimuon_mass"] : \n {output["dimuon_mass"].head()}')
-    #     return output
+        return output
     
