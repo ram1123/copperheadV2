@@ -1,8 +1,7 @@
 from coffea.jetmet_tools import CorrectedJetsFactory, JECStack
 from coffea.lookup_tools import extractor
-
-
-
+import numpy as np
+import awkward as ak
 
 def jec_names_and_sources(jec_pars):
     names = {}
@@ -166,3 +165,107 @@ def get_jec_factories(jec_parameters: dict):
         )
 
     return jec_factories, jec_factories_data
+
+
+    
+def jet_id(jets, config):
+    # print(f"jets parameters: {parameters}")
+    pass_jet_id = ak.ones_like(jets.jetId, dtype=bool)
+    if "loose" in config["jet_id"]:
+        pass_jet_id = jets.jetId >= 1
+    elif "tight" in config["jet_id"]:
+        if "2016" in config["year"]: # I thought loose for 2016?
+            pass_jet_id = jets.jetId >= 3
+        else:
+            pass_jet_id = jets.jetId >= 2
+    return pass_jet_id
+
+
+def jet_puid(jets, config):
+    jet_puid_opt = config["jet_puid"]
+    puId = jets.puId
+    jet_puid_wps = {
+        "loose": (puId >= 4) | (jets.pt > 50),
+        "medium": (puId >= 6) | (jets.pt > 50),
+        "tight": (puId >= 7) | (jets.pt > 50),
+    }
+    pass_jet_puid = ak.ones_like(jets.pt, dtype=bool)
+    print(f"jet_puid pass_jet_puid: {pass_jet_puid}")
+    if jet_puid_opt in ["loose", "medium", "tight"]:
+        pass_jet_puid = jet_puid_wps[jet_puid_opt]
+    elif "2017corrected" in jet_puid_opt: # for misreco due ot ECAL endcap noise
+        eta_window = (abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0)
+        pass_jet_puid = (eta_window & (puId >= 7)) | ( # tight puid in the noisy eta window, else loose
+            (~eta_window) & jet_puid_wps["loose"]
+        )
+    return pass_jet_puid
+
+
+def fill_softjets(events, jets, muons, cutoff):
+    print(f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}")
+    print(f"jets cutoff: {cutoff}")
+    events["SoftActivityJet","mass"] = 0
+    saj = events.SoftActivityJet
+    saj_Njets = events[f"SoftActivityJetNjets{cutoff}"]
+    saj_HT = events[f"SoftActivityJetHT{cutoff}"]
+    
+
+    njets = ak.num(jets, axis=1)
+    padded_jets = ak.pad_none(jets, 2)
+    jet1 = padded_jets[:,0]
+    jet2 = padded_jets[:,1]
+    
+    nmuons = ak.num(muons, axis=1)
+    mu1 = muons[:,0]
+    mu2 = muons[:,1]
+    print(f"jets njets: {njets}")
+    print(f"jets saj.pt: {saj.pt}")
+    print(f"jets jet1.pt: {jet1.pt}")
+    print(f"jets jet2.pt: {jet2.pt}")
+    print(f"jets mu1.pt: {mu1.pt}")
+    print(f"jets mu2.pt: {mu2.pt}")
+    
+    dR_m1 = saj.delta_r(mu1)
+    dR_m2 = saj.delta_r(mu2)
+    dR_j1 = saj.delta_r(jet1)
+    dR_j2 = saj.delta_r(jet2)
+    dR_m1_filter = ak.fill_none((dR_m1 < 0.4), value=False, axis=None)
+    dR_m2_filter = ak.fill_none((dR_m2 < 0.4), value=False, axis=None)
+    dR_j1_filter = ak.fill_none((dR_j1 < 0.4), value=False, axis=None)
+    dR_j2_filter = ak.fill_none((dR_j2 < 0.4), value=False, axis=None)
+    print(f"jets dR_m1_filter: {dR_m1_filter}")
+    print(f"jets dR_m2_filter: {dR_m2_filter}")
+    print(f"jets dR_j1_filter: {dR_j1_filter}")
+    print(f"jets dR_j2_filter: {dR_j2_filter}")
+    saj_to_remove = dR_m1_filter | dR_m2_filter | dR_j1_filter | dR_j2_filter
+    saj_to_remove = ak.fill_none(saj_to_remove, value=False)
+    print(f"jets saj_to_remove: {saj_to_remove}")
+    
+    footprint = saj[(saj_to_remove) & (saj.pt > cutoff)]
+    footprint_sumPt = ak.sum(footprint.pt, axis=1)
+    print(f"jets footprint_sumPt: {ak.to_numpy(footprint_sumPt)}")
+    ht_corrected = saj_HT - footprint_sumPt
+    footprint_njets = ak.num(footprint, axis=1)
+    corrected_njets = saj_Njets - footprint_njets
+
+    print(f"jets footprint_njets: {ak.to_numpy(footprint_njets)}")
+    print(f"jets corrected_njets: {ak.to_numpy(corrected_njets)}")
+    print(f"jets saj_Njets: {saj_Njets}")
+
+    evnts_to_correct = (nmuons==2) |(njets > 0) 
+    print(f"jets evnts_to_correct: {evnts_to_correct}")
+
+    print(f"jets footprint_njets b4: {ak.to_numpy(saj_Njets)}")
+    print(f"jets corrected_njets b4: {ak.to_numpy(saj_HT)}")
+    
+    saj_Njets = ak.where(evnts_to_correct,corrected_njets,saj_Njets)
+    saj_HT = ak.where(evnts_to_correct,ht_corrected,saj_HT)
+
+    
+    print(f"jets footprint_njets after: {ak.to_numpy(saj_Njets)}")
+    print(f"jets corrected_njets after: {ak.to_numpy(saj_HT)}")
+    out_dict = {
+        f"nsoftjets{cutoff}" : saj_Njets,
+        f"htsoft{cutoff}" : saj_HT
+    }
+    return out_dict
