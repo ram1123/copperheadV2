@@ -7,6 +7,8 @@ from corrections.rochester import apply_roccor
 from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
+from corrections.weight import Weights
+from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, musf_lookup
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -44,6 +46,9 @@ class EventProcessor(processor.ProcessorABC):
             "do_geofit" : True,
             "year" : "2018",
             "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
+            "auto_pu" : True,
+            "do_nnlops" : True,
+            "do_pdf" : True
         }
         self.config.update(dict_update)
         # print(f"copperhead proccesor self.config after update: \n {self.config}")
@@ -64,6 +69,8 @@ class EventProcessor(processor.ProcessorABC):
         extractor_instance.finalize()
         self.evaluator = extractor_instance.make_evaluator()
 
+        self.weight_collection = None # will be initialzed later
+        
         # # prepare lookup tables for all kinds of corrections
         # self.prepare_lookups()
 
@@ -162,16 +169,51 @@ class EventProcessor(processor.ProcessorABC):
 
         if events.metadata["is_mc"]:
             lumi_mask = ak.ones_like(event_filter)
+
+        
         else:
             lumi_info = LumiMask(self.config["lumimask"])
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
             print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
+
+
+        
         # ------------------------------------------------------------#
         # Apply lumimask, genweights, PU weights
         # and L1 prefiring weights
         # ------------------------------------------------------------#
-
+        weight_ones = ak.ones_like(event_filter)
+        # weight_ones = ak.ones_like(events.Muon.pt[:,0]) # get 1D array of filtered events
+        self.weight_collection = Weights(weight_ones)
+        if events.metadata["is_mc"]:
+            # For MC: Apply gen.weights, pileup weights, lumi weights,
+            # L1 prefiring weights
+            genweight = events.genWeight
+            self.weight_collection.add_weight("genwgt", genweight)
+            print(f"weight_collection genwgt info: \n  {self.weight_collection.get_info()}")
+            print(f"weight_collection genwgt wgts: \n  {self.weight_collection.wgts}")
+            self.weight_collection.add_weight("lumi", 0.03576104036357644) # hard code for now
+            print(f"weight_collection lumi info: \n  {self.weight_collection.get_info()}")
+            print(f"weight_collection lumi wgts: \n  {self.weight_collection.wgts}")
+            numevents = ak.num(event_filter, axis=0)
+            # pu_wgts = pu_evaluator(
+            #     #self.pu_lookups,
+            #     self.config,
+            #     numevents,
+            #     events.Pileup.nTrueInt,
+            #     self.config["auto_pu"],
+            # )
+            # print(f"copperhead2 EventProcessor pu_wgts: \n  {pu_wgts}")
+            if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in df.fields):
+            # if True:
+                L1_nom = events.L1PreFiringWeight.Nom
+                # L1_up = events.L1PreFiringWeight.Up
+                # L1_down = events.L1PreFiringWeight.Dn
+                self.weight_collection.add_weight("l1prefiring_wgt", L1_nom)
+                print(f"weight_collection l1prefiring_wgt info: \n  {self.weight_collection.get_info()}")
+                
+        
         
         # NOTE: this portion of code below is commented out bc original copperhead doesn't filter out event until the very end.
         # however, once everything is validated, filtering out events b4 any events would save computational time
@@ -318,6 +360,9 @@ class EventProcessor(processor.ProcessorABC):
             print(f"copperhead2 EventProcessor after leading pt cut event_filter long: \n {ak.to_dataframe(event_filter).to_string()}")
             print(f"copperhead2 EventProcessor after leading pt cut ak.sum(event_filter): \n {ak.sum(event_filter)}")
             print(f"copperhead2 EventProcessor events.Muon: \n {ak.num(events.Muon, axis=1)}")
+
+
+        # now fill in the weights HERE
         
         # --------------------------------------------------------#
         # Fill dimuon and muon variables
@@ -328,7 +373,6 @@ class EventProcessor(processor.ProcessorABC):
         even_selection column, since fill muon is computationally exp
         Last time I checked there was some errors on LHE correction shape mismatch
         """
-        # fill_muons(self, output, mu1, mu2, is_mc)
         mu1 = events.Muon[:,0]
         mu2 = events.Muon[:,1]
         dimuon_dR = mu1.delta_r(mu2)
@@ -424,19 +468,9 @@ class EventProcessor(processor.ProcessorABC):
         do_jerunc = self.config["do_jerunc"]
         
         
-        # apply General jet energy correction (JEC)
-        # jets = apply_jec(
-        #     events,
-        #     jets,
-        #     dataset,
-        #     is_mc,
-        #     self.year,
-        #     self.do_jec,
-        #     self.do_jecunc,
-        #     self.do_jerunc,
-        #     self.jec_factories,
-        #     self.jec_factories_data,
-        # )
+        # ------------------------------------------------------------#
+        # Apply JEC, get JEC and JER variations
+        # ------------------------------------------------------------#
         if do_jec:
             if events.metadata["is_mc"]:
                 factory = self.jec_factories["jec"]
@@ -458,9 +492,10 @@ class EventProcessor(processor.ProcessorABC):
         # TODO: JER nuisances
         
         # # update with JECed pt
-        if self.test:
+        is_data = not events.metadata["is_mc"]
+        if self.test and is_data:
             events["Jet","pt_b4_jec"] = events.Jet.pt
-            events["Jet","pt"] = jets.pt.compute()
+            events["Jet","pt"] = jets.pt.compute() # can't circumvent JEC only being dask distributed
         else:
             events["Jet","pt_b4_jec"] = events.Jet.pt
             events["Jet","pt"] = jets.pt
@@ -468,17 +503,41 @@ class EventProcessor(processor.ProcessorABC):
         
 
         if self.test:
-            print(f'copperheadV2 EventProcessor after apply_jec jets.pt short: \n {jets.pt}')
-            print(f'copperheadV2 EventProcessor after apply_jec jets.pt long: \n {ak.to_numpy(ak.flatten(jets.pt.compute()))}')
-            print(f'copperheadV2 EventProcessor jets.pt_jec b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.pt_jec.compute()))}')
-            print(f'copperheadV2 EventProcessor after apply_jec jets.pt_orig long: \n {ak.to_numpy(ak.flatten(jets.pt_orig.compute()))}')
-            print(f'copperheadV2 EventProcessor after apply_jec jets.eta long: \n {ak.to_numpy(ak.flatten(jets.eta.compute()))}')
-            print(f'copperheadV2 EventProcessor after apply_jec jets.phi long: \n {ak.to_numpy(ak.flatten(jets.phi.compute()))}')
-            print(f'copperheadV2 EventProcessor jets.mass b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass.compute()))}')
-            print(f'copperheadV2 EventProcessor jets.mass_jec b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass_jec.compute()))}')
-            print(f'copperheadV2 EventProcessor jets.mass_orig b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass_orig.compute()))}')
+            print("dummy")
+            # print(f'copperheadV2 EventProcessor after apply_jec jets.pt short: \n {jets.pt}')
+            # print(f'copperheadV2 EventProcessor after apply_jec jets.pt long: \n {ak.to_numpy(ak.flatten(jets.pt.compute()))}')
+            # print(f'copperheadV2 EventProcessor jets.pt_jec b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.pt_jec.compute()))}')
+            # print(f'copperheadV2 EventProcessor after apply_jec jets.pt_orig long: \n {ak.to_numpy(ak.flatten(jets.pt_orig.compute()))}')
+            # print(f'copperheadV2 EventProcessor after apply_jec jets.eta long: \n {ak.to_numpy(ak.flatten(jets.eta.compute()))}')
+            # print(f'copperheadV2 EventProcessor after apply_jec jets.phi long: \n {ak.to_numpy(ak.flatten(jets.phi.compute()))}')
+            # print(f'copperheadV2 EventProcessor jets.mass b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass.compute()))}')
+            # print(f'copperheadV2 EventProcessor jets.mass_jec b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass_jec.compute()))}')
+            # print(f'copperheadV2 EventProcessor jets.mass_orig b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass_orig.compute()))}')
         # print(f'copperheadV2 EventProcessor jets.fields: \n {jets.fields}')
 
+
+        # ------------------------------------------------------------#
+        # Calculate other event weights
+        # ------------------------------------------------------------#
+        if events.metadata["is_mc"]:
+            do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
+            if do_nnlops:
+            # if True:
+                nnlopsw = nnlops_weights(events, numevents, self.config, events.metadata["dataset"])
+                self.weight_collection.add_weight("nnlops", nnlopsw)
+                print(f"weight_collection nnlops info: \n  {self.weight_collection.get_info()}")
+            # else:
+            #     weights.add_weight("nnlops", how="dummy")
+            # print(f'copperheadV1 weights.df nnlops: \n {weights.df.to_string()}')
+
+        #do mu SF
+        musf_lookup = musf_lookup(self.parameters)
+        muID, muIso, muTrig = musf_evaluator(
+            musf_lookup, self.config["year"], numevents, mu1, mu2
+        )
+        weights.add_weight("muID", muID, how="all")
+        weights.add_weight("muIso", muIso, how="all")
+        weights.add_weight("muTrig", muTrig, how="all")
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#
@@ -544,6 +603,9 @@ class EventProcessor(processor.ProcessorABC):
             "h_peak" : h_peak,
         }
         out_dict.update(region_dict) 
+
+
+        
         
         return out_dict
         
