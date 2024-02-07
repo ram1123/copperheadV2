@@ -8,7 +8,7 @@ from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 from corrections.weight import Weights
-from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup
+from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -555,6 +555,11 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Calculate other event weights
         # ------------------------------------------------------------#
+        pt_variations = (
+            ["nominal"]
+            # + jec_pars["jec_variations"]
+            # + jec_pars["jer_variations"]
+        )
         if events.metadata["is_mc"]:
             do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
             if do_nnlops:
@@ -582,14 +587,27 @@ class EventProcessor(processor.ProcessorABC):
             # self.weight_collection.add_weight("muID", muID, how="all")
             # self.weight_collection.add_weight("muIso", muIso, how="all")
             # self.weight_collection.add_weight("muTrig", muTrig, how="all") 
+
+            # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
+            do_lhe = (
+                ("LHEScaleWeight" in events.fields)
+                and ("LHEPdfWeight" in events.fields)
+                and ("nominal" in pt_variations)
+            )
+            print(f"do_lhe: {do_lhe}")
+            if do_lhe:
+                lhe_ren, lhe_fac = lhe_weights(events, events.metadata["dataset"], self.config["year"])
+                print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
+                print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
+                # self.weight_collection.add_weight("LHERen", lhe_ren, how="only_vars")
+                # print(f"weight_collection LHERen info: \n  {self.weight_collection.get_info()}")
+                # self.weight_collection.add_weight("LHEFac", lhe_fac, how="only_vars")
+                # print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
+            
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#
-        pt_variations = (
-            ["nominal"]
-            # + jec_pars["jec_variations"]
-            # + jec_pars["jer_variations"]
-        )
+        
         for variation in pt_variations:
             jet_loop_dict = self.jet_loop(
                 events, 

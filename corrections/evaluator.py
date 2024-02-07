@@ -301,7 +301,7 @@ def musf_evaluator(lookups, year, numevents, muons):
     sf["muIso_up"] = ak.prod(muIso_ + muIsoerr, axis=1)
     sf["muIso_down"] = ak.prod(muIso_ - muIsoerr, axis=1)
     
-    # print(f'copperheadV2 lepton sf  sf["muID_nom"]: \n {ak.to_numpy(sf["muID_nom"])}')
+    print(f'copperheadV2 lepton sf  sf["muID_nom"]: \n {ak.to_numpy(sf["muID_nom"])}')
     # print(f'copperheadV2 lepton sf  sf["muID_up"]: \n {ak.to_numpy(sf["muID_up"])}')
     # print(f'copperheadV2 lepton sf  sf["muID_down"]: \n {ak.to_numpy(sf["muID_down"])}')
     # print(f'copperheadV2 lepton sf  sf["muIso_nom"]: \n {ak.to_numpy(sf["muIso_nom"])}')
@@ -325,3 +325,53 @@ def musf_evaluator(lookups, year, numevents, muons):
     muTrig = {"nom": sf["muTrig_nom"], "up": sf["muTrig_up"], "down": sf["muTrig_down"]}
     # print(f'copperheadV2 lepton sf  sf["muTrig_nom"]: \n {(sf["muTrig_nom"])}')
     return muID, muIso, muTrig
+
+
+
+# LHE SF-------------------------------------------------------------------------
+
+def lhe_weights(events, dataset, year):
+    factor2 = ("dy_m105_160_amc" in dataset) and (("2017" in year) or ("2018" in year))
+    if factor2:
+        lhefactor = 2.0
+    else:
+        lhefactor = 1.0
+    nLHEScaleWeight = ak.count(events.LHEScaleWeight, axis=1)
+    lhe_events = {}
+    nLHEScaleWeights_to_iterate = [1, 3, 4, 5, 6, 7, 15, 24, 34]
+    max_i = max(nLHEScaleWeights_to_iterate)
+    padded_LHEScaleWeight = ak.pad_none(events.LHEScaleWeight, max_i+1)
+    for i in nLHEScaleWeights_to_iterate:
+        cut = nLHEScaleWeight > i
+        cut_ak = nLHEScaleWeight > i
+        ones = ak.ones_like(events.Muon.pt[:,0])
+        # print(f'copperheadV2 lepton sf ones: \n {ak.to_numpy(ones)}')
+        lhe_events[f"LHE{i}"] = ak.where(cut, padded_LHEScaleWeight[:, i], ones)
+        print(f'copperheadV2 lepton sf lhe_events[f"LHE{i}"]: \n {ak.to_numpy(lhe_events[f"LHE{i}"])}')
+        # lhe_events[f"LHE{i}"] = 1.0
+        # lhe_events.loc[cut, f"LHE{i}"] = ak.to_numpy(events.LHEScaleWeight[cut_ak][:, i])
+
+    cut8 = nLHEScaleWeight > 8
+    cut30 = nLHEScaleWeight > 30
+    lhe_ren_up = lhe_events["LHE6"] * lhefactor
+    lhe_ren_up = ak.where(cut8, (lhe_events["LHE7"] * lhefactor), lhe_ren_up)
+    lhe_ren_up = ak.where(cut30, (lhe_events["LHE34"] * lhefactor), lhe_ren_up)
+    lhe_ren_down = lhe_events["LHE1"] * lhefactor
+    lhe_ren_down = ak.where(cut8, (lhe_events["LHE1"] * lhefactor), lhe_ren_down)
+    lhe_ren_down = ak.where(cut30, (lhe_events["LHE5"] * lhefactor), lhe_ren_down)
+
+    lhe_fac_up = lhe_events["LHE4"] * lhefactor
+    lhe_fac_up = ak.where(cut8, (lhe_events["LHE5"] * lhefactor), lhe_fac_up)
+    lhe_fac_up = ak.where(cut30, (lhe_events["LHE24"] * lhefactor), lhe_fac_up)
+    lhe_fac_down = lhe_events["LHE3"] * lhefactor
+    lhe_fac_down = ak.where(cut8, (lhe_events["LHE3"] * lhefactor), lhe_fac_down)
+    lhe_fac_down = ak.where(cut30, (lhe_events["LHE15"] * lhefactor), lhe_fac_down)
+
+    print(f'copperheadV2 lepton sf lhe_ren_up: \n {ak.to_numpy(lhe_ren_up)}')
+    print(f'copperheadV2 lepton sf lhe_ren_down: \n {ak.to_numpy(lhe_ren_down)}')
+    print(f'copperheadV2 lepton sf lhe_fac_up: \n {ak.to_numpy(lhe_fac_up)}')
+    print(f'copperheadV2 lepton sf lhe_fac_down: \n {ak.to_numpy(lhe_fac_down)}')
+    
+    lhe_ren = {"up": lhe_ren_up, "down": lhe_ren_down}
+    lhe_fac = {"up": lhe_fac_up, "down": lhe_fac_down}
+    return lhe_ren, lhe_fac
