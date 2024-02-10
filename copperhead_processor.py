@@ -556,13 +556,13 @@ class EventProcessor(processor.ProcessorABC):
         
 
             
-            # if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in df.fields):
-            # # if True:
-            #     L1_nom = events.L1PreFiringWeight.Nom
-            #     # L1_up = events.L1PreFiringWeight.Up
-            #     # L1_down = events.L1PreFiringWeight.Dn
-            #     self.weight_collection.add_weight("l1prefiring_wgt", L1_nom)
-            #     print(f"weight_collection l1prefiring_wgt info: \n  {self.weight_collection.get_info()}")
+            if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in df.fields):
+            # if True:
+                L1_nom = events.L1PreFiringWeight.Nom
+                # L1_up = events.L1PreFiringWeight.Up
+                # L1_down = events.L1PreFiringWeight.Dn
+                self.weight_collection.add_weight("l1prefiring_wgt", L1_nom)
+                print(f"weight_collection l1prefiring_wgt info: \n  {self.weight_collection.get_info()}")
 
         
         # ------------------------------------------------------------#
