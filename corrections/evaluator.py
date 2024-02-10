@@ -13,6 +13,7 @@ def pu_lookups(parameters, mode="nom", auto=[]):
         pu_hist_data = uproot.open(parameters["pu_file_data"])[branch[mode]].values()
 
         nbins = len(pu_hist_data)
+        print(f"pu_reweight nbins: {nbins}")
         edges = [[i for i in range(nbins)]]
         print(f"pu_lookups type(pu_hist_data): {type(pu_hist_data)}")
         if len(auto) == 0:
@@ -28,6 +29,7 @@ def pu_lookups(parameters, mode="nom", auto=[]):
 
 def pu_reweight(pu_hist_data, pu_hist_mc):
     #print(pu_hist_mc)
+    print(f"pu_reweight len(pu_hist_mc): {len(pu_hist_mc)}")
     pu_arr_mc_ = np.zeros(len(pu_hist_mc))
     # for ibin, value in enumerate(pu_hist_mc):
     #     pu_arr_mc_[ibin] = max(value, 0)
@@ -286,7 +288,7 @@ def get_musf_lookup(parameters):
 
 
 
-def musf_evaluator(lookups, year, numevents, muons):
+def musf_evaluator(lookups, year, muons):
     # sf = pd.DataFrame(
     #     index=mu1.index,
     #     columns=[
