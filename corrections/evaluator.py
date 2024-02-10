@@ -14,7 +14,7 @@ def pu_lookups(parameters, mode="nom", auto=[]):
 
         nbins = len(pu_hist_data)
         edges = [[i for i in range(nbins)]]
-
+        print(f"pu_lookups type(pu_hist_data): {type(pu_hist_data)}")
         if len(auto) == 0:
             pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
         else:
@@ -29,16 +29,19 @@ def pu_lookups(parameters, mode="nom", auto=[]):
 def pu_reweight(pu_hist_data, pu_hist_mc):
     #print(pu_hist_mc)
     pu_arr_mc_ = np.zeros(len(pu_hist_mc))
-    for ibin, value in enumerate(pu_hist_mc):
-        pu_arr_mc_[ibin] = max(value, 0)
+    # for ibin, value in enumerate(pu_hist_mc):
+    #     pu_arr_mc_[ibin] = max(value, 0)
 
-    pu_arr_data = np.zeros(len(pu_hist_data))
-    for ibin, value in enumerate(pu_hist_data):
-        pu_arr_data[ibin] = max(value, 0)
-
+    # pu_arr_data = np.zeros(len(pu_hist_data))
+    # for ibin, value in enumerate(pu_hist_data):
+    #     pu_arr_data[ibin] = max(value, 0)
+    pu_arr_mc_ = np.where(pu_hist_mc<0, 0, pu_hist_mc) # min cut of zero
+    pu_arr_data = np.where(pu_hist_data<0, 0, pu_hist_data) # min cut of zero
+    print(f"pu_reweight pu_arr_mc_: {pu_arr_mc_}")
+    print(f"pu_reweight pu_arr_data: {pu_arr_data}")
     pu_arr_mc_ref = pu_arr_mc_
-    pu_arr_mc = pu_arr_mc_ / pu_arr_mc_.sum()
-    pu_arr_data = pu_arr_data / pu_arr_data.sum()
+    pu_arr_mc = pu_arr_mc_ / np.sum(pu_arr_mc_)
+    pu_arr_data = pu_arr_data / np.sum(pu_arr_data)
     #print(pu_arr_mc)
     weights = np.ones(len(pu_hist_mc))
     weights[pu_arr_mc != 0] = pu_arr_data[pu_arr_mc != 0] / pu_arr_mc[pu_arr_mc != 0]
@@ -72,17 +75,39 @@ def checkIntegral(wgt1, wgt2, ref):
     return (myint - refint) / refint
 
 
-def pu_evaluator(parameters, numevents, ntrueint, auto_pu):
-    if auto_pu:
-        lookups = pu_lookups(parameters, auto=ntrueint)
-        #print("Hello")
+# def pu_evaluator(parameters, numevents, ntrueint):
+#     """
+#     params:
+#     numevents = integer value of 
+#     ntrueint = np array for making dense lookup
+#     """
+#     lookups = pu_lookups(parameters, auto=ntrueint)
+#     #print("Hello")
+#     pu_weights = {}
+#     for var, lookup in lookups.items():
+#         pu_weights[var] = np.ones(numevents)
+#         pu_weights[var] = lookup(ntrueint)
+#         pu_weights[var] = np.array(pu_weights[var])
+#         pu_weights[var][ntrueint > 100] = 1
+#         pu_weights[var][ntrueint < 1] = 1
+#     return pu_weights
+
+def pu_evaluator(parameters, ntrueint, test=False):
+    """
+    params:
+    numevents = integer value of 
+    ntrueint = np array for making dense lookup
+    """
+    if test:
+        lookups = pu_lookups(parameters, auto=ak.to_numpy(ntrueint))
+    else:
+        lookups = pu_lookups(parameters, auto=ak.to_numpy(ntrueint.compute()))
+    #print("Hello")
     pu_weights = {}
     for var, lookup in lookups.items():
-        pu_weights[var] = np.ones(numevents)
         pu_weights[var] = lookup(ntrueint)
-        pu_weights[var] = np.array(pu_weights[var])
-        pu_weights[var][ntrueint > 100] = 1
-        pu_weights[var][ntrueint < 1] = 1
+        pu_weights[var] = ak.where((ntrueint > 100), 1, pu_weights[var])
+        pu_weights[var] = ak.where((ntrueint < 1), 1, pu_weights[var])
     return pu_weights
 
 
@@ -110,40 +135,78 @@ class NNLOPS_Evaluator(object):
             }
 
     def evaluate(self, hig_pt, njets, mode):
-        result = np.ones(len(hig_pt), dtype=float)
-        hig_pt = np.array(hig_pt)
-        njets = np.array(njets)
-        result[njets == 0] = np.interp(
-            np.minimum(hig_pt[njets == 0], 125.0),
+        # result = np.ones(len(hig_pt), dtype=float)
+        print(f'nnlops sf len(hig_pt): {len(hig_pt)}')
+        result = ak.ones_like(hig_pt)
+        # njet0_filter = (hig_pt < 125) & (njets == 0)
+        # interp_in = ak.where(njet0_filter, hig_pt, 125)
+        njet0_interp_out =  np.interp(
+            ak.where((hig_pt < 125), hig_pt, 125.0),
             self.ratio_0jet[mode].member("fX"),
             self.ratio_0jet[mode].member("fY"),
         )
-        result[njets == 1] = np.interp(
-            np.minimum(hig_pt[njets == 1], 625.0),
+        result = ak.where((njets == 0), njet0_interp_out, result)
+        # ------------------------------------------------------------#
+        njet1_interp_out =  np.interp(
+            ak.where((hig_pt < 625), hig_pt, 625.0),
             self.ratio_1jet[mode].member("fX"),
             self.ratio_1jet[mode].member("fY"),
         )
-        result[njets == 2] = np.interp(
-            np.minimum(hig_pt[njets == 2], 800.0),
+        result = ak.where((njets == 1), njet1_interp_out, result)
+        # ------------------------------------------------------------#
+        njet2_interp_out =  np.interp(
+            ak.where((hig_pt < 800), hig_pt, 800.0),
             self.ratio_2jet[mode].member("fX"),
             self.ratio_2jet[mode].member("fY"),
         )
-        result[njets > 2] = np.interp(
-            np.minimum(hig_pt[njets > 2], 925.0),
+        result = ak.where((njets == 2), njet2_interp_out, result)
+        # ------------------------------------------------------------#
+        njet3_interp_out =  np.interp(
+            ak.where((hig_pt < 925), hig_pt, 925.0),
             self.ratio_3jet[mode].member("fX"),
             self.ratio_3jet[mode].member("fY"),
         )
+        result = ak.where((njets > 2), njet3_interp_out, result)
+        
+        # njet0_interp_out =  np.interp(
+        #     ak.where((hig_pt < 125), hig_pt, 125.0),
+        #     self.ratio_0jet[mode].member("fX"),
+        #     self.ratio_0jet[mode].member("fY"),
+        # )
+        # result = ak.where((njets == 0), njet0_interp_out, result)
+        
+        # result[njets == 0] = np.interp(
+        #     np.minimum(hig_pt[njets == 0], 125.0),
+        #     self.ratio_0jet[mode].member("fX"),
+        #     self.ratio_0jet[mode].member("fY"),
+        # )
+        # result[njets == 1] = np.interp(
+        #     np.minimum(hig_pt[njets == 1], 625.0),
+        #     self.ratio_1jet[mode].member("fX"),
+        #     self.ratio_1jet[mode].member("fY"),
+        # )
+        # result[njets == 2] = np.interp(
+        #     np.minimum(hig_pt[njets == 2], 800.0),
+        #     self.ratio_2jet[mode].member("fX"),
+        #     self.ratio_2jet[mode].member("fY"),
+        # )
+        # result[njets > 2] = np.interp(
+        #     np.minimum(hig_pt[njets > 2], 925.0),
+        #     self.ratio_3jet[mode].member("fX"),
+        #     self.ratio_3jet[mode].member("fY"),
+        # )
         return result
 
 
-def nnlops_weights(df, numevents, parameters, dataset):
+def nnlops_weights(events, parameters, dataset):
     nnlops = NNLOPS_Evaluator(parameters["nnlops_file"])
-    nnlopsw = np.ones(numevents, dtype=float)
     if "amc" in dataset:
-        nnlopsw = nnlops.evaluate(df.HTXS.Higgs_pt, df.HTXS.njets30, "mcatnlo")
+        mc_generator = "mcatnlo"
     elif "powheg" in dataset:
-        nnlopsw = nnlops.evaluate(df.HTXS.Higgs_pt, df.HTXS.njets30, "powheg")
-    return nnlopsw
+        mc_generator = "powheg"
+    nnlops_w = nnlops.evaluate(events.HTXS.Higgs_pt, events.HTXS.njets30, mc_generator)
+    print(f'nnlops_weights nnlops_w: {ak.to_numpy(nnlops_w)}')
+    return nnlops_w
 
 
 # Mu SF-------------------------------------------------------------------------
@@ -375,3 +438,294 @@ def lhe_weights(events, dataset, year):
     lhe_ren = {"up": lhe_ren_up, "down": lhe_ren_down}
     lhe_fac = {"up": lhe_fac_up, "down": lhe_fac_down}
     return lhe_ren, lhe_fac
+
+
+# THU SF-------------------------------------------------------------------------
+# STXS   TOT,  PTH200,  Mjj60 , Mjj120 , Mjj350 ,
+# Mjj700, Mjj1000, Mjj1500,  25, JET01
+stxs_acc = {
+    200: [0.07, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    201: [0.0744, 0, 0, 0, 0, 0, 0, 0, 0, -0.1649],
+    # Jet0
+    202: [0.3367, 0, 0, 0, 0, 0, 0, 0, 0, -0.7464],
+    # Jet1
+    203: [0.0092, 0, -0.6571, 0, 0, 0, 0, 0, -0.0567, 0.0178],
+    # Mjj 0-60, PTHjj 0-25
+    204: [0.0143, 0, 0.0282, -0.5951, 0, 0, 0, 0, -0.0876, 0.0275],
+    # Mjj 60-120, PTHjj 0-25
+    205: [0.0455, 0, 0.0902, 0.0946, -0.3791, 0, 0, 0, -0.2799, 0.0877],
+    # Mjj 120-350, PTHjj 0-25
+    206: [0.0048, 0, -0.3429, 0, 0, 0, 0, 0, 0.0567, 0.0093],
+    # Mjj 0-60, PTHjj 25-inf
+    207: [0.0097, 0, 0.0192, -0.4049, 0, 0, 0, 0, 0.0876, 0.0187],
+    # Mjj 60-120, PTHjj 25-inf
+    208: [0.0746, 0, 0.1477, 0.0155, -0.6209, 0, 0, 0, 0.2799, 0.1437],
+    # Mjj 120-350, PTHjj 25-inf
+    209: [0.0375, 0.1166, 0.0743, 0.078, 0.1039, -0.2757, 0, 0, -0.2306, 0.0723],
+    # Mjj 350-700, PTHjj 0-25, pTH 0-200
+    210: [0.0985, 0.3062, 0.1951, 0.2048, 0.273, -0.7243, 0, 0, 0.2306, 0.1898],
+    # Mjj 350-700, PTHjj 25-inf, pTH 0-200
+    211: [0.0166, 0.0515, 0.0328, 0.0345, 0.0459, 0.0773, -0.2473, 0, -0.1019, 0.0319],
+    # Mjj 700-1000, PTHjj 0-25, pTH 0-200
+    212: [0.0504, 0.1568, 0.0999, 0.1049, 0.1398, 0.2353, -0.7527, 0, 0.1019, 0.0972],
+    # Mjj 700-1000, PTHjj 25-inf, pTH 0-200
+    213: [
+        0.0137,
+        0.0426,
+        0.0271,
+        0.0285,
+        0.0379,
+        0.0639,
+        0.0982,
+        -0.2274,
+        -0.0842,
+        0.0264,
+    ],
+    # Mjj 1000-1500, PTHjj 0-25, pTH 0-200
+    214: [
+        0.0465,
+        0.1446,
+        0.0922,
+        0.0967,
+        0.1289,
+        0.2171,
+        0.3335,
+        -0.7726,
+        0.0842,
+        0.0897,
+    ],
+    # Mjj 1000-1500, PTHjj 25-inf, pTH 0-200
+    215: [
+        0.0105,
+        0.0327,
+        0.0208,
+        0.0219,
+        0.0291,
+        0.0491,
+        0.0754,
+        0.1498,
+        -0.0647,
+        0.0203,
+    ],
+    # Mjj 1500-inf, PTHjj 0-25, pTH 0-200
+    216: [0.048, 0.1491, 0.095, 0.0998, 0.133, 0.2239, 0.344, 0.6836, 0.0647, 0.0925],
+    # Mjj 1500-inf, PTHjj 25-inf, pTH 0-200
+    217: [
+        0.0051,
+        -0.1304,
+        0.0101,
+        0.0106,
+        0.0141,
+        0.0238,
+        0.0366,
+        0.0727,
+        -0.0314,
+        0.0098,
+    ],
+    # Mjj 350-700, PTHjj 0-25, pTH 200-inf
+    218: [
+        0.0054,
+        -0.1378,
+        0.0107,
+        0.0112,
+        0.0149,
+        0.0251,
+        0.0386,
+        0.0768,
+        0.0314,
+        0.0104,
+    ],
+    # Mjj 350-700, PTHjj 25-inf, pTH 200-inf
+    219: [
+        0.0032,
+        -0.0816,
+        0.0063,
+        0.0066,
+        0.0088,
+        0.0149,
+        0.0229,
+        0.0455,
+        -0.0196,
+        0.0062,
+    ],
+    # Mjj 700-1000, PTHjj 0-25, pTH 200-inf
+    220: [
+        0.0047,
+        -0.1190,
+        0.0092,
+        0.0097,
+        0.0129,
+        0.0217,
+        0.0334,
+        0.0663,
+        0.0196,
+        0.0090,
+    ],
+    # Mjj 700-1000, PTHjj 25-inf, pTH 200-inf
+    221: [
+        0.0034,
+        -0.0881,
+        0.0068,
+        0.0072,
+        0.0096,
+        0.0161,
+        0.0247,
+        0.0491,
+        -0.0212,
+        0.0066,
+    ],
+    # Mjj 1000-1500, PTHjj 0-25, pTH 200-inf
+    222: [
+        0.0056,
+        -0.1440,
+        0.0112,
+        0.0117,
+        0.0156,
+        0.0263,
+        0.0404,
+        0.0802,
+        0.0212,
+        0.0109,
+    ],
+    # Mjj 1000-1500, PTHjj 25-inf, pTH 200-inf
+    223: [
+        0.0036,
+        -0.0929,
+        0.0072,
+        0.0076,
+        0.0101,
+        0.0169,
+        0.026,
+        0.0518,
+        -0.0223,
+        0.0070,
+    ],
+    # Mjj 1500-inf, PTHjj 0-25, pTH 200-inf
+    224: [
+        0.0081,
+        -0.2062,
+        0.016,
+        0.0168,
+        0.0223,
+        0.0376,
+        0.0578,
+        0.1149,
+        0.0223,
+        0.0155,
+    ]
+    # Mjj 1500-inf, PTHjj 25-inf, pTH 200-inf
+}
+uncert_deltas = [
+    14.867,
+    0.394,
+    9.762,
+    6.788,
+    7.276,
+    3.645,
+    2.638,
+    1.005,
+    20.073,
+    18.094,
+]
+powheg_xsec = {
+    200: 273.952,
+    201: 291.030,
+    202: 1317.635,
+    203: 36.095,
+    204: 55.776,
+    205: 178.171,
+    206: 18.839,
+    207: 37.952,
+    208: 291.846,
+    209: 146.782,
+    210: 385.566,
+    211: 64.859,
+    212: 197.414,
+    213: 53.598,
+    214: 182.107,
+    215: 41.167,
+    216: 187.823,
+    217: 19.968,
+    218: 21.092,
+    219: 12.496,
+    220: 18.215,
+    221: 13.490,
+    222: 22.044,
+    223: 14.220,
+    224: 31.565,
+}
+
+
+def stxs_lookups():
+    stxs_acc_lookups = {}
+    # edges = np.array([])
+    # values = np.array([])
+    for i in range(10):
+        # for k, v in stxs_acc.items():
+        #     edges = np.append(edges, k)
+        #     values = np.append(values, v[i])
+        # print(f'stxs_lookups {i} v[i]: {v[i]}')
+        edges = list(stxs_acc.keys())
+        values = [v[i] for v in stxs_acc.values()]
+        # convert values and edge to np arrays, as ak array doesn't work with dense_lookup initialization
+        values = np.array(values) 
+        edges = ak.Array(edges)
+        print(f'stxs_lookups {i} edges: {edges}')
+        print(f'stxs_lookups {i} values: {values}')
+        stxs_acc_lookups[i] = dense_lookup.dense_lookup(values, [edges])
+        print(f'stxs_lookups stxs_acc_lookups[i]._axes: {stxs_acc_lookups[i]._axes}')
+    powheg_xsec_lookup = dense_lookup.dense_lookup(
+        np.array(list(powheg_xsec.values())), [np.array(list(powheg_xsec.keys()))]
+    )
+    return stxs_acc_lookups, powheg_xsec_lookup
+
+
+def add_stxs_variations(
+    events, 
+    weights, 
+    parameters
+):
+    # STXS VBF cross-section uncertainty
+    stxs_acc_lookups, powheg_xsec_lookup = stxs_lookups()
+    for i, name in enumerate(parameters["sths_names"]):
+        print(f"add_stxs_variations i: {i}, name: {name}")
+        wgt_up = stxs_uncert(
+            i,
+            events.HTXS.stage1_1_fine_cat_pTjet30GeV,
+            1.0,
+            stxs_acc_lookups,
+            powheg_xsec_lookup,
+        )
+        wgt_down = stxs_uncert(
+            i,
+            events.HTXS.stage1_1_fine_cat_pTjet30GeV,
+            -1.0,
+            stxs_acc_lookups,
+            powheg_xsec_lookup,
+        )
+        thu_wgts = {"up": wgt_up, "down": wgt_down}
+        weights.add_weight("THU_VBF_" + name, thu_wgts, how="only_vars")
+
+
+
+def stxs_uncert(source, event_STXS, Nsigma, stxs_acc_lookups, powheg_xsec_lookup):
+    """
+    NOTE: source numbering seems arbitrary, I gotta ask Dmitry about this
+    Moreover, source is always < 10, so idk what the use case is 
+    """
+    # vbf_uncert_stage_1_1
+    # return a single weight for a given souce
+    if source < 10: # idk why we have this
+        print(f'stxs_lookups source: {source}')
+        print(f'stxs_lookups stxs_acc_lookups.keys(): {stxs_acc_lookups.keys()}')
+        print(f'stxs_uncert stxs_acc_lookups[source]: {stxs_acc_lookups[source]}')
+        print(f'stxs_uncert event_STXS: {event_STXS}')
+        print(f'stxs_uncert stxs_acc_lookups[source](event_STXS): {stxs_acc_lookups[source](event_STXS)}')
+        print(f'stxs_uncert uncert_deltas[source]: {uncert_deltas[source]}')
+        delta_var = stxs_acc_lookups[source](event_STXS) * uncert_deltas[source]
+        ret = ak.ones_like(event_STXS, dtype="float") + Nsigma * (
+            delta_var / powheg_xsec_lookup(event_STXS)
+        )
+        return ret
+    else:
+        return ak.zeros_like(event_STXS, dtype="float")

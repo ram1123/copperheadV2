@@ -35,7 +35,7 @@ class Weights(object):
             nom = wgt["nom"]
             up = wgt["up"]
             down = wgt["down"]
-            print(f"add_weight all how nom: \n {nom}")
+            # print(f"add_weight all how nom: \n {nom}")
             self.add_weight_with_variations(name, nom, up, down)
         elif how == "only_vars":
             # add only variations
@@ -43,67 +43,74 @@ class Weights(object):
             down = wgt["down"]
             self.add_only_variations(name, up, down)
 
-        elif (how == "dummy_nom") or (how == "dummy"):
-            self.add_dummy_weight(name, nom=True, variations=False)
-        elif how == "dummy_all":
-            self.add_dummy_weight(name, nom=True, variations=True)
-        elif how == "dummy_vars":
-            self.add_dummy_weight(name, nom=False, variations=True)
+        # elif (how == "dummy_nom") or (how == "dummy"):
+        #     self.add_dummy_weight(name, nom=True, variations=False)
+        # elif how == "dummy_all":
+        #     self.add_dummy_weight(name, nom=True, variations=True)
+        # elif how == "dummy_vars":
+        #     self.add_dummy_weight(name, nom=False, variations=True)
 
         # print(f"add_weight sself.wgts : \n {self.wgts}")
     
     def add_nom_weight(self, name, wgt):
-        w_names = self.weights.keys()
-        # print(f"weights name_off: {name}_off")
-        # print(f'type(self.weights["nominal"]): {type(self.weights["nominal"])}')
-        # self.weights[f"{name}_off"] = ak.copy(self.weights["nominal"]) # assign the value of the nominal b4 we overwrite it
-        # self.weights[f"{name}_off"] = self.weights["nominal"]
+        w_names = list(self.weights.keys()) # get a static list, not a dict_key pointer
+        # print(f'w_names b4: {w_names}')
 
-        for w_name in w_names:
-            self.weights[w_name] = self.weights[w_name]*wgt
-        # self.df[w_name] = (
-        #     self.df[columns].multiply(np.array(wgt), axis=0).astype(np.float64)
-        # )
         
+        self.weights[f"{name}_off"] = self.weights["nominal"]
+        # print(f'self.weights {name}_off \n : {ak.to_numpy(self.weights[f"{name}_off"])}')
+        # print(f'w_names after: {w_names}')
+        for w_name in w_names:
+            # print(f'w_name: {w_name}')
+            # print(f'self.weights {w_name} \n : {ak.to_numpy(self.weights[w_name])}')
+            self.weights[w_name] = self.weights[w_name]*wgt
+
+        # print(f"wgt \n : {ak.to_numpy(wgt)}")
         self.variations.append(name)
         self.wgts[name] = wgt 
 
     
 
     def add_weight_with_variations(self, name, nom_wgt, up, down):
-        columns = self.df.columns
+        w_names = list(self.weights.keys()) # get a static list, not a dict_key pointer
         self.wgts[name] = nom_wgt
-        nom = self.df["nominal"]
-        self.df[f"{name}_off"] = nom
-        self.df[f"{name}_up"] = (nom * up).astype(np.float64)
-        self.df[f"{name}_down"] = (nom * down).astype(np.float64)
-        self.df[columns] = self.df[columns].multiply(nom_wgt, axis=0).astype(np.float64)
+        prev_nom = self.weights["nominal"]
+        self.weights[f"{name}_off"] = prev_nom
+        self.weights[f"{name}_up"] = ak.values_astype(prev_nom * up, "float64")
+        self.weights[f"{name}_down"] = ak.values_astype(prev_nom * down, "float64")
+        for w_name in w_names:
+            self.weights[w_name] = self.weights[w_name]*nom_wgt
         self.variations.append(name)
 
     def add_only_variations(self, name, up, down):
-        nom = self.df["nominal"]
-        self.df[f"{name}_up"] = (nom * up).astype(np.float64)
-        self.df[f"{name}_down"] = (nom * down).astype(np.float64)
+        prev_nom = self.weights["nominal"]
+        self.weights[f"{name}_up"] = ak.values_astype(prev_nom * up, "float64")
+        self.weights[f"{name}_down"] = ak.values_astype(prev_nom * down, "float64")
         self.variations.append(name)
 
-    def add_dummy_weight(self, name, nom=True, variations=False):
-        self.variations.append(name)
-        if nom:
-            self.df[f"{name}_off"] = self.df["nominal"]
-            self.wgts[name] = 1.0
-        if variations:
-            self.df[f"{name}_up"] = np.nan
-            self.df[f"{name}_down"] = np.nan
-            self.df[f"{name}_up"] = self.df[f"{name}_up"].astype(np.float64)
-            self.df[f"{name}_down"] = self.df[f"{name}_down"].astype(np.float64)
+    # def add_dummy_weight(self, name, nom=True, variations=False):
+    #     self.variations.append(name)
+    #     if nom:
+    #         self.df[f"{name}_off"] = self.df["nominal"]
+    #         self.wgts[name] = 1.0
+    #     if variations:
+    #         self.df[f"{name}_up"] = np.nan
+    #         self.df[f"{name}_down"] = np.nan
+    #         self.df[f"{name}_up"] = self.df[f"{name}_up"].astype(np.float64)
+    #         self.df[f"{name}_down"] = self.df[f"{name}_down"].astype(np.float64)
 
-    def get_weight(self, name, mask=np.array([])):
-        if len(mask) == 0:
-            mask = np.ones(self.df.shape[0], dtype=bool)
-        if name in self.df.columns:
-            return self.df[name].to_numpy()[mask]
+    # def get_weight(self, name, mask=np.array([])):
+    #     if len(mask) == 0:
+    #         mask = np.ones(self.df.shape[0], dtype=bool)
+    #     if name in self.df.columns:
+    #         return self.df[name].to_numpy()[mask]
+    #     else:
+    #         return np.array([])
+    def get_weight(self, name):
+        if name in self.weights.keys():
+            return self.weights[name]
         else:
-            return np.array([])
+            return ak.array([])
 
     def effect_on_normalization(self, mask=np.array([])):
         if len(mask) == 0:

@@ -8,7 +8,7 @@ from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 from corrections.weight import Weights
-from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights
+from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -42,8 +42,8 @@ class EventProcessor(processor.ProcessorABC):
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : False, #True
             "do_roccor" : False,# True
-            "do_fsr" : True,
-            "do_geofit" : True,
+            "do_fsr" : False,
+            "do_geofit" : False,
             "year" : "2018",
             "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             "auto_pu" : True,
@@ -138,6 +138,7 @@ class EventProcessor(processor.ProcessorABC):
                     (events.TrigObj.pt > pt_threshold)
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
             padded_muons = ak.pad_none(events.Muon, 2) # pad in case we have only one muon or zero in an event
+            # padded_muons = ak.pad_none(events.Muon, 4)
             print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
             mu1 = padded_muons[:,0]
             mu2 = padded_muons[:,1]
@@ -149,23 +150,45 @@ class EventProcessor(processor.ProcessorABC):
                 (mu2.pt > pt_threshold)
             mu2_match =  ak.sum(mu2_match, axis=1)
             mu2_match = ak.fill_none(mu2_match, value=False)
-            
+
             trigger_match = (mu1_match >0) | (mu2_match > 0)
+            
+            # mu3 = padded_muons[:,2]
+            # mu4 = padded_muons[:,3]
+            # mu3_match = (mu3.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+            #     (mu3.pt > pt_threshold)
+            # mu3_match = ak.sum(mu3_match, axis=1)
+            # mu3_match = ak.fill_none(mu3_match, value=False)
+            # mu4_match = (mu4.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+            #     (mu4.pt > pt_threshold)
+            # mu4_match =  ak.sum(mu4_match, axis=1)
+            # mu4_match = ak.fill_none(mu4_match, value=False)
+            
+            # trigger_non_match = ~trigger_match & (mu3_match >0) | (mu4_match > 0)
+            # trigger_non_match = trigger_non_match & events.HLT.IsoMu24
+            
             if self.test:
                 print(f"copperhead2 EventProcessor mu1_match: \n {mu1_match}")
                 print(f"copperhead2 EventProcessor mu2_match: \n {mu2_match}")
                 print(f"copperhead2 EventProcessor trigger_match: \n {trigger_match}")
-            print(f"copperhead2 EventProcessor events.HLT.IsoMu24 and trigger_match mismatch count: \n {ak.sum(events.HLT.IsoMu24 != trigger_match)}")
+                print(f"copperhead2 EventProcessor events.HLT.IsoMu24 and trigger_match mismatch count: \n {ak.sum(events.HLT.IsoMu24 != trigger_match)}")
+                
+            # print(f"copperhead2 EventProcessor trigger_match sum: {ak.sum(trigger_match)}")
+            # print(f"copperhead2 EventProcessor trigger_non_match: \n {ak.sum(trigger_non_match)}")
+            # print(f"copperhead2 EventProcessor trigger_non_match ratio: {ak.sum(trigger_non_match)/ak.sum(trigger_match)}")
+            
+
+        
             event_filter = event_filter & trigger_match
 
             
         # Apply HLT to both Data and MC
         for HLT_str in self.config["hlt"]:
             event_filter = event_filter & events.HLT[HLT_str]
-        if self.test:
-            print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
-            print(f"copperhead2 EventProcessor ak.sum(events.HLT.IsoMu24): \n {ak.sum(events.HLT.IsoMu24)}")
-            print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
+        # if self.test:
+        #     print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
+        #     print(f"copperhead2 EventProcessor ak.sum(events.HLT.IsoMu24): \n {ak.sum(events.HLT.IsoMu24)}")
+        #     print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
 
         if events.metadata["is_mc"]:
             lumi_mask = ak.ones_like(event_filter)
@@ -212,6 +235,15 @@ class EventProcessor(processor.ProcessorABC):
         #         # L1_down = events.L1PreFiringWeight.Dn
         #         self.weight_collection.add_weight("l1prefiring_wgt", L1_nom)
         #         print(f"weight_collection l1prefiring_wgt info: \n  {self.weight_collection.get_info()}")
+
+        #-------------------------- delete after puwgts are verified
+        # numevents = ak.num(event_filter, axis=0)
+        # pu_wgts = pu_evaluator(
+        #             self.config,
+        #             numevents,
+        #             ak.to_numpy(events.Pileup.nTrueInt),
+        #         )
+        # print(f"copperhead2 EventProcessor pu_wgts: \n  {pu_wgts}")
                 
            
         
@@ -310,17 +342,7 @@ class EventProcessor(processor.ProcessorABC):
             print(f"copperhead2 EventProcessor b4 selection ak.sum(electron_veto: \n {ak.sum(electron_veto)}")
             print(f"copperhead2 EventProcessor b4 selection ak.sum(good_pv: \n {ak.sum((events.PV.npvsGood > 0))}")
 
-        # if self.test:
-        #     # save electrons in for plotting
-        #     electrons = events.Electron[electron_selection]
-        #     placeholder =  pd.DataFrame({
-        #         'el_pt': ak.to_numpy(ak.flatten(electrons.pt)),
-        #         'el_eta': ak.to_numpy(ak.flatten(electrons.eta)),
-        #         'el_phi': ak.to_numpy(ak.flatten(electrons.phi)),
-        #         'el_charge': ak.to_numpy(ak.flatten(electrons.charge)),
-        #     })
-        #     placeholder.to_csv("./V2electrons.csv")
-        
+
         
         event_filter = (
                 event_filter
@@ -502,8 +524,7 @@ class EventProcessor(processor.ProcessorABC):
         # jet_loop
         
 
-        if self.test:
-            print("dummy")
+        # if self.test:
             # print(f'copperheadV2 EventProcessor after apply_jec jets.pt short: \n {jets.pt}')
             # print(f'copperheadV2 EventProcessor after apply_jec jets.pt long: \n {ak.to_numpy(ak.flatten(jets.pt.compute()))}')
             # print(f'copperheadV2 EventProcessor jets.pt_jec b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.pt_jec.compute()))}')
@@ -531,25 +552,43 @@ class EventProcessor(processor.ProcessorABC):
             self.weight_collection.add_weight("genwgt", genweight)
             print(f"weight_collection genwgt info: \n  {self.weight_collection.get_info()}")
             print(f"weight_collection genwgt wgts: \n  {self.weight_collection.wgts}")
-            self.weight_collection.add_weight("lumi", 0.03576104036357644) # hard code for now
+            # lumi_arr = 0.03576104036357644*ak.ones_like(weight_ones) # dy 50
+            lumi_arr = 2.955104456012521e-05*ak.ones_like(weight_ones) # ggh 
+            self.weight_collection.add_weight("lumi", lumi_arr) # hard code for now
             print(f"weight_collection lumi info: \n  {self.weight_collection.get_info()}")
             print(f"weight_collection lumi wgts: \n  {self.weight_collection.wgts}")
-            numevents = ak.num(event_filter, axis=0)
-            # pu_wgts = pu_evaluator(
-            #     #self.pu_lookups,
-            #     self.config,
-            #     numevents,
-            #     events.Pileup.nTrueInt,
-            #     self.config["auto_pu"],
-            # )
-            # print(f"copperhead2 EventProcessor pu_wgts: \n  {pu_wgts}")
-            if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in df.fields):
-            # if True:
-                L1_nom = events.L1PreFiringWeight.Nom
-                # L1_up = events.L1PreFiringWeight.Up
-                # L1_down = events.L1PreFiringWeight.Dn
-                self.weight_collection.add_weight("l1prefiring_wgt", L1_nom)
-                print(f"weight_collection l1prefiring_wgt info: \n  {self.weight_collection.get_info()}")
+            # num_filtered_events = ak.sum(event_filter, axis=0) 
+            # if self.test:
+            #     pu_wgts = pu_evaluator(
+            #         self.config,
+            #         # num_filtered_events,
+            #         events.Pileup.nTrueInt,
+            #         test=self.test
+            #     )
+            #     print(f"copperhead2 EventProcessor pu_wgts: \n  {pu_wgts}")
+            # else:
+            #     pu_wgts = pu_evaluator(
+            #         self.config,
+            #         num_filtered_events,
+            #         ak.to_numpy(events.Pileup.nTrueInt.compute()),
+            #     )
+        
+            pu_wgts = pu_evaluator(
+                    self.config,
+                    # num_filtered_events,
+                    events.Pileup.nTrueInt,
+                    test=self.test
+            )
+            print(f"copperhead2 EventProcessor pu_wgts: \n  {pu_wgts}")
+            print(f"copperhead2 EventProcessor type(pu_wgts['nom']): \n  {type(pu_wgts['nom'])}")
+            
+            # if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in df.fields):
+            # # if True:
+            #     L1_nom = events.L1PreFiringWeight.Nom
+            #     # L1_up = events.L1PreFiringWeight.Up
+            #     # L1_down = events.L1PreFiringWeight.Dn
+            #     self.weight_collection.add_weight("l1prefiring_wgt", L1_nom)
+            #     print(f"weight_collection l1prefiring_wgt info: \n  {self.weight_collection.get_info()}")
 
         
         # ------------------------------------------------------------#
@@ -562,9 +601,10 @@ class EventProcessor(processor.ProcessorABC):
         )
         if events.metadata["is_mc"]:
             do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
+            print(f"do_nnlops: {do_nnlops}")
             if do_nnlops:
             # if True:
-                nnlopsw = nnlops_weights(events, numevents, self.config, events.metadata["dataset"])
+                nnlopsw = nnlops_weights(events, self.config, events.metadata["dataset"])
                 self.weight_collection.add_weight("nnlops", nnlopsw)
                 print(f"weight_collection nnlops info: \n  {self.weight_collection.get_info()}")
             # else:
@@ -578,11 +618,11 @@ class EventProcessor(processor.ProcessorABC):
             )
             # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_dataframe(muTrig["nom"]).to_string()}')
             # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_numpy(muTrig["nom"])}')
-            self.weight_collection.add_weight("muID", muID["nom"])
+            self.weight_collection.add_weight("muID", muID, how="all")
             print(f"weight_collection muID info: \n  {self.weight_collection.get_info()}")
-            self.weight_collection.add_weight("muIso", muIso["nom"])
+            self.weight_collection.add_weight("muIso", muIso, how="all")
             print(f"weight_collection muIso info: \n  {self.weight_collection.get_info()}")
-            self.weight_collection.add_weight("muTrig", muTrig["nom"])
+            self.weight_collection.add_weight("muTrig", muTrig, how="all")
             print(f"weight_collection muTrig info: \n  {self.weight_collection.get_info()}")
             # self.weight_collection.add_weight("muID", muID, how="all")
             # self.weight_collection.add_weight("muIso", muIso, how="all")
@@ -604,6 +644,43 @@ class EventProcessor(processor.ProcessorABC):
                 # self.weight_collection.add_weight("LHEFac", lhe_fac, how="only_vars")
                 # print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
             
+            #skip thu for now
+            # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
+            dataset = events.metadata["dataset"]
+            do_thu = (
+                ("vbf" in dataset)
+                and ("dy" not in dataset)
+                and ("nominal" in pt_variations)
+                and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
+            )
+            print(f"do_thu: {do_thu}")
+            if do_thu:
+                add_stxs_variations(
+                    events,
+                    self.weight_collection,
+                    self.config,
+                )
+                print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
+            # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
+            do_pdf = (
+                self.config["do_pdf"]
+                and ("nominal" in pt_variations)
+                and (
+                    "dy" in dataset
+                    or "ewk" in dataset
+                    or "ggh" in dataset
+                    or "vbf" in dataset
+                )
+                and ("mg" not in dataset)
+            )
+            print(f"do_pdf: {do_pdf}")
+            #skip pdf 
+            # add_pdf_variations(
+            #     do_pdf, df, self.year, dataset, self.parameters, output, weights
+            # )
+
+
+        
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#
