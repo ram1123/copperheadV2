@@ -42,7 +42,7 @@ class EventProcessor(processor.ProcessorABC):
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : False, #True
             "do_roccor" : False,# True
-            "do_fsr" : False,
+            "do_fsr" : True,
             "do_geofit" : False,
             "year" : "2018",
             "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
