@@ -43,13 +43,6 @@ class Weights(object):
             down = wgt["down"]
             self.add_only_variations(name, up, down)
 
-        # elif (how == "dummy_nom") or (how == "dummy"):
-        #     self.add_dummy_weight(name, nom=True, variations=False)
-        # elif how == "dummy_all":
-        #     self.add_dummy_weight(name, nom=True, variations=True)
-        # elif how == "dummy_vars":
-        #     self.add_dummy_weight(name, nom=False, variations=True)
-
         # print(f"add_weight sself.wgts : \n {self.wgts}")
     
     def add_nom_weight(self, name, wgt):
@@ -88,24 +81,7 @@ class Weights(object):
         self.weights[f"{name}_down"] = ak.values_astype(prev_nom * down, "float64")
         self.variations.append(name)
 
-    # def add_dummy_weight(self, name, nom=True, variations=False):
-    #     self.variations.append(name)
-    #     if nom:
-    #         self.df[f"{name}_off"] = self.df["nominal"]
-    #         self.wgts[name] = 1.0
-    #     if variations:
-    #         self.df[f"{name}_up"] = np.nan
-    #         self.df[f"{name}_down"] = np.nan
-    #         self.df[f"{name}_up"] = self.df[f"{name}_up"].astype(np.float64)
-    #         self.df[f"{name}_down"] = self.df[f"{name}_down"].astype(np.float64)
 
-    # def get_weight(self, name, mask=np.array([])):
-    #     if len(mask) == 0:
-    #         mask = np.ones(self.df.shape[0], dtype=bool)
-    #     if name in self.df.columns:
-    #         return self.df[name].to_numpy()[mask]
-    #     else:
-    #         return np.array([])
     def get_weight(self, name):
         if name in self.weights.keys():
             return self.weights[name]
