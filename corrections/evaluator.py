@@ -731,3 +731,39 @@ def stxs_uncert(source, event_STXS, Nsigma, stxs_acc_lookups, powheg_xsec_lookup
         return ret
     else:
         return ak.zeros_like(event_STXS, dtype="float")
+
+
+def add_pdf_variations(events, weights, config, dataset):
+    if "2016" in config["year"]:
+        max_replicas = 0
+        if "dy" in dataset:
+            max_replicas = 100
+        elif "ewk" in dataset:
+            max_replicas = 33
+        else:
+            max_replicas = 100
+        pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]]
+
+        #---------------- No idea why output instead of weights
+        for i in range(100):
+            if (i < max_replicas) and do_pdf:
+                output[f"pdf_mcreplica{i}"] = pdf_wgts[:, i]
+            else:
+                output[f"pdf_mcreplica{i}"] = np.nan
+        #--------------------------------------------
+    
+    else:
+        # pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]][0]
+        pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]]
+        # pdf_wgts = np.array(pdf_wgts)
+        print(f"add_pdf_variations pdf_wgts: {pdf_wgts}")
+        pdf_std = ak.std(pdf_wgts, axis=1)
+        pdf_vars = {
+            # "up": (1 + 2 * pdf_wgts.std()),
+            # "down": (1 - 2 * pdf_wgts.std()),
+            "up": (1 + 2 * pdf_std),
+            "down": (1 - 2 * pdf_std),
+        }
+        print(f"add_pdf_variations pdf_vars up: {ak.to_numpy(pdf_vars['up'])}")
+        print(f"add_pdf_variations pdf_vars down: {ak.to_numpy(pdf_vars['down'])}")
+        weights.add_weight("pdf_2rms", pdf_vars, how="only_vars")

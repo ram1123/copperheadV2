@@ -8,7 +8,7 @@ from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 from corrections.weight import Weights
-from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations
+from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -634,7 +634,8 @@ class EventProcessor(processor.ProcessorABC):
                     self.weight_collection,
                     self.config,
                 )
-                print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
+                self.test:
+                    print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_pdf = (
                 self.config["do_pdf"]
@@ -648,10 +649,11 @@ class EventProcessor(processor.ProcessorABC):
                 and ("mg" not in dataset)
             )
             print(f"do_pdf: {do_pdf}")
-            #skip pdf 
-            # add_pdf_variations(
-            #     do_pdf, df, self.year, dataset, self.parameters, output, weights
-            # )
+            if do_pdf:
+                add_pdf_variations(events, self.weight_collection, self.config, dataset)
+                self.test:
+                    print(f"weight_collection do_pdf info: \n  {self.weight_collection.get_info()}")
+
 
 
         
