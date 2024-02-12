@@ -8,7 +8,7 @@ from corrections.fsr_recovery import fsr_recovery
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 from corrections.weight import Weights
-from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations
+from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -28,16 +28,19 @@ def cs_variables(
 
 
 class EventProcessor(processor.ProcessorABC):
-    def __init__(self, config_path: str,**kwargs):
+    # def __init__(self, config_path: str,**kwargs):
+    def __init__(self, config: dict,**kwargs):
         """
         TODO: replace all of these with self.config dict variable which is taken from a
         pre-made json file
         """
-        with open(config_path) as file:
-            self.config = json.loads(file.read())
+        # with open(config_path) as file:
+        #     self.config = json.loads(file.read())
+        self.config = config
 
         # self.config = json.loads(config_path)
         # print(f"copperhead proccesor self.config b4 update: \n {self.config}")
+        self.test = True# False
         dict_update = {
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : False, #True
@@ -52,16 +55,17 @@ class EventProcessor(processor.ProcessorABC):
         }
         self.config.update(dict_update)
         # print(f"copperhead proccesor self.config after update: \n {self.config}")
-        self.test = True# False
+        
 
         # --- Evaluator
         extractor_instance = extractor()
         # Calibration of event-by-event mass resolution
+        year = self.config["year"]
         for mode in ["Data", "MC"]:
-            if "2016" in self.config["year"]:
+            if "2016" in year:
                 yearstr = "2016"
             else:
-                yearstr=self.config["year"] #Work around before there are seperate new files for pre and postVFP
+                yearstr=year #Work around before there are seperate new files for pre and postVFP
             label = f"res_calib_{mode}_{yearstr}"
             path = self.config["res_calib_path"]
             file_path = f"{path}/{label}.root"
@@ -70,7 +74,13 @@ class EventProcessor(processor.ProcessorABC):
         self.evaluator = extractor_instance.make_evaluator()
 
         self.weight_collection = None # will be initialzed later
-        
+
+        dataset = events.metadata['dataset']
+        cross_section = self.config["cross_sections"][dataset]
+        totalGenWgts = events.metadata['sumGenWgts']
+        integrated_lumi = self.config["integrated_lumis"][year]
+        lumi_weight = cross_section * integrated_lumi/ totalGenWgts
+        self.config["lumi_weight"] = lumi_weight
         # # prepare lookup tables for all kinds of corrections
         # self.prepare_lookups()
 
@@ -547,10 +557,11 @@ class EventProcessor(processor.ProcessorABC):
             self.weight_collection.add_weight("genwgt", genweight)
             print(f"weight_collection genwgt info: \n  {self.weight_collection.get_info()}")
             print(f"weight_collection genwgt wgts: \n  {self.weight_collection.wgts}")
-            # lumi_arr = 0.03576104036357644*ak.ones_like(weight_ones) # dy 50
-            # lumi_arr = 2.955104456012521e-05*ak.ones_like(weight_ones) # ggh 
-            lumi_arr = 1.3805388208609223e-05*ak.ones_like(weight_ones) # ggh 
-            self.weight_collection.add_weight("lumi", lumi_arr) # hard code for now
+            # lumi_weight = 0.03576104036357644*ak.ones_like(weight_ones) # dy 50
+            # lumi_weight = 2.955104456012521e-05 # ggh 
+            # lumi_weight = 1.3805388208609223e-05 # vbf 
+            lumi_weight = self.config["lumi_weight"]
+            self.weight_collection.add_weight("lumi", lumi_weight) 
             print(f"weight_collection lumi info: \n  {self.weight_collection.get_info()}")
             print(f"weight_collection lumi wgts: \n  {self.weight_collection.wgts}")
         
@@ -618,7 +629,6 @@ class EventProcessor(processor.ProcessorABC):
                 # self.weight_collection.add_weight("LHEFac", lhe_fac, how="only_vars")
                 # print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
             
-            #skip thu for now
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             dataset = events.metadata["dataset"]
             do_thu = (
@@ -634,8 +644,8 @@ class EventProcessor(processor.ProcessorABC):
                     self.weight_collection,
                     self.config,
                 )
-                self.test:
-                    print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
+            if self.test:
+                print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_pdf = (
                 self.config["do_pdf"]
@@ -651,8 +661,8 @@ class EventProcessor(processor.ProcessorABC):
             print(f"do_pdf: {do_pdf}")
             if do_pdf:
                 add_pdf_variations(events, self.weight_collection, self.config, dataset)
-                self.test:
-                    print(f"weight_collection do_pdf info: \n  {self.weight_collection.get_info()}")
+            if self.test:
+                print(f"weight_collection do_pdf info: \n  {self.weight_collection.get_info()}")
 
 
 
@@ -1090,30 +1100,31 @@ class EventProcessor(processor.ProcessorABC):
         # b-tag weights calculation
         vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) & (jet1.pt > 35)
 
-        # ------------------------------------------------------------#
-        # Calculate QGL weights, btag SF and apply btag veto
-        # ------------------------------------------------------------#
+        # # ------------------------------------------------------------#
+        # # Calculate QGL weights, btag SF and apply btag veto
+        # # ------------------------------------------------------------#
+        # # TODO: qgl seems to be only for vbf, double check that
+        # if is_mc and variation == "nominal":
+        #     # --- QGL weights --- #
+        #     isHerwig = "herwig" in events.metadata['dataset']
 
-    #     if is_mc and variation == "nominal":
-    #         # --- QGL weights --- #
-    #         isHerwig = "herwig" in dataset
+        #     qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
+        #     self.weight_collection.add_weight("qgl_wgt", qgl_wgts, how="all")
+        #     # print(f"type(qgl_wgts) : \n {type(qgl_wgts)}")
+        #     # print(f"qgl_wgts : \n {qgl_wgts}")
 
-    #         qgl_wgts = qgl_weights(jet1, jet2, isHerwig, output, variables, njets)
-    #         weights.add_weight("qgl_wgt", qgl_wgts, how="all")
-    #         # print(f"type(qgl_wgts) : \n {type(qgl_wgts)}")
-    #         # print(f"qgl_wgts : \n {qgl_wgts}")
+        #     # --- Btag weights --- #
+        #     bjet_sel_mask = output.event_selection #& two_jets & vbf_cut
+        #     btag_systs = self.config["btag_systs"]
+        #     btag_json =  correctionlib.CorrectionSet.from_file(self.parameters["btag_sf_json"],)
+        #     btag_wgt, btag_syst = btag_weights_json(
+        #         self, btag_systs, jets, weights, bjet_sel_mask, btag_json
+        #     )
+        #     weights.add_weight("btag_wgt", btag_wgt)
 
-    #         # --- Btag weights --- #
-    #         bjet_sel_mask = output.event_selection #& two_jets & vbf_cut
-
-    #         btag_wgt, btag_syst = btag_weights_json(
-    #             self, self.btag_systs, jets, weights, bjet_sel_mask, self.btag_json
-    #         )
-    #         weights.add_weight("btag_wgt", btag_wgt)
-
-    #         # --- Btag weights variations --- #
-    #         for name, bs in btag_syst.items():
-    #             weights.add_weight(f"btag_wgt_{name}", bs, how="only_vars")
+        #     # --- Btag weights variations --- #
+        #     for name, bs in btag_syst.items():
+        #         weights.add_weight(f"btag_wgt_{name}", bs, how="only_vars")
 
     #     # Separate from ttH and VH phase space
         
