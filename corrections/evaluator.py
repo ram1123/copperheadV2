@@ -13,9 +13,9 @@ def pu_lookups(parameters, mode="nom", auto=[]):
         pu_hist_data = uproot.open(parameters["pu_file_data"])[branch[mode]].values()
 
         nbins = len(pu_hist_data)
-        print(f"pu_reweight nbins: {nbins}")
+        # print(f"pu_reweight nbins: {nbins}")
         edges = [[i for i in range(nbins)]]
-        print(f"pu_lookups type(pu_hist_data): {type(pu_hist_data)}")
+        # print(f"pu_lookups type(pu_hist_data): {type(pu_hist_data)}")
         if len(auto) == 0:
             pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
         else:
@@ -29,7 +29,7 @@ def pu_lookups(parameters, mode="nom", auto=[]):
 
 def pu_reweight(pu_hist_data, pu_hist_mc):
     #print(pu_hist_mc)
-    print(f"pu_reweight len(pu_hist_mc): {len(pu_hist_mc)}")
+    # print(f"pu_reweight len(pu_hist_mc): {len(pu_hist_mc)}")
     pu_arr_mc_ = np.zeros(len(pu_hist_mc))
     # for ibin, value in enumerate(pu_hist_mc):
     #     pu_arr_mc_[ibin] = max(value, 0)
@@ -39,8 +39,8 @@ def pu_reweight(pu_hist_data, pu_hist_mc):
     #     pu_arr_data[ibin] = max(value, 0)
     pu_arr_mc_ = np.where(pu_hist_mc<0, 0, pu_hist_mc) # min cut of zero
     pu_arr_data = np.where(pu_hist_data<0, 0, pu_hist_data) # min cut of zero
-    print(f"pu_reweight pu_arr_mc_: {pu_arr_mc_}")
-    print(f"pu_reweight pu_arr_data: {pu_arr_data}")
+    # print(f"pu_reweight pu_arr_mc_: {pu_arr_mc_}")
+    # print(f"pu_reweight pu_arr_data: {pu_arr_data}")
     pu_arr_mc_ref = pu_arr_mc_
     pu_arr_mc = pu_arr_mc_ / np.sum(pu_arr_mc_)
     pu_arr_data = pu_arr_data / np.sum(pu_arr_data)
@@ -138,7 +138,7 @@ class NNLOPS_Evaluator(object):
 
     def evaluate(self, hig_pt, njets, mode):
         # result = np.ones(len(hig_pt), dtype=float)
-        print(f'nnlops sf len(hig_pt): {len(hig_pt)}')
+        # print(f'nnlops sf len(hig_pt): {len(hig_pt)}')
         result = ak.ones_like(hig_pt)
         # njet0_filter = (hig_pt < 125) & (njets == 0)
         # interp_in = ak.where(njet0_filter, hig_pt, 125)
@@ -207,7 +207,7 @@ def nnlops_weights(events, parameters, dataset):
     elif "powheg" in dataset:
         mc_generator = "powheg"
     nnlops_w = nnlops.evaluate(events.HTXS.Higgs_pt, events.HTXS.njets30, mc_generator)
-    print(f'nnlops_weights nnlops_w: {ak.to_numpy(nnlops_w)}')
+    # print(f'nnlops_weights nnlops_w: {ak.to_numpy(nnlops_w)}')
     return nnlops_w
 
 
@@ -226,7 +226,7 @@ def get_musf_lookup(parameters):
     for scaleFactors in parameters["muSFFileList"]:
         id_file = uproot.open(scaleFactors["id"][0])
         iso_file = uproot.open(scaleFactors["iso"][0])
-        print(f'lepton sf scaleFactors["trig"][0: {scaleFactors["trig"][0]}')
+        # print(f'lepton sf scaleFactors["trig"][0: {scaleFactors["trig"][0]}')
         trig_file = uproot.open(scaleFactors["trig"][0])
         mu_id_vals += id_file[scaleFactors["id"][1]].values() * scaleFactors["scale"]
         mu_id_err += (
@@ -269,8 +269,8 @@ def get_musf_lookup(parameters):
     mu_iso_err = dense_lookup.dense_lookup(mu_iso_err, mu_iso_edges)
 
     mu_trig_eff_data = dense_lookup.dense_lookup(mu_trig_vals_data, mu_trig_edges)
-    print(f'lepton sf mu_trig_vals_mc: {mu_trig_vals_mc}')
-    print(f'lepton sf mu_trig_edges: {mu_trig_edges}')
+    # print(f'lepton sf mu_trig_vals_mc: {mu_trig_vals_mc}')
+    # print(f'lepton sf mu_trig_edges: {mu_trig_edges}')
     mu_trig_eff_mc = dense_lookup.dense_lookup(mu_trig_vals_mc, mu_trig_edges)
     mu_trig_err_data = dense_lookup.dense_lookup(mu_trig_err_data, mu_trig_edges)
     mu_trig_err_mc = dense_lookup.dense_lookup(mu_trig_err_mc, mu_trig_edges)
@@ -366,7 +366,7 @@ def musf_evaluator(lookups, year, muons):
     sf["muIso_up"] = ak.prod(muIso_ + muIsoerr, axis=1)
     sf["muIso_down"] = ak.prod(muIso_ - muIsoerr, axis=1)
     
-    print(f'copperheadV2 lepton sf  sf["muID_nom"]: \n {ak.to_numpy(sf["muID_nom"])}')
+    # print(f'copperheadV2 lepton sf  sf["muID_nom"]: \n {ak.to_numpy(sf["muID_nom"])}')
     # print(f'copperheadV2 lepton sf  sf["muID_up"]: \n {ak.to_numpy(sf["muID_up"])}')
     # print(f'copperheadV2 lepton sf  sf["muID_down"]: \n {ak.to_numpy(sf["muID_down"])}')
     # print(f'copperheadV2 lepton sf  sf["muIso_nom"]: \n {ak.to_numpy(sf["muIso_nom"])}')
@@ -382,8 +382,8 @@ def musf_evaluator(lookups, year, muons):
         #     sf.loc[cut, f"trig_num_{how}"] / sf.loc[cut, f"trig_denom_{how}"]
         # )
         cut_val = sf[f"trig_num_{how}"] / sf[f"trig_denom_{how}"]
-        print(f'copperheadV2 lepton sf {how} cut_val: \n {ak.to_numpy(cut_val)}')
-        print(f'copperheadV2 lepton sf ak.ones_like(muons.pt[:,0]): \n {ak.to_numpy(ak.ones_like(muons.pt[:,0]))}')
+        # print(f'copperheadV2 lepton sf {how} cut_val: \n {ak.to_numpy(cut_val)}')
+        # print(f'copperheadV2 lepton sf ak.ones_like(muons.pt[:,0]): \n {ak.to_numpy(ak.ones_like(muons.pt[:,0]))}')
         sf[f"muTrig_{how}"] = ak.where(cut, cut_val, ak.ones_like(muons.pt[:,0]))
     muID = {"nom": sf["muID_nom"], "up": sf["muID_up"], "down": sf["muID_down"]}
     muIso = {"nom": sf["muIso_nom"], "up": sf["muIso_up"], "down": sf["muIso_down"]}
@@ -412,7 +412,7 @@ def lhe_weights(events, dataset, year):
         ones = ak.ones_like(events.Muon.pt[:,0])
         # print(f'copperheadV2 lepton sf ones: \n {ak.to_numpy(ones)}')
         lhe_events[f"LHE{i}"] = ak.where(cut, padded_LHEScaleWeight[:, i], ones)
-        print(f'copperheadV2 lepton sf lhe_events[f"LHE{i}"]: \n {ak.to_numpy(lhe_events[f"LHE{i}"])}')
+        # print(f'copperheadV2 lepton sf lhe_events[f"LHE{i}"]: \n {ak.to_numpy(lhe_events[f"LHE{i}"])}')
         # lhe_events[f"LHE{i}"] = 1.0
         # lhe_events.loc[cut, f"LHE{i}"] = ak.to_numpy(events.LHEScaleWeight[cut_ak][:, i])
 
@@ -432,10 +432,10 @@ def lhe_weights(events, dataset, year):
     lhe_fac_down = ak.where(cut8, (lhe_events["LHE3"] * lhefactor), lhe_fac_down)
     lhe_fac_down = ak.where(cut30, (lhe_events["LHE15"] * lhefactor), lhe_fac_down)
 
-    print(f'copperheadV2 lepton sf lhe_ren_up: \n {ak.to_numpy(lhe_ren_up)}')
-    print(f'copperheadV2 lepton sf lhe_ren_down: \n {ak.to_numpy(lhe_ren_down)}')
-    print(f'copperheadV2 lepton sf lhe_fac_up: \n {ak.to_numpy(lhe_fac_up)}')
-    print(f'copperheadV2 lepton sf lhe_fac_down: \n {ak.to_numpy(lhe_fac_down)}')
+    # print(f'copperheadV2 lepton sf lhe_ren_up: \n {ak.to_numpy(lhe_ren_up)}')
+    # print(f'copperheadV2 lepton sf lhe_ren_down: \n {ak.to_numpy(lhe_ren_down)}')
+    # print(f'copperheadV2 lepton sf lhe_fac_up: \n {ak.to_numpy(lhe_fac_up)}')
+    # print(f'copperheadV2 lepton sf lhe_fac_down: \n {ak.to_numpy(lhe_fac_down)}')
     
     lhe_ren = {"up": lhe_ren_up, "down": lhe_ren_down}
     lhe_fac = {"up": lhe_fac_up, "down": lhe_fac_down}
@@ -672,10 +672,10 @@ def stxs_lookups():
         # convert values and edge to np arrays, as ak array doesn't work with dense_lookup initialization
         values = np.array(values) 
         edges = ak.Array(edges)
-        print(f'stxs_lookups {i} edges: {edges}')
-        print(f'stxs_lookups {i} values: {values}')
+        # print(f'stxs_lookups {i} edges: {edges}')
+        # print(f'stxs_lookups {i} values: {values}')
         stxs_acc_lookups[i] = dense_lookup.dense_lookup(values, [edges])
-        print(f'stxs_lookups stxs_acc_lookups[i]._axes: {stxs_acc_lookups[i]._axes}')
+        # print(f'stxs_lookups stxs_acc_lookups[i]._axes: {stxs_acc_lookups[i]._axes}')
     powheg_xsec_lookup = dense_lookup.dense_lookup(
         np.array(list(powheg_xsec.values())), [np.array(list(powheg_xsec.keys()))]
     )
@@ -690,7 +690,7 @@ def add_stxs_variations(
     # STXS VBF cross-section uncertainty
     stxs_acc_lookups, powheg_xsec_lookup = stxs_lookups()
     for i, name in enumerate(parameters["sths_names"]):
-        print(f"add_stxs_variations i: {i}, name: {name}")
+        # print(f"add_stxs_variations i: {i}, name: {name}")
         wgt_up = stxs_uncert(
             i,
             events.HTXS.stage1_1_fine_cat_pTjet30GeV,
@@ -718,12 +718,12 @@ def stxs_uncert(source, event_STXS, Nsigma, stxs_acc_lookups, powheg_xsec_lookup
     # vbf_uncert_stage_1_1
     # return a single weight for a given souce
     if source < 10: # idk why we have this
-        print(f'stxs_lookups source: {source}')
-        print(f'stxs_lookups stxs_acc_lookups.keys(): {stxs_acc_lookups.keys()}')
-        print(f'stxs_uncert stxs_acc_lookups[source]: {stxs_acc_lookups[source]}')
-        print(f'stxs_uncert event_STXS: {event_STXS}')
-        print(f'stxs_uncert stxs_acc_lookups[source](event_STXS): {stxs_acc_lookups[source](event_STXS)}')
-        print(f'stxs_uncert uncert_deltas[source]: {uncert_deltas[source]}')
+        # print(f'stxs_lookups source: {source}')
+        # print(f'stxs_lookups stxs_acc_lookups.keys(): {stxs_acc_lookups.keys()}')
+        # print(f'stxs_uncert stxs_acc_lookups[source]: {stxs_acc_lookups[source]}')
+        # print(f'stxs_uncert event_STXS: {event_STXS}')
+        # print(f'stxs_uncert stxs_acc_lookups[source](event_STXS): {stxs_acc_lookups[source](event_STXS)}')
+        # print(f'stxs_uncert uncert_deltas[source]: {uncert_deltas[source]}')
         delta_var = stxs_acc_lookups[source](event_STXS) * uncert_deltas[source]
         ret = ak.ones_like(event_STXS, dtype="float") + Nsigma * (
             delta_var / powheg_xsec_lookup(event_STXS)
@@ -756,7 +756,7 @@ def add_pdf_variations(events, weights, config, dataset):
         # pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]][0]
         pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]]
         # pdf_wgts = np.array(pdf_wgts)
-        print(f"add_pdf_variations pdf_wgts: {pdf_wgts}")
+        # print(f"add_pdf_variations pdf_wgts: {pdf_wgts}")
         pdf_std = ak.std(pdf_wgts, axis=1)
         pdf_vars = {
             # "up": (1 + 2 * pdf_wgts.std()),
@@ -764,6 +764,291 @@ def add_pdf_variations(events, weights, config, dataset):
             "up": (1 + 2 * pdf_std),
             "down": (1 - 2 * pdf_std),
         }
-        print(f"add_pdf_variations pdf_vars up: {ak.to_numpy(pdf_vars['up'])}")
-        print(f"add_pdf_variations pdf_vars down: {ak.to_numpy(pdf_vars['down'])}")
+        # print(f"add_pdf_variations pdf_vars up: {ak.to_numpy(pdf_vars['up'])}")
+        # print(f"add_pdf_variations pdf_vars down: {ak.to_numpy(pdf_vars['down'])}")
         weights.add_weight("pdf_2rms", pdf_vars, how="only_vars")
+
+# QGL SF-------------------------------------------------------------------------
+
+def qgl_weights(jet1, jet2, njets, isHerwig):
+    """
+    We assume that event filtering/selection has been already applied
+    params:
+    jet1 = leading pt jet variable if doens't exist, it's padded with None
+    jet2 = subleading pt jet variable if doens't exist, it's padded with None
+    """
+    # qgl = pd.DataFrame(index=output.index, columns=["wgt", "wgt_down"]).fillna(1.0)
+    
+    
+    # qgl1 = get_qgl_weights(jet1, isHerwig).fillna(1.0)
+    # qgl2 = get_qgl_weights(jet2, isHerwig).fillna(1.0)
+    # qgl.wgt *= qgl1 * qgl2
+    qgl1 = get_qgl_weights(jet1, isHerwig)
+    qgl2 = get_qgl_weights(jet2, isHerwig)
+    print(f"qgl_weights jet1: {qgl1}")
+    print(f"qgl_weights jet2: {qgl2}")
+    # qgl_nom = ak.fill_none(qgl1*qgl2, value=1.0) # events with jet2==None is converted to 1.0
+    
+    # qgl2_has_value = ~ak.is_none(qgl2)
+    # qgl_nom = ak.where(qgl2_has_value, (qgl1*qgl2), qgl1)
+    qgl_nom = (qgl1*qgl2)
+
+    print(f"qgl_weights qgl_nom b4: {qgl_nom}")
+    # qgl.wgt[variables.njets == 1] = 1.0 # fill_none does this
+    # qgl.wgt = qgl.wgt / qgl.wgt[selected].mean()
+    # selected = output.event_selection & (njets > 2)
+    njet_selection = njets > 2
+    qgl_mean = ak.mean(qgl_nom[njet_selection])
+    qgl_nom = qgl_nom/ qgl_mean
+    print(f"qgl_weights qgl_nom after: {ak.to_numpy(qgl_nom)}")
+    qgl_nom = ak.fill_none(qgl_nom, value=1.0) # we got rid of jet2==None case, but jet1 could still be None
+    print(f"qgl_weights qgl_nom after after: {ak.to_numpy(qgl_nom)}")
+    print(f"qgl_weights qgl_nom[njet_selection]: {ak.to_numpy(qgl_nom[njet_selection])}")
+
+
+
+    qgl_down = ak.ones_like(qgl_nom, dtype="float")
+    print(f"qgl_weights qgl_down : {ak.to_numpy(qgl_down)}")
+
+    # qgl = qgl.fillna(1.0)
+
+    # wgts = {"nom": qgl.wgt, "up": qgl.wgt * qgl.wgt, "down": qgl.wgt_down}
+    wgts = {"nom": qgl_nom, "up": qgl_nom * qgl_nom, "down": qgl_down}
+    return wgts
+
+
+def get_qgl_weights(jet, isHerwig):
+    # df = pd.DataFrame(index=jet.index, columns=["weights"])
+    qgl_weights = ak.ones_like(jet.pt, dtype="float")
+
+    wgt_mask = (jet.partonFlavour != 0) & (abs(jet.eta) < 2) & (jet.qgl > 0)
+    light = wgt_mask & (abs(jet.partonFlavour) < 4)
+    gluon = wgt_mask & (jet.partonFlavour == 21)
+
+    qgl = jet.qgl
+
+    if isHerwig:
+        # df.weights[light] = (
+        #     1.16636 * qgl[light] ** 3
+        #     - 2.45101 * qgl[light] ** 2
+        #     + 1.86096 * qgl[light]
+        #     + 0.596896
+        # )
+        # df.weights[gluon] = (
+        #     -63.2397 * qgl[gluon] ** 7
+        #     + 111.455 * qgl[gluon] ** 6
+        #     - 16.7487 * qgl[gluon] ** 5
+        #     - 72.8429 * qgl[gluon] ** 4
+        #     + 56.7714 * qgl[gluon] ** 3
+        #     - 19.2979 * qgl[gluon] ** 2
+        #     + 3.41825 * qgl[gluon]
+        #     + 0.919838
+        # )
+        light_val =  (
+            1.16636 * qgl ** 3
+            - 2.45101 * qgl ** 2
+            + 1.86096 * qgl
+            + 0.596896
+        )
+        # qgl_weights = ak.where(light, light_val, qgl_weights)
+        gluon_val = (
+            -63.2397 * qgl ** 7
+            + 111.455 * qgl ** 6
+            - 16.7487 * qgl ** 5
+            - 72.8429 * qgl ** 4
+            + 56.7714 * qgl ** 3
+            - 19.2979 * qgl ** 2
+            + 3.41825 * qgl
+            + 0.919838
+        )
+        # qgl_weights = ak.where(gluon, gluon_val, qgl_weights)
+    else:
+        # df.weights[light] = (
+        #     -0.666978 * qgl[light] ** 3
+        #     + 0.929524 * qgl[light] ** 2
+        #     - 0.255505 * qgl[light]
+        #     + 0.981581
+        # )
+        # df.weights[gluon] = (
+        #     -55.7067 * qgl[gluon] ** 7
+        #     + 113.218 * qgl[gluon] ** 6
+        #     - 21.1421 * qgl[gluon] ** 5
+        #     - 99.927 * qgl[gluon] ** 4
+        #     + 92.8668 * qgl[gluon] ** 3
+        #     - 34.3663 * qgl[gluon] ** 2
+        #     + 6.27 * qgl[gluon]
+        #     + 0.612992
+        # )
+        light_val = (
+            -0.666978 * qgl ** 3
+            + 0.929524 * qgl ** 2
+            - 0.255505 * qgl
+            + 0.981581
+        )
+        # qgl_weights = ak.where(light, light_val, qgl_weights)
+        gluon_val= (
+            -55.7067 * qgl ** 7
+            + 113.218 * qgl ** 6
+            - 21.1421 * qgl ** 5
+            - 99.927 * qgl ** 4
+            + 92.8668 * qgl ** 3
+            - 34.3663 * qgl ** 2
+            + 6.27 * qgl
+            + 0.612992
+        )
+        # qgl_weights = ak.where(gluon, gluon_val, qgl_weights)
+    
+    # apply two filters, first light, then gluon
+    qgl_weights = ak.where(light, light_val, qgl_weights)
+    qgl_weights = ak.where(gluon, gluon_val, qgl_weights)
+    return qgl_weights
+
+
+# Btag SF-------------------------------------------------------------------------
+
+def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file):
+
+    btag = pd.DataFrame(index=bjet_sel_mask.index)
+    #print(f"len btag1 {len(btag)}")
+    #print(f"len jets1 {len(jets)}")
+    jets = jets[abs(jets.eta) < 2.4]
+    jets["btag_wgt"] = 1.0
+    jets.loc[jets.pt > 1000.0, "pt"] = 1000.0
+    
+    
+    btag_json=[btag_file["deepCSV_shape"]]
+    jets.loc[abs(jets["eta"]) < 2.4, "btag_wgt"] = onedimeval(partial(btag_json[0].evaluate,
+        "central"),
+        jets.hadronFlavour.values,
+        abs(jets.eta.values),
+        jets.pt.values,
+        jets.btagDeepB.values,
+    )
+    btag["wgt"] = jets["btag_wgt"].prod(level=0)
+    btag["wgt"] = btag["wgt"].fillna(1.0)
+    btag.loc[btag.wgt < 0.01, "wgt"] = 1.0
+    #print(f"len btag2 {len(btag)}")
+    #print(f"len jets2 {len(jets)}")
+    flavors = {
+        0: ["jes", "lf", "lfstats1", "lfstats2"],
+        1: ["jes", "lf", "lfstats1", "lfstats2"],
+        2: ["jes", "lf", "lfstats1", "lfstats2"],
+        3: ["jes", "lf", "lfstats1", "lfstats2"],
+        4: ["cferr1", "cferr2"],
+        5: ["jes", "hf", "hfstats1", "hfstats2"],
+        21: ["jes", "lf", "lfstats1", "lfstats2"],
+    }
+    btag_syst = {}
+    for sys in systs:
+
+        jets[f"btag_{sys}_up"] = 1.0
+        jets[f"btag_{sys}_down"] = 1.0
+        btag[f"{sys}_up"] = 1.0
+        btag[f"{sys}_down"] = 1.0
+
+        for f, f_syst in flavors.items():
+            if sys in f_syst:
+                btag_mask = (abs(jets.hadronFlavour)) == f #& (abs(jets.eta) < 2.4))
+                jets.loc[btag_mask, f"btag_{sys}_up"] = onedimeval(partial(btag_json[0].evaluate,
+                    f"up_{sys}"),
+                    jets.hadronFlavour[btag_mask].values,
+                    abs(jets.eta)[btag_mask].values,
+                    jets.pt[btag_mask].values,
+                    jets.btagDeepB[btag_mask].values,
+                    
+                )
+                jets.loc[btag_mask, f"btag_{sys}_down"] = onedimeval(partial(btag_json[0].evaluate,
+                    f"down_{sys}"),
+                    jets.hadronFlavour[btag_mask].values,
+                    abs(jets.eta)[btag_mask].values,
+                    jets.pt[btag_mask].values,
+                    jets.btagDeepB[btag_mask].values,
+                    
+                )
+
+        btag[f"{sys}_up"] = jets[f"btag_{sys}_up"].prod(level=0)
+        btag[f"{sys}_down"] = jets[f"btag_{sys}_down"].prod(level=0)
+        btag[f"{sys}_up"] =btag[f"{sys}_up"].fillna(1.0)
+        btag[f"{sys}_down"] =btag[f"{sys}_down"].fillna(1.0)
+        
+        btag_syst[sys] = {"up": btag[f"{sys}_up"], "down": btag[f"{sys}_down"]}
+
+    sum_before = weights.df["nominal"][bjet_sel_mask].sum()
+    sum_after = (
+        weights.df["nominal"][bjet_sel_mask]
+        .multiply(btag.wgt[bjet_sel_mask], axis=0)
+        .sum()
+    )
+    btag.wgt = btag.wgt * sum_before / sum_after
+    #print(f"len btag.wgt {len(btag.wgt)}")
+    #print(f"len jets3 {len(jets)}")
+    return btag.wgt, btag_syst
+
+def btag_weights_csv(processor, lookup, systs, jets, weights, bjet_sel_mask):
+
+    btag = pd.DataFrame(index=bjet_sel_mask.index)
+    jets = jets[abs(jets.eta) < 2.4]
+    jets.loc[jets.pt > 1000.0, "pt"] = 1000.0
+
+    jets["btag_wgt"] = lookup.eval(
+        "central",
+        jets.hadronFlavour.values,
+        abs(jets.eta.values),
+        jets.pt.values,
+        jets.btagDeepB.values,
+        True,
+    )
+    btag["wgt"] = jets["btag_wgt"].prod(level=0)
+    btag["wgt"] = btag["wgt"].fillna(1.0)
+    btag.loc[btag.wgt < 0.01, "wgt"] = 1.0
+
+    flavors = {
+        0: ["jes", "hf", "lfstats1", "lfstats2"],
+        1: ["jes", "hf", "lfstats1", "lfstats2"],
+        2: ["jes", "hf", "lfstats1", "lfstats2"],
+        3: ["jes", "hf", "lfstats1", "lfstats2"],
+        4: ["cferr1", "cferr2"],
+        5: ["jes", "lf", "hfstats1", "hfstats2"],
+        21: ["jes", "hf", "lfstats1", "lfstats2"],
+    }
+
+    btag_syst = {}
+    for sys in systs:
+        jets[f"btag_{sys}_up"] = 1.0
+        jets[f"btag_{sys}_down"] = 1.0
+        btag[f"{sys}_up"] = 1.0
+        btag[f"{sys}_down"] = 1.0
+
+        for f, f_syst in flavors.items():
+            if sys in f_syst:
+                btag_mask = abs(jets.hadronFlavour) == f
+                jets.loc[btag_mask, f"btag_{sys}_up"] = lookup.eval(
+                    f"up_{sys}",
+                    jets.hadronFlavour[btag_mask].values,
+                    abs(jets.eta)[btag_mask].values,
+                    jets.pt[btag_mask].values,
+                    jets.btagDeepB[btag_mask].values,
+                    True,
+                )
+                jets.loc[btag_mask, f"btag_{sys}_down"] = lookup.eval(
+                    f"down_{sys}",
+                    jets.hadronFlavour[btag_mask].values,
+                    abs(jets.eta)[btag_mask].values,
+                    jets.pt[btag_mask].values,
+                    jets.btagDeepB[btag_mask].values,
+                    True,
+                )
+
+        btag[f"{sys}_up"] = jets[f"btag_{sys}_up"].prod(level=0)
+        btag[f"{sys}_down"] = jets[f"btag_{sys}_down"].prod(level=0)
+        btag_syst[sys] = {"up": btag[f"{sys}_up"], "down": btag[f"{sys}_down"]}
+
+    sum_before = weights.df["nominal"][bjet_sel_mask].sum()
+    sum_after = (
+        weights.df["nominal"][bjet_sel_mask]
+        .multiply(btag.wgt[bjet_sel_mask], axis=0)
+        .sum()
+    )
+    btag.wgt = btag.wgt * sum_before / sum_after
+
+    return btag.wgt, btag_syst
