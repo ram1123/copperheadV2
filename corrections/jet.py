@@ -201,7 +201,7 @@ def jet_puid(jets, config):
     return pass_jet_puid
 
 
-def fill_softjets(events, jets, muons, cutoff):
+def fill_softjets(events, jets, muons, cutoff, test_mode=False):
     print(f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}")
     print(f"jets cutoff: {cutoff}")
     events["SoftActivityJet","mass"] = 0
@@ -233,37 +233,40 @@ def fill_softjets(events, jets, muons, cutoff):
     dR_m2_filter = ak.fill_none((dR_m2 < 0.4), value=False, axis=None)
     dR_j1_filter = ak.fill_none((dR_j1 < 0.4), value=False, axis=None)
     dR_j2_filter = ak.fill_none((dR_j2 < 0.4), value=False, axis=None)
-    print(f"jets dR_m1_filter: {dR_m1_filter}")
-    print(f"jets dR_m2_filter: {dR_m2_filter}")
-    print(f"jets dR_j1_filter: {dR_j1_filter}")
-    print(f"jets dR_j2_filter: {dR_j2_filter}")
+    if test_mode:
+        print(f"jets dR_m1_filter: {dR_m1_filter}")
+        print(f"jets dR_m2_filter: {dR_m2_filter}")
+        print(f"jets dR_j1_filter: {dR_j1_filter}")
+        print(f"jets dR_j2_filter: {dR_j2_filter}")
     saj_to_remove = dR_m1_filter | dR_m2_filter | dR_j1_filter | dR_j2_filter
     saj_to_remove = ak.fill_none(saj_to_remove, value=False)
     print(f"jets saj_to_remove: {saj_to_remove}")
     
     footprint = saj[(saj_to_remove) & (saj.pt > cutoff)]
     footprint_sumPt = ak.sum(footprint.pt, axis=1)
-    print(f"jets footprint_sumPt: {ak.to_numpy(footprint_sumPt)}")
+    if test_mode:
+        print(f"jets footprint_sumPt: {ak.to_numpy(footprint_sumPt)}")
     ht_corrected = saj_HT - footprint_sumPt
     footprint_njets = ak.num(footprint, axis=1)
     corrected_njets = saj_Njets - footprint_njets
-
-    print(f"jets footprint_njets: {ak.to_numpy(footprint_njets)}")
-    print(f"jets corrected_njets: {ak.to_numpy(corrected_njets)}")
-    print(f"jets saj_Njets: {saj_Njets}")
+    
+    if test_mode:
+        print(f"jets footprint_njets: {ak.to_numpy(footprint_njets)}")
+        print(f"jets corrected_njets: {ak.to_numpy(corrected_njets)}")
+        print(f"jets saj_Njets: {saj_Njets}")
 
     evnts_to_correct = (nmuons==2) |(njets > 0) 
-    print(f"jets evnts_to_correct: {evnts_to_correct}")
-
-    print(f"jets footprint_njets b4: {ak.to_numpy(saj_Njets)}")
-    print(f"jets corrected_njets b4: {ak.to_numpy(saj_HT)}")
+    if test_mode:
+        print(f"jets evnts_to_correct: {evnts_to_correct}")
+        print(f"jets footprint_njets b4: {ak.to_numpy(saj_Njets)}")
+        print(f"jets corrected_njets b4: {ak.to_numpy(saj_HT)}")
     
     saj_Njets = ak.where(evnts_to_correct,corrected_njets,saj_Njets)
     saj_HT = ak.where(evnts_to_correct,ht_corrected,saj_HT)
 
-    
-    print(f"jets footprint_njets after: {ak.to_numpy(saj_Njets)}")
-    print(f"jets corrected_njets after: {ak.to_numpy(saj_HT)}")
+    if test_mode:
+        print(f"jets footprint_njets after: {ak.to_numpy(saj_Njets)}")
+        print(f"jets corrected_njets after: {ak.to_numpy(saj_HT)}")
     out_dict = {
         f"nsoftjets{cutoff}" : saj_Njets,
         f"htsoft{cutoff}" : saj_HT

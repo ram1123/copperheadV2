@@ -82,12 +82,15 @@ class Weights(object):
         self.variations.append(name)
 
 
-    def get_weight(self, name):
+    def get_weight(self, name: str):
         if name in self.weights.keys():
+            # print(f"{name} in keys")
             return self.weights[name]
         else:
             return ak.array([])
 
+    """
+    I don't use this code, it's just here from copperheadV1 in case I need to use it
     def effect_on_normalization(self, mask=np.array([])):
         if len(mask) == 0:
             mask = np.ones(self.df.shape[0], dtype=int)
@@ -103,7 +106,7 @@ class Weights(object):
             else:
                 ef = round(effect, 2)
                 print(f"Enabling {var} increases yield by {ef}%")
-
+    """
 
     def get_info(self):
         info_str = ""
