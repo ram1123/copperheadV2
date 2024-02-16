@@ -6,7 +6,7 @@ coffea_nanoevent = TypeVar('coffea_nanoevent')
 
 
 def fsr_recovery(events: coffea_nanoevent) -> ak_array:
-    print(f"fsr_recovery type(events): {type(events)}")
+    # print(f"fsr_recovery type(events): {type(events)}")
     fsrPhotonsToRecover = (
         (events.Muon.fsrPhotonIdx >= 0)
         & (events.Muon.matched_fsrPhoton.relIso03 < 1.8)

@@ -79,8 +79,7 @@ def get_name_map(stack):
     name_map["Rho"] = "rho"
     return name_map
 
-# def get_jec_factories(jec_parameters: dict, year: str):
-def get_jec_factories(jec_parameters: dict):
+def get_jec_factories(jec_parameters: dict, test_mode=False):
     # jec_pars = {k: v[year] for k, v in jec_parameters.items()}
     # jec_pars = {k: v for k, v in jec_parameters.items()}
     jec_pars = jec_parameters
@@ -113,7 +112,8 @@ def get_jec_factories(jec_parameters: dict):
         stacks[key] = []
         for v in vals:
             stacks[key].extend(names[v])
-    print(f"jec_factories stacks: \n{stacks}")
+    if test_mode:
+        print(f"jec_factories stacks: \n{stacks}")
 
     jec_input_options = {}
     jet_variations = ["jec", "junc", "jer"]
@@ -130,10 +130,12 @@ def get_jec_factories(jec_parameters: dict):
         # }
         jec_input_options[variation] ={}
         for name in stacks[f"{variation}_stack"]:
-            print(f"jec_factories stack name: {name}")
+            if test_mode:
+                print(f"jec_factories stack name: {name}")
             jec_input_options[variation][name] =jet_evaluator[name] 
         
-    print(f"jec_factories jec_input_options: \n {jec_input_options}")
+    if test_mode:
+        print(f"jec_factories jec_input_options: \n {jec_input_options}")
     for src in names["junc_sources"]:
         for key in jet_evaluator.keys():
             if src in key:
@@ -141,8 +143,9 @@ def get_jec_factories(jec_parameters: dict):
 
     # Create separate factories for JEC, JER, JEC variations
     for variation in jet_variations:
-        print(f"jec_factories variation: {variation}")
-        print(f"jec_factories jec_input_options[variation]: {jec_input_options[variation]}")
+        if test_mode:
+            print(f"jec_factories variation: {variation}")
+            print(f"jec_factories jec_input_options[variation]: {jec_input_options[variation]}")
         
         stack = JECStack(jec_input_options[variation])
         jec_factories[variation] = CorrectedJetsFactory(get_name_map(stack), stack)
@@ -190,7 +193,7 @@ def jet_puid(jets, config):
         "tight": (puId >= 7) | (jets.pt > 50),
     }
     pass_jet_puid = ak.ones_like(jets.pt, dtype=bool)
-    print(f"jet_puid pass_jet_puid: {pass_jet_puid}")
+    # print(f"jet_puid pass_jet_puid: {pass_jet_puid}")
     if jet_puid_opt in ["loose", "medium", "tight"]:
         pass_jet_puid = jet_puid_wps[jet_puid_opt]
     elif "2017corrected" in jet_puid_opt: # for misreco due ot ECAL endcap noise
@@ -202,8 +205,9 @@ def jet_puid(jets, config):
 
 
 def fill_softjets(events, jets, muons, cutoff, test_mode=False):
-    print(f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}")
-    print(f"jets cutoff: {cutoff}")
+    if test_mode:
+        print(f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}")
+        print(f"jets cutoff: {cutoff}")
     events["SoftActivityJet","mass"] = 0
     saj = events.SoftActivityJet
     saj_Njets = events[f"SoftActivityJetNjets{cutoff}"]
@@ -218,12 +222,13 @@ def fill_softjets(events, jets, muons, cutoff, test_mode=False):
     nmuons = ak.num(muons, axis=1)
     mu1 = muons[:,0]
     mu2 = muons[:,1]
-    print(f"jets njets: {njets}")
-    print(f"jets saj.pt: {saj.pt}")
-    print(f"jets jet1.pt: {jet1.pt}")
-    print(f"jets jet2.pt: {jet2.pt}")
-    print(f"jets mu1.pt: {mu1.pt}")
-    print(f"jets mu2.pt: {mu2.pt}")
+    if test_mode:
+        print(f"jets njets: {njets}")
+        print(f"jets saj.pt: {saj.pt}")
+        print(f"jets jet1.pt: {jet1.pt}")
+        print(f"jets jet2.pt: {jet2.pt}")
+        print(f"jets mu1.pt: {mu1.pt}")
+        print(f"jets mu2.pt: {mu2.pt}")
     
     dR_m1 = saj.delta_r(mu1)
     dR_m2 = saj.delta_r(mu2)
@@ -240,11 +245,12 @@ def fill_softjets(events, jets, muons, cutoff, test_mode=False):
         print(f"jets dR_j2_filter: {dR_j2_filter}")
     saj_to_remove = dR_m1_filter | dR_m2_filter | dR_j1_filter | dR_j2_filter
     saj_to_remove = ak.fill_none(saj_to_remove, value=False)
-    print(f"jets saj_to_remove: {saj_to_remove}")
+    
     
     footprint = saj[(saj_to_remove) & (saj.pt > cutoff)]
     footprint_sumPt = ak.sum(footprint.pt, axis=1)
     if test_mode:
+        print(f"jets saj_to_remove: {saj_to_remove}")
         print(f"jets footprint_sumPt: {ak.to_numpy(footprint_sumPt)}")
     ht_corrected = saj_HT - footprint_sumPt
     footprint_njets = ak.num(footprint, axis=1)

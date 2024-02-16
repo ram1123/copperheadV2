@@ -397,7 +397,7 @@ class EventProcessor(processor.ProcessorABC):
         dimuon_dPhi = abs(mu1.delta_phi(mu2))
         dimuon = mu1+mu2
         # fill in pd Dataframe as placeholder. Should be fine since we don't need jagged arrays
-        dimuon_mass_resolution = self.mass_resolution(events)
+        dimuon_mass_resolution = self.mass_resolution(events, test_mode=self.test)
         rel_dimuon_ebe_mass_res = dimuon_mass_resolution/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
 
@@ -455,6 +455,7 @@ class EventProcessor(processor.ProcessorABC):
         jets = events.Jet
         self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
             self.config["jec_parameters"], 
+            test_mode=self.test
         )
         
         do_jec = False
@@ -479,7 +480,8 @@ class EventProcessor(processor.ProcessorABC):
                 for run in self.config["jec_parameters"]["runs"]:
                     if run in events.metadata["dataset"]:
                         factory = self.jec_factories_data[run]
-            print("jets build")
+            if self.test:
+                print("jets build")
             jets = factory.build(jets)
             if self.test :
                 jets = jets.compute() # can't circumvent JEC only being on dask distributed
@@ -517,7 +519,7 @@ class EventProcessor(processor.ProcessorABC):
         if events.metadata["is_mc"]:
             # For MC: initialize weight_collection
             weight_ones = ak.ones_like(events.Muon.pt[:,0]) # get 1D array of filtered events
-            print(f"weight_collection len(weight_ones):  {ak.num(weight_ones, axis=0)}")
+            # print(f"weight_collection len(weight_ones):  {ak.num(weight_ones, axis=0)}")
             self.weight_collection = Weights(weight_ones)
         
             # For MC: Apply gen.weights, pileup weights, lumi weights,
@@ -546,7 +548,6 @@ class EventProcessor(processor.ProcessorABC):
             cross_section = self.config["cross_sections"][dataset]
             totalGenWgts = events.metadata['sumGenWgts']
             integrated_lumi = self.config["integrated_lumis"]
-            print(f"weight_collection integrated_lumi: \n  {integrated_lumi}")
             lumi_weight = cross_section * integrated_lumi/ totalGenWgts
             self.config["lumi_weight"] = lumi_weight
 
@@ -556,6 +557,7 @@ class EventProcessor(processor.ProcessorABC):
             lumi_weight = self.config["lumi_weight"]
             self.weight_collection.add_weight("lumi", lumi_weight) 
             if self.test:
+                print(f"weight_collection integrated_lumi: \n  {integrated_lumi}")
                 print(f"weight_collection lumi info: \n  {self.weight_collection.get_info()}")
                 print(f"weight_collection lumi wgts: \n  {self.weight_collection.wgts}")
                 print(f"weight_collection lumi_weight: \n  {lumi_weight}")
@@ -620,7 +622,8 @@ class EventProcessor(processor.ProcessorABC):
                 and ("LHEPdfWeight" in events.fields)
                 and ("nominal" in pt_variations)
             )
-            print(f"do_lhe: {do_lhe}")
+            if self.test:
+                print(f"do_lhe: {do_lhe}")
             if do_lhe:
                 lhe_ren, lhe_fac = lhe_weights(events, events.metadata["dataset"], self.config["year"])
                 if self.test:
@@ -639,7 +642,7 @@ class EventProcessor(processor.ProcessorABC):
                 and ("nominal" in pt_variations)
                 and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
             )
-            print(f"do_thu: {do_thu}")
+            )
             if do_thu:
                 add_stxs_variations(
                     events,
@@ -647,6 +650,7 @@ class EventProcessor(processor.ProcessorABC):
                     self.config,
                 )
             if self.test:
+                print(f"do_thu: {do_thu}"
                 print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_pdf = (
@@ -660,10 +664,10 @@ class EventProcessor(processor.ProcessorABC):
                 )
                 and ("mg" not in dataset)
             )
-            print(f"do_pdf: {do_pdf}")
             if do_pdf:
                 add_pdf_variations(events, self.weight_collection, self.config, dataset)
             if self.test:
+                print(f"do_pdf: {do_pdf}")
                 print(f"weight_collection do_pdf info: \n  {self.weight_collection.get_info()}")
 
         # ------------------------------------------------------------#
@@ -732,7 +736,8 @@ class EventProcessor(processor.ProcessorABC):
 
         # add in the weights
         if events.metadata["is_mc"]:
-            print(f"self.weight_collection.weights: {self.weight_collection.weights} ")
+            if self.test:
+                print(f"self.weight_collection.weights: {self.weight_collection.weights} ")
             out_dict.update({
                "nominal" : self.weight_collection.get_weight("nominal")
             })
@@ -748,14 +753,15 @@ class EventProcessor(processor.ProcessorABC):
         pass
 
     
-    def mass_resolution(self, events):
+    def mass_resolution(self, events, test_mode=False):
         # Returns absolute mass resolution!
         mu1 = events.Muon[:,0]
         mu2 = events.Muon[:,1]
         muon_E = (mu1+mu2).mass /2
         dpt1 = (mu1.ptErr / mu1.pt) * muon_E
         dpt2 = (mu2.ptErr / mu2.pt) * muon_E
-        print(f"muons mass_resolution dpt1: {dpt1}")
+        if test_mode:
+            print(f"muons mass_resolution dpt1: {dpt1}")
         if "2016" in self.config["year"]:
             yearstr = "2016"
         else:
@@ -1090,13 +1096,14 @@ class EventProcessor(processor.ProcessorABC):
             # sj_dict.update(fill_softjets(events, jets, muons, 2))
             # sj_dict.update(fill_softjets(events, jets, muons, 5))
             for cutout in cutouts:
-                sj_out = fill_softjets(events, jets, muons, cutout)
+                sj_out = fill_softjets(events, jets, muons, cutout, test_mode=self.test)
                 sj_out = {
                     key+"_"+variation : val \
                     for key, val in sj_out.items()
                 }
                 sj_dict.update(sj_out)
-            print(f"sj_dict.keys(): {sj_dict.keys()}")
+            if self.test:
+                print(f"sj_dict.keys(): {sj_dict.keys()}")
         jet_loop_out_dict.update(sj_dict)
         
 
@@ -1157,15 +1164,17 @@ class EventProcessor(processor.ProcessorABC):
         nBtagMedium = ak.num(jets[btagMedium_filter], axis=1)
         nBtagMedium = ak.fill_none(nBtagMedium, value=0)
             
-        print(f"jet loop nBtagLoose: {nBtagLoose}")
-        print(f"jet loop nBtagMedium: {nBtagMedium}")
+        
         
         temp_out_dict = {
             "nBtagLoose": nBtagLoose,
             "nBtagMedium": nBtagMedium,
         }
         jet_loop_out_dict.update(temp_out_dict)
-        print(f"jet loop jet_loop_out_dict.keys(): {jet_loop_out_dict.keys()}")
+        if self.test:
+            print(f"jet loop nBtagLoose: {nBtagLoose}")
+            print(f"jet loop nBtagMedium: {nBtagMedium}")
+            print(f"jet loop jet_loop_out_dict.keys(): {jet_loop_out_dict.keys()}")
         
 
         # --------------------------------------------------------------#
