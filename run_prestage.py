@@ -8,6 +8,7 @@ import argparse
 from distributed import LocalCluster, Client
 import time
 import copy
+import tqdm
 
 datasets = {
     "2016preVFP": {
@@ -122,8 +123,8 @@ datasets = {
         "data_D": "/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
         "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X*/NANOAODSIM",
         "dy_M-100To200": "/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-        # "ttjets_dl": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-        # "ttjets_sl": "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+        "ttjets_dl": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+        "ttjets_sl": "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         # # "ttw": "",
         # # "ttz": "",
         # "st_tw_top":"/ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
@@ -199,14 +200,14 @@ if __name__ == "__main__":
             print("Gateway Client created")
         else: # use local cluster
             cluster = LocalCluster()
-            cluster.scale(32) 
+            cluster.adapt(minimum=8, maximum=32) 
             client = Client(cluster)
             print("Local scale Client created")
         big_sample_info = {}
         dataset = datasets[args.year]
-    
-        for sample_name in dataset.keys():
-            print(f"prestage sample_name: {sample_name}")
+
+        for sample_name in tqdm.tqdm(dataset.keys()):
+            # print(f"prestage sample_name: {sample_name}")
             # # test
             # if "dy_M-50" not in sample_name:
             #     continue
@@ -230,7 +231,7 @@ if __name__ == "__main__":
             )
             fnames = [file[0] for file in outfiles if file != []]
             # print(f"prestage fnames: {fnames}")
-            print(f"prestage len(fnames): {len(fnames)}")
+            # print(f"prestage len(fnames): {len(fnames)}")
             
             """
             run through each file and collect total number of 
@@ -260,7 +261,7 @@ if __name__ == "__main__":
                 preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 total_events += preprocess_metadata["nGenEvts"] 
-            print(f"prestage preprocess_metadata: {preprocess_metadata}")    
+            # print(f"prestage preprocess_metadata: {preprocess_metadata}")    
     
             val = "Events"
             file_dict = {}
@@ -303,7 +304,7 @@ if __name__ == "__main__":
     
         elapsed = round(time.time() - time_step, 3)
         print(f"Finished everything in {elapsed} s.")
-        print(f"Total Events to go thru {total_events}.")
+        print(f"Total Events in files {total_events}.")
         
     else: # take the pre existing samples.json and prune off files we don't need
         fraction = float(args.fraction)
@@ -316,7 +317,7 @@ if __name__ == "__main__":
             is_data = "data" in sample_name
             tot_N_evnts = sample['metadata']["data_entries"] if is_data else sample['metadata']["nGenEvts"]
             new_N_evnts = int(tot_N_evnts*fraction)
-            print(f"datset {sample_name} new_N_evnts: {new_N_evnts} ")
+            # print(f"datset {sample_name} new_N_evnts: {new_N_evnts} ")
             # new_samples[sample_name] = {
             #     "metadata" : sample["metadata"] # copy old metadata for now, overwrite it later
             # }
@@ -327,14 +328,14 @@ if __name__ == "__main__":
                 new_samples[sample_name]['metadata']["sumGenWgts"] *= fraction # just directly multiply by fraction for this since this is already float
             new_samples[sample_name]['metadata']["fraction"] = fraction
             
-            print(f"new_samples[{sample_name}]: {new_samples[sample_name].keys()}")
+            # print(f"new_samples[{sample_name}]: {new_samples[sample_name].keys()}")
             # loop through the files to correct the steps
             event_counter = 0 # keeps track of events of multiple root files
             stop_flag = False
             new_files = {}
             # for file in sample["files"]:
             for file, file_dict in sample["files"].items():
-                print(f"stop_flag: {stop_flag}")
+                # print(f"stop_flag: {stop_flag}")
                 if stop_flag:
                     del new_samples[sample_name]["files"][file] # delete the exess files
                     continue
@@ -352,7 +353,7 @@ if __name__ == "__main__":
                             new_step_lim
                         ])
                         stop_flag = True
-                        print(f'event_counter+new_step_lim : {event_counter+new_step_lim}')
+                        # print(f'event_counter+new_step_lim : {event_counter+new_step_lim}')
                         break
                 # print(f'new_samples[sample_name]["files"].keys(): {new_samples[sample_name]["files"].keys()}')
                 new_samples[sample_name]["files"][file]["steps"] = new_steps # overwrite new steps
