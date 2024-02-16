@@ -4,17 +4,19 @@ import matplotlib.pyplot as plt
 import time
 import numpy as np
 import pandas as pd
-import mplhep
-# mplhep.style.use("CMS")
-plt.style.use(mplhep.style.CMS)
 import glob
 import os
+import mplhep as hep
+style = hep.style.CMS
+style["mathtext.fontset"] = "cm"
+style["mathtext.default"] = "rm"
+plt.style.use(style)
 
 data_samples = [
-    # "data_A",
-    # "data_B",
-    # "data_C",
-    # "data_D",
+    "data_A",
+    "data_B",
+    "data_C",
+    "data_D",
 ]
 bkg_samples = [
     "dy_M-50",
@@ -32,66 +34,66 @@ bkg_samples = [
 ]
 sig_samples = [
     "ggh_powheg",
-    # "vbf_powheg"
+    "vbf_powheg"
 ]
 mc_samples = [
-    # *bkg_samples,
-    # *sig_samples
+    *bkg_samples,
+    *sig_samples
 ]
 variables = [
     # 'mu1_pt',
     # 'mu2_pt',
     # 'mu1_eta',
     # 'mu2_eta',
-    # 'mu1_phi',
-    # 'mu2_phi',
-    # # 'mu1_iso',
-    # # 'mu2_iso',
-    'mu1_pt_over_mass',
-    'mu2_pt_over_mass',
-    # "dimuon_mass",
+    # # 'mu1_phi',
+    # # 'mu2_phi',
+    # # # 'mu1_iso',
+    # # # 'mu2_iso',
+    # 'mu1_pt_over_mass',
+    # 'mu2_pt_over_mass',
+    "dimuon_mass",
     # "dimuon_ebe_mass_res",
     # "dimuon_ebe_mass_res_rel",
-    "dimuon_pt",
+    # "dimuon_pt",
     # "dimuon_pt_log",
     # "dimuon_eta",
     # "dimuon_phi",
     # "dimuon_dEta",
     # "dimuon_dPhi",
     # "dimuon_dR",
-    "dimuon_cos_theta_cs",
-    "dimuon_phi_cs",
-    # "jet1_pt",
+    # "dimuon_cos_theta_cs",
+    # "dimuon_phi_cs",
+    "jet1_pt",
     # "jet1_eta",
     # "jet1_rap",
     # "jet1_phi",
     # "jet1_qgl",
     # "jet1_jetId",
     # "jet1_puId",
-    # "jet2_pt",
+    "jet2_pt",
     # "jet2_eta",
     # "jet2_rap",
     # "jet2_phi",
     # "jet2_qgl",
     # "jet2_jetId",
-    # "jet2_puId",
+    # # "jet2_puId",
     # "jj_mass",
-    # "jj_mass_log",
-    # "jj_pt",
-    # "jj_eta",
-    # "jj_phi",
+    # # "jj_mass_log",
+    # # "jj_pt",
+    # # "jj_eta",
+    # # "jj_phi",
     # "jj_dEta",
     # "jj_dPhi",
-    # "mmj1_dEta",
-    # "mmj1_dPhi",
-    # "mmj1_dR",
-    # "mmj2_dEta",
-    # "mmj2_dPhi",
-    # "mmj2_dR",
+    # # "mmj1_dEta",
+    # # "mmj1_dPhi",
+    # # "mmj1_dR",
+    # # "mmj2_dEta",
+    # # "mmj2_dPhi",
+    # # "mmj2_dR",
     # "mmj_min_dEta",
     # "mmj_min_dPhi",
-    # "mmjj_pt",
-    # "mmjj_eta",
+    # # "mmjj_pt",
+    # # "mmjj_eta",
     # "mmjj_phi",
     # "mmjj_mass",
     # "rpt",
@@ -123,7 +125,6 @@ range_dict = { # order of the variables matter since many share the same word(s)
     "dEta" : [0, 1.2*np.pi],
     "dPhi" : [0, np.pi],
     "dR" : [0, 2*np.pi],
-    
     "puId" : [0, 8],
     "puId" : [0, 10],
     "zeppenfeld" : [-10, 10],
@@ -174,9 +175,11 @@ def get_variable(
         # print(f"df[variable]: {df[variable]}")
         #fill histogram
         if sample_type =="Data":
-            weight = 1/df["fraction"]
+            # weight = 1/df["fraction"]
+            weight=1
         else:
-            weight = df["weight_nominal"] / df["weight_nominal"].sum()
+            weight = df["weight_nominal"]
+            # weight = df["weight_nominal"] / df["weight_nominal"].sum()
         histogram.fill(dataset=sample_type,
             var=df[variable],
            weight = weight,
@@ -190,8 +193,34 @@ if __name__ == "__main__":
     print(f"load_path: {load_path}")
     file_list = glob.glob(load_path+"/*.csv")
     # print(f"file_list: {file_list}")
-    # print(f"range_dict.keys(): {range_dict.keys()}")
+    print(f"range_dict.keys(): {range_dict.keys()}")
     # loop over variables
+
+    # plotsize = 8
+    # ratio_plot_size = 0.25
+
+    # # temporary
+    # variation = "nominal"
+
+    # slicer = {"region": region, "channel": channel, "variation": variation, "category": category}
+    # fig = plt.figure()
+    # plot_ratio = False
+    # if plot_ratio:
+    #     fig.set_size_inches(plotsize * 1.2, plotsize * (1 + ratio_plot_size))
+    #     gs = fig.add_gridspec(
+    #         2, 1, height_ratios=[(1 - ratio_plot_size), ratio_plot_size], hspace=0.07
+    #     )
+    #     # Top panel: Data/MC
+    #     ax1 = fig.add_subplot(gs[0])
+    # else:
+    #     fig, ax1 = plt.subplots()
+    #     fig.set_size_inches(plotsize, plotsize)
+
+    # label: ['TT+ST', 'DY']
+    # entry.stack: True
+    # entry.histtype: fill
+    # entry.plot_opts: {'alpha': 0.8, 'edgecolor': (0, 0, 0)}
+    
     for region in regions:
         for var in variables:
             range = []
