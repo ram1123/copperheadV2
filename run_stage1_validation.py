@@ -7,6 +7,8 @@ import pandas as pd
 import glob
 import os
 import mplhep as hep
+from histogram.variable import variables_lookup, Entry
+# print(f"variables_lookup: {variables_lookup}")
 style = hep.style.CMS
 style["mathtext.fontset"] = "cm"
 style["mathtext.default"] = "rm"
@@ -40,6 +42,7 @@ mc_samples = [
     *bkg_samples,
     *sig_samples
 ]
+
 variables = [
     # 'mu1_pt',
     # 'mu2_pt',
@@ -108,43 +111,40 @@ regions = [
 ]
 load_path = "/depot/cms/users/yun79/results/stage1/test"
 save_path = "/depot/cms/users/yun79/valerie/fork/copperheadV2/validation/figs"
-range_dict = { # order of the variables matter since many share the same word(s)
-    "cos_theta" : [-1,1],
-    "rpt" : [0, 1],
-    "mass_res_rel" : [0,0.1],
-    "mass_res" : [0,8],
-    "mass_log" : [0,10],
-    "mass" : [0,250],
-    "pt_over_mass" : [0, 2],
-    "pt_log" : [-5,10],
-    "pt" : [20,250],
-    "eta" : [-2.5, 2.5],
-    "phi_cs" : [-np.pi,np.pi],
-    "phi" : [-np.pi, np.pi],
-    "rap" : [-np.pi, np.pi], # rapidity
-    "dEta" : [0, 1.2*np.pi],
-    "dPhi" : [0, np.pi],
-    "dR" : [0, 2*np.pi],
-    "puId" : [0, 8],
-    "puId" : [0, 10],
-    "zeppenfeld" : [-10, 10],
-    "njets" : [0, 6],
-    "qgl" : [-2, 2],
-    "default" : [-100,500]
+
+# channels = ["vbf", "ggh", "DY", "TT+ST", "Data"]
+channels =  ["Data", "MC", "Bkg", "Sig"]
+plot_group_config= {
+    # 'stack': ['DY', 'EWK', 'TT+ST', 'VV', 'VVV'],
+    # 'step': ['VBF', 'ggH'], 
+    # 'errorbar': ['Data']
+    'stack': ['Bkg'],
+    'step': ['Sig'], 
+    'errorbar': ['Data']
 }
-def get_variable(
-    histogram, 
+
+def get_plottable(
     variable: str,
     file_list: list,
     samples: list,
+    # channel: str,
     region: str,
-    sample_type: str,
+    channel: str,
     ):
     # print(f"mc_samples: {mc_samples}")
     # if len(samples)==0:
-    #     print(f"empty samples for {sample_type}")
+    #     print(f"empty samples for {channel}")
     #     return histogram
     # loop over data samples
+    
+    h_var = variables_lookup[variable]
+    histogram = (
+        hist.Hist.new
+        # .StrCat(channels, name="channel")
+        .Reg(h_var.nbins, h_var.xmin, h_var.xmax, name=h_var.name, label=h_var.caption)
+        .Double()
+    )
+    print(f"range max: {max}")
     for sample in samples:
         df = None
         for file in file_list:
@@ -170,20 +170,22 @@ def get_variable(
 
         # refine df
         df = df[region_filter]
-        print(f"sample_type: {sample_type}")
+        print(f"channel: {channel}")
         # print(f"df[variable][region_filter]: {df[variable][region_filter]}")
         # print(f"df[variable]: {df[variable]}")
         #fill histogram
-        if sample_type =="Data":
+        if channel =="Data":
             # weight = 1/df["fraction"]
             weight=1
         else:
             weight = df["weight_nominal"]
             # weight = df["weight_nominal"] / df["weight_nominal"].sum()
-        histogram.fill(dataset=sample_type,
-            var=df[variable],
-           weight = weight,
-        )
+        
+        to_fill = {
+            h_var.name: df[variable],
+            # "channel": channel,
+        }
+        histogram.fill(**to_fill, weight=weight)
     return histogram
 
 if __name__ == "__main__":
@@ -193,28 +195,17 @@ if __name__ == "__main__":
     print(f"load_path: {load_path}")
     file_list = glob.glob(load_path+"/*.csv")
     # print(f"file_list: {file_list}")
-    print(f"range_dict.keys(): {range_dict.keys()}")
     # loop over variables
 
-    # plotsize = 8
-    # ratio_plot_size = 0.25
+    plotsize = 8
+    ratio_plot_size = 0.25
+    year = "2018"
 
     # # temporary
     # variation = "nominal"
 
     # slicer = {"region": region, "channel": channel, "variation": variation, "category": category}
-    # fig = plt.figure()
-    # plot_ratio = False
-    # if plot_ratio:
-    #     fig.set_size_inches(plotsize * 1.2, plotsize * (1 + ratio_plot_size))
-    #     gs = fig.add_gridspec(
-    #         2, 1, height_ratios=[(1 - ratio_plot_size), ratio_plot_size], hspace=0.07
-    #     )
-    #     # Top panel: Data/MC
-    #     ax1 = fig.add_subplot(gs[0])
-    # else:
-    #     fig, ax1 = plt.subplots()
-    #     fig.set_size_inches(plotsize, plotsize)
+    
 
     # label: ['TT+ST', 'DY']
     # entry.stack: True
@@ -223,37 +214,78 @@ if __name__ == "__main__":
     
     for region in regions:
         for var in variables:
-            range = []
-            for keyword in range_dict.keys():
-                # print(f"keyword: {keyword}")
-                if keyword in var:
-                    range = range_dict[keyword]
-                    break
-            if len(range) == 0:
-                range = range_dict["default"]
-            min,max = range[0],range[1]
-            print(f"range max: {max}")
-            dists = (
-                hist.Hist.new
-                .StrCat(["Data", "MC", "Bkg", "Sig"], name="dataset")
-                # .StrCat(["Data", "MC"], name="dataset")
-                # .StrCat(["Bkg", "Sig"], name="dataset")
-                .Reg(80, min, max, name="var")
-                .Weight()
-            )
+            fig = plt.figure()
+            plot_ratio = False
+            if plot_ratio:
+                fig.set_size_inches(plotsize * 1.2, plotsize * (1 + ratio_plot_size))
+                gs = fig.add_gridspec(
+                    2, 1, height_ratios=[(1 - ratio_plot_size), ratio_plot_size], hspace=0.07
+                )
+                # Top panel: Data/MC
+                ax1 = fig.add_subplot(gs[0])
+            else:
+                fig, ax1 = plt.subplots()
+                fig.set_size_inches(plotsize, plotsize)
+                
+            ax1.set_yscale("log")
+            ax1.set_ylim(0.001, 1e9)
+            ax1.legend(prop={"size": "x-small"})
+            if plot_ratio:
+                ax1.set_xlabel("")
+                ax1.tick_params(axis="x", labelbottom=False)
+            else:
+                ax1.set_xlabel(variables_lookup[var].caption, loc="right")
+
+            entries = {entry_type: Entry(entry_type) for entry_type in plot_group_config.keys()}
             print(f"plotting: {var}")
-            dists = get_variable(dists, var, file_list, data_samples, region, "Data")
-            dists = get_variable(dists, var, file_list, mc_samples, region, "MC")
-            dists = get_variable(dists, var, file_list, bkg_samples, region, "Bkg")
-            dists = get_variable(dists, var, file_list, sig_samples, region, "Sig")
+            dists = get_plottable(var, file_list, data_samples, region, "Data")
+            print(f"dists: {dists}")
+            histtype= "errorbar"
+            hep.histplot(
+                dists,
+                label=["Data"],
+                ax=ax1,
+                # yerr=yerr,
+                stack=True,
+                histtype=histtype,
+                **entries[histtype].plot_opts,
+            )
+            # dists = get_plottable(dists, var, file_list, mc_samples, region, "MC")
+            # hep.histplot(
+            #     dists,
+            #     label="MC",
+            #     ax=ax1,
+            #     # yerr=yerr,
+            #     stack=True,
+            #     histtype="errorbar",
+            #     # **entry.plot_opts,
+            # )
+            dists = get_plottable(var, file_list, bkg_samples, region, "Bkg")
+            hep.histplot(
+                dists,
+                label=["Bkg"],
+                ax=ax1,
+                # yerr=yerr,
+                stack=True,
+                histtype="fill",
+                # **entry.plot_opts,
+            )
+            dists = get_plottable(var, file_list, sig_samples, region, "Sig")
+            hep.histplot(
+                dists,
+                label=["Sig"],
+                ax=ax1,
+                # yerr=yerr,
+                stack=True,
+                histtype="step",
+                # **entry.plot_opts,
+            )
             
     
-            fig, ax = plt.subplots()
-            dists.plot1d(ax=ax)
-            ax.legend(title=f"{var} validation")
-            plt.xlabel(var)
+
+            hep.cms.label(ax=ax1, data=True, label="Work in progress", year=year)
             # save figure
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
-            plt.savefig(save_path+f"/V{var}_{region}.png")
+            fig.savefig(save_path+f"/V{var}_{region}.png")
     
