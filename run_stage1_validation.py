@@ -23,8 +23,8 @@ data_samples = [
 bkg_samples = [
     "dy_M-50",
     "dy_M-100To200",
-    # "ttjets_dl",
-    # "ttjets_sl",
+    "ttjets_dl",
+    "ttjets_sl",
     # "st_tw_top",
     # "st_tw_antitop", 
     # "ww_2l2nu",
@@ -114,22 +114,51 @@ save_path = "/depot/cms/users/yun79/valerie/fork/copperheadV2/validation/figs"
 
 # channels = ["vbf", "ggh", "DY", "TT+ST", "Data"]
 channels =  ["Data", "MC", "Bkg", "Sig"]
-plot_group_config= {
-    # 'stack': ['DY', 'EWK', 'TT+ST', 'VV', 'VVV'],
-    # 'step': ['VBF', 'ggH'], 
-    # 'errorbar': ['Data']
-    'stack': ['Bkg'],
-    'step': ['Sig'], 
-    'errorbar': ['Data']
+# plot_group_config= {
+#     # 'stack': ['DY', 'EWK', 'TT+ST', 'VV', 'VVV'],
+#     # 'step': ['VBF', 'ggH'], 
+#     # 'errorbar': ['Data']
+#     'stack': ['Bkg'],
+#     'step': ['Sig'], 
+#     'errorbar': ['Data']
+# }
+
+parameters = {}
+parameters["grouping"] = {
+    "data_A": "Data",
+    "data_B": "Data",
+    "data_C": "Data",
+    "data_D": "Data",
+    "data_E": "Data",
+    "data_F": "Data",
+    "data_G": "Data",
+    "data_H": "Data",
+    "dy_M-50": "DY",
+    "dy_M-100To200": "DY",
+    "ttjets_dl": "TT+ST",
+    "ttjets_sl": "TT+ST",
+    "ggh_powheg": "ggH",
+    "vbf_powheg": "VBF",
 }
+parameters["plot_group"] = {
+    "stack": ["DY", "EWK", "TT+ST", "VV", "VVV"],
+    "step": ["VBF", "ggH"],
+    "errorbar": ["Data"],
+}
+# parameters["plot_group"] = {
+#     "Data" : "errorbar",
+#     "ggH" : "step",
+#     "VBF" : "step",
+#     "DY" : "stack",
+#     "TT+ST" : "stack",
+# }
 
 def get_plottable(
     variable: str,
     file_list: list,
-    samples: list,
-    # channel: str,
+    entry,
     region: str,
-    channel: str,
+    # grouping: str,
     ):
     # print(f"mc_samples: {mc_samples}")
     # if len(samples)==0:
@@ -138,55 +167,71 @@ def get_plottable(
     # loop over data samples
     
     h_var = variables_lookup[variable]
-    histogram = (
-        hist.Hist.new
-        # .StrCat(channels, name="channel")
-        .Reg(h_var.nbins, h_var.xmin, h_var.xmax, name=h_var.name, label=h_var.caption)
-        .Double()
-    )
-    print(f"range max: {max}")
-    for sample in samples:
-        df = None
-        for file in file_list:
-            if sample in file:
-                print(f"{sample} matched with {file}")
-                df = pd.read_csv(file)
-                break
-        if df is None:
-            print(f"{sample} not in stage1 results")
-            continue
-        if var not in df.columns:
-            print(f"{variable} not found in df columns")
-            continue
-        # get region array
-        if region == "z_peak":
-            region_filter = df["z_peak"]
-        elif region == "h_sidebands":
-            region_filter = df["h_sidebands"]
-        elif region == "h_peak":
-            region_filter = df["h_peak"]
-        else:
-            region_filter = df["z_peak"] | df["h_sidebands"] | df["h_peak"]
-
-        # refine df
-        df = df[region_filter]
-        print(f"channel: {channel}")
-        # print(f"df[variable][region_filter]: {df[variable][region_filter]}")
-        # print(f"df[variable]: {df[variable]}")
-        #fill histogram
-        if channel =="Data":
-            # weight = 1/df["fraction"]
-            weight=1
-        else:
-            weight = df["weight_nominal"]
-            # weight = df["weight_nominal"] / df["weight_nominal"].sum()
-        
-        to_fill = {
-            h_var.name: df[variable],
-            # "channel": channel,
-        }
-        histogram.fill(**to_fill, weight=weight)
-    return histogram
+    h_dict = {}
+    for group in entry.groups:
+        samples = [e for e, g in entry.entry_dict.items() if (group == g)]
+        print(f"samples: {samples}")
+        histogram = (
+            hist.Hist.new
+            .Reg(h_var.nbins, h_var.xmin, h_var.xmax, name=h_var.name, label=h_var.caption)
+            .Double()
+        )
+        for sample in samples:
+            df = None
+            for file in file_list:
+                if sample in file:
+                    print(f"{sample} matched with {file}")
+                    df = pd.read_csv(file)
+                    break
+            if df is None:
+                print(f"{sample} not in stage1 results")
+                continue
+            if var not in df.columns:
+                print(f"{variable} not found in df columns")
+                continue
+            # get region array
+            if region == "z_peak":
+                region_filter = df["z_peak"]
+            elif region == "h_sidebands":
+                region_filter = df["h_sidebands"]
+            elif region == "h_peak":
+                region_filter = df["h_peak"]
+            else:
+                region_filter = df["z_peak"] | df["h_sidebands"] | df["h_peak"]
+    
+            # refine df
+            df = df[region_filter]
+            # print(f'df["fraction"][0]: {df["fraction"][0]}')
+            # print(f"df[variable][region_filter]: {df[variable][region_filter]}")
+            # print(f"df[variable]: {df[variable]}")
+            #fill histogram
+            if "Data" in entry.groups: # data
+                # weight = 1/df["fraction"]
+                weight=1
+            else: # MC
+                weight = df["weight_nominal"]
+                # weight = df["weight_nominal"] / df["weight_nominal"].sum()
+            
+            to_fill = {
+                h_var.name: df[variable],
+                # "grouping": grouping,
+            }
+            histogram.fill(**to_fill, weight=weight)
+        print(f"histogram.sum(): {histogram.sum()}")
+        # h_list.append(histogram)
+        # need to sort by histogram sum later
+        h_dict[histogram.sum()] = (histogram, group) 
+    
+    print(f"h_dict b4: {h_dict}")
+    h_dict  = dict(sorted(h_dict.items()))
+    print(f"h_dict after: {h_dict}")
+    h_list = []
+    labels = []
+    for histogram, group in h_dict.values():
+        h_list.append(histogram)
+        labels.append(group)
+    # return h_list
+    return h_list, labels
 
 if __name__ == "__main__":
     # dataset_fraction = 0.01
@@ -214,6 +259,7 @@ if __name__ == "__main__":
     
     for region in regions:
         for var in variables:
+            print(f"plotting: {var}")
             fig = plt.figure()
             plot_ratio = False
             if plot_ratio:
@@ -227,63 +273,96 @@ if __name__ == "__main__":
                 fig, ax1 = plt.subplots()
                 fig.set_size_inches(plotsize, plotsize)
                 
-            ax1.set_yscale("log")
-            ax1.set_ylim(0.001, 1e9)
-            ax1.legend(prop={"size": "x-small"})
+            
             if plot_ratio:
                 ax1.set_xlabel("")
                 ax1.tick_params(axis="x", labelbottom=False)
             else:
                 ax1.set_xlabel(variables_lookup[var].caption, loc="right")
 
-            entries = {entry_type: Entry(entry_type) for entry_type in plot_group_config.keys()}
-            print(f"plotting: {var}")
-            dists = get_plottable(var, file_list, data_samples, region, "Data")
-            print(f"dists: {dists}")
-            histtype= "errorbar"
-            hep.histplot(
-                dists,
-                label=["Data"],
-                ax=ax1,
-                # yerr=yerr,
-                stack=True,
-                histtype=histtype,
-                **entries[histtype].plot_opts,
-            )
-            # dists = get_plottable(dists, var, file_list, mc_samples, region, "MC")
+            entries = {entry_type: Entry(entry_type, parameters) for entry_type in parameters["plot_group"].keys()}
+            for entry in entries.values():
+                print(f"entry.histtype: {entry.histtype}")
+                print(f"entry.stack: {entry.stack}")
+                print(f"entry.labels: {entry.labels}")
+                print(f"entry.groups: {entry.groups}")
+                # print(f"entry.entry_dict: {entry.entry_dict}")
+                # print(f"entry.entry_list: {entry.entry_list}")
+                # grouping = parameters["grouping"][data_samples[0]]
+                dists, labels = get_plottable(var, file_list, entry, region)
+                # print(f"dists: {dists}")
+                hep.histplot(
+                    dists,
+                    # label=entry.groups,
+                    label=labels,
+                    ax=ax1,
+                    # yerr=yerr,
+                    stack=entry.stack,
+                    histtype=entry.histtype,
+                    **entry.plot_opts,
+                )
+            #---------------------------------------------------
+            # for samples in [data_samples, bkg_samples, sig_samples]:
+            #     grouping = parameters["grouping"][sample[0]]
+            #     dists = get_plottable(var, file_list, samples, region, grouping)
+            #     # print(f"dists: {dists}")
+            #     hep.histplot(
+            #         dists,
+            #         label=[grouping],
+            #         ax=ax1,
+            #         # yerr=yerr,
+            #         stack=entry.stack,
+            #         histtype=entry.histtype,
+            #         **entry.plot_opts,
+            #     )
+            #--------------------------------------------------
+            # histtype= "errorbar"
             # hep.histplot(
             #     dists,
-            #     label="MC",
+            #     label=["Data"],
             #     ax=ax1,
             #     # yerr=yerr,
             #     stack=True,
-            #     histtype="errorbar",
+            #     histtype=histtype,
+            #     **entries[histtype].plot_opts,
+            # )
+            # # dists = get_plottable(dists, var, file_list, mc_samples, region, "MC")
+            # # hep.histplot(
+            # #     dists,
+            # #     label="MC",
+            # #     ax=ax1,
+            # #     # yerr=yerr,
+            # #     stack=True,
+            # #     histtype="errorbar",
+            # #     # **entry.plot_opts,
+            # # )
+            # dists = get_plottable(var, file_list, bkg_samples, region, "Bkg")
+            # hep.histplot(
+            #     dists,
+            #     label=["Bkg"],
+            #     ax=ax1,
+            #     # yerr=yerr,
+            #     stack=True,
+            #     histtype="fill",
             #     # **entry.plot_opts,
             # )
-            dists = get_plottable(var, file_list, bkg_samples, region, "Bkg")
-            hep.histplot(
-                dists,
-                label=["Bkg"],
-                ax=ax1,
-                # yerr=yerr,
-                stack=True,
-                histtype="fill",
-                # **entry.plot_opts,
-            )
-            dists = get_plottable(var, file_list, sig_samples, region, "Sig")
-            hep.histplot(
-                dists,
-                label=["Sig"],
-                ax=ax1,
-                # yerr=yerr,
-                stack=True,
-                histtype="step",
-                # **entry.plot_opts,
-            )
+            # dists = get_plottable(var, file_list, sig_samples, region, "Sig")
+            # hep.histplot(
+            #     dists,
+            #     label=["Sig"],
+            #     ax=ax1,
+            #     # yerr=yerr,
+            #     stack=True,
+            #     histtype="step",
+            #     # **entry.plot_opts,
+            # )
             
     
 
             hep.cms.label(ax=ax1, data=True, label="Work in progress", year=year)
+            ax1.set_yscale("log")
+            ax1.set_ylim(0.001, 1e9)
+            ax1.legend(prop={"size": "x-small"})
             # save figure
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
