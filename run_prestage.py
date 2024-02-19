@@ -9,6 +9,7 @@ from distributed import LocalCluster, Client
 import time
 import copy
 import tqdm
+import uproot
 
 datasets = {
     "2016preVFP": {
@@ -117,10 +118,10 @@ datasets = {
         # "vbf_powheg_dipole": "",
     },
     "2018": {
-        "data_A": "/SingleMuon/Run2018A-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
-        "data_B": "/SingleMuon/Run2018B-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
-        "data_C": "/SingleMuon/Run2018C-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
-        "data_D": "/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
+        # "data_A": "/SingleMuon/Run2018A-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
+        # "data_B": "/SingleMuon/Run2018B-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
+        # "data_C": "/SingleMuon/Run2018C-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD",
+        # "data_D": "/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
         "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X*/NANOAODSIM",
         "dy_M-100To200": "/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         "ttjets_dl": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
@@ -149,6 +150,7 @@ datasets = {
         # # "vbf_powheg_dipole": "",
     },
 }
+
 
 if __name__ == "__main__":
 
@@ -200,7 +202,7 @@ if __name__ == "__main__":
             print("Gateway Client created")
         else: # use local cluster
             cluster = LocalCluster()
-            cluster.adapt(minimum=8, maximum=32) 
+            cluster.adapt(minimum=8, maximum=32) #min: 8 max: 32
             client = Client(cluster)
             print("Local scale Client created")
         big_sample_info = {}
@@ -215,10 +217,10 @@ if __name__ == "__main__":
             das_query = dataset[sample_name]
             
             
-            client = rucio_utils.get_rucio_client()
+            rucio_client = rucio_utils.get_rucio_client()
             outlist, outtree = rucio_utils.query_dataset(
                 das_query,
-                client=client,
+                client=rucio_client,
                 tree=True,
                 scope="cms",
             )
@@ -226,7 +228,7 @@ if __name__ == "__main__":
                 outlist[0],
                 allowlist_sites=allowlist_sites,
                 mode="full",
-                client=client,
+                client=rucio_client,
                 partial_allowed=True
             )
             fnames = [file[0] for file in outfiles if file != []]
@@ -242,6 +244,15 @@ if __name__ == "__main__":
                 "data_entries" : None,
             }
             if "data" in sample_name: # data sample
+                """
+                Nick's propsed way to do it below. It's not particularily faster than the original method, so I just commented out for record keeping sake
+                # entries = client.map(lambda filename: uproot.open({filename: "Events"}).num_entries, fnames)  
+                # entries = [entry.result() for entry in entries]
+                # preprocess_metadata["data_entries"] = sum(entries)
+                # total_events += preprocess_metadata["data_entries"]
+                # # print(f"sum entries : {sum(entries)}")
+                # --------------------------------------------------------
+                """
                 file_input = {fname : {"object_path": "Events"} for fname in fnames}
                 events = NanoEventsFactory.from_root(
                         file_input,
@@ -261,7 +272,10 @@ if __name__ == "__main__":
                 preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 total_events += preprocess_metadata["nGenEvts"] 
-            # print(f"prestage preprocess_metadata: {preprocess_metadata}")    
+                print(f"prestage runs.genEventSumw: {runs.genEventSumw.compute()}") 
+                
+            print(f"prestage sample_name: {sample_name}") 
+            print(f"prestage preprocess_metadata: {preprocess_metadata}")    
     
             val = "Events"
             file_dict = {}
@@ -321,12 +335,14 @@ if __name__ == "__main__":
             # new_samples[sample_name] = {
             #     "metadata" : sample["metadata"] # copy old metadata for now, overwrite it later
             # }
+            old_N_evnts = new_samples[sample_name]['metadata']["data_entries"] if is_data else new_samples[sample_name]['metadata']["nGenEvts"]
             if is_data:
                 new_samples[sample_name]['metadata']["data_entries"] = new_N_evnts
             else:
                 new_samples[sample_name]['metadata']["nGenEvts"] = new_N_evnts
                 new_samples[sample_name]['metadata']["sumGenWgts"] *= fraction # just directly multiply by fraction for this since this is already float
-            new_samples[sample_name]['metadata']["fraction"] = fraction
+            # new_samples[sample_name]['metadata']["fraction"] = fraction
+            new_samples[sample_name]['metadata']["fraction"] = new_N_evnts/old_N_evnts
             
             # print(f"new_samples[{sample_name}]: {new_samples[sample_name].keys()}")
             # loop through the files to correct the steps
