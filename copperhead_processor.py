@@ -642,7 +642,6 @@ class EventProcessor(processor.ProcessorABC):
                 and ("nominal" in pt_variations)
                 and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
             )
-            )
             if do_thu:
                 add_stxs_variations(
                     events,
@@ -650,7 +649,7 @@ class EventProcessor(processor.ProcessorABC):
                     self.config,
                 )
             if self.test:
-                print(f"do_thu: {do_thu}"
+                print(f"do_thu: {do_thu}")
                 print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_pdf = (
@@ -1169,6 +1168,7 @@ class EventProcessor(processor.ProcessorABC):
         temp_out_dict = {
             "nBtagLoose": nBtagLoose,
             "nBtagMedium": nBtagMedium,
+            "vbf_cut": vbf_cut,
         }
         jet_loop_out_dict.update(temp_out_dict)
         if self.test:
