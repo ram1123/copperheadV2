@@ -8,40 +8,53 @@ import glob
 import os
 import mplhep as hep
 from histogram.variable import variables_lookup, Entry
+from hist.intervals import poisson_interval
+
 # print(f"variables_lookup: {variables_lookup}")
 style = hep.style.CMS
 style["mathtext.fontset"] = "cm"
 style["mathtext.default"] = "rm"
 plt.style.use(style)
 
-data_samples = [
-    "data_A",
-    "data_B",
-    "data_C",
-    "data_D",
-]
-bkg_samples = [
-    "dy_M-50",
-    "dy_M-100To200",
-    "ttjets_dl",
-    "ttjets_sl",
-    # "st_tw_top",
-    # "st_tw_antitop", 
-    # "ww_2l2nu",
-    # "wz_3lnu",
-    # "wz_2l2q",
-    # "wz_1l1nu2q",
-    # "zz",
-    # "ewk_lljj_mll50_mjj120",
-]
-sig_samples = [
-    "ggh_powheg",
-    "vbf_powheg"
-]
-mc_samples = [
-    *bkg_samples,
-    *sig_samples
-]
+stat_err_opts = {
+    "step": "post",
+    "label": "Stat. unc.",
+    "hatch": "//////",
+    "facecolor": "none",
+    "edgecolor": (0, 0, 0, 0.5),
+    "linewidth": 0,
+}
+ratio_err_opts = {"step": "post", "facecolor": (0, 0, 0, 0.3), "linewidth": 0}
+
+
+# data_samples = [
+#     "data_A",
+#     "data_B",
+#     "data_C",
+#     "data_D",
+# ]
+# bkg_samples = [
+#     "dy_M-50",
+#     "dy_M-100To200",
+#     "ttjets_dl",
+#     "ttjets_sl",
+#     # "st_tw_top",
+#     # "st_tw_antitop", 
+#     # "ww_2l2nu",
+#     # "wz_3lnu",
+#     # "wz_2l2q",
+#     # "wz_1l1nu2q",
+#     # "zz",
+#     # "ewk_lljj_mll50_mjj120",
+# ]
+# sig_samples = [
+#     "ggh_powheg",
+#     "vbf_powheg"
+# ]
+# mc_samples = [
+#     *bkg_samples,
+#     *sig_samples
+# ]
 
 variables = [
     # 'mu1_pt',
@@ -176,6 +189,11 @@ def get_plottable(
             .Reg(h_var.nbins, h_var.xmin, h_var.xmax, name=h_var.name, label=h_var.caption)
             .Double()
         )
+        histogram_w2 = ( # weight sq histogram for stat err calculation
+            hist.Hist.new
+            .Reg(h_var.nbins, h_var.xmin, h_var.xmax, name=h_var.name, label=h_var.caption)
+            .Double()
+        )
         for sample in samples:
             df = None
             for file in file_list:
@@ -217,21 +235,24 @@ def get_plottable(
                 # "grouping": grouping,
             }
             histogram.fill(**to_fill, weight=weight)
+            histogram_w2.fill(**to_fill, weight=weight*weight)
         print(f"histogram.sum(): {histogram.sum()}")
         # h_list.append(histogram)
         # need to sort by histogram sum later
-        h_dict[histogram.sum()] = (histogram, group) 
+        h_dict[histogram.sum()] = (histogram, histogram_w2, group) 
     
     print(f"h_dict b4: {h_dict}")
     h_dict  = dict(sorted(h_dict.items()))
     print(f"h_dict after: {h_dict}")
     h_list = []
+    h_w2_list = []
     labels = []
-    for histogram, group in h_dict.values():
+    for histogram, histogram_w2, group in h_dict.values():
         h_list.append(histogram)
+        h_w2_list.append(histogram_w2)
         labels.append(group)
     # return h_list
-    return h_list, labels
+    return h_list, h_w2_list, labels
 
 if __name__ == "__main__":
     # dataset_fraction = 0.01
@@ -244,8 +265,10 @@ if __name__ == "__main__":
 
     plotsize = 8
     ratio_plot_size = 0.25
+    integrated_lumi = 59970.0 /1000 # get this from config in the future
+    fontsize=20
     year = "2018"
-
+    
     # # temporary
     # variation = "nominal"
 
@@ -289,7 +312,7 @@ if __name__ == "__main__":
                 # print(f"entry.entry_dict: {entry.entry_dict}")
                 # print(f"entry.entry_list: {entry.entry_list}")
                 # grouping = parameters["grouping"][data_samples[0]]
-                dists, labels = get_plottable(var, file_list, entry, region)
+                dists, dists_w2, labels = get_plottable(var, file_list, entry, region)
                 # print(f"dists: {dists}")
                 hep.histplot(
                     dists,
@@ -301,6 +324,21 @@ if __name__ == "__main__":
                     histtype=entry.histtype,
                     **entry.plot_opts,
                 )
+                # Bkg MC errors
+                if entry.entry_type == "stack":    
+                    total_bkg = sum(dists).values()
+                    total_sumw2 = sum(dists_w2).values()
+                    if sum(total_bkg) > 0:
+                        err = poisson_interval(total_bkg, total_sumw2)
+                        ax1.fill_between(
+                            x=dists[0].axes[0].edges,
+                            y1=np.r_[err[0, :], err[0, -1]],
+                            y2=np.r_[err[1, :], err[1, -1]],
+                            **stat_err_opts,
+                        )
+            # # Bottom panel: Data/MC ratio plot
+            # if plot_ratio:
+                
             #---------------------------------------------------
             # for samples in [data_samples, bkg_samples, sig_samples]:
             #     grouping = parameters["grouping"][sample[0]]
@@ -358,8 +396,8 @@ if __name__ == "__main__":
             # )
             
     
-
-            hep.cms.label(ax=ax1, data=True, label="Work in progress", year=year)
+            
+            hep.cms.label(ax=ax1, data=True, label="Work in progress", year=year, lumi=integrated_lumi, fontsize=fontsize)
             ax1.set_yscale("log")
             ax1.set_ylim(0.001, 1e9)
             ax1.legend(prop={"size": "x-small"})
