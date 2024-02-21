@@ -12,6 +12,7 @@ from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, 
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
+import dask_awkward as dak
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
@@ -713,6 +714,7 @@ class EventProcessor(processor.ProcessorABC):
         for variation in pt_variations:
             jet_loop_dict = self.jet_loop(
                 events, 
+                jets,
                 variation,
                 do_jec = do_jec,
                 do_jecunc = do_jecunc,
@@ -851,9 +853,9 @@ class EventProcessor(processor.ProcessorABC):
     def jet_loop(
         self,
         events,
-        # jets,
+        jets,
         variation,
-        do_jec = True,
+        do_jec = True, #False
         do_jecunc = False,
         do_jerunc = False,
         # dataset,
@@ -870,7 +872,6 @@ class EventProcessor(processor.ProcessorABC):
         is_mc = events.metadata["is_mc"]
         if (not is_mc) and variation != "nominal":
             return
-        jets= events.Jet
         # variables = pd.DataFrame(index=output.index)
         # print(f"variables: {variables}")
 
@@ -951,10 +952,12 @@ class EventProcessor(processor.ProcessorABC):
     #         # We use JER corrections only for systematics, so we shouldn't
     #         # update the kinematics. Use original values,
     #         # unless JEC were applied.
+        """
         if is_mc and do_jerunc and not do_jec: # NOTE: I don't think this is needed anymore since jets variable is the original events.Jet if do_jec==False
             events["Jet","pt"] = jets["pt_orig"]
             events["Jet","mass"] = jets["mass_orig"]
             jets = events.Jet
+        """
 
         # ------------------------------------------------------------#
         # Apply jetID and PUID
@@ -985,8 +988,21 @@ class EventProcessor(processor.ProcessorABC):
             & (jets.pt > self.config["jet_pt_cut"])
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
+        # print(f"jet_selection: {jet_selection}")
+        # print(f"jets b4 selection: {jets}")
+        # print(f"jets._meta b4 selection: {repr(jets._meta)}")
+        # print(f"dak.necessary_columns(jets.pt) b4 selection: {dak.necessary_columns(jets.pt)}")
+        # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
+        jets = ak.to_packed(ak.mask(jets, jet_selection))
+        # print(f"jets after selection: {jets}")
+        # print(f"jets._meta after selection: {str(jets._meta.compute())}")
+        # print(f"jet_selection._meta: {str(jet_selection._meta.compute())}")
+        # print(f"jets._meta after selection: {repr(jets._meta)}")
+        # print(f"jet_selection._meta: {repr(jet_selection._meta)}")
+        # print(f"dak.necessary_columns(jets.pt) after selection: {dak.necessary_columns(jets.pt)}")
+        # 
         
-        jets = jets[jet_selection]
+        # jets = ak.where(jet_selection, jets, None)
         muons = events.Muon 
         njets = ak.num(jets, axis=1)
 
@@ -995,12 +1011,13 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
 
         
-        if self.test:
-            print(f"jet loop njets: {njets}")
-            print(f"jet loop jet_selection short: {jet_selection}")
-            print(f"jet loop jet_selection sum: {ak.sum(jet_selection, axis =1)}")
-            print(f"jet loop jet_selection long: {ak.to_numpy(ak.flatten(jet_selection))}")
-            print(f"jet loop jets.pt short: {jets.pt}")
+        # if self.test:
+        # print(f"jet loop njets: {njets}")
+        # print(f"jet loop ak.num(events, axis=0): {ak.num(events, axis=0)}")
+        # print(f"jet loop jet_selection short: {jet_selection}")
+        # print(f"jet loop jet_selection sum: {ak.sum(jet_selection, axis =1)}")
+        # print(f"jet loop jet_selection long: {ak.to_numpy(ak.flatten(jet_selection))}")
+        # print(f"jet loop jets.pt short: {jets.pt}")
         # variables["njets"] = njets
 
         # fill_jets(output, variables, jet1, jet2)
@@ -1009,6 +1026,7 @@ class EventProcessor(processor.ProcessorABC):
         jet1 = padded_jets[:,0]
         jet2 = padded_jets[:,1]
         dijet = jet1+jet2
+        # print(f"dijet: {dijet}")
         jj_dEta = abs(jet1.eta - jet2.eta)
         jj_dPhi = abs(jet1.delta_phi(jet2))
         dimuon = muons[:,0] + muons[:,1]
@@ -1038,6 +1056,7 @@ class EventProcessor(processor.ProcessorABC):
 
         jet_loop_out_dict = {
             "jet1_pt" : jet1.pt,
+            # "jet1_pt" : ak.where(jet_selection,jet1.pt,-999),
             "jet1_eta" : jet1.eta,
             "jet1_rap" : jet1.rapidity,
             "jet1_phi" : jet1.phi,
@@ -1046,13 +1065,25 @@ class EventProcessor(processor.ProcessorABC):
             "jet1_puId" : jet1.puId,
             "jet2_pt" : jet2.pt,
             "jet2_eta" : jet2.eta,
+            #-------------------------------
+            # "jet1_pt" : jet1.pt[jet_selection],
+            # "jet1_eta" : jet1.eta[jet_selection],
+            # "jet1_rap" : jet1.rapidity[jet_selection],
+            # "jet1_phi" : jet1.phi[jet_selection],
+            # "jet1_qgl" : jet1.qgl[jet_selection],
+            # "jet1_jetId" : jet1.jetId[jet_selection],
+            # "jet1_puId" : jet1.puId[jet_selection],
+            # "jet2_pt" : jet2.pt[jet_selection],
+            # "jet2_eta" : jet2.eta[jet_selection],
+            #----------------------------------
             "jet2_rap" : jet2.rapidity,
             "jet2_phi" : jet2.phi,
             "jet2_qgl" : jet2.qgl,
             "jet2_jetId" : jet2.jetId,
             "jet2_puId" : jet2.puId,
             "jj_mass" : dijet.mass,
-            "jj_mass_log" : np.log(dijet.mass),
+            # # "jj_mass" : ak.where(jet_selection,dijet.mass,-999),
+            # "jj_mass_log" : np.log(dijet.mass),
             "jj_pt" : dijet.pt,
             "jj_eta" : dijet.eta,
             "jj_phi" : dijet.phi,
@@ -1074,6 +1105,8 @@ class EventProcessor(processor.ProcessorABC):
             "zeppenfeld" : zeppenfeld,
             "njets" : njets,
         }
+        # return jet_loop_out_dict
+        
         # jet_loop_out_dict = {
         #     key: ak.to_numpy(val) for key, val in jet_loop_out_dict.items()
         # }
@@ -1092,8 +1125,6 @@ class EventProcessor(processor.ProcessorABC):
         sj_dict = {}
         cutouts = [2,5]
         if variation == "nominal":
-            # sj_dict.update(fill_softjets(events, jets, muons, 2))
-            # sj_dict.update(fill_softjets(events, jets, muons, 5))
             for cutout in cutouts:
                 sj_out = fill_softjets(events, jets, muons, cutout, test_mode=self.test)
                 sj_out = {
@@ -1113,6 +1144,7 @@ class EventProcessor(processor.ProcessorABC):
         # Cut has to be defined here because we will use it in
         # b-tag weights calculation
         vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) & (jet1.pt > 35)
+        jet_loop_out_dict.update({"vbf_cut": vbf_cut})
 
         # # ------------------------------------------------------------#
         # # Calculate QGL weights, btag SF and apply btag veto
@@ -1140,7 +1172,7 @@ class EventProcessor(processor.ProcessorABC):
         #     for name, bs in btag_syst.items():
         #         weights.add_weight(f"btag_wgt_{name}", bs, how="only_vars")
 
-    #     # Separate from ttH and VH phase space
+        # Separate from ttH and VH phase space
         
     #     # print(f'self.parameters["btag_medium_wp"] : {self.parameters["btag_medium_wp"]}')
     #     # print(f'jets  \n: {jets}')
@@ -1168,7 +1200,6 @@ class EventProcessor(processor.ProcessorABC):
         temp_out_dict = {
             "nBtagLoose": nBtagLoose,
             "nBtagMedium": nBtagMedium,
-            "vbf_cut": vbf_cut,
         }
         jet_loop_out_dict.update(temp_out_dict)
         if self.test:

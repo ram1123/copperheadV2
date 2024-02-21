@@ -315,9 +315,15 @@ cross_sections = {
     "zh": 0.000192,
     "tth": 0.000110,
 }
-
 parameters["cross_sections"] = cross_sections
 
+integrated_lumis = {
+    "2016preVFP" : 19500.0,
+    "2016postVFP" : 16800.0,
+    "2017" : 41530.0,
+    "2018" : 59970.0,
+}
+parameters["integrated_lumis"] = integrated_lumis
 
 jec_parameters = {}
 
@@ -472,6 +478,8 @@ if __name__ == "__main__":
     config_to_save["do_jerunc"] = False
     print(f"make_parameters config_to_save: \n {config_to_save}")
 
+   
+    
     #save config as json
     directory = "./config"
     filename = directory+"/parameters.json"
