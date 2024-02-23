@@ -44,12 +44,13 @@ class EventProcessor(processor.ProcessorABC):
         self.test = test_mode# False
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : False, #True
-            "do_roccor" : False,# True
+            "do_trigger_match" : False, # False
+            "do_roccor" : False,# False
             "do_fsr" : True,
-            "do_geofit" : False,
+            "do_geofit" : False, # False
+            "do_beamConstraint": True,
             "year" : "2018",
-            "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
+            # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             "auto_pu" : True,
             "do_nnlops" : True,
             "do_pdf" : True
@@ -264,7 +265,7 @@ class EventProcessor(processor.ProcessorABC):
         
         # Apply Rochester correction
         if self.config["do_roccor"]:
-            apply_roccor(events, self.config["rocorr_file_path"], events.metadata["is_mc"])
+            apply_roccor(events, self.config["roccor_file"], events.metadata["is_mc"])
             events["Muon", "pt"] = events.Muon.pt_roch
         # FSR recovery
         if self.config["do_fsr"]:
@@ -273,10 +274,29 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "eta"] = events.Muon.eta_fsr
             events["Muon", "phi"] = events.Muon.phi_fsr
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
-        # geofit
-        if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
-            apply_geofit(events, self.config["year"], ~applied_fsr)
-            events["Muon", "pt"] = events.Muon.pt_gf
+        else:
+            events["Muon", "pt_fsr"] = events.Muon.pt
+            events["Muon", "eta_fsr"] = events.Muon.eta
+            events["Muon", "phi_fsr"] = events.Muon.phi
+            events["Muon", "iso_fsr"] = events.Muon.pfRelIso04_all
+        # apply Beam constraint or geofit or nothing if neither
+        if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
+            print(f"doing beam constraint")
+            print(f"events.Muon.fields: {events.Muon.fields}")
+            BSConstraint_mask = (
+                (events.Muon.bsConstrainedChi2 <30)
+            )
+            BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
+            events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
+            events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
+        else:
+            if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
+                print(f"doing geofit")
+                apply_geofit(events, self.config["year"], ~applied_fsr)
+                events["Muon", "pt"] = events.Muon.pt_gf
+            else: 
+                # print(f"doing neither beam constraint nor geofit")
+                pass
 
 
         # --------------------------------------------------------#
@@ -979,7 +999,18 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
-
+        HEMVeto = ak.ones_like(clean) == 1 # 1D array saying True
+        if self.config["year"] == "2018":
+            HEMVeto_filter = (
+                (jets.pt >= 20.0)
+                & (jets.eta >= -3.0)
+                & (jets.eta <= -1.3)
+                & (jets.phi >= -1.57)
+                & (jets.phi <= -0.87)
+            )
+            false_arr = ak.ones_like(HEMVeto) < 0
+            HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
+        # print(f"HEMVeto : {HEMVeto}")
         jet_selection = (
             pass_jet_id
             & pass_jet_puid
@@ -987,6 +1018,7 @@ class EventProcessor(processor.ProcessorABC):
             & clean
             & (jets.pt > self.config["jet_pt_cut"])
             & (abs(jets.eta) < self.config["jet_eta_cut"])
+            & HEMVeto
         )
         # print(f"jet_selection: {jet_selection}")
         # print(f"jets b4 selection: {jets}")

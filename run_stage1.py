@@ -14,19 +14,20 @@ import pandas as pd
 import os
 import tqdm
 import warnings
+import dask_awkward as dak
+import glob
 
-test_mode = True
+test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
 
 
 
-def dataset_loop(processor, dataset_dict, test=False):
+def dataset_loop(processor, dataset_dict,  test=False):
     save_path = "/depot/cms/users/yun79/results/stage1/test/"
     # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
     if not test: # full scale implementation
         # print(f"dataset_dict: {dataset_dict['files']}")
         events = NanoEventsFactory.from_root(
-            # samples["files"],
             dataset_dict["files"],
             schemaclass=NanoAODSchema,
             metadata= dataset_dict["metadata"],
@@ -159,6 +160,7 @@ def dataset_loop(processor, dataset_dict, test=False):
     placeholder.to_csv(save_path+f"/V2stage1_{dataset}.csv")
     """
     computed = out_collections
+    # print(f"computed: {computed}")
     placeholder_dict =  {
             'mu1_pt': (computed["mu_pt"][:,0]),
             'mu2_pt': (computed["mu_pt"][:,1]),
@@ -168,13 +170,13 @@ def dataset_loop(processor, dataset_dict, test=False):
             'mu2_phi': (computed["mu_phi"][:,1]),
             'mu1_iso': (computed["mu_iso"][:,0]),
             'mu2_iso': (computed["mu_iso"][:,1]),
-            'mu1_pt_over_mass': (computed["mu_pt_over_mass"][:,0]),
-            'mu2_pt_over_mass': (computed["mu_pt_over_mass"][:,1]),
+            # 'mu1_pt_over_mass': (computed["mu_pt_over_mass"][:,0]),
+            # 'mu2_pt_over_mass': (computed["mu_pt_over_mass"][:,1]),
             "dimuon_mass": (computed["dimuon_mass"]),
             "dimuon_ebe_mass_res": (computed["dimuon_ebe_mass_res"]),
             "dimuon_ebe_mass_res_rel": (computed["dimuon_ebe_mass_res_rel"]),
             "dimuon_pt": (computed["dimuon_pt"]),
-            "dimuon_pt_log": (np.log(computed["dimuon_pt"])), # np functions are compatible with ak if input is ak array 
+            # "dimuon_pt_log": (np.log(computed["dimuon_pt"])), # np functions are compatible with ak if input is ak array 
             "dimuon_eta": (computed["dimuon_eta"]),
             "dimuon_phi": (computed["dimuon_phi"]),
             "dimuon_dEta": (computed["dimuon_dEta"]),
@@ -219,7 +221,7 @@ def dataset_loop(processor, dataset_dict, test=False):
             "rpt" : (computed["rpt"]),
             "zeppenfeld" : (computed["zeppenfeld"]),
             "njets" : (computed["njets"]),
-            # regions -------------------------------------
+            # # regions -------------------------------------
             "z_peak" : (computed["z_peak"]),
             "h_sidebands" : (computed["h_sidebands"]),
             "h_peak" : (computed["h_peak"]),
@@ -228,19 +230,77 @@ def dataset_loop(processor, dataset_dict, test=False):
             #----------------------------------------
             "fraction" : dataset_fraction*(ak.ones_like(computed["njets"])),
     }
+    if dataset_dict["metadata"]["is_mc"]:
+        additional_dict = {
+            #  # gen jet variables -------------------------------------
+            # "gjj_mass":  (computed["gjj_mass"]),
+            # 'gjet1_pt': (computed["gjet_pt"][:,0]),
+            # 'gjet2_pt': (computed["gjet_pt"][:,1]),
+            # 'gjet1_eta': (computed["gjet_eta"][:,0]),
+            # 'gjet2_eta': (computed["gjet_eta"][:,1]),
+            # 'gjet1_phi': (computed["gjet_phi"][:,0]),
+            # 'gjet2_phi': (computed["gjet_phi"][:,1]),
+            # 'gjet1_mass': (computed["gjet_mass"][:,0]),
+            # 'gjet2_mass': (computed["gjet_mass"][:,1]),
+            # "gjj_dEta": (computed["gjj_dEta"]),
+            # "gjj_dPhi": (computed["gjj_dPhi"]),
+            # "gjj_dR": (computed["gjj_dR"]),
+            # weights -------------------------------------
+            "weight_nominal" : (ak.ones_like(computed["nominal"])),
+        }
+        placeholder_dict.update(additional_dict)
+    
+    fraction_str = str(dataset_dict["metadata"]["original_fraction"]).replace('.', '_')
+    sample_name = dataset_dict['metadata']['dataset']
     zip = ak.zip(placeholder_dict, depth_limit=1)
     # N_reasonable = 100000
     N_reasonable = 40000
     # zip = zip.repartition(rows_per_partition=N_reasonable)
     print(f"zip: {zip}")
-    fraction_str = str(dataset_dict["metadata"]["original_fraction"]).replace('.', '_')
     save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}"
+    print(f"save_path: {save_path}")
+    filelist = glob.glob(f"{save_path}/*.parquet")
+    # print(f"filelist: {filelist}")
+    for file in filelist:
+        try:
+            os.remove(file)
+        except Exception:
+            pass
     if not os.path.exists(save_path):
-            os.makedirs(save_path)
-    if not test:
-        print("saving to parquet")
-        zip.to_parquet(save_path, compute=False)
-
+        os.makedirs(save_path)
+    zip.to_parquet(save_path, compute=True)
+    
+    # if test:
+    #     for var_name, ak_arr in placeholder_dict.items():
+    #         sample_save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{var_name}"
+    #         if not os.path.exists(sample_save_path):
+    #             os.makedirs(sample_save_path)
+    #         # print(f"saving to parquet on: {sample_save_path}")
+    #         ak.to_parquet(ak_arr, sample_save_path+"/array1.parquet")
+    # else:
+    #     for var_name, ak_arr in placeholder_dict.items():
+    #         sample_save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{var_name}"
+    #         if not os.path.exists(sample_save_path):
+    #             os.makedirs(sample_save_path)
+    #         print(f"saving to parquet on: {sample_save_path}")
+    #         # if "ttjet" in sample_name:
+    #         #     print(f"computed: {dask.compute(computed)}")
+    #         # zip.to_parquet(save_path, compute=False)
+    #         # ak_arr.to_parquet(save_path, compute=False)
+    #         # ak_arr.to_parquet(save_path)
+    #         #delete preexisting parquet files
+    #         filelist = glob.glob(f"{sample_save_path}/*.parquet")
+    #         print(f"filelist: {filelist}")
+    #         for file in filelist:
+    #             try:
+    #                 os.remove(file)
+    #             except Exception:
+    #                 pass
+    #         var_step = time.time()
+    #         dak.to_parquet(ak_arr,sample_save_path,compute=True)
+    #         var_elapsed = round(time.time() - var_step, 3)
+    #         print(f"Finished saving {sample_save_path} in {var_elapsed} s.")
+    
 if __name__ == "__main__":
     time_step = time.time()
     
@@ -255,19 +315,19 @@ if __name__ == "__main__":
     coffea_processor = EventProcessor(config, test_mode=test_mode)
     if not test_mode: # full scale implementation
         from dask_gateway import Gateway
-        # gateway = Gateway()
-        # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-        # client = gateway.connect(cluster_info.name).get_client()
-        # print("Gateway Client created")
+        gateway = Gateway()
+        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+        client = gateway.connect(cluster_info.name).get_client()
+        print("Gateway Client created")
         # #-----------------------------------------------------------
-        cluster = LocalCluster()
-        cluster.adapt(minimum=16, maximum=16)
-        # cluster.scale(63) # create 16 local workers
-        client = Client(cluster)
-        print("Local scale Client created")
-        print(f"client dashboard link: {client.dashboard_link}")
+        # cluster = LocalCluster()
+        # cluster.adapt(minimum=16, maximum=16)
+        # # cluster.scale(63) # create 16 local workers
+        # client = Client(cluster)
+        # print("Local scale Client created")
+        # print(f"client dashboard link: {client.dashboard_link}")
         
-        print("cluster scale up")
+        # print("cluster scale up")
         # sample_path = "./config/processor_samples.json"
         sample_path = "./config/fraction_processor_samples.json"
         with open(sample_path) as file:
@@ -281,8 +341,8 @@ if __name__ == "__main__":
             # if ("dy_M-100To200" not in dataset) and ("data_A" not in dataset):
             # if ("dy_M-100To200" not in dataset) :
             # if ("ggh_powheg" not in dataset) and ("vbf_powheg" not in dataset):
-            if ("ggh_powheg"  in dataset):
-                continue
+            # if ("ggh_powheg"  in dataset):
+            #     continue
             # print(f"dataset: {dataset}")
             dataset_loop(coffea_processor, sample, test=test_mode)
     else:
