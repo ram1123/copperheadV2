@@ -34,7 +34,8 @@ parameters.update(
         "jet_pt_cut": for_all_years(25.0),
         "jet_eta_cut": for_all_years(4.7),
         "jet_id": {"2016preVFP": "loose","2016postVFP": "loose", "2017": "tight", "2018": "tight"},
-        "jet_puid": {"2016preVFP": "loose","2016postVFP": "loose", "2017": "loose", "2018": "loose"},
+        # "jet_puid": {"2016preVFP": "loose","2016postVFP": "loose", "2017": "loose", "2018": "loose"},
+        "jet_puid": {"2016preVFP": "loose","2016postVFP": "loose", "2017": "2017corrected", "2018": "loose"},
         "min_dr_mu_jet": for_all_years(0.4),
         "btag_loose_wp": {"2016preVFP": 0.2027,"2016postVFP": 0.1918 ,"2017": 0.1355, "2018": 0.1208},
         "btag_medium_wp": {"2016preVFP": 0.6001,"2016postVFP": 0.4847, "2017": 0.4506, "2018": 0.4168},
@@ -295,7 +296,6 @@ cross_sections = {
     "vbf_powheg": 0.0008210722,
     "vbf_powheg_herwig": 0.0008210722,
     "vbf_powheg_dipole": 0.0008210722,
-    "vbf_powheg": 0.0008210722,
     "vbf_powhegPS": 0.0008210722,
     "vbf_amc_herwig": 0.0008210722,
     "vbf_amcPS_TuneCP5down": 0.0008210722,
@@ -401,39 +401,39 @@ jec_parameters["jec_levels_data"] = for_all_years(
 )
 
 jec_parameters["jec_tags"] = {
-    "2016preVFP": "Summer16_07Aug2017_V11_MC",
-    "2016postVFP": "Summer16_07Aug2017_V11_MC",
-    "2017": "Fall17_17Nov2017_V32_MC",
-    "2018": "Autumn18_V19_MC",
+    "2016preVFP": "Summer19UL16APV_V7_MC",
+    "2016postVFP": "Summer19UL16_V7_MC",
+    "2017": "Summer19UL17_V5_MC",
+    "2018": "Summer19UL18_V5_MC",
 }
 
 jec_parameters["jer_tags"] = {
-    "2016preVFP": "Summer16_25nsV1_MC",
-    "2016postVFP": "Summer16_25nsV1_MC",
-    "2017": "Fall17_V3_MC",
-    "2018": "Autumn18_V7_MC",
+    "2016preVFP": "Summer20UL16APV_JRV3_MC",
+    "2016postVFP": "Summer20UL16_JRV3_MC",
+    "2017": "Summer19UL17_JRV2_MC",
+    "2018": "Summer19UL18_JRV2_MC",
 }
 
 jec_parameters["jec_data_tags"] = {
     "2016preVFP": {
-        "Summer16_07Aug2017BCD_V11_DATA": ["B", "C", "D"],
-        "Summer16_07Aug2017EF_V11_DATA": ["E", "F"],
+        "Summer19UL16APV_RunBCD_V7_DATA": ["B", "C", "D"],
+        "Summer19UL16APV_RunEF_V7_DATA": ["E", "F"],
     },
     "2016postVFP": {
-        "Summer16_07Aug2017EF_V11_DATA": ["F"],
-        "Summer16_07Aug2017GH_V11_DATA": ["G", "H"],
+        "Summer19UL16_RunFGH_V7_DATA": ["F","G","H"],
     },
     "2017": {
-        "Fall17_17Nov2017B_V32_DATA": ["B"],
-        "Fall17_17Nov2017C_V32_DATA": ["C"],
-        "Fall17_17Nov2017DE_V32_DATA": ["D", "E"],
-        "Fall17_17Nov2017F_V32_DATA": ["F"],
+        "Summer19UL17_RunB_V5_DATA": ["B"],
+        "Summer19UL17_RunC_V5_DATA": ["C"],
+        "Summer19UL17_RunD_V5_DATA": ["D"],
+        "Summer19UL17_RunE_V5_DATA": ["E"],
+        "Summer19UL17_RunF_V5_DATA": ["F"],
     },
     "2018": {
-        "Autumn18_RunA_V19_DATA": ["A"],
-        "Autumn18_RunB_V19_DATA": ["B"],
-        "Autumn18_RunC_V19_DATA": ["C"],
-        "Autumn18_RunD_V19_DATA": ["D"],
+        "Summer19UL18_RunA_V5_DATA": ["A"],
+        "Summer19UL18_RunB_V5_DATA": ["B"],
+        "Summer19UL18_RunC_V5_DATA": ["C"],
+        "Summer19UL18_RunD_V5_DATA": ["D"],
     },
 }
 

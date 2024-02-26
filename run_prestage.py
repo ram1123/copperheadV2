@@ -134,18 +134,18 @@ datasets = {
         "ttjets_sl": "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         # # "ttw": "",
         # # "ttz": "",
-        # "st_tw_top":"/ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-        # "st_tw_antitop":"/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM", 
-        # "ww_2l2nu": "/WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
-        # "wz_3lnu": "/WZTo3LNu_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
-        # "wz_2l2q": "/WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-        # "wz_1l1nu2q": "/WZTo1L1Nu2Q_4f_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-        # "zz": "/ZZ_TuneCP5_13TeV-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+        "st_tw_top":"/ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+        "st_tw_antitop":"/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM", 
+        "ww_2l2nu": "/WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
+        "wz_3lnu": "/WZTo3LNu_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
+        "wz_2l2q": "/WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+        "wz_1l1nu2q": "/WZTo1L1Nu2Q_4f_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+        "zz": "/ZZ_TuneCP5_13TeV-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         # # "www": "",
         # # "wwz": "",
         # # "wzz": "",
         # # "zzz": "",
-        # "ewk_lljj_mll50_mjj120": "/EWK_LLJJ_MLL-50_MJJ-120_TuneCP5_13TeV-madgraph-pythia8_dipole/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+        "ewk_lljj_mll50_mjj120": "/EWK_LLJJ_MLL-50_MJJ-120_TuneCP5_13TeV-madgraph-pythia8_dipole/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         "ggh_powheg":"/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         # # "ggh_amc": "",
         # # "ggh_amcPS": "",
@@ -167,14 +167,14 @@ def get_Xcache_filelist(fnames: list):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    # "-y",
-    # "--year",
-    # dest="year",
-    # default="2018",
-    # action="store",
-    # help="year",
-    # )
+    parser.add_argument(
+    "-y",
+    "--year",
+    dest="year",
+    default="2018",
+    action="store",
+    help="year value. The options are: 2016preVFP, 2016postVFP, 2017, 2018",
+    )
     parser.add_argument(
     "-c",
     "--cluster",
@@ -199,13 +199,43 @@ if __name__ == "__main__":
     action="store",
     help="change fraction of steps of the data",
     )
+    # parser.add_argument(
+    # "-in_str",
+    # "--input_string",
+    # dest="input_string",
+    # default=None,
+    # action="store",
+    # help="string representation of samples to process, in the format of Year_{year}/DataRun_{A,B,C,D)}/Bkg_{DY,tt, etc}/Sig_{ggH, VBF}",
+    # )
     parser.add_argument(
-    "-in_str",
-    "--input_string",
-    dest="input_string",
-    default=None,
+    "-data",
+    "--data",
+    dest="data_samples",
+    default=[],
+    nargs="*",
+    type=str,
     action="store",
-    help="string representation of samples to process, in the format of Year_{year}/DataRun_{A,B,C,D)}/Bkg_{DY,tt, etc}/Sig_{ggH, VBF}",
+    help="list of data samples represented by alphabetical letters A-H",
+    )
+    parser.add_argument(
+    "-bkg",
+    "--background",
+    dest="bkg_samples",
+    default=[],
+    nargs="*",
+    type=str,
+    action="store",
+    help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
+    )
+    parser.add_argument(
+    "-sig",
+    "--signal",
+    dest="sig_samples",
+    default=[],
+    nargs="*",
+    type=str,
+    action="store",
+    help="list of sig samples represented by shorthands: ggH, VBF",
     )
     args = parser.parse_args()
     time_step = time.time()
@@ -228,15 +258,17 @@ if __name__ == "__main__":
             print("Local scale Client created")
         big_sample_info = {}
         # dataset = datasets[args.year]
-        year = re.findall(r"Year_\d...", args.input_string)
-        year = [str.replace("Year_", "") for str in year]
-        year = year[0]
+        # year = re.findall(r"Year_\d...", args.input_string)
+        # year = [str.replace("Year_", "") for str in year]
+        # year = year[0]
+        year = args.year
         # print(f"year: {year}")
         
         dataset = datasets[year]
         
         # key_list = list(dataset.keys())
         new_sample_list = []
+        """
         # take data
         data_runs = re.findall(r"\bDataRun_.*\bBkg", args.input_string)
         data_runs = [str.replace("DataRun_", "").replace("/Bkg","") for str in data_runs]
@@ -279,16 +311,58 @@ if __name__ == "__main__":
                 if sig in sample_name:
                     new_sample_list.append(sample_name)
         # print(f"new_sample_list: {new_sample_list}")
-
+        """
+        # take data
+        data_l =  [sample_name for sample_name in dataset.keys() if "data" in sample_name]
+        data_samples = args.data_samples
+        if len(data_samples) >0:
+            for data_letter in data_samples:
+                for sample_name in data_l:
+                    if data_letter in sample_name:
+                        new_sample_list.append(sample_name)
+        # take bkg
+        bkg_samples = args.bkg_samples
+        if len(bkg_samples) >0:
+            for bkg_sample in bkg_samples:
+                if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
+                    new_sample_list.append("dy_M-50")
+                    new_sample_list.append("dy_M-100To200")
+                elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
+                    new_sample_list.append("ttjets_dl")
+                    new_sample_list.append("ttjets_sl")
+                elif bkg_sample.upper() == "ST": # enforce upper case to prevent confusion
+                    new_sample_list.append("st_tw_top")
+                    new_sample_list.append("st_tw_antitop")
+                elif bkg_sample.upper() == "DB": # enforce upper case to prevent confusion
+                    new_sample_list.append("ww_2l2nu")
+                    new_sample_list.append("wz_3lnu")
+                    new_sample_list.append("wz_2l2q")
+                    new_sample_list.append("wz_1l1nu2q")
+                    new_sample_list.append("zz")
+                elif bkg_sample.upper() == "EWK": # enforce upper case to prevent confusion
+                    new_sample_list.append("ewk_lljj_mll50_mjj120")
+                else:
+                    print(f"unknown background {bkg_sample} was given!")
+            
+        # take sig
+        sig_samples = args.sig_samples
+        if len(sig_samples) >0:
+            for sig_sample in sig_samples:
+                if sig_sample.upper() == "GGH": # enforce upper case to prevent confusion
+                    new_sample_list.append("ggh_powheg")
+                elif sig_sample.upper() == "VBF": # enforce upper case to prevent confusion
+                    new_sample_list.append("vbf_powheg")
+                else:
+                    print(f"unknown signal {sig_sample} was given!")
+        
         dataset = dict([(sample_name, dataset[sample_name]) for sample_name in new_sample_list])
-        # print(f"new dataset: {dataset}")
+        print(f"new dataset: {dataset.keys()}")
 
         for sample_name in tqdm.tqdm(dataset.keys()):
             # print(f"prestage sample_name: {sample_name}")
             # # test
             # if "dy_M-50" not in sample_name:
             #     continue
-            
             das_query = dataset[sample_name]
             
             
@@ -304,19 +378,20 @@ if __name__ == "__main__":
                 allowlist_sites=allowlist_sites,
                 mode="full",
                 client=rucio_client,
-                partial_allowed=True
+                # partial_allowed=True
             )
             fnames = [file[0] for file in outfiles if file != []]
             # print(f"fnames: {fnames}")
             
             random.shuffle(fnames)
-            fnames = get_Xcache_filelist(fnames)
+            # fnames = get_Xcache_filelist(fnames)
+            print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
-            # print(f"fnames: {fnames}")
-            # raise ValueError
+            # print(f"fnames[0]: {fnames[0]}")
+            # continue
             # print(f"prestage fnames: {fnames}")
             # print(f"prestage len(fnames): {len(fnames)}")
-            # print(f"sample_name: {sample_name}")
+            # 
             
             """
             run through each file and collect total number of 
@@ -373,8 +448,8 @@ if __name__ == "__main__":
             step_size = int(args.chunksize)
             files_available, files_total = preprocess(
                 final_output,
-                maybe_step_size=step_size,
-                # step_size=step_size,
+                # maybe_step_size=step_size,
+                step_size=step_size,
                 align_clusters=False,
                 skip_bad_files=True,
             )
@@ -430,7 +505,7 @@ if __name__ == "__main__":
                     new_samples[sample_name]['metadata']["data_entries"] = new_N_evnts
                 else:
                     new_samples[sample_name]['metadata']["nGenEvts"] = new_N_evnts
-                    new_samples[sample_name]['metadata']["sumGenWgts"] *= fraction # just directly multiply by fraction for this since this is already float
+                    # new_samples[sample_name]['metadata']["sumGenWgts"] *= fraction # just directly multiply by fraction for this since this is already float
                     """
                     # recalculate sumGenWgts
                     events = NanoEventsFactory.from_root(

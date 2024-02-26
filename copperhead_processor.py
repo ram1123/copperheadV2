@@ -13,6 +13,7 @@ import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
 import dask_awkward as dak
+import dask
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
@@ -44,11 +45,11 @@ class EventProcessor(processor.ProcessorABC):
         self.test = test_mode# False
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : False, # False
+            "do_trigger_match" : True, # False
             "do_roccor" : False,# False
             "do_fsr" : True,
-            "do_geofit" : False, # False
-            "do_beamConstraint": True,
+            "do_geofit" : True, # False
+            "do_beamConstraint": False,
             "year" : "2018",
             # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             "auto_pu" : True,
@@ -153,7 +154,7 @@ class EventProcessor(processor.ProcessorABC):
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
             padded_muons = ak.pad_none(events.Muon, 2) # pad in case we have only one muon or zero in an event
             # padded_muons = ak.pad_none(events.Muon, 4)
-            print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
+            # print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
             mu1 = padded_muons[:,0]
             mu2 = padded_muons[:,1]
             mu1_match = (mu1.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
@@ -291,7 +292,7 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
         else:
             if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
-                print(f"doing geofit")
+                # print(f"doing geofit")
                 apply_geofit(events, self.config["year"], ~applied_fsr)
                 events["Muon", "pt"] = events.Muon.pt_gf
             else: 
@@ -749,10 +750,15 @@ class EventProcessor(processor.ProcessorABC):
         h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
         h_peak = ((mass > 115.03) & (mass < 135.03))
         region_dict = {
-            "z_peak" : z_peak,
-            "h_sidebands" : h_sidebands,
-            "h_peak" : h_peak,
+            "z_peak" : ak.fill_none(z_peak, value=False),
+            "h_sidebands" : ak.fill_none(h_sidebands, value=False),
+            "h_peak" : ak.fill_none(h_peak, value=False),
         }
+        # if self.test:
+        #     print(f"region_dict: {region_dict}")
+        # else:
+        #     print(f"region_dict: {dask.compute(region_dict)}")
+            
         out_dict.update(region_dict) 
 
         # add in the weights

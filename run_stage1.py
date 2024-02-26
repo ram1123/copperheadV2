@@ -16,15 +16,19 @@ import tqdm
 import warnings
 import dask_awkward as dak
 import glob
+from itertools import islice
+import copy
+import argparse
 
 test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
 
 
 
-def dataset_loop(processor, dataset_dict,  test=False):
-    save_path = "/depot/cms/users/yun79/results/stage1/test/"
-    # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
+def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None):
+    if save_path is None:
+        save_path = "/depot/cms/users/yun79/results/stage1/test/" # default
+        # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
     if not test: # full scale implementation
         # print(f"dataset_dict: {dataset_dict['files']}")
         events = NanoEventsFactory.from_root(
@@ -232,19 +236,19 @@ def dataset_loop(processor, dataset_dict,  test=False):
     }
     if dataset_dict["metadata"]["is_mc"]:
         additional_dict = {
-            #  # gen jet variables -------------------------------------
-            # "gjj_mass":  (computed["gjj_mass"]),
-            # 'gjet1_pt': (computed["gjet_pt"][:,0]),
-            # 'gjet2_pt': (computed["gjet_pt"][:,1]),
-            # 'gjet1_eta': (computed["gjet_eta"][:,0]),
-            # 'gjet2_eta': (computed["gjet_eta"][:,1]),
-            # 'gjet1_phi': (computed["gjet_phi"][:,0]),
-            # 'gjet2_phi': (computed["gjet_phi"][:,1]),
-            # 'gjet1_mass': (computed["gjet_mass"][:,0]),
-            # 'gjet2_mass': (computed["gjet_mass"][:,1]),
-            # "gjj_dEta": (computed["gjj_dEta"]),
-            # "gjj_dPhi": (computed["gjj_dPhi"]),
-            # "gjj_dR": (computed["gjj_dR"]),
+             # gen jet variables -------------------------------------
+            "gjj_mass":  (computed["gjj_mass"]),
+            'gjet1_pt': (computed["gjet_pt"][:,0]),
+            'gjet2_pt': (computed["gjet_pt"][:,1]),
+            'gjet1_eta': (computed["gjet_eta"][:,0]),
+            'gjet2_eta': (computed["gjet_eta"][:,1]),
+            'gjet1_phi': (computed["gjet_phi"][:,0]),
+            'gjet2_phi': (computed["gjet_phi"][:,1]),
+            'gjet1_mass': (computed["gjet_mass"][:,0]),
+            'gjet2_mass': (computed["gjet_mass"][:,1]),
+            "gjj_dEta": (computed["gjj_dEta"]),
+            "gjj_dPhi": (computed["gjj_dPhi"]),
+            "gjj_dR": (computed["gjj_dR"]),
             # weights -------------------------------------
             "weight_nominal" : (ak.ones_like(computed["nominal"])),
         }
@@ -257,10 +261,10 @@ def dataset_loop(processor, dataset_dict,  test=False):
     N_reasonable = 40000
     # zip = zip.repartition(rows_per_partition=N_reasonable)
     print(f"zip: {zip}")
-    save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}"
+    save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     print(f"save_path: {save_path}")
     filelist = glob.glob(f"{save_path}/*.parquet")
-    # print(f"filelist: {filelist}")
+    print(f"len(filelist): {len(filelist)}")
     for file in filelist:
         try:
             os.remove(file)
@@ -300,8 +304,31 @@ def dataset_loop(processor, dataset_dict,  test=False):
     #         dak.to_parquet(ak_arr,sample_save_path,compute=True)
     #         var_elapsed = round(time.time() - var_step, 3)
     #         print(f"Finished saving {sample_save_path} in {var_elapsed} s.")
-    
+
+# def divide_chunks(l: list, n: int): 
+#     # looping till length l 
+#     for i in range(0, len(l), n):  
+#         yield l[i:i + n] 
+
+
+def divide_chunks(data: dict, SIZE: int):
+   it = iter(data)
+   for i in range(0, len(data), SIZE):
+      yield {k:data[k] for k in islice(it, SIZE)}
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default=None,
+    action="store",
+    help="save path to store stage1 output files",
+    )
+    args = parser.parse_args()
+    
     time_step = time.time()
     
     warnings.filterwarnings('ignore')
@@ -322,29 +349,44 @@ if __name__ == "__main__":
         # #-----------------------------------------------------------
         # cluster = LocalCluster()
         # cluster.adapt(minimum=16, maximum=16)
-        # # cluster.scale(63) # create 16 local workers
+        # # # cluster.scale(63) # create 16 local workers
         # client = Client(cluster)
-        # print("Local scale Client created")
-        # print(f"client dashboard link: {client.dashboard_link}")
-        
+        # # print("Local scale Client created")
+        # # print(f"client dashboard link: {client.dashboard_link}")
+
+        #-----------------------------------------------------------
+        # client = Client(n_workers=16,  threads_per_worker=1) 
+        #---------------------------------------------------------
         # print("cluster scale up")
         # sample_path = "./config/processor_samples.json"
         sample_path = "./config/fraction_processor_samples.json"
         with open(sample_path) as file:
             samples = json.loads(file.read())
         # print(f"samples.keys(): {samples.keys()}")
-
+        
         # for dataset, sample in samples.items():
         for dataset, sample in tqdm.tqdm(samples.items()):
-            
-            # testing
-            # if ("dy_M-100To200" not in dataset) and ("data_A" not in dataset):
-            # if ("dy_M-100To200" not in dataset) :
-            # if ("ggh_powheg" not in dataset) and ("vbf_powheg" not in dataset):
-            # if ("ggh_powheg"  in dataset):
+            #test
+            # if dataset != "ttjets_dl":
+            # if "data" in dataset:
             #     continue
             # print(f"dataset: {dataset}")
-            dataset_loop(coffea_processor, sample, test=test_mode)
+            # print(f'sample["files"]: {sample["files"]}')
+            # divide sample to smaller chunks
+            # max_file_len = 15
+            max_file_len = 8
+            smaller_files = list(divide_chunks(sample["files"], max_file_len))
+            # print(f"smaller_files: {smaller_files}")
+            for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
+                smaller_sample = copy.deepcopy(sample)
+                smaller_sample["files"] = smaller_files[idx]
+                # print(f"smaller_files[{idx}]: {smaller_files[idx]}")
+                # continue
+                var_step = time.time()
+                dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=args.save_path)
+                var_elapsed = round(time.time() - var_step, 3)
+                # print(f"Finished file_idx {idx} in {var_elapsed} s.")
+                
     else:
         # xrootd_path = "root://eos.cms.rcac.purdue.edu/"
         # # fname = "/store/mc/RunIISummer20UL18NanoAODv9/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v2/230000/1A909DE6-CA08-434B-BDBB-B648B95BEFDF.root"
