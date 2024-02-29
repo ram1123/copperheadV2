@@ -18,4 +18,10 @@ This would start the GRID certificate password prompt, and then once given the p
 | Correction | Year | Location |
 | ------------- | ------------- | ------------- |
 | Rochester | 2018 | data/roch_corr/RoccoR2018.txt  |
-|   | 2018 | data/roch_corr/RoccoR2018.txt  |
+|   | 2017 | data/roch_corr/RoccoR2017.txt  |
+|   | 2016 | data/roch_corr/RoccoR2016.txt  |
+| Zpt | 2018, 2017, 2016 | data/zpt_weights.histo.json |
+| Lumi Mask  | 2018 | data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt  |
+|   | 2017 | data/lumimasks/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt  |
+|   | 2016 | data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"  |
+
