@@ -12,3 +12,10 @@ source setup_proxy.sh
 ```
 
 This would start the GRID certificate password prompt, and then once given the password, the conda env would be activated. Once voms proxy and conda env is activated, we can start on the tutorial.ipynb
+
+## Table of correction and its weight file locations:
+
+| Correction | Year | Location |
+| ------------- | ------------- | ------------- |
+| Rochester | 2018 | data/roch_corr/RoccoR2018.txt  |
+|   | 2018 | data/roch_corr/RoccoR2018.txt  |
