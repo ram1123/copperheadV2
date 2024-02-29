@@ -15,7 +15,7 @@ This would start the GRID certificate password prompt, and then once given the p
 
 ## Table of correction weight file locations:
 
-| Correction | Year | Location |
+| Correction | Year (Data/MC) | Location |
 | ------------- | ------------- | ------------- |
 | Rochester | 2018 | data/roch_corr/RoccoR2018.txt  |
 |   | 2017 | data/roch_corr/RoccoR2017.txt  |
@@ -28,7 +28,10 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2017 | /data/res_calib/res_calib_{Data or MC}_2017.root    |
 |   | 2016 | /data/res_calib/res_calib_{Data or MC}_2016.root   |
 | Jet PU ID | 2018, 2017, 2016 | data/JetPUID_106XTraining_ULRun2_EffSFandUncties_v1.root |
-| Rochester | 2018 | data/roch_corr/RoccoR2018.txt  |
-|   | 2017 | data/roch_corr/RoccoR2017.txt  |
-|   | 2016 | data/roch_corr/RoccoR2016.txt  |
+| PU ID | 2018 Data | data/pileup/puData2018_UL_withVar.root |
+|   | 2018 MC | data/pileup/mcPileup2018.root  |
+|   | 2017 Data | data/pileup/puData2017_UL_withVar.root|
+|   | 2017 MC | data/pileup/mcPileup2017.root  |
+|   | 2016 Data | data/pileup/puData2016_UL_withVar.root |
+|   | 2016 MC | data/pileup/pileup_profile_Summer16.root  |
 
