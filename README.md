@@ -28,10 +28,22 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2017 | /data/res_calib/res_calib_{Data or MC}_2017.root    |
 |   | 2016 | /data/res_calib/res_calib_{Data or MC}_2016.root   |
 | Jet PU ID | 2018, 2017, 2016 | data/JetPUID_106XTraining_ULRun2_EffSFandUncties_v1.root |
-| PU ID | 2018 Data | data/pileup/puData2018_UL_withVar.root |
+| PU reweight | 2018 Data | data/pileup/puData2018_UL_withVar.root |
 |   | 2018 MC | data/pileup/mcPileup2018.root  |
 |   | 2017 Data | data/pileup/puData2017_UL_withVar.root|
 |   | 2017 MC | data/pileup/mcPileup2017.root  |
 |   | 2016 Data | data/pileup/puData2016_UL_withVar.root |
 |   | 2016 MC | data/pileup/pileup_profile_Summer16.root  |
+| Muon ID | 2018  | data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root |
+|   | 2017 | data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root  |
+|   | 2016postVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_ID.root  |
+|   | 2016preVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_HIPM_ID.root  |
+| Muon ISO | 2018  | data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root |
+|   | 2017 | data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root  |
+|   | 2016postVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_ISO.root  |
+|   | 2016preVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_HIPM_ISO.root  |
+| Muon Trig | 2018  | data/muon_sf/mu2018/EfficienciesStudies_2018_trigger_EfficienciesAndSF_2018Data_BeforeMuonHLTUpdate.root |
+|   | 2017 | data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root |
+|   | 2016postVFP | data/muon_sf/mu2016/EfficienciesStudies_2016_trigger_EfficienciesAndSF_RunGtoH.root  |
+|   | 2016preVFP | data/muon_sf/mu2016/EfficienciesStudies_2016_trigger_EfficienciesAndSF_RunBtoF.root |
 
