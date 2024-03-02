@@ -57,7 +57,7 @@
     },
     "njets": {
         "variable": "njets",
-        "binning_linspace": [0, 8,9],
+        "binning_linspace": [0, 8, 8],
         "density": false,
         "ylabel": "Events ",
         "xlabel": "Number of Jets",
