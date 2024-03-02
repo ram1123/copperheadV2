@@ -19,7 +19,7 @@ available_processes = ["data_A", "data_B", "data_C", "data_D", "dy_M-50", "dy_M-
 # available_processes = ["Data2018C"]
 
 # # Parser setup
-parser = argparse.ArgumentParser(description="Make control plots for Z to mu mu studies.")
+parser = argparse.ArgumentParser()
 # parser.add_argument("--dataset", choices=["all"] + available_processes, default = "all", type=str, help="specifying which plot you want") # changeable in future... 
 parser.add_argument("--groupProcesses", action="store_true", default = "false", help="saying which processes do you want to group")
 parser.add_argument(
