@@ -45,16 +45,15 @@ class EventProcessor(processor.ProcessorABC):
         self.test = test_mode# False
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : True, # False
+            "do_trigger_match" : False, # False
             "do_roccor" : False,# False
             "do_fsr" : True,
-            "do_geofit" : True, # False
+            "do_geofit" : False, # False
             "do_beamConstraint": False,
             "year" : "2018",
             # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
-            "auto_pu" : True,
-            "do_nnlops" : True,
-            "do_pdf" : True
+            "do_nnlops" : False,
+            "do_pdf" : False
         }
         self.config.update(dict_update)
         # print(f"copperhead proccesor self.config after update: \n {self.config}")
@@ -62,20 +61,39 @@ class EventProcessor(processor.ProcessorABC):
 
         # --- Evaluator
         extractor_instance = extractor()
-        # Calibration of event-by-event mass resolution
         year = self.config["year"]
+         # Z-pT reweighting 
+        zpt_filename = self.config["zpt_weights_file"]
+        extractor_instance.add_weight_sets([f"* * {zpt_filename}"])
+        if "2016" in year:
+            self.zpt_path = "zpt_weights/2016_value"
+        elif ("2017" in year) or ("2018" in year):
+            self.zpt_path = "zpt_weights/2017_value" # use same weights for 2018
+        elif "2022" in year:
+            self.zpt_path = "zpt_weights/2022_value" #  hypothetical value, we don't have run3 data yet
+        else:
+            print(f"USER WARNING: unrecognized Zpt correction for the year {year}!")
+        
+        # Calibration of event-by-event mass resolution
         for mode in ["Data", "MC"]:
             if "2016" in year:
-                yearstr = "2016"
+                yearUL = "2016"
             else:
-                yearstr=year #Work around before there are seperate new files for pre and postVFP
-            label = f"res_calib_{mode}_{yearstr}"
+                yearUL=year #Work around before there are seperate new files for pre and postVFP
+            label = f"res_calib_{mode}_{yearUL}"
             path = self.config["res_calib_path"]
             file_path = f"{path}/{label}.root"
             extractor_instance.add_weight_sets([f"{label} {label} {file_path}"])
+
+        # PU ID weights
+        jetpuid_filename = self.config["jetpuid_sf_file"]
+        extractor_instance.add_weight_sets([f"* * {jetpuid_filename}"])
+        
         extractor_instance.finalize()
         self.evaluator = extractor_instance.make_evaluator()
-
+        # turn ._axes from tuple of axes to just axes
+        self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]  
+        
         self.weight_collection = None # will be initialzed later
 
         
@@ -482,14 +500,17 @@ class EventProcessor(processor.ProcessorABC):
         
         do_jec = False
 
-        # We only need to reapply JEC for 2018 data
-        # (unless new versions of JEC are released)
-        is_data = not events.metadata["is_mc"]
-        if is_data and ("2018" in self.config["year"]):
-            do_jec = True
+        # # We only need to reapply JEC for 2018 data
+        # # (unless new versions of JEC are released)
+        # is_data = not events.metadata["is_mc"]
+        # if is_data and ("2018" in self.config["year"]):
+        #     do_jec = True
 
-        do_jecunc = self.config["do_jecunc"]
-        do_jerunc = self.config["do_jerunc"]
+        # do_jecunc = self.config["do_jecunc"]
+        # do_jerunc = self.config["do_jerunc"]
+        #testing 
+        do_jecunc = False
+        do_jerunc = False
         
 
         # ------------------------------------------------------------#
@@ -617,7 +638,16 @@ class EventProcessor(processor.ProcessorABC):
             # else:
             #     weights.add_weight("nnlops", how="dummy")
             # print(f'copperheadV1 weights.df nnlops: \n {weights.df.to_string()}')
-
+            
+            # do zpt SF
+            do_zpt = ('dy' in dataset)
+            
+            if do_zpt:
+                zpt_weight = self.evaluator[self.zpt_path](dimuon.pt)
+                self.weight_collection.add_weight('zpt_wgt', zpt_weight)
+            """
+            
+                
             #do mu SF
             musf_lookup = get_musf_lookup(self.config)
             muID, muIso, muTrig = musf_evaluator(
@@ -637,7 +667,7 @@ class EventProcessor(processor.ProcessorABC):
             # self.weight_collection.add_weight("muID", muID, how="all")
             # self.weight_collection.add_weight("muIso", muIso, how="all")
             # self.weight_collection.add_weight("muTrig", muTrig, how="all") 
-
+            """
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_lhe = (
                 ("LHEScaleWeight" in events.fields)
@@ -658,12 +688,13 @@ class EventProcessor(processor.ProcessorABC):
             
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             dataset = events.metadata["dataset"]
-            do_thu = (
-                ("vbf" in dataset)
-                and ("dy" not in dataset)
-                and ("nominal" in pt_variations)
-                and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
-            )
+            do_thu = False
+            # do_thu = (
+            #     ("vbf" in dataset)
+            #     and ("dy" not in dataset)
+            #     and ("nominal" in pt_variations)
+            #     and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
+            # )
             if do_thu:
                 add_stxs_variations(
                     events,
@@ -674,17 +705,18 @@ class EventProcessor(processor.ProcessorABC):
                 print(f"do_thu: {do_thu}")
                 print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
-            do_pdf = (
-                self.config["do_pdf"]
-                and ("nominal" in pt_variations)
-                and (
-                    "dy" in dataset
-                    or "ewk" in dataset
-                    or "ggh" in dataset
-                    or "vbf" in dataset
-                )
-                and ("mg" not in dataset)
-            )
+            do_pdf = False
+            # do_pdf = (
+            #     self.config["do_pdf"]
+            #     and ("nominal" in pt_variations)
+            #     and (
+            #         "dy" in dataset
+            #         or "ewk" in dataset
+            #         or "ggh" in dataset
+            #         or "vbf" in dataset
+            #     )
+            #     and ("mg" not in dataset)
+            # )
             if do_pdf:
                 add_pdf_variations(events, self.weight_collection, self.config, dataset)
             if self.test:
@@ -790,13 +822,13 @@ class EventProcessor(processor.ProcessorABC):
         if test_mode:
             print(f"muons mass_resolution dpt1: {dpt1}")
         if "2016" in self.config["year"]:
-            yearstr = "2016"
+            yearUL = "2016"
         else:
-            yearstr=self.config["year"] #Work around before there are seperate new files for pre and postVFP
+            yearUL = self.config["year"] #Work around before there are seperate new files for pre and postVFP
         if events.metadata["is_mc"]:
-            label = f"res_calib_MC_{yearstr}"
+            label = f"res_calib_MC_{yearUL}"
         else:
-            label = f"res_calib_Data_{yearstr}"
+            label = f"res_calib_Data_{yearUL}"
         calibration =  self.evaluator[label]( # this is a coffea.dense_lookup instance
             mu1.pt, 
             abs(mu1.eta), 
@@ -843,38 +875,7 @@ class EventProcessor(processor.ProcessorABC):
         # # STXS VBF cross-section uncertainty
         # self.stxs_acc_lookups, self.powheg_xsec_lookup = stxs_lookups()
 
-        # # --- Evaluator
-        # self.extractor = extractor()
-
-        # # Z-pT reweigting (disabled)
-        # zpt_filename = self.parameters["zpt_weights_file"]
-        # self.extractor.add_weight_sets([f"* * {zpt_filename}"])
-        # if "2016" in self.year:
-        #     self.zpt_path = "zpt_weights/2016_value"
-        # else:
-        #     self.zpt_path = "zpt_weights/2017_value"
-        # # PU ID weights
-        # puid_filename = self.parameters["puid_sf_file"]
-        # self.extractor.add_weight_sets([f"* * {puid_filename}"])
-        # # Calibration of event-by-event mass resolution
-        # for mode in ["Data", "MC"]:
-        #     if "2016" in self.year:
-        #         yearstr = "2016"
-        #     else:
-        #         yearstr=self.year #Work around before there are seperate new files for pre and postVFP
-        #     label = f"res_calib_{mode}_{yearstr}"
-        #     path = self.parameters["res_calib_path"]
-        #     file_path = f"{path}/{label}.root"
-        #     self.extractor.add_weight_sets([f"{label} {label} {file_path}"])
-        # # Mass resolution - Pisa implementation
-        # self.extractor.add_weight_sets(["* * data/mass_res_pisa/muonresolution.root"])
-        # self.extractor.finalize()
-        # self.evaluator = self.extractor.make_evaluator()
-        # print(f"processor self.evaluator: {self.evaluator}")
-
-        # self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]
-
-        # return
+       
 
     def jet_loop(
         self,
@@ -1182,6 +1183,7 @@ class EventProcessor(processor.ProcessorABC):
         # Cut has to be defined here because we will use it in
         # b-tag weights calculation
         vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) & (jet1.pt > 35)
+        vbf_cut = ak.fill_none(vbf_cut, value=False)
         jet_loop_out_dict.update({"vbf_cut": vbf_cut})
 
         # # ------------------------------------------------------------#
