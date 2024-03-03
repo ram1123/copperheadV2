@@ -84,6 +84,13 @@ if __name__ == "__main__":
     help="string value of integrated luminosity to label",
     )
     parser.add_argument(
+    "--status",
+    dest="status",
+    default="",
+    action="store",
+    help="Status of results ie Private, Preliminary, In Progress",
+    )
+    parser.add_argument(
     "--no_ratio",
     dest="no_ratio",
     default=False, 
@@ -162,6 +169,7 @@ if __name__ == "__main__":
     # obtain plot settings from config file
     with open("./histogram/plot_settings.json", "r") as file:
         plot_settings = json.load(file)
+    status = args.status.replace("_", " ")
     if args.ROOT_style:
         import ROOT
         #Plotting part
@@ -479,7 +487,7 @@ if __name__ == "__main__":
             pad.SetLogy();
             pad.Modified();
             pad.Update();
-            CMS_lumi(canvas, args.lumi, up=True, reduceSize=True);
+            CMS_lumi(canvas, args.lumi, up=True, reduceSize=True, status=status);
             pad.RedrawAxis("sameaxis");
             full_save_path = args.save_path
             if not os.path.exists(full_save_path):
@@ -678,8 +686,10 @@ if __name__ == "__main__":
             colours = hep.style.cms.cmap_petroff[0:2]
             # print(f"colours: {colours}")
             # print(f"labels: {labels}")
-            
-            fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+            if not args.no_ratio:
+                fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+            else: # skip ratio
+                fig, ax_main = plt.subplots()
             
             fig.subplots_adjust(hspace=0.1)
             # obtain fraction weight, this should be the same for all processes and rows
@@ -766,19 +776,20 @@ if __name__ == "__main__":
                 ax_ratio.set_ylabel('Data / MC')
                 ax_ratio.set_xlim(binning[0], binning[-1])
                 # ax_ratio.set_ylim(0.6, 1.4)
-                ax_ratio.set_ylim(0.5,1.5)
-                
-                # Decorating with CMS label
-                if args.lumi == '':
-                    hep.cms.label(data=True, loc=0, label="Private Work", com=13, ax=ax_main)
-                else:
-                    hep.cms.label(data=True, loc=0, label="Private Work", com=13, lumi=args.lumi, ax=ax_main)
-                
-                
-                # Saving with special name
-                full_save_path = args.save_path+f"/mplhep"
-                if not os.path.exists(full_save_path):
-                    os.makedirs(full_save_path)
-                plt.savefig(f"{full_save_path}/{var}.pdf")
-                plt.clf()
+                ax_ratio.set_ylim(0.5,1.5) 
+            else:  
+                ax_main.set_xlabel(plot_settings[var].get("xlabel"))
+            # Decorating with CMS label
+            if args.lumi == '':
+                hep.cms.label(data=True, loc=0, label=status, com=13, ax=ax_main)
+            else:
+                hep.cms.label(data=True, loc=0, label=status, com=13, lumi=args.lumi, ax=ax_main)
+
+            
+            # Saving with special name
+            full_save_path = args.save_path+f"/mplhep"
+            if not os.path.exists(full_save_path):
+                os.makedirs(full_save_path)
+            plt.savefig(f"{full_save_path}/{var}.pdf")
+            plt.clf()
 
