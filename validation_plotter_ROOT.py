@@ -1,4 +1,5 @@
 import ROOT
+import awkward as ak
 import dask_awkward as dak
 import numpy as np
 import json
@@ -137,9 +138,21 @@ def CMS_lumi( pad,  lumi,  up = False,  skipPreliminary = True, reduceSize = Fal
       else:
           latex2.DrawLatex(0.28+offset, 0.86, "Preliminary");
 
+def reweightROOTH(hist, weight: float):
+    """
+    reweight the histogram values and its errors
+    the given weight value
+    """
+    for idx in range(1, hist.GetNbinsX()+1):
+        hist.SetBinContent(idx, hist.GetBinContent(idx)*weight)
+        hist.SetBinError(idx, hist.GetBinError(idx)*weight)
+    return
+    
+
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D",]
-group_DY_processes = ["dy_M-100To200", "dy_M-50"]
+# group_DY_processes = ["dy_M-100To200", "dy_M-50"] # dy_M-50 is not used in ggH BDT training input
+group_DY_processes = ["dy_M-100To200"]
 group_Top_processes = ["ttjets_dl", "ttjets_sl"]
 group_Ewk_processes = []
 group_VV_processes = []# diboson
@@ -263,8 +276,7 @@ if __name__ == "__main__":
             else:
                 print(f"unknown signal {sig_sample} was given!")
     # gather variables to plot:
-    # kinematic_vars = ['pt', 'eta', 'phi']
-    kinematic_vars = ['eta', 'phi']
+    kinematic_vars = ['pt', 'eta', 'phi']
     variables2plot = []
     if len(args.variables) == 0:
         print("no variables to plot!")
@@ -305,7 +317,7 @@ if __name__ == "__main__":
     # available_processes = ["dy_M-100To200", "dy_M-50","data_A", "data_B", "data_C", "data_D", "ttjets_dl", "ttjets_sl", "ggh_powheg","vbf_powheg"]
     
     
-    
+    fraction_weight = 1.0 # to be used later in reweightROOTH after all histograms are filled
     # var = "jet1_pt"
     for var in variables2plot:
         if var not in plot_settings.keys():
@@ -327,8 +339,21 @@ if __name__ == "__main__":
             print(f"process: {process}")
             full_load_path = args.load_path+f"/{process}/*/*.parquet"
             events = dak.from_parquet(full_load_path) 
-            
-            np_hist, _ = np.histogram(events[var].compute(), bins=binning)
+            # obtain fraction weight, this should be the same for each process 
+            fraction_weight = 1/events.fraction[0].compute()
+            print(f"fraction_weight: {fraction_weight}")
+            # obtain the category selection
+            vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
+            region = events.h_sidebands | events.h_peak
+            btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
+            category_selection = (
+                ~vbf_cut & # we're interested in ggH category
+                region &
+                btag_cut # btag cut is for VH and ttH categories
+            ).compute()
+            category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
+            weights = 1*category_selection
+            np_hist, _ = np.histogram(events[var].compute(), bins=binning, weights = weights)
             # print(f"max(np_hist): {max(np_hist)}")
             # print(f"(np_hist): {(np_hist)}")
             # print(f"(np_hist): {np.any(np_hist==0)}")
@@ -383,6 +408,9 @@ if __name__ == "__main__":
                 group_VBF_hists.append(var_hist_VBF)
             #-------------------------------------------------------
             else: # put into "other" bkg group
+                if "dy_M-50" in process:
+                    # print("dy_M-50 activated")
+                    continue
                 print("other activated")
                 var_hist_other = ROOT.TH1F( var+'_hist_other', var, len(binning)-1, min(binning), max(binning))
                 for idx in range (len(np_hist)): # paste the np histogram values to root histogram
@@ -452,7 +480,11 @@ if __name__ == "__main__":
             for MC_hist_stacked in all_MC_hist_list: 
                 MC_hist_stacked.Sumw2() # set the hist mode to Sumw2 before stacking
                 all_MC_hist_stacked.Add(MC_hist_stacked) 
-                # ratio_den.Add(MC_hist_stacked)
+            
+            # now reweight each TH1F stacked in all_MC_hist_stacked
+            for idx in range(all_MC_hist_stacked.GetStack().GetEntries()):
+                all_MC_hist = all_MC_hist_stacked.GetStack().At(idx) # get the TH1F portion of THStack
+                reweightROOTH(all_MC_hist, fraction_weight) # reweight histogram bins and errors
             all_MC_hist_stacked.Draw("hist same");
         
         # stack and plot data 
@@ -473,7 +505,7 @@ if __name__ == "__main__":
             data_hist_stacked.SetMarkerSize(1);
             data_hist_stacked.SetMarkerColor(1);
             data_hist_stacked.SetLineColor(1);
-            
+            reweightROOTH(data_hist_stacked, fraction_weight) # reweight histogram bins and errors
             data_hist_stacked.Draw("EPsame");        
         
         
@@ -483,12 +515,14 @@ if __name__ == "__main__":
             hist_ggH.SetLineColor(ROOT.kBlack);
             hist_ggH.SetLineWidth(3);
             hist_ggH.Sumw2()
+            reweightROOTH(hist_ggH, fraction_weight) # reweight histogram bins and errors
             hist_ggH.Draw("hist same");
         if len(group_VBF_hists) > 0:
             hist_VBF = group_VBF_hists[0]
             hist_VBF.SetLineColor(ROOT.kRed);
             hist_VBF.SetLineWidth(3);
             hist_VBF.Sumw2()
+            reweightROOTH(hist_VBF, fraction_weight) # reweight histogram bins and errors
             hist_VBF.Draw("hist same");
     
         # Ratio pad
@@ -579,7 +613,8 @@ if __name__ == "__main__":
         pad.RedrawAxis("sameaxis");
             
         pad.cd();
-        dummy_hist.GetYaxis().SetRangeUser(0.01, data_hist_stacked.GetMaximum()*10000);
+        # dummy_hist.GetYaxis().SetRangeUser(0.01, data_hist_stacked.GetMaximum()*10000);
+        dummy_hist.GetYaxis().SetRangeUser(0.01, 1e9);
         pad.SetLogy();
         pad.Modified();
         pad.Update();
