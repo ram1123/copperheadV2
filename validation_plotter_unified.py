@@ -20,6 +20,14 @@ group_VBF_processes = ["vbf_powheg"]
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
+    "-y",
+    "--year",
+    dest="year",
+    default="2018",
+    action="store",
+    help="string value of year we are calculating",
+    )
+    parser.add_argument(
     "-data",
     "--data",
     dest="data_samples",
@@ -53,7 +61,7 @@ if __name__ == "__main__":
     "-var",
     "--variables",
     dest="variables",
-    default=['jet'],
+    default=[],
     nargs="*",
     type=str,
     action="store",
@@ -160,9 +168,9 @@ if __name__ == "__main__":
                 variables2plot.append(f"{particle}1_{kinematic}")
                 variables2plot.append(f"{particle}2_{kinematic}")
         elif "dimuon" in particle:
-            variables2plot.append(f"{particle}_{mass}")
-            for kinematic in kinematic_vars:
-                variables2plot.append(f"{particle}_{kinematic}")
+            variables2plot.append(f"{particle}_mass")
+            # for kinematic in kinematic_vars:
+            #     variables2plot.append(f"{particle}_{kinematic}")
         else:
             print(f"Unsupported variable: {particle} is given!")
     print(f"variables2plot: {variables2plot}")
@@ -208,6 +216,11 @@ if __name__ == "__main__":
                 print(f"process: {process}")
                 full_load_path = args.load_path+f"/{process}/*/*.parquet"
                 events = dak.from_parquet(full_load_path) 
+                # collect weights
+                if "data" in process.lower():
+                    weights = np.ones_like(events["mu1_pt"].compute())
+                else:
+                    weights = ak.to_numpy(events["weight_nominal"].compute() )
                 # obtain fraction weight, this should be the same for each process, so doesn't matter if we keep reassigning it
                 fraction_weight = 1/events.fraction[0].compute()
                 print(f"fraction_weight: {fraction_weight}")
@@ -489,10 +502,10 @@ if __name__ == "__main__":
             pad.Update();
             CMS_lumi(canvas, args.lumi, up=True, reduceSize=True, status=status);
             pad.RedrawAxis("sameaxis");
-            full_save_path = args.save_path
+            full_save_path = f"{args.save_path}/{args.year}/ROOT"
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
-            canvas.SaveAs(f"{full_save_path}/ROOT/{var}.pdf");
+            canvas.SaveAs(f"{full_save_path}/{var}.pdf");
     else:
         import mplhep as hep
         import matplotlib.pyplot as plt
@@ -787,7 +800,7 @@ if __name__ == "__main__":
 
             
             # Saving with special name
-            full_save_path = args.save_path+f"/mplhep"
+            full_save_path = args.save_path+f"/{args.year}/mplhep"
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             plt.savefig(f"{full_save_path}/{var}.pdf")
