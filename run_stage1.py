@@ -19,6 +19,8 @@ import glob
 from itertools import islice
 import copy
 import argparse
+from dask.distributed import performance_report
+
 
 test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
@@ -58,218 +60,131 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         ).events()
     out_collections = coffea_processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
-    """
-    # print(f"copperhead2 run stage1 out_collections b4 compute: {out_collections}")
-    (computed, ) = dask.compute(out_collections)
-    # print(f"copperhead2 run stage1 computed after compute: {computed}")
-    # print(f"copperhead2 run stage1 type(out): {type(result)}")
-    
+
+    computed = out_collections
+    print(f"computed: {dask.compute(computed)}")
+     #just reading test start--------------------------------
     # placeholder_dict =  {
-    #         'mu1_pt': ak.to_numpy(computed["mu_pt"][:,0]),
-    #         'mu2_pt': ak.to_numpy(computed["mu_pt"][:,1]),
-    #         'mu1_eta': ak.to_numpy(computed["mu_eta"][:,0]),
-    #         'mu2_eta': ak.to_numpy(computed["mu_eta"][:,1]),
-    #         'mu1_phi': ak.to_numpy(computed["mu_phi"][:,0]),
-    #         'mu2_phi': ak.to_numpy(computed["mu_phi"][:,1]),
-    #         'mu1_iso': ak.to_numpy(computed["mu_iso"][:,0]),
-    #         'mu2_iso': ak.to_numpy(computed["mu_iso"][:,1]),
-    #         'mu1_pt_over_mass': ak.to_numpy(computed["mu_pt_over_mass"][:,0]),
-    #         'mu2_pt_over_mass': ak.to_numpy(computed["mu_pt_over_mass"][:,1]),
-    #         "dimuon_mass": ak.to_numpy(computed["dimuon_mass"]),
-    #         "dimuon_ebe_mass_res": ak.to_numpy(computed["dimuon_ebe_mass_res"]),
-    #         "dimuon_ebe_mass_res_rel": ak.to_numpy(computed["dimuon_ebe_mass_res_rel"]),
-    #         "dimuon_pt": ak.to_numpy(computed["dimuon_pt"]),
-    #         "dimuon_pt_log": ak.to_numpy(np.log(computed["dimuon_pt"])), # np functions are compatible with ak if input is ak array 
-    #         "dimuon_eta": ak.to_numpy(computed["dimuon_eta"]),
-    #         "dimuon_phi": ak.to_numpy(computed["dimuon_phi"]),
-    #         "dimuon_dEta": ak.to_numpy(computed["dimuon_dEta"]),
-    #         "dimuon_dPhi": ak.to_numpy(computed["dimuon_dPhi"]),
-    #         "dimuon_dR": ak.to_numpy(computed["dimuon_dR"]),
-    #         "dimuon_cos_theta_cs": ak.to_numpy(computed["dimuon_cos_theta_cs"]), 
-    #         "dimuon_phi_cs": ak.to_numpy(computed["dimuon_phi_cs"]), 
-    #         # jet variables -------------------------------
-    #         "jet1_pt" : ak.to_numpy(computed["jet1_pt"]),
-    #         "jet1_eta" : ak.to_numpy(computed["jet1_eta"]),
-    #         "jet1_rap" : ak.to_numpy(computed["jet1_rap"]),
-    #         "jet1_phi" : ak.to_numpy(computed["jet1_phi"]),
-    #         "jet1_qgl" : ak.to_numpy(computed["jet1_qgl"]),
-    #         "jet1_jetId" : ak.to_numpy(computed["jet1_jetId"]),
-    #         "jet1_puId" : ak.to_numpy(computed["jet1_puId"]),
-    #         "jet2_pt" : ak.to_numpy(computed["jet2_pt"]),
-    #         "jet2_eta" : ak.to_numpy(computed["jet2_eta"]),
-    #         "jet2_rap" : ak.to_numpy(computed["jet2_rap"]),
-    #         "jet2_phi" : ak.to_numpy(computed["jet2_phi"]),
-    #         "jet2_qgl" : ak.to_numpy(computed["jet2_qgl"]),
-    #         "jet2_jetId" : ak.to_numpy(computed["jet2_jetId"]),
-    #         "jet2_puId" : ak.to_numpy(computed["jet2_puId"]),
-    #         "jj_mass" : ak.to_numpy(computed["jj_mass"]),
-    #         "jj_mass_log" : ak.to_numpy(computed["jj_mass_log"]),
-    #         "jj_pt" : ak.to_numpy(computed["jj_pt"]),
-    #         "jj_eta" : ak.to_numpy(computed["jj_eta"]),
-    #         "jj_phi" : ak.to_numpy(computed["jj_phi"]),
-    #         "jj_dEta" : ak.to_numpy(computed["jj_dEta"]),
-    #         "jj_dPhi":  ak.to_numpy(computed["jj_dPhi"]),
-    #         "mmj1_dEta" : ak.to_numpy(computed["mmj1_dEta"]),
-    #         "mmj1_dPhi" : ak.to_numpy(computed["mmj1_dPhi"]),
-    #         "mmj1_dR" : ak.to_numpy(computed["mmj1_dR"]),
-    #         "mmj2_dEta" : ak.to_numpy(computed["mmj2_dEta"]),
-    #         "mmj2_dPhi" : ak.to_numpy(computed["mmj2_dPhi"]),
-    #         "mmj2_dR" : ak.to_numpy(computed["mmj2_dR"]),
-    #         "mmj_min_dEta" : ak.to_numpy(computed["mmj_min_dEta"]),
-    #         "mmj_min_dPhi" : ak.to_numpy(computed["mmj_min_dPhi"]),
-    #         "mmjj_pt" : ak.to_numpy(computed["mmjj_pt"]),
-    #         "mmjj_eta" : ak.to_numpy(computed["mmjj_eta"]),
-    #         "mmjj_phi" : ak.to_numpy(computed["mmjj_phi"]),
-    #         "mmjj_mass" : ak.to_numpy(computed["mmjj_mass"]),
-    #         "rpt" : ak.to_numpy(computed["rpt"]),
-    #         "zeppenfeld" : ak.to_numpy(computed["zeppenfeld"]),
-    #         "njets" : ak.to_numpy(computed["njets"]),
-    #         # regions -------------------------------------
-    #         "z_peak" : ak.to_numpy(computed["z_peak"]),
-    #         "h_sidebands" : ak.to_numpy(computed["h_sidebands"]),
-    #         "h_peak" : ak.to_numpy(computed["h_peak"]),
-    #         # vbf ?? ------------------------------------------------
-    #         "vbf_cut" : ak.to_numpy(computed["vbf_cut"]),
-    #         #----------------------------------------
-    #         "fraction" : dataset_fraction*ak.to_numpy(ak.ones_like(computed["njets"])),
+    #         'mu1_pt': (computed["mu_pt"][:,0]),
+    #         'mu2_pt': (computed["mu_pt"][:,1]),
+       
+            # 'mu1_eta': (computed["mu_eta"][:,0]),
+            # 'mu2_eta': (computed["mu_eta"][:,1]),
+            # 'mu1_phi': (computed["mu_phi"][:,0]),
+            # 'mu2_phi': (computed["mu_phi"][:,1]),
+            # 'mu1_iso': (computed["mu_iso"][:,0]),
+            # 'mu2_iso': (computed["mu_iso"][:,1]),
+            # # 'mu1_pt_over_mass': (computed["mu_pt_over_mass"][:,0]),
+            # # 'mu2_pt_over_mass': (computed["mu_pt_over_mass"][:,1]),
+            # "dimuon_mass": (computed["dimuon_mass"]),
+            # "dimuon_ebe_mass_res": (computed["dimuon_ebe_mass_res"]),
+            # "dimuon_ebe_mass_res_rel": (computed["dimuon_ebe_mass_res_rel"]),
+            # "dimuon_pt": (computed["dimuon_pt"]),
+            # # "dimuon_pt_log": (np.log(computed["dimuon_pt"])), # np functions are compatible with ak if input is ak array 
+            # "dimuon_eta": (computed["dimuon_eta"]),
+            # "dimuon_phi": (computed["dimuon_phi"]),
+            # "dimuon_dEta": (computed["dimuon_dEta"]),
+            # "dimuon_dPhi": (computed["dimuon_dPhi"]),
+            # "dimuon_dR": (computed["dimuon_dR"]),
+            # "dimuon_cos_theta_cs": (computed["dimuon_cos_theta_cs"]), 
+            # "dimuon_phi_cs": (computed["dimuon_phi_cs"]), 
+            # # # jet variables -------------------------------
+            # "jet1_pt" : (computed["jet1_pt"]),
+            # "jet1_eta" : (computed["jet1_eta"]),
+            # "jet1_rap" : (computed["jet1_rap"]),
+            # "jet1_phi" : (computed["jet1_phi"]),
+            # "jet1_qgl" : (computed["jet1_qgl"]),
+            # "jet1_jetId" : (computed["jet1_jetId"]),
+            # "jet1_puId" : (computed["jet1_puId"]),
+            # "jet2_pt" : (computed["jet2_pt"]),
+            # "jet2_eta" : (computed["jet2_eta"]),
+            # "jet2_rap" : (computed["jet2_rap"]),
+            # "jet2_phi" : (computed["jet2_phi"]),
+            # "jet2_qgl" : (computed["jet2_qgl"]),
+            # "jet2_jetId" : (computed["jet2_jetId"]),
+            # "jet2_puId" : (computed["jet2_puId"]),
+            # "jj_mass" : (computed["jj_mass"]),
+            # # "jj_mass_log" : (computed["jj_mass_log"]),
+            # "jj_pt" : (computed["jj_pt"]),
+            # "jj_eta" : (computed["jj_eta"]),
+            # "jj_phi" : (computed["jj_phi"]),
+            # "jj_dEta" : (computed["jj_dEta"]),
+            # "jj_dPhi":  (computed["jj_dPhi"]),
+            # "mmj1_dEta" : (computed["mmj1_dEta"]),
+            # "mmj1_dPhi" : (computed["mmj1_dPhi"]),
+            # "mmj1_dR" : (computed["mmj1_dR"]),
+            # "mmj2_dEta" : (computed["mmj2_dEta"]),
+            # "mmj2_dPhi" : (computed["mmj2_dPhi"]),
+            # "mmj2_dR" : (computed["mmj2_dR"]),
+            # "mmj_min_dEta" : (computed["mmj_min_dEta"]),
+            # "mmj_min_dPhi" : (computed["mmj_min_dPhi"]),
+            # "mmjj_pt" : (computed["mmjj_pt"]),
+            # "mmjj_eta" : (computed["mmjj_eta"]),
+            # "mmjj_phi" : (computed["mmjj_phi"]),
+            # "mmjj_mass" : (computed["mmjj_mass"]),
+            # "rpt" : (computed["rpt"]),
+            # "zeppenfeld" : (computed["zeppenfeld"]),
+            # "njets" : (computed["njets"]),
+            # # Btagging WPs
+            # "nBtagLoose" : (computed["nBtagLoose"]),
+            # "nBtagMedium" : (computed["nBtagMedium"]),
+            # # regions -------------------------------------
+            # "z_peak" : (computed["z_peak"]),
+            # "h_sidebands" : (computed["h_sidebands"]),
+            # "h_peak" : (computed["h_peak"]),
+            # # vbf ?? ------------------------------------------------
+            # "vbf_cut" : (computed["vbf_cut"]),
+            # #----------------------------------------
+            # "fraction" : dataset_fraction*(ak.ones_like(computed["njets"])),    
+        
     # }
     # if dataset_dict["metadata"]["is_mc"]:
     #     additional_dict = {
     #          # gen jet variables -------------------------------------
-    #         "gjj_mass":  ak.to_numpy(computed["gjj_mass"]),
-    #         'gjet1_pt': ak.to_numpy(computed["gjet_pt"][:,0]),
-    #         'gjet2_pt': ak.to_numpy(computed["gjet_pt"][:,1]),
-    #         'gjet1_eta': ak.to_numpy(computed["gjet_eta"][:,0]),
-    #         'gjet2_eta': ak.to_numpy(computed["gjet_eta"][:,1]),
-    #         'gjet1_phi': ak.to_numpy(computed["gjet_phi"][:,0]),
-    #         'gjet2_phi': ak.to_numpy(computed["gjet_phi"][:,1]),
-    #         'gjet1_mass': ak.to_numpy(computed["gjet_mass"][:,0]),
-    #         'gjet2_mass': ak.to_numpy(computed["gjet_mass"][:,1]),
-    #         "gjj_dEta": ak.to_numpy(computed["gjj_dEta"]),
-    #         "gjj_dPhi": ak.to_numpy(computed["gjj_dPhi"]),
-    #         "gjj_dR": ak.to_numpy(computed["gjj_dR"]),
+    #         "gjj_mass":  (computed["gjj_mass"]),
+    #         'gjet1_pt': (computed["gjet_pt"][:,0]),
+    #         'gjet2_pt': (computed["gjet_pt"][:,1]),
+    #         'gjet1_eta': (computed["gjet_eta"][:,0]),
+    #         'gjet2_eta': (computed["gjet_eta"][:,1]),
+    #         'gjet1_phi': (computed["gjet_phi"][:,0]),
+    #         'gjet2_phi': (computed["gjet_phi"][:,1]),
+    #         'gjet1_mass': (computed["gjet_mass"][:,0]),
+    #         'gjet2_mass': (computed["gjet_mass"][:,1]),
+    #         "gjj_dEta": (computed["gjj_dEta"]),
+    #         "gjj_dPhi": (computed["gjj_dPhi"]),
+    #         "gjj_dR": (computed["gjj_dR"]),
     #         # weights -------------------------------------
-    #         "weight_nominal" : ak.to_numpy(ak.ones_like(computed["nominal"])),
+    #         "weight_nominal" : (ak.ones_like(computed["nominal"])),
     #     }
     #     placeholder_dict.update(additional_dict)
-    # placeholder = pd.DataFrame(placeholder_dict)
+    #just reading test end--------------------------------
 
-    # print(f"copperhead2 EventProcessor after leading pt cut placeholder: \n {placeholder.to_string()}")
-    #save results 
-    fraction_str = str(dataset_dict["metadata"]["original_fraction"]).replace('.', '_')
-    save_path = save_path + f"/f{fraction_str}"
-    if not os.path.exists(save_path):
-            os.makedirs(save_path)
-    dataset = events.metadata['dataset']
-    placeholder.to_csv(save_path+f"/V2stage1_{dataset}.csv")
-    """
-    computed = out_collections
-    # print(f"computed: {computed}")
+    # ------------------------------------------
     placeholder_dict =  {
             'mu1_pt': (computed["mu_pt"][:,0]),
             'mu2_pt': (computed["mu_pt"][:,1]),
-            'mu1_eta': (computed["mu_eta"][:,0]),
-            'mu2_eta': (computed["mu_eta"][:,1]),
-            'mu1_phi': (computed["mu_phi"][:,0]),
-            'mu2_phi': (computed["mu_phi"][:,1]),
-            'mu1_iso': (computed["mu_iso"][:,0]),
-            'mu2_iso': (computed["mu_iso"][:,1]),
-            # 'mu1_pt_over_mass': (computed["mu_pt_over_mass"][:,0]),
-            # 'mu2_pt_over_mass': (computed["mu_pt_over_mass"][:,1]),
-            "dimuon_mass": (computed["dimuon_mass"]),
-            "dimuon_ebe_mass_res": (computed["dimuon_ebe_mass_res"]),
-            "dimuon_ebe_mass_res_rel": (computed["dimuon_ebe_mass_res_rel"]),
-            "dimuon_pt": (computed["dimuon_pt"]),
-            # "dimuon_pt_log": (np.log(computed["dimuon_pt"])), # np functions are compatible with ak if input is ak array 
-            "dimuon_eta": (computed["dimuon_eta"]),
-            "dimuon_phi": (computed["dimuon_phi"]),
-            "dimuon_dEta": (computed["dimuon_dEta"]),
-            "dimuon_dPhi": (computed["dimuon_dPhi"]),
-            "dimuon_dR": (computed["dimuon_dR"]),
-            "dimuon_cos_theta_cs": (computed["dimuon_cos_theta_cs"]), 
-            "dimuon_phi_cs": (computed["dimuon_phi_cs"]), 
-            # # jet variables -------------------------------
-            "jet1_pt" : (computed["jet1_pt"]),
-            "jet1_eta" : (computed["jet1_eta"]),
-            "jet1_rap" : (computed["jet1_rap"]),
-            "jet1_phi" : (computed["jet1_phi"]),
-            "jet1_qgl" : (computed["jet1_qgl"]),
-            "jet1_jetId" : (computed["jet1_jetId"]),
-            "jet1_puId" : (computed["jet1_puId"]),
-            "jet2_pt" : (computed["jet2_pt"]),
-            "jet2_eta" : (computed["jet2_eta"]),
-            "jet2_rap" : (computed["jet2_rap"]),
-            "jet2_phi" : (computed["jet2_phi"]),
-            "jet2_qgl" : (computed["jet2_qgl"]),
-            "jet2_jetId" : (computed["jet2_jetId"]),
-            "jet2_puId" : (computed["jet2_puId"]),
-            "jj_mass" : (computed["jj_mass"]),
-            # "jj_mass_log" : (computed["jj_mass_log"]),
-            "jj_pt" : (computed["jj_pt"]),
-            "jj_eta" : (computed["jj_eta"]),
-            "jj_phi" : (computed["jj_phi"]),
-            "jj_dEta" : (computed["jj_dEta"]),
-            "jj_dPhi":  (computed["jj_dPhi"]),
-            "mmj1_dEta" : (computed["mmj1_dEta"]),
-            "mmj1_dPhi" : (computed["mmj1_dPhi"]),
-            "mmj1_dR" : (computed["mmj1_dR"]),
-            "mmj2_dEta" : (computed["mmj2_dEta"]),
-            "mmj2_dPhi" : (computed["mmj2_dPhi"]),
-            "mmj2_dR" : (computed["mmj2_dR"]),
-            "mmj_min_dEta" : (computed["mmj_min_dEta"]),
-            "mmj_min_dPhi" : (computed["mmj_min_dPhi"]),
-            "mmjj_pt" : (computed["mmjj_pt"]),
-            "mmjj_eta" : (computed["mmjj_eta"]),
-            "mmjj_phi" : (computed["mmjj_phi"]),
-            "mmjj_mass" : (computed["mmjj_mass"]),
-            "rpt" : (computed["rpt"]),
-            "zeppenfeld" : (computed["zeppenfeld"]),
-            "njets" : (computed["njets"]),
-            # # regions -------------------------------------
-            "z_peak" : (computed["z_peak"]),
-            "h_sidebands" : (computed["h_sidebands"]),
-            "h_peak" : (computed["h_peak"]),
-            # vbf ?? ------------------------------------------------
-            "vbf_cut" : (computed["vbf_cut"]),
-            #----------------------------------------
-            "fraction" : dataset_fraction*(ak.ones_like(computed["njets"])),
-    }
-    if dataset_dict["metadata"]["is_mc"]:
-        additional_dict = {
-             # gen jet variables -------------------------------------
-            "gjj_mass":  (computed["gjj_mass"]),
-            'gjet1_pt': (computed["gjet_pt"][:,0]),
-            'gjet2_pt': (computed["gjet_pt"][:,1]),
-            'gjet1_eta': (computed["gjet_eta"][:,0]),
-            'gjet2_eta': (computed["gjet_eta"][:,1]),
-            'gjet1_phi': (computed["gjet_phi"][:,0]),
-            'gjet2_phi': (computed["gjet_phi"][:,1]),
-            'gjet1_mass': (computed["gjet_mass"][:,0]),
-            'gjet2_mass': (computed["gjet_mass"][:,1]),
-            "gjj_dEta": (computed["gjj_dEta"]),
-            "gjj_dPhi": (computed["gjj_dPhi"]),
-            "gjj_dR": (computed["gjj_dR"]),
-            # weights -------------------------------------
-            "weight_nominal" : (ak.ones_like(computed["nominal"])),
-        }
-        placeholder_dict.update(additional_dict)
+            'nmuons': (computed["nmuons"]),
+     }
+    #------------------------
     
     fraction_str = str(dataset_dict["metadata"]["original_fraction"]).replace('.', '_')
     sample_name = dataset_dict['metadata']['dataset']
     zip = ak.zip(placeholder_dict, depth_limit=1)
+    # zip = dask.compute(placeholder_dict)
     # N_reasonable = 100000
-    N_reasonable = 40000
+    # N_reasonable = 40000
     # zip = zip.repartition(rows_per_partition=N_reasonable)
-    print(f"zip: {zip}")
+    print(f"zip: {zip.compute()}")
     save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     print(f"save_path: {save_path}")
     filelist = glob.glob(f"{save_path}/*.parquet")
     print(f"len(filelist): {len(filelist)}")
     for file in filelist:
-        try:
-            os.remove(file)
-        except Exception:
-            pass
+        # try:
+        #     os.remove(file)
+        # except Exception:
+        #     print(f"failed removing files in {save_path}. Please manually delete all the parquet files")
+        os.remove(file)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     zip.to_parquet(save_path, compute=True)
@@ -327,6 +242,14 @@ if __name__ == "__main__":
     action="store",
     help="save path to store stage1 output files",
     )
+    parser.add_argument(
+    "-y",
+    "--year",
+    dest="year",
+    default="2018",
+    action="store",
+    help="string value of year we are calculating",
+    )
     args = parser.parse_args()
     
     time_step = time.time()
@@ -340,22 +263,23 @@ if __name__ == "__main__":
     with open(config_path) as file:
         config = json.loads(file.read())
     coffea_processor = EventProcessor(config, test_mode=test_mode)
+
     if not test_mode: # full scale implementation
-        from dask_gateway import Gateway
-        gateway = Gateway()
-        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-        client = gateway.connect(cluster_info.name).get_client()
-        print("Gateway Client created")
+        # from dask_gateway import Gateway
+        # gateway = Gateway()
+        # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+        # client = gateway.connect(cluster_info.name).get_client()
+        # print("Gateway Client created")
         # #-----------------------------------------------------------
-        # cluster = LocalCluster()
-        # cluster.adapt(minimum=16, maximum=16)
-        # # # cluster.scale(63) # create 16 local workers
-        # client = Client(cluster)
-        # # print("Local scale Client created")
-        # # print(f"client dashboard link: {client.dashboard_link}")
+        cluster = LocalCluster(processes=True, memory_limit='12 GiB')
+        cluster.adapt(minimum=8, maximum=8)
+        # # cluster.scale(63) # create 16 local workers
+        client = Client(cluster)
+        print("Local scale Client created")
+        # print(f"client dashboard link: {client.dashboard_link}")
 
         #-----------------------------------------------------------
-        # client = Client(n_workers=16,  threads_per_worker=1) 
+        # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='12 GiB') 
         #---------------------------------------------------------
         # print("cluster scale up")
         # sample_path = "./config/processor_samples.json"
@@ -363,29 +287,30 @@ if __name__ == "__main__":
         with open(sample_path) as file:
             samples = json.loads(file.read())
         # print(f"samples.keys(): {samples.keys()}")
-        
-        # for dataset, sample in samples.items():
-        for dataset, sample in tqdm.tqdm(samples.items()):
-            #test
-            # if dataset != "ttjets_dl":
-            # if "data" in dataset:
-            #     continue
-            # print(f"dataset: {dataset}")
-            # print(f'sample["files"]: {sample["files"]}')
-            # divide sample to smaller chunks
-            # max_file_len = 15
-            max_file_len = 8
-            smaller_files = list(divide_chunks(sample["files"], max_file_len))
-            # print(f"smaller_files: {smaller_files}")
-            for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                smaller_sample = copy.deepcopy(sample)
-                smaller_sample["files"] = smaller_files[idx]
-                # print(f"smaller_files[{idx}]: {smaller_files[idx]}")
-                # continue
-                var_step = time.time()
-                dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=args.save_path)
-                var_elapsed = round(time.time() - var_step, 3)
-                # print(f"Finished file_idx {idx} in {var_elapsed} s.")
+        total_save_path = args.save_path + f"/{args.year}"
+        with performance_report(filename="dask-report.html"):
+            # for dataset, sample in samples.items():
+            for dataset, sample in tqdm.tqdm(samples.items()):
+                #test
+                # if dataset != "ttjets_dl":
+                # if "data" in dataset:
+                #     continue
+                # print(f"dataset: {dataset}")
+                # print(f'sample["files"]: {sample["files"]}')
+                # divide sample to smaller chunks
+                # max_file_len = 15
+                max_file_len = 8
+                smaller_files = list(divide_chunks(sample["files"], max_file_len))
+                print(f"smaller_files: {smaller_files}")
+                for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
+                    smaller_sample = copy.deepcopy(sample)
+                    smaller_sample["files"] = smaller_files[idx]
+                    # print(f"smaller_files[{idx}]: {smaller_files[idx]}")
+                    # continue
+                    var_step = time.time()
+                    dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
+                    var_elapsed = round(time.time() - var_step, 3)
+                    # print(f"Finished file_idx {idx} in {var_elapsed} s.")
                 
     else:
         # xrootd_path = "root://eos.cms.rcac.purdue.edu/"
@@ -401,16 +326,17 @@ if __name__ == "__main__":
             samples = json.loads(file.read())
         # print(f"samples.keys(): {samples.keys()}")
 
-        # for dataset, sample in samples.items():
-        for dataset, sample in tqdm.tqdm(samples.items()):
-            
-            # testing
-            # if ("dy_M-100To200" not in dataset) and ("data_A" not in dataset):
-            # if ("dy_M-100To200" not in dataset) :
-            # if ("ggh_powheg" not in dataset) and ("vbf_powheg" not in dataset):
-            #     continue
-            # print(f"dataset: {dataset}")
-            dataset_loop(coffea_processor, sample, test=test_mode)
+        with performance_report(filename="dask-report.html"):
+            # for dataset, sample in samples.items():
+            for dataset, sample in tqdm.tqdm(samples.items()):
+                
+                # testing
+                # if ("dy_M-100To200" not in dataset) and ("data_A" not in dataset):
+                # if ("dy_M-100To200" not in dataset) :
+                # if ("ggh_powheg" not in dataset) and ("vbf_powheg" not in dataset):
+                #     continue
+                # print(f"dataset: {dataset}")
+                dataset_loop(coffea_processor, sample, test=test_mode)
         
     
 
