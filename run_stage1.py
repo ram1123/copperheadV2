@@ -163,7 +163,20 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     placeholder_dict =  {
             'mu1_pt': (computed["mu_pt"][:,0]),
             'mu2_pt': (computed["mu_pt"][:,1]),
+            'mu1_eta': (computed["mu_eta"][:,0]),
+            'mu2_eta': (computed["mu_eta"][:,1]),
+            'mu1_phi': (computed["mu_phi"][:,0]),
+            'mu2_phi': (computed["mu_phi"][:,1]),
             'nmuons': (computed["nmuons"]),
+            'jet1_pt': (computed["jet_pt"][:,0]),
+            'jet2_pt': (computed["jet_pt"][:,1]),
+            'jet1_eta': (computed["jet_eta"][:,0]),
+            'jet2_eta': (computed["jet_eta"][:,1]),
+            'jet1_phi': (computed["jet_phi"][:,0]),
+            'jet2_phi': (computed["jet_phi"][:,1]),
+            'jet1_mass': (computed["jet_mass"][:,0]),
+            'jet2_mass': (computed["jet_mass"][:,1]),
+            'njets': (computed["njets"]),
      }
     #------------------------
     

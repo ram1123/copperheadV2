@@ -821,12 +821,21 @@ class EventProcessor(processor.ProcessorABC):
         # --------------------------
         print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         nmuons = ak.num(events.Muon.pt, axis=1)
+        njets = ak.num(events.Jet.pt, axis=1)
         event_filter =   nmuons>=1
         events = events[event_filter]
         print(f"events after filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         out_dict = {
             "mu_pt" : ak.pad_none(events.Muon.pt, 2),
+            "mu_eta" : ak.pad_none(events.Muon.eta, 2),
+            "mu_phi" : ak.pad_none(events.Muon.phi, 2),
+            "mu_charge" : ak.pad_none(events.Muon.charge, 2),
             "nmuons" : nmuons[event_filter],
+            "jet_pt" : ak.pad_none(events.Jet.pt, 2),
+            "jet_mass" : ak.pad_none(events.Jet.mass, 2),
+            "jet_eta" : ak.pad_none(events.Jet.eta, 2),
+            "jet_phi" : ak.pad_none(events.Jet.phi, 2),
+            "njets" : njets[event_filter],
         }
         #----------------------------
         
