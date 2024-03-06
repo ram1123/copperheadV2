@@ -277,10 +277,10 @@ class EventProcessor(processor.ProcessorABC):
         
         # # Save raw variables before computing any corrections
         # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
-        # events["Muon", "pt_raw"] = events.Muon.pt
-        # events["Muon", "eta_raw"] = events.Muon.eta
-        # events["Muon", "phi_raw"] = events.Muon.phi
-        # events["Muon", "pfRelIso04_all_raw"] = events.Muon.pfRelIso04_all
+        events["Muon", "pt_raw"] = events.Muon.pt
+        events["Muon", "eta_raw"] = events.Muon.eta
+        events["Muon", "phi_raw"] = events.Muon.phi
+        events["Muon", "pfRelIso04_all_raw"] = events.Muon.pfRelIso04_all
         # # --------------------------------------------------------
         # # # Apply Rochester correction
         # # if self.config["do_roccor"]:
@@ -332,15 +332,15 @@ class EventProcessor(processor.ProcessorABC):
         #     evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
 
         
-        # # muon_id = "mediumId" if "medium" in self.config["muon_id"] else "looseId"
-        # # print(f"copperhead2 EventProcessor muon_id: {muon_id}")
-        # muon_selection = (
-        #     (events.Muon.pt_raw > self.config["muon_pt_cut"])
-        #     & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
-        #     & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
-        #     # & events.Muon[muon_id]
-        #     & events.Muon[self.config["muon_id"]]
-        # )
+        # muon_id = "mediumId" if "medium" in self.config["muon_id"] else "looseId"
+        # print(f"copperhead2 EventProcessor muon_id: {muon_id}")
+        muon_selection = (
+            (events.Muon.pt_raw > self.config["muon_pt_cut"])
+            & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+            & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
+            # & events.Muon[muon_id]
+            & events.Muon[self.config["muon_id"]]
+        )
         # if self.test:
         #     print(f"copperhead2 EventProcessor evnt_qual_flg_selection long: \n {ak.to_numpy((evnt_qual_flg_selection))}")
         #     print(f"copperhead2 EventProcessor muon_selection[44]: \n {muon_selection[44]}")
@@ -820,15 +820,20 @@ class EventProcessor(processor.ProcessorABC):
 
         # --------------------------
         print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
-        sumWeights = ak.sum(events.genWeight) # b4 we do any filtering
+        # b4 we do any filtering, we obtain the sum of gen weights for normalization
+        events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
+        sumWeights = ak.sum(events.genWeight, axis=0)
         print(f"sumWeights: {(sumWeights.compute())}")
         # raise ValueError
-        nmuons = ak.num(events.Muon.pt, axis=1)
+        muons = events.Muon[muon_selection]
+        nmuons = ak.num(muons, axis=1)
         event_filter =   nmuons>=1
         events = events[event_filter]
-        nmuons = nmuons[event_filter]
-        njets = ak.num(events.Jet.pt, axis=1)
-        print(f"events after filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
+        muons = muons[event_filter] # update events on these too
+        nmuons = nmuons[event_filter] # update events on these too
+        jets = events.Jet
+        njets = ak.num(jets.pt, axis=1)
+        print(f"events after filter length: {ak.num(muons.pt, axis=0).compute()}")
         weights = events.genWeight
         dataset = events.metadata['dataset']
         cross_section = self.config["cross_sections"][dataset]
@@ -838,17 +843,20 @@ class EventProcessor(processor.ProcessorABC):
         weights = weights*cross_section*integrated_lumi/sumWeights
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
-        
+        print(f"njets: {ak.num(njets, axis=0).compute()}")
+        print(f"jets: {ak.num(jets, axis=0).compute()}")
+        print(f"muons: {ak.num(muons, axis=0).compute()}")
+                        
         out_dict = {
-            "mu_pt" : ak.pad_none(events.Muon.pt, 2),
-            "mu_eta" : ak.pad_none(events.Muon.eta, 2),
-            "mu_phi" : ak.pad_none(events.Muon.phi, 2),
-            "mu_charge" : ak.pad_none(events.Muon.charge, 2),
+            "mu_pt" : ak.pad_none(muons.pt, 2),
+            "mu_eta" : ak.pad_none(muons.eta, 2),
+            "mu_phi" : ak.pad_none(muons.phi, 2),
+            "mu_charge" : ak.pad_none(muons.charge, 2),
             "nmuons" : nmuons,
-            "jet_pt" : ak.pad_none(events.Jet.pt, 2),
-            "jet_mass" : ak.pad_none(events.Jet.mass, 2),
-            "jet_eta" : ak.pad_none(events.Jet.eta, 2),
-            "jet_phi" : ak.pad_none(events.Jet.phi, 2),
+            "jet_pt" : ak.pad_none(jets.pt, 2),
+            "jet_mass" : ak.pad_none(jets.mass, 2),
+            "jet_eta" : ak.pad_none(jets.eta, 2),
+            "jet_phi" : ak.pad_none(jets.phi, 2),
             "njets" : njets,
             "weights" : weights,
         }
