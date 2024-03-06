@@ -326,10 +326,10 @@ class EventProcessor(processor.ProcessorABC):
         # # passing quality cuts and at least one good PV
         # # --------------------------------------------------------#
 
-        # # Apply event quality flags
-        # evnt_qual_flg_selection = ak.ones_like(event_filter)
-        # for evt_qual_flg in self.config["event_flags"]:
-        #     evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
+        # Apply event quality flags
+        evnt_qual_flg_selection = ak.ones_like(event_filter)
+        for evt_qual_flg in self.config["event_flags"]:
+            evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
 
         
         # muon_id = "mediumId" if "medium" in self.config["muon_id"] else "looseId"
@@ -389,11 +389,11 @@ class EventProcessor(processor.ProcessorABC):
         event_filter = (
                 event_filter
                 & lumi_mask
-                # & (evnt_qual_flg_selection > 0)
+                & (evnt_qual_flg_selection > 0)
                 & (nmuons == 2)
                 & (mm_charge == -1)
-                # & electron_veto
-                # & (events.PV.npvsGood > 0) # number of good primary vertex cut
+                & electron_veto
+                & (events.PV.npvsGood > 0) # number of good primary vertex cut
 
         )
         # good_pv = (events.PV.npvsGood > 0) 
@@ -410,18 +410,18 @@ class EventProcessor(processor.ProcessorABC):
         # if self.test:
         #     # print(f"copperhead2 EventProcessor b4 leading pt cut event_filter long: \n {pd.DataFrame(ak.to_numpy(event_filter)).to_string()}")
         #     print(f"copperhead2 EventProcessor b4 leading pt cut event_filter sum:  {ak.sum(event_filter)}")
-        # # --------------------------------------------------------#
-        # # Select events with muons passing leading pT cut
-        # # --------------------------------------------------------#
+        # --------------------------------------------------------#
+        # Select events with muons passing leading pT cut
+        # --------------------------------------------------------#
 
-        # # Events where there is at least one muon passing
-        # # leading muon pT cut
-        # pass_leading_pt = events.Muon[:,:1].pt_raw > self.config["muon_leading_pt"]
-        # pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
-        # pass_leading_pt = ak.sum(pass_leading_pt, axis=1)
+        # Events where there is at least one muon passing
+        # leading muon pT cut
+        pass_leading_pt = events.Muon[:,:1].pt_raw > self.config["muon_leading_pt"]
+        pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
+        pass_leading_pt = ak.sum(pass_leading_pt, axis=1)
         
 
-        # event_filter = event_filter & (pass_leading_pt >0)
+        event_filter = event_filter & (pass_leading_pt >0)
         
         
         
