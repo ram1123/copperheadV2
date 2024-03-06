@@ -206,13 +206,13 @@ class EventProcessor(processor.ProcessorABC):
         # # Apply HLT to both Data and MC
         # for HLT_str in self.config["hlt"]:
         #     event_filter = event_filter & events.HLT[HLT_str]
-        # # if self.test:
-        # #     print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
-        # #     print(f"copperhead2 EventProcessor ak.sum(events.HLT.IsoMu24): \n {ak.sum(events.HLT.IsoMu24)}")
-        # #     print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
+        # if self.test:
+        #     print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
+        #     print(f"copperhead2 EventProcessor ak.sum(events.HLT.IsoMu24): \n {ak.sum(events.HLT.IsoMu24)}")
+        #     print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
 
-        # if events.metadata["is_mc"]:
-        #     lumi_mask = ak.ones_like(event_filter)
+        if events.metadata["is_mc"]:
+            lumi_mask = ak.ones_like(event_filter)
 
         
         # else:
@@ -341,11 +341,11 @@ class EventProcessor(processor.ProcessorABC):
             # & events.Muon[muon_id]
             & events.Muon[self.config["muon_id"]]
         )
-        # if self.test:
-        #     print(f"copperhead2 EventProcessor evnt_qual_flg_selection long: \n {ak.to_numpy((evnt_qual_flg_selection))}")
-        #     print(f"copperhead2 EventProcessor muon_selection[44]: \n {muon_selection[44]}")
-        #     print(f"copperhead2 EventProcessor muon_selection: \n {muon_selection}")
-        #     print(f"copperhead2 EventProcessor muon_selection long: \n {ak.to_numpy(ak.flatten(muon_selection))}")
+        if self.test:
+            print(f"copperhead2 EventProcessor evnt_qual_flg_selection long: \n {ak.to_numpy((evnt_qual_flg_selection))}")
+            print(f"copperhead2 EventProcessor muon_selection[44]: \n {muon_selection[44]}")
+            print(f"copperhead2 EventProcessor muon_selection: \n {muon_selection}")
+            print(f"copperhead2 EventProcessor muon_selection long: \n {ak.to_numpy(ak.flatten(muon_selection))}")
         
         # # count muons that pass the general cut 
         # nmuons = ak.num(events.Muon[muon_selection], axis=1)
@@ -353,14 +353,20 @@ class EventProcessor(processor.ProcessorABC):
         # # Find opposite-sign muons
         # mm_charge = ak.prod(events.Muon.charge[muon_selection], axis=1)
         
+        muons = events.Muon[muon_selection]
+        # count muons that pass the general cut 
+        nmuons = ak.num(muons, axis=1)
+        # Find opposite-sign muons
+        mm_charge = ak.prod(muons.charge, axis=1)
+        
 
-        # # Veto events with good quality electrons; VBF and ggH categories need zero electrons
-        # electron_selection = (
-        #     (events.Electron.pt > self.config["electron_pt_cut"])
-        #     & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
-        #     & events.Electron[self.config["electron_id"]]
-        # )
-        # electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0)
+        # Veto events with good quality electrons; VBF and ggH categories need zero electrons
+        electron_selection = (
+            (events.Electron.pt > self.config["electron_pt_cut"])
+            & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
+            & events.Electron[self.config["electron_id"]]
+        )
+        electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0)
 
         
         # if self.test:
@@ -380,16 +386,16 @@ class EventProcessor(processor.ProcessorABC):
 
 
         
-        # event_filter = (
-        #         event_filter
-        #         & lumi_mask
-        #         & (evnt_qual_flg_selection > 0)
-        #         & (nmuons == 2)
-        #         & (mm_charge == -1)
-        #         & electron_veto
-        #         & (events.PV.npvsGood > 0) # number of good primary vertex cut
+        event_filter = (
+                event_filter
+                & lumi_mask
+                # & (evnt_qual_flg_selection > 0)
+                # & (nmuons == 2)
+                # & (mm_charge == -1)
+                # & electron_veto
+                # & (events.PV.npvsGood > 0) # number of good primary vertex cut
 
-        # )
+        )
         # good_pv = (events.PV.npvsGood > 0) 
         # mm_charge_cond = (mm_charge == -1)
         # nmuon_cond  = (nmuons == 2)
