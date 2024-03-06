@@ -47,9 +47,9 @@ class EventProcessor(processor.ProcessorABC):
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : False, # False
             "do_roccor" : False,# False
-            "do_fsr" : False,
+            "do_fsr" : True,
             "do_geofit" : False, # False
-            "do_beamConstraint": False,
+            "do_beamConstraint": False, # if True, override do_geofit
             "year" : "2018",
             # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             "do_nnlops" : False,
@@ -286,18 +286,27 @@ class EventProcessor(processor.ProcessorABC):
         # # if self.config["do_roccor"]:
         # #     apply_roccor(events, self.config["roccor_file"], events.metadata["is_mc"])
         # #     events["Muon", "pt"] = events.Muon.pt_roch
-        # # # FSR recovery
-        # # if self.config["do_fsr"]:
-        # #     applied_fsr = fsr_recovery(events)
-        # #     events["Muon", "pt"] = events.Muon.pt_fsr
-        # #     events["Muon", "eta"] = events.Muon.eta_fsr
-        # #     events["Muon", "phi"] = events.Muon.phi_fsr
-        # #     events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
-        # # else:
-        # #     events["Muon", "pt_fsr"] = events.Muon.pt
-        # #     events["Muon", "eta_fsr"] = events.Muon.eta
-        # #     events["Muon", "phi_fsr"] = events.Muon.phi
-        # #     events["Muon", "iso_fsr"] = events.Muon.pfRelIso04_all
+        # FSR recovery
+        if self.config["do_fsr"]:
+            print(f"doing fsr!")
+            applied_fsr = fsr_recovery(events)
+            events["Muon", "pt"] = events.Muon.pt_fsr
+            events["Muon", "eta"] = events.Muon.eta_fsr
+            events["Muon", "phi"] = events.Muon.phi_fsr
+            events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
+        else:
+            # if no fsr, just copy 'pt' to 'pt_fsr'
+            events["Muon", "pt_fsr"] = events.Muon.pt
+            # events["Muon", "eta_fsr"] = events.Muon.eta
+            # events["Muon", "phi_fsr"] = events.Muon.phi
+            # events["Muon", "iso_fsr"] = events.Muon.pfRelIso04_all
+
+        # Note temporary soln to copperheadV1 pt_raw being overwritten with fsr---
+        events["Muon", "pt_raw"] = events.Muon.pt
+        events["Muon", "eta_raw"] = events.Muon.eta
+        events["Muon", "phi_raw"] = events.Muon.phi
+        #-----------------------------------------------------------------
+        
         # # # apply Beam constraint or geofit or nothing if neither
         # # if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
         # #     print(f"doing beam constraint")
@@ -834,9 +843,11 @@ class EventProcessor(processor.ProcessorABC):
         muons = events.Muon[muon_selection]
         # nmuons = ak.num(muons, axis=1)
         # event_filter =   nmuons>=1
+        # print(f"event_filter: {event_filter.compute()}")
         events = events[event_filter]
         muons = muons[event_filter] # update events on these too
         nmuons = nmuons[event_filter] # update events on these too
+        applied_fsr = applied_fsr[event_filter]
         jets = events.Jet
         njets = ak.num(jets.pt, axis=1)
         print(f"events after filter length: {ak.num(muons.pt, axis=0).compute()}")
@@ -848,10 +859,10 @@ class EventProcessor(processor.ProcessorABC):
         print(f"integrated_lumi: {(integrated_lumi)}")
         weights = weights*cross_section*integrated_lumi/sumWeights
         print(f"weights: {ak.num(weights, axis=0).compute()}")
-        print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
-        print(f"njets: {ak.num(njets, axis=0).compute()}")
-        print(f"jets: {ak.num(jets, axis=0).compute()}")
-        print(f"muons: {ak.num(muons, axis=0).compute()}")
+        # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
+        # print(f"njets: {ak.num(njets, axis=0).compute()}")
+        # print(f"jets: {ak.num(jets, axis=0).compute()}")
+        # print(f"muons: {ak.num(muons, axis=0).compute()}")
                         
         out_dict = {
             "mu_pt" : ak.pad_none(muons.pt, 2),
@@ -866,6 +877,9 @@ class EventProcessor(processor.ProcessorABC):
             "njets" : njets,
             "weights" : weights,
         }
+        if self.config["do_fsr"]:
+            fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
+            out_dict.update(fsr_dict)
         #----------------------------
         
         return out_dict
