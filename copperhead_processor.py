@@ -203,9 +203,9 @@ class EventProcessor(processor.ProcessorABC):
         #     event_filter = event_filter & trigger_match
 
             
-        # # Apply HLT to both Data and MC
-        # for HLT_str in self.config["hlt"]:
-        #     event_filter = event_filter & events.HLT[HLT_str]
+        # # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
+        for HLT_str in self.config["hlt"]:
+            event_filter = event_filter & events.HLT[HLT_str]
         # if self.test:
         #     print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
         #     print(f"copperhead2 EventProcessor ak.sum(events.HLT.IsoMu24): \n {ak.sum(events.HLT.IsoMu24)}")
@@ -832,8 +832,8 @@ class EventProcessor(processor.ProcessorABC):
         print(f"sumWeights: {(sumWeights.compute())}")
         # raise ValueError
         muons = events.Muon[muon_selection]
-        nmuons = ak.num(muons, axis=1)
-        event_filter =   nmuons>=1
+        # nmuons = ak.num(muons, axis=1)
+        # event_filter =   nmuons>=1
         events = events[event_filter]
         muons = muons[event_filter] # update events on these too
         nmuons = nmuons[event_filter] # update events on these too
