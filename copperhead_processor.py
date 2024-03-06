@@ -390,8 +390,8 @@ class EventProcessor(processor.ProcessorABC):
                 event_filter
                 & lumi_mask
                 # & (evnt_qual_flg_selection > 0)
-                # & (nmuons == 2)
-                # & (mm_charge == -1)
+                & (nmuons == 2)
+                & (mm_charge == -1)
                 # & electron_veto
                 # & (events.PV.npvsGood > 0) # number of good primary vertex cut
 
