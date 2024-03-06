@@ -820,22 +820,37 @@ class EventProcessor(processor.ProcessorABC):
 
         # --------------------------
         print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
+        sumWeights = ak.sum(events.genWeight) # b4 we do any filtering
+        print(f"sumWeights: {(sumWeights.compute())}")
+        # raise ValueError
         nmuons = ak.num(events.Muon.pt, axis=1)
-        njets = ak.num(events.Jet.pt, axis=1)
         event_filter =   nmuons>=1
         events = events[event_filter]
+        nmuons = nmuons[event_filter]
+        njets = ak.num(events.Jet.pt, axis=1)
         print(f"events after filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
+        weights = events.genWeight
+        dataset = events.metadata['dataset']
+        cross_section = self.config["cross_sections"][dataset]
+        integrated_lumi = self.config["integrated_lumis"]
+        print(f"cross_section: {(cross_section)}")
+        print(f"integrated_lumi: {(integrated_lumi)}")
+        weights = weights*cross_section*integrated_lumi/sumWeights
+        print(f"weights: {ak.num(weights, axis=0).compute()}")
+        print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
+        
         out_dict = {
             "mu_pt" : ak.pad_none(events.Muon.pt, 2),
             "mu_eta" : ak.pad_none(events.Muon.eta, 2),
             "mu_phi" : ak.pad_none(events.Muon.phi, 2),
             "mu_charge" : ak.pad_none(events.Muon.charge, 2),
-            "nmuons" : nmuons[event_filter],
+            "nmuons" : nmuons,
             "jet_pt" : ak.pad_none(events.Jet.pt, 2),
             "jet_mass" : ak.pad_none(events.Jet.mass, 2),
             "jet_eta" : ak.pad_none(events.Jet.eta, 2),
             "jet_phi" : ak.pad_none(events.Jet.phi, 2),
-            "njets" : njets[event_filter],
+            "njets" : njets,
+            "weights" : weights,
         }
         #----------------------------
         
