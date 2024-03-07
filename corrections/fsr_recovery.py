@@ -60,14 +60,19 @@ def fsr_recovery(events: coffea_nanoevent) -> ak_array:
     # bad_idxs = bad_idxs[ak.to_numpy(fsr_filter_computed)]
     # print(f"bad_idxs len: {ak.num(bad_idxs, axis=0)}")
     #-------------------------------------------------------------------
+    # print(f"ak.argmax(fsr_events.Muon.pt): {ak.argmax(fsr_events.Muon.pt, axis=1).compute()}")
     
-    print(f"ak.num(fsr_events.Muon): {ak.num(fsr_events.Muon, axis=0).compute()}")
-    print(f"ak.num(events.Muon): {ak.num(events.Muon, axis=0).compute()}")
+    # print(f"leading still leading after fsr:{ak.sum(ak.argmax(fsr_events.Muon.pt_fsr, axis=1)==0).compute()}")
+    # print(f"subleading leading after fsr:{ak.sum(ak.argmax(fsr_events.Muon.pt_fsr, axis=1)==1).compute()}")
+    # print(f"subsubleading+ leading after fsr:{ak.sum(ak.argmax(fsr_events.Muon.pt_fsr, axis=1)>1).compute()}")
+    # print(f"ak.num(fsr_events.Muon): {ak.num(fsr_events.Muon, axis=0).compute()}")
+    
+    # print(f"ak.num(events.Muon): {ak.num(events.Muon, axis=0).compute()}")
     # print(f"muon_fsr.pt_fsr: {fsr_events.Muon.pt_fsr.compute()}")
     # print(f"muon_fsr.pt: {fsr_events.Muon.pt.compute()}")
     # print(f"bad muon_fsr.pt_fsr: {fsr_events.Muon.pt_fsr.compute()[bad_idxs]}")
     # print(f"bad muon_fsr.pt: {fsr_events.Muon.pt.compute()[bad_idxs]}")
-    print(f"muon_fsr.matched_fsrPhoton.pt: \n {fsr_events.Muon.matched_fsrPhoton.pt.compute()}")
+    # print(f"muon_fsr.matched_fsrPhoton.pt: \n {fsr_events.Muon.matched_fsrPhoton.pt.compute()}")
     # print(f"events.Muon.pt[mask]: {events.Muon.pt[fsrPhotonsToRecover].compute()}")
     # print(f"sum events.Muon.pt[mask]: {ak.sum(events.Muon.pt[fsrPhotonsToRecover], axis=1).compute()}")
     # print(f"num events.Muon.pt[mask]: {ak.num(events.Muon.pt[fsrPhotonsToRecover], axis=1).compute()}")
