@@ -459,8 +459,8 @@ if __name__ == "__main__":
                     ratio_line.GetYaxis().SetNdivisions(505);
                 
                     ratio_line.Draw("SAME");
-                    num_hist.Draw("PE1 SAME");
                     mc_ratio.Draw("E2 SAME");
+                    num_hist.Draw("PE1 SAME");
                     pad2.RedrawAxis("sameaxis");
         
             # setup legends
