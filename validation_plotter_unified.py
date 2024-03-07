@@ -231,7 +231,7 @@ if __name__ == "__main__":
                 category_selection = (
                     ~vbf_cut & # we're interested in ggH category
                     region &
-                    btag_cut # btag cut is for VH and ttH categories
+                    ~btag_cut # btag cut is for VH and ttH categories
                 ).compute()
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
                 weights = 1*category_selection
@@ -550,7 +550,7 @@ if __name__ == "__main__":
                 category_selection = (
                     ~vbf_cut & # we're interested in ggH category
                     region &
-                    btag_cut # btag cut is for VH and ttH categories
+                    ~btag_cut # btag cut is for VH and ttH categories
                 ).compute()
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
                 weights = weights*category_selection # weights where category_selection==False -> zero
