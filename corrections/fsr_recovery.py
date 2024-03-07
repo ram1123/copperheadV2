@@ -6,27 +6,44 @@ coffea_nanoevent = TypeVar('coffea_nanoevent')
 
 
 def fsr_recovery(events: coffea_nanoevent) -> ak_array:
-    # test that no muon fsrPhoton idx is overlapping with electron photon idx-
-    idxs = [1,2,3] # check up to 3 assocaited photons
-    for i in idxs:
-        mu_photon_idxs = events.Muon.fsrPhotonIdxG[events.Muon.fsrPhotonIdxG != -1][:,(i-1):i]
-        mu_photon_idxs = ak.flatten(ak.pad_none(mu_photon_idxs,1)) # get event length array of idxs with flatten
-        for j in idxs:
-            el_photon_idxs = events.Electron.photonIdxG[events.Electron.photonIdxG != -1][:,(j-1):j]
-            el_photon_idxs = ak.flatten(ak.pad_none(el_photon_idxs,1)) # get event length array of idxs with flatten
-            # print(mu_photon_idxs.compute())
-            flag = ak.fill_none((mu_photon_idxs==el_photon_idxs), value=False)
-            print(f"# of {i}th muon fsrPhoton beig same as {j}th electron photon: {ak.sum(flag).compute()}")
-    #----------------------------------------------------------------------
+    # test that no muon fsrPhoton idx is overlapping with electron photon idx------------------
+    # idxs = [1,2,3] # check up to 3 assocaited photons
+    # for i in idxs:
+    #     mu_photon_idxs = events.Muon.fsrPhotonIdxG[events.Muon.fsrPhotonIdxG != -1][:,(i-1):i]
+    #     mu_photon_idxs = ak.flatten(ak.pad_none(mu_photon_idxs,1)) # get event length array of idxs with flatten
+    #     for j in idxs:
+    #         el_photon_idxs = events.Electron.photonIdxG[events.Electron.photonIdxG != -1][:,(j-1):j]
+    #         el_photon_idxs = ak.flatten(ak.pad_none(el_photon_idxs,1)) # get event length array of idxs with flatten
+    #         # print(mu_photon_idxs.compute())
+    #         flag = ak.fill_none((mu_photon_idxs==el_photon_idxs), value=False)
+    #         print(f"# of {i}th muon fsrPhoton beig same as {j}th electron photon: {ak.sum(flag).compute()}")
+    # fsrPhoton test end ----------------------------------------------------------------------
     # print(f"fsr_recovery type(events): {type(events)}")
-    
+
+    # testing better fsrPhotonsToRecover ---------------------------------------------------------------
+    mu_fsr_delta_r = events.Muon.delta_r(events.Muon.matched_fsrPhoton)
+    fsr_abs_eta = abs(events.Muon.matched_fsrPhoton.eta)
     fsrPhotonsToRecover = (
         (events.Muon.fsrPhotonIdx >= 0) # pick rows and cols that have values (-1 means no photon found)
         & (events.Muon.matched_fsrPhoton.relIso03 < 1.8)
         & (events.Muon.matched_fsrPhoton.dROverEt2 < 0.012)
         & (events.Muon.matched_fsrPhoton.pt / events.Muon.pt < 0.4) # suppress Zgamma -> mumu contanmination
-        & (abs(events.Muon.matched_fsrPhoton.eta) < 2.4)
-    ) # loosen the condition for more yields during testing
+        & ( ((fsr_abs_eta > 0)&(fsr_abs_eta < 1.4442)) | ((fsr_abs_eta > 1.566)&(fsr_abs_eta < 2.5)) )
+        & ((mu_fsr_delta_r > 0.0001) & (mu_fsr_delta_r < 0.5))
+    ) 
+    # # testing better fsrPhotonsToRecover end ---------------------------------------------------------------
+    
+    # # original fsrPhotonsToRecover ---------------------------------------------------------------
+    # fsrPhotonsToRecover = (
+    #     (events.Muon.fsrPhotonIdx >= 0) # pick rows and cols that have values (-1 means no photon found)
+    #     & (events.Muon.matched_fsrPhoton.relIso03 < 1.8)
+    #     & (events.Muon.matched_fsrPhoton.dROverEt2 < 0.012)
+    #     & (events.Muon.matched_fsrPhoton.pt / events.Muon.pt < 0.4) # suppress Zgamma -> mumu contanmination
+    #     & (abs(events.Muon.matched_fsrPhoton.eta) < 2.4)
+    # ) 
+    # # original fsrPhotonsToRecover end ---------------------------------------------------------------
+
+    
     fsrPhotonsToRecover = ak.fill_none(fsrPhotonsToRecover, False) 
     # add mass and charge as otherwise you can't add two lorentzvectors
     events["FsrPhoton", "mass"] = 0 
