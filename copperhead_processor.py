@@ -211,6 +211,7 @@ class EventProcessor(processor.ProcessorABC):
         #     print(f"copperhead2 EventProcessor ak.sum(events.HLT.IsoMu24): \n {ak.sum(events.HLT.IsoMu24)}")
         #     print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
 
+
         if events.metadata["is_mc"]:
             lumi_mask = ak.ones_like(event_filter)
 
@@ -863,12 +864,24 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"njets: {ak.num(njets, axis=0).compute()}")
         # print(f"jets: {ak.num(jets, axis=0).compute()}")
         # print(f"muons: {ak.num(muons, axis=0).compute()}")
-                        
+        muons_padded = ak.pad_none(muons, 2)
+        muon_flip = muons.pt[:,0] < muons.pt[:,1]  
+        # take the subleading muon values if that now has higher pt after corrections
+        mu1 = ak.where(muon_flip, muons_padded[:,1], muons_padded[:,0])
+        mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
         out_dict = {
-            "mu_pt" : ak.pad_none(muons.pt, 2),
-            "mu_eta" : ak.pad_none(muons.eta, 2),
-            "mu_phi" : ak.pad_none(muons.phi, 2),
-            "mu_charge" : ak.pad_none(muons.charge, 2),
+            # "mu_pt" : ak.pad_none(muons.pt, 2),
+            # "mu_eta" : ak.pad_none(muons.eta, 2),
+            # "mu_phi" : ak.pad_none(muons.phi, 2),
+            # "mu_charge" : ak.pad_none(muons.charge, 2),
+            "mu1_pt" : mu1.pt,
+            "mu2_pt" : mu2.pt,
+            "mu1_eta" : mu1.eta,
+            "mu2_eta" : mu2.eta,
+            "mu1_phi" : mu1.phi,
+            "mu2_phi" : mu2.phi,
+            "mu1_charge" : mu1.charge,
+            "mu2_charge" : mu2.charge,
             "nmuons" : nmuons,
             "jet_pt" : ak.pad_none(jets.pt, 2),
             "jet_mass" : ak.pad_none(jets.mass, 2),

@@ -62,7 +62,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
     computed = out_collections
-    print(f"computed: {dask.compute(computed)}")
+    # print(f"computed: {dask.compute(computed)}")
      #just reading test start--------------------------------
     # placeholder_dict =  {
     #         'mu1_pt': (computed["mu_pt"][:,0]),
@@ -161,12 +161,18 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # ------------------------------------------
     placeholder_dict =  {
-            'mu1_pt': (computed["mu_pt"][:,0]),
-            'mu2_pt': (computed["mu_pt"][:,1]),
-            'mu1_eta': (computed["mu_eta"][:,0]),
-            'mu2_eta': (computed["mu_eta"][:,1]),
-            'mu1_phi': (computed["mu_phi"][:,0]),
-            'mu2_phi': (computed["mu_phi"][:,1]),
+            # 'mu1_pt': (computed["mu_pt"][:,0]),
+            # 'mu2_pt': (computed["mu_pt"][:,1]),
+            # 'mu1_eta': (computed["mu_eta"][:,0]),
+            # 'mu2_eta': (computed["mu_eta"][:,1]),
+            # 'mu1_phi': (computed["mu_phi"][:,0]),
+            # 'mu2_phi': (computed["mu_phi"][:,1]),
+            'mu1_pt': (computed["mu1_pt"]),
+            'mu2_pt': (computed["mu2_pt"]),
+            'mu1_eta': (computed["mu1_eta"]),
+            'mu2_eta': (computed["mu2_eta"]),
+            'mu1_phi': (computed["mu1_phi"]),
+            'mu2_phi': (computed["mu2_phi"]),
             'nmuons': (computed["nmuons"]),
             'jet1_pt': (computed["jet_pt"][:,0]),
             'jet2_pt': (computed["jet_pt"][:,1]),
@@ -177,7 +183,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'jet1_mass': (computed["jet_mass"][:,0]),
             'jet2_mass': (computed["jet_mass"][:,1]),
             'njets': (computed["njets"]),
-     }
+            'weights': (computed["weights"]),
+            'fsr_mask': (computed["fsr_mask"]),
+         }
     #------------------------
     
     fraction_str = str(dataset_dict["metadata"]["original_fraction"]).replace('.', '_')
@@ -187,7 +195,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # N_reasonable = 100000
     # N_reasonable = 40000
     # zip = zip.repartition(rows_per_partition=N_reasonable)
-    print(f"zip: {zip.compute()}")
+    # print(f"zip: {zip.compute()}")
     save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     print(f"save_path: {save_path}")
     filelist = glob.glob(f"{save_path}/*.parquet")
@@ -285,8 +293,8 @@ if __name__ == "__main__":
         # print("Gateway Client created")
         # #-----------------------------------------------------------
         cluster = LocalCluster(processes=True, memory_limit='12 GiB')
-        cluster.adapt(minimum=8, maximum=8)
-        # # cluster.scale(63) # create 16 local workers
+        # cluster.adapt(minimum=8, maximum=8)
+        cluster.scale(1)
         client = Client(cluster)
         print("Local scale Client created")
         # print(f"client dashboard link: {client.dashboard_link}")
