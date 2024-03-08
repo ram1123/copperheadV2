@@ -185,8 +185,12 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'njets': (computed["njets"]),
             'weights': (computed["weights"]),
             'fsr_mask': (computed["fsr_mask"]),
-            'mu1_gf_filter': (computed["mu1_gf_filter"]),
-            'mu1_gf_pt_corr': (computed["mu1_gf_pt_corr"]),
+            'dimuon_mass': (computed["dimuon_mass"]),
+            'dimuon_ebe_mass_res': (computed["dimuon_ebe_mass_res"]),
+            
+
+            # 'mu1_gf_filter': (computed["mu1_gf_filter"]),
+            # 'mu1_gf_pt_corr': (computed["mu1_gf_pt_corr"]),
         
          }
     #------------------------
