@@ -929,6 +929,9 @@ class EventProcessor(processor.ProcessorABC):
             # "mu1_gf_pt_corr" :events.Muon.gf_pt_corr[:,0],
             "dimuon_mass" : dimuon.mass,
             "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
+            "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
+            "dimuon_phi_cs" : dimuon_phi_cs,
+
         }
         if self.config["do_fsr"]:
             fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
