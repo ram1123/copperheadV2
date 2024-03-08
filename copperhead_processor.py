@@ -321,8 +321,11 @@ class EventProcessor(processor.ProcessorABC):
         else:
             if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
                 print(f"doing geofit")
-                apply_geofit(events, self.config["year"], ~applied_fsr)
+                gf_filter, gf_pt_corr = apply_geofit(events, self.config["year"], ~applied_fsr)
                 events["Muon", "pt"] = events.Muon.pt_gf
+                # save gf_filter, gf_pt_corr for debugging. comment it out later
+                # events["Muon", "gf_filter"] = gf_filter
+                # events["Muon", "gf_pt_corr"] = gf_pt_corr
             else: 
                 # print(f"doing neither beam constraint nor geofit")
                 pass
@@ -889,6 +892,8 @@ class EventProcessor(processor.ProcessorABC):
             "jet_phi" : ak.pad_none(jets.phi, 2),
             "njets" : njets,
             "weights" : weights,
+            # "mu1_gf_filter" : events.Muon.gf_filter[:,0],
+            # "mu1_gf_pt_corr" :events.Muon.gf_pt_corr[:,0],
         }
         if self.config["do_fsr"]:
             fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
