@@ -120,7 +120,7 @@ class EventProcessor(processor.ProcessorABC):
         Apply LHE cuts for DY sample stitching
         Basically remove events that has dilepton mass between 100 and 200 GeV
         """
-        event_filter = ak.ones_like(events.HLT.IsoMu24) # 1D array to be used to filter out bad events
+        event_filter = ak.ones_like(events.HLT.IsoMu24) # 1D boolean array to be used to filter out bad events
         # if events.metadata['dataset'] == 'dy_M-50': # if dy_M-50, apply LHE cut
         #     LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
         #     bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
@@ -448,13 +448,23 @@ class EventProcessor(processor.ProcessorABC):
         events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
         sumWeights = ak.sum(events.genWeight, axis=0)
         print(f"sumWeights: {(sumWeights.compute())}")
+        print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = nmuons[event_filter==True]
         applied_fsr = applied_fsr[event_filter==True]
         
-
+        # start filling in weights
+        weights = Weights(None) # none for dask awkward
+        weights.add("genWeight", weight=events.genWeight)
+        weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights)
+        dataset = events.metadata['dataset']
+        cross_section = self.config["cross_sections"][dataset]
+        integrated_lumi = self.config["integrated_lumis"]
+        weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
+        weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
+        
         # if self.test:
             
         #     print(f"copperhead2 EventProcessor pass_leading_pt: \n {pass_leading_pt}")
@@ -463,7 +473,7 @@ class EventProcessor(processor.ProcessorABC):
         #     print(f"copperhead2 EventProcessor events.Muon: \n {ak.num(events.Muon, axis=1)}")
 
 
-        # # now fill in the weights HERE
+        
         
         # # --------------------------------------------------------#
         # # Fill dimuon and muon variables
@@ -852,7 +862,7 @@ class EventProcessor(processor.ProcessorABC):
         # just reading part 2 end ---------------------------
 
         # --------------------------
-        print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
+        
         # b4 we do any filtering, we obtain the sum of gen weights for normalization
         # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
         
@@ -868,13 +878,14 @@ class EventProcessor(processor.ProcessorABC):
         jets = events.Jet
         njets = ak.num(jets.pt, axis=1)
         print(f"events after filter length: {ak.num(muons.pt, axis=0).compute()}")
-        weights = events.genWeight
-        dataset = events.metadata['dataset']
-        cross_section = self.config["cross_sections"][dataset]
-        integrated_lumi = self.config["integrated_lumis"]
+        # weights = events.genWeight
+        # dataset = events.metadata['dataset']
+        # cross_section = self.config["cross_sections"][dataset]
+        # integrated_lumi = self.config["integrated_lumis"]
         print(f"cross_section: {(cross_section)}")
         print(f"integrated_lumi: {(integrated_lumi)}")
-        weights = weights*cross_section*integrated_lumi/sumWeights
+        # weights = weights*cross_section*integrated_lumi/sumWeights
+        weights = weights.weight()
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
         # print(f"njets: {ak.num(njets, axis=0).compute()}")
