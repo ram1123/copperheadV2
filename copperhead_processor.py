@@ -14,6 +14,7 @@ from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
 import dask_awkward as dak
 import dask
+from coffea.analysis_tools import Weights
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
@@ -211,7 +212,13 @@ class EventProcessor(processor.ProcessorABC):
         #     print(f"copperhead2 EventProcessor ak.sum(events.HLT.IsoMu24): \n {ak.sum(events.HLT.IsoMu24)}")
         #     print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
 
-
+        # ------------------------------------------------------------#
+        # Skimming end, filter out events and prepare for pre-selection
+        # Edit: NVM; doing it this stage breaks fsr recovery
+        # ------------------------------------------------------------#
+        # events = events[event_filter]
+        # event_filter = ak.ones_like(events.HLT.IsoMu24)
+        
         if events.metadata["is_mc"]:
             lumi_mask = ak.ones_like(event_filter)
 
@@ -429,17 +436,24 @@ class EventProcessor(processor.ProcessorABC):
 
         # Events where there is at least one muon passing
         # leading muon pT cut
-        pass_leading_pt = events.Muon[:,:1].pt_raw > self.config["muon_leading_pt"]
+        # pass_leading_pt = events.Muon[:,:1].pt_raw > self.config["muon_leading_pt"]
+        pass_leading_pt = muons.pt_raw > self.config["muon_leading_pt"]
         pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
         pass_leading_pt = ak.sum(pass_leading_pt, axis=1)
         
 
         event_filter = event_filter & (pass_leading_pt >0)
         
+        # calculate sum of gen weight b4 skimming off bad events
+        events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
+        sumWeights = ak.sum(events.genWeight, axis=0)
+        print(f"sumWeights: {(sumWeights.compute())}")
+        # skim off bad events onto events and other related variables
+        events = events[event_filter==True]
+        muons = muons[event_filter==True]
+        nmuons = nmuons[event_filter==True]
+        applied_fsr = applied_fsr[event_filter==True]
         
-        
-        # # filter out bad events since we're calculating delta_r
-        # events = events[event_filter==True]
 
         # if self.test:
             
@@ -840,18 +854,17 @@ class EventProcessor(processor.ProcessorABC):
         # --------------------------
         print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # b4 we do any filtering, we obtain the sum of gen weights for normalization
-        events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
-        sumWeights = ak.sum(events.genWeight, axis=0)
-        print(f"sumWeights: {(sumWeights.compute())}")
+        # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
+        
         # raise ValueError
-        muons = events.Muon[muon_selection]
+        # muons = events.Muon[muon_selection]
         # nmuons = ak.num(muons, axis=1)
         # event_filter =   nmuons>=1
         # print(f"event_filter: {event_filter.compute()}")
-        events = events[event_filter]
-        muons = muons[event_filter] # update events on these too
-        nmuons = nmuons[event_filter] # update events on these too
-        applied_fsr = applied_fsr[event_filter]
+        # events = events[event_filter]
+        # muons = muons[event_filter] # update events on these too
+        # nmuons = nmuons[event_filter] # update events on these too
+        # applied_fsr = applied_fsr[event_filter]
         jets = events.Jet
         njets = ak.num(jets.pt, axis=1)
         print(f"events after filter length: {ak.num(muons.pt, axis=0).compute()}")
