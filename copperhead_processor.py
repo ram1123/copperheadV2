@@ -216,11 +216,11 @@ class EventProcessor(processor.ProcessorABC):
             lumi_mask = ak.ones_like(event_filter)
 
         
-        # else:
-        #     lumi_info = LumiMask(self.config["lumimask"])
-        #     lumi_mask = lumi_info(events.run, events.luminosityBlock)
-        #     if self.test:
-        #         print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
+        else:
+            lumi_info = LumiMask(self.config["lumimask"])
+            lumi_mask = lumi_info(events.run, events.luminosityBlock)
+            if self.test:
+                print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
 
 
@@ -308,24 +308,24 @@ class EventProcessor(processor.ProcessorABC):
         events["Muon", "phi_raw"] = events.Muon.phi
         #-----------------------------------------------------------------
         
-        # # # apply Beam constraint or geofit or nothing if neither
-        # # if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
-        # #     print(f"doing beam constraint")
-        # #     print(f"events.Muon.fields: {events.Muon.fields}")
-        # #     BSConstraint_mask = (
-        # #         (events.Muon.bsConstrainedChi2 <30)
-        # #     )
-        # #     BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
-        # #     events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
-        # #     events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
-        # # else:
-        # #     if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
-        # #         # print(f"doing geofit")
-        # #         apply_geofit(events, self.config["year"], ~applied_fsr)
-        # #         events["Muon", "pt"] = events.Muon.pt_gf
-        # #     else: 
-        # #         # print(f"doing neither beam constraint nor geofit")
-        # #         pass
+        # apply Beam constraint or geofit or nothing if neither
+        if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
+            print(f"doing beam constraint")
+            print(f"events.Muon.fields: {events.Muon.fields}")
+            BSConstraint_mask = (
+                (events.Muon.bsConstrainedChi2 <30)
+            )
+            BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
+            events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
+            events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
+        else:
+            if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
+                print(f"doing geofit")
+                apply_geofit(events, self.config["year"], ~applied_fsr)
+                events["Muon", "pt"] = events.Muon.pt_gf
+            else: 
+                # print(f"doing neither beam constraint nor geofit")
+                pass
 
         # # --------------------------------------------------------
         
