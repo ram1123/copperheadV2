@@ -475,25 +475,34 @@ class EventProcessor(processor.ProcessorABC):
 
         
         
-        # # --------------------------------------------------------#
-        # # Fill dimuon and muon variables
-        # # --------------------------------------------------------#
+        # --------------------------------------------------------#
+        # Fill dimuon and muon variables
+        # --------------------------------------------------------#
 
-        # # ---------------------------------------------------------
-        # # TODO: find out why we don't filter out bad events right now via
-        # # even_selection column, since fill muon is computationally exp
-        # # Last time I checked there was some errors on LHE correction shape mismatch
-        # # ---------------------------------------------------------
+        # ---------------------------------------------------------
+        # TODO: find out why we don't filter out bad events right now via
+        # even_selection column, since fill muon is computationally exp
+        # Last time I checked there was some errors on LHE correction shape mismatch
+        # ---------------------------------------------------------
         # mu1 = events.Muon[:,0]
         # mu2 = events.Muon[:,1]
-        # dimuon_dR = mu1.delta_r(mu2)
-        # dimuon_dEta = abs(mu1.eta - mu2.eta)
-        # dimuon_dPhi = abs(mu1.delta_phi(mu2))
-        # dimuon = mu1+mu2
-        # # fill in pd Dataframe as placeholder. Should be fine since we don't need jagged arrays
-        # dimuon_mass_resolution = self.mass_resolution(events, test_mode=self.test)
-        # rel_dimuon_ebe_mass_res = dimuon_mass_resolution/dimuon.mass
-        # dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
+        muons_padded = ak.pad_none(muons, 2)
+        muon_flip = muons_padded.pt[:,0] < muons_padded.pt[:,1]  
+        muon_flip = ak.fill_none(muon_flip, value=False)
+        # take the subleading muon values if that now has higher pt after corrections
+        mu1 = ak.where(muon_flip, muons_padded[:,1], muons_padded[:,0])
+        mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
+        
+        dimuon_dR = mu1.delta_r(mu2)
+        dimuon_dEta = abs(mu1.eta - mu2.eta)
+        dimuon_dPhi = abs(mu1.delta_phi(mu2))
+        dimuon = mu1+mu2
+        # fill in pd Dataframe as placeholder. Should be fine since we don't need jagged arrays
+        # dimuon_ebe_mass_res = self.get_mass_resolution(events, test_mode=self.test)
+        is_mc = events.metadata["is_mc"]
+        dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test)
+        rel_dimuon_ebe_mass_res = dimuon_ebe_mass_res/dimuon.mass
+        dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
 
         # #fill genjets
         
@@ -891,11 +900,11 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"njets: {ak.num(njets, axis=0).compute()}")
         # print(f"jets: {ak.num(jets, axis=0).compute()}")
         # print(f"muons: {ak.num(muons, axis=0).compute()}")
-        muons_padded = ak.pad_none(muons, 2)
-        muon_flip = muons.pt[:,0] < muons.pt[:,1]  
-        # take the subleading muon values if that now has higher pt after corrections
-        mu1 = ak.where(muon_flip, muons_padded[:,1], muons_padded[:,0])
-        mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
+        # muons_padded = ak.pad_none(muons, 2)
+        # muon_flip = muons.pt[:,0] < muons.pt[:,1]  
+        # # take the subleading muon values if that now has higher pt after corrections
+        # mu1 = ak.where(muon_flip, muons_padded[:,1], muons_padded[:,0])
+        # mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
         out_dict = {
             # "mu_pt" : ak.pad_none(muons.pt, 2),
             # "mu_eta" : ak.pad_none(muons.eta, 2),
@@ -918,6 +927,8 @@ class EventProcessor(processor.ProcessorABC):
             "weights" : weights,
             # "mu1_gf_filter" : events.Muon.gf_filter[:,0],
             # "mu1_gf_pt_corr" :events.Muon.gf_pt_corr[:,0],
+            "dimuon_mass" : dimuon.mass,
+            "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
         }
         if self.config["do_fsr"]:
             fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
@@ -933,11 +944,13 @@ class EventProcessor(processor.ProcessorABC):
         pass
 
     
-    def mass_resolution(self, events, test_mode=False):
+    # def get_mass_resolution(self, events, test_mode=False):
+    def get_mass_resolution(self, dimuon, mu1,mu2, is_mc:bool, test_mode=False):
         # Returns absolute mass resolution!
-        mu1 = events.Muon[:,0]
-        mu2 = events.Muon[:,1]
-        muon_E = (mu1+mu2).mass /2
+        # mu1 = events.Muon[:,0]
+        # mu2 = events.Muon[:,1]
+        # muon_E = (mu1+mu2).mass /2
+        muon_E = dimuon.mass /2
         dpt1 = (mu1.ptErr / mu1.pt) * muon_E
         dpt2 = (mu2.ptErr / mu2.pt) * muon_E
         if test_mode:
@@ -946,7 +959,7 @@ class EventProcessor(processor.ProcessorABC):
             yearUL = "2016"
         else:
             yearUL = self.config["year"] #Work around before there are seperate new files for pre and postVFP
-        if events.metadata["is_mc"]:
+        if is_mc:
             label = f"res_calib_MC_{yearUL}"
         else:
             label = f"res_calib_Data_{yearUL}"
