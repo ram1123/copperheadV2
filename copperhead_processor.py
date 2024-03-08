@@ -48,7 +48,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_trigger_match" : False, # False
             "do_roccor" : False,# False
             "do_fsr" : True,
-            "do_geofit" : False, # False
+            "do_geofit" : True, # False
             "do_beamConstraint": False, # if True, override do_geofit
             "year" : "2018",
             # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
