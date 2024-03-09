@@ -504,6 +504,7 @@ class EventProcessor(processor.ProcessorABC):
         rel_dimuon_ebe_mass_res = dimuon_ebe_mass_res/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
 
+        # skip validation for genjets for now -----------------------------------------------
         # #fill genjets
         
         # if events.metadata["is_mc"]:
@@ -545,8 +546,7 @@ class EventProcessor(processor.ProcessorABC):
         # #     gjj_dEta = ak.zeros_like(events.Muon.pt[:,0])
         # #     gjj_dPhi = ak.zeros_like(events.Muon.pt[:,0])
         # #     gjj_dR = ak.zeros_like(events.Muon.pt[:,0])
-        # self.prepare_jets(events)
-
+        
         # if self.test:
         #     print(f"copperhead2 EventProcessor events.Jet.rho: \n {events.Jet.rho}")
         #     print(f"copperhead2 EventProcessor events.Jet.rho long: \n {ak.to_numpy(ak.flatten(events.Jet.rho))}")   
@@ -554,53 +554,53 @@ class EventProcessor(processor.ProcessorABC):
         #     print(f'copperheadV2 EventProcessor jets.eta b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.eta))}')
         #     print(f'copperheadV2 EventProcessor jets.phi b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.phi))}')
         #     print(f'copperheadV2 EventProcessor jets.mass b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.mass))}')
-        
-        # jets = events.Jet
-        # self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
-        #     self.config["jec_parameters"], 
-        #     test_mode=self.test
-        # )
-        
-        # do_jec = False
+        # skip validation for genjet end --------------------------------------------
 
-        # # # We only need to reapply JEC for 2018 data
-        # # # (unless new versions of JEC are released)
-        # # is_data = not events.metadata["is_mc"]
-        # # if is_data and ("2018" in self.config["year"]):
-        # #     do_jec = True
+        self.prepare_jets(events)
 
-        # # do_jecunc = self.config["do_jecunc"]
-        # # do_jerunc = self.config["do_jerunc"]
-        # #testing 
-        # do_jecunc = False
-        # do_jerunc = False
+
+        # ------------------------------------------------------------#
+        # Apply JEC, get JEC and JER variations
+        # ------------------------------------------------------------#
         
+        jets = events.Jet
+        self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
+            self.config["jec_parameters"], 
+            test_mode=self.test
+        )       
+        do_jec = True
 
-        # # ------------------------------------------------------------#
-        # # Apply JEC, get JEC and JER variations
-        # # ------------------------------------------------------------#
-        # if do_jec:
-        #     if events.metadata["is_mc"]:
-        #         factory = self.jec_factories["jec"]
-        #     else:
-        #         for run in self.config["jec_parameters"]["runs"]:
-        #             if run in events.metadata["dataset"]:
-        #                 factory = self.jec_factories_data[run]
-        #     if self.test:
-        #         print("jets build")
-        #     jets = factory.build(jets)
-        #     if self.test :
-        #         jets = jets.compute() # can't circumvent JEC only being on dask distributed
+
+        # do_jecunc = self.config["do_jecunc"]
+        # do_jerunc = self.config["do_jerunc"]
+        #testing 
+        do_jecunc = False
+        do_jerunc = False
+
+        if do_jec:
+            if events.metadata["is_mc"]:
+                factory = self.jec_factories_mc["jec"]
+            else:
+                for run in self.config["jec_parameters"]["runs"]:
+                    if run in events.metadata["dataset"]:
+                        factory = self.jec_factories_data[run]
+                
+            print("do jec!")
+            jets = factory.build(jets)
+            if self.test :
+                print("jets build")
+                jets = jets.compute() # can't circumvent JEC only being on dask distributed
+                
         # # TODO: only consider nuisances that are defined in run parameters
         # # Compute JEC uncertainties
         # if events.metadata["is_mc"] and do_jecunc:
-        #     jets = self.jec_factories["junc"].build(jets)
+        #     jets = self.jec_factories_mc["junc"].build(jets)
     
-        # # Compute JER uncertainties
-        # if events.metadata["is_mc"] and do_jerunc:
-        #     jets = self.jec_factories["jer"].build(jets)
+        # # # Compute JER uncertainties
+        # # if events.metadata["is_mc"] and do_jerunc:
+        # #     jets = self.jec_factories_mc["jer"].build(jets)
         
-        # # TODO: JER nuisances
+        # # # TODO: JER nuisances
 
         
 
@@ -884,7 +884,7 @@ class EventProcessor(processor.ProcessorABC):
         # muons = muons[event_filter] # update events on these too
         # nmuons = nmuons[event_filter] # update events on these too
         # applied_fsr = applied_fsr[event_filter]
-        jets = events.Jet
+        # jets = events.Jet
         njets = ak.num(jets.pt, axis=1)
         print(f"events after filter length: {ak.num(muons.pt, axis=0).compute()}")
         # weights = events.genWeight
@@ -923,6 +923,11 @@ class EventProcessor(processor.ProcessorABC):
             "jet_mass" : ak.pad_none(jets.mass, 2),
             "jet_eta" : ak.pad_none(jets.eta, 2),
             "jet_phi" : ak.pad_none(jets.phi, 2),
+            "jet_pt_raw" : ak.pad_none(jets.pt_raw, 2),
+            "jet_mass_raw" : ak.pad_none(jets.mass_raw, 2),
+            "jet_rho" : ak.pad_none(jets.rho, 2),
+            "jet_area" : ak.pad_none(jets.area, 2),
+            "jet_pt_gen" : ak.pad_none(jets.pt_gen, 2),
             "njets" : njets,
             "weights" : weights,
             # "mu1_gf_filter" : events.Muon.gf_filter[:,0],
@@ -931,7 +936,6 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
             "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
             "dimuon_phi_cs" : dimuon_phi_cs,
-
         }
         if self.config["do_fsr"]:
             fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
@@ -981,8 +985,11 @@ class EventProcessor(processor.ProcessorABC):
         events["Jet", "rho"] = ak.broadcast_arrays(events.fixedGridRhoFastjetAll, events.Jet.pt)[0]
     
         if events.metadata["is_mc"]:
-            # comment off pt_gen assignment bc I don't see it being used anywhere
-            # events["Jet", "pt_gen"] = events.Jet.matched_gen.pt 
+            # pt_gen is used for JEC (one of the factory name map values)            
+            events["Jet", "pt_gen"] =  ak.values_astype(
+                ak.fill_none(events.Jet.matched_gen.pt, value=0.0),
+                "float32"
+            )
             events["Jet", "has_matched_gen"] = events.Jet.genJetIdx > 0
         else:
             events["Jet", "has_matched_gen"] = False

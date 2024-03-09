@@ -77,15 +77,17 @@ def get_name_map(stack):
     name_map["ptRaw"] = "pt_raw"
     name_map["massRaw"] = "mass_raw"
     name_map["Rho"] = "rho"
+    # print(f"name_map: {name_map}")
     return name_map
 
 def get_jec_factories(jec_parameters: dict, test_mode=False):
     # jec_pars = {k: v[year] for k, v in jec_parameters.items()}
     # jec_pars = {k: v for k, v in jec_parameters.items()}
+    
     jec_pars = jec_parameters
 
 
-    # print(f"jec_factories jec_pars: {jec_pars}")
+    print(f"jec_factories jec_pars: {jec_pars}")
     # weight_sets = jec_weight_sets(jec_pars)
     # names = jec_names_and_sources(jec_pars)
     weight_sets, names = jec_weight_sets(jec_pars)
@@ -112,8 +114,9 @@ def get_jec_factories(jec_parameters: dict, test_mode=False):
         stacks[key] = []
         for v in vals:
             stacks[key].extend(names[v])
-    if test_mode:
-        print(f"jec_factories stacks: \n{stacks}")
+    print(f"jec_factories stacks: \n{stacks}")
+    # if test_mode:
+    #     print(f"jec_factories stacks: \n{stacks}")
 
     jec_input_options = {}
     jet_variations = ["jec", "junc", "jer"]
@@ -134,8 +137,7 @@ def get_jec_factories(jec_parameters: dict, test_mode=False):
                 print(f"jec_factories stack name: {name}")
             jec_input_options[variation][name] =jet_evaluator[name] 
         
-    if test_mode:
-        print(f"jec_factories jec_input_options: \n {jec_input_options}")
+    print(f"jec_factories jec_input_options: \n {jec_input_options}")
     for src in names["junc_sources"]:
         for key in jet_evaluator.keys():
             if src in key:
@@ -148,6 +150,8 @@ def get_jec_factories(jec_parameters: dict, test_mode=False):
             print(f"jec_factories jec_input_options[variation]: {jec_input_options[variation]}")
         
         stack = JECStack(jec_input_options[variation])
+        print(f"jec_factories JECStack: {stack}")
+        print(f"jec_factories get_name_map(stack): {get_name_map(stack)}")
         jec_factories[variation] = CorrectedJetsFactory(get_name_map(stack), stack)
 
     # Create a separate factory for each data run
