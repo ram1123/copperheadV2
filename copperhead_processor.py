@@ -75,7 +75,7 @@ class EventProcessor(processor.ProcessorABC):
             self.zpt_path = "zpt_weights/2022_value" #  hypothetical value, we don't have run3 data yet
         else:
             print(f"USER WARNING: unrecognized Zpt correction for the year {year}!")
-        
+        print(f"self.zpt_path: {self.zpt_path}")
         # Calibration of event-by-event mass resolution
         for mode in ["Data", "MC"]:
             if "2016" in year:
@@ -626,7 +626,8 @@ class EventProcessor(processor.ProcessorABC):
             # + jec_pars["jec_variations"]
             # + jec_pars["jer_variations"]
         )
-        # if events.metadata["is_mc"]:
+        if events.metadata["is_mc"]:
+            # moved nnlops reweighting outside of dak process-----------------
         #     do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
         #     if do_nnlops:
         #         print("doing NNLOPS!")
@@ -635,16 +636,18 @@ class EventProcessor(processor.ProcessorABC):
         #     # else:
         #     #     weights.add_weight("nnlops", how="dummy")
         #     # print(f'copperheadV1 weights.df nnlops: \n {weights.df.to_string()}')
+            # moved nnlops reweighting outside of dak process-----------------
             
-        #     # do zpt SF
-        #     do_zpt = ('dy' in dataset)
-        #     do_zpt
-        #     if do_zpt:
-        #         zpt_weight = self.evaluator[self.zpt_path](dimuon.pt)
-        #         self.weight_collection.add_weight('zpt_wgt', zpt_weight)
-        #     """
-            
+            # do zpt SF
+            do_zpt = ('dy' in dataset)
+            do_zpt = False
+            if do_zpt:
+                print("doing zpt weight!")
+                zpt_weight = self.evaluator[self.zpt_path](dimuon.pt)
+                # self.weight_collection.add_weight('zpt_wgt', zpt_weight)
+                weights.add("zpt_wgt", weight=zpt_weight)
                 
+        #     """      
         #     #do mu SF
         #     musf_lookup = get_musf_lookup(self.config)
         #     muID, muIso, muTrig = musf_evaluator(
