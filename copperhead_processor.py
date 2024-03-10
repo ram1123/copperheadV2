@@ -229,60 +229,15 @@ class EventProcessor(processor.ProcessorABC):
             if self.test:
                 print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
+        # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
+        if events.metadata["is_mc"]:
+            pu_wgts = pu_evaluator(
+                        self.config,
+                        events.Pileup.nTrueInt,
+                        test=self.test
+                )
 
-
-        
-        # # # ------------------------------------------------------------#
-        # # # Apply lumimask, genweights, PU weights
-        # # # and L1 prefiring weights
-        # # # ------------------------------------------------------------#
-        # # weight_ones = ak.ones_like(event_filter)
-        # # # weight_ones = ak.ones_like(events.Muon.pt[:,0]) # get 1D array of filtered events
-        # # self.weight_collection = Weights(weight_ones)
-        # # if events.metadata["is_mc"]:
-        # #     # For MC: Apply gen.weights, pileup weights, lumi weights,
-        # #     # L1 prefiring weights
-        # #     genweight = events.genWeight
-        # #     self.weight_collection.add_weight("genwgt", genweight)
-        # #     print(f"weight_collection genwgt info: \n  {self.weight_collection.get_info()}")
-        # #     print(f"weight_collection genwgt wgts: \n  {self.weight_collection.wgts}")
-        # #     self.weight_collection.add_weight("lumi", 0.03576104036357644) # hard code for now
-        # #     print(f"weight_collection lumi info: \n  {self.weight_collection.get_info()}")
-        # #     print(f"weight_collection lumi wgts: \n  {self.weight_collection.wgts}")
-        # #     if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in df.fields):
-        # #     # if True:
-        # #         L1_nom = events.L1PreFiringWeight.Nom
-        # #         # L1_up = events.L1PreFiringWeight.Up
-        # #         # L1_down = events.L1PreFiringWeight.Dn
-        # #         self.weight_collection.add_weight("l1prefiring_wgt", L1_nom)
-        # #         print(f"weight_collection l1prefiring_wgt info: \n  {self.weight_collection.get_info()}")
-
-        
-        # if events.metadata["is_mc"]:
-        #     #apply PU reweighting b4 event filtering, and keep pu_wgts until we finalize event_filter
-        #     pu_wgts = pu_evaluator(
-        #                 self.config,
-        #                 events.Pileup.nTrueInt,
-        #                 test=self.test
-        #         )
-        #     if self.test:
-        #         print(f"copperhead2 EventProcessor events.Pileup.nTrueInt: \n  {ak.to_numpy(events.Pileup.nTrueInt)}")
-        #         for key in pu_wgts.keys():
-        #             print(f"copperhead2 EventProcessor pu_wgts {key} b4: \n  {ak.to_numpy(pu_wgts[key])}")
-            
-
-           
-        
-        # # # NOTE: this portion of code below is commented out bc original copperhead doesn't filter out event until the very end.
-        # # # however, once everything is validated, filtering out events b4 any events would save computational time
-        # # ----------------------------------------------------------------------------------
-        # # # Filter out the events to ignore corrections (ie rochester, fsr recovery and geofit)
-        # # print(f"copperhead2 EventProcessor len(events) b4: {len(events)}")
-        # # events = events[event_filter]
-        # # print(f"copperhead2 EventProcessor len(events) after: {len(events)}")
-        # #-------------------------------------------------------------------------
-
-        
+       
         # # Save raw variables before computing any corrections
         # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
         events["Muon", "pt_raw"] = events.Muon.pt
@@ -454,16 +409,11 @@ class EventProcessor(processor.ProcessorABC):
         muons = muons[event_filter==True]
         nmuons = nmuons[event_filter==True]
         applied_fsr = applied_fsr[event_filter==True]
-        
-        # start filling in weights
-        weights = Weights(None) # none for dask awkward
-        weights.add("genWeight", weight=events.genWeight)
-        weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights)
-        dataset = events.metadata['dataset']
-        cross_section = self.config["cross_sections"][dataset]
-        integrated_lumi = self.config["integrated_lumis"]
-        weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
-        weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
+        print(f"type(pu_wgts): {type(pu_wgts)}")
+        print(f"(pu_wgts.keys()): {(pu_wgts.keys())}")
+        for variation in pu_wgts.keys():
+            pu_wgts[variation] = pu_wgts[variation][event_filter==True]
+            
         
         # if self.test:
             
@@ -564,11 +514,11 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         
         jets = events.Jet
-        self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
-            self.config["jec_parameters"], 
-            test_mode=self.test
-        )       
-        do_jec = True
+        # self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
+        #     self.config["jec_parameters"], 
+        #     test_mode=self.test
+        # )       
+        do_jec = False
 
 
         # do_jecunc = self.config["do_jecunc"]
@@ -619,10 +569,21 @@ class EventProcessor(processor.ProcessorABC):
         
 
         # # ------------------------------------------------------------#
-        # # Apply lumimask, genweights, PU weights
+        # # Apply genweights, PU weights
         # # and L1 prefiring weights
         # # ------------------------------------------------------------#
-        # if events.metadata["is_mc"]:
+        weights = Weights(None) # none for dask awkward
+        if events.metadata["is_mc"]:
+            weights.add("genWeight", weight=events.genWeight)
+            weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights)
+            dataset = events.metadata['dataset']
+            cross_section = self.config["cross_sections"][dataset]
+            integrated_lumi = self.config["integrated_lumis"]
+            weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
+            weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
+            weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
+            print(f'pu_wgts["nom"]: {pu_wgts["nom"].compute()}')
+        
         #     # For MC: initialize weight_collection
         #     weight_ones = ak.ones_like(events.Muon.pt[:,0]) # get 1D array of filtered events
         #     # print(f"weight_collection len(weight_ones):  {ak.num(weight_ones, axis=0)}")
@@ -640,33 +601,6 @@ class EventProcessor(processor.ProcessorABC):
         #     self.weight_collection.add_weight("pu_wgt", pu_wgts, how="all")
         #     if self.test:
         #         print(f"weight_collection pu_wgt info: \n  {self.weight_collection.get_info()}")
-            
-        #     # gen Weight
-        #     genweight = events.genWeight
-        #     self.weight_collection.add_weight("genwgt", genweight)
-        #     if self.test:
-        #         print(f"weight_collection genwgt info: \n  {self.weight_collection.get_info()}")
-        #         print(f"weight_collection genwgt wgts: \n  {self.weight_collection.wgts}")
-            
-        #     # Lumi Weight
-            
-        #     dataset = events.metadata['dataset']
-        #     cross_section = self.config["cross_sections"][dataset]
-        #     totalGenWgts = events.metadata['sumGenWgts']
-        #     integrated_lumi = self.config["integrated_lumis"]
-        #     lumi_weight = cross_section * integrated_lumi/ totalGenWgts
-        #     self.config["lumi_weight"] = lumi_weight
-
-        #     # lumi_weight = 0.03576104036357644*ak.ones_like(weight_ones) # dy 50
-        #     # lumi_weight = 2.955104456012521e-05 # ggh 
-        #     # lumi_weight = 1.3805388208609223e-05 # vbf 
-        #     lumi_weight = self.config["lumi_weight"]
-        #     self.weight_collection.add_weight("lumi", lumi_weight) 
-        #     if self.test:
-        #         print(f"weight_collection integrated_lumi: \n  {integrated_lumi}")
-        #         print(f"weight_collection lumi info: \n  {self.weight_collection.get_info()}")
-        #         print(f"weight_collection lumi wgts: \n  {self.weight_collection.wgts}")
-        #         print(f"weight_collection lumi_weight: \n  {lumi_weight}")
             
 
         #     # L1 prefiring weights
