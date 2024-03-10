@@ -54,7 +54,8 @@ class EventProcessor(processor.ProcessorABC):
             "year" : "2018",
             # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             "do_nnlops" : False,
-            "do_pdf" : False
+            "do_pdf" : False,
+            "do_l1prefiring_wgts" : True,
         }
         self.config.update(dict_update)
         # print(f"copperhead proccesor self.config after update: \n {self.config}")
@@ -583,6 +584,17 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
             weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
             print(f'pu_wgts["nom"]: {pu_wgts["nom"].compute()}')
+            # L1 prefiring weights
+            if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
+                L1_nom = events.L1PreFiringWeight.Nom
+                L1_up = events.L1PreFiringWeight.Up
+                L1_down = events.L1PreFiringWeight.Dn
+                weights.add("l1prefiring", 
+                    weight=L1_nom,
+                    weightUp=L1_up,
+                    weightDown=L1_down
+                )
+
         
         #     # For MC: initialize weight_collection
         #     weight_ones = ak.ones_like(events.Muon.pt[:,0]) # get 1D array of filtered events
@@ -603,15 +615,7 @@ class EventProcessor(processor.ProcessorABC):
         #         print(f"weight_collection pu_wgt info: \n  {self.weight_collection.get_info()}")
             
 
-        #     # L1 prefiring weights
-        #     if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in df.fields):
-        #     # if True:
-        #         L1_nom = events.L1PreFiringWeight.Nom
-        #         # L1_up = events.L1PreFiringWeight.Up
-        #         # L1_down = events.L1PreFiringWeight.Dn
-        #         self.weight_collection.add_weight("l1prefiring_wgt", L1_nom)
-        #         if self.test:
-        #             print(f"weight_collection l1prefiring_wgt info: \n  {self.weight_collection.get_info()}")
+            
 
         
         # # ------------------------------------------------------------#
@@ -828,6 +832,7 @@ class EventProcessor(processor.ProcessorABC):
         print(f"cross_section: {(cross_section)}")
         print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
+        print(f"weight statistics: {weights.weightStatistics}")
         weights = weights.weight()
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
