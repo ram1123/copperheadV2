@@ -20,7 +20,7 @@ from itertools import islice
 import copy
 import argparse
 from dask.distributed import performance_report
-
+from corrections.evaluator import nnlops_weights
 
 test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
@@ -58,7 +58,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             entry_start = entry_start,
             entry_stop = entry_start+test_size,
         ).events()
-    out_collections = coffea_processor.process(events)
+    # out_collections = coffea_processor.process(events)
+    out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
     computed = out_collections
@@ -189,34 +190,73 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'dimuon_ebe_mass_res': (computed["dimuon_ebe_mass_res"]),
             'dimuon_cos_theta_cs': (computed["dimuon_cos_theta_cs"]),
             'dimuon_phi_cs': (computed["dimuon_phi_cs"]),
-
+            'jet1_pt_raw': (computed["jet_pt_raw"][:,0]),
+            'jet1_mass_raw': (computed["jet_mass_raw"][:,0]),
+            'jet1_rho': (computed["jet_rho"][:,0]),
+            'jet1_area': (computed["jet_area"][:,0]),
+            'jet1_pt_gen': (computed["jet_pt_gen"][:,0]),
+            'jet2_pt_raw': (computed["jet_pt_raw"][:,1]),
+            'jet2_mass_raw': (computed["jet_mass_raw"][:,1]),
+            'jet2_rho': (computed["jet_rho"][:,1]),
+            'jet2_area': (computed["jet_area"][:,1]),
+            'jet2_pt_gen': (computed["jet_pt_gen"][:,1]),
+    
             # 'mu1_gf_filter': (computed["mu1_gf_filter"]),
             # 'mu1_gf_pt_corr': (computed["mu1_gf_pt_corr"]),
         
          }
-    #------------------------
-    
+    #------------------------------
+    # define save path
     fraction_str = str(dataset_dict["metadata"]["original_fraction"]).replace('.', '_')
     sample_name = dataset_dict['metadata']['dataset']
+    save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
+    print(f"save_path: {save_path}")
+    filelist = glob.glob(f"{save_path}/*.parquet")
+    print(f"len(filelist): {len(filelist)}")
+    for file in filelist:
+        os.remove(file)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    #------------------------
+    # do nnlops correct on normal awkward
+    do_nnlops = processor.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
+    if do_nnlops: # we need full computed for this
+        # placeholder_dict = dask.compute(placeholder_dict)[0]
+        HTX_dict = {
+            "HTXS_Higgs_pt" : (computed["HTXS_Higgs_pt"]),
+            "HTXS_njets30" : (computed["HTXS_njets30"]),
+        }
+        HTX_dict = dask.compute(HTX_dict)[0] # dask compute gives a tuple of length one
+        # print(f"type(HTX_dict): {type(HTX_dict)}")
+        # print(f"(HTX_dict): {(HTX_dict)}")
+        nnlops_wgt = nnlops_weights(
+            HTX_dict["HTXS_Higgs_pt"],
+            HTX_dict["HTXS_njets30"], 
+            processor.config, 
+            events.metadata["dataset"]
+        )
+        nnlops_save_path = save_path + "/nnlops"
+        filelist = glob.glob(f"{nnlops_save_path}/*.parquet")
+        print(f"nnlops filelist: {filelist}")
+        for file in filelist:
+            os.remove(file)
+        if not os.path.exists(nnlops_save_path):
+            os.makedirs(nnlops_save_path)
+        print(f"nnlops_wgt: {nnlops_wgt}")
+        # save nnlops wgts to apply them later
+        ak.to_parquet(ak.zip({"nnlops_wgt" : nnlops_wgt}), nnlops_save_path+"/wgt.parquet")
+        # ak.to_parquet(nnlops_wgt, nnlops_save_path+"/wgt.parquet")
+
+    #----------------------------------
     zip = ak.zip(placeholder_dict, depth_limit=1)
     # zip = dask.compute(placeholder_dict)
     # N_reasonable = 100000
     # N_reasonable = 40000
     # zip = zip.repartition(rows_per_partition=N_reasonable)
     # print(f"zip: {zip.compute()}")
-    save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
-    print(f"save_path: {save_path}")
-    filelist = glob.glob(f"{save_path}/*.parquet")
-    print(f"len(filelist): {len(filelist)}")
-    for file in filelist:
-        # try:
-        #     os.remove(file)
-        # except Exception:
-        #     print(f"failed removing files in {save_path}. Please manually delete all the parquet files")
-        os.remove(file)
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    zip.to_parquet(save_path, compute=True)
+    
+    # zip.to_parquet(save_path, compute=True)
+    dak.to_parquet(zip, save_path, compute=True)
     
     # if test:
     #     for var_name, ak_arr in placeholder_dict.items():

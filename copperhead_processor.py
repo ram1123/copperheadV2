@@ -53,7 +53,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_beamConstraint": False, # if True, override do_geofit
             "year" : "2018",
             # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
-            "do_nnlops" : False,
+            "do_nnlops" : True,
             "do_pdf" : False,
             "do_l1prefiring_wgts" : True,
         }
@@ -410,8 +410,8 @@ class EventProcessor(processor.ProcessorABC):
         muons = muons[event_filter==True]
         nmuons = nmuons[event_filter==True]
         applied_fsr = applied_fsr[event_filter==True]
-        print(f"type(pu_wgts): {type(pu_wgts)}")
-        print(f"(pu_wgts.keys()): {(pu_wgts.keys())}")
+        # print(f"type(pu_wgts): {type(pu_wgts)}")
+        # print(f"(pu_wgts.keys()): {(pu_wgts.keys())}")
         for variation in pu_wgts.keys():
             pu_wgts[variation] = pu_wgts[variation][event_filter==True]
             
@@ -583,7 +583,7 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
             weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
-            print(f'pu_wgts["nom"]: {pu_wgts["nom"].compute()}')
+            # print(f'pu_wgts["nom"]: {pu_wgts["nom"].compute()}')
             # L1 prefiring weights
             if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
                 L1_nom = events.L1PreFiringWeight.Nom
@@ -618,24 +618,20 @@ class EventProcessor(processor.ProcessorABC):
             
 
         
-        # # ------------------------------------------------------------#
-        # # Calculate other event weights
-        # # ------------------------------------------------------------#
-        # pt_variations = (
-        #     ["nominal"]
-        #     # + jec_pars["jec_variations"]
-        #     # + jec_pars["jer_variations"]
-        # )
+        # ------------------------------------------------------------#
+        # Calculate other event weights
+        # ------------------------------------------------------------#
+        pt_variations = (
+            ["nominal"]
+            # + jec_pars["jec_variations"]
+            # + jec_pars["jer_variations"]
+        )
         # if events.metadata["is_mc"]:
-        #     """ nnlops crashes in dask awkward
         #     do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
-        #     print(f"do_nnlops: {do_nnlops}")
         #     if do_nnlops:
-        #     # if True:
+        #         print("doing NNLOPS!")
         #         nnlopsw = nnlops_weights(events, self.config, events.metadata["dataset"])
-        #         self.weight_collection.add_weight("nnlops", nnlopsw)
-        #         print(f"weight_collection nnlops info: \n  {self.weight_collection.get_info()}")
-        #     """
+        #         print(f"nnlopsw: \n  {nnlopsw}")
         #     # else:
         #     #     weights.add_weight("nnlops", how="dummy")
         #     # print(f'copperheadV1 weights.df nnlops: \n {weights.df.to_string()}')
@@ -875,6 +871,8 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
             "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
             "dimuon_phi_cs" : dimuon_phi_cs,
+            "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,
+            "HTXS_njets30" : events.HTXS.njets30,
         }
         if self.config["do_fsr"]:
             fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
