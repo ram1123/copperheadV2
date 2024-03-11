@@ -640,34 +640,71 @@ class EventProcessor(processor.ProcessorABC):
             
             # do zpt SF
             do_zpt = ('dy' in dataset)
-            do_zpt = False
+            # do_zpt = False
             if do_zpt:
                 print("doing zpt weight!")
                 zpt_weight = self.evaluator[self.zpt_path](dimuon.pt)
                 # self.weight_collection.add_weight('zpt_wgt', zpt_weight)
+                print(f"zpt_weight: {zpt_weight.compute()}")
                 weights.add("zpt_wgt", weight=zpt_weight)
                 
-        #     """      
-        #     #do mu SF
-        #     musf_lookup = get_musf_lookup(self.config)
-        #     muID, muIso, muTrig = musf_evaluator(
-        #         musf_lookup, self.config["year"], events.Muon
-        #     )
-        #     # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_dataframe(muTrig["nom"]).to_string()}')
-        #     # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_numpy(muTrig["nom"])}')
-        #     self.weight_collection.add_weight("muID", muID, how="all")
-        #     if self.test:
-        #         print(f"weight_collection muID info: \n  {self.weight_collection.get_info()}")
-        #     self.weight_collection.add_weight("muIso", muIso, how="all")
-        #     if self.test:
-        #         print(f"weight_collection muIso info: \n  {self.weight_collection.get_info()}")
-        #     self.weight_collection.add_weight("muTrig", muTrig, how="all")
-        #     if self.test:
-        #         print(f"weight_collection muTrig info: \n  {self.weight_collection.get_info()}")
-        #     # self.weight_collection.add_weight("muID", muID, how="all")
-        #     # self.weight_collection.add_weight("muIso", muIso, how="all")
-        #     # self.weight_collection.add_weight("muTrig", muTrig, how="all") 
-        #     """
+              
+            # #do mu SF
+            # musf_lookup = get_musf_lookup(self.config)
+            # muID, muIso, muTrig = musf_evaluator(
+            #     musf_lookup, self.config["year"], events.Muon
+            # )
+            # # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_dataframe(muTrig["nom"]).to_string()}')
+            # # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_numpy(muTrig["nom"])}')
+            # self.weight_collection.add_weight("muID", muID, how="all")
+            # if self.test:
+            #     print(f"weight_collection muID info: \n  {self.weight_collection.get_info()}")
+            # self.weight_collection.add_weight("muIso", muIso, how="all")
+            # if self.test:
+            #     print(f"weight_collection muIso info: \n  {self.weight_collection.get_info()}")
+            # self.weight_collection.add_weight("muTrig", muTrig, how="all")
+            # if self.test:
+            #     print(f"weight_collection muTrig info: \n  {self.weight_collection.get_info()}")
+            # # self.weight_collection.add_weight("muID", muID, how="all")
+            # # self.weight_collection.add_weight("muIso", muIso, how="all")
+            # # self.weight_collection.add_weight("muTrig", muTrig, how="all") 
+
+            #do mu SF
+            print("doing musf!")
+            musf_lookup = get_musf_lookup(self.config)
+            muID, muIso, muTrig = musf_evaluator(
+                musf_lookup, self.config["year"], events.Muon
+            )
+            weights.add("muID", 
+                    weight=muID["nom"],
+                    weightUp=muID["up"],
+                    weightDown=muID["down"]
+            )
+            weights.add("muIso", 
+                    weight=muIso["nom"],
+                    weightUp=muIso["up"],
+                    weightDown=muIso["down"]
+            )
+            weights.add("muTrig", 
+                    weight=muTrig["nom"],
+                    weightUp=muTrig["up"],
+                    weightDown=muTrig["down"]
+            )
+            # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_dataframe(muTrig["nom"]).to_string()}')
+            # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_numpy(muTrig["nom"])}')
+            # self.weight_collection.add_weight("muID", muID, how="all")
+            # if self.test:
+            #     print(f"weight_collection muID info: \n  {self.weight_collection.get_info()}")
+            # self.weight_collection.add_weight("muIso", muIso, how="all")
+            # if self.test:
+            #     print(f"weight_collection muIso info: \n  {self.weight_collection.get_info()}")
+            # self.weight_collection.add_weight("muTrig", muTrig, how="all")
+            # if self.test:
+            #     print(f"weight_collection muTrig info: \n  {self.weight_collection.get_info()}")
+            # self.weight_collection.add_weight("muID", muID, how="all")
+            # self.weight_collection.add_weight("muIso", muIso, how="all")
+            # self.weight_collection.add_weight("muTrig", muTrig, how="all") 
+            
         #     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
         #     do_lhe = (
         #         ("LHEScaleWeight" in events.fields)
