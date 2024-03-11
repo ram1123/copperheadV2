@@ -879,8 +879,8 @@ class EventProcessor(processor.ProcessorABC):
         # weights = weights*cross_section*integrated_lumi/sumWeights
         print(f"weight statistics: {weights.weightStatistics}")
         # weights = weights.weight()
-        # weights = weights.weight("LHERenUp")
-        weights = weights.weight("LHEFacDown")
+        weights = weights.weight("LHEFacUp")
+        # weights = weights.weight("LHEFacDown")
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
         # print(f"njets: {ak.num(njets, axis=0).compute()}")
