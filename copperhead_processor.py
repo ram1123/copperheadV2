@@ -518,7 +518,7 @@ class EventProcessor(processor.ProcessorABC):
             self.config["jec_parameters"], 
             test_mode=self.test
         )       
-        do_jec = True
+        do_jec = True # True 
 
 
         # do_jecunc = self.config["do_jecunc"]
@@ -540,7 +540,11 @@ class EventProcessor(processor.ProcessorABC):
             if self.test :
                 print("jets build")
                 jets = jets.compute() # can't circumvent JEC only being on dask distributed
-                
+        else:
+            jets["mass_jec"] = jets.mass
+            jets["pt_jec"] = jets.pt
+
+        
         # # TODO: only consider nuisances that are defined in run parameters
         # # Compute JEC uncertainties
         # if events.metadata["is_mc"] and do_jecunc:
@@ -648,25 +652,6 @@ class EventProcessor(processor.ProcessorABC):
                 weights.add("zpt_wgt", weight=zpt_weight)
                 
               
-            # #do mu SF
-            # musf_lookup = get_musf_lookup(self.config)
-            # muID, muIso, muTrig = musf_evaluator(
-            #     musf_lookup, self.config["year"], events.Muon
-            # )
-            # # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_dataframe(muTrig["nom"]).to_string()}')
-            # # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_numpy(muTrig["nom"])}')
-            # self.weight_collection.add_weight("muID", muID, how="all")
-            # if self.test:
-            #     print(f"weight_collection muID info: \n  {self.weight_collection.get_info()}")
-            # self.weight_collection.add_weight("muIso", muIso, how="all")
-            # if self.test:
-            #     print(f"weight_collection muIso info: \n  {self.weight_collection.get_info()}")
-            # self.weight_collection.add_weight("muTrig", muTrig, how="all")
-            # if self.test:
-            #     print(f"weight_collection muTrig info: \n  {self.weight_collection.get_info()}")
-            # # self.weight_collection.add_weight("muID", muID, how="all")
-            # # self.weight_collection.add_weight("muIso", muIso, how="all")
-            # # self.weight_collection.add_weight("muTrig", muTrig, how="all") 
 
             #do mu SF
             print("doing musf!")
@@ -728,12 +713,13 @@ class EventProcessor(processor.ProcessorABC):
             
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             dataset = events.metadata["dataset"]
-            do_thu = (
-                ("vbf" in dataset)
-                and ("dy" not in dataset)
-                and ("nominal" in pt_variations)
-                and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
-            )
+            # do_thu = (
+            #     ("vbf" in dataset)
+            #     and ("dy" not in dataset)
+            #     and ("nominal" in pt_variations)
+            #     and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
+            # )
+            do_thu = False
             if do_thu:
                 print("doing THU!")
                 add_stxs_variations(
@@ -805,19 +791,31 @@ class EventProcessor(processor.ProcessorABC):
         #     }
         #     out_dict.update(gjet_dict)
         
-        # # ------------------------------------------------------------#
-        # # Loop over JEC variations and fill jet variables
-        # # ------------------------------------------------------------#
+        # ------------------------------------------------------------#
+        # Loop over JEC variations and fill jet variables
+        # ------------------------------------------------------------#
         
-        # for variation in pt_variations:
-        #     jet_loop_dict = self.jet_loop(
-        #         events, 
-        #         jets,
-        #         variation,
-        #         do_jec = do_jec,
-        #         do_jecunc = do_jecunc,
-        #         do_jerunc = do_jerunc,
-        #     )
+        for variation in pt_variations:
+            # jet_loop_dict = self.jet_loop(
+            #     events, 
+            #     jets,
+            #     dimuon,
+            #     variation,
+            #     weights,
+            #     do_jec = do_jec,
+            #     do_jecunc = do_jecunc,
+            #     do_jerunc = do_jerunc,
+            # )
+            jets = self.jet_loop(
+                events, 
+                jets,
+                dimuon,
+                variation,
+                weights,
+                do_jec = do_jec,
+                do_jecunc = do_jecunc,
+                do_jerunc = do_jerunc,
+            )
 
         # out_dict.update(jet_loop_dict) 
         
@@ -873,7 +871,7 @@ class EventProcessor(processor.ProcessorABC):
         print(f"cross_section: {(cross_section)}")
         print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
-        print(f"weight statistics: {weights.weightStatistics}")
+        # print(f"weight statistics: {weights.weightStatistics}")
         weights = weights.weight()
         # weights = weights.weight("pdf_2rmsUp")
         # weights = weights.weight("LHEFacDown")
@@ -1011,22 +1009,15 @@ class EventProcessor(processor.ProcessorABC):
         self,
         events,
         jets,
+        dimuon,
         variation,
+        weights,
         # do_jec = True, #False
         # do_jecunc = False,
         # do_jerunc = False,
         do_jec = False, #False
         do_jecunc = False,
         do_jerunc = False,
-        # dataset,
-        # mask,
-        # muons,
-        # mu1,
-        # mu2,
-        # jets,
-        # weights,
-        # numevents,
-        # output,
     ):
         # weights = copy.deepcopy(weights)
         is_mc = events.metadata["is_mc"]
@@ -1120,23 +1111,24 @@ class EventProcessor(processor.ProcessorABC):
             jets = events.Jet
         """
 
-        # ------------------------------------------------------------#
-        # Apply jetID and PUID
-        # ------------------------------------------------------------#
+        # # ------------------------------------------------------------#
+        # # Apply jetID and PUID
+        # # ------------------------------------------------------------#
 
         pass_jet_id = jet_id(jets, self.config)
         pass_jet_puid = jet_puid(jets, self.config)
 
-        """
-        this code has been disabled by Dmitry
-        # Jet PUID scale factors
-        # if is_mc and False:  # disable for now
+
+        # # Jet PUID scale factors
+        # if is_mc:  # disable for now
         #     puid_weight = puid_weights(
         #         self.evaluator, self.year, jets, pt_name,
         #         jet_puid_opt, jet_puid, numevents
         #     )
-        #     weights.add_weight('puid_wgt', puid_weight)
-        """
+        #     print(f"puid_weight: {puid_weight}")
+        #     weights.add("puid_wgt", weight=puid_weight)
+        # #     weights.add_weight('puid_wgt', puid_weight)
+
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
@@ -1167,6 +1159,11 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"dak.necessary_columns(jets.pt) b4 selection: {dak.necessary_columns(jets.pt)}")
         # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
         jets = ak.to_packed(ak.mask(jets, jet_selection))
+
+        #testing ------------------------
+        return jets
+        # testing ------------
+        
         # print(f"jets after selection: {jets}")
         # print(f"jets._meta after selection: {str(jets._meta.compute())}")
         # print(f"jet_selection._meta: {str(jet_selection._meta.compute())}")
@@ -1202,7 +1199,7 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"dijet: {dijet}")
         jj_dEta = abs(jet1.eta - jet2.eta)
         jj_dPhi = abs(jet1.delta_phi(jet2))
-        dimuon = muons[:,0] + muons[:,1]
+        # dimuon = muons[:,0] + muons[:,1]
         mmj1_dEta = abs(dimuon.eta - jet1.eta)
         mmj2_dEta = abs(dimuon.eta - jet2.eta)
         mmj_min_dEta = ak.where(

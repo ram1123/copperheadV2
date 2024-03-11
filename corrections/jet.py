@@ -87,7 +87,7 @@ def get_jec_factories(jec_parameters: dict, test_mode=False):
     jec_pars = jec_parameters
 
 
-    print(f"jec_factories jec_pars: {jec_pars}")
+    # print(f"jec_factories jec_pars: {jec_pars}")
     # weight_sets = jec_weight_sets(jec_pars)
     # names = jec_names_and_sources(jec_pars)
     weight_sets, names = jec_weight_sets(jec_pars)
@@ -114,7 +114,7 @@ def get_jec_factories(jec_parameters: dict, test_mode=False):
         stacks[key] = []
         for v in vals:
             stacks[key].extend(names[v])
-    print(f"jec_factories stacks: \n{stacks}")
+    # print(f"jec_factories stacks: \n{stacks}")
     # if test_mode:
     #     print(f"jec_factories stacks: \n{stacks}")
 
@@ -133,11 +133,9 @@ def get_jec_factories(jec_parameters: dict, test_mode=False):
         # }
         jec_input_options[variation] ={}
         for name in stacks[f"{variation}_stack"]:
-            if test_mode:
-                print(f"jec_factories stack name: {name}")
             jec_input_options[variation][name] =jet_evaluator[name] 
         
-    print(f"jec_factories jec_input_options: \n {jec_input_options}")
+    # print(f"jec_factories jec_input_options: \n {jec_input_options}")
     for src in names["junc_sources"]:
         for key in jet_evaluator.keys():
             if src in key:
@@ -150,8 +148,8 @@ def get_jec_factories(jec_parameters: dict, test_mode=False):
             print(f"jec_factories jec_input_options[variation]: {jec_input_options[variation]}")
         
         stack = JECStack(jec_input_options[variation])
-        print(f"jec_factories JECStack: {stack}")
-        print(f"jec_factories get_name_map(stack): {get_name_map(stack)}")
+        # print(f"jec_factories JECStack: {stack}")
+        # print(f"jec_factories get_name_map(stack): {get_name_map(stack)}")
         jec_factories[variation] = CorrectedJetsFactory(get_name_map(stack), stack)
 
     # Create a separate factory for each data run
