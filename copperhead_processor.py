@@ -514,11 +514,11 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         
         jets = events.Jet
-        # self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
-        #     self.config["jec_parameters"], 
-        #     test_mode=self.test
-        # )       
-        do_jec = False
+        self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
+            self.config["jec_parameters"], 
+            test_mode=self.test
+        )       
+        do_jec = True
 
 
         # do_jecunc = self.config["do_jecunc"]
@@ -734,42 +734,37 @@ class EventProcessor(processor.ProcessorABC):
                 and ("nominal" in pt_variations)
                 and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
             )
-            # if do_thu:
-            #     print("doing LHE!")
-            #     add_stxs_variations(
-            #         events,
-            #         self.weight_collection,
-            #         self.config,
-            #     )
             if do_thu:
-                print("doing LHE!")
+                print("doing THU!")
                 add_stxs_variations(
                     events,
                     weights,
                     self.config,
                 )
                 
-            if self.test:
-                print(f"do_thu: {do_thu}")
-                print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
-        #     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
-        #     do_pdf = False
-        #     # do_pdf = (
-        #     #     self.config["do_pdf"]
-        #     #     and ("nominal" in pt_variations)
-        #     #     and (
-        #     #         "dy" in dataset
-        #     #         or "ewk" in dataset
-        #     #         or "ggh" in dataset
-        #     #         or "vbf" in dataset
-        #     #     )
-        #     #     and ("mg" not in dataset)
-        #     # )
-        #     if do_pdf:
-        #         add_pdf_variations(events, self.weight_collection, self.config, dataset)
-        #     if self.test:
-        #         print(f"do_pdf: {do_pdf}")
-        #         print(f"weight_collection do_pdf info: \n  {self.weight_collection.get_info()}")
+
+            # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
+            do_pdf = (
+                self.config["do_pdf"]
+                and ("nominal" in pt_variations)
+                and (
+                    "dy" in dataset
+                    or "ewk" in dataset
+                    or "ggh" in dataset
+                    or "vbf" in dataset
+                )
+                and ("mg" not in dataset)
+            )
+            if do_pdf:
+                print("doing pdf!")
+                # add_pdf_variations(events, self.weight_collection, self.config, dataset)
+                pdf_vars = add_pdf_variations(events, self.weight_collection, self.config, dataset)
+                weights.add("pdf_2rms", 
+                    weight=ak.ones_like(pdf_vars["up"]),
+                    weightUp=pdf_vars["up"],
+                    weightDown=pdf_vars["down"]
+                )
+
 # just reading test end
 # just reading part 2 start -------------------------        
         # ------------------------------------------------------------#
@@ -880,7 +875,7 @@ class EventProcessor(processor.ProcessorABC):
         # weights = weights*cross_section*integrated_lumi/sumWeights
         print(f"weight statistics: {weights.weightStatistics}")
         weights = weights.weight()
-        # weights = weights.weight("LHEFacUp")
+        # weights = weights.weight("pdf_2rmsUp")
         # weights = weights.weight("LHEFacDown")
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
@@ -915,6 +910,8 @@ class EventProcessor(processor.ProcessorABC):
             "jet_rho" : ak.pad_none(jets.rho, 2),
             "jet_area" : ak.pad_none(jets.area, 2),
             "jet_pt_gen" : ak.pad_none(jets.pt_gen, 2),
+            "jet_pt_jec" : ak.pad_none(jets.pt_jec, 2),
+            "jet_mass_jec" : ak.pad_none(jets.mass_jec, 2),
             "njets" : njets,
             "weights" : weights,
             # "mu1_gf_filter" : events.Muon.gf_filter[:,0],
