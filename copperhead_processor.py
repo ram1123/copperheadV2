@@ -54,7 +54,7 @@ class EventProcessor(processor.ProcessorABC):
             "year" : "2018",
             # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             "do_nnlops" : True,
-            "do_pdf" : False,
+            "do_pdf" : True,
             "do_l1prefiring_wgts" : True,
         }
         self.config.update(dict_update)
@@ -872,8 +872,8 @@ class EventProcessor(processor.ProcessorABC):
         print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
         # print(f"weight statistics: {weights.weightStatistics}")
-        weights = weights.weight()
-        # weights = weights.weight("pdf_2rmsUp")
+        # weights = weights.weight()
+        weights = weights.weight("pdf_2rmsUp")
         # weights = weights.weight("LHEFacDown")
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
@@ -1072,18 +1072,18 @@ class EventProcessor(processor.ProcessorABC):
         matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
         clean = ~(ak.fill_none(matched_mu_pass, value=False))
         
-        if self.test:
-            # print(f"jet loop jets.matched_muons: {jets.matched_muons}")
-            print(f"jet loop matched_mu_pass after: {matched_mu_pass}")
-            print(f"jet loop matched_mu_pt: {matched_mu_pt}")
-            print(f"jet loop matched_mu_iso: {matched_mu_iso}")
-            print(f"jet loop matched_mu_id: {matched_mu_id}")
+        # if self.test:
+        #     # print(f"jet loop jets.matched_muons: {jets.matched_muons}")
+        #     print(f"jet loop matched_mu_pass after: {matched_mu_pass}")
+        #     print(f"jet loop matched_mu_pt: {matched_mu_pt}")
+        #     print(f"jet loop matched_mu_iso: {matched_mu_iso}")
+        #     print(f"jet loop matched_mu_id: {matched_mu_id}")
             
-            # print(f"type(matched_mu_pass): {type(matched_mu_pass)}")
-            # print(f"ak.to_dataframe(matched_mu_pass): {ak.to_dataframe(matched_mu_pass)}")
-            # print(f"jet loop clean: {clean}")
-            print(f"jet loop clean: {ak.to_numpy(ak.flatten(clean))}")
-            print(f"jet loop clean sum: {ak.to_numpy(ak.sum(clean, axis=1))}")
+        #     # print(f"type(matched_mu_pass): {type(matched_mu_pass)}")
+        #     # print(f"ak.to_dataframe(matched_mu_pass): {ak.to_dataframe(matched_mu_pass)}")
+        #     # print(f"jet loop clean: {clean}")
+        #     print(f"jet loop clean: {ak.to_numpy(ak.flatten(clean))}")
+        #     print(f"jet loop clean sum: {ak.to_numpy(ak.sum(clean, axis=1))}")
 
         # skip selecting particular JEC variation for now
         # # Select particular JEC variation
@@ -1173,7 +1173,7 @@ class EventProcessor(processor.ProcessorABC):
         # 
         
         # jets = ak.where(jet_selection, jets, None)
-        muons = events.Muon 
+        # muons = events.Muon 
         njets = ak.num(jets, axis=1)
 
         # ------------------------------------------------------------#
