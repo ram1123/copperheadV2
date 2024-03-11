@@ -880,7 +880,7 @@ class EventProcessor(processor.ProcessorABC):
         print(f"weight statistics: {weights.weightStatistics}")
         # weights = weights.weight()
         # weights = weights.weight("LHERenUp")
-        weights = weights.weight("LHERenDown")
+        weights = weights.weight("LHEFacDown")
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
         # print(f"njets: {ak.num(njets, axis=0).compute()}")
