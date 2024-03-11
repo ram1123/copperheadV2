@@ -704,24 +704,34 @@ class EventProcessor(processor.ProcessorABC):
             # self.weight_collection.add_weight("muIso", muIso, how="all")
             # self.weight_collection.add_weight("muTrig", muTrig, how="all") 
             
-        #     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
-        #     do_lhe = (
-        #         ("LHEScaleWeight" in events.fields)
-        #         and ("LHEPdfWeight" in events.fields)
-        #         and ("nominal" in pt_variations)
-        #     )
-        #     do_lhe = False
-        #     if self.test:
-        #         print(f"do_lhe: {do_lhe}")
-        #     if do_lhe:
-        #         lhe_ren, lhe_fac = lhe_weights(events, events.metadata["dataset"], self.config["year"])
-        #         if self.test:
-        #             print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
-        #             print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
-        #             # self.weight_collection.add_weight("LHERen", lhe_ren, how="only_vars")
-        #             # print(f"weight_collection LHERen info: \n  {self.weight_collection.get_info()}")
-        #             # self.weight_collection.add_weight("LHEFac", lhe_fac, how="only_vars")
-        #             # print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
+            # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
+            do_lhe = (
+                ("LHEScaleWeight" in events.fields)
+                and ("LHEPdfWeight" in events.fields)
+                and ("nominal" in pt_variations)
+            )
+            if do_lhe:
+                print("doing LHE!")
+                lhe_ren, lhe_fac = lhe_weights(events, events.metadata["dataset"], self.config["year"])
+                print(f"lhe_ren: {lhe_ren}")
+                print(f"lhe_fac: {lhe_fac}")
+                weights.add("LHERen", 
+                    weight=ak.ones_like(lhe_ren["up"]),
+                    weightUp=lhe_ren["up"],
+                    weightDown=lhe_ren["down"]
+                )
+                weights.add("LHEFac", 
+                    weight=ak.ones_like(lhe_fac["up"]),
+                    weightUp=lhe_fac["up"],
+                    weightDown=lhe_fac["down"]
+                )
+                if self.test:
+                    print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
+                    print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
+                    # self.weight_collection.add_weight("LHERen", lhe_ren, how="only_vars")
+                    # print(f"weight_collection LHERen info: \n  {self.weight_collection.get_info()}")
+                    # self.weight_collection.add_weight("LHEFac", lhe_fac, how="only_vars")
+                    # print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
             
         #     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
         #     dataset = events.metadata["dataset"]
@@ -868,7 +878,8 @@ class EventProcessor(processor.ProcessorABC):
         print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
         print(f"weight statistics: {weights.weightStatistics}")
-        weights = weights.weight()
+        # weights = weights.weight()
+        weights = weights.weight("LHERenUp")
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
         # print(f"njets: {ak.num(njets, axis=0).compute()}")
