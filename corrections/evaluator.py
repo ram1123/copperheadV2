@@ -200,13 +200,23 @@ class NNLOPS_Evaluator(object):
         return result
 
 
-def nnlops_weights(events, parameters, dataset):
+# def nnlops_weights(events, parameters, dataset):
+#     nnlops = NNLOPS_Evaluator(parameters["nnlops_file"])
+#     if "amc" in dataset:
+#         mc_generator = "mcatnlo"
+#     elif "powheg" in dataset:
+#         mc_generator = "powheg"
+#     nnlops_w = nnlops.evaluate(events.HTXS.Higgs_pt, events.HTXS.njets30, mc_generator)
+#     # print(f'nnlops_weights nnlops_w: {ak.to_numpy(nnlops_w)}')
+#     return nnlops_w
+
+def nnlops_weights(Higgs_pt, njets30, parameters, dataset):
     nnlops = NNLOPS_Evaluator(parameters["nnlops_file"])
     if "amc" in dataset:
         mc_generator = "mcatnlo"
     elif "powheg" in dataset:
         mc_generator = "powheg"
-    nnlops_w = nnlops.evaluate(events.HTXS.Higgs_pt, events.HTXS.njets30, mc_generator)
+    nnlops_w = nnlops.evaluate(Higgs_pt, njets30, mc_generator)
     # print(f'nnlops_weights nnlops_w: {ak.to_numpy(nnlops_w)}')
     return nnlops_w
 
@@ -288,109 +298,158 @@ def get_musf_lookup(parameters):
 
 
 
-def musf_evaluator(lookups, year, muons):
-    # sf = pd.DataFrame(
-    #     index=mu1.index,
-    #     columns=[
-    #         "muID_nom",
-    #         "muID_up",
-    #         "muID_down",
-    #         "muIso_nom",
-    #         "muIso_up",
-    #         "muIso_down",
-    #         "muTrig_nom",
-    #         "muTrig_up",
-    #         "muTrig_down",
-    #     ],
-    # )
-    # sf = sf.fillna(1.0)
-    # muons = ak.pad_none(muons,2)
+# def musf_evaluator(lookups, year, muons):
+#     sf = {
+#         # "muID_nom": ak.ones_like(muons.pt[:,0]),
+#         # "muID_up": ak.ones_like(muons.pt[:,0]),
+#         # "muID_down": ak.ones_like(muons.pt[:,0]),
+#         # "muIso_nom": ak.ones_like(muons.pt[:,0]),
+#         # "muIso_up": ak.ones_like(muons.pt[:,0]),
+#         # "muIso_down": ak.ones_like(muons.pt[:,0]),
+#         # "muTrig_nom": ak.ones_like(muons.pt[:,0]),
+#         # "muTrig_up": ak.ones_like(muons.pt[:,0]),
+#         # "muTrig_down": ak.ones_like(muons.pt[:,0]),
+#     }
+
+#     for how in ["nom", "up", "down"]:
+#         sf[f"trig_num_{how}"] = 1.0
+#         sf[f"trig_denom_{how}"] = 1.0
+
+#     pt = muons.pt_raw
+#     eta = muons.eta_raw
+#     abs_eta = abs(muons.eta_raw)
+#     # pt = muons.pt
+#     # eta = muons.eta
+#     # abs_eta = abs(muons.eta)
+
+#     if "2016" in year:
+#         muID_ = lookups["mu_id_sf"](eta, pt)
+#         muIso_ = lookups["mu_iso_sf"](eta, pt)
+#         muIDerr = lookups["mu_id_err"](eta, pt)
+#         muIsoerr = lookups["mu_iso_err"](eta, pt)
+#     else:
+#         muID_ = lookups["mu_id_sf"](pt, abs_eta)
+#         muIso_ = lookups["mu_iso_sf"](pt, abs_eta)
+#         muIDerr = lookups["mu_id_err"](pt, abs_eta)
+#         muIsoerr = lookups["mu_iso_err"](pt, abs_eta)
+
+#     muTrig_data = lookups["mu_trig_eff_data"](abs_eta, pt)
+#     muTrig_mc = lookups["mu_trig_eff_mc"](abs_eta, pt)
+#     muTrigerr_data = lookups["mu_trig_err_data"](abs_eta, pt)
+#     muTrigerr_mc = lookups["mu_trig_err_mc"](abs_eta, pt)
+
+#     sf["trig_num_nom"] = ak.prod(1.0 - muTrig_data, axis=1)
+#     sf["trig_num_up"] = ak.prod(1.0 - (muTrig_data - muTrigerr_data), axis=1)
+#     sf["trig_num_down"] = ak.prod(1.0 - (muTrig_data + muTrigerr_data), axis=1)
+#     sf["trig_denom_nom"] = ak.prod(1.0 - muTrig_mc, axis=1)
+#     sf["trig_denom_up"] = ak.prod(1.0 - (muTrig_mc - muTrigerr_mc), axis=1)
+#     sf["trig_denom_down"] = ak.prod(1.0 - (muTrig_mc + muTrigerr_mc), axis=1)
+
+#     # print(f'copperheadV2 lepton sf  sf["trig_num_nom"]: \n {ak.to_numpy(sf["trig_num_nom"])}')
+#     # print(f'copperheadV2 lepton sf  sf["trig_num_up"]: \n {ak.to_numpy(sf["trig_num_up"])}')
+#     # print(f'copperheadV2 lepton sf  sf["trig_num_down"]: \n {ak.to_numpy(sf["trig_num_down"])}')
+#     # print(f'copperheadV2 lepton sf  sf["trig_denom_nom"]: \n {ak.to_numpy(sf["trig_denom_nom"])}')
+#     # print(f'copperheadV2 lepton sf  sf["trig_denom_up"]: \n {ak.to_numpy(sf["trig_denom_up"])}')
+#     # print(f'copperheadV2 lepton sf  sf["trig_denom_down"]: \n {ak.to_numpy(sf["trig_denom_down"])}')
+
+    
+#     sf["muID_nom"] =  ak.prod(muID_, axis=1)
+#     sf["muID_up"] = ak.prod(muID_ + muIDerr, axis=1)
+#     sf["muID_down"] = ak.prod(muID_ - muIDerr, axis=1)
+#     sf["muIso_nom"] = ak.prod(muIso_, axis=1)
+#     sf["muIso_up"] = ak.prod(muIso_ + muIsoerr, axis=1)
+#     sf["muIso_down"] = ak.prod(muIso_ - muIsoerr, axis=1)
+    
+#     # print(f'copperheadV2 lepton sf  sf["muID_nom"]: \n {ak.to_numpy(sf["muID_nom"])}')
+#     # print(f'copperheadV2 lepton sf  sf["muID_up"]: \n {ak.to_numpy(sf["muID_up"])}')
+#     # print(f'copperheadV2 lepton sf  sf["muID_down"]: \n {ak.to_numpy(sf["muID_down"])}')
+#     # print(f'copperheadV2 lepton sf  sf["muIso_nom"]: \n {ak.to_numpy(sf["muIso_nom"])}')
+#     # print(f'copperheadV2 lepton sf  sf["muIso_up"]: \n {ak.to_numpy(sf["muIso_up"])}')
+#     # print(f'copperheadV2 lepton sf  sf["muIso_down"]: \n {ak.to_numpy(sf["muIso_down"])}')
+
+#     #for trig SF
+#     for how in ["nom", "up", "down"]:
+#         sf[f"trig_num_{how}"] = 1 - sf[f"trig_num_{how}"]
+#         sf[f"trig_denom_{how}"] = 1 - sf[f"trig_denom_{how}"]
+#         cut = sf[f"trig_denom_{how}"] != 0
+#         # sf.loc[cut, f"muTrig_{how}"] = (
+#         #     sf.loc[cut, f"trig_num_{how}"] / sf.loc[cut, f"trig_denom_{how}"]
+#         # )
+#         cut_val = sf[f"trig_num_{how}"] / sf[f"trig_denom_{how}"]
+#         # print(f'copperheadV2 lepton sf {how} cut_val: \n {ak.to_numpy(cut_val)}')
+#         # print(f'copperheadV2 lepton sf ak.ones_like(muons.pt[:,0]): \n {ak.to_numpy(ak.ones_like(muons.pt[:,0]))}')
+#         sf[f"muTrig_{how}"] = ak.where(cut, cut_val, ak.ones_like(muons.pt[:,0]))
+#     muID = {"nom": sf["muID_nom"], "up": sf["muID_up"], "down": sf["muID_down"]}
+#     muIso = {"nom": sf["muIso_nom"], "up": sf["muIso_up"], "down": sf["muIso_down"]}
+#     muTrig = {"nom": sf["muTrig_nom"], "up": sf["muTrig_up"], "down": sf["muTrig_down"]}
+#     # print(f'copperheadV2 lepton sf  sf["muTrig_nom"]: \n {(sf["muTrig_nom"])}')
+#     return muID, muIso, muTrig
+
+def musf_evaluator(lookups, year, mu1, mu2):
     sf = {
-        # "muID_nom": ak.ones_like(muons.pt[:,0]),
-        # "muID_up": ak.ones_like(muons.pt[:,0]),
-        # "muID_down": ak.ones_like(muons.pt[:,0]),
-        # "muIso_nom": ak.ones_like(muons.pt[:,0]),
-        # "muIso_up": ak.ones_like(muons.pt[:,0]),
-        # "muIso_down": ak.ones_like(muons.pt[:,0]),
-        # "muTrig_nom": ak.ones_like(muons.pt[:,0]),
-        # "muTrig_up": ak.ones_like(muons.pt[:,0]),
-        # "muTrig_down": ak.ones_like(muons.pt[:,0]),
+        "muID_nom": ak.ones_like(mu1.pt),
+        "muID_up": ak.ones_like(mu1.pt),
+        "muID_down": ak.ones_like(mu1.pt),
+        "muIso_nom": ak.ones_like(mu1.pt),
+        "muIso_up": ak.ones_like(mu1.pt),
+        "muIso_down": ak.ones_like(mu1.pt),
+        "muTrig_nom": ak.ones_like(mu1.pt),
+        "muTrig_up": ak.ones_like(mu1.pt),
+        "muTrig_down": ak.ones_like(mu1.pt),
     }
 
     for how in ["nom", "up", "down"]:
         sf[f"trig_num_{how}"] = 1.0
         sf[f"trig_denom_{how}"] = 1.0
 
-    pt = muons.pt_raw
-    eta = muons.eta_raw
-    abs_eta = abs(muons.eta_raw)
-    # pt = muons.pt
-    # eta = muons.eta
-    # abs_eta = abs(muons.eta)
+    for mu in [mu1, mu2]:
+        pt = mu.pt_raw
+        eta = mu.eta_raw
+        abs_eta = abs(mu.eta_raw)
 
-    if "2016" in year:
-        muID_ = lookups["mu_id_sf"](eta, pt)
-        muIso_ = lookups["mu_iso_sf"](eta, pt)
-        muIDerr = lookups["mu_id_err"](eta, pt)
-        muIsoerr = lookups["mu_iso_err"](eta, pt)
-    else:
-        muID_ = lookups["mu_id_sf"](pt, abs_eta)
-        muIso_ = lookups["mu_iso_sf"](pt, abs_eta)
-        muIDerr = lookups["mu_id_err"](pt, abs_eta)
-        muIsoerr = lookups["mu_iso_err"](pt, abs_eta)
-
-    muTrig_data = lookups["mu_trig_eff_data"](abs_eta, pt)
-    muTrig_mc = lookups["mu_trig_eff_mc"](abs_eta, pt)
-    muTrigerr_data = lookups["mu_trig_err_data"](abs_eta, pt)
-    muTrigerr_mc = lookups["mu_trig_err_mc"](abs_eta, pt)
-
-    sf["trig_num_nom"] = ak.prod(1.0 - muTrig_data, axis=1)
-    sf["trig_num_up"] = ak.prod(1.0 - (muTrig_data - muTrigerr_data), axis=1)
-    sf["trig_num_down"] = ak.prod(1.0 - (muTrig_data + muTrigerr_data), axis=1)
-    sf["trig_denom_nom"] = ak.prod(1.0 - muTrig_mc, axis=1)
-    sf["trig_denom_up"] = ak.prod(1.0 - (muTrig_mc - muTrigerr_mc), axis=1)
-    sf["trig_denom_down"] = ak.prod(1.0 - (muTrig_mc + muTrigerr_mc), axis=1)
-
-    # print(f'copperheadV2 lepton sf  sf["trig_num_nom"]: \n {ak.to_numpy(sf["trig_num_nom"])}')
-    # print(f'copperheadV2 lepton sf  sf["trig_num_up"]: \n {ak.to_numpy(sf["trig_num_up"])}')
-    # print(f'copperheadV2 lepton sf  sf["trig_num_down"]: \n {ak.to_numpy(sf["trig_num_down"])}')
-    # print(f'copperheadV2 lepton sf  sf["trig_denom_nom"]: \n {ak.to_numpy(sf["trig_denom_nom"])}')
-    # print(f'copperheadV2 lepton sf  sf["trig_denom_up"]: \n {ak.to_numpy(sf["trig_denom_up"])}')
-    # print(f'copperheadV2 lepton sf  sf["trig_denom_down"]: \n {ak.to_numpy(sf["trig_denom_down"])}')
-
+        if "2016" in year:
+            muID_ = lookups["mu_id_sf"](eta, pt)
+            muIso_ = lookups["mu_iso_sf"](eta, pt)
+            muIDerr = lookups["mu_id_err"](eta, pt)
+            muIsoerr = lookups["mu_iso_err"](eta, pt)
+        else:
+            muID_ = lookups["mu_id_sf"](pt, abs_eta)
+            muIso_ = lookups["mu_iso_sf"](pt, abs_eta)
+            muIDerr = lookups["mu_id_err"](pt, abs_eta)
+            muIsoerr = lookups["mu_iso_err"](pt, abs_eta)
     
-    sf["muID_nom"] =  ak.prod(muID_, axis=1)
-    sf["muID_up"] = ak.prod(muID_ + muIDerr, axis=1)
-    sf["muID_down"] = ak.prod(muID_ - muIDerr, axis=1)
-    sf["muIso_nom"] = ak.prod(muIso_, axis=1)
-    sf["muIso_up"] = ak.prod(muIso_ + muIsoerr, axis=1)
-    sf["muIso_down"] = ak.prod(muIso_ - muIsoerr, axis=1)
+        muTrig_data = lookups["mu_trig_eff_data"](abs_eta, pt)
+        muTrig_mc = lookups["mu_trig_eff_mc"](abs_eta, pt)
+        muTrigerr_data = lookups["mu_trig_err_data"](abs_eta, pt)
+        muTrigerr_mc = lookups["mu_trig_err_mc"](abs_eta, pt)
     
-    # print(f'copperheadV2 lepton sf  sf["muID_nom"]: \n {ak.to_numpy(sf["muID_nom"])}')
-    # print(f'copperheadV2 lepton sf  sf["muID_up"]: \n {ak.to_numpy(sf["muID_up"])}')
-    # print(f'copperheadV2 lepton sf  sf["muID_down"]: \n {ak.to_numpy(sf["muID_down"])}')
-    # print(f'copperheadV2 lepton sf  sf["muIso_nom"]: \n {ak.to_numpy(sf["muIso_nom"])}')
-    # print(f'copperheadV2 lepton sf  sf["muIso_up"]: \n {ak.to_numpy(sf["muIso_up"])}')
-    # print(f'copperheadV2 lepton sf  sf["muIso_down"]: \n {ak.to_numpy(sf["muIso_down"])}')
+        sf["trig_num_nom"] = sf["trig_num_nom"] * ( 1.0 - muTrig_data)
+        sf["trig_num_up"] = sf["trig_num_up"] * (1.0 - (muTrig_data - muTrigerr_data))
+        sf["trig_num_down"] = sf["trig_num_down"] * (1.0 - (muTrig_data + muTrigerr_data))
+        sf["trig_denom_nom"] = sf["trig_denom_nom"] * (1.0 - muTrig_mc)
+        sf["trig_denom_up"] = sf["trig_denom_up"] * (1.0 - (muTrig_mc - muTrigerr_mc))
+        sf["trig_denom_down"] = sf["trig_denom_down"] *(1.0 - (muTrig_mc + muTrigerr_mc))
+        
+        sf["muID_nom"] =  sf["muID_nom"] * (muID_)
+        sf["muID_up"] = sf["muID_up"] * (muID_ + muIDerr)
+        sf["muID_down"] = sf["muID_down"] * (muID_ - muIDerr)
+        sf["muIso_nom"] = sf["muIso_nom"] * (muIso_)
+        sf["muIso_up"] = sf["muIso_up"] * (muIso_ + muIsoerr)
+        sf["muIso_down"] = sf["muIso_down"] * (muIso_ - muIsoerr)
+    
+   
 
     #for trig SF
     for how in ["nom", "up", "down"]:
         sf[f"trig_num_{how}"] = 1 - sf[f"trig_num_{how}"]
         sf[f"trig_denom_{how}"] = 1 - sf[f"trig_denom_{how}"]
         cut = sf[f"trig_denom_{how}"] != 0
-        # sf.loc[cut, f"muTrig_{how}"] = (
-        #     sf.loc[cut, f"trig_num_{how}"] / sf.loc[cut, f"trig_denom_{how}"]
-        # )
         cut_val = sf[f"trig_num_{how}"] / sf[f"trig_denom_{how}"]
-        # print(f'copperheadV2 lepton sf {how} cut_val: \n {ak.to_numpy(cut_val)}')
-        # print(f'copperheadV2 lepton sf ak.ones_like(muons.pt[:,0]): \n {ak.to_numpy(ak.ones_like(muons.pt[:,0]))}')
-        sf[f"muTrig_{how}"] = ak.where(cut, cut_val, ak.ones_like(muons.pt[:,0]))
+        sf[f"muTrig_{how}"] = ak.where(cut, cut_val, ak.ones_like(mu1.pt))
     muID = {"nom": sf["muID_nom"], "up": sf["muID_up"], "down": sf["muID_down"]}
     muIso = {"nom": sf["muIso_nom"], "up": sf["muIso_up"], "down": sf["muIso_down"]}
     muTrig = {"nom": sf["muTrig_nom"], "up": sf["muTrig_up"], "down": sf["muTrig_down"]}
-    # print(f'copperheadV2 lepton sf  sf["muTrig_nom"]: \n {(sf["muTrig_nom"])}')
     return muID, muIso, muTrig
-
 
 
 # LHE SF-------------------------------------------------------------------------
@@ -797,7 +856,7 @@ def qgl_weights(jet1, jet2, njets, isHerwig):
     # qgl.wgt[variables.njets == 1] = 1.0 # fill_none does this
     # qgl.wgt = qgl.wgt / qgl.wgt[selected].mean()
     # selected = output.event_selection & (njets > 2)
-    njet_selection = njets > 2
+    njet_selection = njets > 2 # think this is a bug, but have to double check
     qgl_mean = ak.mean(qgl_nom[njet_selection])
     qgl_nom = qgl_nom/ qgl_mean
     print(f"qgl_weights qgl_nom after: {ak.to_numpy(qgl_nom)}")

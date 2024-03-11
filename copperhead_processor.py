@@ -75,7 +75,7 @@ class EventProcessor(processor.ProcessorABC):
             self.zpt_path = "zpt_weights/2022_value" #  hypothetical value, we don't have run3 data yet
         else:
             print(f"USER WARNING: unrecognized Zpt correction for the year {year}!")
-        print(f"self.zpt_path: {self.zpt_path}")
+        # print(f"self.zpt_path: {self.zpt_path}")
         # Calibration of event-by-event mass resolution
         for mode in ["Data", "MC"]:
             if "2016" in year:
@@ -435,8 +435,7 @@ class EventProcessor(processor.ProcessorABC):
         # even_selection column, since fill muon is computationally exp
         # Last time I checked there was some errors on LHE correction shape mismatch
         # ---------------------------------------------------------
-        # mu1 = events.Muon[:,0]
-        # mu2 = events.Muon[:,1]
+
         muons_padded = ak.pad_none(muons, 2)
         muon_flip = muons_padded.pt[:,0] < muons_padded.pt[:,1]  
         muon_flip = ak.fill_none(muon_flip, value=False)
@@ -673,7 +672,7 @@ class EventProcessor(processor.ProcessorABC):
             print("doing musf!")
             musf_lookup = get_musf_lookup(self.config)
             muID, muIso, muTrig = musf_evaluator(
-                musf_lookup, self.config["year"], events.Muon
+                musf_lookup, self.config["year"], mu1, mu2
             )
             weights.add("muID", 
                     weight=muID["nom"],
