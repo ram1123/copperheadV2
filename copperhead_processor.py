@@ -725,32 +725,33 @@ class EventProcessor(processor.ProcessorABC):
                     weightUp=lhe_fac["up"],
                     weightDown=lhe_fac["down"]
                 )
-                if self.test:
-                    print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
-                    print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
-                    # self.weight_collection.add_weight("LHERen", lhe_ren, how="only_vars")
-                    # print(f"weight_collection LHERen info: \n  {self.weight_collection.get_info()}")
-                    # self.weight_collection.add_weight("LHEFac", lhe_fac, how="only_vars")
-                    # print(f"weight_collection LHEFac info: \n  {self.weight_collection.get_info()}")
             
-        #     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
-        #     dataset = events.metadata["dataset"]
-        #     do_thu = False
-        #     # do_thu = (
-        #     #     ("vbf" in dataset)
-        #     #     and ("dy" not in dataset)
-        #     #     and ("nominal" in pt_variations)
-        #     #     and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
-        #     # )
-        #     if do_thu:
-        #         add_stxs_variations(
-        #             events,
-        #             self.weight_collection,
-        #             self.config,
-        #         )
-        #     if self.test:
-        #         print(f"do_thu: {do_thu}")
-        #         print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
+            # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
+            dataset = events.metadata["dataset"]
+            do_thu = (
+                ("vbf" in dataset)
+                and ("dy" not in dataset)
+                and ("nominal" in pt_variations)
+                and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
+            )
+            # if do_thu:
+            #     print("doing LHE!")
+            #     add_stxs_variations(
+            #         events,
+            #         self.weight_collection,
+            #         self.config,
+            #     )
+            if do_thu:
+                print("doing LHE!")
+                add_stxs_variations(
+                    events,
+                    weights,
+                    self.config,
+                )
+                
+            if self.test:
+                print(f"do_thu: {do_thu}")
+                print(f"weight_collection do_thu info: \n  {self.weight_collection.get_info()}")
         #     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
         #     do_pdf = False
         #     # do_pdf = (
@@ -878,8 +879,8 @@ class EventProcessor(processor.ProcessorABC):
         print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
         print(f"weight statistics: {weights.weightStatistics}")
-        # weights = weights.weight()
-        weights = weights.weight("LHEFacUp")
+        weights = weights.weight()
+        # weights = weights.weight("LHEFacUp")
         # weights = weights.weight("LHEFacDown")
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")

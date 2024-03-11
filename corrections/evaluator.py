@@ -741,9 +741,36 @@ def stxs_lookups():
     return stxs_acc_lookups, powheg_xsec_lookup
 
 
+# def add_stxs_variations(
+#     events, 
+#     weights, 
+#     parameters
+# ):
+#     # STXS VBF cross-section uncertainty
+#     stxs_acc_lookups, powheg_xsec_lookup = stxs_lookups()
+#     for i, name in enumerate(parameters["sths_names"]):
+#         # print(f"add_stxs_variations i: {i}, name: {name}")
+#         wgt_up = stxs_uncert(
+#             i,
+#             events.HTXS.stage1_1_fine_cat_pTjet30GeV,
+#             1.0,
+#             stxs_acc_lookups,
+#             powheg_xsec_lookup,
+#         )
+#         wgt_down = stxs_uncert(
+#             i,
+#             events.HTXS.stage1_1_fine_cat_pTjet30GeV,
+#             -1.0,
+#             stxs_acc_lookups,
+#             powheg_xsec_lookup,
+#         )
+#         thu_wgts = {"up": wgt_up, "down": wgt_down}
+#         weights.add_weight("THU_VBF_" + name, thu_wgts, how="only_vars")
+
+
 def add_stxs_variations(
     events, 
-    weights, 
+    weights,
     parameters
 ):
     # STXS VBF cross-section uncertainty
@@ -765,10 +792,13 @@ def add_stxs_variations(
             powheg_xsec_lookup,
         )
         thu_wgts = {"up": wgt_up, "down": wgt_down}
-        weights.add_weight("THU_VBF_" + name, thu_wgts, how="only_vars")
-
-
-
+        weights.add("THU_VBF_" + name, 
+                    weight=ak.ones_like(thu_wgts["up"]),
+                    weightUp=thu_wgts["up"],
+                    weightDown=thu_wgts["down"]
+        )
+    return
+    
 def stxs_uncert(source, event_STXS, Nsigma, stxs_acc_lookups, powheg_xsec_lookup):
     """
     NOTE: source numbering seems arbitrary, I gotta ask Dmitry about this
