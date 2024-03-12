@@ -1190,10 +1190,10 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"jets._meta b4 selection: {repr(jets._meta)}")
         # print(f"dak.necessary_columns(jets.pt) b4 selection: {dak.necessary_columns(jets.pt)}")
         # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
-        # jets = ak.to_packed(ak.mask(jets, jet_selection))
+        jets = ak.to_packed(ak.mask(jets, jet_selection))
         # ak mask leaves None in room of filtered Jets -> which isn't good
         # bc then leading jet now becomes None bc idx==0 jet is None
-        jets = ak.to_packed(jets[jet_selection]) 
+        # jets = ak.to_packed(jets[jet_selection]) 
 
         # #testing ------------------------
         # return jets
@@ -1239,13 +1239,13 @@ class EventProcessor(processor.ProcessorABC):
         print(f"jets.mass_raw[jet_argmax_not_leading] : {jets.mass_raw[jet_argmax_not_leading].compute()}")
         print(f"jets.mass[jet_argmax_not_leading] : {jets.mass[jet_argmax_not_leading].compute()}")
         padded_jets = ak.pad_none(jets, 2)
-        # jet1 = padded_jets[:,0]
-        # jet2 = padded_jets[:,1]
-        jet_flip = padded_jets.pt[:,0] < padded_jets.pt[:,1]  
-        jet_flip = ak.fill_none(jet_flip, value=False)
-        # take the subleading muon values if that now has higher pt after corrections
-        jet1 = ak.where(jet_flip, padded_jets[:,1], padded_jets[:,0])
-        jet2 = ak.where(jet_flip, padded_jets[:,0], padded_jets[:,1])
+        jet1 = padded_jets[:,0]
+        jet2 = padded_jets[:,1]
+        # jet_flip = padded_jets.pt[:,0] < padded_jets.pt[:,1]  
+        # jet_flip = ak.fill_none(jet_flip, value=False)
+        # # take the subleading muon values if that now has higher pt after corrections
+        # jet1 = ak.where(jet_flip, padded_jets[:,1], padded_jets[:,0])
+        # jet2 = ak.where(jet_flip, padded_jets[:,0], padded_jets[:,1])
         dijet = jet1+jet2
         # print(f"dijet: {dijet}")
         jj_dEta = abs(jet1.eta - jet2.eta)
