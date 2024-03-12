@@ -630,7 +630,7 @@ class EventProcessor(processor.ProcessorABC):
             # + jec_pars["jer_variations"]
         )
         if events.metadata["is_mc"]:
-            # moved nnlops reweighting outside of dak process-----------------
+            # moved nnlops reweighting outside of dak process and to run_stage1-----------------
         #     do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
         #     if do_nnlops:
         #         print("doing NNLOPS!")
@@ -897,7 +897,7 @@ class EventProcessor(processor.ProcessorABC):
         print(f"cross_section: {(cross_section)}")
         print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
-        # print(f"weight statistics: {weights.weightStatistics}")
+        print(f"weight statistics: {weights.weightStatistics.keys()}")
         weights = weights.weight()
         # weights = weights.weight("pdf_2rmsUp")
         # weights = weights.weight("LHEFacDown")
@@ -1148,9 +1148,10 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
 
         pass_jet_id = jet_id(jets, self.config)
-        pass_jet_puid = jet_puid(jets, self.config)
 
-
+        # jet PUID disabled as it's not applicable for jets with JEC and pt> 50,
+        # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
+        # pass_jet_puid = jet_puid(jets, self.config)
         # # Jet PUID scale factors
         # if is_mc:  # disable for now
         #     puid_weight = puid_weights(
@@ -1178,7 +1179,7 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"HEMVeto : {HEMVeto}")
         jet_selection = (
             pass_jet_id
-            & pass_jet_puid
+            # & pass_jet_puid
             & (jets.qgl > -2)
             & clean
             & (jets.pt > self.config["jet_pt_cut"])
@@ -1235,12 +1236,12 @@ class EventProcessor(processor.ProcessorABC):
         jet_argmax_not_leading = ak.fill_none((jet_argmax != 0), value=False)
         # print(f"jet_argmax_not_leading: {jet_argmax_not_leading.compute()}")
         # print(f"sum jet_argmax_not_leading: {ak.sum(jet_argmax_not_leading).compute()}")
-        print(f"jet_argmax[jet_argmax_not_leading] : {jet_argmax[jet_argmax_not_leading].compute()}")
-        print(f"jets.pt[jet_argmax_not_leading] : {jets.pt[jet_argmax_not_leading].compute()}")
-        # print(f"jets.pt_jec[jet_argmax_not_leading] : {jets.pt_jec[jet_argmax_not_leading].compute()}")
-        print(f"jets.pt_raw[jet_argmax_not_leading] : {jets.pt_raw[jet_argmax_not_leading].compute()}")
-        print(f"jets.mass_raw[jet_argmax_not_leading] : {jets.mass_raw[jet_argmax_not_leading].compute()}")
-        print(f"jets.mass[jet_argmax_not_leading] : {jets.mass[jet_argmax_not_leading].compute()}")
+        # print(f"jet_argmax[jet_argmax_not_leading] : {jet_argmax[jet_argmax_not_leading].compute()}")
+        # print(f"jets.pt[jet_argmax_not_leading] : {jets.pt[jet_argmax_not_leading].compute()}")
+        # # print(f"jets.pt_jec[jet_argmax_not_leading] : {jets.pt_jec[jet_argmax_not_leading].compute()}")
+        # print(f"jets.pt_raw[jet_argmax_not_leading] : {jets.pt_raw[jet_argmax_not_leading].compute()}")
+        # print(f"jets.mass_raw[jet_argmax_not_leading] : {jets.mass_raw[jet_argmax_not_leading].compute()}")
+        # print(f"jets.mass[jet_argmax_not_leading] : {jets.mass[jet_argmax_not_leading].compute()}")
         padded_jets = ak.pad_none(jets, 2)
         # jet1 = padded_jets[:,0]
         # jet2 = padded_jets[:,1]
