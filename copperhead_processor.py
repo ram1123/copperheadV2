@@ -698,8 +698,8 @@ class EventProcessor(processor.ProcessorABC):
             if do_lhe:
                 print("doing LHE!")
                 lhe_ren, lhe_fac = lhe_weights(events, events.metadata["dataset"], self.config["year"])
-                print(f"lhe_ren: {lhe_ren}")
-                print(f"lhe_fac: {lhe_fac}")
+                # print(f"lhe_ren: {lhe_ren}")
+                # print(f"lhe_fac: {lhe_fac}")
                 weights.add("LHERen", 
                     weight=ak.ones_like(lhe_ren["up"]),
                     weightUp=lhe_ren["up"],
@@ -756,7 +756,6 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Fill Muon variables and gjet variables
         # ------------------------------------------------------------#
-        # print(f"events.Muon.pt: {events.Muon.pt}")
         # out_dict = {
         #     "mu_pt" : events.Muon.pt,
         #     # "mu_eta" : events.Muon.eta,
@@ -775,6 +774,28 @@ class EventProcessor(processor.ProcessorABC):
         #     # "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
         #     # "dimuon_phi_cs" : dimuon_phi_cs,
         # }
+        out_dict = {
+            "mu1_pt" : mu1.pt,
+            "mu2_pt" : mu2.pt,
+            "mu1_eta" : mu1.eta,
+            "mu2_eta" : mu2.eta,
+            "mu1_phi" : mu1.phi,
+            "mu2_phi" : mu2.phi,
+            "mu1_charge" : mu1.charge,
+            "mu2_charge" : mu2.charge,
+            "nmuons" : nmuons,
+            "dimuon_mass" : dimuon.mass,
+            "dimuon_eta" : dimuon.eta,
+            "dimuon_phi" : dimuon.phi,
+            "dimuon_dEta" : dimuon_dEta,
+            "dimuon_dPhi" : dimuon_dPhi,
+            "dimuon_dR" : dimuon_dR,
+            "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
+            "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
+            "dimuon_phi_cs" : dimuon_phi_cs,
+            "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,
+            "HTXS_njets30" : events.HTXS.njets30,
+        }
         # if events.metadata["is_mc"]:
         #     gjet_dict = {
         #         "gjet_pt" : padded_iso_gjet.pt,
@@ -796,7 +817,21 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         
         for variation in pt_variations:
-            # jet_loop_dict = self.jet_loop(
+            jet_loop_dict = self.jet_loop(
+                events, 
+                jets,
+                dimuon,
+                mu1,
+                mu2,
+                variation,
+                weights,
+                do_jec = do_jec,
+                do_jecunc = do_jecunc,
+                do_jerunc = do_jerunc,
+            )
+            
+            # # testing --------------------------------------
+            # jets = self.jet_loop(
             #     events, 
             #     jets,
             #     dimuon,
@@ -806,18 +841,9 @@ class EventProcessor(processor.ProcessorABC):
             #     do_jecunc = do_jecunc,
             #     do_jerunc = do_jerunc,
             # )
-            jets = self.jet_loop(
-                events, 
-                jets,
-                dimuon,
-                variation,
-                weights,
-                do_jec = do_jec,
-                do_jecunc = do_jecunc,
-                do_jerunc = do_jerunc,
-            )
-
-        # out_dict.update(jet_loop_dict) 
+            # # testing end --------------------------------------
+        
+        out_dict.update(jet_loop_dict) 
         
         # # fill in the regions
         # mass = dimuon.mass
@@ -872,8 +898,8 @@ class EventProcessor(processor.ProcessorABC):
         print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
         # print(f"weight statistics: {weights.weightStatistics}")
-        # weights = weights.weight()
-        weights = weights.weight("pdf_2rmsUp")
+        weights = weights.weight()
+        # weights = weights.weight("pdf_2rmsUp")
         # weights = weights.weight("LHEFacDown")
         print(f"weights: {ak.num(weights, axis=0).compute()}")
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
@@ -885,42 +911,46 @@ class EventProcessor(processor.ProcessorABC):
         # # take the subleading muon values if that now has higher pt after corrections
         # mu1 = ak.where(muon_flip, muons_padded[:,1], muons_padded[:,0])
         # mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
-        out_dict = {
-            # "mu_pt" : ak.pad_none(muons.pt, 2),
-            # "mu_eta" : ak.pad_none(muons.eta, 2),
-            # "mu_phi" : ak.pad_none(muons.phi, 2),
-            # "mu_charge" : ak.pad_none(muons.charge, 2),
-            "mu1_pt" : mu1.pt,
-            "mu2_pt" : mu2.pt,
-            "mu1_eta" : mu1.eta,
-            "mu2_eta" : mu2.eta,
-            "mu1_phi" : mu1.phi,
-            "mu2_phi" : mu2.phi,
-            "mu1_charge" : mu1.charge,
-            "mu2_charge" : mu2.charge,
-            "nmuons" : nmuons,
-            "jet_pt" : ak.pad_none(jets.pt, 2),
-            "jet_mass" : ak.pad_none(jets.mass, 2),
-            "jet_eta" : ak.pad_none(jets.eta, 2),
-            "jet_phi" : ak.pad_none(jets.phi, 2),
-            "jet_pt_raw" : ak.pad_none(jets.pt_raw, 2),
-            "jet_mass_raw" : ak.pad_none(jets.mass_raw, 2),
-            "jet_rho" : ak.pad_none(jets.rho, 2),
-            "jet_area" : ak.pad_none(jets.area, 2),
-            "jet_pt_gen" : ak.pad_none(jets.pt_gen, 2),
-            "jet_pt_jec" : ak.pad_none(jets.pt_jec, 2),
-            "jet_mass_jec" : ak.pad_none(jets.mass_jec, 2),
-            "njets" : njets,
-            "weights" : weights,
-            # "mu1_gf_filter" : events.Muon.gf_filter[:,0],
-            # "mu1_gf_pt_corr" :events.Muon.gf_pt_corr[:,0],
-            "dimuon_mass" : dimuon.mass,
-            "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
-            "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
-            "dimuon_phi_cs" : dimuon_phi_cs,
-            "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,
-            "HTXS_njets30" : events.HTXS.njets30,
-        }
+        # out_dict = {
+        #     # "mu_pt" : ak.pad_none(muons.pt, 2),
+        #     # "mu_eta" : ak.pad_none(muons.eta, 2),
+        #     # "mu_phi" : ak.pad_none(muons.phi, 2),
+        #     # "mu_charge" : ak.pad_none(muons.charge, 2),
+        #     "mu1_pt" : mu1.pt,
+        #     "mu2_pt" : mu2.pt,
+        #     "mu1_eta" : mu1.eta,
+        #     "mu2_eta" : mu2.eta,
+        #     "mu1_phi" : mu1.phi,
+        #     "mu2_phi" : mu2.phi,
+        #     "mu1_charge" : mu1.charge,
+        #     "mu2_charge" : mu2.charge,
+        #     "nmuons" : nmuons,
+        #     # "jet_pt" : ak.pad_none(jets.pt, 2),
+        #     # "jet_mass" : ak.pad_none(jets.mass, 2),
+        #     # "jet_eta" : ak.pad_none(jets.eta, 2),
+        #     # "jet_phi" : ak.pad_none(jets.phi, 2),
+        #     # "jet_pt_raw" : ak.pad_none(jets.pt_raw, 2),
+        #     # "jet_mass_raw" : ak.pad_none(jets.mass_raw, 2),
+        #     # "jet_rho" : ak.pad_none(jets.rho, 2),
+        #     # "jet_area" : ak.pad_none(jets.area, 2),
+        #     # "jet_pt_gen" : ak.pad_none(jets.pt_gen, 2),
+        #     # "jet_pt_jec" : ak.pad_none(jets.pt_jec, 2),
+        #     # "jet_mass_jec" : ak.pad_none(jets.mass_jec, 2),
+        #     # "njets" : njets,
+        #     "weights" : weights,
+        #     # "mu1_gf_filter" : events.Muon.gf_filter[:,0],
+        #     # "mu1_gf_pt_corr" :events.Muon.gf_pt_corr[:,0],
+        #     "dimuon_mass" : dimuon.mass,
+        #     "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
+        #     "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
+        #     "dimuon_phi_cs" : dimuon_phi_cs,
+        #     "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,
+        #     "HTXS_njets30" : events.HTXS.njets30,
+        # }
+
+        # add in weights
+        out_dict.update({"weights" : weights})
+        
         if self.config["do_fsr"]:
             fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
             out_dict.update(fsr_dict)
@@ -1010,6 +1040,8 @@ class EventProcessor(processor.ProcessorABC):
         events,
         jets,
         dimuon,
+        mu1,
+        mu2,
         variation,
         weights,
         # do_jec = True, #False
@@ -1153,16 +1185,19 @@ class EventProcessor(processor.ProcessorABC):
             & (abs(jets.eta) < self.config["jet_eta_cut"])
             & HEMVeto
         )
-        # print(f"jet_selection: {jet_selection}")
+        print(f"jet_selection: {jet_selection.compute()}")
         # print(f"jets b4 selection: {jets}")
         # print(f"jets._meta b4 selection: {repr(jets._meta)}")
         # print(f"dak.necessary_columns(jets.pt) b4 selection: {dak.necessary_columns(jets.pt)}")
         # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
-        jets = ak.to_packed(ak.mask(jets, jet_selection))
+        # jets = ak.to_packed(ak.mask(jets, jet_selection))
+        # ak mask leaves None in room of filtered Jets -> which isn't good
+        # bc then leading jet now becomes None bc idx==0 jet is None
+        jets = ak.to_packed(jets[jet_selection]) 
 
-        #testing ------------------------
-        return jets
-        # testing ------------
+        # #testing ------------------------
+        # return jets
+        # # testing ------------
         
         # print(f"jets after selection: {jets}")
         # print(f"jets._meta after selection: {str(jets._meta.compute())}")
@@ -1192,9 +1227,25 @@ class EventProcessor(processor.ProcessorABC):
 
         # fill_jets(output, variables, jet1, jet2)
         #fill_jets
+        # print(f"jets: {jets.compute()}")
+        jet_argmax = ak.argmax(jets.pt, axis=1)
+        jet_argmax_not_leading = ak.fill_none((jet_argmax != 0), value=False)
+        # print(f"jet_argmax_not_leading: {jet_argmax_not_leading.compute()}")
+        # print(f"sum jet_argmax_not_leading: {ak.sum(jet_argmax_not_leading).compute()}")
+        print(f"jet_argmax[jet_argmax_not_leading] : {jet_argmax[jet_argmax_not_leading].compute()}")
+        print(f"jets.pt[jet_argmax_not_leading] : {jets.pt[jet_argmax_not_leading].compute()}")
+        # print(f"jets.pt_jec[jet_argmax_not_leading] : {jets.pt_jec[jet_argmax_not_leading].compute()}")
+        print(f"jets.pt_raw[jet_argmax_not_leading] : {jets.pt_raw[jet_argmax_not_leading].compute()}")
+        print(f"jets.mass_raw[jet_argmax_not_leading] : {jets.mass_raw[jet_argmax_not_leading].compute()}")
+        print(f"jets.mass[jet_argmax_not_leading] : {jets.mass[jet_argmax_not_leading].compute()}")
         padded_jets = ak.pad_none(jets, 2)
-        jet1 = padded_jets[:,0]
-        jet2 = padded_jets[:,1]
+        # jet1 = padded_jets[:,0]
+        # jet2 = padded_jets[:,1]
+        jet_flip = padded_jets.pt[:,0] < padded_jets.pt[:,1]  
+        jet_flip = ak.fill_none(jet_flip, value=False)
+        # take the subleading muon values if that now has higher pt after corrections
+        jet1 = ak.where(jet_flip, padded_jets[:,1], padded_jets[:,0])
+        jet2 = ak.where(jet_flip, padded_jets[:,0], padded_jets[:,1])
         dijet = jet1+jet2
         # print(f"dijet: {dijet}")
         jj_dEta = abs(jet1.eta - jet2.eta)
@@ -1246,6 +1297,23 @@ class EventProcessor(processor.ProcessorABC):
             # "jet2_pt" : jet2.pt[jet_selection],
             # "jet2_eta" : jet2.eta[jet_selection],
             #----------------------------------
+            "jet1_mass" : jet1.mass,
+            "jet2_mass" : jet2.mass,
+            "jet1_pt_raw" : jet1.pt_raw,
+            "jet2_pt_raw" : jet2.pt_raw,
+            "jet1_mass_raw" : jet1.mass_raw,
+            "jet2_mass_raw" : jet2.mass_raw,
+            "jet1_rho" : jet1.rho,
+            "jet2_rho" : jet2.rho,
+            "jet1_area" : jet1.area,
+            "jet2_area" : jet2.area,
+            "jet1_pt_gen" : jet1.pt_gen,
+            "jet2_pt_gen" : jet2.pt_gen,
+            "jet1_pt_jec" : jet1.pt_jec,
+            "jet2_pt_jec" : jet2.pt_jec,
+            "jet1_mass_jec" : jet1.mass_jec,
+            "jet2_mass_jec" : jet2.mass_jec,
+            #-------------------------
             "jet2_rap" : jet2.rapidity,
             "jet2_phi" : jet2.phi,
             "jet2_qgl" : jet2.qgl,
@@ -1294,9 +1362,11 @@ class EventProcessor(processor.ProcessorABC):
 
         sj_dict = {}
         cutouts = [2,5]
+        nmuons = ak.num(events.Muon, axis=1)
         if variation == "nominal":
             for cutout in cutouts:
-                sj_out = fill_softjets(events, jets, muons, cutout, test_mode=self.test)
+                # sj_out = fill_softjets(events, jets, muons, cutout, test_mode=self.test)
+                sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout, test_mode=self.test)
                 sj_out = {
                     key+"_"+variation : val \
                     for key, val in sj_out.items()
