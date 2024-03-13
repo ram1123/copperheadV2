@@ -193,7 +193,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'jet2_mass': (computed["jet2_mass"]),
             'njets': (computed["njets"]),
             'weights': (computed["weights"]),
-            'fsr_mask': (computed["fsr_mask"]),
+            # 'fsr_mask': (computed["fsr_mask"]),
             'dimuon_mass': (computed["dimuon_mass"]),
             'dimuon_ebe_mass_res': (computed["dimuon_ebe_mass_res"]),
             'dimuon_cos_theta_cs': (computed["dimuon_cos_theta_cs"]),
@@ -403,7 +403,7 @@ if __name__ == "__main__":
             print("Gateway Client created")
         # #-----------------------------------------------------------
         else:
-            cluster = LocalCluster(processes=True, memory_limit='12 GiB')
+            cluster = LocalCluster(processes=True, memory_limit='12 GiB', threads_per_worker=1,)
             # cluster.adapt(minimum=8, maximum=8)
             cluster.scale(1)
             client = Client(cluster)
