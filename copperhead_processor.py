@@ -401,19 +401,22 @@ class EventProcessor(processor.ProcessorABC):
         event_filter = event_filter & (pass_leading_pt >0)
         
         # calculate sum of gen weight b4 skimming off bad events
-        events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
-        sumWeights = ak.sum(events.genWeight, axis=0)
-        print(f"sumWeights: {(sumWeights.compute())}")
-        print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
+        is_mc = events.metadata["is_mc"]
+        if is_mc:
+            events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
+            sumWeights = ak.sum(events.genWeight, axis=0)
+            # print(f"sumWeights: {(sumWeights.compute())}")
+        # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = nmuons[event_filter==True]
         applied_fsr = applied_fsr[event_filter==True]
-        # print(f"type(pu_wgts): {type(pu_wgts)}")
-        # print(f"(pu_wgts.keys()): {(pu_wgts.keys())}")
-        for variation in pu_wgts.keys():
-            pu_wgts[variation] = pu_wgts[variation][event_filter==True]
+        if is_mc:
+            # print(f"type(pu_wgts): {type(pu_wgts)}")
+            # print(f"(pu_wgts.keys()): {(pu_wgts.keys())}")
+            for variation in pu_wgts.keys():
+                pu_wgts[variation] = pu_wgts[variation][event_filter==True]
             
         
         # if self.test:
@@ -449,7 +452,7 @@ class EventProcessor(processor.ProcessorABC):
         dimuon = mu1+mu2
         # fill in pd Dataframe as placeholder. Should be fine since we don't need jagged arrays
         # dimuon_ebe_mass_res = self.get_mass_resolution(events, test_mode=self.test)
-        is_mc = events.metadata["is_mc"]
+        
         dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test)
         rel_dimuon_ebe_mass_res = dimuon_ebe_mass_res/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
@@ -577,7 +580,8 @@ class EventProcessor(processor.ProcessorABC):
         # # and L1 prefiring weights
         # # ------------------------------------------------------------#
         weights = Weights(None) # none for dask awkward
-        if events.metadata["is_mc"]:
+        is_mc = events.metadata["is_mc"]
+        if is_mc:
             weights.add("genWeight", weight=events.genWeight)
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights)
             dataset = events.metadata['dataset']
@@ -597,7 +601,8 @@ class EventProcessor(processor.ProcessorABC):
                     weightUp=L1_up,
                     weightDown=L1_down
                 )
-
+        else: # data-> just add in ak ones for consistency
+            weights.add("ones", weight=ak.values_astype(ak.ones_like(events.HLT.IsoMu24), "float32"))
         
         #     # For MC: initialize weight_collection
         #     weight_ones = ak.ones_like(events.Muon.pt[:,0]) # get 1D array of filtered events
@@ -793,14 +798,15 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
             "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
             "dimuon_phi_cs" : dimuon_phi_cs,
-            "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,
-            "HTXS_njets30" : events.HTXS.njets30,
+            
         }
-        # if events.metadata["is_mc"]:
-        #     gjet_dict = {
-        #         "gjet_pt" : padded_iso_gjet.pt,
-        #         "gjet_eta" : padded_iso_gjet.eta,
-        #         "gjet_phi" : padded_iso_gjet.phi,
+        if is_mc:
+            mc_dict = {
+                "HTXS_Higgs_pt" : events.HTXS.Higgs_pt, # for nnlops weight for ggH signal sample
+                "HTXS_njets30" : events.HTXS.njets30, # for nnlops weight for ggH signal sample
+                # "gjet_pt" : padded_iso_gjet.pt,
+                # "gjet_eta" : padded_iso_gjet.eta,
+                # "gjet_phi" : padded_iso_gjet.phi,
         #         "gjet_mass" : padded_iso_gjet.mass,
         #         "gjj_mass": gjj.mass,
         #         "gjj_pt" : gjj.pt,
@@ -809,8 +815,8 @@ class EventProcessor(processor.ProcessorABC):
         #         "gjj_dEta" : gjj_dEta,
         #         "gjj_dPhi" : gjj_dPhi,
         #         "gjj_dR" : gjj_dR,
-        #     }
-        #     out_dict.update(gjet_dict)
+            }
+            out_dict.update(mc_dict)
         
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
@@ -846,22 +852,17 @@ class EventProcessor(processor.ProcessorABC):
         out_dict.update(jet_loop_dict) 
         
         # # fill in the regions
-        # mass = dimuon.mass
-        # z_peak = ((mass > 76) & (mass < 106))
-        # h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
-        # h_peak = ((mass > 115.03) & (mass < 135.03))
-        # region_dict = {
-        #     "z_peak" : ak.fill_none(z_peak, value=False),
-        #     "h_sidebands" : ak.fill_none(h_sidebands, value=False),
-        #     "h_peak" : ak.fill_none(h_peak, value=False),
-        # }
-        # # print(f"dimuon mass: {ak.to_numpy(mass.compute())}")
-        # # if self.test:
-        # #     print(f"region_dict: {region_dict}")
-        # # else:
-        # #     print(f"region_dict: {dask.compute(region_dict)}")
+        mass = dimuon.mass
+        z_peak = ((mass > 76) & (mass < 106))
+        h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
+        h_peak = ((mass > 115.03) & (mass < 135.03))
+        region_dict = {
+            "z_peak" : ak.fill_none(z_peak, value=False),
+            "h_sidebands" : ak.fill_none(h_sidebands, value=False),
+            "h_peak" : ak.fill_none(h_peak, value=False),
+        }
             
-        # out_dict.update(region_dict) 
+        out_dict.update(region_dict) 
 
         # # add in the weights
         # if events.metadata["is_mc"]:
@@ -894,8 +895,9 @@ class EventProcessor(processor.ProcessorABC):
         # dataset = events.metadata['dataset']
         # cross_section = self.config["cross_sections"][dataset]
         # integrated_lumi = self.config["integrated_lumis"]
-        print(f"cross_section: {(cross_section)}")
-        print(f"integrated_lumi: {(integrated_lumi)}")
+        if is_mc:
+            print(f"cross_section: {(cross_section)}")
+            print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         weights = weights.weight()
@@ -1186,7 +1188,7 @@ class EventProcessor(processor.ProcessorABC):
             & (abs(jets.eta) < self.config["jet_eta_cut"])
             & HEMVeto
         )
-        print(f"njets passing jet_selection: {ak.sum(jet_selection).compute()}")
+        # print(f"njets passing jet_selection: {ak.sum(jet_selection).compute()}")
         # print(f"jets b4 selection: {jets}")
         # print(f"jets._meta b4 selection: {repr(jets._meta)}")
         # print(f"dak.necessary_columns(jets.pt) b4 selection: {dak.necessary_columns(jets.pt)}")
@@ -1213,7 +1215,7 @@ class EventProcessor(processor.ProcessorABC):
         # muons = events.Muon 
         njets = ak.num(jets, axis=1)
         
-        print(f"number of events passing jet selection: {ak.sum((njets>0)).compute()}")
+        # print(f"number of events passing jet selection: {ak.sum((njets>0)).compute()}")
 
         # ------------------------------------------------------------#
         # Fill jet-related variables
@@ -1311,8 +1313,6 @@ class EventProcessor(processor.ProcessorABC):
             "jet2_rho" : jet2.rho,
             "jet1_area" : jet1.area,
             "jet2_area" : jet2.area,
-            "jet1_pt_gen" : jet1.pt_gen,
-            "jet2_pt_gen" : jet2.pt_gen,
             "jet1_pt_jec" : jet1.pt_jec,
             "jet2_pt_jec" : jet2.pt_jec,
             "jet1_mass_jec" : jet1.mass_jec,
@@ -1347,7 +1347,12 @@ class EventProcessor(processor.ProcessorABC):
             "zeppenfeld" : zeppenfeld,
             "njets" : njets,
         }
-        # return jet_loop_out_dict
+        if is_mc:
+            mc_dict = {
+                "jet1_pt_gen" : jet1.pt_gen,
+                "jet2_pt_gen" : jet2.pt_gen,
+            }
+            jet_loop_out_dict.update(mc_dict)
         
         # jet_loop_out_dict = {
         #     key: ak.to_numpy(val) for key, val in jet_loop_out_dict.items()

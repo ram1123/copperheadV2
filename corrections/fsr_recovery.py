@@ -56,6 +56,7 @@ def fsr_recovery(events: coffea_nanoevent) -> ak_array:
     # add mass and charge as otherwise you can't add two lorentzvectors
     events["FsrPhoton", "mass"] = 0 
     events["FsrPhoton", "charge"] = 0 
+    # print(f"events.Muon.matched_fsrPhoton: {events.Muon.matched_fsrPhoton.compute()}")
     fsr_muons = events.Muon.matched_fsrPhoton + events.Muon # None means there weren't matched fsrphotons
     fsr_iso = (events.Muon.pfRelIso04_all * events.Muon.pt - events.Muon.matched_fsrPhoton.pt) / fsr_muons.pt
    
@@ -83,7 +84,7 @@ def fsr_recovery(events: coffea_nanoevent) -> ak_array:
     
     
     fsr_filter = (ak.sum(fsrPhotonsToRecover, axis=1) > 0)
-    print(f"fsr_filter: {fsr_filter.compute()}")
+    # print(f"fsr_filter: {fsr_filter.compute()}")
     # print(f"fsr_filter sum: {ak.sum(fsr_filter).compute()}")
     # print(f"fsr_filter num: {ak.num(fsr_filter, axis=0).compute()}")
 
@@ -94,15 +95,16 @@ def fsr_recovery(events: coffea_nanoevent) -> ak_array:
     # print(f"argmax max: {(ak.max(argmax)).compute()}")
     # print(f"argmax min: {(ak.min(argmax)).compute()}")
     argmax_not_leading = argmax != 0
-    print(f"argmax_not_leading: {(argmax_not_leading).compute()}")
-    print(f"argmax_not_leading sum: {ak.sum(argmax_not_leading).compute()}")
-    print(f"argmax not leading muon_fsr.pt_fsr: {fsr_events.Muon.pt_fsr[argmax_not_leading].compute()}")
+    # print(f"muon argmax[argmax_not_leading]: {argmax[argmax_not_leading].compute()}")
+    # print(f"argmax_not_leading: {(argmax_not_leading).compute()}")
+    # print(f"argmax_not_leading sum: {ak.sum(argmax_not_leading).compute()}")
+    # print(f"argmax not leading muon_fsr.pt_fsr: {fsr_events.Muon.pt_fsr[argmax_not_leading].compute()}")
     argmax_not_leading_events = fsr_events[argmax_not_leading]
-    print(f"argmax_not_leading_events.Muon.fsrPhotonIdx >= 0 : \n {(argmax_not_leading_events.Muon.fsrPhotonIdx >= 0).compute()}")
-    print(f"argmax_not_leading_events.Muon.matched_fsrPhoton.relIso03 < 1.8 : \n {(argmax_not_leading_events.Muon.matched_fsrPhoton.relIso03 < 1.8).compute()}")
-    print(f"argmax_not_leading_events.Muon.matched_fsrPhoton.dROverEt2 < 0.012 : \n {(argmax_not_leading_events.Muon.matched_fsrPhoton.dROverEt2 < 0.012).compute()}")
-    print(f"argmax_not_leading_events.Muon.matched_fsrPhoton.pt / argmax_not_leading_events.Muon.pt < 0.4 : \n {(argmax_not_leading_events.Muon.matched_fsrPhoton.pt / argmax_not_leading_events.Muon.pt < 0.4 ).compute()}")
-    print(f"abs(argmax_not_leading_events.Muon.matched_fsrPhoton.eta) < 2.4 : \n {(abs(argmax_not_leading_events.Muon.matched_fsrPhoton.eta) < 2.4).compute()}")
+    # print(f"argmax_not_leading_events.Muon.fsrPhotonIdx >= 0 : \n {(argmax_not_leading_events.Muon.fsrPhotonIdx >= 0).compute()}")
+    # print(f"argmax_not_leading_events.Muon.matched_fsrPhoton.relIso03 < 1.8 : \n {(argmax_not_leading_events.Muon.matched_fsrPhoton.relIso03 < 1.8).compute()}")
+    # print(f"argmax_not_leading_events.Muon.matched_fsrPhoton.dROverEt2 < 0.012 : \n {(argmax_not_leading_events.Muon.matched_fsrPhoton.dROverEt2 < 0.012).compute()}")
+    # print(f"argmax_not_leading_events.Muon.matched_fsrPhoton.pt / argmax_not_leading_events.Muon.pt < 0.4 : \n {(argmax_not_leading_events.Muon.matched_fsrPhoton.pt / argmax_not_leading_events.Muon.pt < 0.4 ).compute()}")
+    # print(f"abs(argmax_not_leading_events.Muon.matched_fsrPhoton.eta) < 2.4 : \n {(abs(argmax_not_leading_events.Muon.matched_fsrPhoton.eta) < 2.4).compute()}")
 
     # print(f"ak.num(fsr_events, axis=0) : {ak.num(fsr_events, axis=0).compute()}")
     # # testing the inconsistent idxs with copper head V1 ----------------

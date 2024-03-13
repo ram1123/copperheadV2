@@ -126,7 +126,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             # "rpt" : (computed["rpt"]),
             # "zeppenfeld" : (computed["zeppenfeld"]),
             # "njets" : (computed["njets"]),
-            # # Btagging WPs
+            # # Btagging WPs ------------------------------------
             # "nBtagLoose" : (computed["nBtagLoose"]),
             # "nBtagMedium" : (computed["nBtagMedium"]),
             # # regions -------------------------------------
@@ -216,22 +216,49 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'jet1_mass_raw': (computed["jet1_mass_raw"]),
             'jet1_rho': (computed["jet1_rho"]),
             'jet1_area': (computed["jet1_area"]),
-            'jet1_pt_gen': (computed["jet1_pt_gen"]),
             'jet1_pt_jec': (computed["jet1_pt_jec"]),
             'jet1_mass_jec': (computed["jet1_mass_jec"]),
             'jet2_pt_raw': (computed["jet2_pt_raw"]),
             'jet2_mass_raw': (computed["jet2_mass_raw"]),
             'jet2_rho': (computed["jet2_rho"]),
             'jet2_area': (computed["jet2_area"]),
-            'jet2_pt_gen': (computed["jet2_pt_gen"]),
             'jet2_pt_jec': (computed["jet2_pt_jec"]),
             'jet2_mass_jec': (computed["jet2_mass_jec"]),
-    
-            # 'mu1_gf_filter': (computed["mu1_gf_filter"]),
-            # 'mu1_gf_pt_corr': (computed["mu1_gf_pt_corr"]),
+            # fraction -------------------------------------
+            "fraction" : dataset_fraction*(ak.ones_like(computed["njets"])), 
+            # Btagging WPs ------------------------------------
+            "nBtagLoose" : (computed["nBtagLoose"]),
+            "nBtagMedium" : (computed["nBtagMedium"]),
+            # regions -------------------------------------
+            "z_peak" : (computed["z_peak"]),
+            "h_sidebands" : (computed["h_sidebands"]),
+            "h_peak" : (computed["h_peak"]),
+            # vbf ?? ------------------------------------------------
+            "vbf_cut" : (computed["vbf_cut"]),
         
          }
+    is_mc = dataset_dict["metadata"]["is_mc"]
+    if is_mc:
+        additional_dict = {
+            'jet1_pt_gen': (computed["jet1_pt_gen"]),
+            'jet2_pt_gen': (computed["jet2_pt_gen"]),
+    #          # gen jet variables -------------------------------------
+    #         "gjj_mass":  (computed["gjj_mass"]),
+    #         'gjet1_pt': (computed["gjet_pt"][:,0]),
+    #         'gjet2_pt': (computed["gjet_pt"][:,1]),
+    #         'gjet1_eta': (computed["gjet_eta"][:,0]),
+    #         'gjet2_eta': (computed["gjet_eta"][:,1]),
+    #         'gjet1_phi': (computed["gjet_phi"][:,0]),
+    #         'gjet2_phi': (computed["gjet_phi"][:,1]),
+    #         'gjet1_mass': (computed["gjet_mass"][:,0]),
+    #         'gjet2_mass': (computed["gjet_mass"][:,1]),
+    #         "gjj_dEta": (computed["gjj_dEta"]),
+    #         "gjj_dPhi": (computed["gjj_dPhi"]),
+    #         "gjj_dR": (computed["gjj_dR"]),
+        }
+        placeholder_dict.update(additional_dict)
     #------------------------------
+        
     # define save path
     fraction_str = str(dataset_dict["metadata"]["original_fraction"]).replace('.', '_')
     sample_name = dataset_dict['metadata']['dataset']
@@ -346,6 +373,13 @@ if __name__ == "__main__":
     action="store",
     help="string value of year we are calculating",
     )
+    parser.add_argument(
+    "--use_gateway",
+    dest="use_gateway",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, uses dask gateway client instead of local",
+    )
     args = parser.parse_args()
     
     time_step = time.time()
@@ -361,18 +395,20 @@ if __name__ == "__main__":
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
     if not test_mode: # full scale implementation
-        # from dask_gateway import Gateway
-        # gateway = Gateway()
-        # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-        # client = gateway.connect(cluster_info.name).get_client()
-        # print("Gateway Client created")
+        if args.use_gateway:
+            from dask_gateway import Gateway
+            gateway = Gateway()
+            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+            client = gateway.connect(cluster_info.name).get_client()
+            print("Gateway Client created")
         # #-----------------------------------------------------------
-        cluster = LocalCluster(processes=True, memory_limit='12 GiB')
-        # cluster.adapt(minimum=8, maximum=8)
-        cluster.scale(1)
-        client = Client(cluster)
-        print("Local scale Client created")
-        # print(f"client dashboard link: {client.dashboard_link}")
+        else:
+            cluster = LocalCluster(processes=True, memory_limit='12 GiB')
+            # cluster.adapt(minimum=8, maximum=8)
+            cluster.scale(1)
+            client = Client(cluster)
+            print("Local scale Client created")
+            # print(f"client dashboard link: {client.dashboard_link}")
 
         #-----------------------------------------------------------
         # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='12 GiB') 
@@ -397,7 +433,7 @@ if __name__ == "__main__":
                 # max_file_len = 15
                 max_file_len = 8
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
-                print(f"smaller_files: {smaller_files}")
+                # print(f"smaller_files: {smaller_files}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
