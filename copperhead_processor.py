@@ -310,25 +310,25 @@ class EventProcessor(processor.ProcessorABC):
         
         # muon_id = "mediumId" if "medium" in self.config["muon_id"] else "looseId"
         # print(f"copperhead2 EventProcessor muon_id: {muon_id}")
-        # # original muon selection ------------------------------------------------
-        # muon_selection = (
-        #     (events.Muon.pt_raw > self.config["muon_pt_cut"])
-        #     & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
-        #     & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
-        #     # & events.Muon[muon_id]
-        #     & events.Muon[self.config["muon_id"]]
-        # )
-        # # original muon selection end ------------------------------------------------
-
-        # testing muon selection ------------------------------------------------
+        # original muon selection ------------------------------------------------
         muon_selection = (
-            (ak.values_astype(events.Muon.pt_raw,  "float64") > self.config["muon_pt_cut"])
-            & (ak.values_astype(abs(events.Muon.eta_raw), "float64")  < self.config["muon_eta_cut"])
-            & (ak.values_astype(events.Muon.pfRelIso04_all, "float64")  < self.config["muon_iso_cut"])
+            (events.Muon.pt_raw > self.config["muon_pt_cut"])
+            & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+            & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
             # & events.Muon[muon_id]
             & events.Muon[self.config["muon_id"]]
         )
-        # testing muon selection end ------------------------------------------------
+        # original muon selection end ------------------------------------------------
+
+        # # testing muon selection ------------------------------------------------
+        # muon_selection = (
+        #     (ak.values_astype(events.Muon.pt_raw,  "float64") > self.config["muon_pt_cut"])
+        #     & (ak.values_astype(abs(events.Muon.eta_raw), "float64")  < self.config["muon_eta_cut"])
+        #     & (ak.values_astype(events.Muon.pfRelIso04_all, "float64")  < self.config["muon_iso_cut"])
+        #     # & events.Muon[muon_id]
+        #     & events.Muon[self.config["muon_id"]]
+        # )
+        # # testing muon selection end ------------------------------------------------
 
         # # count muons that pass the general cut 
         # nmuons = ak.num(events.Muon[muon_selection], axis=1)
@@ -337,6 +337,7 @@ class EventProcessor(processor.ProcessorABC):
         # mm_charge = ak.prod(events.Muon.charge[muon_selection], axis=1)
         
         muons = events.Muon[muon_selection]
+        # muons = ak.to_packed(events.Muon[muon_selection])
         # count muons that pass the general cut 
         nmuons = ak.num(muons, axis=1)
         # Find opposite-sign muons
@@ -415,15 +416,29 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"sumWeights: {(sumWeights.compute())}")
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
+        # original -----------------------------------------------
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = nmuons[event_filter==True]
         applied_fsr = applied_fsr[event_filter==True]
         if is_mc:
-            # print(f"type(pu_wgts): {type(pu_wgts)}")
-            # print(f"(pu_wgts.keys()): {(pu_wgts.keys())}")
             for variation in pu_wgts.keys():
                 pu_wgts[variation] = pu_wgts[variation][event_filter==True]
+
+        # original end -----------------------------------------------
+
+
+        # # to_packed testing -----------------------------------------------
+        # events = events[event_filter==True]
+        # muons = muons[event_filter==True]
+        # nmuons = ak.to_packed(nmuons[event_filter==True])
+        # applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
+        # if is_mc:
+        #     for variation in pu_wgts.keys():
+        #         pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
+
+        # # to_packed testing end -----------------------------------------------
+        
             
         
         # if self.test:
@@ -660,7 +675,7 @@ class EventProcessor(processor.ProcessorABC):
                 print("doing zpt weight!")
                 zpt_weight = self.evaluator[self.zpt_path](dimuon.pt)
                 # self.weight_collection.add_weight('zpt_wgt', zpt_weight)
-                print(f"zpt_weight: {zpt_weight.compute()}")
+                # print(f"zpt_weight: {zpt_weight.compute()}")
                 weights.add("zpt_wgt", weight=zpt_weight)
                 
               
@@ -1187,29 +1202,29 @@ class EventProcessor(processor.ProcessorABC):
             HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
         # print(f"HEMVeto : {HEMVeto}")
         
-        # # original jet_selection-----------------------------------------------
-        # jet_selection = (
-        #     pass_jet_id
-        #     # & pass_jet_puid
-        #     & (jets.qgl > -2)
-        #     & clean
-        #     & (jets.pt > self.config["jet_pt_cut"])
-        #     & (abs(jets.eta) < self.config["jet_eta_cut"])
-        #     & HEMVeto
-        # )
-        # # original jet_selection end ----------------------------------------------
-
-        # testing jet_selection-----------------------------------------------
+        # original jet_selection-----------------------------------------------
         jet_selection = (
             pass_jet_id
             # & pass_jet_puid
             & (jets.qgl > -2)
             & clean
-            & (ak.values_astype(jets.pt, "float64") > self.config["jet_pt_cut"])
-            & (ak.values_astype(abs(jets.eta), "float64")  < self.config["jet_eta_cut"])
+            & (jets.pt > self.config["jet_pt_cut"])
+            & (abs(jets.eta) < self.config["jet_eta_cut"])
             & HEMVeto
         )
-        # testing jet_selection end ----------------------------------------------
+        # original jet_selection end ----------------------------------------------
+
+        # # testing jet_selection-----------------------------------------------
+        # jet_selection = (
+        #     pass_jet_id
+        #     # & pass_jet_puid
+        #     & (jets.qgl > -2)
+        #     & clean
+        #     & (ak.values_astype(jets.pt, "float64") > self.config["jet_pt_cut"])
+        #     & (ak.values_astype(abs(jets.eta), "float64")  < self.config["jet_eta_cut"])
+        #     & HEMVeto
+        # )
+        # # testing jet_selection end ----------------------------------------------
 
 
 
@@ -1222,7 +1237,9 @@ class EventProcessor(processor.ProcessorABC):
         # jets = ak.to_packed(ak.mask(jets, jet_selection))
         # ak mask leaves None in room of filtered Jets -> which isn't good
         # bc then leading jet now becomes None bc idx==0 jet is None
-        jets = ak.to_packed(jets[jet_selection]) 
+        
+        # jets = ak.to_packed(jets[jet_selection]) 
+        jets = jets[jet_selection]
 
         
         # #testing ------------------------
