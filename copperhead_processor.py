@@ -48,7 +48,7 @@ class EventProcessor(processor.ProcessorABC):
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : False, # False
             "do_roccor" : False,# False
-            "do_fsr" : True,
+            "do_fsr" : False,
             "do_geofit" : True, # False
             "do_beamConstraint": False, # if True, override do_geofit
             "year" : "2018",
@@ -260,15 +260,18 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
         else:
             # if no fsr, just copy 'pt' to 'pt_fsr'
+            applied_fsr = (ak.zeros_like(events.Muon.pt) != 0) # boolean array of Falses
             events["Muon", "pt_fsr"] = events.Muon.pt
             # events["Muon", "eta_fsr"] = events.Muon.eta
             # events["Muon", "phi_fsr"] = events.Muon.phi
             # events["Muon", "iso_fsr"] = events.Muon.pfRelIso04_all
-
-        # Note temporary soln to copperheadV1 pt_raw being overwritten with fsr---
-        events["Muon", "pt_raw"] = events.Muon.pt
-        events["Muon", "eta_raw"] = events.Muon.eta
-        events["Muon", "phi_raw"] = events.Muon.phi
+        
+        # Note temporary soln to copperheadV1 pt_raw being overwritten with fsr... and possibly with geofit
+        # which is important for the muon selection later on
+        # events["Muon", "pt_raw"] = events.Muon.pt
+        # events["Muon", "eta_raw"] = events.Muon.eta
+        # events["Muon", "phi_raw"] = events.Muon.phi
+        
         #-----------------------------------------------------------------
         
         # apply Beam constraint or geofit or nothing if neither
@@ -293,7 +296,12 @@ class EventProcessor(processor.ProcessorABC):
                 # print(f"doing neither beam constraint nor geofit")
                 pass
 
-        # # --------------------------------------------------------
+        ## Note temporary soln to copperheadV1 pt_raw being overwritten with fsr... and possibly with geofit
+        # # which is important for the muon selection later on
+        # events["Muon", "pt_raw"] = events.Muon.pt
+        # events["Muon", "eta_raw"] = events.Muon.eta
+        # events["Muon", "phi_raw"] = events.Muon.phi
+        # # # --------------------------------------------------------
         
         # # --------------------------------------------------------#
         # # Select muons that pass pT, eta, isolation cuts,
@@ -313,6 +321,7 @@ class EventProcessor(processor.ProcessorABC):
         # original muon selection ------------------------------------------------
         muon_selection = (
             (events.Muon.pt_raw > self.config["muon_pt_cut"])
+            # (events.Muon.pt_raw >= self.config["muon_pt_cut"])
             & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
             & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
             # & events.Muon[muon_id]
@@ -402,6 +411,9 @@ class EventProcessor(processor.ProcessorABC):
         # leading muon pT cut
         # pass_leading_pt = events.Muon[:,:1].pt_raw > self.config["muon_leading_pt"]
         pass_leading_pt = muons.pt_raw > self.config["muon_leading_pt"]
+        # testing -----------------------
+        # pass_leading_pt = muons.pt_raw >= self.config["muon_leading_pt"] - 0.001 
+        # ----------------------------------------
         pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
         pass_leading_pt = ak.sum(pass_leading_pt, axis=1)
         
@@ -975,9 +987,9 @@ class EventProcessor(processor.ProcessorABC):
         # add in weights
         out_dict.update({"weights" : weights})
         
-        if self.config["do_fsr"]:
-            fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
-            out_dict.update(fsr_dict)
+        # if self.config["do_fsr"]:
+        #     fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
+        #     out_dict.update(fsr_dict)
         #----------------------------
         
         return out_dict

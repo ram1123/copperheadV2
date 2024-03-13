@@ -50,14 +50,16 @@ def fsr_recovery(events: coffea_nanoevent) -> ak_array:
     # print(f"nmuons axis: {ak.num(events.Muon, axis=1).compute()}")
     # print(f"muons: {events.Muon.pt.compute()}")
 
-    # print(f"total nmuons applied with fsrPhotons: {ak.sum(fsrPhotonsToRecover,axis=None).compute()}")
-    # print(f"total nmuons: {ak.sum(ak.num(events.Muon,axis=1)).compute()}")
+    print(f"total nmuons applied with fsrPhotons: {ak.sum(fsrPhotonsToRecover,axis=None).compute()}")
+    print(f"total nmuons: {ak.sum(ak.num(events.Muon,axis=1)).compute()}")
     
     # add mass and charge as otherwise you can't add two lorentzvectors
     events["FsrPhoton", "mass"] = 0 
     events["FsrPhoton", "charge"] = 0 
     # print(f"events.Muon.matched_fsrPhoton: {events.Muon.matched_fsrPhoton.compute()}")
     fsr_muons = events.Muon.matched_fsrPhoton + events.Muon # None means there weren't matched fsrphotons
+    # fsr_muons =  ak.values_astype(events.Muon.matched_fsrPhoton,  "float64")  + ak.values_astype(events.Muon,  "float64") 
+    
     fsr_iso = (events.Muon.pfRelIso04_all * events.Muon.pt - events.Muon.matched_fsrPhoton.pt) / fsr_muons.pt
    
     events["Muon", "pt_fsr"] = ak.where(fsrPhotonsToRecover, fsr_muons.pt, events.Muon.pt)
