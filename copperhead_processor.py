@@ -48,7 +48,7 @@ class EventProcessor(processor.ProcessorABC):
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : False, # False
             "do_roccor" : False,# False
-            "do_fsr" : False,
+            "do_fsr" : True,
             "do_geofit" : True, # False
             "do_beamConstraint": False, # if True, override do_geofit
             "year" : "2018",
