@@ -310,19 +310,26 @@ class EventProcessor(processor.ProcessorABC):
         
         # muon_id = "mediumId" if "medium" in self.config["muon_id"] else "looseId"
         # print(f"copperhead2 EventProcessor muon_id: {muon_id}")
+        # # original muon selection ------------------------------------------------
+        # muon_selection = (
+        #     (events.Muon.pt_raw > self.config["muon_pt_cut"])
+        #     & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+        #     & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
+        #     # & events.Muon[muon_id]
+        #     & events.Muon[self.config["muon_id"]]
+        # )
+        # # original muon selection end ------------------------------------------------
+
+        # testing muon selection ------------------------------------------------
         muon_selection = (
-            (events.Muon.pt_raw > self.config["muon_pt_cut"])
-            & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
-            & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
+            (ak.values_astype(events.Muon.pt_raw,  "float64") > self.config["muon_pt_cut"])
+            & (ak.values_astype(abs(events.Muon.eta_raw), "float64")  < self.config["muon_eta_cut"])
+            & (ak.values_astype(events.Muon.pfRelIso04_all, "float64")  < self.config["muon_iso_cut"])
             # & events.Muon[muon_id]
             & events.Muon[self.config["muon_id"]]
         )
-        if self.test:
-            print(f"copperhead2 EventProcessor evnt_qual_flg_selection long: \n {ak.to_numpy((evnt_qual_flg_selection))}")
-            print(f"copperhead2 EventProcessor muon_selection[44]: \n {muon_selection[44]}")
-            print(f"copperhead2 EventProcessor muon_selection: \n {muon_selection}")
-            print(f"copperhead2 EventProcessor muon_selection long: \n {ak.to_numpy(ak.flatten(muon_selection))}")
-        
+        # testing muon selection end ------------------------------------------------
+
         # # count muons that pass the general cut 
         # nmuons = ak.num(events.Muon[muon_selection], axis=1)
         
@@ -1179,15 +1186,34 @@ class EventProcessor(processor.ProcessorABC):
             false_arr = ak.ones_like(HEMVeto) < 0
             HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
         # print(f"HEMVeto : {HEMVeto}")
+        
+        # # original jet_selection-----------------------------------------------
+        # jet_selection = (
+        #     pass_jet_id
+        #     # & pass_jet_puid
+        #     & (jets.qgl > -2)
+        #     & clean
+        #     & (jets.pt > self.config["jet_pt_cut"])
+        #     & (abs(jets.eta) < self.config["jet_eta_cut"])
+        #     & HEMVeto
+        # )
+        # # original jet_selection end ----------------------------------------------
+
+        # testing jet_selection-----------------------------------------------
         jet_selection = (
             pass_jet_id
             # & pass_jet_puid
             & (jets.qgl > -2)
             & clean
-            & (jets.pt > self.config["jet_pt_cut"])
-            & (abs(jets.eta) < self.config["jet_eta_cut"])
+            & (ak.values_astype(jets.pt, "float64") > self.config["jet_pt_cut"])
+            & (ak.values_astype(abs(jets.eta), "float64")  < self.config["jet_eta_cut"])
             & HEMVeto
         )
+        # testing jet_selection end ----------------------------------------------
+
+
+
+        
         # print(f"njets passing jet_selection: {ak.sum(jet_selection).compute()}")
         # print(f"jets b4 selection: {jets}")
         # print(f"jets._meta b4 selection: {repr(jets._meta)}")
