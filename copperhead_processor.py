@@ -424,32 +424,34 @@ class EventProcessor(processor.ProcessorABC):
         is_mc = events.metadata["is_mc"]
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
-            sumWeights = ak.sum(events.genWeight, axis=0)
-            # print(f"sumWeights: {(sumWeights.compute())}")
+            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            sumWeights = events.metadata['sumGenWgts']
+            print(f"sumWeights: {(sumWeights)}")
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
-        # original -----------------------------------------------
-        events = events[event_filter==True]
-        muons = muons[event_filter==True]
-        nmuons = nmuons[event_filter==True]
-        applied_fsr = applied_fsr[event_filter==True]
-        if is_mc:
-            for variation in pu_wgts.keys():
-                pu_wgts[variation] = pu_wgts[variation][event_filter==True]
-
-        # original end -----------------------------------------------
-
-
-        # # to_packed testing -----------------------------------------------
+        # # original -----------------------------------------------
         # events = events[event_filter==True]
         # muons = muons[event_filter==True]
-        # nmuons = ak.to_packed(nmuons[event_filter==True])
-        # applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
+        # nmuons = nmuons[event_filter==True]
+        # applied_fsr = applied_fsr[event_filter==True]
         # if is_mc:
         #     for variation in pu_wgts.keys():
-        #         pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
+        #         pu_wgts[variation] = pu_wgts[variation][event_filter==True]
 
-        # # to_packed testing end -----------------------------------------------
+        # # original end -----------------------------------------------
+
+
+        # to_packed testing -----------------------------------------------
+        events = events[event_filter==True]
+        muons = muons[event_filter==True]
+        nmuons = ak.to_packed(nmuons[event_filter==True])
+        applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
+        if is_mc:
+            for variation in pu_wgts.keys():
+                pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
+
+        # to_packed testing end -----------------------------------------------
         
             
         
@@ -563,7 +565,7 @@ class EventProcessor(processor.ProcessorABC):
         #testing 
         do_jecunc = False
         do_jerunc = False
-
+        cache = events.caches[0]
         if do_jec:
             if events.metadata["is_mc"]:
                 factory = self.jec_factories_mc["jec"]
@@ -573,10 +575,8 @@ class EventProcessor(processor.ProcessorABC):
                         factory = self.jec_factories_data[run]
                 
             print("do jec!")
-            jets = factory.build(jets)
-            if self.test :
-                print("jets build")
-                jets = jets.compute() # can't circumvent JEC only being on dask distributed
+            jets = factory.build(jets, lazy_cache=cache)
+
         else:
             jets["mass_jec"] = jets.mass
             jets["pt_jec"] = jets.pt
@@ -585,11 +585,11 @@ class EventProcessor(processor.ProcessorABC):
         # # TODO: only consider nuisances that are defined in run parameters
         # # Compute JEC uncertainties
         # if events.metadata["is_mc"] and do_jecunc:
-        #     jets = self.jec_factories_mc["junc"].build(jets)
+        #     jets = self.jec_factories_mc["junc"].build(jets, lazy_cache=cache)
     
         # # # Compute JER uncertainties
         # # if events.metadata["is_mc"] and do_jerunc:
-        # #     jets = self.jec_factories_mc["jer"].build(jets)
+        # #     jets = self.jec_factories_mc["jer"].build(jets, lazy_cache=cache)
         
         # # # TODO: JER nuisances
 
@@ -924,7 +924,7 @@ class EventProcessor(processor.ProcessorABC):
         # applied_fsr = applied_fsr[event_filter]
         # jets = events.Jet
         njets = ak.num(jets.pt, axis=1)
-        print(f"events after filter length: {ak.num(muons.pt, axis=0).compute()}")
+        # print(f"events after filter length: {ak.num(muons.pt, axis=0).compute()}")
         # weights = events.genWeight
         # dataset = events.metadata['dataset']
         # cross_section = self.config["cross_sections"][dataset]
@@ -937,7 +937,9 @@ class EventProcessor(processor.ProcessorABC):
         weights = weights.weight()
         # weights = weights.weight("pdf_2rmsUp")
         # weights = weights.weight("LHEFacDown")
-        print(f"weights: {ak.num(weights, axis=0).compute()}")
+        
+        # print(f"weights: {ak.num(weights, axis=0).compute()}")
+        
         # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
         # print(f"njets: {ak.num(njets, axis=0).compute()}")
         # print(f"jets: {ak.num(jets, axis=0).compute()}")
@@ -1250,8 +1252,8 @@ class EventProcessor(processor.ProcessorABC):
         # ak mask leaves None in room of filtered Jets -> which isn't good
         # bc then leading jet now becomes None bc idx==0 jet is None
         
-        # jets = ak.to_packed(jets[jet_selection]) 
-        jets = jets[jet_selection]
+        jets = ak.to_packed(jets[jet_selection]) 
+        # jets = jets[jet_selection]
 
         
         # #testing ------------------------

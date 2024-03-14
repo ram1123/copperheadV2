@@ -5,7 +5,7 @@ import awkward as ak
 import matplotlib.pyplot as plt
 import numpy as np
 import dask
-from dask.distributed import Client
+# from dask.distributed import Client
 import sys
 import time
 import json
@@ -22,9 +22,31 @@ import argparse
 from dask.distributed import performance_report
 from corrections.evaluator import nnlops_weights
 
+dask.config.set({'logging.distributed': 'error'})
+import logging
+logger = logging.getLogger("distributed.utils_perf")
+logger.setLevel(logging.ERROR)
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning) 
+
 test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
+import gc
+import ctypes
+def trim_memory() -> int:
+     libc = ctypes.CDLL("libc.so.6")
+     return libc.malloc_trim(0)
+    
+# # test code limiting memory leak -----------------------------------
+# import gc
+# client.run(gc.collect)  # collect garbage on all workers
+# import ctypes
+# def trim_memory() -> int:
+#      libc = ctypes.CDLL("libc.so.6")
+#      return libc.malloc_trim(0)
+# client.run(trim_memory)
 
+# #-------------------------------------------------------------------
 
 
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None):
@@ -260,7 +282,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #------------------------------
         
     # define save path
-    fraction_str = str(dataset_dict["metadata"]["original_fraction"]).replace('.', '_')
+    fraction_str = str(dataset_dict["metadata"]["fraction"]).replace('.', '_')
     sample_name = dataset_dict['metadata']['dataset']
     save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     print(f"save_path: {save_path}")
@@ -403,7 +425,7 @@ if __name__ == "__main__":
             print("Gateway Client created")
         # #-----------------------------------------------------------
         else:
-            cluster = LocalCluster(processes=True, memory_limit='12 GiB', threads_per_worker=1,)
+            cluster = LocalCluster(processes=True, memory_limit='14 GiB', threads_per_worker=1,)
             # cluster.adapt(minimum=8, maximum=8)
             cluster.scale(1)
             client = Client(cluster)
@@ -431,7 +453,7 @@ if __name__ == "__main__":
                 # print(f'sample["files"]: {sample["files"]}')
                 # divide sample to smaller chunks
                 # max_file_len = 15
-                max_file_len = 8
+                max_file_len = 1
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
@@ -441,6 +463,11 @@ if __name__ == "__main__":
                     # continue
                     var_step = time.time()
                     dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
+                    # do garbage collection and memory trimming-----------
+                    client.run(gc.collect)
+                    client.run(trim_memory)
+                    #-----------------------------------------------------
+                    
                     var_elapsed = round(time.time() - var_step, 3)
                     # print(f"Finished file_idx {idx} in {var_elapsed} s.")
                 
