@@ -9,7 +9,7 @@ import dask
 import sys
 import time
 import json
-from distributed import LocalCluster, Client
+from distributed import LocalCluster, Client, progress
 import pandas as pd
 import os
 import tqdm
@@ -332,8 +332,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # print(f"zip: {zip.compute()}")
     
     # zip.to_parquet(save_path, compute=True)
-    dak.to_parquet(zip, save_path, compute=True)
-    
+    skim = dak.to_parquet(zip, save_path, compute=False)
+    return skim
     # if test:
     #     for var_name, ak_arr in placeholder_dict.items():
     #         sample_save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{var_name}"
@@ -417,23 +417,24 @@ if __name__ == "__main__":
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
     if not test_mode: # full scale implementation
-        if args.use_gateway:
-            from dask_gateway import Gateway
-            gateway = Gateway()
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-            client = gateway.connect(cluster_info.name).get_client()
-            print("Gateway Client created")
-        # #-----------------------------------------------------------
-        else:
-            cluster = LocalCluster(processes=True, memory_limit='14 GiB', threads_per_worker=1,)
-            # cluster.adapt(minimum=8, maximum=8)
-            cluster.scale(1)
-            client = Client(cluster)
-            print("Local scale Client created")
-            # print(f"client dashboard link: {client.dashboard_link}")
-
+        # # original ---------------------------------------------------------
+        # if args.use_gateway:
+        #     from dask_gateway import Gateway
+        #     gateway = Gateway()
+        #     cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+        #     client = gateway.connect(cluster_info.name).get_client()
+        #     print("Gateway Client created")
+        # # #-----------------------------------------------------------
+        # else:
+        #     cluster = LocalCluster(processes=True, memory_limit='14 GiB', threads_per_worker=1,)
+        #     # cluster.adapt(minimum=8, maximum=8)
+        #     cluster.scale(1)
+        #     client = Client(cluster)
+        #     print("Local scale Client created")
+        #     # print(f"client dashboard link: {client.dashboard_link}")
+        #-------------------------------------------------------------------------------------
         #-----------------------------------------------------------
-        # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='12 GiB') 
+        # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
         #---------------------------------------------------------
         # print("cluster scale up")
         # sample_path = "./config/processor_samples.json"
@@ -442,34 +443,47 @@ if __name__ == "__main__":
             samples = json.loads(file.read())
         # print(f"samples.keys(): {samples.keys()}")
         total_save_path = args.save_path + f"/{args.year}"
-        with performance_report(filename="dask-report.html"):
-            # for dataset, sample in samples.items():
-            for dataset, sample in tqdm.tqdm(samples.items()):
-                #test
-                # if dataset != "ttjets_dl":
-                # if "data" in dataset:
-                #     continue
-                # print(f"dataset: {dataset}")
-                # print(f'sample["files"]: {sample["files"]}')
-                # divide sample to smaller chunks
-                # max_file_len = 15
-                max_file_len = 1
-                smaller_files = list(divide_chunks(sample["files"], max_file_len))
-                # print(f"smaller_files: {smaller_files}")
-                for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    smaller_sample = copy.deepcopy(sample)
-                    smaller_sample["files"] = smaller_files[idx]
-                    # print(f"smaller_files[{idx}]: {smaller_files[idx]}")
-                    # continue
-                    var_step = time.time()
-                    dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
-                    # do garbage collection and memory trimming-----------
-                    client.run(gc.collect)
-                    client.run(trim_memory)
-                    #-----------------------------------------------------
-                    
-                    var_elapsed = round(time.time() - var_step, 3)
-                    # print(f"Finished file_idx {idx} in {var_elapsed} s.")
+        # with performance_report(filename="dask-report.html"):
+        # for dataset, sample in samples.items():
+        
+        for dataset, sample in tqdm.tqdm(samples.items()):
+            sample_step = time.time()
+            #test
+            # if dataset != "ttjets_dl":
+            # if "data" in dataset:
+            #     continue
+            # print(f"dataset: {dataset}")
+            # print(f'sample["files"]: {sample["files"]}')
+            # divide sample to smaller chunks
+            # max_file_len = 15
+            max_file_len = 4
+            # max_file_len = 1
+            smaller_files = list(divide_chunks(sample["files"], max_file_len))
+            # print(f"smaller_files: {smaller_files}")
+            for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
+                with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
+                    with performance_report(filename="dask-report.html"):
+                        smaller_sample = copy.deepcopy(sample)
+                        smaller_sample["files"] = smaller_files[idx]
+                        # print(f"smaller_files[{idx}]: {smaller_files[idx]}")
+                        # continue
+                        var_step = time.time()
+                        to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
+                        # print(f"to_compute: {to_compute}")
+                        futures = dask.compute(to_compute) # futures: represent the ongoing or completed computations within the Dask cluster, regardless of the underlying execution environment
+                        # print(f"futures: {futures}")
+                        progress(futures)
+                        results = client.gather(futures)
+    
+                        # do garbage collection and memory trimming-----------
+                        client.run(gc.collect)
+                        client.run(trim_memory)
+                        #-----------------------------------------------------
+                        
+                        var_elapsed = round(time.time() - var_step, 3)
+                        print(f"Finished file_idx {idx} in {var_elapsed} s.")
+            sample_elapsed = round(time.time() - sample_step, 3)
+            print(f"Finished sample {dataset} in {sample_elapsed} s.")
                 
     else:
         # xrootd_path = "root://eos.cms.rcac.purdue.edu/"
