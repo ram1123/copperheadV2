@@ -67,17 +67,49 @@
         "variable": "mu1_pt",
         "binning_linspace": [20, 300, 30],
         "density": false,
-        "ylabel": "Events / 1 GeV",
-        "xlabel": "$p_{T}(\\mu_{1})$ [GeV]",
-        "color": "red"
+        "ylabel": "Events",
+        "xlabel": "$p_{T}(mu1)$ [GeV]",
+        "color": "royalblue"
+    },
+    "mu1_eta": {
+        "variable": "mu1_eta",
+        "binning_linspace": [-3, 3, 30],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$\\eta (mu1)$",
+        "color": "royalblue"
+    },
+    "mu1_phi": {
+        "variable": "mu1_phi",
+        "binning_linspace": [-3.2, 3.2, 30],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$\\phi (mu1)$",
+        "color": "royalblue"
     },
     "mu2_pt": {
         "variable": "mu2_pt",
         "binning_linspace": [20, 300, 30],
         "density": false,
-        "ylabel": "Events / 1 GeV",
-        "xlabel": "$p_{T}(\\mu_{2})$ [GeV]",
-        "color": "red"
+        "ylabel": "Events",
+        "xlabel": "$p_{T}(mu2)$ [GeV]",
+        "color": "royalblue"
+    },
+    "mu2_eta": {
+        "variable": "mu2_eta",
+        "binning_linspace": [-3, 3, 30],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$\\eta (mu2)$",
+        "color": "royalblue"
+    },
+    "mu2_phi": {
+        "variable": "mu2_phi",
+        "binning_linspace": [-3.2, 3.2, 30],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$\\phi (mu2)$",
+        "color": "royalblue"
     },
     "deta": {
         "variable": "deta",
