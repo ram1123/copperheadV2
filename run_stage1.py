@@ -282,7 +282,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #------------------------------
         
     # define save path
-    fraction_str = str(dataset_dict["metadata"]["fraction"]).replace('.', '_')
+    fraction = round(dataset_dict["metadata"]["fraction"], 3)
+    fraction_str = str(fraction).replace('.', '_')
     sample_name = dataset_dict['metadata']['dataset']
     save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     print(f"save_path: {save_path}")
@@ -456,7 +457,7 @@ if __name__ == "__main__":
             # print(f'sample["files"]: {sample["files"]}')
             # divide sample to smaller chunks
             # max_file_len = 15
-            max_file_len = 4
+            max_file_len = 6
             # max_file_len = 1
             smaller_files = list(divide_chunks(sample["files"], max_file_len))
             # print(f"smaller_files: {smaller_files}")
@@ -486,12 +487,6 @@ if __name__ == "__main__":
             print(f"Finished sample {dataset} in {sample_elapsed} s.")
                 
     else:
-        # xrootd_path = "root://eos.cms.rcac.purdue.edu/"
-        # # fname = "/store/mc/RunIISummer20UL18NanoAODv9/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v2/230000/1A909DE6-CA08-434B-BDBB-B648B95BEFDF.root"
-        # # fname = '/store/data/Run2018A/SingleMuon/NANOAOD/UL2018_MiniAODv2_NanoAODv9-v2/2550000/9DDF008C-B740-CA4D-B7EE-8E7E660FBD9A.root'
-        # # fname = "/store/mc/RunIISummer20UL18NanoAODv9/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v2/40000/ECB51118-0153-2F40-BB6D-0204F0EE98C2.root" # "dy_M-50",
-        # # fname = '/store/mc/RunIISummer20UL18NanoAODv9/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v1/2810000/C4DAB63C-E2A1-A541-93A8-3F46315E362C.root' # ggh_powheg
-        # fname ="/store/mc/RunIISummer20UL18NanoAODv9/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v1/2820000/083C985C-C112-3B46-A053-D72C1F83309D.root" # vbf
         # dataset_loop(coffea_processor, xrootd_path+fname, test=test_mode)
 
         sample_path = "./config/fraction_processor_samples.json"

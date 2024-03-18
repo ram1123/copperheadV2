@@ -252,7 +252,7 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             print("Gateway Client created")
         else: # use local cluster
-            cluster = LocalCluster()
+            cluster = LocalCluster(processes=True)
             cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
             client = Client(cluster)
             print("Local scale Client created")
@@ -315,6 +315,8 @@ if __name__ == "__main__":
         # take data
         data_l =  [sample_name for sample_name in dataset.keys() if "data" in sample_name]
         data_samples = args.data_samples
+        # print(f"data_samples: {data_samples}")
+        # print(f"data_l: {data_l}")
         if len(data_samples) >0:
             for data_letter in data_samples:
                 for sample_name in data_l:
@@ -325,7 +327,7 @@ if __name__ == "__main__":
         if len(bkg_samples) >0:
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
-                    new_sample_list.append("dy_M-50")
+                    # new_sample_list.append("dy_M-50")
                     new_sample_list.append("dy_M-100To200")
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                     new_sample_list.append("ttjets_dl")
@@ -333,7 +335,7 @@ if __name__ == "__main__":
                 elif bkg_sample.upper() == "ST": # enforce upper case to prevent confusion
                     new_sample_list.append("st_tw_top")
                     new_sample_list.append("st_tw_antitop")
-                elif bkg_sample.upper() == "DB": # enforce upper case to prevent confusion
+                elif bkg_sample.upper() == "VV": # enforce upper case to prevent confusion
                     new_sample_list.append("ww_2l2nu")
                     new_sample_list.append("wz_3lnu")
                     new_sample_list.append("wz_2l2q")
@@ -383,7 +385,7 @@ if __name__ == "__main__":
             fnames = [file[0] for file in outfiles if file != []]
             # print(f"fnames: {fnames}")
             
-            random.shuffle(fnames)
+            # random.shuffle(fnames)
             # fnames = get_Xcache_filelist(fnames)
             print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
@@ -489,9 +491,11 @@ if __name__ == "__main__":
         with open(sample_path) as file:
             samples = json.loads(file.read())
         new_samples = copy.deepcopy(samples) # copy old sample, overwrite it later
-
+        # print(f"fraction : {fraction}")
         if fraction < 1.0: # else, just save the original samples and new samples
+            # print("make new samples!")
             # new_samples = {}
+            # print(f"original samples : {samples}")
             for sample_name, sample in tqdm.tqdm(samples.items()):
                 is_data = "data" in sample_name
                 tot_N_evnts = sample['metadata']["data_entries"] if is_data else sample['metadata']["nGenEvts"]
@@ -502,10 +506,11 @@ if __name__ == "__main__":
                 # }
                 old_N_evnts = new_samples[sample_name]['metadata']["data_entries"] if is_data else new_samples[sample_name]['metadata']["nGenEvts"]
                 if is_data:
+                    print("data!")
                     new_samples[sample_name]['metadata']["data_entries"] = new_N_evnts
                 else:
                     new_samples[sample_name]['metadata']["nGenEvts"] = new_N_evnts
-                    # new_samples[sample_name]['metadata']["sumGenWgts"] *= fraction # just directly multiply by fraction for this since this is already float
+                    new_samples[sample_name]['metadata']["sumGenWgts"] *= new_N_evnts/old_N_evnts # just directly multiply by fraction for this since this is already float and this is much faster
                     """
                     # recalculate sumGenWgts
                     events = NanoEventsFactory.from_root(
@@ -521,8 +526,10 @@ if __name__ == "__main__":
                     print(f"new sumGenWgts: {new_samples[sample_name]['metadata']['sumGenWgts']}")
                     """
                 # new_samples[sample_name]['metadata']["fraction"] = fraction
-                new_samples[sample_name]['metadata']["fraction"] = new_N_evnts/old_N_evnts
-                new_samples[sample_name]['metadata']["original_fraction"] = fraction
+                # state new fraction
+                new_samples[sample_name]['metadata']['fraction'] = new_N_evnts/old_N_evnts
+                print(f"new_samples[sample_name]['metadata']['fraction']: {new_samples[sample_name]['metadata']['fraction']}")
+                # new_samples[sample_name]['metadata']["original_fraction"] = fraction
                 
                 # print(f"new_samples[{sample_name}]: {new_samples[sample_name].keys()}")
                 # loop through the files to correct the steps
@@ -557,12 +564,12 @@ if __name__ == "__main__":
                     if not stop_flag: # update variables and move to next file
                         end_idx = len(file_dict["steps"])-1
                         event_counter += file_dict["steps"][end_idx][1]
-                
+                # print(f"new_samples final: {new_samples}")
 
         #save the sample info
         directory = "./config"
         filename = directory+"/fraction_processor_samples.json"
-        # filename = directory+"/processor_samples.json"
+        # print(f"new samples filename: {filename}")
         with open(filename, "w") as file:
                 json.dump(new_samples, file)
     
