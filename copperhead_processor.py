@@ -424,10 +424,14 @@ class EventProcessor(processor.ProcessorABC):
         is_mc = events.metadata["is_mc"]
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
-            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
-            sumWeights = events.metadata['sumGenWgts']
-            print(f"sumWeights: {(sumWeights)}")
+            # small files testing start ------------------------------------------
+            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            # small files testing end ------------------------------------------
+            # original start ----------------------------------------------
+            # sumWeights = events.metadata['sumGenWgts']
+            # print(f"sumWeights: {(sumWeights)}")
+            # original end -------------------------------------------------
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
         # # original -----------------------------------------------
@@ -565,7 +569,7 @@ class EventProcessor(processor.ProcessorABC):
         #testing 
         do_jecunc = False
         do_jerunc = False
-        cache = events.caches[0]
+        # cache = events.caches[0]
         if do_jec:
             if events.metadata["is_mc"]:
                 factory = self.jec_factories_mc["jec"]
@@ -575,7 +579,8 @@ class EventProcessor(processor.ProcessorABC):
                         factory = self.jec_factories_data[run]
                 
             print("do jec!")
-            jets = factory.build(jets, lazy_cache=cache)
+            # jets = factory.build(jets, lazy_cache=cache)
+            jets = factory.build(jets)
 
         else:
             jets["mass_jec"] = jets.mass
