@@ -6,19 +6,7 @@ coffea_nanoevent = TypeVar('coffea_nanoevent')
 
 
 def fsr_recovery(events: coffea_nanoevent) -> ak_array:
-    # test that no muon fsrPhoton idx is overlapping with electron photon idx------------------
-    # idxs = [1,2,3] # check up to 3 assocaited photons
-    # for i in idxs:
-    #     mu_photon_idxs = events.Muon.fsrPhotonIdxG[events.Muon.fsrPhotonIdxG != -1][:,(i-1):i]
-    #     mu_photon_idxs = ak.flatten(ak.pad_none(mu_photon_idxs,1)) # get event length array of idxs with flatten
-    #     for j in idxs:
-    #         el_photon_idxs = events.Electron.photonIdxG[events.Electron.photonIdxG != -1][:,(j-1):j]
-    #         el_photon_idxs = ak.flatten(ak.pad_none(el_photon_idxs,1)) # get event length array of idxs with flatten
-    #         # print(mu_photon_idxs.compute())
-    #         flag = ak.fill_none((mu_photon_idxs==el_photon_idxs), value=False)
-    #         print(f"# of {i}th muon fsrPhoton beig same as {j}th electron photon: {ak.sum(flag).compute()}")
-    # fsrPhoton test end ----------------------------------------------------------------------
-    # print(f"fsr_recovery type(events): {type(events)}")
+    
 
     # # testing better fsrPhotonsToRecover ---------------------------------------------------------------
     # mu_fsr_delta_r = events.Muon.delta_r(events.Muon.matched_fsrPhoton)
@@ -45,13 +33,6 @@ def fsr_recovery(events: coffea_nanoevent) -> ak_array:
 
     
     fsrPhotonsToRecover = ak.fill_none(fsrPhotonsToRecover, False) 
-    # print(f"fsrPhotonsToRecover: {fsrPhotonsToRecover.compute()}")
-    # print(f"ak.sum(fsrPhotonsToRecover, axis=1): {ak.sum(fsrPhotonsToRecover, axis=1).compute()}")
-    # print(f"nmuons axis: {ak.num(events.Muon, axis=1).compute()}")
-    # print(f"muons: {events.Muon.pt.compute()}")
-
-    print(f"total nmuons applied with fsrPhotons: {ak.sum(fsrPhotonsToRecover,axis=None).compute()}")
-    print(f"total nmuons: {ak.sum(ak.num(events.Muon,axis=1)).compute()}")
     
     # add mass and charge as otherwise you can't add two lorentzvectors
     events["FsrPhoton", "mass"] = 0 
@@ -68,82 +49,73 @@ def fsr_recovery(events: coffea_nanoevent) -> ak_array:
     events["Muon", "mass_fsr"] = ak.where(fsrPhotonsToRecover, fsr_muons.mass, events.Muon.mass)
     events["Muon", "iso_fsr"] = ak.where(fsrPhotonsToRecover, fsr_iso, events.Muon.pfRelIso04_all)
 
-    #-----------------------------------------------------
-    # #some quick test. comment them out when done:
-    # assert(
-    #     0 ==
-    #     (ak.sum(events.Muon[~fsrPhotonsToRecover].pt_fsr!= events.Muon[~fsrPhotonsToRecover].pt)) 
-    # )
-    # assert(
-    #     0 ==
-    #     (ak.sum(events.Muon[fsrPhotonsToRecover].pt_fsr== events.Muon[fsrPhotonsToRecover].pt)) 
-    # )
-    #-----------------------------------------------------
-    
-    
-    # print(f"fsrPhotonsToRecover: {fsrPhotonsToRecover.compute()}")
-    # print(f"ak.sum(fsrPhotonsToRecover, axis=1: {ak.sum(fsrPhotonsToRecover, axis=1).compute()}")
-    
-    
-    fsr_filter = (ak.sum(fsrPhotonsToRecover, axis=1) > 0)
-    # print(f"fsr_filter: {fsr_filter.compute()}")
-    # print(f"fsr_filter sum: {ak.sum(fsr_filter).compute()}")
-    # print(f"fsr_filter num: {ak.num(fsr_filter, axis=0).compute()}")
 
-    fsr_events = events[fsr_filter]
-    # print(f"ak.num(fsr_events.Muon.pt_fsr, axis=1): {ak.num(fsr_events.Muon.pt_fsr, axis=1).compute()}")
-    # print(f"ak.num(fsr_events.Muon.pt_fsr, axis=0): {ak.num(fsr_events.Muon.pt_fsr, axis=0).compute()}")
-    argmax = ak.argmax(fsr_events.Muon.pt_fsr, axis=1)
-    # print(f"argmax max: {(ak.max(argmax)).compute()}")
-    # print(f"argmax min: {(ak.min(argmax)).compute()}")
-    argmax_not_leading = argmax != 0
-    # print(f"muon argmax[argmax_not_leading]: {argmax[argmax_not_leading].compute()}")
-    # print(f"argmax_not_leading: {(argmax_not_leading).compute()}")
-    # print(f"argmax_not_leading sum: {ak.sum(argmax_not_leading).compute()}")
-    # print(f"argmax not leading muon_fsr.pt_fsr: {fsr_events.Muon.pt_fsr[argmax_not_leading].compute()}")
-    argmax_not_leading_events = fsr_events[argmax_not_leading]
-    # print(f"argmax_not_leading_events.Muon.fsrPhotonIdx >= 0 : \n {(argmax_not_leading_events.Muon.fsrPhotonIdx >= 0).compute()}")
-    # print(f"argmax_not_leading_events.Muon.matched_fsrPhoton.relIso03 < 1.8 : \n {(argmax_not_leading_events.Muon.matched_fsrPhoton.relIso03 < 1.8).compute()}")
-    # print(f"argmax_not_leading_events.Muon.matched_fsrPhoton.dROverEt2 < 0.012 : \n {(argmax_not_leading_events.Muon.matched_fsrPhoton.dROverEt2 < 0.012).compute()}")
-    # print(f"argmax_not_leading_events.Muon.matched_fsrPhoton.pt / argmax_not_leading_events.Muon.pt < 0.4 : \n {(argmax_not_leading_events.Muon.matched_fsrPhoton.pt / argmax_not_leading_events.Muon.pt < 0.4 ).compute()}")
-    # print(f"abs(argmax_not_leading_events.Muon.matched_fsrPhoton.eta) < 2.4 : \n {(abs(argmax_not_leading_events.Muon.matched_fsrPhoton.eta) < 2.4).compute()}")
-
-    # print(f"ak.num(fsr_events, axis=0) : {ak.num(fsr_events, axis=0).compute()}")
-    # # testing the inconsistent idxs with copper head V1 ----------------
-    # # print(f"test: {ak.num(events.Muon.pt, axis=0)}")
-    # fsr_filter_computed = (fsr_filter).compute()
-    # bad_idxs = ak.to_numpy(ak.zeros_like(fsr_filter_computed))
-    # bad_idxs[393] = 1
-    # bad_idxs[669] = 1
-    # bad_idxs[1550] = 1
-    # bad_idxs[2286] = 1
-    # bad_idxs[4710] = 1
-    # bad_idxs[6403] = 1
-    # bad_idxs[6643] = 1
-    # bad_idxs[7378] = 1
-    # bad_idxs[8396] = 1
-    # bad_idxs = bad_idxs[ak.to_numpy(fsr_filter_computed)]
-    # print(f"bad_idxs len: {ak.num(bad_idxs, axis=0)}")
-    #-------------------------------------------------------------------
-    # print(f"ak.argmax(fsr_events.Muon.pt): {ak.argmax(fsr_events.Muon.pt, axis=1).compute()}")
     
-    # print(f"leading still leading after fsr:{ak.sum(ak.argmax(fsr_events.Muon.pt_fsr, axis=1)==0).compute()}")
-    # print(f"subleading leading after fsr:{ak.sum(ak.argmax(fsr_events.Muon.pt_fsr, axis=1)==1).compute()}")
-    # print(f"subsubleading+ leading after fsr:{ak.sum(ak.argmax(fsr_events.Muon.pt_fsr, axis=1)>1).compute()}")
-    # print(f"ak.num(fsr_events.Muon): {ak.num(fsr_events.Muon, axis=0).compute()}")
-    
-    # print(f"ak.num(events.Muon): {ak.num(events.Muon, axis=0).compute()}")
-    # print(f"muon_fsr.pt_fsr: {fsr_events.Muon.pt_fsr.compute()}")
-    # print(f"muon_fsr.pt: {fsr_events.Muon.pt.compute()}")
-    # print(f"bad muon_fsr.pt_fsr: {fsr_events.Muon.pt_fsr.compute()[bad_idxs]}")
-    # print(f"bad muon_fsr.pt: {fsr_events.Muon.pt.compute()[bad_idxs]}")
-    # print(f"muon_fsr.matched_fsrPhoton.pt: \n {fsr_events.Muon.matched_fsrPhoton.pt.compute()}")
-    # print(f"events.Muon.pt[mask]: {events.Muon.pt[fsrPhotonsToRecover].compute()}")
-    # print(f"sum events.Muon.pt[mask]: {ak.sum(events.Muon.pt[fsrPhotonsToRecover], axis=1).compute()}")
-    # print(f"num events.Muon.pt[mask]: {ak.num(events.Muon.pt[fsrPhotonsToRecover], axis=1).compute()}")
+    # fsr_filter = (ak.sum(fsrPhotonsToRecover, axis=1) > 0)
+    # fsr_events = events[fsr_filter]
+    # argmax = ak.argmax(fsr_events.Muon.pt_fsr, axis=1)
+    # argmax_not_leading = argmax != 0
+    # argmax_not_leading_events = fsr_events[argmax_not_leading]
     return fsrPhotonsToRecover # return boolean filter for geofit
 
+# def fsr_recoveryV1(events: coffea_nanoevent) -> ak_array:
+#     """
+#     Import of Dmitry's implementation of fsr recovery from copperhead V1
+#     """
+        
+#     # original fsrPhotonsToRecover ---------------------------------------------------------------
+#     fsrPhotonsToRecover = (
+#         (events.Muon.fsrPhotonIdx >= 0) # pick rows and cols that have values (-1 means no photon found)
+#         & (events.Muon.matched_fsrPhoton.relIso03 < 1.8)
+#         & (events.Muon.matched_fsrPhoton.dROverEt2 < 0.012)
+#         & (events.Muon.matched_fsrPhoton.pt / events.Muon.pt < 0.4) # suppress Zgamma -> mumu contanmination
+#         & (abs(events.Muon.matched_fsrPhoton.eta) < 2.4)
+#     ) 
+#     # original fsrPhotonsToRecover end ---------------------------------------------------------------
 
+    
+#     fsrPhotonsToRecover = ak.fill_none(fsrPhotonsToRecover, False) 
+#     fsr = {
+#         "pt": events.Muon.matched_fsrPhoton.pt,
+#         "eta": events.Muon.matched_fsrPhoton.eta,
+#         "phi": events.Muon.matched_fsrPhoton.phi,
+#         "mass": 0.0,
+#     }
+
+#     for obj in [df.Muon, fsr]:
+#         px_ = obj["pt"] * np.cos(obj["phi"])
+#         py_ = obj["pt"] * np.sin(obj["phi"])
+#         pz_ = obj["pt"] * np.sinh(obj["eta"])
+#         e_ = np.sqrt(px_**2 + py_**2 + pz_**2 + obj["mass"] ** 2)
+
+#         px = px + px_
+#         py = py + py_
+#         pz = pz + pz_
+#         e = e + e_
+#     # add mass and charge as otherwise you can't add two lorentzvectors
+#     pt = np.sqrt(px**2 + py**2)
+#     print(f"type(pt): {(pt.type)}")
+#     print(f"total nmuons applied with fsrPhotons: {ak.sum(mask,axis=None)}")
+#     eta = np.arcsinh(pz / pt)
+#     phi = np.arctan2(py, px)
+#     mass = np.sqrt(e**2 - px**2 - py**2 - pz**2)
+#     print(f"type(eta): {(eta.type)}")
+#     print(f"type(phi): {(phi.type)}")
+#     print(f"type(mass): {(mass.type)}")
+#     iso = (df.Muon.pfRelIso04_all * df.Muon.pt - df.Muon.matched_fsrPhoton.pt) / pt
+
+#     df["Muon", "pt_fsr"] = ak.where(mask, pt, df.Muon.pt)
+#     df["Muon", "eta_fsr"] = ak.where(mask, eta, df.Muon.eta)
+#     df["Muon", "phi_fsr"] = ak.where(mask, phi, df.Muon.phi)
+#     df["Muon", "mass_fsr"] = ak.where(mask, mass, df.Muon.mass)
+#     # df["Muon", "mass_fsr"] = df.Muon.mass
+#     df["Muon", "iso_fsr"] = ak.where(mask, iso, df.Muon.pfRelIso04_all)
+#     fsr_event_mask = ak.sum(mask, axis=1) > 0
+#     # print(f"fsr_event_mask len : {ak.sum(fsr_event_mask)}")
+#     # print(f"df[mask].Muon.pt_fsr: {df[fsr_event_mask].Muon.pt_fsr}")
+#     # print(f"df[mask].Muon.pt: {df[fsr_event_mask].Muon.pt}")
+#     # print(f"fsr[pt][mask]: \n {fsr['pt'][fsr_event_mask]}")
+#     return mask
 
 
 
