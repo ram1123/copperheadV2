@@ -479,12 +479,16 @@ class EventProcessor(processor.ProcessorABC):
         # Last time I checked there was some errors on LHE correction shape mismatch
         # ---------------------------------------------------------
 
-        muons_padded = ak.pad_none(muons, 2)
-        muon_flip = muons_padded.pt[:,0] < muons_padded.pt[:,1]  
-        muon_flip = ak.fill_none(muon_flip, value=False)
-        # take the subleading muon values if that now has higher pt after corrections
-        mu1 = ak.where(muon_flip, muons_padded[:,1], muons_padded[:,0])
-        mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
+        muons_padded = ak.pad_none(muons, target=2, clip=True)
+        # muon_flip = muons_padded.pt[:,0] < muons_padded.pt[:,1]  
+        # muon_flip = ak.fill_none(muon_flip, value=False)
+        # # take the subleading muon values if that now has higher pt after corrections
+        # mu1 = ak.where(muon_flip, muons_padded[:,1], muons_padded[:,0])
+        # mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
+        sorted_args = ak.argsort(muons_padded.pt, ascending=False)
+        muons_sorted = (muons_padded[sorted_args])
+        mu1 = muons_sorted[:,0]
+        mu2 = muons_sorted[:,1]
         
         dimuon_dR = mu1.delta_r(mu2)
         dimuon_dEta = abs(mu1.eta - mu2.eta)
@@ -1306,14 +1310,19 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"jets.pt_raw[jet_argmax_not_leading] : {jets.pt_raw[jet_argmax_not_leading].compute()}")
         # print(f"jets.mass_raw[jet_argmax_not_leading] : {jets.mass_raw[jet_argmax_not_leading].compute()}")
         # print(f"jets.mass[jet_argmax_not_leading] : {jets.mass[jet_argmax_not_leading].compute()}")
-        padded_jets = ak.pad_none(jets, 2)
-        # jet1 = padded_jets[:,0]
-        # jet2 = padded_jets[:,1]
-        jet_flip = padded_jets.pt[:,0] < padded_jets.pt[:,1]  
-        jet_flip = ak.fill_none(jet_flip, value=False)
-        # take the subleading muon values if that now has higher pt after corrections
-        jet1 = ak.where(jet_flip, padded_jets[:,1], padded_jets[:,0])
-        jet2 = ak.where(jet_flip, padded_jets[:,0], padded_jets[:,1])
+        padded_jets = ak.pad_none(jets, target=2, clip=True)
+        # # jet1 = padded_jets[:,0]
+        # # jet2 = padded_jets[:,1]
+        # jet_flip = padded_jets.pt[:,0] < padded_jets.pt[:,1]  
+        # jet_flip = ak.fill_none(jet_flip, value=False)
+        # # take the subleading muon values if that now has higher pt after corrections
+        # jet1 = ak.where(jet_flip, padded_jets[:,1], padded_jets[:,0])
+        # jet2 = ak.where(jet_flip, padded_jets[:,0], padded_jets[:,1])
+        sorted_args = ak.argsort(padded_jets.pt, ascending=False)
+        sorted_jets = (padded_jets[sorted_args])
+        jet1 = sorted_jets[:,0]
+        jet2 = sorted_jets[:,1]
+        
         dijet = jet1+jet2
         # print(f"dijet: {dijet}")
         jj_dEta = abs(jet1.eta - jet2.eta)
