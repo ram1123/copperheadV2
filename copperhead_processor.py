@@ -320,8 +320,8 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"copperhead2 EventProcessor muon_id: {muon_id}")
         # original muon selection ------------------------------------------------
         muon_selection = (
-            (events.Muon.pt_raw > self.config["muon_pt_cut"])
-            # (events.Muon.pt_raw >= self.config["muon_pt_cut"])
+            # (events.Muon.pt_raw > self.config["muon_pt_cut"])
+            (events.Muon.pt > self.config["muon_pt_cut"]) # testing
             & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
             & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
             # & events.Muon[muon_id]
@@ -410,9 +410,9 @@ class EventProcessor(processor.ProcessorABC):
         # Events where there is at least one muon passing
         # leading muon pT cut
         # pass_leading_pt = events.Muon[:,:1].pt_raw > self.config["muon_leading_pt"]
-        pass_leading_pt = muons.pt_raw > self.config["muon_leading_pt"]
+        # pass_leading_pt = muons.pt_raw > self.config["muon_leading_pt"]
         # testing -----------------------
-        # pass_leading_pt = muons.pt_raw >= self.config["muon_leading_pt"] - 0.001 
+        pass_leading_pt = muons.pt > self.config["muon_leading_pt"]
         # ----------------------------------------
         pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
         pass_leading_pt = ak.sum(pass_leading_pt, axis=1)
@@ -425,12 +425,12 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            sumWeights = events.metadata['sumGenWgts']
-            print(f"sumWeights: {(sumWeights)}")
+            # sumWeights = events.metadata['sumGenWgts']
+            # print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
