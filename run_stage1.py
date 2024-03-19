@@ -22,7 +22,7 @@ import argparse
 from dask.distributed import performance_report
 from corrections.evaluator import nnlops_weights
 
-dask.config.set({'logging.distributed': 'error'})
+# dask.config.set({'logging.distributed': 'error'})
 import logging
 logger = logging.getLogger("distributed.utils_perf")
 logger.setLevel(logging.ERROR)
@@ -446,7 +446,7 @@ if __name__ == "__main__":
         total_save_path = args.save_path + f"/{args.year}"
         # with performance_report(filename="dask-report.html"):
         # for dataset, sample in samples.items():
-        
+        # dask.config.set(scheduler='single-threaded')
         for dataset, sample in tqdm.tqdm(samples.items()):
             sample_step = time.time()
             #test
@@ -463,6 +463,8 @@ if __name__ == "__main__":
             # print(f"smaller_files: {smaller_files}")
             for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                 with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
+                # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') as client:
+                # with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='5 GiB') as client:
                     with performance_report(filename="dask-report.html"):
                         smaller_sample = copy.deepcopy(sample)
                         smaller_sample["files"] = smaller_files[idx]
