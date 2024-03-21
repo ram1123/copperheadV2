@@ -4,16 +4,17 @@ import numpy as np
 import json
 import argparse
 import os
-from histogram.ROOT_utils import setTDRStyle, CMS_lumi, reweightROOTH
-    
+from histogram.ROOT_utils import setTDRStyle, CMS_lumi, reweightROOTH_data, reweightROOTH_mc #reweightROOTH
+from distributed import Client
+import time    
 
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D",]
 # group_DY_processes = ["dy_M-100To200", "dy_M-50"] # dy_M-50 is not used in ggH BDT training input
 group_DY_processes = ["dy_M-100To200"]
-group_Top_processes = ["ttjets_dl", "ttjets_sl"]
-group_Ewk_processes = []
-group_VV_processes = []# diboson
+group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop"]
+group_Ewk_processes = ["ewk_lljj_mll50_mjj120"]
+group_VV_processes = ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"]# diboson
 group_ggH_processes = ["ggh_powheg"]
 group_VBF_processes = ["vbf_powheg"]
 
@@ -126,7 +127,7 @@ if __name__ == "__main__":
     if len(bkg_samples) >0:
         for bkg_sample in bkg_samples:
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
-                available_processes.append("dy_M-50")
+                # available_processes.append("dy_M-50")
                 available_processes.append("dy_M-100To200")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
@@ -134,7 +135,7 @@ if __name__ == "__main__":
             elif bkg_sample.upper() == "ST": # enforce upper case to prevent confusion
                 available_processes.append("st_tw_top")
                 available_processes.append("st_tw_antitop")
-            elif bkg_sample.upper() == "DB": # enforce upper case to prevent confusion
+            elif bkg_sample.upper() == "VV": # enforce upper case to prevent confusion
                 available_processes.append("ww_2l2nu")
                 available_processes.append("wz_3lnu")
                 available_processes.append("wz_2l2q")
@@ -178,6 +179,12 @@ if __name__ == "__main__":
     with open("./histogram/plot_settings.json", "r") as file:
         plot_settings = json.load(file)
     status = args.status.replace("_", " ")
+
+
+    # define client for parallelization for speed boost
+    client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+    # record time
+    time_step = time.time()
     if args.ROOT_style:
         import ROOT
         #Plotting part
@@ -197,6 +204,8 @@ if __name__ == "__main__":
         fraction_weight = 1.0 # to be used later in reweightROOTH after all histograms are filled
         # var = "jet1_pt"
         for var in variables2plot:
+            # with Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') as client:
+            # client.restart()
             if var not in plot_settings.keys():
                 print(f"variable {var} not configured in plot settings!")
                 continue
@@ -217,10 +226,25 @@ if __name__ == "__main__":
                 full_load_path = args.load_path+f"/{process}/*/*.parquet"
                 events = dak.from_parquet(full_load_path) 
                 # collect weights
-                if "data" in process.lower():
-                    weights = np.ones_like(events["mu1_pt"].compute())
-                else:
-                    weights = ak.to_numpy(events["weight_nominal"].compute() )
+                is_data = "data" in process.lower()
+                print(f"is_data: {is_data}")
+                if is_data:
+                    # weights = ak.to_numpy((events["weights"]/events["fraction"]).compute())
+                    weights = ak.to_numpy((events["weights"]).compute())
+                else: # MC
+                    weights = ak.to_numpy((events["weights"]).compute()) # MC are already normalized by xsec*lumi
+                # if "data" in process.lower():
+                #     weights = np.ones_like(events["mu1_pt"].compute())
+                # else: # MC
+                #     weights = ak.to_numpy(events["weight_nominal"].compute() )
+                
+                # if ggH, apply nnlops weights, which is saved separately
+                if "ggh" in process.lower():
+                    print("ggh in process!")
+                    nnlops_full_load_path = args.load_path+f"/{process}/*/nnlops/*.parquet"
+                    nnlops_wgts = ak.from_parquet(nnlops_full_load_path)["nnlops_wgt"]
+                    weights = weights*nnlops_wgts
+                
                 # obtain fraction weight, this should be the same for each process, so doesn't matter if we keep reassigning it
                 fraction_weight = 1/events.fraction[0].compute()
                 print(f"fraction_weight: {fraction_weight}")
@@ -234,7 +258,7 @@ if __name__ == "__main__":
                     ~btag_cut # btag cut is for VH and ttH categories
                 ).compute()
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
-                weights = 1*category_selection
+                weights = weights*category_selection
                 np_hist, _ = np.histogram(events[var].compute(), bins=binning, weights = weights)
                 # print(f"max(np_hist): {max(np_hist)}")
                 # print(f"(np_hist): {(np_hist)}")
@@ -356,18 +380,27 @@ if __name__ == "__main__":
             
             # aggregate all MC hist by stacking them and then plot
             all_MC_hist_stacked = ROOT.THStack("all_MC_hist_stacked", "");
-            
             if len(all_MC_hist_list) > 0:
                 all_MC_hist_list.reverse() # add smallest histgrams first, so from other -> DY
                 for MC_hist_stacked in all_MC_hist_list: 
-                    MC_hist_stacked.Sumw2() # set the hist mode to Sumw2 before stacking
+                    # MC_hist_stacked.Sumw2() # set the hist mode to Sumw2 before stacking
+                    # reweightROOTH_mc(MC_hist_stacked, fraction_weight) # reweight histogram bins and errors
                     all_MC_hist_stacked.Add(MC_hist_stacked) 
-                
+                # all_MC_hist_stacked.Sumw2() # apply error by quadrature after stacking
                 # now reweight each TH1F stacked in all_MC_hist_stacked
                 for idx in range(all_MC_hist_stacked.GetStack().GetEntries()):
                     all_MC_hist = all_MC_hist_stacked.GetStack().At(idx) # get the TH1F portion of THStack
-                    reweightROOTH(all_MC_hist, fraction_weight) # reweight histogram bins and errors
+                    # reweightROOTH(all_MC_hist, fraction_weight) # reweight histogram bins and errors
+                    # reweightROOTH_mc(all_MC_hist, fraction_weight) # reweight histogram bins and errors
                 all_MC_hist_stacked.Draw("hist same");
+
+            # separately make copy of mc hists for error calculation. doing it directly onto THStack is a pain
+            all_MC_hist_copy = all_MC_hist_list[0].Clone("all_MC_hist_copy");# we assume that there's at least one element in all_MC_hist_list
+            for idx in range(1, len(all_MC_hist_list)):
+                all_MC_hist_copy.Add(all_MC_hist_list[idx]) 
+            reweightROOTH_mc(all_MC_hist_copy, fraction_weight)
+            all_MC_hist_copy.Sumw2() 
+            
             
             # stack and plot data 
             if len(group_data_hists) > 0:
@@ -387,7 +420,8 @@ if __name__ == "__main__":
                 data_hist_stacked.SetMarkerSize(1);
                 data_hist_stacked.SetMarkerColor(1);
                 data_hist_stacked.SetLineColor(1);
-                reweightROOTH(data_hist_stacked, fraction_weight) # reweight histogram bins and errors
+                # reweightROOTH(data_hist_stacked, fraction_weight) # reweight histogram bins and errors
+                reweightROOTH_data(data_hist_stacked, fraction_weight) # reweight histogram bins and errors
                 data_hist_stacked.Draw("EPsame");        
             
             
@@ -397,14 +431,14 @@ if __name__ == "__main__":
                 hist_ggH.SetLineColor(ROOT.kBlack);
                 hist_ggH.SetLineWidth(3);
                 hist_ggH.Sumw2()
-                reweightROOTH(hist_ggH, fraction_weight) # reweight histogram bins and errors
+                # reweightROOTH(hist_ggH, fraction_weight) # reweight histogram bins and errors
                 hist_ggH.Draw("hist same");
             if len(group_VBF_hists) > 0:
                 hist_VBF = group_VBF_hists[0]
                 hist_VBF.SetLineColor(ROOT.kRed);
                 hist_VBF.SetLineWidth(3);
                 hist_VBF.Sumw2()
-                reweightROOTH(hist_VBF, fraction_weight) # reweight histogram bins and errors
+                # reweightROOTH(hist_VBF, fraction_weight) # reweight histogram bins and errors
                 hist_VBF.Draw("hist same");
         
             # Ratio pad
@@ -423,9 +457,18 @@ if __name__ == "__main__":
                 if (len(group_data_hists) > 0) and (len(all_MC_hist_list) > 0):
                     print("ratio activated")
                     num_hist = data_hist_stacked.Clone("num_hist");
-                    den_hist = all_MC_hist_stacked.Clone("den_hist").GetStack().Last(); # to get TH1F from THStack, one needs to call .GetStack().Last()
-                    print(num_hist)
-                    print(den_hist)
+                    # den_hist = all_MC_hist_stacked.Clone("den_hist").GetStack().Last(); # this only gets the most prominent stack
+                    den_hist = all_MC_hist_copy.Clone("den_hist")
+                    # print(num_hist)
+                    # print(den_hist)
+                    # testing -----------------------------------------
+                    for idx in range(1, den_hist.GetNbinsX()+1):
+                        val = den_hist.GetBinContent(idx)
+                        err = den_hist.GetBinError(idx)
+                        # print(f"den_hist idx{idx} val: {val}")
+                        if val != 0:
+                            print(f"den_hist idx{idx} rel error: {err/val}")
+                    # testing end -----------------------------------------
                     num_hist.Divide(den_hist); # we assume Sumw2 mode was previously activated
                     num_hist.SetStats(ROOT.kFALSE);
                     num_hist.SetLineColor(ROOT.kBlack);
@@ -433,7 +476,8 @@ if __name__ == "__main__":
                     num_hist.SetMarkerSize(0.8);
                     
                     # get MC statistical errors 
-                    mc_ratio = all_MC_hist_stacked.Clone("den_hist").GetStack().Last();
+                    # mc_ratio = all_MC_hist_stacked.Clone("mc_ratio").GetStack().Last();
+                    mc_ratio = all_MC_hist_copy.Clone("mc_ratio")
                     # set all of its errors to zero to prevent double counting of same error
                     for idx in range(1, mc_ratio.GetNbinsX()+1):
                         mc_ratio.SetBinError(idx, 0)
@@ -805,4 +849,5 @@ if __name__ == "__main__":
                 os.makedirs(full_save_path)
             plt.savefig(f"{full_save_path}/{var}.pdf")
             plt.clf()
-
+    time_elapsed = round(time.time() - time_step, 3)
+    print(f"Finished in {time_elapsed} s.")

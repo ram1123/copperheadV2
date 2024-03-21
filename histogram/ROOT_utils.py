@@ -1,4 +1,5 @@
 import ROOT
+import numpy as np
 
 def setTDRStyle():
   ROOT.gStyle.SetCanvasBorderMode(0);
@@ -132,12 +133,57 @@ def CMS_lumi( pad,  lumi,  up = False,  status = "", reduceSize = False, offset 
       else:
           latex2.DrawLatex(0.28+offset, 0.86, status);
 
-def reweightROOTH(hist, weight: float):
+# def reweightROOTH(hist, weight: float):
+#     """
+#     reweight the histogram values and its errors
+#     the given weight value
+#     """
+#     for idx in range(1, hist.GetNbinsX()+1):
+#         hist.SetBinContent(idx, hist.GetBinContent(idx)*weight)
+#         hist.SetBinError(idx, hist.GetBinError(idx)*weight)
+#     return
+
+def reweightROOTH_data(hist, weight: float):
     """
-    reweight the histogram values and its errors
-    the given weight value
+    reweight the histogram values keep its original relative
+    error by multiplying its errors to the appropriate values
     """
     for idx in range(1, hist.GetNbinsX()+1):
-        hist.SetBinContent(idx, hist.GetBinContent(idx)*weight)
-        hist.SetBinError(idx, hist.GetBinError(idx)*weight)
+        val_orig = hist.GetBinContent(idx)
+        err_orig = hist.GetBinError(idx)
+        if val_orig != 0:
+            rel_err = err_orig/val_orig
+        else:
+            rel_err = 0
+        val_new = val_orig*weight
+        err_new = val_new*rel_err
+        hist.SetBinContent(idx, val_new)
+        hist.SetBinError(idx, err_new)
+    return
+
+def reweightROOTH_mc(hist, weight: float):
+    """
+    reweight histogram errors according to the fraction
+    weight. This is different from data since MC samples
+    are normalized by cross section * lumi, regardless of the sample
+    size. Therefore, the error isn't properly propagated
+    """
+    for idx in range(1, hist.GetNbinsX()+1):
+        val_new = hist.GetBinContent(idx) # current value is already new value
+        val_orig = val_new/weight
+        err_orig = np.sqrt(val_orig)
+        if val_orig != 0:
+            rel_err = err_orig/val_orig
+        else:
+            rel_err = 0 
+
+        # print(f"original val at idx {idx}: {val_new}")
+        if val_new !=0:
+            print(f"original rel err idx {idx}: {rel_err}")
+            print(f"new auto rel err idx {idx}: {hist.GetBinError(idx)/val_new}")
+        err_new = val_new*rel_err
+        # if val_new !=0:
+        #     print(f"err_new idx {idx}: {err_new}")
+        #     print(f"original bad err idx {idx}: {hist.GetBinError(idx)}")
+        hist.SetBinError(idx, err_new)
     return
