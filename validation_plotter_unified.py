@@ -7,6 +7,7 @@ import os
 from histogram.ROOT_utils import setTDRStyle, CMS_lumi, reweightROOTH_data, reweightROOTH_mc #reweightROOTH
 from distributed import Client
 import time    
+import tqdm
 
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D",]
@@ -185,6 +186,7 @@ if __name__ == "__main__":
     client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
     # record time
     time_step = time.time()
+    # ROOT style or mplhep style starts here --------------------------------------
     if args.ROOT_style:
         import ROOT
         #Plotting part
@@ -203,10 +205,11 @@ if __name__ == "__main__":
         pad.cd();
         fraction_weight = 1.0 # to be used later in reweightROOTH after all histograms are filled
         # var = "jet1_pt"
-        for var in variables2plot:
+        for var in tqdm.tqdm(variables2plot):
+            var_step = time.time()
             # with Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') as client:
-            del client
-            client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB')
+            # del client
+            # client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB')
             # client.restart()
             if var not in plot_settings.keys():
                 print(f"variable {var} not configured in plot settings!")
@@ -220,9 +223,10 @@ if __name__ == "__main__":
             group_other_hists = []
             group_ggH_hists = [] # there should only be one ggH histogram, but making a list for consistency
             group_VBF_hists = [] # there should only be one VBF histogram, but making a list for consistency
+
             
             # group_other_hists = [] # histograms not belonging to any other group
-            
+            ROOT.TH1.AddDirectory(False)
             for process in available_processes:
                 print(f"process: {process}")
                 full_load_path = args.load_path+f"/{process}/*/*.parquet"
@@ -247,7 +251,7 @@ if __name__ == "__main__":
                     nnlops_wgts = ak.from_parquet(nnlops_full_load_path)["nnlops_wgt"]
                     weights = weights*nnlops_wgts
                 # original ---------------------------------------------------------------------------------------------
-                # # obtain fraction weight, this should be the same for each process, so doesn't matter if we keep reassigning it
+                # obtain fraction weight, this should be the same for each process, so doesn't matter if we keep reassigning it
                 # fraction_weight = 1/events.fraction[0].compute()
                 # print(f"fraction_weight: {fraction_weight}")
                 # # obtain the category selection
@@ -261,73 +265,10 @@ if __name__ == "__main__":
                 # ).compute()
                 # category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
                 # weights = weights*category_selection
-                # np_hist, _ = np.histogram(events[var].compute(), bins=binning, weights = weights)
-                
-                # if process in group_data_processes:
-                #     print("data activated")
-                #     var_hist_data = ROOT.TH1F( var+'_hist_data', var, len(binning)-1, min(binning), max(binning))
-                #     for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-                #         var_hist_data.SetBinContent(1+idx, np_hist[idx])
-                #     group_data_hists.append(var_hist_data)
-                # #-------------------------------------------------------
-                # elif process in group_DY_processes:
-                #     print("DY activated")
-                #     var_hist_DY = ROOT.TH1F( var+'_hist_DY', var, len(binning)-1, min(binning), max(binning))
-                #     for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-                #         var_hist_DY.SetBinContent(1+idx, np_hist[idx])
-                #     group_DY_hists.append(var_hist_DY)
-                # #-------------------------------------------------------
-                # elif process in group_Top_processes:
-                #     print("top activated")
-                #     var_hist_Top = ROOT.TH1F( var+'_hist_Top', var, len(binning)-1, min(binning), max(binning))
-                #     for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-                #         var_hist_Top.SetBinContent(1+idx, np_hist[idx])
-                #     group_Top_hists.append(var_hist_Top)
-                # #-------------------------------------------------------
-                # elif process in group_Ewk_processes:
-                #     print("Ewk activated")
-                #     var_hist_Ewk = ROOT.TH1F( var+'_hist_Ewk', var, len(binning)-1, min(binning), max(binning))
-                #     for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-                #         var_hist_Ewk.SetBinContent(1+idx, np_hist[idx])
-                #     group_Ewk_hists.append(var_hist_Ewk)
-                # #-------------------------------------------------------
-                # elif process in group_VV_processes:
-                #     print("VV activated")
-                #     var_hist_VV = ROOT.TH1F( var+'_hist_VV', var, len(binning)-1, min(binning), max(binning))
-                #     for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-                #         var_hist_VV.SetBinContent(1+idx, np_hist[idx])
-                #     group_VV_hists.append(var_hist_VV)
-                # #-------------------------------------------------------
-                # elif process in group_ggH_processes:
-                #     print("ggH activated")
-                #     var_hist_ggH = ROOT.TH1F( var+'_hist_ggH', var, len(binning)-1, min(binning), max(binning))
-                #     for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-                #         var_hist_ggH.SetBinContent(1+idx, np_hist[idx])
-                #     group_ggH_hists.append(var_hist_ggH)
-                # #-------------------------------------------------------
-                # elif process in group_VBF_processes:
-                #     print("VBF activated")
-                #     var_hist_VBF = ROOT.TH1F( var+'_hist_VBF', var, len(binning)-1, min(binning), max(binning))
-                #     for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-                #         var_hist_VBF.SetBinContent(1+idx, np_hist[idx])
-                #     group_VBF_hists.append(var_hist_VBF)
-                # #-------------------------------------------------------
-                # else: # put into "other" bkg group
-                #     if "dy_M-50" in process:
-                #         # print("dy_M-50 activated")
-                #         continue
-                #     print("other activated")
-                #     var_hist_other = ROOT.TH1F( var+'_hist_other', var, len(binning)-1, min(binning), max(binning))
-                #     for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-                #         var_hist_other.SetBinContent(1+idx, np_hist[idx])
-                #     group_other_hists.append(var_hist_other)
-                # original end ------------------------------------------------------------------------------
-                
-                # inherent ROOT weight propagation testing start -------------------------------------------
-                # obtain fraction weight, this should be the same for each process, so doesn't matter if we keep reassigning it
+
                 fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
-                print(f"fraction_weight: {fraction_weight[0]}")
-                print(f"fraction_weight: {fraction_weight[4]}")
+                # print(f"fraction_weight: {fraction_weight[0]}")
+                # print(f"fraction_weight: {fraction_weight[4]}")
                 # obtain the category selection
                 vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
                 region = events.h_sidebands | events.h_peak
@@ -345,80 +286,86 @@ if __name__ == "__main__":
                 values_filter = values!=-999.0
                 values = values[values_filter]
                 weights = weights[values_filter]
-                fraction_weight = fraction_weight[values_filter]
-                
-                # print(f"len(values): {len(values)}")
-                # print(f"len(weights): {len(weights)}")
-                
+                # MC samples are already normalized by their xsec*lumi, but data is not
+                if process in group_data_processes:
+                    fraction_weight = fraction_weight[values_filter]
+                    weights = weights*fraction_weight
+                    
+                    
+                np_hist, _ = np.histogram(values, bins=binning, weights = weights)
+                # collect same histogram, but for weight squares for error calculation 
+                np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
+                # calculate histogram errors consistent with TH1.Sumw2() mode at
+                # https://root.cern.ch/doc/master/classTH1.html#aefa4ee94f053ec3d217f3223b01fa014
+                hist_errs = np.sqrt(np_hist_w2)
                 if process in group_data_processes:
                     print("data activated")
-                    var_hist_data = ROOT.TH1F( var+'_hist_data', var, len(binning)-1, min(binning), max(binning))
+                    # var_hist_data = ROOT.TH1F( var+'_hist_data', var, len(binning)-1, min(binning), max(binning))
+                    var_hist_data = ROOT.TH1F(process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_data.Sumw2()
-                    for idx in range (len(values)): # paste the np histogram values to root histogram
-                        value = values[idx]
-                        weight = weights[idx]
-                        frac_wgt = fraction_weight[idx]
-                        # print(f"value: {value}")
-                        # print(f"weight: {weight}")
-                        var_hist_data.Fill(value, weight*frac_wgt) # apply fraction weight to data only, MC is already normalized by xsec*lumi
+                    for idx in range (len(np_hist)): # paste the np histogram values to root histogram
+                        var_hist_data.SetBinContent(1+idx, np_hist[idx])
+                        var_hist_data.SetBinError(1+idx, hist_errs[idx])
                     group_data_hists.append(var_hist_data)
                 #-------------------------------------------------------
                 elif process in group_DY_processes:
                     print("DY activated")
-                    var_hist_DY = ROOT.TH1F( var+'_hist_DY', var, len(binning)-1, min(binning), max(binning))
+                    # var_hist_DY = ROOT.TH1F( var+'_hist_DY', var, len(binning)-1, min(binning), max(binning))
+                    var_hist_DY = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_DY.Sumw2()
-                    for idx in range (len(values)): # paste the np histogram values to root histogram
-                        value = values[idx]
-                        weight = weights[idx]
-                        var_hist_DY.Fill(value, weight)
+                    for idx in range (len(np_hist)): # paste the np histogram values to root histogram
+                        var_hist_DY.SetBinContent(1+idx, np_hist[idx])
+                        var_hist_DY.SetBinError(1+idx, hist_errs[idx])
                     group_DY_hists.append(var_hist_DY)
                 #-------------------------------------------------------
                 elif process in group_Top_processes:
                     print("top activated")
-                    var_hist_Top = ROOT.TH1F( var+'_hist_Top', var, len(binning)-1, min(binning), max(binning))
+                    # var_hist_Top = ROOT.TH1F( var+'_hist_Top', var, len(binning)-1, min(binning), max(binning))
+                    var_hist_Top = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_Top.Sumw2()
-                    for idx in range (len(values)): # paste the np histogram values to root histogram
-                        value = values[idx]
-                        weight = weights[idx]
-                        var_hist_Top.Fill(value, weight)
+                    for idx in range (len(np_hist)): # paste the np histogram values to root histogram
+                        var_hist_Top.SetBinContent(1+idx, np_hist[idx])
+                        var_hist_Top.SetBinError(1+idx, hist_errs[idx])
                     group_Top_hists.append(var_hist_Top)
                 #-------------------------------------------------------
                 elif process in group_Ewk_processes:
                     print("Ewk activated")
-                    var_hist_Ewk = ROOT.TH1F( var+'_hist_Ewk', var, len(binning)-1, min(binning), max(binning))
+                    # var_hist_Ewk = ROOT.TH1F( var+'_hist_Ewk', var, len(binning)-1, min(binning), max(binning))
+                    var_hist_Ewk = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_Ewk.Sumw2()
-                    for idx in range (len(values)): # paste the np histogram values to root histogram
-                        value = values[idx]
-                        weight = weights[idx]
-                        var_hist_Ewk.Fill(value, weight)
+                    for idx in range (len(np_hist)): # paste the np histogram values to root histogram
+                        var_hist_Ewk.SetBinContent(1+idx, np_hist[idx])
+                        var_hist_Ewk.SetBinError(1+idx, hist_errs[idx])
                     group_Ewk_hists.append(var_hist_Ewk)
                 #-------------------------------------------------------
                 elif process in group_VV_processes:
                     print("VV activated")
-                    var_hist_VV = ROOT.TH1F( var+'_hist_VV', var, len(binning)-1, min(binning), max(binning))
+                    # var_hist_VV = ROOT.TH1F( var+'_hist_VV', var, len(binning)-1, min(binning), max(binning))
+                    var_hist_VV = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_VV.Sumw2()
-                    for idx in range (len(values)): # paste the np histogram values to root histogram
+                    for idx in range (len(np_hist)): # paste the np histogram values to root histogram
                         var_hist_VV.SetBinContent(1+idx, np_hist[idx])
+                        var_hist_VV.SetBinError(1+idx, hist_errs[idx])
                     group_VV_hists.append(var_hist_VV)
                 #-------------------------------------------------------
                 elif process in group_ggH_processes:
                     print("ggH activated")
-                    var_hist_ggH = ROOT.TH1F( var+'_hist_ggH', var, len(binning)-1, min(binning), max(binning))
+                    # var_hist_ggH = ROOT.TH1F( var+'_hist_ggH', var, len(binning)-1, min(binning), max(binning))
+                    var_hist_ggH = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_ggH.Sumw2()
-                    for idx in range (len(values)): # paste the np histogram values to root histogram
-                        value = values[idx]
-                        weight = weights[idx]
-                        var_hist_ggH.Fill(value, weight)
+                    for idx in range (len(np_hist)): # paste the np histogram values to root histogram
+                        var_hist_ggH.SetBinContent(1+idx, np_hist[idx])
+                        var_hist_ggH.SetBinError(1+idx, hist_errs[idx])
                     group_ggH_hists.append(var_hist_ggH)
                 #-------------------------------------------------------
                 elif process in group_VBF_processes:
                     print("VBF activated")
-                    var_hist_VBF = ROOT.TH1F( var+'_hist_VBF', var, len(binning)-1, min(binning), max(binning))
+                    # var_hist_VBF = ROOT.TH1F( var+'_hist_VBF', var, len(binning)-1, min(binning), max(binning))
+                    var_hist_VBF = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_VBF.Sumw2()
-                    for idx in range (len(values)): # paste the np histogram values to root histogram
-                        value = values[idx]
-                        weight = weights[idx]
-                        var_hist_VBF.Fill(value, weight)
+                    for idx in range (len(np_hist)): # paste the np histogram values to root histogram
+                        var_hist_VBF.SetBinContent(1+idx, np_hist[idx])
+                        var_hist_VBF.SetBinError(1+idx, hist_errs[idx])
                     group_VBF_hists.append(var_hist_VBF)
                 #-------------------------------------------------------
                 else: # put into "other" bkg group
@@ -426,13 +373,125 @@ if __name__ == "__main__":
                         # print("dy_M-50 activated")
                         continue
                     print("other activated")
-                    var_hist_other = ROOT.TH1F( var+'_hist_other', var, len(binning)-1, min(binning), max(binning))
+                    # var_hist_other = ROOT.TH1F( var+'_hist_other', var, len(binning)-1, min(binning), max(binning))
+                    var_hist_other = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_other.Sumw2()
-                    for idx in range (len(values)): # paste the np histogram values to root histogram
-                        value = values[idx]
-                        weight = weights[idx]
-                        var_hist_other.Fill(value, weight)
+                    for idx in range (len(np_hist)): # paste the np histogram values to root histogram
+                        var_hist_other.SetBinContent(1+idx, np_hist[idx])
+                        var_hist_other.SetBinError(1+idx, hist_errs[idx])
                     group_other_hists.append(var_hist_other)
+                # original end ------------------------------------------------------------------------------
+                
+                # inherent ROOT weight propagation testing start -------------------------------------------
+                # # obtain fraction weight, this should be the same for each process, so doesn't matter if we keep reassigning it
+                # fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
+                # print(f"fraction_weight: {fraction_weight[0]}")
+                # print(f"fraction_weight: {fraction_weight[4]}")
+                # # obtain the category selection
+                # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
+                # region = events.h_sidebands | events.h_peak
+                # btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
+                # category_selection = (
+                #     ~vbf_cut & # we're interested in ggH category
+                #     region &
+                #     ~btag_cut # btag cut is for VH and ttH categories
+                # ).compute()
+                # category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
+                # weights = weights*category_selection
+                # # values = ak.to_numpy(events[var].compute())
+                # values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
+                # # print(f"values[0]: {values[0]}")
+                # values_filter = values!=-999.0
+                # values = values[values_filter]
+                # weights = weights[values_filter]
+                # fraction_weight = fraction_weight[values_filter]
+                
+                # # print(f"len(values): {len(values)}")
+                # # print(f"len(weights): {len(weights)}")
+                
+                # if process in group_data_processes:
+                #     print("data activated")
+                #     var_hist_data = ROOT.TH1F( var+'_hist_data', var, len(binning)-1, min(binning), max(binning))
+                #     var_hist_data.Sumw2()
+                #     for idx in range (len(values)): # paste the np histogram values to root histogram
+                #         value = values[idx]
+                #         weight = weights[idx]
+                #         frac_wgt = fraction_weight[idx]
+                #         # print(f"value: {value}")
+                #         # print(f"weight: {weight}")
+                #         var_hist_data.Fill(value, weight*frac_wgt) # apply fraction weight to data only, MC is already normalized by xsec*lumi
+                #     group_data_hists.append(var_hist_data)
+                # #-------------------------------------------------------
+                # elif process in group_DY_processes:
+                #     print("DY activated")
+                #     var_hist_DY = ROOT.TH1F( var+'_hist_DY', var, len(binning)-1, min(binning), max(binning))
+                #     var_hist_DY.Sumw2()
+                #     for idx in range (len(values)): # paste the np histogram values to root histogram
+                #         value = values[idx]
+                #         weight = weights[idx]
+                #         var_hist_DY.Fill(value, weight)
+                #     group_DY_hists.append(var_hist_DY)
+                # #-------------------------------------------------------
+                # elif process in group_Top_processes:
+                #     print("top activated")
+                #     var_hist_Top = ROOT.TH1F( var+'_hist_Top', var, len(binning)-1, min(binning), max(binning))
+                #     var_hist_Top.Sumw2()
+                #     for idx in range (len(values)): # paste the np histogram values to root histogram
+                #         value = values[idx]
+                #         weight = weights[idx]
+                #         var_hist_Top.Fill(value, weight)
+                #     group_Top_hists.append(var_hist_Top)
+                # #-------------------------------------------------------
+                # elif process in group_Ewk_processes:
+                #     print("Ewk activated")
+                #     var_hist_Ewk = ROOT.TH1F( var+'_hist_Ewk', var, len(binning)-1, min(binning), max(binning))
+                #     var_hist_Ewk.Sumw2()
+                #     for idx in range (len(values)): # paste the np histogram values to root histogram
+                #         value = values[idx]
+                #         weight = weights[idx]
+                #         var_hist_Ewk.Fill(value, weight)
+                #     group_Ewk_hists.append(var_hist_Ewk)
+                # #-------------------------------------------------------
+                # elif process in group_VV_processes:
+                #     print("VV activated")
+                #     var_hist_VV = ROOT.TH1F( var+'_hist_VV', var, len(binning)-1, min(binning), max(binning))
+                #     var_hist_VV.Sumw2()
+                #     for idx in range (len(values)): # paste the np histogram values to root histogram
+                #         var_hist_VV.SetBinContent(1+idx, np_hist[idx])
+                #     group_VV_hists.append(var_hist_VV)
+                # #-------------------------------------------------------
+                # elif process in group_ggH_processes:
+                #     print("ggH activated")
+                #     var_hist_ggH = ROOT.TH1F( var+'_hist_ggH', var, len(binning)-1, min(binning), max(binning))
+                #     var_hist_ggH.Sumw2()
+                #     for idx in range (len(values)): # paste the np histogram values to root histogram
+                #         value = values[idx]
+                #         weight = weights[idx]
+                #         var_hist_ggH.Fill(value, weight)
+                #     group_ggH_hists.append(var_hist_ggH)
+                # #-------------------------------------------------------
+                # elif process in group_VBF_processes:
+                #     print("VBF activated")
+                #     var_hist_VBF = ROOT.TH1F( var+'_hist_VBF', var, len(binning)-1, min(binning), max(binning))
+                #     var_hist_VBF.Sumw2()
+                #     for idx in range (len(values)): # paste the np histogram values to root histogram
+                #         value = values[idx]
+                #         weight = weights[idx]
+                #         var_hist_VBF.Fill(value, weight)
+                #     group_VBF_hists.append(var_hist_VBF)
+                # #-------------------------------------------------------
+                # else: # put into "other" bkg group
+                #     if "dy_M-50" in process:
+                #         # print("dy_M-50 activated")
+                #         continue
+                #     print("other activated")
+                #     var_hist_other = ROOT.TH1F( var+'_hist_other', var, len(binning)-1, min(binning), max(binning))
+                #     var_hist_other.Sumw2()
+                #     for idx in range (len(values)): # paste the np histogram values to root histogram
+                #         value = values[idx]
+                #         weight = weights[idx]
+                #         var_hist_other.Fill(value, weight)
+                #     group_other_hists.append(var_hist_other)
                 # inherent ROOT weight propagation testing end -------------------------------------------
             dummy_hist = ROOT.TH1F('dummy_hist', "dummy", len(binning)-1, min(binning), max(binning))
             dummy_hist.Sumw2() # not sure if this is necessary, but just in case
@@ -573,6 +632,7 @@ if __name__ == "__main__":
                 if (len(group_data_hists) > 0) and (len(all_MC_hist_list) > 0):
                     print("ratio activated")
                     num_hist = data_hist_stacked.Clone("num_hist");
+                    print(f"num_hist: {num_hist}")
                     # den_hist = all_MC_hist_stacked.Clone("den_hist").GetStack().Last(); # this only gets the most prominent stack
                     den_hist = all_MC_hist_copy.Clone("den_hist")
                     # print(num_hist)
@@ -689,11 +749,27 @@ if __name__ == "__main__":
                 os.makedirs(full_save_path)
             canvas.SaveAs(f"{full_save_path}/{var}.pdf");
             # delete at least few histograms to prevent memory leakage
-            del dummy_hist
-            del var_hist_data
-            del num_hist
-            del den_hist
-            del mc_ratio
+            # canvas.Delete()
+            # pad.Close()
+            # # pad2.Close()
+            # del dummy_hist
+            # # del var_hist_data
+            # for hist in group_data_hists:
+            #     print(f"hist: {hist}")
+            #     del hist
+            # for hist in all_MC_hist_list:
+            #     del hist
+            # # del num_hist
+            # del den_hist
+            # del mc_ratio
+            # del ratio_line
+            # del all_MC_hist_copy
+            # del all_MC_hist_list
+            # del group_data_hists
+            
+            # record time it took
+            var_elapsed = round(time.time() - var_step, 3)
+            print(f"Finished processing {var} in {var_elapsed} s.")
     else:
         import mplhep as hep
         import matplotlib.pyplot as plt
@@ -703,7 +779,8 @@ if __name__ == "__main__":
 
 
         for var in variables2plot:
-        # for process in available_processes:
+            var_step = time.time()
+            # for process in available_processes:
             if var not in plot_settings.keys():
                 print(f"variable {var} not configured in plot settings!")
                 continue
@@ -993,5 +1070,10 @@ if __name__ == "__main__":
                 os.makedirs(full_save_path)
             plt.savefig(f"{full_save_path}/{var}.pdf")
             plt.clf()
+            # record time it took
+            var_elapsed = round(time.time() - var_step, 3)
+            print(f"Finished processing {var} in {var_elapsed} s.")
+    # ROOT style or mplhep style ends here --------------------------------------
+    
     time_elapsed = round(time.time() - time_step, 3)
     print(f"Finished in {time_elapsed} s.")
