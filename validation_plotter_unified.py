@@ -562,6 +562,14 @@ if __name__ == "__main__":
                     # MC_hist_stacked.Sumw2() # set the hist mode to Sumw2 before stacking
                     # reweightROOTH_mc(MC_hist_stacked, fraction_weight) # reweight histogram bins and errors
                     all_MC_hist_stacked.Add(MC_hist_stacked) 
+                    # testing -------------------------------------------------
+                    for idx in range(1, MC_hist_stacked.GetNbinsX()+1):
+                        val = MC_hist_stacked.GetBinContent(idx)
+                        err = MC_hist_stacked.GetBinError(idx)
+                        print(f"MC_hist_stacked: {MC_hist_stacked}")
+                        print(f"MC_hist_stacked idx{idx} val: {val}")
+                        print(f"MC_hist_stacked idx{idx} err: {err}")
+                    # testing end -------------------------------------------------
                 # all_MC_hist_stacked.Sumw2() # apply error by quadrature after stacking
                 # now reweight each TH1F stacked in all_MC_hist_stacked
                 for idx in range(all_MC_hist_stacked.GetStack().GetEntries()):
@@ -595,7 +603,9 @@ if __name__ == "__main__":
                 data_hist_stacked.SetLineColor(1);
                 # reweightROOTH(data_hist_stacked, fraction_weight) # reweight histogram bins and errors
                 # reweightROOTH_data(data_hist_stacked, fraction_weight) # reweight histogram bins and errors
-                data_hist_stacked.Draw("EPsame");        
+                data_hist_stacked.Draw("EPsame");    
+
+
             
             
             # plot signals: ggH and VBF
@@ -639,20 +649,20 @@ if __name__ == "__main__":
                     # print(den_hist)
 
                     # testing -----------------------------------------
-                    # for idx in range(1, num_hist.GetNbinsX()+1):
-                    #     val = num_hist.GetBinContent(idx)
-                    #     err = num_hist.GetBinError(idx)
-                    #     # print(f"num_hist idx{idx} val: {val}")
-                    #     # print(f"num_hist idx{idx} err: {err}")
-                    #     if val != 0:
-                    #         print(f"num_hist idx{idx} rel error: {err/val}")
-                    # for idx in range(1, den_hist.GetNbinsX()+1):
-                    #     val = den_hist.GetBinContent(idx)
-                    #     err = den_hist.GetBinError(idx)
-                    #     # print(f"den_hist idx{idx} val: {val}")
-                    #     # print(f"den_hist idx{idx} err: {err}")
-                    #     if val != 0:
-                    #         print(f"den_hist idx{idx} rel error: {err/val}")
+                    for idx in range(1, num_hist.GetNbinsX()+1):
+                        val = num_hist.GetBinContent(idx)
+                        err = num_hist.GetBinError(idx)
+                        print(f"num_hist idx{idx} val: {val}")
+                        print(f"num_hist idx{idx} err: {err}")
+                        # if val != 0:
+                            # print(f"num_hist idx{idx} rel error: {err/val}")
+                    for idx in range(1, den_hist.GetNbinsX()+1):
+                        val = den_hist.GetBinContent(idx)
+                        err = den_hist.GetBinError(idx)
+                        print(f"den_hist idx{idx} val: {val}")
+                        print(f"den_hist idx{idx} err: {err}")
+                        # if val != 0:
+                            # print(f"den_hist idx{idx} rel error: {err/val}")
                     # testing end -----------------------------------------
 
                     
