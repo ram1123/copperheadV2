@@ -513,27 +513,33 @@ if __name__ == "__main__":
             #----------------------------------------------
             if len(group_Top_hists) > 0:
                 Top_hist_stacked = group_Top_hists[0]
+                print(f"Top_hist_stacked: {Top_hist_stacked}")
                 if len(group_Top_hists) > 1:
                     for idx in range(1, len(group_Top_hists)):
                         Top_hist_stacked.Add(group_Top_hists[idx])
+                        print(f"group_Top_hists[idx]: {group_Top_hists[idx]}")
                 Top_hist_stacked.SetLineColor(1);
                 Top_hist_stacked.SetFillColor(ROOT.kGreen+1);
                 all_MC_hist_list.append(Top_hist_stacked)
             #----------------------------------------------
             if len(group_Ewk_hists) > 0:
                 Ewk_hist_stacked = group_Ewk_hists[0]
+                print(f"Ewk_hist_stacked: {Ewk_hist_stacked}")
                 if len(group_Ewk_hists) > 1:
                     for idx in range(1, len(group_Ewk_hists)):
                         Ewk_hist_stacked.Add(group_Ewk_hists[idx])
+                        print(f"group_Ewk_hists[idx]: {group_Ewk_hists[idx]}")
                 Ewk_hist_stacked.SetLineColor(1);
                 Ewk_hist_stacked.SetFillColor(ROOT.kMagenta+1);
                 all_MC_hist_list.append(Ewk_hist_stacked)
             #----------------------------------------------
             if len(group_VV_hists) > 0:
                 VV_hist_stacked = group_VV_hists[0]
+                print(f"VV_hist_stacked: {VV_hist_stacked}")
                 if len(group_VV_hists) > 1:
                     for idx in range(1, len(group_VV_hists)):
                         VV_hist_stacked.Add(group_VV_hists[idx])
+                        print(f"group_VV_hists[idx]: {group_VV_hists[idx]}")
                 VV_hist_stacked.SetLineColor(1);
                 VV_hist_stacked.SetFillColor(ROOT.kAzure+1);
                 all_MC_hist_list.append(VV_hist_stacked)
@@ -563,12 +569,12 @@ if __name__ == "__main__":
                     # reweightROOTH_mc(MC_hist_stacked, fraction_weight) # reweight histogram bins and errors
                     all_MC_hist_stacked.Add(MC_hist_stacked) 
                     # testing -------------------------------------------------
-                    for idx in range(1, MC_hist_stacked.GetNbinsX()+1):
-                        val = MC_hist_stacked.GetBinContent(idx)
-                        err = MC_hist_stacked.GetBinError(idx)
-                        print(f"MC_hist_stacked: {MC_hist_stacked}")
-                        print(f"MC_hist_stacked idx{idx} val: {val}")
-                        print(f"MC_hist_stacked idx{idx} err: {err}")
+                    # print(f"MC_hist_stacked: {MC_hist_stacked}")
+                    # for idx in range(1, MC_hist_stacked.GetNbinsX()+1):
+                    #     val = MC_hist_stacked.GetBinContent(idx)
+                    #     err = MC_hist_stacked.GetBinError(idx)
+                    #     print(f"MC_hist_stacked idx{idx} val: {val}")
+                    #     print(f"MC_hist_stacked idx{idx} err: {err}")
                     # testing end -------------------------------------------------
                 # all_MC_hist_stacked.Sumw2() # apply error by quadrature after stacking
                 # now reweight each TH1F stacked in all_MC_hist_stacked
@@ -586,9 +592,11 @@ if __name__ == "__main__":
             if len(group_data_hists) > 0:
                 data_hist_stacked = group_data_hists[0]
                 data_hist_stacked.Sumw2()
+                print(f"data_hist_stacked: {data_hist_stacked}")
                 if len(group_data_hists) > 1:
                     for idx in range(1, len(group_data_hists)):
                         data_hist_stacked.Add(group_data_hists[idx])
+                        print(f"group_data_hists[idx]: {group_data_hists[idx]}")
                 
             
                 # decorate the data_histogram
@@ -649,20 +657,20 @@ if __name__ == "__main__":
                     # print(den_hist)
 
                     # testing -----------------------------------------
-                    for idx in range(1, num_hist.GetNbinsX()+1):
-                        val = num_hist.GetBinContent(idx)
-                        err = num_hist.GetBinError(idx)
-                        print(f"num_hist idx{idx} val: {val}")
-                        print(f"num_hist idx{idx} err: {err}")
-                        # if val != 0:
-                            # print(f"num_hist idx{idx} rel error: {err/val}")
-                    for idx in range(1, den_hist.GetNbinsX()+1):
-                        val = den_hist.GetBinContent(idx)
-                        err = den_hist.GetBinError(idx)
-                        print(f"den_hist idx{idx} val: {val}")
-                        print(f"den_hist idx{idx} err: {err}")
-                        # if val != 0:
-                            # print(f"den_hist idx{idx} rel error: {err/val}")
+                    # for idx in range(1, num_hist.GetNbinsX()+1):
+                    #     val = num_hist.GetBinContent(idx)
+                    #     err = num_hist.GetBinError(idx)
+                    #     print(f"num_hist idx{idx} val: {val}")
+                    #     print(f"num_hist idx{idx} err: {err}")
+                    #     if val != 0:
+                    #         print(f"num_hist idx{idx} rel error: {err/val}")
+                    # for idx in range(1, den_hist.GetNbinsX()+1):
+                    #     val = den_hist.GetBinContent(idx)
+                    #     err = den_hist.GetBinError(idx)
+                    #     print(f"den_hist idx{idx} val: {val}")
+                    #     print(f"den_hist idx{idx} err: {err}")
+                    #     if val != 0:
+                    #         print(f"den_hist idx{idx} rel error: {err/val}")
                     # testing end -----------------------------------------
 
                     
@@ -676,8 +684,8 @@ if __name__ == "__main__":
                     # for idx in range(1, num_hist.GetNbinsX()+1):
                     #     val = num_hist.GetBinContent(idx)
                     #     err = num_hist.GetBinError(idx)
-                    #     # print(f"ratio idx{idx} val: {val}")
-                    #     # print(f"ratio idx{idx} err: {err}")
+                    #     print(f"ratio idx{idx} val: {val}")
+                    #     print(f"ratio idx{idx} err: {err}")
                     #     if val != 0:
                     #         print(f"ratio idx{idx} rel error: {err/val}")
                     # testing end -----------------------------------------
