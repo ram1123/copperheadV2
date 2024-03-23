@@ -250,7 +250,7 @@ if __name__ == "__main__":
                     nnlops_full_load_path = args.load_path+f"/{process}/*/nnlops/*.parquet"
                     nnlops_wgts = ak.from_parquet(nnlops_full_load_path)["nnlops_wgt"]
                     weights = weights*nnlops_wgts
-                # original ---------------------------------------------------------------------------------------------
+                # original np hist start ---------------------------------------------------------------------------------------------
                 # obtain fraction weight, this should be the same for each process, so doesn't matter if we keep reassigning it
                 # fraction_weight = 1/events.fraction[0].compute()
                 # print(f"fraction_weight: {fraction_weight}")
@@ -380,7 +380,7 @@ if __name__ == "__main__":
                         var_hist_other.SetBinContent(1+idx, np_hist[idx])
                         var_hist_other.SetBinError(1+idx, hist_errs[idx])
                     group_other_hists.append(var_hist_other)
-                # original end ------------------------------------------------------------------------------
+                # original np hist end ------------------------------------------------------------------------------
                 
                 # inherent ROOT weight propagation testing start -------------------------------------------
                 # # obtain fraction weight, this should be the same for each process, so doesn't matter if we keep reassigning it
