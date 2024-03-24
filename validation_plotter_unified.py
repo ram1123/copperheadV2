@@ -205,7 +205,13 @@ if __name__ == "__main__":
         pad.cd();
         fraction_weight = 1.0 # to be used later in reweightROOTH after all histograms are filled
         # var = "jet1_pt"
+        counter = 0
         for var in tqdm.tqdm(variables2plot):
+            # if counter == int(len(variables2plot)/2):
+            counter +=1
+            if counter % 3 ==0:
+                print("restarting client!")
+                client.restart(timeout=30)
             var_step = time.time()
             # with Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') as client:
             # del client
@@ -681,11 +687,11 @@ if __name__ == "__main__":
                     num_hist.SetMarkerSize(0.8);
 
                     # testing -----------------------------------------
-                    # for idx in range(1, num_hist.GetNbinsX()+1):
-                    #     val = num_hist.GetBinContent(idx)
-                    #     err = num_hist.GetBinError(idx)
-                    #     print(f"ratio idx{idx} val: {val}")
-                    #     print(f"ratio idx{idx} err: {err}")
+                    for idx in range(1, num_hist.GetNbinsX()+1):
+                        val = num_hist.GetBinContent(idx)
+                        err = num_hist.GetBinError(idx)
+                        print(f"ratio idx{idx} val: {val}")
+                        print(f"ratio idx{idx} err: {err}")
                     #     if val != 0:
                     #         print(f"ratio idx{idx} rel error: {err/val}")
                     # testing end -----------------------------------------
@@ -796,7 +802,7 @@ if __name__ == "__main__":
         # Dictionary for histograms and binnings
 
 
-        for var in variables2plot:
+        for var in tqdm.tqdm(variables2plot):
             var_step = time.time()
             # for process in available_processes:
             if var not in plot_settings.keys():
@@ -813,7 +819,14 @@ if __name__ == "__main__":
             group_other_hists = []  # histograms not belonging to any other mc bkg group
             group_ggH_hists = [] # there should only be one ggH histogram, but making a list for consistency
             group_VBF_hists = [] # there should only be one VBF histogram, but making a list for consistency
-        
+
+            # collect weight squarted histograms for error calculation
+            group_data_hists_w2 = []
+            group_DY_hists_w2 = []
+            group_Top_hists_w2 = []
+            group_Ewk_hists_w2 = []
+            group_VV_hists_w2 = []
+            group_other_hists_w2 = []
             
             # for var in variables2plot:
             for process in available_processes:    
@@ -821,11 +834,33 @@ if __name__ == "__main__":
                 full_load_path = args.load_path+f"/{process}/*/*.parquet"      
                 events = dak.from_parquet(full_load_path)
                 # collect weights
-                if "data" in process.lower():
-                    weights = np.ones_like(events["mu1_pt"].compute())
-                else:
-                    weights = ak.to_numpy(events["weight_nominal"].compute() )
+                # if "data" in process.lower():
+                #     weights = np.ones_like(events["mu1_pt"].compute())
+                # else:
+                #     weights = ak.to_numpy(events["weight_nominal"].compute() )
+                is_data = "data" in process.lower()
+                print(f"is_data: {is_data}")
+                if is_data:
+                    weights = ak.to_numpy((events["weights"]).compute())
+                else: # MC
+                    weights = ak.to_numpy((events["weights"]).compute())
                 #-----------------------------------------------    
+                # obtain the category selection
+                # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
+                # region = events.h_sidebands | events.h_peak
+                # btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
+                # category_selection = (
+                #     ~vbf_cut & # we're interested in ggH category
+                #     region &
+                #     ~btag_cut # btag cut is for VH and ttH categories
+                # ).compute()
+                # category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
+                # weights = weights*category_selection # weights where category_selection==False -> zero
+
+
+                fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
+                # print(f"fraction_weight: {fraction_weight[0]}")
+                # print(f"fraction_weight: {fraction_weight[4]}")
                 # obtain the category selection
                 vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
                 region = events.h_sidebands | events.h_peak
@@ -836,28 +871,41 @@ if __name__ == "__main__":
                     ~btag_cut # btag cut is for VH and ttH categories
                 ).compute()
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
-                weights = weights*category_selection # weights where category_selection==False -> zero
-
-                np_hist, _ = np.histogram(events[var].compute(), bins=binning, weights = weights)
-                # print(f"max(np_hist): {max(np_hist)}")
-                # print(f"(np_hist): {(np_hist)}")
-                # print(f"(np_hist): {np.any(np_hist==0)}")
+                weights = weights*category_selection
+                # values = ak.to_numpy(events[var].compute())
+                values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
+                # print(f"values[0]: {values[0]}")
+                values_filter = values!=-999.0
+                values = values[values_filter]
+                weights = weights[values_filter]
+                # MC samples are already normalized by their xsec*lumi, but data is not
+                if process in group_data_processes:
+                    fraction_weight = fraction_weight[values_filter]
+                    weights = weights*fraction_weight
+                
+                np_hist, _ = np.histogram(values, bins=binning, weights = weights)
+                np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
+               
                 
                 if process in group_data_processes:
                     print("data activated")
                     group_data_hists.append(np_hist)
+                    group_data_hists_w2.append(np_hist_w2)
                 #-------------------------------------------------------
                 elif process in group_DY_processes:
                     print("DY activated")
                     group_DY_hists.append(np_hist)
+                    group_DY_hists_w2.append(np_hist_w2)
                 #-------------------------------------------------------
                 elif process in group_Top_processes:
                     print("top activated")
                     group_Top_hists.append(np_hist)
+                    group_Top_hists_w2.append(np_hist_w2)
                 #-------------------------------------------------------
                 elif process in group_Ewk_processes:
                     print("Ewk activated")
                     group_Ewk_hists.append(np_hist)
+                    group_Ewk_hists_w2.append(np_hist_w2)
                 #-------------------------------------------------------
                 elif process in group_VV_processes:
                     print("VV activated")
@@ -865,6 +913,7 @@ if __name__ == "__main__":
                     # for idx in range (len(np_hist)): # paste the np histogram values to root histogram
                     #     var_hist_VV.SetBinContent(1+idx, np_hist[idx])
                     group_VV_hists.append(np_hist)
+                    group_VV_hists_w2.append(np_hist_w2)
                 #-------------------------------------------------------
                 elif process in group_ggH_processes:
                     print("ggH activated")
@@ -880,35 +929,52 @@ if __name__ == "__main__":
                         continue
                     print("other activated")
                     group_other_hists.append(np_hist)
+                    group_otherhists_w2.append(np_hist_w2)
 
 
                 
                 
             all_MC_hist_list = []
+            all_MC_hist_list_w2 = []
             groups = []
             if len(group_DY_hists) > 0:
                 DY_hist_stacked = np.sum(np.asarray(group_DY_hists), axis=0)
                 all_MC_hist_list.append(DY_hist_stacked)
+                # add w2 for error calculation
+                DY_hist_stacked_w2 = np.sum(np.asarray(group_DY_hists_w2), axis=0)
+                all_MC_hist_list_w2.append(DY_hist_stacked_w2)
                 groups.append("DY")
             #----------------------------------------------
             if len(group_Top_hists) > 0:
                 Top_hist_stacked = np.sum(np.asarray(group_Top_hists), axis=0)
                 all_MC_hist_list.append(Top_hist_stacked)
+                # add w2 for error calculation
+                Top_hist_stacked_w2 = np.sum(np.asarray(group_Top_hists_w2), axis=0)
+                all_MC_hist_list_w2.append(Top_hist_stacked_w2)
                 groups.append("Top")
             #----------------------------------------------
             if len(group_Ewk_hists) > 0:
                 Ewk_hist_stacked = np.sum(np.asarray(group_Ewk_hists), axis=0)
                 all_MC_hist_list.append(Ewk_hist_stacked)
+                # add w2 for error calculation
+                Ewk_hist_stacked_w2 = np.sum(np.asarray(group_Ewk_hists_w2), axis=0)
+                all_MC_hist_list_w2.append(Ewk_hist_stacked_w2)
                 groups.append("Ewk")
             #----------------------------------------------
             if len(group_VV_hists) > 0:
                 VV_hist_stacked = np.sum(np.asarray(group_VV_hists), axis=0)
                 all_MC_hist_list.append(VV_hist_stacked)
+                # add w2 for error calculation
+                VV_hist_stacked_w2 = np.sum(np.asarray(group_VV_hists_w2), axis=0)
+                all_MC_hist_list_w2.append(VV_hist_stacked_w2)
                 groups.append("VV")
             #----------------------------------------------
             if len(group_other_hists) > 0:
                 other_hist_stacked = np.sum(np.asarray(group_other_hists), axis=0)
                 all_MC_hist_list.append(other_hist_stacked)
+                # add w2 for error calculation
+                other_hist_stacked_w2 = np.sum(np.asarray(group_other_hists_w2), axis=0)
+                all_MC_hist_list_w2.append(other_hist_stacked_w2)
                 groups.append("other")
             #----------------------------------------------
                 
@@ -989,8 +1055,8 @@ if __name__ == "__main__":
             
             fig.subplots_adjust(hspace=0.1)
             # obtain fraction weight, this should be the same for all processes and rows
-            fraction_weight = 1/events.fraction[0].compute() # directly apply these to np hists
-            print(f"fraction_weight: {(fraction_weight)}")
+            # fraction_weight = 1/events.fraction[0].compute() # directly apply these to np hists
+            # print(f"fraction_weight: {(fraction_weight)}")
             print(f"all_MC_hist_list: {(all_MC_hist_list)}")
             #------------------------------------------
             mc_sum_histogram = np.sum(np.asarray(all_MC_hist_list), axis=0) # to be used in ratio plot later
@@ -1002,8 +1068,8 @@ if __name__ == "__main__":
                 "other" : "Gray"
             }
             colours = [group_color_map[group] for group in groups]
-            for hist in all_MC_hist_list:
-                hist *= fraction_weight #hists are pointers so this gets
+            # for hist in all_MC_hist_list:
+                # hist *= fraction_weight #hists are pointers so this gets
             hep.histplot(all_MC_hist_list, bins=binning, 
                          stack=True, histtype='fill', 
                          label=groups, 
@@ -1013,7 +1079,8 @@ if __name__ == "__main__":
                          ax=ax_main)
 
             if len(group_ggH_hists) > 0: # there should be only one element or be empty
-                hist_ggh = group_ggH_hists[0]*fraction_weight
+                # hist_ggh = group_ggH_hists[0]*fraction_weight
+                hist_ggh = group_ggH_hists[0]
                 hep.histplot(hist_ggh, bins=binning, 
                              histtype='step', 
                              label="ggH", 
@@ -1023,7 +1090,8 @@ if __name__ == "__main__":
                              # density=plot_settings[plot_name].get("density"), 
                              ax=ax_main)
             if len(group_VBF_hists) > 0: # there should be only one element or be empty
-                hist_vbf = group_VBF_hists[0]*fraction_weight
+                # hist_vbf = group_VBF_hists[0]*fraction_weight
+                hist_vbf = group_VBF_hists[0]
                 hep.histplot(hist_vbf, bins=binning, 
                              histtype='step', 
                              label="VBF", 
@@ -1038,9 +1106,11 @@ if __name__ == "__main__":
             # data_rel_err[data_hist>0] = np.sqrt(data_hist)**(-1) # poisson err / value == inverse sqrt()
             #apply fraction weight to data hist and yerr
             data_hist = np.sum(np.asarray(group_data_hists), axis=0)
-            data_err = np.sqrt(data_hist) # get yerr b4 fraction weight is applied
-            data_hist = data_hist*fraction_weight
-            data_err = data_err*fraction_weight
+            # data_err = np.sqrt(data_hist) # get yerr b4 fraction weight is applied
+            # data_hist = data_hist*fraction_weight
+            # data_err = data_err*fraction_weight
+            # data_hist = data_hist
+            data_err = np.sqrt(np.sum(np.asarray(group_data_hists_w2), axis=0)) # sqrt of sum of squares of weights
             hep.histplot(data_hist, xerr=True, yerr=data_err,
                          bins=binning, stack=False, histtype='errorbar', color='black', 
                          label='Data', ax=ax_main)
@@ -1051,22 +1121,22 @@ if __name__ == "__main__":
             
             if not args.no_ratio:
                 # sum_histogram = np.sum(np.asarray(hists_to_plot), axis=0)
-                mc_yerr = np.sqrt(mc_sum_histogram)
-                mc_yerr *= fraction_weight # re apply fraction weights
-                mc_sum_histogram  *= fraction_weight # re apply fraction weights
+                # mc_yerr = np.sqrt(mc_sum_histogram)
+                # mc_yerr *= fraction_weight # re apply fraction weights
+                # mc_sum_histogram  *= fraction_weight # re apply fraction weights
+                mc_yerr = np.sqrt(np.sum(np.asarray(all_MC_hist_list_w2), axis=0)) # sqrt of sum of squares of weights
+
                 ratio_hist = np.zeros_like(data_hist)
                 ratio_hist[mc_sum_histogram>0] = data_hist[mc_sum_histogram>0]/  mc_sum_histogram[mc_sum_histogram>0]
                 # add rel unc of data and mc by quadrature
                 rel_unc_ratio = np.sqrt((mc_yerr/mc_sum_histogram)**2 + (data_err/data_hist)**2)
                 ratio_err = rel_unc_ratio*ratio_hist
+                print(f"ratio_hist: {ratio_hist}")
+                print(f"ratio_err: {ratio_err}")
                 
                 hep.histplot(ratio_hist, 
                              bins=binning, histtype='errorbar', yerr=ratio_err, 
                              color='black', label='Ratio', ax=ax_ratio)
-                # hep.histplot(np.ones_like(ratio_hist), 
-                #              bins=binning, histtype='fill', yerr=(mc_yerr/mc_sum_histogram).flatten(), 
-                #              color='blue', label='MC err', ax=ax_ratio)
-                # print("flag3")
                 ax_ratio.axhline(1, color='gray', linestyle='--')
                 ax_ratio.set_xlabel(plot_settings[var].get("xlabel"))
                 ax_ratio.set_ylabel('Data / MC')
