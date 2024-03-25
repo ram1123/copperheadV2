@@ -4,7 +4,7 @@ import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
 from corrections.rochester import apply_roccor
-from corrections.fsr_recovery import fsr_recovery
+from corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 from corrections.weight import Weights
@@ -15,6 +15,7 @@ import pandas as pd # just for debugging
 import dask_awkward as dak
 import dask
 from coffea.analysis_tools import Weights
+import copy
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
@@ -241,10 +242,21 @@ class EventProcessor(processor.ProcessorABC):
        
         # # Save raw variables before computing any corrections
         # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
-        events["Muon", "pt_raw"] = events.Muon.pt
-        events["Muon", "eta_raw"] = events.Muon.eta
-        events["Muon", "phi_raw"] = events.Muon.phi
-        events["Muon", "pfRelIso04_all_raw"] = events.Muon.pfRelIso04_all
+        # # original -------------------------------------------------------------------
+        # events["Muon", "pt_raw"] = events.Muon.pt
+        # events["Muon", "eta_raw"] = events.Muon.eta
+        # events["Muon", "phi_raw"] = events.Muon.phi
+        # events["Muon", "pfRelIso04_all_raw"] = events.Muon.pfRelIso04_all
+        # # original end ---------------------------------------------------------------
+
+        # attempt at fixing fsr issue -------------------------------------------------------------------
+        events["Muon", "pt_raw"] = ak.ones_like(events.Muon.pt) * events.Muon.pt
+        events["Muon", "eta_raw"] = ak.ones_like(events.Muon.eta) * events.Muon.eta
+        events["Muon", "phi_raw"] = ak.ones_like(events.Muon.phi) * events.Muon.phi
+        events["Muon", "pfRelIso04_all_raw"] = ak.ones_like(events.Muon.pfRelIso04_all) * events.Muon.pfRelIso04_all
+        # attempt at fixing fsr issue end ---------------------------------------------------------------
+    
+        
         # # --------------------------------------------------------
         # # # Apply Rochester correction
         # # if self.config["do_roccor"]:
@@ -253,7 +265,8 @@ class EventProcessor(processor.ProcessorABC):
         # FSR recovery
         if self.config["do_fsr"]:
             print(f"doing fsr!")
-            applied_fsr = fsr_recovery(events)
+            # applied_fsr = fsr_recovery(events)
+            applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
             events["Muon", "pt"] = events.Muon.pt_fsr
             events["Muon", "eta"] = events.Muon.eta_fsr
             events["Muon", "phi"] = events.Muon.phi_fsr
@@ -320,8 +333,8 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"copperhead2 EventProcessor muon_id: {muon_id}")
         # original muon selection ------------------------------------------------
         muon_selection = (
-            # (events.Muon.pt_raw > self.config["muon_pt_cut"])
-            (events.Muon.pt > self.config["muon_pt_cut"]) # testing
+            (events.Muon.pt_raw > self.config["muon_pt_cut"])
+            # (events.Muon.pt > self.config["muon_pt_cut"]) # testing
             & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
             & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
             # & events.Muon[muon_id]
@@ -362,21 +375,6 @@ class EventProcessor(processor.ProcessorABC):
         electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0)
 
         
-        # if self.test:
-        #     print(f"copperhead2 EventProcessor nmuons long: \n {pd.DataFrame(ak.to_numpy(nmuons)).to_string()}")
-        #     print(f"copperhead2 EventProcessor mm_charge long: \n {ak.to_numpy(mm_charge)}")
-        #     print(f'processor electron_selection : \n {((electron_selection))}')
-        #     print(f'processor electron_selection long: \n {ak.to_numpy(ak.flatten(electron_selection))}')
-        #     # print(f'processor electron_selection long: \n {ak.to_numpy(ak.flatten(electron_selection))}')
-        #     print(f"copperhead2 EventProcessor electron_veto long: \n {pd.DataFrame(ak.to_numpy(electron_veto)).to_string()}")
-        #     print(f"copperhead2 EventProcessor b4 selection ak.sum(event_filter): \n {ak.sum(event_filter)}")
-        #     print(f"copperhead2 EventProcessor b4 selection ak.sum((nmuons == 2)): \n {ak.sum((nmuons == 2))}")
-        #     print(f"copperhead2 EventProcessor b4 selection ak.sum(lumi_mask): \n {ak.sum(lumi_mask)}")
-        #     print(f"copperhead2 EventProcessor b4 selection ak.sum((evnt_qual_flg_selection > 0)): \n {ak.sum((evnt_qual_flg_selection > 0))}")
-        #     print(f"copperhead2 EventProcessor b4 selection ak.sum((mm_charge == -1): \n {ak.sum((mm_charge == -1))}")
-        #     print(f"copperhead2 EventProcessor b4 selection ak.sum(electron_veto: \n {ak.sum(electron_veto)}")
-        #     print(f"copperhead2 EventProcessor b4 selection ak.sum(good_pv: \n {ak.sum((events.PV.npvsGood > 0))}")
-
 
         
         event_filter = (
@@ -407,18 +405,37 @@ class EventProcessor(processor.ProcessorABC):
         # Select events with muons passing leading pT cut
         # --------------------------------------------------------#
 
-        # Events where there is at least one muon passing
-        # leading muon pT cut
-        # pass_leading_pt = events.Muon[:,:1].pt_raw > self.config["muon_leading_pt"]
+        # original start---------------------------------------------------------------
+        # # Events where there is at least one muon passing
+        # # leading muon pT cut
+        # # muons_pt_raw_padded = 
         # pass_leading_pt = muons.pt_raw > self.config["muon_leading_pt"]
-        # testing -----------------------
-        pass_leading_pt = muons.pt > self.config["muon_leading_pt"]
-        # ----------------------------------------
-        pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
-        pass_leading_pt = ak.sum(pass_leading_pt, axis=1)
-        
+        # print(f'type self.config["muon_leading_pt"] : {type(self.config["muon_leading_pt"])}')
+        # print(f'type muons.pt_raw : {ak.type(muons.pt_raw.compute())}')
+        # # testing -----------------------
+        # # pass_leading_pt = muons.pt > self.config["muon_leading_pt"]
+        # # ----------------------------------------
+        # pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
+        # pass_leading_pt = ak.sum(pass_leading_pt, axis=1)
 
-        event_filter = event_filter & (pass_leading_pt >0)
+        # event_filter = event_filter & (pass_leading_pt >0)
+        # original end ---------------------------------------------------------------
+
+        # test start ----------------------------------------------------------------
+        muons_padded = ak.pad_none(muons, target=2, clip=True)
+        sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
+        muons_sorted = (muons_padded[sorted_args])
+        mu1 = muons_sorted[:,0]
+        # mu2 = muons_sorted[:,1]
+        pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
+        pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
+        print(f"pass_leading_pt: {pass_leading_pt.compute()}")
+
+
+        event_filter = event_filter & pass_leading_pt
+        # test end -----------------------------------------------------------------------
+
+        
         
         # calculate sum of gen weight b4 skimming off bad events
         is_mc = events.metadata["is_mc"]
@@ -454,6 +471,8 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             for variation in pu_wgts.keys():
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
+        #testing
+        pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
         # to_packed testing end -----------------------------------------------
         
@@ -841,6 +860,11 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
             "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
             "dimuon_phi_cs" : dimuon_phi_cs,
+            "mu1_pt_raw" : mu1.pt_raw,
+            "mu2_pt_raw" : mu2.pt_raw,
+            "mu1_pt_fsr" : mu1.pt_fsr,
+            "mu2_pt_fsr" : mu2.pt_fsr,
+            "pass_leading_pt" : pass_leading_pt,
             
         }
         if is_mc:

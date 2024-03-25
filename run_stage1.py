@@ -197,6 +197,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'mu1_phi': (computed["mu1_phi"]),
             'mu2_phi': (computed["mu2_phi"]),
             'nmuons': (computed["nmuons"]),
+            'mu1_pt_raw': (computed["mu1_pt_raw"]),
+            'mu2_pt_raw': (computed["mu2_pt_raw"]),
+            'mu1_pt_fsr': (computed["mu1_pt_fsr"]),
+            'mu2_pt_fsr': (computed["mu2_pt_fsr"]),
             # 'jet1_pt': (computed["jet_pt"][:,0]),
             # 'jet2_pt': (computed["jet_pt"][:,1]),
             # 'jet1_eta': (computed["jet_eta"][:,0]),
@@ -257,6 +261,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             "h_peak" : (computed["h_peak"]),
             # vbf ?? ------------------------------------------------
             "vbf_cut" : (computed["vbf_cut"]),
+            "pass_leading_pt" : (computed["pass_leading_pt"]),
         
          }
     is_mc = dataset_dict["metadata"]["is_mc"]
@@ -287,6 +292,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     sample_name = dataset_dict['metadata']['dataset']
     save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     print(f"save_path: {save_path}")
+    # remove previously existing files
     filelist = glob.glob(f"{save_path}/*.parquet")
     print(f"len(filelist): {len(filelist)}")
     for file in filelist:
@@ -313,6 +319,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             events.metadata["dataset"]
         )
         nnlops_save_path = save_path + "/nnlops"
+        # remove previously existing files
         filelist = glob.glob(f"{nnlops_save_path}/*.parquet")
         print(f"nnlops filelist: {filelist}")
         for file in filelist:
