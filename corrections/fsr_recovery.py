@@ -6,7 +6,6 @@ coffea_nanoevent = TypeVar('coffea_nanoevent')
 
 
 def fsr_recovery(events: coffea_nanoevent) -> ak_array:
-    
 
     # # testing better fsrPhotonsToRecover ---------------------------------------------------------------
     # mu_fsr_delta_r = events.Muon.delta_r(events.Muon.matched_fsrPhoton)
@@ -58,64 +57,67 @@ def fsr_recovery(events: coffea_nanoevent) -> ak_array:
     # argmax_not_leading_events = fsr_events[argmax_not_leading]
     return fsrPhotonsToRecover # return boolean filter for geofit
 
-# def fsr_recoveryV1(events: coffea_nanoevent) -> ak_array:
-#     """
-#     Import of Dmitry's implementation of fsr recovery from copperhead V1
-#     """
-        
-#     # original fsrPhotonsToRecover ---------------------------------------------------------------
-#     fsrPhotonsToRecover = (
-#         (events.Muon.fsrPhotonIdx >= 0) # pick rows and cols that have values (-1 means no photon found)
-#         & (events.Muon.matched_fsrPhoton.relIso03 < 1.8)
-#         & (events.Muon.matched_fsrPhoton.dROverEt2 < 0.012)
-#         & (events.Muon.matched_fsrPhoton.pt / events.Muon.pt < 0.4) # suppress Zgamma -> mumu contanmination
-#         & (abs(events.Muon.matched_fsrPhoton.eta) < 2.4)
-#     ) 
-#     # original fsrPhotonsToRecover end ---------------------------------------------------------------
 
-    
-#     fsrPhotonsToRecover = ak.fill_none(fsrPhotonsToRecover, False) 
-#     fsr = {
-#         "pt": events.Muon.matched_fsrPhoton.pt,
-#         "eta": events.Muon.matched_fsrPhoton.eta,
-#         "phi": events.Muon.matched_fsrPhoton.phi,
-#         "mass": 0.0,
-#     }
+def fsr_recoveryV1(df):
+    mask = (
+        (df.Muon.fsrPhotonIdx >= 0)
+        & (df.Muon.matched_fsrPhoton.relIso03 < 1.8)
+        & (df.Muon.matched_fsrPhoton.dROverEt2 < 0.012)
+        & (df.Muon.matched_fsrPhoton.pt / df.Muon.pt < 0.4)
+        & (abs(df.Muon.matched_fsrPhoton.eta) < 2.4)
+    )
+    mask = ak.fill_none(mask, False)
 
-#     for obj in [df.Muon, fsr]:
-#         px_ = obj["pt"] * np.cos(obj["phi"])
-#         py_ = obj["pt"] * np.sin(obj["phi"])
-#         pz_ = obj["pt"] * np.sinh(obj["eta"])
-#         e_ = np.sqrt(px_**2 + py_**2 + pz_**2 + obj["mass"] ** 2)
+    # px = ak.zeros_like(df.Muon.pt, dtype=np.float64)
+    # py = ak.zeros_like(df.Muon.pt, dtype=np.float64)
+    # pz = ak.zeros_like(df.Muon.pt, dtype=np.float64)
+    # e = ak.zeros_like(df.Muon.pt, dtype=np.float64)
+    px = ak.zeros_like(df.Muon.pt)
+    py = ak.zeros_like(df.Muon.pt)
+    pz = ak.zeros_like(df.Muon.pt)
+    e = ak.zeros_like(df.Muon.pt)
 
-#         px = px + px_
-#         py = py + py_
-#         pz = pz + pz_
-#         e = e + e_
-#     # add mass and charge as otherwise you can't add two lorentzvectors
-#     pt = np.sqrt(px**2 + py**2)
-#     print(f"type(pt): {(pt.type)}")
-#     print(f"total nmuons applied with fsrPhotons: {ak.sum(mask,axis=None)}")
-#     eta = np.arcsinh(pz / pt)
-#     phi = np.arctan2(py, px)
-#     mass = np.sqrt(e**2 - px**2 - py**2 - pz**2)
-#     print(f"type(eta): {(eta.type)}")
-#     print(f"type(phi): {(phi.type)}")
-#     print(f"type(mass): {(mass.type)}")
-#     iso = (df.Muon.pfRelIso04_all * df.Muon.pt - df.Muon.matched_fsrPhoton.pt) / pt
+    fsr = {
+        "pt": df.Muon.matched_fsrPhoton.pt,
+        "eta": df.Muon.matched_fsrPhoton.eta,
+        "phi": df.Muon.matched_fsrPhoton.phi,
+        "mass": 0.0,
+    }
 
-#     df["Muon", "pt_fsr"] = ak.where(mask, pt, df.Muon.pt)
-#     df["Muon", "eta_fsr"] = ak.where(mask, eta, df.Muon.eta)
-#     df["Muon", "phi_fsr"] = ak.where(mask, phi, df.Muon.phi)
-#     df["Muon", "mass_fsr"] = ak.where(mask, mass, df.Muon.mass)
-#     # df["Muon", "mass_fsr"] = df.Muon.mass
-#     df["Muon", "iso_fsr"] = ak.where(mask, iso, df.Muon.pfRelIso04_all)
-#     fsr_event_mask = ak.sum(mask, axis=1) > 0
-#     # print(f"fsr_event_mask len : {ak.sum(fsr_event_mask)}")
-#     # print(f"df[mask].Muon.pt_fsr: {df[fsr_event_mask].Muon.pt_fsr}")
-#     # print(f"df[mask].Muon.pt: {df[fsr_event_mask].Muon.pt}")
-#     # print(f"fsr[pt][mask]: \n {fsr['pt'][fsr_event_mask]}")
-#     return mask
+    for obj in [df.Muon, fsr]:
+        px_ = obj["pt"] * np.cos(obj["phi"])
+        py_ = obj["pt"] * np.sin(obj["phi"])
+        pz_ = obj["pt"] * np.sinh(obj["eta"])
+        e_ = np.sqrt(px_**2 + py_**2 + pz_**2 + obj["mass"] ** 2)
+
+        px = px + px_
+        py = py + py_
+        pz = pz + pz_
+        e = e + e_
+
+    pt = np.sqrt(px**2 + py**2)
+    print(f"type(pt): {(pt.type)}")
+    print(f"total nmuons applied with fsrPhotons: {ak.sum(mask,axis=None)}")
+    eta = np.arcsinh(pz / pt)
+    phi = np.arctan2(py, px)
+    mass = np.sqrt(e**2 - px**2 - py**2 - pz**2)
+    print(f"type(eta): {(eta.type)}")
+    print(f"type(phi): {(phi.type)}")
+    print(f"type(mass): {(mass.type)}")
+    iso = (df.Muon.pfRelIso04_all * df.Muon.pt - df.Muon.matched_fsrPhoton.pt) / pt
+
+    df["Muon", "pt_fsr"] = ak.where(mask, pt, df.Muon.pt)
+    df["Muon", "eta_fsr"] = ak.where(mask, eta, df.Muon.eta)
+    df["Muon", "phi_fsr"] = ak.where(mask, phi, df.Muon.phi)
+    df["Muon", "mass_fsr"] = ak.where(mask, mass, df.Muon.mass)
+    # df["Muon", "mass_fsr"] = df.Muon.mass
+    df["Muon", "iso_fsr"] = ak.where(mask, iso, df.Muon.pfRelIso04_all)
+    fsr_event_mask = ak.sum(mask, axis=1) > 0
+    # print(f"fsr_event_mask len : {ak.sum(fsr_event_mask)}")
+    # print(f"df[mask].Muon.pt_fsr: {df[fsr_event_mask].Muon.pt_fsr}")
+    # print(f"df[mask].Muon.pt: {df[fsr_event_mask].Muon.pt}")
+    # print(f"fsr[pt][mask]: \n {fsr['pt'][fsr_event_mask]}")
+    return mask
 
 
 
