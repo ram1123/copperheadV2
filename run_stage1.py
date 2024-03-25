@@ -197,18 +197,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'mu1_phi': (computed["mu1_phi"]),
             'mu2_phi': (computed["mu2_phi"]),
             'nmuons': (computed["nmuons"]),
-            'mu1_pt_raw': (computed["mu1_pt_raw"]),
-            'mu2_pt_raw': (computed["mu2_pt_raw"]),
-            'mu1_pt_fsr': (computed["mu1_pt_fsr"]),
-            'mu2_pt_fsr': (computed["mu2_pt_fsr"]),
-            # 'jet1_pt': (computed["jet_pt"][:,0]),
-            # 'jet2_pt': (computed["jet_pt"][:,1]),
-            # 'jet1_eta': (computed["jet_eta"][:,0]),
-            # 'jet2_eta': (computed["jet_eta"][:,1]),
-            # 'jet1_phi': (computed["jet_phi"][:,0]),
-            # 'jet2_phi': (computed["jet_phi"][:,1]),
-            # 'jet1_mass': (computed["jet_mass"][:,0]),
-            # 'jet2_mass': (computed["jet_mass"][:,1]),
+            # 'mu1_pt_raw': (computed["mu1_pt_raw"]),
+            # 'mu2_pt_raw': (computed["mu2_pt_raw"]),
+            # 'mu1_pt_fsr': (computed["mu1_pt_fsr"]),
+            # 'mu2_pt_fsr': (computed["mu2_pt_fsr"]),
             'jet1_pt': (computed["jet1_pt"]),
             'jet2_pt': (computed["jet2_pt"]),
             'jet1_eta': (computed["jet1_eta"]),
@@ -224,20 +216,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'dimuon_ebe_mass_res': (computed["dimuon_ebe_mass_res"]),
             'dimuon_cos_theta_cs': (computed["dimuon_cos_theta_cs"]),
             'dimuon_phi_cs': (computed["dimuon_phi_cs"]),
-            # 'jet1_pt_raw': (computed["jet_pt_raw"][:,0]),
-            # 'jet1_mass_raw': (computed["jet_mass_raw"][:,0]),
-            # 'jet1_rho': (computed["jet_rho"][:,0]),
-            # 'jet1_area': (computed["jet_area"][:,0]),
-            # 'jet1_pt_gen': (computed["jet_pt_gen"][:,0]),
-            # 'jet1_pt_jec': (computed["jet_pt_jec"][:,0]),
-            # 'jet1_mass_jec': (computed["jet_mass_jec"][:,0]),
-            # 'jet2_pt_raw': (computed["jet_pt_raw"][:,1]),
-            # 'jet2_mass_raw': (computed["jet_mass_raw"][:,1]),
-            # 'jet2_rho': (computed["jet_rho"][:,1]),
-            # 'jet2_area': (computed["jet_area"][:,1]),
-            # 'jet2_pt_gen': (computed["jet_pt_gen"][:,1]),
-            # 'jet2_pt_jec': (computed["jet_pt_jec"][:,1]),
-            # 'jet2_mass_jec': (computed["jet_mass_jec"][:,1]),
+
             'jet1_pt_raw': (computed["jet1_pt_raw"]),
             'jet1_mass_raw': (computed["jet1_mass_raw"]),
             'jet1_rho': (computed["jet1_rho"]),
@@ -261,7 +240,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             "h_peak" : (computed["h_peak"]),
             # vbf ?? ------------------------------------------------
             "vbf_cut" : (computed["vbf_cut"]),
-            "pass_leading_pt" : (computed["pass_leading_pt"]),
+            # "pass_leading_pt" : (computed["pass_leading_pt"]),
         
          }
     is_mc = dataset_dict["metadata"]["is_mc"]
@@ -469,9 +448,9 @@ if __name__ == "__main__":
             smaller_files = list(divide_chunks(sample["files"], max_file_len))
             # print(f"smaller_files: {smaller_files}")
             for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
+                # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
                 # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') as client:
-                # with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='5 GiB') as client:
+                with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
                     with performance_report(filename="dask-report.html"):
                         smaller_sample = copy.deepcopy(sample)
                         smaller_sample["files"] = smaller_files[idx]
@@ -480,10 +459,11 @@ if __name__ == "__main__":
                         var_step = time.time()
                         to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
                         # print(f"to_compute: {to_compute}")
-                        futures = dask.compute(to_compute) # futures: represent the ongoing or completed computations within the Dask cluster, regardless of the underlying execution environment
+                        dask.compute(to_compute)
+                        # futures = dask.compute(to_compute) # futures: represent the ongoing or completed computations within the Dask cluster, regardless of the underlying execution environment
                         # print(f"futures: {futures}")
-                        progress(futures)
-                        results = client.gather(futures)
+                        # progress(futures)
+                        # results = client.gather(futures)
     
                         # do garbage collection and memory trimming-----------
                         client.run(gc.collect)
