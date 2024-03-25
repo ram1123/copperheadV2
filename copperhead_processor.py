@@ -295,6 +295,7 @@ class EventProcessor(processor.ProcessorABC):
                 (events.Muon.bsConstrainedChi2 <30)
             )
             BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
+            BSConstraint_mask = BSConstraint_mask & (~applied_fsr) # apply BSContraint on non FSR muons
             events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
         else:
@@ -457,12 +458,12 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            sumWeights = events.metadata['sumGenWgts']
-            print(f"sumWeights: {(sumWeights)}")
+            # sumWeights = events.metadata['sumGenWgts']
+            # print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
