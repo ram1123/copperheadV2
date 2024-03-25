@@ -421,33 +421,33 @@ class EventProcessor(processor.ProcessorABC):
         # original end ---------------------------------------------------------------
 
         # better original start---------------------------------------------------------------
-        # Events where there is at least one muon passing
-        # leading muon pT cut
-        # muons_pt_raw_padded = 
-        pass_leading_pt = ak.max(muons.pt_raw, axis=1) > self.config["muon_leading_pt"]
-        # testing -----------------------
-        # pass_leading_pt = muons.pt > self.config["muon_leading_pt"]
-        # ----------------------------------------
-        pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
+        # # Events where there is at least one muon passing
+        # # leading muon pT cut
+        # # muons_pt_raw_padded = 
+        # pass_leading_pt = ak.max(muons.pt_raw, axis=1) > self.config["muon_leading_pt"]
+        # # testing -----------------------
+        # # pass_leading_pt = muons.pt > self.config["muon_leading_pt"]
+        # # ----------------------------------------
+        # pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
 
-        event_filter = event_filter & pass_leading_pt
+        # event_filter = event_filter & pass_leading_pt
         # better original end ---------------------------------------------------------------
 
         # test start ----------------------------------------------------------------
-        # # NOTE: if you want to keep this method, (which I don't btw since the original
-        # # code above is conceptually more correct at this moment), you should optimize
-        # # this code, bc this was just something I put together for quick testing
-        # muons_padded = ak.pad_none(muons, target=2)
-        # sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
-        # muons_sorted = (muons_padded[sorted_args])
-        # mu1 = muons_sorted[:,0]
-        # # mu2 = muons_sorted[:,1]
-        # pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
-        # pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
+        # NOTE: if you want to keep this method, (which I don't btw since the original
+        # code above is conceptually more correct at this moment), you should optimize
+        # this code, bc this was just something I put together for quick testing
+        muons_padded = ak.pad_none(muons, target=2)
+        sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
+        muons_sorted = (muons_padded[sorted_args])
+        mu1 = muons_sorted[:,0]
+        # mu2 = muons_sorted[:,1]
+        pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
+        pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
         # print(f"pass_leading_pt: {pass_leading_pt.compute()}")
 
 
-        # event_filter = event_filter & pass_leading_pt
+        event_filter = event_filter & pass_leading_pt
         # test end -----------------------------------------------------------------------
 
         
@@ -457,12 +457,12 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            # sumWeights = events.metadata['sumGenWgts']
-            # print(f"sumWeights: {(sumWeights)}")
+            sumWeights = events.metadata['sumGenWgts']
+            print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
