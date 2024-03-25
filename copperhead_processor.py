@@ -422,7 +422,7 @@ class EventProcessor(processor.ProcessorABC):
         # original end ---------------------------------------------------------------
 
         # test start ----------------------------------------------------------------
-        muons_padded = ak.pad_none(muons, target=2, clip=True)
+        muons_padded = ak.pad_none(muons, target=2)
         sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
         muons_sorted = (muons_padded[sorted_args])
         mu1 = muons_sorted[:,0]
@@ -498,7 +498,7 @@ class EventProcessor(processor.ProcessorABC):
         # Last time I checked there was some errors on LHE correction shape mismatch
         # ---------------------------------------------------------
 
-        muons_padded = ak.pad_none(muons, target=2, clip=True)
+        muons_padded = ak.pad_none(muons, target=2)
         # muon_flip = muons_padded.pt[:,0] < muons_padded.pt[:,1]  
         # muon_flip = ak.fill_none(muon_flip, value=False)
         # # take the subleading muon values if that now has higher pt after corrections
@@ -1334,7 +1334,7 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"jets.pt_raw[jet_argmax_not_leading] : {jets.pt_raw[jet_argmax_not_leading].compute()}")
         # print(f"jets.mass_raw[jet_argmax_not_leading] : {jets.mass_raw[jet_argmax_not_leading].compute()}")
         # print(f"jets.mass[jet_argmax_not_leading] : {jets.mass[jet_argmax_not_leading].compute()}")
-        padded_jets = ak.pad_none(jets, target=2, clip=True)
+        padded_jets = ak.pad_none(jets, target=2) 
         # # jet1 = padded_jets[:,0]
         # # jet2 = padded_jets[:,1]
         # jet_flip = padded_jets.pt[:,0] < padded_jets.pt[:,1]  
