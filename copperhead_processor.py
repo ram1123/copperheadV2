@@ -8,7 +8,7 @@ from corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 from corrections.weight import Weights
-from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights
+from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -231,14 +231,15 @@ class EventProcessor(processor.ProcessorABC):
             if self.test:
                 print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
-        # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
-        if events.metadata["is_mc"]:
-            pu_wgts = pu_evaluator(
-                        self.config,
-                        events.Pileup.nTrueInt,
-                        test=self.test
-                )
-
+        # turn off pu weights test start ---------------------------------
+        # # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
+        # if events.metadata["is_mc"]:
+        #     pu_wgts = pu_evaluator(
+        #                 self.config,
+        #                 events.Pileup.nTrueInt,
+        #                 test=self.test
+        #         )
+        # turn off pu weights test end ---------------------------------
        
         # # Save raw variables before computing any corrections
         # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
@@ -484,10 +485,11 @@ class EventProcessor(processor.ProcessorABC):
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
         applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
-        if is_mc:
-            for variation in pu_wgts.keys():
-                pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
-        #testing
+        # turn off pu weights test start ---------------------------------
+        # if is_mc:
+        #     for variation in pu_wgts.keys():
+        #         pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
+        # turn off pu weights test end ---------------------------------
         pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
         # to_packed testing end -----------------------------------------------
@@ -667,8 +669,9 @@ class EventProcessor(processor.ProcessorABC):
             integrated_lumi = self.config["integrated_lumis"]
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
-            weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
-            # print(f'pu_wgts["nom"]: {pu_wgts["nom"].compute()}')
+            # turn off pu weights test start ---------------------------------
+            # weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
+            # turn off pu weights test end ---------------------------------
             # L1 prefiring weights
             if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
                 L1_nom = events.L1PreFiringWeight.Nom
@@ -1510,15 +1513,15 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         # # Calculate QGL weights, btag SF and apply btag veto
         # # ------------------------------------------------------------#
-        # # TODO: qgl seems to be only for vbf, double check that
-        # if is_mc and variation == "nominal":
-        #     # --- QGL weights --- #
-        #     isHerwig = "herwig" in events.metadata['dataset']
+        if is_mc and variation == "nominal":
+            # --- QGL weights --- #
+            isHerwig = "herwig" in events.metadata['dataset']
 
-        #     qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
+            # qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
         #     self.weight_collection.add_weight("qgl_wgt", qgl_wgts, how="all")
         #     # print(f"type(qgl_wgts) : \n {type(qgl_wgts)}")
-        #     # print(f"qgl_wgts : \n {qgl_wgts}")
+            # print(f"qgl_wgts : \n {qgl_wgts}")
+            qgl_nom = qgl_weights_eager(jet1, jet2, njets, isHerwig)
 
         #     # --- Btag weights --- #
         #     bjet_sel_mask = output.event_selection #& two_jets & vbf_cut
@@ -1561,6 +1564,7 @@ class EventProcessor(processor.ProcessorABC):
         temp_out_dict = {
             "nBtagLoose": nBtagLoose,
             "nBtagMedium": nBtagMedium,
+            "qgl_nom" : qgl_nom,
         }
         jet_loop_out_dict.update(temp_out_dict)
         if self.test:
