@@ -962,14 +962,15 @@ def qgl_weights_eager(jet1, jet2, njets, isHerwig):
     qgl1 = get_qgl_weights(jet1, isHerwig)
     qgl1 = ak.fill_none(qgl1, value=1.0)
     qgl2 = get_qgl_weights(jet2, isHerwig)
-    qgl2 = ak.fill_none(qgl2, value=1.0)
+    # qgl2 = ak.fill_none(qgl2, value=1.0)
     qgl_nom = (qgl1*qgl2)
+    # qgl_nom = ak.fill_none(qgl_nom, value=1.0)
     print(f"(qgl1*qgl2): {ak.to_numpy((qgl1*qgl2).compute())}")
-    qgl_nom = ak.where((njets==1), ak.ones_like(qgl_nom), qgl_nom)
-    
-    # njet_selection = njets > 2 # think this is a bug, but have to double check
-    # qgl_nom = ak.fill_none(qgl_nom, value=1.0) # we got rid of jet2==None case, but jet1 could still be None
-
+    print(f"ak.sum(njets==1): {ak.sum(njets==1).compute()}")
+    print(f"(njets==1): {ak.to_numpy((njets==1).compute())}")
+    ones = ak.ones_like(qgl1) # qgl1 is picked bc we assume there's no none values in it. ones_like function copies None values as well
+    qgl_nom = ak.where((njets==1), ones, qgl_nom) 
+    print(f"qgl_nom after njet==1 selection: {ak.to_numpy((qgl_nom).compute())}")
     return qgl_nom
 
 def get_qgl_weights(jet, isHerwig):
