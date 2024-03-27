@@ -921,36 +921,33 @@ def qgl_weights(jet1, jet2, njets, isHerwig):
     # qgl2 = get_qgl_weights(jet2, isHerwig).fillna(1.0)
     # qgl.wgt *= qgl1 * qgl2
     qgl1 = get_qgl_weights(jet1, isHerwig)
+    qgl1 = ak.fill_none(qgl1, value=1.0)
     qgl2 = get_qgl_weights(jet2, isHerwig)
-    print(f"qgl_weights jet1: {qgl1.compute()}")
-    print(f"qgl_weights jet2: {qgl2.compute()}")
-    # qgl_nom = ak.fill_none(qgl1*qgl2, value=1.0) # events with jet2==None is converted to 1.0
+    # print(f"qgl_weights jet1: {qgl1.compute()}")
+    # print(f"qgl_weights jet2: {qgl2.compute()}")
     
-    # qgl2_has_value = ~ak.is_none(qgl2)
-    # qgl_nom = ak.where(qgl2_has_value, (qgl1*qgl2), qgl1)
     qgl_nom = (qgl1*qgl2)
+    ones = ak.ones_like(qgl1) # qgl1 is picked bc we assume there's no none values in it. ones_like function copies None values as well
+    qgl_nom = ak.where((njets==1), ones, qgl_nom)  # 1D array
 
-    print(f"qgl_weights qgl_nom b4: {qgl_nom.compute()}")
+    # print(f"qgl_weights qgl_nom b4: {qgl_nom.compute()}")
     # qgl.wgt[variables.njets == 1] = 1.0 # fill_none does this
     # qgl.wgt = qgl.wgt / qgl.wgt[selected].mean()
     # selected = output.event_selection & (njets > 2)
     njet_selection = njets > 2 # think this is a bug, but have to double check
-    print(f"qgl_weights qgl_nom[njet_selection]: {qgl_nom[njet_selection].compute()}")
-    qgl_mean = ak.mean(qgl_nom[njet_selection])
+    sum = ak.sum(qgl_nom[njet_selection], axis=None)
+    count = ak.count(qgl_nom[njet_selection], axis=None)
+    qgl_mean = sum/count
     qgl_nom = qgl_nom/ qgl_mean
-    print(f"qgl_weights qgl_nom after: {ak.to_numpy(qgl_nom)}")
+    # print(f"qgl_weights qgl_nom after: {ak.to_numpy(qgl_nom)}")
     qgl_nom = ak.fill_none(qgl_nom, value=1.0) # we got rid of jet2==None case, but jet1 could still be None
-    print(f"qgl_weights qgl_nom after after: {ak.to_numpy(qgl_nom)}")
-    print(f"qgl_weights qgl_nom[njet_selection]: {ak.to_numpy(qgl_nom[njet_selection])}")
+    # print(f"qgl_weights qgl_nom after after: {ak.to_numpy(qgl_nom)}")
+    # print(f"qgl_weights qgl_nom[njet_selection]: {ak.to_numpy(qgl_nom[njet_selection])}")
 
 
 
     qgl_down = ak.ones_like(qgl_nom, dtype="float")
-    print(f"qgl_weights qgl_down : {ak.to_numpy(qgl_down)}")
 
-    # qgl = qgl.fillna(1.0)
-
-    # wgts = {"nom": qgl.wgt, "up": qgl.wgt * qgl.wgt, "down": qgl.wgt_down}
     wgts = {"nom": qgl_nom, "up": qgl_nom * qgl_nom, "down": qgl_down}
     return wgts
 

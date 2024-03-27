@@ -20,7 +20,7 @@ from itertools import islice
 import copy
 import argparse
 from dask.distributed import performance_report
-from corrections.evaluator import nnlops_weights
+from corrections.evaluator import nnlops_weights, qgl_weights
 
 # dask.config.set({'logging.distributed': 'error'})
 import logging
@@ -196,7 +196,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'mu2_eta': (computed["mu2_eta"]),
             'mu1_phi': (computed["mu1_phi"]),
             'mu2_phi': (computed["mu2_phi"]),
-            'nmuons': (computed["nmuons"]),
+            # 'nmuons': (computed["nmuons"]),
             # 'mu1_pt_raw': (computed["mu1_pt_raw"]),
             # 'mu2_pt_raw': (computed["mu2_pt_raw"]),
             # 'mu1_pt_fsr': (computed["mu1_pt_fsr"]),
@@ -212,23 +212,23 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'njets': (computed["njets"]),
             'weights': (computed["weights"]),
             # 'fsr_mask': (computed["fsr_mask"]),
-            'dimuon_mass': (computed["dimuon_mass"]),
-            'dimuon_ebe_mass_res': (computed["dimuon_ebe_mass_res"]),
-            'dimuon_cos_theta_cs': (computed["dimuon_cos_theta_cs"]),
-            'dimuon_phi_cs': (computed["dimuon_phi_cs"]),
+            # 'dimuon_mass': (computed["dimuon_mass"]),
+            # 'dimuon_ebe_mass_res': (computed["dimuon_ebe_mass_res"]),
+            # 'dimuon_cos_theta_cs': (computed["dimuon_cos_theta_cs"]),
+            # 'dimuon_phi_cs': (computed["dimuon_phi_cs"]),
 
             'jet1_pt_raw': (computed["jet1_pt_raw"]),
             'jet1_mass_raw': (computed["jet1_mass_raw"]),
             'jet1_rho': (computed["jet1_rho"]),
             'jet1_area': (computed["jet1_area"]),
-            'jet1_pt_jec': (computed["jet1_pt_jec"]),
-            'jet1_mass_jec': (computed["jet1_mass_jec"]),
+            # 'jet1_pt_jec': (computed["jet1_pt_jec"]),
+            # 'jet1_mass_jec': (computed["jet1_mass_jec"]),
             'jet2_pt_raw': (computed["jet2_pt_raw"]),
             'jet2_mass_raw': (computed["jet2_mass_raw"]),
             'jet2_rho': (computed["jet2_rho"]),
             'jet2_area': (computed["jet2_area"]),
-            'jet2_pt_jec': (computed["jet2_pt_jec"]),
-            'jet2_mass_jec': (computed["jet2_mass_jec"]),
+            # 'jet2_pt_jec': (computed["jet2_pt_jec"]),
+            # 'jet2_mass_jec': (computed["jet2_mass_jec"]),
             # fraction -------------------------------------
             "fraction" : dataset_fraction*(ak.ones_like(computed["njets"])), 
             # Btagging WPs ------------------------------------
@@ -281,6 +281,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #------------------------
     # do nnlops correct on normal awkward
     do_nnlops = processor.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
+    # do_nnlops = False
     if do_nnlops: # we need full computed for this
         print("doing nnlops!")
         # placeholder_dict = dask.compute(placeholder_dict)[0]
@@ -310,6 +311,44 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         ak.to_parquet(ak.zip({"nnlops_wgt" : nnlops_wgt}), nnlops_save_path+"/wgt.parquet")
         # ak.to_parquet(nnlops_wgt, nnlops_save_path+"/wgt.parquet")
 
+    # doing qgl weight calculation start ----------------------------
+    # print("doing QGL weights!")
+    # QGL_dict = {
+    #     "qgl_nom" : (computed["qgl_nom"]),
+    #     "njets" : (computed["njets"]),
+    # }
+    # QGL_dict = dask.compute(QGL_dict)[0]
+    # qgl_nom = QGL_dict["qgl_nom"]
+    # njets = QGL_dict["njets"]
+
+    # njet_selection = njets > 2 
+    # # print(f"qgl_weights qgl_nom[njet_selection]: {qgl_nom[njet_selection]}")
+    # print(f"njet_selection: {njet_selection}")
+    # print(f"njet_selection sum: {ak.sum(njet_selection)}")
+    # qgl_mean = ak.mean(qgl_nom[njet_selection])
+    # print(f"qgl_mean: {qgl_mean}")
+    # qgl_nom = qgl_nom/ qgl_mean
+    # print(f"qgl_nom after mean: {ak.to_numpy(qgl_nom)}")
+    # qgl_nom = ak.fill_none(qgl_nom, value=1.0) 
+    # qgl_zip = ak.zip({
+    #     "qgl_nom" : qgl_nom,
+    #     "up": qgl_nom * qgl_nom, 
+    #     "down": ak.ones_like(qgl_nom, dtype="float")
+    # })
+    # print(f"qgl_nom: {ak.to_numpy(qgl_nom)}")
+    # qgl_save_path = save_path + "/qgl"
+    # # remove previously existing files
+    # filelist = glob.glob(f"{qgl_save_path}/*.parquet")
+    # print(f"qgl filelist: {filelist}")
+    # for file in filelist:
+    #     os.remove(file)
+    # if not os.path.exists(qgl_save_path):
+    #     os.makedirs(qgl_save_path)
+    # print(f"len(qgl_nom): {len(qgl_nom)}")
+    # # save qgl wgts to apply them later
+    # ak.to_parquet(qgl_zip, qgl_save_path+"/wgt.parquet")
+    # qgl weight calculation end ----------------------------
+    
     #----------------------------------
     zip = ak.zip(placeholder_dict, depth_limit=1)
     # zip = dask.compute(placeholder_dict)
@@ -448,9 +487,9 @@ if __name__ == "__main__":
             smaller_files = list(divide_chunks(sample["files"], max_file_len))
             # print(f"smaller_files: {smaller_files}")
             for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
+                with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
                 # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') as client:
-                with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
+                # with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
                     with performance_report(filename="dask-report.html"):
                         smaller_sample = copy.deepcopy(sample)
                         smaller_sample["files"] = smaller_files[idx]
