@@ -4,6 +4,7 @@ import uproot
 import coffea
 from coffea.lookup_tools import dense_lookup
 import awkward as ak
+import dask_awkward as dak
 
 
 def pu_lookups(parameters, mode="nom", auto=[]):
@@ -116,6 +117,27 @@ def pu_evaluator(parameters, ntrueint, test=False):
 
 # NNLOPS SF-------------------------------------------------------------------------
 
+class DelayedInterp:
+    """
+    this is a np.interp wrapper for dask awkward as suggested by 
+    Lindsey, from github issue https://github.com/dask-contrib/dask-awkward/issues/493
+    """
+    def __init__(self, x_knots, y_knots):
+        self.x_knots = x_knots
+        self.y_knots = y_knots
+    
+    def __call__(self, vals):
+        result = ak.Array(np.interp(
+           ak.typetracer.length_zero_if_typetracer(vals), # this will either be a concrete array with data or a type tracer
+           self.x_knots,
+           self.y_knots,
+        ))
+        # print(f"result: {result}")
+        if ak.backend(vals) == "typetracer":
+           return ak.Array(result.layout.to_typetracer(forget_length=True))
+        return result
+
+
 class NNLOPS_Evaluator(object):
     def __init__(self, input_path):
         with uproot.open(input_path) as f:
@@ -142,32 +164,65 @@ class NNLOPS_Evaluator(object):
         result = ak.ones_like(hig_pt)
         # njet0_filter = (hig_pt < 125) & (njets == 0)
         # interp_in = ak.where(njet0_filter, hig_pt, 125)
-        njet0_interp_out =  np.interp(
-            ak.where((hig_pt < 125), hig_pt, 125.0),
+        njet0_interp = DelayedInterp(
             self.ratio_0jet[mode].member("fX"),
-            self.ratio_0jet[mode].member("fY"),
+            self.ratio_0jet[mode].member("fY")
         )
+        njet0_interp_out = dak.map_partitions(
+            njet0_interp,
+            ak.where((hig_pt < 125), hig_pt, 125.0)
+        )
+        # njet0_interp_out =  np.interp(
+        #     ak.where((hig_pt < 125), hig_pt, 125.0),
+        #     self.ratio_0jet[mode].member("fX"),
+        #     self.ratio_0jet[mode].member("fY"),
+        # )
         result = ak.where((njets == 0), njet0_interp_out, result)
         # ------------------------------------------------------------#
-        njet1_interp_out =  np.interp(
-            ak.where((hig_pt < 625), hig_pt, 625.0),
+        njet1_interp = DelayedInterp(
             self.ratio_1jet[mode].member("fX"),
-            self.ratio_1jet[mode].member("fY"),
+            self.ratio_1jet[mode].member("fY")
         )
+        njet1_interp_out = dak.map_partitions(
+            njet1_interp,
+            ak.where((hig_pt < 800), hig_pt, 800.0)
+        )
+        # print(f"njet1_interp_out: {njet1_interp_out.compute()}")
+        # njet1_interp_out =  np.interp(
+        #     ak.where((hig_pt < 800), hig_pt, 800.0),
+        #     self.ratio_1jet[mode].member("fX"),
+        #     self.ratio_1jet[mode].member("fY"),
+        # )
         result = ak.where((njets == 1), njet1_interp_out, result)
         # ------------------------------------------------------------#
-        njet2_interp_out =  np.interp(
-            ak.where((hig_pt < 800), hig_pt, 800.0),
+        njet2_interp = DelayedInterp(
             self.ratio_2jet[mode].member("fX"),
-            self.ratio_2jet[mode].member("fY"),
+            self.ratio_2jet[mode].member("fY")
         )
+        njet2_interp_out = dak.map_partitions(
+            njet2_interp,
+            ak.where((hig_pt < 800), hig_pt, 800.0)
+        )
+        # njet2_interp_out =  np.interp(
+        #     ak.where((hig_pt < 800), hig_pt, 800.0),
+        #     self.ratio_2jet[mode].member("fX"),
+        #     self.ratio_2jet[mode].member("fY"),
+        # )
         result = ak.where((njets == 2), njet2_interp_out, result)
         # ------------------------------------------------------------#
-        njet3_interp_out =  np.interp(
-            ak.where((hig_pt < 925), hig_pt, 925.0),
+        njet3_interp = DelayedInterp(
             self.ratio_3jet[mode].member("fX"),
-            self.ratio_3jet[mode].member("fY"),
+            self.ratio_3jet[mode].member("fY")
         )
+        njet3_interp_out = dak.map_partitions(
+            njet3_interp,
+            ak.where((hig_pt < 925), hig_pt, 925.0)
+        )
+        # njet3_interp_out =  np.interp(
+        #     ak.where((hig_pt < 925), hig_pt, 925.0),
+        #     self.ratio_3jet[mode].member("fX"),
+        #     self.ratio_3jet[mode].member("fY"),
+        # )
         result = ak.where((njets > 2), njet3_interp_out, result)
         
         # njet0_interp_out =  np.interp(
@@ -1060,148 +1115,304 @@ def get_qgl_weights(jet, isHerwig):
 # Btag SF-------------------------------------------------------------------------
 
 def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file):
-
-    btag = pd.DataFrame(index=bjet_sel_mask.index)
-    #print(f"len btag1 {len(btag)}")
-    #print(f"len jets1 {len(jets)}")
-    jets = jets[abs(jets.eta) < 2.4]
-    jets["btag_wgt"] = 1.0
-    jets.loc[jets.pt > 1000.0, "pt"] = 1000.0
+    """
+    We assume jets to be non padded jet that has passed the base jet selection.
+    I don't think jets need to be sorted after JEC for this to work, however
+    """
+    # btag = pd.DataFrame(index=bjet_sel_mask.index)
+    btag_jet_selection = abs(jets.eta) < 2.4
+    jets = ak.to_packed(jets[btag_jet_selection])
+    # jets["btag_wgt"] = 1.0
+    jet_btag_wgts = ak.ones_like(jets.pt)
+    # jets.loc[jets.pt > 1000.0, "pt"] = 1000.0
+    jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
     
     
-    btag_json=[btag_file["deepCSV_shape"]]
-    jets.loc[abs(jets["eta"]) < 2.4, "btag_wgt"] = onedimeval(partial(btag_json[0].evaluate,
-        "central"),
-        jets.hadronFlavour.values,
-        abs(jets.eta.values),
-        jets.pt.values,
-        jets.btagDeepB.values,
+    btag_json=btag_file["deepCSV_shape"]
+    correctionlib_out = btag_json.evaluate(
+        "central",
+        jets.hadronFlavour,
+        abs(jets.eta),
+        jets.pt,
+        jets.btagDeepB,
     )
-    btag["wgt"] = jets["btag_wgt"].prod(level=0)
-    btag["wgt"] = btag["wgt"].fillna(1.0)
-    btag.loc[btag.wgt < 0.01, "wgt"] = 1.0
-    #print(f"len btag2 {len(btag)}")
-    #print(f"len jets2 {len(jets)}")
+    # print(f"correctionlib_out: {correctionlib_out.compute()}")
+    # correctionlib_out = ak.pad_none(correctionlib_out, target=1)
+    btag_wgt = ak.prod(correctionlib_out, axis=1) # for events with no qualified jets(empty row), the value is 1.0
+    # print(f"btag_wgt : {ak.to_numpy(btag_wgt.compute())}")
+
     flavors = {
         0: ["jes", "lf", "lfstats1", "lfstats2"],
-        1: ["jes", "lf", "lfstats1", "lfstats2"],
-        2: ["jes", "lf", "lfstats1", "lfstats2"],
-        3: ["jes", "lf", "lfstats1", "lfstats2"],
+        # 1: ["jes", "lf", "lfstats1", "lfstats2"],
+        # 2: ["jes", "lf", "lfstats1", "lfstats2"],
+        # 3: ["jes", "lf", "lfstats1", "lfstats2"],
         4: ["cferr1", "cferr2"],
         5: ["jes", "hf", "hfstats1", "hfstats2"],
-        21: ["jes", "lf", "lfstats1", "lfstats2"],
-    }
+        # 21: ["jes", "lf", "lfstats1", "lfstats2"],
+    }# printiing the correctionlib input description returns: "hadron flavor definition: 5=b, 4=c, 0=udsg", so corretionlib lookup table only accepts flavours of 0, 4 or 5
+    
     btag_syst = {}
     for sys in systs:
 
-        jets[f"btag_{sys}_up"] = 1.0
-        jets[f"btag_{sys}_down"] = 1.0
-        btag[f"{sys}_up"] = 1.0
-        btag[f"{sys}_down"] = 1.0
-
-        for f, f_syst in flavors.items():
-            if sys in f_syst:
-                btag_mask = (abs(jets.hadronFlavour)) == f #& (abs(jets.eta) < 2.4))
-                jets.loc[btag_mask, f"btag_{sys}_up"] = onedimeval(partial(btag_json[0].evaluate,
-                    f"up_{sys}"),
-                    jets.hadronFlavour[btag_mask].values,
-                    abs(jets.eta)[btag_mask].values,
-                    jets.pt[btag_mask].values,
-                    jets.btagDeepB[btag_mask].values,
-                    
-                )
-                jets.loc[btag_mask, f"btag_{sys}_down"] = onedimeval(partial(btag_json[0].evaluate,
-                    f"down_{sys}"),
-                    jets.hadronFlavour[btag_mask].values,
-                    abs(jets.eta)[btag_mask].values,
-                    jets.pt[btag_mask].values,
-                    jets.btagDeepB[btag_mask].values,
-                    
-                )
-
-        btag[f"{sys}_up"] = jets[f"btag_{sys}_up"].prod(level=0)
-        btag[f"{sys}_down"] = jets[f"btag_{sys}_down"].prod(level=0)
-        btag[f"{sys}_up"] =btag[f"{sys}_up"].fillna(1.0)
-        btag[f"{sys}_down"] =btag[f"{sys}_down"].fillna(1.0)
+        # jets[f"btag_{sys}_up"] = 1.0
+        # jets[f"btag_{sys}_down"] = 1.0
+        # btag[f"{sys}_up"] = 1.0
+        # btag[f"{sys}_down"] = 1.0
+        btag_wgt_up = ak.ones_like(jets.pt)
+        btag_wgt_down = ak.ones_like(jets.pt)
+        # 
         
-        btag_syst[sys] = {"up": btag[f"{sys}_up"], "down": btag[f"{sys}_down"]}
 
-    sum_before = weights.df["nominal"][bjet_sel_mask].sum()
-    sum_after = (
-        weights.df["nominal"][bjet_sel_mask]
-        .multiply(btag.wgt[bjet_sel_mask], axis=0)
-        .sum()
-    )
-    btag.wgt = btag.wgt * sum_before / sum_after
-    #print(f"len btag.wgt {len(btag.wgt)}")
-    #print(f"len jets3 {len(jets)}")
-    return btag.wgt, btag_syst
-
-def btag_weights_csv(processor, lookup, systs, jets, weights, bjet_sel_mask):
-
-    btag = pd.DataFrame(index=bjet_sel_mask.index)
-    jets = jets[abs(jets.eta) < 2.4]
-    jets.loc[jets.pt > 1000.0, "pt"] = 1000.0
-
-    jets["btag_wgt"] = lookup.eval(
-        "central",
-        jets.hadronFlavour.values,
-        abs(jets.eta.values),
-        jets.pt.values,
-        jets.btagDeepB.values,
-        True,
-    )
-    btag["wgt"] = jets["btag_wgt"].prod(level=0)
-    btag["wgt"] = btag["wgt"].fillna(1.0)
-    btag.loc[btag.wgt < 0.01, "wgt"] = 1.0
-
-    flavors = {
-        0: ["jes", "hf", "lfstats1", "lfstats2"],
-        1: ["jes", "hf", "lfstats1", "lfstats2"],
-        2: ["jes", "hf", "lfstats1", "lfstats2"],
-        3: ["jes", "hf", "lfstats1", "lfstats2"],
-        4: ["cferr1", "cferr2"],
-        5: ["jes", "lf", "hfstats1", "hfstats2"],
-        21: ["jes", "hf", "lfstats1", "lfstats2"],
-    }
-
-    btag_syst = {}
-    for sys in systs:
-        jets[f"btag_{sys}_up"] = 1.0
-        jets[f"btag_{sys}_down"] = 1.0
-        btag[f"{sys}_up"] = 1.0
-        btag[f"{sys}_down"] = 1.0
-
-        for f, f_syst in flavors.items():
+        for flavor, f_syst in flavors.items():
             if sys in f_syst:
-                btag_mask = abs(jets.hadronFlavour) == f
-                jets.loc[btag_mask, f"btag_{sys}_up"] = lookup.eval(
+                # print(f"sys: {sys}")
+                # print(f"flavor: {flavor}")
+                btag_mask = (abs(jets.hadronFlavour)) == flavor #& (abs(jets.eta) < 2.4))
+                # enforce input hadronFlavour to match the target, otherwise, the lookup table will fail
+                dummy_flavor = flavor*ak.ones_like(jets.hadronFlavour)
+                hadronFlavour = ak.where(btag_mask, jets.hadronFlavour, dummy_flavor)
+                sys_wgts =  btag_json.evaluate(
                     f"up_{sys}",
-                    jets.hadronFlavour[btag_mask].values,
-                    abs(jets.eta)[btag_mask].values,
-                    jets.pt[btag_mask].values,
-                    jets.btagDeepB[btag_mask].values,
-                    True,
+                    hadronFlavour,
+                    abs(jets.eta),
+                    jets.pt,
+                    jets.btagDeepB,
                 )
-                jets.loc[btag_mask, f"btag_{sys}_down"] = lookup.eval(
+                # print(f"sys_wgts up: {sys_wgts.compute()}")
+                btag_wgt_up = ak.where(btag_mask, sys_wgts, btag_wgt_up)
+                # jets.loc[btag_mask, f"btag_{sys}_up"] = onedimeval(partial(btag_json[0].evaluate,
+                #     f"up_{sys}"),
+                #     jets.hadronFlavour[btag_mask].values,
+                #     abs(jets.eta)[btag_mask].values,
+                #     jets.pt[btag_mask].values,
+                #     jets.btagDeepB[btag_mask].values,
+                    
+                # )
+                sys_wgts =  btag_json.evaluate(
                     f"down_{sys}",
-                    jets.hadronFlavour[btag_mask].values,
-                    abs(jets.eta)[btag_mask].values,
-                    jets.pt[btag_mask].values,
-                    jets.btagDeepB[btag_mask].values,
-                    True,
+                    hadronFlavour,
+                    abs(jets.eta),
+                    jets.pt,
+                    jets.btagDeepB,
                 )
+                # print(f"sys_wgts down: {sys_wgts.compute()}")
+                btag_wgt_down = ak.where(btag_mask, sys_wgts, btag_wgt_down)
+                # jets.loc[btag_mask, f"btag_{sys}_down"] = onedimeval(partial(btag_json[0].evaluate,
+                #     f"down_{sys}"),
+                #     jets.hadronFlavour[btag_mask].values,
+                #     abs(jets.eta)[btag_mask].values,
+                #     jets.pt[btag_mask].values,
+                #     jets.btagDeepB[btag_mask].values,
+                    
+                # )
+        btag_wgt_up = ak.prod(btag_wgt_up, axis=1)
+        btag_wgt_down = ak.prod(btag_wgt_down, axis=1)
+        # print(f"btag_wgt_up: {ak.to_numpy(btag_wgt_up.compute())}")
+        # print(f"btag_wgt_down: {ak.to_numpy(btag_wgt_down.compute())}")
+        btag_syst[sys] = {"up": btag_wgt_up, "down": btag_wgt_down}
 
-        btag[f"{sys}_up"] = jets[f"btag_{sys}_up"].prod(level=0)
-        btag[f"{sys}_down"] = jets[f"btag_{sys}_down"].prod(level=0)
-        btag_syst[sys] = {"up": btag[f"{sys}_up"], "down": btag[f"{sys}_down"]}
+    weights = weights.weight()
+    sum_before = ak.sum(weights, axis=None)
+    sum_after = ak.sum(weights*btag_wgt, axis=None)
+    btag_wgt = btag_wgt * sum_before / sum_after
+    # print(f"btag_wgt after normalization: {ak.to_numpy(btag_wgt.compute())}")
+    return btag_wgt, btag_syst
+    # sum_before = weights.df["nominal"][bjet_sel_mask].sum()
+    # sum_after = (
+    #     weights.df["nominal"][bjet_sel_mask]
+    #     .multiply(btag.wgt[bjet_sel_mask], axis=0)
+    #     .sum()
+    # )
+    # btag.wgt = btag.wgt * sum_before / sum_after
+    # #print(f"len btag.wgt {len(btag.wgt)}")
+    # #print(f"len jets3 {len(jets)}")
+    # return btag.wgt, btag_syst
 
-    sum_before = weights.df["nominal"][bjet_sel_mask].sum()
-    sum_after = (
-        weights.df["nominal"][bjet_sel_mask]
-        .multiply(btag.wgt[bjet_sel_mask], axis=0)
-        .sum()
-    )
-    btag.wgt = btag.wgt * sum_before / sum_after
+# def btag_weights_csv(processor, lookup, systs, jets, weights, bjet_sel_mask):
 
-    return btag.wgt, btag_syst
+#     btag = pd.DataFrame(index=bjet_sel_mask.index)
+#     jets = jets[abs(jets.eta) < 2.4]
+#     jets.loc[jets.pt > 1000.0, "pt"] = 1000.0
+
+#     jets["btag_wgt"] = lookup.eval(
+#         "central",
+#         jets.hadronFlavour.values,
+#         abs(jets.eta.values),
+#         jets.pt.values,
+#         jets.btagDeepB.values,
+#         True,
+#     )
+#     btag["wgt"] = jets["btag_wgt"].prod(level=0)
+#     btag["wgt"] = btag["wgt"].fillna(1.0)
+#     btag.loc[btag.wgt < 0.01, "wgt"] = 1.0
+
+#     flavors = {
+#         0: ["jes", "hf", "lfstats1", "lfstats2"],
+#         1: ["jes", "hf", "lfstats1", "lfstats2"],
+#         2: ["jes", "hf", "lfstats1", "lfstats2"],
+#         3: ["jes", "hf", "lfstats1", "lfstats2"],
+#         4: ["cferr1", "cferr2"],
+#         5: ["jes", "lf", "hfstats1", "hfstats2"],
+#         21: ["jes", "hf", "lfstats1", "lfstats2"],
+#     }
+
+#     btag_syst = {}
+#     for sys in systs:
+#         jets[f"btag_{sys}_up"] = 1.0
+#         jets[f"btag_{sys}_down"] = 1.0
+#         btag[f"{sys}_up"] = 1.0
+#         btag[f"{sys}_down"] = 1.0
+
+#         for f, f_syst in flavors.items():
+#             if sys in f_syst:
+#                 btag_mask = abs(jets.hadronFlavour) == f
+#                 jets.loc[btag_mask, f"btag_{sys}_up"] = lookup.eval(
+#                     f"up_{sys}",
+#                     jets.hadronFlavour[btag_mask].values,
+#                     abs(jets.eta)[btag_mask].values,
+#                     jets.pt[btag_mask].values,
+#                     jets.btagDeepB[btag_mask].values,
+#                     True,
+#                 )
+#                 jets.loc[btag_mask, f"btag_{sys}_down"] = lookup.eval(
+#                     f"down_{sys}",
+#                     jets.hadronFlavour[btag_mask].values,
+#                     abs(jets.eta)[btag_mask].values,
+#                     jets.pt[btag_mask].values,
+#                     jets.btagDeepB[btag_mask].values,
+#                     True,
+#                 )
+
+#         btag[f"{sys}_up"] = jets[f"btag_{sys}_up"].prod(level=0)
+#         btag[f"{sys}_down"] = jets[f"btag_{sys}_down"].prod(level=0)
+#         btag_syst[sys] = {"up": btag[f"{sys}_up"], "down": btag[f"{sys}_down"]}
+
+#     sum_before = weights.df["nominal"][bjet_sel_mask].sum()
+#     sum_after = (
+#         weights.df["nominal"][bjet_sel_mask]
+#         .multiply(btag.wgt[bjet_sel_mask], axis=0)
+#         .sum()
+#     )
+#     btag.wgt = btag.wgt * sum_before / sum_after
+
+#     return btag.wgt, btag_syst
+
+# jet puid weight
+
+# def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid, numevents):
+#     if year == "2016preVFP":
+#         yearname = "UL2016APV"
+#     if year == "2016postVFP":
+#         yearname = "UL2016"
+#     if year == "2017":
+#         yearname = "UL2017"
+#     if year == "2018":
+#         yearname = "UL2018"
+#     if "2017corrected" in jet_puid_opt:
+#         h_eff_name_L = f"h2_eff_mc{yearname}_L"
+#         h_sf_name_L = f"h2_eff_sf{yearname}_L"
+#         h_eff_name_T = f"h2_eff_mc{yearname}_T"
+#         h_sf_name_T = f"h2_eff_sf{year}_T"
+#         puid_eff_L = evaluator[h_eff_name_L](jets[pt_name], jets.eta)
+#         puid_sf_L = evaluator[h_sf_name_L](jets[pt_name], jets.eta)
+#         puid_eff_T = evaluator[h_eff_name_T](jets[pt_name], jets.eta)
+#         puid_sf_T = evaluator[h_sf_name_T](jets[pt_name], jets.eta)
+
+#         jets_passed_L = (
+#             (jets[pt_name] > 25)
+#             & (jets[pt_name] < 50)
+#             & jet_puid
+#             & ((abs(jets.eta) < 2.6) | (abs(jets.eta) > 3.0))
+#         )
+#         jets_failed_L = (
+#             (jets[pt_name] > 25)
+#             & (jets[pt_name] < 50)
+#             & (~jet_puid)
+#             & ((abs(jets.eta) < 2.6) | (abs(jets.eta) > 3.0))
+#         )
+#         jets_passed_T = (
+#             (jets[pt_name] > 25)
+#             & (jets[pt_name] < 50)
+#             & jet_puid
+#             & ((abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0))
+#         )
+#         jets_failed_T = (
+#             (jets[pt_name] > 25)
+#             & (jets[pt_name] < 50)
+#             & (~jet_puid)
+#             & ((abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0))
+#         )
+
+#         pMC_L = (
+#             puid_eff_L[jets_passed_L].prod() * (1.0 - puid_eff_L[jets_failed_L]).prod()
+#         )
+#         pMC_T = (
+#             puid_eff_T[jets_passed_T].prod() * (1.0 - puid_eff_T[jets_failed_T]).prod()
+#         )
+
+#         pData_L = (
+#             puid_eff_L[jets_passed_L].prod()
+#             * puid_sf_L[jets_passed_L].prod()
+#             * (1.0 - puid_eff_L[jets_failed_L] * puid_sf_L[jets_failed_L]).prod()
+#         )
+#         pData_T = (
+#             puid_eff_T[jets_passed_T].prod()
+#             * puid_sf_T[jets_passed_T].prod()
+#             * (1.0 - puid_eff_T[jets_failed_T] * puid_sf_T[jets_failed_T]).prod()
+#         )
+
+#         puid_weight = np.ones(numevents)
+#         puid_weight[pMC_L * pMC_T != 0] = np.divide(
+#             (pData_L * pData_T)[pMC_L * pMC_T != 0], (pMC_L * pMC_T)[pMC_L * pMC_T != 0]
+#         )
+
+#     else:
+#         wp_dict = {"loose": "L", "medium": "M", "tight": "T"}
+#         wp = wp_dict[jet_puid_opt]
+#         h_eff_name = f"h2_eff_mcUL{year}_L"
+#         h_sf_name = f"h2_eff_sfUL{year}_L"
+#         jetpt = jets[pt_name]
+#         jeteta = jets.eta
+#         puid_eff = evaluator[h_eff_name](jetpt, jeteta)
+#         puid_sf = evaluator[h_sf_name](jetpt, jeteta)
+#         # jets["puid_eff"] = puid_eff
+#         # jets["oneminuspuid_eff"] = 1.0-puid_eff
+#         # jets["puid_sf"] = puid_sf
+#         # jets["eff_sf"] = puid_sf * puid_eff
+#         # jets["oneminus_eff_sf"] = 1.0-(puid_sf * puid_eff)
+#         oneminuspuid_eff = 1.0-puid_eff
+#         eff_sf = puid_sf * puid_eff
+#         oneminus_eff_sf = 1.0-(puid_sf * puid_eff)
+
+#         # apply pt< 50 cut as instructed on https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
+#         jets_passed = (jets[pt_name] > 25) & (jets[pt_name] < 50) & jet_puid
+#         jets_failed = (jets[pt_name] > 25) & (jets[pt_name] < 50) & (~jet_puid)
+
+#         pMC_failed = ak.ones_like(puid_sf)
+#         pMC_passed_bare = ak.prod(ak.to_packed(jets[jets_passed==True]).puid_eff) axis=1)
+#         pMC_failed_bare = ak.prod(ak.to_packed(jets[jets_failed==True]).oneminuspuid_eff, axis=1)
+#         pMC_passed = ak.ones_like(puid_sf)
+#         pMC_failed = ak.ones_like(puid_sf)
+#         pMC_passed.update(pMC_passed_bare)
+#         pMC_failed.update(pMC_failed_bare)
+#         pSF = pd.Series(1, index=range(0, numevents))
+#         pfailSF = pd.Series(1, index=range(0, numevents))
+#         pSF_bare = jets[jets_passed==True].groupby('entry').puid_sf.prod()
+#         pfailSF_bare = (jets[jets_failed==True].groupby('entry').oneminus_eff_sf).prod()
+#         pSF.update(pSF_bare)
+#         pfailSF.update(pfailSF_bare)
+        
+#         #print(pMC_failed)
+#         pMC = pMC_passed * pMC_failed
+
+#         pData = (
+#             pMC_passed
+#             * pSF
+#             * pfailSF
+#         )
+#         #print(pMC_passed)
+#         #print(pData)
+#         puid_weight = np.ones(numevents)
+#         puid_weight[pMC != 0] = np.divide(pData[pMC != 0], pMC[pMC != 0])
+#         #print(puid_weight)
+#     return puid_weight

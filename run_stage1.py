@@ -280,8 +280,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         os.makedirs(save_path)
     #------------------------
     # do nnlops correct on normal awkward
-    do_nnlops = processor.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
-    # do_nnlops = False
+    # do_nnlops = processor.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
+    do_nnlops = False
     if do_nnlops: # we need full computed for this
         print("doing nnlops!")
         # placeholder_dict = dask.compute(placeholder_dict)[0]
@@ -311,15 +311,13 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         ak.to_parquet(ak.zip({"nnlops_wgt" : nnlops_wgt}), nnlops_save_path+"/wgt.parquet")
         # ak.to_parquet(nnlops_wgt, nnlops_save_path+"/wgt.parquet")
 
-    # doing qgl weight calculation start ----------------------------
-    # print("doing QGL weights!")
-    # QGL_dict = {
-    #     "qgl_nom" : (computed["qgl_nom"]),
-    #     "njets" : (computed["njets"]),
+    # finish btag weight calculation start ----------------------------
+    # print("doing Btag weights!")
+    # btag_dict = {
+    #     "btag_wgt" : (computed["btag_wgt"]),
     # }
-    # QGL_dict = dask.compute(QGL_dict)[0]
-    # qgl_nom = QGL_dict["qgl_nom"]
-    # njets = QGL_dict["njets"]
+    # btag_dict = dask.compute(btag_dict)[0]
+    # btag_wgt = btag_dict["btag_wgt"]
 
     # njet_selection = njets > 2 
     # # print(f"qgl_weights qgl_nom[njet_selection]: {qgl_nom[njet_selection]}")
@@ -347,7 +345,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # print(f"len(qgl_nom): {len(qgl_nom)}")
     # # save qgl wgts to apply them later
     # ak.to_parquet(qgl_zip, qgl_save_path+"/wgt.parquet")
-    # qgl weight calculation end ----------------------------
+    # finish btag weight calculation end ----------------------------
     
     #----------------------------------
     zip = ak.zip(placeholder_dict, depth_limit=1)
@@ -487,9 +485,9 @@ if __name__ == "__main__":
             smaller_files = list(divide_chunks(sample["files"], max_file_len))
             # print(f"smaller_files: {smaller_files}")
             for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
+                # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
                 # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') as client:
-                # with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
+                with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
                     with performance_report(filename="dask-report.html"):
                         smaller_sample = copy.deepcopy(sample)
                         smaller_sample["files"] = smaller_files[idx]

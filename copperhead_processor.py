@@ -3,12 +3,13 @@ from coffea.lookup_tools import extractor
 import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
+import correctionlib
 from corrections.rochester import apply_roccor
 from corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 from corrections.weight import Weights
-from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager
+from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager, btag_weights_json
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -717,11 +718,12 @@ class EventProcessor(processor.ProcessorABC):
         )
         if events.metadata["is_mc"]:
             # moved nnlops reweighting outside of dak process and to run_stage1-----------------
-        #     do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
-        #     if do_nnlops:
-        #         print("doing NNLOPS!")
-        #         nnlopsw = nnlops_weights(events, self.config, events.metadata["dataset"])
-        #         print(f"nnlopsw: \n  {nnlopsw}")
+            do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
+            if do_nnlops:
+                print("doing NNLOPS!")
+                nnlopsw = nnlops_weights(events.HTXS.Higgs_pt, events.HTXS.njets30, self.config, events.metadata["dataset"])
+                weights.add("nnlops", weight=nnlopsw)
+                # print(f"nnlopsw: \n  {ak.to_numpy(nnlopsw.compute())}")
         #     # else:
         #     #     weights.add_weight("nnlops", how="dummy")
         #     # print(f'copperheadV1 weights.df nnlops: \n {weights.df.to_string()}')
@@ -987,6 +989,10 @@ class EventProcessor(processor.ProcessorABC):
         # weights = weights*cross_section*integrated_lumi/sumWeights
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         weights = weights.weight()
+        if "btag_wgt" in out_dict.keys():
+            print("adding btag wgts!")
+            weights = weights*out_dict["btag_wgt"]
+        # print(f"weights: {ak.to_numpy(weights.compute())}")
         # weights = weights.weight("pdf_2rmsUp")
         # weights = weights.weight("LHEFacDown")
         
@@ -1242,15 +1248,21 @@ class EventProcessor(processor.ProcessorABC):
         # jet PUID disabled as it's not applicable for jets with JEC and pt> 50,
         # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
         # pass_jet_puid = jet_puid(jets, self.config)
-        # # Jet PUID scale factors
-        # if is_mc:  # disable for now
+        # # only apply jet puid to jets with pt < 50, else, pass
+        # bool_filter = ak.ones_like(pass_jet_puid, dtype="bool")
+        # pass_jet_puid = ak.where((jets.pt <50),pass_jet_puid, bool_filter)
+        # # Jet PUID scale factors, which also takes pt < 50 into account within the function
+        # if is_mc:  
+        #     jet_puid_opt = self.config["jet_puid"]
+        #     pt_name = "pt"
+        #     puId = jets.puId
         #     puid_weight = puid_weights(
         #         self.evaluator, self.year, jets, pt_name,
         #         jet_puid_opt, jet_puid, numevents
         #     )
         #     print(f"puid_weight: {puid_weight}")
-        #     weights.add("puid_wgt", weight=puid_weight)
-        # #     weights.add_weight('puid_wgt', puid_weight)
+        # #     weights.add("puid_wgt", weight=puid_weight)
+        # # #     weights.add_weight('puid_wgt', puid_weight)
 
         # ------------------------------------------------------------#
         # Select jets
@@ -1343,8 +1355,8 @@ class EventProcessor(processor.ProcessorABC):
         # fill_jets(output, variables, jet1, jet2)
         #fill_jets
         # print(f"jets: {jets.compute()}")
-        jet_argmax = ak.argmax(jets.pt, axis=1)
-        jet_argmax_not_leading = ak.fill_none((jet_argmax != 0), value=False)
+        # jet_argmax = ak.argmax(jets.pt, axis=1)
+        # jet_argmax_not_leading = ak.fill_none((jet_argmax != 0), value=False)
         # print(f"jet_argmax_not_leading: {jet_argmax_not_leading.compute()}")
         # print(f"sum jet_argmax_not_leading: {ak.sum(jet_argmax_not_leading).compute()}")
         # print(f"jet_argmax[jet_argmax_not_leading] : {jet_argmax[jet_argmax_not_leading].compute()}")
@@ -1353,18 +1365,29 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"jets.pt_raw[jet_argmax_not_leading] : {jets.pt_raw[jet_argmax_not_leading].compute()}")
         # print(f"jets.mass_raw[jet_argmax_not_leading] : {jets.mass_raw[jet_argmax_not_leading].compute()}")
         # print(f"jets.mass[jet_argmax_not_leading] : {jets.mass[jet_argmax_not_leading].compute()}")
-        padded_jets = ak.pad_none(jets, target=2) 
-        # # jet1 = padded_jets[:,0]
-        # # jet2 = padded_jets[:,1]
-        # jet_flip = padded_jets.pt[:,0] < padded_jets.pt[:,1]  
-        # jet_flip = ak.fill_none(jet_flip, value=False)
-        # # take the subleading muon values if that now has higher pt after corrections
-        # jet1 = ak.where(jet_flip, padded_jets[:,1], padded_jets[:,0])
-        # jet2 = ak.where(jet_flip, padded_jets[:,0], padded_jets[:,1])
-        sorted_args = ak.argsort(padded_jets.pt, ascending=False)
-        sorted_jets = (padded_jets[sorted_args])
-        jet1 = sorted_jets[:,0]
-        jet2 = sorted_jets[:,1]
+        # original start ----------------------------------------
+        # padded_jets = ak.pad_none(jets, target=2) 
+        # # # jet1 = padded_jets[:,0]
+        # # # jet2 = padded_jets[:,1]
+        # # jet_flip = padded_jets.pt[:,0] < padded_jets.pt[:,1]  
+        # # jet_flip = ak.fill_none(jet_flip, value=False)
+        # # # take the subleading muon values if that now has higher pt after corrections
+        # # jet1 = ak.where(jet_flip, padded_jets[:,1], padded_jets[:,0])
+        # # jet2 = ak.where(jet_flip, padded_jets[:,0], padded_jets[:,1])
+        # sorted_args = ak.argsort(padded_jets.pt, ascending=False)
+        # sorted_jets = (padded_jets[sorted_args])
+        # jet1 = sorted_jets[:,0]
+        # jet2 = sorted_jets[:,1]
+        # original end ----------------------------------------
+        # test start ----------------------------------------
+        
+        sorted_args = ak.argsort(jets.pt, ascending=False)
+        sorted_jets = (jets[sorted_args])
+        paddedSorted_jets = ak.pad_none(sorted_jets, target=2) 
+        jet1 = paddedSorted_jets[:,0]
+        jet2 = paddedSorted_jets[:,1]
+        # test end ----------------------------------------
+
         
         dijet = jet1+jet2
         # print(f"dijet: {dijet}")
@@ -1514,23 +1537,45 @@ class EventProcessor(processor.ProcessorABC):
         # # Calculate QGL weights, btag SF and apply btag veto
         # # ------------------------------------------------------------#
         if is_mc and variation == "nominal":
-            # --- QGL weights --- #
+            # --- QGL weights  start --- #
             isHerwig = "herwig" in events.metadata['dataset']
 
-            # qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
-        #     self.weight_collection.add_weight("qgl_wgt", qgl_wgts, how="all")
-        #     # print(f"type(qgl_wgts) : \n {type(qgl_wgts)}")
-            # print(f"qgl_wgts : \n {qgl_wgts}")
-            qgl_nom = qgl_weights_eager(jet1, jet2, njets, isHerwig)
-
-        #     # --- Btag weights --- #
-        #     bjet_sel_mask = output.event_selection #& two_jets & vbf_cut
-        #     btag_systs = self.config["btag_systs"]
-        #     btag_json =  correctionlib.CorrectionSet.from_file(self.parameters["btag_sf_json"],)
-        #     btag_wgt, btag_syst = btag_weights_json(
-        #         self, btag_systs, jets, weights, bjet_sel_mask, btag_json
+        #     # qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
+        # #     self.weight_collection.add_weight("qgl_wgt", qgl_wgts, how="all")
+        # #     # print(f"type(qgl_wgts) : \n {type(qgl_wgts)}")
+        #     # print(f"qgl_wgts : \n {qgl_wgts}")
+        #     # qgl_nom = qgl_weights_eager(jet1, jet2, njets, isHerwig)
+        #     qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
+        #     weights.add("qgl", 
+        #                 weight=qgl_wgts["nom"],
+        #                 weightUp=qgl_wgts["up"],
+        #                 weightDown=qgl_wgts["down"]
         #     )
-        #     weights.add_weight("btag_wgt", btag_wgt)
+            # --- QGL weights  end --- #
+            
+
+            # # --- Btag weights --- #
+            bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
+            btag_systs = self.config["btag_systs"] #if do_btag_syst else []
+            btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
+            print(f"btag_json: {btag_json}")
+            btag_wgt, btag_syst = btag_weights_json(
+                self, btag_systs, jets, weights, bjet_sel_mask, btag_json
+            )
+
+
+
+        
+            # print(f"weight nom b4 adding btag: {ak.to_numpy(weights.weight().compute())}")
+            # adding btag wgt directly to weights doesn't work, this may 
+            # have to do with the fact that we use weights.weight() to 
+            # calculate btag_wgt, so save this separtely and apply it later
+            # weights.add("btag_wgt", 
+            #             weight=btag_wgt
+            # )
+            # print(f"btag_wgt: {ak.to_numpy(btag_wgt.compute())}")
+            # print(f"weight statistics: {weights.weightStatistics.keys()}")
+            # print(f"weight nom after adding btag: {ak.to_numpy(weights.weight().compute())}")
 
         #     # --- Btag weights variations --- #
         #     for name, bs in btag_syst.items():
@@ -1564,9 +1609,13 @@ class EventProcessor(processor.ProcessorABC):
         temp_out_dict = {
             "nBtagLoose": nBtagLoose,
             "nBtagMedium": nBtagMedium,
-            "qgl_nom" : qgl_nom,
         }
         jet_loop_out_dict.update(temp_out_dict)
+        if is_mc:
+            jet_loop_out_dict.update({
+                # "qgl_nom" : qgl_nom,
+                "btag_wgt": btag_wgt
+            })
         if self.test:
             print(f"jet loop nBtagLoose: {nBtagLoose}")
             print(f"jet loop nBtagMedium: {nBtagMedium}")
