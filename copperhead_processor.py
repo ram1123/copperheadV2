@@ -9,7 +9,7 @@ from corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 from corrections.weight import Weights
-from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager, btag_weights_json
+from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager, btag_weights_json, get_jetpuid_weights
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -49,7 +49,7 @@ class EventProcessor(processor.ProcessorABC):
         dict_update = {
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : False, # False
-            "do_roccor" : False,# False
+            "do_roccor" : True,# False
             "do_fsr" : True,
             "do_geofit" : True, # False
             "do_beamConstraint": False, # if True, override do_geofit
@@ -261,9 +261,10 @@ class EventProcessor(processor.ProcessorABC):
         
         # # --------------------------------------------------------
         # # # Apply Rochester correction
-        # # if self.config["do_roccor"]:
-        # #     apply_roccor(events, self.config["roccor_file"], events.metadata["is_mc"])
-        # #     events["Muon", "pt"] = events.Muon.pt_roch
+        if self.config["do_roccor"]:
+            print("doing rochester!")
+            apply_roccor(events, self.config["roccor_file"], events.metadata["is_mc"])
+            events["Muon", "pt"] = events.Muon.pt_roch
         # FSR recovery
         if self.config["do_fsr"]:
             print(f"doing fsr!")
@@ -460,12 +461,12 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            # sumWeights = events.metadata['sumGenWgts']
-            # print(f"sumWeights: {(sumWeights)}")
+            sumWeights = events.metadata['sumGenWgts']
+            print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
@@ -992,6 +993,7 @@ class EventProcessor(processor.ProcessorABC):
         if "btag_wgt" in out_dict.keys():
             print("adding btag wgts!")
             weights = weights*out_dict["btag_wgt"]
+        
         # print(f"weights: {ak.to_numpy(weights.compute())}")
         # weights = weights.weight("pdf_2rmsUp")
         # weights = weights.weight("LHEFacDown")
@@ -1147,7 +1149,6 @@ class EventProcessor(processor.ProcessorABC):
         do_jecunc = False,
         do_jerunc = False,
     ):
-        # weights = copy.deepcopy(weights)
         is_mc = events.metadata["is_mc"]
         if (not is_mc) and variation != "nominal":
             return
@@ -1247,19 +1248,23 @@ class EventProcessor(processor.ProcessorABC):
 
         # jet PUID disabled as it's not applicable for jets with JEC and pt> 50,
         # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
-        # pass_jet_puid = jet_puid(jets, self.config)
+        pass_jet_puid = jet_puid(jets, self.config)
         # # only apply jet puid to jets with pt < 50, else, pass
         # bool_filter = ak.ones_like(pass_jet_puid, dtype="bool")
         # pass_jet_puid = ak.where((jets.pt <50),pass_jet_puid, bool_filter)
         # # Jet PUID scale factors, which also takes pt < 50 into account within the function
-        # if is_mc:  
-        #     jet_puid_opt = self.config["jet_puid"]
-        #     pt_name = "pt"
-        #     puId = jets.puId
-        #     puid_weight = puid_weights(
-        #         self.evaluator, self.year, jets, pt_name,
-        #         jet_puid_opt, jet_puid, numevents
-        #     )
+        year = self.config["year"]
+        if is_mc:  
+            jet_puid_opt = self.config["jet_puid"]
+            pt_name = "pt"
+            puId = jets.puId
+            jetpuid_weight = get_jetpuid_weights(
+                self.evaluator, year, jets, pt_name,
+                jet_puid_opt, pass_jet_puid
+            )
+            weights.add("jetpuid_wgt", 
+                    weight=jetpuid_weight,
+            )
         #     print(f"puid_weight: {puid_weight}")
         # #     weights.add("puid_wgt", weight=puid_weight)
         # # #     weights.add_weight('puid_wgt', puid_weight)
@@ -1268,7 +1273,7 @@ class EventProcessor(processor.ProcessorABC):
         # Select jets
         # ------------------------------------------------------------#
         HEMVeto = ak.ones_like(clean) == 1 # 1D array saying True
-        if self.config["year"] == "2018":
+        if year == "2018":
             HEMVeto_filter = (
                 (jets.pt >= 20.0)
                 & (jets.eta >= -3.0)
@@ -1554,16 +1559,20 @@ class EventProcessor(processor.ProcessorABC):
             # --- QGL weights  end --- #
             
 
-            # # --- Btag weights --- #
-            bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
-            btag_systs = self.config["btag_systs"] #if do_btag_syst else []
-            btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
-            print(f"btag_json: {btag_json}")
-            btag_wgt, btag_syst = btag_weights_json(
-                self, btag_systs, jets, weights, bjet_sel_mask, btag_json
-            )
-
-
+            # # --- Btag weights  start--- #
+            do_btag_wgt = False
+            if do_btag_wgt:
+                print("doing btag wgt!")
+                bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
+                btag_systs = self.config["btag_systs"] #if do_btag_syst else []
+                btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
+                print(f"btag_json: {btag_json}")
+                btag_wgt, btag_syst = btag_weights_json(
+                    self, btag_systs, jets, weights, bjet_sel_mask, btag_json
+                )
+                # print(f"btag_syst['jes_up']: {ak.to_numpy(btag_syst['jes']['up'].compute())}")
+                # print(f"btag_syst['jes_down']: {ak.to_numpy(btag_syst['jes']['down'].compute())}")
+            # # --- Btag weights end --- #
 
         
             # print(f"weight nom b4 adding btag: {ak.to_numpy(weights.weight().compute())}")
@@ -1611,7 +1620,7 @@ class EventProcessor(processor.ProcessorABC):
             "nBtagMedium": nBtagMedium,
         }
         jet_loop_out_dict.update(temp_out_dict)
-        if is_mc:
+        if is_mc and do_btag_wgt:
             jet_loop_out_dict.update({
                 # "qgl_nom" : qgl_nom,
                 "btag_wgt": btag_wgt
