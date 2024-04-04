@@ -30,7 +30,7 @@ import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
 test_mode = False
-np.set_printoptions(threshold=sys.maxsize)
+np.set_printoptions(precision=7, threshold=sys.maxsize)
 import gc
 import ctypes
 def trim_memory() -> int:
@@ -485,9 +485,9 @@ if __name__ == "__main__":
             smaller_files = list(divide_chunks(sample["files"], max_file_len))
             # print(f"smaller_files: {smaller_files}")
             for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
+                with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
                 # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') as client:
-                with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
+                # with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
                     with performance_report(filename="dask-report.html"):
                         smaller_sample = copy.deepcopy(sample)
                         smaller_sample["files"] = smaller_files[idx]
@@ -495,7 +495,7 @@ if __name__ == "__main__":
                         # continue
                         var_step = time.time()
                         to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
-                        # print(f"to_compute: {to_compute}")
+                        print(f"to_compute: {to_compute}")
                         dask.compute(to_compute)
                         # futures = dask.compute(to_compute) # futures: represent the ongoing or completed computations within the Dask cluster, regardless of the underlying execution environment
                         # print(f"futures: {futures}")

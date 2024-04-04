@@ -234,12 +234,12 @@ class EventProcessor(processor.ProcessorABC):
 
         # turn off pu weights test start ---------------------------------
         # # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
-        # if events.metadata["is_mc"]:
-        #     pu_wgts = pu_evaluator(
-        #                 self.config,
-        #                 events.Pileup.nTrueInt,
-        #                 test=self.test
-        #         )
+        if events.metadata["is_mc"]:
+            pu_wgts = pu_evaluator(
+                        self.config,
+                        events.Pileup.nTrueInt,
+                        test=self.test
+                )
         # turn off pu weights test end ---------------------------------
        
         # # Save raw variables before computing any corrections
@@ -488,9 +488,9 @@ class EventProcessor(processor.ProcessorABC):
         nmuons = ak.to_packed(nmuons[event_filter==True])
         applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
         # turn off pu weights test start ---------------------------------
-        # if is_mc:
-        #     for variation in pu_wgts.keys():
-        #         pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
+        if is_mc:
+            for variation in pu_wgts.keys():
+                pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
         # turn off pu weights test end ---------------------------------
         pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
@@ -672,7 +672,8 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
             # turn off pu weights test start ---------------------------------
-            # weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
+            print("adding PU wgts!")
+            weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
             # turn off pu weights test end ---------------------------------
             # L1 prefiring weights
             if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
@@ -1255,6 +1256,7 @@ class EventProcessor(processor.ProcessorABC):
         # # Jet PUID scale factors, which also takes pt < 50 into account within the function
         year = self.config["year"]
         if is_mc:  
+            print("doing jet puid weights!")
             jet_puid_opt = self.config["jet_puid"]
             pt_name = "pt"
             puId = jets.puId
@@ -1544,23 +1546,18 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc and variation == "nominal":
             # --- QGL weights  start --- #
             isHerwig = "herwig" in events.metadata['dataset']
-
-        #     # qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
-        # #     self.weight_collection.add_weight("qgl_wgt", qgl_wgts, how="all")
-        # #     # print(f"type(qgl_wgts) : \n {type(qgl_wgts)}")
-        #     # print(f"qgl_wgts : \n {qgl_wgts}")
-        #     # qgl_nom = qgl_weights_eager(jet1, jet2, njets, isHerwig)
-        #     qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
-        #     weights.add("qgl", 
-        #                 weight=qgl_wgts["nom"],
-        #                 weightUp=qgl_wgts["up"],
-        #                 weightDown=qgl_wgts["down"]
-        #     )
+            print("adding QGL weights!")
+            qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
+            weights.add("qgl", 
+                        weight=qgl_wgts["nom"],
+                        weightUp=qgl_wgts["up"],
+                        weightDown=qgl_wgts["down"]
+            )
             # --- QGL weights  end --- #
             
 
             # # --- Btag weights  start--- #
-            do_btag_wgt = False
+            do_btag_wgt = True
             if do_btag_wgt:
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
