@@ -6,7 +6,7 @@ from coffea.lookup_tools import dense_lookup
 import awkward as ak
 import dask_awkward as dak
 
-
+# PU SF --------------------------------------------------------------------
 def pu_lookups(parameters, mode="nom", auto=[]):
     lookups = {}
     branch = {"nom": "pileup", "up": "pileup_plus", "down": "pileup_minus"}
@@ -108,9 +108,11 @@ def pu_evaluator(parameters, ntrueint, test=False):
     #print("Hello")
     pu_weights = {}
     for var, lookup in lookups.items():
+        print(f"lookup(ntrueint): {lookup(ntrueint)}")
         pu_weights[var] = lookup(ntrueint)
         pu_weights[var] = ak.where((ntrueint > 100), 1, pu_weights[var])
         pu_weights[var] = ak.where((ntrueint < 1), 1, pu_weights[var])
+        print(f"pu_weights[{var}]: {pu_weights[var].compute()}")
     return pu_weights
 
 
@@ -1299,120 +1301,179 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
 
 # jet puid weight
 
-# def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid, numevents):
-#     if year == "2016preVFP":
-#         yearname = "UL2016APV"
-#     if year == "2016postVFP":
-#         yearname = "UL2016"
-#     if year == "2017":
-#         yearname = "UL2017"
-#     if year == "2018":
-#         yearname = "UL2018"
-#     if "2017corrected" in jet_puid_opt:
-#         h_eff_name_L = f"h2_eff_mc{yearname}_L"
-#         h_sf_name_L = f"h2_eff_sf{yearname}_L"
-#         h_eff_name_T = f"h2_eff_mc{yearname}_T"
-#         h_sf_name_T = f"h2_eff_sf{year}_T"
-#         puid_eff_L = evaluator[h_eff_name_L](jets[pt_name], jets.eta)
-#         puid_sf_L = evaluator[h_sf_name_L](jets[pt_name], jets.eta)
-#         puid_eff_T = evaluator[h_eff_name_T](jets[pt_name], jets.eta)
-#         puid_sf_T = evaluator[h_sf_name_T](jets[pt_name], jets.eta)
+def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid):
+    if year == "2016preVFP":
+        yearname = "UL2016APV"
+    if year == "2016postVFP":
+        yearname = "UL2016"
+    if year == "2017":
+        yearname = "UL2017"
+    if year == "2018":
+        yearname = "UL2018"
+    # define 1D array of ones for other arrays to copy off of
+    ones = ak.fill_none(
+        ak.pad_none(jets.pt, target=1, clip=True)[:,0], 
+        value= 1.0
+    )
+    ones = ak.ones_like(ones)
+    # if True:
+    if "2017corrected" in jet_puid_opt:
+        print("doing the 2017corrected jetPUID method !")
+        h_eff_name_L = f"h2_eff_mcUL{year}_L"
+        h_sf_name_L = f"h2_eff_sfUL{year}_L"
+        h_eff_name_T = f"h2_eff_mcUL{year}_T"
+        h_sf_name_T = f"h2_eff_sfUL{year}_T"
+        puid_eff_L = evaluator[h_eff_name_L](jets[pt_name], jets.eta)
+        puid_sf_L = evaluator[h_sf_name_L](jets[pt_name], jets.eta)
+        puid_eff_T = evaluator[h_eff_name_T](jets[pt_name], jets.eta)
+        puid_sf_T = evaluator[h_sf_name_T](jets[pt_name], jets.eta)
 
-#         jets_passed_L = (
-#             (jets[pt_name] > 25)
-#             & (jets[pt_name] < 50)
-#             & jet_puid
-#             & ((abs(jets.eta) < 2.6) | (abs(jets.eta) > 3.0))
-#         )
-#         jets_failed_L = (
-#             (jets[pt_name] > 25)
-#             & (jets[pt_name] < 50)
-#             & (~jet_puid)
-#             & ((abs(jets.eta) < 2.6) | (abs(jets.eta) > 3.0))
-#         )
-#         jets_passed_T = (
-#             (jets[pt_name] > 25)
-#             & (jets[pt_name] < 50)
-#             & jet_puid
-#             & ((abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0))
-#         )
-#         jets_failed_T = (
-#             (jets[pt_name] > 25)
-#             & (jets[pt_name] < 50)
-#             & (~jet_puid)
-#             & ((abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0))
-#         )
-
-#         pMC_L = (
-#             puid_eff_L[jets_passed_L].prod() * (1.0 - puid_eff_L[jets_failed_L]).prod()
-#         )
-#         pMC_T = (
-#             puid_eff_T[jets_passed_T].prod() * (1.0 - puid_eff_T[jets_failed_T]).prod()
-#         )
-
-#         pData_L = (
-#             puid_eff_L[jets_passed_L].prod()
-#             * puid_sf_L[jets_passed_L].prod()
-#             * (1.0 - puid_eff_L[jets_failed_L] * puid_sf_L[jets_failed_L]).prod()
-#         )
-#         pData_T = (
-#             puid_eff_T[jets_passed_T].prod()
-#             * puid_sf_T[jets_passed_T].prod()
-#             * (1.0 - puid_eff_T[jets_failed_T] * puid_sf_T[jets_failed_T]).prod()
-#         )
-
-#         puid_weight = np.ones(numevents)
-#         puid_weight[pMC_L * pMC_T != 0] = np.divide(
-#             (pData_L * pData_T)[pMC_L * pMC_T != 0], (pMC_L * pMC_T)[pMC_L * pMC_T != 0]
-#         )
-
-#     else:
-#         wp_dict = {"loose": "L", "medium": "M", "tight": "T"}
-#         wp = wp_dict[jet_puid_opt]
-#         h_eff_name = f"h2_eff_mcUL{year}_L"
-#         h_sf_name = f"h2_eff_sfUL{year}_L"
-#         jetpt = jets[pt_name]
-#         jeteta = jets.eta
-#         puid_eff = evaluator[h_eff_name](jetpt, jeteta)
-#         puid_sf = evaluator[h_sf_name](jetpt, jeteta)
-#         # jets["puid_eff"] = puid_eff
-#         # jets["oneminuspuid_eff"] = 1.0-puid_eff
-#         # jets["puid_sf"] = puid_sf
-#         # jets["eff_sf"] = puid_sf * puid_eff
-#         # jets["oneminus_eff_sf"] = 1.0-(puid_sf * puid_eff)
-#         oneminuspuid_eff = 1.0-puid_eff
-#         eff_sf = puid_sf * puid_eff
-#         oneminus_eff_sf = 1.0-(puid_sf * puid_eff)
-
-#         # apply pt< 50 cut as instructed on https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
-#         jets_passed = (jets[pt_name] > 25) & (jets[pt_name] < 50) & jet_puid
-#         jets_failed = (jets[pt_name] > 25) & (jets[pt_name] < 50) & (~jet_puid)
-
-#         pMC_failed = ak.ones_like(puid_sf)
-#         pMC_passed_bare = ak.prod(ak.to_packed(jets[jets_passed==True]).puid_eff) axis=1)
-#         pMC_failed_bare = ak.prod(ak.to_packed(jets[jets_failed==True]).oneminuspuid_eff, axis=1)
-#         pMC_passed = ak.ones_like(puid_sf)
-#         pMC_failed = ak.ones_like(puid_sf)
-#         pMC_passed.update(pMC_passed_bare)
-#         pMC_failed.update(pMC_failed_bare)
-#         pSF = pd.Series(1, index=range(0, numevents))
-#         pfailSF = pd.Series(1, index=range(0, numevents))
-#         pSF_bare = jets[jets_passed==True].groupby('entry').puid_sf.prod()
-#         pfailSF_bare = (jets[jets_failed==True].groupby('entry').oneminus_eff_sf).prod()
-#         pSF.update(pSF_bare)
-#         pfailSF.update(pfailSF_bare)
+        jets_passed_L = (
+            (jets[pt_name] > 25)
+            & (jets[pt_name] < 50)
+            & jet_puid
+            & ((abs(jets.eta) < 2.6) | (abs(jets.eta) > 3.0))
+        )
+        jets_failed_L = (
+            (jets[pt_name] > 25)
+            & (jets[pt_name] < 50)
+            & (~jet_puid)
+            & ((abs(jets.eta) < 2.6) | (abs(jets.eta) > 3.0))
+        )
+        jets_passed_T = (
+            (jets[pt_name] > 25)
+            & (jets[pt_name] < 50)
+            & jet_puid
+            & ((abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0))
+        )
+        jets_failed_T = (
+            (jets[pt_name] > 25)
+            & (jets[pt_name] < 50)
+            & (~jet_puid)
+            & ((abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0))
+        )
+        # original start ---------------------------------------------------------
+        # obtain the Loose jet puid 
+        # oneminuspuid_eff_L = 1.0 - puid_eff_L
+        # pMC_L = (
+        #     ak.prod(ak.to_packed(puid_eff_L[jets_passed_L]), axis=1) *
+        #     (ak.prod(ak.to_packed(oneminuspuid_eff_L[jets_failed_L]), axis=1))
+        # )
         
-#         #print(pMC_failed)
-#         pMC = pMC_passed * pMC_failed
+        # oneminuspuid_effNSF_L = 1.0 - puid_eff_L * puid_sf_L
+        # pData_L = (
+        #     ak.prod(ak.to_packed(puid_eff_L[jets_passed_L]), axis=1)
+        #     * ak.prod(ak.to_packed(puid_sf_L[jets_passed_L]), axis=1)
+        #     * ak.prod(ak.to_packed(oneminuspuid_effNSF_L[jets_failed_L]), axis=1)
+        # )
+        
+        # # obtain the Tight jet puid 
+        # oneminuspuid_eff_T = 1.0 - puid_eff_T
+        # pMC_T = (
+        #     ak.prod(ak.to_packed(puid_eff_T[jets_passed_T]), axis=1) * 
+        #     (ak.prod(ak.to_packed(oneminuspuid_eff_T[jets_failed_T]), axis=1))
+        # )
+        # oneminuspuid_effNSF_T = 1.0 - puid_eff_T * puid_sf_T
+        # pData_T = (
+        #     ak.prod(ak.to_packed(puid_eff_T[jets_passed_T]), axis=1)
+        #     * ak.prod(ak.to_packed(puid_sf_T[jets_passed_T]), axis=1)
+        #     * ak.prod(ak.to_packed((oneminuspuid_effNSF_T[jets_failed_T])), axis=1)
+        # )
+        # original end ---------------------------------------------------------
+        
+        # obtain the Loose jet puid 
+        pMC_failed_L = ak.ones_like(ones)
+        pMC_passed_bare_L = ak.prod(ak.to_packed(puid_eff_L[jets_passed_L==True]), axis=1)
+        pMC_failed_bare_L = ak.prod(ak.to_packed(oneminuspuid_eff_L[jets_failed_L==True]), axis=1)
+        pMC_passed_L = ak.ones_like(ones)
+        pMC_failed_L = ak.ones_like(ones)
+        pMC_passed_L = pMC_passed_bare_L
+        pMC_failed_L = pMC_failed_bare_L
+        # print(f"pMC_failed_L: {ak.to_numpy(pMC_failed_L.compute())}")
+        pSF_L = ak.ones_like(ones)
+        pfailSF_L = ak.ones_like(ones)
+        pSF_bare_L = ak.prod(ak.to_packed(puid_sf_L[jets_passed_L==True]), axis=1)
+        pfailSF_bare_L = ak.prod(ak.to_packed(oneminus_eff_sf_L[jets_failed_L==True]), axis=1)
+        pSF_L = pSF_bare_L
+        pfailSF_L = pfailSF_bare_L
+        pMC_L = pMC_passed_L * pMC_failed_L
+        pData_L = pMC_passed_L * pSF_L * pfailSF_L
 
-#         pData = (
-#             pMC_passed
-#             * pSF
-#             * pfailSF
-#         )
-#         #print(pMC_passed)
-#         #print(pData)
-#         puid_weight = np.ones(numevents)
-#         puid_weight[pMC != 0] = np.divide(pData[pMC != 0], pMC[pMC != 0])
-#         #print(puid_weight)
-#     return puid_weight
+        # obtain the Tight jet puid 
+        pMC_failed_T = ak.ones_like(ones)
+        pMC_passed_bare_T = ak.prod(ak.to_packed(puid_eff_T[jets_passed_T==True]), axis=1)
+        pMC_failed_bare_T = ak.prod(ak.to_packed(oneminuspuid_eff_T[jets_failed_T==True]), axis=1)
+        pMC_passed_T = ak.ones_like(ones)
+        pMC_failed_T = ak.ones_like(ones)
+        pMC_passed_T = pMC_passed_bare_T
+        pMC_failed_T = pMC_failed_bare_T
+        # print(f"pMC_failed_T: {ak.to_numpy(pMC_failed_T.compute())}")
+        pSF_T = ak.ones_like(ones)
+        pfailSF_T = ak.ones_like(ones)
+        pSF_bare_T = ak.prod(ak.to_packed(puid_sf_T[jets_passed_T==True]), axis=1)
+        pfailSF_bare_T = ak.prod(ak.to_packed(oneminus_eff_sf_T[jets_failed_T==True]), axis=1)
+        pSF_T = pSF_bare_T
+        pfailSF_T = pfailSF_bare_T
+        pMC_T = pMC_passed_T * pMC_failed_T
+        pData_T = pMC_passed_T * pSF_T * pfailSF_T
+
+
+        # merge Loose and Tight values, they're supposed to be exlusive to one another, with None replaced with one, so just multiplying them should be good
+        pMC = pMC_L * pMC_T
+        pData = pData_L * pData_T
+        puid_weight = ak.ones_like(ones)
+        # print(f"puid_weight b4: {puid_weight}")
+        # print(f"(pData/pMC): {ak.to_numpy((pData/pMC).compute())}")
+        puid_weight = ak.where((pMC != 0), (pData/pMC), puid_weight)
+        puid_weight = ak.to_packed(puid_weight) # this saves a bit of memory from a very superficial testing
+
+    else:
+        wp_dict = {"loose": "L", "medium": "M", "tight": "T"}
+        wp = wp_dict[jet_puid_opt]
+        h_eff_name = f"h2_eff_mcUL{year}_L"
+        h_sf_name = f"h2_eff_sfUL{year}_L"
+        jetpt = jets[pt_name]
+        jeteta = jets.eta
+        puid_eff = evaluator[h_eff_name](jetpt, jeteta)
+        puid_sf = evaluator[h_sf_name](jetpt, jeteta)
+        # print(f"ones: {ak.to_numpy(ones.compute())}")
+        # jets["puid_eff"] = puid_eff
+        # jets["oneminuspuid_eff"] = 1.0-puid_eff
+        # jets["puid_sf"] = puid_sf
+        # jets["eff_sf"] = puid_sf * puid_eff
+        # jets["oneminus_eff_sf"] = 1.0-(puid_sf * puid_eff)
+        oneminuspuid_eff = 1.0-puid_eff
+        eff_sf = puid_sf * puid_eff
+        oneminus_eff_sf = 1.0-(puid_sf * puid_eff)
+
+        # apply pt< 50 cut as instructed on https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
+        jets_passed = (jets[pt_name] > 25) & (jets[pt_name] < 50) & jet_puid
+        jets_failed = (jets[pt_name] > 25) & (jets[pt_name] < 50) & (~jet_puid)
+
+        pMC_failed = ak.ones_like(ones)
+        pMC_passed_bare = ak.prod(ak.to_packed(puid_eff[jets_passed==True]), axis=1)
+        pMC_failed_bare = ak.prod(ak.to_packed(oneminuspuid_eff[jets_failed==True]), axis=1)
+        pMC_passed = ak.ones_like(ones)
+        pMC_failed = ak.ones_like(ones)
+        pMC_passed = pMC_passed_bare
+        pMC_failed = pMC_failed_bare
+        # print(f"pMC_failed: {ak.to_numpy(pMC_failed.compute())}")
+        pSF = ak.ones_like(ones)
+        pfailSF = ak.ones_like(ones)
+        pSF_bare = ak.prod(ak.to_packed(puid_sf[jets_passed==True]), axis=1)
+        pfailSF_bare = ak.prod(ak.to_packed(oneminus_eff_sf[jets_failed==True]), axis=1)
+        pSF = pSF_bare
+        pfailSF = pfailSF_bare
+        pMC = pMC_passed * pMC_failed
+        pData = pMC_passed * pSF * pfailSF
+        # print(f"pMC: {ak.to_numpy((pMC).compute())}")
+        # print(f"pData: {ak.to_numpy((pData).compute())}")
+        puid_weight = ak.ones_like(ones)
+        # print(f"puid_weight b4: {puid_weight}")
+        # print(f"(pData/pMC): {ak.to_numpy((pData/pMC).compute())}")
+        puid_weight = ak.where((pMC != 0), (pData/pMC), puid_weight)
+        puid_weight = ak.to_packed(puid_weight) # this saves a bit of memory from a very superficial testing
+        # puid_weight[pMC != 0] = np.divide(pData[pMC != 0], pMC[pMC != 0])
+        # print(f"puid_weight after: {puid_weight}")
+        # print(f"puid_weight: {ak.to_numpy(puid_weight.compute())}")
+    return puid_weight
