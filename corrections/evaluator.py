@@ -108,11 +108,11 @@ def pu_evaluator(parameters, ntrueint, test=False):
     #print("Hello")
     pu_weights = {}
     for var, lookup in lookups.items():
-        print(f"lookup(ntrueint): {lookup(ntrueint)}")
+        # print(f"lookup(ntrueint): {lookup(ntrueint)}")
         pu_weights[var] = lookup(ntrueint)
         pu_weights[var] = ak.where((ntrueint > 100), 1, pu_weights[var])
         pu_weights[var] = ak.where((ntrueint < 1), 1, pu_weights[var])
-        print(f"pu_weights[{var}]: {pu_weights[var].compute()}")
+        # print(f"pu_weights[{var}]: {pu_weights[var].compute()}")
     return pu_weights
 
 
@@ -962,6 +962,7 @@ def add_pdf_variations(events, weights, config, dataset):
         
 
 
+
 # QGL SF-------------------------------------------------------------------------
 
 def qgl_weights(jet1, jet2, njets, isHerwig):
@@ -995,7 +996,8 @@ def qgl_weights(jet1, jet2, njets, isHerwig):
     sum = ak.sum(qgl_nom[njet_selection], axis=None)
     count = ak.count(qgl_nom[njet_selection], axis=None)
     qgl_mean = sum/count
-    qgl_nom = qgl_nom/ qgl_mean
+    # qgl_nom = qgl_nom/ qgl_mean
+    qgl_nom = qgl_nom/ (ak.ones_like(qgl_nom)*qgl_mean)
     # print(f"qgl_weights qgl_nom after: {ak.to_numpy(qgl_nom)}")
     qgl_nom = ak.fill_none(qgl_nom, value=1.0) # we got rid of jet2==None case, but jet1 could still be None
     # print(f"qgl_weights qgl_nom after after: {ak.to_numpy(qgl_nom)}")
@@ -1112,7 +1114,6 @@ def get_qgl_weights(jet, isHerwig):
     qgl_weights = ak.where(light, light_val, qgl_weights)
     qgl_weights = ak.where(gluon, gluon_val, qgl_weights)
     return qgl_weights
-
 
 # Btag SF-------------------------------------------------------------------------
 
