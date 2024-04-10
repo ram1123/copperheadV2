@@ -30,7 +30,7 @@ import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
 test_mode = False
-np.set_printoptions(precision=7, threshold=sys.maxsize)
+np.set_printoptions(threshold=sys.maxsize)
 import gc
 import ctypes
 def trim_memory() -> int:
@@ -279,37 +279,37 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     #------------------------
-    # do nnlops correct on normal awkward
-    # do_nnlops = processor.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
-    do_nnlops = False
-    if do_nnlops: # we need full computed for this
-        print("doing nnlops!")
-        # placeholder_dict = dask.compute(placeholder_dict)[0]
-        HTX_dict = {
-            "HTXS_Higgs_pt" : (computed["HTXS_Higgs_pt"]),
-            "HTXS_njets30" : (computed["HTXS_njets30"]),
-        }
-        HTX_dict = dask.compute(HTX_dict)[0] # dask compute gives a tuple of length one
-        # print(f"type(HTX_dict): {type(HTX_dict)}")
-        # print(f"(HTX_dict): {(HTX_dict)}")
-        nnlops_wgt = nnlops_weights(
-            HTX_dict["HTXS_Higgs_pt"],
-            HTX_dict["HTXS_njets30"], 
-            processor.config, 
-            events.metadata["dataset"]
-        )
-        nnlops_save_path = save_path + "/nnlops"
-        # remove previously existing files
-        filelist = glob.glob(f"{nnlops_save_path}/*.parquet")
-        print(f"nnlops filelist: {filelist}")
-        for file in filelist:
-            os.remove(file)
-        if not os.path.exists(nnlops_save_path):
-            os.makedirs(nnlops_save_path)
-        print(f"nnlops_wgt: {nnlops_wgt}")
-        # save nnlops wgts to apply them later
-        ak.to_parquet(ak.zip({"nnlops_wgt" : nnlops_wgt}), nnlops_save_path+"/wgt.parquet")
-        # ak.to_parquet(nnlops_wgt, nnlops_save_path+"/wgt.parquet")
+    # # do nnlops correct on normal awkward
+    # # do_nnlops = processor.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
+    # do_nnlops = False
+    # if do_nnlops: # we need full computed for this
+    #     print("doing nnlops!")
+    #     # placeholder_dict = dask.compute(placeholder_dict)[0]
+    #     HTX_dict = {
+    #         "HTXS_Higgs_pt" : (computed["HTXS_Higgs_pt"]),
+    #         "HTXS_njets30" : (computed["HTXS_njets30"]),
+    #     }
+    #     HTX_dict = dask.compute(HTX_dict)[0] # dask compute gives a tuple of length one
+    #     # print(f"type(HTX_dict): {type(HTX_dict)}")
+    #     # print(f"(HTX_dict): {(HTX_dict)}")
+    #     nnlops_wgt = nnlops_weights(
+    #         HTX_dict["HTXS_Higgs_pt"],
+    #         HTX_dict["HTXS_njets30"], 
+    #         processor.config, 
+    #         events.metadata["dataset"]
+    #     )
+    #     nnlops_save_path = save_path + "/nnlops"
+    #     # remove previously existing files
+    #     filelist = glob.glob(f"{nnlops_save_path}/*.parquet")
+    #     print(f"nnlops filelist: {filelist}")
+    #     for file in filelist:
+    #         os.remove(file)
+    #     if not os.path.exists(nnlops_save_path):
+    #         os.makedirs(nnlops_save_path)
+    #     print(f"nnlops_wgt: {nnlops_wgt}")
+    #     # save nnlops wgts to apply them later
+    #     ak.to_parquet(ak.zip({"nnlops_wgt" : nnlops_wgt}), nnlops_save_path+"/wgt.parquet")
+    #     # ak.to_parquet(nnlops_wgt, nnlops_save_path+"/wgt.parquet")
 
     # finish btag weight calculation start ----------------------------
     # print("doing Btag weights!")
@@ -472,20 +472,13 @@ if __name__ == "__main__":
         # dask.config.set(scheduler='single-threaded')
         for dataset, sample in tqdm.tqdm(samples.items()):
             sample_step = time.time()
-            #test
-            # if dataset != "ttjets_dl":
-            # if "data" in dataset:
-            #     continue
-            # print(f"dataset: {dataset}")
-            # print(f'sample["files"]: {sample["files"]}')
-            # divide sample to smaller chunks
             # max_file_len = 15
             max_file_len = 6
             # max_file_len = 1
             smaller_files = list(divide_chunks(sample["files"], max_file_len))
             # print(f"smaller_files: {smaller_files}")
             for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB', silence_logs=logging.ERROR) as client:
+                with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3.5 GiB', silence_logs=logging.ERROR) as client:
                 # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') as client:
                 # with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
                     with performance_report(filename="dask-report.html"):
