@@ -321,6 +321,7 @@ cross_sections = {
     "vbf_powheg": 0.0008210722,
     "vbf_powheg_herwig": 0.0008210722,
     "vbf_powheg_dipole": 0.0008210722,
+    "vbf_powheg": 0.0008210722,
     "vbf_powhegPS": 0.0008210722,
     "vbf_amc_herwig": 0.0008210722,
     "vbf_amcPS_TuneCP5down": 0.0008210722,
