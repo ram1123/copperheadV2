@@ -603,7 +603,7 @@ class EventProcessor(processor.ProcessorABC):
         )   
         # print(f"njets pre jec: {ak.to_numpy(ak.num(jets, axis=1).compute())}")
         
-        do_jec = False # True 
+        do_jec = True # True 
 
         
 
@@ -1146,7 +1146,7 @@ class EventProcessor(processor.ProcessorABC):
         # do_jec = True, #False
         # do_jecunc = False,
         # do_jerunc = False,
-        do_jec = False, #False
+        do_jec = False, 
         do_jecunc = False,
         do_jerunc = False,
     ):
@@ -1228,16 +1228,16 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
 
         pass_jet_id = jet_id(jets, self.config)
-        print(f"sum pass_jet_id: {ak.to_numpy(ak.sum(pass_jet_id, axis=1).compute())}")
-        print(f"sum pass_jet_id: {ak.to_numpy(ak.sum(pass_jet_id, axis=None).compute())}")
-        print(f"njets: {ak.to_numpy(ak.num(jets, axis=1).compute())}")
+        # print(f"sum pass_jet_id: {ak.to_numpy(ak.sum(pass_jet_id, axis=1).compute())}")
+        # print(f"sum pass_jet_id: {ak.to_numpy(ak.sum(pass_jet_id, axis=None).compute())}")
+        # print(f"njets: {ak.to_numpy(ak.num(jets, axis=1).compute())}")
         
         # jet PUID disabled as it's not applicable for jets with JEC and pt> 50,
         # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
         pass_jet_puid = jet_puid(jets, self.config)
-        print(f"sum pass_jet_puid: {ak.to_numpy(ak.sum(pass_jet_puid, axis=1).compute())}")
-        print(f"sum pass_jet_puid total: {ak.to_numpy(ak.sum(pass_jet_puid, axis=None).compute())}")
-        print(f"pass_jet_puid: {(pass_jet_puid.compute())}")
+        # print(f"sum pass_jet_puid: {ak.to_numpy(ak.sum(pass_jet_puid, axis=1).compute())}")
+        # print(f"sum pass_jet_puid total: {ak.to_numpy(ak.sum(pass_jet_puid, axis=None).compute())}")
+        # print(f"pass_jet_puid: {(pass_jet_puid.compute())}")
         # # only apply jet puid to jets with pt < 50, else, pass
         # bool_filter = ak.ones_like(pass_jet_puid, dtype="bool")
         # pass_jet_puid = ak.where((jets.pt <50),pass_jet_puid, bool_filter)
@@ -1262,6 +1262,7 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
+        # apply HEM Veto, written in "HEM effect in 2018" appendix K of the main long AN
         # HEMVeto = ak.ones_like(clean) == 1 # 1D array saying True
         # if year == "2018":
         #     HEMVeto_filter = (
@@ -1285,9 +1286,9 @@ class EventProcessor(processor.ProcessorABC):
             & (abs(jets.eta) < self.config["jet_eta_cut"])
             # & HEMVeto
         )
-        print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute()).shape}")
-        print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute())}")
-        print(f"sum jet_selection total: {ak.sum(jet_selection, axis=None).compute()}")
+        # print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute()).shape}")
+        # print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute())}")
+        # print(f"sum jet_selection total: {ak.sum(jet_selection, axis=None).compute()}")
         # original jet_selection end ----------------------------------------------
 
 
