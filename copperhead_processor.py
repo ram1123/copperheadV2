@@ -52,7 +52,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_roccor" : True,# False
             "do_fsr" : True,
             "do_geofit" : True, # False
-            "do_beamConstraint": False, # if True, override do_geofit
+            "do_beamConstraint": True, # if True, override do_geofit
             "year" : "2018",
             # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             "do_nnlops" : True,
@@ -71,12 +71,8 @@ class EventProcessor(processor.ProcessorABC):
         extractor_instance.add_weight_sets([f"* * {zpt_filename}"])
         if "2016" in year:
             self.zpt_path = "zpt_weights/2016_value"
-        elif ("2017" in year) or ("2018" in year):
-            self.zpt_path = "zpt_weights/2017_value" # use same weights for 2018
-        elif "2022" in year:
-            self.zpt_path = "zpt_weights/2022_value" #  hypothetical value, we don't have run3 data yet
         else:
-            print(f"USER WARNING: unrecognized Zpt correction for the year {year}!")
+            self.zpt_path = "zpt_weights_all"
         # print(f"self.zpt_path: {self.zpt_path}")
         # Calibration of event-by-event mass resolution
         for mode in ["Data", "MC"]:
@@ -96,7 +92,7 @@ class EventProcessor(processor.ProcessorABC):
         extractor_instance.finalize()
         self.evaluator = extractor_instance.make_evaluator()
         # turn ._axes from tuple of axes to just axes
-        self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]  
+        # self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]  
         
         self.weight_collection = None # will be initialzed later
 
@@ -124,38 +120,37 @@ class EventProcessor(processor.ProcessorABC):
         Basically remove events that has dilepton mass between 100 and 200 GeV
         """
         event_filter = ak.ones_like(events.HLT.IsoMu24) # 1D boolean array to be used to filter out bad events
-        # if events.metadata['dataset'] == 'dy_M-50': # if dy_M-50, apply LHE cut
-        #     LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
-        #     bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
-        #     LHE_leptons = LHE_particles[bool_filter]
+        if events.metadata['dataset'] == 'dy_M-50': # if dy_M-50, apply LHE cut
+            print("doing LHE cut!")
+            LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
+            bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
+            LHE_leptons = LHE_particles[bool_filter]
 
-        #     if self.test:
-        #         # check LHE muons maintain the same event length
-        #         print(f"copperhead2 EventProcessor LHE_particles: {len(LHE_particles)}")
-        #         print(f"copperhead2 EventProcessor LHE_leptons: {len(LHE_leptons)}")
-        #         print(f"copperhead2 EventProcessor LHE_leptons.pdgId: {LHE_leptons.pdgId}")
+            if self.test:
+                # check LHE muons maintain the same event length
+                print(f"copperhead2 EventProcessor LHE_particles: {len(LHE_particles)}")
+                print(f"copperhead2 EventProcessor LHE_leptons: {len(LHE_leptons)}")
+                print(f"copperhead2 EventProcessor LHE_leptons.pdgId: {LHE_leptons.pdgId}")
 
-        #     """
-        #     TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
-        #     When I had a quick look, all LHE_leptons had either two or zero leptons per event, never one, 
-        #     so just indexing first and second could work
-        #     """
-        #     max_idxs = ak.argmax(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for normal lepton
-        #     min_idxs = ak.argmin(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for anti lepton
-        #     LHE_lepton_barless = LHE_leptons[max_idxs]
-        #     LHE_lepton_bar = LHE_leptons[min_idxs]
-        #     if self.test:
-        #         print(f"copperhead2 EventProcessor LHE_lepton_bar: {LHE_lepton_bar}")
-        #     LHE_dilepton_mass =  (LHE_lepton_barless +LHE_lepton_bar).mass
-        #     if self.test:
-        #         print(f"copperhead2 EventProcessor LHE_dilepton_mass: \n{ak.to_numpy(LHE_dilepton_mass)}")
-        #     LHE_filter = ak.flatten(((LHE_dilepton_mass > 100) & (LHE_dilepton_mass < 200)))
-        #     LHE_filter = ak.fill_none(LHE_filter, value=False) 
-        #     LHE_filter = (LHE_filter== False) # we want True to indicate that we want to keep the event
-        #     # print(f"copperhead2 EventProcessor LHE_filter[32]: \n{ak.to_numpy(LHE_filter[32])}")
-        #     if self.test:
-        #         print(f"copperhead2 EventProcessor LHE_filter: \n{ak.to_numpy(LHE_filter)}")
-        #     # event_filter = event_filter & LHE_filter
+            """
+            TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
+            When I had a quick look, all LHE_leptons had either two or zero leptons per event, never one, 
+            so just indexing first and second could work
+            """
+            max_idxs = ak.argmax(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for normal lepton
+            min_idxs = ak.argmin(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for anti lepton
+            LHE_lepton_barless = LHE_leptons[max_idxs]
+            LHE_lepton_bar = LHE_leptons[min_idxs]
+            LHE_dilepton_mass =  (LHE_lepton_barless +LHE_lepton_bar).mass
+
+            # LHE_filter = ak.flatten(((LHE_dilepton_mass > 100) & (LHE_dilepton_mass < 200)))
+            LHE_filter = (((LHE_dilepton_mass > 100) & (LHE_dilepton_mass < 200)))[:,0]
+            # print(f"LHE_filter: {LHE_filter.compute()}")
+            LHE_filter = ak.fill_none(LHE_filter, value=False) 
+            LHE_filter = (LHE_filter== False) # we want True to indicate that we want to keep the event
+            # print(f"copperhead2 EventProcessor LHE_filter[32]: \n{ak.to_numpy(LHE_filter[32])}")
+
+            event_filter = event_filter & LHE_filter
 # --------------------------------------------------------        
         # if self.config["do_trigger_match"]:
         #     """
@@ -233,7 +228,7 @@ class EventProcessor(processor.ProcessorABC):
                 print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
         # turn off pu weights test start ---------------------------------
-        # # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
+        # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
         if events.metadata["is_mc"]:
             pu_wgts = pu_evaluator(
                         self.config,
@@ -346,6 +341,8 @@ class EventProcessor(processor.ProcessorABC):
         )
         # original muon selection end ------------------------------------------------
 
+        print(f"sum muon_selection: {ak.sum(muon_selection).compute()}")
+        
         # # testing muon selection ------------------------------------------------
         # muon_selection = (
         #     (ak.values_astype(events.Muon.pt_raw,  "float64") > self.config["muon_pt_cut"])
@@ -461,12 +458,12 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            sumWeights = events.metadata['sumGenWgts']
-            print(f"sumWeights: {(sumWeights)}")
+            # sumWeights = events.metadata['sumGenWgts']
+            # print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
@@ -603,9 +600,12 @@ class EventProcessor(processor.ProcessorABC):
         self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
             self.config["jec_parameters"], 
             test_mode=self.test
-        )       
-        do_jec = True # True 
+        )   
+        # print(f"njets pre jec: {ak.to_numpy(ak.num(jets, axis=1).compute())}")
+        
+        do_jec = False # True 
 
+        
 
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
@@ -1182,12 +1182,7 @@ class EventProcessor(processor.ProcessorABC):
                 jet_columns += ["pt_orig", "mass_orig"]
         """
         # Find jets that have selected muons within dR<0.4 from them
-        if self.test:
-            print(f"jets.matched_muons: {jets.matched_muons}")
-            print(f"type(jets.matched_muons): {type(jets.matched_muons)}")
-            print(f"type(jets.matched_muons.pt_fsr): {type(jets.matched_muons.pt_fsr)}")
-            print(f"(jets.matched_muons.pt_fsr): {(jets.matched_muons.pt_fsr)}")
-            print(f"ak.to_dataframe(jets.matched_muons.pt_fsr): {ak.to_dataframe(jets.matched_muons.pt_fsr)}")
+
         # matched_mu_pt = jets.matched_muons.pt_fsr
         matched_mu_pt = jets.matched_muons.pt_fsr if "pt_fsr" in jets.matched_muons.fields else jets.matched_muons.pt
         matched_mu_iso = jets.matched_muons.pfRelIso04_all
@@ -1202,19 +1197,6 @@ class EventProcessor(processor.ProcessorABC):
         matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
         clean = ~(ak.fill_none(matched_mu_pass, value=False))
         
-        # if self.test:
-        #     # print(f"jet loop jets.matched_muons: {jets.matched_muons}")
-        #     print(f"jet loop matched_mu_pass after: {matched_mu_pass}")
-        #     print(f"jet loop matched_mu_pt: {matched_mu_pt}")
-        #     print(f"jet loop matched_mu_iso: {matched_mu_iso}")
-        #     print(f"jet loop matched_mu_id: {matched_mu_id}")
-            
-        #     # print(f"type(matched_mu_pass): {type(matched_mu_pass)}")
-        #     # print(f"ak.to_dataframe(matched_mu_pass): {ak.to_dataframe(matched_mu_pass)}")
-        #     # print(f"jet loop clean: {clean}")
-        #     print(f"jet loop clean: {ak.to_numpy(ak.flatten(clean))}")
-        #     print(f"jet loop clean sum: {ak.to_numpy(ak.sum(clean, axis=1))}")
-
         # skip selecting particular JEC variation for now
         # # Select particular JEC variation
         # if "_up" in variation:
@@ -1246,10 +1228,16 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
 
         pass_jet_id = jet_id(jets, self.config)
-
+        print(f"sum pass_jet_id: {ak.to_numpy(ak.sum(pass_jet_id, axis=1).compute())}")
+        print(f"sum pass_jet_id: {ak.to_numpy(ak.sum(pass_jet_id, axis=None).compute())}")
+        print(f"njets: {ak.to_numpy(ak.num(jets, axis=1).compute())}")
+        
         # jet PUID disabled as it's not applicable for jets with JEC and pt> 50,
         # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
         pass_jet_puid = jet_puid(jets, self.config)
+        print(f"sum pass_jet_puid: {ak.to_numpy(ak.sum(pass_jet_puid, axis=1).compute())}")
+        print(f"sum pass_jet_puid total: {ak.to_numpy(ak.sum(pass_jet_puid, axis=None).compute())}")
+        print(f"pass_jet_puid: {(pass_jet_puid.compute())}")
         # # only apply jet puid to jets with pt < 50, else, pass
         # bool_filter = ak.ones_like(pass_jet_puid, dtype="bool")
         # pass_jet_puid = ak.where((jets.pt <50),pass_jet_puid, bool_filter)
@@ -1274,50 +1262,35 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
-        HEMVeto = ak.ones_like(clean) == 1 # 1D array saying True
-        if year == "2018":
-            HEMVeto_filter = (
-                (jets.pt >= 20.0)
-                & (jets.eta >= -3.0)
-                & (jets.eta <= -1.3)
-                & (jets.phi >= -1.57)
-                & (jets.phi <= -0.87)
-            )
-            false_arr = ak.ones_like(HEMVeto) < 0
-            HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
+        # HEMVeto = ak.ones_like(clean) == 1 # 1D array saying True
+        # if year == "2018":
+        #     HEMVeto_filter = (
+        #         (jets.pt >= 20.0)
+        #         & (jets.eta >= -3.0)
+        #         & (jets.eta <= -1.3)
+        #         & (jets.phi >= -1.57)
+        #         & (jets.phi <= -0.87)
+        #     )
+        #     false_arr = ak.ones_like(HEMVeto) < 0
+        #     HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
         # print(f"HEMVeto : {HEMVeto}")
         
         # original jet_selection-----------------------------------------------
         jet_selection = (
             pass_jet_id
-            # & pass_jet_puid
+            & pass_jet_puid
             & (jets.qgl > -2)
             & clean
             & (jets.pt > self.config["jet_pt_cut"])
             & (abs(jets.eta) < self.config["jet_eta_cut"])
-            & HEMVeto
+            # & HEMVeto
         )
+        print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute()).shape}")
+        print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute())}")
+        print(f"sum jet_selection total: {ak.sum(jet_selection, axis=None).compute()}")
         # original jet_selection end ----------------------------------------------
 
-        # # testing jet_selection-----------------------------------------------
-        # jet_selection = (
-        #     pass_jet_id
-        #     # & pass_jet_puid
-        #     & (jets.qgl > -2)
-        #     & clean
-        #     & (ak.values_astype(jets.pt, "float64") > self.config["jet_pt_cut"])
-        #     & (ak.values_astype(abs(jets.eta), "float64")  < self.config["jet_eta_cut"])
-        #     & HEMVeto
-        # )
-        # # testing jet_selection end ----------------------------------------------
 
-
-
-        
-        # print(f"njets passing jet_selection: {ak.sum(jet_selection).compute()}")
-        # print(f"jets b4 selection: {jets}")
-        # print(f"jets._meta b4 selection: {repr(jets._meta)}")
-        # print(f"dak.necessary_columns(jets.pt) b4 selection: {dak.necessary_columns(jets.pt)}")
         # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
         # jets = ak.to_packed(ak.mask(jets, jet_selection))
         # ak mask leaves None in room of filtered Jets -> which isn't good
@@ -1544,7 +1517,7 @@ class EventProcessor(processor.ProcessorABC):
         # # Calculate QGL weights, btag SF and apply btag veto
         # # ------------------------------------------------------------#
         if is_mc and variation == "nominal":
-            # --- QGL weights  start --- #
+        #     # --- QGL weights  start --- #
             isHerwig = "herwig" in events.metadata['dataset']
             print("adding QGL weights!")
             qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
@@ -1553,17 +1526,17 @@ class EventProcessor(processor.ProcessorABC):
                         weightUp=qgl_wgts["up"],
                         weightDown=qgl_wgts["down"]
             )
-            # --- QGL weights  end --- #
+        #     # --- QGL weights  end --- #
             
 
-            # # --- Btag weights  start--- #
+        #     # # --- Btag weights  start--- #
             do_btag_wgt = True
             if do_btag_wgt:
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
                 btag_systs = self.config["btag_systs"] #if do_btag_syst else []
                 btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
-                print(f"btag_json: {btag_json}")
+                # print(f"btag_json: {btag_json}")
                 btag_wgt, btag_syst = btag_weights_json(
                     self, btag_systs, jets, weights, bjet_sel_mask, btag_json
                 )
