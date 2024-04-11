@@ -442,12 +442,16 @@ if __name__ == "__main__":
 
     if not test_mode: # full scale implementation
         # # original ---------------------------------------------------------
-        # if args.use_gateway:
-        #     from dask_gateway import Gateway
-        #     gateway = Gateway()
-        #     cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-        #     client = gateway.connect(cluster_info.name).get_client()
-        #     print("Gateway Client created")
+        if args.use_gateway:
+            from dask_gateway import Gateway
+            # gateway = Gateway()
+            gateway = Gateway(
+                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+            )
+            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+            client = gateway.connect(cluster_info.name).get_client()
+            print("Gateway Client created")
         # # #-----------------------------------------------------------
         # else:
         #     cluster = LocalCluster(processes=True, memory_limit='14 GiB', threads_per_worker=1,)
@@ -478,30 +482,32 @@ if __name__ == "__main__":
             smaller_files = list(divide_chunks(sample["files"], max_file_len))
             # print(f"smaller_files: {smaller_files}")
             for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3.5 GiB', silence_logs=logging.ERROR) as client:
+                print("restarting workers!")
+                client.restart(wait_for_workers = False)
+                # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3.5 GiB', silence_logs=logging.ERROR) as client:
                 # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') as client:
                 # with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
-                    with performance_report(filename="dask-report.html"):
-                        smaller_sample = copy.deepcopy(sample)
-                        smaller_sample["files"] = smaller_files[idx]
-                        # print(f"smaller_files[{idx}]: {smaller_files[idx]}")
-                        # continue
-                        var_step = time.time()
-                        to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
-                        print(f"to_compute: {to_compute}")
-                        dask.compute(to_compute)
-                        # futures = dask.compute(to_compute) # futures: represent the ongoing or completed computations within the Dask cluster, regardless of the underlying execution environment
-                        # print(f"futures: {futures}")
-                        # progress(futures)
-                        # results = client.gather(futures)
-    
-                        # do garbage collection and memory trimming-----------
-                        client.run(gc.collect)
-                        client.run(trim_memory)
-                        #-----------------------------------------------------
-                        
-                        var_elapsed = round(time.time() - var_step, 3)
-                        print(f"Finished file_idx {idx} in {var_elapsed} s.")
+                with performance_report(filename="dask-report.html"):
+                    smaller_sample = copy.deepcopy(sample)
+                    smaller_sample["files"] = smaller_files[idx]
+                    # print(f"smaller_files[{idx}]: {smaller_files[idx]}")
+                    # continue
+                    var_step = time.time()
+                    to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
+                    print(f"to_compute: {to_compute}")
+                    dask.compute(to_compute)
+                    # futures = dask.compute(to_compute) # futures: represent the ongoing or completed computations within the Dask cluster, regardless of the underlying execution environment
+                    # print(f"futures: {futures}")
+                    # progress(futures)
+                    # results = client.gather(futures)
+
+                    # do garbage collection and memory trimming-----------
+                    client.run(gc.collect)
+                    client.run(trim_memory)
+                    #-----------------------------------------------------
+                    
+                    var_elapsed = round(time.time() - var_step, 3)
+                    print(f"Finished file_idx {idx} in {var_elapsed} s.")
             sample_elapsed = round(time.time() - sample_step, 3)
             print(f"Finished sample {dataset} in {sample_elapsed} s.")
                 
