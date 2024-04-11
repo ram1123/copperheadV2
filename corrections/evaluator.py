@@ -1003,7 +1003,7 @@ def qgl_weights(jet1, jet2, njets, isHerwig):
     # print(f"qgl_weights qgl_nom after after: {ak.to_numpy(qgl_nom)}")
     # print(f"qgl_weights qgl_nom[njet_selection]: {ak.to_numpy(qgl_nom[njet_selection])}")
 
-
+    # print(f"qgl_nom: {ak.to_numpy(qgl_nom.compute())}")
 
     qgl_down = ak.ones_like(qgl_nom, dtype="float")
 
@@ -1341,15 +1341,14 @@ def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid):
             & (~jet_puid)
             & ((abs(jets.eta) < 2.6) | (abs(jets.eta) > 3.0))
         )
+        # tight PUID applied to all jets irrespective of pT https://indico.cern.ch/event/850507/contributions/3574693/subcontributions/291453/attachments/1932754/3201723/Raffaele_23_10_2019.pdf
         jets_passed_T = (
             (jets[pt_name] > 25)
-            & (jets[pt_name] < 50)
             & jet_puid
             & ((abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0))
         )
         jets_failed_T = (
             (jets[pt_name] > 25)
-            & (jets[pt_name] < 50)
             & (~jet_puid)
             & ((abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0))
         )
