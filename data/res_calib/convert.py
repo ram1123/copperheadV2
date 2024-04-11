@@ -35,8 +35,7 @@ def convert_to_th3d(path, in_file, era):
         f_out.Close()
 
 
-# path = "data/ebeCalib/"
-path = "data/res_Calib/"
+path = "data/ebeCalib/"
 
 calib_files = {
     "2016": "ebe_mass_uncertaintiy_calibration_2016.root",
