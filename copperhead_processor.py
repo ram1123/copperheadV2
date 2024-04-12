@@ -337,7 +337,7 @@ class EventProcessor(processor.ProcessorABC):
         )
         # original muon selection end ------------------------------------------------
 
-        print(f"sum muon_selection: {ak.sum(muon_selection).compute()}")
+        # print(f"sum muon_selection: {ak.sum(muon_selection).compute()}")
         
         # # testing muon selection ------------------------------------------------
         # muon_selection = (
@@ -662,15 +662,15 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             weights.add("genWeight", weight=events.genWeight)
             # original initial weight start ----------------
-            weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights)
-            dataset = events.metadata['dataset']
-            cross_section = self.config["cross_sections"][dataset]
-            integrated_lumi = self.config["integrated_lumis"]
-            weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
-            weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
+            # weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights)
+            # dataset = events.metadata['dataset']
+            # cross_section = self.config["cross_sections"][dataset]
+            # integrated_lumi = self.config["integrated_lumis"]
+            # weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
+            # weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
             # original initial weight end ----------------
             # hard code to match lumi weight of valerie's code start ----
-            # weights.add("lumi_weight", weight=ak.ones_like(events.genWeight)*0.012550352440399929)
+            weights.add("lumi_weight", weight=ak.ones_like(events.genWeight)*0.012550352440399929)
             # hard code to match lumi weight of valerie's code end ----
             
             # turn off pu weights test start ---------------------------------
