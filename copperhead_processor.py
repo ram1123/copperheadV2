@@ -454,12 +454,12 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            # sumWeights = events.metadata['sumGenWgts']
-            # print(f"sumWeights: {(sumWeights)}")
+            sumWeights = events.metadata['sumGenWgts']
+            print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
@@ -661,12 +661,18 @@ class EventProcessor(processor.ProcessorABC):
         is_mc = events.metadata["is_mc"]
         if is_mc:
             weights.add("genWeight", weight=events.genWeight)
+            # original initial weight start ----------------
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights)
             dataset = events.metadata['dataset']
             cross_section = self.config["cross_sections"][dataset]
             integrated_lumi = self.config["integrated_lumis"]
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
+            # original initial weight end ----------------
+            # hard code to match lumi weight of valerie's code start ----
+            # weights.add("lumi_weight", weight=ak.ones_like(events.genWeight)*0.012550352440399929)
+            # hard code to match lumi weight of valerie's code end ----
+            
             # turn off pu weights test start ---------------------------------
             print("adding PU wgts!")
             weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
@@ -971,9 +977,9 @@ class EventProcessor(processor.ProcessorABC):
         # dataset = events.metadata['dataset']
         # cross_section = self.config["cross_sections"][dataset]
         # integrated_lumi = self.config["integrated_lumis"]
-        if is_mc:
-            print(f"cross_section: {(cross_section)}")
-            print(f"integrated_lumi: {(integrated_lumi)}")
+        # if is_mc:
+        #     print(f"cross_section: {(cross_section)}")
+        #     print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         weights = weights.weight()
@@ -1251,17 +1257,17 @@ class EventProcessor(processor.ProcessorABC):
         # Select jets
         # ------------------------------------------------------------#
         # apply HEM Veto, written in "HEM effect in 2018" appendix K of the main long AN
-        # HEMVeto = ak.ones_like(clean) == 1 # 1D array saying True
-        # if year == "2018":
-        #     HEMVeto_filter = (
-        #         (jets.pt >= 20.0)
-        #         & (jets.eta >= -3.0)
-        #         & (jets.eta <= -1.3)
-        #         & (jets.phi >= -1.57)
-        #         & (jets.phi <= -0.87)
-        #     )
-        #     false_arr = ak.ones_like(HEMVeto) < 0
-        #     HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
+        HEMVeto = ak.ones_like(clean) == 1 # 1D array saying True
+        if year == "2018":
+            HEMVeto_filter = (
+                (jets.pt >= 20.0)
+                & (jets.eta >= -3.0)
+                & (jets.eta <= -1.3)
+                & (jets.phi >= -1.57)
+                & (jets.phi <= -0.87)
+            )
+            false_arr = ak.ones_like(HEMVeto) < 0
+            HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
         # print(f"HEMVeto : {HEMVeto}")
         
         # original jet_selection-----------------------------------------------
@@ -1272,7 +1278,7 @@ class EventProcessor(processor.ProcessorABC):
             & clean
             & (jets.pt > self.config["jet_pt_cut"])
             & (abs(jets.eta) < self.config["jet_eta_cut"])
-            # & HEMVeto
+            & HEMVeto
         )
         # print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute()).shape}")
         # print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute())}")
@@ -1507,14 +1513,14 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         if is_mc and variation == "nominal":
         #     # --- QGL weights  start --- #
-            # isHerwig = "herwig" in events.metadata['dataset']
-            # print("adding QGL weights!")
-            # qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
-            # weights.add("qgl", 
-            #             weight=qgl_wgts["nom"],
-            #             weightUp=qgl_wgts["up"],
-            #             weightDown=qgl_wgts["down"]
-            # )
+            isHerwig = "herwig" in events.metadata['dataset']
+            print("adding QGL weights!")
+            qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
+            weights.add("qgl", 
+                        weight=qgl_wgts["nom"],
+                        weightUp=qgl_wgts["up"],
+                        weightDown=qgl_wgts["down"]
+            )
         #     # --- QGL weights  end --- #
             
 
@@ -1528,7 +1534,7 @@ class EventProcessor(processor.ProcessorABC):
                 btag_wgt, btag_syst = btag_weights_json(
                     self, btag_systs, jets, weights, bjet_sel_mask, btag_json
                 )
-                print(f"btag_wgt: {ak.to_numpy(btag_wgt.compute())}")
+                # print(f"btag_wgt: {ak.to_numpy(btag_wgt.compute())}")
                 # print(f"btag_syst['jes_up']: {ak.to_numpy(btag_syst['jes']['up'].compute())}")
                 # print(f"btag_syst['jes_down']: {ak.to_numpy(btag_syst['jes']['down'].compute())}")
             # # --- Btag weights end --- #
