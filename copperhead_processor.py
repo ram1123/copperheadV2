@@ -519,7 +519,7 @@ class EventProcessor(processor.ProcessorABC):
         # mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
         sorted_args = ak.argsort(muons_padded.pt, ascending=False)
         muons_sorted = (muons_padded[sorted_args])
-        mu1 = muons31m_sorted[:,0]
+        mu1 = muons_sorted[:,0]
         mu2 = muons_sorted[:,1]
         
         dimuon_dR = mu1.delta_r(mu2)
