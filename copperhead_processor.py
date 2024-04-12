@@ -963,7 +963,9 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"njets: {ak.to_numpy(njets.compute())}")
 
         # do zpt weight at the very end
-        do_zpt = ('dy' in dataset)
+        dataset = events.metadata["dataset"]
+        is_mc = events.metadata["is_mc"]
+        do_zpt = ('dy' in dataset) and is_mc
         # do_zpt = False
         if do_zpt:
             print("doing zpt weight!")
