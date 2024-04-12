@@ -915,7 +915,7 @@ def stxs_uncert(source, event_STXS, Nsigma, stxs_acc_lookups, powheg_xsec_lookup
 #         # print(f"add_pdf_variations pdf_vars down: {ak.to_numpy(pdf_vars['down'])}")
 #         weights.add_weight("pdf_2rms", pdf_vars, how="only_vars")
 
-def add_pdf_variations(events, weights, config, dataset):
+def add_pdf_variations(events, config, dataset):
     if "2016" in config["year"]:
         max_replicas = 0
         if "dy" in dataset:
@@ -1125,24 +1125,24 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
     # btag = pd.DataFrame(index=bjet_sel_mask.index)
     btag_jet_selection = abs(jets.eta) < 2.4
     jets = ak.to_packed(jets[btag_jet_selection])
-    # jets["btag_wgt"] = 1.0
-    jet_btag_wgts = ak.ones_like(jets.pt)
-    # jets.loc[jets.pt > 1000.0, "pt"] = 1000.0
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
     
     
-    btag_json=btag_file["deepCSV_shape"]
+    # btag_json=btag_file["deepCSV_shape"]
+    btag_json=btag_file["deepJet_shape"]
     correctionlib_out = btag_json.evaluate(
         "central",
         jets.hadronFlavour,
         abs(jets.eta),
         jets.pt,
-        jets.btagDeepB,
+        # jets.btagDeepB,
+        jets.btagDeepFlavB,
     )
-    # print(f"correctionlib_out: {correctionlib_out.compute()}")
+    print(f"correctionlib_out: {correctionlib_out.compute()}")
     # correctionlib_out = ak.pad_none(correctionlib_out, target=1)
     btag_wgt = ak.prod(correctionlib_out, axis=1) # for events with no qualified jets(empty row), the value is 1.0
-    # print(f"btag_wgt : {ak.to_numpy(btag_wgt.compute())}")
+    btag_wgt = ak.where((btag_wgt < 0.01), 1.0, btag_wgt)
+    print(f"btag_wgt b4 normalization: {ak.to_numpy(btag_wgt.compute())}")
 
     flavors = {
         0: ["jes", "lf", "lfstats1", "lfstats2"],

@@ -1519,16 +1519,16 @@ class EventProcessor(processor.ProcessorABC):
             
 
         #     # # --- Btag weights  start--- #
-            do_btag_wgt = False # True
+            do_btag_wgt = True # True
             if do_btag_wgt:
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
                 btag_systs = self.config["btag_systs"] #if do_btag_syst else []
                 btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
-                # print(f"btag_json: {btag_json}")
                 btag_wgt, btag_syst = btag_weights_json(
                     self, btag_systs, jets, weights, bjet_sel_mask, btag_json
                 )
+                print(f"btag_wgt: {ak.to_numpy(btag_wgt.compute())}")
                 # print(f"btag_syst['jes_up']: {ak.to_numpy(btag_syst['jes']['up'].compute())}")
                 # print(f"btag_syst['jes_down']: {ak.to_numpy(btag_syst['jes']['down'].compute())}")
             # # --- Btag weights end --- #
@@ -1581,13 +1581,9 @@ class EventProcessor(processor.ProcessorABC):
         jet_loop_out_dict.update(temp_out_dict)
         if is_mc and do_btag_wgt:
             jet_loop_out_dict.update({
-                # "qgl_nom" : qgl_nom,
                 "btag_wgt": btag_wgt
             })
-        if self.test:
-            print(f"jet loop nBtagLoose: {nBtagLoose}")
-            print(f"jet loop nBtagMedium: {nBtagMedium}")
-            print(f"jet loop jet_loop_out_dict.keys(): {jet_loop_out_dict.keys()}")
+
         
 
         # --------------------------------------------------------------#
