@@ -57,7 +57,6 @@ class EventProcessor(processor.ProcessorABC):
             # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             "do_nnlops" : True,
             "do_pdf" : True,
-            "do_l1prefiring_wgts" : True,
         }
         self.config.update(dict_update)
         # print(f"copperhead proccesor self.config after update: \n {self.config}")
@@ -66,7 +65,7 @@ class EventProcessor(processor.ProcessorABC):
         # --- Evaluator
         extractor_instance = extractor()
         year = self.config["year"]
-         # Z-pT reweighting 
+        # Z-pT reweighting 
         zpt_filename = self.config["zpt_weights_file"]
         extractor_instance.add_weight_sets([f"* * {zpt_filename}"])
         if "2016" in year:
@@ -93,10 +92,7 @@ class EventProcessor(processor.ProcessorABC):
         self.evaluator = extractor_instance.make_evaluator()
         # turn ._axes from tuple of axes to just axes
         # self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]  
-        
-        self.weight_collection = None # will be initialzed later
-
-        
+                
         
         # # prepare lookup tables for all kinds of corrections
         # self.prepare_lookups()
@@ -731,19 +727,8 @@ class EventProcessor(processor.ProcessorABC):
         #     # print(f'copperheadV1 weights.df nnlops: \n {weights.df.to_string()}')
             # moved nnlops reweighting outside of dak process-----------------
             
-            # do zpt SF
-            do_zpt = ('dy' in dataset)
-            # do_zpt = False
-            if do_zpt:
-                print("doing zpt weight!")
-                zpt_weight = self.evaluator[self.zpt_path](dimuon.pt)
-                # self.weight_collection.add_weight('zpt_wgt', zpt_weight)
-                # print(f"zpt_weight: {zpt_weight.compute()}")
-                weights.add("zpt_wgt", weight=zpt_weight)
-                
-              
 
-            #do mu SF
+            #do mu SF start -------------------------------------
             print("doing musf!")
             musf_lookup = get_musf_lookup(self.config)
             muID, muIso, muTrig = musf_evaluator(
@@ -764,20 +749,8 @@ class EventProcessor(processor.ProcessorABC):
                     weightUp=muTrig["up"],
                     weightDown=muTrig["down"]
             )
-            # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_dataframe(muTrig["nom"]).to_string()}')
-            # print(f'copperheadV2 EventProcessor muTrig["nom"]: \n {ak.to_numpy(muTrig["nom"])}')
-            # self.weight_collection.add_weight("muID", muID, how="all")
-            # if self.test:
-            #     print(f"weight_collection muID info: \n  {self.weight_collection.get_info()}")
-            # self.weight_collection.add_weight("muIso", muIso, how="all")
-            # if self.test:
-            #     print(f"weight_collection muIso info: \n  {self.weight_collection.get_info()}")
-            # self.weight_collection.add_weight("muTrig", muTrig, how="all")
-            # if self.test:
-            #     print(f"weight_collection muTrig info: \n  {self.weight_collection.get_info()}")
-            # self.weight_collection.add_weight("muID", muID, how="all")
-            # self.weight_collection.add_weight("muIso", muIso, how="all")
-            # self.weight_collection.add_weight("muTrig", muTrig, how="all") 
+            #do mu SF end -------------------------------------
+
             
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_lhe = (
@@ -834,7 +807,7 @@ class EventProcessor(processor.ProcessorABC):
             if do_pdf:
                 print("doing pdf!")
                 # add_pdf_variations(events, self.weight_collection, self.config, dataset)
-                pdf_vars = add_pdf_variations(events, self.weight_collection, self.config, dataset)
+                pdf_vars = add_pdf_variations(events, self.config, dataset)
                 weights.add("pdf_2rms", 
                     weight=ak.ones_like(pdf_vars["up"]),
                     weightUp=pdf_vars["up"],
@@ -954,6 +927,7 @@ class EventProcessor(processor.ProcessorABC):
             
         out_dict.update(region_dict) 
 
+
         # # add in the weights
         # if events.metadata["is_mc"]:
         #     if self.test:
@@ -979,7 +953,19 @@ class EventProcessor(processor.ProcessorABC):
         # nmuons = nmuons[event_filter] # update events on these too
         # applied_fsr = applied_fsr[event_filter]
         # jets = events.Jet
-        njets = ak.num(jets.pt, axis=1)
+        njets = out_dict["njets"]
+        # print(f"njets: {ak.to_numpy(njets.compute())}")
+
+        # do zpt weight at the very end
+        do_zpt = ('dy' in dataset)
+        # do_zpt = False
+        if do_zpt:
+            print("doing zpt weight!")
+            zpt_weight =\
+                     self.evaluator[self.zpt_path](dimuon.pt, njets)
+            # print(f"zpt_weight: {zpt_weight.compute()}")
+            # weights.add("zpt_wgt", weight=zpt_weight) # leave it outsie like btag
+        
         # print(f"events after filter length: {ak.num(muons.pt, axis=0).compute()}")
         # weights = events.genWeight
         # dataset = events.metadata['dataset']
@@ -994,6 +980,8 @@ class EventProcessor(processor.ProcessorABC):
         if "btag_wgt" in out_dict.keys():
             print("adding btag wgts!")
             weights = weights*out_dict["btag_wgt"]
+        if do_zpt:
+            weights = weights*zpt_weight
         
         # print(f"weights: {ak.to_numpy(weights.compute())}")
         # weights = weights.weight("pdf_2rmsUp")
@@ -1519,19 +1507,19 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         if is_mc and variation == "nominal":
         #     # --- QGL weights  start --- #
-            isHerwig = "herwig" in events.metadata['dataset']
-            print("adding QGL weights!")
-            qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
-            weights.add("qgl", 
-                        weight=qgl_wgts["nom"],
-                        weightUp=qgl_wgts["up"],
-                        weightDown=qgl_wgts["down"]
-            )
+            # isHerwig = "herwig" in events.metadata['dataset']
+            # print("adding QGL weights!")
+            # qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
+            # weights.add("qgl", 
+            #             weight=qgl_wgts["nom"],
+            #             weightUp=qgl_wgts["up"],
+            #             weightDown=qgl_wgts["down"]
+            # )
         #     # --- QGL weights  end --- #
             
 
         #     # # --- Btag weights  start--- #
-            do_btag_wgt = True
+            do_btag_wgt = False # True
             if do_btag_wgt:
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
