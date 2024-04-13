@@ -453,13 +453,10 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             print("Gateway Client created")
         # # #-----------------------------------------------------------
-        # else:
-        #     cluster = LocalCluster(processes=True, memory_limit='14 GiB', threads_per_worker=1,)
-        #     # cluster.adapt(minimum=8, maximum=8)
-        #     cluster.scale(1)
-        #     client = Client(cluster)
-        #     print("Local scale Client created")
-        #     # print(f"client dashboard link: {client.dashboard_link}")
+        else:
+            # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
+            client = Client(n_workers=20,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+            print("Local scale Client created")
         #-------------------------------------------------------------------------------------
         #-----------------------------------------------------------
         # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
@@ -474,32 +471,23 @@ if __name__ == "__main__":
         # with performance_report(filename="dask-report.html"):
         # for dataset, sample in samples.items():
         # dask.config.set(scheduler='single-threaded')
-        for dataset, sample in tqdm.tqdm(samples.items()):
-            sample_step = time.time()
-            # max_file_len = 15
-            max_file_len = 6
-            # max_file_len = 1
-            smaller_files = list(divide_chunks(sample["files"], max_file_len))
-            # print(f"smaller_files: {smaller_files}")
-            for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                print("restarting workers!")
-                client.restart(wait_for_workers = False)
-                # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3.5 GiB', silence_logs=logging.ERROR) as client:
-                # with Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') as client:
-                # with Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') as client:
-                with performance_report(filename="dask-report.html"):
+        with performance_report(filename="dask-report.html"):
+            for dataset, sample in tqdm.tqdm(samples.items()):
+                sample_step = time.time()
+                max_file_len = 15
+                # max_file_len = 6
+                # max_file_len = 1
+                smaller_files = list(divide_chunks(sample["files"], max_file_len))
+                # print(f"smaller_files: {smaller_files}")
+                for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
+                    print("restarting workers!")
+                    client.restart(wait_for_workers = False)
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
-                    # print(f"smaller_files[{idx}]: {smaller_files[idx]}")
-                    # continue
                     var_step = time.time()
                     to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
                     print(f"to_compute: {to_compute}")
                     dask.compute(to_compute)
-                    # futures = dask.compute(to_compute) # futures: represent the ongoing or completed computations within the Dask cluster, regardless of the underlying execution environment
-                    # print(f"futures: {futures}")
-                    # progress(futures)
-                    # results = client.gather(futures)
 
                     # do garbage collection and memory trimming-----------
                     client.run(gc.collect)
