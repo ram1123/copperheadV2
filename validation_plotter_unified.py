@@ -678,7 +678,7 @@ if __name__ == "__main__":
             pad.Update();
             CMS_lumi(canvas, args.lumi, up=True, reduceSize=True, status=status);
             pad.RedrawAxis("sameaxis");
-            full_save_path = f"{args.save_path}/{args.year}/ROOT"
+            full_save_path = f"{args.save_path}/{args.year}/ROOT/Reg_{args.region}"
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             canvas.SaveAs(f"{full_save_path}/{var}.pdf");
@@ -884,7 +884,7 @@ if __name__ == "__main__":
             # obtain fraction weight, this should be the same for all processes and rows
             # fraction_weight = 1/events.fraction[0].compute() # directly apply these to np hists
             # print(f"fraction_weight: {(fraction_weight)}")
-            print(f"all_MC_hist_list: {(all_MC_hist_list)}")
+            # print(f"all_MC_hist_list: {(all_MC_hist_list)}")
             #------------------------------------------
             mc_sum_histogram = np.sum(np.asarray(all_MC_hist_list), axis=0) # to be used in ratio plot later
             group_color_map = {
@@ -959,8 +959,8 @@ if __name__ == "__main__":
                 # add rel unc of data and mc by quadrature
                 rel_unc_ratio = np.sqrt((mc_yerr/mc_sum_histogram)**2 + (data_err/data_hist)**2)
                 ratio_err = rel_unc_ratio*ratio_hist
-                print(f"ratio_hist: {ratio_hist}")
-                print(f"ratio_err: {ratio_err}")
+                # print(f"ratio_hist: {ratio_hist}")
+                # print(f"ratio_err: {ratio_err}")
                 
                 hep.histplot(ratio_hist, 
                              bins=binning, histtype='errorbar', yerr=ratio_err, 
@@ -981,11 +981,12 @@ if __name__ == "__main__":
 
             
             # Saving with special name
-            full_save_path = args.save_path+f"/{args.year}/mplhep"
+            full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}"
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             plt.savefig(f"{full_save_path}/{var}.pdf")
             plt.clf()
+            print(f"figure saved in {full_save_path}/{var}.pdf")
             # record time it took
             var_elapsed = round(time.time() - var_step, 3)
             print(f"Finished processing {var} in {var_elapsed} s.")
