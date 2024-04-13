@@ -12,7 +12,7 @@ import tqdm
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D",]
 # group_DY_processes = ["dy_M-100To200", "dy_M-50"] # dy_M-50 is not used in ggH BDT training input
-group_DY_processes = ["dy_M-100To200"]
+group_DY_processes = ["dy_M-100To200","dy_M-50"]
 group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop"]
 group_Ewk_processes = ["ewk_lljj_mll50_mjj120"]
 group_VV_processes = ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"]# diboson
@@ -114,6 +114,13 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, uses pyROOT functionality instead of mplhep",
     )
+    parser.add_argument(
+    "--linear_scale",
+    dest="linear_scale",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, provide plots in linear scale",
+    )
     #---------------------------------------------------------
     # gather arguments
     args = parser.parse_args()
@@ -208,10 +215,10 @@ if __name__ == "__main__":
         counter = 0
         for var in tqdm.tqdm(variables2plot):
             # if counter == int(len(variables2plot)/2):
-            counter +=1
-            if counter % 3 ==0:
-                print("restarting client!")
-                client.restart(timeout=30)
+            # counter +=1
+            # if counter % 5 ==0:
+            #     print("restarting client!")
+            #     client.restart(wait_for_workers=False)
             var_step = time.time()
             # with Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') as client:
             # del client
@@ -249,38 +256,30 @@ if __name__ == "__main__":
                 #     weights = np.ones_like(events["mu1_pt"].compute())
                 # else: # MC
                 #     weights = ak.to_numpy(events["weight_nominal"].compute() )
-                
-                # if ggH, apply nnlops weights, which is saved separately
-                if "ggh" in process.lower():
-                    print("ggh in process!")
-                    nnlops_full_load_path = args.load_path+f"/{process}/*/nnlops/*.parquet"
-                    nnlops_wgts = ak.from_parquet(nnlops_full_load_path)["nnlops_wgt"]
-                    weights = weights*nnlops_wgts
-                # original np hist start ---------------------------------------------------------------------------------------------
-                # obtain fraction weight, this should be the same for each process, so doesn't matter if we keep reassigning it
-                # fraction_weight = 1/events.fraction[0].compute()
-                # print(f"fraction_weight: {fraction_weight}")
-                # # obtain the category selection
-                # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
-                # region = events.h_sidebands | events.h_peak
-                # btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
-                # category_selection = (
-                #     ~vbf_cut & # we're interested in ggH category
-                #     region &
-                #     ~btag_cut # btag cut is for VH and ttH categories
-                # ).compute()
-                # category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
-                # weights = weights*category_selection
+
+                # we don't save nnlops weights separately anymore----------------------------------------
+                # # if ggH, apply nnlops weights, which is saved separately
+                # if "ggh" in process.lower():
+                #     print("ggh in process!")
+                #     nnlops_full_load_path = args.load_path+f"/{process}/*/nnlops/*.parquet"
+                #     nnlops_wgts = ak.from_parquet(nnlops_full_load_path)["nnlops_wgt"]
+                #     weights = weights*nnlops_wgts
+                # we don't save nnlops weights separately anymore----------------------------------------
+
 
                 fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
                 # print(f"fraction_weight: {fraction_weight[0]}")
                 # print(f"fraction_weight: {fraction_weight[4]}")
                 # obtain the category selection
                 vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
-                region = events.h_sidebands | events.h_peak
+                print("doing root style!")
+                # region = events.h_sidebands | events.h_peak
+                region = events.h_sidebands 
+                # region = events.z_peak
                 btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
                 category_selection = (
                     ~vbf_cut & # we're interested in ggH category
+                    # vbf_cut & # we're interested in VBF category
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 ).compute()
@@ -375,9 +374,9 @@ if __name__ == "__main__":
                     group_VBF_hists.append(var_hist_VBF)
                 #-------------------------------------------------------
                 else: # put into "other" bkg group
-                    if "dy_M-50" in process:
-                        # print("dy_M-50 activated")
-                        continue
+                    # if "dy_M-50" in process:
+                    #     # print("dy_M-50 activated")
+                    #     continue
                     print("other activated")
                     # var_hist_other = ROOT.TH1F( var+'_hist_other', var, len(binning)-1, min(binning), max(binning))
                     var_hist_other = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
@@ -762,8 +761,13 @@ if __name__ == "__main__":
                 
             pad.cd();
             # dummy_hist.GetYaxis().SetRangeUser(0.01, data_hist_stacked.GetMaximum()*10000);
-            dummy_hist.GetYaxis().SetRangeUser(0.01, 1e9);
-            pad.SetLogy();
+            if not args.linear_scale:
+                dummy_hist.GetYaxis().SetRangeUser(0.01, 1e9);
+                pad.SetLogy();
+            else:
+                binmax = data_hist_stacked.GetMaximumBin()
+                max_y = data_hist_stacked.GetBinContent(binmax)
+                ax_main.set_ylim(0, 1.3*max_y)
             pad.Modified();
             pad.Update();
             CMS_lumi(canvas, args.lumi, up=True, reduceSize=True, status=status);
@@ -772,24 +776,6 @@ if __name__ == "__main__":
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             canvas.SaveAs(f"{full_save_path}/{var}.pdf");
-            # delete at least few histograms to prevent memory leakage
-            # canvas.Delete()
-            # pad.Close()
-            # # pad2.Close()
-            # del dummy_hist
-            # # del var_hist_data
-            # for hist in group_data_hists:
-            #     print(f"hist: {hist}")
-            #     del hist
-            # for hist in all_MC_hist_list:
-            #     del hist
-            # # del num_hist
-            # del den_hist
-            # del mc_ratio
-            # del ratio_line
-            # del all_MC_hist_copy
-            # del all_MC_hist_list
-            # del group_data_hists
             
             # record time it took
             var_elapsed = round(time.time() - var_step, 3)
@@ -924,9 +910,9 @@ if __name__ == "__main__":
                     group_VBF_hists.append(np_hist)
                 #-------------------------------------------------------
                 else: # put into "other" bkg group
-                    if "dy_M-50" in process:
-                        # print("dy_M-50 activated")
-                        continue
+                    # if "dy_M-50" in process:
+                    #     # print("dy_M-50 activated")
+                    #     continue
                     print("other activated")
                     group_other_hists.append(np_hist)
                     group_otherhists_w2.append(np_hist_w2)
@@ -1115,8 +1101,9 @@ if __name__ == "__main__":
                          bins=binning, stack=False, histtype='errorbar', color='black', 
                          label='Data', ax=ax_main)
             ax_main.set_ylabel(plot_settings[var].get("ylabel"))
-            ax_main.set_yscale('log')
-            ax_main.set_ylim(0.01, 1e9)
+            if not args.linear_scale:
+                ax_main.set_yscale('log')
+                ax_main.set_ylim(0.01, 1e9)
             ax_main.legend(loc="upper right")
             
             if not args.no_ratio:
