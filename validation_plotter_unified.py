@@ -173,8 +173,8 @@ if __name__ == "__main__":
             else:
                 print(f"unknown signal {sig_sample} was given!")
     # gather variables to plot:
-    # kinematic_vars = ['pt', 'eta', 'phi
-    kinematic_vars = ['pt']
+    kinematic_vars = ['pt', 'eta', 'phi']
+    # kinematic_vars = ['pt']
     variables2plot = []
     if len(args.variables) == 0:
         print("no variables to plot!")
@@ -288,6 +288,7 @@ if __name__ == "__main__":
                 elif args.region == "h_peak":
                     region = events.h_peak 
                 elif args.region == "h_sidebands":
+                    print("h_sidebands region chosen!")
                     region = events.h_sidebands 
                 elif args.region == "z_peak":
                     region = events.z_peak 
@@ -934,10 +935,6 @@ if __name__ == "__main__":
             # data_rel_err[data_hist>0] = np.sqrt(data_hist)**(-1) # poisson err / value == inverse sqrt()
             #apply fraction weight to data hist and yerr
             data_hist = np.sum(np.asarray(group_data_hists), axis=0)
-            # data_err = np.sqrt(data_hist) # get yerr b4 fraction weight is applied
-            # data_hist = data_hist*fraction_weight
-            # data_err = data_err*fraction_weight
-            # data_hist = data_hist
             data_err = np.sqrt(np.sum(np.asarray(group_data_hists_w2), axis=0)) # sqrt of sum of squares of weights
             hep.histplot(data_hist, xerr=True, yerr=data_err,
                          bins=binning, stack=False, histtype='errorbar', color='black', 
@@ -949,10 +946,6 @@ if __name__ == "__main__":
             ax_main.legend(loc="upper right")
             
             if not args.no_ratio:
-                # sum_histogram = np.sum(np.asarray(hists_to_plot), axis=0)
-                # mc_yerr = np.sqrt(mc_sum_histogram)
-                # mc_yerr *= fraction_weight # re apply fraction weights
-                # mc_sum_histogram  *= fraction_weight # re apply fraction weights
                 mc_yerr = np.sqrt(np.sum(np.asarray(all_MC_hist_list_w2), axis=0)) # sqrt of sum of squares of weights
 
                 ratio_hist = np.zeros_like(data_hist)
