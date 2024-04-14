@@ -261,24 +261,11 @@ if __name__ == "__main__":
                     weights = ak.to_numpy((events["weights"]).compute())
                 else: # MC
                     weights = ak.to_numpy((events["weights"]).compute()) # MC are already normalized by xsec*lumi
-                # if "data" in process.lower():
-                #     weights = np.ones_like(events["mu1_pt"].compute())
-                # else: # MC
-                #     weights = ak.to_numpy(events["weight_nominal"].compute() )
 
-                # we don't save nnlops weights separately anymore----------------------------------------
-                # # if ggH, apply nnlops weights, which is saved separately
-                # if "ggh" in process.lower():
-                #     print("ggh in process!")
-                #     nnlops_full_load_path = args.load_path+f"/{process}/*/nnlops/*.parquet"
-                #     nnlops_wgts = ak.from_parquet(nnlops_full_load_path)["nnlops_wgt"]
-                #     weights = weights*nnlops_wgts
-                # we don't save nnlops weights separately anymore----------------------------------------
 
 
                 fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
-                # print(f"fraction_weight: {fraction_weight[0]}")
-                # print(f"fraction_weight: {fraction_weight[4]}")
+
                 # obtain the category selection
                 vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
                 print("doing root style!")
@@ -478,23 +465,9 @@ if __name__ == "__main__":
             if len(all_MC_hist_list) > 0:
                 all_MC_hist_list.reverse() # add smallest histgrams first, so from other -> DY
                 for MC_hist_stacked in all_MC_hist_list: 
-                    # MC_hist_stacked.Sumw2() # set the hist mode to Sumw2 before stacking
-                    # reweightROOTH_mc(MC_hist_stacked, fraction_weight) # reweight histogram bins and errors
                     all_MC_hist_stacked.Add(MC_hist_stacked) 
-                    # testing -------------------------------------------------
-                    # print(f"MC_hist_stacked: {MC_hist_stacked}")
-                    # for idx in range(1, MC_hist_stacked.GetNbinsX()+1):
-                    #     val = MC_hist_stacked.GetBinContent(idx)
-                    #     err = MC_hist_stacked.GetBinError(idx)
-                    #     print(f"MC_hist_stacked idx{idx} val: {val}")
-                    #     print(f"MC_hist_stacked idx{idx} err: {err}")
-                    # testing end -------------------------------------------------
-                # all_MC_hist_stacked.Sumw2() # apply error by quadrature after stacking
-                # now reweight each TH1F stacked in all_MC_hist_stacked
                 for idx in range(all_MC_hist_stacked.GetStack().GetEntries()):
                     all_MC_hist = all_MC_hist_stacked.GetStack().At(idx) # get the TH1F portion of THStack
-                    # reweightROOTH(all_MC_hist, fraction_weight) # reweight histogram bins and errors
-                    # reweightROOTH_mc(all_MC_hist, fraction_weight) # reweight histogram bins and errors
                 all_MC_hist_stacked.Draw("hist same");
 
             
@@ -522,8 +495,6 @@ if __name__ == "__main__":
                 data_hist_stacked.SetMarkerSize(1);
                 data_hist_stacked.SetMarkerColor(1);
                 data_hist_stacked.SetLineColor(1);
-                # reweightROOTH(data_hist_stacked, fraction_weight) # reweight histogram bins and errors
-                # reweightROOTH_data(data_hist_stacked, fraction_weight) # reweight histogram bins and errors
                 data_hist_stacked.Draw("EPsame");    
 
 
@@ -535,16 +506,12 @@ if __name__ == "__main__":
                 hist_ggH.Sumw2()
                 hist_ggH.SetLineColor(ROOT.kBlack);
                 hist_ggH.SetLineWidth(3);
-                # 
-                # reweightROOTH(hist_ggH, fraction_weight) # reweight histogram bins and errors
                 hist_ggH.Draw("hist same");
             if len(group_VBF_hists) > 0:
                 hist_VBF = group_VBF_hists[0]
                 hist_VBF.Sumw2()
                 hist_VBF.SetLineColor(ROOT.kRed);
                 hist_VBF.SetLineWidth(3);
-                # 
-                # reweightROOTH(hist_VBF, fraction_weight) # reweight histogram bins and errors
                 hist_VBF.Draw("hist same");
         
             # Ratio pad
@@ -564,45 +531,17 @@ if __name__ == "__main__":
                     print("ratio activated")
                     num_hist = data_hist_stacked.Clone("num_hist");
                     print(f"num_hist: {num_hist}")
-                    # den_hist = all_MC_hist_stacked.Clone("den_hist").GetStack().Last(); # this only gets the most prominent stack
                     den_hist = all_MC_hist_copy.Clone("den_hist")
-                    # print(num_hist)
-                    # print(den_hist)
 
-                    # testing -----------------------------------------
-                    # for idx in range(1, num_hist.GetNbinsX()+1):
-                    #     val = num_hist.GetBinContent(idx)
-                    #     err = num_hist.GetBinError(idx)
-                    #     print(f"num_hist idx{idx} val: {val}")
-                    #     print(f"num_hist idx{idx} err: {err}")
-                    #     if val != 0:
-                    #         print(f"num_hist idx{idx} rel error: {err/val}")
-                    # for idx in range(1, den_hist.GetNbinsX()+1):
-                    #     val = den_hist.GetBinContent(idx)
-                    #     err = den_hist.GetBinError(idx)
-                    #     print(f"den_hist idx{idx} val: {val}")
-                    #     print(f"den_hist idx{idx} err: {err}")
-                    #     if val != 0:
-                    #         print(f"den_hist idx{idx} rel error: {err/val}")
-                    # testing end -----------------------------------------
+
+
 
                     
                     num_hist.Divide(den_hist); # we assume Sumw2 mode was previously activated
                     num_hist.SetStats(ROOT.kFALSE);
                     num_hist.SetLineColor(ROOT.kBlack);
                     num_hist.SetMarkerColor(ROOT.kBlack);
-                    num_hist.SetMarkerSize(0.8);
-
-                    # testing -----------------------------------------
-                    # for idx in range(1, num_hist.GetNbinsX()+1):
-                    #     val = num_hist.GetBinContent(idx)
-                    #     err = num_hist.GetBinError(idx)
-                    #     print(f"ratio idx{idx} val: {val}")
-                    #     print(f"ratio idx{idx} err: {err}")
-                    #     if val != 0:
-                    #         print(f"ratio idx{idx} rel error: {err/val}")
-                    # testing end -----------------------------------------
-                    
+                    num_hist.SetMarkerSize(0.8);                  
                     
                     # get MC statistical errors 
                     # mc_ratio = all_MC_hist_stacked.Clone("mc_ratio").GetStack().Last();
@@ -668,7 +607,6 @@ if __name__ == "__main__":
             pad.RedrawAxis("sameaxis");
                 
             pad.cd();
-            # dummy_hist.GetYaxis().SetRangeUser(0.01, data_hist_stacked.GetMaximum()*10000);
             if not args.linear_scale:
                 dummy_hist.GetYaxis().SetRangeUser(0.01, 1e9);
                 pad.SetLogy();
@@ -883,11 +821,6 @@ if __name__ == "__main__":
                 fig, ax_main = plt.subplots()
             
             fig.subplots_adjust(hspace=0.1)
-            # obtain fraction weight, this should be the same for all processes and rows
-            # fraction_weight = 1/events.fraction[0].compute() # directly apply these to np hists
-            # print(f"fraction_weight: {(fraction_weight)}")
-            # print(f"all_MC_hist_list: {(all_MC_hist_list)}")
-            #------------------------------------------
             mc_sum_histogram = np.sum(np.asarray(all_MC_hist_list), axis=0) # to be used in ratio plot later
             group_color_map = {
                 "DY" : "Orange",
@@ -897,43 +830,32 @@ if __name__ == "__main__":
                 "other" : "Gray"
             }
             colours = [group_color_map[group] for group in groups]
-            # for hist in all_MC_hist_list:
-                # hist *= fraction_weight #hists are pointers so this gets
             hep.histplot(all_MC_hist_list, bins=binning, 
                          stack=True, histtype='fill', 
                          label=groups, 
                          sort='label_r', 
                          color=colours, 
-                         # density=plot_settings[plot_name].get("density"), 
                          ax=ax_main)
 
             if len(group_ggH_hists) > 0: # there should be only one element or be empty
-                # hist_ggh = group_ggH_hists[0]*fraction_weight
                 hist_ggh = group_ggH_hists[0]
                 hep.histplot(hist_ggh, bins=binning, 
                              histtype='step', 
                              label="ggH", 
                              sort='label_r', 
-                             # color =  hep.style.cms.cmap_petroff[5],
                              color =  "black",
-                             # density=plot_settings[plot_name].get("density"), 
                              ax=ax_main)
             if len(group_VBF_hists) > 0: # there should be only one element or be empty
-                # hist_vbf = group_VBF_hists[0]*fraction_weight
                 hist_vbf = group_VBF_hists[0]
                 hep.histplot(hist_vbf, bins=binning, 
                              histtype='step', 
                              label="VBF", 
                              sort='label_r', 
-                             # color =  hep.style.cms.cmap_petroff[4],
                              color = "red",
-                             # density=plot_settings[plot_name].get("density"), 
                              ax=ax_main)
             
             
-            # data_rel_err = np.zeros_like(data_hist)
-            # data_rel_err[data_hist>0] = np.sqrt(data_hist)**(-1) # poisson err / value == inverse sqrt()
-            #apply fraction weight to data hist and yerr
+
             data_hist = np.sum(np.asarray(group_data_hists), axis=0)
             data_err = np.sqrt(np.sum(np.asarray(group_data_hists_w2), axis=0)) # sqrt of sum of squares of weights
             hep.histplot(data_hist, xerr=True, yerr=data_err,
