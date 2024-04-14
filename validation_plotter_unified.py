@@ -173,7 +173,8 @@ if __name__ == "__main__":
             else:
                 print(f"unknown signal {sig_sample} was given!")
     # gather variables to plot:
-    kinematic_vars = ['pt', 'eta', 'phi']
+    # kinematic_vars = ['pt', 'eta', 'phi
+    kinematic_vars = ['pt']
     variables2plot = []
     if len(args.variables) == 0:
         print("no variables to plot!")
@@ -281,6 +282,7 @@ if __name__ == "__main__":
                 # obtain the category selection
                 vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
                 print("doing root style!")
+                print(f"args.region: {args.region}")
                 if args.region == "signal":
                     region = events.h_sidebands | events.h_peak
                 elif args.region == "h_peak":
@@ -296,7 +298,6 @@ if __name__ == "__main__":
                 btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
                 category_selection = (
                     ~vbf_cut & # we're interested in ggH category
-                    # vbf_cut & # we're interested in VBF category
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 ).compute()
