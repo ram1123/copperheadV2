@@ -46,8 +46,8 @@ def apply_geofit(
     
     events["Muon", "pt_gf"] = ak.where(mask, pt - pt_corr, pt)
     # print(f"apply_geofit pt_corr: {pt_corr[mask].compute()}")
-    print(f"apply_geofit max pt_corr: {ak.max(abs(pt_corr[mask].compute()))}")
-    print(f"apply_geofit min pt_corr: {ak.min(abs(pt_corr[mask].compute()))}")
+    # print(f"apply_geofit max pt_corr: {ak.max(abs(pt_corr[mask].compute()))}")
+    # print(f"apply_geofit min pt_corr: {ak.min(abs(pt_corr[mask].compute()))}")
     # print(f"apply_geofit abs(pt - pt_corr): {abs(pt - pt_corr).compute()}")
     # print(f"apply_geofit max pt_corr: {ak.max(abs(pt).compute())}")
     
@@ -57,4 +57,4 @@ def apply_geofit(
     # print(f"apply_geofit ak.sum(events.Muon.pt_gf != events.Muon.pt): {ak.sum(events.Muon.pt_gf != events.Muon.pt)}")
     # print(f"apply_geofit ak.sum(mask): {ak.sum(mask)}")
     # print(f"apply_geofit mask: {mask.compute()}")
-    return mask, pt_corr
+    return mask, pt_corr # return these values for debugging purposes

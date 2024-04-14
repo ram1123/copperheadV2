@@ -30,8 +30,9 @@ parameters.update(
         "muon_trigmatch_id": for_all_years("tightId"),
         "electron_pt_cut": for_all_years(20.0),
         "electron_eta_cut": for_all_years(2.5),
-        "electron_id_run3": for_all_years("mvaIso_WP90"), #Run3 ready!
-        "electron_id_UL": for_all_years("mvaFall17V2Iso_WP90"),
+        # "electron_id_run3": for_all_years("mvaIso_WP90"), #Run3 ready!
+        # "electron_id_UL": for_all_years("mvaFall17V2Iso_WP90"),
+        "electron_id": for_all_years("mvaFall17V2Iso_WP90"),
         "jet_pt_cut": for_all_years(25.0),
         "jet_eta_cut": for_all_years(4.7),
         "jet_id": {"2016preVFP": "loose","2016postVFP": "loose", "2017": "tight", "2018": "tight","2022EE": "tight",},
@@ -219,7 +220,7 @@ parameters["muSFFileList"] = {
 }
 
 parameters["zpt_weights_file"] = for_all_years("data/reweight_zpt_2018_nJetBinned_new.histo.root")
-parameters["puid_sf_file"] = for_all_years("data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root")
+parameters["jetpuid_sf_file"] = for_all_years("data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root")
 parameters["res_calib_path"] = for_all_years("data/res_calib/")
 
 parameters["sths_names"] = for_all_years(

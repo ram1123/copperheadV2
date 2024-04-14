@@ -179,7 +179,7 @@ def jet_id(jets, config):
     if "loose" in config["jet_id"]:
         pass_jet_id = jets.jetId >= 1
     elif "tight" in config["jet_id"]:
-        if "2016" in config["year"]: # I thought loose for 2016?
+        if "2016" in config["year"]: 
             pass_jet_id = jets.jetId >= 3
         else:
             pass_jet_id = jets.jetId >= 2
@@ -194,8 +194,7 @@ def jet_puid(jets, config):
         "medium": (puId >= 6) | (jets.pt > 50),
         "tight": (puId >= 7) | (jets.pt > 50),
     }
-    pass_jet_puid = ak.ones_like(jets.pt, dtype=bool)
-    # print(f"jet_puid pass_jet_puid: {pass_jet_puid}")
+    pass_jet_puid = ak.ones_like(jets.jetId, dtype=bool)
     if jet_puid_opt in ["loose", "medium", "tight"]:
         pass_jet_puid = jet_puid_wps[jet_puid_opt]
     elif "2017corrected" in jet_puid_opt: # for misreco due ot ECAL endcap noise
@@ -206,7 +205,8 @@ def jet_puid(jets, config):
     return pass_jet_puid
 
 
-def fill_softjets(events, jets, muons, cutoff, test_mode=False):
+# def fill_softjets(events, jets, muons, cutoff, test_mode=False):
+def fill_softjets(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
     if test_mode:
         print(f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}")
         print(f"jets cutoff: {cutoff}")
@@ -221,9 +221,9 @@ def fill_softjets(events, jets, muons, cutoff, test_mode=False):
     jet1 = padded_jets[:,0]
     jet2 = padded_jets[:,1]
     
-    nmuons = ak.num(muons, axis=1)
-    mu1 = muons[:,0]
-    mu2 = muons[:,1]
+    # nmuons = ak.num(muons, axis=1)
+    # mu1 = muons[:,0]
+    # mu2 = muons[:,1]
     if test_mode:
         print(f"jets njets: {njets}")
         print(f"jets saj.pt: {saj.pt}")

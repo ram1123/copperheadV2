@@ -1138,11 +1138,11 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
         # jets.btagDeepB,
         jets.btagDeepFlavB,
     )
-    print(f"correctionlib_out: {correctionlib_out.compute()}")
+    # print(f"correctionlib_out: {correctionlib_out.compute()}")
     # correctionlib_out = ak.pad_none(correctionlib_out, target=1)
     btag_wgt = ak.prod(correctionlib_out, axis=1) # for events with no qualified jets(empty row), the value is 1.0
     btag_wgt = ak.where((btag_wgt < 0.01), 1.0, btag_wgt)
-    print(f"btag_wgt b4 normalization: {ak.to_numpy(btag_wgt.compute())}")
+    # print(f"btag_wgt b4 normalization: {ak.to_numpy(btag_wgt.compute())}")
 
     flavors = {
         0: ["jes", "lf", "lfstats1", "lfstats2"],

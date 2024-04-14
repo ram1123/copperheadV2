@@ -96,14 +96,14 @@ def fsr_recoveryV1(df):
         e = e + e_
 
     pt = np.sqrt(px**2 + py**2)
-    print(f"type(pt): {(pt.type)}")
-    print(f"total nmuons applied with fsrPhotons: {ak.sum(mask,axis=None)}")
+    # print(f"type(pt): {(pt.type)}")
+    # print(f"total nmuons applied with fsrPhotons: {ak.sum(mask,axis=None)}")
     eta = np.arcsinh(pz / pt)
     phi = np.arctan2(py, px)
     mass = np.sqrt(e**2 - px**2 - py**2 - pz**2)
-    print(f"type(eta): {(eta.type)}")
-    print(f"type(phi): {(phi.type)}")
-    print(f"type(mass): {(mass.type)}")
+    # print(f"type(eta): {(eta.type)}")
+    # print(f"type(phi): {(phi.type)}")
+    # print(f"type(mass): {(mass.type)}")
     iso = (df.Muon.pfRelIso04_all * df.Muon.pt - df.Muon.matched_fsrPhoton.pt) / pt
 
     df["Muon", "pt_fsr"] = ak.where(mask, pt, df.Muon.pt)
