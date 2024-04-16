@@ -464,28 +464,28 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
         # # original -----------------------------------------------
-        # events = events[event_filter==True]
-        # muons = muons[event_filter==True]
-        # nmuons = nmuons[event_filter==True]
-        # applied_fsr = applied_fsr[event_filter==True]
-        # if is_mc:
-        #     for variation in pu_wgts.keys():
-        #         pu_wgts[variation] = pu_wgts[variation][event_filter==True]
-
+        events = events[event_filter==True]
+        muons = muons[event_filter==True]
+        nmuons = nmuons[event_filter==True]
+        applied_fsr = applied_fsr[event_filter==True]
+        if is_mc:
+            for variation in pu_wgts.keys():
+                pu_wgts[variation] = pu_wgts[variation][event_filter==True]
+        pass_leading_pt = pass_leading_pt[event_filter==True]
         # # original end -----------------------------------------------
 
 
         # to_packed testing -----------------------------------------------
-        events = events[event_filter==True]
-        muons = muons[event_filter==True]
-        nmuons = ak.to_packed(nmuons[event_filter==True])
-        applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
-        # turn off pu weights test start ---------------------------------
-        if is_mc:
-            for variation in pu_wgts.keys():
-                pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
-        # turn off pu weights test end ---------------------------------
-        pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
+        # events = events[event_filter==True]
+        # muons = muons[event_filter==True]
+        # nmuons = ak.to_packed(nmuons[event_filter==True])
+        # applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
+        # # turn off pu weights test start ---------------------------------
+        # if is_mc:
+        #     for variation in pu_wgts.keys():
+        #         pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
+        # # turn off pu weights test end ---------------------------------
+        # pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
         # to_packed testing end -----------------------------------------------
         
@@ -1292,8 +1292,8 @@ class EventProcessor(processor.ProcessorABC):
         # jets = ak.to_packed(ak.mask(jets, jet_selection))
         # ak mask leaves None in room of filtered Jets -> which isn't good
         # bc then leading jet now becomes None bc idx==0 jet is None
-        
-        jets = ak.to_packed(jets[jet_selection]) 
+
+        # jets = ak.to_packed(jets[jet_selection]) 
         # jets = jets[jet_selection]
 
         
