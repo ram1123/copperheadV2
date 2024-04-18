@@ -54,7 +54,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         save_path = "/depot/cms/users/yun79/results/stage1/test/" # default
         # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
     if not test: # full scale implementation
-        # print(f"dataset_dict: {dataset_dict['files']}")
+        print(f"dataset_dict: {dataset_dict['files']}")
         events = NanoEventsFactory.from_root(
             dataset_dict["files"],
             schemaclass=NanoAODSchema,
