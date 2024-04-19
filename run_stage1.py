@@ -85,8 +85,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     dataset_fraction = dataset_dict["metadata"]["fraction"]
     
     # Dmitry test 4 start ----------------------------
-
-    skim = dak.to_parquet(out_collections, save_path, compute=False)
+    # for key, value in out_collections.items():
+    #     # out_collections[key] = ak.pad_none(value, target=1)[:,0]
+    #     out_collections[key] = ak.flatten(value)
+    skim = dak.to_parquet(ak.zip(out_collections), save_path, compute=False)
     print(f"skim: {skim}")
     return skim
     # DMitry test 4 end--------------------------------
@@ -307,7 +309,8 @@ if __name__ == "__main__":
                     var_step = time.time()
                     to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
                     print(f"to_compute: {to_compute}")
-                    dask.compute(to_compute)
+                    dask_computed = dask.compute(to_compute)
+                    print(f"dask_computed: {dask_computed}")
 
                     # do garbage collection and memory trimming-----------
                     client.run(gc.collect)
