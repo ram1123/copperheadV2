@@ -84,76 +84,79 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
     
-    computed = out_collections
-    #just reading test end--------------------------------
+    # Dmitry test 4 start ----------------------------
+
+    skim = dak.to_parquet(out_collections, save_path, compute=False)
+    return skim
+    # DMitry test 4 end--------------------------------
 
     # ------------------------------------------
     placeholder_dict =  {
-            'mu1_pt': (computed["mu1_pt"]),
-            'mu2_pt': (computed["mu2_pt"]),
-            'mu1_eta': (computed["mu1_eta"]),
-            'mu2_eta': (computed["mu2_eta"]),
-            'mu1_phi': (computed["mu1_phi"]),
-            'mu2_phi': (computed["mu2_phi"]),
-            'jet1_pt': (computed["jet1_pt"]),
-            'jet2_pt': (computed["jet2_pt"]),
-            'jet1_eta': (computed["jet1_eta"]),
-            'jet2_eta': (computed["jet2_eta"]),
-            'jet1_phi': (computed["jet1_phi"]),
-            'jet2_phi': (computed["jet2_phi"]),
-            'jet1_mass': (computed["jet1_mass"]),
-            'jet2_mass': (computed["jet2_mass"]),
-            'njets': (computed["njets"]),
-            'weights': (computed["weights"]),
-            # 'dimuon_mass': (computed["dimuon_mass"]),
-            # 'dimuon_ebe_mass_res': (computed["dimuon_ebe_mass_res"]),
-            # 'dimuon_cos_theta_cs': (computed["dimuon_cos_theta_cs"]),
-            # 'dimuon_phi_cs': (computed["dimuon_phi_cs"]),
+            'mu1_pt': (out_collections["mu1_pt"]),
+            'mu2_pt': (out_collections["mu2_pt"]),
+            'mu1_eta': (out_collections["mu1_eta"]),
+            'mu2_eta': (out_collections["mu2_eta"]),
+            'mu1_phi': (out_collections["mu1_phi"]),
+            'mu2_phi': (out_collections["mu2_phi"]),
+            'jet1_pt': (out_collections["jet1_pt"]),
+            'jet2_pt': (out_collections["jet2_pt"]),
+            'jet1_eta': (out_collections["jet1_eta"]),
+            'jet2_eta': (out_collections["jet2_eta"]),
+            'jet1_phi': (out_collections["jet1_phi"]),
+            'jet2_phi': (out_collections["jet2_phi"]),
+            'jet1_mass': (out_collections["jet1_mass"]),
+            'jet2_mass': (out_collections["jet2_mass"]),
+            'njets': (out_collections["njets"]),
+            'weights': (out_collections["weights"]),
+            # 'dimuon_mass': (out_collections["dimuon_mass"]),
+            # 'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
+            # 'dimuon_cos_theta_cs': (out_collections["dimuon_cos_theta_cs"]),
+            # 'dimuon_phi_cs': (out_collections["dimuon_phi_cs"]),
 
-            'jet1_pt_raw': (computed["jet1_pt_raw"]),
-            'jet1_mass_raw': (computed["jet1_mass_raw"]),
-            'jet1_rho': (computed["jet1_rho"]),
-            'jet1_area': (computed["jet1_area"]),
-            # 'jet1_pt_jec': (computed["jet1_pt_jec"]),
-            # 'jet1_mass_jec': (computed["jet1_mass_jec"]),
-            'jet2_pt_raw': (computed["jet2_pt_raw"]),
-            'jet2_mass_raw': (computed["jet2_mass_raw"]),
-            'jet2_rho': (computed["jet2_rho"]),
-            'jet2_area': (computed["jet2_area"]),
-            # 'jet2_pt_jec': (computed["jet2_pt_jec"]),
-            # 'jet2_mass_jec': (computed["jet2_mass_jec"]),
+            'jet1_pt_raw': (out_collections["jet1_pt_raw"]),
+            'jet1_mass_raw': (out_collections["jet1_mass_raw"]),
+            'jet1_rho': (out_collections["jet1_rho"]),
+            'jet1_area': (out_collections["jet1_area"]),
+            # 'jet1_pt_jec': (out_collections["jet1_pt_jec"]),
+            # 'jet1_mass_jec': (out_collections["jet1_mass_jec"]),
+            'jet2_pt_raw': (out_collections["jet2_pt_raw"]),
+            'jet2_mass_raw': (out_collections["jet2_mass_raw"]),
+            'jet2_rho': (out_collections["jet2_rho"]),
+            'jet2_area': (out_collections["jet2_area"]),
+            # 'jet2_pt_jec': (out_collections["jet2_pt_jec"]),
+            # 'jet2_mass_jec': (out_collections["jet2_mass_jec"]),
             # fraction -------------------------------------
-            "fraction" : dataset_fraction*(ak.ones_like(computed["njets"])), 
+            "fraction" : dataset_fraction*(ak.ones_like(out_collections["njets"])), 
             # Btagging WPs ------------------------------------
-            "nBtagLoose" : (computed["nBtagLoose"]),
-            "nBtagMedium" : (computed["nBtagMedium"]),
+            "nBtagLoose" : (out_collections["nBtagLoose"]),
+            "nBtagMedium" : (out_collections["nBtagMedium"]),
             # regions -------------------------------------
-            "z_peak" : (computed["z_peak"]),
-            "h_sidebands" : (computed["h_sidebands"]),
-            "h_peak" : (computed["h_peak"]),
+            "z_peak" : (out_collections["z_peak"]),
+            "h_sidebands" : (out_collections["h_sidebands"]),
+            "h_peak" : (out_collections["h_peak"]),
             # vbf ?? ------------------------------------------------
-            "vbf_cut" : (computed["vbf_cut"]),
-            # "pass_leading_pt" : (computed["pass_leading_pt"]),
+            "vbf_cut" : (out_collections["vbf_cut"]),
+            # "pass_leading_pt" : (out_collections["pass_leading_pt"]),
         
          }
     is_mc = dataset_dict["metadata"]["is_mc"]
     if is_mc:
         additional_dict = {
-            'jet1_pt_gen': (computed["jet1_pt_gen"]),
-            'jet2_pt_gen': (computed["jet2_pt_gen"]),
+            'jet1_pt_gen': (out_collections["jet1_pt_gen"]),
+            'jet2_pt_gen': (out_collections["jet2_pt_gen"]),
     #          # gen jet variables -------------------------------------
-    #         "gjj_mass":  (computed["gjj_mass"]),
-    #         'gjet1_pt': (computed["gjet_pt"][:,0]),
-    #         'gjet2_pt': (computed["gjet_pt"][:,1]),
-    #         'gjet1_eta': (computed["gjet_eta"][:,0]),
-    #         'gjet2_eta': (computed["gjet_eta"][:,1]),
-    #         'gjet1_phi': (computed["gjet_phi"][:,0]),
-    #         'gjet2_phi': (computed["gjet_phi"][:,1]),
-    #         'gjet1_mass': (computed["gjet_mass"][:,0]),
-    #         'gjet2_mass': (computed["gjet_mass"][:,1]),
-    #         "gjj_dEta": (computed["gjj_dEta"]),
-    #         "gjj_dPhi": (computed["gjj_dPhi"]),
-    #         "gjj_dR": (computed["gjj_dR"]),
+    #         "gjj_mass":  (out_collections["gjj_mass"]),
+    #         'gjet1_pt': (out_collections["gjet_pt"][:,0]),
+    #         'gjet2_pt': (out_collections["gjet_pt"][:,1]),
+    #         'gjet1_eta': (out_collections["gjet_eta"][:,0]),
+    #         'gjet2_eta': (out_collections["gjet_eta"][:,1]),
+    #         'gjet1_phi': (out_collections["gjet_phi"][:,0]),
+    #         'gjet2_phi': (out_collections["gjet_phi"][:,1]),
+    #         'gjet1_mass': (out_collections["gjet_mass"][:,0]),
+    #         'gjet2_mass': (out_collections["gjet_mass"][:,1]),
+    #         "gjj_dEta": (out_collections["gjj_dEta"]),
+    #         "gjj_dPhi": (out_collections["gjj_dPhi"]),
+    #         "gjj_dR": (out_collections["gjj_dR"]),
         }
         placeholder_dict.update(additional_dict)
     #------------------------------
@@ -175,10 +178,6 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #----------------------------------
     zip = ak.zip(placeholder_dict, depth_limit=1)
     # zip = dask.compute(placeholder_dict)
-    # N_reasonable = 100000
-    # N_reasonable = 40000
-    # zip = zip.repartition(rows_per_partition=N_reasonable)
-    # print(f"zip: {zip.compute()}")
     
     # zip.to_parquet(save_path, compute=True)
     skim = dak.to_parquet(zip, save_path, compute=False)
@@ -196,8 +195,6 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #         if not os.path.exists(sample_save_path):
     #             os.makedirs(sample_save_path)
     #         print(f"saving to parquet on: {sample_save_path}")
-    #         # if "ttjet" in sample_name:
-    #         #     print(f"computed: {dask.compute(computed)}")
     #         # zip.to_parquet(save_path, compute=False)
     #         # ak_arr.to_parquet(save_path, compute=False)
     #         # ak_arr.to_parquet(save_path)
