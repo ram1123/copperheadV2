@@ -438,7 +438,6 @@ class EventProcessor(processor.ProcessorABC):
         sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
         muons_sorted = (muons_padded[sorted_args])
         mu1 = muons_sorted[:,0]
-        # mu2 = muons_sorted[:,1]
         pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
         pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
         # print(f"pass_leading_pt: {pass_leading_pt.compute()}")
@@ -454,38 +453,38 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            sumWeights = events.metadata['sumGenWgts']
-            print(f"sumWeights: {(sumWeights)}")
+            # sumWeights = events.metadata['sumGenWgts']
+            # print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
         # # original -----------------------------------------------
-        events = events[event_filter==True]
-        muons = muons[event_filter==True]
-        nmuons = nmuons[event_filter==True]
-        applied_fsr = applied_fsr[event_filter==True]
-        if is_mc:
-            for variation in pu_wgts.keys():
-                pu_wgts[variation] = pu_wgts[variation][event_filter==True]
-        pass_leading_pt = pass_leading_pt[event_filter==True]
+        # events = events[event_filter==True]
+        # muons = muons[event_filter==True]
+        # nmuons = nmuons[event_filter==True]
+        # applied_fsr = applied_fsr[event_filter==True]
+        # if is_mc:
+        #     for variation in pu_wgts.keys():
+        #         pu_wgts[variation] = pu_wgts[variation][event_filter==True]
+        # pass_leading_pt = pass_leading_pt[event_filter==True]
         # # original end -----------------------------------------------
 
 
         # to_packed testing -----------------------------------------------
-        # events = events[event_filter==True]
-        # muons = muons[event_filter==True]
-        # nmuons = ak.to_packed(nmuons[event_filter==True])
-        # applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
-        # # turn off pu weights test start ---------------------------------
-        # if is_mc:
-        #     for variation in pu_wgts.keys():
-        #         pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
-        # # turn off pu weights test end ---------------------------------
-        # pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
+        events = events[event_filter==True]
+        muons = muons[event_filter==True]
+        nmuons = ak.to_packed(nmuons[event_filter==True])
+        applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
+        # turn off pu weights test start ---------------------------------
+        if is_mc:
+            for variation in pu_wgts.keys():
+                pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
+        # turn off pu weights test end ---------------------------------
+        pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
         # to_packed testing end -----------------------------------------------
         
@@ -1044,13 +1043,19 @@ class EventProcessor(processor.ProcessorABC):
         # }
 
         # add in weights
+        # weights = ak.to_packed(weights)
         out_dict.update({"weights" : weights})
         
         # if self.config["do_fsr"]:
         #     fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
         #     out_dict.update(fsr_dict)
         #----------------------------
-        
+
+        # to packed test start -------------------------
+        # for key, value in out_dict.items():
+        #     out_dict[key] = ak.to_packed(value)
+        # to packed test end -------------------------
+    
         return out_dict
         
     def postprocess(self, accumulator):
@@ -1289,11 +1294,8 @@ class EventProcessor(processor.ProcessorABC):
 
 
         # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
-        # jets = ak.to_packed(ak.mask(jets, jet_selection))
-        # ak mask leaves None in room of filtered Jets -> which isn't good
-        # bc then leading jet now becomes None bc idx==0 jet is None
 
-        # jets = ak.to_packed(jets[jet_selection]) 
+        jets = ak.to_packed(jets[jet_selection]) 
         # jets = jets[jet_selection]
 
         

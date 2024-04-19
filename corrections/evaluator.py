@@ -1305,11 +1305,11 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
 def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid):
     if year == "2016preVFP":
         yearname = "UL2016APV"
-    if year == "2016postVFP":
+    elif year == "2016postVFP":
         yearname = "UL2016"
-    if year == "2017":
+    elif year == "2017":
         yearname = "UL2017"
-    if year == "2018":
+    elif year == "2018":
         yearname = "UL2018"
     # define 1D array of ones for other arrays to copy off of
     ones = ak.fill_none(
@@ -1320,10 +1320,10 @@ def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid):
     # if True:
     if "2017corrected" in jet_puid_opt:
         print("doing the 2017corrected jetPUID method !")
-        h_eff_name_L = f"h2_eff_mcUL{year}_L"
-        h_sf_name_L = f"h2_eff_sfUL{year}_L"
-        h_eff_name_T = f"h2_eff_mcUL{year}_T"
-        h_sf_name_T = f"h2_eff_sfUL{year}_T"
+        h_eff_name_L = f"h2_eff_mc{yearname}_L"
+        h_sf_name_L = f"h2_eff_sf{yearname}_L"
+        h_eff_name_T = f"h2_eff_mc{yearname}_T"
+        h_sf_name_T = f"h2_eff_sf{yearname}_T"
         puid_eff_L = evaluator[h_eff_name_L](jets[pt_name], jets.eta)
         puid_sf_L = evaluator[h_sf_name_L](jets[pt_name], jets.eta)
         puid_eff_T = evaluator[h_eff_name_T](jets[pt_name], jets.eta)
@@ -1430,8 +1430,8 @@ def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid):
     else:
         wp_dict = {"loose": "L", "medium": "M", "tight": "T"}
         wp = wp_dict[jet_puid_opt]
-        h_eff_name = f"h2_eff_mcUL{year}_L"
-        h_sf_name = f"h2_eff_sfUL{year}_L"
+        h_eff_name = f"h2_eff_mc{yearname}_L"
+        h_sf_name = f"h2_eff_sf{yearname}_L"
         jetpt = jets[pt_name]
         jeteta = jets.eta
         puid_eff = evaluator[h_eff_name](jetpt, jeteta)

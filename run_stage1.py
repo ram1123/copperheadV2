@@ -54,7 +54,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         save_path = "/depot/cms/users/yun79/results/stage1/test/" # default
         # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
     if not test: # full scale implementation
-        print(f"dataset_dict: {dataset_dict['files']}")
+        # print(f"dataset_dict: {dataset_dict['files']}")
         events = NanoEventsFactory.from_root(
             dataset_dict["files"],
             schemaclass=NanoAODSchema,
@@ -455,7 +455,8 @@ if __name__ == "__main__":
         # # #-----------------------------------------------------------
         else:
             # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
-            client = Client(n_workers=20,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+            client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+            # client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
             print("Local scale Client created")
         #-------------------------------------------------------------------------------------
         #-----------------------------------------------------------
@@ -476,7 +477,8 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 max_file_len = 15
                 # max_file_len = 6
-                # max_file_len = 1
+                # max_file_len = 50
+                # max_file_len = 9
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
@@ -496,8 +498,8 @@ if __name__ == "__main__":
                     
                     var_elapsed = round(time.time() - var_step, 3)
                     print(f"Finished file_idx {idx} in {var_elapsed} s.")
-            sample_elapsed = round(time.time() - sample_step, 3)
-            print(f"Finished sample {dataset} in {sample_elapsed} s.")
+                sample_elapsed = round(time.time() - sample_step, 3)
+                print(f"Finished sample {dataset} in {sample_elapsed} s.")
                 
     else:
         # dataset_loop(coffea_processor, xrootd_path+fname, test=test_mode)
