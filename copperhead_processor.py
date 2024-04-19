@@ -101,12 +101,40 @@ class EventProcessor(processor.ProcessorABC):
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
-        # dataset = events.metadata['dataset']
-        # cross_section = self.config["cross_sections"][dataset]
-        # totalGenWgts = events.metadata['sumGenWgts']
-        # integrated_lumi = self.config["integrated_lumis"][year]
-        # lumi_weight = cross_section * integrated_lumi/ totalGenWgts
-        # self.config["lumi_weight"] = lumi_weight
+        # Dmitry test 4 start --------------------------------------------------------------------
+        out_dict = {
+            "run" : events.run,
+            "luminosityBlock" : events.luminosityBlock,
+            "HLT_IsoMu24" : events.HLT.IsoMu24,
+            "Muon_pt" : events.Muon.pt,
+            "Muon_eta" : events.Muon.eta,
+            "Muon_phi" : events.Muon.phi,
+            "Muon_mass" : events.Muon.mass,
+            "Muon_charge" : events.Muon.charge,
+            "Muon_pfRelIso04_all" : events.Muon.pfRelIso04_all,
+            "Muon_mediumId" : events.Muon.mediumId,
+            "Muon_ptErr" :  events.Muon.ptErr,
+            "Electron_pt" : events.Electron.pt,
+            "Electron_eta" : events.Electron.eta,
+            "Electron_mvaFall17V2Iso_WP90" : events.Electron.mvaFall17V2Iso_WP90,
+            "Jet_pt" : events.Jet.pt,
+            "Jet_eta" : events.Jet.eta,
+            "Jet_phi" : events.Jet.phi,
+            "Jet_mass" : events.Jet.mass,
+            "PV_npvsGood" : evnets.PV.npvsGood,
+            "fixedGridRhoFastjetAll" : events.fixedGridRhoFastjetAll,
+            "Pileup_nTrueInt" : events.Pileup.nTrueInt,  
+            "genWeight" : events.genWeight,          
+            "GenPart_pdgId" : events.GenPart.pdgId,        
+            "LHEScaleWeight" : events.LHEScaleWeight,     
+            "LHEPdfWeight" : events.LHEPdfWeight,       
+            "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,      
+            "HTXS_njets30" : events.HTXS.njets30,
+            
+        }
+        return out_dict
+        # Dmitry test 4 end----------------------------------------------------------------------------
+
         if self.test:
             print(f"copperhead2 events muon pt: {ak.to_dataframe(events.Muon.pt)}")
             print(f"copperhead2 type(events): {type(events)}")
@@ -453,12 +481,12 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            # sumWeights = events.metadata['sumGenWgts']
-            # print(f"sumWeights: {(sumWeights)}")
+            sumWeights = events.metadata['sumGenWgts']
+            print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
@@ -689,26 +717,7 @@ class EventProcessor(processor.ProcessorABC):
         else: # data-> just add in ak ones for consistency
             weights.add("ones", weight=ak.values_astype(ak.ones_like(events.HLT.IsoMu24), "float32"))
         
-        #     # For MC: initialize weight_collection
-        #     weight_ones = ak.ones_like(events.Muon.pt[:,0]) # get 1D array of filtered events
-        #     # print(f"weight_collection len(weight_ones):  {ak.num(weight_ones, axis=0)}")
-        #     self.weight_collection = Weights(weight_ones)
-        
-        #     # For MC: Apply gen.weights, pileup weights, lumi weights,
-        #     # apply event_filter on pu weights and then add them to weight_collection
-        #     # print(f"weight_collection len(pu_wgts):  {len(pu_wgts)}")
-        #     # print(f"weight_collection len(event_filter):  {len(event_filter)}")
-        #     # print(f"weight_collection (pu_wgts):  {(pu_wgts)}")
-        #     # print(f"weight_collection (event_filter):  {(event_filter)}")
-        #     for key in pu_wgts.keys():
-        #         pu_wgts[key] = pu_wgts[key][event_filter==True]
-            
-        #     self.weight_collection.add_weight("pu_wgt", pu_wgts, how="all")
-        #     if self.test:
-        #         print(f"weight_collection pu_wgt info: \n  {self.weight_collection.get_info()}")
-            
-
-            
+          
 
         
         # ------------------------------------------------------------#

@@ -87,6 +87,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # Dmitry test 4 start ----------------------------
 
     skim = dak.to_parquet(out_collections, save_path, compute=False)
+    print(f"skim: {skim}")
     return skim
     # DMitry test 4 end--------------------------------
 
