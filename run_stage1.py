@@ -272,8 +272,8 @@ if __name__ == "__main__":
             print("Gateway Client created")
         # # #-----------------------------------------------------------
         else:
-            # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
-            client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+            client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
+            # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
             # client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
             print("Local scale Client created")
         #-------------------------------------------------------------------------------------

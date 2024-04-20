@@ -1180,7 +1180,7 @@ class EventProcessor(processor.ProcessorABC):
             "qgl",
             "puId",
             "mass",
-            "btagDeepB",
+            "btagDeepFlavB",
             "has_matched_gen",
         ]
         if "puId17" in events.Jet.fields:
@@ -1300,9 +1300,6 @@ class EventProcessor(processor.ProcessorABC):
             & (abs(jets.eta) < self.config["jet_eta_cut"])
             & HEMVeto
         )
-        # print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute()).shape}")
-        # print(f"sum jet_selection: {ak.to_numpy(ak.sum(jet_selection, axis=1).compute())}")
-        # print(f"sum jet_selection total: {ak.sum(jet_selection, axis=None).compute()}")
         # original jet_selection end ----------------------------------------------
 
 
@@ -1312,9 +1309,6 @@ class EventProcessor(processor.ProcessorABC):
         # jets = jets[jet_selection]
 
         
-        # #testing ------------------------
-        # return jets
-        # # testing ------------
         
         # print(f"jets after selection: {jets}")
         # print(f"jets._meta after selection: {str(jets._meta.compute())}")
@@ -1587,17 +1581,18 @@ class EventProcessor(processor.ProcessorABC):
     #     # print(f'nBtagLoose test nunique \n: {test.nunique()[:50]}')
     #     # print(f'nBtagLoose test sum \n: {test.sum()[:50]}')
 
-        btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+        btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
         nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
         nBtagLoose = ak.fill_none(nBtagLoose, value=0)
             
 
-        btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+        btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
         nBtagMedium = ak.num(ak.to_packed(jets[btagMedium_filter]), axis=1)
         nBtagMedium = ak.fill_none(nBtagMedium, value=0)
             
-        
-        
+        # print(f"nBtagLoose: {jets.btagDeepFlavB.compute()}")
+        # print(f"nBtagLoose: {ak.to_numpy(nBtagLoose.compute())}")
+        # print(f"njets: {ak.to_numpy(njets.compute())}")
         temp_out_dict = {
             "nBtagLoose": nBtagLoose,
             "nBtagMedium": nBtagMedium,
