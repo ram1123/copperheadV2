@@ -85,12 +85,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     dataset_fraction = dataset_dict["metadata"]["fraction"]
     
     # Dmitry test 4 start ----------------------------
-    # for key, value in out_collections.items():
-    #     # out_collections[key] = ak.pad_none(value, target=1)[:,0]
-    #     out_collections[key] = ak.flatten(value)
-    skim = dak.to_parquet(ak.zip(out_collections), save_path, compute=False)
-    print(f"skim: {skim}")
-    return skim
+ 
+    # skim = dak.to_parquet(ak.zip(out_collections), save_path, compute=False)
+    # print(f"skim: {skim}")
+    # return skim
     # DMitry test 4 end--------------------------------
 
     # ------------------------------------------

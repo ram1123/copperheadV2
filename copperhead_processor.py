@@ -102,41 +102,41 @@ class EventProcessor(processor.ProcessorABC):
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
         # Dmitry test 4 start --------------------------------------------------------------------
-        muon = ak.pad_none(events.Muon, target=1, clip=True)[:,0]
-        jet = ak.pad_none(events.Jet, target=1, clip=True)[:,0]
-        electron = ak.pad_none(events.Electron, target=1, clip=True)[:,0]
+        # muon = ak.pad_none(events.Muon, target=1, clip=True)[:,0]
+        # jet = ak.pad_none(events.Jet, target=1, clip=True)[:,0]
+        # electron = ak.pad_none(events.Electron, target=1, clip=True)[:,0]
         
-        out_dict = {
-            "run" : events.run,
-            "luminosityBlock" : events.luminosityBlock,
-            "HLT_IsoMu24" : events.HLT.IsoMu24,
-            "Muon_pt" : muon.pt,
-            "Muon_eta" : muon.eta,
-            "Muon_phi" : muon.phi,
-            "Muon_mass" : muon.mass,
-            "Muon_charge" : muon.charge,
-            "Muon_pfRelIso04_all" : muon.pfRelIso04_all,
-            "Muon_mediumId" : muon.mediumId,
-            "Muon_ptErr" :  muon.ptErr,
-            "Electron_pt" : electron.pt,
-            "Electron_eta" : electron.eta,
-            "Electron_mvaFall17V2Iso_WP90" : electron.mvaFall17V2Iso_WP90,
-            "Jet_pt" : jet.pt,
-            "Jet_eta" : jet.eta,
-            "Jet_phi" : jet.phi,
-            "Jet_mass" : jet.mass,
-            "PV_npvsGood" : events.PV.npvsGood,
-            "fixedGridRhoFastjetAll" : events.fixedGridRhoFastjetAll,
-            "Pileup_nTrueInt" : events.Pileup.nTrueInt,  
-            "genWeight" : events.genWeight,          
-            "GenPart_pdgId" : ak.pad_none(events.GenPart.pdgId, target=1, clip=True)[:,0], 
-            "LHEScaleWeight" : ak.pad_none(events.LHEScaleWeight, target=1, clip=True)[:,0],     
-            "LHEPdfWeight" : ak.pad_none(events.LHEPdfWeight, target=1, clip=True)[:,0],       
-            "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,      
-            "HTXS_njets30" : events.HTXS.njets30,
+        # out_dict = {
+        #     "run" : events.run,
+        #     "luminosityBlock" : events.luminosityBlock,
+        #     "HLT_IsoMu24" : events.HLT.IsoMu24,
+        #     "Muon_pt" : muon.pt,
+        #     "Muon_eta" : muon.eta,
+        #     "Muon_phi" : muon.phi,
+        #     "Muon_mass" : muon.mass,
+        #     "Muon_charge" : muon.charge,
+        #     "Muon_pfRelIso04_all" : muon.pfRelIso04_all,
+        #     "Muon_mediumId" : muon.mediumId,
+        #     "Muon_ptErr" :  muon.ptErr,
+        #     "Electron_pt" : electron.pt,
+        #     "Electron_eta" : electron.eta,
+        #     "Electron_mvaFall17V2Iso_WP90" : electron.mvaFall17V2Iso_WP90,
+        #     "Jet_pt" : jet.pt,
+        #     "Jet_eta" : jet.eta,
+        #     "Jet_phi" : jet.phi,
+        #     "Jet_mass" : jet.mass,
+        #     "PV_npvsGood" : events.PV.npvsGood,
+        #     "fixedGridRhoFastjetAll" : events.fixedGridRhoFastjetAll,
+        #     "Pileup_nTrueInt" : events.Pileup.nTrueInt,  
+        #     "genWeight" : events.genWeight,          
+        #     "GenPart_pdgId" : ak.pad_none(events.GenPart.pdgId, target=1, clip=True)[:,0], 
+        #     "LHEScaleWeight" : ak.pad_none(events.LHEScaleWeight, target=1, clip=True)[:,0],     
+        #     "LHEPdfWeight" : ak.pad_none(events.LHEPdfWeight, target=1, clip=True)[:,0],       
+        #     "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,      
+        #     "HTXS_njets30" : events.HTXS.njets30,
             
-        }
-        return out_dict
+        # }
+        # return out_dict
         # Dmitry test 4 end----------------------------------------------------------------------------
 
         if self.test:
@@ -1375,6 +1375,7 @@ class EventProcessor(processor.ProcessorABC):
         
         sorted_args = ak.argsort(jets.pt, ascending=False)
         sorted_jets = (jets[sorted_args])
+        jets = sorted_jets
         paddedSorted_jets = ak.pad_none(sorted_jets, target=2) 
         jet1 = paddedSorted_jets[:,0]
         jet2 = paddedSorted_jets[:,1]
@@ -1587,12 +1588,12 @@ class EventProcessor(processor.ProcessorABC):
     #     # print(f'nBtagLoose test sum \n: {test.sum()[:50]}')
 
         btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-        nBtagLoose = ak.num(jets[btagLoose_filter], axis=1)
+        nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
         nBtagLoose = ak.fill_none(nBtagLoose, value=0)
             
 
         btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-        nBtagMedium = ak.num(jets[btagMedium_filter], axis=1)
+        nBtagMedium = ak.num(ak.to_packed(jets[btagMedium_filter]), axis=1)
         nBtagMedium = ak.fill_none(nBtagMedium, value=0)
             
         
