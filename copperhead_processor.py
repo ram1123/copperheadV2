@@ -837,24 +837,6 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Fill Muon variables and gjet variables
         # ------------------------------------------------------------#
-        # out_dict = {
-        #     "mu_pt" : events.Muon.pt,
-        #     # "mu_eta" : events.Muon.eta,
-        #     # "mu_phi" : events.Muon.phi,
-        #     # "mu_iso" : events.Muon.pfRelIso04_all,
-        #     # "dimuon_mass": dimuon.mass,
-        #     # "dimuon_pt" : dimuon.pt,
-        #     # "dimuon_eta" : dimuon.eta,
-        #     # "dimuon_phi" : dimuon.phi,
-        #     # "dimuon_dEta" : dimuon_dEta,
-        #     # "dimuon_dPhi" : dimuon_dPhi,
-        #     # "dimuon_dR" : dimuon_dR,
-        #     # "dimuon_ebe_mass_res": dimuon_mass_resolution,
-        #     # "dimuon_ebe_mass_res_rel": rel_dimuon_ebe_mass_res,
-        #     # "mu_pt_over_mass" : events.Muon.pt / dimuon.mass,
-        #     # "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
-        #     # "dimuon_phi_cs" : dimuon_phi_cs,
-        # }
         out_dict = {
             "mu1_pt" : mu1.pt,
             "mu2_pt" : mu2.pt,
