@@ -39,12 +39,8 @@ class EventProcessor(processor.ProcessorABC):
         TODO: replace all of these with self.config dict variable which is taken from a
         pre-made json file
         """
-        # with open(config_path) as file:
-        #     self.config = json.loads(file.read())
         self.config = config
 
-        # self.config = json.loads(config_path)
-        # print(f"copperhead proccesor self.config b4 update: \n {self.config}")
         self.test = test_mode# False
         dict_update = {
             # "hlt" :["IsoMu24"],
@@ -54,12 +50,10 @@ class EventProcessor(processor.ProcessorABC):
             "do_geofit" : True, # False
             "do_beamConstraint": True, # if True, override do_geofit
             "year" : "2018",
-            # "rocorr_file_path" : "data/roch_corr/RoccoR2018.txt",
             "do_nnlops" : True,
             "do_pdf" : True,
         }
         self.config.update(dict_update)
-        # print(f"copperhead proccesor self.config after update: \n {self.config}")
         
 
         # --- Evaluator
@@ -90,12 +84,6 @@ class EventProcessor(processor.ProcessorABC):
         
         extractor_instance.finalize()
         self.evaluator = extractor_instance.make_evaluator()
-        # turn ._axes from tuple of axes to just axes
-        # self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]  
-                
-        
-        # # prepare lookup tables for all kinds of corrections
-        # self.prepare_lookups()
 
     def process(self, events: coffea_nanoevent):
         """
@@ -233,10 +221,7 @@ class EventProcessor(processor.ProcessorABC):
         # # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
         for HLT_str in self.config["hlt"]:
             event_filter = event_filter & events.HLT[HLT_str]
-        # if self.test:
-        #     print(f"copperhead2 EventProcessor events.HLT.IsoMu24: \n {ak.to_numpy(events.HLT.IsoMu24)}")
-        #     print(f"copperhead2 EventProcessor ak.sum(events.HLT.IsoMu24): \n {ak.sum(events.HLT.IsoMu24)}")
-        #     print(f"copperhead2 EventProcessor event_filter: \n {ak.to_numpy(event_filter)}")
+
 
         # ------------------------------------------------------------#
         # Skimming end, filter out events and prepare for pre-selection
@@ -416,20 +401,9 @@ class EventProcessor(processor.ProcessorABC):
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
 
         )
-        # good_pv = (events.PV.npvsGood > 0) 
-        # mm_charge_cond = (mm_charge == -1)
-        # nmuon_cond  = (nmuons == 2)
+
         
-        # print(f" events len: {ak.num(events.Muon, axis=0).compute()}")
-        # print(f" event filter true len: {ak.sum((event_filter==True), axis=0).compute()}")
-        
-        # print(f" mm_charge_cond true len: {ak.sum((mm_charge_cond==True), axis=0).compute()}")
-        # print(f" nmuon_cond true len: {ak.sum((nmuon_cond==True), axis=0).compute()}")
-        # print(f" electron_veto true len: {ak.sum((electron_veto==True), axis=0).compute()}")
-        # print(f" good_pv true len: {ak.sum((good_pv==True), axis=0).compute()}")
-        # if self.test:
-        #     # print(f"copperhead2 EventProcessor b4 leading pt cut event_filter long: \n {pd.DataFrame(ak.to_numpy(event_filter)).to_string()}")
-        #     print(f"copperhead2 EventProcessor b4 leading pt cut event_filter sum:  {ak.sum(event_filter)}")
+
         # --------------------------------------------------------#
         # Select events with muons passing leading pT cut
         # --------------------------------------------------------#
@@ -472,7 +446,6 @@ class EventProcessor(processor.ProcessorABC):
         mu1 = muons_sorted[:,0]
         pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
         pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
-        # print(f"pass_leading_pt: {pass_leading_pt.compute()}")
 
 
         event_filter = event_filter & pass_leading_pt
@@ -522,15 +495,7 @@ class EventProcessor(processor.ProcessorABC):
         
             
         
-        # if self.test:
-            
-        #     print(f"copperhead2 EventProcessor pass_leading_pt: \n {pass_leading_pt}")
-        #     print(f"copperhead2 EventProcessor after leading pt cut event_filter long: \n {ak.to_dataframe(event_filter).to_string()}")
-        #     print(f"copperhead2 EventProcessor after leading pt cut ak.sum(event_filter): \n {ak.sum(event_filter)}")
-        #     print(f"copperhead2 EventProcessor events.Muon: \n {ak.num(events.Muon, axis=1)}")
-
-
-        
+       
         
         # --------------------------------------------------------#
         # Fill dimuon and muon variables
@@ -927,19 +892,7 @@ class EventProcessor(processor.ProcessorABC):
             
         out_dict.update(region_dict) 
 
-
-        # # add in the weights
-        # if events.metadata["is_mc"]:
-        #     if self.test:
-        #         print(f"self.weight_collection.weights: {self.weight_collection.weights} ")
-        #     out_dict.update({
-        #        "nominal" : self.weight_collection.get_weight("nominal")
-        #     })
-        #     # out_dict.update(self.weight_collection.weights["nominal"])
-        # just reading part 2 end ---------------------------
-
-        # --------------------------
-        
+       
         # b4 we do any filtering, we obtain the sum of gen weights for normalization
         # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
         
@@ -1311,14 +1264,7 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
 
         
-        # if self.test:
-        # print(f"jet loop njets: {njets}")
-        # print(f"jet loop ak.num(events, axis=0): {ak.num(events, axis=0)}")
-        # print(f"jet loop jet_selection short: {jet_selection}")
-        # print(f"jet loop jet_selection sum: {ak.sum(jet_selection, axis =1)}")
-        # print(f"jet loop jet_selection long: {ak.to_numpy(ak.flatten(jet_selection))}")
-        # print(f"jet loop jets.pt short: {jets.pt}")
-        # variables["njets"] = njets
+
 
         # fill_jets(output, variables, jet1, jet2)
         #fill_jets
@@ -1550,18 +1496,6 @@ class EventProcessor(processor.ProcessorABC):
         #         weights.add_weight(f"btag_wgt_{name}", bs, how="only_vars")
 
         # Separate from ttH and VH phase space
-        
-    #     # print(f'self.parameters["btag_medium_wp"] : {self.parameters["btag_medium_wp"]}')
-    #     # print(f'jets  \n: {jets}')
-    #     # print(f'jets.btagDeepB  \n: {jets.btagDeepB}')
-    #     # test = jets[
-    #     #         (jets.btagDeepB > self.parameters["btag_loose_wp"])
-    #     #         & (abs(jets.eta) < 2.5)
-    #     #     ]
-    #     # print(f'jets btag_loose_wp test \n: {test.btagDeepB[:50]}')
-    #     # test = test.reset_index().groupby("entry")["subentry"]
-    #     # print(f'nBtagLoose test nunique \n: {test.nunique()[:50]}')
-    #     # print(f'nBtagLoose test sum \n: {test.sum()[:50]}')
 
         btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
         nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
