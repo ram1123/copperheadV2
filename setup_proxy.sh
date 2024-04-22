@@ -8,3 +8,4 @@ cp $VOMS_PATH $VOMS_TRG
 echo "Your proxy is copied here: "$VOMS_TRG
 export X509_USER_PROXY=$VOMS_TRG
 export WORKDIR=$PWD
+export XRD_REQUESTTIMEOUT=2400

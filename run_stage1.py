@@ -21,6 +21,7 @@ import copy
 import argparse
 from dask.distributed import performance_report
 from corrections.evaluator import nnlops_weights, qgl_weights
+import os
 
 # dask.config.set({'logging.distributed': 'error'})
 import logging
@@ -183,34 +184,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # zip.to_parquet(save_path, compute=True)
     skim = dak.to_parquet(zip, save_path, compute=False)
     return skim
-    # if test:
-    #     for var_name, ak_arr in placeholder_dict.items():
-    #         sample_save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{var_name}"
-    #         if not os.path.exists(sample_save_path):
-    #             os.makedirs(sample_save_path)
-    #         # print(f"saving to parquet on: {sample_save_path}")
-    #         ak.to_parquet(ak_arr, sample_save_path+"/array1.parquet")
-    # else:
-    #     for var_name, ak_arr in placeholder_dict.items():
-    #         sample_save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{var_name}"
-    #         if not os.path.exists(sample_save_path):
-    #             os.makedirs(sample_save_path)
-    #         print(f"saving to parquet on: {sample_save_path}")
-    #         # zip.to_parquet(save_path, compute=False)
-    #         # ak_arr.to_parquet(save_path, compute=False)
-    #         # ak_arr.to_parquet(save_path)
-    #         #delete preexisting parquet files
-    #         filelist = glob.glob(f"{sample_save_path}/*.parquet")
-    #         print(f"filelist: {filelist}")
-    #         for file in filelist:
-    #             try:
-    #                 os.remove(file)
-    #             except Exception:
-    #                 pass
-    #         var_step = time.time()
-    #         dak.to_parquet(ak_arr,sample_save_path,compute=True)
-    #         var_elapsed = round(time.time() - var_step, 3)
-    #         print(f"Finished saving {sample_save_path} in {var_elapsed} s.")
+
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -272,9 +246,10 @@ if __name__ == "__main__":
             print("Gateway Client created")
         # # #-----------------------------------------------------------
         else:
-            client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
+            # os.environ['XRD_REQUESTTIMEOUT']="2400"
+            # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
             # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
-            # client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
+            client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
             print("Local scale Client created")
         #-------------------------------------------------------------------------------------
         #-----------------------------------------------------------
@@ -293,9 +268,10 @@ if __name__ == "__main__":
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
                 sample_step = time.time()
-                max_file_len = 15
+                # max_file_len = 15
+                # max_file_len = 100000000
                 # max_file_len = 6
-                # max_file_len = 50
+                max_file_len = 50
                 # max_file_len = 9
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")

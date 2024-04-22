@@ -11,7 +11,7 @@ import copy
 import tqdm
 import uproot
 import random
-random.seed(9002301)
+# random.seed(9002301)
 import re
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")
@@ -239,12 +239,13 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     time_step = time.time()
-    # print(f"args.input_string: {args.input_string}")
-    
+    # print(f"args.bkg_samples: {args.bkg_samples}")
+    os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
     if args.fraction is None: # do the normal prestage setup
         allowlist_sites=["T2_US_Purdue"] # take data only from purdue for now
         total_events = 0
         # get dask client
+        # turning off seperate client test start --------------------------------------------------------
         if args.cluster is not None:
             from dask_gateway import Gateway
             gateway = Gateway()
@@ -252,10 +253,12 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             print("Gateway Client created")
         else: # use local cluster
-            cluster = LocalCluster(processes=True)
-            cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
-            client = Client(cluster)
+            # cluster = LocalCluster(processes=True)
+            # cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
+            # client = Client(cluster)
+            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             print("Local scale Client created")
+        # turning off seperate client test end --------------------------------------------------------
         big_sample_info = {}
         # dataset = datasets[args.year]
         # year = re.findall(r"Year_\d...", args.input_string)
@@ -366,7 +369,7 @@ if __name__ == "__main__":
             # if "dy_M-50" not in sample_name:
             #     continue
             das_query = dataset[sample_name]
-            
+            print(f"das_query: {das_query}")
             
             rucio_client = rucio_utils.get_rucio_client()
             outlist, outtree = rucio_utils.query_dataset(
@@ -383,17 +386,13 @@ if __name__ == "__main__":
                 # partial_allowed=True
             )
             fnames = [file[0] for file in outfiles if file != []]
-            # print(f"fnames: {fnames}")
+            # fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
             
             # random.shuffle(fnames)
             # fnames = get_Xcache_filelist(fnames)
             print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
-            # print(f"fnames[0]: {fnames[0]}")
-            # continue
-            # print(f"prestage fnames: {fnames}")
-            # print(f"prestage len(fnames): {len(fnames)}")
-            # 
+
             
             """
             run through each file and collect total number of 
@@ -414,6 +413,7 @@ if __name__ == "__main__":
                 # --------------------------------------------------------
                 """
                 file_input = {fname : {"object_path": "Events"} for fname in fnames}
+                # print(f"file_input: {file_input}")
                 events = NanoEventsFactory.from_root(
                         file_input,
                         metadata={},
@@ -423,11 +423,14 @@ if __name__ == "__main__":
                 total_events += preprocess_metadata["data_entries"] 
             else: # if MC
                 file_input = {fname : {"object_path": "Runs"} for fname in fnames}
+                # print(f"file_input: {file_input}")
+                # print(len(file_input.keys()))
                 runs = NanoEventsFactory.from_root(
                         file_input,
                         metadata={},
                         schemaclass=BaseSchema,
                 ).events()
+                # runs = uproot.dask(file_input, handler=uproot.XRootDSource)
                 
                 preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
