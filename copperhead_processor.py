@@ -18,6 +18,7 @@ import dask
 from coffea.analysis_tools import Weights
 import copy
 
+
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
 
@@ -811,8 +812,11 @@ class EventProcessor(processor.ProcessorABC):
             "mu2_phi" : mu2.phi,
             "mu1_charge" : mu1.charge,
             "mu2_charge" : mu2.charge,
+            "mu1_iso" : mu1.pfRelIso04_all,
+            "mu2_iso" : mu2.pfRelIso04_all,
             "nmuons" : nmuons,
             "dimuon_mass" : dimuon.mass,
+            "dimuon_pt" : dimuon.pt,
             "dimuon_eta" : dimuon.eta,
             "dimuon_phi" : dimuon.phi,
             "dimuon_dEta" : dimuon_dEta,
@@ -937,6 +941,10 @@ class EventProcessor(processor.ProcessorABC):
             weights = weights*out_dict["btag_wgt"]
         if do_zpt:
             weights = weights*zpt_weight
+        # add in weights
+        # weights = ak.to_packed(weights)
+        out_dict.update({"weights" : weights})
+
         
         # print(f"weights: {ak.to_numpy(weights.compute())}")
         # weights = weights.weight("pdf_2rmsUp")
@@ -990,9 +998,7 @@ class EventProcessor(processor.ProcessorABC):
         #     "HTXS_njets30" : events.HTXS.njets30,
         # }
 
-        # add in weights
-        # weights = ak.to_packed(weights)
-        out_dict.update({"weights" : weights})
+        
         
         # if self.config["do_fsr"]:
         #     fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
@@ -1257,28 +1263,11 @@ class EventProcessor(processor.ProcessorABC):
         # muons = events.Muon 
         njets = ak.num(jets, axis=1)
         
-        # print(f"number of events passing jet selection: {ak.sum((njets>0)).compute()}")
-
         # ------------------------------------------------------------#
         # Fill jet-related variables
         # ------------------------------------------------------------#
 
         
-
-
-        # fill_jets(output, variables, jet1, jet2)
-        #fill_jets
-        # print(f"jets: {jets.compute()}")
-        # jet_argmax = ak.argmax(jets.pt, axis=1)
-        # jet_argmax_not_leading = ak.fill_none((jet_argmax != 0), value=False)
-        # print(f"jet_argmax_not_leading: {jet_argmax_not_leading.compute()}")
-        # print(f"sum jet_argmax_not_leading: {ak.sum(jet_argmax_not_leading).compute()}")
-        # print(f"jet_argmax[jet_argmax_not_leading] : {jet_argmax[jet_argmax_not_leading].compute()}")
-        # print(f"jets.pt[jet_argmax_not_leading] : {jets.pt[jet_argmax_not_leading].compute()}")
-        # # print(f"jets.pt_jec[jet_argmax_not_leading] : {jets.pt_jec[jet_argmax_not_leading].compute()}")
-        # print(f"jets.pt_raw[jet_argmax_not_leading] : {jets.pt_raw[jet_argmax_not_leading].compute()}")
-        # print(f"jets.mass_raw[jet_argmax_not_leading] : {jets.mass_raw[jet_argmax_not_leading].compute()}")
-        # print(f"jets.mass[jet_argmax_not_leading] : {jets.mass[jet_argmax_not_leading].compute()}")
         # original start ----------------------------------------
         # padded_jets = ak.pad_none(jets, target=2) 
         # # # jet1 = padded_jets[:,0]
@@ -1333,9 +1322,12 @@ class EventProcessor(processor.ProcessorABC):
             dimuon.pt + jet1.pt + jet2.pt
         )
 
+        # calculate ll_zstar
+        ll_ystar = dimuon.rapidity - (jet1.rapidity + jet1.rapidity) / 2
+        ll_zstar = abs(ll_ystar / (jet1.rapidity - jet1.rapidity))
+    
         jet_loop_out_dict = {
             "jet1_pt" : jet1.pt,
-            # "jet1_pt" : ak.where(jet_selection,jet1.pt,-999),
             "jet1_eta" : jet1.eta,
             "jet1_rap" : jet1.rapidity,
             "jet1_phi" : jet1.phi,
@@ -1344,17 +1336,6 @@ class EventProcessor(processor.ProcessorABC):
             "jet1_puId" : jet1.puId,
             "jet2_pt" : jet2.pt,
             "jet2_eta" : jet2.eta,
-            #-------------------------------
-            # "jet1_pt" : jet1.pt[jet_selection],
-            # "jet1_eta" : jet1.eta[jet_selection],
-            # "jet1_rap" : jet1.rapidity[jet_selection],
-            # "jet1_phi" : jet1.phi[jet_selection],
-            # "jet1_qgl" : jet1.qgl[jet_selection],
-            # "jet1_jetId" : jet1.jetId[jet_selection],
-            # "jet1_puId" : jet1.puId[jet_selection],
-            # "jet2_pt" : jet2.pt[jet_selection],
-            # "jet2_eta" : jet2.eta[jet_selection],
-            #----------------------------------
             "jet1_mass" : jet1.mass,
             "jet2_mass" : jet2.mass,
             "jet1_pt_raw" : jet1.pt_raw,
@@ -1376,8 +1357,6 @@ class EventProcessor(processor.ProcessorABC):
             "jet2_jetId" : jet2.jetId,
             "jet2_puId" : jet2.puId,
             "jj_mass" : dijet.mass,
-            # # "jj_mass" : ak.where(jet_selection,dijet.mass,-999),
-            # "jj_mass_log" : np.log(dijet.mass),
             "jj_pt" : dijet.pt,
             "jj_eta" : dijet.eta,
             "jj_phi" : dijet.phi,
@@ -1398,6 +1377,7 @@ class EventProcessor(processor.ProcessorABC):
             "rpt" : rpt,
             "zeppenfeld" : zeppenfeld,
             "njets" : njets,
+            "ll_zstar" : ll_zstar
         }
         if is_mc:
             mc_dict = {

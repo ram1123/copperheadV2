@@ -100,6 +100,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'mu2_eta': (out_collections["mu2_eta"]),
             'mu1_phi': (out_collections["mu1_phi"]),
             'mu2_phi': (out_collections["mu2_phi"]),
+            'mu1_iso': (out_collections["mu1_iso"]),
+            'mu2_iso': (out_collections["mu2_iso"]),
             'jet1_pt': (out_collections["jet1_pt"]),
             'jet2_pt': (out_collections["jet2_pt"]),
             'jet1_eta': (out_collections["jet1_eta"]),
@@ -108,25 +110,55 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'jet2_phi': (out_collections["jet2_phi"]),
             'jet1_mass': (out_collections["jet1_mass"]),
             'jet2_mass': (out_collections["jet2_mass"]),
+            'jet1_qgl': (out_collections["jet1_qgl"]),
+            'jet2_qgl': (out_collections["jet2_qgl"]),
             'njets': (out_collections["njets"]),
+            # jj variables------------------------------
+            'jj_dEta': (out_collections["jj_dEta"]),
+            'jj_dPhi': (out_collections["jj_dPhi"]),
+            'jj_mass': (out_collections["jj_mass"]),
+            'jj_pt': (out_collections["jj_pt"]),
+            'jj_eta': (out_collections["jj_eta"]),
+            'jj_phi': (out_collections["jj_phi"]),
+            # weights -----------------------------------------
             'weights': (out_collections["weights"]),
-            # 'dimuon_mass': (out_collections["dimuon_mass"]),
+            #dimuon variables-----------------------
+            'dimuon_mass': (out_collections["dimuon_mass"]),
             # 'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
-            # 'dimuon_cos_theta_cs': (out_collections["dimuon_cos_theta_cs"]),
-            # 'dimuon_phi_cs': (out_collections["dimuon_phi_cs"]),
+            'dimuon_cos_theta_cs': (out_collections["dimuon_cos_theta_cs"]),
+            'dimuon_phi_cs': (out_collections["dimuon_phi_cs"]),
+            'dimuon_dPhi': (out_collections["dimuon_dPhi"]),
+            'dimuon_dR': (out_collections["dimuon_dR"]),
+            'dimuon_eta': (out_collections["dimuon_eta"]),
+            'dimuon_phi': (out_collections["dimuon_phi"]),
+            'dimuon_pt': (out_collections["dimuon_pt"]),
 
-            'jet1_pt_raw': (out_collections["jet1_pt_raw"]),
-            'jet1_mass_raw': (out_collections["jet1_mass_raw"]),
-            'jet1_rho': (out_collections["jet1_rho"]),
-            'jet1_area': (out_collections["jet1_area"]),
+            # mmj variables ------------------------------
+            'mmj1_dEta': (out_collections["mmj1_dEta"]),
+            'mmj1_dPhi': (out_collections["mmj1_dPhi"]),
+            'mmj2_dEta': (out_collections["mmj2_dEta"]),
+            'mmj2_dPhi': (out_collections["mmj2_dPhi"]),
+            'mmj_min_dEta': (out_collections["mmj_min_dEta"]),
+            'mmj_min_dPhi': (out_collections["mmj_min_dPhi"]),
+            'mmjj_mass': (out_collections["mmjj_mass"]),
+            'mmjj_pt': (out_collections["mmjj_pt"]),
+            'mmjj_eta': (out_collections["mmjj_eta"]),
+            'mmjj_phi': (out_collections["mmjj_phi"]),
+            
+
+            # 'jet1_pt_raw': (out_collections["jet1_pt_raw"]),
+            # 'jet1_mass_raw': (out_collections["jet1_mass_raw"]),
+            # 'jet1_rho': (out_collections["jet1_rho"]),
+            # 'jet1_area': (out_collections["jet1_area"]),
             # 'jet1_pt_jec': (out_collections["jet1_pt_jec"]),
             # 'jet1_mass_jec': (out_collections["jet1_mass_jec"]),
-            'jet2_pt_raw': (out_collections["jet2_pt_raw"]),
-            'jet2_mass_raw': (out_collections["jet2_mass_raw"]),
-            'jet2_rho': (out_collections["jet2_rho"]),
-            'jet2_area': (out_collections["jet2_area"]),
+            # 'jet2_pt_raw': (out_collections["jet2_pt_raw"]),
+            # 'jet2_mass_raw': (out_collections["jet2_mass_raw"]),
+            # 'jet2_rho': (out_collections["jet2_rho"]),
+            # 'jet2_area': (out_collections["jet2_area"]),
             # 'jet2_pt_jec': (out_collections["jet2_pt_jec"]),
             # 'jet2_mass_jec': (out_collections["jet2_mass_jec"]),
+        
             # fraction -------------------------------------
             "fraction" : dataset_fraction*(ak.ones_like(out_collections["njets"])), 
             # Btagging WPs ------------------------------------
@@ -139,29 +171,33 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             # vbf ?? ------------------------------------------------
             "vbf_cut" : (out_collections["vbf_cut"]),
             # "pass_leading_pt" : (out_collections["pass_leading_pt"]),
+            "ll_zstar" : (out_collections["ll_zstar"]),
+            "zeppenfeld" : (out_collections["zeppenfeld"]),
+
         
          }
-    is_mc = dataset_dict["metadata"]["is_mc"]
-    if is_mc:
-        additional_dict = {
-            'jet1_pt_gen': (out_collections["jet1_pt_gen"]),
-            'jet2_pt_gen': (out_collections["jet2_pt_gen"]),
-    #          # gen jet variables -------------------------------------
-    #         "gjj_mass":  (out_collections["gjj_mass"]),
-    #         'gjet1_pt': (out_collections["gjet_pt"][:,0]),
-    #         'gjet2_pt': (out_collections["gjet_pt"][:,1]),
-    #         'gjet1_eta': (out_collections["gjet_eta"][:,0]),
-    #         'gjet2_eta': (out_collections["gjet_eta"][:,1]),
-    #         'gjet1_phi': (out_collections["gjet_phi"][:,0]),
-    #         'gjet2_phi': (out_collections["gjet_phi"][:,1]),
-    #         'gjet1_mass': (out_collections["gjet_mass"][:,0]),
-    #         'gjet2_mass': (out_collections["gjet_mass"][:,1]),
-    #         "gjj_dEta": (out_collections["gjj_dEta"]),
-    #         "gjj_dPhi": (out_collections["gjj_dPhi"]),
-    #         "gjj_dR": (out_collections["gjj_dR"]),
-        }
-        placeholder_dict.update(additional_dict)
-    #------------------------------
+    # gen jet variables start ------------------------------
+    # is_mc = dataset_dict["metadata"]["is_mc"]
+    # if is_mc:
+    #     additional_dict = {
+    #         'jet1_pt_gen': (out_collections["jet1_pt_gen"]),
+    #         'jet2_pt_gen': (out_collections["jet2_pt_gen"]),
+    # #          # gen jet variables -------------------------------------
+    # #         "gjj_mass":  (out_collections["gjj_mass"]),
+    # #         'gjet1_pt': (out_collections["gjet_pt"][:,0]),
+    # #         'gjet2_pt': (out_collections["gjet_pt"][:,1]),
+    # #         'gjet1_eta': (out_collections["gjet_eta"][:,0]),
+    # #         'gjet2_eta': (out_collections["gjet_eta"][:,1]),
+    # #         'gjet1_phi': (out_collections["gjet_phi"][:,0]),
+    # #         'gjet2_phi': (out_collections["gjet_phi"][:,1]),
+    # #         'gjet1_mass': (out_collections["gjet_mass"][:,0]),
+    # #         'gjet2_mass': (out_collections["gjet_mass"][:,1]),
+    # #         "gjj_dEta": (out_collections["gjj_dEta"]),
+    # #         "gjj_dPhi": (out_collections["gjj_dPhi"]),
+    # #         "gjj_dR": (out_collections["gjj_dR"]),
+    #     }
+    #     placeholder_dict.update(additional_dict)
+    # gen jet variables end ------------------------------
         
     # define save path
     fraction = round(dataset_dict["metadata"]["fraction"], 3)
