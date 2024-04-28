@@ -21,6 +21,8 @@ This would start the GRID certificate password prompt, and then once given the p
 |  Event by event dimuon mass calibration   | ./calibration/ebeMassRes/ |  
 |  ggH production channel MVA training | ./calibration/MVA_training/ggH/ |  
 |  VBF production channel MVA training | ./calibration/MVA\_training/VBF/ |  
+|  General corrections (stage1) | ./corrections/ |  
+
 
 
 ## Table of correction weight file locations:
