@@ -27,7 +27,7 @@ This would start the GRID certificate password prompt, and then once given the p
 
 ## Table of correction weight file locations:
 
-| Correction | Year (Data/MC) | Local Location | Central Link |
+| Correction | Year (Data/MC) | Local Location | Central Source |
 | ------------- | ------------- | ------------- |------------- |
 |   Rochester Correction  | 2024 |  | |
 |   | 2023 |   | |
