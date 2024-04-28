@@ -161,7 +161,7 @@ def get_Xcache_filelist(fnames: list):
     new_fnames = []
     for fname in fnames:
         root_file = re.findall(r"/store.*", fname)[0]
-        x_cache_fname = "root://cms-xcache.rcac.purdue.edu:1094/" + root_file
+        x_cache_fname = "root://cms-xcache.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
     return new_fnames
     
@@ -174,14 +174,6 @@ if __name__ == "__main__":
     default="2018",
     action="store",
     help="year value. The options are: 2016preVFP, 2016postVFP, 2017, 2018",
-    )
-    parser.add_argument(
-    "-c",
-    "--cluster",
-    dest="cluster",
-    default=None,
-    action="store",
-    help="if not None, use distributed cluster",
     )
     parser.add_argument(
     "-ch",
@@ -237,6 +229,13 @@ if __name__ == "__main__":
     action="store",
     help="list of sig samples represented by shorthands: ggH, VBF",
     )
+    parser.add_argument(
+    "--use_gateway",
+    dest="use_gateway",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, uses dask gateway client instead of local",
+    )
     args = parser.parse_args()
     time_step = time.time()
     # print(f"args.bkg_samples: {args.bkg_samples}")
@@ -246,9 +245,12 @@ if __name__ == "__main__":
         total_events = 0
         # get dask client
         # turning off seperate client test start --------------------------------------------------------
-        if args.cluster is not None:
+        if args.use_gateway:
             from dask_gateway import Gateway
-            gateway = Gateway()
+            gateway = Gateway(
+                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+            )
             cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
             print("Gateway Client created")
@@ -364,10 +366,6 @@ if __name__ == "__main__":
         print(f"new dataset: {dataset.keys()}")
 
         for sample_name in tqdm.tqdm(dataset.keys()):
-            # print(f"prestage sample_name: {sample_name}")
-            # # test
-            # if "dy_M-50" not in sample_name:
-            #     continue
             das_query = dataset[sample_name]
             print(f"das_query: {das_query}")
             
@@ -386,10 +384,11 @@ if __name__ == "__main__":
                 # partial_allowed=True
             )
             fnames = [file[0] for file in outfiles if file != []]
-            # fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
+            fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
             
             # random.shuffle(fnames)
-            # fnames = get_Xcache_filelist(fnames)
+            fnames = get_Xcache_filelist(fnames)
+            print(f"fnames: {fnames}")
             print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
 
@@ -423,6 +422,7 @@ if __name__ == "__main__":
                 total_events += preprocess_metadata["data_entries"] 
             else: # if MC
                 file_input = {fname : {"object_path": "Runs"} for fname in fnames}
+                print(f"file_input: {file_input}")
                 # print(f"file_input: {file_input}")
                 # print(len(file_input.keys()))
                 runs = NanoEventsFactory.from_root(
@@ -451,14 +451,14 @@ if __name__ == "__main__":
             }
             
             step_size = int(args.chunksize)
+            print(f"final_output: {final_output}")
             files_available, files_total = preprocess(
                 final_output,
-                # maybe_step_size=step_size,
                 step_size=step_size,
                 align_clusters=False,
                 skip_bad_files=True,
             )
-            
+            print(f"files_available: {files_available}")
             pre_stage_data = files_available
             # add in metadata
             pre_stage_data[sample_name]['metadata'] = preprocess_metadata
@@ -472,6 +472,7 @@ if __name__ == "__main__":
                 pre_stage_data[sample_name]['metadata']["is_mc"] = True
             pre_stage_data[sample_name]['metadata']["dataset"] = sample_name
             big_sample_info.update(pre_stage_data)
+            print(f"big_sample_info: {big_sample_info}")
         
         #save the sample info
         directory = "./config"
