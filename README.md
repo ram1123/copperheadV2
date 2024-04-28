@@ -13,6 +13,16 @@ source setup_proxy.sh
 
 This would start the GRID certificate password prompt, and then once given the password, the conda env would be activated. Once voms proxy and conda env is activated, we can start on the tutorial.ipynb
 
+
+## Planned High-level arrangement of code in CopperheadV2
+
+| Task | Directory Location of Relevant Code |
+| ------------- | ------------- |
+|  Event by event dimuon mass calibration   | ./calibration/ebeMassRes/ |  
+|  ggH production channel MVA training | ./calibration/MVA_training/ggH/ |  
+|  VBF production channel MVA training | ./calibration/MVA\_training/VBF/ |  
+
+
 ## Table of correction weight file locations:
 
 | Correction | Year (Data/MC) | Local Location | Central Link |
