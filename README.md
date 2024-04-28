@@ -31,14 +31,29 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2023 |   | |
 |   | 2022 |   | |
 |   | 2018, 2017, 2016 | data/NNLOPS_reweight.root | |
-| Lumi Mask  | 2018 | data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt  | |
+|   Lumi Mask  | 2024 |  | |
+|   | 2023 |   | |
+|   | 2022 |   | |
+|   | 2018 | data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt  | |
 |   | 2017 | data/lumimasks/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt  | |
 |   | 2016 | data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt  | |
-| Event by event Dimuon mass resolution | 2018 | /data/res_calib/res_calib_{Data or MC}_2018.root  | |
-|   | 2017 | /data/res_calib/res_calib_{Data or MC}_2017.root    | |
-|   | 2016 | /data/res_calib/res_calib_{Data or MC}_2016.root   | |
-| Jet PU ID SF | 2018, 2017, 2016 | data/JetPUID_106XTraining_ULRun2_EffSFandUncties_v1.root | |
-| PU reweight | 2018 Data | data/pileup/puData2018_UL_withVar.root | |
+|   Event by event Dimuon mass resolution  | 2024 |  | Locally Calculated |
+|   | 2023 |   | Locally Calculated  |
+|   | 2022 |   | Locally Calculated  |
+|   | 2018 | /data/res_calib/res_calib_{Data or MC}_2018.root  | Locally Calculated  |
+|   | 2017 | /data/res_calib/res_calib_{Data or MC}_2017.root   | Locally Calculated  |
+|   | 2016 | /data/res_calib/res_calib_{Data or MC}_2016.root   | Locally Calculated  |
+|   Jet PU ID SF  | 2024 |  | |
+|   | 2023 |   | |
+|   | 2022 |   | |
+|   | 2018, 2017, 2016 | data/JetPUID_106XTraining_ULRun2_EffSFandUncties_v1.root | |
+|   PU reweight   | 2024 Data |  | |
+|   | 2024 MC |  | |
+|   | 2023 Data |   | |
+|   | 2023 MC |   | |
+|   | 2022 Data |   | |
+|   | 2022 MC |   | |
+|   | 2018 Data | data/pileup/puData2018_UL_withVar.root | |
 |   | 2018 MC | data/pileup/mcPileup2018.root  | |
 |   | 2017 Data | data/pileup/puData2017_UL_withVar.root| |
 |   | 2017 MC | data/pileup/mcPileup2017.root  | |
