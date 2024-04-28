@@ -205,7 +205,6 @@ def jet_puid(jets, config):
     return pass_jet_puid
 
 
-# def fill_softjets(events, jets, muons, cutoff, test_mode=False):
 def fill_softjets(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
     if test_mode:
         print(f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}")

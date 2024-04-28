@@ -1135,7 +1135,6 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
         jets.hadronFlavour,
         abs(jets.eta),
         jets.pt,
-        # jets.btagDeepB,
         jets.btagDeepFlavB,
     )
     # print(f"correctionlib_out: {correctionlib_out.compute()}")

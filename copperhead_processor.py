@@ -533,46 +533,34 @@ class EventProcessor(processor.ProcessorABC):
         # skip validation for genjets for now -----------------------------------------------
         # #fill genjets
         
-        # if events.metadata["is_mc"]:
-        #     #fill gen jets for VBF filter on postprocess
-        #     gjets = events.GenJet
-        #     gleptons = events.GenPart[
-        #         (abs(events.GenPart.pdgId) == 13)
-        #         | (abs(events.GenPart.pdgId) == 11)
-        #         | (abs(events.GenPart.pdgId) == 15)
-        #     ]
-        #     gl_pair = ak.cartesian({"jet": gjets, "lepton": gleptons}, axis=1, nested=True)
-        #     dr_gl = gl_pair["jet"].delta_r(gl_pair["lepton"])
-        #     isolated = ak.all((dr_gl > 0.3), axis=-1) # this also returns true if there's no leptons near the gjet
+        if events.metadata["is_mc"]:
+            #fill gen jets for VBF filter on postprocess
+            gjets = events.GenJet
+            gleptons = events.GenPart[
+                (abs(events.GenPart.pdgId) == 13)
+                | (abs(events.GenPart.pdgId) == 11)
+                | (abs(events.GenPart.pdgId) == 15)
+            ]
+            gl_pair = ak.cartesian({"jet": gjets, "lepton": gleptons}, axis=1, nested=True)
+            dr_gl = gl_pair["jet"].delta_r(gl_pair["lepton"])
+            isolated = ak.all((dr_gl > 0.3), axis=-1) # this also returns true if there's no leptons near the gjet
             
-        #     # I suppose we assume there's at least two jets
-        #     padded_iso_gjet = ak.pad_none(gjets[isolated],2) # pad with none val to ensure that events have at least two columns each event
-        #     gjet1 = padded_iso_gjet[:,0]
+            # I suppose we assume there's at least two jets
+            padded_iso_gjet = ak.pad_none(
+                ak.to_packed(gjets[isolated]),
+                target=2,
+                clip=True
+            ) # pad with none val to ensure that events have at least two columns each event
+            sorted_args = ak.argsort(padded_iso_gjet.pt, ascending=False) # leading pt is ordered by pt
+            gjets_sorted = (padded_iso_gjet[sorted_args])
+            gjet1 = gjets_sorted[:,0]
+            gjet2 = gjets_sorted[:,1] 
+            gjj = gjet1 + gjet2
             
-        #     gjet2 = padded_iso_gjet[:,1] 
-        #     gjj = gjet1 + gjet2
-            
-        #     gjj_dEta = abs(gjet1.eta - gjet2.eta)
-        #     gjj_dPhi = abs(gjet1.delta_phi(gjet2))
-        #     gjj_dR = gjet1.delta_r(gjet2)
-        #     if self.test:
-        #         print(f"fill_gen_jets isolated: \n {isolated}")
-        #         print(f"fill_gen_jets isolated long: \n {ak.to_numpy(ak.flatten(isolated))}")
-        #         print(f"fill_gen_jets gjet1: \n {gjet1}")
-        #         print(f"fill_gen_jets gjj: \n {gjj}")
-        #         print(f"fill_gen_jets gjj_dEta: \n {gjj_dEta}")
-        #         print(f"fill_gen_jets gjj_dPhi: \n {gjj_dPhi}")
-        #         print(f"fill_gen_jets gjj_dR: \n {gjj_dR}")
-        # # else: # if data
-        # #     # TODO fill this with None values later, this filling is for testing
-        # #     # gjet1 = ak.zeros_like(events.Muon.pt[:,0])
-        # #     # gjet2 = ak.zeros_like(events.Muon.pt[:,0])
-        # #     padded_iso_gjet = ak.pad_none(ak.zeros_like(events.Muon.pt), 2)
-        # #     gjj = ak.zeros_like(events.Muon.pt[:,0])
-        # #     gjj_dEta = ak.zeros_like(events.Muon.pt[:,0])
-        # #     gjj_dPhi = ak.zeros_like(events.Muon.pt[:,0])
-        # #     gjj_dR = ak.zeros_like(events.Muon.pt[:,0])
-        
+            gjj_dEta = abs(gjet1.eta - gjet2.eta)
+            gjj_dPhi = abs(gjet1.delta_phi(gjet2))
+            gjj_dR = gjet1.delta_r(gjet2)
+
         # if self.test:
         #     print(f"copperhead2 EventProcessor events.Jet.rho: \n {events.Jet.rho}")
         #     print(f"copperhead2 EventProcessor events.Jet.rho long: \n {ak.to_numpy(ak.flatten(events.Jet.rho))}")   
@@ -637,17 +625,7 @@ class EventProcessor(processor.ProcessorABC):
         
 
 
-        # # if self.test:
-        # #     print(f'copperheadV2 EventProcessor after apply_jec jets.pt short: \n {jets.pt}')
-        # #     print(f'copperheadV2 EventProcessor after apply_jec jets.pt long: \n {ak.to_numpy(ak.flatten(jets.pt.compute()))}')
-        # #     print(f'copperheadV2 EventProcessor jets.pt_jec b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.pt_jec.compute()))}')
-        # #     print(f'copperheadV2 EventProcessor after apply_jec jets.pt_orig long: \n {ak.to_numpy(ak.flatten(jets.pt_orig.compute()))}')
-        # #     print(f'copperheadV2 EventProcessor after apply_jec jets.eta long: \n {ak.to_numpy(ak.flatten(jets.eta.compute()))}')
-        # #     print(f'copperheadV2 EventProcessor after apply_jec jets.phi long: \n {ak.to_numpy(ak.flatten(jets.phi.compute()))}')
-        # #     print(f'copperheadV2 EventProcessor jets.mass b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass.compute()))}')
-        # #     print(f'copperheadV2 EventProcessor jets.mass_jec b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass_jec.compute()))}')
-        # #     print(f'copperheadV2 EventProcessor jets.mass_orig b4 apply_jec long: \n {ak.to_numpy(ak.flatten(jets.mass_orig.compute()))}')
-        # # print(f'copperheadV2 EventProcessor jets.fields: \n {jets.fields}')
+
         
 
         # # ------------------------------------------------------------#
@@ -804,6 +782,7 @@ class EventProcessor(processor.ProcessorABC):
         # Fill Muon variables and gjet variables
         # ------------------------------------------------------------#
         out_dict = {
+            "event" : events.event,
             "mu1_pt" : mu1.pt,
             "mu2_pt" : mu2.pt,
             "mu1_eta" : mu1.eta,
@@ -836,17 +815,21 @@ class EventProcessor(processor.ProcessorABC):
             mc_dict = {
                 "HTXS_Higgs_pt" : events.HTXS.Higgs_pt, # for nnlops weight for ggH signal sample
                 "HTXS_njets30" : events.HTXS.njets30, # for nnlops weight for ggH signal sample
-                # "gjet_pt" : padded_iso_gjet.pt,
-                # "gjet_eta" : padded_iso_gjet.eta,
-                # "gjet_phi" : padded_iso_gjet.phi,
-        #         "gjet_mass" : padded_iso_gjet.mass,
-        #         "gjj_mass": gjj.mass,
-        #         "gjj_pt" : gjj.pt,
-        #         "gjj_eta" : gjj.eta,
-        #         "gjj_phi" : gjj.phi,
-        #         "gjj_dEta" : gjj_dEta,
-        #         "gjj_dPhi" : gjj_dPhi,
-        #         "gjj_dR" : gjj_dR,
+                "gjet1_pt" : gjet1.pt,
+                "gjet1_eta" : gjet1.eta,
+                "gjet1_phi" : gjet1.phi,
+                "gjet1_mass" : gjet1.mass,
+                "gjet2_pt" : gjet2.pt,
+                "gjet2_eta" : gjet2.eta,
+                "gjet2_phi" : gjet2.phi,
+                "gjet2_mass" : gjet2.mass,
+                "gjj_pt" : gjj.pt,
+                "gjj_eta" : gjj.eta,
+                "gjj_phi" : gjj.phi,
+                "gjj_mass": gjj.mass,
+                "gjj_dEta" : gjj_dEta,
+                "gjj_dPhi" : gjj_dPhi,
+                "gjj_dR" : gjj_dR,
             }
             out_dict.update(mc_dict)
         
@@ -867,21 +850,9 @@ class EventProcessor(processor.ProcessorABC):
                 do_jecunc = do_jecunc,
                 do_jerunc = do_jerunc,
             )
-            
-            # # testing --------------------------------------
-            # jets = self.jet_loop(
-            #     events, 
-            #     jets,
-            #     dimuon,
-            #     variation,
-            #     weights,
-            #     do_jec = do_jec,
-            #     do_jecunc = do_jecunc,
-            #     do_jerunc = do_jerunc,
-            # )
-            # # testing end --------------------------------------
-        
+                    
         out_dict.update(jet_loop_dict) 
+        # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
         
         # # fill in the regions
         mass = dimuon.mass
@@ -945,65 +916,8 @@ class EventProcessor(processor.ProcessorABC):
         # weights = ak.to_packed(weights)
         out_dict.update({"weights" : weights})
 
-        
-        # print(f"weights: {ak.to_numpy(weights.compute())}")
-        # weights = weights.weight("pdf_2rmsUp")
-        # weights = weights.weight("LHEFacDown")
-        
-        # print(f"weights: {ak.num(weights, axis=0).compute()}")
-        
-        # print(f"nmuons: {ak.num(nmuons, axis=0).compute()}")
-        # print(f"njets: {ak.num(njets, axis=0).compute()}")
-        # print(f"jets: {ak.num(jets, axis=0).compute()}")
-        # print(f"muons: {ak.num(muons, axis=0).compute()}")
-        # muons_padded = ak.pad_none(muons, 2)
-        # muon_flip = muons.pt[:,0] < muons.pt[:,1]  
-        # # take the subleading muon values if that now has higher pt after corrections
-        # mu1 = ak.where(muon_flip, muons_padded[:,1], muons_padded[:,0])
-        # mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
-        # out_dict = {
-        #     # "mu_pt" : ak.pad_none(muons.pt, 2),
-        #     # "mu_eta" : ak.pad_none(muons.eta, 2),
-        #     # "mu_phi" : ak.pad_none(muons.phi, 2),
-        #     # "mu_charge" : ak.pad_none(muons.charge, 2),
-        #     "mu1_pt" : mu1.pt,
-        #     "mu2_pt" : mu2.pt,
-        #     "mu1_eta" : mu1.eta,
-        #     "mu2_eta" : mu2.eta,
-        #     "mu1_phi" : mu1.phi,
-        #     "mu2_phi" : mu2.phi,
-        #     "mu1_charge" : mu1.charge,
-        #     "mu2_charge" : mu2.charge,
-        #     "nmuons" : nmuons,
-        #     # "jet_pt" : ak.pad_none(jets.pt, 2),
-        #     # "jet_mass" : ak.pad_none(jets.mass, 2),
-        #     # "jet_eta" : ak.pad_none(jets.eta, 2),
-        #     # "jet_phi" : ak.pad_none(jets.phi, 2),
-        #     # "jet_pt_raw" : ak.pad_none(jets.pt_raw, 2),
-        #     # "jet_mass_raw" : ak.pad_none(jets.mass_raw, 2),
-        #     # "jet_rho" : ak.pad_none(jets.rho, 2),
-        #     # "jet_area" : ak.pad_none(jets.area, 2),
-        #     # "jet_pt_gen" : ak.pad_none(jets.pt_gen, 2),
-        #     # "jet_pt_jec" : ak.pad_none(jets.pt_jec, 2),
-        #     # "jet_mass_jec" : ak.pad_none(jets.mass_jec, 2),
-        #     # "njets" : njets,
-        #     "weights" : weights,
-        #     # "mu1_gf_filter" : events.Muon.gf_filter[:,0],
-        #     # "mu1_gf_pt_corr" :events.Muon.gf_pt_corr[:,0],
-        #     "dimuon_mass" : dimuon.mass,
-        #     "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
-        #     "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
-        #     "dimuon_phi_cs" : dimuon_phi_cs,
-        #     "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,
-        #     "HTXS_njets30" : events.HTXS.njets30,
-        # }
 
         
-        
-        # if self.config["do_fsr"]:
-        #     fsr_dict = {"fsr_mask" : (ak.sum(applied_fsr, axis=1) > 0)}
-        #     out_dict.update(fsr_dict)
-        #----------------------------
 
         # to packed test start -------------------------
         # for key, value in out_dict.items():
@@ -1406,15 +1320,14 @@ class EventProcessor(processor.ProcessorABC):
         nmuons = ak.num(events.Muon, axis=1)
         if variation == "nominal":
             for cutout in cutouts:
-                # sj_out = fill_softjets(events, jets, muons, cutout, test_mode=self.test)
                 sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout, test_mode=self.test)
                 sj_out = {
                     key+"_"+variation : val \
                     for key, val in sj_out.items()
                 }
                 sj_dict.update(sj_out)
-            if self.test:
-                print(f"sj_dict.keys(): {sj_dict.keys()}")
+
+        print(f"sj_dict.keys(): {sj_dict.keys()}")
         jet_loop_out_dict.update(sj_dict)
         
 

@@ -67,10 +67,6 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         # test_size = 50
         test_size = 1000
         entry_start= 1000
-        # metadata = {"dataset": "dy_M-50", "is_mc": True, "sumGenWgts" : 60713723011.942}
-        # metadata = {"dataset": "vbf_powheg", "is_mc": True, "sumGenWgts" : 7720081.838819998}
-        # metadata = {"dataset": "ggh_powheg", "is_mc": True}
-        # metadata = {"dataset": "data_A", "is_mc": False}
         root_file = list(dataset_dict["files"].keys())[0]
         print(f"test root_file: {root_file}")
         events = NanoEventsFactory.from_root(
@@ -173,32 +169,44 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             # "pass_leading_pt" : (out_collections["pass_leading_pt"]),
             "ll_zstar" : (out_collections["ll_zstar"]),
             "zeppenfeld" : (out_collections["zeppenfeld"]),
-
-        
+            "event" : (out_collections["event"]),
          }
+    
+    # add in nsoftjets and htsoft variables
+    softj_vars = {}
+    for key, value in out_collections.items():
+        if "nsoftjets" in key:
+            softj_vars[key] = value
+        elif "htsoft" in key:
+            softj_vars[key] = value
+    placeholder_dict.update(softj_vars)
+    # print(f"softj_vars.keys(): {softj_vars.keys()}")
+    
     # gen jet variables start ------------------------------
-    # is_mc = dataset_dict["metadata"]["is_mc"]
-    # if is_mc:
-    #     additional_dict = {
-    #         'jet1_pt_gen': (out_collections["jet1_pt_gen"]),
-    #         'jet2_pt_gen': (out_collections["jet2_pt_gen"]),
-    # #          # gen jet variables -------------------------------------
-    # #         "gjj_mass":  (out_collections["gjj_mass"]),
-    # #         'gjet1_pt': (out_collections["gjet_pt"][:,0]),
-    # #         'gjet2_pt': (out_collections["gjet_pt"][:,1]),
-    # #         'gjet1_eta': (out_collections["gjet_eta"][:,0]),
-    # #         'gjet2_eta': (out_collections["gjet_eta"][:,1]),
-    # #         'gjet1_phi': (out_collections["gjet_phi"][:,0]),
-    # #         'gjet2_phi': (out_collections["gjet_phi"][:,1]),
-    # #         'gjet1_mass': (out_collections["gjet_mass"][:,0]),
-    # #         'gjet2_mass': (out_collections["gjet_mass"][:,1]),
-    # #         "gjj_dEta": (out_collections["gjj_dEta"]),
-    # #         "gjj_dPhi": (out_collections["gjj_dPhi"]),
-    # #         "gjj_dR": (out_collections["gjj_dR"]),
-    #     }
-    #     placeholder_dict.update(additional_dict)
+    is_mc = dataset_dict["metadata"]["is_mc"]
+    if is_mc:
+        mc_dict = {
+            "gjet1_pt":  (out_collections["gjet1_pt"]),
+            "gjet1_eta":  (out_collections["gjet1_eta"]),
+            "gjet1_phi":  (out_collections["gjet1_phi"]),
+            "gjet1_mass":  (out_collections["gjet1_mass"]),
+            "gjet2_pt":  (out_collections["gjet2_pt"]),
+            "gjet2_eta":  (out_collections["gjet2_eta"]),
+            "gjet2_phi":  (out_collections["gjet2_phi"]),
+            "gjet2_mass":  (out_collections["gjet2_mass"]),
+            "gjj_pt":  (out_collections["gjj_pt"]),
+            "gjj_eta":  (out_collections["gjj_eta"]),
+            "gjj_phi":  (out_collections["gjj_phi"]),
+            "gjj_mass":  (out_collections["gjj_mass"]),
+            "gjj_dEta":  (out_collections["gjj_dEta"]),
+            "gjj_dPhi":  (out_collections["gjj_dPhi"]),
+            "gjj_dR":  (out_collections["gjj_dR"]),
+            
+        }
+        placeholder_dict.update(mc_dict)
     # gen jet variables end ------------------------------
-        
+
+    # print(f"placeholder_dict.keys(): {placeholder_dict.keys()}")
     # define save path
     fraction = round(dataset_dict["metadata"]["fraction"], 3)
     fraction_str = str(fraction).replace('.', '_')

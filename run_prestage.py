@@ -262,13 +262,7 @@ if __name__ == "__main__":
             print("Local scale Client created")
         # turning off seperate client test end --------------------------------------------------------
         big_sample_info = {}
-        # dataset = datasets[args.year]
-        # year = re.findall(r"Year_\d...", args.input_string)
-        # year = [str.replace("Year_", "") for str in year]
-        # year = year[0]
         year = args.year
-        # print(f"year: {year}")
-        
         dataset = datasets[year]
         
         # key_list = list(dataset.keys())
@@ -387,7 +381,7 @@ if __name__ == "__main__":
             fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
             
             # random.shuffle(fnames)
-            fnames = get_Xcache_filelist(fnames)
+            # fnames = get_Xcache_filelist(fnames)
             print(f"fnames: {fnames}")
             print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
@@ -422,7 +416,7 @@ if __name__ == "__main__":
                 total_events += preprocess_metadata["data_entries"] 
             else: # if MC
                 file_input = {fname : {"object_path": "Runs"} for fname in fnames}
-                print(f"file_input: {file_input}")
+                # print(f"file_input: {file_input}")
                 # print(f"file_input: {file_input}")
                 # print(len(file_input.keys()))
                 runs = NanoEventsFactory.from_root(
