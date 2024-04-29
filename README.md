@@ -18,10 +18,12 @@ This would start the GRID certificate password prompt, and then once given the p
 
 | Task | Directory Location of Relevant Code |
 | ------------- | ------------- |
-|  Event by event dimuon mass calibration   | ./calibration/ebeMassRes/ |  
-|  ggH production channel MVA training | ./calibration/MVA_training/ggH/ |  
-|  VBF production channel MVA training | ./calibration/MVA\_training/VBF/ |  
-|  General corrections (stage1) | ./corrections/ |  
+|  Event by event dimuon mass calibration   | ./lib/ebeMassResCalibration/ |  
+|  Zpt weight calculation   | ./lib/ZptWgtCalculation/ |  
+|  ggH production channel MVA training | ./lib/MVA_training/ggH/ |  
+|  VBF production channel MVA training | ./lib/MVA_training/VBF/ |  
+|  General corrections (stage1) | ./lib/corrections/ |  
+|  Roofit fitting (stage3) | ./lib/fit_models/ |  
 
 
 
@@ -39,7 +41,7 @@ This would start the GRID certificate password prompt, and then once given the p
 | Zpt SF | 2024 |  | |
 |   | 2023 |   | |
 |   | 2022 |   | |
-|   | 2018, 2017, 2016 | data/zpt_weights.histo.json | |
+|   | 2018, 2017, 2016 | data/zpt_weights.histo.json | Locally Calculated |
 | NNLOPS (ggH) | 2024 |  | |
 |   | 2023 |   | |
 |   | 2022 |   | |
@@ -73,22 +75,22 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2016 Data | data/pileup/puData2016_UL_withVar.root | |
 |   | 2016 MC | data/pileup/pileup_profile_Summer16.root  | |
 | Muon ID SF  | 2024 |  | |
-|   | 2023 |   | |
-|   | 2022 |   | |
+|   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
+|   | 2022 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
 |   | 2018  | data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root | |
 |   | 2017 | data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root  | |
 |   | 2016postVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_ID.root  | |
 |   | 2016preVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_HIPM_ID.root  | |
 | Muon ISO SF  | 2024 |  | |
-|   | 2023 |   | |
-|   | 2022 |   | |
+|   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
+|   | 2022 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
 |   | 2018  | data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root | |
 |   | 2017 | data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root  | |
 |   | 2016postVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_ISO.root  | |
 |   | 2016preVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_HIPM_ISO.root  | |
 | Muon Trig SF  | 2024 |  | |
-|   | 2023 |   | |
-|   | 2022 |   | |
+|   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
+|   | 2022 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
 |   | 2018  | data/muon_sf/mu2018/EfficienciesStudies_2018_trigger_EfficienciesAndSF_2018Data_BeforeMuonHLTUpdate.root | |
 |   | 2017 | data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root | |
 |   | 2016postVFP | data/muon_sf/mu2016/EfficienciesStudies_2016_trigger_EfficienciesAndSF_RunGtoH.root  | |
