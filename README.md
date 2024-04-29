@@ -126,3 +126,92 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2016 Data | data/jec/Summer16_07Aug2017{BCD, EF and GH}_V11_DATA_Uncertainty_AK4PFchs.junc.txt | |
 |   | 2016 MC | data/jec/Summer16_07Aug2017_V11_MC_{L1FastJet, L3Absolute, L2L3Residual and Uncertainty}_AK4PFchs.jec.txt | |
 
+
+## Table of samples for Run2 and Run3:
+
+| Sample | Year | Path |
+| ------------- | ------------- | ------------- |
+| Data  | 2024 |  |
+| Data  | 2023 |  |
+| Data  | 2022postEE |  |
+| Data  | 2022preEE |  |
+| Data  | 2018 |  |
+| Data  | 2017 |  |
+| Data  | 2016postVFP | /SingleMuon/Run2016{F,G,H}-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD |
+| Data  | 2016preVFP | /SingleMuon/Run2016{B-ver2_,C-,D-,E-,F-}HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD  |
+| ggH signal  | 2024 |  |
+| ggH signal  | 2023 |  |
+| ggH signal  | 2022postEE |  |
+| ggH signal  | 2022preEE |  |
+| ggH signal  | 2018 |  |
+| ggH signal  | 2017 |  |
+| ggH signal  | 2016postVFP | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
+| ggH signal  | 2016preVFP | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM|
+| VBF signal  | 2024 |  |
+| VBF signal  | 2023 |  |
+| VBF signal  | 2022postEE |  |
+| VBF signal  | 2022preEE |  |
+| VBF signal  | 2018 |  |
+| VBF signal  | 2017 |  |
+| VBF signal  | 2016postVFP | /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
+| VBF signal  | 2016preVFP | /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+| DYm100To200  | 2024 |  |
+| DYm100To200  | 2023 |  |
+| DYm100To200  | 2022postEE |  |
+| DYm100To200  | 2022preEE |  |
+| DYm100To200  | 2018 |  |
+| DYm100To200  | 2017 |  |
+| DYm100To200  | 2016postVFP | /DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v2/NANOAODSIM |
+| DYm100To200  | 2016preVFP | /DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+| DYm50  | 2024 |  |
+| DYm50  | 2023 |  |
+| DYm50  | 2022postEE |  |
+| DYm50  | 2022preEE |  |
+| DYm50  | 2018 |  |
+| DYm50  | 2017 |  |
+| DYm50  | 2016postVFP | /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
+| DYm50  | 2016preVFP | /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+| TT di-leptonic  | 2024 |  |
+| TT di-leptonic  | 2023 |  |
+| TT di-leptonic  | 2022postEE |  |
+| TT di-leptonic  | 2022preEE |  |
+| TT di-leptonic  | 2018 |  |
+| TT di-leptonic  | 2017 |  |
+| TT di-leptonic  | 2016postVFP | /TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
+| TT di-leptonic  | 2016preVFP | /TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+| TT semi leptonic  | 2024 |  |
+| TT semi leptonic  | 2023 |  |
+| TT semi leptonic  | 2022postEE |  |
+| TT semi leptonic  | 2022preEE |  |
+| TT semi leptonic  | 2018 |  |
+| TT semi leptonic  | 2017 |  |
+| TT semi leptonic  | 2016postVFP | /TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
+| TT semi leptonic  | 2016preVFP | /TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+| Single Top  | 2024 |  |
+| Single Top  | 2023 |  |
+| Single Top  | 2022postEE |  |
+| Single Top  | 2022preEE |  |
+| Single Top  | 2018 |  |
+| Single Top  | 2017 |  |
+| Single Top  | 2016postVFP | /ST_tW_{top,antitop}_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
+| Single Top  | 2016preVFP | /ST_tW_{top,antitop}_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+| Diboson  | 2024 |  |
+| Diboson  | 2023 |  |
+| Diboson  | 2022postEE |  |
+| Diboson  | 2022preEE |  |
+| Diboson  | 2018 |  |
+| Diboson  | 2017 |  |
+| Diboson  | 2016postVFP |  |
+| Diboson  | 2016preVFP |  /WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+|   | 2016preVFP |  /WZTo3LNu_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+|   | 2016preVFP |  /WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v2/NANOAODSIM |
+|   | 2016preVFP |  /WZTo1L1Nu2Q_4f_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+|   | 2016preVFP |  /ZZ_TuneCP5_13TeV-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
+| Electro Weak  | 2024 |  |
+| Electro Weak  | 2023 |  |
+| Electro Weak  | 2022postEE |  |
+| Electro Weak  | 2022preEE |  |
+| Electro Weak  | 2018 |  |
+| Electro Weak  | 2017 |  |
+| Electro Weak  | 2016postVFP |  |
+| Electro Weak  | 2016preVFP | /EWK_LLJJ_MLL-50_MJJ-120_TuneCP5_13TeV-madgraph-pythia8_dipole/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
