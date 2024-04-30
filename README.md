@@ -133,8 +133,9 @@ This would start the GRID certificate password prompt, and then once given the p
 | ------------- | ------------- | ------------- |
 | Data  | 2024 |  |
 | Data  | 2023 |  |
-| Data  | 2022postEE |  |
-| Data  | 2022preEE |  |
+| Data  | 2022postEE | /Muon/Run2022{E,F}-16Dec2023-v1/NANOAOD |
+|   |  | /Muon/Run2022G-19Dec2023-v2/NANOAOD |
+| Data  | 2022preEE | /Muon/Run2022{C,D}-16Dec2023-v1/NANOAOD |
 | Data  | 2018 | /SingleMuon/Run2018{A,B,C}-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD |
 |  |  | /SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD |
 | Data  | 2017 | /SingleMuon/Run2017{B,C,D,E,F}-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD  |
@@ -144,7 +145,7 @@ This would start the GRID certificate password prompt, and then once given the p
 | ggH signal  | 2023 |  |
 | ggH signal  | 2022postEE |  |
 | ggH signal  | 2022preEE |  |
-| ggH signal  | 2018 |  |
+| ggH signal  | 2018 | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
 | ggH signal  | 2017 | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v1/NANOAODSIM |
 | ggH signal  | 2016postVFP | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
 | ggH signal  | 2016preVFP | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM|
@@ -152,7 +153,7 @@ This would start the GRID certificate password prompt, and then once given the p
 | VBF signal  | 2023 |  |
 | VBF signal  | 2022postEE |  |
 | VBF signal  | 2022preEE |  |
-| VBF signal  | 2018 |  |
+| VBF signal  | 2018 | /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
 | VBF signal  | 2017 | /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v1/NANOAODSIM |
 | VBF signal  | 2016postVFP | /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
 | VBF signal  | 2016preVFP | /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
@@ -160,22 +161,22 @@ This would start the GRID certificate password prompt, and then once given the p
 | DYm100To200  | 2023 |  |
 | DYm100To200  | 2022postEE |  |
 | DYm100To200  | 2022preEE |  |
-| DYm100To200  | 2018 |  |
+| DYm100To200  | 2018 | /DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
 | DYm100To200  | 2017 | /DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v1/NANOAODSIM |
 | DYm100To200  | 2016postVFP | /DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v2/NANOAODSIM |
 | DYm100To200  | 2016preVFP | /DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
 | DYm50  | 2024 |  |
 | DYm50  | 2023 |  |
-| DYm50  | 2022postEE |  |
-| DYm50  | 2022preEE |  |
-| DYm50  | 2018 |  |
+| DYm50  | 2022postEE | /DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v5-v2/NANOAODSIM |
+| DYm50  | 2022preEE | /DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM |
+| DYm50  | 2018 | /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X*/NANOAODSIM |
 | DYm50  | 2017 | /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v2/NANOAODSIM |
 | DYm50  | 2016postVFP | /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
 | DYm50  | 2016preVFP | /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
 | Top anti-Top pair | 2024 |  |
 | Top anti-Top pair | 2023 |  |
-| Top anti-Top pair | 2022postEE |  |
-| Top anti-Top pair | 2022preEE |  |
+| Top anti-Top pair | 2022postEE | /TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM |
+| Top anti-Top pair | 2022preEE | /TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM |
 | Top anti-Top pair | 2018 | /TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
 | |  | /TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
 | Top anti-Top pair | 2017 | /TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v1/NANOAODSIM |
@@ -188,19 +189,27 @@ This would start the GRID certificate password prompt, and then once given the p
 | Single Top  | 2023 |  |
 | Single Top  | 2022postEE |  |
 | Single Top  | 2022preEE |  |
-| Single Top  | 2018 |  |
+| Single Top  | 2018 | /ST_tW_{top,antitop}_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
 | Single Top  | 2017 | /ST_tW_{top,antitop}_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v1/NANOAODSIM |
 | Single Top  | 2016postVFP | /ST_tW_{top,antitop}_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
 | Single Top  | 2016preVFP | /ST_tW_{top,antitop}_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM |
 | Diboson  | 2024 |  |
 | Diboson  | 2023 |  |
-| Diboson  | 2022postEE |  |
-| Diboson  | 2022preEE |  |
-| Diboson  | 2018 |  |
-|   |  |  |
-|   |  |  |
-|   |  |  |
-|   |  |  |
+| Diboson  | 2022postEE | /WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM |
+|   |  | /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM |
+|   |  | /WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM |
+|   |  | /WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM |
+|   |  | /ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM |
+| Diboson  | 2022preEE | /WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM |
+|   |  | /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM |
+|   |  | /WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM |
+|   |  | /WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM |
+|   |  | /ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM |
+| Diboson  | 2018 | "/WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM |
+|   |  | /WZTo3LNu_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM |
+|   |  | /WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
+|   |  | /WZTo1L1Nu2Q_4f_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
+|   |  |  /ZZ_TuneCP5_13TeV-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
 | Diboson  | 2017 | /WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v2/NANOAODSIM  |
 |   |  | /WZTo3LNu_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v2/NANOAODSIM |
 |   |  | /WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v2/NANOAODSIM |
