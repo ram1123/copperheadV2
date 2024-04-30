@@ -34,6 +34,8 @@ test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
 import gc
 import ctypes
+from omegaconf import OmegaConf
+
 def trim_memory() -> int:
      libc = ctypes.CDLL("libc.so.6")
      return libc.malloc_trim(0)
@@ -272,15 +274,16 @@ if __name__ == "__main__":
     """
     
     config_path = "./config/parameters.json"
-    with open(config_path) as file:
-        config = json.loads(file.read())
+    # with open(config_path) as file:
+    #     config = json.loads(file.read())
+    config_path = "./config/parameters.yaml"
+    config = OmegaConf.load(config_path)
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
     if not test_mode: # full scale implementation
         # # original ---------------------------------------------------------
         if args.use_gateway:
             from dask_gateway import Gateway
-            # gateway = Gateway()
             gateway = Gateway(
                 "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
                 proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
@@ -290,10 +293,9 @@ if __name__ == "__main__":
             print("Gateway Client created")
         # # #-----------------------------------------------------------
         else:
-            # os.environ['XRD_REQUESTTIMEOUT']="2400"
-            # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
+            client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
             # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
-            client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
+            # client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
             print("Local scale Client created")
         #-------------------------------------------------------------------------------------
         #-----------------------------------------------------------
@@ -306,6 +308,7 @@ if __name__ == "__main__":
             samples = json.loads(file.read())
         # print(f"samples.keys(): {samples.keys()}")
         total_save_path = args.save_path + f"/{args.year}"
+        print(f"total_save_path: {total_save_path}")
         # with performance_report(filename="dask-report.html"):
         # for dataset, sample in samples.items():
         # dask.config.set(scheduler='single-threaded')
