@@ -76,21 +76,29 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2016 MC | data/pileup/pileup_profile_Summer16.root  | |
 | Muon ID SF  | 2024 |  | |
 |   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
-|   | 2022 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
-|   | 2018  | data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root | |
+|   | 2022postEE | data/muon_sf/year2022postEE/ScaleFactors_Muon_Z_ID_ISO_2022_EE_schemaV2.json  | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022  |
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022_EE/2022_Z | 
+|   | 2022preEE | data/muon_sf/year2022preEE/ScaleFactors_Muon_Z_ID_ISO_2022_schemaV2.json  | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022  |
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022/2022_Z | |   | 2018  | data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root | |
 |   | 2017 | data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root  | |
 |   | 2016postVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_ID.root  | |
 |   | 2016preVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_HIPM_ID.root  | |
 | Muon ISO SF  | 2024 |  | |
 |   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
-|   | 2022 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
+|   | 2022postEE | data/muon_sf/year2022postEE/ScaleFactors_Muon_Z_ID_ISO_2022_EE_schemaV2.json  | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022  |
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022_EE/2022_Z | 
+|   | 2022preEE | data/muon_sf/year2022preEE/ScaleFactors_Muon_Z_ID_ISO_2022_schemaV2.json  | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022  |
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022/2022_Z | 
 |   | 2018  | data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root | |
 |   | 2017 | data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root  | |
 |   | 2016postVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_ISO.root  | |
 |   | 2016preVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_HIPM_ISO.root  | |
 | Muon Trig SF  | 2024 |  | |
 |   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
-|   | 2022 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
+|   | 2022postEE |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022_EE/2022_Z/HLT/json | 
+|   | 2022preEE |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022/2022_Z/HLT/json | 
 |   | 2018  | data/muon_sf/mu2018/EfficienciesStudies_2018_trigger_EfficienciesAndSF_2018Data_BeforeMuonHLTUpdate.root | |
 |   | 2017 | data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root | |
 |   | 2016postVFP | data/muon_sf/mu2016/EfficienciesStudies_2016_trigger_EfficienciesAndSF_RunGtoH.root  | |
