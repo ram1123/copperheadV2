@@ -24,6 +24,7 @@ This would start the GRID certificate password prompt, and then once given the p
 |  VBF production channel MVA training | ./lib/MVA_training/VBF/ |  
 |  General corrections (stage1) | ./lib/corrections/ |  
 |  Roofit fitting (stage3) | ./lib/fit_models/ |  
+|  Parameters (metadata) | ./parameters/*.yaml|  
 
 
 
