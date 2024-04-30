@@ -143,16 +143,16 @@ This would start the GRID certificate password prompt, and then once given the p
 | Data  | 2016preVFP | /SingleMuon/Run2016{B-ver2_,C-,D-,E-,F-}HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD  |
 | ggH signal  | 2024 |  |
 | ggH signal  | 2023 |  |
-| ggH signal  | 2022postEE |  |
-| ggH signal  | 2022preEE |  |
+| ggH signal  | 2022postEE | /GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v1/NANOAODSIM |
+| ggH signal  | 2022preEE | /GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM  |
 | ggH signal  | 2018 | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
 | ggH signal  | 2017 | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v1/NANOAODSIM |
 | ggH signal  | 2016postVFP | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
 | ggH signal  | 2016preVFP | /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM|
 | VBF signal  | 2024 |  |
 | VBF signal  | 2023 |  |
-| VBF signal  | 2022postEE |  |
-| VBF signal  | 2022preEE |  |
+| VBF signal  | 2022postEE | /VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM |
+| VBF signal  | 2022preEE | /VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM |
 | VBF signal  | 2018 | /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM |
 | VBF signal  | 2017 | /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v1/NANOAODSIM |
 | VBF signal  | 2016postVFP | /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM |
