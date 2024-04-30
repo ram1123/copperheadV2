@@ -16,20 +16,17 @@ import re
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")
 
-
 datasets = {
-    "2022preEE": {
-        "data_C": "/Muon/Run2022C-16Dec2023-v1/NANOAOD",
-        "data_D": "/Muon/Run2022D-16Dec2023-v1/NANOAOD",
-        "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
-        "ttjets_dl": "/TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
-        "ww_2l2nu": "/WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
-        "wz_3lnu": "/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
-        "wz_2l2q": "/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
-        "zz": "/ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
-        "ggh_powheg":"/GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM",
-        "vbf_powheg" : "/VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM",
-    }.
+    "2023" : {
+        "data_E" : "/Muon/Run2023E-PromptReco-v1/NANOAOD",
+        "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer23NanoAODv12-PilotMuonHits_130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM",
+        "ttjets_dl": "/TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM",
+        "ww_2l2nu": "/WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v4/NANOAODSIM",
+        "wz_3lnu": "/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM",
+        "wz_2l2q": "/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM",
+        "wz_1l1nu2q": "/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM",
+        "zz": "/ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM",
+    },
     "2022postEE": {
         "data_E": "/Muon/Run2022E-16Dec2023-v1/NANOAOD",
         "data_F": "/Muon/Run2022F-16Dec2023-v1/NANOAOD",
@@ -39,10 +36,24 @@ datasets = {
         "ww_2l2nu": "/WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM",
         "wz_3lnu": "/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM",
         "wz_2l2q": "/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM",
+        "wz_1l1nu2q": "/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM",
         "zz": "/ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM",
         "ggh_powheg":"/GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v1/NANOAODSIM",
         "vbf_powheg" : "/VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM",
-    }.
+    },
+    "2022preEE": {
+        "data_C": "/Muon/Run2022C-16Dec2023-v1/NANOAOD",
+        "data_D": "/Muon/Run2022D-16Dec2023-v1/NANOAOD",
+        "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
+        "ttjets_dl": "/TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
+        "ww_2l2nu": "/WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
+        "wz_3lnu": "/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
+        "wz_2l2q": "/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
+        "wz_1l1nu2q": "/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
+        "zz": "/ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM",
+        "ggh_powheg":"/GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM",
+        "vbf_powheg" : "/VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM",
+    },
     "2016preVFP": {
         "data_B": "/SingleMuon/Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD",
         "data_C": "/SingleMuon/Run2016C-HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD",
@@ -283,7 +294,7 @@ if __name__ == "__main__":
             # cluster = LocalCluster(processes=True)
             # cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
             # client = Client(cluster)
-            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+            client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             print("Local scale Client created")
         # turning off seperate client test end --------------------------------------------------------
         big_sample_info = {}
@@ -292,50 +303,7 @@ if __name__ == "__main__":
         
         # key_list = list(dataset.keys())
         new_sample_list = []
-        """
-        # take data
-        data_runs = re.findall(r"\bDataRun_.*\bBkg", args.input_string)
-        data_runs = [str.replace("DataRun_", "").replace("/Bkg","") for str in data_runs]
-        data_runs = data_runs[0].split(',')
-        # print(f"data runs: {data_runs}")
-        if data_runs[0] == '':
-            data_runs = []
-        data_l =  [sample_name for sample_name in dataset.keys() if "data" in sample_name]
-        # print(f"data_l: {data_l}")
-        for data_run in data_runs:
-            for sample_name in data_l:
-                if data_run in sample_name:
-                    new_sample_list.append(sample_name)
- 
-        bkgs = re.findall(r"\bBkg_.*\bSig", args.input_string)
-        bkgs = [str.replace("Bkg_", "").replace("/Sig","") for str in bkgs]
-        bkgs = bkgs[0].split(',')
-        bkgs = [bkg.lower() for bkg in bkgs]# lowercase everthing for consistency
-        # print(f"bkgs: {bkgs}")
-        if bkgs[0] == '':
-            bkgs = []
-        # take DY and TT
-        bkg_l =  [sample_name for sample_name in dataset.keys() if ("dy_" in sample_name or "ttjets" in sample_name)] 
-        for bkg in bkgs:
-            for sample_name in bkg_l:
-                if bkg in sample_name:
-                    new_sample_list.append(sample_name)
-        # print(f"new_sample_list: {new_sample_list}")
-        sigs = re.findall(r"\bSig_.*", args.input_string)
-        sigs = [str.replace("Sig_","") for str in sigs]
-        sigs = sigs[0].split(',')
-        sigs = [sig.lower() for sig in sigs]# lowercase everthing for consistency
-        # print(f"sigs: {sigs}")
-        if sigs[0] == '':
-            sigs = []
-        # take signal
-        sig_l =  [sample_name for sample_name in dataset.keys() if ("ggh" in sample_name or "vbf" in sample_name)] 
-        for sig in sigs:
-            for sample_name in sig_l:
-                if sig in sample_name:
-                    new_sample_list.append(sample_name)
-        # print(f"new_sample_list: {new_sample_list}")
-        """
+       
         # take data
         data_l =  [sample_name for sample_name in dataset.keys() if "data" in sample_name]
         data_samples = args.data_samples
@@ -351,7 +319,7 @@ if __name__ == "__main__":
         if len(bkg_samples) >0:
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
-                    # new_sample_list.append("dy_M-50")
+                    new_sample_list.append("dy_M-50")
                     new_sample_list.append("dy_M-100To200")
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                     new_sample_list.append("ttjets_dl")
@@ -406,8 +374,8 @@ if __name__ == "__main__":
             fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
             
             # random.shuffle(fnames)
-            # fnames = get_Xcache_filelist(fnames)
-            print(f"fnames: {fnames}")
+            fnames = get_Xcache_filelist(fnames)
+            # print(f"fnames: {fnames}")
             print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
 
@@ -470,14 +438,14 @@ if __name__ == "__main__":
             }
             
             step_size = int(args.chunksize)
-            print(f"final_output: {final_output}")
+            # print(f"final_output: {final_output}")
             files_available, files_total = preprocess(
                 final_output,
                 step_size=step_size,
                 align_clusters=False,
                 skip_bad_files=True,
             )
-            print(f"files_available: {files_available}")
+            # print(f"files_available: {files_available}")
             pre_stage_data = files_available
             # add in metadata
             pre_stage_data[sample_name]['metadata'] = preprocess_metadata
@@ -491,7 +459,7 @@ if __name__ == "__main__":
                 pre_stage_data[sample_name]['metadata']["is_mc"] = True
             pre_stage_data[sample_name]['metadata']["dataset"] = sample_name
             big_sample_info.update(pre_stage_data)
-            print(f"big_sample_info: {big_sample_info}")
+            # print(f"big_sample_info: {big_sample_info}")
         
         #save the sample info
         directory = "./config"
