@@ -1,6 +1,7 @@
 import json
 import os
 import argparse
+from omegaconf import OmegaConf
 
 def for_all_years(value):
     out = {k: value for k in ["2016preVFP","2016postVFP", "2017", "2018","2022EE"]}
@@ -507,7 +508,11 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     config_to_save = {}
+    # with open("./parameters/parameters.yaml", "w") as file:
+    #     OmegaConf.save(config=parameters, f=file.name)
+    parameters = OmegaConf.load("./parameters/parameters.yaml")
     for key, val in parameters.items():
+        print(f"type(val) : {type(val)}")
         print(f"make parameters key: {key}")
         if "cross_sections" in key:
             config_to_save[key] = val
@@ -527,14 +532,16 @@ if __name__ == "__main__":
     config_to_save["do_jecunc"] = False
     config_to_save["do_jerunc"] = False
     print(f"make_parameters config_to_save: \n {config_to_save}")
-
+    print(f"make_parameters type(config_to_save): \n {type(config_to_save)}")
    
     
     #save config as json
     directory = "./config"
-    filename = directory+"/parameters.json"
+    # filename = directory+"/parameters.json"
+    filename = directory+"/parameters.yaml"
     if not os.path.exists(directory):
         os.makedirs(directory)
     with open(filename, "w") as file:
-        json.dump(config_to_save, file)
+        # json.dump(config_to_save, file)
+        OmegaConf.save(config=config_to_save, f=file.name)
 
