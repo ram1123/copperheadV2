@@ -2,6 +2,36 @@ from coffea.jetmet_tools import CorrectedJetsFactory, JECStack
 from coffea.lookup_tools import extractor
 import numpy as np
 import awkward as ak
+import os
+
+
+# def jec_names_and_sources_yaml(jec_pars, year):
+#     localdir = os.path.dirname(os.path.abspath("__file__"))
+#     print(f"localdir: {localdir}")
+#     OmegaConf.register_new_resolver("default_params_dir", lambda: localdir+"/data", replace=True)
+#     jec_dict = OmegaConf.load(localdir+'/parameters/jets_calibration.yaml')
+#     jec_fnames = jec_dict['default_jets_calibration']["factory_configuration"]["AK4PFchs"]["JES_JER_Syst"][year]
+#     names = {}
+#     suffix = {
+#         "jec_names": [f"_{level}_AK4PFchs" for level in jec_pars["jec_levels_mc"]],
+#         "junc_names": ["_Uncertainty_AK4PFchs"],
+#         "junc_sources": ["_UncertaintySources_AK4PFchs"],
+#         "jer_names": ["_PtResolution_AK4PFchs"],
+#         "jersf_names": ["_SF_AK4PFchs"],
+#     }
+
+#     for key, suff in suffix.items():
+#         if "data" in key:
+#             names[key] = {}
+#             for run in jec_pars["runs"]:
+#                 for tag, iruns in jec_pars["jec_data_tags"].items():
+#                     if run in iruns:
+#                         names[key].update({run: [f"{tag}{s}" for s in suff]})
+#         else:
+#             tag = jec_pars["jer_tags"] if "jer" in key else jec_pars["jec_tags"]
+#             names[key] = [f"{tag}{s}" for s in suff]
+
+#     return names
 
 def jec_names_and_sources(jec_pars):
     names = {}
@@ -32,7 +62,7 @@ def jec_names_and_sources(jec_pars):
     return names
 
 
-def jec_weight_sets(jec_pars):
+def jec_weight_sets(jec_pars, year):
     weight_sets = {}
     names = jec_names_and_sources(jec_pars)
 
@@ -80,19 +110,15 @@ def get_name_map(stack):
     # print(f"name_map: {name_map}")
     return name_map
 
-def get_jec_factories(jec_parameters: dict, test_mode=False):
+def get_jec_factories(jec_parameters: dict, year):
     # jec_pars = {k: v[year] for k, v in jec_parameters.items()}
     # jec_pars = {k: v for k, v in jec_parameters.items()}
     
     jec_pars = jec_parameters
 
 
-    # print(f"jec_factories jec_pars: {jec_pars}")
-    # weight_sets = jec_weight_sets(jec_pars)
-    # names = jec_names_and_sources(jec_pars)
-    weight_sets, names = jec_weight_sets(jec_pars)
-    # print(f"jec_factories weight_sets: {weight_sets}")
-    # print(f"jec_factories names: {names}")
+    weight_sets, names = jec_weight_sets(jec_pars, year)
+
     jec_factories = {}
     jec_factories_data = {}
 
@@ -114,9 +140,7 @@ def get_jec_factories(jec_parameters: dict, test_mode=False):
         stacks[key] = []
         for v in vals:
             stacks[key].extend(names[v])
-    # print(f"jec_factories stacks: \n{stacks}")
-    # if test_mode:
-    #     print(f"jec_factories stacks: \n{stacks}")
+
 
     jec_input_options = {}
     jet_variations = ["jec", "junc", "jer"]
@@ -143,9 +167,7 @@ def get_jec_factories(jec_parameters: dict, test_mode=False):
 
     # Create separate factories for JEC, JER, JEC variations
     for variation in jet_variations:
-        if test_mode:
-            print(f"jec_factories variation: {variation}")
-            print(f"jec_factories jec_input_options[variation]: {jec_input_options[variation]}")
+
         
         stack = JECStack(jec_input_options[variation])
         # print(f"jec_factories JECStack: {stack}")
@@ -188,12 +210,21 @@ def jet_id(jets, config):
 
 def jet_puid(jets, config):
     jet_puid_opt = config["jet_puid"]
+    year = config["year"]
     puId = jets.puId
-    jet_puid_wps = {
-        "loose": (puId >= 4) | (jets.pt > 50),
-        "medium": (puId >= 6) | (jets.pt > 50),
-        "tight": (puId >= 7) | (jets.pt > 50),
-    }
+    # jet puid for standard wps are different for 2016 vs 2017,2018 as shown in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL#Working_Points
+    if "2016" in year:
+        jet_puid_wps = {
+            "loose": (puId >= 1) | (jets.pt > 50),
+            "medium": (puId >= 3) | (jets.pt > 50),
+            "tight": (puId >= 7) | (jets.pt > 50),
+        }
+    else:
+        jet_puid_wps = {
+            "loose": (puId >= 4) | (jets.pt > 50),
+            "medium": (puId >= 6) | (jets.pt > 50),
+            "tight": (puId >= 7) | (jets.pt > 50),
+        }
     pass_jet_puid = ak.ones_like(jets.jetId, dtype=bool)
     if jet_puid_opt in ["loose", "medium", "tight"]:
         pass_jet_puid = jet_puid_wps[jet_puid_opt]
