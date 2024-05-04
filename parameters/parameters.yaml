@@ -168,11 +168,11 @@ pu_file_data:
   '2018': data/pileup/puData2018_UL_withVar.root
   2022EE: data/pileup/puData2018_UL_withVar.root
 pu_file_mc:
-  2016preVFP: data/pileup/pileup_profile_Summer16.root
-  2016postVFP: data/pileup/pileup_profile_Summer16.root
-  '2017': data/pileup/mcPileup2017.root
-  '2018': data/pileup/mcPileup2018.root
-  2022EE: data/pileup/mcPileup2018.root
+  2016preVFP: data/pileup/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
+  2016postVFP: data/pileup/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
+  '2017': data/pileup/mix_2017_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
+  '2018': data/pileup/mix_2018_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
+  2022EE: data/pileup/Run3_2022_LHC_Simulation_10h_2h_cfi.yaml
 muSFFileList:
   2016preVFP:
   - id:

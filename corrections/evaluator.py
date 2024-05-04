@@ -1,12 +1,43 @@
 import numpy as np
 import uproot
-
+import json
 import coffea
 from coffea.lookup_tools import dense_lookup
 import awkward as ak
 import dask_awkward as dak
+from omegaconf import OmegaConf
+
 
 # PU SF --------------------------------------------------------------------
+# def pu_lookups(parameters, mode="nom", auto=[]):
+#     lookups = {}
+#     branch = {"nom": "pileup", "up": "pileup_plus", "down": "pileup_minus"}
+#     for mode in ["nom", "up", "down"]:
+#         if len(auto) == 0:
+#             pu_hist = uproot.open(parameters["pu_file"])["pileup"].values() # returns a np array
+#             nbins = len(pu_hist)
+#             edges = [[i for i in range(nbins)]]
+#             lookup = dense_lookup.dense_lookup(pu_hist, edges)
+#         else:
+#             pu_hist_data = uproot.open(parameters["pu_file_data"])[branch[mode]].values()
+    
+#             nbins = len(pu_hist_data)
+#             # print(f"pu_reweight nbins: {nbins}")
+#             edges = [[i for i in range(nbins)]]
+#             pu_hist_mc = np.histogram(auto, bins=range(nbins + 1))[0]
+#             print(f"pu_hist_mc: {pu_hist_mc}")
+#             # print(f"pu_lookups type(pu_hist_data): {type(pu_hist_data)}")
+#             # ----------------------------------------
+#             # if len(auto) == 0:
+#             #     pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
+#             # else:
+#             #     pu_hist_mc = np.histogram(auto, bins=range(nbins + 1))[0]
+#             #----------------------------------------------------
+    
+#             lookup = dense_lookup.dense_lookup(pu_reweight(pu_hist_data, pu_hist_mc), edges)
+#         lookups[mode] = lookup
+#     return lookups
+
 def pu_lookups(parameters, mode="nom", auto=[]):
     lookups = {}
     branch = {"nom": "pileup", "up": "pileup_plus", "down": "pileup_minus"}
@@ -17,16 +48,22 @@ def pu_lookups(parameters, mode="nom", auto=[]):
         # print(f"pu_reweight nbins: {nbins}")
         edges = [[i for i in range(nbins)]]
         # print(f"pu_lookups type(pu_hist_data): {type(pu_hist_data)}")
+        # ----------------------------------------
         if len(auto) == 0:
-            pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
+            # pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
+            with open(parameters["pu_file_mc"]) as file:
+                # config = json.loads(file.read())
+                print(f"file: {file}")
+                config = OmegaConf.load(file)
+                # print(f"config: {config}")
+            pu_hist_mc = np.array(config["pu_mc"])
         else:
             pu_hist_mc = np.histogram(auto, bins=range(nbins + 1))[0]
-        
+        #----------------------------------------------------
 
         lookup = dense_lookup.dense_lookup(pu_reweight(pu_hist_data, pu_hist_mc), edges)
         lookups[mode] = lookup
     return lookups
-
 
 def pu_reweight(pu_hist_data, pu_hist_mc):
     #print(pu_hist_mc)
@@ -95,16 +132,16 @@ def checkIntegral(wgt1, wgt2, ref):
 #         pu_weights[var][ntrueint < 1] = 1
 #     return pu_weights
 
-def pu_evaluator(parameters, ntrueint, test=False):
+def pu_evaluator(parameters, ntrueint, onTheSpot=False):
     """
     params:
     numevents = integer value of 
     ntrueint = np array for making dense lookup
     """
-    if test:
-        lookups = pu_lookups(parameters, auto=ak.to_numpy(ntrueint))
-    else:
+    if onTheSpot:
         lookups = pu_lookups(parameters, auto=ak.to_numpy(ntrueint.compute()))
+    else:
+        lookups = pu_lookups(parameters, auto=[])
     #print("Hello")
     pu_weights = {}
     for var, lookup in lookups.items():

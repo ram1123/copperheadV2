@@ -247,7 +247,8 @@ class EventProcessor(processor.ProcessorABC):
             pu_wgts = pu_evaluator(
                         self.config,
                         events.Pileup.nTrueInt,
-                        test=self.test
+                        onTheSpot=False # use locally saved true PU dist
+                        # onTheSpot=True
                 )
         # turn off pu weights test end ---------------------------------
        
@@ -576,11 +577,11 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Apply JEC, get JEC and JER variations
         # ------------------------------------------------------------#
-        
+        year = self.config["year"]
         jets = events.Jet
         self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
             self.config["jec_parameters"], 
-            test_mode=self.test
+            year
         )   
         # print(f"njets pre jec: {ak.to_numpy(ak.num(jets, axis=1).compute())}")
         
@@ -593,9 +594,10 @@ class EventProcessor(processor.ProcessorABC):
         #testing 
         do_jecunc = False
         do_jerunc = False
+        is_mc = events.metadata["is_mc"]
         # cache = events.caches[0]
         if do_jec:
-            if events.metadata["is_mc"]:
+            if is_mc:
                 factory = self.jec_factories_mc["jec"]
             else:
                 for run in self.config["jec_parameters"]["runs"]:
@@ -603,7 +605,6 @@ class EventProcessor(processor.ProcessorABC):
                         factory = self.jec_factories_data[run]
                 
             print("do jec!")
-            # jets = factory.build(jets, lazy_cache=cache)
             jets = factory.build(jets)
 
         else:
