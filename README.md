@@ -68,13 +68,13 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2023 Data |   | |
 |   | 2023 MC |   | |
 |   | 2022 Data |   | |
-|   | 2022 MC |   | |
+|   | 2022 MC |   | https://github.com/cms-sw/cmssw/blob/CMSSW_12_6_X/SimGeneral/MixingModule/python/Run3_2022_LHC_Simulation_10h_2h_cfi.py |
 |   | 2018 Data | data/pileup/puData2018_UL_withVar.root | |
-|   | 2018 MC | data/pileup/mcPileup2018.root  | |
+|   | 2018 MC | data/pileup/mcPileup2018.root  | https://github.com/cms-sw/cmssw/blob/CMSSW_12_6_X/SimGeneral/MixingModule/python/mix_2018_25ns_UltraLegacy_PoissonOOTPU_cfi.py |
 |   | 2017 Data | data/pileup/puData2017_UL_withVar.root| |
-|   | 2017 MC | data/pileup/mcPileup2017.root  | |
+|   | 2017 MC | data/pileup/mcPileup2017.root  | https://github.com/cms-sw/cmssw/blob/CMSSW_12_6_X/SimGeneral/MixingModule/python/mix_2017_25ns_UltraLegacy_PoissonOOTPU_cfi.py |
 |   | 2016 Data | data/pileup/puData2016_UL_withVar.root | |
-|   | 2016 MC | data/pileup/pileup_profile_Summer16.root  | |
+|   | 2016 MC | data/pileup/pileup_profile_Summer16.root  | https://github.com/cms-sw/cmssw/blob/CMSSW_12_6_X/SimGeneral/MixingModule/python/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.py |
 | Muon ID SF  | 2024 |  | |
 |   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
 |   | 2022postEE | data/muon_sf/year2022postEE/ScaleFactors_Muon_Z_ID_ISO_2022_EE_schemaV2.json  | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022  |
