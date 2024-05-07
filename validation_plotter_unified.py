@@ -10,7 +10,7 @@ import time
 import tqdm
 
 # real process arrangement
-group_data_processes = ["data_A", "data_B", "data_C", "data_D",]
+group_data_processes = ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F"]
 # group_DY_processes = ["dy_M-100To200", "dy_M-50"] # dy_M-50 is not used in ggH BDT training input
 group_DY_processes = ["dy_M-100To200"]
 group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop"]
@@ -173,22 +173,44 @@ if __name__ == "__main__":
             else:
                 print(f"unknown signal {sig_sample} was given!")
     # gather variables to plot:
-    kinematic_vars = ['pt', 'eta', 'phi']
-    # kinematic_vars = ['pt']
+    # kinematic_vars = ['pt', 'eta', 'phi']
+    kinematic_vars = ['pt']
     variables2plot = []
     if len(args.variables) == 0:
         print("no variables to plot!")
         raise ValueError
     for particle in args.variables:
-        if ("mu" in particle) or ("jet" in particle):
+        if "dimuon" in particle:
+            # variables2plot.append(f"{particle}_mass")
+            variables2plot.append(f"{particle}_pt")
+            variables2plot.append(f"{particle}_cos_theta_cs")
+            variables2plot.append(f"{particle}_phi_cs")
+            variables2plot.append(f"mmj_min_dPhi")
+            variables2plot.append(f"mmj_min_dEta")
+        elif "dijet" in particle:
+            variables2plot.append(f"jj_mass")
+            variables2plot.append(f"jj_dEta")
+            variables2plot.append(f"jj_dPhi")
+        elif ("mu" in particle) :
             for kinematic in kinematic_vars:
                 # plot both leading and subleading muons/jets
                 variables2plot.append(f"{particle}1_{kinematic}")
                 variables2plot.append(f"{particle}2_{kinematic}")
-        elif "dimuon" in particle:
-            variables2plot.append(f"{particle}_mass")
-            # for kinematic in kinematic_vars:
-            #     variables2plot.append(f"{particle}_{kinematic}")
+        elif ("jet" in particle):
+            variables2plot.append(f"njets")
+            for kinematic in kinematic_vars:
+                # plot both leading and subleading muons/jets
+                variables2plot.append(f"{particle}1_{kinematic}")
+                variables2plot.append(f"{particle}2_{kinematic}")
+        # if ("mu" in particle) or ("jet" in particle):
+        #     for kinematic in kinematic_vars:
+        #         # plot both leading and subleading muons/jets
+        #         variables2plot.append(f"{particle}1_{kinematic}")
+        #         variables2plot.append(f"{particle}2_{kinematic}")
+        # elif "dimuon" in particle:
+        #     variables2plot.append(f"{particle}_mass")
+        #     # for kinematic in kinematic_vars:
+        #     #     variables2plot.append(f"{particle}_{kinematic}")
         else:
             print(f"Unsupported variable: {particle} is given!")
     print(f"variables2plot: {variables2plot}")
@@ -199,7 +221,7 @@ if __name__ == "__main__":
 
 
     # define client for parallelization for speed boost
-    client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+    client =  Client(n_workers=20,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
     # record time
     time_step = time.time()
     # ROOT style or mplhep style starts here --------------------------------------
@@ -221,13 +243,17 @@ if __name__ == "__main__":
         pad.cd();
         fraction_weight = 1.0 # to be used later in reweightROOTH after all histograms are filled
         # var = "jet1_pt"
+        # val_events start -------------------------------
+        # val_events = {key: events[key] for key in events.fields}
+        # val_events = val_events.compute()
+        # val_events end -------------------------------
         counter = 0
         for var in tqdm.tqdm(variables2plot):
             # if counter == int(len(variables2plot)/2):
-            # counter +=1
-            # if counter % 5 ==0:
-            #     print("restarting client!")
-            #     client.restart(wait_for_workers=False)
+            counter +=1
+            if counter % 5 ==0:
+                print("restarting client!")
+                client.restart(wait_for_workers=False)
             var_step = time.time()
             # with Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') as client:
             # del client
@@ -293,6 +319,9 @@ if __name__ == "__main__":
                 weights = weights*category_selection
                 # values = ak.to_numpy(events[var].compute())
                 values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
+                # values = ak.to_numpy(ak.fill_none(val_events[var], value=-999.0))
+
+                
                 # print(f"values[0]: {values[0]}")
                 values_filter = values!=-999.0
                 values = values[values_filter]
@@ -634,8 +663,12 @@ if __name__ == "__main__":
         # this mplhep implementation assumes non-empty data; otherwise, it will crash
         # Dictionary for histograms and binnings
 
-
+        counter = 0
         for var in tqdm.tqdm(variables2plot):
+            counter +=1
+            if counter % 5 ==0:
+                print("restarting client!")
+                client.restart(wait_for_workers=False)
             var_step = time.time()
             # for process in available_processes:
             if var not in plot_settings.keys():
@@ -680,7 +713,7 @@ if __name__ == "__main__":
                 #-----------------------------------------------    
                 # obtain the category selection
 
-                fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
+                fraction_weight = ak.to_numpy(1/events.fraction.compute()) # TBF, all fractions should be same
                 # print(f"fraction_weight: {fraction_weight[0]}")
                 # print(f"fraction_weight: {fraction_weight[4]}")
                 # obtain the category selection
@@ -693,9 +726,14 @@ if __name__ == "__main__":
                     region = events.h_sidebands 
                 elif args.region == "z_peak":
                     region = events.z_peak 
+                elif args.region == "all":
+                    region = events.h_sidebands | events.h_peak | events.z_peak 
                 else: 
-                    print("ERROR: acceptable region!")
+                    print("ERROR: not acceptable region!")
                     raise ValueError
+                # nBtagLoose = ak.fill_none(events.nBtagLoose, value=0)
+                # nBtagMedium = ak.fill_none(events.nBtagMedium, value=0)
+                # btag_cut =(nBtagLoose >= 2) | (nBtagMedium >= 1)
                 btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
                 category_selection = (
                     ~vbf_cut & # we're interested in ggH category
@@ -704,6 +742,7 @@ if __name__ == "__main__":
                 ).compute()
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
                 weights = weights*category_selection
+                print(f"weights.shape: {weights[weights>0].shape}")
                 # values = ak.to_numpy(events[var].compute())
                 values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
                 # print(f"values[0]: {values[0]}")
@@ -713,8 +752,9 @@ if __name__ == "__main__":
                 # MC samples are already normalized by their xsec*lumi, but data is not
                 if process in group_data_processes:
                     fraction_weight = fraction_weight[values_filter]
+                    # print(f"fraction_weight: {fraction_weight}")
                     weights = weights*fraction_weight
-                
+                print(f"weights.shape: {weights[weights>0].shape}")
                 np_hist, _ = np.histogram(values, bins=binning, weights = weights)
                 np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
                
@@ -722,6 +762,8 @@ if __name__ == "__main__":
                 if process in group_data_processes:
                     print("data activated")
                     group_data_hists.append(np_hist)
+                    print(f"np_hist: {np_hist}")
+                    print(f"np_hist.dtype: {np_hist.dtype}")
                     group_data_hists_w2.append(np_hist_w2)
                 #-------------------------------------------------------
                 elif process in group_DY_processes:
@@ -825,17 +867,18 @@ if __name__ == "__main__":
             group_color_map = {
                 "DY" : "Orange",
                 "Top" : "Green",
-                "EwK" : "Magenta",
+                "Ewk" : "Magenta",
                 "VV" : "Azure",
                 "other" : "Gray"
             }
             colours = [group_color_map[group] for group in groups]
-            hep.histplot(all_MC_hist_list, bins=binning, 
-                         stack=True, histtype='fill', 
-                         label=groups, 
-                         sort='label_r', 
-                         color=colours, 
-                         ax=ax_main)
+            if len(all_MC_hist_list) > 0:
+                hep.histplot(all_MC_hist_list, bins=binning, 
+                             stack=True, histtype='fill', 
+                             label=groups, 
+                             sort='label_r', 
+                             color=colours, 
+                             ax=ax_main)
 
             if len(group_ggH_hists) > 0: # there should be only one element or be empty
                 hist_ggh = group_ggH_hists[0]
@@ -857,6 +900,8 @@ if __name__ == "__main__":
             
 
             data_hist = np.sum(np.asarray(group_data_hists), axis=0)
+            print(f"data_hist: {data_hist}")
+            print(f"data_hist.dtype: {data_hist.dtype}")
             data_err = np.sqrt(np.sum(np.asarray(group_data_hists_w2), axis=0)) # sqrt of sum of squares of weights
             hep.histplot(data_hist, xerr=True, yerr=data_err,
                          bins=binning, stack=False, histtype='errorbar', color='black', 
