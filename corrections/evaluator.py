@@ -53,7 +53,7 @@ def pu_lookups(parameters, mode="nom", auto=[]):
             # pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
             with open(parameters["pu_file_mc"]) as file:
                 # config = json.loads(file.read())
-                print(f"file: {file}")
+                # print(f"pu file: {file}")
                 config = OmegaConf.load(file)
                 # print(f"config: {config}")
             pu_hist_mc = np.array(config["pu_mc"])
@@ -84,6 +84,8 @@ def pu_reweight(pu_hist_data, pu_hist_mc):
     pu_arr_data = pu_arr_data / np.sum(pu_arr_data)
     #print(pu_arr_mc)
     weights = np.ones(len(pu_hist_mc))
+    # print(f"len(pu_hist_mc): {len(pu_hist_mc)}")
+    # print(f"len(pu_arr_data): {len(pu_arr_data)}")
     weights[pu_arr_mc != 0] = pu_arr_data[pu_arr_mc != 0] / pu_arr_mc[pu_arr_mc != 0]
     maxw = min(weights.max(), 5.0)
     cropped = []
@@ -1002,6 +1004,35 @@ def add_pdf_variations(events, config, dataset):
 
 # QGL SF-------------------------------------------------------------------------
 
+def qgl_weights_keepDim(jet1, jet2, njets, isHerwig):
+    """
+    We assume that event filtering/selection has been already applied
+    params:
+    jet1 = leading pt jet variable if doens't exist, it's padded with None
+    jet2 = subleading pt jet variable if doens't exist, it's padded with None
+    """
+
+    qgl1 = get_qgl_weights(jet1, isHerwig)
+    qgl1 = ak.fill_none(qgl1, value=1.0)
+    qgl2 = get_qgl_weights(jet2, isHerwig)
+
+    
+    qgl_nom = (qgl1*qgl2)
+    ones = ak.ones_like(qgl1) # qgl1 is picked bc we assume there's no none values in it. ones_like function copies None values as well
+    qgl_nom = ak.where((njets==1), ones, qgl_nom)  # 1D array
+
+
+    njet_selection = njets > 2 # think this is a bug, but have to double check
+    qgl_mean = dak.map_partitions(np.mean, qgl_nom[njet_selection], keepdims=True)
+    qgl_nom = qgl_nom/ qgl_mean
+    qgl_nom = ak.fill_none(qgl_nom, value=1.0) # we got rid of jet2==None case, but jet1 could still be None
+
+
+    qgl_down = ak.ones_like(qgl_nom, dtype="float")
+
+    wgts = {"nom": qgl_nom, "up": qgl_nom * qgl_nom, "down": qgl_down}
+    return wgts
+
 def qgl_weights(jet1, jet2, njets, isHerwig):
     """
     We assume that event filtering/selection has been already applied
@@ -1153,6 +1184,87 @@ def get_qgl_weights(jet, isHerwig):
     return qgl_weights
 
 # Btag SF-------------------------------------------------------------------------
+
+def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, btag_file):
+    """
+    We assume jets to be non padded jet that has passed the base jet selection.
+    I don't think jets need to be sorted after JEC for this to work, however
+    """
+    # btag = pd.DataFrame(index=bjet_sel_mask.index)
+    btag_jet_selection = abs(jets.eta) < 2.4
+    jets = ak.to_packed(jets[btag_jet_selection])
+    jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
+    
+    
+    btag_json=btag_file["deepJet_shape"]
+    correctionlib_out = btag_json.evaluate(
+        "central",
+        jets.hadronFlavour,
+        abs(jets.eta),
+        jets.pt,
+        jets.btagDeepFlavB,
+    )
+
+    btag_wgt = ak.prod(correctionlib_out, axis=1) # for events with no qualified jets(empty row), the value is 1.0
+    btag_wgt = ak.where((btag_wgt < 0.01), 1.0, btag_wgt)
+    # print(f"btag_wgt b4 normalization: {ak.to_numpy(btag_wgt.compute())}")
+
+    flavors = {
+        0: ["jes", "lf", "lfstats1", "lfstats2"],
+        # 1: ["jes", "lf", "lfstats1", "lfstats2"],
+        # 2: ["jes", "lf", "lfstats1", "lfstats2"],
+        # 3: ["jes", "lf", "lfstats1", "lfstats2"],
+        4: ["cferr1", "cferr2"],
+        5: ["jes", "hf", "hfstats1", "hfstats2"],
+        # 21: ["jes", "lf", "lfstats1", "lfstats2"],
+    }# printiing the correctionlib input description returns: "hadron flavor definition: 5=b, 4=c, 0=udsg", so corretionlib lookup table only accepts flavours of 0, 4 or 5
+    
+    btag_syst = {}
+    for sys in systs:
+
+
+        btag_wgt_up = ak.ones_like(jets.pt)
+        btag_wgt_down = ak.ones_like(jets.pt)
+        # 
+        
+
+        for flavor, f_syst in flavors.items():
+            if sys in f_syst:
+                # print(f"sys: {sys}")
+                # print(f"flavor: {flavor}")
+                btag_mask = (abs(jets.hadronFlavour)) == flavor #& (abs(jets.eta) < 2.4))
+                # enforce input hadronFlavour to match the target, otherwise, the lookup table will fail
+                dummy_flavor = flavor*ak.ones_like(jets.hadronFlavour)
+                hadronFlavour = ak.where(btag_mask, jets.hadronFlavour, dummy_flavor)
+                sys_wgts =  btag_json.evaluate(
+                    f"up_{sys}",
+                    hadronFlavour,
+                    abs(jets.eta),
+                    jets.pt,
+                    jets.btagDeepB,
+                )
+                btag_wgt_up = ak.where(btag_mask, sys_wgts, btag_wgt_up)
+
+                    
+                sys_wgts =  btag_json.evaluate(
+                    f"down_{sys}",
+                    hadronFlavour,
+                    abs(jets.eta),
+                    jets.pt,
+                    jets.btagDeepB,
+                )
+                btag_wgt_down = ak.where(btag_mask, sys_wgts, btag_wgt_down)
+
+        btag_wgt_up = ak.prod(btag_wgt_up, axis=1)
+        btag_wgt_down = ak.prod(btag_wgt_down, axis=1)
+
+        btag_syst[sys] = {"up": btag_wgt_up, "down": btag_wgt_down}
+
+    weights = weights.weight()
+    sum_before = dak.map_partitions(ak.sum, weights, keepdims=True)
+    sum_after = dak.map_partitions(ak.sum, weights*btag_wgt, keepdims=True)
+    btag_wgt = btag_wgt * sum_before / sum_after
+    return btag_wgt, btag_syst
 
 def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file):
     """

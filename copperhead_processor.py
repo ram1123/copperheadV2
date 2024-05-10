@@ -9,7 +9,7 @@ from corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 from corrections.weight import Weights
-from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager, btag_weights_json, get_jetpuid_weights
+from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager, qgl_weights_keepDim, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -1349,7 +1349,13 @@ class EventProcessor(processor.ProcessorABC):
         #     # --- QGL weights  start --- #
             isHerwig = "herwig" in events.metadata['dataset']
             print("adding QGL weights!")
-            qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
+            # original start -------------------------------------
+            # qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
+            # original end -------------------------------------
+            
+            # keep dims start -------------------------------------
+            qgl_wgts = qgl_weights_keepDim(jet1, jet2, njets, isHerwig)
+            # keep dims end -------------------------------------
             weights.add("qgl", 
                         weight=qgl_wgts["nom"],
                         weightUp=qgl_wgts["up"],
@@ -1365,9 +1371,17 @@ class EventProcessor(processor.ProcessorABC):
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
                 btag_systs = self.config["btag_systs"] #if do_btag_syst else []
                 btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
-                btag_wgt, btag_syst = btag_weights_json(
-                    self, btag_systs, jets, weights, bjet_sel_mask, btag_json
+                # original start -------------------------------------
+                # btag_wgt, btag_syst = btag_weights_json(
+                #     self, btag_systs, jets, weights, bjet_sel_mask, btag_json
+                # )
+                # original end -------------------------------------
+                
+                # keep dims start -------------------------------------
+                btag_wgt, btag_syst = btag_weights_jsonKeepDim(
+                            self, btag_systs, jets, weights, bjet_sel_mask, btag_json
                 )
+                # keep dims end -------------------------------------
                 # print(f"btag_wgt: {ak.to_numpy(btag_wgt.compute())}")
                 # print(f"btag_syst['jes_up']: {ak.to_numpy(btag_syst['jes']['up'].compute())}")
                 # print(f"btag_syst['jes_down']: {ak.to_numpy(btag_syst['jes']['down'].compute())}")
