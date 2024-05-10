@@ -218,6 +218,7 @@ def apply_roccor(events, roccor_file_path: str, is_mc:bool, test_mode=False):
                 cs.Variable(name="eta", type="real", description="Jet pseudorapdity"),
                 cs.Variable(name="phi", type="real", description="Jet phi"),
                 cs.Variable(name="charge", type="real", description="Muon charge"),
+                cs.Variable(name="event", type="real", description="Event number"),
             ],
             output=cs.Variable(name="rng", type="real"),
             data=cs.HashPRNG(
@@ -232,6 +233,7 @@ def apply_roccor(events, roccor_file_path: str, is_mc:bool, test_mode=False):
             events.Muon.eta,
             events.Muon.phi,
             events.Muon.charge,
+            events.event,
         )
         # print(f"mc_rand: {ak.to_numpy(ak.flatten(mc_rand.compute()))}")
         # mc_rand = ak.unflatten(mc_rand, ak.num(events.Muon.pt, axis=1))
