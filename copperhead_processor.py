@@ -356,7 +356,6 @@ class EventProcessor(processor.ProcessorABC):
         )
         # original muon selection end ------------------------------------------------
 
-        # print(f"sum muon_selection: {ak.sum(muon_selection).compute()}")
         
         # # testing muon selection ------------------------------------------------
         # muon_selection = (
@@ -1098,9 +1097,7 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
 
         pass_jet_id = jet_id(jets, self.config)
-        # print(f"sum pass_jet_id: {ak.to_numpy(ak.sum(pass_jet_id, axis=1).compute())}")
-        # print(f"sum pass_jet_id: {ak.to_numpy(ak.sum(pass_jet_id, axis=None).compute())}")
-        # print(f"njets: {ak.to_numpy(ak.num(jets, axis=1).compute())}")
+
         
         # jet PUID disabled as it's not applicable for jets with JEC and pt> 50,
         # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL

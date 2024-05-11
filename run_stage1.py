@@ -35,6 +35,7 @@ np.set_printoptions(threshold=sys.maxsize)
 import gc
 import ctypes
 from omegaconf import OmegaConf
+from lib.get_parameters import getParametersForYr
 
 def trim_memory() -> int:
      libc = ctypes.CDLL("libc.so.6")
@@ -276,8 +277,10 @@ if __name__ == "__main__":
     config_path = "./config/parameters.json"
     # with open(config_path) as file:
     #     config = json.loads(file.read())
-    config_path = "./config/parameters.yaml"
-    config = OmegaConf.load(config_path)
+    # config_path = "./config/parameters.yaml"
+    # config = OmegaConf.load(config_path)
+    config = getParametersForYr(args.year)
+    
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
     if not test_mode: # full scale implementation
@@ -316,9 +319,9 @@ if __name__ == "__main__":
             for dataset, sample in tqdm.tqdm(samples.items()):
                 sample_step = time.time()
                 # max_file_len = 15
-                # max_file_len = 100000000
+                max_file_len = 100000000
                 # max_file_len = 6
-                max_file_len = 50
+                # max_file_len = 50
                 # max_file_len = 9
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
@@ -329,9 +332,9 @@ if __name__ == "__main__":
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
                     to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
-                    print(f"to_compute: {to_compute}")
+                    # print(f"to_compute: {to_compute}")
                     dask_computed = dask.compute(to_compute)
-                    print(f"dask_computed: {dask_computed}")
+                    # print(f"dask_computed: {dask_computed}")
 
                     # do garbage collection and memory trimming-----------
                     client.run(gc.collect)

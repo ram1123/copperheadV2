@@ -294,14 +294,12 @@ if __name__ == "__main__":
             # cluster = LocalCluster(processes=True)
             # cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
             # client = Client(cluster)
-            client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             print("Local scale Client created")
         # turning off seperate client test end --------------------------------------------------------
         big_sample_info = {}
         year = args.year
         dataset = datasets[year]
-        
-        # key_list = list(dataset.keys())
         new_sample_list = []
        
         # take data
@@ -316,10 +314,11 @@ if __name__ == "__main__":
                         new_sample_list.append(sample_name)
         # take bkg
         bkg_samples = args.bkg_samples
+        print(f"bkg_samples: {bkg_samples}")
         if len(bkg_samples) >0:
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
-                    new_sample_list.append("dy_M-50")
+                    # new_sample_list.append("dy_M-50")
                     new_sample_list.append("dy_M-100To200")
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                     new_sample_list.append("ttjets_dl")
