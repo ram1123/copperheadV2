@@ -60,6 +60,76 @@ def get_calib_categories(events):
 
 
 
+def generateVoigtian_plot(mass_arr, cat_idx: int):
+    """
+    params
+    mass_arr: numpy arrary of dimuon mass value to do calibration fit on
+    cat_idx: int index of specific calibration category the mass_arr is from
+    """
+    canvas = rt.TCanvas(str(cat_idx),str(cat_idx)) # giving a specific name for each canvas prevents segfault
+    canvas.cd()
+    # workspace = rt.RooWorkspace("w", "w")
+    mass =  rt.RooRealVar("dimuon_mass","mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
+    mass.setBins(200)
+    roo_dataset = rt.RooDataSet.from_numpy({"dimuon_mass": mass_arr}, [mass])
+    # workspace.Import(mass)
+    frame = mass.frame()
+    
+    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.5, 0, 30)
+    bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.2, 90, 92)
+    sigma = rt.RooRealVar("sigma" , "sigma", 2, 0.0, 5.0)
+    
+    bwWidth.setConstant(True)
+    # bwmZ.setConstant(True)
+    
+    model1 = rt.RooVoigtian("Voigtian" , "Voigtian",mass, bwmZ, bwWidth, sigma)
+    
+    exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want 
+    # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", -0.1, -1, -0.00000001) # negative coeff to get the peak shape we want 
+    shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
+    shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
+    model2_1 = rt.RooExponential("Exponential", "Exponential", shifted_mass,exp_coeff)
+    
+    erfc_center = rt.RooRealVar("erfc_center" , "erfc_center", 91.2, 75, 105)
+    erfc_coeff = rt.RooRealVar("erfc_coeff" , "erfc_coeff", 0.1, 0, 1.5)
+    erfc_in = rt.RooFormulaVar("erfc_in", "(@0 - @2) * @1", rt.RooArgList(mass, erfc_coeff, erfc_center)) 
+    # both bindPdf and RooGenericPdf work, but one may have better cuda integration over other, so leaving both options
+    # model2_2 = rt.RooFit.bindPdf("erfc", rt.TMath.Erfc, erfc_in)
+    model2_2 = rt.RooGenericPdf("erfc", "TMath::Erfc(@0)", erfc_in)
+    
+    
+    # model2_2 = rt.RooGenericPdf("erfc", "TMath::Erf(@0)+1", erfc_in)
+    # model2_2 = rt.RooFit.bindFunction("erfc", rt.TMath.Erf, erfc_in)
+    
+    
+    
+    
+    model2 = rt.RooProdPdf("erfc_exp", "erfc_exp", rt.RooArgList(model2_1, model2_2))
+    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0, 1.0)
+    model3 = rt.RooAddPdf("model3", "model3", rt.RooArgList(model1, model2),rt.RooArgList(sigfrac))
+
+
+    time_step = time.time()
+    
+    #fitting directly to unbinned dataset is slow, so first make a histogram
+    roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
+    # do fitting
+    rt.EnableImplicitMT()
+    # model3.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
+    model3.fitTo(roo_hist, rt.RooFit.Save(), rt.RooFit.PrefitDataFraction(0.8), EvalBackend ="cpu")
+    print(f"fitting elapsed time: {time.time() - time_step}")
+    #do plotting
+    roo_dataset.plotOn(frame)
+    model1.plotOn(frame, rt.RooFit.LineColor(rt.kRed))
+    # model2.plotOn(frame, rt.RooFit.LineColor(rt.kBlue))
+    model3.plotOn(frame, rt.RooFit.LineColor(rt.kGreen))
+    
+    frame.Draw()
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
+    del canvas
+
 def generateBWxDCB_plot(mass_arr, cat_idx: int):
     """
     params
@@ -117,6 +187,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     
     sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.98, 0, 1.0)
     model3 = rt.RooAddPdf("model3", "model3", rt.RooArgList(model1, model2),sigfrac)
+    
+
 
     time_step = time.time()
     
@@ -124,7 +196,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # do fitting
     rt.EnableImplicitMT()
-    model3.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
+    # model3.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
+    model3.fitTo(roo_hist, rt.RooFit.Save(), rt.RooFit.PrefitDataFraction(0.8), EvalBackend ="cpu") #, Minos=True
     print(f"fitting elapsed time: {time.time() - time_step}")
     #do plotting
     roo_dataset.plotOn(frame)
@@ -161,4 +234,7 @@ if __name__ == "__main__":
     for idx in range(len(data_categories)):
         cat_selection = data_categories[idx]
         cat_dimuon_mass = ak.to_numpy(data_events.dimuon_mass[cat_selection])
-        generateBWxDCB_plot(cat_dimuon_mass, idx)
+        if idx < 12:
+            generateBWxDCB_plot(cat_dimuon_mass, idx)
+        else:
+            generateVoigtian_plot(cat_dimuon_mass, idx)
