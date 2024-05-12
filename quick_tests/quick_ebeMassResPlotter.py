@@ -126,9 +126,11 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     
     frame.Draw()
     canvas.Update()
-    canvas.Draw()
+    # canvas.Draw()
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
     del canvas
+    # # consider script to wait a second for stability?
+    # time.sleep(1)
 
 def generateBWxDCB_plot(mass_arr, cat_idx: int):
     """
@@ -207,9 +209,11 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     
     frame.Draw()
     canvas.Update()
-    canvas.Draw()
+    # canvas.Draw()
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
     del canvas
+    # # consider script to wait a second for stability?
+    # time.sleep(1)
 
 if __name__ == "__main__":
     client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
