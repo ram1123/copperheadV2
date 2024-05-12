@@ -74,39 +74,38 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     roo_dataset = rt.RooDataSet.from_numpy({"dimuon_mass": mass_arr}, [mass])
     # workspace.Import(mass)
     frame = mass.frame()
-    
-    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.5, 0, 30)
-    bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.2, 90, 92)
-    sigma = rt.RooRealVar("sigma" , "sigma", 2, 0.0, 5.0)
-    
+
+    # Voigtian --------------------------------------------------------------------------
+    bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
+    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
+    sigma = rt.RooRealVar("sigma" , "sigma", 2, 1.5, 2.5)
     bwWidth.setConstant(True)
-    # bwmZ.setConstant(True)
-    
-    model1 = rt.RooVoigtian("Voigtian" , "Voigtian",mass, bwmZ, bwWidth, sigma)
-    
-    exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want 
+    model1 = rt.RooVoigtian("signal" , "signal", mass, bwmZ, bwWidth, sigma)
+
+
+
+    # # Exp x Erfc Background --------------------------------------------------------------------------
+    # # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want 
     # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", -0.1, -1, -0.00000001) # negative coeff to get the peak shape we want 
-    shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
-    shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
-    model2_1 = rt.RooExponential("Exponential", "Exponential", shifted_mass,exp_coeff)
+    # shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
+    # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
+    # model2_1 = rt.RooExponential("Exponential", "Exponential", shifted_mass,exp_coeff)
     
-    erfc_center = rt.RooRealVar("erfc_center" , "erfc_center", 91.2, 75, 105)
-    erfc_coeff = rt.RooRealVar("erfc_coeff" , "erfc_coeff", 0.1, 0, 1.5)
-    erfc_in = rt.RooFormulaVar("erfc_in", "(@0 - @2) * @1", rt.RooArgList(mass, erfc_coeff, erfc_center)) 
-    # both bindPdf and RooGenericPdf work, but one may have better cuda integration over other, so leaving both options
-    # model2_2 = rt.RooFit.bindPdf("erfc", rt.TMath.Erfc, erfc_in)
-    model2_2 = rt.RooGenericPdf("erfc", "TMath::Erfc(@0)", erfc_in)
+    # erfc_center = rt.RooRealVar("erfc_center" , "erfc_center", 91.2, 75, 105)
+    # erfc_coeff = rt.RooRealVar("erfc_coeff" , "erfc_coeff", 0.1, 0, 1.5)
+    # erfc_in = rt.RooFormulaVar("erfc_in", "(@0 - @2) * @1", rt.RooArgList(mass, erfc_coeff, erfc_center)) 
+    # model2_2a = rt.RooFit.bindFunction("erfc", rt.TMath.Erfc, erfc_in) # turn TMath function to Roofit funciton
+    # model2_2 = rt.RooWrapperPdf("erfc","erfc", model2_2a) # turn bound function to pdf
+    # model2 = rt.RooProdPdf("bkg", "bkg", [model2_1, model2_2]) # generate ExpxErfc bkg  
     
+    # Landau Background --------------------------------------------------------------------------
+    mean = rt.RooRealVar("mean" , "mean", 95, 90, 100)
+    sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 2, 1.5, 2.5)
+    model2 = rt.RooLandau("bkg", "bkg", mass, mean, sigma_landau) # generate Landau bkg  
+
     
-    # model2_2 = rt.RooGenericPdf("erfc", "TMath::Erf(@0)+1", erfc_in)
-    # model2_2 = rt.RooFit.bindFunction("erfc", rt.TMath.Erf, erfc_in)
-    
-    
-    
-    
-    model2 = rt.RooProdPdf("erfc_exp", "erfc_exp", rt.RooArgList(model2_1, model2_2))
     sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0, 1.0)
-    model3 = rt.RooAddPdf("model3", "model3", rt.RooArgList(model1, model2),rt.RooArgList(sigfrac))
+    final_model = rt.RooAddPdf("final_model", "final_model", rt.RooArgList(model1, model2),rt.RooArgList(sigfrac))
 
 
     time_step = time.time()
@@ -115,22 +114,22 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # do fitting
     rt.EnableImplicitMT()
-    # model3.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
-    model3.fitTo(roo_hist, rt.RooFit.Save(), rt.RooFit.PrefitDataFraction(0.8), EvalBackend ="cpu")
+    # final_model.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
+    final_model.fitTo(roo_hist, rt.RooFit.PrefitDataFraction(0.8), Save=True,  EvalBackend ="cpu")
     print(f"fitting elapsed time: {time.time() - time_step}")
     #do plotting
     roo_dataset.plotOn(frame)
-    model1.plotOn(frame, rt.RooFit.LineColor(rt.kRed))
-    # model2.plotOn(frame, rt.RooFit.LineColor(rt.kBlue))
-    model3.plotOn(frame, rt.RooFit.LineColor(rt.kGreen))
+    final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
+    final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
+    final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
     
     frame.Draw()
     canvas.Update()
     # canvas.Draw()
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
     del canvas
-    # # consider script to wait a second for stability?
-    # time.sleep(1)
+    # consider script to wait a second for stability?
+    time.sleep(1)
 
 def generateBWxDCB_plot(mass_arr, cat_idx: int):
     """
@@ -146,13 +145,13 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     roo_dataset = rt.RooDataSet.from_numpy({"dimuon_mass": mass_arr}, [mass])
     # workspace.Import(mass)
     frame = mass.frame()
-    
-    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.5, 0, 30)
-    bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.2, 90, 92)
-    sigma = rt.RooRealVar("sigma" , "sigma", 2, 0.0, 5.0)
-    
+
+    # BWxDCB --------------------------------------------------------------------------
+    bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
+    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
+    bwmZ.setConstant(True)
     bwWidth.setConstant(True)
-    bwmZ.setConstant(True) # set bwmZ 
+    
     
     model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
     
@@ -172,23 +171,25 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     n2.setConstant(True)
     model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
     
-    # merge BW with DCB
-    model1 = rt.RooFFTConvPdf("BWxDCB", "BWxDCB", mass, model1_1, model1_2)
+    # merge BW with DCB via convolution
+    model1 = rt.RooFFTConvPdf("signal", "signal", mass, model1_1, model1_2) # BWxDCB
     
     
     mass.setBins(10000,"cache") # This nbins has nothing to do with actual nbins of mass. cache bins is representation of the variable only used in FFT
     mass.setMin("cache",50.5) 
     mass.setMax("cache",130.5)
-    
+
+    # Background --------------------------------------------------------------------------
     coeff = rt.RooRealVar("coeff", "coeff", 0.01, 0.00000001, 1)
     # shift = rt.RooRealVar("shift" , "shift", 92, -10, 1000)
     # coeff = rt.RooRealVar("coeff", "Slope", 0.0001, -1.5, 0)
     shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
     shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
-    model2 = rt.RooExponential("Exponential", "Exponential", shifted_mass, coeff)
+    model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
     
-    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.98, 0, 1.0)
-    model3 = rt.RooAddPdf("model3", "model3", rt.RooArgList(model1, model2),sigfrac)
+    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0, 1.0)
+    # final_model = rt.RooAddPdf("final_model", "final_model", rt.RooArgList(model1, model2),sigfrac)
+    final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
     
 
 
@@ -198,22 +199,22 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # do fitting
     rt.EnableImplicitMT()
-    # model3.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
-    model3.fitTo(roo_hist, rt.RooFit.Save(), rt.RooFit.PrefitDataFraction(0.8), EvalBackend ="cpu") #, Minos=True
+    # final_model.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
+    final_model.fitTo(roo_hist,rt.RooFit.PrefitDataFraction(0.8), Save=True,  EvalBackend ="cpu") #, Minos=True
     print(f"fitting elapsed time: {time.time() - time_step}")
     #do plotting
     roo_dataset.plotOn(frame)
-    model1.plotOn(frame, rt.RooFit.LineColor(rt.kRed))
-    # model2.plotOn(frame, rt.RooFit.LineColor(rt.kBlue))
-    model3.plotOn(frame, rt.RooFit.LineColor(rt.kGreen))
+    final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
+    final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
+    final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
     
     frame.Draw()
     canvas.Update()
     # canvas.Draw()
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
     del canvas
-    # # consider script to wait a second for stability?
-    # time.sleep(1)
+    # consider script to wait a second for stability?
+    time.sleep(1)
 
 if __name__ == "__main__":
     client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
@@ -235,7 +236,8 @@ if __name__ == "__main__":
     }).compute()
     data_categories = get_calib_categories(data_events)
     # iterate over 30 different calibration categories
-    for idx in range(len(data_categories)):
+    # for idx in range(len(data_categories)):
+    for idx in range(12, len(data_categories)):
         cat_selection = data_categories[idx]
         cat_dimuon_mass = ak.to_numpy(data_events.dimuon_mass[cat_selection])
         if idx < 12:
