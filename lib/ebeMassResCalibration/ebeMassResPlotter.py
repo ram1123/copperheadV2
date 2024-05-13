@@ -66,7 +66,8 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
     cat_idx: int index of specific calibration category the mass_arr is from
     """
-    canvas = rt.TCanvas(str(cat_idx),str(cat_idx)) # giving a specific name for each canvas prevents segfault
+    # if you want TCanvas to not crash, separate fitting and drawing
+    canvas = rt.TCanvas(str(cat_idx),str(cat_idx)) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     # workspace = rt.RooWorkspace("w", "w")
     mass =  rt.RooRealVar("dimuon_mass","mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
@@ -78,7 +79,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     # Voigtian --------------------------------------------------------------------------
     bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
     bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
-    sigma = rt.RooRealVar("sigma" , "sigma", 2, 1.5, 2.5)
+    sigma = rt.RooRealVar("sigma" , "sigma", 2, 0.5, 2.5)
     bwWidth.setConstant(True)
     model1 = rt.RooVoigtian("signal" , "signal", mass, bwmZ, bwWidth, sigma)
 
@@ -99,9 +100,9 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     # model2 = rt.RooProdPdf("bkg", "bkg", [model2_1, model2_2]) # generate ExpxErfc bkg  
     
     # Landau Background --------------------------------------------------------------------------
-    mean = rt.RooRealVar("mean" , "mean", 95, 90, 100)
-    sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 2, 1.5, 2.5)
-    model2 = rt.RooLandau("bkg", "bkg", mass, mean, sigma_landau) # generate Landau bkg  
+    mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 95, 90, 150)
+    sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 2, 0.5, 8.5)
+    model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg  
 
     
     sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0, 1.0)
@@ -114,16 +115,31 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # do fitting
     rt.EnableImplicitMT()
-    # final_model.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
-    final_model.fitTo(roo_hist, rt.RooFit.PrefitDataFraction(0.8), Save=True,  EvalBackend ="cpu")
+    # final_model.fitTo(roo_hist,rt.RooFit.PrefitDataFraction(0.2), rt.RooFit.Save(), EvalBackend ="cpu")
+    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     print(f"fitting elapsed time: {time.time() - time_step}")
     #do plotting
-    roo_dataset.plotOn(frame)
+    # roo_dataset.plotOn(frame)
+    roo_hist.plotOn(frame, Name="data_hist_frame") # name is explicitly defined so chiSquare can find it
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
     final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
-    
     frame.Draw()
+
+    #calculate chi2 and add to plot
+    n_free_params = fit_result.floatParsFinal().getSize()
+    print(f"n_free_params: {n_free_params}")
+    chi2 = frame.chiSquare(final_model.GetName(), "data_hist_frame", n_free_params)
+    chi2 = float('%.3g' % chi2) # get upt to 3 sig fig
+    print(f"chi2: {chi2}")
+    latex = rt.TLatex()
+    latex.SetNDC()
+    latex.SetTextAlign(11)
+    latex.SetTextFont(42)
+    latex.SetTextSize(0.04)
+    latex.DrawLatex(0.7,0.8,f"#chi^2 = {chi2}")
+   
     canvas.Update()
     # canvas.Draw()
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
@@ -203,7 +219,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     final_model.fitTo(roo_hist,rt.RooFit.PrefitDataFraction(0.8), Save=True,  EvalBackend ="cpu") #, Minos=True
     print(f"fitting elapsed time: {time.time() - time_step}")
     #do plotting
-    roo_dataset.plotOn(frame)
+    # roo_dataset.plotOn(frame)
+    roo_hist.plotOn(frame, Name="data_hist_frame") # name is explicitly defined so chiSquare can find it
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
     final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
@@ -219,8 +236,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
 if __name__ == "__main__":
     client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
     common_load_path = "/work/users/yun79/stage1_output/Run2StorageTest/2018/f1_0"
-    # data_load_path = common_load_path+"/data*/*/*.parquet"
-    data_load_path = common_load_path+"/data_C/*/*.parquet"
+    data_load_path = common_load_path+"/data*/*/*.parquet"
+    # data_load_path = common_load_path+"/data_C/*/*.parquet"
     # data_load_path = common_load_path+"/data_D/*/*.parquet"
     
     data_events = dak.from_parquet(data_load_path) 
@@ -237,7 +254,7 @@ if __name__ == "__main__":
     data_categories = get_calib_categories(data_events)
     # iterate over 30 different calibration categories
     # for idx in range(len(data_categories)):
-    for idx in range(12, len(data_categories)):
+    for idx in range(24, len(data_categories)):
         cat_selection = data_categories[idx]
         cat_dimuon_mass = ak.to_numpy(data_events.dimuon_mass[cat_selection])
         if idx < 12:
