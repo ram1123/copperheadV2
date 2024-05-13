@@ -67,14 +67,22 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     cat_idx: int index of specific calibration category the mass_arr is from
     """
     # if you want TCanvas to not crash, separate fitting and drawing
-    canvas = rt.TCanvas(str(cat_idx),str(cat_idx)) # giving a specific name for each canvas prevents segfault?
-    canvas.cd()
+    canvas = rt.TCanvas(str(cat_idx),str(cat_idx),800, 800) # giving a specific name for each canvas prevents segfault?
+    # canvas.cd()
+    upper_pad = rt.TPad("upper_pad", "upper_pad", 0, 0.25, 1, 1)
+    lower_pad = rt.TPad("lower_pad", "lower_pad", 0, 0, 1, 0.35)
+    upper_pad.SetBottomMargin(0.14)
+    lower_pad.SetTopMargin(0.00001)
+    lower_pad.SetBottomMargin(0.25)
+    upper_pad.Draw()
+    lower_pad.Draw()
+    upper_pad.cd()
     # workspace = rt.RooWorkspace("w", "w")
     mass =  rt.RooRealVar("dimuon_mass","mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
-    mass.setBins(200)
+    mass.setBins(500)
     roo_dataset = rt.RooDataSet.from_numpy({"dimuon_mass": mass_arr}, [mass])
     # workspace.Import(mass)
-    frame = mass.frame()
+    frame = mass.frame(Title=f"ZCR Dimuon Mass calibration fit for category {cat_idx}")
 
     # Voigtian --------------------------------------------------------------------------
     bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
@@ -116,21 +124,23 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     # do fitting
     rt.EnableImplicitMT()
     # final_model.fitTo(roo_hist,rt.RooFit.PrefitDataFraction(0.2), rt.RooFit.Save(), EvalBackend ="cpu")
-    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     print(f"fitting elapsed time: {time.time() - time_step}")
     #do plotting
-    # roo_dataset.plotOn(frame)
-    roo_hist.plotOn(frame, Name="data_hist_frame") # name is explicitly defined so chiSquare can find it
+    roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
+    # roo_hist.plotOn(frame, Name="data_hist") 
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
     final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
+    # frame.GetXaxis().SetTitle("")
+    frame.GetYaxis().SetTitle("Events")
     frame.Draw()
 
     #calculate chi2 and add to plot
     n_free_params = fit_result.floatParsFinal().getSize()
     print(f"n_free_params: {n_free_params}")
-    chi2 = frame.chiSquare(final_model.GetName(), "data_hist_frame", n_free_params)
+    chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
     chi2 = float('%.3g' % chi2) # get upt to 3 sig fig
     print(f"chi2: {chi2}")
     latex = rt.TLatex()
@@ -139,7 +149,23 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     latex.SetTextFont(42)
     latex.SetTextSize(0.04)
     latex.DrawLatex(0.7,0.8,f"#chi^2 = {chi2}")
-   
+    # canvas.Update()
+
+    # obtain pull plot
+    hpull = frame.pullHist("data_hist", "final_model")
+    lower_pad.cd()
+    frame2 = mass.frame(Title=" ")
+    frame2.addPlotable(hpull, "P")
+    frame2.GetYaxis().SetTitle("(Data-Fit)/ #sigma")
+    frame2.GetYaxis().SetRangeUser(-5, 8)
+    frame2.GetYaxis().SetTitleOffset(0.3)
+    frame2.GetYaxis().SetTitleSize(0.08)
+    frame2.GetYaxis().SetLabelSize(0.08)
+    frame2.GetXaxis().SetLabelSize(0.08)
+    frame2.GetXaxis().SetTitle("m_{#mu#mu} (GeV)")
+    frame2.Draw()
+
+    # canvas.Modified()
     canvas.Update()
     # canvas.Draw()
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
@@ -254,7 +280,8 @@ if __name__ == "__main__":
     data_categories = get_calib_categories(data_events)
     # iterate over 30 different calibration categories
     # for idx in range(len(data_categories)):
-    for idx in range(24, len(data_categories)):
+    for idx in range(12, len(data_categories)):
+    # for idx in range(16, 17):
         cat_selection = data_categories[idx]
         cat_dimuon_mass = ak.to_numpy(data_events.dimuon_mass[cat_selection])
         if idx < 12:
