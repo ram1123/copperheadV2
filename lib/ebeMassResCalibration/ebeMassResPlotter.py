@@ -78,11 +78,12 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     lower_pad.Draw()
     upper_pad.cd()
     # workspace = rt.RooWorkspace("w", "w")
-    mass =  rt.RooRealVar("dimuon_mass","mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
+    mass_name = "dimuon_mass"
+    mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
     mass.setBins(500)
-    roo_dataset = rt.RooDataSet.from_numpy({"dimuon_mass": mass_arr}, [mass])
+    roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     # workspace.Import(mass)
-    frame = mass.frame(Title=f"ZCR Dimuon Mass calibration fit for category {cat_idx}")
+    frame = mass.frame(Title=f"ZCR Dimuon Mass Voigtian calibration fit for category {cat_idx}")
 
     # Voigtian --------------------------------------------------------------------------
     bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
@@ -90,7 +91,6 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     sigma = rt.RooRealVar("sigma" , "sigma", 2, 0.5, 2.5)
     bwWidth.setConstant(True)
     model1 = rt.RooVoigtian("signal" , "signal", mass, bwmZ, bwWidth, sigma)
-
 
 
     # # Exp x Erfc Background --------------------------------------------------------------------------
@@ -114,11 +114,10 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
 
     
     sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0, 1.0)
-    final_model = rt.RooAddPdf("final_model", "final_model", rt.RooArgList(model1, model2),rt.RooArgList(sigfrac))
+    final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
 
 
     time_step = time.time()
-    
     #fitting directly to unbinned dataset is slow, so first make a histogram
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # do fitting
@@ -133,7 +132,6 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
     final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
-    # frame.GetXaxis().SetTitle("")
     frame.GetYaxis().SetTitle("Events")
     frame.Draw()
 
@@ -179,19 +177,29 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
     cat_idx: int index of specific calibration category the mass_arr is from
     """
-    canvas = rt.TCanvas(str(cat_idx),str(cat_idx)) # giving a specific name for each canvas prevents segfault
-    canvas.cd()
+    # if you want TCanvas to not crash, separate fitting and drawing
+    canvas = rt.TCanvas(str(cat_idx),str(cat_idx),800, 800) # giving a specific name for each canvas prevents segfault?
+    # canvas.cd()
+    upper_pad = rt.TPad("upper_pad", "upper_pad", 0, 0.25, 1, 1)
+    lower_pad = rt.TPad("lower_pad", "lower_pad", 0, 0, 1, 0.35)
+    upper_pad.SetBottomMargin(0.14)
+    lower_pad.SetTopMargin(0.00001)
+    lower_pad.SetBottomMargin(0.25)
+    upper_pad.Draw()
+    lower_pad.Draw()
+    upper_pad.cd()
     # workspace = rt.RooWorkspace("w", "w")
-    mass =  rt.RooRealVar("dimuon_mass","mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
-    mass.setBins(200)
-    roo_dataset = rt.RooDataSet.from_numpy({"dimuon_mass": mass_arr}, [mass])
+    mass_name = "dimuon_mass"
+    mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
+    mass.setBins(500)
+    roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     # workspace.Import(mass)
-    frame = mass.frame()
+    frame = mass.frame(Title=f"ZCR Dimuon Mass BWxDCB calibration fit for category {cat_idx}")
 
     # BWxDCB --------------------------------------------------------------------------
     bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
     bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
-    bwmZ.setConstant(True)
+    # bwmZ.setConstant(True)
     bwWidth.setConstant(True)
     
     
@@ -209,8 +217,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 185)
     alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
     n2 = rt.RooRealVar("n2" , "n2", 25, 0.01, 385)
-    n1.setConstant(True)
-    n2.setConstant(True)
+    # n1.setConstant(True)
+    # n2.setConstant(True)
     model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
     
     # merge BW with DCB via convolution
@@ -221,18 +229,21 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     mass.setMin("cache",50.5) 
     mass.setMax("cache",130.5)
 
-    # Background --------------------------------------------------------------------------
+    # Exp Background --------------------------------------------------------------------------
     coeff = rt.RooRealVar("coeff", "coeff", 0.01, 0.00000001, 1)
-    # shift = rt.RooRealVar("shift" , "shift", 92, -10, 1000)
-    # coeff = rt.RooRealVar("coeff", "Slope", 0.0001, -1.5, 0)
     shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
     shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
     model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
+    #--------------------------------------------------
+    
+    # Landau Background --------------------------------------------------------------------------
+    # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 90, 70, 150)
+    # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 5, 0.5, 8.5)
+    # model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg  
+    #-----------------------------------------------------
     
     sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0, 1.0)
-    # final_model = rt.RooAddPdf("final_model", "final_model", rt.RooArgList(model1, model2),sigfrac)
     final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
-    
 
 
     time_step = time.time()
@@ -242,16 +253,47 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     # do fitting
     rt.EnableImplicitMT()
     # final_model.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
-    final_model.fitTo(roo_hist,rt.RooFit.PrefitDataFraction(0.8), Save=True,  EvalBackend ="cpu") #, Minos=True
+    _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     print(f"fitting elapsed time: {time.time() - time_step}")
     #do plotting
-    # roo_dataset.plotOn(frame)
-    roo_hist.plotOn(frame, Name="data_hist_frame") # name is explicitly defined so chiSquare can find it
+    roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
+    # roo_hist.plotOn(frame, Name="data_hist") # name is explicitly defined so chiSquare can find it
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
     final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
-    
+    frame.GetYaxis().SetTitle("Events")
     frame.Draw()
+
+    #calculate chi2 and add to plot
+    n_free_params = fit_result.floatParsFinal().getSize()
+    print(f"n_free_params: {n_free_params}")
+    chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
+    chi2 = float('%.3g' % chi2) # get upt to 3 sig fig
+    print(f"chi2: {chi2}")
+    latex = rt.TLatex()
+    latex.SetNDC()
+    latex.SetTextAlign(11)
+    latex.SetTextFont(42)
+    latex.SetTextSize(0.04)
+    latex.DrawLatex(0.7,0.8,f"#chi^2 = {chi2}")
+    # canvas.Update()
+
+    # obtain pull plot
+    hpull = frame.pullHist("data_hist", "final_model")
+    lower_pad.cd()
+    frame2 = mass.frame(Title=" ")
+    frame2.addPlotable(hpull, "P")
+    frame2.GetYaxis().SetTitle("(Data-Fit)/ #sigma")
+    frame2.GetYaxis().SetRangeUser(-5, 8)
+    frame2.GetYaxis().SetTitleOffset(0.3)
+    frame2.GetYaxis().SetTitleSize(0.08)
+    frame2.GetYaxis().SetLabelSize(0.08)
+    frame2.GetXaxis().SetLabelSize(0.08)
+    frame2.GetXaxis().SetTitle("m_{#mu#mu} (GeV)")
+    frame2.Draw()
+
+    # canvas.Modified()    
     canvas.Update()
     # canvas.Draw()
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
@@ -262,8 +304,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
 if __name__ == "__main__":
     client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
     common_load_path = "/work/users/yun79/stage1_output/Run2StorageTest/2018/f1_0"
-    data_load_path = common_load_path+"/data*/*/*.parquet"
-    # data_load_path = common_load_path+"/data_C/*/*.parquet"
+    # data_load_path = common_load_path+"/data*/*/*.parquet"
+    data_load_path = common_load_path+"/data_C/*/*.parquet"
     # data_load_path = common_load_path+"/data_D/*/*.parquet"
     
     data_events = dak.from_parquet(data_load_path) 
@@ -280,8 +322,8 @@ if __name__ == "__main__":
     data_categories = get_calib_categories(data_events)
     # iterate over 30 different calibration categories
     # for idx in range(len(data_categories)):
-    for idx in range(12, len(data_categories)):
-    # for idx in range(16, 17):
+    # for idx in range(12, len(data_categories)):
+    for idx in range(0, 12):
         cat_selection = data_categories[idx]
         cat_dimuon_mass = ak.to_numpy(data_events.dimuon_mass[cat_selection])
         if idx < 12:
