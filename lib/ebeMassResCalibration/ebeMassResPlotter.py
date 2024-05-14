@@ -212,6 +212,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     put whatevere restrictions we want.
     """
     mean = rt.RooRealVar("mean" , "mean", 0, -10,10) # mean is mean relative to BW
+    # mean = rt.RooRealVar("mean" , "mean", 100, 95,110) # test
     sigma = rt.RooRealVar("sigma" , "sigma", 2, .1, 4.0)
     alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
     n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 185)
@@ -229,21 +230,22 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     mass.setMin("cache",50.5) 
     mass.setMax("cache",130.5)
 
-    # Exp Background --------------------------------------------------------------------------
-    coeff = rt.RooRealVar("coeff", "coeff", 0.01, 0.00000001, 1)
-    shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
-    shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
-    model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
+    # # Exp Background --------------------------------------------------------------------------
+    # coeff = rt.RooRealVar("coeff", "coeff", 0.01, 0.00000001, 1)
+    # shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
+    # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
+    # model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
     #--------------------------------------------------
     
     # Landau Background --------------------------------------------------------------------------
-    # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 90, 70, 150)
-    # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 5, 0.5, 8.5)
-    # model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg  
+    mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 90, 70, 150)
+    sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 5, 0.5, 8.5)
+    model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg  
     #-----------------------------------------------------
     
-    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0, 1.0)
+    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0.000001, 0.99999999)
     final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
+    # final_model = model1_2
 
 
     time_step = time.time()
@@ -304,8 +306,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
 if __name__ == "__main__":
     client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
     common_load_path = "/work/users/yun79/stage1_output/Run2StorageTest/2018/f1_0"
-    # data_load_path = common_load_path+"/data*/*/*.parquet"
-    data_load_path = common_load_path+"/data_C/*/*.parquet"
+    data_load_path = common_load_path+"/data*/*/*.parquet"
+    # data_load_path = common_load_path+"/data_C/*/*.parquet"
     # data_load_path = common_load_path+"/data_D/*/*.parquet"
     
     data_events = dak.from_parquet(data_load_path) 
