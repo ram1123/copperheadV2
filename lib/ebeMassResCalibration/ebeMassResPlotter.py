@@ -60,7 +60,7 @@ def get_calib_categories(events):
 
 
 
-def generateVoigtian_plot(mass_arr, cat_idx: int):
+def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -80,7 +80,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     # workspace = rt.RooWorkspace("w", "w")
     mass_name = "dimuon_mass"
     mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
-    mass.setBins(500)
+    mass.setBins(nbins)
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     # workspace.Import(mass)
     frame = mass.frame(Title=f"ZCR Dimuon Mass Voigtian calibration fit for category {cat_idx}")
@@ -126,6 +126,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     print(f"fitting elapsed time: {time.time() - time_step}")
+    time.sleep(1)
     #do plotting
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
     # roo_hist.plotOn(frame, Name="data_hist") 
@@ -171,7 +172,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int):
     # consider script to wait a second for stability?
     time.sleep(1)
 
-def generateBWxDCB_plot(mass_arr, cat_idx: int):
+def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -191,7 +192,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     # workspace = rt.RooWorkspace("w", "w")
     mass_name = "dimuon_mass"
     mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
-    mass.setBins(500)
+    mass.setBins(nbins)
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     # workspace.Import(mass)
     frame = mass.frame(Title=f"ZCR Dimuon Mass BWxDCB calibration fit for category {cat_idx}")
@@ -238,14 +239,60 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int):
     #--------------------------------------------------
     
     # Landau Background --------------------------------------------------------------------------
-    mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 90, 70, 150)
-    sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 5, 0.5, 8.5)
-    model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg  
+    # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 150, 70, 200)
+    # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 5, 0.5, 8.5)
+    # model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg  
     #-----------------------------------------------------
+
+    # neg Exp Background --------------------------------------------------------------------------
+    # coeff = rt.RooRealVar("coeff", "coeff", -0.01, -1,  -0.00000001)
+    # shift = rt.RooRealVar("shift", "Offset", 70, 40, 105)
+    # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
+    # model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
+    #--------------------------------------------------
+    
+    # Landau Background test--------------------------------------------------------------------------
+    # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", -90,  -150, -70)
+    # mass_neg = rt.RooFormulaVar("mass_neg", "-@0", [mass])
+    # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 3, 8.5)
+    # model2 = rt.RooLandau("bkg", "bkg", mass_neg, mean_landau, sigma_landau) # generate Landau bkg  
+    #-----------------------------------------------------
+
+    # Exp x Erf Background --------------------------------------------------------------------------
+    # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want 
+    # # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", -0.1, -1, -0.00000001) # negative coeff to get the peak shape we want 
+    # shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
+    # shifted_mass = rt.RooFormulaVar("shifted_mass", "(@0 - @1)", rt.RooArgList(mass, shift))
+    # model2_1 = rt.RooExponential("Exponential", "Exponential", shifted_mass,exp_coeff)
+    
+    # erf_center = rt.RooRealVar("erf_center" , "erf_center", 91.2, 75, 155)
+    # erf_in = rt.RooFormulaVar("erf_in", "(@0 - @1)", rt.RooArgList(mass, erf_center)) 
+    # model2_2a = rt.RooFit.bindFunction("erf", rt.TMath.Erf, erf_in) # turn TMath function to Roofit funciton
+    # model2_2 = rt.RooWrapperPdf("erf","erf", model2_2a) # turn bound function to pdf
+    # # model2 = rt.RooProdPdf("bkg", "bkg", [model2_1, model2_2]) # generate Expxerf bkg 
+
+    #-----------------------------------------------------
+
+    # # Exp x Erf Background V2--------------------------------------------------------------------------
+    # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want 
+    exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", -0.1, -1, -0.00000001) # negative coeff to get the peak shape we want 
+    shift = rt.RooRealVar("shift", "Offset", 100, 90, 150)
+    shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
+    model2_1 = rt.RooExponential("Exponential", "Exponential", shifted_mass,exp_coeff)
+    erfc_center = rt.RooRealVar("erfc_center" , "erfc_center", 100, 90, 150)
+    erfc_in = rt.RooFormulaVar("erfc_in", "(@0 - @1)", rt.RooArgList(mass, erfc_center)) 
+    # both bindPdf and RooGenericPdf work, but one may have better cuda integration over other, so leaving both options
+    # model2_2 = rt.RooFit.bindPdf("erfc", rt.TMath.Erfc, erfc_in)
+    model2_2 = rt.RooGenericPdf("erfc", "TMath::Erf(@0)+1", erfc_in)
+    model2 = rt.RooProdPdf("bkg", "bkg", rt.RooArgList(model2_1, model2_2))
+    #-----------------------------------------------------
+
+
     
     sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0.000001, 0.99999999)
     final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
     # final_model = model1_2
+
 
 
     time_step = time.time()
@@ -322,13 +369,14 @@ if __name__ == "__main__":
         field : data_events[field] for field in data_events.fields
     }).compute()
     data_categories = get_calib_categories(data_events)
+    nbins = 100
     # iterate over 30 different calibration categories
     # for idx in range(len(data_categories)):
-    # for idx in range(12, len(data_categories)):
-    for idx in range(0, 12):
+    for idx in range(12, len(data_categories)):
+    # for idx in range(0, 12):
         cat_selection = data_categories[idx]
         cat_dimuon_mass = ak.to_numpy(data_events.dimuon_mass[cat_selection])
         if idx < 12:
-            generateBWxDCB_plot(cat_dimuon_mass, idx)
+            generateBWxDCB_plot(cat_dimuon_mass, idx, nbins=nbins)
         else:
-            generateVoigtian_plot(cat_dimuon_mass, idx)
+            generateVoigtian_plot(cat_dimuon_mass, idx, nbins=nbins)
