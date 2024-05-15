@@ -958,7 +958,8 @@ class EventProcessor(processor.ProcessorABC):
             abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
         )
     
-        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
+        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
+    return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
     
     def prepare_jets(self, events): # analogous to add_jec_variables function in boosted higgs
         # Initialize missing fields (needed for JEC)
