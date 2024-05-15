@@ -122,7 +122,6 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100):
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # do fitting
     rt.EnableImplicitMT()
-    # final_model.fitTo(roo_hist,rt.RooFit.PrefitDataFraction(0.2), rt.RooFit.Save(), EvalBackend ="cpu")
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     print(f"fitting elapsed time: {time.time() - time_step}")
@@ -133,6 +132,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100):
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
     final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
+    model1.paramOn(frame, Parameters=[sigma], Layout=[0.55,0.94, 0.8])
     frame.GetYaxis().SetTitle("Events")
     frame.Draw()
 
@@ -167,6 +167,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100):
     # canvas.Modified()
     canvas.Update()
     # canvas.Draw()
+    print(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
     del canvas
     # consider script to wait a second for stability?
@@ -301,7 +302,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # do fitting
     rt.EnableImplicitMT()
-    # final_model.fitTo(roo_hist, rt.RooFit.Save(), EvalBackend ="cpu")
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     print(f"fitting elapsed time: {time.time() - time_step}")
@@ -311,6 +311,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
     final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
+    model1.paramOn(frame, Parameters=[sigma], Layout=[0.55,0.94, 0.8])
     frame.GetYaxis().SetTitle("Events")
     frame.Draw()
 
@@ -345,6 +346,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     # canvas.Modified()    
     canvas.Update()
     # canvas.Draw()
+    print(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
     del canvas
     # consider script to wait a second for stability?
@@ -373,7 +375,7 @@ if __name__ == "__main__":
     # iterate over 30 different calibration categories
     # for idx in range(len(data_categories)):
     for idx in range(12, len(data_categories)):
-    # for idx in range(0, 12):
+    # for idx in range(0, 1):
         cat_selection = data_categories[idx]
         cat_dimuon_mass = ak.to_numpy(data_events.dimuon_mass[cat_selection])
         if idx < 12:
