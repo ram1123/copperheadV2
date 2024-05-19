@@ -17,21 +17,93 @@ import dask_awkward as dak
 import dask
 from coffea.analysis_tools import Weights
 import copy
+from coffea.nanoevents.methods import vector
 
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
 
+# def cs_variables(
+#         mu1: coffea_nanoevent,
+#         mu2: coffea_nanoevent
+#     ) -> Tuple[ak_array]: 
+#     dphi = abs(mu1.delta_phi(mu2))
+#     theta_cs = np.arccos(np.tanh((mu1.eta - mu2.eta) / 2))
+#     phi_cs = np.tan((np.pi - np.abs(dphi)) / 2) * np.sin(theta_cs)
+#     return np.cos(theta_cs), phi_cs
+
 def cs_variables(
         mu1: coffea_nanoevent,
         mu2: coffea_nanoevent
     ) -> Tuple[ak_array]: 
-    dphi = abs(mu1.delta_phi(mu2))
-    theta_cs = np.arccos(np.tanh((mu1.eta - mu2.eta) / 2))
-    phi_cs = np.tan((np.pi - np.abs(dphi)) / 2) * np.sin(theta_cs)
-    return np.cos(theta_cs), phi_cs
+    """
+    return cos(theta) and phi in collins-soper frame
+    """
+    dimuon = mu1 + mu2
+    cos_theta_cs = getCosThetaCS(mu1, mu2, dimuon)
+    phi_cs = getPhiCS(mu1, mu2, dimuon)
+    return cos_theta_cs, phi_cs
 
+def getCosThetaCS(
+    mu1: coffea_nanoevent,
+    mu2: coffea_nanoevent,
+    dimuon: coffea_nanoevent,
+    ) -> ak_array :
+    """
+    return cos(theta) in collins-soper frame
+    the formula for cos(theta) is given in Eqn 1. of https://www.ciemat.es/portal.do?TR=A&IDR=1&identificador=813
+    """
+    dimuon_pt = dimuon.pt
+    dimuon_mass = dimuon.mass
+    nominator = 2*(mu1.pz*mu2.energy - mu2.pz*mu1.energy)
+    demoninator = dimuon_mass * (dimuon_mass**2 + dimuon_pt**2)**(0.5)
+    cos_theta_cs = nominator/demoninator
+    return cos_theta_cs
 
+def getPhiCS(
+    mu1: coffea_nanoevent,
+    mu2: coffea_nanoevent,
+    dimuon: coffea_nanoevent,
+    ) -> ak_array :
+    """
+    return phi in collins-soper frame
+    the formula for phi is given in Eqn F.8 of https://people.na.infn.it/~elly/TesiAtlas/SpinCP/TestIpotesi/CollinSoperDefinition.pdf
+    the implementation is heavily inspired from https://github.com/JanFSchulte/SUSYBSMAnalysis-Zprime2muAnalysis/blob/mini-AOD-2018/src/AsymFunctions.C#L1549-L1603
+    """
+    mu_neg = ak.where((mu1.charge<0), mu1,mu2)
+    mu_pos = ak.where((mu1.charge>0), mu1,mu2)
+    dimuon_pz = dimuon.pz
+    dimuon_pt = dimuon.pt
+    dimuon_mass = dimuon.mass
+    beam_vec_z = ak.where((dimuon_pz>0), ak.ones_like(dimuon_pz), -ak.ones_like(dimuon_pz))
+    # beam_vec_z = ak.ones_like(dimuon_pz)
+    # intialize beam vector as threevector to do cross product
+    beam_vec =  ak.zip(
+        {
+            "x": ak.zeros_like(dimuon_pz),
+            "y": ak.zeros_like(dimuon_pz),
+            "z": beam_vec_z,
+        },
+        with_name="ThreeVector",
+        behavior=vector.behavior,
+    )
+    # apply cross product. note x,y,z of dimuon refers to its momentum, NOT its location
+    # mu.px == mu.x, mu.py == mu.y and so on
+    R_T = beam_vec.cross(dimuon)
+    # make it a unit vector
+    R_T = R_T.unit
+    Q_T = dimuon
+    Q_coeff = ( ((dimuon_mass*dimuon_mass + (dimuon_pt*dimuon_pt)))**(0.5) )/dimuon_mass
+    delta_T_dot_R_T = (mu_neg.px-mu_pos.px)*R_T.x + (mu_neg.py-mu_pos.py)*R_T.y 
+    delta_R_term = delta_T_dot_R_T
+    delta_T_dot_Q_T = (mu_neg.px-mu_pos.px)*Q_T.px + (mu_neg.py-mu_pos.py)*Q_T.py
+    # delta_T_dot_Q_T = -delta_T_dot_Q_T
+    delta_Q_term = delta_T_dot_Q_T
+    delta_Q_term = delta_Q_term / dimuon_pt # normalize since Q_T should techincally be a unit vector
+    phi_cs = np.arctan2(Q_coeff*delta_R_term, delta_Q_term)
+    # phi_cs = np.arctan(Q_coeff*delta_R_term/ delta_Q_term)
+    return phi_cs
+    
 
 class EventProcessor(processor.ProcessorABC):
     # def __init__(self, config_path: str,**kwargs):
@@ -90,43 +162,7 @@ class EventProcessor(processor.ProcessorABC):
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
-        # Dmitry test 4 start --------------------------------------------------------------------
-        # muon = ak.pad_none(events.Muon, target=1, clip=True)[:,0]
-        # jet = ak.pad_none(events.Jet, target=1, clip=True)[:,0]
-        # electron = ak.pad_none(events.Electron, target=1, clip=True)[:,0]
-        
-        # out_dict = {
-        #     "run" : events.run,
-        #     "luminosityBlock" : events.luminosityBlock,
-        #     "HLT_IsoMu24" : events.HLT.IsoMu24,
-        #     "Muon_pt" : muon.pt,
-        #     "Muon_eta" : muon.eta,
-        #     "Muon_phi" : muon.phi,
-        #     "Muon_mass" : muon.mass,
-        #     "Muon_charge" : muon.charge,
-        #     "Muon_pfRelIso04_all" : muon.pfRelIso04_all,
-        #     "Muon_mediumId" : muon.mediumId,
-        #     "Muon_ptErr" :  muon.ptErr,
-        #     "Electron_pt" : electron.pt,
-        #     "Electron_eta" : electron.eta,
-        #     "Electron_mvaFall17V2Iso_WP90" : electron.mvaFall17V2Iso_WP90,
-        #     "Jet_pt" : jet.pt,
-        #     "Jet_eta" : jet.eta,
-        #     "Jet_phi" : jet.phi,
-        #     "Jet_mass" : jet.mass,
-        #     "PV_npvsGood" : events.PV.npvsGood,
-        #     "fixedGridRhoFastjetAll" : events.fixedGridRhoFastjetAll,
-        #     "Pileup_nTrueInt" : events.Pileup.nTrueInt,  
-        #     "genWeight" : events.genWeight,          
-        #     "GenPart_pdgId" : ak.pad_none(events.GenPart.pdgId, target=1, clip=True)[:,0], 
-        #     "LHEScaleWeight" : ak.pad_none(events.LHEScaleWeight, target=1, clip=True)[:,0],     
-        #     "LHEPdfWeight" : ak.pad_none(events.LHEPdfWeight, target=1, clip=True)[:,0],       
-        #     "HTXS_Higgs_pt" : events.HTXS.Higgs_pt,      
-        #     "HTXS_njets30" : events.HTXS.njets30,
-            
-        # }
-        # return out_dict
-        # Dmitry test 4 end----------------------------------------------------------------------------
+
 
         if self.test:
             print(f"copperhead2 events muon pt: {ak.to_dataframe(events.Muon.pt)}")
@@ -137,6 +173,8 @@ class EventProcessor(processor.ProcessorABC):
         Basically remove events that has dilepton mass between 100 and 200 GeV
         """
         event_filter = ak.ones_like(events.HLT.IsoMu24) # 1D boolean array to be used to filter out bad events
+
+        # LHE cut original start -----------------------------------------------------------------------------
         if events.metadata['dataset'] == 'dy_M-50': # if dy_M-50, apply LHE cut
             print("doing LHE cut!")
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
@@ -168,6 +206,9 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"copperhead2 EventProcessor LHE_filter[32]: \n{ak.to_numpy(LHE_filter[32])}")
 
             event_filter = event_filter & LHE_filter
+        # LHE cut original end -----------------------------------------------------------------------------
+
+        
 # --------------------------------------------------------        
         # if self.config["do_trigger_match"]:
         #     """
@@ -958,8 +999,8 @@ class EventProcessor(processor.ProcessorABC):
             abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
         )
     
-        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
-    return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
+        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
+        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
     
     def prepare_jets(self, events): # analogous to add_jec_variables function in boosted higgs
         # Initialize missing fields (needed for JEC)
