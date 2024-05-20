@@ -272,6 +272,20 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, uses dask gateway client instead of local",
     )
+    parser.add_argument(
+    "--xcache",
+    dest="xcache",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, uses xcache root file paths",
+    )
+    parser.add_argument(
+    "--skipBadFiles",
+    dest="skipBadFiles",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, uses skips bad files when calling preprocessing",
+    )
     args = parser.parse_args()
     time_step = time.time()
     # print(f"args.bkg_samples: {args.bkg_samples}")
@@ -373,7 +387,8 @@ if __name__ == "__main__":
             fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
             
             # random.shuffle(fnames)
-            fnames = get_Xcache_filelist(fnames)
+            if args.xcache:
+                fnames = get_Xcache_filelist(fnames)
             # print(f"fnames: {fnames}")
             print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
@@ -388,17 +403,7 @@ if __name__ == "__main__":
                 "data_entries" : None,
             }
             if "data" in sample_name: # data sample
-                """
-                Nick's propsed way to do it below. It's not particularily faster than the original method, so I just commented out for record keeping sake
-                # entries = client.map(lambda filename: uproot.open({filename: "Events"}).num_entries, fnames)  
-                # entries = [entry.result() for entry in entries]
-                # preprocess_metadata["data_entries"] = sum(entries)
-                # total_events += preprocess_metadata["data_entries"]
-                # # print(f"sum entries : {sum(entries)}")
-                # --------------------------------------------------------
-                """
                 file_input = {fname : {"object_path": "Events"} for fname in fnames}
-                # print(f"file_input: {file_input}")
                 events = NanoEventsFactory.from_root(
                         file_input,
                         metadata={},
@@ -421,30 +426,23 @@ if __name__ == "__main__":
                 preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 total_events += preprocess_metadata["nGenEvts"] 
-                # print(f"prestage runs.genEventSumw: {runs.genEventSumw.compute()}") 
-                
-            # print(f"prestage sample_name: {sample_name}") 
-            # print(f"prestage preprocess_metadata: {preprocess_metadata}")    
+
     
             val = "Events"
             file_dict = {}
             for file in fnames:
                 file_dict[file] = val
-            # final_output = {"files" :file_dict, "metadata" : "MC"}
-            # final_output = {sample_name :final_output}
             final_output = {
                 sample_name :{"files" :file_dict}
             }
             
             step_size = int(args.chunksize)
-            # print(f"final_output: {final_output}")
             files_available, files_total = preprocess(
                 final_output,
                 step_size=step_size,
                 align_clusters=False,
-                skip_bad_files=True,
+                skip_bad_files=args.skipBadFiles,
             )
-            # print(f"files_available: {files_available}")
             pre_stage_data = files_available
             # add in metadata
             pre_stage_data[sample_name]['metadata'] = preprocess_metadata
@@ -458,7 +456,6 @@ if __name__ == "__main__":
                 pre_stage_data[sample_name]['metadata']["is_mc"] = True
             pre_stage_data[sample_name]['metadata']["dataset"] = sample_name
             big_sample_info.update(pre_stage_data)
-            # print(f"big_sample_info: {big_sample_info}")
         
         #save the sample info
         directory = "./config"
@@ -481,19 +478,11 @@ if __name__ == "__main__":
         with open(sample_path) as file:
             samples = json.loads(file.read())
         new_samples = copy.deepcopy(samples) # copy old sample, overwrite it later
-        # print(f"fraction : {fraction}")
         if fraction < 1.0: # else, just save the original samples and new samples
-            # print("make new samples!")
-            # new_samples = {}
-            # print(f"original samples : {samples}")
             for sample_name, sample in tqdm.tqdm(samples.items()):
                 is_data = "data" in sample_name
                 tot_N_evnts = sample['metadata']["data_entries"] if is_data else sample['metadata']["nGenEvts"]
                 new_N_evnts = int(tot_N_evnts*fraction)
-                # print(f"datset {sample_name} new_N_evnts: {new_N_evnts} ")
-                # new_samples[sample_name] = {
-                #     "metadata" : sample["metadata"] # copy old metadata for now, overwrite it later
-                # }
                 old_N_evnts = new_samples[sample_name]['metadata']["data_entries"] if is_data else new_samples[sample_name]['metadata']["nGenEvts"]
                 if is_data:
                     print("data!")
@@ -501,42 +490,23 @@ if __name__ == "__main__":
                 else:
                     new_samples[sample_name]['metadata']["nGenEvts"] = new_N_evnts
                     new_samples[sample_name]['metadata']["sumGenWgts"] *= new_N_evnts/old_N_evnts # just directly multiply by fraction for this since this is already float and this is much faster
-                    """
-                    # recalculate sumGenWgts
-                    events = NanoEventsFactory.from_root(
-                            sample['files'],
-                            metadata={},
-                            schemaclass=NanoAODSchema,
-                    ).events()
-                    new_samples[sample_name]['metadata']["sumGenWgts"] = float(ak.sum(events.genWeight[:new_N_evnts]).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    """
-                    # print(f"sumGenWgt double check: {ak.sum(events.genWeight[:]).compute()}")
-                    """
-                    print(f"old sumGenWgts: {samples[sample_name]['metadata']['sumGenWgts']}")
-                    print(f"new sumGenWgts: {new_samples[sample_name]['metadata']['sumGenWgts']}")
-                    """
                 # new_samples[sample_name]['metadata']["fraction"] = fraction
                 # state new fraction
                 new_samples[sample_name]['metadata']['fraction'] = new_N_evnts/old_N_evnts
                 print(f"new_samples[sample_name]['metadata']['fraction']: {new_samples[sample_name]['metadata']['fraction']}")
                 # new_samples[sample_name]['metadata']["original_fraction"] = fraction
                 
-                # print(f"new_samples[{sample_name}]: {new_samples[sample_name].keys()}")
                 # loop through the files to correct the steps
                 event_counter = 0 # keeps track of events of multiple root files
                 stop_flag = False
                 new_files = {}
-                # for file in sample["files"]:
                 for file, file_dict in sample["files"].items():
-                    # print(f"stop_flag: {stop_flag}")
                     if stop_flag:
                         del new_samples[sample_name]["files"][file] # delete the exess files
                         continue
                     new_steps = []
-                    # loop through step sizes to correct it
+                    # loop through step sizes to correct fractions
                     for step_iteration in file_dict["steps"]:
-                    # for i in range(len(file["steps"])):
-                    #     step_iteration= file["steps"][i]
                         new_step_lim = new_N_evnts-event_counter
                         if step_iteration[1] < new_step_lim:
                             new_steps.append(step_iteration)
@@ -546,20 +516,16 @@ if __name__ == "__main__":
                                 new_step_lim
                             ])
                             stop_flag = True
-                            # print(f'event_counter+new_step_lim : {event_counter+new_step_lim}')
                             break
-                    # print(f'new_samples[sample_name]["files"].keys(): {new_samples[sample_name]["files"].keys()}')
                     new_samples[sample_name]["files"][file]["steps"] = new_steps # overwrite new steps
                     # add the end step val to the event_counter
                     if not stop_flag: # update variables and move to next file
                         end_idx = len(file_dict["steps"])-1
                         event_counter += file_dict["steps"][end_idx][1]
-                # print(f"new_samples final: {new_samples}")
 
         #save the sample info
         directory = "./config"
         filename = directory+"/fraction_processor_samples.json"
-        # print(f"new samples filename: {filename}")
         with open(filename, "w") as file:
                 json.dump(new_samples, file)
     
