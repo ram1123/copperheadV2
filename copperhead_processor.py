@@ -23,14 +23,24 @@ from coffea.nanoevents.methods import vector
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
 
-# def cs_variables(
-#         mu1: coffea_nanoevent,
-#         mu2: coffea_nanoevent
-#     ) -> Tuple[ak_array]: 
-#     dphi = abs(mu1.delta_phi(mu2))
-#     theta_cs = np.arccos(np.tanh((mu1.eta - mu2.eta) / 2))
-#     phi_cs = np.tan((np.pi - np.abs(dphi)) / 2) * np.sin(theta_cs)
-#     return np.cos(theta_cs), phi_cs
+def etaFrame_variables(
+        mu1: coffea_nanoevent,
+        mu2: coffea_nanoevent
+    ) -> Tuple[ak_array]: 
+    """
+    Obtain eta frame cos(theta) and phi as specified in:
+    https://link.springer.com/article/10.1140/epjc/s10052-011-1600-y and
+    This Eta frame values supposedly plays a similar role to CS frame in terms of physics
+    sensitivity, but with better resolution. Not nocessarily believe this claim 
+    however.
+    """
+    # divide muons in terms of negative and positive charges instead of leading pT
+    mu_neg = ak.where((mu1.charge<0), mu1,mu2)
+    mu_pos = ak.where((mu1.charge>0), mu1,mu2)
+    dphi = abs(mu_neg.delta_phi(mu_pos))
+    theta_eta = np.arccos(np.tanh((mu_neg.eta - mu_pos.eta) / 2))
+    phi_eta = np.tan((np.pi - np.abs(dphi)) / 2) * np.sin(theta_eta)
+    return np.cos(theta_eta), phi_eta
 
 def cs_variables(
         mu1: coffea_nanoevent,
@@ -76,7 +86,6 @@ def getPhiCS(
     dimuon_pt = dimuon.pt
     dimuon_mass = dimuon.mass
     beam_vec_z = ak.where((dimuon_pz>0), ak.ones_like(dimuon_pz), -ak.ones_like(dimuon_pz))
-    # beam_vec_z = ak.ones_like(dimuon_pz)
     # intialize beam vector as threevector to do cross product
     beam_vec =  ak.zip(
         {
@@ -570,6 +579,7 @@ class EventProcessor(processor.ProcessorABC):
         dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test)
         rel_dimuon_ebe_mass_res = dimuon_ebe_mass_res/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
+        dimuon_cos_theta_eta, dimuon_phi_eta = etaFrame_variables(mu1,mu2)
 
         # skip validation for genjets for now -----------------------------------------------
         # #fill genjets
@@ -845,6 +855,8 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
             "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
             "dimuon_phi_cs" : dimuon_phi_cs,
+            "dimuon_cos_theta_eta" : dimuon_cos_theta_eta,
+            "dimuon_phi_eta" : dimuon_phi_eta,
             "mu1_pt_raw" : mu1.pt_raw,
             "mu2_pt_raw" : mu2.pt_raw,
             "mu1_pt_fsr" : mu1.pt_fsr,

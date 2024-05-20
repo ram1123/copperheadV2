@@ -92,7 +92,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # DMitry test 4 end--------------------------------
 
     # ------------------------------------------
-    placeholder_dict =  {
+    skim_dict =  {
             'mu1_pt': (out_collections["mu1_pt"]),
             'mu2_pt': (out_collections["mu2_pt"]),
             'mu1_eta': (out_collections["mu1_eta"]),
@@ -126,6 +126,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             # 'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
             'dimuon_cos_theta_cs': (out_collections["dimuon_cos_theta_cs"]),
             'dimuon_phi_cs': (out_collections["dimuon_phi_cs"]),
+            'dimuon_cos_theta_eta': (out_collections["dimuon_cos_theta_eta"]),
+            'dimuon_phi_eta': (out_collections["dimuon_phi_eta"]),
             'dimuon_dPhi': (out_collections["dimuon_dPhi"]),
             'dimuon_dR': (out_collections["dimuon_dR"]),
             'dimuon_eta': (out_collections["dimuon_eta"]),
@@ -182,7 +184,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             softj_vars[key] = value
         elif "htsoft" in key:
             softj_vars[key] = value
-    placeholder_dict.update(softj_vars)
+    skim_dict.update(softj_vars)
     # print(f"softj_vars.keys(): {softj_vars.keys()}")
     
     # gen jet variables start ------------------------------
@@ -206,10 +208,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             "gjj_dR":  (out_collections["gjj_dR"]),
             
         }
-        placeholder_dict.update(mc_dict)
+        skim_dict.update(mc_dict)
     # gen jet variables end ------------------------------
 
-    # print(f"placeholder_dict.keys(): {placeholder_dict.keys()}")
+    # print(f"skim_dict.keys(): {skim_dict.keys()}")
     # define save path
     fraction = round(dataset_dict["metadata"]["fraction"], 3)
     fraction_str = str(fraction).replace('.', '_')
@@ -225,8 +227,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         os.makedirs(save_path)
     
     #----------------------------------
-    zip = ak.zip(placeholder_dict, depth_limit=1)
-    # zip = dask.compute(placeholder_dict)
+    zip = ak.zip(skim_dict, depth_limit=1)
+    # zip = dask.compute(skim_dict)
     
     # zip.to_parquet(save_path, compute=True)
     skim = dak.to_parquet(zip, save_path, compute=False)
@@ -293,12 +295,13 @@ if __name__ == "__main__":
             )
             cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
+            print(f"client: {client}")
             print("Gateway Client created")
         # # #-----------------------------------------------------------
         else:
-            client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
-            # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
-            # client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
+            # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
+            client = Client(n_workers=30,  threads_per_worker=1, processes=True, memory_limit='6 GiB') 
+            # client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
             print("Local scale Client created")
         #-------------------------------------------------------------------------------------
         #-----------------------------------------------------------
@@ -317,28 +320,34 @@ if __name__ == "__main__":
         # dask.config.set(scheduler='single-threaded')
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
+            # for dataset, sample in samples.items():
                 sample_step = time.time()
                 # max_file_len = 15
-                max_file_len = 100000000
+                # max_file_len = 1000
                 # max_file_len = 6
                 # max_file_len = 50
+                max_file_len = 80
                 # max_file_len = 9
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
+                print(f"max_file_len: {max_file_len}")
+                print(f"len(smaller_files): {len(smaller_files)}")
+                # for idx in range(len(smaller_files)):
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     print("restarting workers!")
                     client.restart(wait_for_workers = False)
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
+                    print(f"var_step: {var_step}")
                     to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
                     # print(f"to_compute: {to_compute}")
                     dask_computed = dask.compute(to_compute)
                     # print(f"dask_computed: {dask_computed}")
-
+    
                     # do garbage collection and memory trimming-----------
-                    client.run(gc.collect)
-                    client.run(trim_memory)
+                    # client.run(gc.collect)
+                    # client.run(trim_memory)
                     #-----------------------------------------------------
                     
                     var_elapsed = round(time.time() - var_step, 3)
