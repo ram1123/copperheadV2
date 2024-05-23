@@ -63,6 +63,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             dataset_dict["files"],
             schemaclass=NanoAODSchema,
             metadata= dataset_dict["metadata"],
+            uproot_options={
+                "timeout":2400,
+                # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
+            },
         ).events()
     else: # do it in a small set for developing and testing
         print("local testing")
@@ -325,8 +329,8 @@ if __name__ == "__main__":
                 # max_file_len = 15
                 # max_file_len = 1000
                 # max_file_len = 6
-                # max_file_len = 50
-                max_file_len = 80
+                max_file_len = 50
+                # max_file_len = 100000
                 # max_file_len = 9
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")

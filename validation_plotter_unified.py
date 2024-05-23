@@ -9,10 +9,14 @@ from distributed import Client
 import time    
 import tqdm
 
+
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F"]
 # group_DY_processes = ["dy_M-100To200", "dy_M-50"] # dy_M-50 is not used in ggH BDT training input
-group_DY_processes = ["dy_M-100To200"]
+# group_DY_processes = ["dy_M-100To200"]
+group_DY_processes = ["dy_M-100To200","dy_VBF_filter"]
+
+
 group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop"]
 group_Ewk_processes = ["ewk_lljj_mll50_mjj120"]
 group_VV_processes = ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"]# diboson
@@ -129,6 +133,20 @@ if __name__ == "__main__":
     action="store",
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
     )
+    parser.add_argument(
+    "--use_gateway",
+    dest="use_gateway",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, uses dask gateway client instead of local",
+    )
+    parser.add_argument(
+    "--vbf",
+    dest="vbf_cat_mode",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, apply vbf cut for vbf category, else, ggH category cut",
+    )
     #---------------------------------------------------------
     # gather arguments
     args = parser.parse_args()
@@ -145,6 +163,7 @@ if __name__ == "__main__":
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                 # available_processes.append("dy_M-50")
                 available_processes.append("dy_M-100To200")
+                # available_processes.append("dy_VBF_filter")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
                 available_processes.append("ttjets_sl")
@@ -173,15 +192,15 @@ if __name__ == "__main__":
             else:
                 print(f"unknown signal {sig_sample} was given!")
     # gather variables to plot:
-    # kinematic_vars = ['pt', 'eta', 'phi']
-    kinematic_vars = ['pt']
+    kinematic_vars = ['pt', 'eta', 'phi']
+    # kinematic_vars = ['pt']
     variables2plot = []
     if len(args.variables) == 0:
         print("no variables to plot!")
         raise ValueError
     for particle in args.variables:
         if "dimuon" in particle:
-            # variables2plot.append(f"{particle}_mass")
+            variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
             variables2plot.append(f"{particle}_cos_theta_cs")
             variables2plot.append(f"{particle}_phi_cs")
@@ -219,9 +238,19 @@ if __name__ == "__main__":
         plot_settings = json.load(file)
     status = args.status.replace("_", " ")
 
-
+    if args.use_gateway:
+            from dask_gateway import Gateway
+            gateway = Gateway(
+                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+            )
+            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+            client = gateway.connect(cluster_info.name).get_client()
+            print("Gateway Client created")
+    else:
     # define client for parallelization for speed boost
-    client =  Client(n_workers=20,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+        client =  Client(n_workers=20,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+        print("Local scale Client created")
     # record time
     time_step = time.time()
     # ROOT style or mplhep style starts here --------------------------------------
@@ -310,8 +339,12 @@ if __name__ == "__main__":
                     raise ValueError
                 # region = events.z_peak
                 btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
+                if args.vbf_cat_mode:
+                    prod_cat_cut =  vbf_cut
+                else: # we're interested in ggH category
+                    prod_cat_cut =  ~vbf_cut
                 category_selection = (
-                    ~vbf_cut & # we're interested in ggH category
+                    prod_cat_cut & 
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 ).compute()
@@ -507,11 +540,11 @@ if __name__ == "__main__":
             if len(group_data_hists) > 0:
                 data_hist_stacked = group_data_hists[0]
                 data_hist_stacked.Sumw2()
-                print(f"data_hist_stacked: {data_hist_stacked}")
+                # print(f"data_hist_stacked: {data_hist_stacked}")
                 if len(group_data_hists) > 1:
                     for idx in range(1, len(group_data_hists)):
                         data_hist_stacked.Add(group_data_hists[idx])
-                        print(f"group_data_hists[idx]: {group_data_hists[idx]}")
+                        # print(f"group_data_hists[idx]: {group_data_hists[idx]}")
                 
             
                 # decorate the data_histogram
@@ -735,14 +768,18 @@ if __name__ == "__main__":
                 # nBtagMedium = ak.fill_none(events.nBtagMedium, value=0)
                 # btag_cut =(nBtagLoose >= 2) | (nBtagMedium >= 1)
                 btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
+                if args.vbf_cat_mode:
+                    prod_cat_cut =  vbf_cut
+                else: # we're interested in ggH category
+                    prod_cat_cut =  ~vbf_cut
                 category_selection = (
-                    ~vbf_cut & # we're interested in ggH category
+                    prod_cat_cut & 
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 ).compute()
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
                 weights = weights*category_selection
-                print(f"weights.shape: {weights[weights>0].shape}")
+                # print(f"weights.shape: {weights[weights>0].shape}")
                 # values = ak.to_numpy(events[var].compute())
                 values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
                 # print(f"values[0]: {values[0]}")
@@ -754,7 +791,7 @@ if __name__ == "__main__":
                     fraction_weight = fraction_weight[values_filter]
                     # print(f"fraction_weight: {fraction_weight}")
                     weights = weights*fraction_weight
-                print(f"weights.shape: {weights[weights>0].shape}")
+                # print(f"weights.shape: {weights[weights>0].shape}")
                 np_hist, _ = np.histogram(values, bins=binning, weights = weights)
                 np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
                
@@ -762,8 +799,8 @@ if __name__ == "__main__":
                 if process in group_data_processes:
                     print("data activated")
                     group_data_hists.append(np_hist)
-                    print(f"np_hist: {np_hist}")
-                    print(f"np_hist.dtype: {np_hist.dtype}")
+                    # print(f"np_hist: {np_hist}")
+                    # print(f"np_hist.dtype: {np_hist.dtype}")
                     group_data_hists_w2.append(np_hist_w2)
                 #-------------------------------------------------------
                 elif process in group_DY_processes:
@@ -900,8 +937,8 @@ if __name__ == "__main__":
             
 
             data_hist = np.sum(np.asarray(group_data_hists), axis=0)
-            print(f"data_hist: {data_hist}")
-            print(f"data_hist.dtype: {data_hist.dtype}")
+            # print(f"data_hist: {data_hist}")
+            # print(f"data_hist.dtype: {data_hist.dtype}")
             data_err = np.sqrt(np.sum(np.asarray(group_data_hists_w2), axis=0)) # sqrt of sum of squares of weights
             hep.histplot(data_hist, xerr=True, yerr=data_err,
                          bins=binning, stack=False, histtype='errorbar', color='black', 
