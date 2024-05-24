@@ -163,7 +163,7 @@ if __name__ == "__main__":
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                 # available_processes.append("dy_M-50")
                 available_processes.append("dy_M-100To200")
-                # available_processes.append("dy_VBF_filter")
+                available_processes.append("dy_VBF_filter")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
                 available_processes.append("ttjets_sl")
@@ -340,16 +340,36 @@ if __name__ == "__main__":
                 # region = events.z_peak
                 btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
                 if args.vbf_cat_mode:
+                    print("vbf mode!")
                     prod_cat_cut =  vbf_cut
                 else: # we're interested in ggH category
                     prod_cat_cut =  ~vbf_cut
+                # print(f"prod_cat_cut sum b4: {ak.sum(prod_cat_cut).compute()}")
+                if process == "dy_VBF_filter":
+                    print("dy_VBF_filter extra!")
+                    prod_cat_cut =  ( prod_cat_cut  
+                                & ak.fill_none((events.gjj_mass > 350), value=False) 
+                    )
+                elif process == "dy_M-100To200":
+                    print("dy_M-100To200 extra!")
+                    prod_cat_cut =  ( prod_cat_cut  
+                                & ak.fill_none((events.gjj_mass <= 350), value=False)  
+                    )
+                # print(f"prod_cat_cut sum after: {ak.sum(prod_cat_cut).compute()}")
+                
                 category_selection = (
                     prod_cat_cut & 
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 ).compute()
+                # print(f"category_selection: {category_selection}")
+                # print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
+                # print(f"category_selection {process} : {category_selection}")
+                # temp condition
+                
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
                 weights = weights*category_selection
+                # print(f"weights {process} : {weights}")
                 # values = ak.to_numpy(events[var].compute())
                 values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
                 # values = ak.to_numpy(ak.fill_none(val_events[var], value=-999.0))
@@ -366,6 +386,7 @@ if __name__ == "__main__":
                     
                     
                 np_hist, _ = np.histogram(values, bins=binning, weights = weights)
+                print(f"np_hist {process} : {np_hist}")
                 # collect same histogram, but for weight squares for error calculation 
                 np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
                 # calculate histogram errors consistent with TH1.Sumw2() mode at
