@@ -179,6 +179,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             "ll_zstar" : (out_collections["ll_zstar"]),
             "zeppenfeld" : (out_collections["zeppenfeld"]),
             "event" : (out_collections["event"]),
+            # temporary test start ------------------------------------
+            # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
+            # temporary test end ------------------------------------
          }
     
     # add in nsoftjets and htsoft variables
@@ -304,7 +307,7 @@ if __name__ == "__main__":
         # # #-----------------------------------------------------------
         else:
             # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
-            client = Client(n_workers=30,  threads_per_worker=1, processes=True, memory_limit='6 GiB') 
+            client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='6 GiB') 
             # client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
             print("Local scale Client created")
         #-------------------------------------------------------------------------------------
@@ -328,8 +331,8 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # max_file_len = 15
                 # max_file_len = 1000
-                # max_file_len = 6
-                max_file_len = 50
+                max_file_len = 6
+                # max_file_len = 50
                 # max_file_len = 100000
                 # max_file_len = 9
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))

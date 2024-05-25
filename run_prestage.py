@@ -5,6 +5,8 @@ from coffea.nanoevents import NanoEventsFactory, NanoAODSchema, BaseSchema
 import json
 import os
 import argparse
+import dask
+dask.config.set({'logging.distributed': 'error'})
 from distributed import LocalCluster, Client
 import time
 import copy
@@ -13,8 +15,11 @@ import uproot
 import random
 # random.seed(9002301)
 import re
+import glob
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")
+
+
 
 datasets = {
     "2023" : {
@@ -166,6 +171,7 @@ datasets = {
         "data_D": "/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
         "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X*/NANOAODSIM",
         "dy_M-100To200": "/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+        "dy_VBF_filter": "dummy",
         "ttjets_dl": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         "ttjets_sl": "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         # # "ttw": "",
@@ -308,7 +314,7 @@ if __name__ == "__main__":
             # cluster = LocalCluster(processes=True)
             # cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
             # client = Client(cluster)
-            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+            client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
             print("Local scale Client created")
         # turning off seperate client test end --------------------------------------------------------
         big_sample_info = {}
@@ -333,7 +339,8 @@ if __name__ == "__main__":
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                     # new_sample_list.append("dy_M-50")
-                    new_sample_list.append("dy_M-100To200")
+                    # new_sample_list.append("dy_M-100To200")
+                    new_sample_list.append("dy_VBF_filter")
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                     new_sample_list.append("ttjets_dl")
                     new_sample_list.append("ttjets_sl")
@@ -366,30 +373,43 @@ if __name__ == "__main__":
         print(f"new dataset: {dataset.keys()}")
 
         for sample_name in tqdm.tqdm(dataset.keys()):
-            das_query = dataset[sample_name]
-            print(f"das_query: {das_query}")
-            
-            rucio_client = rucio_utils.get_rucio_client()
-            outlist, outtree = rucio_utils.query_dataset(
-                das_query,
-                client=rucio_client,
-                tree=True,
-                scope="cms",
-            )
-            outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
-                outlist[0],
-                allowlist_sites=allowlist_sites,
-                mode="full",
-                client=rucio_client,
-                # partial_allowed=True
-            )
-            fnames = [file[0] for file in outfiles if file != []]
-            fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
-            
-            # random.shuffle(fnames)
-            if args.xcache:
-                fnames = get_Xcache_filelist(fnames)
-            # print(f"fnames: {fnames}")
+            if sample_name == "dy_VBF_filter":
+                """
+                temporary condition bc IDK a way to integrate prod/phys03 CMSDAS datasets into rucio utils
+                """
+                # test start -----------------------------------------------------------
+                # load_path = "/eos/purdue/store/user/vscheure/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano/240514_124107/"
+                # # fnames = glob.glob(f"{load_path}/*/*.root")
+                # # fnames = glob.glob(f"{load_path}/0002/*.root")
+                # fnames = glob.glob(f"{load_path}/0000/*.root")
+                # test end -----------------------------------------------------------
+                load_path = "/depot/cms/users/yun79/private_samples/MC/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano"
+                fnames = glob.glob(f"{load_path}/*.root")
+            else:
+                das_query = dataset[sample_name]
+                print(f"das_query: {das_query}")
+                
+                rucio_client = rucio_utils.get_rucio_client()
+                outlist, outtree = rucio_utils.query_dataset(
+                    das_query,
+                    client=rucio_client,
+                    tree=True,
+                    scope="cms",
+                )
+                outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
+                    outlist[0],
+                    allowlist_sites=allowlist_sites,
+                    mode="full",
+                    client=rucio_client,
+                    # partial_allowed=True
+                )
+                fnames = [file[0] for file in outfiles if file != []]
+                # fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
+                
+                # random.shuffle(fnames)
+                if args.xcache:
+                    fnames = get_Xcache_filelist(fnames)
+                # print(f"fnames: {fnames}")
             print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
 
@@ -408,6 +428,7 @@ if __name__ == "__main__":
                         file_input,
                         metadata={},
                         schemaclass=NanoAODSchema,
+                        uproot_options={"timeout":2400},
                 ).events()
                 preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 total_events += preprocess_metadata["data_entries"] 
@@ -420,6 +441,7 @@ if __name__ == "__main__":
                         file_input,
                         metadata={},
                         schemaclass=BaseSchema,
+                        uproot_options={"timeout":2400},
                 ).events()
                 # runs = uproot.dask(file_input, handler=uproot.XRootDSource)
                 

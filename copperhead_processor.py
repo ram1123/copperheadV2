@@ -217,34 +217,35 @@ class EventProcessor(processor.ProcessorABC):
             event_filter = event_filter & LHE_filter
         # LHE cut original end -----------------------------------------------------------------------------
         
-        elif events.metadata['dataset'] == 'dy_M-100To200': # if dy_M-100To200, apply LHE cut
-            print("doing dy_M-100To200 LHE cut!")
-            LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
-            bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
-            LHE_leptons = LHE_particles[bool_filter]
+        # elif events.metadata['dataset'] == 'dy_M-100To200': # if dy_M-100To200, apply LHE cut
+        #     print("doing dy_M-100To200 LHE cut!")
+        #     LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
+        #     bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
+        #     LHE_leptons = LHE_particles[bool_filter]
 
-            if self.test:
-                # check LHE muons maintain the same event length
-                print(f"copperhead2 EventProcessor LHE_particles: {len(LHE_particles)}")
-                print(f"copperhead2 EventProcessor LHE_leptons: {len(LHE_leptons)}")
-                print(f"copperhead2 EventProcessor LHE_leptons.pdgId: {LHE_leptons.pdgId}")
+        #     if self.test:
+        #         # check LHE muons maintain the same event length
+        #         print(f"copperhead2 EventProcessor LHE_particles: {len(LHE_particles)}")
+        #         print(f"copperhead2 EventProcessor LHE_leptons: {len(LHE_leptons)}")
+        #         print(f"copperhead2 EventProcessor LHE_leptons.pdgId: {LHE_leptons.pdgId}")
 
-            """
-            TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
-            When I had a quick look, all LHE_leptons had either two or zero leptons per event, never one, 
-            so just indexing first and second could work
-            """
-            max_idxs = ak.argmax(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for normal lepton
-            min_idxs = ak.argmin(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for anti lepton
-            LHE_lepton_barless = LHE_leptons[max_idxs]
-            LHE_lepton_bar = LHE_leptons[min_idxs]
-            LHE_dilepton_mass =  (LHE_lepton_barless +LHE_lepton_bar).mass
+        #     """
+        #     TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
+        #     When I had a quick look, all LHE_leptons had either two or zero leptons per event, never one, 
+        #     so just indexing first and second could work
+        #     """
+        #     max_idxs = ak.argmax(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for normal lepton
+        #     min_idxs = ak.argmin(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for anti lepton
+        #     LHE_lepton_barless = LHE_leptons[max_idxs]
+        #     LHE_lepton_bar = LHE_leptons[min_idxs]
+        #     LHE_dilepton_mass =  (LHE_lepton_barless +LHE_lepton_bar).mass
 
-            LHE_filter = (((LHE_dilepton_mass > 105) & (LHE_dilepton_mass < 160)))[:,0]
-            LHE_filter = ak.fill_none(LHE_filter, value=False) 
-            LHE_filter = (LHE_filter== False) # we want True to indicate that we want to keep the event
+        #     LHE_filter = (((LHE_dilepton_mass > 105) & (LHE_dilepton_mass < 160)))[:,0]
+        #     LHE_filter = ak.fill_none(LHE_filter, value=False) 
+        #     M105to160normalizedWeight = LHE_filter
+        #     # LHE_filter = (LHE_filter== False) # we want True to indicate that we want to keep the event
 
-            event_filter = event_filter & LHE_filter
+        #     # event_filter = event_filter & LHE_filter
         
 # --------------------------------------------------------        
         # if self.config["do_trigger_match"]:
@@ -560,6 +561,11 @@ class EventProcessor(processor.ProcessorABC):
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
         applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
+
+        # temporary test start ------------------------------------
+        # M105to160normalizedWeight = ak.to_packed(M105to160normalizedWeight[event_filter==True])
+        # temporary test end ------------------------------------
+        
         # turn off pu weights test start ---------------------------------
         if is_mc:
             for variation in pu_wgts.keys():
@@ -714,6 +720,9 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("genWeight", weight=events.genWeight)
             # original initial weight start ----------------
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights)
+            #temporary lhe filter start -----------------
+            # M105to160normalizedWeight = M105to160normalizedWeight*events.genWeight/sumWeights
+            #temporary lhe filter end -----------------
             dataset = events.metadata['dataset']
             cross_section = self.config["cross_sections"][dataset]
             integrated_lumi = self.config["integrated_lumis"]
@@ -887,7 +896,9 @@ class EventProcessor(processor.ProcessorABC):
             "mu1_pt_fsr" : mu1.pt_fsr,
             "mu2_pt_fsr" : mu2.pt_fsr,
             "pass_leading_pt" : pass_leading_pt,
-            
+            # temporary test start ------------------------------------
+            # "M105to160normalizedWeight" : M105to160normalizedWeight,
+            # temporary test end ------------------------------------
         }
         if is_mc:
             mc_dict = {
@@ -983,6 +994,16 @@ class EventProcessor(processor.ProcessorABC):
         #     print(f"cross_section: {(cross_section)}")
         #     print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
+
+        # aply vbf filter phase cut if DY
+        if events.metadata['dataset'] == 'dy_M-100To200':
+            vbfReverseFilter = ak.values_astype(
+                ak.fill_none((gjj.mass <= 350), value=False), 
+                np.int32
+            ) # any higher value should be populated by VBF filtered DY instead
+            weights.add("vbfReverseFilter", 
+                    weight=vbfReverseFilter,
+            )
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         weights = weights.weight()
         if "btag_wgt" in out_dict.keys():
@@ -1368,7 +1389,8 @@ class EventProcessor(processor.ProcessorABC):
             "rpt" : rpt,
             "zeppenfeld" : zeppenfeld,
             "njets" : njets,
-            "ll_zstar" : ll_zstar
+            "ll_zstar" : ll_zstar,
+            
         }
         if is_mc:
             mc_dict = {
