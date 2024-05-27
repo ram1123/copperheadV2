@@ -301,6 +301,7 @@ if __name__ == "__main__":
     os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
     if args.fraction is None: # do the normal prestage setup
         allowlist_sites=["T2_US_Purdue"] # take data only from purdue for now
+        total_events = 0
         # get dask client
         # turning off seperate client test start --------------------------------------------------------
         if args.use_gateway:
@@ -387,18 +388,6 @@ if __name__ == "__main__":
                 # test end -----------------------------------------------------------
                 # load_path = "/depot/cms/users/yun79/private_samples/MC/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano"
                 # fnames = glob.glob(f"{load_path}/*.root")
-            elif sample_name == "data_nanoaodv12":
-                if year == "2016preVFP":
-                    load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/*/*/*.root"
-                elif year == "2016postVFP":
-                    load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/*/*/*.root"
-                elif year == "2017":
-                    load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/*/*/*.root"
-                else:
-                    print("Uncompatible year for privately produced data nanoaodV12!")
-                    raise ValueError
-                fnames = glob.glob(f"{load_path}")
-                # print(f"fnames: {fnames}")
             else:
                 das_query = dataset[sample_name]
                 print(f"das_query: {das_query}")
@@ -436,24 +425,55 @@ if __name__ == "__main__":
                 "nGenEvts" : None,
                 "data_entries" : None,
             }
-            
+            if "data" in sample_name: # data sample
+                file_input = {fname : {"object_path": "Events"} for fname in fnames}
+                events = NanoEventsFactory.from_root(
+                        file_input,
+                        metadata={},
+                        schemaclass=NanoAODSchema,
+                        uproot_options={"timeout":2400},
+                ).events()
+                preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                total_events += preprocess_metadata["data_entries"] 
+            else: # if MC
+                file_input = {fname : {"object_path": "Runs"} for fname in fnames}
+                # print(f"file_input: {file_input}")
+                # print(f"file_input: {file_input}")
+                # print(len(file_input.keys()))
+                runs = NanoEventsFactory.from_root(
+                        file_input,
+                        metadata={},
+                        schemaclass=BaseSchema,
+                        uproot_options={"timeout":2400},
+                ).events()               
+                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                total_events += preprocess_metadata["nGenEvts"] 
 
-            if (sample_name == "dy_VBF_filter"):
+    
+            
+            # test start -------------------------------
+            if sample_name == "dy_VBF_filter":
+                """
+                Starting from coffea 2024.4.1, this if statement is technically as obsolite preprocess
+                can now handle thousands of root files no problem, but this "manual" is at least three 
+                times faster than preprocess, so keeping this if statement for now
+                """
                 runs = NanoEventsFactory.from_root(
                         file_input,
                         metadata={},
                         schemaclass=BaseSchema,
                         uproot_options={"timeout":2400},
                 ).events()  
-                genEventCount = int(runs.genEventCount.compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                print(f"(genEventCount): {(genEventCount)}")
-                print(f"len(genEventCount): {len(genEventCount)}")
+                genEventCount = runs.genEventCount.compute()
+                # print(f"(genEventCount): {(genEventCount)}")
+                # print(f"len(genEventCount): {len(genEventCount)}")
                 
                 assert len(fnames) == len(genEventCount)
                 file_dict = {}
                 for idx in range(len(fnames)):
                     step_start = 0
-                    step_end = genEventCount[idx]
+                    step_end = int(genEventCount[idx]) # convert into 32bit precision as 64 bit precision isn't json serializable
                     file = fnames[idx]
                     file_dict[file] = {
                         "object_path": "Events",
@@ -465,63 +485,11 @@ if __name__ == "__main__":
                 }
                 print(f"final_output: {final_output}")
                 pre_stage_data = final_output
-                # update metadata
-                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                preprocess_metadata["nGenEvts"] = ak.sum(genEventCount) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    
-            
-                # raise ValueError
-            elif (sample_name == "data_nanoaodv12"): # same thing as dy_VBF_filter, but for data
-                eventCount = []
-                for fname in tqdm.tqdm(fnames):
-                    events = len(uproot.open(fname)["Events"]["Muon_pt"].array()) # get total number of rows (which is events)
-                    eventCount.append(eventCount)
-                print(f"len(eventCount): {len(eventCount)}")
-                print(f"max(eventCount): {max(eventCount)}")
-                print(f"min(eventCount): {min(eventCount)}")
-                raise ValueError
-                assert len(fnames) == len(eventCount)
-                file_dict = {}
-                for idx in tqdm.tqdm(range(len(fnames))):
-                    step_start = 0
-                    step_end = int(eventCount[idx]) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    file = fnames[idx]
-                    file_dict[file] = {
-                        "object_path": "Events",
-                        "steps" : [[step_start,step_end]],
-                        "num_entries" : step_end, 
-                    }
-                final_output = {
-                    sample_name :{"files" :file_dict}
-                }
-                print(f"final_output: {final_output}")
-                pre_stage_data = final_output
-                # update metadata
-                preprocess_metadata["data_entries"] = ak.sum() # convert into 32bit precision as 64 bit precision isn't json serializable
-
-
-            
-            else: # Centrally produced samples
-                if ("data" in sample_name): # data sample
-                    file_input = {fname : {"object_path": "Events"} for fname in fnames}
-                    events = NanoEventsFactory.from_root(
-                            file_input,
-                            metadata={},
-                            schemaclass=NanoAODSchema,
-                            uproot_options={"timeout":2400},
-                    ).events()
-                    preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                else: # if MC
-                    file_input = {fname : {"object_path": "Runs"} for fname in fnames}
-                    runs = NanoEventsFactory.from_root(
-                            file_input,
-                            metadata={},
-                            schemaclass=BaseSchema,
-                            uproot_options={"timeout":2400},
-                    ).events()               
-                    preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    
+            else:
+                """
+                everything else other than VBF filter, but starting from coffea 2024.4.1 is condition could
+                techincally work on VBF filter files, just slower
+                """
                 val = "Events"
                 file_dict = {}
                 for file in fnames:
@@ -539,6 +507,8 @@ if __name__ == "__main__":
                 )
                 # print(f"files_available: {files_available}")
                 pre_stage_data = files_available
+
+            # test end2  --------------------------------------------------------------
             # add in metadata
             pre_stage_data[sample_name]['metadata'] = preprocess_metadata
             # add in faction -> for later use
@@ -565,6 +535,7 @@ if __name__ == "__main__":
     
         elapsed = round(time.time() - time_step, 3)
         print(f"Finished everything in {elapsed} s.")
+        print(f"Total Events in files {total_events}.")
         
     else: # take the pre existing samples.json and prune off files we don't need
         fraction = float(args.fraction)
@@ -625,5 +596,4 @@ if __name__ == "__main__":
     
         elapsed = round(time.time() - time_step, 3)
         print(f"Finished everything in {elapsed} s.")
-
 
