@@ -163,7 +163,7 @@ if __name__ == "__main__":
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                 # available_processes.append("dy_M-50")
                 available_processes.append("dy_M-100To200")
-                available_processes.append("dy_VBF_filter")
+                # available_processes.append("dy_VBF_filter")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
                 available_processes.append("ttjets_sl")
@@ -204,9 +204,12 @@ if __name__ == "__main__":
             variables2plot.append(f"{particle}_pt")
             variables2plot.append(f"{particle}_cos_theta_cs")
             variables2plot.append(f"{particle}_phi_cs")
+            variables2plot.append(f"{particle}_cos_theta_eta")
+            variables2plot.append(f"{particle}_phi_eta")
             variables2plot.append(f"mmj_min_dPhi")
             variables2plot.append(f"mmj_min_dEta")
         elif "dijet" in particle:
+            variables2plot.append(f"gjj_mass")
             variables2plot.append(f"jj_mass")
             variables2plot.append(f"jj_dEta")
             variables2plot.append(f"jj_dPhi")
@@ -313,11 +316,19 @@ if __name__ == "__main__":
                 print(f"is_data: {is_data}")
                 if is_data:
                     # weights = ak.to_numpy((events["weights"]/events["fraction"]).compute())
-                    weights = ak.to_numpy((events["weights"]).compute())
+                    weights = ak.to_numpy(ak.fill_none(events["weights"], value=0.0).compute())
                 else: # MC
-                    weights = ak.to_numpy((events["weights"]).compute()) # MC are already normalized by xsec*lumi
+                    # print(f"events.weights: {events.weights.compute()}")
+                    weights = ak.fill_none(events["weights"], value=0.0).compute()
+                    # print(f"weights {process} b4 numpy: {weights}")
+                    weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
+                    # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
+                    # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
+                    weights = np.nan_to_num(weights, nan=0.0) 
 
-
+                # print(f"weights {process} after numpy: {weights}")
+                # print(f"weights {process} isnan sum: {np.sum(np.isnan(weights))}")
+                
 
                 fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
 
@@ -342,19 +353,24 @@ if __name__ == "__main__":
                 if args.vbf_cat_mode:
                     print("vbf mode!")
                     prod_cat_cut =  vbf_cut
+                    # apply additional cut to MC samples if vbf 
+                    # VBF filter cut start -------------------------------------------------
+                    # if process == "dy_VBF_filter":
+                    #     print("dy_VBF_filter extra!")
+                    #     prod_cat_cut =  ( prod_cat_cut  
+                    #                 & ak.fill_none((events.gjj_mass > 350), value=False) 
+                    #     )
+                    # elif process == "dy_M-100To200":
+                    #     print("dy_M-100To200 extra!")
+                    #     prod_cat_cut =  ( prod_cat_cut  
+                    #                 & ak.fill_none((events.gjj_mass <= 350), value=False)  
+                    #     )
+                    # VBF filter cut end -------------------------------------------------
                 else: # we're interested in ggH category
                     prod_cat_cut =  ~vbf_cut
                 # print(f"prod_cat_cut sum b4: {ak.sum(prod_cat_cut).compute()}")
-                if process == "dy_VBF_filter":
-                    print("dy_VBF_filter extra!")
-                    prod_cat_cut =  ( prod_cat_cut  
-                                & ak.fill_none((events.gjj_mass > 350), value=False) 
-                    )
-                elif process == "dy_M-100To200":
-                    print("dy_M-100To200 extra!")
-                    prod_cat_cut =  ( prod_cat_cut  
-                                & ak.fill_none((events.gjj_mass <= 350), value=False)  
-                    )
+                
+               
                 # print(f"prod_cat_cut sum after: {ak.sum(prod_cat_cut).compute()}")
                 
                 category_selection = (
@@ -368,11 +384,10 @@ if __name__ == "__main__":
                 # temp condition
                 
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
+                # print(f"weights b4 category selection {process} : {weights}")
                 weights = weights*category_selection
                 # print(f"weights {process} : {weights}")
-                # values = ak.to_numpy(events[var].compute())
                 values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
-                # values = ak.to_numpy(ak.fill_none(val_events[var], value=-999.0))
 
                 
                 # print(f"values[0]: {values[0]}")
@@ -383,12 +398,20 @@ if __name__ == "__main__":
                 if process in group_data_processes:
                     fraction_weight = fraction_weight[values_filter]
                     weights = weights*fraction_weight
-                    
+                # print(f"weights after category selection {process}: {weights}")    
                     
                 np_hist, _ = np.histogram(values, bins=binning, weights = weights)
-                print(f"np_hist {process} : {np_hist}")
+                # print(f"np_hist old {process} : {np_hist}")
+                
+               
                 # collect same histogram, but for weight squares for error calculation 
                 np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
+
+                # convert nans to zeros in case histograms have them
+                np_hist =   np.nan_to_num(np_hist)
+                np_hist_w2 =   np.nan_to_num(np_hist_w2)
+                print(f"np_hist new {process} : {np_hist}")
+                print(f"np_hist_w2 {process} : {np_hist_w2}")
                 # calculate histogram errors consistent with TH1.Sumw2() mode at
                 # https://root.cern.ch/doc/master/classTH1.html#aefa4ee94f053ec3d217f3223b01fa014
                 hist_errs = np.sqrt(np_hist_w2)

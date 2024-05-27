@@ -378,13 +378,13 @@ if __name__ == "__main__":
                 temporary condition bc IDK a way to integrate prod/phys03 CMSDAS datasets into rucio utils
                 """
                 # test start -----------------------------------------------------------
-                # load_path = "/eos/purdue/store/user/vscheure/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano/240514_124107/"
-                # # fnames = glob.glob(f"{load_path}/*/*.root")
-                # # fnames = glob.glob(f"{load_path}/0002/*.root")
+                load_path = "/eos/purdue/store/user/vscheure/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano/240514_124107/"
+                fnames = glob.glob(f"{load_path}/*/*.root")
+                # fnames = glob.glob(f"{load_path}/0002/*.root")
                 # fnames = glob.glob(f"{load_path}/0000/*.root")
                 # test end -----------------------------------------------------------
-                load_path = "/depot/cms/users/yun79/private_samples/MC/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano"
-                fnames = glob.glob(f"{load_path}/*.root")
+                # load_path = "/depot/cms/users/yun79/private_samples/MC/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano"
+                # fnames = glob.glob(f"{load_path}/*.root")
             else:
                 das_query = dataset[sample_name]
                 print(f"das_query: {das_query}")
@@ -404,7 +404,7 @@ if __name__ == "__main__":
                     # partial_allowed=True
                 )
                 fnames = [file[0] for file in outfiles if file != []]
-                # fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
+                fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
                 
                 # random.shuffle(fnames)
                 if args.xcache:
@@ -442,30 +442,61 @@ if __name__ == "__main__":
                         metadata={},
                         schemaclass=BaseSchema,
                         uproot_options={"timeout":2400},
-                ).events()
-                # runs = uproot.dask(file_input, handler=uproot.XRootDSource)
-                
+                ).events()               
                 preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 total_events += preprocess_metadata["nGenEvts"] 
 
     
-            val = "Events"
-            file_dict = {}
-            for file in fnames:
-                file_dict[file] = val
-            final_output = {
-                sample_name :{"files" :file_dict}
-            }
             
-            step_size = int(args.chunksize)
-            files_available, files_total = preprocess(
-                final_output,
-                step_size=step_size,
-                align_clusters=False,
-                skip_bad_files=args.skipBadFiles,
-            )
-            pre_stage_data = files_available
+            # test start -------------------------------
+            if sample_name == "dy_VBF_filter":
+                runs = NanoEventsFactory.from_root(
+                        file_input,
+                        metadata={},
+                        schemaclass=BaseSchema,
+                        uproot_options={"timeout":2400},
+                ).events()  
+                genEventCount = runs.genEventCount.compute()
+                print(f"(genEventCount): {(genEventCount)}")
+                print(f"len(genEventCount): {len(genEventCount)}")
+                
+                assert len(fnames) == len(genEventCount)
+                file_dict = {}
+                for idx in range(len(fnames)):
+                    step_start = 0
+                    step_end = int(genEventCount[idx]) # convert into 32bit precision as 64 bit precision isn't json serializable
+                    file = fnames[idx]
+                    file_dict[file] = {
+                        "object_path": "Events",
+                        "steps" : [[step_start,step_end]],
+                        "num_entries" : step_end, 
+                    }
+                final_output = {
+                    sample_name :{"files" :file_dict}
+                }
+                print(f"final_output: {final_output}")
+                pre_stage_data = final_output
+                # raise ValueError
+            else:
+            # test end -------------------------
+                val = "Events"
+                file_dict = {}
+                for file in fnames:
+                    file_dict[file] = val
+                final_output = {
+                    sample_name :{"files" :file_dict}
+                }
+                # print(f"final_output: {final_output}")
+                step_size = int(args.chunksize)
+                files_available, files_total = preprocess(
+                    final_output,
+                    step_size=step_size,
+                    align_clusters=False,
+                    skip_bad_files=args.skipBadFiles,
+                )
+                # print(f"files_available: {files_available}")
+                pre_stage_data = files_available
             # add in metadata
             pre_stage_data[sample_name]['metadata'] = preprocess_metadata
             # add in faction -> for later use

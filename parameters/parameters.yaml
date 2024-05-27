@@ -433,8 +433,8 @@ cross_sections:
   test: 6200.0
   dy_M-50: 6195.8
   dy_M-50_nocut: 6450.0
-  dy_M-100To200: 252.2 # original value: 254.2
-  dy_VBF_filter: 2.0  # subjet to change
+  dy_M-100To200: 254.2 # original value: 254.2
+  dy_VBF_filter: 2.01  # subjet to change
   dy_0j: 4620.52
   dy_1j: 922.5
   dy_2j: 293.6
