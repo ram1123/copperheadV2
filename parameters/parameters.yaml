@@ -64,12 +64,18 @@ electron_eta_cut:
   '2017': 2.5
   '2018': 2.5
   2022EE: 2.5
-electron_id:
+electron_id_v9:
   2016preVFP: mvaFall17V2Iso_WP90
   2016postVFP: mvaFall17V2Iso_WP90
   '2017': mvaFall17V2Iso_WP90
   '2018': mvaFall17V2Iso_WP90
   2022EE: mvaFall17V2Iso_WP90
+electron_id_v12:
+  2016preVFP: mvaIso_WP90
+  2016postVFP: mvaIso_WP90
+  '2017': mvaIso_WP90
+  '2018': mvaIso_WP90
+  2022EE: mvaIso_WP90
 jet_pt_cut:
   2016preVFP: 25.0
   2016postVFP: 25.0
