@@ -182,9 +182,12 @@ class EventProcessor(processor.ProcessorABC):
         Basically remove events that has dilepton mass between 100 and 200 GeV
         """
         event_filter = ak.ones_like(events.HLT.IsoMu24) # 1D boolean array to be used to filter out bad events
-
+        dataset = events.metadata['dataset']
+        print(f"events.metadata: {events.metadata}")
+        NanoAODv = events.metadata['NanoAODv']
+        print(f"NanoAODv: {NanoAODv}")
         # LHE cut original start -----------------------------------------------------------------------------
-        if events.metadata['dataset'] == 'dy_M-50': # if dy_M-50, apply LHE cut
+        if dataset == 'dy_M-50': # if dy_M-50, apply LHE cut
             print("doing dy_M-50 LHE cut!")
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
@@ -381,22 +384,23 @@ class EventProcessor(processor.ProcessorABC):
         
         # apply Beam constraint or geofit or nothing if neither
         if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
-            print(f"doing beam constraint")
-            print(f"events.Muon.fields: {events.Muon.fields}")
+            print(f"doing beam constraint!")
+            # print(f"events.Muon.fields: {events.Muon.fields}")
             BSConstraint_mask = (
                 (events.Muon.bsConstrainedChi2 <30)
             )
             BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
-            BSConstraint_mask = BSConstraint_mask & (~applied_fsr) # apply BSContraint on non FSR muons
+            # comment off (~applied_fsr) cut for now 
+            # BSConstraint_mask = BSConstraint_mask & (~applied_fsr) # apply BSContraint on non FSR muons
             events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
         else:
             if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
-                print(f"doing geofit")
+                print(f"doing geofit!")
                 gf_filter, gf_pt_corr = apply_geofit(events, self.config["year"], ~applied_fsr)
                 events["Muon", "pt"] = events.Muon.pt_gf
             else: 
-                # print(f"doing neither beam constraint nor geofit")
+                print(f"doing neither beam constraint nor geofit!")
                 pass
 
         ## Note temporary soln to copperheadV1 pt_raw being overwritten with fsr... and possibly with geofit
@@ -456,12 +460,14 @@ class EventProcessor(processor.ProcessorABC):
         # Find opposite-sign muons
         mm_charge = ak.prod(muons.charge, axis=1)
         
-
+        # print(f"events.Electron.fields: {events.Electron.fields}")
+        electron_id = self.config[f"electron_id_v{NanoAODv}"]
+        print(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
         electron_selection = (
             (events.Electron.pt > self.config["electron_pt_cut"])
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
-            & events.Electron[self.config["electron_id"]]
+            & events.Electron[electron_id]
         )
         electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0)
 
@@ -652,7 +658,7 @@ class EventProcessor(processor.ProcessorABC):
         #     print(f'copperheadV2 EventProcessor jets.mass b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.mass))}')
         # skip validation for genjet end --------------------------------------------
 
-        self.prepare_jets(events)
+        self.prepare_jets(events, NanoAODv=NanoAODv)
 
 
         # ------------------------------------------------------------#
@@ -684,6 +690,9 @@ class EventProcessor(processor.ProcessorABC):
                 for run in self.config["jec_parameters"]["runs"]:
                     if run in events.metadata["dataset"]:
                         factory = self.jec_factories_data[run]
+                    else:
+                        print("JEC factory not recognized!")
+                        raise ValueError
                 
             print("do jec!")
             jets = factory.build(jets)
@@ -723,7 +732,6 @@ class EventProcessor(processor.ProcessorABC):
             #temporary lhe filter start -----------------
             # M105to160normalizedWeight = M105to160normalizedWeight*events.genWeight/sumWeights
             #temporary lhe filter end -----------------
-            dataset = events.metadata['dataset']
             cross_section = self.config["cross_sections"][dataset]
             integrated_lumi = self.config["integrated_lumis"]
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
@@ -996,7 +1004,7 @@ class EventProcessor(processor.ProcessorABC):
         # weights = weights*cross_section*integrated_lumi/sumWeights
 
         # aply vbf filter phase cut if DY
-        if events.metadata['dataset'] == 'dy_M-100To200':
+        if dataset == 'dy_M-100To200':
             vbfReverseFilter = ak.values_astype(
                 ak.fill_none((gjj.mass <= 350), value=False), 
                 np.int32
@@ -1060,11 +1068,16 @@ class EventProcessor(processor.ProcessorABC):
         return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
         # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
     
-    def prepare_jets(self, events): # analogous to add_jec_variables function in boosted higgs
+    def prepare_jets(self, events, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
         # Initialize missing fields (needed for JEC)
+        print(f"prepare jets NanoAODv: {NanoAODv}")
         events["Jet", "pt_raw"] = (1 - events.Jet.rawFactor) * events.Jet.pt
         events["Jet", "mass_raw"] = (1 - events.Jet.rawFactor) * events.Jet.mass
-        events["Jet", "rho"] = ak.broadcast_arrays(events.fixedGridRhoFastjetAll, events.Jet.pt)[0]
+        if NanoAODv >= 12:
+            fixedGridRhoFastjetAll = events.Rho.fixedGridRhoFastjetAll
+        else: # if v9
+            fixedGridRhoFastjetAll = events.fixedGridRhoFastjetAll
+        events["Jet", "rho"] = ak.broadcast_arrays(fixedGridRhoFastjetAll, events.Jet.pt)[0]
     
         if events.metadata["is_mc"]:
             # pt_gen is used for JEC (one of the factory name map values)            

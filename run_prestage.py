@@ -65,7 +65,7 @@ datasets = {
         "data_D": "/SingleMuon/Run2016D-HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD",
         "data_E": "/SingleMuon/Run2016E-HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD",
         "data_F": "/SingleMuon/Run2016F-HIPM_UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD",
-        "data_nanoaodv12": "dummy",
+        # "data_nanoaodv12": "dummy", # privately produced Run2 data in NanoAOD v12 format
         "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM",
         "dy_M-100To200": "/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM",
         "ttjets_dl": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv9-106X_mcRun2_asymptotic_preVFP_v11-v1/NANOAODSIM",
@@ -101,7 +101,7 @@ datasets = {
         "data_F": "/SingleMuon/Run2016F-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD",
         "data_G": "/SingleMuon/Run2016G-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD",
         "data_H": "/SingleMuon/Run2016H-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD",
-        "data_nanoaodv12": "dummy",
+        # "data_nanoaodv12": "dummy", # privately produced Run2 data in NanoAOD v12 format
         "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM",
         "dy_M-100To200": "/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v2/NANOAODSIM",
         "ttjets_dl": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM",
@@ -139,7 +139,7 @@ datasets = {
         "data_D": "/SingleMuon/Run2017D-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD",
         "data_E": "/SingleMuon/Run2017E-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD",
         "data_F": "/SingleMuon/Run2017F-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD",
-        "data_nanoaodv12": "dummy",
+        # "data_nanoaodv12": "dummy", # privately produced Run2 data in NanoAOD v12 format
         "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v2/NANOAODSIM",
         "dy_M-100To200": "/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v1/NANOAODSIM",
         "ttjets_dl": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv9-106X_mc2017_realistic_v9-v1/NANOAODSIM",
@@ -174,7 +174,7 @@ datasets = {
         "data_D": "/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
         "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X*/NANOAODSIM",
         "dy_M-100To200": "/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-        "dy_VBF_filter": "dummy",
+        "dy_VBF_filter": "dummy", # privately produced Run2 data in NanoAOD v12 format
         "ttjets_dl": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         "ttjets_sl": "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         # # "ttw": "",
@@ -236,14 +236,6 @@ if __name__ == "__main__":
     action="store",
     help="change fraction of steps of the data",
     )
-    # parser.add_argument(
-    # "-in_str",
-    # "--input_string",
-    # dest="input_string",
-    # default=None,
-    # action="store",
-    # help="string representation of samples to process, in the format of Year_{year}/DataRun_{A,B,C,D)}/Bkg_{DY,tt, etc}/Sig_{ggH, VBF}",
-    # )
     parser.add_argument(
     "-data",
     "--data",
@@ -295,7 +287,22 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, uses skips bad files when calling preprocessing",
     )
+    parser.add_argument(
+    "-aod_v",
+    "--NanoAODv",
+    dest="NanoAODv",
+    default="9",
+    action="store",
+    help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
+    )
     args = parser.parse_args()
+    # make NanoAODv into an interger variable
+    args.NanoAODv = int(args.NanoAODv)
+    # check for NanoAOD versions
+    allowed_nanoAODvs = [9, 12]
+    if not (args.NanoAODv in allowed_nanoAODvs):
+        print("wrong NanoAOD version is given!")
+        raise ValueError
     time_step = time.time()
     # print(f"args.bkg_samples: {args.bkg_samples}")
     os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
@@ -383,11 +390,20 @@ if __name__ == "__main__":
                 # test start -----------------------------------------------------------
                 load_path = "/eos/purdue/store/user/vscheure/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano/240514_124107/"
                 fnames = glob.glob(f"{load_path}/*/*.root")
-                # fnames = glob.glob(f"{load_path}/0002/*.root")
-                # fnames = glob.glob(f"{load_path}/0000/*.root")
-                # test end -----------------------------------------------------------
-                # load_path = "/depot/cms/users/yun79/private_samples/MC/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano"
-                # fnames = glob.glob(f"{load_path}/*.root")
+            elif sample_name == "data_nanoaodv12":
+                """
+                temp condition for privately produced Run2 data in NanoAOD v12 format
+                """
+                if year == "2016preVFP":
+                    load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/*/*/*.root"
+                elif year == "2016postVFP":
+                    load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/*/*/*.root"
+                elif year == "2017":
+                    load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/*/*/*.root"
+                else:
+                    print("Uncompatible year for privately produced data nanoaodV12!")
+                    raise ValueError
+                fnames = glob.glob(f"{load_path}")
             else:
                 das_query = dataset[sample_name]
                 print(f"das_query: {das_query}")

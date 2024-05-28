@@ -274,8 +274,22 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, uses dask gateway client instead of local",
     )
+    parser.add_argument(
+    "-aod_v",
+    "--NanoAODv",
+    dest="NanoAODv",
+    default="9",
+    action="store",
+    help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
+    )
     args = parser.parse_args()
-    
+    # make NanoAODv into an interger variable
+    args.NanoAODv = int(args.NanoAODv)
+    # check for NanoAOD versions
+    allowed_nanoAODvs = [9, 12]
+    if not (args.NanoAODv in allowed_nanoAODvs):
+        print("wrong NanoAOD version is given!")
+        raise ValueError
     time_step = time.time()
     
     warnings.filterwarnings('ignore')
@@ -283,13 +297,8 @@ if __name__ == "__main__":
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
     
-    config_path = "./config/parameters.json"
-    # with open(config_path) as file:
-    #     config = json.loads(file.read())
-    # config_path = "./config/parameters.yaml"
-    # config = OmegaConf.load(config_path)
+
     config = getParametersForYr(args.year)
-    
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
     if not test_mode: # full scale implementation
@@ -319,7 +328,9 @@ if __name__ == "__main__":
         sample_path = "./config/fraction_processor_samples.json"
         with open(sample_path) as file:
             samples = json.loads(file.read())
-        # print(f"samples.keys(): {samples.keys()}")
+        # add in NanoAODv info into samples metadata for coffea processor
+        for dataset in samples.keys():
+            samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
         total_save_path = args.save_path + f"/{args.year}"
         print(f"total_save_path: {total_save_path}")
         # with performance_report(filename="dask-report.html"):
@@ -330,11 +341,8 @@ if __name__ == "__main__":
             # for dataset, sample in samples.items():
                 sample_step = time.time()
                 # max_file_len = 15
-                # max_file_len = 1000
-                max_file_len = 6
                 # max_file_len = 50
-                # max_file_len = 100000
-                # max_file_len = 9
+                max_file_len = 900
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
                 print(f"max_file_len: {max_file_len}")
@@ -346,7 +354,7 @@ if __name__ == "__main__":
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
-                    print(f"var_step: {var_step}")
+                    # print(f"var_step: {var_step}")
                     to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
                     # print(f"to_compute: {to_compute}")
                     dask_computed = dask.compute(to_compute)
