@@ -183,6 +183,7 @@ class EventProcessor(processor.ProcessorABC):
         """
         event_filter = ak.ones_like(events.HLT.IsoMu24) # 1D boolean array to be used to filter out bad events
         dataset = events.metadata['dataset']
+        print(f"dataset: {dataset}")
         print(f"events.metadata: {events.metadata}")
         NanoAODv = events.metadata['NanoAODv']
         print(f"NanoAODv: {NanoAODv}")
@@ -683,16 +684,18 @@ class EventProcessor(processor.ProcessorABC):
         do_jerunc = False
         is_mc = events.metadata["is_mc"]
         # cache = events.caches[0]
+        factory = None
         if do_jec:
             if is_mc:
                 factory = self.jec_factories_mc["jec"]
             else:
                 for run in self.config["jec_parameters"]["runs"]:
-                    if run in events.metadata["dataset"]:
+                    # print(f"run: {run}")
+                    if run in dataset:
                         factory = self.jec_factories_data[run]
-                    else:
-                        print("JEC factory not recognized!")
-                        raise ValueError
+                if factory == None:
+                    print("JEC factory not recognized!")
+                    raise ValueError
                 
             print("do jec!")
             jets = factory.build(jets)
@@ -1003,15 +1006,16 @@ class EventProcessor(processor.ProcessorABC):
         #     print(f"integrated_lumi: {(integrated_lumi)}")
         # weights = weights*cross_section*integrated_lumi/sumWeights
 
-        # aply vbf filter phase cut if DY
-        if dataset == 'dy_M-100To200':
-            vbfReverseFilter = ak.values_astype(
-                ak.fill_none((gjj.mass <= 350), value=False), 
-                np.int32
-            ) # any higher value should be populated by VBF filtered DY instead
-            weights.add("vbfReverseFilter", 
-                    weight=vbfReverseFilter,
-            )
+        # apply vbf filter phase cut if DY test start ---------------------------------
+        # if dataset == 'dy_M-100To200':
+        #     vbfReverseFilter = ak.values_astype(
+        #         ak.fill_none((gjj.mass <= 350), value=False), 
+        #         np.int32
+        #     ) # any higher value should be populated by VBF filtered DY instead
+        #     weights.add("vbfReverseFilter", 
+        #             weight=vbfReverseFilter,
+        #     )
+        # apply vbf filter phase cut if DY test end ---------------------------------
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         weights = weights.weight()
         if "btag_wgt" in out_dict.keys():
@@ -1458,7 +1462,7 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         if is_mc and variation == "nominal":
         #     # --- QGL weights  start --- #
-            isHerwig = "herwig" in events.metadata['dataset']
+            isHerwig = "herwig" in dataset
             print("adding QGL weights!")
             # original start -------------------------------------
             # qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
