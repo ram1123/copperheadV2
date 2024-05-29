@@ -349,7 +349,7 @@ if __name__ == "__main__":
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                     # new_sample_list.append("dy_M-50")
-                    # new_sample_list.append("dy_M-100To200")
+                    new_sample_list.append("dy_M-100To200")
                     new_sample_list.append("dy_VBF_filter")
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                     new_sample_list.append("ttjets_dl")
@@ -382,7 +382,9 @@ if __name__ == "__main__":
         dataset = dict([(sample_name, dataset[sample_name]) for sample_name in new_sample_list])
         print(f"new dataset: {dataset.keys()}")
 
+        
         for sample_name in tqdm.tqdm(dataset.keys()):
+            is_data =  ("data" in sample_name)
             if sample_name == "dy_VBF_filter":
                 """
                 temporary condition bc IDK a way to integrate prod/phys03 CMSDAS datasets into rucio utils
@@ -390,19 +392,51 @@ if __name__ == "__main__":
                 # test start -----------------------------------------------------------
                 load_path = "/eos/purdue/store/user/vscheure/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano/240514_124107/"
                 fnames = glob.glob(f"{load_path}/*/*.root")
-            elif sample_name == "data_nanoaodv12":
+            elif (args.NanoAODv >= 12) and is_data :
                 """
                 temp condition for privately produced Run2 data in NanoAOD v12 format
                 """
                 if year == "2016preVFP":
-                    load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/*/*/*.root"
+                    if sample_name == "data_B":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_151941/*/*.root"
+                    elif sample_name == "data_C":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152121/*/*.root"
+                    elif sample_name == "data_D":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152208/*/*.root"
+                    elif sample_name == "data_E":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152315/*/*.root"
+                    elif sample_name == "data_F":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152432/*/*.root"
+                    else:
+                        print("unknown v12 Data run!")
+                        raise ValueError
                 elif year == "2016postVFP":
-                    load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/*/*/*.root"
+                    if sample_name == "data_F":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/240517_201444/*/*.root"
+                    elif sample_name == "data_G":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/240517_201522/*/*.root"
+                    elif sample_name == "data_H":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/240517_201559/*/*.root"
+                    else:
+                        print("unknown v12 Data run!")
                 elif year == "2017":
-                    load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/*/*/*.root"
+                    if sample_name == "data_B":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095548/*/*.root"
+                    elif sample_name == "data_C":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095646/*/*.root"
+                    elif sample_name == "data_D":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095712/*/*.root"
+                    elif sample_name == "data_E":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095505/*/*.root"
+                    elif sample_name == "data_F":
+                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095808/*/*.root"
+                    else:
+                        print("unknown v12 Data run!")
+                        raise ValueError
                 else:
                     print("Uncompatible year for privately produced data nanoaodV12!")
                     raise ValueError
+                print(f"fnames load_path: {load_path}")
                 fnames = glob.glob(f"{load_path}")
             else:
                 das_query = dataset[sample_name]
@@ -423,7 +457,7 @@ if __name__ == "__main__":
                     # partial_allowed=True
                 )
                 fnames = [file[0] for file in outfiles if file != []]
-                fnames = [fname.replace("root://eos.cms.rcac.purdue.edu//", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
+                fnames = [fname.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
                 
                 # random.shuffle(fnames)
                 if args.xcache:
@@ -441,7 +475,7 @@ if __name__ == "__main__":
                 "nGenEvts" : None,
                 "data_entries" : None,
             }
-            if "data" in sample_name: # data sample
+            if is_data: # data sample
                 file_input = {fname : {"object_path": "Events"} for fname in fnames}
                 events = NanoEventsFactory.from_root(
                         file_input,
