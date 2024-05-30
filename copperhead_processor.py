@@ -194,11 +194,6 @@ class EventProcessor(processor.ProcessorABC):
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
             LHE_leptons = LHE_particles[bool_filter]
 
-            if self.test:
-                # check LHE muons maintain the same event length
-                print(f"copperhead2 EventProcessor LHE_particles: {len(LHE_particles)}")
-                print(f"copperhead2 EventProcessor LHE_leptons: {len(LHE_leptons)}")
-                print(f"copperhead2 EventProcessor LHE_leptons.pdgId: {LHE_leptons.pdgId}")
 
             """
             TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
@@ -419,20 +414,14 @@ class EventProcessor(processor.ProcessorABC):
         # )
         # # testing muon selection end ------------------------------------------------
 
-        # # count muons that pass the general cut 
-        # nmuons = ak.num(events.Muon[muon_selection], axis=1)
-        
-        # # Find opposite-sign muons
-        # mm_charge = ak.prod(events.Muon.charge[muon_selection], axis=1)
-        
         muons = events.Muon[muon_selection]
         # muons = ak.to_packed(events.Muon[muon_selection])
-        # count muons that pass the general cut 
+
+        # count muons that pass the muon selection
         nmuons = ak.num(muons, axis=1)
         # Find opposite-sign muons
         mm_charge = ak.prod(muons.charge, axis=1)
         
-        # print(f"events.Electron.fields: {events.Electron.fields}")
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
         print(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
@@ -451,6 +440,7 @@ class EventProcessor(processor.ProcessorABC):
         # else:
         #     electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0) 
         # some temporary testing code end -----------------------------------------
+        
         electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0) 
 
         
@@ -528,7 +518,6 @@ class EventProcessor(processor.ProcessorABC):
             sumWeights = events.metadata['sumGenWgts']
             print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
-        # print(f"events b4 filter length: {ak.num(events.Muon.pt, axis=0).compute()}")
         # skim off bad events onto events and other related variables
         # # original -----------------------------------------------
         # events = events[event_filter==True]
@@ -548,18 +537,13 @@ class EventProcessor(processor.ProcessorABC):
         nmuons = ak.to_packed(nmuons[event_filter==True])
         applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
 
-        # temporary test start ------------------------------------
-        # M105to160normalizedWeight = ak.to_packed(M105to160normalizedWeight[event_filter==True])
-        # temporary test end ------------------------------------
-        
+       
         # turn off pu weights test start ---------------------------------
         if is_mc:
             for variation in pu_wgts.keys():
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
-        # turn off pu weights test end ---------------------------------
         pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
-        # to_packed testing end -----------------------------------------------
         
             
         
@@ -576,11 +560,6 @@ class EventProcessor(processor.ProcessorABC):
         # ---------------------------------------------------------
 
         muons_padded = ak.pad_none(muons, target=2)
-        # muon_flip = muons_padded.pt[:,0] < muons_padded.pt[:,1]  
-        # muon_flip = ak.fill_none(muon_flip, value=False)
-        # # take the subleading muon values if that now has higher pt after corrections
-        # mu1 = ak.where(muon_flip, muons_padded[:,1], muons_padded[:,0])
-        # mu2 = ak.where(muon_flip, muons_padded[:,0], muons_padded[:,1])
         sorted_args = ak.argsort(muons_padded.pt, ascending=False)
         muons_sorted = (muons_padded[sorted_args])
         mu1 = muons_sorted[:,0]
@@ -629,14 +608,6 @@ class EventProcessor(processor.ProcessorABC):
             gjj_dPhi = abs(gjet1.delta_phi(gjet2))
             gjj_dR = gjet1.delta_r(gjet2)
 
-        # if self.test:
-        #     print(f"copperhead2 EventProcessor events.Jet.rho: \n {events.Jet.rho}")
-        #     print(f"copperhead2 EventProcessor events.Jet.rho long: \n {ak.to_numpy(ak.flatten(events.Jet.rho))}")   
-        #     print(f'copperheadV2 EventProcessor jets.pt b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.pt))}')
-        #     print(f'copperheadV2 EventProcessor jets.eta b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.eta))}')
-        #     print(f'copperheadV2 EventProcessor jets.phi b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.phi))}')
-        #     print(f'copperheadV2 EventProcessor jets.mass b4 apply_jec long: \n {ak.to_numpy(ak.flatten(events.Jet.mass))}')
-        # skip validation for genjet end --------------------------------------------
 
         self.prepare_jets(events, NanoAODv=NanoAODv)
 
@@ -650,12 +621,8 @@ class EventProcessor(processor.ProcessorABC):
             self.config["jec_parameters"], 
             year
         )   
-        # print(f"njets pre jec: {ak.to_numpy(ak.num(jets, axis=1).compute())}")
         
-        do_jec = True # True 
-
-        
-
+        do_jec = True # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -798,8 +765,6 @@ class EventProcessor(processor.ProcessorABC):
             if do_lhe:
                 print("doing LHE!")
                 lhe_ren, lhe_fac = lhe_weights(events, events.metadata["dataset"], self.config["year"])
-                # print(f"lhe_ren: {lhe_ren}")
-                # print(f"lhe_fac: {lhe_fac}")
                 weights.add("LHERen", 
                     weight=ak.ones_like(lhe_ren["up"]),
                     weightUp=lhe_ren["up"],
@@ -950,16 +915,7 @@ class EventProcessor(processor.ProcessorABC):
         # b4 we do any filtering, we obtain the sum of gen weights for normalization
         # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
         
-        # raise ValueError
-        # muons = events.Muon[muon_selection]
-        # nmuons = ak.num(muons, axis=1)
-        # event_filter =   nmuons>=1
-        # print(f"event_filter: {event_filter.compute()}")
-        # events = events[event_filter]
-        # muons = muons[event_filter] # update events on these too
-        # nmuons = nmuons[event_filter] # update events on these too
-        # applied_fsr = applied_fsr[event_filter]
-        # jets = events.Jet
+
         njets = out_dict["njets"]
         # print(f"njets: {ak.to_numpy(njets.compute())}")
 
@@ -975,15 +931,6 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"zpt_weight: {zpt_weight.compute()}")
             # weights.add("zpt_wgt", weight=zpt_weight) # leave it outsie like btag
         
-        # print(f"events after filter length: {ak.num(muons.pt, axis=0).compute()}")
-        # weights = events.genWeight
-        # dataset = events.metadata['dataset']
-        # cross_section = self.config["cross_sections"][dataset]
-        # integrated_lumi = self.config["integrated_lumis"]
-        # if is_mc:
-        #     print(f"cross_section: {(cross_section)}")
-        #     print(f"integrated_lumi: {(integrated_lumi)}")
-        # weights = weights*cross_section*integrated_lumi/sumWeights
 
         # apply vbf filter phase cut if DY test start ---------------------------------
         # if dataset == 'dy_M-100To200':
@@ -1006,13 +953,6 @@ class EventProcessor(processor.ProcessorABC):
         # weights = ak.to_packed(weights)
         out_dict.update({"weights" : weights})
 
-
-        
-
-        # to packed test start -------------------------
-        # for key, value in out_dict.items():
-        #     out_dict[key] = ak.to_packed(value)
-        # to packed test end -------------------------
     
         return out_dict
         
