@@ -221,35 +221,6 @@ class EventProcessor(processor.ProcessorABC):
             event_filter = event_filter & LHE_filter
         # LHE cut original end -----------------------------------------------------------------------------
         
-        # elif events.metadata['dataset'] == 'dy_M-100To200': # if dy_M-100To200, apply LHE cut
-        #     print("doing dy_M-100To200 LHE cut!")
-        #     LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
-        #     bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
-        #     LHE_leptons = LHE_particles[bool_filter]
-
-        #     if self.test:
-        #         # check LHE muons maintain the same event length
-        #         print(f"copperhead2 EventProcessor LHE_particles: {len(LHE_particles)}")
-        #         print(f"copperhead2 EventProcessor LHE_leptons: {len(LHE_leptons)}")
-        #         print(f"copperhead2 EventProcessor LHE_leptons.pdgId: {LHE_leptons.pdgId}")
-
-        #     """
-        #     TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
-        #     When I had a quick look, all LHE_leptons had either two or zero leptons per event, never one, 
-        #     so just indexing first and second could work
-        #     """
-        #     max_idxs = ak.argmax(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for normal lepton
-        #     min_idxs = ak.argmin(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for anti lepton
-        #     LHE_lepton_barless = LHE_leptons[max_idxs]
-        #     LHE_lepton_bar = LHE_leptons[min_idxs]
-        #     LHE_dilepton_mass =  (LHE_lepton_barless +LHE_lepton_bar).mass
-
-        #     LHE_filter = (((LHE_dilepton_mass > 105) & (LHE_dilepton_mass < 160)))[:,0]
-        #     LHE_filter = ak.fill_none(LHE_filter, value=False) 
-        #     M105to160normalizedWeight = LHE_filter
-        #     # LHE_filter = (LHE_filter== False) # we want True to indicate that we want to keep the event
-
-        #     # event_filter = event_filter & LHE_filter
         
 # --------------------------------------------------------        
         # if self.config["do_trigger_match"]:
@@ -470,9 +441,17 @@ class EventProcessor(processor.ProcessorABC):
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
             & events.Electron[electron_id]
         )
-        electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0)
-
         
+        # some temporary testing code start -----------------------------------------
+        # if doing_ebeMassCalib:
+        #     """
+        #     if obtaining results for ebe mass Calibration calculation, we want electron_veto to be turned off
+        #     """
+        #     electron_veto = ak.ones_like(event_filter)
+        # else:
+        #     electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0) 
+        # some temporary testing code end -----------------------------------------
+        electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0) 
 
         
         event_filter = (
@@ -481,7 +460,7 @@ class EventProcessor(processor.ProcessorABC):
                 & (evnt_qual_flg_selection > 0)
                 & (nmuons == 2)
                 & (mm_charge == -1)
-                & electron_veto
+                & electron_veto 
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
 
         )
@@ -1044,7 +1023,6 @@ class EventProcessor(processor.ProcessorABC):
         pass
 
     
-    # def get_mass_resolution(self, events, test_mode=False):
     def get_mass_resolution(self, dimuon, mu1,mu2, is_mc:bool, test_mode=False):
         # Returns absolute mass resolution!
         # mu1 = events.Muon[:,0]
@@ -1069,8 +1047,8 @@ class EventProcessor(processor.ProcessorABC):
             abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
         )
     
-        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
-        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
+        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
+        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
     
     def prepare_jets(self, events, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
         # Initialize missing fields (needed for JEC)
