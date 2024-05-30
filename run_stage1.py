@@ -125,9 +125,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'jj_phi': (out_collections["jj_phi"]),
             # weights -----------------------------------------
             'weights': (out_collections["weights"]),
-            #dimuon variables-----------------------
+            # #dimuon variables-----------------------
             'dimuon_mass': (out_collections["dimuon_mass"]),
-            # 'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
+            'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
             'dimuon_cos_theta_cs': (out_collections["dimuon_cos_theta_cs"]),
             'dimuon_phi_cs': (out_collections["dimuon_phi_cs"]),
             'dimuon_cos_theta_eta': (out_collections["dimuon_cos_theta_eta"]),
@@ -138,7 +138,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'dimuon_phi': (out_collections["dimuon_phi"]),
             'dimuon_pt': (out_collections["dimuon_pt"]),
 
-            # mmj variables ------------------------------
+            # # mmj variables ------------------------------
             'mmj1_dEta': (out_collections["mmj1_dEta"]),
             'mmj1_dPhi': (out_collections["mmj1_dPhi"]),
             'mmj2_dEta': (out_collections["mmj2_dEta"]),
@@ -178,7 +178,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             # "pass_leading_pt" : (out_collections["pass_leading_pt"]),
             "ll_zstar" : (out_collections["ll_zstar"]),
             "zeppenfeld" : (out_collections["zeppenfeld"]),
-            "event" : (out_collections["event"]),
+            # "event" : (out_collections["event"]),
             # temporary test start ------------------------------------
             # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
             # temporary test end ------------------------------------
@@ -348,6 +348,7 @@ if __name__ == "__main__":
                 print(f"max_file_len: {max_file_len}")
                 print(f"len(smaller_files): {len(smaller_files)}")
                 # for idx in range(len(smaller_files)):
+                # for idx in tqdm.tqdm(range(12, len(smaller_files)), leave=False):
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     print("restarting workers!")
                     client.restart(wait_for_workers = False)
