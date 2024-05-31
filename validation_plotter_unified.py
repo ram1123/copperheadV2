@@ -163,7 +163,7 @@ if __name__ == "__main__":
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                 # available_processes.append("dy_M-50")
                 available_processes.append("dy_M-100To200")
-                # available_processes.append("dy_VBF_filter")
+                available_processes.append("dy_VBF_filter")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
                 available_processes.append("ttjets_sl")
@@ -209,7 +209,7 @@ if __name__ == "__main__":
             variables2plot.append(f"mmj_min_dPhi")
             variables2plot.append(f"mmj_min_dEta")
         elif "dijet" in particle:
-            variables2plot.append(f"gjj_mass")
+            # variables2plot.append(f"gjj_mass")
             variables2plot.append(f"jj_mass")
             variables2plot.append(f"jj_dEta")
             variables2plot.append(f"jj_dPhi")
@@ -219,7 +219,7 @@ if __name__ == "__main__":
                 variables2plot.append(f"{particle}1_{kinematic}")
                 variables2plot.append(f"{particle}2_{kinematic}")
         elif ("jet" in particle):
-            variables2plot.append(f"njets")
+            # variables2plot.append(f"njets")
             for kinematic in kinematic_vars:
                 # plot both leading and subleading muons/jets
                 variables2plot.append(f"{particle}1_{kinematic}")
@@ -240,7 +240,8 @@ if __name__ == "__main__":
     with open("./histogram/plot_settings.json", "r") as file:
         plot_settings = json.load(file)
     status = args.status.replace("_", " ")
-
+    
+    # define client for parallelization 
     if args.use_gateway:
             from dask_gateway import Gateway
             gateway = Gateway(
@@ -251,11 +252,30 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             print("Gateway Client created")
     else:
-    # define client for parallelization for speed boost
-        client =  Client(n_workers=20,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+        client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
         print("Local scale Client created")
     # record time
     time_step = time.time()
+
+    # load saved parquet files. This increases memory use, but increases runtime significantly
+    loaded_events = {}
+    N_reasonable = 50000
+    for process in tqdm.tqdm(available_processes):
+        print(f"loading process {process}..")
+        full_load_path = args.load_path+f"/{process}/*/*.parquet"
+        events = dak.from_parquet(full_load_path)
+        # only select specific fields to load to save run time
+        fields2load = variables2plot + ["weights", "fraction", "h_sidebands", "h_peak", "z_peak", "vbf_cut","nBtagLoose", "nBtagMedium",]
+        is_data = "data" in process.lower()
+        if not is_data: # MC sample
+             fields2load += ["gjj_mass", "gjj_dR",]
+        events = events[fields2load]
+        # load data to memory using compute()
+        events = ak.zip({
+            field : events[field] for field in events.fields
+        }).repartition(rows_per_partition=N_reasonable).compute()
+        loaded_events[process] = events
+    print("finished loading parquet files!")
     # ROOT style or mplhep style starts here --------------------------------------
     if args.ROOT_style:
         import ROOT
@@ -274,23 +294,14 @@ if __name__ == "__main__":
         pad.Draw();
         pad.cd();
         fraction_weight = 1.0 # to be used later in reweightROOTH after all histograms are filled
-        # var = "jet1_pt"
-        # val_events start -------------------------------
-        # val_events = {key: events[key] for key in events.fields}
-        # val_events = val_events.compute()
-        # val_events end -------------------------------
-        counter = 0
+        # counter = 0
         for var in tqdm.tqdm(variables2plot):
             # if counter == int(len(variables2plot)/2):
-            counter +=1
-            if counter % 5 ==0:
-                print("restarting client!")
-                client.restart(wait_for_workers=False)
+            # counter +=1
+            # if counter % 5 ==0:
+            #     print("restarting client!")
+            #     client.restart(wait_for_workers=False)
             var_step = time.time()
-            # with Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') as client:
-            # del client
-            # client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB')
-            # client.restart()
             if var not in plot_settings.keys():
                 print(f"variable {var} not configured in plot settings!")
                 continue
@@ -309,17 +320,22 @@ if __name__ == "__main__":
             ROOT.TH1.AddDirectory(False)
             for process in available_processes:
                 print(f"process: {process}")
-                full_load_path = args.load_path+f"/{process}/*/*.parquet"
-                events = dak.from_parquet(full_load_path) 
+                # runtime optimization test start ---------------------------------
+                # full_load_path = args.load_path+f"/{process}/*/*.parquet"
+                # events = dak.from_parquet(full_load_path) 
+                events = loaded_events[process]
+                # runtime optimization test end ---------------------------------
                 # collect weights
                 is_data = "data" in process.lower()
                 print(f"is_data: {is_data}")
                 if is_data:
                     # weights = ak.to_numpy((events["weights"]/events["fraction"]).compute())
-                    weights = ak.to_numpy(ak.fill_none(events["weights"], value=0.0).compute())
+                    # weights = ak.to_numpy(ak.fill_none(events["weights"], value=0.0).compute())
+                    weights = ak.to_numpy(ak.fill_none(events["weights"], value=0.0))
                 else: # MC
                     # print(f"events.weights: {events.weights.compute()}")
-                    weights = ak.fill_none(events["weights"], value=0.0).compute()
+                    # weights = ak.fill_none(events["weights"], value=0.0).compute()
+                    weights = ak.fill_none(events["weights"], value=0.0)
                     # print(f"weights {process} b4 numpy: {weights}")
                     weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
@@ -330,7 +346,8 @@ if __name__ == "__main__":
                 # print(f"weights {process} isnan sum: {np.sum(np.isnan(weights))}")
                 
 
-                fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
+                # fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
+                fraction_weight = 1/events.fraction # TBF, all fractions should be same
 
                 # obtain the category selection
                 vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
@@ -355,18 +372,29 @@ if __name__ == "__main__":
                     prod_cat_cut =  vbf_cut
                     # apply additional cut to MC samples if vbf 
                     # VBF filter cut start -------------------------------------------------
-                    # if process == "dy_VBF_filter":
-                    #     print("dy_VBF_filter extra!")
-                    #     prod_cat_cut =  ( prod_cat_cut  
-                    #                 & ak.fill_none((events.gjj_mass > 350), value=False) 
-                    #     )
-                    # elif process == "dy_M-100To200":
-                    #     print("dy_M-100To200 extra!")
-                    #     prod_cat_cut =  ( prod_cat_cut  
-                    #                 & ak.fill_none((events.gjj_mass <= 350), value=False)  
-                    #     )
+                    if "dy_" in process:
+                        
+                        
+                        if process == "dy_VBF_filter":
+                            print("dy_VBF_filter extra!")
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) & ak.fill_none((events.gjj_dR > 0.3), value=False)
+                            # print(f"events.gjj_dR: {events.gjj_dR.compute()}")
+                            prod_cat_cut =  (prod_cat_cut  
+                                        & vbf_filter
+                            )
+                        elif process == "dy_M-100To200":
+                            print("dy_M-100To200 extra!")
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) | ak.fill_none((events.gjj_dR > 0.3), value=False)
+                            # print(f"events.gjj_dR: {events.gjj_dR.compute()}")
+                            prod_cat_cut =  (prod_cat_cut  
+                                        & ~vbf_filter 
+                            )
+                        else:
+                            print(f"no extra processing for {process}")
+                            pass
                     # VBF filter cut end -------------------------------------------------
                 else: # we're interested in ggH category
+                    print("ggH mode!")
                     prod_cat_cut =  ~vbf_cut
                 # print(f"prod_cat_cut sum b4: {ak.sum(prod_cat_cut).compute()}")
                 
@@ -377,7 +405,8 @@ if __name__ == "__main__":
                     prod_cat_cut & 
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
-                ).compute()
+                )
+                # ).compute()
                 # print(f"category_selection: {category_selection}")
                 # print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
                 # print(f"category_selection {process} : {category_selection}")
@@ -387,7 +416,8 @@ if __name__ == "__main__":
                 # print(f"weights b4 category selection {process} : {weights}")
                 weights = weights*category_selection
                 # print(f"weights {process} : {weights}")
-                values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
+                values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
+                # values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
 
                 
                 # print(f"values[0]: {values[0]}")
@@ -411,7 +441,7 @@ if __name__ == "__main__":
                 np_hist =   np.nan_to_num(np_hist)
                 np_hist_w2 =   np.nan_to_num(np_hist_w2)
                 print(f"np_hist new {process} : {np_hist}")
-                print(f"np_hist_w2 {process} : {np_hist_w2}")
+                # print(f"np_hist_w2 {process} : {np_hist_w2}")
                 # calculate histogram errors consistent with TH1.Sumw2() mode at
                 # https://root.cern.ch/doc/master/classTH1.html#aefa4ee94f053ec3d217f3223b01fa014
                 hist_errs = np.sqrt(np_hist_w2)
@@ -717,8 +747,12 @@ if __name__ == "__main__":
                 dummy_hist.GetYaxis().SetRangeUser(0.01, 1e9);
                 pad.SetLogy();
             else:
-                binmax = data_hist_stacked.GetMaximumBin()
-                max_y = data_hist_stacked.GetBinContent(binmax)
+                # binmax = data_hist_stacked.GetMaximumBin()
+                # max_y = data_hist_stacked.GetBinContent(binmax)
+                # use MC max_y temporarily start ------------------
+                binmax = all_MC_hist_copy.GetMaximumBin()
+                max_y = all_MC_hist_copy.GetBinContent(binmax)
+                # use MC max_y temporarily end ------------------
                 dummy_hist.GetYaxis().SetRangeUser(0.0, 1.3*max_y);
             pad.Modified();
             pad.Update();
