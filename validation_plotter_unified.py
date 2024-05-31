@@ -294,13 +294,7 @@ if __name__ == "__main__":
         pad.Draw();
         pad.cd();
         fraction_weight = 1.0 # to be used later in reweightROOTH after all histograms are filled
-        # counter = 0
         for var in tqdm.tqdm(variables2plot):
-            # if counter == int(len(variables2plot)/2):
-            # counter +=1
-            # if counter % 5 ==0:
-            #     print("restarting client!")
-            #     client.restart(wait_for_workers=False)
             var_step = time.time()
             if var not in plot_settings.keys():
                 print(f"variable {var} not configured in plot settings!")
@@ -320,21 +314,14 @@ if __name__ == "__main__":
             ROOT.TH1.AddDirectory(False)
             for process in available_processes:
                 print(f"process: {process}")
-                # runtime optimization test start ---------------------------------
-                # full_load_path = args.load_path+f"/{process}/*/*.parquet"
-                # events = dak.from_parquet(full_load_path) 
                 events = loaded_events[process]
-                # runtime optimization test end ---------------------------------
+                
                 # collect weights
                 is_data = "data" in process.lower()
                 print(f"is_data: {is_data}")
                 if is_data:
-                    # weights = ak.to_numpy((events["weights"]/events["fraction"]).compute())
-                    # weights = ak.to_numpy(ak.fill_none(events["weights"], value=0.0).compute())
                     weights = ak.to_numpy(ak.fill_none(events["weights"], value=0.0))
                 else: # MC
-                    # print(f"events.weights: {events.weights.compute()}")
-                    # weights = ak.fill_none(events["weights"], value=0.0).compute()
                     weights = ak.fill_none(events["weights"], value=0.0)
                     # print(f"weights {process} b4 numpy: {weights}")
                     weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
@@ -346,7 +333,6 @@ if __name__ == "__main__":
                 # print(f"weights {process} isnan sum: {np.sum(np.isnan(weights))}")
                 
 
-                # fraction_weight = 1/events.fraction.compute() # TBF, all fractions should be same
                 fraction_weight = 1/events.fraction # TBF, all fractions should be same
 
                 # obtain the category selection
@@ -378,14 +364,12 @@ if __name__ == "__main__":
                         if process == "dy_VBF_filter":
                             print("dy_VBF_filter extra!")
                             vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) & ak.fill_none((events.gjj_dR > 0.3), value=False)
-                            # print(f"events.gjj_dR: {events.gjj_dR.compute()}")
                             prod_cat_cut =  (prod_cat_cut  
                                         & vbf_filter
                             )
                         elif process == "dy_M-100To200":
                             print("dy_M-100To200 extra!")
                             vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) | ak.fill_none((events.gjj_dR > 0.3), value=False)
-                            # print(f"events.gjj_dR: {events.gjj_dR.compute()}")
                             prod_cat_cut =  (prod_cat_cut  
                                         & ~vbf_filter 
                             )
@@ -406,7 +390,7 @@ if __name__ == "__main__":
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 )
-                # ).compute()
+                
                 # print(f"category_selection: {category_selection}")
                 # print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
                 # print(f"category_selection {process} : {category_selection}")
@@ -417,7 +401,6 @@ if __name__ == "__main__":
                 weights = weights*category_selection
                 # print(f"weights {process} : {weights}")
                 values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
-                # values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
 
                 
                 # print(f"values[0]: {values[0]}")
@@ -774,12 +757,7 @@ if __name__ == "__main__":
         # this mplhep implementation assumes non-empty data; otherwise, it will crash
         # Dictionary for histograms and binnings
 
-        counter = 0
         for var in tqdm.tqdm(variables2plot):
-            counter +=1
-            if counter % 5 ==0:
-                print("restarting client!")
-                client.restart(wait_for_workers=False)
             var_step = time.time()
             # for process in available_processes:
             if var not in plot_settings.keys():
@@ -808,23 +786,17 @@ if __name__ == "__main__":
             # for var in variables2plot:
             for process in available_processes:    
                 print(f"process: {process}")
-                full_load_path = args.load_path+f"/{process}/*/*.parquet"      
-                events = dak.from_parquet(full_load_path)
-                # collect weights
-                # if "data" in process.lower():
-                #     weights = np.ones_like(events["mu1_pt"].compute())
-                # else:
-                #     weights = ak.to_numpy(events["weight_nominal"].compute() )
+                events = loaded_events[process]
                 is_data = "data" in process.lower()
                 print(f"is_data: {is_data}")
                 if is_data:
-                    weights = ak.to_numpy((events["weights"]).compute())
+                    weights = ak.to_numpy((events["weights"]))
                 else: # MC
-                    weights = ak.to_numpy((events["weights"]).compute())
+                    weights = ak.to_numpy((events["weights"]))
                 #-----------------------------------------------    
                 # obtain the category selection
 
-                fraction_weight = ak.to_numpy(1/events.fraction.compute()) # TBF, all fractions should be same
+                fraction_weight = ak.to_numpy(1/events.fraction) # TBF, all fractions should be same
                 # print(f"fraction_weight: {fraction_weight[0]}")
                 # print(f"fraction_weight: {fraction_weight[4]}")
                 # obtain the category selection
@@ -854,12 +826,11 @@ if __name__ == "__main__":
                     prod_cat_cut & 
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
-                ).compute()
+                )
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
                 weights = weights*category_selection
                 # print(f"weights.shape: {weights[weights>0].shape}")
-                # values = ak.to_numpy(events[var].compute())
-                values = ak.to_numpy(ak.fill_none(events[var], value=-999.0).compute())
+                values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
                 # print(f"values[0]: {values[0]}")
                 values_filter = values!=-999.0
                 values = values[values_filter]
