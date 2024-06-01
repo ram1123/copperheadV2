@@ -116,7 +116,7 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2018  | data/jec/Fall17_V3_MC_PtResolution_AK4PFchs.jr.txt | |
 |   | 2017 | data/jec/Autumn18_V7_MC_PtResolution_AK4PFchs.jr.txt | |
 |   | 2016 | data/jec/Summer16_25nsV1_MC_PtResolution_AK4PFchs.jr.txt | |
-| JER SF  | 2024 |  | |
+| Jet Resolution SF  | 2024 |  | |
 |   | 2023 |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
 |   | 2022 |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
 |   | 2018  | data/jec/Autumn18_V7_MC_SF_AK4PFchs.jersf.txt | |
