@@ -111,23 +111,23 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2017 | data/btag/DeepCSV_106XUL17SF.csv  | |
 |   | 2016 | data/btag/DeepCSV_2016LegacySF_V1.csv | |
 | JER  | 2024 |  | |
-|   | 2023 |   | |
-|   | 2022 |   | |
+|   | 2023 |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
+|   | 2022 |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
 |   | 2018  | data/jec/Fall17_V3_MC_PtResolution_AK4PFchs.jr.txt | |
 |   | 2017 | data/jec/Autumn18_V7_MC_PtResolution_AK4PFchs.jr.txt | |
 |   | 2016 | data/jec/Summer16_25nsV1_MC_PtResolution_AK4PFchs.jr.txt | |
 | JER SF  | 2024 |  | |
-|   | 2023 |   | |
-|   | 2022 |   | |
+|   | 2023 |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
+|   | 2022 |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
 |   | 2018  | data/jec/Autumn18_V7_MC_SF_AK4PFchs.jersf.txt | |
 |   | 2017 | data/jec/Fall17_V3_MC_SF_AK4PFchs.jersf.txt | |
 |   | 2016 | data/jec/Summer16_25nsV1_MC_SF_AK4PFchs.jersf.txt | |
 | JEC  | 2024 Data |  | |
 |   | 2024 MC |  | |
-|   | 2023 Data |   | |
-|   | 2023 MC |   | |
-|   | 2022 Data |   | |
-|   | 2022 MC |   | |
+|   | 2023 Data |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
+|   | 2023 MC |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
+|   | 2022 Data |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
+|   | 2022 MC |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
 |   | 2018 Data | data/jec/Autumn18_Run{A, B, C and D}_V19_DATA_Uncertainty_AK4PFchs.junc.txt | |
 |   | 2018 MC | data/jec/Autumn18_V19_MC_{L1FastJet, L2Relative, L3Absolute, L2L3Residual and Uncertainty}_AK4PFchs.jec.txt | |
 |   | 2017 Data | data/jec/Fall17_17Nov2017{B, C , DE, and F}_V32_DATA_Uncertainty_AK4PFchs.junc.txt | |
