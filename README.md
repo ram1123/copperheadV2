@@ -134,7 +134,9 @@ This would start the GRID certificate password prompt, and then once given the p
 |   | 2017 MC | data/jec/Fall17_17Nov2017_V32_MC_{L1FastJet, L2Relative, L3Absolute L2L3Residual and Uncertainty}_AK4PFchs.jec.txt | |
 |   | 2016 Data | data/jec/Summer16_07Aug2017{BCD, EF and GH}_V11_DATA_Uncertainty_AK4PFchs.junc.txt | |
 |   | 2016 MC | data/jec/Summer16_07Aug2017_V11_MC_{L1FastJet, L3Absolute, L2L3Residual and Uncertainty}_AK4PFchs.jec.txt | |
-
+| Jet Map Veto  | 2024 |  | |
+|   | 2023 |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
+|   | 2022 |   | https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/tree/master/POG/JME|
 
 ## Table of samples for Run2 and Run3:
 
