@@ -530,6 +530,7 @@ if __name__ == "__main__":
                         DY_hist_stacked.Add(group_DY_hists[idx])
                 DY_hist_stacked.SetLineColor(1);
                 DY_hist_stacked.SetFillColor(ROOT.kOrange+1);
+                # DY_hist_stacked.SetFillColor("#5790fc");
                 all_MC_hist_list.append(DY_hist_stacked)
             #----------------------------------------------
             if len(group_Top_hists) > 0:
@@ -755,7 +756,9 @@ if __name__ == "__main__":
         import mplhep as hep
         import matplotlib.pyplot as plt
         import matplotlib
-        hep.style.use("CMS")
+        # hep.style.use("CMS")
+        # Load CMS style including color-scheme (it's an editable dict)
+        plt.style.use(hep.style.CMS)
         # this mplhep implementation assumes non-empty data; otherwise, it will crash
         # Dictionary for histograms and binnings
 
@@ -792,9 +795,14 @@ if __name__ == "__main__":
                 is_data = "data" in process.lower()
                 print(f"is_data: {is_data}")
                 if is_data:
-                    weights = ak.to_numpy((events["weights"]))
+                    weights = ak.to_numpy(ak.fill_none(events["weights"], value=0.0))
                 else: # MC
-                    weights = ak.to_numpy((events["weights"]))
+                    weights = ak.fill_none(events["weights"], value=0.0)
+                    # print(f"weights {process} b4 numpy: {weights}")
+                    weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
+                    # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
+                    # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
+                    weights = np.nan_to_num(weights, nan=0.0) 
                 #-----------------------------------------------    
                 # obtain the category selection
 
@@ -816,19 +824,40 @@ if __name__ == "__main__":
                 else: 
                     print("ERROR: not acceptable region!")
                     raise ValueError
-                # nBtagLoose = ak.fill_none(events.nBtagLoose, value=0)
-                # nBtagMedium = ak.fill_none(events.nBtagMedium, value=0)
-                # btag_cut =(nBtagLoose >= 2) | (nBtagMedium >= 1)
-                btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
+
+                btag_cut =ak.fill_none((events.nBtagLoose >= 2), value=False) | ak.fill_none((events.nBtagMedium >= 1), value=False)
                 if args.vbf_cat_mode:
+                    print("vbf mode!")
                     prod_cat_cut =  vbf_cut
+                    if "dy_" in process:
+                        if process == "dy_VBF_filter":
+                            print("dy_VBF_filter extra!")
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # & ak.fill_none((events.gjj_dR > 0.3), value=False)
+                            prod_cat_cut =  (prod_cat_cut  
+                                        & vbf_filter
+                            )
+                        elif process == "dy_M-100To200":
+                            print("dy_M-100To200 extra!")
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # | ak.fill_none((events.gjj_dR > 0.3), value=False)
+                            prod_cat_cut =  (prod_cat_cut  
+                                        & ~vbf_filter 
+                            )
+                        else:
+                            print(f"no extra processing for {process}")
+                            pass
                 else: # we're interested in ggH category
+                    print("ggH mode!")
                     prod_cat_cut =  ~vbf_cut
+                    
                 category_selection = (
                     prod_cat_cut & 
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 )
+                print(f"category_selection: {category_selection}")
+                print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
+                print(f"category_selection {process} : {category_selection}")
+                
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
                 weights = weights*category_selection
                 # print(f"weights.shape: {weights[weights>0].shape}")
@@ -844,6 +873,7 @@ if __name__ == "__main__":
                     weights = weights*fraction_weight
                 # print(f"weights.shape: {weights[weights>0].shape}")
                 np_hist, _ = np.histogram(values, bins=binning, weights = weights)
+                print(f"np_hist old {process} : {np_hist}")
                 np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
                
                 
@@ -941,9 +971,8 @@ if __name__ == "__main__":
             #----------------------------------------------             
                     
                 
-            # colours = hep.style.cms.cmap_petroff[0:3]
-            colours = hep.style.cms.cmap_petroff[0:2]
-            # print(f"colours: {colours}")
+            colours = hep.style.cms.cmap_petroff[0:len(groups)]
+            print(f"colours: {colours}")
             # print(f"labels: {labels}")
             if not args.no_ratio:
                 fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
@@ -959,13 +988,13 @@ if __name__ == "__main__":
                 "VV" : "Azure",
                 "other" : "Gray"
             }
-            colours = [group_color_map[group] for group in groups]
+            # colours = [group_color_map[group] for group in groups]
             if len(all_MC_hist_list) > 0:
                 hep.histplot(all_MC_hist_list, bins=binning, 
                              stack=True, histtype='fill', 
                              label=groups, 
                              sort='label_r', 
-                             color=colours, 
+                             # color=colours, 
                              ax=ax_main)
 
             if len(group_ggH_hists) > 0: # there should be only one element or be empty
@@ -998,6 +1027,7 @@ if __name__ == "__main__":
             if not args.linear_scale:
                 ax_main.set_yscale('log')
                 ax_main.set_ylim(0.01, 1e9)
+                
             ax_main.legend(loc="upper right")
             
             if not args.no_ratio:
