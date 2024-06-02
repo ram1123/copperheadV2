@@ -224,15 +224,16 @@ class EventProcessor(processor.ProcessorABC):
         #     to be matched with the trigger object that fired our HLT. If none of the muons did it, then we reject the 
         #     event. This operation is computationally expensive, so perhaps worth considering not implementing it if 
         #     it has neglible impact
+        #     reference: https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv9/2018UL/doc_TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8_RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1.html
             
         #     TODO: The impact this operation has onto the statistics is supposedly very low, but I have to check that
         #     """
         #     isoMu_filterbit = 2
         #     mu_id = 13
         #     pt_threshold = 24 
-        #     dr_threshold = 0.1
+        #     dr_threshold = 0.1 # for matching gen muons to reco muons
         #     IsoMu24_muons = (events.TrigObj.id == mu_id) &  \
-        #             ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
+            #             ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
         #             (events.TrigObj.pt > pt_threshold)
         #     #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
         #     padded_muons = ak.pad_none(events.Muon, 2) # pad in case we have only one muon or zero in an event
@@ -297,7 +298,6 @@ class EventProcessor(processor.ProcessorABC):
                         self.config,
                         events.Pileup.nTrueInt,
                         onTheSpot=False # use locally saved true PU dist
-                        # onTheSpot=True
                 )
         # turn off pu weights test end ---------------------------------
        
@@ -584,9 +584,10 @@ class EventProcessor(processor.ProcessorABC):
             #fill gen jets for VBF filter on postprocess
             gjets = events.GenJet
             gleptons = events.GenPart[
-                (abs(events.GenPart.pdgId) == 13)
+                ((abs(events.GenPart.pdgId) == 13)
                 | (abs(events.GenPart.pdgId) == 11)
-                | (abs(events.GenPart.pdgId) == 15)
+                | (abs(events.GenPart.pdgId) == 15))
+                & events.GenPart.hasFlags('isHardProcess')
             ]
             gl_pair = ak.cartesian({"jet": gjets, "lepton": gleptons}, axis=1, nested=True)
             dr_gl = gl_pair["jet"].delta_r(gl_pair["lepton"])
@@ -596,7 +597,6 @@ class EventProcessor(processor.ProcessorABC):
             padded_iso_gjet = ak.pad_none(
                 ak.to_packed(gjets[isolated]),
                 target=2,
-                clip=True
             ) # pad with none val to ensure that events have at least two columns each event
             sorted_args = ak.argsort(padded_iso_gjet.pt, ascending=False) # leading pt is ordered by pt
             gjets_sorted = (padded_iso_gjet[sorted_args])
@@ -987,8 +987,8 @@ class EventProcessor(processor.ProcessorABC):
             abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
         )
     
-        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
-        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
+        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
+        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
     
     def prepare_jets(self, events, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
         # Initialize missing fields (needed for JEC)
@@ -1055,6 +1055,7 @@ class EventProcessor(processor.ProcessorABC):
         do_jerunc = False,
     ):
         is_mc = events.metadata["is_mc"]
+        dataset = events.metadata["dataset"]
         if (not is_mc) and variation != "nominal":
             return
         # variables = pd.DataFrame(index=output.index)
