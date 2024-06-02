@@ -219,7 +219,7 @@ def jet_puid(jets, config):
             "medium": (puId >= 3) | (jets.pt > 50),
             "tight": (puId >= 7) | (jets.pt > 50),
         }
-    else:
+    else: # 2017 and 2018
         jet_puid_wps = {
             "loose": (puId >= 4) | (jets.pt > 50),
             "medium": (puId >= 6) | (jets.pt > 50),
