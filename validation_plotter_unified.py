@@ -8,7 +8,7 @@ from histogram.ROOT_utils import setTDRStyle, CMS_lumi, reweightROOTH_data, rewe
 from distributed import Client
 import time    
 import tqdm
-
+import cmsstyle as CMS
 
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F"]
@@ -281,7 +281,9 @@ if __name__ == "__main__":
         import ROOT
         #Plotting part
         setTDRStyle()
+        # CMS.SetExtraText("Private")
         canvas = ROOT.TCanvas("canvas","",600,750);
+        # canvas = CMS.cmsCanvas('', 0, 1, 0, 1, '', '', square = CMS.kSquare, extraSpace=0.01, iPos=11) #generally : iPos = 10*(alignement 1/2/3) + position (1/2/3 = l/c/r)
         canvas.cd();
         
         pad = ROOT.TPad("pad","pad",0,0.,1,1);
@@ -337,8 +339,8 @@ if __name__ == "__main__":
 
                 # obtain the category selection
                 vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
-                print("doing root style!")
-                print(f"args.region: {args.region}")
+                # print("doing root style!")
+                # print(f"args.region: {args.region}")
                 if args.region == "signal":
                     region = events.h_sidebands | events.h_peak
                 elif args.region == "h_peak":
@@ -359,17 +361,15 @@ if __name__ == "__main__":
                     # apply additional cut to MC samples if vbf 
                     # VBF filter cut start -------------------------------------------------
                     if "dy_" in process:
-                        
-                        
                         if process == "dy_VBF_filter":
                             print("dy_VBF_filter extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) & ak.fill_none((events.gjj_dR > 0.3), value=False)
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # & ak.fill_none((events.gjj_dR > 0.3), value=False)
                             prod_cat_cut =  (prod_cat_cut  
                                         & vbf_filter
                             )
                         elif process == "dy_M-100To200":
                             print("dy_M-100To200 extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) | ak.fill_none((events.gjj_dR > 0.3), value=False)
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # | ak.fill_none((events.gjj_dR > 0.3), value=False)
                             prod_cat_cut =  (prod_cat_cut  
                                         & ~vbf_filter 
                             )
@@ -407,6 +407,8 @@ if __name__ == "__main__":
                 values_filter = values!=-999.0
                 values = values[values_filter]
                 weights = weights[values_filter]
+                if process == "dy_VBF_filter":
+                    weights = weights*(0.7)
                 # MC samples are already normalized by their xsec*lumi, but data is not
                 if process in group_data_processes:
                     fraction_weight = fraction_weight[values_filter]
@@ -423,7 +425,7 @@ if __name__ == "__main__":
                 # convert nans to zeros in case histograms have them
                 np_hist =   np.nan_to_num(np_hist)
                 np_hist_w2 =   np.nan_to_num(np_hist_w2)
-                print(f"np_hist new {process} : {np_hist}")
+                # print(f"np_hist new {process} : {np_hist}")
                 # print(f"np_hist_w2 {process} : {np_hist_w2}")
                 # calculate histogram errors consistent with TH1.Sumw2() mode at
                 # https://root.cern.ch/doc/master/classTH1.html#aefa4ee94f053ec3d217f3223b01fa014
