@@ -79,7 +79,8 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100):
     upper_pad.cd()
     # workspace = rt.RooWorkspace("w", "w")
     mass_name = "dimuon_mass"
-    mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
+    # mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
+    mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,80,100)
     mass.setBins(nbins)
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     # workspace.Import(mass)
@@ -192,7 +193,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     upper_pad.cd()
     # workspace = rt.RooWorkspace("w", "w")
     mass_name = "dimuon_mass"
-    mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
+    # mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
+    mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,80,100)
     mass.setBins(nbins)
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     # workspace.Import(mass)
@@ -220,8 +222,9 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 185)
     alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
     n2 = rt.RooRealVar("n2" , "n2", 25, 0.01, 385)
-    # n1.setConstant(True)
-    # n2.setConstant(True)
+    # n2 = rt.RooRealVar("n2" , "n2", 114, 0.01, 385) #test 114
+    n1.setConstant(True)
+    n2.setConstant(True)
     model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
     
     # merge BW with DCB via convolution
@@ -240,8 +243,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     #--------------------------------------------------
     
     # Landau Background --------------------------------------------------------------------------
-    # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 150, 70, 200)
-    # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 5, 0.5, 8.5)
+    # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 90, 70, 200)
+    # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 0.5, 8.5)
     # model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg  
     #-----------------------------------------------------
 
@@ -252,11 +255,11 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     # model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
     #--------------------------------------------------
     
-    # Landau Background test--------------------------------------------------------------------------
-    # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", -90,  -150, -70)
-    # mass_neg = rt.RooFormulaVar("mass_neg", "-@0", [mass])
-    # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 3, 8.5)
-    # model2 = rt.RooLandau("bkg", "bkg", mass_neg, mean_landau, sigma_landau) # generate Landau bkg  
+    # Reverse Landau Background test--------------------------------------------------------------------------
+    mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", -80,  -150, -70) # 80
+    mass_neg = rt.RooFormulaVar("mass_neg", "-@0", [mass])
+    sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 0.5, 8.5)
+    model2 = rt.RooLandau("bkg", "bkg", mass_neg, mean_landau, sigma_landau) # generate Landau bkg  
     #-----------------------------------------------------
 
     # Exp x Erf Background --------------------------------------------------------------------------
@@ -275,17 +278,17 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     #-----------------------------------------------------
 
     # # Exp x Erf Background V2--------------------------------------------------------------------------
-    # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want 
-    exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", -0.1, -1, -0.00000001) # negative coeff to get the peak shape we want 
-    shift = rt.RooRealVar("shift", "Offset", 100, 90, 150)
-    shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
-    model2_1 = rt.RooExponential("Exponential", "Exponential", shifted_mass,exp_coeff)
-    erfc_center = rt.RooRealVar("erfc_center" , "erfc_center", 100, 90, 150)
-    erfc_in = rt.RooFormulaVar("erfc_in", "(@0 - @1)", rt.RooArgList(mass, erfc_center)) 
-    # both bindPdf and RooGenericPdf work, but one may have better cuda integration over other, so leaving both options
-    # model2_2 = rt.RooFit.bindPdf("erfc", rt.TMath.Erfc, erfc_in)
-    model2_2 = rt.RooGenericPdf("erfc", "TMath::Erf(@0)+1", erfc_in)
-    model2 = rt.RooProdPdf("bkg", "bkg", rt.RooArgList(model2_1, model2_2))
+    # # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want 
+    # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", -0.1, -1, -0.00000001) # negative coeff to get the peak shape we want 
+    # shift = rt.RooRealVar("shift", "Offset", 100, 90, 150)
+    # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
+    # model2_1 = rt.RooExponential("Exponential", "Exponential", shifted_mass,exp_coeff)
+    # erfc_center = rt.RooRealVar("erfc_center" , "erfc_center", 100, 90, 150)
+    # erfc_in = rt.RooFormulaVar("erfc_in", "(@0 - @1)", rt.RooArgList(mass, erfc_center)) 
+    # # both bindPdf and RooGenericPdf work, but one may have better cuda integration over other, so leaving both options
+    # # model2_2 = rt.RooFit.bindPdf("erfc", rt.TMath.Erfc, erfc_in)
+    # model2_2 = rt.RooGenericPdf("erfc", "TMath::Erf(@0)+1", erfc_in)
+    # model2 = rt.RooProdPdf("bkg", "bkg", rt.RooArgList(model2_1, model2_2))
     #-----------------------------------------------------
 
 
@@ -346,6 +349,14 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     # canvas.Modified()    
     canvas.Update()
     # canvas.Draw()
+    
+    
+    print(f"mean_landau: {mean_landau.getVal()}")
+    print(f"sigma_landau: {sigma_landau.getVal()}")
+    print(f"n1: {n1.getVal()}")
+    print(f"n2: {n2.getVal()}")
+    print(f"alpha1: {alpha1.getVal()}")
+    print(f"alpha2: {alpha2.getVal()}")
     print(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
     del canvas
@@ -371,11 +382,11 @@ if __name__ == "__main__":
         field : data_events[field] for field in data_events.fields
     }).compute()
     data_categories = get_calib_categories(data_events)
-    nbins = 100
+    nbins = 100 # 100
     # iterate over 30 different calibration categories
-    # for idx in range(len(data_categories)):
-    for idx in range(12, len(data_categories)):
-    # for idx in range(0, 1):
+    for idx in range(len(data_categories)):
+    # for idx in range(12, len(data_categories)):
+    # for idx in range(0, 12):
         cat_selection = data_categories[idx]
         cat_dimuon_mass = ak.to_numpy(data_events.dimuon_mass[cat_selection])
         if idx < 12:
