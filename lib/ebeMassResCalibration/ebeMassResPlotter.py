@@ -126,7 +126,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100):
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     print(f"fitting elapsed time: {time.time() - time_step}")
-    time.sleep(1)
+    time.sleep(1) # rest a second for stability
     #do plotting
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
     # roo_hist.plotOn(frame, Name="data_hist") 
@@ -171,8 +171,8 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100):
     print(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
     canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
     del canvas
-    # consider script to wait a second for stability?
-    time.sleep(1)
+    # # consider script to wait a second for stability?
+    # time.sleep(1)
 
 def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     """
@@ -308,6 +308,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     print(f"fitting elapsed time: {time.time() - time_step}")
+    time.sleep(1) # rest a second for stability
     #do plotting
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
     # roo_hist.plotOn(frame, Name="data_hist") # name is explicitly defined so chiSquare can find it
@@ -365,6 +366,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100):
 
 if __name__ == "__main__":
     client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+    total_time_start = time.time() 
     common_load_path = "/work/users/yun79/stage1_output/Run2StorageTest/2018/f1_0"
     data_load_path = common_load_path+"/data*/*/*.parquet"
     # data_load_path = common_load_path+"/data_C/*/*.parquet"
@@ -393,3 +395,6 @@ if __name__ == "__main__":
             generateBWxDCB_plot(cat_dimuon_mass, idx, nbins=nbins)
         else:
             generateVoigtian_plot(cat_dimuon_mass, idx, nbins=nbins)
+
+    print("Success!")
+    print(f"total time elapsed : {time.time() - total_time_start}")
