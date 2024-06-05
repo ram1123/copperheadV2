@@ -226,13 +226,14 @@ def jet_puid(jets, config):
             "tight": (puId >= 7) | (jets.pt > 50),
         }
     pass_jet_puid = ak.ones_like(jets.jetId, dtype=bool)
-    if jet_puid_opt in ["loose", "medium", "tight"]:
-        pass_jet_puid = jet_puid_wps[jet_puid_opt]
-    elif "2017corrected" in jet_puid_opt: # for misreco due ot ECAL endcap noise
+    
+    if "2017" in year: # for misreco due ot ECAL endcap noise
         eta_window = (abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0)
-        pass_jet_puid = (eta_window & (puId >= 7)) | ( # tight puid in the noisy eta window, else loose
-            (~eta_window) & jet_puid_wps["loose"]
+        pass_jet_puid = (eta_window & jet_puid_wps["tight"]) | ( # tight puid in the noisy eta window, else loose
+            (~eta_window) & jet_puid_wps[jet_puid_opt]
         )
+    else:
+        pass_jet_puid = jet_puid_wps[jet_puid_opt]
     return pass_jet_puid
 
 
