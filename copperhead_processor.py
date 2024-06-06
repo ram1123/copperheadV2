@@ -18,10 +18,18 @@ import dask
 from coffea.analysis_tools import Weights
 import copy
 from coffea.nanoevents.methods import vector
-
+import sys
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
+
+# Dmitry's implementation of delta_r
+def delta_r_V1(eta1, eta2, phi1, phi2):
+    deta = abs(eta1 - eta2)
+    dphi = abs(np.mod(phi1 - phi2 + np.pi, 2 * np.pi) - np.pi)
+    dr = np.sqrt(deta**2 + dphi**2)
+    return deta, dphi, dr
+
 
 def etaFrame_variables(
         mu1: coffea_nanoevent,
@@ -584,25 +592,57 @@ class EventProcessor(processor.ProcessorABC):
             #fill gen jets for VBF filter on postprocess
             gjets = events.GenJet
             gleptons = events.GenPart[
-                ((abs(events.GenPart.pdgId) == 13)
-                | (abs(events.GenPart.pdgId) == 11)
-                | (abs(events.GenPart.pdgId) == 15))
+                (
+                    (abs(events.GenPart.pdgId) == 13)
+                    | (abs(events.GenPart.pdgId) == 11)
+                    | (abs(events.GenPart.pdgId) == 15)
+                )
                 & events.GenPart.hasFlags('isHardProcess')
             ]
+            # print(f"n_gleptons: {ak.num(gleptons,axis=1).compute()}")
             gl_pair = ak.cartesian({"jet": gjets, "lepton": gleptons}, axis=1, nested=True)
             dr_gl = gl_pair["jet"].delta_r(gl_pair["lepton"])
+            # print(f'gl_pair["jet"]: {gl_pair["jet"].pt.compute().show(formatter=np.set_printoptions(threshold=sys.maxsize))}')
+            # print(f'gl_pair["lepton"]: {gl_pair["lepton"].pt.compute().show(formatter=np.set_printoptions(threshold=sys.maxsize))}')
+            # test start --------------------------------
+            # _, _, dr_gl = delta_r_V1(
+            #     gl_pair["jet"].eta,
+            #     gl_pair["lepton"].eta,
+            #     gl_pair["jet"].phi,
+            #     gl_pair["lepton"].phi,
+            # )
+            # test end --------------------------------
+            # print(f"n_gjets: {ak.num(gjets,axis=1).compute()}")
+            # print(f"gl_pair: {gl_pair.compute()}")
+            # print(f"dr_gl: {dr_gl.compute().show(formatter=np.set_printoptions(threshold=sys.maxsize))}")
+            # print(f"gjets b4 isolation: {gjets.compute()}")
             isolated = ak.all((dr_gl > 0.3), axis=-1) # this also returns true if there's no leptons near the gjet
-            
-            # I suppose we assume there's at least two jets
+            # print(f"isolated: {isolated.compute()}")
+            # print(f"dr_gl[isolated]: {dr_gl[isolated].compute()}")
+            # original start ----------------------------------------
             padded_iso_gjet = ak.pad_none(
                 ak.to_packed(gjets[isolated]),
                 target=2,
             ) # pad with none val to ensure that events have at least two columns each event
             sorted_args = ak.argsort(padded_iso_gjet.pt, ascending=False) # leading pt is ordered by pt
             gjets_sorted = (padded_iso_gjet[sorted_args])
+            # original end ----------------------------------------
+
+            # same order sorting algorithm as reco jet start -----------------
+            # gjets = ak.to_packed(gjets[isolated])
+            # # print(f"gjets.pt: {gjets.pt.compute()}")
+            # sorted_args = ak.argsort(gjets.pt, ascending=False)
+            # sorted_gjets = (gjets[sorted_args])
+            # gjets_sorted = ak.pad_none(sorted_gjets, target=2) 
+            # same order sorting algorithm as reco jet end -----------------
+            
+            # print(f"gjets_sorted: {gjets_sorted.compute()}")
             gjet1 = gjets_sorted[:,0]
             gjet2 = gjets_sorted[:,1] 
             gjj = gjet1 + gjet2
+            gjj_mass = ak.fill_none(gjj.mass, value=0.0)
+            # print(f"gjj.mass: {gjj_mass.compute().show(formatter=np.set_printoptions(threshold=sys.maxsize))}")
+            # print(f"gjj.mass: {ak.sum(gjj_mass,axis=None).compute()}")
             
             gjj_dEta = abs(gjet1.eta - gjet2.eta)
             gjj_dPhi = abs(gjet1.delta_phi(gjet2))
@@ -622,7 +662,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = True # True       
+        do_jec = False # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -926,10 +966,14 @@ class EventProcessor(processor.ProcessorABC):
         # do_zpt = False
         if do_zpt:
             print("doing zpt weight!")
-            zpt_weight =\
-                     self.evaluator[self.zpt_path](dimuon.pt, njets)
+            # original  zpt start -------------------
+            # zpt_weight =\
+            #          self.evaluator[self.zpt_path](dimuon.pt, njets)
+            # original zpt end ------------------------------
             # print(f"zpt_weight: {zpt_weight.compute()}")
-            # weights.add("zpt_wgt", weight=zpt_weight) # leave it outsie like btag
+            # test  zpt start -------------------
+            weights.add("zpt_wgt", weight=zpt_weight) # leave it outsie like btag
+            # test zpt end ------------------------------
         
 
         # apply vbf filter phase cut if DY test start ---------------------------------
@@ -943,15 +987,22 @@ class EventProcessor(processor.ProcessorABC):
         #     )
         # apply vbf filter phase cut if DY test end ---------------------------------
         print(f"weight statistics: {weights.weightStatistics.keys()}")
-        weights = weights.weight()
+        wgt_nominal = weights.weight()
         if "btag_wgt" in out_dict.keys():
             print("adding btag wgts!")
-            weights = weights*out_dict["btag_wgt"]
-        if do_zpt:
-            weights = weights*zpt_weight
+            wgt_nominal = wgt_nominal*out_dict["btag_wgt"]
+        # original  zpt start -------------------
+        # if do_zpt:
+        #     wgt_nominal = wgt_nominal*zpt_weight
+        # original zpt end ------------------------------
+
         # add in weights
-        # weights = ak.to_packed(weights)
-        out_dict.update({"weights" : weights})
+        weight_dict = {"wgt_nominal_total" : wgt_nominal}
+        for weight_type in list(weights.weightStatistics.keys()):
+            wgt_name = "wgt_nominal_" + weight_type
+            print(f"wgt_name: {wgt_name}")
+            weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
+        out_dict.update(weight_dict)
 
     
         return out_dict
@@ -1399,7 +1450,7 @@ class EventProcessor(processor.ProcessorABC):
             
 
         #     # # --- Btag weights  start--- #
-            do_btag_wgt = True # True
+            do_btag_wgt = False # True
             if do_btag_wgt:
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
