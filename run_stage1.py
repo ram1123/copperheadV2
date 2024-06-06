@@ -124,7 +124,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'jj_eta': (out_collections["jj_eta"]),
             'jj_phi': (out_collections["jj_phi"]),
             # weights -----------------------------------------
-            'weights': (out_collections["weights"]),
+            # 'weights': (out_collections["weights"]),    
             # #dimuon variables-----------------------
             'dimuon_mass': (out_collections["dimuon_mass"]),
             'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
@@ -182,7 +182,14 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             # temporary test start ------------------------------------
             # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
             # temporary test end ------------------------------------
-         }
+    }
+    # add in weights
+    weight_dict = {}
+    for key, value in out_collections.items():
+        if "wgt_nominal" in key:
+            # print(f"wgt name: {key}")
+            weight_dict[key] = value
+    skim_dict.update(weight_dict)   
     
     # add in nsoftjets and htsoft variables
     softj_vars = {}
@@ -341,14 +348,14 @@ if __name__ == "__main__":
             # for dataset, sample in samples.items():
                 sample_step = time.time()
                 # max_file_len = 15
-                # max_file_len = 50
-                max_file_len = 900
+                max_file_len = 50
+                # max_file_len = 900
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
                 print(f"max_file_len: {max_file_len}")
                 print(f"len(smaller_files): {len(smaller_files)}")
                 # for idx in range(len(smaller_files)):
-                # for idx in tqdm.tqdm(range(12, len(smaller_files)), leave=False):
+                # for idx in tqdm.tqdm(range(1, len(smaller_files)), leave=False):
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     print("restarting workers!")
                     client.restart(wait_for_workers = False)
