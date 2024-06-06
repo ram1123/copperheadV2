@@ -620,27 +620,26 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"isolated: {isolated.compute()}")
             # print(f"dr_gl[isolated]: {dr_gl[isolated].compute()}")
             # original start ----------------------------------------
-            padded_iso_gjet = ak.pad_none(
-                ak.to_packed(gjets[isolated]),
-                target=2,
-            ) # pad with none val to ensure that events have at least two columns each event
-            sorted_args = ak.argsort(padded_iso_gjet.pt, ascending=False) # leading pt is ordered by pt
-            gjets_sorted = (padded_iso_gjet[sorted_args])
+            # padded_iso_gjet = ak.pad_none(
+            #     ak.to_packed(gjets[isolated]),
+            #     target=2,
+            # ) # pad with none val to ensure that events have at least two columns each event
+            # sorted_args = ak.argsort(padded_iso_gjet.pt, ascending=False) # leading pt is ordered by pt
+            # gjets_sorted = (padded_iso_gjet[sorted_args])
             # original end ----------------------------------------
 
             # same order sorting algorithm as reco jet start -----------------
-            # gjets = ak.to_packed(gjets[isolated])
-            # # print(f"gjets.pt: {gjets.pt.compute()}")
-            # sorted_args = ak.argsort(gjets.pt, ascending=False)
-            # sorted_gjets = (gjets[sorted_args])
-            # gjets_sorted = ak.pad_none(sorted_gjets, target=2) 
+            gjets = ak.to_packed(gjets[isolated])
+            # print(f"gjets.pt: {gjets.pt.compute()}")
+            sorted_args = ak.argsort(gjets.pt, ascending=False)
+            sorted_gjets = (gjets[sorted_args])
+            gjets_sorted = ak.pad_none(sorted_gjets, target=2) 
             # same order sorting algorithm as reco jet end -----------------
             
             # print(f"gjets_sorted: {gjets_sorted.compute()}")
             gjet1 = gjets_sorted[:,0]
             gjet2 = gjets_sorted[:,1] 
             gjj = gjet1 + gjet2
-            gjj_mass = ak.fill_none(gjj.mass, value=0.0)
             # print(f"gjj.mass: {gjj_mass.compute().show(formatter=np.set_printoptions(threshold=sys.maxsize))}")
             # print(f"gjj.mass: {ak.sum(gjj_mass,axis=None).compute()}")
             
@@ -966,10 +965,8 @@ class EventProcessor(processor.ProcessorABC):
         # do_zpt = False
         if do_zpt:
             print("doing zpt weight!")
-            # original  zpt start -------------------
-            # zpt_weight =\
-            #          self.evaluator[self.zpt_path](dimuon.pt, njets)
-            # original zpt end ------------------------------
+            zpt_weight =\
+                     self.evaluator[self.zpt_path](dimuon.pt, njets)
             # print(f"zpt_weight: {zpt_weight.compute()}")
             # test  zpt start -------------------
             weights.add("zpt_wgt", weight=zpt_weight) # leave it outsie like btag
