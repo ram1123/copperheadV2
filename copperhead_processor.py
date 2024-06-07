@@ -8,7 +8,7 @@ from corrections.rochester import apply_roccor
 from corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from corrections.geofit import apply_geofit
 from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
-from corrections.weight import Weights
+# from corrections.weight import Weights
 from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager, qgl_weights_keepDim, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights
 import json
 from coffea.lumi_tools import LumiMask
@@ -661,7 +661,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = False # True       
+        do_jec = True # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -711,7 +711,7 @@ class EventProcessor(processor.ProcessorABC):
         # # Apply genweights, PU weights
         # # and L1 prefiring weights
         # # ------------------------------------------------------------#
-        weights = Weights(None) # none for dask awkward
+        weights = Weights(None, storeIndividual=True) # none for dask awkward
         is_mc = events.metadata["is_mc"]
         if is_mc:
             weights.add("genWeight", weight=events.genWeight)
@@ -721,6 +721,7 @@ class EventProcessor(processor.ProcessorABC):
             # M105to160normalizedWeight = M105to160normalizedWeight*events.genWeight/sumWeights
             #temporary lhe filter end -----------------
             cross_section = self.config["cross_sections"][dataset]
+            print(f"cross_section: {cross_section}")
             integrated_lumi = self.config["integrated_lumis"]
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
@@ -934,7 +935,7 @@ class EventProcessor(processor.ProcessorABC):
                 do_jerunc = do_jerunc,
             )
                     
-        out_dict.update(jet_loop_dict) 
+            out_dict.update(jet_loop_dict) 
         # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
         
         # # fill in the regions
@@ -985,9 +986,9 @@ class EventProcessor(processor.ProcessorABC):
         # apply vbf filter phase cut if DY test end ---------------------------------
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         wgt_nominal = weights.weight()
-        if "btag_wgt" in out_dict.keys():
+        if "wgt_nominal_btag_wgt" in out_dict.keys():
             print("adding btag wgts!")
-            wgt_nominal = wgt_nominal*out_dict["btag_wgt"]
+            wgt_nominal = wgt_nominal*out_dict["wgt_nominal_btag_wgt"]
         # original  zpt start -------------------
         # if do_zpt:
         #     wgt_nominal = wgt_nominal*zpt_weight
@@ -997,7 +998,7 @@ class EventProcessor(processor.ProcessorABC):
         weight_dict = {"wgt_nominal_total" : wgt_nominal}
         for weight_type in list(weights.weightStatistics.keys()):
             wgt_name = "wgt_nominal_" + weight_type
-            print(f"wgt_name: {wgt_name}")
+            # print(f"wgt_name: {wgt_name}")
             weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
         out_dict.update(weight_dict)
 
@@ -1095,9 +1096,6 @@ class EventProcessor(processor.ProcessorABC):
         mu2,
         variation,
         weights,
-        # do_jec = True, #False
-        # do_jecunc = False,
-        # do_jerunc = False,
         do_jec = False, 
         do_jecunc = False,
         do_jerunc = False,
@@ -1447,7 +1445,7 @@ class EventProcessor(processor.ProcessorABC):
             
 
         #     # # --- Btag weights  start--- #
-            do_btag_wgt = False # True
+            do_btag_wgt = True # True
             if do_btag_wgt:
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
@@ -1506,7 +1504,7 @@ class EventProcessor(processor.ProcessorABC):
         jet_loop_out_dict.update(temp_out_dict)
         if is_mc and do_btag_wgt:
             jet_loop_out_dict.update({
-                "btag_wgt": btag_wgt
+                "wgt_nominal_btag_wgt": btag_wgt
             })
 
         
