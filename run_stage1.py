@@ -348,14 +348,14 @@ if __name__ == "__main__":
             # for dataset, sample in samples.items():
                 sample_step = time.time()
                 # max_file_len = 15
-                max_file_len = 50
-                # max_file_len = 900
+                # max_file_len = 50
+                max_file_len = 900
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
                 print(f"max_file_len: {max_file_len}")
                 print(f"len(smaller_files): {len(smaller_files)}")
                 # for idx in range(len(smaller_files)):
-                # for idx in tqdm.tqdm(range(1, len(smaller_files)), leave=False):
+                # for idx in tqdm.tqdm(range(2, len(smaller_files)), leave=False):
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     print("restarting workers!")
                     client.restart(wait_for_workers = False)
