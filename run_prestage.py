@@ -174,7 +174,8 @@ datasets = {
         "data_D": "/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD",
         "dy_M-50": "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X*/NANOAODSIM",
         "dy_M-100To200": "/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-        "dy_VBF_filter": "dummy", # privately produced Run2 data in NanoAOD v12 format
+        "dy_VBF_filter": "dummy", # privately produced Run2 data in NanoAOD v12 format.
+        "dy_m105_160_vbf_amc" : "dummy",
         "ttjets_dl": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         "ttjets_sl": "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
         # # "ttw": "",
@@ -349,8 +350,9 @@ if __name__ == "__main__":
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                     # new_sample_list.append("dy_M-50")
-                    new_sample_list.append("dy_M-100To200")
-                    new_sample_list.append("dy_VBF_filter")
+                    # new_sample_list.append("dy_M-100To200")
+                    # new_sample_list.append("dy_VBF_filter")
+                    new_sample_list.append("dy_m105_160_vbf_amc")
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                     new_sample_list.append("ttjets_dl")
                     new_sample_list.append("ttjets_sl")
@@ -382,7 +384,7 @@ if __name__ == "__main__":
         dataset = dict([(sample_name, dataset[sample_name]) for sample_name in new_sample_list])
         print(f"new dataset: {dataset.keys()}")
 
-        
+        genWeight
         for sample_name in tqdm.tqdm(dataset.keys()):
             is_data =  ("data" in sample_name)
             if sample_name == "dy_VBF_filter":
@@ -392,6 +394,15 @@ if __name__ == "__main__":
                 # test start -----------------------------------------------------------
                 load_path = "/eos/purdue/store/user/vscheure/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano/240514_124107/"
                 fnames = glob.glob(f"{load_path}/*/*.root")
+
+            elif sample_name == "dy_m105_160_vbf_amc":
+                """
+                load directly from local files
+                """
+                # test start -----------------------------------------------------------
+                load_path = "/eos/purdue/store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM"
+                fnames = glob.glob(f"{load_path}/*/*/*.root")
+
             elif (args.NanoAODv >= 12) and is_data :
                 """
                 temp condition for privately produced Run2 data in NanoAOD v12 format
@@ -496,8 +507,13 @@ if __name__ == "__main__":
                         schemaclass=BaseSchema,
                         uproot_options={"timeout":2400},
                 ).events()               
-                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                print(f"runs.fields: {runs.fields}")
+                if sample_name == "dy_m105_160_vbf_amc":
+                    preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                    preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                else:
+                    preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                    preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 total_events += preprocess_metadata["nGenEvts"] 
 
     
@@ -533,7 +549,7 @@ if __name__ == "__main__":
                 final_output = {
                     sample_name :{"files" :file_dict}
                 }
-                print(f"final_output: {final_output}")
+                # print(f"final_output: {final_output}")
                 pre_stage_data = final_output
             else:
                 """
