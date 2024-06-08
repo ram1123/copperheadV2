@@ -258,17 +258,22 @@ if __name__ == "__main__":
     time_step = time.time()
 
     # load saved parquet files. This increases memory use, but increases runtime significantly
-    loaded_events = {}
+    loaded_events = {} # intialize dictionary containing all the arrays
     N_reasonable = 50000
     for process in tqdm.tqdm(available_processes):
         print(f"loading process {process}..")
         full_load_path = args.load_path+f"/{process}/*/*.parquet"
         events = dak.from_parquet(full_load_path)
         # only select specific fields to load to save run time
-        fields2load = variables2plot + ["weights", "fraction", "h_sidebands", "h_peak", "z_peak", "vbf_cut","nBtagLoose", "nBtagMedium",]
+        fields2load = variables2plot + ["wgt_nominal_total","fraction", "h_sidebands", "h_peak", "z_peak", "vbf_cut","nBtagLoose", "nBtagMedium",]
+        # # add in weights
+        # for field in events.fields:
+        #     if "wgt_nominal" in field:
+        #         fields2load.append(field)
+                
         is_data = "data" in process.lower()
         if not is_data: # MC sample
-             fields2load += ["gjj_mass", "gjj_dR",]
+             fields2load += ["gjj_mass", "gjj_dR", "gjet1_pt", "gjet2_pt"]
         events = events[fields2load]
         # load data to memory using compute()
         events = ak.zip({
@@ -322,9 +327,9 @@ if __name__ == "__main__":
                 is_data = "data" in process.lower()
                 print(f"is_data: {is_data}")
                 if is_data:
-                    weights = ak.to_numpy(ak.fill_none(events["weights"], value=0.0))
+                    weights = ak.to_numpy(ak.fill_none(events["wgt_nominal_total"], value=0.0))
                 else: # MC
-                    weights = ak.fill_none(events["weights"], value=0.0)
+                    weights = ak.fill_none(events["wgt_nominal_total"], value=0.0)
                     # print(f"weights {process} b4 numpy: {weights}")
                     weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
@@ -364,8 +369,12 @@ if __name__ == "__main__":
                         if process == "dy_VBF_filter":
                             print("dy_VBF_filter extra!")
                             vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # & ak.fill_none((events.gjj_dR > 0.3), value=False)
+                            # extra cut to make dy_VBF_filter(nanoAODv9) to be same as nanoAODv6 
+                            extra_gjetCut = (events.gjet1_pt < 10) | (events.gjet2_pt < 10) 
+                            extra_gjetCut = ~extra_gjetCut
                             prod_cat_cut =  (prod_cat_cut  
                                         & vbf_filter
+                                             & extra_gjetCut
                             )
                         elif process == "dy_M-100To200":
                             print("dy_M-100To200 extra!")
@@ -385,11 +394,16 @@ if __name__ == "__main__":
                
                 # print(f"prod_cat_cut sum after: {ak.sum(prod_cat_cut).compute()}")
                 
+                # original start -----------------------------------------
                 category_selection = (
                     prod_cat_cut & 
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 )
+                # original end -----------------------------------------
+                # test start ------------------------------------------
+                # category_selection = region
+                # test end -----------------------------------------
                 
                 # print(f"category_selection: {category_selection}")
                 # print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
@@ -832,7 +846,12 @@ if __name__ == "__main__":
                     if "dy_" in process:
                         if process == "dy_VBF_filter":
                             print("dy_VBF_filter extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # & ak.fill_none((events.gjj_dR > 0.3), value=False)
+                            vbf_filter = (
+                                ak.fill_none((events.gjj_mass > 350), value=False) 
+                                # & ak.fill_none((events.gjj_dR > 0.3), value=False)
+                                # & ak.fill_none((events.gjet1_pt > 35), value=False)
+                             )
+                            
                             prod_cat_cut =  (prod_cat_cut  
                                         & vbf_filter
                             )
@@ -848,7 +867,8 @@ if __name__ == "__main__":
                 else: # we're interested in ggH category
                     print("ggH mode!")
                     prod_cat_cut =  ~vbf_cut
-                    
+
+            
                 category_selection = (
                     prod_cat_cut & 
                     region &
