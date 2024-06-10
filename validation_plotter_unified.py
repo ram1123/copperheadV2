@@ -362,25 +362,31 @@ if __name__ == "__main__":
                 btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
                 if args.vbf_cat_mode:
                     print("vbf mode!")
+                    # original start --------------------------
                     prod_cat_cut =  vbf_cut
+                    # original end-----------------
+                    # test start ------------------------------------------
+                    # prod_cat_cut = ak.ones_like(vbf_cut)
+                    # test end -----------------------------------------
                     # apply additional cut to MC samples if vbf 
                     # VBF filter cut start -------------------------------------------------
                     if "dy_" in process:
                         if process == "dy_VBF_filter":
                             print("dy_VBF_filter extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # & ak.fill_none((events.gjj_dR > 0.3), value=False)
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
                             # extra cut to make dy_VBF_filter(nanoAODv9) to be same as nanoAODv6 
                             extra_gjetCut = (events.gjet1_pt < 10) | (events.gjet2_pt < 10) 
-                            extra_gjetCut = ~extra_gjetCut
+                            extra_gjetCut = ak.fill_none( ~extra_gjetCut, value=False)
                             prod_cat_cut =  (prod_cat_cut  
                                         & vbf_filter
-                                             & extra_gjetCut
+                                         & extra_gjetCut
                             )
                         elif process == "dy_M-100To200":
                             print("dy_M-100To200 extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # | ak.fill_none((events.gjj_dR > 0.3), value=False)
-                            prod_cat_cut =  (prod_cat_cut  
-                                        & ~vbf_filter 
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) 
+                            prod_cat_cut =  (
+                                prod_cat_cut  
+                                & ~vbf_filter 
                             )
                         else:
                             print(f"no extra processing for {process}")
@@ -396,9 +402,9 @@ if __name__ == "__main__":
                 
                 # original start -----------------------------------------
                 category_selection = (
-                    prod_cat_cut & 
-                    region &
-                    ~btag_cut # btag cut is for VH and ttH categories
+                    prod_cat_cut  
+                    & region 
+                    & ~btag_cut # btag cut is for VH and ttH categories
                 )
                 # original end -----------------------------------------
                 # test start ------------------------------------------
@@ -421,8 +427,7 @@ if __name__ == "__main__":
                 values_filter = values!=-999.0
                 values = values[values_filter]
                 weights = weights[values_filter]
-                if process == "dy_VBF_filter":
-                    weights = weights*(0.7)
+
                 # MC samples are already normalized by their xsec*lumi, but data is not
                 if process in group_data_processes:
                     fraction_weight = fraction_weight[values_filter]
@@ -858,8 +863,9 @@ if __name__ == "__main__":
                         elif process == "dy_M-100To200":
                             print("dy_M-100To200 extra!")
                             vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # | ak.fill_none((events.gjj_dR > 0.3), value=False)
-                            prod_cat_cut =  (prod_cat_cut  
-                                        & ~vbf_filter 
+                            prod_cat_cut =  (
+                                prod_cat_cut  
+                                & ~vbf_filter 
                             )
                         else:
                             print(f"no extra processing for {process}")
