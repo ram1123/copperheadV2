@@ -441,6 +441,8 @@ cross_sections:
   dy_M-50_nocut: 6450.0
   dy_M-100To200: 254.2 # original value: 254.2
   dy_VBF_filter: 2.01  # subjet to change
+  dy_m105_160_vbf_amc: 2.01 # subjet to change
+  dy_VBF_filter_customJMEoff: 2.01 # subjet to change
   dy_0j: 4620.52
   dy_1j: 922.5
   dy_2j: 293.6
@@ -449,11 +451,11 @@ cross_sections:
     '2016': 1.77
     '2017': 2.04
     '2018': 2.03
-  dy_m105_160_amc: 47.17
-  dy_m105_160_vbf_amc:
-    '2016': 1.77
-    '2017': 2.04
-    '2018': 2.03
+  # dy_m105_160_amc: 47.17
+  # dy_m105_160_vbf_amc:
+  #   '2016': 1.77
+  #   '2017': 2.04
+  #   '2018': 2.03
   ewk_lljj_mll105_160:
     '2016': 0.0508896
     '2017': 0.0508896
