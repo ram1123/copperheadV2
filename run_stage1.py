@@ -34,7 +34,6 @@ test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
 import gc
 import ctypes
-from omegaconf import OmegaConf
 from lib.get_parameters import getParametersForYr
 
 def trim_memory() -> int:
@@ -105,6 +104,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'mu2_phi': (out_collections["mu2_phi"]),
             'mu1_iso': (out_collections["mu1_iso"]),
             'mu2_iso': (out_collections["mu2_iso"]),
+            "mu1_pt_over_mass" = (out_collections["mu1_pt"] / out_collections["dimuon_mass"])
+            "mu2_pt_over_mass" = (out_collections["mu2_pt"] / out_collections["dimuon_mass"])
             'jet1_pt': (out_collections["jet1_pt"]),
             'jet2_pt': (out_collections["jet2_pt"]),
             'jet1_eta': (out_collections["jet1_eta"]),
@@ -120,6 +121,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'jj_dEta': (out_collections["jj_dEta"]),
             'jj_dPhi': (out_collections["jj_dPhi"]),
             'jj_mass': (out_collections["jj_mass"]),
+            'jj_mass_log': np.log(out_collections["jj_mass"]),
             'jj_pt': (out_collections["jj_pt"]),
             'jj_eta': (out_collections["jj_eta"]),
             'jj_phi': (out_collections["jj_phi"]),
@@ -134,9 +136,11 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'dimuon_phi_eta': (out_collections["dimuon_phi_eta"]),
             'dimuon_dPhi': (out_collections["dimuon_dPhi"]),
             'dimuon_dR': (out_collections["dimuon_dR"]),
+            'dimuon_dEta': (out_collections["dimuon_dEta"]),
             'dimuon_eta': (out_collections["dimuon_eta"]),
             'dimuon_phi': (out_collections["dimuon_phi"]),
             'dimuon_pt': (out_collections["dimuon_pt"]),
+            'dimuon_pt_log': np.log(out_collections["dimuon_pt"]),
 
             # # mmj variables ------------------------------
             'mmj1_dEta': (out_collections["mmj1_dEta"]),
@@ -177,12 +181,15 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             "vbf_cut" : (out_collections["vbf_cut"]),
             # "pass_leading_pt" : (out_collections["pass_leading_pt"]),
             "ll_zstar" : (out_collections["ll_zstar"]),
+            "ll_zstar_log" : np.log(out_collections["ll_zstar"]),
             "zeppenfeld" : (out_collections["zeppenfeld"]),
             # "event" : (out_collections["event"]),
             # temporary test start ------------------------------------
             # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
             # temporary test end ------------------------------------
     }
+
+    
     # add in weights
     weight_dict = {}
     for key, value in out_collections.items():
