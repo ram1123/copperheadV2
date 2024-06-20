@@ -18,17 +18,24 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
     """
     # collect all variables that we don't want destroyed by Python once function ends
     out_dict = {}
+
+    shifted_mass = rt.RooFormulaVar("shifted_mass", "(@0 - 125)", rt.RooArgList(mass))
+    out_dict[shifted_mass.GetName()] = shifted_mass 
     
     # make BernStein
     bern_order = order-1
     BernCoeff_list = []
     for ix in range(bern_order):
         name = f"Bernstein_c_{ix}"
-        coeff = rt.RooRealVar(name,name, 1.0,-1.0,5.0)
+        if ix == 0:
+            coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
+        else:
+            coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.append(coeff)
     name = f"Bernstein_model_order_{bern_order}"
     bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
+    # bern_model = rt.RooBernstein(name, name, shifted_mass, BernCoeff_list)
     out_dict[name] = bern_model # add variable to make python remember
 
     
@@ -36,7 +43,7 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
     bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
     bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
     bwWidth.setConstant(True)
-    # bwmZ.setConstant(True)
+    bwmZ.setConstant(True)
     out_dict[bwWidth.GetName()] = bwWidth 
     out_dict[bwmZ.GetName()] = bwmZ 
     
@@ -44,21 +51,23 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
     BWZ = rt.RooBreitWigner(name, name, mass, bwmZ,bwWidth)
     # our BWZ model is also multiplied by exp(a* mass) as defined in the AN
     name = "BWZ_exp_coeff"
-    expCoeff = rt.RooRealVar(name, name, -0.5, -1.0, 1.0)
+    expCoeff = rt.RooRealVar(name, name, -0.0, -3.0, 1.0)
     name = "BWZ_exp_model"
     exp_model = rt.RooExponential(name, name, mass, expCoeff)
-    name = "BWZxExp"
-    full_BWZ = rt.RooProdPdf(name, name, [BWZ, exp_model]) 
+    # exp_model = rt.RooExponential(name, name, shifted_mass, expCoeff)
+    # name = "BWZxExp"
+    # full_BWZ = rt.RooProdPdf(name, name, [BWZ, exp_model]) 
 
     # add variables
     out_dict[BWZ.GetName()] = BWZ 
     out_dict[expCoeff.GetName()] = expCoeff 
     out_dict[exp_model.GetName()] = exp_model 
-    out_dict[full_BWZ.GetName()] = full_BWZ 
+    # out_dict[full_BWZ.GetName()] = full_BWZ 
     
     # multiply BWZ and Bernstein
     name = f"BWZxBern_order_{order}"
-    final_model = rt.RooProdPdf(name, name, [bern_model, full_BWZ]) 
+    # final_model = rt.RooProdPdf(name, name, [bern_model, full_BWZ]) 
+    final_model = rt.RooProdPdf(name, name, [bern_model, BWZ, exp_model]) 
    
     return (final_model, out_dict)
     
@@ -111,20 +120,23 @@ if __name__ == "__main__":
     # figure out the discontinuous fit range later ---------------------
     
     mass_arr = ak.to_numpy(events.dimuon_mass.compute())
-    # for debugging purposes -----------------
-    binning = np.linspace(110, 150, 100)
-    np_hist, _ = np.histogram(mass_arr, bins=binning)
-    print(f"np_hist: {np_hist}")
-    # -------------------------------------------
-
+    
     # start Root fit 
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     mass_name = "dimuon_mass"
-    mass =  rt.RooRealVar(mass_name,"mass (GeV)",120,110,140)
-    nbins = 100
+    mass =  rt.RooRealVar(mass_name,"mass (GeV)",120,110,150)
+    nbins = 81
     mass.setBins(nbins)
+
+    # for debugging purposes -----------------
+    binning = np.linspace(110, 150, nbins)
+    np_hist, _ = np.histogram(mass_arr, bins=binning)
+    print(f"np_hist: {np_hist}")
+    # -------------------------------------------
+
+
     
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass])
 
@@ -164,10 +176,10 @@ if __name__ == "__main__":
     
 
     rt.EnableImplicitMT()
-    _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
-    fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
-    # _ = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
-    # fit_result = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    # _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
+    # fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
+    _ = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    fit_result = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
 
     # draw on canvas
     frame = mass.frame()
