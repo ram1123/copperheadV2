@@ -176,10 +176,10 @@ if __name__ == "__main__":
     
 
     rt.EnableImplicitMT()
-    # _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
-    # fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
-    _ = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
-    fit_result = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
+    fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
+    # _ = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    # fit_result = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
 
     # draw on canvas
     frame = mass.frame()
