@@ -19,8 +19,7 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
     # collect all variables that we don't want destroyed by Python once function ends
     out_dict = {}
 
-    shifted_mass = rt.RooFormulaVar("shifted_mass", "(@0 - 125)", rt.RooArgList(mass))
-    out_dict[shifted_mass.GetName()] = shifted_mass 
+
     
     # make BernStein
     bern_order = order-1
@@ -35,7 +34,6 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
         BernCoeff_list.append(coeff)
     name = f"Bernstein_model_order_{bern_order}"
     bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
-    # bern_model = rt.RooBernstein(name, name, shifted_mass, BernCoeff_list)
     out_dict[name] = bern_model # add variable to make python remember
 
     
@@ -54,7 +52,6 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
     expCoeff = rt.RooRealVar(name, name, -0.0, -3.0, 1.0)
     name = "BWZ_exp_model"
     exp_model = rt.RooExponential(name, name, mass, expCoeff)
-    # exp_model = rt.RooExponential(name, name, shifted_mass, expCoeff)
     # name = "BWZxExp"
     # full_BWZ = rt.RooProdPdf(name, name, [BWZ, exp_model]) 
 
@@ -183,8 +180,10 @@ if __name__ == "__main__":
 
     # draw on canvas
     frame = mass.frame()
+    
+    roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+    BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="BWZxBern", LineColor=rt.kGreen)
     roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range), DataError="SumW2", Name="data_hist")
-    BWZxBern.plotOn(frame, Name="BWZxBern", LineColor=rt.kGreen)
 
     frame.Draw()
     canvas.Update()
