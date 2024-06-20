@@ -10,6 +10,51 @@ time to fit : define the core functions with their parameters
 from typing import Tuple, List, Dict
 import ROOT as rt
 
+def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
+    # collect all variables that we don't want destroyed by Python once function ends
+    out_dict = {}
+    
+    name = f"BWZ_Redux_a_coeff"
+    a_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    name = "exp_model_mass"
+    exp_model_mass = rt.RooExponential(name, name, mass, a_coeff)
+    
+    mass_sq = rt.RooFormulaVar("mass_sq", "@0*@0", rt.RooArgList(mass))
+    name = f"BWZ_Redux_b_coeff"
+    b_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    
+    name = "exp_model_mass_sq"
+    exp_model_mass_sq = rt.RooExponential(name, name, mass_sq, b_coeff)
+
+    # add in the variables and models
+    out_dict[a_coeff.GetName()] = a_coeff 
+    out_dict[exp_model_mass.GetName()] = exp_model_mass
+    out_dict[mass_sq.GetName()] = mass_sq
+    out_dict[b_coeff.GetName()] = b_coeff
+    out_dict[exp_model_mass_sq.GetName()] = exp_model_mass_sq
+    
+    # make Z boson related stuff
+    bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
+    bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
+    bwWidth.setConstant(True)
+    bwmZ.setConstant(True)
+
+    # start multiplying them all
+    name = f"BWZ_Redux_c_coeff"
+    c_coeff = rt.RooRealVar(name,name, 2,-5.0,5.0)
+    BWZ_redux_main = rt.RooGenericPdf(
+        "BWZ_redux_main", "@1/ ( pow((@0-@2), @3) + 0.25*pow(@1, @3) )", rt.RooArgList(mass, bwWidth, bwmZ, c_coeff)
+    )
+    # add in the variables and models
+    out_dict[bwWidth.GetName()] = bwWidth 
+    out_dict[bwmZ.GetName()] = bwmZ 
+    out_dict[c_coeff.GetName()] = c_coeff 
+    out_dict[BWZ_redux_main.GetName()] = BWZ_redux_main 
+
+    name = "BWZ_Redux"
+    final_model = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
+    return (final_model, out_dict)
+
 def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
     """
     params:
@@ -148,20 +193,65 @@ if __name__ == "__main__":
     order = 3
     BWZxBern, params_bern = MakeBWZxBern(mass, order)
     sumExp, params_exp = MakeSumExponential(mass, order)
+    BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, order)
+    #-------------
+    # # collect all variables that we don't want destroyed by Python once function ends
+    # out_dict = {}
+    
+    # name = f"BWZ_Redux_a_coeff"
+    # a_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    # name = "exp_model_mass"
+    # exp_model_mass = rt.RooExponential(name, name, mass, a_coeff)
+    
+    # mass_sq = rt.RooFormulaVar("mass_sq", "@0*@0", rt.RooArgList(mass))
+    # name = f"BWZ_Redux_b_coeff"
+    # b_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    
+    # name = "exp_model_mass_sq"
+    # exp_model_mass_sq = rt.RooExponential(name, name, mass_sq, b_coeff)
+
+    # # add in the variables and models
+    # out_dict[a_coeff.GetName()] = a_coeff 
+    # out_dict[exp_model_mass.GetName()] = exp_model_mass
+    # out_dict[mass_sq.GetName()] = mass_sq
+    # out_dict[b_coeff.GetName()] = b_coeff
+    # out_dict[exp_model_mass_sq.GetName()] = exp_model_mass_sq
+    
+    # # make Z boson related stuff
+    # bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
+    # bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
+    # bwWidth.setConstant(True)
+    # bwmZ.setConstant(True)
+
+    # # start multiplying them all
+    # name = f"BWZ_Redux_c_coeff"
+    # c_coeff = rt.RooRealVar(name,name, 2,-5.0,5.0)
+    # BWZ_redux_main = rt.RooGenericPdf(
+    #     "BWZ_redux_main", "@1/ ( pow((@0-@2), @3) + 0.25*pow(@1, @3) )", rt.RooArgList(mass, bwWidth, bwmZ, c_coeff)
+    # )
+    # # add in the variables and models
+    # out_dict[bwWidth.GetName()] = bwWidth 
+    # out_dict[bwmZ.GetName()] = bwmZ 
+    # out_dict[c_coeff.GetName()] = c_coeff 
+    # out_dict[BWZ_redux_main.GetName()] = BWZ_redux_main 
+
+    # name = "BWZ_Redux"
+    # BWZ_Redux = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
+    #-----------------
    
     # print(f"params: {params}")
     # roo_dataset.Print()
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # roo_hist.Print()
 
-    # begin multi-pdf
-    cat = rt.RooCategory("pdf_index","Index of Pdf which is active")
-    pdflist = rt.RooArgList()
-    # Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
-    # 0 == BWZxBern
-    # 1 == sumExp
-    pdflist.add(BWZxBern)
-    pdflist.add(sumExp)
+    # # begin multi-pdf
+    # cat = rt.RooCategory("pdf_index","Index of Pdf which is active")
+    # pdflist = rt.RooArgList()
+    # # Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
+    # # 0 == BWZxBern
+    # # 1 == sumExp
+    # pdflist.add(BWZxBern)
+    # pdflist.add(sumExp)
     
     # multipdf = rt.RooMultiPdf(
     #     # f"multipdf_{self.channel}_{category}", 
@@ -177,8 +267,19 @@ if __name__ == "__main__":
     # fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
     # _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
     # fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
-    _ = sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
-    fit_result = sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
+    # _ = sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
+    # fit_result = sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
+    
+    # _ = sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
+    # fit_result = sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
+    _ = BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
+    fit_result = BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
+    
+
+    #Core-PDF
+    # _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
+    # _ = sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
+    # fit_result = multipdf.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
     
     # _ = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     # fit_result = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
@@ -189,12 +290,15 @@ if __name__ == "__main__":
     # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
     roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
     # BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="BWZxBern", LineColor=rt.kGreen)
-    sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="Sum Exponential", LineColor=rt.kGreen)
+    # sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="Sum Exponential", LineColor=rt.kGreen)
+    BWZ_Redux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="NWZ Redux", LineColor=rt.kGreen)
+    # multipdf.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="MultiPdf", LineColor=rt.kGreen)
     roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range), DataError="SumW2", Name="data_hist")
 
     frame.Draw()
     canvas.Update()
     canvas.Draw()
     # canvas.SaveAs(f"./quick_plots/stage3_plot_test_BWZxBern.pdf")
-    canvas.SaveAs(f"./quick_plots/stage3_plot_test_sumExponent.pdf")
+    # canvas.SaveAs(f"./quick_plots/stage3_plot_test_sumExponent.pdf")
+    canvas.SaveAs(f"./quick_plots/stage3_plot_test_BWZRedux.pdf")
     
