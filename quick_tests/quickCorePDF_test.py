@@ -127,7 +127,7 @@ if __name__ == "__main__":
     canvas.cd()
     mass_name = "dimuon_mass"
     mass =  rt.RooRealVar(mass_name,"mass (GeV)",120,110,150)
-    nbins = 81
+    nbins = 80
     mass.setBins(nbins)
 
     # for debugging purposes -----------------
