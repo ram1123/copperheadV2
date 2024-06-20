@@ -112,9 +112,9 @@ if __name__ == "__main__":
     
     mass_arr = ak.to_numpy(events.dimuon_mass.compute())
     # for debugging purposes -----------------
-    binning = np.linspace(110, 140, 100)
+    binning = np.linspace(110, 150, 100)
     np_hist, _ = np.histogram(mass_arr, bins=binning)
-    # print(f"np_hist: {np_hist}")
+    print(f"np_hist: {np_hist}")
     # -------------------------------------------
 
     # start Root fit 
@@ -122,17 +122,20 @@ if __name__ == "__main__":
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     mass_name = "dimuon_mass"
-    mass =  rt.RooRealVar(mass_name,"mass (GeV)",120,110,150)
+    mass =  rt.RooRealVar(mass_name,"mass (GeV)",120,110,140)
     nbins = 100
     mass.setBins(nbins)
-    # set sideband mass range
+    
+    roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass])
+
+    # set sideband mass range after initializing dataset (idk why this order matters, but that's how it's shown here https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/tutorial2023/parametric_exercise/?h=sideband#background-modelling)
     mass.setRange("loSB", 110, 115 )
     mass.setRange("hiSB", 135, 150 )
     mass.setRange("h_peak", 115, 135 )
     mass.setRange("full", 110, 150 )
     fit_range = "loSB,hiSB" # we're fitting bkg only
+
     
-    roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass])
     order = 3
     BWZxBern, params_bern = MakeBWZxBern(mass, order)
     sumExp, params_exp = MakeSumExponential(mass, order)
@@ -161,10 +164,10 @@ if __name__ == "__main__":
     
 
     rt.EnableImplicitMT()
-    # _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
-    # fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
-    _ = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
-    fit_result = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
+    fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
+    # _ = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    # fit_result = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
 
     # draw on canvas
     frame = mass.frame()
