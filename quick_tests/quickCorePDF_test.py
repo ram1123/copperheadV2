@@ -173,8 +173,13 @@ if __name__ == "__main__":
     
 
     rt.EnableImplicitMT()
-    _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
-    fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
+    # _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
+    # fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), Save=True,  EvalBackend ="cpu")
+    # _ = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
+    # fit_result = BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
+    _ = sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
+    fit_result = sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range),  rt.RooFit.BatchMode("cpu"), Save=True, )
+    
     # _ = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     # fit_result = BWZxBern.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
 
@@ -183,11 +188,13 @@ if __name__ == "__main__":
 
     # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
     roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-    BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="BWZxBern", LineColor=rt.kGreen)
+    # BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="BWZxBern", LineColor=rt.kGreen)
+    sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="Sum Exponential", LineColor=rt.kGreen)
     roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range), DataError="SumW2", Name="data_hist")
 
     frame.Draw()
     canvas.Update()
     canvas.Draw()
-    canvas.SaveAs(f"./quick_plots/stage3_plot_test.pdf")
+    # canvas.SaveAs(f"./quick_plots/stage3_plot_test_BWZxBern.pdf")
+    canvas.SaveAs(f"./quick_plots/stage3_plot_test_sumExponent.pdf")
     
