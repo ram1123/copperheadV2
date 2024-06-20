@@ -180,7 +180,8 @@ if __name__ == "__main__":
 
     # draw on canvas
     frame = mass.frame()
-    
+
+    # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
     roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
     BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name="BWZxBern", LineColor=rt.kGreen)
     roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range), DataError="SumW2", Name="data_hist")
