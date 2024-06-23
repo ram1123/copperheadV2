@@ -1,0 +1,263 @@
+from typing import Tuple, List, Dict
+import ROOT as rt
+
+def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
+    # collect all variables that we don't want destroyed by Python once function ends
+    out_dict = {}
+    
+    name = f"BWZ_Redux_a_coeff"
+    a_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    name = "exp_model_mass"
+    exp_model_mass = rt.RooExponential(name, name, mass, a_coeff)
+    
+    mass_sq = rt.RooFormulaVar("mass_sq", "@0*@0", rt.RooArgList(mass))
+    name = f"BWZ_Redux_b_coeff"
+    b_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    
+    name = "exp_model_mass_sq"
+    exp_model_mass_sq = rt.RooExponential(name, name, mass_sq, b_coeff)
+
+    # add in the variables and models
+    out_dict[a_coeff.GetName()] = a_coeff 
+    out_dict[exp_model_mass.GetName()] = exp_model_mass
+    out_dict[mass_sq.GetName()] = mass_sq
+    out_dict[b_coeff.GetName()] = b_coeff
+    out_dict[exp_model_mass_sq.GetName()] = exp_model_mass_sq
+    
+    # make Z boson related stuff
+    bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
+    bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
+    bwWidth.setConstant(True)
+    bwmZ.setConstant(True)
+
+    # start multiplying them all
+    name = f"BWZ_Redux_c_coeff"
+    c_coeff = rt.RooRealVar(name,name, 2,-5.0,5.0)
+    BWZ_redux_main = rt.RooGenericPdf(
+        "BWZ_redux_main", "@1/ ( pow((@0-@2), @3) + 0.25*pow(@1, @3) )", rt.RooArgList(mass, bwWidth, bwmZ, c_coeff)
+    )
+    # add in the variables and models
+    out_dict[bwWidth.GetName()] = bwWidth 
+    out_dict[bwmZ.GetName()] = bwmZ 
+    out_dict[c_coeff.GetName()] = c_coeff 
+    out_dict[BWZ_redux_main.GetName()] = BWZ_redux_main 
+
+    name = "BWZ_Redux"
+    final_model = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
+    return (final_model, out_dict)
+
+def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
+    """
+    params:
+    mass = rt.RooRealVar that we will fitTo
+    order = order of the sum of exponential, that we assume to be >= 2
+    """
+    # collect all variables that we don't want destroyed by Python once function ends
+    out_dict = {}
+
+
+    
+    # make BernStein
+    bern_order = order-1
+    BernCoeff_list = []
+    for ix in range(bern_order):
+        name = f"Bernstein_c_{ix}"
+        if ix == 0:
+            coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
+        else:
+            coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
+        out_dict[name] = coeff # add variable to make python remember 
+        BernCoeff_list.append(coeff)
+    name = f"Bernstein_model_order_{bern_order}"
+    bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
+    out_dict[name] = bern_model # add variable to make python remember
+
+    
+    # make BWZ
+    bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
+    bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
+    bwWidth.setConstant(True)
+    bwmZ.setConstant(True)
+    out_dict[bwWidth.GetName()] = bwWidth 
+    out_dict[bwmZ.GetName()] = bwmZ 
+    
+    name = "VanillaBW_model"
+    BWZ = rt.RooBreitWigner(name, name, mass, bwmZ,bwWidth)
+    # our BWZ model is also multiplied by exp(a* mass) as defined in the AN
+    name = "BWZ_exp_coeff"
+    expCoeff = rt.RooRealVar(name, name, -0.0, -3.0, 1.0)
+    name = "BWZ_exp_model"
+    exp_model = rt.RooExponential(name, name, mass, expCoeff)
+    # name = "BWZxExp"
+    # full_BWZ = rt.RooProdPdf(name, name, [BWZ, exp_model]) 
+
+    # add variables
+    out_dict[BWZ.GetName()] = BWZ 
+    out_dict[expCoeff.GetName()] = expCoeff 
+    out_dict[exp_model.GetName()] = exp_model 
+    # out_dict[full_BWZ.GetName()] = full_BWZ 
+    
+    # multiply BWZ and Bernstein
+    name = f"BWZxBern_order_{order}"
+    # final_model = rt.RooProdPdf(name, name, [bern_model, full_BWZ]) 
+    final_model = rt.RooProdPdf(name, name, [bern_model, BWZ, exp_model]) 
+   
+    return (final_model, out_dict)
+    
+
+def MakeSumExponential(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
+    """
+    params:
+    mass = rt.RooRealVar that we will fitTo
+    order = order of the sum of exponential, that we assume to be >= 2
+    returns:
+    rt.RooAddPdf
+    dictionary of variables with {variable name : rt.RooRealVar or rt.RooExponential} format mainly for keep python from
+    destroying these variables, but also useful in debugging
+    """
+    model_list = [] # list of RooExp models for RooAddPdf
+    a_i_list = [] # list of RooExp coeffs for RooAddPdf
+    rest_list = [] # list of rest of variables to save it from being destroyed
+    for ix in range(order):
+        name = f"S_exp_b_{ix}"
+        b_i = rt.RooRealVar(name, name, -0.05, -1.0, 1.0)
+        rest_list.append(b_i)
+        
+        name = f"S_exp_model_{ix}"
+        model = rt.RooExponential(name, name, mass, b_i)
+        model_list.append(model)
+        
+        if ix >0:
+            name = f"S_exp_a_{ix}"
+            a_i = rt.RooRealVar(name, name, 0.3, 0, 1.0)
+            a_i_list.append(a_i)
+            
+    name = f"S_exp_order_{order}"
+    recursiveFractions= True
+    final_model = rt.RooAddPdf(name, name, model_list, a_i_list, recursiveFractions)
+    # collect all variables that we don't want destroyed by Python once function ends
+    out_dict = {}
+    for model in model_list:
+        out_dict[model.GetName()] = model
+    for a_i in a_i_list:
+        out_dict[a_i.GetName()] = a_i
+    for var in rest_list:
+        out_dict[var.GetName()] = var
+    return (final_model, out_dict)
+
+
+# functions for MVA related stuff start --------------------------------------------
+def prepare_features(df, training_features, variation="nominal", add_year=False):
+    #global training_features
+    if add_year:
+        features = training_features + ["year"]
+    else:
+        features = training_features
+    features_var = []
+    #print(features)
+    for trf in features:
+        if f"{trf}_{variation}" in df.fields:
+            features_var.append(f"{trf}_{variation}")
+        elif trf in df.fields:
+            features_var.append(trf)
+        else:
+            print(f"Variable {trf} not found in training dataframe!")
+    return features_var
+
+    
+
+def evaluate_bdt(df, variation, model, parameters):
+
+    # filter out events neither h_peak nor h_sidebands
+    row_filter = (df.h_peak != 0) | (df.h_sidebands != 0)
+    df = df[row_filter]
+    
+    # training_features = ['dimuon_cos_theta_cs', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_eta', 'dimuon_phi', 'dimuon_phi_cs', 'dimuon_pt', 'dimuon_pt_log', 'jet1_eta_nominal', 'jet1_phi_nominal', 'jet1_pt_nominal', 'jet1_qgl_nominal', 'jet2_eta_nominal', 'jet2_phi_nominal', 'jet2_pt_nominal', 'jet2_qgl_nominal', 'jj_dEta_nominal', 'jj_dPhi_nominal', 'jj_eta_nominal', 'jj_mass_nominal', 'jj_mass_log_nominal', 'jj_phi_nominal', 'jj_pt_nominal', 'll_zstar_log_nominal', 'mmj1_dEta_nominal', 'mmj1_dPhi_nominal', 'mmj2_dEta_nominal', 'mmj2_dPhi_nominal', 'mmj_min_dEta_nominal', 'mmj_min_dPhi_nominal', 'mmjj_eta_nominal', 'mmjj_mass_nominal', 'mmjj_phi_nominal', 'mmjj_pt_nominal', 'mu1_eta', 'mu1_iso', 'mu1_phi', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_iso', 'mu2_phi', 'mu2_pt_over_mass', 'zeppenfeld_nominal']
+    training_features = [
+        'dimuon_cos_theta_cs', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_eta', 'dimuon_phi', 'dimuon_phi_cs', 'dimuon_pt', 
+        'dimuon_pt_log', 'jet1_eta', 'jet1_phi', 'jet1_pt', 'jet1_qgl', 'jet2_eta', 'jet2_phi', 
+        'jet2_pt', 'jet2_qgl', 'jj_dEta', 'jj_dPhi', 'jj_eta', 'jj_mass', 'jj_mass_log', 
+        'jj_phi', 'jj_pt', 'll_zstar_log', 'mmj1_dEta', 'mmj1_dPhi', 'mmj2_dEta', 'mmj2_dPhi', 
+        'mmj_min_dEta', 'mmj_min_dPhi', 'mmjj_eta', 'mmjj_mass', 'mmjj_phi', 'mmjj_pt', 'mu1_eta', 'mu1_iso', 
+        'mu1_phi', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_iso', 'mu2_phi', 'mu2_pt_over_mass', 'zeppenfeld'
+    ]
+
+    
+    # df['mu1_pt_over_mass'] = df['mu1_pt']/df['dimuon_mass']
+    # df['mu2_pt_over_mass'] = df['mu2_pt']/df['dimuon_mass']
+    # df['njets'] = ak.fill_none(df['njets'], value=0)
+
+    #df[df['njets_nominal']<2]['jj_dPhi_nominal'] = -1
+    none_val = -99.0
+    for field in df.fields:
+        df[field] = ak.fill_none(df[field], value= none_val)
+        inf_cond = (np.inf == df[field]) | (-np.inf == df[field]) 
+        df[field] = ak.where(inf_cond, none_val, df[field])
+        
+    # print(f"df.h_peak: {df.h_peak}")
+    print(f"sum df.h_peak: {ak.sum(df.h_peak)}")
+    # overwrite dimuon mass for regions not in h_peak
+    not_h_peak = (df.h_peak ==0)
+    # df["dimuon_mass"] = ak.where(not_h_peak, 125.0,  df["dimuon_mass"])
+    
+
+
+    # idk why mmj variables are overwritten something to double chekc later
+    df['mmj_min_dEta'] = df["mmj2_dEta"]
+    df['mmj_min_dPhi'] = df["mmj2_dPhi"]
+
+    # temporary definition of even bc I don't have it
+    if "event" not in df.fields:
+        df["event"] = np.arange(len(df.dimuon_pt))
+    
+    features = prepare_features(df,training_features, variation=variation, add_year=False)
+    # features = training_features
+    #model = f"{model}_{parameters['years'][0]}"
+    # score_name = f"score_{model}_{variation}"
+    score_name = "BDT_score"
+
+    # df.loc[:, score_name] = 0
+    score_total = np.zeros(len(df['dimuon_pt']))
+    
+    nfolds = 4
+    
+    for i in range(nfolds):
+        # eval_folds are the list of test dataset chunks that each bdt is trained to evaluate
+        eval_folds = [(i + f) % nfolds for f in [3]]
+        # eval_filter = df.event.mod(nfolds).isin(eval_folds)
+        eval_filter = (df.event % nfolds ) == (np.array(eval_folds) * ak.ones_like(df.event))
+        scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
+        scalers = np.load(scalers_path, allow_pickle=True)
+        model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
+
+        bdt_model = pickle.load(open(model_path, "rb"))
+        df_i = df[eval_filter]
+        # print(f"df_i: {len(df_i)}")
+        # print(len
+        if len(df_i) == 0:
+            continue
+        # df_i.loc[df_i.region != "h-peak", "dimuon_mass"] = 125.0
+        print(f"scalers: {scalers.shape}")
+        print(f"df_i: {df_i}")
+        df_i_feat = df_i[features]
+        # df_i_feat = np.transpose(np.array(ak.unzip(df_i_feat)))
+        df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
+        print(f"df_i_feat[:,0]: {df_i_feat[:,0]}")
+        print(f'df_i.dimuon_cos_theta_cs: {df_i.dimuon_cos_theta_cs}')
+        # print(f"type df_i_feat: {type(df_i_feat)}")
+        # print(f"df_i_feat: {df_i_feat.shape}")
+        df_i_feat = ak.Array(df_i_feat)
+        df_i = (df_i_feat - scalers[0]) / scalers[1]
+        if len(df_i) > 0:
+            print(f"model: {model}")
+            prediction = np.array(
+                # bdt_model.predict_proba(df_i.values)[:, 1]
+                bdt_model.predict_proba(df_i_feat)[:, 1]
+            ).ravel()
+            print(f"prediction: {prediction}")
+            # df.loc[eval_filter, score_name] = prediction  # np.arctanh((prediction))
+            # score_total = ak.where(eval_filter, prediction, score_total)
+            score_total[eval_filter] = prediction
+
+    df[score_name] = score_total
+    return df

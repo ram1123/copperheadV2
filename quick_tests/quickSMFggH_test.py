@@ -3,157 +3,158 @@ import pickle
 import awkward as ak
 import dask_awkward as dak
 from distributed import Client
-
-"""
-time to fit : define the core functions with their parameters
-"""
-from typing import Tuple, List, Dict
 import ROOT as rt
+# """
+# time to fit : define the core functions with their parameters
+# """
+# from typing import Tuple, List, Dict
+# import ROOT as rt
 
-def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
-    # collect all variables that we don't want destroyed by Python once function ends
-    out_dict = {}
+# def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
+#     # collect all variables that we don't want destroyed by Python once function ends
+#     out_dict = {}
     
-    name = f"BWZ_Redux_a_coeff"
-    a_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
-    name = "exp_model_mass"
-    exp_model_mass = rt.RooExponential(name, name, mass, a_coeff)
+#     name = f"BWZ_Redux_a_coeff"
+#     a_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+#     name = "exp_model_mass"
+#     exp_model_mass = rt.RooExponential(name, name, mass, a_coeff)
     
-    mass_sq = rt.RooFormulaVar("mass_sq", "@0*@0", rt.RooArgList(mass))
-    name = f"BWZ_Redux_b_coeff"
-    b_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+#     mass_sq = rt.RooFormulaVar("mass_sq", "@0*@0", rt.RooArgList(mass))
+#     name = f"BWZ_Redux_b_coeff"
+#     b_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
     
-    name = "exp_model_mass_sq"
-    exp_model_mass_sq = rt.RooExponential(name, name, mass_sq, b_coeff)
+#     name = "exp_model_mass_sq"
+#     exp_model_mass_sq = rt.RooExponential(name, name, mass_sq, b_coeff)
 
-    # add in the variables and models
-    out_dict[a_coeff.GetName()] = a_coeff 
-    out_dict[exp_model_mass.GetName()] = exp_model_mass
-    out_dict[mass_sq.GetName()] = mass_sq
-    out_dict[b_coeff.GetName()] = b_coeff
-    out_dict[exp_model_mass_sq.GetName()] = exp_model_mass_sq
+#     # add in the variables and models
+#     out_dict[a_coeff.GetName()] = a_coeff 
+#     out_dict[exp_model_mass.GetName()] = exp_model_mass
+#     out_dict[mass_sq.GetName()] = mass_sq
+#     out_dict[b_coeff.GetName()] = b_coeff
+#     out_dict[exp_model_mass_sq.GetName()] = exp_model_mass_sq
     
-    # make Z boson related stuff
-    bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
-    bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
-    bwWidth.setConstant(True)
-    bwmZ.setConstant(True)
+#     # make Z boson related stuff
+#     bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
+#     bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
+#     bwWidth.setConstant(True)
+#     bwmZ.setConstant(True)
 
-    # start multiplying them all
-    name = f"BWZ_Redux_c_coeff"
-    c_coeff = rt.RooRealVar(name,name, 2,-5.0,5.0)
-    BWZ_redux_main = rt.RooGenericPdf(
-        "BWZ_redux_main", "@1/ ( pow((@0-@2), @3) + 0.25*pow(@1, @3) )", rt.RooArgList(mass, bwWidth, bwmZ, c_coeff)
-    )
-    # add in the variables and models
-    out_dict[bwWidth.GetName()] = bwWidth 
-    out_dict[bwmZ.GetName()] = bwmZ 
-    out_dict[c_coeff.GetName()] = c_coeff 
-    out_dict[BWZ_redux_main.GetName()] = BWZ_redux_main 
+#     # start multiplying them all
+#     name = f"BWZ_Redux_c_coeff"
+#     c_coeff = rt.RooRealVar(name,name, 2,-5.0,5.0)
+#     BWZ_redux_main = rt.RooGenericPdf(
+#         "BWZ_redux_main", "@1/ ( pow((@0-@2), @3) + 0.25*pow(@1, @3) )", rt.RooArgList(mass, bwWidth, bwmZ, c_coeff)
+#     )
+#     # add in the variables and models
+#     out_dict[bwWidth.GetName()] = bwWidth 
+#     out_dict[bwmZ.GetName()] = bwmZ 
+#     out_dict[c_coeff.GetName()] = c_coeff 
+#     out_dict[BWZ_redux_main.GetName()] = BWZ_redux_main 
 
-    name = "BWZ_Redux"
-    final_model = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
-    return (final_model, out_dict)
+#     name = "BWZ_Redux"
+#     final_model = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
+#     return (final_model, out_dict)
 
-def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
-    """
-    params:
-    mass = rt.RooRealVar that we will fitTo
-    order = order of the sum of exponential, that we assume to be >= 2
-    """
-    # collect all variables that we don't want destroyed by Python once function ends
-    out_dict = {}
+# def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
+#     """
+#     params:
+#     mass = rt.RooRealVar that we will fitTo
+#     order = order of the sum of exponential, that we assume to be >= 2
+#     """
+#     # collect all variables that we don't want destroyed by Python once function ends
+#     out_dict = {}
 
-
-    
-    # make BernStein
-    bern_order = order-1
-    BernCoeff_list = []
-    for ix in range(bern_order):
-        name = f"Bernstein_c_{ix}"
-        if ix == 0:
-            coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
-        else:
-            coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
-        out_dict[name] = coeff # add variable to make python remember 
-        BernCoeff_list.append(coeff)
-    name = f"Bernstein_model_order_{bern_order}"
-    bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
-    out_dict[name] = bern_model # add variable to make python remember
 
     
-    # make BWZ
-    bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
-    bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
-    bwWidth.setConstant(True)
-    bwmZ.setConstant(True)
-    out_dict[bwWidth.GetName()] = bwWidth 
-    out_dict[bwmZ.GetName()] = bwmZ 
-    
-    name = "VanillaBW_model"
-    BWZ = rt.RooBreitWigner(name, name, mass, bwmZ,bwWidth)
-    # our BWZ model is also multiplied by exp(a* mass) as defined in the AN
-    name = "BWZ_exp_coeff"
-    expCoeff = rt.RooRealVar(name, name, -0.0, -3.0, 1.0)
-    name = "BWZ_exp_model"
-    exp_model = rt.RooExponential(name, name, mass, expCoeff)
-    # name = "BWZxExp"
-    # full_BWZ = rt.RooProdPdf(name, name, [BWZ, exp_model]) 
+#     # make BernStein
+#     bern_order = order-1
+#     BernCoeff_list = []
+#     for ix in range(bern_order):
+#         name = f"Bernstein_c_{ix}"
+#         if ix == 0:
+#             coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
+#         else:
+#             coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
+#         out_dict[name] = coeff # add variable to make python remember 
+#         BernCoeff_list.append(coeff)
+#     name = f"Bernstein_model_order_{bern_order}"
+#     bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
+#     out_dict[name] = bern_model # add variable to make python remember
 
-    # add variables
-    out_dict[BWZ.GetName()] = BWZ 
-    out_dict[expCoeff.GetName()] = expCoeff 
-    out_dict[exp_model.GetName()] = exp_model 
-    # out_dict[full_BWZ.GetName()] = full_BWZ 
     
-    # multiply BWZ and Bernstein
-    name = f"BWZxBern_order_{order}"
-    # final_model = rt.RooProdPdf(name, name, [bern_model, full_BWZ]) 
-    final_model = rt.RooProdPdf(name, name, [bern_model, BWZ, exp_model]) 
+#     # make BWZ
+#     bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
+#     bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
+#     bwWidth.setConstant(True)
+#     bwmZ.setConstant(True)
+#     out_dict[bwWidth.GetName()] = bwWidth 
+#     out_dict[bwmZ.GetName()] = bwmZ 
+    
+#     name = "VanillaBW_model"
+#     BWZ = rt.RooBreitWigner(name, name, mass, bwmZ,bwWidth)
+#     # our BWZ model is also multiplied by exp(a* mass) as defined in the AN
+#     name = "BWZ_exp_coeff"
+#     expCoeff = rt.RooRealVar(name, name, -0.0, -3.0, 1.0)
+#     name = "BWZ_exp_model"
+#     exp_model = rt.RooExponential(name, name, mass, expCoeff)
+#     # name = "BWZxExp"
+#     # full_BWZ = rt.RooProdPdf(name, name, [BWZ, exp_model]) 
+
+#     # add variables
+#     out_dict[BWZ.GetName()] = BWZ 
+#     out_dict[expCoeff.GetName()] = expCoeff 
+#     out_dict[exp_model.GetName()] = exp_model 
+#     # out_dict[full_BWZ.GetName()] = full_BWZ 
+    
+#     # multiply BWZ and Bernstein
+#     name = f"BWZxBern_order_{order}"
+#     # final_model = rt.RooProdPdf(name, name, [bern_model, full_BWZ]) 
+#     final_model = rt.RooProdPdf(name, name, [bern_model, BWZ, exp_model]) 
    
-    return (final_model, out_dict)
+#     return (final_model, out_dict)
     
 
-def MakeSumExponential(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
-    """
-    params:
-    mass = rt.RooRealVar that we will fitTo
-    order = order of the sum of exponential, that we assume to be >= 2
-    returns:
-    rt.RooAddPdf
-    dictionary of variables with {variable name : rt.RooRealVar or rt.RooExponential} format mainly for keep python from
-    destroying these variables, but also useful in debugging
-    """
-    model_list = [] # list of RooExp models for RooAddPdf
-    a_i_list = [] # list of RooExp coeffs for RooAddPdf
-    rest_list = [] # list of rest of variables to save it from being destroyed
-    for ix in range(order):
-        name = f"S_exp_b_{ix}"
-        b_i = rt.RooRealVar(name, name, -0.05, -1.0, 1.0)
-        rest_list.append(b_i)
+# def MakeSumExponential(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
+#     """
+#     params:
+#     mass = rt.RooRealVar that we will fitTo
+#     order = order of the sum of exponential, that we assume to be >= 2
+#     returns:
+#     rt.RooAddPdf
+#     dictionary of variables with {variable name : rt.RooRealVar or rt.RooExponential} format mainly for keep python from
+#     destroying these variables, but also useful in debugging
+#     """
+#     model_list = [] # list of RooExp models for RooAddPdf
+#     a_i_list = [] # list of RooExp coeffs for RooAddPdf
+#     rest_list = [] # list of rest of variables to save it from being destroyed
+#     for ix in range(order):
+#         name = f"S_exp_b_{ix}"
+#         b_i = rt.RooRealVar(name, name, -0.05, -1.0, 1.0)
+#         rest_list.append(b_i)
         
-        name = f"S_exp_model_{ix}"
-        model = rt.RooExponential(name, name, mass, b_i)
-        model_list.append(model)
+#         name = f"S_exp_model_{ix}"
+#         model = rt.RooExponential(name, name, mass, b_i)
+#         model_list.append(model)
         
-        if ix >0:
-            name = f"S_exp_a_{ix}"
-            a_i = rt.RooRealVar(name, name, 0.3, 0, 1.0)
-            a_i_list.append(a_i)
+#         if ix >0:
+#             name = f"S_exp_a_{ix}"
+#             a_i = rt.RooRealVar(name, name, 0.3, 0, 1.0)
+#             a_i_list.append(a_i)
             
-    name = f"S_exp_order_{order}"
-    recursiveFractions= True
-    final_model = rt.RooAddPdf(name, name, model_list, a_i_list, recursiveFractions)
-    # collect all variables that we don't want destroyed by Python once function ends
-    out_dict = {}
-    for model in model_list:
-        out_dict[model.GetName()] = model
-    for a_i in a_i_list:
-        out_dict[a_i.GetName()] = a_i
-    for var in rest_list:
-        out_dict[var.GetName()] = var
-    return (final_model, out_dict)
+#     name = f"S_exp_order_{order}"
+#     recursiveFractions= True
+#     final_model = rt.RooAddPdf(name, name, model_list, a_i_list, recursiveFractions)
+#     # collect all variables that we don't want destroyed by Python once function ends
+#     out_dict = {}
+#     for model in model_list:
+#         out_dict[model.GetName()] = model
+#     for a_i in a_i_list:
+#         out_dict[a_i.GetName()] = a_i
+#     for var in rest_list:
+#         out_dict[var.GetName()] = var
+#     return (final_model, out_dict)
 
+from quickSMFtest_functions import MakeBWZ_Redux, MakeBWZxBern, MakeSumExponential
 
 if __name__ == "__main__":
     client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
