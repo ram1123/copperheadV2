@@ -10,7 +10,7 @@ time to fit : define the core functions with their parameters
 from typing import Tuple, List, Dict
 import ROOT as rt
 
-def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
+def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
     # collect all variables that we don't want destroyed by Python once function ends
     out_dict = {}
     
@@ -55,7 +55,7 @@ def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
     final_model = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
     return (final_model, out_dict)
 
-def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
+def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
     """
     params:
     mass = rt.RooRealVar that we will fitTo
@@ -129,7 +129,7 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Di
     rest_list = [] # list of rest of variables to save it from being destroyed
     for ix in range(order):
         name = f"S_exp_b_{ix}"
-        b_i = rt.RooRealVar(name, name, -0.5, -5.0, 1.0)
+        b_i = rt.RooRealVar(name, name, -0.05, -1.0, 1.0)
         rest_list.append(b_i)
         
         name = f"S_exp_model_{ix}"
@@ -138,11 +138,12 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Di
         
         if ix >0:
             name = f"S_exp_a_{ix}"
-            a_i = rt.RooRealVar(name, name, 0.5, 0, 1.0)
+            a_i = rt.RooRealVar(name, name, 0.3, 0, 1.0)
             a_i_list.append(a_i)
             
     name = f"S_exp_order_{order}"
-    final_model = rt.RooAddPdf(name, name, model_list, a_i_list)
+    recursiveFractions= True
+    final_model = rt.RooAddPdf(name, name, model_list, a_i_list, recursiveFractions)
     # collect all variables that we don't want destroyed by Python once function ends
     out_dict = {}
     for model in model_list:
@@ -156,8 +157,10 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Di
 
 if __name__ == "__main__":
     client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
-    load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0/"
+    load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0"
     full_load_path = load_path+f"/data_C/*/*.parquet"
+    # full_load_path = load_path+f"/data_D/*/*.parquet"
+    # full_load_path = load_path+f"/data_*/*/*.parquet"
     events = dak.from_parquet(full_load_path)
     # figure out the discontinuous fit range later ---------------------
     
@@ -173,15 +176,8 @@ if __name__ == "__main__":
     nbins = 80
     mass.setBins(nbins)
 
-    # for debugging purposes -----------------
-    binning = np.linspace(110, 150, nbins)
-    np_hist, _ = np.histogram(mass_arr, bins=binning)
-    print(f"np_hist: {np_hist}")
-    # -------------------------------------------
-
-
     
-    roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass])
+    
 
     # set sideband mass range after initializing dataset (idk why this order matters, but that's how it's shown here https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/tutorial2023/parametric_exercise/?h=sideband#background-modelling)
     mass.setRange("loSB", 110, 115 )
@@ -198,7 +194,7 @@ if __name__ == "__main__":
 
     
     
-    # load the MVA and divide the data into categories 
+    roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass])
     
     # initialize the categories
     poly_order_by_cat = {
@@ -218,14 +214,28 @@ if __name__ == "__main__":
 
     smfVarList = []
     smf_order=3
+    # smf_order=2
     for ix in range(smf_order-1): # minus one bc the normalization constraint takes off one degree of freedom
         name = f"smf_{ix}"
-        smf_coeff = rt.RooRealVar(name, name, 2.5, 0, 30)
+        smf_coeff = rt.RooRealVar(name, name, 0.005, 0, 1)
+        # if ix ==0: # linear coffient
+        #     smf_coeff = rt.RooRealVar(name, name, 0.5, 0, 30)
+        # else:
+        #     smf_coeff = rt.RooRealVar(name, name, 0.0001, 0, 30)
         smfVarList.append(smf_coeff)
 
-    polynomial_model = rt.RooPolynomial("pol", "pol", mass, smfVarList)
-    name = "smf x model"
-    final_model =  rt.RooProdPdf(name, name, [polynomial_model, BWZxBern]) 
+    # shift = rt.RooRealVar("shift", "Offset", 125, 75, 150)
+    # shift.setConstant(True)
+    shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-125", rt.RooArgList(mass))
+    polynomial_model = rt.RooPolynomial("pol", "pol", shifted_mass, smfVarList)
+    # polynomial_model = rt.RooPolynomial("pol", "pol", mass, smfVarList)
+    
+    # final_model =  rt.RooProdPdf(name, name, [polynomial_model, BWZxBern]) 
+    core_model = BWZ_Redux # BWZxBern , sumExp, BWZ_Redux
+    name = f"smf x {core_model.GetName()}"
+    final_model =  rt.RooProdPdf(name, name, [polynomial_model,core_model]) 
+    # final_model = sumExp
+    
     
     rt.EnableImplicitMT()
     _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
@@ -238,6 +248,7 @@ if __name__ == "__main__":
 
     # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
     roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+    # final_model.fixAddCoefRange("full",True)
     final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
     dataset_name = "data"
     roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
@@ -267,7 +278,7 @@ if __name__ == "__main__":
     hist_data.FillN(len(mass_arr), mass_arr, np.ones(len(mass_arr)))
     
     # print(f"hist_data: {hist_data}")
-    model_hist = BWZxBern.asTF(mass)
+    model_hist = core_model.asTF(mass)
     # model_hist.Draw("EP")
     
     hist_data.Divide(model_hist)
@@ -275,11 +286,20 @@ if __name__ == "__main__":
     hist_data.Scale(1/hist_data.Integral(), "width")
     hist_data.Draw("EP")
 
-    smf_model = polynomial_model.createHistogram("smf hist", mass,  rt.RooFit.Binning(80, 110, 150))
-    # normalize
-    smf_model.Scale(1/smf_model.Integral(), "width")
-    smf_model.Draw("hist same")
+    # # smf_hist = polynomial_model.createHistogram("smf hist", mass,  rt.RooFit.Binning(80, 110, 150))
+    # shift = 125
+    # shifted_mass_var =  rt.RooRealVar("shifted mass","mass (GeV)",120-shift,110-shift,150-shift)
+    # smf_hist = polynomial_model.createHistogram("smf hist", shifted_mass_var,  rt.RooFit.Binning(80, 110-shift, 150-shift))
+    # # normalize
+    # smf_hist.Scale(1/smf_hist.Integral(), "width")
+    # smf_hist.Draw("hist same")
     # polynomial_model.asTF(mass).Draw("hist same")
+
+    frame = mass.frame()
+    # RooRatio("test", "test", roo_hist,)
+    # roo_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+    polynomial_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), LineColor=rt.kGreen)
+    frame.Draw("hist same")
     
     # polynomial_model.asTF(mass).Draw("same")
     
