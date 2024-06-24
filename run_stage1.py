@@ -104,8 +104,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'mu2_phi': (out_collections["mu2_phi"]),
             'mu1_iso': (out_collections["mu1_iso"]),
             'mu2_iso': (out_collections["mu2_iso"]),
-            "mu1_pt_over_mass" = (out_collections["mu1_pt"] / out_collections["dimuon_mass"])
-            "mu2_pt_over_mass" = (out_collections["mu2_pt"] / out_collections["dimuon_mass"])
+            "mu1_pt_over_mass" : (out_collections["mu1_pt"] / out_collections["dimuon_mass"]) ,
+            "mu2_pt_over_mass" : (out_collections["mu2_pt"] / out_collections["dimuon_mass"]) ,
             'jet1_pt': (out_collections["jet1_pt"]),
             'jet2_pt': (out_collections["jet2_pt"]),
             'jet1_eta': (out_collections["jet1_eta"]),
@@ -183,7 +183,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             "ll_zstar" : (out_collections["ll_zstar"]),
             "ll_zstar_log" : np.log(out_collections["ll_zstar"]),
             "zeppenfeld" : (out_collections["zeppenfeld"]),
-            # "event" : (out_collections["event"]),
+            "event" : (out_collections["event"]),
             # temporary test start ------------------------------------
             # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
             # temporary test end ------------------------------------
@@ -338,8 +338,8 @@ if __name__ == "__main__":
         # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
         #---------------------------------------------------------
         # print("cluster scale up")
-        # sample_path = "./config/processor_samples.json"
-        sample_path = "./config/fraction_processor_samples.json"
+        # sample_path = "./prestage_output/processor_samples.json"
+        sample_path = "./prestage_output/fraction_processor_samples.json"
         with open(sample_path) as file:
             samples = json.loads(file.read())
         # add in NanoAODv info into samples metadata for coffea processor
@@ -388,7 +388,7 @@ if __name__ == "__main__":
     else:
         # dataset_loop(coffea_processor, xrootd_path+fname, test=test_mode)
 
-        sample_path = "./config/fraction_processor_samples.json"
+        sample_path = "./prestage_output/fraction_processor_samples.json"
         with open(sample_path) as file:
             samples = json.loads(file.read())
         # print(f"samples.keys(): {samples.keys()}")

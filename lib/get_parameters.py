@@ -7,7 +7,7 @@ def getParametersForYr(year: str) -> dict:
     If you would like to only accept certain yaml files, feel free to hard code the 
     filelist varaibles to contain the yaml files you want
     """
-    local_path = "./parameters/" # feel free to change this
+    local_path = "./configs/parameters/" # feel free to change this
     filelist = glob.glob(local_path + "*.yaml")
     # print(f"getParametersForYr filelist: {filelist}")
     params = [OmegaConf.load(f) for f in filelist]
@@ -30,9 +30,9 @@ def getParametersForYr(year: str) -> dict:
     yr_specific_params["do_jecunc"] = False
     yr_specific_params["do_jerunc"] = False
 
-
-    directory = "./config"
-    filename = directory+"/parameters.yaml"
-    with open(filename, "w") as file:
-        OmegaConf.save(config=yr_specific_params, f=file.name)
+    # save year specific yaml for testing vs json version
+    # directory = "./config"
+    # filename = directory+"/parameters.yaml"
+    # with open(filename, "w") as file:
+    #     OmegaConf.save(config=yr_specific_params, f=file.name)
     return yr_specific_params
