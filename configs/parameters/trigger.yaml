@@ -1,0 +1,13 @@
+hlt:
+  2016preVFP:
+  - IsoMu24
+  - IsoTkMu24
+  2016postVFP:
+  - IsoMu24
+  - IsoTkMu24
+  '2017':
+  - IsoMu27
+  '2018':
+  - IsoMu24
+  2022EE:
+  - IsoMu24

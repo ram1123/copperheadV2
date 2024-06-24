@@ -1,0 +1,12 @@
+roccor_file:
+  2016preVFP: data/roch_corr/RoccoR2016aUL.txt
+  2016postVFP: data/roch_corr/RoccoR2016bUL.txt
+  '2017': data/roch_corr/RoccoR2017UL.txt
+  '2018': data/roch_corr/RoccoR2018UL.txt
+  2022EE: data/roch_corr/RoccoR2018UL.txt
+res_calib_path:
+  2016preVFP: data/res_calib/
+  2016postVFP: data/res_calib/
+  '2017': data/res_calib/
+  '2018': data/res_calib/
+  2022EE: data/res_calib/
