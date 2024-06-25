@@ -159,8 +159,8 @@ from quickSMFtest_functions import MakeBWZ_Redux, MakeBWZxBern, MakeSumExponenti
 if __name__ == "__main__":
     client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
     load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0"
-    full_load_path = load_path+f"/data_C/*/*.parquet"
-    # full_load_path = load_path+f"/data_D/*/*.parquet"
+    # full_load_path = load_path+f"/data_C/*/*.parquet"
+    full_load_path = load_path+f"/data_D/*/*.parquet"
     # full_load_path = load_path+f"/data_*/*/*.parquet"
     events = dak.from_parquet(full_load_path)
     # figure out the discontinuous fit range later ---------------------
@@ -232,7 +232,7 @@ if __name__ == "__main__":
     # polynomial_model = rt.RooPolynomial("pol", "pol", mass, smfVarList)
     
     # final_model =  rt.RooProdPdf(name, name, [polynomial_model, BWZxBern]) 
-    core_model = BWZ_Redux # BWZxBern , sumExp, BWZ_Redux
+    core_model = BWZxBern # BWZxBern , sumExp, BWZ_Redux
     name = f"smf x {core_model.GetName()}"
     final_model =  rt.RooProdPdf(name, name, [polynomial_model,core_model]) 
     # final_model = sumExp

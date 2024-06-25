@@ -1,5 +1,10 @@
 from typing import Tuple, List, Dict
 import ROOT as rt
+import numpy as np
+import pickle
+import awkward as ak
+import dask_awkward as dak
+from distributed import Client
 
 def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
     # collect all variables that we don't want destroyed by Python once function ends
