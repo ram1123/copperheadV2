@@ -61,7 +61,7 @@ if __name__ == "__main__":
     processed_events = evaluate_bdt(events, "nominal", model_name, parameters)
 
     # load BDT score edges for subcategory divison
-    BDTedges_load_path = "../parameters/MVA/ggH/BDT_edges.yaml"
+    BDTedges_load_path = "../configs/MVA/ggH/BDT_edges.yaml"
     edges = OmegaConf.load(BDTedges_load_path)
     year = "2018"
     edges = np.array(edges[year])
@@ -152,8 +152,8 @@ if __name__ == "__main__":
         rt.EnableImplicitMT()
         # _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
         # fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
-        _ = final_model.fitTo(roo_hist, EvalBackend="cpu", Save=True, )
-        fit_result = final_model.fitTo(roo_hist, EvalBackend="cpu", Save=True, )
+        _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
     
     
         

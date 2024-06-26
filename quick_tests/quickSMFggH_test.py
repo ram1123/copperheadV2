@@ -159,8 +159,8 @@ from quickSMFtest_functions import MakeBWZ_Redux, MakeBWZxBern, MakeSumExponenti
 if __name__ == "__main__":
     client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
     load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0"
-    # full_load_path = load_path+f"/data_C/*/*.parquet"
-    full_load_path = load_path+f"/data_D/*/*.parquet"
+    full_load_path = load_path+f"/data_C/*/*.parquet"
+    # full_load_path = load_path+f"/data_D/*/*.parquet"
     # full_load_path = load_path+f"/data_*/*/*.parquet"
     events = dak.from_parquet(full_load_path)
     # figure out the discontinuous fit range later ---------------------
@@ -193,7 +193,23 @@ if __name__ == "__main__":
     sumExp, params_exp = MakeSumExponential(mass, order)
     BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, order)
 
-    
+    # trying multi pdf for like the 5th time
+    cat = rt.RooCategory("pdf_index","Index of Pdf which is active");
+
+    # // Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
+    # // 0 == BWZxBern
+    # // 1 == sumExp
+    # // 2 == BWZ_Redux
+
+    pdf_list = rt.RooArgList(
+        BWZxBern,
+        # sumExp,
+        BWZ_Redux
+    )
+    print("just b4 roo multipdf")
+    multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
+    # print(f"multipdf: {multipdf}")
+    multipdf.Print()
     
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass])
     
@@ -205,12 +221,15 @@ if __name__ == "__main__":
         3:3,
         4:3,
     }
-   
+    
+    
+    
+    
     # roo_dataset.Print()
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # roo_hist.Print()
 
-
+    
     
 
     smfVarList = []
@@ -232,7 +251,7 @@ if __name__ == "__main__":
     # polynomial_model = rt.RooPolynomial("pol", "pol", mass, smfVarList)
     
     # final_model =  rt.RooProdPdf(name, name, [polynomial_model, BWZxBern]) 
-    core_model = BWZxBern # BWZxBern , sumExp, BWZ_Redux
+    core_model = multipdf # BWZxBern , sumExp, BWZ_Redux, multipdf
     name = f"smf x {core_model.GetName()}"
     final_model =  rt.RooProdPdf(name, name, [polynomial_model,core_model]) 
     # final_model = sumExp

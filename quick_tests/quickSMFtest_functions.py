@@ -110,11 +110,13 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
     return (final_model, out_dict)
     
 
-def MakeSumExponential(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Dict]:
+def MakeSumExponential(mass: rt.RooRealVar, order: int, fit_range="loSB,hiSB") ->Tuple[rt.RooAddPdf, Dict]:
     """
     params:
     mass = rt.RooRealVar that we will fitTo
     order = order of the sum of exponential, that we assume to be >= 2
+    fit_range = str representation of fit range from mass. We assume this has already been defined before this
+        function is called. If no fit_range is specified, you can give an empty string
     returns:
     rt.RooAddPdf
     dictionary of variables with {variable name : rt.RooRealVar or rt.RooExponential} format mainly for keep python from
@@ -140,6 +142,12 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooAddPdf, Di
     name = f"S_exp_order_{order}"
     recursiveFractions= True
     final_model = rt.RooAddPdf(name, name, model_list, a_i_list, recursiveFractions)
+    # for good explnanation of recursiveFractions, visit https://root-forum.cern.ch/t/rooaddpdf-when-to-use-recursivefraction/33317
+    # final_model = rt.RooAddPdf(name, name, model_list, a_i_list)
+    if fit_range != "": # if empty string, skip
+        final_model.fixCoefNormalization(rt.RooArgSet(mass))
+        final_model.fixCoefRange(fit_range)
+        
     # collect all variables that we don't want destroyed by Python once function ends
     out_dict = {}
     for model in model_list:
