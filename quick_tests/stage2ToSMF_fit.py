@@ -94,7 +94,8 @@ if __name__ == "__main__":
         3:3,
         4:3,
     }
-    for cat_ix in range(5):
+    # for cat_ix in range(5):
+    for cat_ix in [0]:
         subCat_filter = (processed_events["subCategory_idx"] == cat_ix)
         subCat_mass_arr = processed_events.dimuon_mass[subCat_filter]
         subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
@@ -144,7 +145,7 @@ if __name__ == "__main__":
         print(f"smf_order: {smf_order}")
         for ix in range(smf_order-1): # minus one bc the normalization constraint takes off one degree of freedom
             name = f"smf_{ix}"
-            smf_coeff = rt.RooRealVar(name, name, 0.05, -0.5, 0.5)
+            smf_coeff = rt.RooRealVar(name, name, -0.0005, -0.007, 0.007)
             smfVarList.append(smf_coeff)
     
 
@@ -152,15 +153,30 @@ if __name__ == "__main__":
         # shift.setConstant(True)
         shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-125", rt.RooArgList(mass))
         polynomial_model = rt.RooPolynomial("pol", "pol", shifted_mass, smfVarList)
-        core_model = sumExp # BWZxBern , sumExp, BWZ_Redux
-        name = f"smf x {core_model.GetName()}"
-        final_model =  rt.RooProdPdf(name, name, [polynomial_model,core_model]) 
+        # core_model = sumExp # BWZxBern , sumExp, BWZ_Redux
+        # name = f"smf x {core_model.GetName()}"
+        # final_model =  rt.RooProdPdf(name, name, [polynomial_model,core_model]) 
+        name = f"smf x {sumExp.GetName()}"
+        final_BWZ_Redux_model = rt.RooProdPdf(name, name, [polynomial_model,sumExp]) 
+        name = f"smf x {BWZ_Redux.GetName()}"
+        final_BWZxBern_model = rt.RooProdPdf(name, name, [polynomial_model,BWZ_Redux]) 
         
         rt.EnableImplicitMT()
         # _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
         # fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
-        _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        print("start BWZ_Redux !")
+        _ = final_BWZxBern_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        print("start sumExp !")
+        _ = final_BWZ_Redux_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+
+        # freeze the polynomial coefficient, and fine-tune the core functions
+        for poly_coeff in smfVarList:
+            poly_coeff.setConstant(True)
+        
+        fit_result = final_BWZxBern_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_BWZ_Redux_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
     
     
         
@@ -169,14 +185,19 @@ if __name__ == "__main__":
     
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
         roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-        final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
+        # final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
+        final_BWZxBern_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZxBern_model.GetName(), LineColor=rt.kGreen)
+        final_BWZ_Redux_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZ_Redux_model.GetName(), LineColor=rt.kBlue)
         dataset_name = "data"
         roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
     
     
         # legend
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        name=final_model.GetName()
+        # name=final_model.GetName()
+        name=final_BWZxBern_model.GetName()
+        legend.AddEntry(name,name, "L")
+        name=final_BWZ_Redux_model.GetName()
         legend.AddEntry(name,name, "L")
         name="data"
         legend.AddEntry(name,name, "P")
@@ -187,50 +208,51 @@ if __name__ == "__main__":
         canvas.Update()
         canvas.Draw()
     
-        canvas.SaveAs(f"./quick_plots/stage3_plot_SMF_subCat{cat_ix}_{final_model.GetName()}.pdf")
+        # canvas.SaveAs(f"./quick_plots/stage3_plot_SMF_subCat{cat_ix}_{final_model.GetName()}.pdf")
+        canvas.SaveAs(f"./quick_plots/stage3_plot_SMF_subCat{cat_ix}.pdf")
     
-        # make SMF plots
-        name = "Canvas"
-        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-        canvas.cd()
-        hist_data = rt.TH1F("hist1", "Histogram for all data", 80, 110, 150)
-        print(f"subCat_mass_arr.shape: {subCat_mass_arr.shape}")
-        hist_data.FillN(len(subCat_mass_arr), subCat_mass_arr, np.ones(len(subCat_mass_arr)))
+        # # make SMF plots
+        # name = "Canvas"
+        # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        # canvas.cd()
+        # hist_data = rt.TH1F("hist1", "Histogram for all data", 80, 110, 150)
+        # print(f"subCat_mass_arr.shape: {subCat_mass_arr.shape}")
+        # hist_data.FillN(len(subCat_mass_arr), subCat_mass_arr, np.ones(len(subCat_mass_arr)))
         
-        # print(f"hist_data: {hist_data}")
-        model_hist = core_model.asTF(mass)
-        # model_hist.Draw("EP")
+        # # print(f"hist_data: {hist_data}")
+        # model_hist = core_model.asTF(mass)
+        # # model_hist.Draw("EP")
         
-        hist_data.Divide(model_hist)
-        # normalize
-        hist_data.Scale(1/hist_data.Integral(), "width")
-        hist_data.Draw("EP")
-    
-        # # smf_hist = polynomial_model.createHistogram("smf hist", mass,  rt.RooFit.Binning(80, 110, 150))
-        # shift = 125
-        # shifted_mass_var =  rt.RooRealVar("shifted mass","mass (GeV)",120-shift,110-shift,150-shift)
-        # smf_hist = polynomial_model.createHistogram("smf hist", shifted_mass_var,  rt.RooFit.Binning(80, 110-shift, 150-shift))
+        # hist_data.Divide(model_hist)
         # # normalize
-        # smf_hist.Scale(1/smf_hist.Integral(), "width")
-        # smf_hist.Draw("hist same")
-        # polynomial_model.asTF(mass).Draw("hist same")
+        # hist_data.Scale(1/hist_data.Integral(), "width")
+        # hist_data.Draw("EP")
     
-        frame = mass.frame()
-        # RooRatio("test", "test", roo_hist,)
-        # roo_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-        polynomial_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), LineColor=rt.kGreen)
-        frame.Draw("hist same")
-        
-        # polynomial_model.asTF(mass).Draw("same")
-        
-        # # draw on canvas
+        # # # smf_hist = polynomial_model.createHistogram("smf hist", mass,  rt.RooFit.Binning(80, 110, 150))
+        # # shift = 125
+        # # shifted_mass_var =  rt.RooRealVar("shifted mass","mass (GeV)",120-shift,110-shift,150-shift)
+        # # smf_hist = polynomial_model.createHistogram("smf hist", shifted_mass_var,  rt.RooFit.Binning(80, 110-shift, 150-shift))
+        # # # normalize
+        # # smf_hist.Scale(1/smf_hist.Integral(), "width")
+        # # smf_hist.Draw("hist same")
+        # # polynomial_model.asTF(mass).Draw("hist same")
+    
         # frame = mass.frame()
-        # # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        # roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-        # final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
+        # # RooRatio("test", "test", roo_hist,)
+        # # roo_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        # polynomial_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), LineColor=rt.kGreen)
         # frame.Draw("hist same")
         
-        canvas.Update()
+        # # polynomial_model.asTF(mass).Draw("same")
+        
+        # # # draw on canvas
+        # # frame = mass.frame()
+        # # # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+        # # roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        # # final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
+        # # frame.Draw("hist same")
+        
+        # canvas.Update()
         
         
-        canvas.SaveAs(f"./quick_plots/stage3_plot_test_SMF_SMF_subCat{cat_ix}_{final_model.GetName()}.pdf")
+        # canvas.SaveAs(f"./quick_plots/stage3_plot_test_SMF_SMF_subCat{cat_ix}_{final_model.GetName()}.pdf")

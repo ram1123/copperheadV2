@@ -61,16 +61,17 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
     out_dict = {}
 
 
-    
+    c_start_val_map = {
+        0 : 0.34,
+        1 : 0.69,
+    }
     # make BernStein
     bern_order = order-1
     BernCoeff_list = []
     for ix in range(bern_order):
         name = f"Bernstein_c_{ix}"
-        if ix == 0:
-            coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
-        else:
-            coeff = rt.RooRealVar(name,name, 1,-5.0,5.0)
+        c_start_val = c_start_val_map[ix]
+        coeff = rt.RooRealVar(name,name, c_start_val,-2.0, 2.0)
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.append(coeff)
     name = f"Bernstein_model_order_{bern_order}"
@@ -90,7 +91,7 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
     BWZ = rt.RooBreitWigner(name, name, mass, bwmZ,bwWidth)
     # our BWZ model is also multiplied by exp(a* mass) as defined in the AN
     name = "BWZ_exp_coeff"
-    expCoeff = rt.RooRealVar(name, name, -0.0, -3.0, 1.0)
+    expCoeff = rt.RooRealVar(name, name, -0.015, -1.0, 0.5)
     name = "BWZ_exp_model"
     exp_model = rt.RooExponential(name, name, mass, expCoeff)
     # name = "BWZxExp"
@@ -122,12 +123,28 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int, fit_range="loSB,hiSB") -
     dictionary of variables with {variable name : rt.RooRealVar or rt.RooExponential} format mainly for keep python from
     destroying these variables, but also useful in debugging
     """
+
+    b_start_val_map = {
+        0 : -0.2,
+        1 : -1,
+        2 : -0.05,
+    }
+    a_start_val_map = {
+        1 : 0.39,
+        2 : 0.59,
+    }
+
+    
+    # TODO: make a dictionary list of starting values optimized for sumexponential for specific data, starting with data_* for ggH
     model_list = [] # list of RooExp models for RooAddPdf
     a_i_list = [] # list of RooExp coeffs for RooAddPdf
     rest_list = [] # list of rest of variables to save it from being destroyed
+
+    #hard code in starting values
     for ix in range(order):
         name = f"S_exp_b_{ix}"
-        b_i = rt.RooRealVar(name, name, -0.05, -1.0, 1.0)
+        b_start_val = b_start_val_map[ix]
+        b_i = rt.RooRealVar(name, name, b_start_val, -2.0, 1.0)
         rest_list.append(b_i)
         
         name = f"S_exp_model_{ix}"
@@ -136,8 +153,11 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int, fit_range="loSB,hiSB") -
         
         if ix >0:
             name = f"S_exp_a_{ix}"
-            a_i = rt.RooRealVar(name, name, 0.3, 0, 1.0)
+            a_start_val = a_start_val_map[ix]
+            a_i = rt.RooRealVar(name, name, a_start_val, 0, 1.0)
             a_i_list.append(a_i)
+
+    
             
     name = f"S_exp_order_{order}"
     recursiveFractions= True
@@ -146,7 +166,7 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int, fit_range="loSB,hiSB") -
     # final_model = rt.RooAddPdf(name, name, model_list, a_i_list)
     if fit_range != "": # if empty string, skip
         final_model.fixCoefNormalization(rt.RooArgSet(mass))
-        final_model.fixCoefRange(fit_range)
+        # final_model.fixCoefRange(fit_range)
         
     # collect all variables that we don't want destroyed by Python once function ends
     out_dict = {}
