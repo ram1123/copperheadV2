@@ -123,10 +123,10 @@ if __name__ == "__main__":
         fit_range = "loSB,hiSB" # we're fitting bkg only
     
         
-        order = 3
-        BWZxBern, params_bern = MakeBWZxBern(mass, order)
-        sumExp, params_exp = MakeSumExponential(mass, order)
-        BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, order)
+        dof = 3
+        BWZxBern, params_bern = MakeBWZxBern(mass, dof)
+        sumExp, params_exp = MakeSumExponential(mass, dof)
+        BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, dof)
         
         roo_dataset = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
         
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         print(f"smf_order: {smf_order}")
         for ix in range(smf_order-1): # minus one bc the normalization constraint takes off one degree of freedom
             name = f"smf_{ix}"
-            smf_coeff = rt.RooRealVar(name, name, -0.0005, -0.007, 0.007)
+            smf_coeff = rt.RooRealVar(name, name, -0.005, -0.007, 0.007)
             smfVarList.append(smf_coeff)
     
 
@@ -210,6 +210,34 @@ if __name__ == "__main__":
     
         # canvas.SaveAs(f"./quick_plots/stage3_plot_SMF_subCat{cat_ix}_{final_model.GetName()}.pdf")
         canvas.SaveAs(f"./quick_plots/stage3_plot_SMF_subCat{cat_ix}.pdf")
+
+        # generate MutliPdf and save them into a workspace
+        # trying multi pdf for like the 5th time
+        cat = rt.RooCategory("pdf_index","Index of Pdf which is active");
+    
+        # // Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
+        # // 0 == BWZxBern
+        # // 1 == sumExp
+        # // 2 == BWZ_Redux
+    
+        pdf_list = rt.RooArgList(
+            # BWZxBern,
+            sumExp,
+            BWZ_Redux
+        )
+        print("just b4 roo multipdf")
+        multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
+
+        fout = rt.TFile("./workspace.root","RECREATE")
+        wout = rt.RooWorkspace("workspace","workspace")
+        roo_hist.SetName("data");
+        wout.Import(roo_hist);
+        wout.Import(cat);
+        # wout.Import(norm);
+        wout.Import(multipdf);
+        # wout.Import(signal);
+        wout.Print();
+        wout.Write();
     
         # # make SMF plots
         # name = "Canvas"

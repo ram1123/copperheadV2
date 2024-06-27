@@ -6,12 +6,18 @@ import awkward as ak
 import dask_awkward as dak
 from distributed import Client
 
-def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
+def MakeBWZ_Redux(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
+    """
+    params:
+    mass = rt.RooRealVar that we will fitTo
+    dof = degrees of freedom given to this model. This parameter is meaningless 
+        as the actual dof(=3) is hard coded into the model's definition
+    """
     # collect all variables that we don't want destroyed by Python once function ends
     out_dict = {}
     
     name = f"BWZ_Redux_a_coeff"
-    a_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    a_coeff = rt.RooRealVar(name,name, -0.001,-0.001,0.001)
     name = "exp_model_mass"
     exp_model_mass = rt.RooExponential(name, name, mass, a_coeff)
     
@@ -37,7 +43,7 @@ def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
 
     # start multiplying them all
     name = f"BWZ_Redux_c_coeff"
-    c_coeff = rt.RooRealVar(name,name, 2,-5.0,5.0)
+    c_coeff = rt.RooRealVar(name,name, 1.5,-5.0,5.0)
     BWZ_redux_main = rt.RooGenericPdf(
         "BWZ_redux_main", "@1/ ( pow((@0-@2), @3) + 0.25*pow(@1, @3) )", rt.RooArgList(mass, bwWidth, bwmZ, c_coeff)
     )
@@ -47,15 +53,15 @@ def MakeBWZ_Redux(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
     out_dict[c_coeff.GetName()] = c_coeff 
     out_dict[BWZ_redux_main.GetName()] = BWZ_redux_main 
 
-    name = "BWZ_Redux"
+    name = "BWZ_Redux_dof_3"
     final_model = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
     return (final_model, out_dict)
 
-def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
+def MakeBWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     """
     params:
     mass = rt.RooRealVar that we will fitTo
-    order = order of the sum of exponential, that we assume to be >= 2
+    dof = degrees of freedom given to this model. We assume it to be >= 2
     """
     # collect all variables that we don't want destroyed by Python once function ends
     out_dict = {}
@@ -66,7 +72,7 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
         1 : 0.69,
     }
     # make BernStein
-    bern_order = order-1
+    bern_order = dof-1
     BernCoeff_list = []
     for ix in range(bern_order):
         name = f"Bernstein_c_{ix}"
@@ -104,18 +110,18 @@ def MakeBWZxBern(mass: rt.RooRealVar, order: int) ->Tuple[rt.RooProdPdf, Dict]:
     # out_dict[full_BWZ.GetName()] = full_BWZ 
     
     # multiply BWZ and Bernstein
-    name = f"BWZxBern_order_{order}"
+    name = f"BWZxBern_dof_{dof}"
     # final_model = rt.RooProdPdf(name, name, [bern_model, full_BWZ]) 
     final_model = rt.RooProdPdf(name, name, [bern_model, BWZ, exp_model]) 
    
     return (final_model, out_dict)
     
 
-def MakeSumExponential(mass: rt.RooRealVar, order: int, fit_range="loSB,hiSB") ->Tuple[rt.RooAddPdf, Dict]:
+def MakeSumExponential(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->Tuple[rt.RooAddPdf, Dict]:
     """
     params:
     mass = rt.RooRealVar that we will fitTo
-    order = order of the sum of exponential, that we assume to be >= 2
+    dof = degrees of freedom of the sum of exponential, that we assume to be >= 3. Must be an odd number
     fit_range = str representation of fit range from mass. We assume this has already been defined before this
         function is called. If no fit_range is specified, you can give an empty string
     returns:
@@ -123,15 +129,14 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int, fit_range="loSB,hiSB") -
     dictionary of variables with {variable name : rt.RooRealVar or rt.RooExponential} format mainly for keep python from
     destroying these variables, but also useful in debugging
     """
-
+    order = int((dof+1)/2) # order is the number of expoenetial terms to sum up
+    print(f"order: {order}")
     b_start_val_map = {
         0 : -0.2,
-        1 : -1,
-        2 : -0.05,
+        1 : -0.02,
     }
     a_start_val_map = {
-        1 : 0.39,
-        2 : 0.59,
+        1 : 0.1,
     }
 
     
@@ -140,8 +145,9 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int, fit_range="loSB,hiSB") -
     a_i_list = [] # list of RooExp coeffs for RooAddPdf
     rest_list = [] # list of rest of variables to save it from being destroyed
 
-    #hard code in starting values
+    
     for ix in range(order):
+        #hard code in starting values
         name = f"S_exp_b_{ix}"
         b_start_val = b_start_val_map[ix]
         b_i = rt.RooRealVar(name, name, b_start_val, -2.0, 1.0)
@@ -159,7 +165,7 @@ def MakeSumExponential(mass: rt.RooRealVar, order: int, fit_range="loSB,hiSB") -
 
     
             
-    name = f"S_exp_order_{order}"
+    name = f"S_exp_dof_{dof}"
     recursiveFractions= True
     final_model = rt.RooAddPdf(name, name, model_list, a_i_list, recursiveFractions)
     # for good explnanation of recursiveFractions, visit https://root-forum.cern.ch/t/rooaddpdf-when-to-use-recursivefraction/33317
