@@ -9,7 +9,7 @@ from typing import Tuple, List, Dict
 import ROOT as rt
 
 
-from quickSMFtest_functions import MakeBWZ_Redux, MakeBWZxBern, MakeSumExponential,prepare_features,evaluate_bdt
+from quickSMFtest_functions import MakeBWZ_Redux, MakeBWZxBern, MakeSumExponential, MakeFEWZxBern
 
 
 
@@ -104,12 +104,12 @@ if __name__ == "__main__":
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         mass_name = "dimuon_mass"
-        mass =  rt.RooRealVar(mass_name,"mass (GeV)",120,110,150)
+        mass =  rt.RooRealVar(mass_name,mass_name,120,110,150)
         nbins = 80
         mass.setBins(nbins)
     
         # for debugging purposes -----------------
-        binning = np.linspace(110, 150, nbins)
+        binning = np.linspace(110, 150, nbins+1) # RooDataHist nbins are a bit different from np.histogram nbins apparently
         np_hist, _ = np.histogram(subCat_mass_arr, bins=binning)
         print(f"np_hist: {np_hist}")
         # -------------------------------------------
@@ -123,10 +123,7 @@ if __name__ == "__main__":
         fit_range = "loSB,hiSB" # we're fitting bkg only
     
         
-        dof = 3
-        BWZxBern, params_bern = MakeBWZxBern(mass, dof)
-        sumExp, params_exp = MakeSumExponential(mass, dof)
-        BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, dof)
+       
         
         roo_dataset = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
         
@@ -138,7 +135,16 @@ if __name__ == "__main__":
         # roo_hist.Print()
     
         
+        dof = 3
+
+        FEWZxBern, params_fewz = MakeFEWZxBern(mass, dof, roo_hist)
         
+        # FEWZxBern_func, params_fewz = MakeFEWZxBern(mass, dof, roo_hist)
+        # FEWZxBern = rt.RooGenericPdf("FEWZxBern", "Spline * Bernstein PDF", "@0", rt.RooArgList(FEWZxBern_func))
+        
+        # BWZxBern, params_bern = MakeBWZxBern(mass, dof)
+        sumExp, params_exp = MakeSumExponential(mass, dof)
+        BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, dof)
     
         smfVarList = []
         smf_order= poly_order_by_cat[cat_ix]
@@ -156,27 +162,35 @@ if __name__ == "__main__":
         # core_model = sumExp # BWZxBern , sumExp, BWZ_Redux
         # name = f"smf x {core_model.GetName()}"
         # final_model =  rt.RooProdPdf(name, name, [polynomial_model,core_model]) 
+        name = f"smf x {FEWZxBern.GetName()}"
+        final_FEWZxBern = rt.RooProdPdf(name, name, [polynomial_model,FEWZxBern]) 
         name = f"smf x {sumExp.GetName()}"
-        final_BWZ_Redux_model = rt.RooProdPdf(name, name, [polynomial_model,sumExp]) 
+        final_sumExp = rt.RooProdPdf(name, name, [polynomial_model,sumExp]) 
         name = f"smf x {BWZ_Redux.GetName()}"
-        final_BWZxBern_model = rt.RooProdPdf(name, name, [polynomial_model,BWZ_Redux]) 
+        final_BWZ_Redux = rt.RooProdPdf(name, name, [polynomial_model,BWZ_Redux]) 
+        
         
         rt.EnableImplicitMT()
         # _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
         # fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
         # _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        
         print("start BWZ_Redux !")
-        _ = final_BWZxBern_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        _ = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        print("start Fewz Bern !")
+        _ = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         print("start sumExp !")
-        _ = final_BWZ_Redux_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        _ = final_sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        
 
         # freeze the polynomial coefficient, and fine-tune the core functions
         for poly_coeff in smfVarList:
             poly_coeff.setConstant(True)
-        
-        fit_result = final_BWZxBern_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        fit_result = final_BWZ_Redux_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+
+        fit_result = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
     
     
         
@@ -186,25 +200,28 @@ if __name__ == "__main__":
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
         roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
         # final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
-        final_BWZxBern_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZxBern_model.GetName(), LineColor=rt.kGreen)
-        final_BWZ_Redux_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZ_Redux_model.GetName(), LineColor=rt.kBlue)
+        final_BWZ_Redux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZ_Redux.GetName(), LineColor=rt.kGreen)
+        final_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kBlue)
+        final_FEWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
         dataset_name = "data"
         roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
-    
+        frame.Draw()
     
         # legend
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
         # name=final_model.GetName()
-        name=final_BWZxBern_model.GetName()
+        name=final_BWZ_Redux.GetName()
         legend.AddEntry(name,name, "L")
-        name=final_BWZ_Redux_model.GetName()
+        name=final_sumExp.GetName()
+        legend.AddEntry(name,name, "L")
+        name=final_FEWZxBern.GetName()
         legend.AddEntry(name,name, "L")
         name="data"
         legend.AddEntry(name,name, "P")
         legend.Draw()
         
     
-        frame.Draw()
+        
         canvas.Update()
         canvas.Draw()
     
@@ -216,26 +233,37 @@ if __name__ == "__main__":
         cat = rt.RooCategory("pdf_index","Index of Pdf which is active");
     
         # // Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
-        # // 0 == BWZxBern
+        # // 0 == BWZ_Redux
         # // 1 == sumExp
-        # // 2 == BWZ_Redux
+        # // 2 == FEWZxBern
     
         pdf_list = rt.RooArgList(
-            # BWZxBern,
-            sumExp,
-            BWZ_Redux
+            final_FEWZxBern,
+            final_BWZ_Redux,
+            final_sumExp,
+            # final_FEWZxBern,
+            # FEWZxBern,
         )
         print("just b4 roo multipdf")
         multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
+
+        norm = rt.RooRealVar("roomultipdf_norm","Number of background events",1000,0,10000)
+
+        # inject a signal 
+        sigma = rt.RooRealVar("sigma","sigma",1.2); 
+        sigma.setConstant(True);
+        MH = rt.RooRealVar ("MH","MH",125); 
+        MH.setConstant(True)
+        signal =rt.RooGaussian ("signal","signal",mass,MH,sigma);
 
         fout = rt.TFile("./workspace.root","RECREATE")
         wout = rt.RooWorkspace("workspace","workspace")
         roo_hist.SetName("data");
         wout.Import(roo_hist);
         wout.Import(cat);
-        # wout.Import(norm);
+        wout.Import(norm);
         wout.Import(multipdf);
-        # wout.Import(signal);
+        wout.Import(signal);
         wout.Print();
         wout.Write();
     

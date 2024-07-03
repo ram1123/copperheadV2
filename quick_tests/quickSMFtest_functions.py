@@ -5,6 +5,74 @@ import pickle
 import awkward as ak
 import dask_awkward as dak
 from distributed import Client
+import ctypes
+
+def MakeFEWZxBern(mass: rt.RooRealVar, dof: int, mass_hist: rt.RooDataHist) ->Tuple[rt.RooProdPdf, Dict]:
+    """
+    params:
+    mass = rt.RooRealVar that we will fitTo
+    dof = degrees of freedom given to this model. Since the spline
+    has no dof, all the dof is inserted to the Bernstein
+    """
+    # collect all variables that we don't want destroyed by Python once function ends
+    out_dict = {}
+
+    c_start_val_map = {
+        0 : 0.34,
+        1 : 0.33,
+        2 : 0.33,
+    }
+    # make BernStein of order == dof
+    bern_order = dof
+    BernCoeff_list = []
+    for ix in range(bern_order):
+        name = f"FEWZxBern_Bernstein_c_{ix}"
+        c_start_val = c_start_val_map[ix]
+        coeff = rt.RooRealVar(name,name, c_start_val,-2.0, 2.0)
+        out_dict[name] = coeff # add variable to make python remember 
+        BernCoeff_list.append(coeff)
+    name = f"FEWZxBern_Bernstein_model_order_{bern_order}"
+    bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
+    out_dict[name] = bern_model # add model to make python remember
+
+    # make the spline portion
+    x_arr = []
+    y_arr = []
+    nbins = mass.frame().GetXaxis().GetNbins()
+    for ix in range(nbins):
+        binCentre = mass_hist.get(ix)[mass.GetName()].getVal()
+        x_arr.append(binCentre)
+        binVal = mass_hist.weight(ix)
+        y_arr.append(binVal)
+
+    
+    # x_arr_vec = rt.vector("double")(x_arr)
+    # y_arr_vec = rt.vector("double")(y_arr)
+    # name = "fewz_roospline_func"
+    # roo_spline_func = rt.RooSpline(name, name, mass, x_arr_vec, y_arr_vec)
+        
+        x0 = [109.75,   110.25, 110.75, 111.25, 111.75, 112.25, 112.75, 113.25, 113.75, 114.25, 114.75, 115.25, 115.75, 116.25, 116.75, 117.25, 117.75, 118.25, 118.75, 119.25, 119.75, 120.25, 120.75, 121.25, 121.75, 122.25, 122.75, 123.25, 123.75, 124.25, 124.75, 125.25, 125.75, 126.25, 126.75, 127.25, 127.75, 128.25, 128.75, 129.25, 129.75, 130.25, 130.75, 131.25, 131.75, 132.25, 132.75, 133.25, 133.75, 134.25, 134.75, 135.25, 135.75, 136.25, 136.75, 137.25, 137.75, 138.25, 138.75, 139.25, 139.75, 140.25, 140.75, 141.25, 141.75, 142.25, 142.75, 143.25, 143.75, 144.25, 144.75, 145.25, 145.75, 146.25, 146.75, 147.25, 147.75, 148.25, 148.75, 149.25, 149.75, 150.25]
+    
+    y0 = [1406.0, 1406.0, 1422.0, 1355.0, 1327.0, 1258.0, 1206.0, 1151.0, 1149.0, 1105.0, 1034.0, 1020.0, 1039.0, 965.0, 992.0, 955.0, 871.0, 914.0, 844.0, 847.0, 847.0, 838.0, 776.0, 780.0, 772.0, 776.0, 748.0, 777.0, 668.0, 678.0, 662.0, 665.0, 664.0, 642.0, 607.0, 604.0, 647.0, 585.0, 566.0, 578.0, 583.0, 574.0, 515.0, 528.0, 548.0, 513.0, 522.0, 494.0, 510.0, 482.0, 470.0, 476.0, 518.0, 426.0, 462.0, 477.0, 473.0, 462.0, 436.0, 409.0, 413.0, 436.0, 458.0, 402.0, 436.0, 424.0, 446.0, 444.0, 378.0, 366.0, 424.0, 338.0, 388.0, 321.0, 352.0, 349.0, 342.0, 352.0, 338.0, 336.0, 316.0, 316.0]
+
+    x_arr_ctype = (ctypes.c_double * len(x_arr))(*x_arr)
+    y_arr_ctype = (ctypes.c_double * len(y_arr))(*y_arr)
+    n = len(x_arr)
+    name = "fewz_roospline_func"
+    roo_spline_func = rt.RooSpline1D(name, name, mass, n, x_arr_ctype, y_arr_ctype, "CSPLINE")
+
+    out_dict[name] = roo_spline_func
+    name = "fewz_roospline_pdf"
+    roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
+    out_dict[name] = roo_spline_pdf # add model to make python remember  
+                          
+
+    name = f"FEWZxBern_dof_{dof}"
+    final_model = rt.RooProdPdf(name, name, [bern_model, roo_spline_pdf]) 
+   
+    return (final_model, out_dict)
+
+    
 
 def MakeBWZ_Redux(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     """
@@ -75,12 +143,12 @@ def MakeBWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     bern_order = dof-1
     BernCoeff_list = []
     for ix in range(bern_order):
-        name = f"Bernstein_c_{ix}"
+        name = f"BWZxBern_Bernstein_c_{ix}"
         c_start_val = c_start_val_map[ix]
         coeff = rt.RooRealVar(name,name, c_start_val,-2.0, 2.0)
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.append(coeff)
-    name = f"Bernstein_model_order_{bern_order}"
+    name = f"BWZxBern_Bernstein_model_order_{bern_order}"
     bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add variable to make python remember
 
