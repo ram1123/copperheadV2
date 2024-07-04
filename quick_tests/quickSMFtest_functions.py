@@ -18,20 +18,21 @@ def MakeFEWZxBern(mass: rt.RooRealVar, dof: int, mass_hist: rt.RooDataHist) ->Tu
     out_dict = {}
 
     c_start_val_map = {
-        0 : 0.34,
-        1 : 0.33,
-        2 : 0.33,
+        0 : 0.25,
+        1 : 0.25,
+        2 : 0.25,
+        3 : 0.25,
     }
     # make BernStein of order == dof
-    bern_order = dof
+    n_coeffs = dof + 1 # you need to give in n+1 coefficients for degree of freedom n
     BernCoeff_list = []
-    for ix in range(bern_order):
+    for ix in range(n_coeffs):
         name = f"FEWZxBern_Bernstein_c_{ix}"
         c_start_val = c_start_val_map[ix]
         coeff = rt.RooRealVar(name,name, c_start_val,-2.0, 2.0)
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.append(coeff)
-    name = f"FEWZxBern_Bernstein_model_order_{bern_order}"
+    name = f"FEWZxBern_Bernstein_model_n_coeffs_{n_coeffs}"
     bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add model to make python remember
 
@@ -125,6 +126,66 @@ def MakeBWZ_Redux(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     final_model = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
     return (final_model, out_dict)
 
+def MakeBWZxBernFast(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
+    """
+    params:
+    mass = rt.RooRealVar that we will fitTo
+    dof = degrees of freedom given to this model. We assume it to be >= 2
+    """
+    # collect all variables that we don't want destroyed by Python once function ends
+    out_dict = {}
+
+
+    c_start_val_map = {
+        0 : 2,
+        1 : 6, 
+    }
+    # make BernStein
+    bern_n_coeffs = dof-1  # you need to give in n+1 coefficients for degree of freedom n
+    print(f"bernFast_n_coeffs: {bern_n_coeffs}")
+    BernCoeff_list = rt.RooArgList()
+    for ix in range(bern_n_coeffs):
+        name = f"BWZxBernFast_Bernstein_c_{ix}"
+        c_start_val = c_start_val_map[ix]
+        coeff = rt.RooRealVar(name,name, c_start_val,-2.0, 2.0)
+        out_dict[name] = coeff # add variable to make python remember 
+        BernCoeff_list.add(coeff)
+    name = f"BWZxBernFast_Bernstein_model_n_coeffs_{bern_n_coeffs}"
+    bern_model = rt.RooBernsteinFast(name, name, mass, BernCoeff_list)
+    out_dict[name] = bern_model # add variable to make python remember
+
+    
+    # make BWZ
+    bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
+    bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
+    bwWidth.setConstant(True)
+    bwmZ.setConstant(True)
+    out_dict[bwWidth.GetName()] = bwWidth 
+    out_dict[bwmZ.GetName()] = bwmZ 
+    
+    name = "VanillaBW_model"
+    BWZ = rt.RooBreitWigner(name, name, mass, bwmZ,bwWidth)
+    # our BWZ model is also multiplied by exp(a* mass) as defined in the AN
+    name = "BWZ_exp_coeff"
+    expCoeff = rt.RooRealVar(name, name, -0.015, -1.0, 0.5)
+    name = "BWZ_exp_model"
+    exp_model = rt.RooExponential(name, name, mass, expCoeff)
+    # name = "BWZxExp"
+    # full_BWZ = rt.RooProdPdf(name, name, [BWZ, exp_model]) 
+
+    # add variables
+    out_dict[BWZ.GetName()] = BWZ 
+    out_dict[expCoeff.GetName()] = expCoeff 
+    out_dict[exp_model.GetName()] = exp_model 
+    # out_dict[full_BWZ.GetName()] = full_BWZ 
+    
+    # multiply BWZ and Bernstein
+    name = f"BWZxBern_dof_{dof}"
+    # final_model = rt.RooProdPdf(name, name, [bern_model, full_BWZ]) 
+    final_model = rt.RooProdPdf(name, name, [bern_model, BWZ, exp_model]) 
+   
+    return (final_model, out_dict)
+
 def MakeBWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     """
     params:
@@ -136,19 +197,23 @@ def MakeBWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
 
 
     c_start_val_map = {
-        0 : 0.34,
-        1 : 0.69,
+        0 : 0.17,
+        1 : 0.34, # 0.0025
+        2 : 1.05,
     }
     # make BernStein
-    bern_order = dof-1
+    bern_dof = dof-1 # one dof is used for the RooExponenet
+    bern_n_coeffs = bern_dof +1 # you need to give in n+1 coefficients for degree of freedom n
+    print(f"bern_n_coeffs: {bern_n_coeffs}")
+    # bern_n_coeffs = 2
     BernCoeff_list = []
-    for ix in range(bern_order):
+    for ix in range(bern_n_coeffs):
         name = f"BWZxBern_Bernstein_c_{ix}"
         c_start_val = c_start_val_map[ix]
         coeff = rt.RooRealVar(name,name, c_start_val,-2.0, 2.0)
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.append(coeff)
-    name = f"BWZxBern_Bernstein_model_order_{bern_order}"
+    name = f"BWZxBern_Bernstein_model_n_coeffs_{bern_n_coeffs}"
     bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add variable to make python remember
 

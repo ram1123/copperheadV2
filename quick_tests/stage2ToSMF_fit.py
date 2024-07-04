@@ -9,7 +9,7 @@ from typing import Tuple, List, Dict
 import ROOT as rt
 
 
-from quickSMFtest_functions import MakeBWZ_Redux, MakeBWZxBern, MakeSumExponential, MakeFEWZxBern
+from quickSMFtest_functions import MakeBWZ_Redux, MakeBWZxBern, MakeSumExponential, MakeFEWZxBern, MakeBWZxBernFast
 
 
 
@@ -94,6 +94,8 @@ if __name__ == "__main__":
         3:3,
         4:3,
     }
+    dof = 3 # degrees of freedom for the core-functions. This should be same for all the functions
+    
     # for cat_ix in range(5):
     for cat_ix in [0]:
         subCat_filter = (processed_events["subCategory_idx"] == cat_ix)
@@ -116,11 +118,13 @@ if __name__ == "__main__":
         
     
         # set sideband mass range after initializing dataset (idk why this order matters, but that's how it's shown here https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/tutorial2023/parametric_exercise/?h=sideband#background-modelling)
-        mass.setRange("loSB", 110, 115 )
         mass.setRange("hiSB", 135, 150 )
+        mass.setRange("loSB", 110, 115 )
+        
         mass.setRange("h_peak", 115, 135 )
         mass.setRange("full", 110, 150 )
-        fit_range = "loSB,hiSB" # we're fitting bkg only
+        # fit_range = "loSB,hiSB" # we're fitting bkg only
+        fit_range = "hiSB,loSB" # we're fitting bkg only
     
         
        
@@ -135,14 +139,16 @@ if __name__ == "__main__":
         # roo_hist.Print()
     
         
-        dof = 3
+        
 
         FEWZxBern, params_fewz = MakeFEWZxBern(mass, dof, roo_hist)
+        
         
         # FEWZxBern_func, params_fewz = MakeFEWZxBern(mass, dof, roo_hist)
         # FEWZxBern = rt.RooGenericPdf("FEWZxBern", "Spline * Bernstein PDF", "@0", rt.RooArgList(FEWZxBern_func))
         
         # BWZxBern, params_bern = MakeBWZxBern(mass, dof)
+        BWZxBern, params_bern = MakeBWZxBernFast(mass, dof)
         sumExp, params_exp = MakeSumExponential(mass, dof)
         BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, dof)
     
@@ -162,6 +168,8 @@ if __name__ == "__main__":
         # core_model = sumExp # BWZxBern , sumExp, BWZ_Redux
         # name = f"smf x {core_model.GetName()}"
         # final_model =  rt.RooProdPdf(name, name, [polynomial_model,core_model]) 
+        name = f"smf x {BWZxBern.GetName()}"
+        final_BWZxBern = rt.RooProdPdf(name, name, [polynomial_model,BWZxBern]) 
         name = f"smf x {FEWZxBern.GetName()}"
         final_FEWZxBern = rt.RooProdPdf(name, name, [polynomial_model,FEWZxBern]) 
         name = f"smf x {sumExp.GetName()}"
@@ -176,10 +184,16 @@ if __name__ == "__main__":
         # _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         
+        
+        # -------------------------------------------------------
+        print("start final_BWZxBern !")
+        _ = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # _ = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range("full"), EvalBackend="cpu", Save=True, )
+        # print("start Fewz Bern !")
+        # _ = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # -------------------------------------------------------
         print("start BWZ_Redux !")
         _ = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        print("start Fewz Bern !")
-        _ = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         print("start sumExp !")
         _ = final_sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         
@@ -188,7 +202,10 @@ if __name__ == "__main__":
         for poly_coeff in smfVarList:
             poly_coeff.setConstant(True)
 
-        fit_result = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # -------------------------------------------------------
+        fit_result = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # fit_result = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # -------------------------------------------------------
         fit_result = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         fit_result = final_sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
     
@@ -202,20 +219,26 @@ if __name__ == "__main__":
         # final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
         final_BWZ_Redux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZ_Redux.GetName(), LineColor=rt.kGreen)
         final_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kBlue)
-        final_FEWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
+        # -------------------------------------------------------
+        # final_FEWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
+        final_BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
+        # -------------------------------------------------------
         dataset_name = "data"
         roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
         frame.Draw()
     
         # legend
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        # name=final_model.GetName()
         name=final_BWZ_Redux.GetName()
         legend.AddEntry(name,name, "L")
         name=final_sumExp.GetName()
         legend.AddEntry(name,name, "L")
-        name=final_FEWZxBern.GetName()
+        # -------------------------------------------------------
+        name=final_BWZxBern.GetName()
         legend.AddEntry(name,name, "L")
+        # name=final_FEWZxBern.GetName()
+        # legend.AddEntry(name,name, "L")
+        # -------------------------------------------------------
         name="data"
         legend.AddEntry(name,name, "P")
         legend.Draw()
@@ -238,11 +261,14 @@ if __name__ == "__main__":
         # // 2 == FEWZxBern
     
         pdf_list = rt.RooArgList(
-            final_FEWZxBern,
-            final_BWZ_Redux,
-            final_sumExp,
+            # -------------------------------------------------------
+            # final_BWZxBern,
+            # params_bern["BWZxBern_Bernstein_model_n_coeffs_3"],
+            BWZxBern,
             # final_FEWZxBern,
-            # FEWZxBern,
+            # -------------------------------------------------------
+            # final_BWZ_Redux,
+            # final_sumExp,
         )
         print("just b4 roo multipdf")
         multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
