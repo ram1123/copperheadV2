@@ -145,8 +145,9 @@ if __name__ == "__main__":
         # FEWZxBern_func, params_fewz = MakeFEWZxBern(mass, dof, roo_hist)
         # FEWZxBern = rt.RooGenericPdf("FEWZxBern", "Spline * Bernstein PDF", "@0", rt.RooArgList(FEWZxBern_func))
         
-        # BWZxBern, params_bern = MakeBWZxBern(mass, dof)
+        BWZxBern, params_bern = MakeBWZxBern(mass, dof)
         # BWZxBern, params_bern = MakeBWZxBernFast(mass, dof)
+        
         sumExp, params_exp = MakeSumExponential(mass, dof)
         BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, dof)
         powerSum, params_power = MakePowerSum(mass, dof)
@@ -167,8 +168,8 @@ if __name__ == "__main__":
         # -------------------------------------------------------
         name = f"smf x {powerSum.GetName()}"
         final_powerSum = rt.RooProdPdf(name, name, [polynomial_model,powerSum]) 
-        # name = f"smf x {BWZxBern.GetName()}"
-        # final_BWZxBern = rt.RooProdPdf(name, name, [polynomial_model,BWZxBern]) 
+        name = f"smf x {BWZxBern.GetName()}"
+        final_BWZxBern = rt.RooProdPdf(name, name, [polynomial_model,BWZxBern]) 
         # -------------------------------------------------------
         name = f"smf x {FEWZxBern.GetName()}"
         final_FEWZxBern = rt.RooProdPdf(name, name, [polynomial_model,FEWZxBern]) 
@@ -189,24 +190,25 @@ if __name__ == "__main__":
         # -------------------------------------------------------
         print("start final_powerSum !")
         _ = final_powerSum.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        # print("start final_BWZxBern !")
-        # _ = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        print("start final_BWZxBern !")
+        _ = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # print("start Fewz Bern !")
         # _ = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # -------------------------------------------------------
-        print("start BWZ_Redux !")
-        _ = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        print("start sumExp !")
-        _ = final_sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # print("start BWZ_Redux !")
+        # _ = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # print("start sumExp !")
+        # _ = final_sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         
-
+        raise ValueError
+        
         # freeze the polynomial coefficient, and fine-tune the core functions
         for poly_coeff in smfVarList:
             poly_coeff.setConstant(True)
 
         # -------------------------------------------------------
         fit_result = final_powerSum.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        # fit_result = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # fit_result = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # -------------------------------------------------------
         fit_result = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
@@ -267,12 +269,12 @@ if __name__ == "__main__":
         # // 2 == PowerSum
     
         pdf_list = rt.RooArgList(
-            final_BWZ_Redux,
-            final_sumExp,
+            # final_BWZ_Redux,
+            # final_sumExp,
             # -------------------------------------------------------
-            # final_BWZxBern,
+            final_BWZxBern,
             # params_bern["BWZxBern_Bernstein_model_n_coeffs_3"],
-            final_powerSum,
+            # final_powerSum,
             # final_FEWZxBern,
             # -------------------------------------------------------
         )

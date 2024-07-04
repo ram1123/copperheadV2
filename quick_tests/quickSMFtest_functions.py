@@ -151,7 +151,8 @@ def MakeBWZxBernFast(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.add(coeff)
     name = f"BWZxBernFast_Bernstein_model_n_coeffs_{bern_n_coeffs}"
-    bern_model = rt.RooBernsteinFast(name, name, mass, BernCoeff_list)
+    order = bern_n_coeffs+1
+    bern_model = rt.RooBernsteinFast(order)(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add variable to make python remember
 
     
@@ -201,6 +202,11 @@ def MakeBWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
         1 : 0.34, # 0.0025
         2 : 1.05,
     }
+    # c_start_val_map = {
+    #     0 : 1,
+    #     1 : 2,
+    #     2 : 6,
+    # }
     # make BernStein
     bern_dof = dof-1 # one dof is used for the RooExponenet
     bern_n_coeffs = bern_dof +1 # you need to give in n+1 coefficients for degree of freedom n
@@ -211,6 +217,8 @@ def MakeBWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
         name = f"BWZxBern_Bernstein_c_{ix}"
         c_start_val = c_start_val_map[ix]
         coeff = rt.RooRealVar(name,name, c_start_val,-2.0, 2.0)
+        if ix == 0 : # freeze the first coeff
+            coeff.setConstant(True)
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.append(coeff)
     name = f"BWZxBern_Bernstein_model_n_coeffs_{bern_n_coeffs}"
@@ -331,7 +339,7 @@ def MakePowerSum(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->Tuple[r
     destroying these variables, but also useful in debugging
     """
     order = int((dof+1)/2) # order is the number of power terms to sum up
-    print(f"order: {order}")
+    print(f"MakePowerSum order: {order}")
     b_start_val_map = {
         0 : -10,
         1 : -15,
@@ -362,7 +370,7 @@ def MakePowerSum(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->Tuple[r
         a_i = rt.RooRealVar(name, name, a_start_val, 0, 1.0)
         a_i_list.append(a_i)
         
-    name = f"PowerSum_dof_{ix}"
+    name = f"PowerSum_dof_{dof}"
     final_model = rt.RooPowerSum(name, name, mass, a_i_list, b_i_list)
 
     
