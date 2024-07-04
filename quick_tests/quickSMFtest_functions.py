@@ -276,7 +276,7 @@ def MakeSumExponential(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->T
     # TODO: make a dictionary list of starting values optimized for sumexponential for specific data, starting with data_* for ggH
     model_list = [] # list of RooExp models for RooAddPdf
     a_i_list = [] # list of RooExp coeffs for RooAddPdf
-    rest_list = [] # list of rest of variables to save it from being destroyed
+    b_i_list = [] # list of RooExp b_i variables to save it from being destroyed
 
     
     for ix in range(order):
@@ -284,7 +284,7 @@ def MakeSumExponential(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->T
         name = f"S_exp_b_{ix}"
         b_start_val = b_start_val_map[ix]
         b_i = rt.RooRealVar(name, name, b_start_val, -2.0, 1.0)
-        rest_list.append(b_i)
+        b_i_list.append(b_i)
         
         name = f"S_exp_model_{ix}"
         model = rt.RooExponential(name, name, mass, b_i)
@@ -313,7 +313,64 @@ def MakeSumExponential(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->T
         out_dict[model.GetName()] = model
     for a_i in a_i_list:
         out_dict[a_i.GetName()] = a_i
-    for var in rest_list:
+    for var in b_i_list:
+        out_dict[var.GetName()] = var
+    return (final_model, out_dict)
+
+
+def MakePowerSum(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->Tuple[rt.RooAddPdf, Dict]:
+    """
+    params:
+    mass = rt.RooRealVar that we will fitTo
+    dof = degrees of freedom of the sum of exponential, that we assume to be >= 3. Must be an odd number
+    fit_range = str representation of fit range from mass. We assume this has already been defined before this
+        function is called. If no fit_range is specified, you can give an empty string
+    returns:
+    rt.RooAddPdf
+    dictionary of variables with {variable name : rt.RooRealVar or rt.RooPowerSum} format mainly for keep python from
+    destroying these variables, but also useful in debugging
+    """
+    order = int((dof+1)/2) # order is the number of power terms to sum up
+    print(f"order: {order}")
+    b_start_val_map = {
+        0 : -10,
+        1 : -15,
+    }
+    a_start_val_map = {
+        0 : 0.001,
+        1 : 0.9,
+    }
+    out_dict = {}
+    mass = rt.RooFormulaVar("mass_shift", "@0-100", rt.RooArgList(mass))
+    out_dict[mass.GetName()] = mass
+
+    
+    # TODO: make a dictionary list of starting values optimized for sumexponential for specific data, starting with data_* for ggH
+    a_i_list = [] # list of RooPowerSum coeffs 
+    b_i_list = [] # list of RooPower exponents
+
+    
+    for ix in range(order):
+        #hard code in starting values
+        name = f"PowerSum_b_{ix}"
+        b_start_val = b_start_val_map[ix]
+        b_i = rt.RooRealVar(name, name, b_start_val, -2.0, 1.0)
+        b_i_list.append(b_i)
+
+        name = f"PowerSum_a_{ix}"
+        a_start_val = a_start_val_map[ix]
+        a_i = rt.RooRealVar(name, name, a_start_val, 0, 1.0)
+        a_i_list.append(a_i)
+        
+    name = f"PowerSum_dof_{ix}"
+    final_model = rt.RooPowerSum(name, name, mass, a_i_list, b_i_list)
+
+    
+    # collect all variables that we don't want destroyed by Python once function ends
+    
+    for a_i in a_i_list:
+        out_dict[a_i.GetName()] = a_i
+    for var in b_i_list:
         out_dict[var.GetName()] = var
     return (final_model, out_dict)
 

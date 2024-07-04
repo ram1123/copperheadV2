@@ -9,7 +9,7 @@ from typing import Tuple, List, Dict
 import ROOT as rt
 
 
-from quickSMFtest_functions import MakeBWZ_Redux, MakeBWZxBern, MakeSumExponential, MakeFEWZxBern, MakeBWZxBernFast
+from quickSMFtest_functions import MakeBWZ_Redux, MakeBWZxBern, MakeSumExponential, MakeFEWZxBern, MakeBWZxBernFast, MakePowerSum
 
 
 
@@ -142,15 +142,14 @@ if __name__ == "__main__":
         
 
         FEWZxBern, params_fewz = MakeFEWZxBern(mass, dof, roo_hist)
-        
-        
         # FEWZxBern_func, params_fewz = MakeFEWZxBern(mass, dof, roo_hist)
         # FEWZxBern = rt.RooGenericPdf("FEWZxBern", "Spline * Bernstein PDF", "@0", rt.RooArgList(FEWZxBern_func))
         
         # BWZxBern, params_bern = MakeBWZxBern(mass, dof)
-        BWZxBern, params_bern = MakeBWZxBernFast(mass, dof)
+        # BWZxBern, params_bern = MakeBWZxBernFast(mass, dof)
         sumExp, params_exp = MakeSumExponential(mass, dof)
         BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, dof)
+        powerSum, params_power = MakePowerSum(mass, dof)
     
         smfVarList = []
         smf_order= poly_order_by_cat[cat_ix]
@@ -165,17 +164,19 @@ if __name__ == "__main__":
         # shift.setConstant(True)
         shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-125", rt.RooArgList(mass))
         polynomial_model = rt.RooPolynomial("pol", "pol", shifted_mass, smfVarList)
-        # core_model = sumExp # BWZxBern , sumExp, BWZ_Redux
-        # name = f"smf x {core_model.GetName()}"
-        # final_model =  rt.RooProdPdf(name, name, [polynomial_model,core_model]) 
-        name = f"smf x {BWZxBern.GetName()}"
-        final_BWZxBern = rt.RooProdPdf(name, name, [polynomial_model,BWZxBern]) 
+        # -------------------------------------------------------
+        name = f"smf x {powerSum.GetName()}"
+        final_powerSum = rt.RooProdPdf(name, name, [polynomial_model,powerSum]) 
+        # name = f"smf x {BWZxBern.GetName()}"
+        # final_BWZxBern = rt.RooProdPdf(name, name, [polynomial_model,BWZxBern]) 
+        # -------------------------------------------------------
         name = f"smf x {FEWZxBern.GetName()}"
         final_FEWZxBern = rt.RooProdPdf(name, name, [polynomial_model,FEWZxBern]) 
         name = f"smf x {sumExp.GetName()}"
         final_sumExp = rt.RooProdPdf(name, name, [polynomial_model,sumExp]) 
         name = f"smf x {BWZ_Redux.GetName()}"
         final_BWZ_Redux = rt.RooProdPdf(name, name, [polynomial_model,BWZ_Redux]) 
+       
         
         
         rt.EnableImplicitMT()
@@ -186,9 +187,10 @@ if __name__ == "__main__":
         
         
         # -------------------------------------------------------
-        print("start final_BWZxBern !")
-        _ = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        # _ = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range("full"), EvalBackend="cpu", Save=True, )
+        print("start final_powerSum !")
+        _ = final_powerSum.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # print("start final_BWZxBern !")
+        # _ = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # print("start Fewz Bern !")
         # _ = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # -------------------------------------------------------
@@ -203,7 +205,8 @@ if __name__ == "__main__":
             poly_coeff.setConstant(True)
 
         # -------------------------------------------------------
-        fit_result = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_powerSum.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # fit_result = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # fit_result = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # -------------------------------------------------------
         fit_result = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
@@ -220,8 +223,9 @@ if __name__ == "__main__":
         final_BWZ_Redux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZ_Redux.GetName(), LineColor=rt.kGreen)
         final_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kBlue)
         # -------------------------------------------------------
+        final_powerSum.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
+        # final_BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
         # final_FEWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
-        final_BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
         # -------------------------------------------------------
         dataset_name = "data"
         roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
@@ -234,8 +238,10 @@ if __name__ == "__main__":
         name=final_sumExp.GetName()
         legend.AddEntry(name,name, "L")
         # -------------------------------------------------------
-        name=final_BWZxBern.GetName()
+        name=final_powerSum.GetName()
         legend.AddEntry(name,name, "L")
+        # name=final_BWZxBern.GetName()
+        # legend.AddEntry(name,name, "L")
         # name=final_FEWZxBern.GetName()
         # legend.AddEntry(name,name, "L")
         # -------------------------------------------------------
@@ -258,17 +264,17 @@ if __name__ == "__main__":
         # // Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
         # // 0 == BWZ_Redux
         # // 1 == sumExp
-        # // 2 == FEWZxBern
+        # // 2 == PowerSum
     
         pdf_list = rt.RooArgList(
+            final_BWZ_Redux,
+            final_sumExp,
             # -------------------------------------------------------
             # final_BWZxBern,
             # params_bern["BWZxBern_Bernstein_model_n_coeffs_3"],
-            BWZxBern,
+            final_powerSum,
             # final_FEWZxBern,
             # -------------------------------------------------------
-            # final_BWZ_Redux,
-            # final_sumExp,
         )
         print("just b4 roo multipdf")
         multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
