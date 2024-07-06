@@ -52,7 +52,7 @@ def MakeFEWZxBern(mass: rt.RooRealVar, dof: int, mass_hist: rt.RooDataHist) ->Tu
     # name = "fewz_roospline_func"
     # roo_spline_func = rt.RooSpline(name, name, mass, x_arr_vec, y_arr_vec)
         
-        x0 = [109.75,   110.25, 110.75, 111.25, 111.75, 112.25, 112.75, 113.25, 113.75, 114.25, 114.75, 115.25, 115.75, 116.25, 116.75, 117.25, 117.75, 118.25, 118.75, 119.25, 119.75, 120.25, 120.75, 121.25, 121.75, 122.25, 122.75, 123.25, 123.75, 124.25, 124.75, 125.25, 125.75, 126.25, 126.75, 127.25, 127.75, 128.25, 128.75, 129.25, 129.75, 130.25, 130.75, 131.25, 131.75, 132.25, 132.75, 133.25, 133.75, 134.25, 134.75, 135.25, 135.75, 136.25, 136.75, 137.25, 137.75, 138.25, 138.75, 139.25, 139.75, 140.25, 140.75, 141.25, 141.75, 142.25, 142.75, 143.25, 143.75, 144.25, 144.75, 145.25, 145.75, 146.25, 146.75, 147.25, 147.75, 148.25, 148.75, 149.25, 149.75, 150.25]
+    x0 = [109.75,   110.25, 110.75, 111.25, 111.75, 112.25, 112.75, 113.25, 113.75, 114.25, 114.75, 115.25, 115.75, 116.25, 116.75, 117.25, 117.75, 118.25, 118.75, 119.25, 119.75, 120.25, 120.75, 121.25, 121.75, 122.25, 122.75, 123.25, 123.75, 124.25, 124.75, 125.25, 125.75, 126.25, 126.75, 127.25, 127.75, 128.25, 128.75, 129.25, 129.75, 130.25, 130.75, 131.25, 131.75, 132.25, 132.75, 133.25, 133.75, 134.25, 134.75, 135.25, 135.75, 136.25, 136.75, 137.25, 137.75, 138.25, 138.75, 139.25, 139.75, 140.25, 140.75, 141.25, 141.75, 142.25, 142.75, 143.25, 143.75, 144.25, 144.75, 145.25, 145.75, 146.25, 146.75, 147.25, 147.75, 148.25, 148.75, 149.25, 149.75, 150.25]
     
     y0 = [1406.0, 1406.0, 1422.0, 1355.0, 1327.0, 1258.0, 1206.0, 1151.0, 1149.0, 1105.0, 1034.0, 1020.0, 1039.0, 965.0, 992.0, 955.0, 871.0, 914.0, 844.0, 847.0, 847.0, 838.0, 776.0, 780.0, 772.0, 776.0, 748.0, 777.0, 668.0, 678.0, 662.0, 665.0, 664.0, 642.0, 607.0, 604.0, 647.0, 585.0, 566.0, 578.0, 583.0, 574.0, 515.0, 528.0, 548.0, 513.0, 522.0, 494.0, 510.0, 482.0, 470.0, 476.0, 518.0, 426.0, 462.0, 477.0, 473.0, 462.0, 436.0, 409.0, 413.0, 436.0, 458.0, 402.0, 436.0, 424.0, 446.0, 444.0, 378.0, 366.0, 424.0, 338.0, 388.0, 321.0, 352.0, 349.0, 342.0, 352.0, 338.0, 336.0, 316.0, 316.0]
 
@@ -136,23 +136,27 @@ def MakeBWZxBernFast(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]
     out_dict = {}
 
 
+
     c_start_val_map = {
-        0 : 2,
-        1 : 6, 
+        0 : 1.157,
+        1 : 1.602,
+        2 : 1.463,
     }
     # make BernStein
-    bern_n_coeffs = dof-1  # you need to give in n+1 coefficients for degree of freedom n
+    bern_n_coeffs = dof-1 +1 # you need to give in n+1 coefficients for degree of freedom n
     print(f"bernFast_n_coeffs: {bern_n_coeffs}")
     BernCoeff_list = rt.RooArgList()
+
     for ix in range(bern_n_coeffs):
         name = f"BWZxBernFast_Bernstein_c_{ix}"
         c_start_val = c_start_val_map[ix]
-        coeff = rt.RooRealVar(name,name, c_start_val,-2.0, 2.0)
+        coeff = rt.RooRealVar(name,name, c_start_val,0, 2.0)
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.add(coeff)
+    
+    #
     name = f"BWZxBernFast_Bernstein_model_n_coeffs_{bern_n_coeffs}"
-    order = bern_n_coeffs+1
-    bern_model = rt.RooBernsteinFast(order)(name, name, mass, BernCoeff_list)
+    bern_model = rt.RooBernsteinFast(bern_n_coeffs)(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add variable to make python remember
 
     
@@ -197,16 +201,16 @@ def MakeBWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     out_dict = {}
 
 
-    c_start_val_map = {
-        0 : 0.17,
-        1 : 0.34, # 0.0025
-        2 : 1.05,
-    }
     # c_start_val_map = {
-    #     0 : 1,
-    #     1 : 2,
-    #     2 : 6,
+    #     0 : 0.17,
+    #     1 : 0.34, # 0.0025
+    #     2 : 1.05,
     # }
+    c_start_val_map = {
+        0 : 1,
+        1 : 1.671,
+        2 : 2,
+    }
     # make BernStein
     bern_dof = dof-1 # one dof is used for the RooExponenet
     bern_n_coeffs = bern_dof +1 # you need to give in n+1 coefficients for degree of freedom n
