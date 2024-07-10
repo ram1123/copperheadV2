@@ -17,7 +17,7 @@ observation  -1
 bin      dimuon_mass dimuon_mass  
 process  signal background   
 process  0      1        
-rate     10     1       
+rate     1     1       
 
 ---------------
 # usual systematics .... note, we advertise the pdf changing parameter as a discrete nuisance

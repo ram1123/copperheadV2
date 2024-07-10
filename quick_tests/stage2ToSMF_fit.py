@@ -18,71 +18,15 @@ if __name__ == "__main__":
     laoding stage1 output data and evalauting BDT is deletegated to run_stage2.py
     """
     # client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
-    # load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0"
-    # # full_load_path = load_path+f"/data_C/*/*.parquet"
-    # # full_load_path = load_path+f"/data_D/*/*.parquet"
-    # # full_load_path = load_path+f"/data_*/*/*.parquet"
-    # full_load_path = load_path+f"/data_A/*/*.parquet"
-    # events = dak.from_parquet(full_load_path)
 
-    # # load and obtain MVA outputs
-    # events["dimuon_dEta"] = np.abs(events.mu1_pt -events.mu2_pt)
-    # events["dimuon_pt_log"] = np.log(events.dimuon_pt)
-    # events["jj_mass_log"] = np.log(events.jj_mass)
-    # events["ll_zstar_log"] = np.log(events.ll_zstar)
-    # events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
-    # events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
+    # load_path = "/work/users/yun79/stage2_output/test/processed_events.parquet"
+    load_path = "/work/users/yun79/stage2_output/test/processed_events_data.parquet"
+    processed_eventsData = ak.from_parquet(load_path)
+
+    load_path = "/work/users/yun79/stage2_output/test/processed_events_signalMC.parquet"
+    processed_eventsSignalMC = ak.from_parquet(load_path)
+
     
-    
-    # training_features = [
-    #     'dimuon_cos_theta_cs', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_eta', 'dimuon_phi', 'dimuon_phi_cs', 'dimuon_pt', 
-    #     'dimuon_pt_log', 'jet1_eta', 'jet1_phi', 'jet1_pt', 'jet1_qgl', 'jet2_eta', 'jet2_phi', 
-    #     'jet2_pt', 'jet2_qgl', 'jj_dEta', 'jj_dPhi', 'jj_eta', 'jj_mass', 'jj_mass_log', 
-    #     'jj_phi', 'jj_pt', 'll_zstar_log', 'mmj1_dEta', 'mmj1_dPhi', 'mmj2_dEta', 'mmj2_dPhi', 
-    #     'mmj_min_dEta', 'mmj_min_dPhi', 'mmjj_eta', 'mmjj_mass', 'mmjj_phi', 'mmjj_pt', 'mu1_eta', 'mu1_iso', 
-    #     'mu1_phi', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_iso', 'mu2_phi', 'mu2_pt_over_mass', 'zeppenfeld'
-    # ]
-    # for training_feature in training_features:
-    #     if training_feature not in events.fields:
-    #         print(f"mssing feature: {training_feature}")
-    
-    # fields2load = training_features + ["h_peak", "h_sidebands", "dimuon_mass", "wgt_nominal_total"]
-    # events = events[fields2load]
-    # # load data to memory using compute()
-    # events = ak.zip({
-    #     field : events[field] for field in events.fields
-    # }).compute()
-
-
-    # parameters = {
-    # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
-    # }
-    # # model_name = "BDTv12_2018"
-    # # model_name = "phifixedBDT_2018"
-    # model_name = "BDTperyear_2018"
-    
-    # processed_events = evaluate_bdt(events, "nominal", model_name, parameters)
-
-    # # load BDT score edges for subcategory divison
-    # BDTedges_load_path = "../configs/MVA/ggH/BDT_edges.yaml"
-    # edges = OmegaConf.load(BDTedges_load_path)
-    # year = "2018"
-    # edges = np.array(edges[year])
-
-    # # Calculate the subCategory index 
-    # BDT_score = processed_events["BDT_score"]
-    # n_edges = len(edges)
-    # BDT_score_repeat = ak.concatenate([BDT_score[:,np.newaxis] for i in range(n_edges)], axis=1)
-    # # BDT_score_repeat
-    # n_rows = len(BDT_score_repeat)
-    # edges_repeat = np.repeat(edges[np.newaxis,:],n_rows,axis=0)
-    # # edges_repeat.shape
-    # edge_idx = ak.sum( (BDT_score_repeat >= edges_repeat), axis=1)
-    # subCat_idx =  edge_idx - 1 # sub category index starts at zero
-    # processed_events["subCategory_idx"] = subCat_idx
-
-    load_path = "/work/users/yun79/stage2_output/test/processed_events.parquet"
-    processed_events = ak.from_parquet(load_path)
     print("events loaded!")
     
     # comence roofit fitting for each subcategory 
@@ -98,8 +42,8 @@ if __name__ == "__main__":
     
     # for cat_ix in range(5):
     for cat_ix in [0]:
-        subCat_filter = (processed_events["subCategory_idx"] == cat_ix)
-        subCat_mass_arr = processed_events.dimuon_mass[subCat_filter]
+        subCat_filter = (processed_eventsData["subCategory_idx"] == cat_ix)
+        subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
         subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
         # start Root fit 
         name = "Canvas"
@@ -129,24 +73,24 @@ if __name__ == "__main__":
         
        
         
-        roo_dataset = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+        roo_datasetData = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
         
         # initialize the categories
         
        
-        # roo_dataset.Print()
-        roo_hist = rt.RooDataHist("data_hist",f"binned version of roo_dataset of subcat {cat_ix}", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
-        # roo_hist.Print()
+        # roo_datasetData.Print()
+        roo_histData = rt.RooDataHist("data_hist",f"binned version of roo_datasetData of subcat {cat_ix}", rt.RooArgSet(mass), roo_datasetData)  # copies binning from mass variable
+        # roo_histData.Print()
     
         
         
 
-        FEWZxBern, params_fewz = MakeFEWZxBern(mass, dof, roo_hist)
-        # FEWZxBern_func, params_fewz = MakeFEWZxBern(mass, dof, roo_hist)
+        FEWZxBern, params_fewz = MakeFEWZxBern(mass, dof, roo_histData)
+        # FEWZxBern_func, params_fewz = MakeFEWZxBern(mass, dof, roo_histData)
         # FEWZxBern = rt.RooGenericPdf("FEWZxBern", "Spline * Bernstein PDF", "@0", rt.RooArgList(FEWZxBern_func))
         
-        BWZxBern, params_bern = MakeBWZxBern(mass, dof)
-        # BWZxBern, params_bern = MakeBWZxBernFast(mass, dof)
+        # BWZxBern, params_bern = MakeBWZxBern(mass, dof)
+        BWZxBern, params_bern = MakeBWZxBernFast(mass, dof)
         
         sumExp, params_exp = MakeSumExponential(mass, dof)
         BWZ_Redux, params_redux =  MakeBWZ_Redux(mass, dof)
@@ -181,38 +125,42 @@ if __name__ == "__main__":
         
         
         rt.EnableImplicitMT()
-        # _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
-        # fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
-        # _ = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        # fit_result = final_model.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # _ = final_model.fitTo(roo_histData, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
+        # fit_result = final_model.fitTo(roo_histData, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
+        # _ = final_model.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # fit_result = final_model.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         
         
         # -------------------------------------------------------
-        print("start final_powerSum !")
-        _ = final_powerSum.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # print("start final_powerSum !")
+        # _ = final_powerSum.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         print("start final_BWZxBern !")
-        _ = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        _ = final_BWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # model = params_bern["BWZxBernFast_Bernstein_model_n_coeffs_3"]
+        # model.Print()
+        # print(f"model: {model}")
+        # _ = model.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # print("start Fewz Bern !")
-        # _ = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # _ = final_FEWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # -------------------------------------------------------
-        # print("start BWZ_Redux !")
-        # _ = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        # print("start sumExp !")
-        # _ = final_sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        print("start BWZ_Redux !")
+        _ = final_BWZ_Redux.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        print("start sumExp !")
+        _ = final_sumExp.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         
-        raise ValueError
+        # 
         
         # freeze the polynomial coefficient, and fine-tune the core functions
         for poly_coeff in smfVarList:
             poly_coeff.setConstant(True)
 
         # -------------------------------------------------------
-        fit_result = final_powerSum.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        fit_result = final_BWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        # fit_result = final_FEWZxBern.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_powerSum.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_BWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # fit_result = final_FEWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # -------------------------------------------------------
-        fit_result = final_BWZ_Redux.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        fit_result = final_sumExp.fitTo(roo_hist, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_BWZ_Redux.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_sumExp.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
     
     
         
@@ -220,17 +168,17 @@ if __name__ == "__main__":
         frame = mass.frame()
     
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        roo_datasetData.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
         # final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
         final_BWZ_Redux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZ_Redux.GetName(), LineColor=rt.kGreen)
         final_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kBlue)
         # -------------------------------------------------------
-        final_powerSum.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
-        # final_BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
+        # final_powerSum.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
+        final_BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
         # final_FEWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
         # -------------------------------------------------------
         dataset_name = "data"
-        roo_dataset.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
+        roo_datasetData.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
         frame.Draw()
     
         # legend
@@ -240,10 +188,10 @@ if __name__ == "__main__":
         name=final_sumExp.GetName()
         legend.AddEntry(name,name, "L")
         # -------------------------------------------------------
-        name=final_powerSum.GetName()
-        legend.AddEntry(name,name, "L")
-        # name=final_BWZxBern.GetName()
+        # name=final_powerSum.GetName()
         # legend.AddEntry(name,name, "L")
+        name=final_BWZxBern.GetName()
+        legend.AddEntry(name,name, "L")
         # name=final_FEWZxBern.GetName()
         # legend.AddEntry(name,name, "L")
         # -------------------------------------------------------
@@ -269,12 +217,11 @@ if __name__ == "__main__":
         # // 2 == PowerSum
     
         pdf_list = rt.RooArgList(
-            # final_BWZ_Redux,
-            # final_sumExp,
+            final_BWZ_Redux,
+            final_sumExp,
             # -------------------------------------------------------
+            final_powerSum,
             final_BWZxBern,
-            # params_bern["BWZxBern_Bernstein_model_n_coeffs_3"],
-            # final_powerSum,
             # final_FEWZxBern,
             # -------------------------------------------------------
         )
@@ -283,17 +230,82 @@ if __name__ == "__main__":
 
         norm = rt.RooRealVar("roomultipdf_norm","Number of background events",1000,0,10000)
 
-        # inject a signal 
-        sigma = rt.RooRealVar("sigma","sigma",1.2); 
-        sigma.setConstant(True);
-        MH = rt.RooRealVar ("MH","MH",125); 
-        MH.setConstant(True)
-        signal =rt.RooGaussian ("signal","signal",mass,MH,sigma);
+        # # inject a signal 
+        # sigma = rt.RooRealVar("sigma","sigma",1.2); 
+        # sigma.setConstant(True);
+        # MH = rt.RooRealVar ("MH","MH",125); 
+        # MH.setConstant(True)
+        # signal =rt.RooGaussian ("signal","signal",mass,MH,sigma);
+
+        #----------------------------------------------------------------------
+        # fit signal
+        
+        subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == cat_ix)
+        subCat_mass_arrSigMC = processed_eventsSignalMC.dimuon_mass[subCat_filter]
+        subCat_mass_arrSigMC  = ak.to_numpy(subCat_mass_arrSigMC) # convert to numpy for rt.RooDataSet
+        
+        # the mass range and nbins are taken from Fig 6.15 of the long AN (page 57)
+        mass_name = "ggH_dimuon_mass"
+        massSigMC =  rt.RooRealVar(mass_name,mass_name,125,110,140) # h peak range
+        nbins = 80 # This could be wrong bc I counted by hand from the histogram
+        massSigMC.setBins(nbins)
+        
+        roo_datasetSigMC = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arrSigMC}, [massSigMC])
+        roo_datasetSigMC.SetName(f"ggH PowHeg MC subCat {cat_ix}")
+        roo_histSigMC = rt.RooDataHist("SigMC_hist",f"binned version of SigMC of subcat {cat_ix}", rt.RooArgSet(massSigMC), roo_datasetSigMC)  # copies binning from mass variable
+        # make roofit signal model
+        mH = rt.RooRealVar("mH" , "mH", 125, 115,135)
+        mH.setConstant(True) #
+        sigma = rt.RooRealVar("sigma" , "sigma", 2, .1, 4.0)
+        alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
+        n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 100)
+        alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
+        n2 = rt.RooRealVar("n2" , "n2", 25, 0.01, 100)
+        # n1.setConstant(True) # freeze for stability
+        # n2.setConstant(True) # freeze for stability
+        # dcb_name = f"ggH Signal Model subCat {cat_ix}"
+        dcb_name = "signal"
+        signal = rt.RooCrystalBall(dcb_name,dcb_name,massSigMC, mH, sigma, alpha1, n1, alpha2, n2)
+        
+        # fit signal model
+        _ = signal.fitTo(roo_histSigMC,  EvalBackend="cpu", Save=True, )
+        fit_result = signal.fitTo(roo_histSigMC,  EvalBackend="cpu", Save=True, )
+        
+        # clear canvas to plot the signal model
+        canvas.Clear()
+        frame = massSigMC.frame()
+        roo_datasetSigMC.plotOn(frame, DataError="SumW2", Name=roo_datasetSigMC.GetName())
+        signal.plotOn(frame, Name=signal.GetName(), LineColor=rt.kGreen)
+        frame.Draw()
+        
+        
+        # legend
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        name=signal.GetName()
+        legend.AddEntry(name,name, "L")
+        
+        name=roo_datasetSigMC.GetName()
+        legend.AddEntry(name,name, "P")
+        legend.Draw()
+        
+        canvas.Update()
+        canvas.Draw()
+        
+        canvas.SaveAs(f"./quick_plots/stage3_plot_SigMC_ggH{cat_ix}.pdf")
+
+        # freeze other parameters b4 adding to workspace
+        sigma.setConstant(True)
+        alpha1.setConstant(True)
+        n1.setConstant(True)
+        alpha2.setConstant(True)
+        n2.setConstant(True)
+        #----------------------------------------------------------------------
+        
 
         fout = rt.TFile("./workspace.root","RECREATE")
         wout = rt.RooWorkspace("workspace","workspace")
-        roo_hist.SetName("data");
-        wout.Import(roo_hist);
+        roo_histData.SetName("data");
+        wout.Import(roo_histData);
         wout.Import(cat);
         wout.Import(norm);
         wout.Import(multipdf);
@@ -328,8 +340,8 @@ if __name__ == "__main__":
         # # polynomial_model.asTF(mass).Draw("hist same")
     
         # frame = mass.frame()
-        # # RooRatio("test", "test", roo_hist,)
-        # # roo_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        # # RooRatio("test", "test", roo_histData,)
+        # # roo_histData.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
         # polynomial_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), LineColor=rt.kGreen)
         # frame.Draw("hist same")
         
@@ -338,7 +350,7 @@ if __name__ == "__main__":
         # # # draw on canvas
         # # frame = mass.frame()
         # # # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        # # roo_dataset.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        # # roo_datasetData.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
         # # final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
         # # frame.Draw("hist same")
         
