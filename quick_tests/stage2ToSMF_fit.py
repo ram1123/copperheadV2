@@ -51,7 +51,8 @@ if __name__ == "__main__":
         canvas.cd()
         mass_name = "dimuon_mass"
         mass =  rt.RooRealVar(mass_name,mass_name,120,110,150)
-        nbins = 80
+        nbins = 800 # Bin size = 50 MeV -> line 1762 of RERECO AN
+        # nbins = 80
         mass.setBins(nbins)
     
         # for debugging purposes -----------------
@@ -125,10 +126,8 @@ if __name__ == "__main__":
         
         
         rt.EnableImplicitMT()
-        # _ = final_model.fitTo(roo_histData, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
-        # fit_result = final_model.fitTo(roo_histData, rt.RooFit.Range(fit_range),  EvalBackend="cpu", Save=True, )
-        # _ = final_model.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        # fit_result = final_model.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # rt.RooFit.PrintLevel(-1) # this suppresses fitTo messages
+
         
         
         # -------------------------------------------------------
@@ -225,10 +224,14 @@ if __name__ == "__main__":
             # final_FEWZxBern,
             # -------------------------------------------------------
         )
-        print("just b4 roo multipdf")
-        multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
+        multipdf = final_BWZ_Redux
+        final_BWZ_Redux.SetName("roomultipdf")
+        # multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
+        # multipdf.setCorrectionFactor(0) # by default the penalty of 0.5 is given to nll
+        
 
-        norm = rt.RooRealVar("roomultipdf_norm","Number of background events",1000,0,10000)
+        print(f"multipdf.GetName(): {multipdf.GetName()}")
+        norm = rt.RooRealVar(multipdf.GetName()+"_norm","Number of background events",roo_datasetData.numEntries(),0,3*roo_datasetData.numEntries())
 
         # # inject a signal 
         # sigma = rt.RooRealVar("sigma","sigma",1.2); 
@@ -246,13 +249,33 @@ if __name__ == "__main__":
         
         # the mass range and nbins are taken from Fig 6.15 of the long AN (page 57)
         mass_name = "ggH_dimuon_mass"
-        massSigMC =  rt.RooRealVar(mass_name,mass_name,125,110,140) # h peak range
-        nbins = 80 # This could be wrong bc I counted by hand from the histogram
+        massSigMC =  rt.RooRealVar(mass_name,mass_name,125,115,135) # h peak range
+        nbins = 400 # Bin size = 50 MeV -> line 1762 of RERECO AN
+        # nbins = 80
         massSigMC.setBins(nbins)
         
         roo_datasetSigMC = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arrSigMC}, [massSigMC])
         roo_datasetSigMC.SetName(f"ggH PowHeg MC subCat {cat_ix}")
         roo_histSigMC = rt.RooDataHist("SigMC_hist",f"binned version of SigMC of subcat {cat_ix}", rt.RooArgSet(massSigMC), roo_datasetSigMC)  # copies binning from mass variable
+
+
+        # calculate the Normalization events as demonstrated in https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/tutorial2023/parametric_exercise/#signal-modelling
+        # Define SM cross section and branching fraction values
+        # xs_ggH = 0.01057 #taken from parameters.yml
+        xs_ggH = 0.01057
+        br_HToMuMu =  2.19e-4 #taken from https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageBR2014#Higgs_2_gauge_bosons
+        
+        # Calculate the efficiency and print output
+        sumw = roo_datasetSigMC.sumEntries()
+        print(f"sumw: {sumw}")
+        eff = sumw/(xs_ggH*br_HToMuMu)
+        print("Efficiency of ggH events landing in Subcat 0 is: %.2f%%"%(eff*100))
+        # Calculate the total yield (assuming full Run 2 lumi) and print output
+        lumi = 59970 # 2018
+        N = xs_ggH*br_HToMuMu*eff*lumi
+        print("For2018, total normalisation of signal is: N = xs * br * eff * lumi = %.2f events"%N)
+        # ------------------------------------------------------------------------------------------
+
         # make roofit signal model
         mH = rt.RooRealVar("mH" , "mH", 125, 115,135)
         mH.setConstant(True) #
@@ -270,6 +293,14 @@ if __name__ == "__main__":
         # fit signal model
         _ = signal.fitTo(roo_histSigMC,  EvalBackend="cpu", Save=True, )
         fit_result = signal.fitTo(roo_histSigMC,  EvalBackend="cpu", Save=True, )
+
+        # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+        sigma.setConstant(True)
+        alpha1.setConstant(True)
+        n1.setConstant(True)
+        alpha2.setConstant(True)
+        n2.setConstant(True)
+
         
         # clear canvas to plot the signal model
         canvas.Clear()
