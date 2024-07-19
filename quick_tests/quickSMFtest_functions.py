@@ -42,51 +42,69 @@ def MakeFEWZxBern(mass: rt.RooRealVar, dof: int, mass_hist: rt.RooDataHist) ->Tu
     out_dict = {}
 
     c_start_val_map = {
-        0 : 0.25,
         1 : 0.25,
         2 : 0.25,
         3 : 0.25,
     }
     # make BernStein of order == dof
-    n_coeffs = dof + 1 # you need to give in n+1 coefficients for degree of freedom n
+    n_coeffs = dof 
     BernCoeff_list = []
     for ix in range(n_coeffs):
-        name = f"FEWZxBern_Bernstein_c_{ix}"
-        c_start_val = c_start_val_map[ix]
+        name = f"FEWZxBern_Bernstein_c_{ix+1}"
+        c_start_val = c_start_val_map[ix+1]
         coeff = rt.RooRealVar(name,name, c_start_val,-2.0, 2.0)
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.append(coeff)
-    name = f"FEWZxBern_Bernstein_model_n_coeffs_{n_coeffs}"
-    bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
+    name = f"FEWZxBern_BernsteinFast_n_coeffs_{n_coeffs}"
+    bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add model to make python remember
 
+
+    
     # make the spline portion
 
     # this ROOT files has branches full_36fb, full_xsec, full_shape -> all three has the same shape (same hist once normalized)
-    FEWZ_file = rt.TFile("../data//NNLO_Bourilkov_2017.root", "READ")
-    FEWZ_histo_36fb = FEWZ_file.Get("full_36fb")
-    x_vals, y_vals = getFEWZ_vals(FEWZ_histo_full_shape)
+    FEWZ_file = rt.TFile("../data/NNLO_Bourilkov_2017.root", "READ")
+    # FEWZ_histo = FEWZ_file.Get("full_36fb")
+    FEWZ_histo = FEWZ_file.Get("full_shape")
     
-    x_arr = []
-    y_arr = []
-    nbins = mass.frame().GetXaxis().GetNbins()
-    for ix in range(nbins):
-        binCentre = mass_hist.get(ix)[mass.GetName()].getVal()
-        x_arr.append(binCentre)
-        binVal = mass_hist.weight(ix)
-        y_arr.append(binVal)
+    x_arr, y_arr = getFEWZ_vals(FEWZ_histo)
+    
 
-    
+    # Roospline start ---------------------------------    
     x_arr_vec = rt.vector("double")(x_arr)
     y_arr_vec = rt.vector("double")(y_arr)
     name = "fewz_roospline_func"
     roo_spline_func = rt.RooSpline(name, name, mass, x_arr_vec, y_arr_vec)
-        
     out_dict[name] = roo_spline_func
-    name = "fewz_roospline_pdf"
-    roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
-    out_dict[name] = roo_spline_pdf # add model to make python remember  
-                          
+    # Roospline end ------------------------------------
+
+    # Roospline1D start ---------------------------------    
+    # x0 = (ctypes.c_double * len(x_arr))(*x_arr)
+    # y0 = (ctypes.c_double * len(y_arr))(*y_arr)
+    # n = len(x0)
+    # name = "fewz_roospline_func"
+    # roo_spline_func = rt.RooSpline1D(name, name, mass, n,x0, y0)
+    # out_dict[name] = roo_spline_func
+    # Roospline1D end ------------------------------------
+    
+
+    # turn roo_spline_func into pdf
+    # RooProdPDF seems to automatically normalize the pdfs on https://root.cern.ch/doc/master/classRooProdPdf.html,
+    # so no need to "normalize" rooSpline into a PDF. Also, I tried both full_36fb and full_shape bracnhes of 
+    # FEWZ histograms (they have same shape, but different values), and I saw no difference in fit function plot,
+    # loosely suggesting automatic normalization
+    roo_spline_pdf = roo_spline_func
+    
+    
+    # name = "fewz_roospline_pdf"
+    # roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
+    # out_dict[name] = roo_spline_pdf # add model to make python remember  
+
+    # RooWrapperPdf doesn't seem to work well with FitTo. Just freezes for a long time
+    # name = "fewz_roospline_pdf"
+    # roo_spline_pdf = rt.RooGenericPdf(name, "@0", rt.RooArgList(roo_spline_func))      
+    # out_dict[name] = roo_spline_pdf # add model to make python remember  
 
     name = f"FEWZxBern_dof_{dof}"
     final_model = rt.RooProdPdf(name, name, [bern_model, roo_spline_pdf]) 
@@ -225,18 +243,17 @@ def MakeBWZxBernFast(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]
 
 
     c_start_val_map = {
-        0 : 1.157,
-        1 : 1.602,
-        2 : 1.463,
+        1 : 1.157,
+        2 : 1.602,
     }
     # make BernStein
-    bern_n_coeffs = dof-1 +1 # you need to give in n+1 coefficients for degree of freedom n
-    print(f"bernFast_n_coeffs: {bern_n_coeffs}")
+    bern_n_coeffs = dof-1
+    # print(f"MakeBWZxBernFast bernFast_n_coeffs: {bern_n_coeffs}")
     BernCoeff_list = rt.RooArgList()
 
     for ix in range(bern_n_coeffs):
-        name = f"BWZxBernFast_Bernstein_c_{ix}"
-        c_start_val = c_start_val_map[ix]
+        name = f"BWZxBernFast_Bernstein_c_{ix+1}"
+        c_start_val = c_start_val_map[ix+1]
         coeff = rt.RooRealVar(name,name, c_start_val,0, 2.0)
         out_dict[name] = coeff # add variable to make python remember 
         BernCoeff_list.add(coeff)

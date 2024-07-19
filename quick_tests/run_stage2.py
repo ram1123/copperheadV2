@@ -68,6 +68,7 @@ if __name__ == "__main__":
     edges = OmegaConf.load(BDTedges_load_path)
     year = "2018"
     edges = np.array(edges[year])
+    print(f"subCat BDT edges: {edges}")
 
     # Calculate the subCategory index 
     BDT_score = processed_events["BDT_score"]

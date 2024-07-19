@@ -32,11 +32,11 @@ if __name__ == "__main__":
     # comence roofit fitting for each subcategory 
     n_subCats = 5
     poly_order_by_cat = {
-        0:2,
-        1:2,
+        0:3,
+        1:3,
         2:2,
-        3:3,
-        4:3,
+        3:2,
+        4:2,
     }
     dof = 3 # degrees of freedom for the core-functions. This should be same for all the functions
     
@@ -100,16 +100,22 @@ if __name__ == "__main__":
         smfVarList = []
         smf_order= poly_order_by_cat[cat_ix]
         print(f"smf_order: {smf_order}")
-        for ix in range(smf_order-1): # minus one bc the normalization constraint takes off one degree of freedom
-            name = f"smf_{ix}"
-            smf_coeff = rt.RooRealVar(name, name, -0.005, -0.007, 0.007)
+        for ix in range(smf_order): 
+            name = f"SMF_Order{smf_order}_Coeff{ix+1}"
+            # smf_coeff = rt.RooRealVar(name, name, -0.005, -0.007, 0.007)
+            smf_coeff = rt.RooRealVar(name, name, -0.005, -10, 10)
             smfVarList.append(smf_coeff)
     
 
         # shift = rt.RooRealVar("shift", "Offset", 125, 75, 150)
         # shift.setConstant(True)
-        shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-125", rt.RooArgList(mass))
-        polynomial_model = rt.RooPolynomial("pol", "pol", shifted_mass, smfVarList)
+        # original start -------------------------------------------
+        # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-125", rt.RooArgList(mass))
+        # polynomial_model = rt.RooPolynomial("pol", "pol", shifted_mass, smfVarList)
+        # original end ----------------------------------------------
+        # replace RooPolynomial with RooChebychev start ---------------------------
+        polynomial_model = rt.RooChebychev("pol", "pol", mass, smfVarList)
+        # replace RooPolynomial with RooChebychev end ---------------------------
         # -------------------------------------------------------
         name = f"smf x {powerSum.GetName()}"
         final_powerSum = rt.RooProdPdf(name, name, [polynomial_model,powerSum]) 
@@ -133,14 +139,11 @@ if __name__ == "__main__":
         # -------------------------------------------------------
         # print("start final_powerSum !")
         # _ = final_powerSum.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        print("start final_BWZxBern !")
-        _ = final_BWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # print("start final_BWZxBern !")
+        # _ = final_BWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # model = params_bern["BWZxBernFast_Bernstein_model_n_coeffs_3"]
-        # model.Print()
-        # print(f"model: {model}")
-        # _ = model.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        # print("start Fewz Bern !")
-        # _ = final_FEWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        print("start Fewz Bern !")
+        _ = final_FEWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # -------------------------------------------------------
         print("start BWZ_Redux !")
         _ = final_BWZ_Redux.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
@@ -155,8 +158,8 @@ if __name__ == "__main__":
 
         # -------------------------------------------------------
         fit_result = final_powerSum.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        fit_result = final_BWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-        # fit_result = final_FEWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        # fit_result = final_BWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+        fit_result = final_FEWZxBern.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         # -------------------------------------------------------
         fit_result = final_BWZ_Redux.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         fit_result = final_sumExp.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
@@ -165,32 +168,37 @@ if __name__ == "__main__":
         
         # draw on canvas
         frame = mass.frame()
-    
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
         roo_datasetData.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
         # final_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_model.GetName(), LineColor=rt.kGreen)
         final_BWZ_Redux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZ_Redux.GetName(), LineColor=rt.kGreen)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1),final_BWZ_Redux.GetName(), "L")
         final_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kBlue)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1),final_sumExp.GetName(), "L")
         # -------------------------------------------------------
-        # final_powerSum.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
-        final_BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
-        # final_FEWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_sumExp.GetName(), LineColor=rt.kRed)
+        # final_powerSum.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_powerSum.GetName(), LineColor=rt.kRed)
+        # final_BWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_BWZxBern.GetName(), LineColor=rt.kRed)
+        # legend.AddEntry(frame.getObject(int(frame.numItems())-1),final_BWZxBern.GetName(), "L")
+        final_FEWZxBern.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=final_FEWZxBern.GetName(), LineColor=rt.kRed)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1),final_FEWZxBern.GetName(), "L")
         # -------------------------------------------------------
         dataset_name = "data"
-        roo_datasetData.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
+        # roo_datasetData.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
         frame.Draw()
     
-        # legend
-        legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        name=final_BWZ_Redux.GetName()
-        legend.AddEntry(name,name, "L")
-        name=final_sumExp.GetName()
-        legend.AddEntry(name,name, "L")
+        # # legend
+        # legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        # name=final_BWZ_Redux.GetName()
+        # legend.AddEntry(name,name, "L")
+        # name=final_sumExp.GetName()
+        # legend.AddEntry(name,name, "L")
         # -------------------------------------------------------
         # name=final_powerSum.GetName()
         # legend.AddEntry(name,name, "L")
-        name=final_BWZxBern.GetName()
-        legend.AddEntry(name,name, "L")
+        # name=final_BWZxBern.GetName()
+        # legend.AddEntry(name,name, "L")
         # name=final_FEWZxBern.GetName()
         # legend.AddEntry(name,name, "L")
         # -------------------------------------------------------
