@@ -152,7 +152,7 @@ if __name__ == "__main__":
         
         # 
         
-        # freeze the polynomial coefficient, and fine-tune the core functions
+        # freeze the polynomial coefficient, and fine-tune the core functions,
         for poly_coeff in smfVarList:
             poly_coeff.setConstant(True)
 
@@ -164,7 +164,9 @@ if __name__ == "__main__":
         fit_result = final_BWZ_Redux.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         fit_result = final_sumExp.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
     
-    
+        # unfreeze the polynomial coefficients back in order for combine to play with it
+        for poly_coeff in smfVarList:
+            poly_coeff.setConstant(False)
         
         # draw on canvas
         frame = mass.frame()
@@ -229,9 +231,9 @@ if __name__ == "__main__":
             final_BWZ_Redux,
             final_sumExp,
             # -------------------------------------------------------
-            final_powerSum,
-            final_BWZxBern,
-            # final_FEWZxBern,
+            # final_powerSum,
+            # final_BWZxBern,
+            final_FEWZxBern,
             # -------------------------------------------------------
         )
         multipdf = final_BWZ_Redux
@@ -345,6 +347,7 @@ if __name__ == "__main__":
 
         fout = rt.TFile("./workspace.root","RECREATE")
         wout = rt.RooWorkspace("workspace","workspace")
+        # roo_histData.SetName("data_cat0_ggh");
         roo_histData.SetName("data");
         wout.Import(roo_histData);
         wout.Import(cat);
