@@ -18,12 +18,15 @@ if __name__ == "__main__":
     load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0"
     # full_load_path = load_path+f"/data_C/*/*.parquet"
     # full_load_path = load_path+f"/data_D/*/*.parquet"
-    full_load_path = load_path+f"/data_*/*/*.parquet"
+    # full_load_path = load_path+f"/data_*/*/*.parquet"
     # full_load_path = load_path+f"/data_A/*/*.parquet"
+    # full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
+    full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
+    
     events = dak.from_parquet(full_load_path)
 
     # load and obtain MVA outputs
-    events["dimuon_dEta"] = np.abs(events.mu1_pt -events.mu2_pt)
+    events["dimuon_dEta"] = np.abs(events.mu1_pt - events.mu2_pt)
     events["dimuon_pt_log"] = np.log(events.dimuon_pt)
     events["jj_mass_log"] = np.log(events.jj_mass)
     events["ll_zstar_log"] = np.log(events.ll_zstar)
@@ -89,13 +92,23 @@ if __name__ == "__main__":
     })
     # define save path and save
     save_path = "/work/users/yun79/stage2_output/test"
-    # check if there's any files on save path, and if yes, delete them
-    filelist = glob.glob(f"{save_path}/*.parquet")
-    print(f"len(filelist): {len(filelist)}")
-    for file in filelist:
-        os.remove(file)
-    # make save path if it doesn't exist
+        # make save path if it doesn't exist
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-    ak.to_parquet(processed_events, save_path+"/processed_events.parquet")
+    if "data" in full_load_path:
+        save_filename = save_path+"/processed_events_data.parquet"  
+    elif "ggh_powheg" in full_load_path: # else, ggh powheg
+        save_filename = save_path+"/processed_events_signalMC.parquet" 
+    elif "dy_M-100To200" in full_load_path:
+        save_filename = save_path+"/processed_events_dyMC.parquet" 
+    print(f"save_filename: {save_filename}")
+
+    # delete the file if there's already same save_filename
+    try:
+        os.remove(save_filename)
+    except:
+        pass
+    ak.to_parquet(processed_events, save_filename)
+
+
     

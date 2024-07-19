@@ -214,7 +214,9 @@ if __name__ == "__main__":
         # // 0 == BWZ_Redux
         # // 1 == sumExp
         # // 2 == PowerSum
-    
+        
+        # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
+        # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
         pdf_list = rt.RooArgList(
             final_BWZ_Redux,
             final_sumExp,
@@ -249,8 +251,8 @@ if __name__ == "__main__":
         
         # the mass range and nbins are taken from Fig 6.15 of the long AN (page 57)
         mass_name = "ggH_dimuon_mass"
-        massSigMC =  rt.RooRealVar(mass_name,mass_name,125,115,135) # h peak range
-        nbins = 400 # Bin size = 50 MeV -> line 1762 of RERECO AN
+        massSigMC =  rt.RooRealVar(mass_name,mass_name,125,110,150) # fit MC signal over the whole signal range
+        nbins = 800 # Bin size = 50 MeV -> line 1762 of RERECO AN
         # nbins = 80
         massSigMC.setBins(nbins)
         
