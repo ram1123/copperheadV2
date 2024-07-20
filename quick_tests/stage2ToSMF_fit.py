@@ -164,9 +164,9 @@ if __name__ == "__main__":
         fit_result = final_BWZ_Redux.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
         fit_result = final_sumExp.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
     
-        # unfreeze the polynomial coefficients back in order for combine to play with it
-        for poly_coeff in smfVarList:
-            poly_coeff.setConstant(False)
+        # # unfreeze the polynomial coefficients back in order for combine to play with it
+        # for poly_coeff in smfVarList:
+        #     poly_coeff.setConstant(False)
         
         # draw on canvas
         frame = mass.frame()
@@ -237,7 +237,7 @@ if __name__ == "__main__":
             # -------------------------------------------------------
         )
         multipdf = final_BWZ_Redux
-        final_BWZ_Redux.SetName("roomultipdf")
+        multipdf.SetName("roomultipdf")
         # multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
         # multipdf.setCorrectionFactor(0) # by default the penalty of 0.5 is given to nll
         
@@ -350,7 +350,7 @@ if __name__ == "__main__":
         # roo_histData.SetName("data_cat0_ggh");
         roo_histData.SetName("data");
         wout.Import(roo_histData);
-        wout.Import(cat);
+        # wout.Import(cat);
         wout.Import(norm);
         wout.Import(multipdf);
         wout.Import(signal);
