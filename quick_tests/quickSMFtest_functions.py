@@ -42,9 +42,9 @@ def MakeFEWZxBern(mass: rt.RooRealVar, dof: int, mass_hist: rt.RooDataHist) ->Tu
     out_dict = {}
 
     c_start_val_map = {
-        1 : 0.25,
-        2 : 0.25,
-        3 : 0.25,
+        1 : 0.17,
+        2 : 0.15,
+        3 : 0.05,
     }
     # make BernStein of order == dof
     n_coeffs = dof 
