@@ -178,8 +178,6 @@ def MakeFEWZxBern(mass: rt.RooRealVar, dof: int, mass_hist: rt.RooDataHist) ->Tu
    
 #     return (final_model, out_dict)
 
-    
-
 def MakeBWZ_Redux(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     """
     params:
@@ -191,45 +189,76 @@ def MakeBWZ_Redux(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     out_dict = {}
     
     name = f"BWZ_Redux_a_coeff"
-    a_coeff = rt.RooRealVar(name,name, -0.001,-0.001,0.001)
-    name = "exp_model_mass"
-    exp_model_mass = rt.RooExponential(name, name, mass, a_coeff)
-    
-    mass_sq = rt.RooFormulaVar("mass_sq", "@0*@0", rt.RooArgList(mass))
+    # a_coeff = rt.RooRealVar(name,name, -0.001,-0.0025,0.0035)
+    a_coeff = rt.RooRealVar(name,name, -0.001,-0.015,0.015)
     name = f"BWZ_Redux_b_coeff"
     b_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    name = f"BWZ_Redux_c_coeff"
+    c_coeff = rt.RooRealVar(name,name, 1.5,-5.0,5.0)
     
-    name = "exp_model_mass_sq"
-    exp_model_mass_sq = rt.RooExponential(name, name, mass_sq, b_coeff)
 
     # add in the variables and models
     out_dict[a_coeff.GetName()] = a_coeff 
-    out_dict[exp_model_mass.GetName()] = exp_model_mass
-    out_dict[mass_sq.GetName()] = mass_sq
     out_dict[b_coeff.GetName()] = b_coeff
-    out_dict[exp_model_mass_sq.GetName()] = exp_model_mass_sq
-    
-    # make Z boson related stuff
-    bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
-    bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
-    bwWidth.setConstant(True)
-    bwmZ.setConstant(True)
-
-    # start multiplying them all
-    name = f"BWZ_Redux_c_coeff"
-    c_coeff = rt.RooRealVar(name,name, 1.5,-5.0,5.0)
-    BWZ_redux_main = rt.RooGenericPdf(
-        "BWZ_redux_main", "@1/ ( pow((@0-@2), @3) + 0.25*pow(@1, @3) )", rt.RooArgList(mass, bwWidth, bwmZ, c_coeff)
-    )
-    # add in the variables and models
-    out_dict[bwWidth.GetName()] = bwWidth 
-    out_dict[bwmZ.GetName()] = bwmZ 
     out_dict[c_coeff.GetName()] = c_coeff 
-    out_dict[BWZ_redux_main.GetName()] = BWZ_redux_main 
+    
 
     name = "BWZ_Redux_dof_3"
-    final_model = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
+    final_model = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
     return (final_model, out_dict)
+
+
+
+# def MakeBWZ_Redux_old(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
+#     """
+#     params:
+#     mass = rt.RooRealVar that we will fitTo
+#     dof = degrees of freedom given to this model. This parameter is meaningless 
+#         as the actual dof(=3) is hard coded into the model's definition
+#     """
+#     # collect all variables that we don't want destroyed by Python once function ends
+#     out_dict = {}
+    
+#     name = f"BWZ_Redux_a_coeff"
+#     a_coeff = rt.RooRealVar(name,name, -0.001,-0.001,0.001)
+#     name = "exp_model_mass"
+#     exp_model_mass = rt.RooExponential(name, name, mass, a_coeff)
+    
+#     mass_sq = rt.RooFormulaVar("mass_sq", "@0*@0", rt.RooArgList(mass))
+#     name = f"BWZ_Redux_b_coeff"
+#     b_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    
+#     name = "exp_model_mass_sq"
+#     exp_model_mass_sq = rt.RooExponential(name, name, mass_sq, b_coeff)
+
+#     # add in the variables and models
+#     out_dict[a_coeff.GetName()] = a_coeff 
+#     out_dict[exp_model_mass.GetName()] = exp_model_mass
+#     out_dict[mass_sq.GetName()] = mass_sq
+#     out_dict[b_coeff.GetName()] = b_coeff
+#     out_dict[exp_model_mass_sq.GetName()] = exp_model_mass_sq
+    
+#     # make Z boson related stuff
+#     bwWidth = rt.RooRealVar("bwWidth", "bwWidth", 2.5, 0, 30)
+#     bwmZ = rt.RooRealVar("bwmZ", "bwmZ", 91.2, 90, 92)
+#     bwWidth.setConstant(True)
+#     bwmZ.setConstant(True)
+
+#     # start multiplying them all
+#     name = f"BWZ_Redux_c_coeff"
+#     c_coeff = rt.RooRealVar(name,name, 1.5,-5.0,5.0)
+#     BWZ_redux_main = rt.RooGenericPdf(
+#         "BWZ_redux_main", "@1/ ( pow((@0-@2), @3) + 0.25*pow(@1, @3) )", rt.RooArgList(mass, bwWidth, bwmZ, c_coeff)
+#     )
+#     # add in the variables and models
+#     out_dict[bwWidth.GetName()] = bwWidth 
+#     out_dict[bwmZ.GetName()] = bwmZ 
+#     out_dict[c_coeff.GetName()] = c_coeff 
+#     out_dict[BWZ_redux_main.GetName()] = BWZ_redux_main 
+
+#     name = "BWZ_Redux_dof_3"
+#     final_model = rt.RooProdPdf(name, name, [BWZ_redux_main, exp_model_mass, exp_model_mass_sq]) 
+#     return (final_model, out_dict)
 
 def MakeBWZxBernFast(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     """

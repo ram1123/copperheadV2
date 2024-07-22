@@ -236,9 +236,9 @@ if __name__ == "__main__":
             final_FEWZxBern,
             # -------------------------------------------------------
         )
-        multipdf = final_BWZ_Redux
-        multipdf.SetName("roomultipdf")
-        # multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
+        # multipdf = final_BWZ_Redux
+        # multipdf.SetName("roomultipdf")
+        multipdf = rt.RooMultiPdf("roomultipdf","All Pdfs",cat,pdf_list)
         # multipdf.setCorrectionFactor(0) # by default the penalty of 0.5 is given to nll
         
 
@@ -260,15 +260,15 @@ if __name__ == "__main__":
         subCat_mass_arrSigMC  = ak.to_numpy(subCat_mass_arrSigMC) # convert to numpy for rt.RooDataSet
         
         # the mass range and nbins are taken from Fig 6.15 of the long AN (page 57)
-        mass_name = "ggH_dimuon_mass"
-        massSigMC =  rt.RooRealVar(mass_name,mass_name,125,110,150) # fit MC signal over the whole signal range
-        nbins = 800 # Bin size = 50 MeV -> line 1762 of RERECO AN
-        # nbins = 80
-        massSigMC.setBins(nbins)
+        # mass_name = "ggH_dimuon_mass"
+        # massSigMC =  rt.RooRealVar(mass_name,mass_name,125,110,150) # fit MC signal over the whole signal range
+        # nbins = 800 # Bin size = 50 MeV -> line 1762 of RERECO AN
+        # # nbins = 80
+        # massSigMC.setBins(nbins)
         
-        roo_datasetSigMC = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arrSigMC}, [massSigMC])
+        roo_datasetSigMC = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arrSigMC}, [mass])
         roo_datasetSigMC.SetName(f"ggH PowHeg MC subCat {cat_ix}")
-        roo_histSigMC = rt.RooDataHist("SigMC_hist",f"binned version of SigMC of subcat {cat_ix}", rt.RooArgSet(massSigMC), roo_datasetSigMC)  # copies binning from mass variable
+        roo_histSigMC = rt.RooDataHist("SigMC_hist",f"binned version of SigMC of subcat {cat_ix}", rt.RooArgSet(mass), roo_datasetSigMC)  # copies binning from mass variable
 
 
         # calculate the Normalization events as demonstrated in https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/tutorial2023/parametric_exercise/#signal-modelling
@@ -289,8 +289,8 @@ if __name__ == "__main__":
         # ------------------------------------------------------------------------------------------
 
         # make roofit signal model
-        mH = rt.RooRealVar("mH" , "mH", 125, 115,135)
-        mH.setConstant(True) #
+        MH = rt.RooRealVar("MH" , "MH", 125, 115,135)
+        MH.setConstant(True) #
         sigma = rt.RooRealVar("sigma" , "sigma", 2, .1, 4.0)
         alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
         n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 100)
@@ -300,7 +300,7 @@ if __name__ == "__main__":
         # n2.setConstant(True) # freeze for stability
         # dcb_name = f"ggH Signal Model subCat {cat_ix}"
         dcb_name = "signal"
-        signal = rt.RooCrystalBall(dcb_name,dcb_name,massSigMC, mH, sigma, alpha1, n1, alpha2, n2)
+        signal = rt.RooCrystalBall(dcb_name,dcb_name,mass, MH, sigma, alpha1, n1, alpha2, n2)
         
         # fit signal model
         _ = signal.fitTo(roo_histSigMC,  EvalBackend="cpu", Save=True, )
@@ -316,7 +316,7 @@ if __name__ == "__main__":
         
         # clear canvas to plot the signal model
         canvas.Clear()
-        frame = massSigMC.frame()
+        frame = mass.frame()
         roo_datasetSigMC.plotOn(frame, DataError="SumW2", Name=roo_datasetSigMC.GetName())
         signal.plotOn(frame, Name=signal.GetName(), LineColor=rt.kGreen)
         frame.Draw()
@@ -350,7 +350,7 @@ if __name__ == "__main__":
         # roo_histData.SetName("data_cat0_ggh");
         roo_histData.SetName("data");
         wout.Import(roo_histData);
-        # wout.Import(cat);
+        wout.Import(cat);
         wout.Import(norm);
         wout.Import(multipdf);
         wout.Import(signal);
