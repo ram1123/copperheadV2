@@ -40,9 +40,9 @@ if __name__ == "__main__":
     dof = 3 # degrees of freedom for the core-functions. This should be same for all the functions
     smf_coeffStartVals = {
         0: {
-            1: 0.48, # smf val start with index one bc zeroth order coeff is assumed to be zero for RooChebychev
-            2: 0.17,
-            3: -0.014,
+            1: 0.369, # smf val start with index one bc zeroth order coeff is assumed to be zero for RooChebychev
+            2: 0.152,
+            3: -0.025,
         },
         1: {
             1: 0.5,
@@ -159,40 +159,42 @@ if __name__ == "__main__":
     _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
     fit_result = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
 
-    # save workspace for plotting later
-    fout = rt.TFile("./simultFitTestWorkspace.root","RECREATE")
-    wout = rt.RooWorkspace("workspace","workspace")
-    wout.Import(roo_datasetData);
-    for model_name, model in model_dict.items():
-        print(f"model_name: {model_name}")
-        wout.Import(model);
-    wout.Print();
-    wout.Write();
-    # # plot 
-    # frame = mass.frame()
-    # legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    # # save workspace for plotting later
+    # fout = rt.TFile("./simultFitTestWorkspace.root","RECREATE")
+    # wout = rt.RooWorkspace("workspace","workspace")
+    # wout.Import(roo_datasetData);
+    # for model_name, model in model_dict.items():
+    #     print(f"model_name: {model_name}")
+    #     wout.Import(model);
+    # wout.Print();
+    # wout.Write();
+    # plot 
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
 
-    # for core_model in core_models:
+    for core_model in core_models:
         
-    #     canvas.Clear()
-    #     # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-    #     roo_datasetData.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        canvas.Clear()
+        legend.Clear()
+        frame.Clear()
+        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+        roo_datasetData.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
 
-    #     core_modelName = core_model.GetName()
-    #     for model_name, model in model_dict.items():
-    #         if core_modelName in model_name:
-    #             color = rt.kBlue
-    #             for subCat, col in subCatColorMap.items():
-    #                 if subCat in core_modelName:
-    #                     color = col
-    #             model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model.GetName(), LineColor=color)
-    #             # model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model.GetName())
-    #             legend.AddEntry(frame.getObject(int(frame.numItems())-1),model.GetName(), "L")
+        core_modelName = core_model.GetName()
+        for model_name, model in model_dict.items():
+            if core_modelName in model_name:
+                color = rt.kBlue
+                for subCat, col in subCatColorMap.items():
+                    if subCat in model_name:
+                        color = col
+                model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model.GetName(), LineColor=color)
+                # model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model.GetName())
+                legend.AddEntry(frame.getObject(int(frame.numItems())-1),model.GetName(), "L")
     
-    #     frame.Draw()
-    #     legend.Draw()        
-    #     canvas.Update()
-    #     canvas.Draw()
-    #     canvas.SaveAs(f"./quick_plots/simultaneousPlotTest_{core_modelName}.pdf")
+        frame.Draw()
+        legend.Draw()        
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"./quick_plots/simultaneousPlotTest_{core_modelName}.pdf")
         
         

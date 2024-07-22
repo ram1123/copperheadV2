@@ -42,12 +42,12 @@ def MakeFEWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     out_dict = {}
 
     c_start_val_map = {
-        1 : 0.17,
-        2 : 0.15,
-        3 : 0.05,
-        # 1 : 0.29,
+        # 1 : 0.17,
         # 2 : 0.15,
-        # 3 : 0.081,
+        # 3 : 0.05,
+        1 : 0.339,
+        2 : 0.169,
+        3 : 0.102,
     }
     # make BernStein of order == dof
     n_coeffs = dof 
@@ -193,14 +193,14 @@ def MakeBWZ_Redux(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     
     name = f"BWZ_Redux_a_coeff"
     # a_coeff = rt.RooRealVar(name,name, -0.001,-0.0025,0.0035)
-    a_coeff = rt.RooRealVar(name,name, -0.001,-0.015,0.015)
-    # a_coeff = rt.RooRealVar(name,name, 0.012,-0.015,0.03)
+    # a_coeff = rt.RooRealVar(name,name, -0.001,-0.015,0.015)
+    a_coeff = rt.RooRealVar(name,name, -0.0154,-0.02,0.03)
     name = f"BWZ_Redux_b_coeff"
-    b_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    b_coeff = rt.RooRealVar(name,name, -0.000121,-0.001,0.001)
     # b_coeff = rt.RooRealVar(name,name, -0.00022,-0.001,0.001)
     name = f"BWZ_Redux_c_coeff"
-    c_coeff = rt.RooRealVar(name,name, 1.5,-5.0,5.0)
     # c_coeff = rt.RooRealVar(name,name, 1.5,-5.0,5.0)
+    c_coeff = rt.RooRealVar(name,name, 0.421,-5.0,5.0)
     
 
     # add in the variables and models
@@ -416,14 +416,14 @@ def MakeSumExponential(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->T
     order = int((dof+1)/2) # order is the number of expoenetial terms to sum up
     print(f"order: {order}")
     b_start_val_map = {
-        0 : -0.2,
-        1 : -0.02,
-        # 0 : -0.068,
-        # 1 : -0.062,
+        # 0 : -0.2,
+        # 1 : -0.02,
+        0 : -0.058,
+        1 : -0.006,
     }
     a_start_val_map = {
-        1 : 0.1,
-        # 1 : 0.15,
+        # 1 : 0.1,
+        1 : 0.5,
     }
 
     
