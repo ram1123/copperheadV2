@@ -40,9 +40,9 @@ if __name__ == "__main__":
     dof = 3 # degrees of freedom for the core-functions. This should be same for all the functions
     smf_coeffStartVals = {
         0: {
-            1: 0.6, # smf val start with index one bc zeroth order coeff is assumed to be zero for RooChebychev
-            2: 0.2,
-            3: 0.0005,
+            1: 0.48, # smf val start with index one bc zeroth order coeff is assumed to be zero for RooChebychev
+            2: 0.17,
+            3: -0.014,
         },
         1: {
             1: 0.5,
@@ -118,6 +118,7 @@ if __name__ == "__main__":
         for core_model in core_models:
             subCat_name4coreModel = subCat_name + "_" + core_model.GetName()
             sample.defineType(subCat_name4coreModel)
+            print(f"subCat_name4coreModel :{subCat_name4coreModel}")
             # generate
             subCat_filter = (processed_eventsData["subCategory_idx"] == cat_ix)
             subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
@@ -128,8 +129,9 @@ if __name__ == "__main__":
             print(f"roo_datasetData.GetName(): {roo_datasetData.GetName()}")
     
             
-            name = subCat_name4coreModel+f"_SMFx{BWZ_Redux.GetName()}"
+            name = subCat_name4coreModel+"_final"
             final_model = rt.RooProdPdf(name, name, [polynomial_model,core_model])
+            print(f"final_model name: {name}")
             
             # add the information to relevant dictionaries
             model_dict[subCat_name4coreModel] = final_model
@@ -150,8 +152,7 @@ if __name__ == "__main__":
     ) 
     # combData.Print("v")
     sample.Print("v")
-    # combHist = rt.RooDataHist("CombDataHist_Data",f"CombDataHist_Data", rt.RooArgSet(mass), combData)
-    # combHist.Print("v")
+
 
     # Construct a simultaneous pdf using category sample as index: associate model
     simPdf = rt.RooSimultaneous("simPdf", "simultaneous pdf", model_dict, sample)
@@ -163,6 +164,7 @@ if __name__ == "__main__":
     wout = rt.RooWorkspace("workspace","workspace")
     wout.Import(roo_datasetData);
     for model_name, model in model_dict.items():
+        print(f"model_name: {model_name}")
         wout.Import(model);
     wout.Print();
     wout.Write();

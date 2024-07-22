@@ -31,7 +31,7 @@ def getFEWZ_vals(FEWZ_histo):
     return (np.array(x_vals), np.array(y_vals))
     
 
-def MakeFEWZxBern(mass: rt.RooRealVar, dof: int, mass_hist: rt.RooDataHist) ->Tuple[rt.RooProdPdf, Dict]:
+def MakeFEWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     """
     params:
     mass = rt.RooRealVar that we will fitTo
@@ -45,6 +45,9 @@ def MakeFEWZxBern(mass: rt.RooRealVar, dof: int, mass_hist: rt.RooDataHist) ->Tu
         1 : 0.17,
         2 : 0.15,
         3 : 0.05,
+        # 1 : 0.29,
+        # 2 : 0.15,
+        # 3 : 0.081,
     }
     # make BernStein of order == dof
     n_coeffs = dof 
@@ -191,10 +194,13 @@ def MakeBWZ_Redux(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     name = f"BWZ_Redux_a_coeff"
     # a_coeff = rt.RooRealVar(name,name, -0.001,-0.0025,0.0035)
     a_coeff = rt.RooRealVar(name,name, -0.001,-0.015,0.015)
+    # a_coeff = rt.RooRealVar(name,name, 0.012,-0.015,0.03)
     name = f"BWZ_Redux_b_coeff"
     b_coeff = rt.RooRealVar(name,name, -0.00001,-0.001,0.001)
+    # b_coeff = rt.RooRealVar(name,name, -0.00022,-0.001,0.001)
     name = f"BWZ_Redux_c_coeff"
     c_coeff = rt.RooRealVar(name,name, 1.5,-5.0,5.0)
+    # c_coeff = rt.RooRealVar(name,name, 1.5,-5.0,5.0)
     
 
     # add in the variables and models
@@ -412,9 +418,12 @@ def MakeSumExponential(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->T
     b_start_val_map = {
         0 : -0.2,
         1 : -0.02,
+        # 0 : -0.068,
+        # 1 : -0.062,
     }
     a_start_val_map = {
         1 : 0.1,
+        # 1 : 0.15,
     }
 
     
