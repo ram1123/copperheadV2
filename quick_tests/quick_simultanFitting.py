@@ -7,6 +7,7 @@ from omegaconf import OmegaConf
 
 from typing import Tuple, List, Dict
 import ROOT as rt
+import time
 
 
 from quickSMFtest_functions import MakeBWZ_Redux, MakeFEWZxBern, MakeSumExponential
@@ -17,6 +18,7 @@ if __name__ == "__main__":
     """
     load_path = "/work/users/yun79/stage2_output/test/processed_events_data.parquet"
     processed_eventsData = ak.from_parquet(load_path)
+    start_time = time.time()
 
     
     print("events loaded!")
@@ -40,9 +42,9 @@ if __name__ == "__main__":
     dof = 3 # degrees of freedom for the core-functions. This should be same for all the functions
     smf_coeffStartVals = {
         0: {
-            1: 0.369, # smf val start with index one bc zeroth order coeff is assumed to be zero for RooChebychev
-            2: 0.152,
-            3: -0.025,
+            1: 0.330, # smf val start with index one bc zeroth order coeff is assumed to be zero for RooChebychev
+            2: 0.142,
+            3: -0.0283,
         },
         1: {
             1: 0.5,
@@ -92,7 +94,7 @@ if __name__ == "__main__":
     core_models = [BWZ_Redux, FEWZxBern, sumExp]
     
     # for cat_ix in range(5):
-    for cat_ix in [0]:
+    for cat_ix in [0,1]:
         subCat_name = f"subCat{cat_ix}"
         smfVarList = []
         smf_order= poly_order_by_cat[cat_ix]
@@ -156,9 +158,12 @@ if __name__ == "__main__":
 
     # Construct a simultaneous pdf using category sample as index: associate model
     simPdf = rt.RooSimultaneous("simPdf", "simultaneous pdf", model_dict, sample)
-    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
-    fit_result = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, )
+    rt.EnableImplicitMT()
+    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, Strategy=0)
+    fit_result = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, Strategy=0)
 
+    end_time  =time.time()
+    print(f"time for fitting to take plsace: {end_time-start_time} sec")
     # # save workspace for plotting later
     # fout = rt.TFile("./simultFitTestWorkspace.root","RECREATE")
     # wout = rt.RooWorkspace("workspace","workspace")
