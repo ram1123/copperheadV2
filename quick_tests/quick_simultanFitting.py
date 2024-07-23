@@ -91,8 +91,13 @@ if __name__ == "__main__":
     FEWZxBern, params_fewz = MakeFEWZxBern(mass, dof)
     sumExp, params_exp = MakeSumExponential(mass, dof)
 
-    core_models = [BWZ_Redux, FEWZxBern, sumExp]
+    core_models = [
+        BWZ_Redux, 
+        # FEWZxBern, 
+        # sumExp,
+    ]
     
+    rt.EnableImplicitMT() # for fitting
     # for cat_ix in range(5):
     for cat_ix in [0,1]:
         subCat_name = f"subCat{cat_ix}"
@@ -140,7 +145,8 @@ if __name__ == "__main__":
             subCat_dataHists[subCat_name4coreModel] = roo_histData
             misc_dict[roo_datasetData.GetName()] = roo_datasetData
             
-            # misc_dict.update(params_redux)
+            # # fit model individually once b4 doing simiultaneous fit 
+            # _ = final_model.fitTo(roo_histData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, Strategy=0)
 
     print(f"misc_dict: {misc_dict}")
     print(f"model_dict: {model_dict}")
@@ -158,7 +164,7 @@ if __name__ == "__main__":
 
     # Construct a simultaneous pdf using category sample as index: associate model
     simPdf = rt.RooSimultaneous("simPdf", "simultaneous pdf", model_dict, sample)
-    rt.EnableImplicitMT()
+    
     _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, Strategy=0)
     fit_result = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", Save=True, Strategy=0)
 
