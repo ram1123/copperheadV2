@@ -45,8 +45,8 @@ if __name__ == "__main__":
      
     # Construct background pdf
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
-    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.004, -1, 1)
-    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.004, -1, 1)
+    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -1, 1)
+    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -1, 1)
     px = rt.RooChebychev("px", "px", mass, [a0_subCat0, a1_subCat0, a3_subCat0])
      
     # Construct composite pdf
@@ -122,12 +122,15 @@ if __name__ == "__main__":
      
     # Construct a simultaneous pdf using category sample as index: associate model
     # with the physics state and model_ctl with the control state
-    simPdf = rt.RooSimultaneous("simPdf", "simultaneous pdf", 
-                                  {
-                                      "physics": model, 
-                                       "control": model_ctl
-                                  }, sample
-                                 )
+    simPdf = rt.RooSimultaneous(
+                                "simPdf", 
+                                "simultaneous pdf", 
+                                {
+                                    "physics": model, 
+                                    "control": model_ctl
+                                }, 
+                                sample,
+    )
      
     # Perform a simultaneous fit
     # ---------------------------------------------------
@@ -135,8 +138,10 @@ if __name__ == "__main__":
     # Perform simultaneous fit of model to data and model_ctl to data_ctl
     start = time.time()
 
-    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
-    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
+    # _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
+    # fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
+    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True, Strategy=0)
+    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True, Strategy=0)
     end = time.time()
     
     fitResult.Print()
