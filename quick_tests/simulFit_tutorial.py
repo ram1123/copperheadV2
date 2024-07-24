@@ -47,7 +47,7 @@ if __name__ == "__main__":
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
     a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.004, -1, 1)
     a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.004, -1, 1)
-    px = rt.RooChebychev("px", "px", mass, [a0_subCat0, a1_subCat0,a3_subCat0])
+    px = rt.RooChebychev("px", "px", mass, [a0_subCat0, a1_subCat0, a3_subCat0])
      
     # Construct composite pdf
     model = rt.RooProdPdf("model", "model", [BWZ_Redux_cat0, px])
@@ -62,11 +62,17 @@ if __name__ == "__main__":
     name = "Subcat1_BWZ_Redux_dof_3"
     BWZ_Redux_cat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
     gx_ctl = BWZ_Redux_cat1
+    # gx_ctl = BWZ_Redux_cat0
     
     # Construct the background pdf
-    a0_ctl = rt.RooRealVar("a0_ctl", "a0_ctl", -0.1, -1, 1)
-    a1_ctl = rt.RooRealVar("a1_ctl", "a1_ctl", 0.5, -0.1, 1)
-    px_ctl = rt.RooChebychev("px_ctl", "px_ctl", mass, [a0_ctl, a1_ctl])
+    a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
+    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.1, 1)
+    a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -0.1, 1)
+    px_ctl = rt.RooChebychev("px_ctl", "px_ctl", mass, 
+                             [a0_subCat1, 
+                              a1_subCat1, 
+                              a3_subCat1
+                             ])
      
     # Construct the composite model
     model_ctl = rt.RooProdPdf("model_ctl", "model_ctl", [gx_ctl, px_ctl])
@@ -128,7 +134,8 @@ if __name__ == "__main__":
      
     # Perform simultaneous fit of model to data and model_ctl to data_ctl
     start = time.time()
-    
+
+    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
     fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
     end = time.time()
     
