@@ -22,10 +22,20 @@ if __name__ == "__main__":
     nbins = 800
     mass.setBins(nbins)
     
-    # Construct signal pdf
-    mean = rt.RooRealVar("mean", "mean", 0, -8, 8)
-    sigma = rt.RooRealVar("sigma", "sigma", 0.3, 0.1, 10)
-    gx = rt.RooGaussian("gx", "gx", mass, mean, sigma)
+    # # Construct signal pdf
+    # mean = rt.RooRealVar("mean", "mean", 0, -8, 8)
+    # sigma = rt.RooRealVar("sigma", "sigma", 0.3, 0.1, 10)
+    # gx = rt.RooGaussian("gx", "gx", mass, mean, sigma)
+    # intialize the core functions 
+    name = f"BWZ_Redux_a_coeff"
+    a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
+    name = f"BWZ_Redux_b_coeff"
+    b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
+    name = f"BWZ_Redux_c_coeff"
+    c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
+    
+    name = "Subcat0_BWZ_Redux_dof_3"
+    BWZ_Redux_cat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
      
     # Construct background pdf
     a0 = rt.RooRealVar("a0", "a0", -0.1, -1, 1)
@@ -33,25 +43,26 @@ if __name__ == "__main__":
     px = rt.RooChebychev("px", "px", mass, [a0, a1])
      
     # Construct composite pdf
-    f = rt.RooRealVar("f", "f", 0.2, 0.0, 1.0)
-    model = rt.RooAddPdf("model", "model", [gx, px], [f])
+    model = rt.RooProdPdf("model", "model", [BWZ_Redux_cat0, px])
      
     # Create model for control sample
     # --------------------------------------------------------------
      
     # Construct signal pdf.
     # NOTE that sigma is shared with the signal sample model
-    mean_ctl = rt.RooRealVar("mean_ctl", "mean_ctl", -3, -8, 8)
-    gx_ctl = rt.RooGaussian("gx_ctl", "gx_ctl", mass, mean_ctl, sigma)
-     
+    # mean_ctl = rt.RooRealVar("mean_ctl", "mean_ctl", -3, -8, 8)
+    # gx_ctl = rt.RooGaussian("gx_ctl", "gx_ctl", mass, mean_ctl, sigma)
+    name = "Subcat1_BWZ_Redux_dof_3"
+    BWZ_Redux_cat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    gx_ctl = BWZ_Redux_cat1
+    
     # Construct the background pdf
     a0_ctl = rt.RooRealVar("a0_ctl", "a0_ctl", -0.1, -1, 1)
     a1_ctl = rt.RooRealVar("a1_ctl", "a1_ctl", 0.5, -0.1, 1)
     px_ctl = rt.RooChebychev("px_ctl", "px_ctl", mass, [a0_ctl, a1_ctl])
      
     # Construct the composite model
-    f_ctl = rt.RooRealVar("f_ctl", "f_ctl", 0.5, 0.0, 1.0)
-    model_ctl = rt.RooAddPdf("model_ctl", "model_ctl", [gx_ctl, px_ctl], [f_ctl])
+    model_ctl = rt.RooProdPdf("model_ctl", "model_ctl", [gx_ctl, px_ctl])
      
     # Generate events for both samples
     # ---------------------------------------------------------------
