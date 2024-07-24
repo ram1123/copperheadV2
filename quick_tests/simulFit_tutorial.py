@@ -40,17 +40,19 @@ if __name__ == "__main__":
     name = f"BWZ_Redux_c_coeff"
     c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
     
-    name = "Subcat0_BWZ_Redux_dof_3"
-    BWZ_Redux_cat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    name = "subCat0_BWZ_Redux_dof_3"
+    BWZ_Redux_subCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
      
     # Construct background pdf
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
     a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -1, 1)
     a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -1, 1)
-    px = rt.RooChebychev("px", "px", mass, [a0_subCat0, a1_subCat0, a3_subCat0])
-     
+
+    name = "subCat0_SMF"
+    px = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
+    
     # Construct composite pdf
-    model = rt.RooProdPdf("model", "model", [BWZ_Redux_cat0, px])
+    model_subCat0 = rt.RooProdPdf("model", "model", [BWZ_Redux_subCat0, px])
      
     # Create model for control sample
     # --------------------------------------------------------------
@@ -59,10 +61,10 @@ if __name__ == "__main__":
     # NOTE that sigma is shared with the signal sample model
     # mean_ctl = rt.RooRealVar("mean_ctl", "mean_ctl", -3, -8, 8)
     # gx_ctl = rt.RooGaussian("gx_ctl", "gx_ctl", mass, mean_ctl, sigma)
-    name = "Subcat1_BWZ_Redux_dof_3"
-    BWZ_Redux_cat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    gx_ctl = BWZ_Redux_cat1
-    # gx_ctl = BWZ_Redux_cat0
+    name = "subCat1_BWZ_Redux_dof_3"
+    BWZ_Redux_subCat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat1 = BWZ_Redux_subCat1
+    # coreSubCat1 = BWZ_Redux_subCat0
     
     # Construct the background pdf
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
@@ -75,7 +77,26 @@ if __name__ == "__main__":
                              ])
      
     # Construct the composite model
-    model_ctl = rt.RooProdPdf("model_ctl", "model_ctl", [gx_ctl, px_ctl])
+    model_ctl = rt.RooProdPdf("model_ctl", "model_ctl", [coreSubCat1, px_ctl])
+
+    # subCat 2
+    name = "subCat2_BWZ_Redux_dof_3"
+    BWZ_Redux_subCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat2 = BWZ_Redux_subCat2
+    
+    # Construct the background pdf
+    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
+    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.1, 1)
+    a3_subCat2 = rt.RooRealVar("a3_subCat2", "a3_subCat2", 0.5, -0.1, 1)
+    name = "subCat2_SMF"
+    subCat2_SMF = rt.RooChebychev(name, name, mass, 
+                             [a0_subCat2, 
+                              a1_subCat2, 
+                              a3_subCat2
+                             ])
+    name = "model_SubCat2_SMFxBWZRedux"
+    model_SubCat2_SMFxBWZRedux = rt.RooProdPdf(name, name, [coreSubCat2, subCat2_SMF])
+     
      
     # Generate events for both samples
     # ---------------------------------------------------------------
@@ -87,11 +108,19 @@ if __name__ == "__main__":
     roo_datasetData_subCat0 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
     data = roo_datasetData_subCat0
 
+    # do for cat idx 1
     subCat_filter = (processed_eventsData["subCategory_idx"] == 1)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
     data_ctl = roo_datasetData_subCat1
+
+    # do for cat idx 2
+    subCat_filter = (processed_eventsData["subCategory_idx"] == 2)
+    subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
+    subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
+    roo_datasetData_subCat2 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    data_subCat2 = roo_datasetData_subCat2
 
     # # Generate 1000 events in x and y from model
     # data = model.generate({x}, 1000)
@@ -102,8 +131,9 @@ if __name__ == "__main__":
      
     # Define category to distinguish physics and control samples events
     sample = rt.RooCategory("sample", "sample")
-    sample.defineType("physics")
-    sample.defineType("control")
+    sample.defineType("subCat0")
+    sample.defineType("subCat1")
+    # sample.defineType("subCat2")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -112,8 +142,9 @@ if __name__ == "__main__":
         {mass},
         Index=sample,
         Import={
-            "physics": data, 
-            "control": data_ctl
+            "subCat0": data, 
+            "subCat1": data_ctl,
+            # "subCat2": data_subCat2
         },
     )
      
@@ -126,8 +157,9 @@ if __name__ == "__main__":
                                 "simPdf", 
                                 "simultaneous pdf", 
                                 {
-                                    "physics": model, 
-                                    "control": model_ctl
+                                    "subCat0": model_subCat0, 
+                                    "subCat1": model_ctl,
+                                    # "subCat2": model_SubCat2_SMFxBWZRedux
                                 }, 
                                 sample,
     )
@@ -141,7 +173,7 @@ if __name__ == "__main__":
     # _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
     # fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
     _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True, Strategy=0)
-    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True, Strategy=0)
+    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True,)
     end = time.time()
     
     fitResult.Print()
@@ -158,8 +190,8 @@ if __name__ == "__main__":
 
     # # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
     # roo_datasetData_subCat1.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-    # model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model.GetName(), LineColor=rt.kGreen)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model.GetName(), "L")
+    # model_subCat0.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_subCat0.GetName(), LineColor=rt.kGreen)
+    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_subCat0.GetName(), "L")
     # model_ctl.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_ctl.GetName(), LineColor=rt.kBlue)
     # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_ctl.GetName(), "L")
 
