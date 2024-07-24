@@ -52,7 +52,8 @@ if __name__ == "__main__":
     px = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
     
     # Construct composite pdf
-    model_subCat0 = rt.RooProdPdf("model", "model", [BWZ_Redux_subCat0, px])
+    name = "subCat0_BWZ_Redux"
+    model_subCat0 = rt.RooProdPdf(name, name, [BWZ_Redux_subCat0, px])
      
     # Create model for control sample
     # --------------------------------------------------------------
@@ -77,10 +78,11 @@ if __name__ == "__main__":
                              ])
      
     # Construct the composite model
-    model_ctl = rt.RooProdPdf("model_ctl", "model_ctl", [coreSubCat1, px_ctl])
+    name = "subCat1_BWZ_Redux"
+    model_subCat1 = rt.RooProdPdf(name, name, [coreSubCat1, px_ctl])
 
     # subCat 2
-    name = "subCat2_BWZ_Redux_dof_3"
+    name = "subCat2_BWZ_Redux"
     BWZ_Redux_subCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
     coreSubCat2 = BWZ_Redux_subCat2
     
@@ -95,7 +97,7 @@ if __name__ == "__main__":
                               a3_subCat2
                              ])
     name = "model_SubCat2_SMFxBWZRedux"
-    model_SubCat2_SMFxBWZRedux = rt.RooProdPdf(name, name, [coreSubCat2, subCat2_SMF])
+    model_subCat2 = rt.RooProdPdf(name, name, [coreSubCat2, subCat2_SMF])
      
      
     # Generate events for both samples
@@ -125,9 +127,7 @@ if __name__ == "__main__":
     roo_histData_subCat2 = rt.RooDataHist("subCat2_rooHist","subCat2_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat2)
     data_subCat2 = roo_histData_subCat2
 
-    # # Generate 1000 events in x and y from model
-    # data = model.generate({x}, 1000)
-    # data_ctl = model_ctl.generate({x}, 2000)
+
      
     # Create index category and join samples
     # ---------------------------------------------------------------------------
@@ -154,15 +154,13 @@ if __name__ == "__main__":
     # Construct a simultaneous pdf in (x, sample)
     # -----------------------------------------------------------------------------------
      
-    # Construct a simultaneous pdf using category sample as index: associate model
-    # with the physics state and model_ctl with the control state
     simPdf = rt.RooSimultaneous(
                                 "simPdf", 
                                 "simultaneous pdf", 
                                 {
                                     "subCat0": model_subCat0, 
-                                    "subCat1": model_ctl,
-                                    "subCat2": model_SubCat2_SMFxBWZRedux
+                                    "subCat1": model_subCat1,
+                                    "subCat2": model_subCat2,
                                 }, 
                                 sample,
     )
@@ -170,7 +168,6 @@ if __name__ == "__main__":
     # Perform a simultaneous fit
     # ---------------------------------------------------
      
-    # Perform simultaneous fit of model to data and model_ctl to data_ctl
     start = time.time()
 
     # _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
@@ -182,25 +179,27 @@ if __name__ == "__main__":
     fitResult.Print()
     print(f"runtime: {end-start} seconds")
 
-    # # do plotting
-    # name = "Canvas"
-    # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-    # canvas.cd()
+    # do plotting
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
     
-    # frame = mass.frame()
-    # legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
 
 
-    # # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-    # roo_datasetData_subCat1.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-    # model_subCat0.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_subCat0.GetName(), LineColor=rt.kGreen)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_subCat0.GetName(), "L")
-    # model_ctl.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_ctl.GetName(), LineColor=rt.kBlue)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_ctl.GetName(), "L")
+    # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+    roo_datasetData_subCat1.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+    model_subCat0.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_subCat0.GetName(), LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_subCat0.GetName(), "L")
+    model_subCat1.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_subCat1.GetName(), LineColor=rt.kBlue)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_subCat1.GetName(), "L")
+    model_subCat2.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_subCat2.GetName(), LineColor=rt.kRed)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_subCat2.GetName(), "L")
 
-    # frame.Draw()
-    # legend.Draw()        
-    # canvas.Update()
-    # canvas.Draw()
-    # canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial.pdf")
+    frame.Draw()
+    legend.Draw()        
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial.pdf")
 
