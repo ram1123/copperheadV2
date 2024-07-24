@@ -28,17 +28,17 @@ if __name__ == "__main__":
     # fit_range = "loSB,hiSB" # we're fitting bkg only
     fit_range = "hiSB,loSB" # we're fitting bkg only
     
-    # # Construct signal pdf
-    # mean = rt.RooRealVar("mean", "mean", 0, -8, 8)
-    # sigma = rt.RooRealVar("sigma", "sigma", 0.3, 0.1, 10)
-    # gx = rt.RooGaussian("gx", "gx", mass, mean, sigma)
-    # intialize the core functions 
+    # Initialize BWZ Redux
+    # --------------------------------------------------------------
     name = f"BWZ_Redux_a_coeff"
     a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
     name = f"BWZ_Redux_b_coeff"
     b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
     name = f"BWZ_Redux_c_coeff"
     c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
+
+
+    
     
     name = "subCat0_BWZ_Redux_dof_3"
     BWZ_Redux_subCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
@@ -51,22 +51,18 @@ if __name__ == "__main__":
 
     name = "subCat0_SMF"
     px = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
+
+
     
     # Construct composite pdf
     name = "subCat0_BWZ_Redux"
-    model_subCat0 = rt.RooProdPdf(name, name, [coreSubCat0, px])
+    model_subCat0_BWZredux = rt.RooProdPdf(name, name, [coreSubCat0, px])
      
-    # Create model for control sample
-    # --------------------------------------------------------------
-     
-    # Construct signal pdf.
-    # NOTE that sigma is shared with the signal sample model
-    # mean_ctl = rt.RooRealVar("mean_ctl", "mean_ctl", -3, -8, 8)
-    # gx_ctl = rt.RooGaussian("gx_ctl", "gx_ctl", mass, mean_ctl, sigma)
+    
     name = "subCat1_BWZ_Redux_dof_3"
     BWZ_Redux_subCat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreSubCat1 = BWZ_Redux_subCat1
-    # coreSubCat1 = BWZ_Redux_subCat0
+    # coreSubCat1 = BWZ_Redux_subCat1
+    coreSubCat1 = BWZ_Redux_subCat0
     
     # Construct the background pdf
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
@@ -80,12 +76,13 @@ if __name__ == "__main__":
      
     # Construct the composite model
     name = "subCat1_BWZ_Redux"
-    model_subCat1 = rt.RooProdPdf(name, name, [coreSubCat1, px_ctl])
+    model_subCat1_BWZredux = rt.RooProdPdf(name, name, [coreSubCat1, px_ctl])
 
     # subCat 2
     name = "subCat2_BWZ_Redux"
     BWZ_Redux_subCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreSubCat2 = BWZ_Redux_subCat2
+    # coreSubCat2 = BWZ_Redux_subCat2
+    coreSubCat2 = BWZ_Redux_subCat0
     
     # Construct the background pdf
     a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
@@ -96,9 +93,7 @@ if __name__ == "__main__":
                               a1_subCat2, 
                              ])
     name = "model_SubCat2_SMFxBWZRedux"
-    model_subCat2 = rt.RooProdPdf(name, name, [coreSubCat2, subCat2_SMF])
-
-    
+    model_subCat2_BWZredux = rt.RooProdPdf(name, name, [coreSubCat2, subCat2_SMF])    
      
     # Generate events for both samples
     # ---------------------------------------------------------------
@@ -109,7 +104,7 @@ if __name__ == "__main__":
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat0 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
     roo_histData_subCat0 = rt.RooDataHist("subCat0_rooHist","subCat0_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat0)
-    data_subCat0 = roo_histData_subCat0
+    data_subCat0_BWZredux = roo_histData_subCat0
 
     # do for cat idx 1
     subCat_filter = (processed_eventsData["subCategory_idx"] == 1)
@@ -117,15 +112,15 @@ if __name__ == "__main__":
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
     roo_histData_subCat1 = rt.RooDataHist("subCat1_rooHist","subCat1_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat1)
-    data_subCat1 = roo_histData_subCat1
+    data_subCat1_BWZredux = roo_histData_subCat1
 
-    # do for cat idx 2
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 2)
-    subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
-    subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
-    roo_datasetData_subCat2 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    roo_histData_subCat2 = rt.RooDataHist("subCat2_rooHist","subCat2_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat2)
-    data_subCat2 = roo_histData_subCat2
+    # # do for cat idx 2
+    # subCat_filter = (processed_eventsData["subCategory_idx"] == 2)
+    # subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
+    # subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
+    # roo_datasetData_subCat2 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    # roo_histData_subCat2 = rt.RooDataHist("subCat2_rooHist","subCat2_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat2)
+    # data_subCat2_BWZredux = roo_histData_subCat2
 
 
      
@@ -134,9 +129,9 @@ if __name__ == "__main__":
      
     # Define category to distinguish physics and control samples events
     sample = rt.RooCategory("sample", "sample")
-    sample.defineType("subCat0")
-    sample.defineType("subCat1")
-    sample.defineType("subCat2")
+    sample.defineType("subCat0_BWZredux")
+    sample.defineType("subCat1_BWZredux")
+    # sample.defineType("subCat2_BWZredux")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -145,9 +140,9 @@ if __name__ == "__main__":
         {mass},
         Index=sample,
         Import={
-            "subCat0": data_subCat0, 
-            "subCat1": data_subCat1,
-            "subCat2": data_subCat2
+            "subCat0_BWZredux": data_subCat0_BWZredux, 
+            "subCat1_BWZredux": data_subCat1_BWZredux,
+            # "subCat2_BWZredux": data_subCat2_BWZredux,
         },
     )
      
@@ -158,9 +153,9 @@ if __name__ == "__main__":
                                 "simPdf", 
                                 "simultaneous pdf", 
                                 {
-                                    "subCat0": model_subCat0, 
-                                    "subCat1": model_subCat1,
-                                    "subCat2": model_subCat2,
+                                    "subCat0_BWZredux": model_subCat0_BWZredux, 
+                                    "subCat1_BWZredux": model_subCat1_BWZredux,
+                                    # "subCat2_BWZredux": model_subCat2_BWZredux,
                                 }, 
                                 sample,
     )
