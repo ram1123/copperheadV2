@@ -18,9 +18,15 @@ if __name__ == "__main__":
     # -------------------------------------------------------------
     # Create observables
     mass_name = "mh_ggh"
-    mass = rt.RooRealVar(mass_name, mass_name, -8, 8)
+    mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
     nbins = 800
     mass.setBins(nbins)
+    mass.setRange("hiSB", 135, 150 )
+    mass.setRange("loSB", 110, 115 )
+    mass.setRange("h_peak", 115, 135 )
+    mass.setRange("full", 110, 150 )
+    # fit_range = "loSB,hiSB" # we're fitting bkg only
+    fit_range = "hiSB,loSB" # we're fitting bkg only
     
     # # Construct signal pdf
     # mean = rt.RooRealVar("mean", "mean", 0, -8, 8)
@@ -38,9 +44,10 @@ if __name__ == "__main__":
     BWZ_Redux_cat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
      
     # Construct background pdf
-    a0 = rt.RooRealVar("a0", "a0", -0.1, -1, 1)
-    a1 = rt.RooRealVar("a1", "a1", 0.004, -1, 1)
-    px = rt.RooChebychev("px", "px", mass, [a0, a1])
+    a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
+    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.004, -1, 1)
+    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.004, -1, 1)
+    px = rt.RooChebychev("px", "px", mass, [a0_subCat0, a1_subCat0,a3_subCat0])
      
     # Construct composite pdf
     model = rt.RooProdPdf("model", "model", [BWZ_Redux_cat0, px])
@@ -122,10 +129,31 @@ if __name__ == "__main__":
     # Perform simultaneous fit of model to data and model_ctl to data_ctl
     start = time.time()
     
-    fitResult = simPdf.fitTo(combData, PrintLevel=-1, Save=True)
+    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
     end = time.time()
     
     fitResult.Print()
     print(f"runtime: {end-start} seconds")
 
+    # # do plotting
+    # name = "Canvas"
+    # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    # canvas.cd()
+    
+    # frame = mass.frame()
+    # legend = rt.TLegend(0.65,0.55,0.9,0.7)
+
+
+    # # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+    # roo_datasetData_subCat1.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+    # model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model.GetName(), LineColor=rt.kGreen)
+    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model.GetName(), "L")
+    # model_ctl.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_ctl.GetName(), LineColor=rt.kBlue)
+    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_ctl.GetName(), "L")
+
+    # frame.Draw()
+    # legend.Draw()        
+    # canvas.Update()
+    # canvas.Draw()
+    # canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial.pdf")
 
