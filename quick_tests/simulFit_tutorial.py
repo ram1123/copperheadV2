@@ -106,21 +106,24 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat0 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    data = roo_datasetData_subCat0
+    roo_histData_subCat0 = rt.RooDataHist("subCat0_rooHist","subCat0_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat0)
+    data = roo_histData_subCat0
 
     # do for cat idx 1
     subCat_filter = (processed_eventsData["subCategory_idx"] == 1)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    data_ctl = roo_datasetData_subCat1
+    roo_histData_subCat1 = rt.RooDataHist("subCat1_rooHist","subCat1_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat1)
+    data_ctl = roo_histData_subCat1
 
     # do for cat idx 2
     subCat_filter = (processed_eventsData["subCategory_idx"] == 2)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat2 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    data_subCat2 = roo_datasetData_subCat2
+    roo_histData_subCat2 = rt.RooDataHist("subCat2_rooHist","subCat2_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat2)
+    data_subCat2 = roo_histData_subCat2
 
     # # Generate 1000 events in x and y from model
     # data = model.generate({x}, 1000)
