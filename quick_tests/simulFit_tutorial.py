@@ -133,7 +133,7 @@ if __name__ == "__main__":
     sample = rt.RooCategory("sample", "sample")
     sample.defineType("subCat0")
     sample.defineType("subCat1")
-    # sample.defineType("subCat2")
+    sample.defineType("subCat2")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -144,7 +144,7 @@ if __name__ == "__main__":
         Import={
             "subCat0": data, 
             "subCat1": data_ctl,
-            # "subCat2": data_subCat2
+            "subCat2": data_subCat2
         },
     )
      
@@ -159,7 +159,7 @@ if __name__ == "__main__":
                                 {
                                     "subCat0": model_subCat0, 
                                     "subCat1": model_ctl,
-                                    # "subCat2": model_SubCat2_SMFxBWZRedux
+                                    "subCat2": model_SubCat2_SMFxBWZRedux
                                 }, 
                                 sample,
     )
