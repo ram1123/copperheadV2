@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     
     # Construct composite pdf
-    name = "subCat0_SMFxBWZRedux"
+    name = "model_subCat0_SMFxBWZRedux"
     model_subCat0_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat0, subCat0_SMF])
 
 
@@ -460,11 +460,11 @@ if __name__ == "__main__":
     sample.defineType("subCat2_sumExp")
     sample.defineType("subCat3_sumExp")
     sample.defineType("subCat4_sumExp")
-    sample.defineType("subCat0_FEWZxBern")
-    sample.defineType("subCat1_FEWZxBern")
-    sample.defineType("subCat2_FEWZxBern")
-    sample.defineType("subCat3_FEWZxBern")
-    sample.defineType("subCat4_FEWZxBern")
+    # sample.defineType("subCat0_FEWZxBern")
+    # sample.defineType("subCat1_FEWZxBern")
+    # sample.defineType("subCat2_FEWZxBern")
+    # sample.defineType("subCat3_FEWZxBern")
+    # sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -483,11 +483,11 @@ if __name__ == "__main__":
             "subCat2_sumExp": data_subCat2_sumExp,
             "subCat3_sumExp": data_subCat3_sumExp,
             "subCat4_sumExp": data_subCat4_sumExp,
-            "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
-            "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            # "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
+            # "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
+            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -508,11 +508,11 @@ if __name__ == "__main__":
                                     "subCat2_sumExp": model_subCat2_sumExp,
                                     "subCat3_sumExp": model_subCat3_sumExp,
                                     "subCat4_sumExp": model_subCat4_sumExp,
-                                    "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
-                                    "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+                                    # "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
+                                    # "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
+                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
     )
@@ -533,27 +533,86 @@ if __name__ == "__main__":
     fitResult.Print()
     print(f"runtime: {end-start} seconds")
 
-    # # do plotting
-    # name = "Canvas"
-    # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-    # canvas.cd()
+    # -------------------------------------------------------------------------
+    # do plotting for BWZ Redux
+    # -------------------------------------------------------------------------
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
     
-    # frame = mass.frame()
-    # legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
 
 
-    # # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-    # roo_datasetData_subCat1.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-    # model_subCat0.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_subCat0.GetName(), LineColor=rt.kGreen)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_subCat0.GetName(), "L")
-    # model_subCat1.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_subCat1.GetName(), LineColor=rt.kBlue)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_subCat1.GetName(), "L")
-    # model_subCat2.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=model_subCat2.GetName(), LineColor=rt.kRed)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),model_subCat2.GetName(), "L")
+    # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+    roo_datasetData_subCat1.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+    # subCat 0
+    name = model_subCat0_BWZredux.GetName()
+    model_subCat0_BWZredux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    # subCat 1
+    name = model_subCat1_BWZredux.GetName()
+    model_subCat1_BWZredux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kBlue)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    # subCat 2
+    name = model_subCat2_BWZredux.GetName()
+    model_subCat2_BWZredux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kRed)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    # subCat 3
+    name = model_subCat3_BWZredux.GetName()
+    model_subCat3_BWZredux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kOrange)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    # subCat 4
+    name = model_subCat4_BWZredux.GetName()
+    model_subCat4_BWZredux.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kViolet)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
 
-    # frame.Draw()
-    # legend.Draw()        
-    # canvas.Update()
-    # canvas.Draw()
-    # canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial.pdf")
+    frame.Draw()
+    legend.Draw()        
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial_BWZRedux.pdf")
+
+
+    # -------------------------------------------------------------------------
+    # do plotting for Sum Exp
+    # -------------------------------------------------------------------------
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+
+
+    # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+    roo_datasetData_subCat1.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+    # subCat 0
+    name = model_subCat0_sumExp.GetName()
+    model_subCat0_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    # subCat 1
+    name = model_subCat1_sumExp.GetName()
+    model_subCat1_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kBlue)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    # subCat 2
+    name = model_subCat2_sumExp.GetName()
+    model_subCat2_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kRed)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    # subCat 3
+    name = model_subCat3_sumExp.GetName()
+    model_subCat3_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kOrange)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    # subCat 4
+    name = model_subCat4_sumExp.GetName()
+    model_subCat4_sumExp.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=rt.kViolet)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+
+    frame.Draw()
+    legend.Draw()        
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial_sumExp.pdf")
+
+
 
