@@ -61,8 +61,8 @@ if __name__ == "__main__":
     
     name = "subCat1_BWZ_Redux_dof_3"
     BWZ_Redux_subCat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    # coreSubCat1 = BWZ_Redux_subCat1
-    coreSubCat1 = BWZ_Redux_subCat0
+    coreSubCat1 = BWZ_Redux_subCat1
+    # coreSubCat1 = BWZ_Redux_subCat0
     
     # Construct the background pdf
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
@@ -81,8 +81,8 @@ if __name__ == "__main__":
     # # subCat 2
     # name = "subCat2_BWZ_Redux"
     # BWZ_Redux_subCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    # # coreSubCat2 = BWZ_Redux_subCat2
-    # coreSubCat2 = BWZ_Redux_subCat0
+    # coreSubCat2 = BWZ_Redux_subCat2
+    # # coreSubCat2 = BWZ_Redux_subCat0
     
     # # Construct the background pdf
     # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat0 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    roo_histData_subCat0 = rt.RooDataHist("subCat0_rooHist","subCat0_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat0)
+    roo_histData_subCat0 = rt.RooDataHist("subCat0_rooHist_BWZredux","subCat0_rooHist_BWZredux", rt.RooArgSet(mass), roo_datasetData_subCat0)
     data_subCat0_BWZredux = roo_histData_subCat0
 
     # do for cat idx 1
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    roo_histData_subCat1 = rt.RooDataHist("subCat1_rooHist","subCat1_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat1)
+    roo_histData_subCat1 = rt.RooDataHist("subCat1_rooHist_BWZredux","subCat1_rooHist_BWZredux", rt.RooArgSet(mass), roo_datasetData_subCat1)
     data_subCat1_BWZredux = roo_histData_subCat1
 
     # # do for cat idx 2
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     # subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     # subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     # roo_datasetData_subCat2 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_histData_subCat2 = rt.RooDataHist("subCat2_rooHist","subCat2_rooHist", rt.RooArgSet(mass), roo_datasetData_subCat2)
+    # roo_histData_subCat2 = rt.RooDataHist("subCat2_rooHist_BWZredux,"subCat2_rooHist_BWZredux", rt.RooArgSet(mass), roo_datasetData_subCat2)
     # data_subCat2_BWZredux = roo_histData_subCat2
 
 
@@ -130,12 +130,19 @@ if __name__ == "__main__":
     # --------------------------------------------------------------
     # Initialize Sum Exponential
     # --------------------------------------------------------------
+    # name = f"RooSumTwoExpPdf_a1_coeff"
+    # a1_coeff = rt.RooRealVar(name,name, -0.0603,-2.0,1)
+    # name = f"RooSumTwoExpPdf_a2_coeff"
+    # a2_coeff = rt.RooRealVar(name,name, -0.0450,-2.0,1)
+    # name = f"RooSumTwoExpPdf_f_coeff"
+    # f_coeff = rt.RooRealVar(name,name, 0.742,0.0,1.0)
+
     name = f"RooSumTwoExpPdf_a1_coeff"
-    a1_coeff = rt.RooRealVar(name,name, -0.0603,-2.0,1)
+    a1_coeff = rt.RooRealVar(name,name, -0.2,-2.0,1)
     name = f"RooSumTwoExpPdf_a2_coeff"
-    a2_coeff = rt.RooRealVar(name,name, -0.0450,-2.0,1)
+    a2_coeff = rt.RooRealVar(name,name, -0.09,-2.0,1)
     name = f"RooSumTwoExpPdf_f_coeff"
-    f_coeff = rt.RooRealVar(name,name, 0.742,0.0,1.0)
+    f_coeff = rt.RooRealVar(name,name, 0.000001,0.0,1.0)
     
     
     name = "subCat0_BWZ_Redux_dof_3"
@@ -212,7 +219,7 @@ if __name__ == "__main__":
     sample.defineType("subCat1_BWZredux")
     # sample.defineType("subCat2_BWZredux")
     sample.defineType("subCat0_sumExp")
-    # sample.defineType("subCat1_sumExp")
+    sample.defineType("subCat1_sumExp")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -225,7 +232,7 @@ if __name__ == "__main__":
             "subCat1_BWZredux": data_subCat1_BWZredux,
             # "subCat2_BWZredux": data_subCat2_BWZredux,
             "subCat0_sumExp": data_subCat0_sumExp, 
-            # "subCat1_sumExp": data_subCat1_sumExp,
+            "subCat1_sumExp": data_subCat1_sumExp,
         },
     )
      
@@ -239,8 +246,8 @@ if __name__ == "__main__":
                                     "subCat0_BWZredux": model_subCat0_BWZredux, 
                                     "subCat1_BWZredux": model_subCat1_BWZredux,
                                     # "subCat2_BWZredux": model_subCat2_BWZredux,
-                                    "subCat0_sumExp": model_subCat1_sumExp, 
-                                    # "subCat1_sumExp": model_subCat2_sumExp,
+                                    "subCat0_sumExp": model_subCat0_sumExp, 
+                                    "subCat1_sumExp": model_subCat1_sumExp,
                                 }, 
                                 sample,
     )
