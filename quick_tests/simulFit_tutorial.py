@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     
     # Construct composite pdf
-    name = "subCat0_SMFxBWZredux"
+    name = "subCat0_SMFxBWZRedux"
     model_subCat0_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat0, subCat0_SMF])
 
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
                              ])
      
     # Construct the composite model
-    name = "model_SubCat1_SMFxBWZredux"
+    name = "model_SubCat1_SMFxBWZRedux"
     model_subCat1_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat1, subCat1_SMF])
 
     # subCat 2
