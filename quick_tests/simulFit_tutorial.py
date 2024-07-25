@@ -347,8 +347,8 @@ if __name__ == "__main__":
      
     # subCat 1
     name = "subCat1_FEWZxBern"
-    coreFEWZxBern_SubCat1, params_FEWZxBern_SubCat1 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3) 
-    # coreFEWZxBern_SubCat1 = coreFEWZxBern_SubCat0
+    # coreFEWZxBern_SubCat1, params_FEWZxBern_SubCat1 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3) 
+    coreFEWZxBern_SubCat1 = coreFEWZxBern_SubCat0
     
 
     name = "subCat1_SMF_FEWZxBern"
@@ -364,8 +364,8 @@ if __name__ == "__main__":
 
     # subCat 2
     name = "subCat2_FEWZxBern"
-    coreFEWZxBern_SubCat2, params_FEWZxBern_SubCat2 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3) 
-    # coreFEWZxBern_SubCat2 = coreFEWZxBern_SubCat0
+    # coreFEWZxBern_SubCat2, params_FEWZxBern_SubCat2 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3) 
+    coreFEWZxBern_SubCat2 = coreFEWZxBern_SubCat0
     
     name = "subCat2_SMF_FEWZxBern"
     subCat2_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, 
@@ -377,8 +377,8 @@ if __name__ == "__main__":
 
     # subCat 3
     name = "subCat3_FEWZxBern"
-    coreFEWZxBern_SubCat3, params_FEWZxBern_SubCat3 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3)  
-    # coreFEWZxBern_SubCat3 = coreFEWZxBern_SubCat0
+    # coreFEWZxBern_SubCat3, params_FEWZxBern_SubCat3 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3)  
+    coreFEWZxBern_SubCat3 = coreFEWZxBern_SubCat0
     
     name = "subCat3_SMF_FEWZxBern"
     subCat3_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, 
@@ -390,8 +390,8 @@ if __name__ == "__main__":
 
     # subCat 4
     name = "subCat4_FEWZxBern"
-    coreFEWZxBern_SubCat4, params_FEWZxBern_SubCat4 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3)  
-    # coreFEWZxBern_SubCat4 = coreFEWZxBern_SubCat0
+    # coreFEWZxBern_SubCat4, params_FEWZxBern_SubCat4 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3)  
+    coreFEWZxBern_SubCat4 = coreFEWZxBern_SubCat0
     
     name = "subCat4_SMF_FEWZxBern"
     subCat4_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, 
