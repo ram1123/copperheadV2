@@ -328,11 +328,11 @@ if __name__ == "__main__":
      
     # Define category to distinguish physics and control samples events
     sample = rt.RooCategory("sample", "sample")
-    sample.defineType("subCat0_BWZredux")
-    sample.defineType("subCat1_BWZredux")
-    sample.defineType("subCat2_BWZredux")
-    sample.defineType("subCat3_BWZredux")
-    sample.defineType("subCat4_BWZredux")
+    # sample.defineType("subCat0_BWZredux")
+    # sample.defineType("subCat1_BWZredux")
+    # sample.defineType("subCat2_BWZredux")
+    # sample.defineType("subCat3_BWZredux")
+    # sample.defineType("subCat4_BWZredux")
     sample.defineType("subCat0_sumExp")
     sample.defineType("subCat1_sumExp")
     sample.defineType("subCat2_sumExp")
@@ -346,11 +346,11 @@ if __name__ == "__main__":
         {mass},
         Index=sample,
         Import={
-            "subCat0_BWZredux": data_subCat0_BWZredux, 
-            "subCat1_BWZredux": data_subCat1_BWZredux,
-            "subCat2_BWZredux": data_subCat2_BWZredux,
-            "subCat3_BWZredux": data_subCat3_BWZredux,
-            "subCat4_BWZredux": data_subCat4_BWZredux,
+            # "subCat0_BWZredux": data_subCat0_BWZredux, 
+            # "subCat1_BWZredux": data_subCat1_BWZredux,
+            # "subCat2_BWZredux": data_subCat2_BWZredux,
+            # "subCat3_BWZredux": data_subCat3_BWZredux,
+            # "subCat4_BWZredux": data_subCat4_BWZredux,
             "subCat0_sumExp": data_subCat0_sumExp, 
             "subCat1_sumExp": data_subCat1_sumExp,
             "subCat2_sumExp": data_subCat2_sumExp,
@@ -366,11 +366,11 @@ if __name__ == "__main__":
                                 "simPdf", 
                                 "simultaneous pdf", 
                                 {
-                                    "subCat0_BWZredux": model_subCat0_BWZredux, 
-                                    "subCat1_BWZredux": model_subCat1_BWZredux,
-                                    "subCat2_BWZredux": model_subCat2_BWZredux,
-                                    "subCat3_BWZredux": model_subCat3_BWZredux,
-                                    "subCat4_BWZredux": model_subCat4_BWZredux,
+                                    # "subCat0_BWZredux": model_subCat0_BWZredux, 
+                                    # "subCat1_BWZredux": model_subCat1_BWZredux,
+                                    # "subCat2_BWZredux": model_subCat2_BWZredux,
+                                    # "subCat3_BWZredux": model_subCat3_BWZredux,
+                                    # "subCat4_BWZredux": model_subCat4_BWZredux,
                                     "subCat0_sumExp": model_subCat0_sumExp, 
                                     "subCat1_sumExp": model_subCat1_sumExp,
                                     "subCat2_sumExp": model_subCat2_sumExp,
