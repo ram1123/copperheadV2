@@ -31,6 +31,88 @@ def getFEWZ_vals(FEWZ_histo):
     return (np.array(x_vals), np.array(y_vals))
     
 
+
+def MakeFEWZxBernDof3(
+        name:str, 
+        title:str, 
+        mass: rt.RooRealVar, 
+        c1: rt.RooRealVar, c2: rt.RooRealVar, c3: rt.RooRealVar
+    ) ->Tuple[rt.RooProdPdf, Dict]:
+    """
+    params:
+    mass = rt.RooRealVar that we will fitTo
+    dof = degrees of freedom given to this model. Since the spline
+    has no dof, all the dof is inserted to the Bernstein
+    """
+    # collect all variables that we don't want destroyed by Python once function ends
+    out_dict = {}
+
+    c_start_val_map = {
+        # 1 : 0.17,
+        # 2 : 0.15,
+        # 3 : 0.05,
+        1 : 0.351,
+        2 : 0.178,
+        3 : 0.110,
+    }
+    # make BernStein of order == dof
+    n_coeffs = 3
+    BernCoeff_list = [c1, c2, c3]
+    name = f"BernsteinFast"
+    bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
+    out_dict[name] = bern_model # add model to make python remember
+
+
+    
+    # make the spline portion
+
+    # this ROOT files has branches full_36fb, full_xsec, full_shape -> all three has the same shape (same hist once normalized)
+    FEWZ_file = rt.TFile("../data/NNLO_Bourilkov_2017.root", "READ")
+    # FEWZ_histo = FEWZ_file.Get("full_36fb")
+    FEWZ_histo = FEWZ_file.Get("full_shape")
+    
+    x_arr, y_arr = getFEWZ_vals(FEWZ_histo)
+    
+
+    # Roospline start ---------------------------------    
+    x_arr_vec = rt.vector("double")(x_arr)
+    y_arr_vec = rt.vector("double")(y_arr)
+    name = "fewz_roospline_func"
+    roo_spline_func = rt.RooSpline(name, name, mass, x_arr_vec, y_arr_vec)
+    out_dict[name] = roo_spline_func
+    # Roospline end ------------------------------------
+
+    # Roospline1D start ---------------------------------    
+    # x0 = (ctypes.c_double * len(x_arr))(*x_arr)
+    # y0 = (ctypes.c_double * len(y_arr))(*y_arr)
+    # n = len(x0)
+    # name = "fewz_roospline_func"
+    # roo_spline_func = rt.RooSpline1D(name, name, mass, n,x0, y0)
+    # out_dict[name] = roo_spline_func
+    # Roospline1D end ------------------------------------
+    
+
+    # turn roo_spline_func into pdf
+    # RooProdPDF seems to automatically normalize the pdfs on https://root.cern.ch/doc/master/classRooProdPdf.html,
+    # so no need to "normalize" rooSpline into a PDF. Also, I tried both full_36fb and full_shape bracnhes of 
+    # FEWZ histograms (they have same shape, but different values), and I saw no difference in fit function plot,
+    # loosely suggesting automatic normalization
+    roo_spline_pdf = roo_spline_func
+    
+    
+    # name = "fewz_roospline_pdf"
+    # roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
+    # out_dict[name] = roo_spline_pdf # add model to make python remember  
+
+    # RooWrapperPdf doesn't seem to work well with FitTo. Just freezes for a long time
+    # name = "fewz_roospline_pdf"
+    # roo_spline_pdf = rt.RooGenericPdf(name, "@0", rt.RooArgList(roo_spline_func))      
+    # out_dict[name] = roo_spline_pdf # add model to make python remember  
+
+    final_model = rt.RooProdPdf(name, title, [bern_model, roo_spline_pdf]) 
+   
+    return (final_model, out_dict)
+
 def MakeFEWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     """
     params:
@@ -45,9 +127,9 @@ def MakeFEWZxBern(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
         # 1 : 0.17,
         # 2 : 0.15,
         # 3 : 0.05,
-        1 : 0.339,
-        2 : 0.169,
-        3 : 0.102,
+        1 : 0.351,
+        2 : 0.178,
+        3 : 0.110,
     }
     # make BernStein of order == dof
     n_coeffs = dof 
@@ -194,13 +276,13 @@ def MakeBWZ_Redux(mass: rt.RooRealVar, dof: int) ->Tuple[rt.RooProdPdf, Dict]:
     name = f"BWZ_Redux_a_coeff"
     # a_coeff = rt.RooRealVar(name,name, -0.001,-0.0025,0.0035)
     # a_coeff = rt.RooRealVar(name,name, -0.001,-0.015,0.015)
-    a_coeff = rt.RooRealVar(name,name, -0.0154,-0.02,0.03)
+    a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
     name = f"BWZ_Redux_b_coeff"
-    b_coeff = rt.RooRealVar(name,name, -0.000121,-0.001,0.001)
+    b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
     # b_coeff = rt.RooRealVar(name,name, -0.00022,-0.001,0.001)
     name = f"BWZ_Redux_c_coeff"
     # c_coeff = rt.RooRealVar(name,name, 1.5,-5.0,5.0)
-    c_coeff = rt.RooRealVar(name,name, 0.421,-5.0,5.0)
+    c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
     
 
     # add in the variables and models
@@ -418,12 +500,12 @@ def MakeSumExponential(mass: rt.RooRealVar, dof: int, fit_range="loSB,hiSB") ->T
     b_start_val_map = {
         # 0 : -0.2,
         # 1 : -0.02,
-        0 : -0.058,
-        1 : -0.006,
+        0 : -0.0603,
+        1 : -0.0450,
     }
     a_start_val_map = {
         # 1 : 0.1,
-        1 : 0.5,
+        1 : 0.742,
     }
 
     
