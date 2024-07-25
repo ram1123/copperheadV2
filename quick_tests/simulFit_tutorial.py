@@ -66,8 +66,8 @@ if __name__ == "__main__":
     
     # Construct the background pdf
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
-    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.1, 1)
-    a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -0.1, 1)
+    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -1, 1)
+    a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -1, 1)
     px_ctl = rt.RooChebychev("px_ctl", "px_ctl", mass, 
                              [a0_subCat1, 
                               a1_subCat1, 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     
     # Construct the background pdf
     a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
-    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.1, 1)
+    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -1, 1)
     name = "subCat2_SMF"
     subCat2_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat2, 
@@ -235,11 +235,11 @@ if __name__ == "__main__":
      
     # Define category to distinguish physics and control samples events
     sample = rt.RooCategory("sample", "sample")
-    # sample.defineType("subCat0_BWZredux")
-    # sample.defineType("subCat1_BWZredux")
-    # sample.defineType("subCat2_BWZredux")
+    sample.defineType("subCat0_BWZredux")
+    sample.defineType("subCat1_BWZredux")
+    sample.defineType("subCat2_BWZredux")
     sample.defineType("subCat0_sumExp")
-    # sample.defineType("subCat1_sumExp")
+    sample.defineType("subCat1_sumExp")
     sample.defineType("subCat2_sumExp")
      
     # Construct combined dataset in (x,sample)
@@ -249,11 +249,11 @@ if __name__ == "__main__":
         {mass},
         Index=sample,
         Import={
-            # "subCat0_BWZredux": data_subCat0_BWZredux, 
-            # "subCat1_BWZredux": data_subCat1_BWZredux,
-            # "subCat2_BWZredux": data_subCat2_BWZredux,
+            "subCat0_BWZredux": data_subCat0_BWZredux, 
+            "subCat1_BWZredux": data_subCat1_BWZredux,
+            "subCat2_BWZredux": data_subCat2_BWZredux,
             "subCat0_sumExp": data_subCat0_sumExp, 
-            # "subCat1_sumExp": data_subCat1_sumExp,
+            "subCat1_sumExp": data_subCat1_sumExp,
             "subCat2_sumExp": data_subCat2_sumExp,
         },
     )
@@ -265,11 +265,11 @@ if __name__ == "__main__":
                                 "simPdf", 
                                 "simultaneous pdf", 
                                 {
-                                    # "subCat0_BWZredux": model_subCat0_BWZredux, 
-                                    # "subCat1_BWZredux": model_subCat1_BWZredux,
-                                    # "subCat2_BWZredux": model_subCat2_BWZredux,
+                                    "subCat0_BWZredux": model_subCat0_BWZredux, 
+                                    "subCat1_BWZredux": model_subCat1_BWZredux,
+                                    "subCat2_BWZredux": model_subCat2_BWZredux,
                                     "subCat0_sumExp": model_subCat0_sumExp, 
-                                    # "subCat1_sumExp": model_subCat1_sumExp,
+                                    "subCat1_sumExp": model_subCat1_sumExp,
                                     "subCat2_sumExp": model_subCat2_sumExp,
                                 }, 
                                 sample,
