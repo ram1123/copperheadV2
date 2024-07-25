@@ -452,21 +452,21 @@ if __name__ == "__main__":
      
     # Define category to distinguish physics and control samples events
     sample = rt.RooCategory("sample", "sample")
-    # sample.defineType("subCat0_BWZredux")
-    # sample.defineType("subCat1_BWZredux")
-    # sample.defineType("subCat2_BWZredux")
-    # sample.defineType("subCat3_BWZredux")
-    # sample.defineType("subCat4_BWZredux")
-    # sample.defineType("subCat0_sumExp")
-    # sample.defineType("subCat1_sumExp")
-    # sample.defineType("subCat2_sumExp")
-    # sample.defineType("subCat3_sumExp")
-    # sample.defineType("subCat4_sumExp")
+    sample.defineType("subCat0_BWZredux")
+    sample.defineType("subCat1_BWZredux")
+    sample.defineType("subCat2_BWZredux")
+    sample.defineType("subCat3_BWZredux")
+    sample.defineType("subCat4_BWZredux")
+    sample.defineType("subCat0_sumExp")
+    sample.defineType("subCat1_sumExp")
+    sample.defineType("subCat2_sumExp")
+    sample.defineType("subCat3_sumExp")
+    sample.defineType("subCat4_sumExp")
     sample.defineType("subCat0_FEWZxBern")
     sample.defineType("subCat1_FEWZxBern")
-    # sample.defineType("subCat2_FEWZxBern")
-    # sample.defineType("subCat3_FEWZxBern")
-    # sample.defineType("subCat4_FEWZxBern")
+    sample.defineType("subCat2_FEWZxBern")
+    sample.defineType("subCat3_FEWZxBern")
+    sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -475,21 +475,21 @@ if __name__ == "__main__":
         {mass},
         Index=sample,
         Import={
-            # "subCat0_BWZredux": data_subCat0_BWZredux, 
-            # "subCat1_BWZredux": data_subCat1_BWZredux,
-            # "subCat2_BWZredux": data_subCat2_BWZredux,
-            # "subCat3_BWZredux": data_subCat3_BWZredux,
-            # "subCat4_BWZredux": data_subCat4_BWZredux,
-            # "subCat0_sumExp": data_subCat0_sumExp, 
-            # "subCat1_sumExp": data_subCat1_sumExp,
-            # "subCat2_sumExp": data_subCat2_sumExp,
-            # "subCat3_sumExp": data_subCat3_sumExp,
-            # "subCat4_sumExp": data_subCat4_sumExp,
+            "subCat0_BWZredux": data_subCat0_BWZredux, 
+            "subCat1_BWZredux": data_subCat1_BWZredux,
+            "subCat2_BWZredux": data_subCat2_BWZredux,
+            "subCat3_BWZredux": data_subCat3_BWZredux,
+            "subCat4_BWZredux": data_subCat4_BWZredux,
+            "subCat0_sumExp": data_subCat0_sumExp, 
+            "subCat1_sumExp": data_subCat1_sumExp,
+            "subCat2_sumExp": data_subCat2_sumExp,
+            "subCat3_sumExp": data_subCat3_sumExp,
+            "subCat4_sumExp": data_subCat4_sumExp,
             "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
             "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+            "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -500,21 +500,21 @@ if __name__ == "__main__":
                                 "simPdf", 
                                 "simultaneous pdf", 
                                 {
-                                    # "subCat0_BWZredux": model_subCat0_BWZredux, 
-                                    # "subCat1_BWZredux": model_subCat1_BWZredux,
-                                    # "subCat2_BWZredux": model_subCat2_BWZredux,
-                                    # "subCat3_BWZredux": model_subCat3_BWZredux,
-                                    # "subCat4_BWZredux": model_subCat4_BWZredux,
-                                    # "subCat0_sumExp": model_subCat0_sumExp, 
-                                    # "subCat1_sumExp": model_subCat1_sumExp,
-                                    # "subCat2_sumExp": model_subCat2_sumExp,
-                                    # "subCat3_sumExp": model_subCat3_sumExp,
-                                    # "subCat4_sumExp": model_subCat4_sumExp,
+                                    "subCat0_BWZredux": model_subCat0_BWZredux, 
+                                    "subCat1_BWZredux": model_subCat1_BWZredux,
+                                    "subCat2_BWZredux": model_subCat2_BWZredux,
+                                    "subCat3_BWZredux": model_subCat3_BWZredux,
+                                    "subCat4_BWZredux": model_subCat4_BWZredux,
+                                    "subCat0_sumExp": model_subCat0_sumExp, 
+                                    "subCat1_sumExp": model_subCat1_sumExp,
+                                    "subCat2_sumExp": model_subCat2_sumExp,
+                                    "subCat3_sumExp": model_subCat3_sumExp,
+                                    "subCat4_sumExp": model_subCat4_sumExp,
                                     "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
                                     "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+                                    "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+                                    "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+                                    "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
     )
