@@ -142,7 +142,7 @@ if __name__ == "__main__":
     name = f"RooSumTwoExpPdf_a2_coeff"
     a2_coeff = rt.RooRealVar(name,name, -0.09,-2.0,1)
     name = f"RooSumTwoExpPdf_f_coeff"
-    f_coeff = rt.RooRealVar(name,name, 0.000001,0.0,1.0)
+    f_coeff = rt.RooRealVar(name,name, 0.02,0.0,1.0)
     
     
     name = "subCat0_BWZ_Redux_dof_3"
@@ -215,10 +215,10 @@ if __name__ == "__main__":
      
     # Define category to distinguish physics and control samples events
     sample = rt.RooCategory("sample", "sample")
-    sample.defineType("subCat0_BWZredux")
-    sample.defineType("subCat1_BWZredux")
+    # sample.defineType("subCat0_BWZredux")
+    # sample.defineType("subCat1_BWZredux")
     # sample.defineType("subCat2_BWZredux")
-    sample.defineType("subCat0_sumExp")
+    # sample.defineType("subCat0_sumExp")
     sample.defineType("subCat1_sumExp")
      
     # Construct combined dataset in (x,sample)
@@ -228,10 +228,10 @@ if __name__ == "__main__":
         {mass},
         Index=sample,
         Import={
-            "subCat0_BWZredux": data_subCat0_BWZredux, 
-            "subCat1_BWZredux": data_subCat1_BWZredux,
+            # "subCat0_BWZredux": data_subCat0_BWZredux, 
+            # "subCat1_BWZredux": data_subCat1_BWZredux,
             # "subCat2_BWZredux": data_subCat2_BWZredux,
-            "subCat0_sumExp": data_subCat0_sumExp, 
+            # "subCat0_sumExp": data_subCat0_sumExp, 
             "subCat1_sumExp": data_subCat1_sumExp,
         },
     )
@@ -243,10 +243,10 @@ if __name__ == "__main__":
                                 "simPdf", 
                                 "simultaneous pdf", 
                                 {
-                                    "subCat0_BWZredux": model_subCat0_BWZredux, 
-                                    "subCat1_BWZredux": model_subCat1_BWZredux,
+                                    # "subCat0_BWZredux": model_subCat0_BWZredux, 
+                                    # "subCat1_BWZredux": model_subCat1_BWZredux,
                                     # "subCat2_BWZredux": model_subCat2_BWZredux,
-                                    "subCat0_sumExp": model_subCat0_sumExp, 
+                                    # "subCat0_sumExp": model_subCat0_sumExp, 
                                     "subCat1_sumExp": model_subCat1_sumExp,
                                 }, 
                                 sample,
