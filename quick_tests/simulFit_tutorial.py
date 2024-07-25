@@ -464,9 +464,9 @@ if __name__ == "__main__":
     # sample.defineType("subCat4_sumExp")
     sample.defineType("subCat0_FEWZxBern")
     sample.defineType("subCat1_FEWZxBern")
-    sample.defineType("subCat2_FEWZxBern")
-    sample.defineType("subCat3_FEWZxBern")
-    sample.defineType("subCat4_FEWZxBern")
+    # sample.defineType("subCat2_FEWZxBern")
+    # sample.defineType("subCat3_FEWZxBern")
+    # sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -487,9 +487,9 @@ if __name__ == "__main__":
             # "subCat4_sumExp": data_subCat4_sumExp,
             "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
             "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -512,9 +512,9 @@ if __name__ == "__main__":
                                     # "subCat4_sumExp": model_subCat4_sumExp,
                                     "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
                                     "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
     )
