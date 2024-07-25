@@ -10,6 +10,19 @@ from typing import Tuple, List, Dict
 import ROOT as rt
 from quickSMFtest_functions import MakeFEWZxBernDof3
 
+
+def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
+    """
+    Takes rootHistogram and returns a new copy with histogram values normalized to sum to one
+    """
+    x_name = x.GetName()
+    THist = rooHist.createHistogram(x_name)
+    THist.Scale(1/THist.Integral())
+    normalizedHist_name = rooHist.GetName() + "_normalized"
+    roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist) 
+    return roo_hist_normalized
+    
+
 if __name__ == "__main__":
     load_path = "./processed_events_data.parquet"
     processed_eventsData = ak.from_parquet(load_path)
@@ -599,7 +612,9 @@ if __name__ == "__main__":
         frame = mass.frame()
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        roo_datasetData_subCat1.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
+        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        print(f"normalized_hist integral: {normalized_hist.sum(False)}")
         for ix in range(len(coreFunction_list)):
             model = coreFunction_list[ix]
             name = model.GetName()
@@ -678,7 +693,9 @@ if __name__ == "__main__":
         frame = mass.frame()
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        roo_datasetData_subCat1.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
+        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        print(f"normalized_hist integral: {normalized_hist.sum(False)}")
         for ix in range(len(subCat_list)):
             model = subCat_list[ix]
             name = model.GetName()
