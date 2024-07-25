@@ -40,9 +40,9 @@ if __name__ == "__main__":
 
 
     
-    
-    name = "subCat0_BWZ_Redux"
-    coreBWZredux_SubCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    # subCat 0
+    name = "subCat0_BWZ_Redux_dof_3"
+    coreSubCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
      
     # Construct background pdf
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
@@ -50,24 +50,26 @@ if __name__ == "__main__":
     a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -1, 1)
 
     name = "subCat0_SMF"
-    px = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
+    subCat0_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
 
 
     
     # Construct composite pdf
     name = "subCat0_BWZ_Redux"
-    model_subCat0_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat0, px])
-     
+    model_subCat0_BWZredux = rt.RooProdPdf(name, name, [coreSubCat0, subCat0_SMF])
+
+
     
-    name = "subCat1_BWZ_Redux"
-    # coreBWZredux_SubCat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreBWZredux_SubCat1 = coreBWZredux_SubCat0
+    # subCat 1
+    name = "subCat1_BWZ_Redux_dof_3"
+    # coreSubCat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat1 = coreSubCat0
     
     # Construct the background pdf
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
     a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -1, 1)
     a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -1, 1)
-    name = "subCat1_SMF"
+    name =  "subCat1_SMF"
     subCat1_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat1, 
                               a1_subCat1, 
@@ -76,12 +78,12 @@ if __name__ == "__main__":
      
     # Construct the composite model
     name = "subCat1_BWZ_Redux"
-    model_subCat1_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat1, subCat1_SMF])
+    model_subCat1_BWZredux = rt.RooProdPdf(name, name, [coreSubCat1, subCat1_SMF])
 
     # subCat 2
     name = "subCat2_BWZ_Redux"
-    # coreBWZredux_SubCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreBWZredux_SubCat2 = coreBWZredux_SubCat0
+    # coreSubCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat2 = coreSubCat0
     
     # Construct the background pdf
     a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
@@ -92,12 +94,12 @@ if __name__ == "__main__":
                               a1_subCat2, 
                              ])
     name = "model_SubCat2_SMFxBWZRedux"
-    model_subCat2_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat2, subCat2_SMF])    
+    model_subCat2_BWZredux = rt.RooProdPdf(name, name, [coreSubCat2, subCat2_SMF])    
 
     # subCat 3
     name = "subCat3_BWZ_Redux"
-    # coreBWZredux_SubCat3 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreBWZredux_SubCat3 = coreBWZredux_SubCat0
+    # coreSubCat3 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat3 = coreSubCat0
     
     # Construct the background pdf
     a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -1, 1)
@@ -108,12 +110,12 @@ if __name__ == "__main__":
                               a1_subCat3, 
                              ])
     name = "model_SubCat3_SMFxBWZRedux"
-    model_subCat3_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat3, subCat3_SMF])  
+    model_subCat3_BWZredux = rt.RooProdPdf(name, name, [coreSubCat3, subCat3_SMF])  
 
     # subCat 4
     name = "subCat4_BWZ_Redux"
-    # coreBWZredux_SubCat4 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreBWZredux_SubCat4 = coreBWZredux_SubCat0
+    # coreSubCat4 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat4 = coreSubCat0
     
     # Construct the background pdf
     a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -1, 1)
@@ -124,7 +126,7 @@ if __name__ == "__main__":
                               a1_subCat4, 
                              ])
     name = "model_SubCat4_SMFxBWZRedux"
-    model_subCat4_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat4, subCat4_SMF])  
+    model_subCat4_BWZredux = rt.RooProdPdf(name, name, [coreSubCat4, subCat4_SMF])  
 
 
     # ---------------------------------------------------------------
