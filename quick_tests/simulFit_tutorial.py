@@ -42,8 +42,7 @@ if __name__ == "__main__":
     
     
     name = "subCat0_BWZ_Redux_dof_3"
-    BWZ_Redux_subCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreSubCat0 = BWZ_Redux_subCat0
+    coreSubCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
      
     # Construct background pdf
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
@@ -61,9 +60,8 @@ if __name__ == "__main__":
      
     
     name = "subCat1_BWZ_Redux_dof_3"
-    BWZ_Redux_subCat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreSubCat1 = BWZ_Redux_subCat1
-    # coreSubCat1 = BWZ_Redux_subCat0
+    # coreSubCat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat1 = coreSubCat0
     
     # Construct the background pdf
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
@@ -81,9 +79,8 @@ if __name__ == "__main__":
 
     # subCat 2
     name = "subCat2_BWZ_Redux"
-    BWZ_Redux_subCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreSubCat2 = BWZ_Redux_subCat2
-    # coreSubCat2 = BWZ_Redux_subCat0
+    # coreSubCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat2 = coreSubCat0
     
     # Construct the background pdf
     a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
@@ -98,9 +95,8 @@ if __name__ == "__main__":
 
     # subCat 3
     name = "subCat3_BWZ_Redux"
-    BWZ_Redux_subCat3 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreSubCat3 = BWZ_Redux_subCat3
-    # coreSubCat3 = BWZ_Redux_subCat0
+    # coreSubCat3 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat3 = coreSubCat0
     
     # Construct the background pdf
     a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -1, 1)
@@ -115,9 +111,8 @@ if __name__ == "__main__":
 
     # subCat 4
     name = "subCat4_BWZ_Redux"
-    BWZ_Redux_subCat4 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreSubCat4 = BWZ_Redux_subCat4
-    # coreSubCat4 = BWZ_Redux_subCat0
+    # coreSubCat4 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreSubCat4 = coreSubCat0
     
     # Construct the background pdf
     a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -1, 1)
@@ -223,8 +218,8 @@ if __name__ == "__main__":
      
     # subCat 1
     name = "subCat1_sumExp"
-    coreSumExp_SubCat1 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
-    # coreSumExp_SubCat1 = coreSumExp_SubCat0
+    # coreSumExp_SubCat1 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
+    coreSumExp_SubCat1 = coreSumExp_SubCat0
     
 
     name = "subCat1_SMF_sumExp"
@@ -240,8 +235,8 @@ if __name__ == "__main__":
 
     # subCat 2
     name = "subCat2_sumExp"
-    coreSumExp_SubCat2 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
-    # coreSumExp_SubCat2 = coreSumExp_SubCat0
+    # coreSumExp_SubCat2 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
+    coreSumExp_SubCat2 = coreSumExp_SubCat0
     
     name = "subCat2_SMF_sumExp"
     subCat2_SumExp_SMF = rt.RooChebychev(name, name, mass, 
@@ -253,8 +248,8 @@ if __name__ == "__main__":
 
     # subCat 3
     name = "subCat3_sumExp"
-    coreSumExp_SubCat3 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
-    # coreSumExp_SubCat3 = coreSumExp_SubCat0
+    # coreSumExp_SubCat3 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
+    coreSumExp_SubCat3 = coreSumExp_SubCat0
     
     name = "subCat3_SMF_sumExp"
     subCat3_SumExp_SMF = rt.RooChebychev(name, name, mass, 
@@ -266,8 +261,8 @@ if __name__ == "__main__":
 
     # subCat 4
     name = "subCat4_sumExp"
-    coreSumExp_SubCat4 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
-    # coreSumExp_SubCat4 = coreSumExp_SubCat0
+    # coreSumExp_SubCat4 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
+    coreSumExp_SubCat4 = coreSumExp_SubCat0
     
     name = "subCat4_SMF_sumExp"
     subCat4_SumExp_SMF = rt.RooChebychev(name, name, mass, 
