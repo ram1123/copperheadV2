@@ -55,7 +55,7 @@ if __name__ == "__main__":
     
     # subCat 0
     name = "subCat0_BWZ_Redux"
-    coreBWZredux_SubCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreBWZRedux_SubCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
      
     # Construct background pdf
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
@@ -69,14 +69,14 @@ if __name__ == "__main__":
     
     # Construct composite pdf
     name = "model_subCat0_SMFxBWZRedux"
-    model_subCat0_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat0, subCat0_SMF])
+    model_subCat0_BWZRedux = rt.RooProdPdf(name, name, [coreBWZRedux_SubCat0, subCat0_SMF])
 
 
     
     # subCat 1
     name = "subCat1_BWZ_Redux"
-    # coreBWZredux_SubCat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreBWZredux_SubCat1 = coreBWZredux_SubCat0
+    # coreBWZRedux_SubCat1 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreBWZRedux_SubCat1 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
@@ -91,12 +91,12 @@ if __name__ == "__main__":
      
     # Construct the composite model
     name = "model_SubCat1_SMFxBWZRedux"
-    model_subCat1_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat1, subCat1_SMF])
+    model_subCat1_BWZRedux = rt.RooProdPdf(name, name, [coreBWZRedux_SubCat1, subCat1_SMF])
 
     # subCat 2
     name = "subCat2_BWZ_Redux"
-    # coreBWZredux_SubCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreBWZredux_SubCat2 = coreBWZredux_SubCat0
+    # coreBWZRedux_SubCat2 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreBWZRedux_SubCat2 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
     a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
@@ -107,12 +107,12 @@ if __name__ == "__main__":
                               a1_subCat2, 
                              ])
     name = "model_SubCat2_SMFxBWZRedux"
-    model_subCat2_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat2, subCat2_SMF])    
+    model_subCat2_BWZRedux = rt.RooProdPdf(name, name, [coreBWZRedux_SubCat2, subCat2_SMF])    
 
     # subCat 3
     name = "subCat3_BWZ_Redux"
-    # coreBWZredux_SubCat3 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreBWZredux_SubCat3 = coreBWZredux_SubCat0
+    # coreBWZRedux_SubCat3 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreBWZRedux_SubCat3 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
     a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -1, 1)
@@ -123,12 +123,12 @@ if __name__ == "__main__":
                               a1_subCat3, 
                              ])
     name = "model_SubCat3_SMFxBWZRedux"
-    model_subCat3_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat3, subCat3_SMF])  
+    model_subCat3_BWZRedux = rt.RooProdPdf(name, name, [coreBWZRedux_SubCat3, subCat3_SMF])  
 
     # subCat 4
     name = "subCat4_BWZ_Redux"
-    # coreBWZredux_SubCat4 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
-    coreBWZredux_SubCat4 = coreBWZredux_SubCat0
+    # coreBWZRedux_SubCat4 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+    coreBWZRedux_SubCat4 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
     a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -1, 1)
@@ -139,7 +139,7 @@ if __name__ == "__main__":
                               a1_subCat4, 
                              ])
     name = "model_SubCat4_SMFxBWZRedux"
-    model_subCat4_BWZredux = rt.RooProdPdf(name, name, [coreBWZredux_SubCat4, subCat4_SMF])  
+    model_subCat4_BWZRedux = rt.RooProdPdf(name, name, [coreBWZRedux_SubCat4, subCat4_SMF])  
 
 
     # ---------------------------------------------------------------
@@ -151,40 +151,40 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat0 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    roo_histData_subCat0 = rt.RooDataHist("subCat0_rooHist_BWZredux","subCat0_rooHist_BWZredux", rt.RooArgSet(mass), roo_datasetData_subCat0)
-    data_subCat0_BWZredux = roo_histData_subCat0
+    roo_histData_subCat0 = rt.RooDataHist("subCat0_rooHist_BWZRedux","subCat0_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat0)
+    data_subCat0_BWZRedux = roo_histData_subCat0
 
     # do for cat idx 1
     subCat_filter = (processed_eventsData["subCategory_idx"] == 1)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    roo_histData_subCat1 = rt.RooDataHist("subCat1_rooHist_BWZredux","subCat1_rooHist_BWZredux", rt.RooArgSet(mass), roo_datasetData_subCat1)
-    data_subCat1_BWZredux = roo_histData_subCat1
+    roo_histData_subCat1 = rt.RooDataHist("subCat1_rooHist_BWZRedux","subCat1_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat1)
+    data_subCat1_BWZRedux = roo_histData_subCat1
 
     # do for cat idx 2
     subCat_filter = (processed_eventsData["subCategory_idx"] == 2)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat2 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    roo_histData_subCat2 = rt.RooDataHist("subCat2_rooHist_BWZredux","subCat2_rooHist_BWZredux", rt.RooArgSet(mass), roo_datasetData_subCat2)
-    data_subCat2_BWZredux = roo_histData_subCat2
+    roo_histData_subCat2 = rt.RooDataHist("subCat2_rooHist_BWZRedux","subCat2_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat2)
+    data_subCat2_BWZRedux = roo_histData_subCat2
 
     # do for cat idx 3
     subCat_filter = (processed_eventsData["subCategory_idx"] == 3)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat3 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    roo_histData_subCat3 = rt.RooDataHist("subCat3_rooHist_BWZredux","subCat3_rooHist_BWZredux", rt.RooArgSet(mass), roo_datasetData_subCat3)
-    data_subCat3_BWZredux = roo_histData_subCat3
+    roo_histData_subCat3 = rt.RooDataHist("subCat3_rooHist_BWZRedux","subCat3_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat3)
+    data_subCat3_BWZRedux = roo_histData_subCat3
 
     # do for cat idx 4
     subCat_filter = (processed_eventsData["subCategory_idx"] == 4)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat4 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    roo_histData_subCat4 = rt.RooDataHist("subCat4_rooHist_BWZredux","subCat4_rooHist_BWZredux", rt.RooArgSet(mass), roo_datasetData_subCat4)
-    data_subCat4_BWZredux = roo_histData_subCat4
+    roo_histData_subCat4 = rt.RooDataHist("subCat4_rooHist_BWZRedux","subCat4_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat4)
+    data_subCat4_BWZRedux = roo_histData_subCat4
 
 
 
@@ -463,11 +463,11 @@ if __name__ == "__main__":
      
     # Define category to distinguish physics and control samples events
     sample = rt.RooCategory("sample", "sample")
-    sample.defineType("subCat0_BWZredux")
-    sample.defineType("subCat1_BWZredux")
-    sample.defineType("subCat2_BWZredux")
-    sample.defineType("subCat3_BWZredux")
-    sample.defineType("subCat4_BWZredux")
+    sample.defineType("subCat0_BWZRedux")
+    sample.defineType("subCat1_BWZRedux")
+    sample.defineType("subCat2_BWZRedux")
+    sample.defineType("subCat3_BWZRedux")
+    sample.defineType("subCat4_BWZRedux")
     sample.defineType("subCat0_sumExp")
     sample.defineType("subCat1_sumExp")
     sample.defineType("subCat2_sumExp")
@@ -486,11 +486,11 @@ if __name__ == "__main__":
         {mass},
         Index=sample,
         Import={
-            "subCat0_BWZredux": data_subCat0_BWZredux, 
-            "subCat1_BWZredux": data_subCat1_BWZredux,
-            "subCat2_BWZredux": data_subCat2_BWZredux,
-            "subCat3_BWZredux": data_subCat3_BWZredux,
-            "subCat4_BWZredux": data_subCat4_BWZredux,
+            "subCat0_BWZRedux": data_subCat0_BWZRedux, 
+            "subCat1_BWZRedux": data_subCat1_BWZRedux,
+            "subCat2_BWZRedux": data_subCat2_BWZRedux,
+            "subCat3_BWZRedux": data_subCat3_BWZRedux,
+            "subCat4_BWZRedux": data_subCat4_BWZRedux,
             "subCat0_sumExp": data_subCat0_sumExp, 
             "subCat1_sumExp": data_subCat1_sumExp,
             "subCat2_sumExp": data_subCat2_sumExp,
@@ -511,11 +511,11 @@ if __name__ == "__main__":
                                 "simPdf", 
                                 "simultaneous pdf", 
                                 {
-                                    "subCat0_BWZredux": model_subCat0_BWZredux, 
-                                    "subCat1_BWZredux": model_subCat1_BWZredux,
-                                    "subCat2_BWZredux": model_subCat2_BWZredux,
-                                    "subCat3_BWZredux": model_subCat3_BWZredux,
-                                    "subCat4_BWZredux": model_subCat4_BWZredux,
+                                    "subCat0_BWZRedux": model_subCat0_BWZRedux, 
+                                    "subCat1_BWZRedux": model_subCat1_BWZRedux,
+                                    "subCat2_BWZRedux": model_subCat2_BWZRedux,
+                                    "subCat3_BWZRedux": model_subCat3_BWZRedux,
+                                    "subCat4_BWZRedux": model_subCat4_BWZRedux,
                                     "subCat0_sumExp": model_subCat0_sumExp, 
                                     "subCat1_sumExp": model_subCat1_sumExp,
                                     "subCat2_sumExp": model_subCat2_sumExp,
@@ -552,12 +552,12 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
     
     # model_dict_by_coreFunction = {
-    #     "BWZredux" : {
-    #         "subCat0_BWZredux": model_subCat0_BWZredux, 
-    #         "subCat1_BWZredux": model_subCat1_BWZredux,
-    #         "subCat2_BWZredux": model_subCat2_BWZredux,
-    #         "subCat3_BWZredux": model_subCat3_BWZredux,
-    #         "subCat4_BWZredux": model_subCat4_BWZredux,
+    #     "BWZRedux" : {
+    #         "subCat0_BWZRedux": model_subCat0_BWZRedux, 
+    #         "subCat1_BWZRedux": model_subCat1_BWZRedux,
+    #         "subCat2_BWZRedux": model_subCat2_BWZRedux,
+    #         "subCat3_BWZRedux": model_subCat3_BWZRedux,
+    #         "subCat4_BWZRedux": model_subCat4_BWZRedux,
     #     },
     #     "sumExp" : {
     #         "subCat0_sumExp": model_subCat0_sumExp, 
@@ -575,12 +575,12 @@ if __name__ == "__main__":
     #     },
     # }
     model_dict_by_coreFunction = {
-        "BWZredux" : [
-            model_subCat0_BWZredux, 
-            model_subCat1_BWZredux,
-            model_subCat2_BWZredux,
-            model_subCat3_BWZredux,
-            model_subCat4_BWZredux,
+        "BWZRedux" : [
+            model_subCat0_BWZRedux, 
+            model_subCat1_BWZRedux,
+            model_subCat2_BWZRedux,
+            model_subCat3_BWZRedux,
+            model_subCat4_BWZRedux,
         ],
         "sumExp" : [
             model_subCat0_sumExp, 
@@ -610,11 +610,13 @@ if __name__ == "__main__":
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         frame = mass.frame()
+        frame.SetTitle(f"Normalized Shape Plot of {core_type} PDFs")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
         normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
         normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-        print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
         for ix in range(len(coreFunction_list)):
             model = coreFunction_list[ix]
             name = model.GetName()
@@ -633,54 +635,54 @@ if __name__ == "__main__":
 
     # model_dict_by_subCat = {
     #     0 : {
-    #         "subCat0_BWZredux": model_subCat0_BWZredux, 
+    #         "subCat0_BWZRedux": model_subCat0_BWZRedux, 
     #         "subCat0_sumExp": model_subCat0_sumExp,
     #         "subCat0_FEWZxBern": model_subCat0_FEWZxBern,
     #     },
     #     1 : {
-    #         "subCat1_BWZredux": model_subCat1_BWZredux, 
+    #         "subCat1_BWZRedux": model_subCat1_BWZRedux, 
     #         "subCat1_sumExp": model_subCat1_sumExp,
     #         "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
     #     },
     #     2 : {
-    #         "subCat2_BWZredux": model_subCat2_BWZredux, 
+    #         "subCat2_BWZRedux": model_subCat2_BWZRedux, 
     #         "subCat2_sumExp": model_subCat2_sumExp,
     #         "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
     #     },
     #     3 : {
-    #         "subCat3_BWZredux": model_subCat3_BWZredux, 
+    #         "subCat3_BWZRedux": model_subCat3_BWZRedux, 
     #         "subCat3_sumExp": model_subCat3_sumExp,
     #         "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
     #     },
     #     4 : {
-    #         "subCat4_BWZredux": model_subCat4_BWZredux, 
+    #         "subCat4_BWZRedux": model_subCat4_BWZRedux, 
     #         "subCat4_sumExp": model_subCat4_sumExp,
     #         "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
     #     },
     # }
     model_dict_by_subCat = {
         0 : [
-            model_subCat0_BWZredux, 
+            model_subCat0_BWZRedux, 
             model_subCat0_sumExp,
             model_subCat0_FEWZxBern,
         ],
         1 : [
-            model_subCat1_BWZredux, 
+            model_subCat1_BWZRedux, 
             model_subCat1_sumExp,
             model_subCat1_FEWZxBern,
         ],
         2 : [
-            model_subCat2_BWZredux, 
+            model_subCat2_BWZRedux, 
             model_subCat2_sumExp,
             model_subCat2_FEWZxBern,
         ],
         3 : [
-            model_subCat3_BWZredux, 
+            model_subCat3_BWZRedux, 
             model_subCat3_sumExp,
             model_subCat3_FEWZxBern,
         ],
         4 : [
-            model_subCat4_BWZredux, 
+            model_subCat4_BWZRedux, 
             model_subCat4_sumExp,
             model_subCat4_FEWZxBern,
         ],
@@ -691,11 +693,13 @@ if __name__ == "__main__":
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         frame = mass.frame()
+        frame.SetTitle(f"Normalized Shape Plot of Sub-Category {subCat_idx} PDFs")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
         normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
         normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-        print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
         for ix in range(len(subCat_list)):
             model = subCat_list[ix]
             name = model.GetName()
