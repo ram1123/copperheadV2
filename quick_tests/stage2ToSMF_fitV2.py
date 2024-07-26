@@ -618,7 +618,7 @@ if __name__ == "__main__":
     print(f"mass.getMax(): {mass.getMax()}")
     roo_histData_subCat0_signal = rt.TH1F("subCat0_rooHist_signal", "subCat0_rooHist_signal", nbins, mass.getMin(), mass.getMax())
        
-    roo_histData_subCat0_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, np.ones(len(subCat_mass_arr))) # fill the histograms with mass and weights 
+    roo_histData_subCat0_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat0_SigMC) # fill the histograms with mass and weights 
     roo_histData_subCat0_signal = rt.RooDataHist("subCat0_rooHist_signal", "subCat0_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat0_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat0_signal = roo_histData_subCat0_signal
