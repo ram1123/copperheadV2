@@ -86,7 +86,7 @@ if __name__ == "__main__":
         
         
 
-        FEWZxBern, params_fewz = MakeFEWZxBern(mass, dof, roo_histData)
+        FEWZxBern, params_fewz = MakeFEWZxBern(mass, dof)
         # FEWZxBern_func, params_fewz = MakeFEWZxBern(mass, dof, roo_histData)
         # FEWZxBern = rt.RooGenericPdf("FEWZxBern", "Spline * Bernstein PDF", "@0", rt.RooArgList(FEWZxBern_func))
         
@@ -190,20 +190,7 @@ if __name__ == "__main__":
         # roo_datasetData.plotOn(frame, rt.RooFit.CutRange(fit_range),DataError="SumW2", Name=dataset_name)
         frame.Draw()
     
-        # # legend
-        # legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        # name=final_BWZ_Redux.GetName()
-        # legend.AddEntry(name,name, "L")
-        # name=final_sumExp.GetName()
-        # legend.AddEntry(name,name, "L")
-        # -------------------------------------------------------
-        # name=final_powerSum.GetName()
-        # legend.AddEntry(name,name, "L")
-        # name=final_BWZxBern.GetName()
-        # legend.AddEntry(name,name, "L")
-        # name=final_FEWZxBern.GetName()
-        # legend.AddEntry(name,name, "L")
-        # -------------------------------------------------------
+        # legend
         name="data"
         legend.AddEntry(name,name, "P")
         legend.Draw()
@@ -242,9 +229,10 @@ if __name__ == "__main__":
         # multipdf.setCorrectionFactor(0) # by default the penalty of 0.5 is given to nll
         
 
-        print(f"multipdf.GetName(): {multipdf.GetName()}")
-        norm = rt.RooRealVar(multipdf.GetName()+"_norm","Number of background events",roo_datasetData.numEntries(),0,3*roo_datasetData.numEntries())
-
+        # print(f"multipdf.GetName(): {multipdf.GetName()}")
+        bkg_norm = rt.RooRealVar(multipdf.GetName()+"_norm","Number of background events",roo_datasetData.numEntries(),0,3*roo_datasetData.numEntries())
+        print(f"background roo_datasetData.numEntries(): {roo_datasetData.numEntries()}")
+        
         # # inject a signal 
         # sigma = rt.RooRealVar("sigma","sigma",1.2); 
         # sigma.setConstant(True);
@@ -258,6 +246,9 @@ if __name__ == "__main__":
         subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == cat_ix)
         subCat_mass_arrSigMC = processed_eventsSignalMC.dimuon_mass[subCat_filter]
         subCat_mass_arrSigMC  = ak.to_numpy(subCat_mass_arrSigMC) # convert to numpy for rt.RooDataSet
+
+        # get signal MC event weights
+        subCat_wgtSigMC = processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
         
         # the mass range and nbins are taken from Fig 6.15 of the long AN (page 57)
         # mass_name = "ggH_dimuon_mass"
@@ -313,6 +304,12 @@ if __name__ == "__main__":
         alpha2.setConstant(True)
         n2.setConstant(True)
 
+        # add in normalization value
+        norm_val = ak.sum(subCat_wgtSigMC)
+        # sig_norm = rt.RooRealVar(signal.GetName()+"_norm","Number of signal events",roo_datasetSigMC.numEntries())
+        sig_norm = rt.RooRealVar(signal.GetName()+"_norm","Number of signal events",norm_val)
+        print(f"signal norm_val: {norm_val}")
+        sig_norm.setConstant(True)
         
         # clear canvas to plot the signal model
         canvas.Clear()
@@ -351,9 +348,10 @@ if __name__ == "__main__":
         roo_histData.SetName("data");
         wout.Import(roo_histData);
         wout.Import(cat);
-        wout.Import(norm);
+        wout.Import(bkg_norm);
         wout.Import(multipdf);
         wout.Import(signal);
+        wout.Import(sig_norm);
         wout.Print();
         wout.Write();
     
