@@ -32,21 +32,35 @@ if __name__ == "__main__":
     events["ll_zstar_log"] = np.log(events.ll_zstar)
     events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
     events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
+
+    train_feat_dict = {
+        "BDTperyear_2018" : [
+            'dimuon_cos_theta_cs', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_eta', 'dimuon_phi', 'dimuon_phi_cs', 'dimuon_pt', 
+            'dimuon_pt_log', 'jet1_eta', 'jet1_phi', 'jet1_pt', 'jet1_qgl', 'jet2_eta', 'jet2_phi', 
+            'jet2_pt', 'jet2_qgl', 'jj_dEta', 'jj_dPhi', 'jj_eta', 'jj_mass', 'jj_mass_log', 
+            'jj_phi', 'jj_pt', 'll_zstar_log', 'mmj1_dEta', 'mmj1_dPhi', 
+            'mmj_min_dEta', 'mmj_min_dPhi', 'mmjj_eta', 'mmjj_mass', 'mmjj_phi', 'mmjj_pt', 'mu1_eta', 'mu1_iso', 
+            'mu1_phi', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_iso', 'mu2_phi', 'mu2_pt_over_mass', 'zeppenfeld'
+        ],
+        "phifixedBDT_2018" : [
+                'dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld' #, 'njets'
+        ], # AN 19-124
+        
+    }
     
-    
-    training_features = [
-        'dimuon_cos_theta_cs', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_eta', 'dimuon_phi', 'dimuon_phi_cs', 'dimuon_pt', 
-        'dimuon_pt_log', 'jet1_eta', 'jet1_phi', 'jet1_pt', 'jet1_qgl', 'jet2_eta', 'jet2_phi', 
-        'jet2_pt', 'jet2_qgl', 'jj_dEta', 'jj_dPhi', 'jj_eta', 'jj_mass', 'jj_mass_log', 
-        'jj_phi', 'jj_pt', 'll_zstar_log', 'mmj1_dEta', 'mmj1_dPhi', 'mmj2_dEta', 'mmj2_dPhi', 
-        'mmj_min_dEta', 'mmj_min_dPhi', 'mmjj_eta', 'mmjj_mass', 'mmjj_phi', 'mmjj_pt', 'mu1_eta', 'mu1_iso', 
-        'mu1_phi', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_iso', 'mu2_phi', 'mu2_pt_over_mass', 'zeppenfeld'
-    ]
+    # model_name = "BDTv12_2018"
+    model_name = "phifixedBDT_2018"
+    # model_name = "BDTperyear_2018"
+
+    training_features = train_feat_dict[model_name]
+    print(f"len(training_features): {len(training_features)}")
+
+    # load training features from the ak.Record
     for training_feature in training_features:
         if training_feature not in events.fields:
             print(f"mssing feature: {training_feature}")
     
-    fields2load = training_features + ["h_peak", "h_sidebands", "dimuon_mass", "wgt_nominal_total"]
+    fields2load = training_features + ["h_peak", "h_sidebands", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
     events = events[fields2load]
     # load data to memory using compute()
     events = ak.zip({
@@ -57,11 +71,9 @@ if __name__ == "__main__":
     parameters = {
     "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
     }
-    # model_name = "BDTv12_2018"
-    model_name = "phifixedBDT_2018"
-    # model_name = "BDTperyear_2018"
     
-    processed_events = evaluate_bdt(events, "nominal", model_name, parameters) # this also only filters in h_peak and h_sidebands
+    
+    processed_events = evaluate_bdt(events, "nominal", model_name, training_features, parameters) # this also only filters in h_peak and h_sidebands
 
     # load BDT score edges for subcategory divison
     BDTedges_load_path = "../configs/MVA/ggH/BDT_edges.yaml"
