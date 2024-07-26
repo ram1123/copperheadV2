@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
 
     # ---------------------------------------------------------------
-    # Generate events for both samples
+    # Initialize Data for Bkg models to fit to
     # ---------------------------------------------------------------
      
     # do for cat idx 0
@@ -289,7 +289,7 @@ if __name__ == "__main__":
     name = "model_SubCat4_SMFxSumExp"
     model_subCat4_sumExp = rt.RooProdPdf(name, name, [coreSumExp_SubCat4, subCat4_SumExp_SMF])    
      
-    # Generate events for both samples
+    # Initialize Data for Bkg models to fit to
     # ---------------------------------------------------------------
      
     # do for cat idx 0
@@ -413,7 +413,7 @@ if __name__ == "__main__":
     name = "model_SubCat4_SMFxFEWZxBern"
     model_subCat4_FEWZxBern = rt.RooProdPdf(name, name, [coreFEWZxBern_SubCat4, subCat4_FEWZxBern_SMF])        
      
-    # Generate events for both samples
+    # Initialize Data for Bkg models to fit to
     # ---------------------------------------------------------------
      
     # do for cat idx 0

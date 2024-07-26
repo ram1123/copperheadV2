@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
 
     # ---------------------------------------------------------------
-    # Generate events for both samples
+    # Initialize Data for Bkg models to fit to
     # ---------------------------------------------------------------
      
     # do for cat idx 0
@@ -289,7 +289,7 @@ if __name__ == "__main__":
     name = "model_SubCat4_SMFxSumExp"
     model_subCat4_sumExp = rt.RooProdPdf(name, name, [coreSumExp_SubCat4, subCat4_SumExp_SMF])    
      
-    # Generate events for both samples
+    # Initialize Data for Bkg models to fit to
     # ---------------------------------------------------------------
      
     # do for cat idx 0
@@ -413,7 +413,7 @@ if __name__ == "__main__":
     name = "model_SubCat4_SMFxFEWZxBern"
     model_subCat4_FEWZxBern = rt.RooProdPdf(name, name, [coreFEWZxBern_SubCat4, subCat4_FEWZxBern_SMF])        
      
-    # Generate events for both samples
+    # Initialize Data for Bkg models to fit to
     # ---------------------------------------------------------------
      
     # do for cat idx 0
@@ -536,10 +536,6 @@ if __name__ == "__main__":
      
     start = time.time()
 
-    # _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
-    # fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True)
-    # _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True, Strategy=0)
-    # fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=-1, Save=True,)
     _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu",  PrintLevel=0 ,Save=True, Strategy=0)
     fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=0 ,Save=True,)
     end = time.time()
@@ -567,11 +563,63 @@ if __name__ == "__main__":
         model_subCat0_FEWZxBern,
     )
     corePdf_subCat0 = rt.RooMultiPdf("CorePdf_subCat0","All Pdfs",cat,pdf_list)
-    nevents = roo_datasetData_subCat0.numEntries()
+    nevents = roo_datasetData_subCat0.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     bkg_subCat0_norm = rt.RooRealVar(multipdf.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     
+    
+
+
     # ---------------------------------------------------
-    # Save to Workspace
+    # Obtain signal MC events
+    # ---------------------------------------------------
+
+    load_path = "/work/users/yun79/stage2_output/test/processed_events_signalMC.parquet"
+    processed_eventsSignalMC = ak.from_parquet(load_path)
+    print("signal events loaded")
+
+    # Define signal model's Doubcl Crystal Ball PDF
+
+    # subCat 0
+    MH_subCat0 = rt.RooRealVar("MH_subCat0" , "MH_subCat0", 125, 115,135)
+    MH_subCat0.setConstant(True) # this shouldn't change, I think
+    sigma_subCat0 = rt.RooRealVar("sigma_subCat0" , "sigma_subCat0", 2, .1, 4.0)
+    alpha1_subCat0 = rt.RooRealVar("alpha1_subCat0" , "alpha1_subCat0", 2, 0.01, 65)
+    n1_subCat0 = rt.RooRealVar("n1_subCat0" , "n1_subCat0", 10, 0.01, 100)
+    alpha2_subCat0 = rt.RooRealVar("alpha2_subCat0" , "alpha2_subCat0", 2.0, 0.01, 65)
+    n2_subCat0 = rt.RooRealVar("n2_subCat0" , "n2_subCat0", 25, 0.01, 100)
+    
+    # n1_subCat0.setConstant(True) # freeze for stability
+    # n2_subCat0.setConstant(True) # freeze for stability
+    name = "signal_subCat0"
+    signal = rt.RooCrystalBall(name,name,mass, MH, sigma_subCat0, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
+
+
+
+    # Define signal MC samples to fit to
+
+    
+    
+    # fit signal model
+    _ = signal.fitTo(roo_histSigMC,  EvalBackend="cpu", Save=True, )
+    fit_result = signal.fitTo(roo_histSigMC,  EvalBackend="cpu", Save=True, )
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat0.setConstant(True)
+    alpha1_subCat0.setConstant(True)
+    n1_subCat0.setConstant(True)
+    alpha2_subCat0.setConstant(True)
+    n2_subCat0.setConstant(True)
+
+    # add in normalization value
+    norm_val = ak.sum(subCat_wgtSigMC)
+    # sig_norm = rt.RooRealVar(signal.GetName()+"_norm","Number of signal events",roo_datasetSigMC.numEntries())
+    sig_norm = rt.RooRealVar(signal.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal norm_val: {norm_val}")
+    sig_norm.setConstant(True)
+
+
+    # ---------------------------------------------------
+    # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
 
     fout = rt.TFile("./workspace.root","RECREATE")
@@ -588,15 +636,6 @@ if __name__ == "__main__":
     wout.Import(corePdf_subCat0);
     wout.Print();
     wout.Write();
-
-
-    # # ---------------------------------------------------
-    # # Obtain signal MC events
-    # # ---------------------------------------------------
-
-    # load_path = "/work/users/yun79/stage2_output/test/processed_events_signalMC.parquet"
-    # processed_eventsSignalMC = ak.from_parquet(load_path)
-    # print("signal events loaded")
 
     # # -------------------------------------------------------------------------
     # # do plotting loop divided into core-function
