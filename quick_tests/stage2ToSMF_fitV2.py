@@ -465,20 +465,20 @@ if __name__ == "__main__":
     # Define category to distinguish physics and control samples events
     sample = rt.RooCategory("sample", "sample")
     sample.defineType("subCat0_BWZRedux")
-    sample.defineType("subCat1_BWZRedux")
-    sample.defineType("subCat2_BWZRedux")
-    sample.defineType("subCat3_BWZRedux")
-    sample.defineType("subCat4_BWZRedux")
-    sample.defineType("subCat0_sumExp")
-    sample.defineType("subCat1_sumExp")
-    sample.defineType("subCat2_sumExp")
-    sample.defineType("subCat3_sumExp")
-    sample.defineType("subCat4_sumExp")
-    sample.defineType("subCat0_FEWZxBern")
-    sample.defineType("subCat1_FEWZxBern")
-    sample.defineType("subCat2_FEWZxBern")
-    sample.defineType("subCat3_FEWZxBern")
-    sample.defineType("subCat4_FEWZxBern")
+    # sample.defineType("subCat1_BWZRedux")
+    # sample.defineType("subCat2_BWZRedux")
+    # sample.defineType("subCat3_BWZRedux")
+    # sample.defineType("subCat4_BWZRedux")
+    # sample.defineType("subCat0_sumExp")
+    # sample.defineType("subCat1_sumExp")
+    # sample.defineType("subCat2_sumExp")
+    # sample.defineType("subCat3_sumExp")
+    # sample.defineType("subCat4_sumExp")
+    # sample.defineType("subCat0_FEWZxBern")
+    # sample.defineType("subCat1_FEWZxBern")
+    # sample.defineType("subCat2_FEWZxBern")
+    # sample.defineType("subCat3_FEWZxBern")
+    # sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -488,20 +488,20 @@ if __name__ == "__main__":
         Index=sample,
         Import={
             "subCat0_BWZRedux": data_subCat0_BWZRedux, 
-            "subCat1_BWZRedux": data_subCat1_BWZRedux,
-            "subCat2_BWZRedux": data_subCat2_BWZRedux,
-            "subCat3_BWZRedux": data_subCat3_BWZRedux,
-            "subCat4_BWZRedux": data_subCat4_BWZRedux,
-            "subCat0_sumExp": data_subCat0_sumExp, 
-            "subCat1_sumExp": data_subCat1_sumExp,
-            "subCat2_sumExp": data_subCat2_sumExp,
-            "subCat3_sumExp": data_subCat3_sumExp,
-            "subCat4_sumExp": data_subCat4_sumExp,
-            "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
-            "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            # "subCat1_BWZRedux": data_subCat1_BWZRedux,
+            # "subCat2_BWZRedux": data_subCat2_BWZRedux,
+            # "subCat3_BWZRedux": data_subCat3_BWZRedux,
+            # "subCat4_BWZRedux": data_subCat4_BWZRedux,
+            # "subCat0_sumExp": data_subCat0_sumExp, 
+            # "subCat1_sumExp": data_subCat1_sumExp,
+            # "subCat2_sumExp": data_subCat2_sumExp,
+            # "subCat3_sumExp": data_subCat3_sumExp,
+            # "subCat4_sumExp": data_subCat4_sumExp,
+            # "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
+            # "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
+            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -513,20 +513,20 @@ if __name__ == "__main__":
                                 "simultaneous pdf", 
                                 {
                                     "subCat0_BWZRedux": model_subCat0_BWZRedux, 
-                                    "subCat1_BWZRedux": model_subCat1_BWZRedux,
-                                    "subCat2_BWZRedux": model_subCat2_BWZRedux,
-                                    "subCat3_BWZRedux": model_subCat3_BWZRedux,
-                                    "subCat4_BWZRedux": model_subCat4_BWZRedux,
-                                    "subCat0_sumExp": model_subCat0_sumExp, 
-                                    "subCat1_sumExp": model_subCat1_sumExp,
-                                    "subCat2_sumExp": model_subCat2_sumExp,
-                                    "subCat3_sumExp": model_subCat3_sumExp,
-                                    "subCat4_sumExp": model_subCat4_sumExp,
-                                    "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
-                                    "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+                                    # "subCat1_BWZRedux": model_subCat1_BWZRedux,
+                                    # "subCat2_BWZRedux": model_subCat2_BWZRedux,
+                                    # "subCat3_BWZRedux": model_subCat3_BWZRedux,
+                                    # "subCat4_BWZRedux": model_subCat4_BWZRedux,
+                                    # "subCat0_sumExp": model_subCat0_sumExp, 
+                                    # "subCat1_sumExp": model_subCat1_sumExp,
+                                    # "subCat2_sumExp": model_subCat2_sumExp,
+                                    # "subCat3_sumExp": model_subCat3_sumExp,
+                                    # "subCat4_sumExp": model_subCat4_sumExp,
+                                    # "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
+                                    # "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
+                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
     )
@@ -562,9 +562,9 @@ if __name__ == "__main__":
         model_subCat0_sumExp,
         model_subCat0_FEWZxBern,
     )
-    corePdf_subCat0 = rt.RooMultiPdf("CorePdf_subCat0","All Pdfs",cat,pdf_list)
+    corePdf_subCat0 = rt.RooMultiPdf("CorePdf_subCat0","CorePdf_subCat0",cat_subCat0,pdf_list_subCat0)
     nevents = roo_datasetData_subCat0.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
-    bkg_subCat0_norm = rt.RooRealVar(multipdf.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
+    bkg_subCat0_norm = rt.RooRealVar(corePdf_subCat0.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     
     
 
@@ -576,9 +576,11 @@ if __name__ == "__main__":
     load_path = "/work/users/yun79/stage2_output/test/processed_events_signalMC.parquet"
     processed_eventsSignalMC = ak.from_parquet(load_path)
     print("signal events loaded")
-
+    
+    # ---------------------------------------------------
     # Define signal model's Doubcl Crystal Ball PDF
-
+    # ---------------------------------------------------
+    
     # subCat 0
     MH_subCat0 = rt.RooRealVar("MH_subCat0" , "MH_subCat0", 125, 115,135)
     MH_subCat0.setConstant(True) # this shouldn't change, I think
@@ -591,17 +593,45 @@ if __name__ == "__main__":
     # n1_subCat0.setConstant(True) # freeze for stability
     # n2_subCat0.setConstant(True) # freeze for stability
     name = "signal_subCat0"
-    signal = rt.RooCrystalBall(name,name,mass, MH, sigma_subCat0, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
+    signal_subCat0 = rt.RooCrystalBall(name,name,mass, MH_subCat0, sigma_subCat0, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
 
 
-
+    # ---------------------------------------------------
     # Define signal MC samples to fit to
+    # ---------------------------------------------------
+
+    # subCat 0
+    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 0)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat0_SigMC = ak.to_numpy(
+        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+    ) # weights
+    
+    roo_datasetData_subCat0_signal = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    roo_histData_subCat0_signal = rt.RooDataHist("subCat0_rooHist_signal","subCat0_rooHist_signal", rt.RooArgSet(mass), roo_datasetData_subCat0_signal)
+    
+    # roo_histData_subCat0_signal
 
     
+    data_subCat0_signal = roo_histData_subCat0_signal
+
+    # define normalization value from signal MC event weights 
     
-    # fit signal model
-    _ = signal.fitTo(roo_histSigMC,  EvalBackend="cpu", Save=True, )
-    fit_result = signal.fitTo(roo_histSigMC,  EvalBackend="cpu", Save=True, )
+    norm_val = np.sum(wgt_subCat0_SigMC)
+    sig_norm_subCat0 = rt.RooRealVar(signal_subCat0.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat0 norm_val: {norm_val}")
+    sig_norm_subCat0.setConstant(True)
+    
+    # ---------------------------------------------------
+    # Fit signal model individually, not simultaneous. Sigma, and left and right tails are different for each category
+    # ---------------------------------------------------
+
+    # subCat 0
+    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, )
+    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, )
+    fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat0.setConstant(True)
@@ -610,35 +640,50 @@ if __name__ == "__main__":
     alpha2_subCat0.setConstant(True)
     n2_subCat0.setConstant(True)
 
-    # add in normalization value
-    norm_val = ak.sum(subCat_wgtSigMC)
-    # sig_norm = rt.RooRealVar(signal.GetName()+"_norm","Number of signal events",roo_datasetSigMC.numEntries())
-    sig_norm = rt.RooRealVar(signal.GetName()+"_norm","Number of signal events",norm_val)
-    print(f"signal norm_val: {norm_val}")
-    sig_norm.setConstant(True)
-
-
-    # ---------------------------------------------------
-    # Save to Signal, Background and Data to Workspace
-    # ---------------------------------------------------
-
-    fout = rt.TFile("./workspace.root","RECREATE")
-    wout = rt.RooWorkspace("workspace","workspace")
+    # -------------------------------------------------------------------------
+    # do signal plotting with fit and data
+    # -------------------------------------------------------------------------
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = roo_datasetData_subCat0_signal.GetName()
+    roo_datasetData_subCat0_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat0.GetName()
+    signal_subCat0.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
     
-    # subCat 0 
+    frame.Draw()
+    legend.Draw()
     
-    # roo_histData_subCat0.SetName("data_cat0_ggh");
-    # wout.Import(roo_histData_subCat0);
-    roo_datasetData_subCat0.SetName("data_cat0_ggh");
-    wout.Import(roo_datasetData_subCat0);
-    wout.Import(cat);
-    wout.Import(bkg_norm);
-    wout.Import(corePdf_subCat0);
-    wout.Print();
-    wout.Write();
+    canvas.Update()
+    canvas.Draw()
+    
+    canvas.SaveAs(f"./quick_plots/stage3_plot_ggH_subCat0.pdf")
+
+    # # ---------------------------------------------------
+    # # Save to Signal, Background and Data to Workspace
+    # # ---------------------------------------------------
+
+    # fout = rt.TFile("./workspace.root","RECREATE")
+    # wout = rt.RooWorkspace("workspace","workspace")
+    
+    # # subCat 0 
+    
+    # # roo_histData_subCat0.SetName("data_cat0_ggh");
+    # # wout.Import(roo_histData_subCat0);
+    # roo_datasetData_subCat0.SetName("data_cat0_ggh");
+    # wout.Import(roo_datasetData_subCat0);
+    # wout.Import(cat);
+    # wout.Import(bkg_norm);
+    # wout.Import(corePdf_subCat0);
+    # wout.Print();
+    # wout.Write();
 
     # # -------------------------------------------------------------------------
-    # # do plotting loop divided into core-function
+    # # do Bkg plotting loop divided into core-function
     # # -------------------------------------------------------------------------
     
     # model_dict_by_coreFunction = {
@@ -697,7 +742,7 @@ if __name__ == "__main__":
     #     canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial_{core_type}.pdf")
 
     # # -------------------------------------------------------------------------
-    # # do plotting loop divided into Sub Categories
+    # # do Bkg plotting loop divided into Sub Categories
     # # -------------------------------------------------------------------------
 
     # model_dict_by_subCat = {
