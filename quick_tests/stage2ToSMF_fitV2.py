@@ -609,11 +609,17 @@ if __name__ == "__main__":
         processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
     ) # weights
     
-    roo_datasetData_subCat0_signal = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    roo_histData_subCat0_signal = rt.RooDataHist("subCat0_rooHist_signal","subCat0_rooHist_signal", rt.RooArgSet(mass), roo_datasetData_subCat0_signal)
-    
-    # roo_histData_subCat0_signal
+    # roo_datasetData_subCat0_signal = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    # roo_histData_subCat0_signal = rt.RooDataHist("subCat0_rooHist_signal","subCat0_rooHist_signal", rt.RooArgSet(mass), roo_datasetData_subCat0_signal)
 
+    # generate a weighted histogram 
+    print(f"nbins: {nbins}")
+    print(f"mass.getMin(): {mass.getMin()}")
+    print(f"mass.getMax(): {mass.getMax()}")
+    roo_histData_subCat0_signal = rt.TH1F("subCat0_rooHist_signal", "subCat0_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat0_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, np.ones(len(subCat_mass_arr))) # fill the histograms with mass and weights 
+    roo_histData_subCat0_signal = rt.RooDataHist("subCat0_rooHist_signal", "subCat0_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat0_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat0_signal = roo_histData_subCat0_signal
 
@@ -648,8 +654,8 @@ if __name__ == "__main__":
     canvas.cd()
     frame = mass.frame()
     legend = rt.TLegend(0.65,0.55,0.9,0.7)
-    name = roo_datasetData_subCat0_signal.GetName()
-    roo_datasetData_subCat0_signal.plotOn(frame, DataError="SumW2", Name=name)
+    name = data_subCat0_signal.GetName()
+    data_subCat0_signal.plotOn(frame, DataError="SumW2", Name=name)
     legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
     name = signal_subCat0.GetName()
     signal_subCat0.plotOn(frame, Name=name, LineColor=rt.kGreen)
