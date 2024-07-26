@@ -24,7 +24,8 @@ def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist
     
 
 if __name__ == "__main__":
-    load_path = "./processed_events_data.parquet"
+    # load_path = "./processed_events_data.parquet"
+    load_path = "/work/users/yun79/stage2_output/test/processed_events_data.parquet"
     processed_eventsData = ak.from_parquet(load_path)
     print("events loaded!")
     
@@ -547,170 +548,120 @@ if __name__ == "__main__":
     print(f"runtime: {end-start} seconds")
 
 
-    # -------------------------------------------------------------------------
-    # do plotting loop divided into core-function
-    # -------------------------------------------------------------------------
+    # # -------------------------------------------------------------------------
+    # # do plotting loop divided into core-function
+    # # -------------------------------------------------------------------------
     
     # model_dict_by_coreFunction = {
-    #     "BWZRedux" : {
-    #         "subCat0_BWZRedux": model_subCat0_BWZRedux, 
-    #         "subCat1_BWZRedux": model_subCat1_BWZRedux,
-    #         "subCat2_BWZRedux": model_subCat2_BWZRedux,
-    #         "subCat3_BWZRedux": model_subCat3_BWZRedux,
-    #         "subCat4_BWZRedux": model_subCat4_BWZRedux,
-    #     },
-    #     "sumExp" : {
-    #         "subCat0_sumExp": model_subCat0_sumExp, 
-    #         "subCat1_sumExp": model_subCat1_sumExp,
-    #         "subCat2_sumExp": model_subCat2_sumExp,
-    #         "subCat3_sumExp": model_subCat3_sumExp,
-    #         "subCat4_sumExp": model_subCat4_sumExp,
-    #     },
-    #     "FEWZxBern" : {
-    #         "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
-    #         "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-    #         "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-    #         "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-    #         "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
-    #     },
+    #     "BWZRedux" : [
+    #         model_subCat0_BWZRedux, 
+    #         model_subCat1_BWZRedux,
+    #         model_subCat2_BWZRedux,
+    #         model_subCat3_BWZRedux,
+    #         model_subCat4_BWZRedux,
+    #     ],
+    #     "sumExp" : [
+    #         model_subCat0_sumExp, 
+    #         model_subCat1_sumExp,
+    #         model_subCat2_sumExp,
+    #         model_subCat3_sumExp,
+    #         model_subCat4_sumExp,
+    #     ],
+    #     "FEWZxBern" : [
+    #         model_subCat0_FEWZxBern, 
+    #         model_subCat1_FEWZxBern,
+    #         model_subCat2_FEWZxBern,
+    #         model_subCat3_FEWZxBern,
+    #         model_subCat4_FEWZxBern,
+    #     ],
     # }
-    model_dict_by_coreFunction = {
-        "BWZRedux" : [
-            model_subCat0_BWZRedux, 
-            model_subCat1_BWZRedux,
-            model_subCat2_BWZRedux,
-            model_subCat3_BWZRedux,
-            model_subCat4_BWZRedux,
-        ],
-        "sumExp" : [
-            model_subCat0_sumExp, 
-            model_subCat1_sumExp,
-            model_subCat2_sumExp,
-            model_subCat3_sumExp,
-            model_subCat4_sumExp,
-        ],
-        "FEWZxBern" : [
-            model_subCat0_FEWZxBern, 
-            model_subCat1_FEWZxBern,
-            model_subCat2_FEWZxBern,
-            model_subCat3_FEWZxBern,
-            model_subCat4_FEWZxBern,
-        ],
-    }
-    color_list = [
-        rt.kGreen,
-        rt.kBlue,
-        rt.kRed,
-        rt.kOrange,
-        rt.kViolet,
-    ]
-    for core_type, coreFunction_list in model_dict_by_coreFunction.items():
+    # color_list = [
+    #     rt.kGreen,
+    #     rt.kBlue,
+    #     rt.kRed,
+    #     rt.kOrange,
+    #     rt.kViolet,
+    # ]
+    # for core_type, coreFunction_list in model_dict_by_coreFunction.items():
         
-        name = "Canvas"
-        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-        canvas.cd()
-        frame = mass.frame()
-        frame.SetTitle(f"Normalized Shape Plot of {core_type} PDFs")
-        frame.SetXTitle(f"Dimuon Mass (GeV)")
-        legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
-        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
-        for ix in range(len(coreFunction_list)):
-            model = coreFunction_list[ix]
-            name = model.GetName()
-            color = color_list[ix]
-            model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
-            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
-        frame.Draw()
-        legend.Draw()        
-        canvas.Update()
-        canvas.Draw()
-        canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial_{core_type}.pdf")
+    #     name = "Canvas"
+    #     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    #     canvas.cd()
+    #     frame = mass.frame()
+    #     frame.SetTitle(f"Normalized Shape Plot of {core_type} PDFs")
+    #     frame.SetXTitle(f"Dimuon Mass (GeV)")
+    #     legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    #     # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+    #     normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
+    #     normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+    #     # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+    #     for ix in range(len(coreFunction_list)):
+    #         model = coreFunction_list[ix]
+    #         name = model.GetName()
+    #         color = color_list[ix]
+    #         model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
+    #         legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    #     frame.Draw()
+    #     legend.Draw()        
+    #     canvas.Update()
+    #     canvas.Draw()
+    #     canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial_{core_type}.pdf")
 
-    # -------------------------------------------------------------------------
-    # do plotting loop divided into Sub Categories
-    # -------------------------------------------------------------------------
+    # # -------------------------------------------------------------------------
+    # # do plotting loop divided into Sub Categories
+    # # -------------------------------------------------------------------------
 
     # model_dict_by_subCat = {
-    #     0 : {
-    #         "subCat0_BWZRedux": model_subCat0_BWZRedux, 
-    #         "subCat0_sumExp": model_subCat0_sumExp,
-    #         "subCat0_FEWZxBern": model_subCat0_FEWZxBern,
-    #     },
-    #     1 : {
-    #         "subCat1_BWZRedux": model_subCat1_BWZRedux, 
-    #         "subCat1_sumExp": model_subCat1_sumExp,
-    #         "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-    #     },
-    #     2 : {
-    #         "subCat2_BWZRedux": model_subCat2_BWZRedux, 
-    #         "subCat2_sumExp": model_subCat2_sumExp,
-    #         "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-    #     },
-    #     3 : {
-    #         "subCat3_BWZRedux": model_subCat3_BWZRedux, 
-    #         "subCat3_sumExp": model_subCat3_sumExp,
-    #         "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-    #     },
-    #     4 : {
-    #         "subCat4_BWZRedux": model_subCat4_BWZRedux, 
-    #         "subCat4_sumExp": model_subCat4_sumExp,
-    #         "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
-    #     },
+    #     0 : [
+    #         model_subCat0_BWZRedux, 
+    #         model_subCat0_sumExp,
+    #         model_subCat0_FEWZxBern,
+    #     ],
+    #     1 : [
+    #         model_subCat1_BWZRedux, 
+    #         model_subCat1_sumExp,
+    #         model_subCat1_FEWZxBern,
+    #     ],
+    #     2 : [
+    #         model_subCat2_BWZRedux, 
+    #         model_subCat2_sumExp,
+    #         model_subCat2_FEWZxBern,
+    #     ],
+    #     3 : [
+    #         model_subCat3_BWZRedux, 
+    #         model_subCat3_sumExp,
+    #         model_subCat3_FEWZxBern,
+    #     ],
+    #     4 : [
+    #         model_subCat4_BWZRedux, 
+    #         model_subCat4_sumExp,
+    #         model_subCat4_FEWZxBern,
+    #     ],
     # }
-    model_dict_by_subCat = {
-        0 : [
-            model_subCat0_BWZRedux, 
-            model_subCat0_sumExp,
-            model_subCat0_FEWZxBern,
-        ],
-        1 : [
-            model_subCat1_BWZRedux, 
-            model_subCat1_sumExp,
-            model_subCat1_FEWZxBern,
-        ],
-        2 : [
-            model_subCat2_BWZRedux, 
-            model_subCat2_sumExp,
-            model_subCat2_FEWZxBern,
-        ],
-        3 : [
-            model_subCat3_BWZRedux, 
-            model_subCat3_sumExp,
-            model_subCat3_FEWZxBern,
-        ],
-        4 : [
-            model_subCat4_BWZRedux, 
-            model_subCat4_sumExp,
-            model_subCat4_FEWZxBern,
-        ],
-    }
     
-    for subCat_idx, subCat_list in model_dict_by_subCat.items():
-        name = "Canvas"
-        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-        canvas.cd()
-        frame = mass.frame()
-        frame.SetTitle(f"Normalized Shape Plot of Sub-Category {subCat_idx} PDFs")
-        frame.SetXTitle(f"Dimuon Mass (GeV)")
-        legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
-        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
-        for ix in range(len(subCat_list)):
-            model = subCat_list[ix]
-            name = model.GetName()
-            color = color_list[ix]
-            model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
-            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
-        frame.Draw()
-        legend.Draw()        
-        canvas.Update()
-        canvas.Draw()
-        canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
+    # for subCat_idx, subCat_list in model_dict_by_subCat.items():
+    #     name = "Canvas"
+    #     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    #     canvas.cd()
+    #     frame = mass.frame()
+    #     frame.SetTitle(f"Normalized Shape Plot of Sub-Category {subCat_idx} PDFs")
+    #     frame.SetXTitle(f"Dimuon Mass (GeV)")
+    #     legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    #     # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+    #     normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
+    #     normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+    #     # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+    #     for ix in range(len(subCat_list)):
+    #         model = subCat_list[ix]
+    #         name = model.GetName()
+    #         color = color_list[ix]
+    #         model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
+    #         legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    #     frame.Draw()
+    #     legend.Draw()        
+    #     canvas.Update()
+    #     canvas.Draw()
+    #     canvas.SaveAs(f"./quick_plots/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
 
     
 
