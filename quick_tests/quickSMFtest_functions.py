@@ -631,8 +631,10 @@ def prepare_features(df, training_features, variation="nominal", add_year=False)
 
     
 
-def evaluate_bdt(df, variation, model, parameters):
-
+def evaluate_bdt(df: ak.Record, variation, model, parameters) -> ak.Record :
+    """
+    This also filters in only h_peak and h_sidebands regpion
+    """
     # filter out events neither h_peak nor h_sidebands
     row_filter = (df.h_peak != 0) | (df.h_sidebands != 0)
     df = df[row_filter]

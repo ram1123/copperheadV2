@@ -20,8 +20,8 @@ if __name__ == "__main__":
     # full_load_path = load_path+f"/data_D/*/*.parquet"
     # full_load_path = load_path+f"/data_*/*/*.parquet"
     # full_load_path = load_path+f"/data_A/*/*.parquet"
-    # full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
-    full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
+    full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
+    # full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
     
     events = dak.from_parquet(full_load_path)
 
@@ -58,10 +58,10 @@ if __name__ == "__main__":
     "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
     }
     # model_name = "BDTv12_2018"
-    # model_name = "phifixedBDT_2018"
-    model_name = "BDTperyear_2018"
+    model_name = "phifixedBDT_2018"
+    # model_name = "BDTperyear_2018"
     
-    processed_events = evaluate_bdt(events, "nominal", model_name, parameters)
+    processed_events = evaluate_bdt(events, "nominal", model_name, parameters) # this also only filters in h_peak and h_sidebands
 
     # load BDT score edges for subcategory divison
     BDTedges_load_path = "../configs/MVA/ggH/BDT_edges.yaml"
@@ -87,6 +87,7 @@ if __name__ == "__main__":
         "dimuon_mass",
         "BDT_score",
         "subCategory_idx",
+        "wgt_nominal_total",
     ]
     processed_events = ak.zip({
         field : processed_events[field] for field in fields2save
