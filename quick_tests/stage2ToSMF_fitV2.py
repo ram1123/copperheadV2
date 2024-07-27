@@ -465,20 +465,20 @@ if __name__ == "__main__":
     # Define category to distinguish physics and control samples events
     sample = rt.RooCategory("sample", "sample")
     sample.defineType("subCat0_BWZRedux")
-    # sample.defineType("subCat1_BWZRedux")
-    # sample.defineType("subCat2_BWZRedux")
-    # sample.defineType("subCat3_BWZRedux")
-    # sample.defineType("subCat4_BWZRedux")
-    # sample.defineType("subCat0_sumExp")
-    # sample.defineType("subCat1_sumExp")
-    # sample.defineType("subCat2_sumExp")
-    # sample.defineType("subCat3_sumExp")
-    # sample.defineType("subCat4_sumExp")
-    # sample.defineType("subCat0_FEWZxBern")
-    # sample.defineType("subCat1_FEWZxBern")
-    # sample.defineType("subCat2_FEWZxBern")
-    # sample.defineType("subCat3_FEWZxBern")
-    # sample.defineType("subCat4_FEWZxBern")
+    sample.defineType("subCat1_BWZRedux")
+    sample.defineType("subCat2_BWZRedux")
+    sample.defineType("subCat3_BWZRedux")
+    sample.defineType("subCat4_BWZRedux")
+    sample.defineType("subCat0_sumExp")
+    sample.defineType("subCat1_sumExp")
+    sample.defineType("subCat2_sumExp")
+    sample.defineType("subCat3_sumExp")
+    sample.defineType("subCat4_sumExp")
+    sample.defineType("subCat0_FEWZxBern")
+    sample.defineType("subCat1_FEWZxBern")
+    sample.defineType("subCat2_FEWZxBern")
+    sample.defineType("subCat3_FEWZxBern")
+    sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -488,20 +488,20 @@ if __name__ == "__main__":
         Index=sample,
         Import={
             "subCat0_BWZRedux": data_subCat0_BWZRedux, 
-            # "subCat1_BWZRedux": data_subCat1_BWZRedux,
-            # "subCat2_BWZRedux": data_subCat2_BWZRedux,
-            # "subCat3_BWZRedux": data_subCat3_BWZRedux,
-            # "subCat4_BWZRedux": data_subCat4_BWZRedux,
-            # "subCat0_sumExp": data_subCat0_sumExp, 
-            # "subCat1_sumExp": data_subCat1_sumExp,
-            # "subCat2_sumExp": data_subCat2_sumExp,
-            # "subCat3_sumExp": data_subCat3_sumExp,
-            # "subCat4_sumExp": data_subCat4_sumExp,
-            # "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
-            # "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            "subCat1_BWZRedux": data_subCat1_BWZRedux,
+            "subCat2_BWZRedux": data_subCat2_BWZRedux,
+            "subCat3_BWZRedux": data_subCat3_BWZRedux,
+            "subCat4_BWZRedux": data_subCat4_BWZRedux,
+            "subCat0_sumExp": data_subCat0_sumExp, 
+            "subCat1_sumExp": data_subCat1_sumExp,
+            "subCat2_sumExp": data_subCat2_sumExp,
+            "subCat3_sumExp": data_subCat3_sumExp,
+            "subCat4_sumExp": data_subCat4_sumExp,
+            "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
+            "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
+            "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+            "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -513,20 +513,20 @@ if __name__ == "__main__":
                                 "simultaneous pdf", 
                                 {
                                     "subCat0_BWZRedux": model_subCat0_BWZRedux, 
-                                    # "subCat1_BWZRedux": model_subCat1_BWZRedux,
-                                    # "subCat2_BWZRedux": model_subCat2_BWZRedux,
-                                    # "subCat3_BWZRedux": model_subCat3_BWZRedux,
-                                    # "subCat4_BWZRedux": model_subCat4_BWZRedux,
-                                    # "subCat0_sumExp": model_subCat0_sumExp, 
-                                    # "subCat1_sumExp": model_subCat1_sumExp,
-                                    # "subCat2_sumExp": model_subCat2_sumExp,
-                                    # "subCat3_sumExp": model_subCat3_sumExp,
-                                    # "subCat4_sumExp": model_subCat4_sumExp,
-                                    # "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
-                                    # "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+                                    "subCat1_BWZRedux": model_subCat1_BWZRedux,
+                                    "subCat2_BWZRedux": model_subCat2_BWZRedux,
+                                    "subCat3_BWZRedux": model_subCat3_BWZRedux,
+                                    "subCat4_BWZRedux": model_subCat4_BWZRedux,
+                                    "subCat0_sumExp": model_subCat0_sumExp, 
+                                    "subCat1_sumExp": model_subCat1_sumExp,
+                                    "subCat2_sumExp": model_subCat2_sumExp,
+                                    "subCat3_sumExp": model_subCat3_sumExp,
+                                    "subCat4_sumExp": model_subCat4_sumExp,
+                                    "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
+                                    "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
+                                    "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+                                    "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+                                    "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
     )
@@ -649,6 +649,9 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
     # do signal plotting with fit and data
     # -------------------------------------------------------------------------
+    
+    # subCat 0
+    
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -669,24 +672,24 @@ if __name__ == "__main__":
     
     canvas.SaveAs(f"./quick_plots/stage3_plot_ggH_subCat0.pdf")
 
-    # # ---------------------------------------------------
-    # # Save to Signal, Background and Data to Workspace
-    # # ---------------------------------------------------
+    # ---------------------------------------------------
+    # Save to Signal, Background and Data to Workspace
+    # ---------------------------------------------------
 
-    # fout = rt.TFile("./workspace.root","RECREATE")
-    # wout = rt.RooWorkspace("workspace","workspace")
+    fout = rt.TFile("./workspaceV2.root","RECREATE")
+    wout = rt.RooWorkspace("workspace","workspace")
     
-    # # subCat 0 
+    # subCat 0 
     
-    # # roo_histData_subCat0.SetName("data_cat0_ggh");
-    # # wout.Import(roo_histData_subCat0);
-    # roo_datasetData_subCat0.SetName("data_cat0_ggh");
-    # wout.Import(roo_datasetData_subCat0);
-    # wout.Import(cat);
-    # wout.Import(bkg_norm);
-    # wout.Import(corePdf_subCat0);
-    # wout.Print();
-    # wout.Write();
+    roo_histData_subCat0.SetName("data_subCat0"); # import binned data
+    wout.Import(roo_histData_subCat0);
+    wout.Import(cat_subCat0);
+    wout.Import(bkg_subCat0_norm);
+    wout.Import(corePdf_subCat0);
+    wout.Import(sig_norm_subCat0);
+    wout.Import(signal_subCat0); 
+    wout.Print();
+    wout.Write();
 
     # # -------------------------------------------------------------------------
     # # do Bkg plotting loop divided into core-function
