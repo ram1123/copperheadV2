@@ -45,13 +45,25 @@ if __name__ == "__main__":
     
     # Initialize BWZ Redux
     # --------------------------------------------------------------
+
+    # original start --------------------------------------------------
+    # name = f"BWZ_Redux_a_coeff"
+    # a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
+    # name = f"BWZ_Redux_b_coeff"
+    # b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
+    # name = f"BWZ_Redux_c_coeff"
+    # c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
+    # original end --------------------------------------------------
+
+    # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
+    # new start --------------------------------------------------
     name = f"BWZ_Redux_a_coeff"
-    a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
+    a_coeff = rt.RooRealVar(name,name, -0.0146,-2,2)
     name = f"BWZ_Redux_b_coeff"
-    b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
+    b_coeff = rt.RooRealVar(name,name, -0.000111,-2,2)
     name = f"BWZ_Redux_c_coeff"
     c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
-
+    # new end --------------------------------------------------
 
     
     # subCat 0
@@ -214,12 +226,24 @@ if __name__ == "__main__":
     # name = f"RooSumTwoExpPdf_f_coeff"
     # f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
 
+    # # original start --------------------------------------------------
+    # name = f"RooSumTwoExpPdf_a1_coeff"
+    # a1_coeff = rt.RooRealVar(name,name, -0.043657,-2.0,1)
+    # name = f"RooSumTwoExpPdf_a2_coeff"
+    # a2_coeff = rt.RooRealVar(name,name, -0.23726,-2.0,1)
+    # name = f"RooSumTwoExpPdf_f_coeff"
+    # f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
+    # # original end --------------------------------------------------
+
+    # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
+    # new start --------------------------------------------------
     name = f"RooSumTwoExpPdf_a1_coeff"
-    a1_coeff = rt.RooRealVar(name,name, -0.043657,-2.0,1)
+    a1_coeff = rt.RooRealVar(name,name, -0.043657,-2.0,2)
     name = f"RooSumTwoExpPdf_a2_coeff"
-    a2_coeff = rt.RooRealVar(name,name, -0.23726,-2.0,1)
+    a2_coeff = rt.RooRealVar(name,name, -0.23726,-2.0,2)
     name = f"RooSumTwoExpPdf_f_coeff"
     f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
+    # new end --------------------------------------------------
     
     name = "subCat0_sumExp"
     coreSumExp_SubCat0 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
@@ -563,6 +587,8 @@ if __name__ == "__main__":
         model_subCat0_FEWZxBern,
     )
     corePdf_subCat0 = rt.RooMultiPdf("CorePdf_subCat0","CorePdf_subCat0",cat_subCat0,pdf_list_subCat0)
+    penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
+    corePdf_subCat0.setCorrectionFactor(penalty) 
     nevents = roo_datasetData_subCat0.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     bkg_subCat0_norm = rt.RooRealVar(corePdf_subCat0.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     
