@@ -59,8 +59,17 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
             print(f"mssing feature: {training_feature}")
 
     # ----------------------------------
-    # filter events for ggH category
+    # do preprocessing
     # ----------------------------------
+   
+    # load fields to load
+    fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "vbf_cut", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
+    # load data to memory using compute()
+    events = ak.zip({
+        field : events[field] for field in fields2load
+    }).compute()
+
+    # filter events for ggH category
     prod_cat_cut = ~events.vbf_cut
     btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
     gghCat_selection = (
@@ -68,14 +77,13 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
         & ~btag_cut # btag cut is for VH and ttH categories
     )
     events = events[gghCat_selection]
-
-    # load fields to load
-    fields2load = training_features + ["h_peak", "h_sidebands", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
-    # load data to memory using compute()
-    events = ak.zip({
-        field : events[field] for field in fields2load
-    }).compute()
-
+    
+    # make sure to replace nans with -99.0 values   
+    none_val = -99.0
+    for field in events.fields:
+        events[field] = ak.fill_none(events[field], value= none_val)
+        inf_cond = (np.inf == events[field]) | (-np.inf == events[field]) 
+        events[field] = ak.where(inf_cond, none_val, events[field])
 
     parameters = {
     "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
@@ -303,6 +311,9 @@ if __name__ == "__main__":
     
         client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
         events = dak.from_parquet(full_load_path)
+        # filter in events with regions of interest
+        region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
+        events = events[region]
         if category == "ggh":
             processed_events = process4gghCategory(events)      
         elif category == "vbf":
