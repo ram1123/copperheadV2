@@ -106,7 +106,7 @@ if __name__ == "__main__":
      
     # Construct background pdf
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
-    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -1, 1)
+    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
     a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -0.5, 0.5)
 
     name = "subCat0_SMF"
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     
     # Construct the background pdf
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
-    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -1, 1)
+    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
     a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -0.5, 0.5)
     name =  "subCat1_SMF"
     subCat1_SMF = rt.RooChebychev(name, name, mass, 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     
     # Construct the background pdf
     a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
-    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -1, 1)
+    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
     name = "subCat2_SMF"
     subCat2_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat2, 
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     
     # Construct the background pdf
     a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -1, 1)
-    a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -1, 1)
+    a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
     name = "subCat3_SMF"
     subCat3_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat3, 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat4 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1,  -1, 1)
+    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -1, 1)
     a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.5, 0.5)
     name = "subCat4_SMF"
     subCat4_SMF = rt.RooChebychev(name, name, mass, 
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
     # new start --------------------------------------------------
     name = f"RooSumTwoExpPdf_a1_coeff"
-    a1_coeff = rt.RooRealVar(name,name, -0.05,-2.0,1)
+    a1_coeff = rt.RooRealVar(name,name, 0.00001,-2.0,1)
     name = f"RooSumTwoExpPdf_a2_coeff"
     a2_coeff = rt.RooRealVar(name,name, 0.1,-2.0,1)
     name = f"RooSumTwoExpPdf_f_coeff"
@@ -538,16 +538,16 @@ if __name__ == "__main__":
     sample.defineType("subCat2_BWZRedux")
     sample.defineType("subCat3_BWZRedux")
     sample.defineType("subCat4_BWZRedux")
-    # sample.defineType("subCat0_sumExp")
-    # sample.defineType("subCat1_sumExp")
-    # sample.defineType("subCat2_sumExp")
-    # sample.defineType("subCat3_sumExp")
-    # sample.defineType("subCat4_sumExp")
-    # sample.defineType("subCat0_FEWZxBern")
-    # sample.defineType("subCat1_FEWZxBern")
-    # sample.defineType("subCat2_FEWZxBern")
-    # sample.defineType("subCat3_FEWZxBern")
-    # sample.defineType("subCat4_FEWZxBern")
+    sample.defineType("subCat0_sumExp")
+    sample.defineType("subCat1_sumExp")
+    sample.defineType("subCat2_sumExp")
+    sample.defineType("subCat3_sumExp")
+    sample.defineType("subCat4_sumExp")
+    sample.defineType("subCat0_FEWZxBern")
+    sample.defineType("subCat1_FEWZxBern")
+    sample.defineType("subCat2_FEWZxBern")
+    sample.defineType("subCat3_FEWZxBern")
+    sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -561,16 +561,16 @@ if __name__ == "__main__":
             "subCat2_BWZRedux": data_subCat2_BWZRedux,
             "subCat3_BWZRedux": data_subCat3_BWZRedux,
             "subCat4_BWZRedux": data_subCat4_BWZRedux,
-            # "subCat0_sumExp": data_subCat0_sumExp, 
-            # "subCat1_sumExp": data_subCat1_sumExp,
-            # "subCat2_sumExp": data_subCat2_sumExp,
-            # "subCat3_sumExp": data_subCat3_sumExp,
-            # "subCat4_sumExp": data_subCat4_sumExp,
-            # "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
-            # "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            "subCat0_sumExp": data_subCat0_sumExp, 
+            "subCat1_sumExp": data_subCat1_sumExp,
+            "subCat2_sumExp": data_subCat2_sumExp,
+            "subCat3_sumExp": data_subCat3_sumExp,
+            "subCat4_sumExp": data_subCat4_sumExp,
+            "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
+            "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
+            "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+            "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -586,16 +586,16 @@ if __name__ == "__main__":
                                     "subCat2_BWZRedux": model_subCat2_BWZRedux,
                                     "subCat3_BWZRedux": model_subCat3_BWZRedux,
                                     "subCat4_BWZRedux": model_subCat4_BWZRedux,
-                                    # "subCat0_sumExp": model_subCat0_sumExp, 
-                                    # "subCat1_sumExp": model_subCat1_sumExp,
-                                    # "subCat2_sumExp": model_subCat2_sumExp,
-                                    # "subCat3_sumExp": model_subCat3_sumExp,
-                                    # "subCat4_sumExp": model_subCat4_sumExp,
-                                    # "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
-                                    # "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+                                    "subCat0_sumExp": model_subCat0_sumExp, 
+                                    "subCat1_sumExp": model_subCat1_sumExp,
+                                    "subCat2_sumExp": model_subCat2_sumExp,
+                                    "subCat3_sumExp": model_subCat3_sumExp,
+                                    "subCat4_sumExp": model_subCat4_sumExp,
+                                    "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
+                                    "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
+                                    "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+                                    "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+                                    "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
     )
