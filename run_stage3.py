@@ -81,22 +81,22 @@ if __name__ == "__main__":
     # --------------------------------------------------------------
 
     # original start --------------------------------------------------
-    name = f"BWZ_Redux_a_coeff"
-    a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
-    name = f"BWZ_Redux_b_coeff"
-    b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
-    name = f"BWZ_Redux_c_coeff"
-    c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
+    # name = f"BWZ_Redux_a_coeff"
+    # a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
+    # name = f"BWZ_Redux_b_coeff"
+    # b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
+    # name = f"BWZ_Redux_c_coeff"
+    # c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
     # original end --------------------------------------------------
 
     # # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
-    # # new start --------------------------------------------------
-    # name = f"BWZ_Redux_a_coeff"
-    # a_coeff = rt.RooRealVar(name,name, -0.0146,-2,2)
-    # name = f"BWZ_Redux_b_coeff"
-    # b_coeff = rt.RooRealVar(name,name, -0.000111,-2,2)
-    # name = f"BWZ_Redux_c_coeff"
-    # c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
+    # new start --------------------------------------------------
+    name = f"BWZ_Redux_a_coeff"
+    a_coeff = rt.RooRealVar(name,name, -0.02,-0.03,0.03)
+    name = f"BWZ_Redux_b_coeff"
+    b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
+    name = f"BWZ_Redux_c_coeff"
+    c_coeff = rt.RooRealVar(name,name, 0.5,-5.0,5.0)
     # # new end --------------------------------------------------
 
     
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     # Construct background pdf
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
     a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -1, 1)
-    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -1, 1)
+    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -0.5, 0.5)
 
     name = "subCat0_SMF"
     subCat0_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # Construct the background pdf
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
     a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -1, 1)
-    a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -1, 1)
+    a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -0.5, 0.5)
     name =  "subCat1_SMF"
     subCat1_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat1, 
@@ -178,8 +178,8 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat4 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -1, 1)
-    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -1, 1)
+    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1,  -1, 1)
+    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.5, 0.5)
     name = "subCat4_SMF"
     subCat4_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat4, 
@@ -261,22 +261,22 @@ if __name__ == "__main__":
     # f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
 
     # original start --------------------------------------------------
-    name = f"RooSumTwoExpPdf_a1_coeff"
-    a1_coeff = rt.RooRealVar(name,name, -0.043657,-2.0,1)
-    name = f"RooSumTwoExpPdf_a2_coeff"
-    a2_coeff = rt.RooRealVar(name,name, -0.23726,-2.0,1)
-    name = f"RooSumTwoExpPdf_f_coeff"
-    f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
+    # name = f"RooSumTwoExpPdf_a1_coeff"
+    # a1_coeff = rt.RooRealVar(name,name, -0.043657,-2.0,1)
+    # name = f"RooSumTwoExpPdf_a2_coeff"
+    # a2_coeff = rt.RooRealVar(name,name, -0.23726,-2.0,1)
+    # name = f"RooSumTwoExpPdf_f_coeff"
+    # f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
     # original end --------------------------------------------------
 
     # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
     # new start --------------------------------------------------
-    # name = f"RooSumTwoExpPdf_a1_coeff"
-    # a1_coeff = rt.RooRealVar(name,name, -0.043657,-2.0,2)
-    # name = f"RooSumTwoExpPdf_a2_coeff"
-    # a2_coeff = rt.RooRealVar(name,name, -0.23726,-2.0,2)
-    # name = f"RooSumTwoExpPdf_f_coeff"
-    # f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
+    name = f"RooSumTwoExpPdf_a1_coeff"
+    a1_coeff = rt.RooRealVar(name,name, -0.05,-2.0,1)
+    name = f"RooSumTwoExpPdf_a2_coeff"
+    a2_coeff = rt.RooRealVar(name,name, 0.1,-2.0,1)
+    name = f"RooSumTwoExpPdf_f_coeff"
+    f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
     # new end --------------------------------------------------
     
     name = "subCat0_sumExp"
@@ -395,13 +395,24 @@ if __name__ == "__main__":
     # --------------------------------------------------------------
     # Initialize FEWZxBernstein
     # --------------------------------------------------------------
+    
+    # original start --------------------------------------------------
+    # name = f"FEWZxBern_c1"
+    # c1 = rt.RooRealVar(name,name, 0.2,-2,2)
+    # name = f"FEWZxBern_c2"
+    # c2 = rt.RooRealVar(name,name, 1.0,-2,2)
+    # name = f"FEWZxBern_c3"
+    # c3 = rt.RooRealVar(name,name, 0.5,-2,2)
+    # original end --------------------------------------------------
 
+    # new start --------------------------------------------------
     name = f"FEWZxBern_c1"
     c1 = rt.RooRealVar(name,name, 0.2,-2,2)
     name = f"FEWZxBern_c2"
     c2 = rt.RooRealVar(name,name, 1.0,-2,2)
     name = f"FEWZxBern_c3"
-    c3 = rt.RooRealVar(name,name, 0.5,-2,2)
+    c3 = rt.RooRealVar(name,name, 0.1,-2,2)
+    # new end --------------------------------------------------
     
     name = "subCat0_FEWZxBern"
     coreFEWZxBern_SubCat0, params_FEWZxBern_SubCat0 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3) 
@@ -527,16 +538,16 @@ if __name__ == "__main__":
     sample.defineType("subCat2_BWZRedux")
     sample.defineType("subCat3_BWZRedux")
     sample.defineType("subCat4_BWZRedux")
-    sample.defineType("subCat0_sumExp")
-    sample.defineType("subCat1_sumExp")
-    sample.defineType("subCat2_sumExp")
-    sample.defineType("subCat3_sumExp")
-    sample.defineType("subCat4_sumExp")
-    sample.defineType("subCat0_FEWZxBern")
-    sample.defineType("subCat1_FEWZxBern")
-    sample.defineType("subCat2_FEWZxBern")
-    sample.defineType("subCat3_FEWZxBern")
-    sample.defineType("subCat4_FEWZxBern")
+    # sample.defineType("subCat0_sumExp")
+    # sample.defineType("subCat1_sumExp")
+    # sample.defineType("subCat2_sumExp")
+    # sample.defineType("subCat3_sumExp")
+    # sample.defineType("subCat4_sumExp")
+    # sample.defineType("subCat0_FEWZxBern")
+    # sample.defineType("subCat1_FEWZxBern")
+    # sample.defineType("subCat2_FEWZxBern")
+    # sample.defineType("subCat3_FEWZxBern")
+    # sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -550,16 +561,16 @@ if __name__ == "__main__":
             "subCat2_BWZRedux": data_subCat2_BWZRedux,
             "subCat3_BWZRedux": data_subCat3_BWZRedux,
             "subCat4_BWZRedux": data_subCat4_BWZRedux,
-            "subCat0_sumExp": data_subCat0_sumExp, 
-            "subCat1_sumExp": data_subCat1_sumExp,
-            "subCat2_sumExp": data_subCat2_sumExp,
-            "subCat3_sumExp": data_subCat3_sumExp,
-            "subCat4_sumExp": data_subCat4_sumExp,
-            "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
-            "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            # "subCat0_sumExp": data_subCat0_sumExp, 
+            # "subCat1_sumExp": data_subCat1_sumExp,
+            # "subCat2_sumExp": data_subCat2_sumExp,
+            # "subCat3_sumExp": data_subCat3_sumExp,
+            # "subCat4_sumExp": data_subCat4_sumExp,
+            # "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
+            # "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
+            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -575,16 +586,16 @@ if __name__ == "__main__":
                                     "subCat2_BWZRedux": model_subCat2_BWZRedux,
                                     "subCat3_BWZRedux": model_subCat3_BWZRedux,
                                     "subCat4_BWZRedux": model_subCat4_BWZRedux,
-                                    "subCat0_sumExp": model_subCat0_sumExp, 
-                                    "subCat1_sumExp": model_subCat1_sumExp,
-                                    "subCat2_sumExp": model_subCat2_sumExp,
-                                    "subCat3_sumExp": model_subCat3_sumExp,
-                                    "subCat4_sumExp": model_subCat4_sumExp,
-                                    "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
-                                    "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+                                    # "subCat0_sumExp": model_subCat0_sumExp, 
+                                    # "subCat1_sumExp": model_subCat1_sumExp,
+                                    # "subCat2_sumExp": model_subCat2_sumExp,
+                                    # "subCat3_sumExp": model_subCat3_sumExp,
+                                    # "subCat4_sumExp": model_subCat4_sumExp,
+                                    # "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
+                                    # "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
+                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
     )
@@ -600,6 +611,7 @@ if __name__ == "__main__":
     
     fitResult.Print()
     print(f"runtime: {end-start} seconds")
+    raise ValueError
 
     # ---------------------------------------------------
     # Make CORE-PDF
@@ -696,8 +708,8 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # subCat 0
-    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, PrintLevel=-1)
-    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, PrintLevel=-1)
+    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, )
+    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, )
     fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
