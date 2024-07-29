@@ -9,7 +9,8 @@ from omegaconf import OmegaConf
 from typing import Tuple, List, Dict
 import ROOT as rt
 from lib.fit_functions import MakeFEWZxBernDof3
-
+import argparse
+import os
 
 def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
     """
@@ -24,8 +25,31 @@ def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist
     
 
 if __name__ == "__main__":
-    # load_path = "./processed_events_data.parquet"
-    load_path = "/work/users/yun79/stage2_output/test/processed_events_data.parquet"
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+    "-load",
+    "--load_path",
+    dest="load_path",
+    default=None,
+    action="store",
+    help="save path to store stage1 output files",
+    )
+    parser.add_argument(
+    "-y",
+    "--year",
+    dest="year",
+    default="2018",
+    action="store",
+    help="string value of year we are calculating",
+    )
+    args = parser.parse_args()
+    # check for valid arguments
+    if args.load_path == None:
+        print("load path to load stage1 output is not specified!")
+        raise ValueError
+        
+    # load_path = "/work/users/yun79/stage2_output/ggH/test/processed_events_data.parquet"
+    load_path = f"{args.load_path}/{args.year}/processed_events_data.parquet"
     processed_eventsData = ak.from_parquet(load_path)
     print("events loaded!")
     
@@ -599,7 +623,8 @@ if __name__ == "__main__":
     # Obtain signal MC events
     # ---------------------------------------------------
 
-    load_path = "/work/users/yun79/stage2_output/test/processed_events_signalMC.parquet"
+    # load_path = "/work/users/yun79/stage2_output/ggH/test/processed_events_signalMC.parquet"
+    load_path = f"{args.load_path}/{args.year}/processed_events_signalMC.parquet"
     processed_eventsSignalMC = ak.from_parquet(load_path)
     print("signal events loaded")
     
@@ -673,6 +698,14 @@ if __name__ == "__main__":
     n2_subCat0.setConstant(True)
 
     # -------------------------------------------------------------------------
+    # Plotting
+    # -------------------------------------------------------------------------
+
+    plot_save_path = "./validation/figs/2018"
+    if not os.path.exists(plot_save_path):
+        os.makedirs(plot_save_path)
+    
+    # -------------------------------------------------------------------------
     # do signal plotting with fit and data
     # -------------------------------------------------------------------------
     
@@ -695,8 +728,7 @@ if __name__ == "__main__":
     
     canvas.Update()
     canvas.Draw()
-    
-    canvas.SaveAs(f"./validation/figs/2018/stage3_plot_ggH_subCat0.pdf")
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_ggH_subCat0.pdf")
 
     # ---------------------------------------------------
     # Save to Signal, Background and Data to Workspace
@@ -774,7 +806,7 @@ if __name__ == "__main__":
     #     legend.Draw()        
     #     canvas.Update()
     #     canvas.Draw()
-    #     canvas.SaveAs(f"./validation/figs/2018/simultaneousPlotTestFromTutorial_{core_type}.pdf")
+    #     canvas.SaveAs(f"{plot_save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
 
     # # -------------------------------------------------------------------------
     # # do Bkg plotting loop divided into Sub Categories
@@ -830,7 +862,7 @@ if __name__ == "__main__":
     #     legend.Draw()        
     #     canvas.Update()
     #     canvas.Draw()
-    #     canvas.SaveAs(f"./validation/figs/2018/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
+    #     canvas.SaveAs(f"{plot_save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
 
     
 
