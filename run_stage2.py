@@ -13,6 +13,96 @@ from lib.BDT_functions import prepare_features,evaluate_bdt
 import argparse
 import time
 
+
+def process4gghCategory(events: ak.Record) -> ak.Record:
+    """
+    Takes the given stage1 output, runs MVA, and returns a new 
+    ak.Record with MVA score + relevant info from stage1 output
+    for ggH category
+
+    Params
+    ------------------------------------------------------------
+    events: ak.Record of stage1 output
+    """
+    # load and obtain MVA outputs
+    events["dimuon_dEta"] = np.abs(events.mu1_pt - events.mu2_pt)
+    events["dimuon_pt_log"] = np.log(events.dimuon_pt)
+    events["jj_mass_log"] = np.log(events.jj_mass)
+    events["ll_zstar_log"] = np.log(events.ll_zstar)
+    events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
+    events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
+
+    train_feat_dict = {
+        "BDTperyear_2018" : [
+            'dimuon_cos_theta_cs', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_eta', 'dimuon_phi', 'dimuon_phi_cs', 'dimuon_pt', 
+            'dimuon_pt_log', 'jet1_eta', 'jet1_phi', 'jet1_pt', 'jet1_qgl', 'jet2_eta', 'jet2_phi', 
+            'jet2_pt', 'jet2_qgl', 'jj_dEta', 'jj_dPhi', 'jj_eta', 'jj_mass', 'jj_mass_log', 
+            'jj_phi', 'jj_pt', 'll_zstar_log', 'mmj1_dEta', 'mmj1_dPhi', 
+            'mmj_min_dEta', 'mmj_min_dPhi', 'mmjj_eta', 'mmjj_mass', 'mmjj_phi', 'mmjj_pt', 'mu1_eta', 'mu1_iso', 
+            'mu1_phi', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_iso', 'mu2_phi', 'mu2_pt_over_mass', 'zeppenfeld'
+        ],
+        "phifixedBDT_2018" : [
+                'dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld' #, 'njets'
+        ], # AN 19-124
+        
+    }
+    
+    model_name = "phifixedBDT_2018"
+    # model_name = "BDTperyear_2018"
+
+    training_features = train_feat_dict[model_name]
+    print(f"len(training_features): {len(training_features)}")
+
+    # load training features from the ak.Record
+    for training_feature in training_features:
+        if training_feature not in events.fields:
+            print(f"mssing feature: {training_feature}")
+    
+    fields2load = training_features + ["h_peak", "h_sidebands", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
+    events = events[fields2load]
+    # load data to memory using compute()
+    events = ak.zip({
+        field : events[field] for field in events.fields
+    }).compute()
+
+
+    parameters = {
+    "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
+    }
+    processed_events = evaluate_bdt(events, "nominal", model_name, training_features, parameters) # this also only filters in h_peak and h_sidebands
+
+    # load BDT score edges for subcategory divison
+    BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
+    edges = OmegaConf.load(BDTedges_load_path)
+    year = "2018"
+    edges = np.array(edges[year])
+    print(f"subCat BDT edges: {edges}")
+
+    # Calculate the subCategory index 
+    BDT_score = processed_events["BDT_score"]
+    n_edges = len(edges)
+    BDT_score_repeat = ak.concatenate([BDT_score[:,np.newaxis] for i in range(n_edges)], axis=1)
+    # BDT_score_repeat
+    n_rows = len(BDT_score_repeat)
+    edges_repeat = np.repeat(edges[np.newaxis,:],n_rows,axis=0)
+    # edges_repeat.shape
+    edge_idx = ak.sum( (BDT_score_repeat >= edges_repeat), axis=1)
+    subCat_idx =  edge_idx - 1 # sub category index starts at zero
+    processed_events["subCategory_idx"] = subCat_idx
+
+    # filter in only the variables you need to do stage3
+    fields2save = [
+        "dimuon_mass",
+        "BDT_score",
+        "subCategory_idx",
+        "wgt_nominal_total",
+    ]
+    processed_events = ak.zip({
+        field : processed_events[field] for field in fields2save
+    })
+    return processed_events
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -79,14 +169,14 @@ if __name__ == "__main__":
     # full_load_path = load_path+f"/data_A/*/*.parquet"
     # full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
     # full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
-
+    category = args.category.lower()
     for sample in args.samples:
         if sample.lower() == "data":
             full_load_path = load_path+f"/data_*/*/*.parquet"
         elif sample.lower() == "signal":
-            if args.category.lower() == "ggh": # ggH
+            if category == "ggh": # ggH
                 full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
-            elif args.category.lower() == "vbf": # VBF
+            elif category == "vbf": # VBF
                 full_load_path = load_path+f"/vbf_powheg/*/*.parquet"
             else:
                 print("unsupported category")
@@ -101,88 +191,17 @@ if __name__ == "__main__":
     
         client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
         events = dak.from_parquet(full_load_path)
-    
-        # load and obtain MVA outputs
-        events["dimuon_dEta"] = np.abs(events.mu1_pt - events.mu2_pt)
-        events["dimuon_pt_log"] = np.log(events.dimuon_pt)
-        events["jj_mass_log"] = np.log(events.jj_mass)
-        events["ll_zstar_log"] = np.log(events.ll_zstar)
-        events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
-        events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
-    
-        train_feat_dict = {
-            "BDTperyear_2018" : [
-                'dimuon_cos_theta_cs', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_eta', 'dimuon_phi', 'dimuon_phi_cs', 'dimuon_pt', 
-                'dimuon_pt_log', 'jet1_eta', 'jet1_phi', 'jet1_pt', 'jet1_qgl', 'jet2_eta', 'jet2_phi', 
-                'jet2_pt', 'jet2_qgl', 'jj_dEta', 'jj_dPhi', 'jj_eta', 'jj_mass', 'jj_mass_log', 
-                'jj_phi', 'jj_pt', 'll_zstar_log', 'mmj1_dEta', 'mmj1_dPhi', 
-                'mmj_min_dEta', 'mmj_min_dPhi', 'mmjj_eta', 'mmjj_mass', 'mmjj_phi', 'mmjj_pt', 'mu1_eta', 'mu1_iso', 
-                'mu1_phi', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_iso', 'mu2_phi', 'mu2_pt_over_mass', 'zeppenfeld'
-            ],
-            "phifixedBDT_2018" : [
-                    'dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld' #, 'njets'
-            ], # AN 19-124
+        if category == "ggh":
+            processed_events = process4gghCategory(events)
             
-        }
-        
-        model_name = "phifixedBDT_2018"
-        # model_name = "BDTperyear_2018"
-    
-        training_features = train_feat_dict[model_name]
-        print(f"len(training_features): {len(training_features)}")
-    
-        # load training features from the ak.Record
-        for training_feature in training_features:
-            if training_feature not in events.fields:
-                print(f"mssing feature: {training_feature}")
-        
-        fields2load = training_features + ["h_peak", "h_sidebands", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
-        events = events[fields2load]
-        # load data to memory using compute()
-        events = ak.zip({
-            field : events[field] for field in events.fields
-        }).compute()
-    
-    
-        parameters = {
-        "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
-        }
-        
-        
-        processed_events = evaluate_bdt(events, "nominal", model_name, training_features, parameters) # this also only filters in h_peak and h_sidebands
-    
-        # load BDT score edges for subcategory divison
-        BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
-        edges = OmegaConf.load(BDTedges_load_path)
-        year = "2018"
-        edges = np.array(edges[year])
-        print(f"subCat BDT edges: {edges}")
-    
-        # Calculate the subCategory index 
-        BDT_score = processed_events["BDT_score"]
-        n_edges = len(edges)
-        BDT_score_repeat = ak.concatenate([BDT_score[:,np.newaxis] for i in range(n_edges)], axis=1)
-        # BDT_score_repeat
-        n_rows = len(BDT_score_repeat)
-        edges_repeat = np.repeat(edges[np.newaxis,:],n_rows,axis=0)
-        # edges_repeat.shape
-        edge_idx = ak.sum( (BDT_score_repeat >= edges_repeat), axis=1)
-        subCat_idx =  edge_idx - 1 # sub category index starts at zero
-        processed_events["subCategory_idx"] = subCat_idx
-    
-        # filter in only the variables you need to do stage3
-        fields2save = [
-            "dimuon_mass",
-            "BDT_score",
-            "subCategory_idx",
-            "wgt_nominal_total",
-        ]
-        processed_events = ak.zip({
-            field : processed_events[field] for field in fields2save
-        })
+        elif category == "vbf":
+            raise ValueError
+        else: 
+            print ("unsupported category given!")
+            raise ValueError
         # define save path and save
         # save_path = "/work/users/yun79/stage2_output/ggH/test"
-        save_path = f"{args.save_path}/{args.category.lower()}/{args.year}"
+        save_path = f"{args.save_path}/{category}/{args.year}"
         print(f"save_path: {save_path}")
         # make save path if it doesn't exist
         if not os.path.exists(save_path):
