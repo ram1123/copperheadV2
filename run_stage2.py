@@ -9,7 +9,7 @@ from typing import Tuple, List, Dict
 import ROOT as rt
 import glob, os
 
-from lib.BDT_functions import prepare_features,evaluate_bdt
+from lib.MVA_functions import prepare_features, evaluate_bdt
 import argparse
 import time
 
@@ -57,12 +57,23 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
     for training_feature in training_features:
         if training_feature not in events.fields:
             print(f"mssing feature: {training_feature}")
-    
+
+    # ----------------------------------
+    # filter events for ggH category
+    # ----------------------------------
+    prod_cat_cut = ~events.vbf_cut
+    btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
+    gghCat_selection = (
+        prod_cat_cut  
+        & ~btag_cut # btag cut is for VH and ttH categories
+    )
+    events = events[gghCat_selection]
+
+    # load fields to load
     fields2load = training_features + ["h_peak", "h_sidebands", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
-    events = events[fields2load]
     # load data to memory using compute()
     events = ak.zip({
-        field : events[field] for field in events.fields
+        field : events[field] for field in fields2load
     }).compute()
 
 
@@ -70,6 +81,107 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
     "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
     }
     processed_events = evaluate_bdt(events, "nominal", model_name, training_features, parameters) # this also only filters in h_peak and h_sidebands
+
+    # load BDT score edges for subcategory divison
+    BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
+    edges = OmegaConf.load(BDTedges_load_path)
+    year = "2018"
+    edges = np.array(edges[year])
+    print(f"subCat BDT edges: {edges}")
+
+    # Calculate the subCategory index 
+    BDT_score = processed_events["BDT_score"]
+    n_edges = len(edges)
+    BDT_score_repeat = ak.concatenate([BDT_score[:,np.newaxis] for i in range(n_edges)], axis=1)
+    # BDT_score_repeat
+    n_rows = len(BDT_score_repeat)
+    edges_repeat = np.repeat(edges[np.newaxis,:],n_rows,axis=0)
+    # edges_repeat.shape
+    edge_idx = ak.sum( (BDT_score_repeat >= edges_repeat), axis=1)
+    subCat_idx =  edge_idx - 1 # sub category index starts at zero
+    processed_events["subCategory_idx"] = subCat_idx
+
+    # filter in only the variables you need to do stage3
+    fields2save = [
+        "dimuon_mass",
+        "BDT_score",
+        "subCategory_idx",
+        "wgt_nominal_total",
+    ]
+    processed_events = ak.zip({
+        field : processed_events[field] for field in fields2save
+    })
+    return processed_events
+
+def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
+    """
+    Takes the given stage1 output, runs MVA, and returns a new 
+    ak.Record with MVA score + relevant info from stage1 output
+    for VBF category
+
+    Params
+    ------------------------------------------------------------
+    events: ak.Record of stage1 output
+    """
+    # load and obtain MVA outputs
+    events["dimuon_dEta"] = np.abs(events.mu1_pt - events.mu2_pt)
+    events["dimuon_pt_log"] = np.log(events.dimuon_pt)
+    events["jj_mass_log"] = np.log(events.jj_mass)
+    events["ll_zstar_log"] = np.log(events.ll_zstar)
+    events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
+    events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
+    events["dimuon_ebe_mass_res_rel"] = events.dimuon_ebe_mass_res / events.dimuon_mass
+    events["rpt"] = events.mmjj_pt / (events.dimuon_pt + events.jet1_pt + events.jet2_pt)# as of writing this code, rpt variable is calculated, but not saved during stage1
+    
+    training_features = [
+        "dimuon_mass",
+        "dimuon_pt",
+        "dimuon_pt_log",
+        "dimuon_eta",
+        "dimuon_ebe_mass_res",
+        "dimuon_ebe_mass_res_rel",
+        "dimuon_cos_theta_cs",
+        "dimuon_phi_cs",
+        # "dimuon_pisa_mass_res",
+        # "dimuon_pisa_mass_res_rel",
+        # "dimuon_cos_theta_cs_pisa",
+        # "dimuon_phi_cs_pisa",
+        "jet1_pt",
+        "jet1_eta",
+        "jet1_phi",
+        "jet1_qgl",
+        "jet2_pt",
+        "jet2_eta",
+        "jet2_phi",
+        "jet2_qgl",
+        "jj_mass",
+        "jj_mass_log",
+        "jj_dEta",
+        "rpt",
+        "ll_zstar_log",
+        "mmj_min_dEta",
+        "nsoftjets5",
+        "htsoft2",
+    ]
+    model_name = "PhiFixedVBF"
+    len(training_features)
+    # load training features from the ak.Record
+    for training_feature in training_features:
+        if training_feature not in events.fields:
+            print(f"mssing feature: {training_feature}")
+    
+    fields2load = training_features + ["h_peak", "h_sidebands", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
+    fields2load = prepare_features(events,training_features, variation=variation, add_year=False)
+    events = events[fields2load]
+    # load data to memory using compute()
+    events = ak.zip({
+        field : events[field] for field in fields2load
+    }).compute()
+
+    parameters = {
+    "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
+    }
+    processed_events = evaluate_dnn(events, "nominal", model_name, training_features, parameters) # this also only filters in h_peak and h_sidebands
 
     # load BDT score edges for subcategory divison
     BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
@@ -192,10 +304,9 @@ if __name__ == "__main__":
         client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
         events = dak.from_parquet(full_load_path)
         if category == "ggh":
-            processed_events = process4gghCategory(events)
-            
+            processed_events = process4gghCategory(events)      
         elif category == "vbf":
-            raise ValueError
+            processed_events = process4vbfCategory(events) 
         else: 
             print ("unsupported category given!")
             raise ValueError
