@@ -10,19 +10,55 @@ import ROOT as rt
 import glob, os
 
 from lib.BDT_functions import prepare_features,evaluate_bdt
-
+import argparse
 
 
 if __name__ == "__main__":
-    client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
-    load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0"
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default=None,
+    action="store",
+    help="save path to store stage1 output files",
+    )
+    parser.add_argument(
+    "-load",
+    "--load_path",
+    dest="load_path",
+    default=None,
+    action="store",
+    help="save path to store stage1 output files",
+    )
+    parser.add_argument(
+    "-y",
+    "--year",
+    dest="year",
+    default="2018",
+    action="store",
+    help="string value of year we are calculating",
+    )
+    args = parser.parse_args()
+    # check for valid arguments
+    if args.load_path == None:
+        print("load path to load stage1 output is not specified!")
+        raise ValueError
+    if args.save_path == None:
+        print("save path is not specified!")
+        raise ValueError
+    
+    load_path = f"{args.load_path}/{args.year}/f1_0"
+    print(f"load_path: {load_path}")
+    # load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0"
     # full_load_path = load_path+f"/data_C/*/*.parquet"
     # full_load_path = load_path+f"/data_D/*/*.parquet"
     # full_load_path = load_path+f"/data_*/*/*.parquet"
     # full_load_path = load_path+f"/data_A/*/*.parquet"
     # full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
     full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
-    
+
+    client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
     events = dak.from_parquet(full_load_path)
 
     # load and obtain MVA outputs
@@ -104,7 +140,8 @@ if __name__ == "__main__":
         field : processed_events[field] for field in fields2save
     })
     # define save path and save
-    save_path = "/work/users/yun79/stage2_output/test"
+    # save_path = "/work/users/yun79/stage2_output/ggH/test"
+    save_path = args.save_path
         # make save path if it doesn't exist
     if not os.path.exists(save_path):
         os.makedirs(save_path)
