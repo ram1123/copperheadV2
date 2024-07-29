@@ -72,9 +72,11 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
     # filter events for ggH category
     prod_cat_cut = ~events.vbf_cut
     btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
+    region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
     gghCat_selection = (
         prod_cat_cut  
         & ~btag_cut # btag cut is for VH and ttH categories
+        & region
     )
     events = events[gghCat_selection]
     
@@ -177,14 +179,35 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     for training_feature in training_features:
         if training_feature not in events.fields:
             print(f"mssing feature: {training_feature}")
+
+    # ----------------------------------
+    # do preprocessing
+    # ----------------------------------
     
-    fields2load = training_features + ["h_peak", "h_sidebands", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
+    fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "vbf_cut", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
     fields2load = prepare_features(events,training_features, variation=variation, add_year=False)
-    events = events[fields2load]
     # load data to memory using compute()
     events = ak.zip({
         field : events[field] for field in fields2load
     }).compute()
+
+    # filter events for VBF category
+    prod_cat_cut = events.vbf_cut
+    btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
+    region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
+    vbfCat_selection = (
+        prod_cat_cut  
+        & ~btag_cut # btag cut is for VH and ttH categories
+        & region
+    )
+    events = events[vbfCat_selection]
+    
+    # make sure to replace nans with -99.0 values   
+    none_val = -99.0
+    for field in events.fields:
+        events[field] = ak.fill_none(events[field], value= none_val)
+        inf_cond = (np.inf == events[field]) | (-np.inf == events[field]) 
+        events[field] = ak.where(inf_cond, none_val, events[field])
 
     parameters = {
     "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
@@ -311,9 +334,6 @@ if __name__ == "__main__":
     
         client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
         events = dak.from_parquet(full_load_path)
-        # filter in events with regions of interest
-        region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
-        events = events[region]
         if category == "ggh":
             processed_events = process4gghCategory(events)      
         elif category == "vbf":
