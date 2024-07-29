@@ -42,14 +42,24 @@ if __name__ == "__main__":
     action="store",
     help="string value of year we are calculating",
     )
+    parser.add_argument(
+    "-cat",
+    "--category",
+    dest="category",
+    default="ggH",
+    action="store",
+    help="string value production category we're working on",
+    )
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
         print("load path to load stage1 output is not specified!")
         raise ValueError
-        
+
+    category = args.category.lower()
     # load_path = "/work/users/yun79/stage2_output/ggH/test/processed_events_data.parquet"
-    load_path = f"{args.load_path}/{args.year}/processed_events_data.parquet"
+    load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
+    print(f"load_path: {load_path}")
     processed_eventsData = ak.from_parquet(load_path)
     print("events loaded!")
     
@@ -624,7 +634,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # load_path = "/work/users/yun79/stage2_output/ggH/test/processed_events_signalMC.parquet"
-    load_path = f"{args.load_path}/{args.year}/processed_events_signalMC.parquet"
+    load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
     processed_eventsSignalMC = ak.from_parquet(load_path)
     print("signal events loaded")
     
@@ -686,8 +696,8 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # subCat 0
-    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, )
-    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, )
+    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, PrintLevel=-1)
+    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, PrintLevel=-1)
     fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
@@ -704,7 +714,6 @@ if __name__ == "__main__":
     plot_save_path = "./validation/figs/2018"
     if not os.path.exists(plot_save_path):
         os.makedirs(plot_save_path)
-    
     # -------------------------------------------------------------------------
     # do signal plotting with fit and data
     # -------------------------------------------------------------------------
@@ -728,13 +737,13 @@ if __name__ == "__main__":
     
     canvas.Update()
     canvas.Draw()
-    canvas.SaveAs(f"{plot_save_path}/stage3_plot_ggH_subCat0.pdf")
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat0.pdf")
 
     # ---------------------------------------------------
     # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
 
-    fout = rt.TFile("./workspaces/ggHCatWorkspaceV2.root","RECREATE")
+    fout = rt.TFile(f"./workspaces/{category}_CatWorkspaceV2.root","RECREATE")
     wout = rt.RooWorkspace("workspace","workspace")
     
     # subCat 0 

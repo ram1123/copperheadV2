@@ -11,7 +11,7 @@ import glob, os
 
 from lib.BDT_functions import prepare_features,evaluate_bdt
 import argparse
-
+import time
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -40,6 +40,14 @@ if __name__ == "__main__":
     help="string value of year we are calculating",
     )
     parser.add_argument(
+    "-cat",
+    "--category",
+    dest="category",
+    default="ggH",
+    action="store",
+    help="string value production category we're working on",
+    )
+    parser.add_argument(
     "-samp",
     "--samples",
     dest="samples",
@@ -49,6 +57,7 @@ if __name__ == "__main__":
     action="store",
     help="list of samples to process for stage2. Current valid inputs are data, signal and DY",
     )
+    start_time = time.time()
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
@@ -75,7 +84,13 @@ if __name__ == "__main__":
         if sample.lower() == "data":
             full_load_path = load_path+f"/data_*/*/*.parquet"
         elif sample.lower() == "signal":
-            full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
+            if args.category.lower() == "ggh": # ggH
+                full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
+            elif args.category.lower() == "vbf": # VBF
+                full_load_path = load_path+f"/vbf_powheg/*/*.parquet"
+            else:
+                print("unsupported category")
+                raise ValueError
         elif sample.lower() == "dy":
             full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
         else:
@@ -167,16 +182,17 @@ if __name__ == "__main__":
         })
         # define save path and save
         # save_path = "/work/users/yun79/stage2_output/ggH/test"
-        save_path = args.save_path
-            # make save path if it doesn't exist
+        save_path = f"{args.save_path}/{args.category.lower()}/{args.year}"
+        print(f"save_path: {save_path}")
+        # make save path if it doesn't exist
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         if "data" in full_load_path:
-            save_filename = save_path+"/processed_events_data.parquet"  
+            save_filename = f"{save_path}/processed_events_data.parquet"  
         elif "ggh_powheg" in full_load_path: # else, ggh powheg
-            save_filename = save_path+"/processed_events_signalMC.parquet" 
+            save_filename = f"{save_path}/processed_events_signalMC.parquet" 
         elif "dy_M-100To200" in full_load_path:
-            save_filename = save_path+"/processed_events_dyMC.parquet" 
+            save_filename = f"{save_path}/processed_events_dyMC.parquet" 
         print(f"save_filename: {save_filename}")
     
         # delete the file if there's already same save_filename
@@ -186,5 +202,7 @@ if __name__ == "__main__":
             pass
         ak.to_parquet(processed_events, save_filename)
 
+    end_time = time.time()
+    print(f"stage2 done in {end_time-start_time} seconds")
 
     
