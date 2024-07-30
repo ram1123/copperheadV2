@@ -963,7 +963,7 @@ if __name__ == "__main__":
         rt.kOrange,
         rt.kViolet,
     ]
-    for model_type, coreFunction_list in model_dict_by_coreFunction.items():
+    for model_type, model_list in model_dict_by_coreFunction.items():
         name = "Canvas"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
@@ -975,11 +975,11 @@ if __name__ == "__main__":
         normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
         normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
         # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
-        for ix in range(len(coreFunction_list)):
-            model = coreFunction_list[ix]
+        for ix in range(len(model_list)):
+            model = model_list[ix]
             name = model.GetName()
             color = color_list[ix]
-            model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
+            model.plotOn(frame, Name=name, LineColor=color)
             legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
         frame.Draw()
         legend.Draw()        
@@ -1057,7 +1057,7 @@ if __name__ == "__main__":
             model = coreFunction_list[ix]
             name = model.GetName()
             color = color_list[ix]
-            model.plotOn(frame, Name=name, LineColor=color)
+            model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
             legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
         frame.Draw()
         legend.Draw()        
