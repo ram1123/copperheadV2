@@ -922,26 +922,110 @@ if __name__ == "__main__":
     # do signal plotting with fit and data
     # -------------------------------------------------------------------------
     
-    # # subCat 0
+    # subCat 0
     
-    # name = "Canvas"
-    # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-    # canvas.cd()
-    # frame = mass.frame()
-    # legend = rt.TLegend(0.65,0.55,0.9,0.7)
-    # name = data_subCat0_signal.GetName()
-    # data_subCat0_signal.plotOn(frame, DataError="SumW2", Name=name)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
-    # name = signal_subCat0.GetName()
-    # signal_subCat0.plotOn(frame, Name=name, LineColor=rt.kGreen)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat0_signal.GetName()
+    data_subCat0_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat0.GetName()
+    signal_subCat0.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
     
-    # frame.Draw()
-    # legend.Draw()
+    frame.Draw()
+    legend.Draw()
     
-    # canvas.Update()
-    # canvas.Draw()
-    # canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat0.pdf")
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat0.pdf")
+
+    # subCat 1
+    
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat1_signal.GetName()
+    data_subCat1_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat1.GetName()
+    signal_subCat1.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat1 .pdf")
+
+    # subCat 2
+    
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat2_signal.GetName()
+    data_subCat2_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat2.GetName()
+    signal_subCat2.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat2 .pdf")
+
+    # subCat 3
+    
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat3_signal.GetName()
+    data_subCat3_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat3.GetName()
+    signal_subCat3.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat3 .pdf")
+
+    # subCat 4
+    
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat4_signal.GetName()
+    data_subCat4_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat4.GetName()
+    signal_subCat4.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat4 .pdf")
 
     # -------------------------------------------------------------------------
     # do signal plotting for all sub-Cats in one plot

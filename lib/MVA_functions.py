@@ -48,7 +48,7 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
     
 
 
-    # idk why mmj variables are overwritten something to double chekc later
+    # temporary fix to due to some bug according to Valerie
     df['mmj_min_dEta'] = df["mmj2_dEta"]
     df['mmj_min_dPhi'] = df["mmj2_dPhi"]
 
@@ -96,8 +96,8 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         if len(df_i) > 0:
             print(f"model: {model}")
             prediction = np.array(
-                # bdt_model.predict_proba(df_i.values)[:, 1]
                 bdt_model.predict_proba(df_i_feat)[:, 1]
+                # bdt_model.predict_proba(df_i_feat)[:, 0]
             ).ravel()
             print(f"prediction: {prediction}")
             # df.loc[eval_filter, score_name] = prediction  # np.arctanh((prediction))
@@ -115,7 +115,7 @@ class DnnVBF(nn.Module):
     this class is a copy of "Net" class from https://github.com/green-cabbage/copperhead_fork2/blob/Run3/stage2/mva_models.py#L6
     """
     def __init__(self, input_shape):
-        super(Net, self).__init__()
+        super(DnnVBF, self).__init__()
         self.fc1 = nn.Linear(input_shape, 128)
         self.bn1 = nn.BatchNorm1d(128)
         self.dropout1 = nn.Dropout(0.2)
@@ -147,11 +147,16 @@ class DnnVBF(nn.Module):
         output = F.sigmoid(x)
         return output
 
-def evaluate_dnn(df: ak.Record, variation: str, model: str, training_features: List[str], parameters: dict) -> ak.Record :
+def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str], parameters: dict) -> ak.Record :
     """
     
     """
     print(f"sum df.h_peak: {ak.sum(df.h_peak)}")
+
+    # temporary fix to due to some bug according to Valerie
+    df['mmj_min_dEta'] = df["mmj2_dEta"]
+    df['mmj_min_dPhi'] = df["mmj2_dPhi"]
+    
     # overwrite dimuon mass for regions not in h_peak
     not_h_peak = (df.h_peak ==0)
     df["dimuon_mass"] = ak.where(not_h_peak, 125.0,  df["dimuon_mass"]) # line 2056 of RERECO AN + 7.16
@@ -166,23 +171,27 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, training_features: L
     score_total = np.zeros(len(df['dimuon_pt']))
     
     nfolds = 4
-    
+
     for i in range(nfolds):
         # eval_folds are the list of test dataset chunks that each bdt is trained to evaluate
         eval_folds = [(i + f) % nfolds for f in [3]]
         eval_filter = (df.event % nfolds ) == (np.array(eval_folds) * ak.ones_like(df.event))
         scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
-        scalers = np.load(scalers_path)
-        df_i = df.loc[eval_filter, :]
-        if df_i.shape[0] == 0:
-            #print('error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        scalers = np.load(scalers_path, allow_pickle=True)
+        df_i = df[eval_filter]
+        if len(df_i) == 0:
             continue
-        df_i.loc[df_i.region != "h-peak", "dimuon_mass"] = 125.0
-        df_i[features] = df_i[features].fillna(-99).astype(float)
-        df_i = (df_i[features] - scalers[0]) / scalers[1]
-        #df_i = df_i[features]
-        #print(df_i[features])
-        df_i = torch.tensor(df_i.values).float()
+        print(f"scalers: {scalers.shape}")
+        print(f"df_i: {df_i}")
+        df_i_feat = df_i[features]
+        df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
+        print(f"df_i_feat[:,0]: {df_i_feat[:,0]}")
+        print(f'df_i.dimuon_cos_theta_cs: {df_i.dimuon_cos_theta_cs}')
+        df_i_feat = ak.to_numpy(ak.Array(df_i_feat))
+        df_i = (df_i_feat - scalers[0]) / scalers[1]
+        print(f"df_i: {df_i.shape}")
+        # df_i = torch.tensor(df_i.values).float()
+        df_i = torch.from_numpy(df_i).float()
 
         dnn_model = DnnVBF(len(features))
         model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pt"
@@ -191,8 +200,9 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, training_features: L
         )
         dnn_model.eval()
 
-        prediction = dnn_model(df_i).detach().numpy()
-        
+        prediction = dnn_model(df_i).detach().numpy().flatten()
+        print(f"prediction: {prediction.shape}")
+            
         score_total[eval_filter] = np.arctanh(prediction)
     df[score_name] = score_total
     return df

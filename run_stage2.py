@@ -9,7 +9,7 @@ from typing import Tuple, List, Dict
 import ROOT as rt
 import glob, os
 
-from lib.MVA_functions import prepare_features, evaluate_bdt
+from lib.MVA_functions import prepare_features, evaluate_bdt, evaluate_dnn
 import argparse
 import time
 
@@ -90,26 +90,50 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
     parameters = {
     "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
     }
-    processed_events = evaluate_bdt(events, "nominal", model_name, training_features, parameters) # this also only filters in h_peak and h_sidebands
+    processed_events = evaluate_bdt(events, "nominal", model_name, training_features, parameters) 
 
     # load BDT score edges for subcategory divison
     BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
     edges = OmegaConf.load(BDTedges_load_path)
     year = "2018"
     edges = np.array(edges[year])
+    # edges = 1-edges
     print(f"subCat BDT edges: {edges}")
 
     # Calculate the subCategory index 
+    # original start --------------------------------------------------------------
+    # BDT_score = processed_events["BDT_score"]
+    # print(f"BDT_score :{BDT_score}")
+    # n_edges = len(edges)
+    # BDT_score_repeat = ak.concatenate([BDT_score[:,np.newaxis] for i in range(n_edges)], axis=1)
+    # # BDT_score_repeat
+    # n_rows = len(BDT_score_repeat)
+    # edges_repeat = np.repeat(edges[np.newaxis,:],n_rows,axis=0)
+    # # edges_repeat.shape
+    # edge_idx = ak.sum( (BDT_score_repeat >= edges_repeat), axis=1)
+    # # edge_idx = ak.sum( (BDT_score_repeat <= edges_repeat), axis=1)
+    # subCat_idx =  edge_idx - 1 # sub category index starts at zero
+    # print(f"subCat_idx: {subCat_idx}")
+    # processed_events["subCategory_idx"] = subCat_idx
+    # original end -----------------------------------------------------------------
+
+    # original start --------------------------------------------------------------
     BDT_score = processed_events["BDT_score"]
-    n_edges = len(edges)
-    BDT_score_repeat = ak.concatenate([BDT_score[:,np.newaxis] for i in range(n_edges)], axis=1)
-    # BDT_score_repeat
-    n_rows = len(BDT_score_repeat)
-    edges_repeat = np.repeat(edges[np.newaxis,:],n_rows,axis=0)
-    # edges_repeat.shape
-    edge_idx = ak.sum( (BDT_score_repeat >= edges_repeat), axis=1)
-    subCat_idx =  edge_idx - 1 # sub category index starts at zero
+    print(f"BDT_score :{BDT_score}")
+    subCat_idx = -1*ak.ones_like(BDT_score)
+    for i in range(len(edges) - 1):
+        lo = edges[i]
+        hi = edges[i + 1]
+        cut = (BDT_score > lo) & (BDT_score <= hi)
+        # cut = (BDT_score <= lo) & (BDT_score > hi)
+        subCat_idx = ak.where(cut, i, subCat_idx)
+        # df.loc[cut, "bin_number"] = i
+    # df[score_name] = df["bin_number"]
+    print(f"subCat_idx: {subCat_idx}")
+    # test if any remain has -1 value
+    print(f"ak.sum(subCat_idx==-1): {ak.sum(subCat_idx==-1)}")
     processed_events["subCategory_idx"] = subCat_idx
+    # original end -----------------------------------------------------------------
 
     # filter in only the variables you need to do stage3
     fields2save = [
@@ -142,6 +166,7 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
     events["dimuon_ebe_mass_res_rel"] = events.dimuon_ebe_mass_res / events.dimuon_mass
     events["rpt"] = events.mmjj_pt / (events.dimuon_pt + events.jet1_pt + events.jet2_pt)# as of writing this code, rpt variable is calculated, but not saved during stage1
+
     
     training_features = [
         "dimuon_mass",
@@ -183,9 +208,8 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     # ----------------------------------
     # do preprocessing
     # ----------------------------------
-    
+    training_features = prepare_features(events,training_features, variation=variation, add_year=False)
     fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "vbf_cut", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
-    fields2load = prepare_features(events,training_features, variation=variation, add_year=False)
     # load data to memory using compute()
     events = ak.zip({
         field : events[field] for field in fields2load
@@ -212,33 +236,14 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     parameters = {
     "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
     }
-    processed_events = evaluate_dnn(events, "nominal", model_name, training_features, parameters) # this also only filters in h_peak and h_sidebands
-
-    # load BDT score edges for subcategory divison
-    BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
-    edges = OmegaConf.load(BDTedges_load_path)
-    year = "2018"
-    edges = np.array(edges[year])
-    print(f"subCat BDT edges: {edges}")
-
-    # Calculate the subCategory index 
-    BDT_score = processed_events["BDT_score"]
-    n_edges = len(edges)
-    BDT_score_repeat = ak.concatenate([BDT_score[:,np.newaxis] for i in range(n_edges)], axis=1)
-    # BDT_score_repeat
-    n_rows = len(BDT_score_repeat)
-    edges_repeat = np.repeat(edges[np.newaxis,:],n_rows,axis=0)
-    # edges_repeat.shape
-    edge_idx = ak.sum( (BDT_score_repeat >= edges_repeat), axis=1)
-    subCat_idx =  edge_idx - 1 # sub category index starts at zero
-    processed_events["subCategory_idx"] = subCat_idx
-
+    processed_events = evaluate_dnn(events, "nominal", model_name, training_features, parameters) 
     # filter in only the variables you need to do stage3
     fields2save = [
         "dimuon_mass",
-        "BDT_score",
-        "subCategory_idx",
+        "DNN_score",
         "wgt_nominal_total",
+        "h_peak",
+        "h_sidebands",
     ]
     processed_events = ak.zip({
         field : processed_events[field] for field in fields2save
@@ -350,10 +355,15 @@ if __name__ == "__main__":
             os.makedirs(save_path)
         if "data" in full_load_path:
             save_filename = f"{save_path}/processed_events_data.parquet"  
-        elif "ggh_powheg" in full_load_path: # else, ggh powheg
+        elif "ggh_powheg" in full_load_path: # signal
             save_filename = f"{save_path}/processed_events_signalMC.parquet" 
+        elif "vbf_powheg" in full_load_path: # signal
+            save_filename = f"{save_path}/processed_events_signalMC_vbf.parquet" 
         elif "dy_M-100To200" in full_load_path:
             save_filename = f"{save_path}/processed_events_dyMC.parquet" 
+        else:
+            print ("unsupported sample given!")
+            raise ValueError
         print(f"save_filename: {save_filename}")
     
         # delete the file if there's already same save_filename
