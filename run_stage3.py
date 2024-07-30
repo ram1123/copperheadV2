@@ -611,7 +611,6 @@ if __name__ == "__main__":
     
     fitResult.Print()
     print(f"runtime: {end-start} seconds")
-    raise ValueError
 
     # ---------------------------------------------------
     # Make CORE-PDF
@@ -645,7 +644,6 @@ if __name__ == "__main__":
     # Obtain signal MC events
     # ---------------------------------------------------
 
-    # load_path = "/work/users/yun79/stage2_output/ggH/test/processed_events_signalMC.parquet"
     load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
     processed_eventsSignalMC = ak.from_parquet(load_path)
     print("signal events loaded")
@@ -668,7 +666,63 @@ if __name__ == "__main__":
     name = "signal_subCat0"
     signal_subCat0 = rt.RooCrystalBall(name,name,mass, MH_subCat0, sigma_subCat0, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
 
+    # subCat 1
+    MH_subCat1 = rt.RooRealVar("MH_subCat1" , "MH_subCat1", 125, 115,135)
+    MH_subCat1.setConstant(True) # this shouldn't change, I think
+    sigma_subCat1 = rt.RooRealVar("sigma_subCat1" , "sigma_subCat1", 2, .1, 4.0)
+    alpha1_subCat1 = rt.RooRealVar("alpha1_subCat1" , "alpha1_subCat1", 2, 0.01, 65)
+    n1_subCat1 = rt.RooRealVar("n1_subCat1" , "n1_subCat1", 10, 0.01, 100)
+    alpha2_subCat1 = rt.RooRealVar("alpha2_subCat1" , "alpha2_subCat1", 2.0, 0.01, 65)
+    n2_subCat1 = rt.RooRealVar("n2_subCat1" , "n2_subCat1", 25, 0.01, 100)
+    
+    # n1_subCat1.setConstant(True) # freeze for stability
+    # n2_subCat1.setConstant(True) # freeze for stability
+    name = "signal_subCat1"
+    signal_subCat1 = rt.RooCrystalBall(name,name,mass, MH_subCat1, sigma_subCat1, alpha1_subCat1, n1_subCat1, alpha2_subCat1, n2_subCat1)
 
+    # subCat 2
+    MH_subCat2 = rt.RooRealVar("MH_subCat2" , "MH_subCat2", 125, 115,135)
+    MH_subCat2.setConstant(True) # this shouldn't change, I think
+    sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 2, .1, 4.0)
+    alpha1_subCat2 = rt.RooRealVar("alpha1_subCat2" , "alpha1_subCat2", 2, 0.01, 65)
+    n1_subCat2 = rt.RooRealVar("n1_subCat2" , "n1_subCat2", 10, 0.01, 100)
+    alpha2_subCat2 = rt.RooRealVar("alpha2_subCat2" , "alpha2_subCat2", 2.0, 0.01, 65)
+    n2_subCat2 = rt.RooRealVar("n2_subCat2" , "n2_subCat2", 25, 0.01, 100)
+    
+    # n1_subCat2.setConstant(True) # freeze for stability
+    # n2_subCat2.setConstant(True) # freeze for stability
+    name = "signal_subCat2"
+    signal_subCat2 = rt.RooCrystalBall(name,name,mass, MH_subCat2, sigma_subCat2, alpha1_subCat2, n1_subCat2, alpha2_subCat2, n2_subCat2)
+
+    # subCat 3
+    MH_subCat3 = rt.RooRealVar("MH_subCat3" , "MH_subCat3", 125, 115,135)
+    MH_subCat3.setConstant(True) # this shouldn't change, I think
+    sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 2, .1, 4.0)
+    alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 2, 0.01, 65)
+    n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 10, 0.01, 100)
+    alpha2_subCat3 = rt.RooRealVar("alpha2_subCat3" , "alpha2_subCat3", 2.0, 0.01, 65)
+    n2_subCat3 = rt.RooRealVar("n2_subCat3" , "n2_subCat3", 25, 0.01, 100)
+    
+    # n1_subCat3.setConstant(True) # freeze for stability
+    # n2_subCat3.setConstant(True) # freeze for stability
+    name = "signal_subCat3"
+    signal_subCat3 = rt.RooCrystalBall(name,name,mass, MH_subCat3, sigma_subCat3, alpha1_subCat3, n1_subCat3, alpha2_subCat3, n2_subCat3)
+
+    # subCat 4
+    MH_subCat4 = rt.RooRealVar("MH_subCat4" , "MH_subCat4", 125, 115,135)
+    MH_subCat4.setConstant(True) # this shouldn't change, I think
+    sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 2, .1, 4.0)
+    alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 2, 0.01, 65)
+    n1_subCat4 = rt.RooRealVar("n1_subCat4" , "n1_subCat4", 10, 0.01, 100)
+    alpha2_subCat4 = rt.RooRealVar("alpha2_subCat4" , "alpha2_subCat4", 2.0, 0.01, 65)
+    n2_subCat4 = rt.RooRealVar("n2_subCat4" , "n2_subCat4", 25, 0.01, 100)
+    
+    # n1_subCat4.setConstant(True) # freeze for stability
+    # n2_subCat4.setConstant(True) # freeze for stability
+    name = "signal_subCat4"
+    signal_subCat4 = rt.RooCrystalBall(name,name,mass, MH_subCat4, sigma_subCat4, alpha1_subCat4, n1_subCat4, alpha2_subCat4, n2_subCat4)
+    
+    
     # ---------------------------------------------------
     # Define signal MC samples to fit to
     # ---------------------------------------------------
@@ -681,14 +735,8 @@ if __name__ == "__main__":
     wgt_subCat0_SigMC = ak.to_numpy(
         processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
     ) # weights
-    
-    # roo_datasetData_subCat0_signal = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_histData_subCat0_signal = rt.RooDataHist("subCat0_rooHist_signal","subCat0_rooHist_signal", rt.RooArgSet(mass), roo_datasetData_subCat0_signal)
 
     # generate a weighted histogram 
-    print(f"nbins: {nbins}")
-    print(f"mass.getMin(): {mass.getMin()}")
-    print(f"mass.getMax(): {mass.getMax()}")
     roo_histData_subCat0_signal = rt.TH1F("subCat0_rooHist_signal", "subCat0_rooHist_signal", nbins, mass.getMin(), mass.getMax())
        
     roo_histData_subCat0_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat0_SigMC) # fill the histograms with mass and weights 
@@ -702,6 +750,102 @@ if __name__ == "__main__":
     sig_norm_subCat0 = rt.RooRealVar(signal_subCat0.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat0 norm_val: {norm_val}")
     sig_norm_subCat0.setConstant(True)
+
+    # subCat 1
+    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 1)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat1_SigMC = ak.to_numpy(
+        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+    ) # weights
+    
+    # generate a weighted histogram 
+    roo_histData_subCat1_signal = rt.TH1F("subCat1_rooHist_signal", "subCat1_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat1_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat1_SigMC) # fill the histograms with mass and weights 
+    roo_histData_subCat1_signal = rt.RooDataHist("subCat1_rooHist_signal", "subCat1_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat1_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
+    data_subCat1_signal = roo_histData_subCat1_signal
+
+    # define normalization value from signal MC event weights 
+    
+    norm_val = np.sum(wgt_subCat1_SigMC)
+    sig_norm_subCat1 = rt.RooRealVar(signal_subCat1.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat1 norm_val: {norm_val}")
+    sig_norm_subCat1.setConstant(True)
+
+    # subCat 2
+    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 2)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat2_SigMC = ak.to_numpy(
+        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+    ) # weights
+    
+    # generate a weighted histogram 
+    roo_histData_subCat2_signal = rt.TH1F("subCat2_rooHist_signal", "subCat2_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat2_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat2_SigMC) # fill the histograms with mass and weights 
+    roo_histData_subCat2_signal = rt.RooDataHist("subCat2_rooHist_signal", "subCat2_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat2_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
+    data_subCat2_signal = roo_histData_subCat2_signal
+
+    # define normalization value from signal MC event weights 
+    
+    norm_val = np.sum(wgt_subCat2_SigMC)
+    sig_norm_subCat2 = rt.RooRealVar(signal_subCat2.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat2 norm_val: {norm_val}")
+    sig_norm_subCat2.setConstant(True)
+
+    # subCat 3
+    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 3)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat3_SigMC = ak.to_numpy(
+        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+    ) # weights
+    
+    # generate a weighted histogram 
+    roo_histData_subCat3_signal = rt.TH1F("subCat3_rooHist_signal", "subCat3_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat3_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat3_SigMC) # fill the histograms with mass and weights 
+    roo_histData_subCat3_signal = rt.RooDataHist("subCat3_rooHist_signal", "subCat3_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat3_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
+    data_subCat3_signal = roo_histData_subCat3_signal
+
+    # define normalization value from signal MC event weights 
+    
+    norm_val = np.sum(wgt_subCat3_SigMC)
+    sig_norm_subCat3 = rt.RooRealVar(signal_subCat3.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat3 norm_val: {norm_val}")
+    sig_norm_subCat3.setConstant(True)
+    
+    # subCat 4
+    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 4)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat4_SigMC = ak.to_numpy(
+        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+    ) # weights
+    
+    # generate a weighted histogram 
+    roo_histData_subCat4_signal = rt.TH1F("subCat4_rooHist_signal", "subCat4_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat4_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat4_SigMC) # fill the histograms with mass and weights 
+    roo_histData_subCat4_signal = rt.RooDataHist("subCat4_rooHist_signal", "subCat4_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat4_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
+    data_subCat4_signal = roo_histData_subCat4_signal
+
+    # define normalization value from signal MC event weights 
+    
+    norm_val = np.sum(wgt_subCat4_SigMC)
+    sig_norm_subCat4 = rt.RooRealVar(signal_subCat4.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat4 norm_val: {norm_val}")
+    sig_norm_subCat4.setConstant(True)
     
     # ---------------------------------------------------
     # Fit signal model individually, not simultaneous. Sigma, and left and right tails are different for each category
@@ -719,6 +863,54 @@ if __name__ == "__main__":
     alpha2_subCat0.setConstant(True)
     n2_subCat0.setConstant(True)
 
+    # subCat 1
+    _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend="cpu", Save=True, )
+    fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend="cpu", Save=True, )
+    fit_result.Print()
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat1.setConstant(True)
+    alpha1_subCat1.setConstant(True)
+    n1_subCat1.setConstant(True)
+    alpha2_subCat1.setConstant(True)
+    n2_subCat1.setConstant(True)
+
+    # subCat 2
+    _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend="cpu", Save=True, )
+    fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend="cpu", Save=True, )
+    fit_result.Print()
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat2.setConstant(True)
+    alpha1_subCat2.setConstant(True)
+    n1_subCat2.setConstant(True)
+    alpha2_subCat2.setConstant(True)
+    n2_subCat2.setConstant(True)
+
+    # subCat 3
+    _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend="cpu", Save=True, )
+    fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend="cpu", Save=True, )
+    fit_result.Print()
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat3.setConstant(True)
+    alpha1_subCat3.setConstant(True)
+    n1_subCat3.setConstant(True)
+    alpha2_subCat3.setConstant(True)
+    n2_subCat3.setConstant(True)
+
+    # subCat 4
+    _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend="cpu", Save=True, )
+    fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend="cpu", Save=True, )
+    fit_result.Print()
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat4.setConstant(True)
+    alpha1_subCat4.setConstant(True)
+    n1_subCat4.setConstant(True)
+    alpha2_subCat4.setConstant(True)
+    n2_subCat4.setConstant(True)
+    
     # -------------------------------------------------------------------------
     # Plotting
     # -------------------------------------------------------------------------
@@ -730,27 +922,71 @@ if __name__ == "__main__":
     # do signal plotting with fit and data
     # -------------------------------------------------------------------------
     
-    # subCat 0
+    # # subCat 0
     
-    name = "Canvas"
-    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-    canvas.cd()
-    frame = mass.frame()
-    legend = rt.TLegend(0.65,0.55,0.9,0.7)
-    name = data_subCat0_signal.GetName()
-    data_subCat0_signal.plotOn(frame, DataError="SumW2", Name=name)
-    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
-    name = signal_subCat0.GetName()
-    signal_subCat0.plotOn(frame, Name=name, LineColor=rt.kGreen)
-    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    # name = "Canvas"
+    # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    # canvas.cd()
+    # frame = mass.frame()
+    # legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    # name = data_subCat0_signal.GetName()
+    # data_subCat0_signal.plotOn(frame, DataError="SumW2", Name=name)
+    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    # name = signal_subCat0.GetName()
+    # signal_subCat0.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    # legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
     
-    frame.Draw()
-    legend.Draw()
+    # frame.Draw()
+    # legend.Draw()
     
-    canvas.Update()
-    canvas.Draw()
-    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat0.pdf")
+    # canvas.Update()
+    # canvas.Draw()
+    # canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat0.pdf")
 
+    # -------------------------------------------------------------------------
+    # do signal plotting for all sub-Cats in one plot
+    # -------------------------------------------------------------------------
+    model_dict_by_coreFunction = {
+        "Signal" : [
+            signal_subCat0, 
+            signal_subCat1,
+            signal_subCat2,
+            signal_subCat3,
+            signal_subCat4,
+        ]
+    }
+    
+    color_list = [
+        rt.kGreen,
+        rt.kBlue,
+        rt.kRed,
+        rt.kOrange,
+        rt.kViolet,
+    ]
+    for model_type, coreFunction_list in model_dict_by_coreFunction.items():
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        frame = mass.frame()
+        frame.SetTitle(f"Normalized Shape Plot of {model_type} PDFs")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
+        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+        for ix in range(len(coreFunction_list)):
+            model = coreFunction_list[ix]
+            name = model.GetName()
+            color = color_list[ix]
+            model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
+            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+        frame.Draw()
+        legend.Draw()        
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"{plot_save_path}/simultaneousPlotTestFromTutorial_{model_type}.pdf")
+        
     # ---------------------------------------------------
     # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
@@ -770,64 +1006,64 @@ if __name__ == "__main__":
     wout.Print();
     wout.Write();
 
-    # # -------------------------------------------------------------------------
-    # # do Bkg plotting loop divided into core-function
-    # # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # do Bkg plotting loop divided into core-function
+    # -------------------------------------------------------------------------
     
-    # model_dict_by_coreFunction = {
-    #     "BWZRedux" : [
-    #         model_subCat0_BWZRedux, 
-    #         model_subCat1_BWZRedux,
-    #         model_subCat2_BWZRedux,
-    #         model_subCat3_BWZRedux,
-    #         model_subCat4_BWZRedux,
-    #     ],
-    #     "sumExp" : [
-    #         model_subCat0_sumExp, 
-    #         model_subCat1_sumExp,
-    #         model_subCat2_sumExp,
-    #         model_subCat3_sumExp,
-    #         model_subCat4_sumExp,
-    #     ],
-    #     "FEWZxBern" : [
-    #         model_subCat0_FEWZxBern, 
-    #         model_subCat1_FEWZxBern,
-    #         model_subCat2_FEWZxBern,
-    #         model_subCat3_FEWZxBern,
-    #         model_subCat4_FEWZxBern,
-    #     ],
-    # }
-    # color_list = [
-    #     rt.kGreen,
-    #     rt.kBlue,
-    #     rt.kRed,
-    #     rt.kOrange,
-    #     rt.kViolet,
-    # ]
-    # for core_type, coreFunction_list in model_dict_by_coreFunction.items():
+    model_dict_by_coreFunction = {
+        "BWZRedux" : [
+            model_subCat0_BWZRedux, 
+            model_subCat1_BWZRedux,
+            model_subCat2_BWZRedux,
+            model_subCat3_BWZRedux,
+            model_subCat4_BWZRedux,
+        ],
+        "sumExp" : [
+            model_subCat0_sumExp, 
+            model_subCat1_sumExp,
+            model_subCat2_sumExp,
+            model_subCat3_sumExp,
+            model_subCat4_sumExp,
+        ],
+        "FEWZxBern" : [
+            model_subCat0_FEWZxBern, 
+            model_subCat1_FEWZxBern,
+            model_subCat2_FEWZxBern,
+            model_subCat3_FEWZxBern,
+            model_subCat4_FEWZxBern,
+        ],
+    }
+    color_list = [
+        rt.kGreen,
+        rt.kBlue,
+        rt.kRed,
+        rt.kOrange,
+        rt.kViolet,
+    ]
+    for core_type, coreFunction_list in model_dict_by_coreFunction.items():
         
-    #     name = "Canvas"
-    #     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-    #     canvas.cd()
-    #     frame = mass.frame()
-    #     frame.SetTitle(f"Normalized Shape Plot of {core_type} PDFs")
-    #     frame.SetXTitle(f"Dimuon Mass (GeV)")
-    #     legend = rt.TLegend(0.65,0.55,0.9,0.7)
-    #     # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-    #     normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
-    #     normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-    #     # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
-    #     for ix in range(len(coreFunction_list)):
-    #         model = coreFunction_list[ix]
-    #         name = model.GetName()
-    #         color = color_list[ix]
-    #         model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
-    #         legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
-    #     frame.Draw()
-    #     legend.Draw()        
-    #     canvas.Update()
-    #     canvas.Draw()
-    #     canvas.SaveAs(f"{plot_save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        frame = mass.frame()
+        frame.SetTitle(f"Normalized Shape Plot of {core_type} PDFs")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
+        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+        for ix in range(len(coreFunction_list)):
+            model = coreFunction_list[ix]
+            name = model.GetName()
+            color = color_list[ix]
+            model.plotOn(frame, Name=name, LineColor=color)
+            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+        frame.Draw()
+        legend.Draw()        
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"{plot_save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
 
     # # -------------------------------------------------------------------------
     # # do Bkg plotting loop divided into Sub Categories
