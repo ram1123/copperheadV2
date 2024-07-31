@@ -202,9 +202,13 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str],
 
         prediction = dnn_model(df_i).detach().numpy().flatten()
         print(f"prediction: {prediction.shape}")
+        prediction = (prediction - 1/2)*2 # temporary shift the sigmoid result to have range of a tanh
             
         score_total[eval_filter] = np.arctanh(prediction)
     df[score_name] = score_total
+    print(f"dnn score_total: {score_total}")
+    print(f"dnn score_total max: {np.max(score_total)}")
+    print(f"dnn score_total min: {np.min(score_total)}")
     return df
 
 
