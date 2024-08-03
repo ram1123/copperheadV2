@@ -105,6 +105,48 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, save_path: s
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
 
 
+
+def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, save_path: str):
+    """
+    takes the dictionary of all Signal RooAbsPdf models grouped by same sample, and plot them
+    in the frame() of mass and saves the plots on a given directory path
+    """
+    # make the save_path directory if it doesn't exist
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        
+    color_list = [
+        rt.kGreen,
+        rt.kBlue,
+        rt.kRed,
+        rt.kOrange,
+        rt.kViolet,
+    ]
+    for model_type, model_list in model_dict_by_sample.items():
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        frame = mass.frame()
+        frame.SetTitle(f"Normalized Shape Plot of {model_type} PDFs")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
+        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+        for ix in range(len(model_list)):
+            model = model_list[ix]
+            name = model.GetName()
+            color = color_list[ix]
+            model.plotOn(frame, Name=name, LineColor=color)
+            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+        frame.Draw()
+        legend.Draw()        
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{model_type}.pdf")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1108,50 +1150,6 @@ if __name__ == "__main__":
     canvas.Draw()
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat4 .pdf")
 
-    # -------------------------------------------------------------------------
-    # do signal plotting for all sub-Cats in one plot
-    # -------------------------------------------------------------------------
-    model_dict_by_coreFunction = {
-        "Signal" : [
-            signal_subCat0, 
-            signal_subCat1,
-            signal_subCat2,
-            signal_subCat3,
-            signal_subCat4,
-        ]
-    }
-    
-    color_list = [
-        rt.kGreen,
-        rt.kBlue,
-        rt.kRed,
-        rt.kOrange,
-        rt.kViolet,
-    ]
-    for model_type, model_list in model_dict_by_coreFunction.items():
-        name = "Canvas"
-        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-        canvas.cd()
-        frame = mass.frame()
-        frame.SetTitle(f"Normalized Shape Plot of {model_type} PDFs")
-        frame.SetXTitle(f"Dimuon Mass (GeV)")
-        legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
-        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
-        for ix in range(len(model_list)):
-            model = model_list[ix]
-            name = model.GetName()
-            color = color_list[ix]
-            model.plotOn(frame, Name=name, LineColor=color)
-            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
-        frame.Draw()
-        legend.Draw()        
-        canvas.Update()
-        canvas.Draw()
-        canvas.SaveAs(f"{plot_save_path}/simultaneousPlotTestFromTutorial_{model_type}.pdf")
-        
     # ---------------------------------------------------
     # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
@@ -1170,6 +1168,29 @@ if __name__ == "__main__":
     wout.Import(signal_subCat0); 
     wout.Print();
     wout.Write();
+
+
+    
+    # ---------------------------------------------------
+    # Group plotting start here
+    # ---------------------------------------------------
+    
+    
+    # -------------------------------------------------------------------------
+    # do signal plotting for all sub-Cats in one plot
+    # -------------------------------------------------------------------------
+    sig_dict_by_sample = {
+        "ggh_signal" : [
+            signal_subCat0, 
+            signal_subCat1,
+            signal_subCat2,
+            signal_subCat3,
+            signal_subCat4,
+        ]
+    }
+
+    plotSigBySample(mass, sig_dict_by_sample, plot_save_path)
+        
 
     # # -------------------------------------------------------------------------
     # # do Bkg plotting loop divided into core-function
@@ -1201,38 +1222,38 @@ if __name__ == "__main__":
     # plotBkgByCoreFunc(mass, model_dict_by_coreFunction, plot_save_path)
 
 
-    # -------------------------------------------------------------------------
-    # do Bkg plotting loop divided into Sub Categories
-    # -------------------------------------------------------------------------
+    # # -------------------------------------------------------------------------
+    # # do Bkg plotting loop divided into Sub Categories
+    # # -------------------------------------------------------------------------
 
-    model_dict_by_subCat = {
-        0 : [
-            model_subCat0_BWZRedux, 
-            model_subCat0_sumExp,
-            model_subCat0_FEWZxBern,
-        ],
-        1 : [
-            model_subCat1_BWZRedux, 
-            model_subCat1_sumExp,
-            model_subCat1_FEWZxBern,
-        ],
-        2 : [
-            model_subCat2_BWZRedux, 
-            model_subCat2_sumExp,
-            model_subCat2_FEWZxBern,
-        ],
-        3 : [
-            model_subCat3_BWZRedux, 
-            model_subCat3_sumExp,
-            model_subCat3_FEWZxBern,
-        ],
-        4 : [
-            model_subCat4_BWZRedux, 
-            model_subCat4_sumExp,
-            model_subCat4_FEWZxBern,
-        ],
-    }
-    plotBkgBySubCat(mass, model_dict_by_subCat, plot_save_path)
+    # model_dict_by_subCat = {
+    #     0 : [
+    #         model_subCat0_BWZRedux, 
+    #         model_subCat0_sumExp,
+    #         model_subCat0_FEWZxBern,
+    #     ],
+    #     1 : [
+    #         model_subCat1_BWZRedux, 
+    #         model_subCat1_sumExp,
+    #         model_subCat1_FEWZxBern,
+    #     ],
+    #     2 : [
+    #         model_subCat2_BWZRedux, 
+    #         model_subCat2_sumExp,
+    #         model_subCat2_FEWZxBern,
+    #     ],
+    #     3 : [
+    #         model_subCat3_BWZRedux, 
+    #         model_subCat3_sumExp,
+    #         model_subCat3_FEWZxBern,
+    #     ],
+    #     4 : [
+    #         model_subCat4_BWZRedux, 
+    #         model_subCat4_sumExp,
+    #         model_subCat4_FEWZxBern,
+    #     ],
+    # }
+    # plotBkgBySubCat(mass, model_dict_by_subCat, plot_save_path)
 
     
 
