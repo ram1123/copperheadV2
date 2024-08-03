@@ -23,6 +23,46 @@ def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist
     roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist) 
     return roo_hist_normalized
     
+def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, save_path: str):
+    """
+    takes the dictionary of all Bkg RooAbsPdf models grouped by same corefunctions, and plot them
+    in the frame() of mass and save
+    """
+    # make the save_path directory if it doesn't exist
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        
+    color_list = [
+        rt.kGreen,
+        rt.kBlue,
+        rt.kRed,
+        rt.kOrange,
+        rt.kViolet,
+    ]
+    for core_type, coreFunction_list in model_dict_by_coreFunction.items():
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        frame = mass.frame()
+        frame.SetTitle(f"Normalized Shape Plot of {core_type} PDFs")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
+        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+        for ix in range(len(coreFunction_list)):
+            model = coreFunction_list[ix]
+            name = model.GetName()
+            color = color_list[ix]
+            model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
+            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+        frame.Draw()
+        legend.Draw()        
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -1117,37 +1157,8 @@ if __name__ == "__main__":
             model_subCat4_FEWZxBern,
         ],
     }
-    color_list = [
-        rt.kGreen,
-        rt.kBlue,
-        rt.kRed,
-        rt.kOrange,
-        rt.kViolet,
-    ]
-    for core_type, coreFunction_list in model_dict_by_coreFunction.items():
-        
-        name = "Canvas"
-        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-        canvas.cd()
-        frame = mass.frame()
-        frame.SetTitle(f"Normalized Shape Plot of {core_type} PDFs")
-        frame.SetXTitle(f"Dimuon Mass (GeV)")
-        legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
-        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
-        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
-        for ix in range(len(coreFunction_list)):
-            model = coreFunction_list[ix]
-            name = model.GetName()
-            color = color_list[ix]
-            model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
-            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
-        frame.Draw()
-        legend.Draw()        
-        canvas.Update()
-        canvas.Draw()
-        canvas.SaveAs(f"{plot_save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
+    plotBkgByCoreFunc(mass, model_dict_by_coreFunction, plot_save_path)
+
 
     # # -------------------------------------------------------------------------
     # # do Bkg plotting loop divided into Sub Categories
