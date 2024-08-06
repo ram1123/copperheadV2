@@ -14,8 +14,9 @@ import cmsstyle as CMS
 group_data_processes = ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F"]
 # group_DY_processes = ["dy_M-100To200", "dy_M-50"] # dy_M-50 is not used in ggH BDT training input
 # group_DY_processes = ["dy_M-100To200"]
-group_DY_processes = ["dy_M-100To200","dy_VBF_filter"]
-
+# group_DY_processes = ["dy_M-100To200","dy_VBF_filter"]
+# group_DY_processes = ["dy_M-100To200","dy_m105_160_vbf_amc"]
+group_DY_processes = ["dy_M-100To200","dy_VBF_filter_customJMEoff"]
 
 group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop"]
 group_Ewk_processes = ["ewk_lljj_mll50_mjj120"]
@@ -163,7 +164,10 @@ if __name__ == "__main__":
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                 # available_processes.append("dy_M-50")
                 available_processes.append("dy_M-100To200")
-                available_processes.append("dy_VBF_filter")
+                # available_processes.append("dy_VBF_filter")
+                # available_processes.append("dy_m105_160_vbf_amc")
+                available_processes.append("dy_VBF_filter_customJMEoff")
+            
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
                 available_processes.append("ttjets_sl")
@@ -219,11 +223,11 @@ if __name__ == "__main__":
                 variables2plot.append(f"{particle}1_{kinematic}")
                 variables2plot.append(f"{particle}2_{kinematic}")
         elif ("jet" in particle):
-            # variables2plot.append(f"njets")
-            for kinematic in kinematic_vars:
-                # plot both leading and subleading muons/jets
-                variables2plot.append(f"{particle}1_{kinematic}")
-                variables2plot.append(f"{particle}2_{kinematic}")
+            variables2plot.append(f"njets")
+            # for kinematic in kinematic_vars:
+            #     # plot both leading and subleading muons/jets
+            #     variables2plot.append(f"{particle}1_{kinematic}")
+            #     variables2plot.append(f"{particle}2_{kinematic}")
         # if ("mu" in particle) or ("jet" in particle):
         #     for kinematic in kinematic_vars:
         #         # plot both leading and subleading muons/jets
@@ -361,17 +365,19 @@ if __name__ == "__main__":
                 # region = events.z_peak
                 btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
                 if args.vbf_cat_mode:
-                    print("vbf mode!")
+                    
                     # original start --------------------------
+                    print("vbf mode!")
                     prod_cat_cut =  vbf_cut
                     # original end-----------------
                     # test start ------------------------------------------
+                    # print("no Category mode!")
                     # prod_cat_cut = ak.ones_like(vbf_cut)
                     # test end -----------------------------------------
                     # apply additional cut to MC samples if vbf 
                     # VBF filter cut start -------------------------------------------------
                     if "dy_" in process:
-                        if process == "dy_VBF_filter":
+                        if ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc"):
                             print("dy_VBF_filter extra!")
                             vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
                             # extra cut to make dy_VBF_filter(nanoAODv9) to be same as nanoAODv6 
@@ -379,7 +385,7 @@ if __name__ == "__main__":
                             extra_gjetCut = ak.fill_none( ~extra_gjetCut, value=False)
                             prod_cat_cut =  (prod_cat_cut  
                                         & vbf_filter
-                                         & extra_gjetCut
+                                         # & extra_gjetCut
                             )
                         elif process == "dy_M-100To200":
                             print("dy_M-100To200 extra!")
@@ -395,6 +401,29 @@ if __name__ == "__main__":
                 else: # we're interested in ggH category
                     print("ggH mode!")
                     prod_cat_cut =  ~vbf_cut
+                    # VBF filter cut start -------------------------------------------------
+                    if "dy_" in process:
+                        if (process == "dy_VBF_filter") or (process =="dy_m105_160_vbf_amc"):
+                            print("dy_VBF_filter extra!")
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
+                            # extra cut to make dy_VBF_filter(nanoAODv9) to be same as nanoAODv6 
+                            extra_gjetCut = (events.gjet1_pt < 10) | (events.gjet2_pt < 10) 
+                            extra_gjetCut = ak.fill_none( ~extra_gjetCut, value=False)
+                            prod_cat_cut =  (prod_cat_cut  
+                                        & vbf_filter
+                                         # & extra_gjetCut
+                            )
+                        elif process == "dy_M-100To200":
+                            print("dy_M-100To200 extra!")
+                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) 
+                            prod_cat_cut =  (
+                                prod_cat_cut  
+                                & ~vbf_filter 
+                            )
+                        else:
+                            print(f"no extra processing for {process}")
+                            pass
+                    # VBF filter cut end -------------------------------------------------
                 # print(f"prod_cat_cut sum b4: {ak.sum(prod_cat_cut).compute()}")
                 
                
@@ -1029,7 +1058,7 @@ if __name__ == "__main__":
                              histtype='step', 
                              label="ggH", 
                              sort='label_r', 
-                             color =  "black",
+                             # color =  "black",
                              ax=ax_main)
             if len(group_VBF_hists) > 0: # there should be only one element or be empty
                 hist_vbf = group_VBF_hists[0]
@@ -1037,7 +1066,7 @@ if __name__ == "__main__":
                              histtype='step', 
                              label="VBF", 
                              sort='label_r', 
-                             color = "red",
+                             # color = "red",
                              ax=ax_main)
             
             
