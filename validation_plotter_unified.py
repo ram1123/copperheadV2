@@ -1012,10 +1012,10 @@ if __name__ == "__main__":
                 "weights":np.concatenate(group_data_weights, axis=0)
             }
             bkg_MC_dict = {
-                # "Top" :{
-                #     "values" :np.concatenate(group_Top_vals, axis=0),
-                #     "weights":np.concatenate(group_Top_weights, axis=0)
-                # },
+                "Top" :{
+                    "values" :np.concatenate(group_Top_vals, axis=0),
+                    "weights":np.concatenate(group_Top_weights, axis=0)
+                },
                 "DY" :{
                     "values" :np.concatenate(group_DY_vals, axis=0),
                     "weights":np.concatenate(group_DY_weights, axis=0)
@@ -1052,60 +1052,59 @@ if __name__ == "__main__":
 
             
                 # original start ----------------------------------------------------------
-                # np_hist, _ = np.histogram(values, bins=binning, weights = weights)
-                # # print(f"np_hist old {process} : {np_hist}")
-                # np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
+            #     np_hist, _ = np.histogram(values, bins=binning, weights = weights)
+            #     # print(f"np_hist old {process} : {np_hist}")
+            #     np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
                
                 
-                # if process in group_data_processes:
-                #     print("data activated")
-                #     group_data_hists.append(np_hist)
-                #     # print(f"np_hist: {np_hist}")
-                #     # print(f"np_hist.dtype: {np_hist.dtype}")
-                #     group_data_hists_w2.append(np_hist_w2)
-                # #-------------------------------------------------------
-                # elif process in group_DY_processes:
-                #     print("DY activated")
-                #     group_DY_hists.append(np_hist)
-                #     group_DY_hists_w2.append(np_hist_w2)
-                # #-------------------------------------------------------
-                # elif process in group_Top_processes:
-                #     print("top activated")
-                #     group_Top_hists.append(np_hist)
-                #     group_Top_hists_w2.append(np_hist_w2)
-                # #-------------------------------------------------------
-                # elif process in group_Ewk_processes:
-                #     print("Ewk activated")
-                #     group_Ewk_hists.append(np_hist)
-                #     group_Ewk_hists_w2.append(np_hist_w2)
-                # #-------------------------------------------------------
-                # elif process in group_VV_processes:
-                #     print("VV activated")
-                #     # var_hist_VV = ROOT.TH1F( var+'_hist_VV', var, len(binning)-1, min(binning), max(binning))
-                #     # for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-                #     #     var_hist_VV.SetBinContent(1+idx, np_hist[idx])
-                #     group_VV_hists.append(np_hist)
-                #     group_VV_hists_w2.append(np_hist_w2)
-                # #-------------------------------------------------------
-                # elif process in group_ggH_processes:
-                #     print("ggH activated")
-                #     group_ggH_hists.append(np_hist)
-                # #-------------------------------------------------------
-                # elif process in group_VBF_processes:
-                #     print("VBF activated")
-                #     group_VBF_hists.append(np_hist)
-                # #-------------------------------------------------------
-                # else: # put into "other" bkg group
-                #     # if "dy_M-50" in process:
-                #     #     # print("dy_M-50 activated")
-                #     #     continue
-                #     print("other activated")
-                #     group_other_hists.append(np_hist)
-                #     group_otherhists_w2.append(np_hist_w2)
+            #     if process in group_data_processes:
+            #         print("data activated")
+            #         group_data_hists.append(np_hist)
+            #         # print(f"np_hist: {np_hist}")
+            #         # print(f"np_hist.dtype: {np_hist.dtype}")
+            #         group_data_hists_w2.append(np_hist_w2)
+            #     #-------------------------------------------------------
+            #     elif process in group_DY_processes:
+            #         print("DY activated")
+            #         group_DY_hists.append(np_hist)
+            #         group_DY_hists_w2.append(np_hist_w2)
+            #     #-------------------------------------------------------
+            #     elif process in group_Top_processes:
+            #         print("top activated")
+            #         group_Top_hists.append(np_hist)
+            #         group_Top_hists_w2.append(np_hist_w2)
+            #     #-------------------------------------------------------
+            #     elif process in group_Ewk_processes:
+            #         print("Ewk activated")
+            #         group_Ewk_hists.append(np_hist)
+            #         group_Ewk_hists_w2.append(np_hist_w2)
+            #     #-------------------------------------------------------
+            #     elif process in group_VV_processes:
+            #         print("VV activated")
+            #         # var_hist_VV = ROOT.TH1F( var+'_hist_VV', var, len(binning)-1, min(binning), max(binning))
+            #         # for idx in range (len(np_hist)): # paste the np histogram values to root histogram
+            #         #     var_hist_VV.SetBinContent(1+idx, np_hist[idx])
+            #         group_VV_hists.append(np_hist)
+            #         group_VV_hists_w2.append(np_hist_w2)
+            #     #-------------------------------------------------------
+            #     elif process in group_ggH_processes:
+            #         print("ggH activated")
+            #         group_ggH_hists.append(np_hist)
+            #     #-------------------------------------------------------
+            #     elif process in group_VBF_processes:
+            #         print("VBF activated")
+            #         group_VBF_hists.append(np_hist)
+            #     #-------------------------------------------------------
+            #     else: # put into "other" bkg group
+            #         # if "dy_M-50" in process:
+            #         #     # print("dy_M-50 activated")
+            #         #     continue
+            #         print("other activated")
+            #         group_other_hists.append(np_hist)
+            #         group_otherhists_w2.append(np_hist_w2)
 
 
-                
-            
+                               
             # all_MC_hist_list = []
             # all_MC_hist_list_w2 = []
             # groups = []
@@ -1154,12 +1153,14 @@ if __name__ == "__main__":
             # colours = hep.style.cms.cmap_petroff[0:len(groups)]
             # # print(f"colours: {colours}")
             # # print(f"labels: {labels}")
+
+            
             # if not args.no_ratio:
             #     fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
             # else: # skip ratio
             #     fig, ax_main = plt.subplots()
-            
             # fig.subplots_adjust(hspace=0.1)
+            
             # mc_sum_histogram = np.sum(np.asarray(all_MC_hist_list), axis=0) # to be used in ratio plot later
             # group_color_map = {
             #     "DY" : "Orange",

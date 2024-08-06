@@ -46,10 +46,27 @@ def plotDataMC_compare(
 
     if plot_ratio:
         fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
-        # fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True, squeeze=True)
-        # fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [4, 1]}, sharex=True)
     else: # skip ratio plot
         fig, ax_main = plt.subplots()
+    fig.subplots_adjust(hspace=0.1)
+
+    # -----------------------------------------
+    # plot data
+    # -----------------------------------------
+    values = data["values"]
+    weights = data["weights"]
+    data_hist, data_hist_err = getHistAndErrs(binning, values, weights)
+    hep.histplot(
+        data_hist, 
+        xerr=True, 
+        yerr=data_hist_err,
+        bins=binning, 
+        stack=False, 
+        histtype='errorbar', 
+        color='black', 
+        label='Data', 
+        ax=ax_main,
+    )
     
     
     # -----------------------------------------
@@ -101,23 +118,6 @@ def plotDataMC_compare(
                 ax=ax_main,
             )
 
-    # -----------------------------------------
-    # plot data
-    # -----------------------------------------
-    values = data["values"]
-    weights = data["weights"]
-    data_hist, data_hist_err = getHistAndErrs(binning, values, weights)
-    hep.histplot(
-        data_hist, 
-        xerr=True, 
-        yerr=data_hist_err,
-        bins=binning, 
-        stack=False, 
-        histtype='errorbar', 
-        color='black', 
-        label='Data', 
-        ax=ax_main,
-    )
     
     # -----------------------------------------
     # Data/MC ratio
@@ -159,3 +159,4 @@ def plotDataMC_compare(
     # save figure, we assume that the directory exists
     hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
+    plt.clf()
