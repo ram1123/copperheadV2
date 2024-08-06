@@ -24,9 +24,13 @@ def plotDataMC_compare(
     save_full_path: str,
     sig_MC_dict = {},
     title="default title", 
-    xtitle="Mass (GeV)", 
+    x_title="Mass (GeV)", 
+    y_title="Events",
     plot_ratio=True,
     log_scale=True,
+    lumi = "",
+    status = "Private Work",
+    CenterOfMass = 13,
     ):
     """
     Takes in 
@@ -42,29 +46,12 @@ def plotDataMC_compare(
 
     if plot_ratio:
         fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+        # fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True, squeeze=True)
+        # fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [4, 1]}, sharex=True)
     else: # skip ratio plot
         fig, ax_main = plt.subplots()
-    if log_scale:
-        ax_main.set_yscale('log')
-        ax_main.set_ylim(0.01, 1e9)
     
-    # -----------------------------------------
-    # plot data
-    # -----------------------------------------
-    values = data["values"]
-    weights = data["weights"]
-    data_hist, data_hist_err = getHistAndErrs(binning, values, weights)
-    hep.histplot(
-        data_hist, 
-        xerr=True, 
-        yerr=data_hist_err,
-        bins=binning, 
-        stack=False, 
-        histtype='errorbar', 
-        color='black', 
-        label='Data', 
-        ax=ax_main
-    )
+    
     # -----------------------------------------
     # plot bkg_MC
     # -----------------------------------------
@@ -87,37 +74,15 @@ def plotDataMC_compare(
         stack=True, 
         histtype='fill', 
         label=bkg_mc_sample_names, 
-        ax=ax_main,
         sort='label_r',
+        ax=ax_main,
     )
-    ax_main.set_ylabel("Events")
+    ax_main.set_ylabel(y_title)
+
+    if log_scale:
+        ax_main.set_yscale('log')
+        ax_main.set_ylim(0.01, 1e9)
     
-    if plot_ratio:
-        # get bkg_MC errors
-        bkg_mc_w2_sum = np.sum(np.asarray(bkg_MC_histW2_l), axis=0)
-        bkg_mc_err = np.sqrt(bkg_mc_w2_sum)
-        # initialize ratio histogram and fill in values
-        ratio_hist = np.zeros_like(data_hist)
-        bkg_mc_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
-        inf_filter = bkg_mc_sum>0
-        ratio_hist[inf_filter] = data_hist[inf_filter]/  bkg_mc_sum[inf_filter]
-        # add relative uncertainty of data and bkg_mc by adding by quadrature
-        rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2)
-        ratio_err = rel_unc_ratio*ratio_hist
-
-        
-        hep.histplot(ratio_hist, 
-                     bins=binning, histtype='errorbar', yerr=ratio_err, 
-                     color='black', label='Ratio', ax=ax_ratio)
-        ax_ratio.axhline(1, color='gray', linestyle='--')
-        ax_ratio.set_xlabel(xtitle)
-        ax_ratio.set_ylabel('Data / bkg_MC')
-        ax_ratio.set_xlim(binning[0], binning[-1])
-        # ax_ratio.set_ylim(0.6, 1.4)
-        ax_ratio.set_ylim(0.5,1.5) 
-    else:
-        ax_main.set_xlabel(xtitle)
-
 
     # -----------------------------------------
     # plot signal MC
@@ -137,9 +102,60 @@ def plotDataMC_compare(
             )
 
     # -----------------------------------------
-    # Legend, title, save figure
+    # plot data
+    # -----------------------------------------
+    values = data["values"]
+    weights = data["weights"]
+    data_hist, data_hist_err = getHistAndErrs(binning, values, weights)
+    hep.histplot(
+        data_hist, 
+        xerr=True, 
+        yerr=data_hist_err,
+        bins=binning, 
+        stack=False, 
+        histtype='errorbar', 
+        color='black', 
+        label='Data', 
+        ax=ax_main,
+    )
+    
+    # -----------------------------------------
+    # Data/MC ratio
+    # -----------------------------------------
+    if plot_ratio:
+        # get bkg_MC errors
+        bkg_mc_w2_sum = np.sum(np.asarray(bkg_MC_histW2_l), axis=0)
+        bkg_mc_err = np.sqrt(bkg_mc_w2_sum)
+        # initialize ratio histogram and fill in values
+        ratio_hist = np.zeros_like(data_hist)
+        bkg_mc_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
+        inf_filter = bkg_mc_sum>0
+        ratio_hist[inf_filter] = data_hist[inf_filter]/  bkg_mc_sum[inf_filter]
+        # add relative uncertainty of data and bkg_mc by adding by quadrature
+        rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2)
+        ratio_err = rel_unc_ratio*ratio_hist
+
+        
+        hep.histplot(ratio_hist, 
+                     bins=binning, histtype='errorbar', yerr=ratio_err, 
+                     color='black', label='Ratio', ax=ax_ratio)
+        ax_ratio.axhline(1, color='gray', linestyle='--')
+        ax_ratio.set_xlabel(x_title)
+        ax_ratio.set_ylabel('Data / MC')
+        ax_ratio.set_xlim(binning[0], binning[-1])
+        ax_ratio.set_ylim(0.5,1.5) 
+    else:
+        ax_main.set_xlabel(x_title)
+
+
+    
+
+    # -----------------------------------------
+    # Legend, title, etc +  save figure
     # -----------------------------------------
     ax_main.legend(loc="upper right")
-    ax_main.set_title(title)
+    if title != "":
+        ax_main.set_title(title)
     # save figure, we assume that the directory exists
+    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)

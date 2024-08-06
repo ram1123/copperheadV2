@@ -1012,10 +1012,10 @@ if __name__ == "__main__":
                 "weights":np.concatenate(group_data_weights, axis=0)
             }
             bkg_MC_dict = {
-                "Top" :{
-                    "values" :np.concatenate(group_Top_vals, axis=0),
-                    "weights":np.concatenate(group_Top_weights, axis=0)
-                },
+                # "Top" :{
+                #     "values" :np.concatenate(group_Top_vals, axis=0),
+                #     "weights":np.concatenate(group_Top_weights, axis=0)
+                # },
                 "DY" :{
                     "values" :np.concatenate(group_DY_vals, axis=0),
                     "weights":np.concatenate(group_DY_weights, axis=0)
@@ -1041,8 +1041,11 @@ if __name__ == "__main__":
                 bkg_MC_dict, 
                 full_save_fname,
                 sig_MC_dict=sig_MC_dict,
-                title=process + " Data/MC dist", 
-                xtitle="some unit", 
+                title = "", 
+                x_title = plot_settings[var].get("xlabel"), 
+                y_title = plot_settings[var].get("ylabel"),
+                lumi = args.lumi,
+                status = status,
             )
             
             # test end ----------------------------------------------------------
