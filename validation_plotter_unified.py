@@ -13,10 +13,10 @@ import cmsstyle as CMS
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F"]
 # group_DY_processes = ["dy_M-100To200", "dy_M-50"] # dy_M-50 is not used in ggH BDT training input
-# group_DY_processes = ["dy_M-100To200"]
+group_DY_processes = ["dy_M-100To200"]
 # group_DY_processes = ["dy_M-100To200","dy_VBF_filter"]
 # group_DY_processes = ["dy_M-100To200","dy_m105_160_vbf_amc"]
-group_DY_processes = ["dy_M-100To200","dy_VBF_filter_customJMEoff"]
+# group_DY_processes = ["dy_M-100To200","dy_VBF_filter_customJMEoff"]
 
 group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop"]
 group_Ewk_processes = ["ewk_lljj_mll50_mjj120"]
@@ -157,6 +157,9 @@ if __name__ == "__main__":
     if len(data_samples) >0:
         for data_letter in data_samples:
             available_processes.append(f"data_{data_letter.upper()}")
+        
+        # # take data as one group to save load time 
+        # available_processes.append(f"data_*")
     # take bkg
     bkg_samples = args.bkg_samples
     if len(bkg_samples) >0:
@@ -166,7 +169,7 @@ if __name__ == "__main__":
                 available_processes.append("dy_M-100To200")
                 # available_processes.append("dy_VBF_filter")
                 # available_processes.append("dy_m105_160_vbf_amc")
-                available_processes.append("dy_VBF_filter_customJMEoff")
+                # available_processes.append("dy_VBF_filter_customJMEoff")
             
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
@@ -263,12 +266,16 @@ if __name__ == "__main__":
 
     # load saved parquet files. This increases memory use, but increases runtime significantly
     loaded_events = {} # intialize dictionary containing all the arrays
-    N_reasonable = 50000
     for process in tqdm.tqdm(available_processes):
         print(f"loading process {process}..")
         full_load_path = args.load_path+f"/{process}/*/*.parquet"
         events = dak.from_parquet(full_load_path)
-        # only select specific fields to load to save run time
+        # print(f"events.fields: {events.fields}")
+
+        # ------------------------------------------------------
+        # select only needed variables to load to save run time
+        # ------------------------------------------------------
+        
         fields2load = variables2plot + ["wgt_nominal_total","fraction", "h_sidebands", "h_peak", "z_peak", "vbf_cut","nBtagLoose", "nBtagMedium",]
         # # add in weights
         # for field in events.fields:
@@ -282,7 +289,7 @@ if __name__ == "__main__":
         # load data to memory using compute()
         events = ak.zip({
             field : events[field] for field in events.fields
-        }).repartition(rows_per_partition=N_reasonable).compute()
+        }).compute()
         loaded_events[process] = events
     print("finished loading parquet files!")
     # ROOT style or mplhep style starts here --------------------------------------
@@ -843,9 +850,9 @@ if __name__ == "__main__":
                 is_data = "data" in process.lower()
                 print(f"is_data: {is_data}")
                 if is_data:
-                    weights = ak.to_numpy(ak.fill_none(events["weights"], value=0.0))
+                    weights = ak.to_numpy(ak.fill_none(events["wgt_nominal_total"], value=0.0))
                 else: # MC
-                    weights = ak.fill_none(events["weights"], value=0.0)
+                    weights = ak.fill_none(events["wgt_nominal_total"], value=0.0)
                     # print(f"weights {process} b4 numpy: {weights}")
                     weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
@@ -909,9 +916,9 @@ if __name__ == "__main__":
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 )
-                print(f"category_selection: {category_selection}")
-                print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
-                print(f"category_selection {process} : {category_selection}")
+                # print(f"category_selection: {category_selection}")
+                # print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
+                # print(f"category_selection {process} : {category_selection}")
                 
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
                 weights = weights*category_selection
@@ -928,7 +935,7 @@ if __name__ == "__main__":
                     weights = weights*fraction_weight
                 # print(f"weights.shape: {weights[weights>0].shape}")
                 np_hist, _ = np.histogram(values, bins=binning, weights = weights)
-                print(f"np_hist old {process} : {np_hist}")
+                # print(f"np_hist old {process} : {np_hist}")
                 np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
                
                 
@@ -1027,7 +1034,7 @@ if __name__ == "__main__":
                     
                 
             colours = hep.style.cms.cmap_petroff[0:len(groups)]
-            print(f"colours: {colours}")
+            # print(f"colours: {colours}")
             # print(f"labels: {labels}")
             if not args.no_ratio:
                 fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
