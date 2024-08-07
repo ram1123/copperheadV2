@@ -159,4 +159,3 @@ def plotDataMC_compare(
     # save figure, we assume that the directory exists
     hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
-    plt.clf()
