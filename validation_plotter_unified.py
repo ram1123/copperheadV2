@@ -10,6 +10,7 @@ from distributed import Client
 import time    
 import tqdm
 import cmsstyle as CMS
+from collections import OrderedDict
 
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F"]
@@ -1006,21 +1007,61 @@ if __name__ == "__main__":
                     print("other activated")
                     group_other_vals.append(values)
                     group_otherweights.append(weights)
+            
+            
+            # -------------------------------------------------------
+            # Aggregate the data into Sample types b4 plotting
+            # -------------------------------------------------------
 
+            # define data dict
             data_dict = {
                 "values" :np.concatenate(group_data_vals, axis=0),
                 "weights":np.concatenate(group_data_weights, axis=0)
             }
-            bkg_MC_dict = {
-                "Top" :{
+            
+            # define Bkg MC dict
+            bkg_MC_dict = OrderedDict()
+            # start from lowest yield to highest yield
+            if len(group_other_vals) > 0:
+                bkg_MC_dict["other"] = {
+                    "values" :np.concatenate(group_other_vals, axis=0),
+                    "weights":np.concatenate(group_otherweights, axis=0)
+                }
+            if len(group_VV_vals) > 0:
+                bkg_MC_dict["VV"] = {
+                    "values" :np.concatenate(group_VV_vals, axis=0),
+                    "weights":np.concatenate(group_VV_weights, axis=0)
+                }
+            if len(group_Ewk_vals) > 0:
+                bkg_MC_dict["Ewk"] = {
+                    "values" :np.concatenate(group_Ewk_vals, axis=0),
+                    "weights":np.concatenate(group_Ewk_weights, axis=0)
+                }
+            if len(group_Top_vals) > 0:
+                bkg_MC_dict["Top"] = {
                     "values" :np.concatenate(group_Top_vals, axis=0),
                     "weights":np.concatenate(group_Top_weights, axis=0)
-                },
-                "DY" :{
+                }
+            if len(group_DY_vals) > 0:
+                bkg_MC_dict["DY"] = {
                     "values" :np.concatenate(group_DY_vals, axis=0),
                     "weights":np.concatenate(group_DY_weights, axis=0)
-                },     
-            }
+                }
+
+            
+            # bkg_MC_dict = {
+            #     "Top" :{
+            #         "values" :np.concatenate(group_Top_vals, axis=0),
+            #         "weights":np.concatenate(group_Top_weights, axis=0)
+            #     },
+            #     "DY" :{
+            #         "values" :np.concatenate(group_DY_vals, axis=0),
+            #         "weights":np.concatenate(group_DY_weights, axis=0)
+            #     },     
+            # }
+
+            # define Sig MC dict
+            
             sig_MC_dict = {
                 "ggH" :{
                     "values" :np.concatenate(group_ggH_vals, axis=0),
@@ -1031,10 +1072,17 @@ if __name__ == "__main__":
                     "weights":np.concatenate(group_VBF_weights, axis=0)
                 },  
             }
+            
+
+
+            # -------------------------------------------------------
+            # All data are prepped, now plot Data/MC histogram
+            # -------------------------------------------------------
             full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}"
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             full_save_fname = f"{full_save_path}/{var}.pdf"
+            
             plotDataMC_compare(
                 binning, 
                 data_dict, 
