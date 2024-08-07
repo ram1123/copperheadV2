@@ -829,26 +829,7 @@ if __name__ == "__main__":
             # intialize variables for filling histograms
             binning = np.linspace(*plot_settings[var]["binning_linspace"])
 
-            # original start ----------------------------------------------------------
-            # group_data_hists = []
-            # group_DY_hists = []
-            # group_Top_hists = []
-            # group_Ewk_hists = []
-            # group_VV_hists = []
-            # group_other_hists = []  # histograms not belonging to any other mc bkg group
-            # group_ggH_hists = [] # there should only be one ggH histogram, but making a list for consistency
-            # group_VBF_hists = [] # there should only be one VBF histogram, but making a list for consistency
 
-            # # collect weight squarted histograms for error calculation
-            # group_data_hists_w2 = []
-            # group_DY_hists_w2 = []
-            # group_Top_hists_w2 = []
-            # group_Ewk_hists_w2 = []
-            # group_VV_hists_w2 = []
-            # group_other_hists_w2 = []
-            # original end ----------------------------------------------------------
-
-            # test start ----------------------------------------------------------
             group_data_vals = []
             group_DY_vals = []
             group_Top_vals = []
@@ -866,7 +847,6 @@ if __name__ == "__main__":
             group_other_weights = []
             group_ggH_weights = []
             group_VBF_weights = []
-            # test end ----------------------------------------------------------
 
             
             for process in available_processes:    
@@ -967,7 +947,6 @@ if __name__ == "__main__":
                     weights = weights*fraction_weight
                 # print(f"weights.shape: {weights[weights>0].shape}")
 
-            # test start ----------------------------------------------------------
                 if process in group_data_processes:
                     print("data activated")
                     group_data_vals.append(values)
@@ -1107,209 +1086,10 @@ if __name__ == "__main__":
                 status = status,
             )
             
-            # test end ----------------------------------------------------------
+
 
             
-                # original start ----------------------------------------------------------
-            #     np_hist, _ = np.histogram(values, bins=binning, weights = weights)
-            #     # print(f"np_hist old {process} : {np_hist}")
-            #     np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
-               
-                
-            #     if process in group_data_processes:
-            #         print("data activated")
-            #         group_data_hists.append(np_hist)
-            #         # print(f"np_hist: {np_hist}")
-            #         # print(f"np_hist.dtype: {np_hist.dtype}")
-            #         group_data_hists_w2.append(np_hist_w2)
-            #     #-------------------------------------------------------
-            #     elif process in group_DY_processes:
-            #         print("DY activated")
-            #         group_DY_hists.append(np_hist)
-            #         group_DY_hists_w2.append(np_hist_w2)
-            #     #-------------------------------------------------------
-            #     elif process in group_Top_processes:
-            #         print("top activated")
-            #         group_Top_hists.append(np_hist)
-            #         group_Top_hists_w2.append(np_hist_w2)
-            #     #-------------------------------------------------------
-            #     elif process in group_Ewk_processes:
-            #         print("Ewk activated")
-            #         group_Ewk_hists.append(np_hist)
-            #         group_Ewk_hists_w2.append(np_hist_w2)
-            #     #-------------------------------------------------------
-            #     elif process in group_VV_processes:
-            #         print("VV activated")
-            #         # var_hist_VV = ROOT.TH1F( var+'_hist_VV', var, len(binning)-1, min(binning), max(binning))
-            #         # for idx in range (len(np_hist)): # paste the np histogram values to root histogram
-            #         #     var_hist_VV.SetBinContent(1+idx, np_hist[idx])
-            #         group_VV_hists.append(np_hist)
-            #         group_VV_hists_w2.append(np_hist_w2)
-            #     #-------------------------------------------------------
-            #     elif process in group_ggH_processes:
-            #         print("ggH activated")
-            #         group_ggH_hists.append(np_hist)
-            #     #-------------------------------------------------------
-            #     elif process in group_VBF_processes:
-            #         print("VBF activated")
-            #         group_VBF_hists.append(np_hist)
-            #     #-------------------------------------------------------
-            #     else: # put into "other" bkg group
-            #         # if "dy_M-50" in process:
-            #         #     # print("dy_M-50 activated")
-            #         #     continue
-            #         print("other activated")
-            #         group_other_hists.append(np_hist)
-            #         group_otherhists_w2.append(np_hist_w2)
 
-
-                               
-            # all_MC_hist_list = []
-            # all_MC_hist_list_w2 = []
-            # groups = []
-            # if len(group_DY_hists) > 0:
-            #     DY_hist_stacked = np.sum(np.asarray(group_DY_hists), axis=0)
-            #     all_MC_hist_list.append(DY_hist_stacked)
-            #     # add w2 for error calculation
-            #     DY_hist_stacked_w2 = np.sum(np.asarray(group_DY_hists_w2), axis=0)
-            #     all_MC_hist_list_w2.append(DY_hist_stacked_w2)
-            #     groups.append("DY")
-            # #----------------------------------------------
-            # if len(group_Top_hists) > 0:
-            #     Top_hist_stacked = np.sum(np.asarray(group_Top_hists), axis=0)
-            #     all_MC_hist_list.append(Top_hist_stacked)
-            #     # add w2 for error calculation
-            #     Top_hist_stacked_w2 = np.sum(np.asarray(group_Top_hists_w2), axis=0)
-            #     all_MC_hist_list_w2.append(Top_hist_stacked_w2)
-            #     groups.append("Top")
-            # #----------------------------------------------
-            # if len(group_Ewk_hists) > 0:
-            #     Ewk_hist_stacked = np.sum(np.asarray(group_Ewk_hists), axis=0)
-            #     all_MC_hist_list.append(Ewk_hist_stacked)
-            #     # add w2 for error calculation
-            #     Ewk_hist_stacked_w2 = np.sum(np.asarray(group_Ewk_hists_w2), axis=0)
-            #     all_MC_hist_list_w2.append(Ewk_hist_stacked_w2)
-            #     groups.append("Ewk")
-            # #----------------------------------------------
-            # if len(group_VV_hists) > 0:
-            #     VV_hist_stacked = np.sum(np.asarray(group_VV_hists), axis=0)
-            #     all_MC_hist_list.append(VV_hist_stacked)
-            #     # add w2 for error calculation
-            #     VV_hist_stacked_w2 = np.sum(np.asarray(group_VV_hists_w2), axis=0)
-            #     all_MC_hist_list_w2.append(VV_hist_stacked_w2)
-            #     groups.append("VV")
-            # #----------------------------------------------
-            # if len(group_other_hists) > 0:
-            #     other_hist_stacked = np.sum(np.asarray(group_other_hists), axis=0)
-            #     all_MC_hist_list.append(other_hist_stacked)
-            #     # add w2 for error calculation
-            #     other_hist_stacked_w2 = np.sum(np.asarray(group_other_hists_w2), axis=0)
-            #     all_MC_hist_list_w2.append(other_hist_stacked_w2)
-            #     groups.append("other")
-            # #----------------------------------------------             
-                    
-                
-            # colours = hep.style.cms.cmap_petroff[0:len(groups)]
-            # # print(f"colours: {colours}")
-            # # print(f"labels: {labels}")
-
-            
-            # if not args.no_ratio:
-            #     fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
-            # else: # skip ratio
-            #     fig, ax_main = plt.subplots()
-            # fig.subplots_adjust(hspace=0.1)
-            
-            # mc_sum_histogram = np.sum(np.asarray(all_MC_hist_list), axis=0) # to be used in ratio plot later
-            # group_color_map = {
-            #     "DY" : "Orange",
-            #     "Top" : "Green",
-            #     "Ewk" : "Magenta",
-            #     "VV" : "Azure",
-            #     "other" : "Gray"
-            # }
-            # # colours = [group_color_map[group] for group in groups]
-            # if len(all_MC_hist_list) > 0:
-            #     hep.histplot(all_MC_hist_list, bins=binning, 
-            #                  stack=True, histtype='fill', 
-            #                  label=groups, 
-            #                  sort='label_r', 
-            #                  # color=colours, 
-            #                  ax=ax_main)
-
-            # if len(group_ggH_hists) > 0: # there should be only one element or be empty
-            #     hist_ggh = group_ggH_hists[0]
-            #     hep.histplot(hist_ggh, bins=binning, 
-            #                  histtype='step', 
-            #                  label="ggH", 
-            #                  sort='label_r', 
-            #                  # color =  "black",
-            #                  ax=ax_main)
-            # if len(group_VBF_hists) > 0: # there should be only one element or be empty
-            #     hist_vbf = group_VBF_hists[0]
-            #     hep.histplot(hist_vbf, bins=binning, 
-            #                  histtype='step', 
-            #                  label="VBF", 
-            #                  sort='label_r', 
-            #                  # color = "red",
-            #                  ax=ax_main)
-            
-            
-
-            # data_hist = np.sum(np.asarray(group_data_hists), axis=0)
-            # # print(f"data_hist: {data_hist}")
-            # # print(f"data_hist.dtype: {data_hist.dtype}")
-            # data_err = np.sqrt(np.sum(np.asarray(group_data_hists_w2), axis=0)) # sqrt of sum of squares of weights
-            # hep.histplot(data_hist, xerr=True, yerr=data_err,
-            #              bins=binning, stack=False, histtype='errorbar', color='black', 
-            #              label='Data', ax=ax_main)
-            # ax_main.set_ylabel(plot_settings[var].get("ylabel"))
-            # if not args.linear_scale:
-            #     ax_main.set_yscale('log')
-            #     ax_main.set_ylim(0.01, 1e9)
-                
-            # ax_main.legend(loc="upper right")
-            
-            # if not args.no_ratio:
-            #     mc_yerr = np.sqrt(np.sum(np.asarray(all_MC_hist_list_w2), axis=0)) # sqrt of sum of squares of weights
-
-            #     ratio_hist = np.zeros_like(data_hist)
-            #     ratio_hist[mc_sum_histogram>0] = data_hist[mc_sum_histogram>0]/  mc_sum_histogram[mc_sum_histogram>0]
-            #     # add rel unc of data and mc by quadrature
-            #     rel_unc_ratio = np.sqrt((mc_yerr/mc_sum_histogram)**2 + (data_err/data_hist)**2)
-            #     ratio_err = rel_unc_ratio*ratio_hist
-            #     # print(f"ratio_hist: {ratio_hist}")
-            #     # print(f"ratio_err: {ratio_err}")
-                
-            #     hep.histplot(ratio_hist, 
-            #                  bins=binning, histtype='errorbar', yerr=ratio_err, 
-            #                  color='black', label='Ratio', ax=ax_ratio)
-            #     ax_ratio.axhline(1, color='gray', linestyle='--')
-            #     ax_ratio.set_xlabel(plot_settings[var].get("xlabel"))
-            #     ax_ratio.set_ylabel('Data / MC')
-            #     ax_ratio.set_xlim(binning[0], binning[-1])
-            #     # ax_ratio.set_ylim(0.6, 1.4)
-            #     ax_ratio.set_ylim(0.5,1.5) 
-            # else:  
-            #     ax_main.set_xlabel(plot_settings[var].get("xlabel"))
-            # # Decorating with CMS label
-            # if args.lumi == '':
-            #     hep.cms.label(data=True, loc=0, label=status, com=13, ax=ax_main)
-            # else:
-            #     hep.cms.label(data=True, loc=0, label=status, com=13, lumi=args.lumi, ax=ax_main)
-
-            
-            # # Saving with special name
-            # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}"
-            # if not os.path.exists(full_save_path):
-            #     os.makedirs(full_save_path)
-            # plt.savefig(f"{full_save_path}/{var}.pdf")
-            # plt.clf()
-            # print(f"figure saved in {full_save_path}/{var}.pdf")
-            # # record time it took
-            # var_elapsed = round(time.time() - var_step, 3)
-
-            # original end ----------------------------------------------------------
             var_elapsed = round(time.time() - var_step, 3)
             print(f"Finished processing {var} in {var_elapsed} s.")
     # ROOT style or mplhep style ends here --------------------------------------
