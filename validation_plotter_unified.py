@@ -1062,16 +1062,27 @@ if __name__ == "__main__":
 
             # define Sig MC dict
             
-            sig_MC_dict = {
-                "ggH" :{
+            # sig_MC_dict = {
+            #     "ggH" :{
+            #         "values" :np.concatenate(group_ggH_vals, axis=0),
+            #         "weights":np.concatenate(group_ggH_weights, axis=0)
+            #     },  
+            #     "VBF" :{
+            #         "values" :np.concatenate(group_VBF_vals, axis=0),
+            #         "weights":np.concatenate(group_VBF_weights, axis=0)
+            #     },  
+            # }
+            sig_MC_dict = OrderedDict()
+            if len(group_ggH_vals) > 0:
+                sig_MC_dict["ggH"] = {
                     "values" :np.concatenate(group_ggH_vals, axis=0),
                     "weights":np.concatenate(group_ggH_weights, axis=0)
-                },  
-                "VBF" :{
+                }
+            if len(group_VBF_vals) > 0:
+                sig_MC_dict["VBF"] = {
                     "values" :np.concatenate(group_VBF_vals, axis=0),
                     "weights":np.concatenate(group_VBF_weights, axis=0)
-                },  
-            }
+                }
             
 
 
