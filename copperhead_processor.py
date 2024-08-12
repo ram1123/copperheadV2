@@ -75,7 +75,7 @@ def getCosThetaCS(
     dimuon_mass = dimuon.mass
     nominator = 2*(mu1.pz*mu2.energy - mu2.pz*mu1.energy)
     demoninator = dimuon_mass * (dimuon_mass**2 + dimuon_pt**2)**(0.5)
-    cos_theta_cs = nominator/demoninator
+    cos_theta_cs = -(nominator/demoninator) # add negative sign to match the sign on pisa implementation at https://github.com/green-cabbage/copperhead_fork2/blob/Run3/python/math_tools.py#L152-L223
     return cos_theta_cs
 
 def getPhiCS(
@@ -113,8 +113,9 @@ def getPhiCS(
     Q_coeff = ( ((dimuon_mass*dimuon_mass + (dimuon_pt*dimuon_pt)))**(0.5) )/dimuon_mass
     delta_T_dot_R_T = (mu_neg.px-mu_pos.px)*R_T.x + (mu_neg.py-mu_pos.py)*R_T.y 
     delta_R_term = delta_T_dot_R_T
+    delta_R_term = -delta_R_term # add negative sign to match the sign on pisa implementation at https://github.com/green-cabbage/copperhead_fork2/blob/Run3/python/math_tools.py#L152-L223
     delta_T_dot_Q_T = (mu_neg.px-mu_pos.px)*Q_T.px + (mu_neg.py-mu_pos.py)*Q_T.py
-    # delta_T_dot_Q_T = -delta_T_dot_Q_T
+    delta_T_dot_Q_T = -delta_T_dot_Q_T # add negative sign to match the sign on pisa implementation at https://github.com/green-cabbage/copperhead_fork2/blob/Run3/python/math_tools.py#L152-L223
     delta_Q_term = delta_T_dot_Q_T
     delta_Q_term = delta_Q_term / dimuon_pt # normalize since Q_T should techincally be a unit vector
     phi_cs = np.arctan2(Q_coeff*delta_R_term, delta_Q_term)
@@ -991,7 +992,7 @@ class EventProcessor(processor.ProcessorABC):
             wgt_nominal = wgt_nominal*out_dict["wgt_nominal_btag_wgt"]
         # original  zpt start -------------------
         # if do_zpt:
-        #     wgt_nominal = wgt_nominal*zpt_weight
+            # wgt_nominal = wgt_nominal*zpt_weight
         # original zpt end ------------------------------
 
         # add in weights
