@@ -300,7 +300,7 @@ class EventProcessor(processor.ProcessorABC):
             if self.test:
                 print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
-        do_pu_wgt = False
+        do_pu_wgt = True
         if do_pu_wgt:
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
             if events.metadata["is_mc"]:
@@ -489,12 +489,12 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            # sumWeights = events.metadata['sumGenWgts']
-            # print(f"sumWeights: {(sumWeights)}")
+            sumWeights = events.metadata['sumGenWgts']
+            print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # skim off bad events onto events and other related variables
         # # original -----------------------------------------------
