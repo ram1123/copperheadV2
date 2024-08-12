@@ -132,7 +132,8 @@ class EventProcessor(processor.ProcessorABC):
         """
         self.config = config
 
-        self.test = test_mode# False
+        # self.test_mode = test_mode
+        self.test_mode = True
         dict_update = {
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : False, # False
@@ -182,10 +183,7 @@ class EventProcessor(processor.ProcessorABC):
         """
 
 
-        if self.test:
-            print(f"copperhead2 events muon pt: {ak.to_dataframe(events.Muon.pt)}")
-            print(f"copperhead2 type(events): {type(events)}")
-            print(f"copperhead2 events.metadata: {events.metadata}")
+
         """
         Apply LHE cuts for DY sample stitching
         Basically remove events that has dilepton mass between 100 and 200 GeV
@@ -263,15 +261,6 @@ class EventProcessor(processor.ProcessorABC):
 # --------------------------------------------------------            
 
             
-            # if self.test:
-            #     print(f"copperhead2 EventProcessor mu1_match: \n {mu1_match}")
-            #     print(f"copperhead2 EventProcessor mu2_match: \n {mu2_match}")
-            #     print(f"copperhead2 EventProcessor trigger_match: \n {trigger_match}")
-            #     print(f"copperhead2 EventProcessor events.HLT.IsoMu24 and trigger_match mismatch count: \n {ak.sum(events.HLT.IsoMu24 != trigger_match)}")
-                
-            # print(f"copperhead2 EventProcessor trigger_match sum: {ak.sum(trigger_match)}")
-            # print(f"copperhead2 EventProcessor trigger_non_match: \n {ak.sum(trigger_non_match)}")
-            # print(f"copperhead2 EventProcessor trigger_non_match ratio: {ak.sum(trigger_non_match)/ak.sum(trigger_match)}")
             
 
 # just reading test start --------------------------------------------------------------------------        
@@ -297,10 +286,13 @@ class EventProcessor(processor.ProcessorABC):
         else:
             lumi_info = LumiMask(self.config["lumimask"])
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
-            if self.test:
+            if self.test_mode:
                 print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
         do_pu_wgt = True
+        if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
+            do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
+            
         if do_pu_wgt:
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
             if events.metadata["is_mc"]:
@@ -488,14 +480,12 @@ class EventProcessor(processor.ProcessorABC):
         is_mc = events.metadata["is_mc"]
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
-            # small files testing start ------------------------------------------
-            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
-            # small files testing end ------------------------------------------
-            # original start ----------------------------------------------
-            sumWeights = events.metadata['sumGenWgts']
-            print(f"sumWeights: {(sumWeights)}")
-            # original end -------------------------------------------------
+            if self.test_mode: # for small files local testing
+                sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+                print(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
+            else:
+                sumWeights = events.metadata['sumGenWgts']
+                print(f"sumWeights: {(sumWeights)}")
         # skim off bad events onto events and other related variables
         # # original -----------------------------------------------
         # events = events[event_filter==True]
@@ -547,10 +537,8 @@ class EventProcessor(processor.ProcessorABC):
         dimuon_dEta = abs(mu1.eta - mu2.eta)
         dimuon_dPhi = abs(mu1.delta_phi(mu2))
         dimuon = mu1+mu2
-        # fill in pd Dataframe as placeholder. Should be fine since we don't need jagged arrays
-        # dimuon_ebe_mass_res = self.get_mass_resolution(events, test_mode=self.test)
         
-        dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test)
+        dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode)
         rel_dimuon_ebe_mass_res = dimuon_ebe_mass_res/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
         dimuon_cos_theta_eta, dimuon_phi_eta = etaFrame_variables(mu1,mu2)
@@ -991,9 +979,6 @@ class EventProcessor(processor.ProcessorABC):
     
     def get_mass_resolution(self, dimuon, mu1,mu2, is_mc:bool, test_mode=False):
         # Returns absolute mass resolution!
-        # mu1 = events.Muon[:,0]
-        # mu2 = events.Muon[:,1]
-        # muon_E = (mu1+mu2).mass /2
         muon_E = dimuon.mass /2
         dpt1 = (mu1.ptErr / mu1.pt) * muon_E
         dpt2 = (mu2.ptErr / mu2.pt) * muon_E
@@ -1120,7 +1105,7 @@ class EventProcessor(processor.ProcessorABC):
             & (matched_mu_iso < self.config["muon_iso_cut"])
             & matched_mu_id
         )
-        if self.test:
+        if self.test_mode:
             print(f"jet loop matched_mu_pass b4 : {matched_mu_pass}")
         matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
         clean = ~(ak.fill_none(matched_mu_pass, value=False))
@@ -1378,7 +1363,7 @@ class EventProcessor(processor.ProcessorABC):
         nmuons = ak.num(events.Muon, axis=1)
         if variation == "nominal":
             for cutout in cutouts:
-                sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout, test_mode=self.test)
+                sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout)
                 sj_out = {
                     key+"_"+variation : val \
                     for key, val in sj_out.items()
