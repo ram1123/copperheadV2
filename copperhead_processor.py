@@ -300,15 +300,15 @@ class EventProcessor(processor.ProcessorABC):
             if self.test:
                 print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
-        # turn off pu weights test start ---------------------------------
-        # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
-        if events.metadata["is_mc"]:
-            pu_wgts = pu_evaluator(
-                        self.config,
-                        events.Pileup.nTrueInt,
-                        onTheSpot=False # use locally saved true PU dist
-                )
-        # turn off pu weights test end ---------------------------------
+        do_pu_wgt = True
+        if do_pu_wgt:
+            # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
+            if events.metadata["is_mc"]:
+                pu_wgts = pu_evaluator(
+                            self.config,
+                            events.Pileup.nTrueInt,
+                            onTheSpot=False # use locally saved true PU dist
+                    )
        
         # # Save raw variables before computing any corrections
         # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
@@ -350,12 +350,7 @@ class EventProcessor(processor.ProcessorABC):
             # events["Muon", "phi_fsr"] = events.Muon.phi
             # events["Muon", "iso_fsr"] = events.Muon.pfRelIso04_all
         
-        # Note temporary soln to copperheadV1 pt_raw being overwritten with fsr... and possibly with geofit
-        # which is important for the muon selection later on
-        # events["Muon", "pt_raw"] = events.Muon.pt
-        # events["Muon", "eta_raw"] = events.Muon.eta
-        # events["Muon", "phi_raw"] = events.Muon.phi
-        
+       
         #-----------------------------------------------------------------
         
         # apply Beam constraint or geofit or nothing if neither
@@ -379,19 +374,13 @@ class EventProcessor(processor.ProcessorABC):
                 print(f"doing neither beam constraint nor geofit!")
                 pass
 
-        ## Note temporary soln to copperheadV1 pt_raw being overwritten with fsr... and possibly with geofit
-        # # which is important for the muon selection later on
-        # events["Muon", "pt_raw"] = events.Muon.pt
-        # events["Muon", "eta_raw"] = events.Muon.eta
-        # events["Muon", "phi_raw"] = events.Muon.phi
-        # # # --------------------------------------------------------
-        
-        # # --------------------------------------------------------#
-        # # Select muons that pass pT, eta, isolation cuts,
-        # # muon ID and quality flags
-        # # Select events with 2 good muons, no electrons,
-        # # passing quality cuts and at least one good PV
-        # # --------------------------------------------------------#
+
+        # --------------------------------------------------------#
+        # Select muons that pass pT, eta, isolation cuts,
+        # muon ID and quality flags
+        # Select events with 2 good muons, no electrons,
+        # passing quality cuts and at least one good PV
+        # --------------------------------------------------------#
 
         # Apply event quality flags
         evnt_qual_flg_selection = ak.ones_like(event_filter)
@@ -412,16 +401,6 @@ class EventProcessor(processor.ProcessorABC):
         )
         # original muon selection end ------------------------------------------------
 
-        
-        # # testing muon selection ------------------------------------------------
-        # muon_selection = (
-        #     (ak.values_astype(events.Muon.pt_raw,  "float64") > self.config["muon_pt_cut"])
-        #     & (ak.values_astype(abs(events.Muon.eta_raw), "float64")  < self.config["muon_eta_cut"])
-        #     & (ak.values_astype(events.Muon.pfRelIso04_all, "float64")  < self.config["muon_iso_cut"])
-        #     # & events.Muon[muon_id]
-        #     & events.Muon[self.config["muon_id"]]
-        # )
-        # # testing muon selection end ------------------------------------------------
 
         muons = events.Muon[muon_selection]
         # muons = ak.to_packed(events.Muon[muon_selection])
@@ -548,7 +527,7 @@ class EventProcessor(processor.ProcessorABC):
 
        
         # turn off pu weights test start ---------------------------------
-        if is_mc:
+        if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
         pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
@@ -731,10 +710,9 @@ class EventProcessor(processor.ProcessorABC):
             # weights.add("lumi_weight", weight=ak.ones_like(events.genWeight)*0.012550352440399929)
             # hard code to match lumi weight of valerie's code end ----
             
-            # turn off pu weights test start ---------------------------------
-            print("adding PU wgts!")
-            weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
-            # turn off pu weights test end ---------------------------------
+            if do_pu_wgt:
+                print("adding PU wgts!")
+                weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
             # L1 prefiring weights
             if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
                 L1_nom = events.L1PreFiringWeight.Nom
@@ -966,13 +944,19 @@ class EventProcessor(processor.ProcessorABC):
         do_zpt = ('dy' in dataset) and is_mc
         # do_zpt = False
         if do_zpt:
+            # we explicitly don't directly add zpt weights to the weights variables 
+            # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
+            # once kind of screws with the dak awkward array
             print("doing zpt weight!")
             zpt_weight =\
                      self.evaluator[self.zpt_path](dimuon.pt, njets)
-            # print(f"zpt_weight: {zpt_weight.compute()}")
-            # test  zpt start -------------------
-            weights.add("zpt_wgt", weight=zpt_weight) # leave it outsie like btag
-            # test zpt end ------------------------------
+            
+            out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
+
+            
+            # # test  zpt start -------------------
+            # weights.add("zpt_wgt", weight=zpt_weight) # leave it outsie like btag
+            # # test zpt end ------------------------------
         
 
         # apply vbf filter phase cut if DY test start ---------------------------------
@@ -988,11 +972,13 @@ class EventProcessor(processor.ProcessorABC):
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         wgt_nominal = weights.weight()
         if "wgt_nominal_btag_wgt" in out_dict.keys():
+            # btag is seperated due to requiring information of other weights, and adding it directly to the weights varibles
+            # screws up with the values
             print("adding btag wgts!")
             wgt_nominal = wgt_nominal*out_dict["wgt_nominal_btag_wgt"]
         # original  zpt start -------------------
-        # if do_zpt:
-            # wgt_nominal = wgt_nominal*zpt_weight
+        if do_zpt:
+            wgt_nominal = wgt_nominal*out_dict["wgt_nominal_zpt_wgt"]
         # original zpt end ------------------------------
 
         # add in weights
