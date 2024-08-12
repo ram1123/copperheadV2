@@ -4,12 +4,12 @@ import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
 import correctionlib
-from corrections.rochester import apply_roccor
-from corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
-from corrections.geofit import apply_geofit
-from corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
-# from corrections.weight import Weights
-from corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager, qgl_weights_keepDim, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights
+from src.corrections.rochester import apply_roccor
+from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
+from src.corrections.geofit import apply_geofit
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
+# from src.corrections.weight import Weights
+from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager, qgl_weights_keepDim, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -300,7 +300,7 @@ class EventProcessor(processor.ProcessorABC):
             if self.test:
                 print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
 
-        do_pu_wgt = True
+        do_pu_wgt = False
         if do_pu_wgt:
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
             if events.metadata["is_mc"]:
@@ -312,14 +312,7 @@ class EventProcessor(processor.ProcessorABC):
        
         # # Save raw variables before computing any corrections
         # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
-        # # original -------------------------------------------------------------------
-        # events["Muon", "pt_raw"] = events.Muon.pt
-        # events["Muon", "eta_raw"] = events.Muon.eta
-        # events["Muon", "phi_raw"] = events.Muon.phi
-        # events["Muon", "pfRelIso04_all_raw"] = events.Muon.pfRelIso04_all
-        # # original end ---------------------------------------------------------------
-
-        # attempt at fixing fsr issue -------------------------------------------------------------------
+        # attempt at fixing fsr issue start -------------------------------------------------------------------
         events["Muon", "pt_raw"] = ak.ones_like(events.Muon.pt) * events.Muon.pt
         events["Muon", "eta_raw"] = ak.ones_like(events.Muon.eta) * events.Muon.eta
         events["Muon", "phi_raw"] = ak.ones_like(events.Muon.phi) * events.Muon.phi
@@ -346,9 +339,6 @@ class EventProcessor(processor.ProcessorABC):
             # if no fsr, just copy 'pt' to 'pt_fsr'
             applied_fsr = (ak.zeros_like(events.Muon.pt) != 0) # boolean array of Falses
             events["Muon", "pt_fsr"] = events.Muon.pt
-            # events["Muon", "eta_fsr"] = events.Muon.eta
-            # events["Muon", "phi_fsr"] = events.Muon.phi
-            # events["Muon", "iso_fsr"] = events.Muon.pfRelIso04_all
         
        
         #-----------------------------------------------------------------
@@ -499,12 +489,12 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             # small files testing start ------------------------------------------
-            # sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-            # print(f"sumWeights: {(sumWeights.compute())}") # for testing
+            sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+            print(f"sumWeights: {(sumWeights.compute())}") # for testing
             # small files testing end ------------------------------------------
             # original start ----------------------------------------------
-            sumWeights = events.metadata['sumGenWgts']
-            print(f"sumWeights: {(sumWeights)}")
+            # sumWeights = events.metadata['sumGenWgts']
+            # print(f"sumWeights: {(sumWeights)}")
             # original end -------------------------------------------------
         # skim off bad events onto events and other related variables
         # # original -----------------------------------------------
