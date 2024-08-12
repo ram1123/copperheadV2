@@ -1,5 +1,5 @@
 from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
-from copperhead_processor import EventProcessor
+from src.copperhead_processor import EventProcessor
 # NanoAODSchema.warn_missing_crossrefs = False
 import awkward as ak
 import matplotlib.pyplot as plt
@@ -20,7 +20,7 @@ from itertools import islice
 import copy
 import argparse
 from dask.distributed import performance_report
-from corrections.evaluator import nnlops_weights, qgl_weights
+from src.corrections.evaluator import nnlops_weights, qgl_weights
 import os
 
 # dask.config.set({'logging.distributed': 'error'})
@@ -34,7 +34,7 @@ test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
 import gc
 import ctypes
-from lib.get_parameters import getParametersForYr
+from src.lib.get_parameters import getParametersForYr
 
 def trim_memory() -> int:
      libc = ctypes.CDLL("libc.so.6")
@@ -83,7 +83,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             entry_start = entry_start,
             entry_stop = entry_start+test_size,
         ).events()
-        
+
+    # events.to_parquet(f"./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}")
     out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
     
@@ -184,6 +185,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             "ll_zstar_log" : np.log(out_collections["ll_zstar"]),
             "zeppenfeld" : (out_collections["zeppenfeld"]),
             "event" : (out_collections["event"]),
+            "rpt" : (out_collections["rpt"]),
             # temporary test start ------------------------------------
             # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
             # temporary test end ------------------------------------
@@ -312,7 +314,7 @@ if __name__ == "__main__":
     """
     
 
-    config = getParametersForYr(args.year)
+    config = getParametersForYr("./configs/parameters/" , args.year)
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
     if not test_mode: # full scale implementation
