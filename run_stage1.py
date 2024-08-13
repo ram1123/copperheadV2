@@ -91,14 +91,14 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # events.to_parquet(f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}')
     # print(f'type(dataset_dict["metadata"]): {type(dataset_dict["metadata"])}')
     
-    # metadata = OmegaConf.create(dataset_dict["metadata"])
-    # filename = f'./test/stage1_inputs/{{dataset_dict["metadata"]["dataset"]}}/metadata.yaml'
+    # metadata = OmegaConf.create(dataset_dict)
+    # filename = f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}/dataset_dict.yaml'
     # with open(filename, "w") as file:
     #     OmegaConf.save(config=metadata, f=file.name)
     # raise ValueError
     # save input events for CI testing end ---------------------------------------------
     
-    out_collections = processor.process(events, dataset_dict["metadata"])
+    out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
     # ------------------------------------------

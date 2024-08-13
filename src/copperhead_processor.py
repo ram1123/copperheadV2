@@ -177,7 +177,7 @@ class EventProcessor(processor.ProcessorABC):
         extractor_instance.finalize()
         self.evaluator = extractor_instance.make_evaluator()
 
-    def process(self, events: coffea_nanoevent, metadata: dict):
+    def process(self, events: coffea_nanoevent):
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
@@ -189,11 +189,10 @@ class EventProcessor(processor.ProcessorABC):
         Basically remove events that has dilepton mass between 100 and 200 GeV
         """
         event_filter = ak.ones_like(events.HLT.IsoMu24) # 1D boolean array to be used to filter out bad events
-        dataset = metadata['dataset']
+        dataset = events.metadata['dataset']
         print(f"dataset: {dataset}")
-        print(f"metadata: {metadata}")
-        NanoAODv = metadata['NanoAODv']
-        is_mc = metadata['is_mc']
+        print(f"events.metadata: {events.metadata}")
+        NanoAODv = events.metadata['NanoAODv']
         print(f"NanoAODv: {NanoAODv}")
         # LHE cut original start -----------------------------------------------------------------------------
         if dataset == 'dy_M-50': # if dy_M-50, apply LHE cut
@@ -280,7 +279,7 @@ class EventProcessor(processor.ProcessorABC):
         # events = events[event_filter]
         # event_filter = ak.ones_like(events.HLT.IsoMu24)
         
-        if is_mc:
+        if events.metadata["is_mc"]:
             lumi_mask = ak.ones_like(event_filter)
 
         
@@ -296,7 +295,7 @@ class EventProcessor(processor.ProcessorABC):
             
         if do_pu_wgt:
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
-            if is_mc:
+            if events.metadata["is_mc"]:
                 pu_wgts = pu_evaluator(
                             self.config,
                             events.Pileup.nTrueInt,
@@ -317,7 +316,7 @@ class EventProcessor(processor.ProcessorABC):
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
             print("doing rochester!")
-            apply_roccor(events, self.config["roccor_file"], metadata["is_mc"])
+            apply_roccor(events, self.config["roccor_file"], events.metadata["is_mc"])
             events["Muon", "pt"] = events.Muon.pt_roch
         # FSR recovery
         if self.config["do_fsr"]:
@@ -478,14 +477,14 @@ class EventProcessor(processor.ProcessorABC):
         
         
         # calculate sum of gen weight b4 skimming off bad events
-        
+        is_mc = events.metadata["is_mc"]
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             if self.test_mode: # for small files local testing
                 sumWeights = ak.sum(events.genWeight, axis=0) # for testing
                 print(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
             else:
-                sumWeights = metadata['sumGenWgts']
+                sumWeights = events.metadata['sumGenWgts']
                 print(f"sumWeights: {(sumWeights)}")
         # skim off bad events onto events and other related variables
         # # original -----------------------------------------------
@@ -547,7 +546,7 @@ class EventProcessor(processor.ProcessorABC):
         # skip validation for genjets for now -----------------------------------------------
         # #fill genjets
         
-        if is_mc:
+        if events.metadata["is_mc"]:
             #fill gen jets for VBF filter on postprocess
             gjets = events.GenJet
             gleptons = events.GenPart[
@@ -606,7 +605,8 @@ class EventProcessor(processor.ProcessorABC):
             gjj_dPhi = abs(gjet1.delta_phi(gjet2))
             gjj_dR = gjet1.delta_r(gjet2)
 
-        self.prepare_jets(events, is_mc, NanoAODv=NanoAODv)
+
+        self.prepare_jets(events, NanoAODv=NanoAODv)
 
 
         # ------------------------------------------------------------#
@@ -625,7 +625,7 @@ class EventProcessor(processor.ProcessorABC):
         #testing 
         do_jecunc = False
         do_jerunc = False
-        
+        is_mc = events.metadata["is_mc"]
         # cache = events.caches[0]
         factory = None
         if do_jec:
@@ -650,11 +650,11 @@ class EventProcessor(processor.ProcessorABC):
         
         # # TODO: only consider nuisances that are defined in run parameters
         # # Compute JEC uncertainties
-        # if metadata["is_mc"] and do_jecunc:
+        # if events.metadata["is_mc"] and do_jecunc:
         #     jets = self.jec_factories_mc["junc"].build(jets, lazy_cache=cache)
     
         # # # Compute JER uncertainties
-        # # if metadata["is_mc"] and do_jerunc:
+        # # if events.metadata["is_mc"] and do_jerunc:
         # #     jets = self.jec_factories_mc["jer"].build(jets, lazy_cache=cache)
         
         # # # TODO: JER nuisances
@@ -670,7 +670,7 @@ class EventProcessor(processor.ProcessorABC):
         # # and L1 prefiring weights
         # # ------------------------------------------------------------#
         weights = Weights(None, storeIndividual=True) # none for dask awkward
-        
+        is_mc = events.metadata["is_mc"]
         if is_mc:
             weights.add("genWeight", weight=events.genWeight)
             # original initial weight start ----------------
@@ -715,12 +715,12 @@ class EventProcessor(processor.ProcessorABC):
             # + jec_pars["jec_variations"]
             # + jec_pars["jer_variations"]
         )
-        if is_mc:
+        if events.metadata["is_mc"]:
             # moved nnlops reweighting outside of dak process and to run_stage1-----------------
-            do_nnlops = self.config["do_nnlops"] and ("ggh" in metadata["dataset"])
+            do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
             if do_nnlops:
                 print("doing NNLOPS!")
-                nnlopsw = nnlops_weights(events.HTXS.Higgs_pt, events.HTXS.njets30, self.config, metadata["dataset"])
+                nnlopsw = nnlops_weights(events.HTXS.Higgs_pt, events.HTXS.njets30, self.config, events.metadata["dataset"])
                 weights.add("nnlops", weight=nnlopsw)
                 # print(f"nnlopsw: \n  {ak.to_numpy(nnlopsw.compute())}")
         #     # else:
@@ -761,7 +761,7 @@ class EventProcessor(processor.ProcessorABC):
             )
             if do_lhe:
                 print("doing LHE!")
-                lhe_ren, lhe_fac = lhe_weights(events, metadata["dataset"], self.config["year"])
+                lhe_ren, lhe_fac = lhe_weights(events, events.metadata["dataset"], self.config["year"])
                 weights.add("LHERen", 
                     weight=ak.ones_like(lhe_ren["up"]),
                     weightUp=lhe_ren["up"],
@@ -774,7 +774,7 @@ class EventProcessor(processor.ProcessorABC):
                 )
             
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
-            dataset = metadata["dataset"]
+            dataset = events.metadata["dataset"]
             # do_thu = (
             #     ("vbf" in dataset)
             #     and ("dy" not in dataset)
@@ -881,7 +881,6 @@ class EventProcessor(processor.ProcessorABC):
         for variation in pt_variations:
             jet_loop_dict = self.jet_loop(
                 events, 
-                metadata,
                 jets,
                 dimuon,
                 mu1,
@@ -918,8 +917,8 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"njets: {ak.to_numpy(njets.compute())}")
 
         # do zpt weight at the very end
-        dataset = metadata["dataset"]
-        
+        dataset = events.metadata["dataset"]
+        is_mc = events.metadata["is_mc"]
         do_zpt = ('dy' in dataset) and is_mc
         # do_zpt = False
         if do_zpt:
@@ -1002,7 +1001,7 @@ class EventProcessor(processor.ProcessorABC):
         return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
         # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
     
-    def prepare_jets(self, events, is_mc, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
+    def prepare_jets(self, events, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
         # Initialize missing fields (needed for JEC)
         print(f"prepare jets NanoAODv: {NanoAODv}")
         events["Jet", "pt_raw"] = (1 - events.Jet.rawFactor) * events.Jet.pt
@@ -1013,7 +1012,7 @@ class EventProcessor(processor.ProcessorABC):
             fixedGridRhoFastjetAll = events.fixedGridRhoFastjetAll
         events["Jet", "rho"] = ak.broadcast_arrays(fixedGridRhoFastjetAll, events.Jet.pt)[0]
     
-        if is_mc:
+        if events.metadata["is_mc"]:
             # pt_gen is used for JEC (one of the factory name map values)            
             events["Jet", "pt_gen"] =  ak.values_astype(
                 ak.fill_none(events.Jet.matched_gen.pt, value=0.0),
@@ -1053,7 +1052,6 @@ class EventProcessor(processor.ProcessorABC):
     def jet_loop(
         self,
         events,
-        metadata,
         jets,
         dimuon,
         mu1,
@@ -1064,8 +1062,8 @@ class EventProcessor(processor.ProcessorABC):
         do_jecunc = False,
         do_jerunc = False,
     ):
-        is_mc = metadata["is_mc"]
-        dataset = metadata["dataset"]
+        is_mc = events.metadata["is_mc"]
+        dataset = events.metadata["dataset"]
         if (not is_mc) and variation != "nominal":
             return
         # variables = pd.DataFrame(index=output.index)
