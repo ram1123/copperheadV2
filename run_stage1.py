@@ -57,44 +57,40 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     if save_path is None:
         save_path = "/depot/cms/users/yun79/results/stage1/test/" # default
         # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
-    if not test: # full scale implementation
-        # print(f"dataset_dict: {dataset_dict['files']}")
-        events = NanoEventsFactory.from_root(
-            dataset_dict["files"],
-            schemaclass=NanoAODSchema,
-            metadata= dataset_dict["metadata"],
-            uproot_options={
-                "timeout":2400,
-                # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
-            },
-        ).events()
-    else: # do it in a small set for developing and testing
-        print("local testing")
-        np.random.seed(0) 
-        # test_size = 50
-        test_size = 1000
-        entry_start= 1000
-        root_file = list(dataset_dict["files"].keys())[0]
-        print(f"test root_file: {root_file}")
-        events = NanoEventsFactory.from_root(
-            {root_file : "Events"}, # dataset_dict is just a root file path string in test case
-            schemaclass=NanoAODSchema,
-            metadata= dataset_dict["metadata"],
-            delayed= False,
-            entry_start = entry_start,
-            entry_stop = entry_start+test_size,
-        ).events()
+    # print(f"dataset_dict: {dataset_dict['files']}")
+    events = NanoEventsFactory.from_root(
+        dataset_dict["files"],
+        schemaclass=NanoAODSchema,
+        metadata= dataset_dict["metadata"],
+        uproot_options={
+            "timeout":2400,
+            # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
+        },
+    ).events()
+
 
     # save input events for CI testing start ---------------------------------------------
-
-    
-    # events.to_parquet(f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}')
-    # print(f'type(dataset_dict["metadata"]): {type(dataset_dict["metadata"])}')
-    
-    # metadata = OmegaConf.create(dataset_dict)
-    # filename = f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}/dataset_dict.yaml'
+    # dir = f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}'
+    # if not os.path.exists(dir):
+    #     os.makedirs(dir)
+    # # save dataset_dict as input
+    # input_dataset = OmegaConf.create(dataset_dict)
+    # filename = dir + '/dataset_dict.yaml'
+    # try:
+    #     os.remove(filename)
+    # except OSError:
+    #     pass
     # with open(filename, "w") as file:
-    #     OmegaConf.save(config=metadata, f=file.name)
+    #     OmegaConf.save(config=input_dataset, f=file.name)
+    # # now save output to compare as target
+    # filename = f'./test/stage1_outputs/{dataset_dict["metadata"]["dataset"]}'
+    # try:
+    #     os.remove(filename)
+    # except OSError:
+    #     pass
+    # out_collections = processor.process(events)
+    # zip = ak.zip(out_collections, depth_limit=1)
+    # zip.to_parquet(filename)
     # raise ValueError
     # save input events for CI testing end ---------------------------------------------
     

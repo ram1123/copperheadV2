@@ -193,6 +193,7 @@ class EventProcessor(processor.ProcessorABC):
         print(f"dataset: {dataset}")
         print(f"events.metadata: {events.metadata}")
         NanoAODv = events.metadata['NanoAODv']
+        is_mc = events.metadata['is_mc']
         print(f"NanoAODv: {NanoAODv}")
         # LHE cut original start -----------------------------------------------------------------------------
         if dataset == 'dy_M-50': # if dy_M-50, apply LHE cut
@@ -279,15 +280,14 @@ class EventProcessor(processor.ProcessorABC):
         # events = events[event_filter]
         # event_filter = ak.ones_like(events.HLT.IsoMu24)
         
-        if events.metadata["is_mc"]:
+        if is_mc:
             lumi_mask = ak.ones_like(event_filter)
 
         
         else:
             lumi_info = LumiMask(self.config["lumimask"])
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
-            if self.test_mode:
-                print(f"copperhead2 EventProcessor lumi_mask: \n {ak.to_numpy(lumi_mask)}")
+
 
         do_pu_wgt = True
         if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
@@ -295,7 +295,7 @@ class EventProcessor(processor.ProcessorABC):
             
         if do_pu_wgt:
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
-            if events.metadata["is_mc"]:
+            if is_mc:
                 pu_wgts = pu_evaluator(
                             self.config,
                             events.Pileup.nTrueInt,
@@ -316,7 +316,7 @@ class EventProcessor(processor.ProcessorABC):
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
             print("doing rochester!")
-            apply_roccor(events, self.config["roccor_file"], events.metadata["is_mc"])
+            apply_roccor(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
         # FSR recovery
         if self.config["do_fsr"]:
@@ -477,7 +477,6 @@ class EventProcessor(processor.ProcessorABC):
         
         
         # calculate sum of gen weight b4 skimming off bad events
-        is_mc = events.metadata["is_mc"]
         if is_mc:
             events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             if self.test_mode: # for small files local testing
@@ -546,7 +545,7 @@ class EventProcessor(processor.ProcessorABC):
         # skip validation for genjets for now -----------------------------------------------
         # #fill genjets
         
-        if events.metadata["is_mc"]:
+        if is_mc:
             #fill gen jets for VBF filter on postprocess
             gjets = events.GenJet
             gleptons = events.GenPart[
@@ -625,7 +624,6 @@ class EventProcessor(processor.ProcessorABC):
         #testing 
         do_jecunc = False
         do_jerunc = False
-        is_mc = events.metadata["is_mc"]
         # cache = events.caches[0]
         factory = None
         if do_jec:
@@ -670,7 +668,6 @@ class EventProcessor(processor.ProcessorABC):
         # # and L1 prefiring weights
         # # ------------------------------------------------------------#
         weights = Weights(None, storeIndividual=True) # none for dask awkward
-        is_mc = events.metadata["is_mc"]
         if is_mc:
             weights.add("genWeight", weight=events.genWeight)
             # original initial weight start ----------------
@@ -715,7 +712,7 @@ class EventProcessor(processor.ProcessorABC):
             # + jec_pars["jec_variations"]
             # + jec_pars["jer_variations"]
         )
-        if events.metadata["is_mc"]:
+        if is_mc:
             # moved nnlops reweighting outside of dak process and to run_stage1-----------------
             do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
             if do_nnlops:
@@ -918,7 +915,6 @@ class EventProcessor(processor.ProcessorABC):
 
         # do zpt weight at the very end
         dataset = events.metadata["dataset"]
-        is_mc = events.metadata["is_mc"]
         do_zpt = ('dy' in dataset) and is_mc
         # do_zpt = False
         if do_zpt:
