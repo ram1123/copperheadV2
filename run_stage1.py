@@ -22,6 +22,7 @@ import argparse
 from dask.distributed import performance_report
 from src.corrections.evaluator import nnlops_weights, qgl_weights
 import os
+from omegaconf import OmegaConf
 
 # dask.config.set({'logging.distributed': 'error'})
 import logging
@@ -84,16 +85,21 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             entry_stop = entry_start+test_size,
         ).events()
 
-    # events.to_parquet(f"./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}")
-    out_collections = processor.process(events)
-    dataset_fraction = dataset_dict["metadata"]["fraction"]
+    # save input events for CI testing start ---------------------------------------------
+
     
-    # Dmitry test 4 start ----------------------------
- 
-    # skim = dak.to_parquet(ak.zip(out_collections), save_path, compute=False)
-    # print(f"skim: {skim}")
-    # return skim
-    # DMitry test 4 end--------------------------------
+    # events.to_parquet(f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}')
+    # print(f'type(dataset_dict["metadata"]): {type(dataset_dict["metadata"])}')
+    
+    # metadata = OmegaConf.create(dataset_dict["metadata"])
+    # filename = f'./test/stage1_inputs/{{dataset_dict["metadata"]["dataset"]}}/metadata.yaml'
+    # with open(filename, "w") as file:
+    #     OmegaConf.save(config=metadata, f=file.name)
+    # raise ValueError
+    # save input events for CI testing end ---------------------------------------------
+    
+    out_collections = processor.process(events, dataset_dict["metadata"])
+    dataset_fraction = dataset_dict["metadata"]["fraction"]
 
     # ------------------------------------------
     skim_dict =  {
