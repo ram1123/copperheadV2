@@ -19,9 +19,14 @@ from coffea.analysis_tools import Weights
 import copy
 from coffea.nanoevents.methods import vector
 import sys
+# import vector # hep vector
+# vector.register_awkward()
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
+
+def _mass2_kernel(t, x, y, z):
+    return t * t - x * x - y * y - z * z
 
 # Dmitry's implementation of delta_r
 def delta_r_V1(eta1, eta2, phi1, phi2):
@@ -95,20 +100,31 @@ def getPhiCS(
     dimuon_mass = dimuon.mass
     beam_vec_z = ak.where((dimuon_pz>0), ak.ones_like(dimuon_pz), -ak.ones_like(dimuon_pz))
     # intialize beam vector as threevector to do cross product
+    # beam_vec =  ak.zip(
+    #     {
+    #         "x": ak.zeros_like(dimuon_pz),
+    #         "y": ak.zeros_like(dimuon_pz),
+    #         "z": beam_vec_z,
+    #     },
+    #     with_name="ThreeVector",
+    #     behavior=vector.behavior,
+    # )
+    # print(f"vector.__file__: {vector.__file__}")
     beam_vec =  ak.zip(
         {
             "x": ak.zeros_like(dimuon_pz),
             "y": ak.zeros_like(dimuon_pz),
             "z": beam_vec_z,
         },
-        with_name="ThreeVector",
-        behavior=vector.behavior,
+        with_name="Momentum3D",
+        behavior=vector.behavior
     )
     # apply cross product. note x,y,z of dimuon refers to its momentum, NOT its location
     # mu.px == mu.x, mu.py == mu.y and so on
-    R_T = beam_vec.cross(dimuon)
-    # make it a unit vector
-    R_T = R_T.unit
+    dimuon3D_vec = ak.zip({"x":dimuon.x, "y":dimuon.y, "z":dimuon.z}, with_name="Momentum3D", behavior=vector.behavior)
+    R_T = beam_vec.cross(dimuon3D_vec) # direct cross product with dimuon doesn't work bc it's a 5D vector with x,y,z,t and charge
+    
+    R_T = R_T.unit() # make it a unit vector
     Q_T = dimuon
     Q_coeff = ( ((dimuon_mass*dimuon_mass + (dimuon_pt*dimuon_pt)))**(0.5) )/dimuon_mass
     delta_T_dot_R_T = (mu_neg.px-mu_pos.px)*R_T.x + (mu_neg.py-mu_pos.py)*R_T.y 
@@ -596,9 +612,15 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"gjets_sorted: {gjets_sorted.compute()}")
             gjet1 = gjets_sorted[:,0]
             gjet2 = gjets_sorted[:,1] 
-            gjj = gjet1 + gjet2
+            # original start -----------------------------------------------
+            # gjj = gjet1 + gjet2
             # print(f"gjj.mass: {gjj_mass.compute().show(formatter=np.set_printoptions(threshold=sys.maxsize))}")
             # print(f"gjj.mass: {ak.sum(gjj_mass,axis=None).compute()}")
+            # original end -------------------------------------------------
+
+            gjet1_Lvec = ak.zip({"pt":gjet1.pt, "eta":gjet1.eta, "phi":gjet1.phi, "mass":gjet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+            gjet2_Lvec = ak.zip({"pt":gjet2.pt, "eta":gjet2.eta, "phi":gjet2.phi, "mass":gjet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+            gjj = gjet1_Lvec + gjet2_Lvec
             
             gjj_dEta = abs(gjet1.eta - gjet2.eta)
             gjj_dPhi = abs(gjet1.delta_phi(gjet2))
@@ -1234,8 +1256,8 @@ class EventProcessor(processor.ProcessorABC):
         # jet1 = sorted_jets[:,0]
         # jet2 = sorted_jets[:,1]
         # original end ----------------------------------------
+
         # test start ----------------------------------------
-        
         sorted_args = ak.argsort(jets.pt, ascending=False)
         sorted_jets = (jets[sorted_args])
         jets = sorted_jets
@@ -1243,9 +1265,26 @@ class EventProcessor(processor.ProcessorABC):
         jet1 = paddedSorted_jets[:,0]
         jet2 = paddedSorted_jets[:,1]
         # test end ----------------------------------------
+        
+        # jet1_Lvec = ak.zip({"x":jet1.x, "y":jet1.y, "z":jet1.z, "E":jet1.E}, with_name="LorentzVector", behavior=vector.behavior)
+        # jet2_Lvec = ak.zip({"x":jet2.x, "y":jet2.y, "z":jet2.z, "E":jet2.E}, with_name="LorentzVector", behavior=vector.behavior)
+        jet1_Lvec = ak.zip({"pt":jet1.pt, "eta":jet1.eta, "phi":jet1.phi, "mass":jet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+        jet2_Lvec = ak.zip({"pt":jet2.pt, "eta":jet2.eta, "phi":jet2.phi, "mass":jet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+        # jet1_Lvec = ak.zip({"x":jet1.x, "y":jet1.y, "z":jet1.z, "E":jet1.E}, with_name="Momentum4D", behavior=vector.behavior)
+        # jet2_Lvec = ak.zip({"x":jet2.x, "y":jet2.y, "z":jet2.z, "E":jet2.E}, with_name="Momentum4D", behavior=vector.behavior)
+        
+        # print(f"jet1_Lvec: {jet1_Lvec.compute()}")
+        # print(f"jet2_Lvec: {jet2_Lvec.compute()}")
+        # dijet = jet1+jet2
+        # print(f"type jet1: {type(jet1.compute())}")
+        # print(f"type jet1_Lvec: {type(jet1_Lvec.compute())}")
+        dijet = jet1_Lvec+jet2_Lvec
+
 
         
-        dijet = jet1+jet2
+        # jet1_4D_vec = ak.zip({"x":jet1.x, "y":jet1.y, "z":jet1.z, "E":jet1.E}, with_name="Momentum4D")
+        # jet2_4D_vec = ak.zip({"x":jet2.x, "y":jet2.y, "z":jet2.z, "E":jet2.E}, with_name="Momentum4D")
+        # dijet = jet1_4D_vec+jet2_4D_vec
         # print(f"dijet: {dijet}")
         jj_dEta = abs(jet1.eta - jet2.eta)
         jj_dPhi = abs(jet1.delta_phi(jet2))
@@ -1269,7 +1308,15 @@ class EventProcessor(processor.ProcessorABC):
         zeppenfeld = dimuon.eta - 0.5 * (
             jet1.eta + jet2.eta
         )
-        mmjj = dimuon + dijet
+        # print(f"dimuon: {dimuon.compute()}")
+        # print(f"dijet: {dijet.compute()}")
+        # dimuon4D_vec = ak.zip({"x":dimuon.x, "y":dimuon.y, "z":dimuon.z, "E":dimuon.E}, with_name="Momentum4D")
+        # dijet4D_vec = ak.zip({"x":dijet.x, "y":dijet.y, "z":dijet.z, "E":dijet.E}, with_name="Momentum4D")
+        dimuon4D_vec = ak.zip({"pt":dimuon.pt, "eta":dimuon.eta, "phi":dimuon.phi, "mass":dimuon.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+        dijet4D_vec = ak.zip({"pt":dijet.pt, "eta":dijet.eta, "phi":dijet.phi, "mass":dijet.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+        # mmjj = dimuon + dijet
+        mmjj = dimuon4D_vec + dijet4D_vec
+        # print(f"mmjj: {mmjj.compute()}")
         rpt = mmjj.pt / (
             dimuon.pt + jet1.pt + jet2.pt
         )
@@ -1277,11 +1324,19 @@ class EventProcessor(processor.ProcessorABC):
         # calculate ll_zstar
         ll_ystar = dimuon.rapidity - (jet1.rapidity + jet1.rapidity) / 2
         ll_zstar = abs(ll_ystar / (jet1.rapidity - jet1.rapidity))
+
+        # rapidity definition of the old coffea package
+        jet1_rapidity = 0.5 * (np.log(jet1.E + jet1.pz) - np.log(jet1.E - jet1.pz))
+        jet2_rapidity = 0.5 * (np.log(jet2.E + jet2.pz) - np.log(jet2.E - jet2.pz))
+        # jj_mass = np.sqrt(dijet.t**2-dijet.x**2-dijet.y**2-dijet.z**2)
+        jj_mass = np.sqrt(_mass2_kernel(dijet.t, dijet.x, dijet.y, dijet.z))
     
         jet_loop_out_dict = {
             "jet1_pt" : jet1.pt,
             "jet1_eta" : jet1.eta,
-            "jet1_rap" : jet1.rapidity,
+            # "jet1_rap" : jet1.rapidity, # max rel err: 0.7394
+            # "jet1_rap" : jet1_Lvec.rapidity, # max rel erro: 3.445459052224462e-05
+            "jet1_rap" : jet1_rapidity, # no error
             "jet1_phi" : jet1.phi,
             "jet1_qgl" : jet1.qgl,
             "jet1_jetId" : jet1.jetId,
@@ -1303,12 +1358,15 @@ class EventProcessor(processor.ProcessorABC):
             "jet1_mass_jec" : jet1.mass_jec,
             "jet2_mass_jec" : jet2.mass_jec,
             #-------------------------
-            "jet2_rap" : jet2.rapidity,
+            # "jet2_rap" : jet2.rapidity, # max rel err: 0.781
+            # "jet2_rap" : jet2_Lvec.rapidity, # max rel err: 4.212372628654057e-05
+            "jet2_rap" : jet2_rapidity, # no error
             "jet2_phi" : jet2.phi,
             "jet2_qgl" : jet2.qgl,
             "jet2_jetId" : jet2.jetId,
             "jet2_puId" : jet2.puId,
-            "jj_mass" : dijet.mass,
+            # "jj_mass" : dijet.mass,
+            "jj_mass" : jj_mass,
             "jj_pt" : dijet.pt,
             "jj_eta" : dijet.eta,
             "jj_phi" : dijet.phi,
