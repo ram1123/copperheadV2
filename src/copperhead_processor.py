@@ -28,6 +28,26 @@ ak_array = TypeVar('ak_array')
 def _mass2_kernel(t, x, y, z):
     return t * t - x * x - y * y - z * z
 
+def testJetVector(jets):
+    """
+    This is a helper function in debugging observed inconsistiency in Jet variables after
+    migration from coffea native vectors to hep native vectors
+    params:
+    jets -> nanoevent vector of Jet. IE: events.Jet
+    """
+    padded_jets = ak.pad_none(jets, target=2)
+    jet1 = padded_jets[:, 0]
+    jet2 = padded_jets[:, 1]
+    normal_dijet =  jet1 + jet2
+    # explicitly reinitialize the jets
+    jet1_4D_vec = ak.zip({"pt":jet1.pt, "eta":jet1.eta, "phi":jet1.phi, "mass":jet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+    jet2_4D_vec = ak.zip({"pt":jet2.pt, "eta":jet2.eta, "phi":jet2.phi, "mass":jet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+    new_dijet = jet1_4D_vec + jet2_4D_vec
+    target_arr = ak.fill_none(new_dijet.mass.compute(), value=-99.0)
+    out_arr = ak.fill_none(normal_dijet.mass.compute(), value=-99.0)
+    rel_err = np.abs((target_arr-out_arr)/target_arr)
+    print(f"max rel_err: {ak.max(rel_err)}")
+
 # Dmitry's implementation of delta_r
 def delta_r_V1(eta1, eta2, phi1, phi2):
     deta = abs(eta1 - eta2)
@@ -204,6 +224,9 @@ class EventProcessor(processor.ProcessorABC):
         Apply LHE cuts for DY sample stitching
         Basically remove events that has dilepton mass between 100 and 200 GeV
         """
+        # print("testJetVector right as process starts")
+        # testJetVector(events.Jet)
+        
         event_filter = ak.ones_like(events.HLT.IsoMu24) # 1D boolean array to be used to filter out bad events
         dataset = events.metadata['dataset']
         print(f"dataset: {dataset}")
@@ -520,7 +543,10 @@ class EventProcessor(processor.ProcessorABC):
         nmuons = ak.to_packed(nmuons[event_filter==True])
         applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
 
-       
+        # print("testJetVector right after event filtering")
+        # testJetVector(events.Jet)
+
+        
         # turn off pu weights test start ---------------------------------
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
@@ -613,14 +639,14 @@ class EventProcessor(processor.ProcessorABC):
             gjet1 = gjets_sorted[:,0]
             gjet2 = gjets_sorted[:,1] 
             # original start -----------------------------------------------
-            # gjj = gjet1 + gjet2
+            gjj = gjet1 + gjet2
             # print(f"gjj.mass: {gjj_mass.compute().show(formatter=np.set_printoptions(threshold=sys.maxsize))}")
             # print(f"gjj.mass: {ak.sum(gjj_mass,axis=None).compute()}")
             # original end -------------------------------------------------
 
-            gjet1_Lvec = ak.zip({"pt":gjet1.pt, "eta":gjet1.eta, "phi":gjet1.phi, "mass":gjet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
-            gjet2_Lvec = ak.zip({"pt":gjet2.pt, "eta":gjet2.eta, "phi":gjet2.phi, "mass":gjet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
-            gjj = gjet1_Lvec + gjet2_Lvec
+            # gjet1_Lvec = ak.zip({"pt":gjet1.pt, "eta":gjet1.eta, "phi":gjet1.phi, "mass":gjet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+            # gjet2_Lvec = ak.zip({"pt":gjet2.pt, "eta":gjet2.eta, "phi":gjet2.phi, "mass":gjet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+            # gjj = gjet1_Lvec + gjet2_Lvec
             
             gjj_dEta = abs(gjet1.eta - gjet2.eta)
             gjj_dPhi = abs(gjet1.delta_phi(gjet2))
@@ -628,7 +654,8 @@ class EventProcessor(processor.ProcessorABC):
 
 
         self.prepare_jets(events, NanoAODv=NanoAODv)
-
+        print("test ject vector right after prepare_jets")
+        # testJetVector(events.Jet)
 
         # ------------------------------------------------------------#
         # Apply JEC, get JEC and JER variations
@@ -661,7 +688,11 @@ class EventProcessor(processor.ProcessorABC):
                     raise ValueError
                 
             print("do jec!")
+            print("test ject vector b4 JEC")
+            # testJetVector(jets)
             jets = factory.build(jets)
+            print("test ject vector after JEC")
+            # testJetVector(jets)
 
         else:
             jets["mass_jec"] = jets.mass
@@ -1028,7 +1059,8 @@ class EventProcessor(processor.ProcessorABC):
             fixedGridRhoFastjetAll = events.Rho.fixedGridRhoFastjetAll
         else: # if v9
             fixedGridRhoFastjetAll = events.fixedGridRhoFastjetAll
-        events["Jet", "rho"] = ak.broadcast_arrays(fixedGridRhoFastjetAll, events.Jet.pt)[0]
+        # events["Jet", "rho"] = ak.broadcast_arrays(fixedGridRhoFastjetAll, events.Jet.pt)[0]
+        events["Jet", "PU_rho"] = ak.broadcast_arrays(fixedGridRhoFastjetAll, events.Jet.pt)[0]
     
         if events.metadata["is_mc"]:
             # pt_gen is used for JEC (one of the factory name map values)            
@@ -1275,10 +1307,10 @@ class EventProcessor(processor.ProcessorABC):
         
         # print(f"jet1_Lvec: {jet1_Lvec.compute()}")
         # print(f"jet2_Lvec: {jet2_Lvec.compute()}")
-        # dijet = jet1+jet2
+        dijet = jet1+jet2
         # print(f"type jet1: {type(jet1.compute())}")
         # print(f"type jet1_Lvec: {type(jet1_Lvec.compute())}")
-        dijet = jet1_Lvec+jet2_Lvec
+        # dijet = jet1_Lvec+jet2_Lvec
 
 
         
@@ -1315,7 +1347,8 @@ class EventProcessor(processor.ProcessorABC):
         dimuon4D_vec = ak.zip({"pt":dimuon.pt, "eta":dimuon.eta, "phi":dimuon.phi, "mass":dimuon.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
         dijet4D_vec = ak.zip({"pt":dijet.pt, "eta":dijet.eta, "phi":dijet.phi, "mass":dijet.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
         # mmjj = dimuon + dijet
-        mmjj = dimuon4D_vec + dijet4D_vec
+        # mmjj = dimuon4D_vec + dijet4D_vec
+        mmjj = dimuon4D_vec + dijet
         # print(f"mmjj: {mmjj.compute()}")
         rpt = mmjj.pt / (
             dimuon.pt + jet1.pt + jet2.pt
@@ -1334,9 +1367,9 @@ class EventProcessor(processor.ProcessorABC):
         jet_loop_out_dict = {
             "jet1_pt" : jet1.pt,
             "jet1_eta" : jet1.eta,
-            # "jet1_rap" : jet1.rapidity, # max rel err: 0.7394
+            "jet1_rap" : jet1.rapidity, # max rel err: 0.7394
             # "jet1_rap" : jet1_Lvec.rapidity, # max rel erro: 3.445459052224462e-05
-            "jet1_rap" : jet1_rapidity, # no error
+            # "jet1_rap" : jet1_rapidity, # no error
             "jet1_phi" : jet1.phi,
             "jet1_qgl" : jet1.qgl,
             "jet1_jetId" : jet1.jetId,
@@ -1358,9 +1391,9 @@ class EventProcessor(processor.ProcessorABC):
             "jet1_mass_jec" : jet1.mass_jec,
             "jet2_mass_jec" : jet2.mass_jec,
             #-------------------------
-            # "jet2_rap" : jet2.rapidity, # max rel err: 0.781
+            "jet2_rap" : jet2.rapidity, # max rel err: 0.781
             # "jet2_rap" : jet2_Lvec.rapidity, # max rel err: 4.212372628654057e-05
-            "jet2_rap" : jet2_rapidity, # no error
+            # "jet2_rap" : jet2_rapidity, # no error
             "jet2_phi" : jet2.phi,
             "jet2_qgl" : jet2.qgl,
             "jet2_jetId" : jet2.jetId,

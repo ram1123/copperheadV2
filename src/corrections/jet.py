@@ -106,7 +106,7 @@ def get_name_map(stack):
     name_map["ptGenJet"] = "pt_gen"
     name_map["ptRaw"] = "pt_raw"
     name_map["massRaw"] = "mass_raw"
-    name_map["Rho"] = "rho"
+    name_map["Rho"] = "PU_rho"
     # print(f"name_map: {name_map}")
     return name_map
 
