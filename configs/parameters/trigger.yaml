@@ -9,5 +9,7 @@ hlt:
   - IsoMu27
   '2018':
   - IsoMu24
-  2022EE:
+  2022preEE:
+  - IsoMu24
+  2022postEE:
   - IsoMu24

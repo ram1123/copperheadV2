@@ -92,7 +92,30 @@ jec_parameters:
     - RelativeSample2018_down
     - FlavorQCD_up
     - FlavorQCD_down
-    2022EE:
+    2022preEE:
+    - Absolute_up
+    - Absolute_down
+    - Absolute2018_up
+    - Absolute2018_down
+    - BBEC1_up
+    - BBEC1_down
+    - BBEC12018_up
+    - BBEC12018_down
+    - EC2_up
+    - EC2_down
+    - EC22018_up
+    - EC22018_down
+    - HF_up
+    - HF_down
+    - HF2018_up
+    - HF2018_down
+    - RelativeBal_up
+    - RelativeBal_down
+    - RelativeSample2018_up
+    - RelativeSample2018_down
+    - FlavorQCD_up
+    - FlavorQCD_down
+    2022postEE:
     - Absolute_up
     - Absolute_down
     - Absolute2018_up
@@ -137,11 +160,13 @@ jec_parameters:
     - B
     - C
     - D
-    2022EE:
-    - A
-    - B
+    2022preEE:
     - C
     - D
+    2022postEE:
+    - E
+    - F
+    - G
   jec_levels_mc:
     2016preVFP:
     - L1FastJet
@@ -159,7 +184,11 @@ jec_parameters:
     - L1FastJet
     - L2Relative
     - L3Absolute
-    2022EE:
+    2022preEE:
+    - L1FastJet
+    - L2Relative
+    - L3Absolute
+    2022postEE:
     - L1FastJet
     - L2Relative
     - L3Absolute
@@ -184,7 +213,12 @@ jec_parameters:
     - L2Relative
     - L3Absolute
     - L2L3Residual
-    2022EE:
+    2022preEE:
+    - L1FastJet
+    - L2Relative
+    - L3Absolute
+    - L2L3Residual
+    2022postEE:
     - L1FastJet
     - L2Relative
     - L3Absolute
@@ -194,13 +228,15 @@ jec_parameters:
     2016postVFP: Summer19UL16_V7_MC
     '2017': Summer19UL17_V5_MC
     '2018': Summer19UL18_V5_MC
-    2022EE: Summer19UL18_V5_MC
+    2022preEE: Summer19UL18_V5_MC
+    2022postEE: Summer19UL18_V5_MC
   jer_tags:
     2016preVFP: Summer20UL16APV_JRV3_MC
     2016postVFP: Summer20UL16_JRV3_MC
     '2017': Summer19UL17_JRV2_MC
     '2018': Summer19UL18_JRV2_MC
-    2022EE: Summer19UL18_JRV2_MC
+    2022preEE: Summer19UL18_JRV2_MC
+    2022postEE: Summer19UL18_JRV2_MC
   jec_data_tags:
     2016preVFP:
       Summer19UL16APV_RunBCD_V7_DATA:
@@ -235,15 +271,18 @@ jec_parameters:
       - C
       Summer19UL18_RunD_V5_DATA:
       - D
-    2022EE:
-      Summer19UL18_RunA_V5_DATA:
-      - A
-      Summer19UL18_RunB_V5_DATA:
-      - B
+    2022preEE:
       Summer19UL18_RunC_V5_DATA:
       - C
       Summer19UL18_RunD_V5_DATA:
       - D
+    2022postEE:
+      Summer19UL18_RunE_V5_DATA:
+      - E
+      Summer19UL18_RunF_V5_DATA:
+      - F
+      Summer19UL18_RunG_V5_DATA:
+      - G
   jer_variations:
     2016preVFP:
     - jer1_up
@@ -297,7 +336,20 @@ jec_parameters:
     - jer5_down
     - jer6_up
     - jer6_down
-    2022EE:
+    2022preEE:
+    - jer1_up
+    - jer1_down
+    - jer2_up
+    - jer2_down
+    - jer3_up
+    - jer3_down
+    - jer4_up
+    - jer4_down
+    - jer5_up
+    - jer5_down
+    - jer6_up
+    - jer6_down
+    2022postEE:
     - jer1_up
     - jer1_down
     - jer2_up
