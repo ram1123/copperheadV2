@@ -20,7 +20,7 @@ def categoryWrapper(name: str, events) -> ak.Array:
     for class_name, obj in inspect.getmembers(category_cuts):
         if ("__" not in class_name) and ("Custom" in class_name):  # only look at classes I wrote
             if name == obj.name:
-                print(f"found category cut for {name}!")
+                # print(f"found category cut for {name}!")
                 return obj.filterCategory(events) # this is a 1-D boolean awkward array with length of events
     if not found_cut:
         print(f"ERROR: given category name {name} for categoryWrapper is not supported!")
@@ -47,7 +47,7 @@ def getCategoryCutNames(category:str) -> List[str]:
     category_config = OmegaConf.load("configs/categories/categories.yml")
     out_list = category_config["baseline"]
     out_list += category_config[category]
-    print(f"getCategoryCutNames out_list: {out_list}")
+    # print(f"getCategoryCutNames out_list: {out_list}")
     return out_list
         
 def process4gghCategory(events: ak.Record) -> ak.Record:
@@ -106,22 +106,13 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
     }).compute()
 
     # filter events for ggH category
-    prod_cat_cut = ~events.vbf_cut
-    btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
     region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
-    gghCat_selection = (
-        prod_cat_cut  
-        & ~btag_cut # btag cut is for VH and ttH categories
-        # & region
-    )
-
     category_str = "ggh"
     cut_names = getCategoryCutNames(category_str)
-    test_ggh_selection = categoryWrapperLoop(cut_names, events)
-    is_same = ak.all(ak.isclose(gghCat_selection, test_ggh_selection))
-    print(f"Testing new wrapper: {is_same}")
-    
-    raise ValueError
+    gghCat_selection = (
+        categoryWrapperLoop(cut_names, events)
+        & region
+    )
     
     events = events[gghCat_selection]
     
@@ -297,27 +288,13 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     }).compute()
 
     # filter events for VBF category
-    prod_cat_cut = events.vbf_cut
-    btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
     region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
-    vbfCat_selection = (
-        prod_cat_cut  
-        & ~btag_cut # btag cut is for VH and ttH categories
-        # & region
-    )
-    
-    # test_vbf_selection = categoryWrapper("Cat_VBF", events)
-    # cut_names = [
-    #     "InvBtagCut",
-    #     "VbfCut",
-    # ]
     category_str = "vbf"
     cut_names = getCategoryCutNames(category_str)
-    test_vbf_selection = categoryWrapperLoop(cut_names, events)
-    is_same = ak.all(ak.isclose(vbfCat_selection, test_vbf_selection))
-    print(f"Testing new wrapper: {is_same}")
-    
-    raise ValueError
+    vbfCat_selection = (
+        categoryWrapperLoop(cut_names, events)
+        & region
+    )
     
     events = events[vbfCat_selection]
     
