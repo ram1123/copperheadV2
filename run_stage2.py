@@ -9,11 +9,47 @@ from typing import Tuple, List, Dict
 import ROOT as rt
 import glob, os
 
-from lib.MVA_functions import prepare_features, evaluate_bdt, evaluate_dnn
+from src.lib.MVA_functions import prepare_features, evaluate_bdt, evaluate_dnn
 import argparse
 import time
+import sys, inspect
+import configs.categories.category_cuts as category_cuts
 
+def categoryWrapper(name: str, events) -> ak.Array:
+    found_cut = False
+    for class_name, obj in inspect.getmembers(category_cuts):
+        if ("__" not in class_name) and ("Custom" in class_name):  # only look at classes I wrote
+            if name == obj.name:
+                print(f"found category cut for {name}!")
+                return obj.filterCategory(events) # this is a 1-D boolean awkward array with length of events
+    if not found_cut:
+        print(f"ERROR: given category name {name} for categoryWrapper is not supported!")
+        raise ValueError
 
+def categoryWrapperLoop(names: List[str], events) -> ak.Array:
+    if len(names) == 0:
+        print(f"ERROR: given names in categoryWrapperLoop is empty!")
+        raise ValueError
+    bool_arrs = [categoryWrapper(name, events) for name in names]
+    out_arr = bool_arrs[0]
+    if len(bool_arrs) > 1:
+        for ix in range(1, len(bool_arrs)):
+            out_arr = out_arr & bool_arrs[ix]
+    return out_arr
+
+def getCategoryCutNames(category:str) -> List[str]:
+    """
+    simple wrapper function that loads configs/categories/categories.yml
+    and extracts the relevelt list of strings representation of cuts for
+    the given category
+    """
+    category = category.lower() # force all lower character for simplicity
+    category_config = OmegaConf.load("configs/categories/categories.yml")
+    out_list = category_config["baseline"]
+    out_list += category_config[category]
+    print(f"getCategoryCutNames out_list: {out_list}")
+    return out_list
+        
 def process4gghCategory(events: ak.Record) -> ak.Record:
     """
     Takes the given stage1 output, runs MVA, and returns a new 
@@ -76,8 +112,17 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
     gghCat_selection = (
         prod_cat_cut  
         & ~btag_cut # btag cut is for VH and ttH categories
-        & region
+        # & region
     )
+
+    category_str = "ggh"
+    cut_names = getCategoryCutNames(category_str)
+    test_ggh_selection = categoryWrapperLoop(cut_names, events)
+    is_same = ak.all(ak.isclose(gghCat_selection, test_ggh_selection))
+    print(f"Testing new wrapper: {is_same}")
+    
+    raise ValueError
+    
     events = events[gghCat_selection]
     
     # make sure to replace nans with -99.0 values   
@@ -117,9 +162,11 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
     # processed_events["subCategory_idx"] = subCat_idx
     # original end -----------------------------------------------------------------
 
-    # original start --------------------------------------------------------------
+    # new start --------------------------------------------------------------
     BDT_score = processed_events["BDT_score"]
     print(f"BDT_score :{BDT_score}")
+    print(f"ak.max(BDT_score) :{ak.max(BDT_score)}")
+    print(f"ak.min(BDT_score) :{ak.min(BDT_score)}")
     subCat_idx = -1*ak.ones_like(BDT_score)
     for i in range(len(edges) - 1):
         lo = edges[i]
@@ -127,13 +174,11 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
         cut = (BDT_score > lo) & (BDT_score <= hi)
         # cut = (BDT_score <= lo) & (BDT_score > hi)
         subCat_idx = ak.where(cut, i, subCat_idx)
-        # df.loc[cut, "bin_number"] = i
-    # df[score_name] = df["bin_number"]
     print(f"subCat_idx: {subCat_idx}")
     # test if any remain has -1 value
     print(f"ak.sum(subCat_idx==-1): {ak.sum(subCat_idx==-1)}")
     processed_events["subCategory_idx"] = subCat_idx
-    # original end -----------------------------------------------------------------
+    # new end -----------------------------------------------------------------
 
     # filter in only the variables you need to do stage3
     fields2save = [
@@ -141,7 +186,10 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
         "BDT_score",
         "subCategory_idx",
         "wgt_nominal_total",
+        "h_peak",
+        "h_sidebands",
     ]
+    
     processed_events = ak.zip({
         field : processed_events[field] for field in fields2save
     })
@@ -166,8 +214,43 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
     events["dimuon_ebe_mass_res_rel"] = events.dimuon_ebe_mass_res / events.dimuon_mass
     events["rpt"] = events.mmjj_pt / (events.dimuon_pt + events.jet1_pt + events.jet2_pt)# as of writing this code, rpt variable is calculated, but not saved during stage1
+    events["year"] = ak.ones_like(events.mu1_pt)* 2018
 
-    
+    # original start --------------------------------------
+    # training_features = [
+    #     "dimuon_mass",
+    #     "dimuon_pt",
+    #     "dimuon_pt_log",
+    #     "dimuon_eta",
+    #     "dimuon_ebe_mass_res",
+    #     "dimuon_ebe_mass_res_rel",
+    #     "dimuon_cos_theta_cs",
+    #     "dimuon_phi_cs",
+    #     # "dimuon_pisa_mass_res",
+    #     # "dimuon_pisa_mass_res_rel",
+    #     # "dimuon_cos_theta_cs_pisa",
+    #     # "dimuon_phi_cs_pisa",
+    #     "jet1_pt",
+    #     "jet1_eta",
+    #     "jet1_phi",
+    #     "jet1_qgl",
+    #     "jet2_pt",
+    #     "jet2_eta",
+    #     "jet2_phi",
+    #     "jet2_qgl",
+    #     "jj_mass",
+    #     "jj_mass_log",
+    #     "jj_dEta",
+    #     "rpt",
+    #     "ll_zstar_log",
+    #     "mmj_min_dEta",
+    #     "nsoftjets5",
+    #     "htsoft2",
+    # ]
+    # model_name = "PhiFixedVBF"
+    # original end --------------------------------------
+
+    # teset start ----------------------------------
     training_features = [
         "dimuon_mass",
         "dimuon_pt",
@@ -177,10 +260,6 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
         "dimuon_ebe_mass_res_rel",
         "dimuon_cos_theta_cs",
         "dimuon_phi_cs",
-        # "dimuon_pisa_mass_res",
-        # "dimuon_pisa_mass_res_rel",
-        # "dimuon_cos_theta_cs_pisa",
-        # "dimuon_phi_cs_pisa",
         "jet1_pt",
         "jet1_eta",
         "jet1_phi",
@@ -197,8 +276,10 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
         "mmj_min_dEta",
         "nsoftjets5",
         "htsoft2",
+        "year",
     ]
-    model_name = "PhiFixedVBF"
+    model_name = "pytorch_jun27"
+    # test end --------------------------------------
     len(training_features)
     # load training features from the ak.Record
     for training_feature in training_features:
@@ -222,8 +303,22 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     vbfCat_selection = (
         prod_cat_cut  
         & ~btag_cut # btag cut is for VH and ttH categories
-        & region
+        # & region
     )
+    
+    # test_vbf_selection = categoryWrapper("Cat_VBF", events)
+    # cut_names = [
+    #     "InvBtagCut",
+    #     "VbfCut",
+    # ]
+    category_str = "vbf"
+    cut_names = getCategoryCutNames(category_str)
+    test_vbf_selection = categoryWrapperLoop(cut_names, events)
+    is_same = ak.all(ak.isclose(vbfCat_selection, test_vbf_selection))
+    print(f"Testing new wrapper: {is_same}")
+    
+    raise ValueError
+    
     events = events[vbfCat_selection]
     
     # make sure to replace nans with -99.0 values   
@@ -234,17 +329,20 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
         events[field] = ak.where(inf_cond, none_val, events[field])
 
     parameters = {
-    "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
+    # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/",
+    "models_path" : "/depot/cms/hmm/copperhead/trained_models/",
     }
     processed_events = evaluate_dnn(events, "nominal", model_name, training_features, parameters) 
     # filter in only the variables you need to do stage3
     fields2save = [
         "dimuon_mass",
         "DNN_score",
+        "DNN_score_sigmoid",
         "wgt_nominal_total",
         "h_peak",
         "h_sidebands",
     ]
+    fields2save += training_features # this line is for debugging
     processed_events = ak.zip({
         field : processed_events[field] for field in fields2save
     })
@@ -296,6 +394,7 @@ if __name__ == "__main__":
     help="list of samples to process for stage2. Current valid inputs are data, signal and DY",
     )
     start_time = time.time()
+    client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
@@ -321,23 +420,29 @@ if __name__ == "__main__":
     for sample in args.samples:
         if sample.lower() == "data":
             full_load_path = load_path+f"/data_*/*/*.parquet"
-        elif sample.lower() == "signal":
-            if category == "ggh": # ggH
-                full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
-            elif category == "vbf": # VBF
-                full_load_path = load_path+f"/vbf_powheg/*/*.parquet"
-            else:
-                print("unsupported category")
-                raise ValueError
+        # elif sample.lower() == "signal":
+        #     if category == "ggh": # ggH
+        #         full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
+        #     elif category == "vbf": # VBF
+        #         full_load_path = load_path+f"/vbf_powheg/*/*.parquet"
+        #     else:
+        #         print("unsupported category")
+        #         raise ValueError
+        elif sample.lower() == "ggh":
+            full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
+        elif sample.lower() == "vbf":
+            full_load_path = load_path+f"/vbf_powheg/*/*.parquet"
         elif sample.lower() == "dy":
             full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
+        elif sample.lower() == "ewk":
+            full_load_path = load_path+f"/ewk_lljj_mll50_mjj120/*/*.parquet"
         else:
             print(f"unsupported sample!")
             raise ValueError
             
         print(f"full_load_path: {full_load_path}")
     
-        client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+        
         events = dak.from_parquet(full_load_path)
         if category == "ggh":
             processed_events = process4gghCategory(events)      
@@ -353,14 +458,16 @@ if __name__ == "__main__":
         # make save path if it doesn't exist
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        if "data" in full_load_path:
+        if "data" in full_load_path.lower():
             save_filename = f"{save_path}/processed_events_data.parquet"  
         elif "ggh_powheg" in full_load_path: # signal
-            save_filename = f"{save_path}/processed_events_signalMC.parquet" 
+            save_filename = f"{save_path}/processed_events_sigMC_ggh.parquet" 
         elif "vbf_powheg" in full_load_path: # signal
-            save_filename = f"{save_path}/processed_events_signalMC_vbf.parquet" 
+            save_filename = f"{save_path}/processed_events_sigMC_vbf.parquet" 
         elif "dy_M-100To200" in full_load_path:
-            save_filename = f"{save_path}/processed_events_dyMC.parquet" 
+            save_filename = f"{save_path}/processed_events_bkgMC_dy.parquet" 
+        elif "ewk" in full_load_path:
+            save_filename = f"{save_path}/processed_events_bkgMC_ewk.parquet" 
         else:
             print ("unsupported sample given!")
             raise ValueError
