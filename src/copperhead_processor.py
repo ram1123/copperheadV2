@@ -19,8 +19,6 @@ from coffea.analysis_tools import Weights
 import copy
 from coffea.nanoevents.methods import vector
 import sys
-# import vector # hep vector
-# vector.register_awkward()
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
@@ -36,9 +34,11 @@ def testJetVector(jets):
     jets -> nanoevent vector of Jet. IE: events.Jet
     """
     padded_jets = ak.pad_none(jets, target=2)
+    # print(f"type padded_jets: {type(padded_jets.compute())}")
     jet1 = padded_jets[:, 0]
     jet2 = padded_jets[:, 1]
     normal_dijet =  jet1 + jet2
+    print(f"type normal_dijet: {type(normal_dijet.compute())}")
     # explicitly reinitialize the jets
     jet1_4D_vec = ak.zip({"pt":jet1.pt, "eta":jet1.eta, "phi":jet1.phi, "mass":jet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
     jet2_4D_vec = ak.zip({"pt":jet2.pt, "eta":jet2.eta, "phi":jet2.phi, "mass":jet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
@@ -334,11 +334,16 @@ class EventProcessor(processor.ProcessorABC):
             
         if do_pu_wgt:
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
+            if NanoAODv > 9:
+                run_campaign = 3
+            else:
+                run_campaign = 2
             if is_mc:
                 pu_wgts = pu_evaluator(
                             self.config,
                             events.Pileup.nTrueInt,
-                            onTheSpot=False # use locally saved true PU dist
+                            onTheSpot=False, # use locally saved true PU dist
+                            Run = run_campaign
                     )
        
         # # Save raw variables before computing any corrections
@@ -937,6 +942,7 @@ class EventProcessor(processor.ProcessorABC):
                 mu2,
                 variation,
                 weights,
+                NanoAODv = NanoAODv,
                 do_jec = do_jec,
                 do_jecunc = do_jecunc,
                 do_jerunc = do_jerunc,
@@ -1059,7 +1065,6 @@ class EventProcessor(processor.ProcessorABC):
             fixedGridRhoFastjetAll = events.Rho.fixedGridRhoFastjetAll
         else: # if v9
             fixedGridRhoFastjetAll = events.fixedGridRhoFastjetAll
-        # events["Jet", "rho"] = ak.broadcast_arrays(fixedGridRhoFastjetAll, events.Jet.pt)[0]
         events["Jet", "PU_rho"] = ak.broadcast_arrays(fixedGridRhoFastjetAll, events.Jet.pt)[0]
     
         if events.metadata["is_mc"]:
@@ -1108,12 +1113,14 @@ class EventProcessor(processor.ProcessorABC):
         mu2,
         variation,
         weights,
+        NanoAODv = 9,
         do_jec = False, 
         do_jecunc = False,
         do_jerunc = False,
     ):
         is_mc = events.metadata["is_mc"]
         dataset = events.metadata["dataset"]
+        year = self.config["year"]
         if (not is_mc) and variation != "nominal":
             return
         # variables = pd.DataFrame(index=output.index)
@@ -1191,35 +1198,32 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
 
         pass_jet_id = jet_id(jets, self.config)
-
+        
         
         # jet PUID disabled as it's not applicable for jets with JEC and pt> 50,
         # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
-        pass_jet_puid = jet_puid(jets, self.config)
-        # print(f"sum pass_jet_puid: {ak.to_numpy(ak.sum(pass_jet_puid, axis=1).compute())}")
-        # print(f"sum pass_jet_puid total: {ak.to_numpy(ak.sum(pass_jet_puid, axis=None).compute())}")
-        # print(f"pass_jet_puid: {(pass_jet_puid.compute())}")
-        # # only apply jet puid to jets with pt < 50, else, pass
-        # bool_filter = ak.ones_like(pass_jet_puid, dtype="bool")
-        # pass_jet_puid = ak.where((jets.pt <50),pass_jet_puid, bool_filter)
-        # # Jet PUID scale factors, which also takes pt < 50 into account within the function
-        year = self.config["year"]
-        if is_mc:  
-            print("doing jet puid weights!")
-            jet_puid_opt = self.config["jet_puid"]
-            pt_name = "pt"
-            puId = jets.puId
-            jetpuid_weight = get_jetpuid_weights(
-                self.evaluator, year, jets, pt_name,
-                jet_puid_opt, pass_jet_puid
-            )
-            weights.add("jetpuid_wgt", 
-                    weight=jetpuid_weight,
-            )
-        #     print(f"puid_weight: {puid_weight}")
-        # #     weights.add("puid_wgt", weight=puid_weight)
-        # # #     weights.add_weight('puid_wgt', puid_weight)
-
+        print(f"jet loop NanoAODv: {NanoAODv}")
+        if NanoAODv == 9 : 
+            pass_jet_puid = jet_puid(jets, self.config)
+            # # only apply jet puid to jets with pt < 50, else, pass
+            # bool_filter = ak.ones_like(pass_jet_puid, dtype="bool")
+            # pass_jet_puid = ak.where((jets.pt <50),pass_jet_puid, bool_filter)
+            # # Jet PUID scale factors, which also takes pt < 50 into account within the function
+            
+            if is_mc:  
+                print("doing jet puid weights!")
+                jet_puid_opt = self.config["jet_puid"]
+                pt_name = "pt"
+                puId = jets.puId
+                jetpuid_weight = get_jetpuid_weights(
+                    self.evaluator, year, jets, pt_name,
+                    jet_puid_opt, pass_jet_puid
+                )
+                weights.add("jetpuid_wgt", 
+                        weight=jetpuid_weight,
+                )
+        else: # NanoAODv12 doesn't have Jet_PuID yet
+            pass_jet_puid = ak.ones_like(pass_jet_id, dtype="bool")
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
@@ -1236,12 +1240,18 @@ class EventProcessor(processor.ProcessorABC):
             false_arr = ak.ones_like(HEMVeto) < 0
             HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
         # print(f"HEMVeto : {HEMVeto}")
-        
+
+        # get QGL cut
+        if NanoAODv == 9 : 
+            qgl_cut = (jets.qgl > -2)
+        else: # NanoAODv12 
+            qgl_cut = (jets.btagPNetQvG > -2) # TODO: find out if -2 is the actual threshold for run3
+            jets["qgl"] = jets.btagPNetQvG # this is for saving btagPNetQvG as "qgl" for stage1 outputs
         # original jet_selection-----------------------------------------------
         jet_selection = (
             pass_jet_id
             & pass_jet_puid
-            & (jets.qgl > -2)
+            & qgl_cut
             & clean
             & (jets.pt > self.config["jet_pt_cut"])
             & (abs(jets.eta) < self.config["jet_eta_cut"])
@@ -1300,8 +1310,8 @@ class EventProcessor(processor.ProcessorABC):
         
         # jet1_Lvec = ak.zip({"x":jet1.x, "y":jet1.y, "z":jet1.z, "E":jet1.E}, with_name="LorentzVector", behavior=vector.behavior)
         # jet2_Lvec = ak.zip({"x":jet2.x, "y":jet2.y, "z":jet2.z, "E":jet2.E}, with_name="LorentzVector", behavior=vector.behavior)
-        jet1_Lvec = ak.zip({"pt":jet1.pt, "eta":jet1.eta, "phi":jet1.phi, "mass":jet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
-        jet2_Lvec = ak.zip({"pt":jet2.pt, "eta":jet2.eta, "phi":jet2.phi, "mass":jet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+        # jet1_Lvec = ak.zip({"pt":jet1.pt, "eta":jet1.eta, "phi":jet1.phi, "mass":jet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
+        # jet2_Lvec = ak.zip({"pt":jet2.pt, "eta":jet2.eta, "phi":jet2.phi, "mass":jet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
         # jet1_Lvec = ak.zip({"x":jet1.x, "y":jet1.y, "z":jet1.z, "E":jet1.E}, with_name="Momentum4D", behavior=vector.behavior)
         # jet2_Lvec = ak.zip({"x":jet2.x, "y":jet2.y, "z":jet2.z, "E":jet2.E}, with_name="Momentum4D", behavior=vector.behavior)
         
@@ -1340,15 +1350,15 @@ class EventProcessor(processor.ProcessorABC):
         zeppenfeld = dimuon.eta - 0.5 * (
             jet1.eta + jet2.eta
         )
-        # print(f"dimuon: {dimuon.compute()}")
-        # print(f"dijet: {dijet.compute()}")
+        # print(f"dimuon: {type(dimuon.compute())}")
+        # print(f"dijet: {type(dijet.compute())}")
         # dimuon4D_vec = ak.zip({"x":dimuon.x, "y":dimuon.y, "z":dimuon.z, "E":dimuon.E}, with_name="Momentum4D")
         # dijet4D_vec = ak.zip({"x":dijet.x, "y":dijet.y, "z":dijet.z, "E":dijet.E}, with_name="Momentum4D")
         dimuon4D_vec = ak.zip({"pt":dimuon.pt, "eta":dimuon.eta, "phi":dimuon.phi, "mass":dimuon.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
         dijet4D_vec = ak.zip({"pt":dijet.pt, "eta":dijet.eta, "phi":dijet.phi, "mass":dijet.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
-        # mmjj = dimuon + dijet
+        mmjj = dimuon + dijet
         # mmjj = dimuon4D_vec + dijet4D_vec
-        mmjj = dimuon4D_vec + dijet
+        # mmjj = dimuon4D_vec + dijet
         # print(f"mmjj: {mmjj.compute()}")
         rpt = mmjj.pt / (
             dimuon.pt + jet1.pt + jet2.pt
@@ -1373,7 +1383,7 @@ class EventProcessor(processor.ProcessorABC):
             "jet1_phi" : jet1.phi,
             "jet1_qgl" : jet1.qgl,
             "jet1_jetId" : jet1.jetId,
-            "jet1_puId" : jet1.puId,
+            # "jet1_puId" : jet1.puId,
             "jet2_pt" : jet2.pt,
             "jet2_eta" : jet2.eta,
             "jet1_mass" : jet1.mass,
@@ -1397,7 +1407,7 @@ class EventProcessor(processor.ProcessorABC):
             "jet2_phi" : jet2.phi,
             "jet2_qgl" : jet2.qgl,
             "jet2_jetId" : jet2.jetId,
-            "jet2_puId" : jet2.puId,
+            # "jet2_puId" : jet2.puId,
             # "jj_mass" : dijet.mass,
             "jj_mass" : jj_mass,
             "jj_pt" : dijet.pt,
@@ -1495,6 +1505,8 @@ class EventProcessor(processor.ProcessorABC):
 
         #     # # --- Btag weights  start--- #
             do_btag_wgt = True # True
+            if NanoAODv ==12:
+                do_btag_wgt = False # temporary condition
             if do_btag_wgt:
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
