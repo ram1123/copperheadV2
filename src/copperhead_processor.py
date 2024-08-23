@@ -168,8 +168,7 @@ class EventProcessor(processor.ProcessorABC):
         """
         self.config = config
 
-        # self.test_mode = test_mode
-        self.test_mode = True
+        self.test_mode = test_mode
         dict_update = {
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : False, # False
@@ -331,8 +330,9 @@ class EventProcessor(processor.ProcessorABC):
         do_pu_wgt = True
         if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
             do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
-            
+
         if do_pu_wgt:
+            print("doing PU re-wgt!")
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
             if NanoAODv > 9:
                 run_campaign = 3
@@ -588,8 +588,14 @@ class EventProcessor(processor.ProcessorABC):
         rel_dimuon_ebe_mass_res = dimuon_ebe_mass_res/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
         dimuon_cos_theta_eta, dimuon_phi_eta = etaFrame_variables(mu1,mu2)
-
+        
         # skip validation for genjets for now -----------------------------------------------
+        # test:
+        # print(dimuon_cos_theta_cs.compute())
+        # print(dimuon_phi_cs.compute())
+        
+
+        
         # #fill genjets
         
         if is_mc:
@@ -975,7 +981,6 @@ class EventProcessor(processor.ProcessorABC):
         # do zpt weight at the very end
         dataset = events.metadata["dataset"]
         do_zpt = ('dy' in dataset) and is_mc
-        # do_zpt = False
         if do_zpt:
             # we explicitly don't directly add zpt weights to the weights variables 
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
@@ -1239,7 +1244,7 @@ class EventProcessor(processor.ProcessorABC):
             )
             false_arr = ak.ones_like(HEMVeto) < 0
             HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
-        # print(f"HEMVeto : {HEMVeto}")
+            # print(f"HEMVeto : {HEMVeto.compute()}")
 
         # get QGL cut
         if NanoAODv == 9 : 
@@ -1307,16 +1312,8 @@ class EventProcessor(processor.ProcessorABC):
         jet1 = paddedSorted_jets[:,0]
         jet2 = paddedSorted_jets[:,1]
         # test end ----------------------------------------
-        
-        # jet1_Lvec = ak.zip({"x":jet1.x, "y":jet1.y, "z":jet1.z, "E":jet1.E}, with_name="LorentzVector", behavior=vector.behavior)
-        # jet2_Lvec = ak.zip({"x":jet2.x, "y":jet2.y, "z":jet2.z, "E":jet2.E}, with_name="LorentzVector", behavior=vector.behavior)
-        # jet1_Lvec = ak.zip({"pt":jet1.pt, "eta":jet1.eta, "phi":jet1.phi, "mass":jet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
-        # jet2_Lvec = ak.zip({"pt":jet2.pt, "eta":jet2.eta, "phi":jet2.phi, "mass":jet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
-        # jet1_Lvec = ak.zip({"x":jet1.x, "y":jet1.y, "z":jet1.z, "E":jet1.E}, with_name="Momentum4D", behavior=vector.behavior)
-        # jet2_Lvec = ak.zip({"x":jet2.x, "y":jet2.y, "z":jet2.z, "E":jet2.E}, with_name="Momentum4D", behavior=vector.behavior)
-        
-        # print(f"jet1_Lvec: {jet1_Lvec.compute()}")
-        # print(f"jet2_Lvec: {jet2_Lvec.compute()}")
+               
+
         dijet = jet1+jet2
         # print(f"type jet1: {type(jet1.compute())}")
         # print(f"type jet1_Lvec: {type(jet1_Lvec.compute())}")
@@ -1338,6 +1335,7 @@ class EventProcessor(processor.ProcessorABC):
             mmj1_dEta,
             mmj2_dEta,
         )
+        # print(f"mmj_min_dEta: {mmj_min_dEta.compute()}")
         mmj1_dPhi = abs(dimuon.delta_phi(jet1))
         mmj2_dPhi = abs(dimuon.delta_phi(jet2))
         mmj1_dR = dimuon.delta_r(jet1)
@@ -1347,19 +1345,12 @@ class EventProcessor(processor.ProcessorABC):
             mmj1_dPhi,
             mmj2_dPhi,
         )
+        # print(f"mmj_min_dPhi: {mmj_min_dPhi.compute()}")
         zeppenfeld = dimuon.eta - 0.5 * (
             jet1.eta + jet2.eta
         )
-        # print(f"dimuon: {type(dimuon.compute())}")
-        # print(f"dijet: {type(dijet.compute())}")
-        # dimuon4D_vec = ak.zip({"x":dimuon.x, "y":dimuon.y, "z":dimuon.z, "E":dimuon.E}, with_name="Momentum4D")
-        # dijet4D_vec = ak.zip({"x":dijet.x, "y":dijet.y, "z":dijet.z, "E":dijet.E}, with_name="Momentum4D")
-        dimuon4D_vec = ak.zip({"pt":dimuon.pt, "eta":dimuon.eta, "phi":dimuon.phi, "mass":dimuon.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
-        dijet4D_vec = ak.zip({"pt":dijet.pt, "eta":dijet.eta, "phi":dijet.phi, "mass":dijet.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
         mmjj = dimuon + dijet
-        # mmjj = dimuon4D_vec + dijet4D_vec
-        # mmjj = dimuon4D_vec + dijet
-        # print(f"mmjj: {mmjj.compute()}")
+
         rpt = mmjj.pt / (
             dimuon.pt + jet1.pt + jet2.pt
         )
@@ -1368,11 +1359,6 @@ class EventProcessor(processor.ProcessorABC):
         ll_ystar = dimuon.rapidity - (jet1.rapidity + jet1.rapidity) / 2
         ll_zstar = abs(ll_ystar / (jet1.rapidity - jet1.rapidity))
 
-        # rapidity definition of the old coffea package
-        jet1_rapidity = 0.5 * (np.log(jet1.E + jet1.pz) - np.log(jet1.E - jet1.pz))
-        jet2_rapidity = 0.5 * (np.log(jet2.E + jet2.pz) - np.log(jet2.E - jet2.pz))
-        # jj_mass = np.sqrt(dijet.t**2-dijet.x**2-dijet.y**2-dijet.z**2)
-        jj_mass = np.sqrt(_mass2_kernel(dijet.t, dijet.x, dijet.y, dijet.z))
     
         jet_loop_out_dict = {
             "jet1_pt" : jet1.pt,
@@ -1408,8 +1394,7 @@ class EventProcessor(processor.ProcessorABC):
             "jet2_qgl" : jet2.qgl,
             "jet2_jetId" : jet2.jetId,
             # "jet2_puId" : jet2.puId,
-            # "jj_mass" : dijet.mass,
-            "jj_mass" : jj_mass,
+            "jj_mass" : dijet.mass,
             "jj_pt" : dijet.pt,
             "jj_eta" : dijet.eta,
             "jj_phi" : dijet.phi,

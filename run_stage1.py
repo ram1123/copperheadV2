@@ -23,6 +23,8 @@ from dask.distributed import performance_report
 from src.corrections.evaluator import nnlops_weights, qgl_weights
 import os
 from omegaconf import OmegaConf
+from coffea.nanoevents.methods import vector
+
 
 # dask.config.set({'logging.distributed': 'error'})
 import logging
@@ -67,8 +69,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
         },
     ).events()
-
-
+    
     # save input events for CI testing start ---------------------------------------------
     # dir = f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}'
     # if not os.path.exists(dir):
