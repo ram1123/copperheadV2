@@ -16,6 +16,10 @@ import sys, inspect
 import configs.categories.category_cuts as category_cuts
 
 def categoryWrapper(name: str, events) -> ak.Array:
+    """
+    wrapper function to take a string representation of cuts and applying the python implementation 
+    saved in configs.categories.category_cuts
+    """
     found_cut = False
     for class_name, obj in inspect.getmembers(category_cuts):
         if ("__" not in class_name) and ("Custom" in class_name):  # only look at classes I wrote
@@ -27,6 +31,9 @@ def categoryWrapper(name: str, events) -> ak.Array:
         raise ValueError
 
 def categoryWrapperLoop(names: List[str], events) -> ak.Array:
+    """
+    Wrapper function that implements categoryWrapper in a loop
+    """
     if len(names) == 0:
         print(f"ERROR: given names in categoryWrapperLoop is empty!")
         raise ValueError
