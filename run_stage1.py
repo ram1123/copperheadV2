@@ -54,6 +54,16 @@ def trim_memory() -> int:
 
 # #-------------------------------------------------------------------
 
+def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
+    """
+    Small wrapper function that returns the directory path to save the parquets
+    from stage1
+    """
+    fraction = round(dataset_dict["metadata"]["fraction"], 3)
+    fraction_str = str(fraction).replace('.', '_')
+    sample_name = dataset_dict['metadata']['dataset']
+    save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
+    return save_path
 
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None):
     if save_path is None:
@@ -238,32 +248,36 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # gen jet variables end ------------------------------
     # print(f"stage1 skim compute2: {ak.zip(skim_dict).compute()}")
     # print(f"skim_dict.keys(): {skim_dict.keys()}")
-    # define save path
-    fraction = round(dataset_dict["metadata"]["fraction"], 3)
-    fraction_str = str(fraction).replace('.', '_')
-    sample_name = dataset_dict['metadata']['dataset']
-    save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
-    print(f"save_path: {save_path}")
-    # remove previously existing files
-    filelist = glob.glob(f"{save_path}/*.parquet")
-    print(f"len(filelist): {len(filelist)}")
-    for file in filelist:
-        os.remove(file)
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
+    # # define save path
+    # fraction = round(dataset_dict["metadata"]["fraction"], 3)
+    # fraction_str = str(fraction).replace('.', '_')
+    # sample_name = dataset_dict['metadata']['dataset']
+    # save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
+    # print(f"save_path: {save_path}")
+    # # remove previously existing files
+    # filelist = glob.glob(f"{save_path}/*.parquet")
+    # print(f"len(filelist): {len(filelist)}")
+    # for file in filelist:
+    #     os.remove(file)
+    # if not os.path.exists(save_path):
+    #     os.makedirs(save_path)
     
     #----------------------------------
-    zip = ak.zip(skim_dict, depth_limit=1)
-    zip.persist().to_parquet(save_path)
-    raise ValueError
+    skim_zip = ak.zip(skim_dict, depth_limit=1)
+    print(f"skim_zip: {skim_zip}")
+    # skim_zip.persist().to_parquet(save_path)
+    # raise ValueError
+    return skim_zip
+    # return "Success!"
+    # 
     # zip = dask.compute(skim_dict)
     # print(f"stage1 zip compute: {zip.compute()}")
     # zip.to_parquet(save_path, compute=True)
     # print("zip to parquet done!")
-    skim = dak.to_parquet(zip, save_path, compute=False)
+    # skim = dak.to_parquet(zip, save_path, compute=False)
     # print(f"stage1 skim compute4: {skim.compute()}")
     # print(f"stage1 skim persisted: {skim.persist()}")
-    return skim
+    # return zip
 
 
 
@@ -355,8 +369,8 @@ if __name__ == "__main__":
         # add in NanoAODv info into samples metadata for coffea processor
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
-        total_save_path = args.save_path + f"/{args.year}"
-        print(f"total_save_path: {total_save_path}")
+        start_save_path = args.save_path + f"/{args.year}"
+        print(f"start_save_path: {start_save_path}")
         # with performance_report(filename="dask-report.html"):
         # for dataset, sample in samples.items():
         # dask.config.set(scheduler='single-threaded')
@@ -366,7 +380,8 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # max_file_len = 15
                 # max_file_len = 50
-                max_file_len = 900
+                max_file_len = 30
+                # max_file_len = 900
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
                 print(f"max_file_len: {max_file_len}")
@@ -380,10 +395,21 @@ if __name__ == "__main__":
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
                     # print(f"var_step: {var_step}")
-                    to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
+                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
+                    save_path = getSavePath(start_save_path, smaller_sample, idx)
+                    print(f"save_path: {save_path}")
+                    # remove previously existing files and make path if doesn't exist
+                    filelist = glob.glob(f"{save_path}/*.parquet")
+                    print(f"len(filelist): {len(filelist)}")
+                    for file in filelist:
+                        os.remove(file)
+                    if not os.path.exists(save_path):
+                        os.makedirs(save_path)
+
+                    to_persist.persist().to_parquet(save_path)
                     # print(f"to_compute: {to_compute}")
                     # dask_computed = dask.compute(to_compute)
-                    dask_computed = dask.persist(to_compute)
+                    # dask_computed = dask.persist(to_compute)
                     # print(f"dask_computed: {dask_computed}")
     
                     # do garbage collection and memory trimming-----------

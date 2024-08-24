@@ -941,7 +941,7 @@ class EventProcessor(processor.ProcessorABC):
         #     "mu2_iso" : mu2.pfRelIso04_all,
         # })
         # print(f"test_zip.compute 1: {test_zip.to_parquet(save_path)}")
-        print(f"out_dict.persist 1: {ak.zip(out_dict).persist().to_parquet(save_path)}")
+        # print(f"out_dict.persist 1: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 1: {ak.zip(out_dict).to_parquet(save_path)}")
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
@@ -965,7 +965,7 @@ class EventProcessor(processor.ProcessorABC):
             out_dict.update(jet_loop_dict) 
         # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
-        print(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
+        # print(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
         
         # # fill in the regions
@@ -1038,7 +1038,7 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"wgt_name: {wgt_name}")
             weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
         out_dict.update(weight_dict)
-        print(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
+        # print(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 5: {ak.zip(out_dict).to_parquet(save_path)}")
         return out_dict
         
