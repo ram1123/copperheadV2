@@ -212,7 +212,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             softj_vars[key] = value
     skim_dict.update(softj_vars)
     # print(f"softj_vars.keys(): {softj_vars.keys()}")
-    
+    # print(f"stage1 skim compute1: {ak.zip(skim_dict).compute()}")
     # gen jet variables start ------------------------------
     is_mc = dataset_dict["metadata"]["is_mc"]
     if is_mc:
@@ -236,7 +236,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         }
         skim_dict.update(mc_dict)
     # gen jet variables end ------------------------------
-
+    # print(f"stage1 skim compute2: {ak.zip(skim_dict).compute()}")
     # print(f"skim_dict.keys(): {skim_dict.keys()}")
     # define save path
     fraction = round(dataset_dict["metadata"]["fraction"], 3)
@@ -254,10 +254,15 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     
     #----------------------------------
     zip = ak.zip(skim_dict, depth_limit=1)
+    zip.persist().to_parquet(save_path)
+    raise ValueError
     # zip = dask.compute(skim_dict)
-    
+    # print(f"stage1 zip compute: {zip.compute()}")
     # zip.to_parquet(save_path, compute=True)
+    # print("zip to parquet done!")
     skim = dak.to_parquet(zip, save_path, compute=False)
+    # print(f"stage1 skim compute4: {skim.compute()}")
+    # print(f"stage1 skim persisted: {skim.persist()}")
     return skim
 
 
@@ -377,7 +382,8 @@ if __name__ == "__main__":
                     # print(f"var_step: {var_step}")
                     to_compute = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=total_save_path)
                     # print(f"to_compute: {to_compute}")
-                    dask_computed = dask.compute(to_compute)
+                    # dask_computed = dask.compute(to_compute)
+                    dask_computed = dask.persist(to_compute)
                     # print(f"dask_computed: {dask_computed}")
     
                     # do garbage collection and memory trimming-----------

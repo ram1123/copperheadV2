@@ -23,6 +23,8 @@ import sys
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
 
+save_path = "/depot/cms/users/yun79/results/stage1/DNN_test//2018/f0_1/data_B/0" # for debugging
+
 def _mass2_kernel(t, x, y, z):
     return t * t - x * x - y * y - z * z
 
@@ -155,7 +157,6 @@ def getPhiCS(
     delta_Q_term = delta_T_dot_Q_T
     delta_Q_term = delta_Q_term / dimuon_pt # normalize since Q_T should techincally be a unit vector
     phi_cs = np.arctan2(Q_coeff*delta_R_term, delta_Q_term)
-    # phi_cs = np.arctan(Q_coeff*delta_R_term/ delta_Q_term)
     return phi_cs
     
 
@@ -363,13 +364,15 @@ class EventProcessor(processor.ProcessorABC):
             apply_roccor(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
         # FSR recovery
-        if self.config["do_fsr"]:
+        do_fsr = self.config["do_fsr"]
+        # do_fsr = False
+        if do_fsr:
             print(f"doing fsr!")
             # applied_fsr = fsr_recovery(events)
             applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
-            events["Muon", "pt"] = events.Muon.pt_fsr
-            events["Muon", "eta"] = events.Muon.eta_fsr
-            events["Muon", "phi"] = events.Muon.phi_fsr
+            # events["Muon", "pt"] = events.Muon.pt_fsr
+            # events["Muon", "eta"] = events.Muon.eta_fsr
+            # events["Muon", "phi"] = events.Muon.phi_fsr
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
         else:
             # if no fsr, just copy 'pt' to 'pt_fsr'
@@ -430,7 +433,9 @@ class EventProcessor(processor.ProcessorABC):
 
         muons = events.Muon[muon_selection]
         # muons = ak.to_packed(events.Muon[muon_selection])
-
+        
+        # print(f"muons.pt: {muons.pt.compute()}")
+        
         # count muons that pass the muon selection
         nmuons = ak.num(muons, axis=1)
         # Find opposite-sign muons
@@ -909,9 +914,6 @@ class EventProcessor(processor.ProcessorABC):
             "mu1_pt_fsr" : mu1.pt_fsr,
             "mu2_pt_fsr" : mu2.pt_fsr,
             "pass_leading_pt" : pass_leading_pt,
-            # temporary test start ------------------------------------
-            # "M105to160normalizedWeight" : M105to160normalizedWeight,
-            # temporary test end ------------------------------------
         }
         if is_mc:
             mc_dict = {
@@ -934,7 +936,13 @@ class EventProcessor(processor.ProcessorABC):
                 "gjj_dR" : gjj_dR,
             }
             out_dict.update(mc_dict)
-        
+        # test_zip = ak.zip({
+        #     "mu1_iso" : mu1.pfRelIso04_all,
+        #     "mu2_iso" : mu2.pfRelIso04_all,
+        # })
+        # print(f"test_zip.compute 1: {test_zip.to_parquet(save_path)}")
+        print(f"out_dict.persist 1: {ak.zip(out_dict).persist().to_parquet(save_path)}")
+        # print(f"out_dict.compute 1: {ak.zip(out_dict).to_parquet(save_path)}")
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#
@@ -956,6 +964,9 @@ class EventProcessor(processor.ProcessorABC):
                     
             out_dict.update(jet_loop_dict) 
         # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
+
+        print(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
+        # print(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
         
         # # fill in the regions
         mass = dimuon.mass
@@ -970,11 +981,12 @@ class EventProcessor(processor.ProcessorABC):
             
         out_dict.update(region_dict) 
 
+        
        
         # b4 we do any filtering, we obtain the sum of gen weights for normalization
         # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
         
-
+        # print(f"out_dict.compute 3: {ak.zip(out_dict).to_parquet(save_path)}")
         njets = out_dict["njets"]
         # print(f"njets: {ak.to_numpy(njets.compute())}")
 
@@ -1026,8 +1038,8 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"wgt_name: {wgt_name}")
             weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
         out_dict.update(weight_dict)
-
-    
+        print(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
+        # print(f"out_dict.compute 5: {ak.zip(out_dict).to_parquet(save_path)}")
         return out_dict
         
     def postprocess(self, accumulator):
