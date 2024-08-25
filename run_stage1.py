@@ -264,7 +264,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     
     #----------------------------------
     skim_zip = ak.zip(skim_dict, depth_limit=1)
-    print(f"skim_zip: {skim_zip}")
+    # print(f"skim_zip: {skim_zip}")
     # skim_zip.persist().to_parquet(save_path)
     # raise ValueError
     return skim_zip
@@ -354,8 +354,8 @@ if __name__ == "__main__":
         # # #-----------------------------------------------------------
         else:
             # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
-            client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='6 GiB') 
-            # client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+            # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='6 GiB') 
+            client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
             print("Local scale Client created")
         #-------------------------------------------------------------------------------------
         #-----------------------------------------------------------
@@ -380,8 +380,8 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # max_file_len = 15
                 # max_file_len = 50
-                max_file_len = 30
-                # max_file_len = 900
+                # max_file_len = 30
+                max_file_len = 900
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
                 print(f"max_file_len: {max_file_len}")
@@ -389,8 +389,8 @@ if __name__ == "__main__":
                 # for idx in range(len(smaller_files)):
                 # for idx in tqdm.tqdm(range(2, len(smaller_files)), leave=False):
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    print("restarting workers!")
-                    client.restart(wait_for_workers = False)
+                    # print("restarting workers!")
+                    # client.restart(wait_for_workers = False)
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
@@ -406,7 +406,8 @@ if __name__ == "__main__":
                     if not os.path.exists(save_path):
                         os.makedirs(save_path)
 
-                    to_persist.persist().to_parquet(save_path)
+                    # to_persist.persist().to_parquet(save_path)
+                    dak.to_parquet(to_persist, save_path, compute=True) # run-time test for old method
                     # print(f"to_compute: {to_compute}")
                     # dask_computed = dask.compute(to_compute)
                     # dask_computed = dask.persist(to_compute)

@@ -370,9 +370,9 @@ class EventProcessor(processor.ProcessorABC):
             print(f"doing fsr!")
             # applied_fsr = fsr_recovery(events)
             applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
-            # events["Muon", "pt"] = events.Muon.pt_fsr
-            # events["Muon", "eta"] = events.Muon.eta_fsr
-            # events["Muon", "phi"] = events.Muon.phi_fsr
+            events["Muon", "pt"] = events.Muon.pt_fsr
+            events["Muon", "eta"] = events.Muon.eta_fsr
+            events["Muon", "phi"] = events.Muon.phi_fsr
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
         else:
             # if no fsr, just copy 'pt' to 'pt_fsr'
@@ -1381,7 +1381,7 @@ class EventProcessor(processor.ProcessorABC):
             "jet1_phi" : jet1.phi,
             "jet1_qgl" : jet1.qgl,
             "jet1_jetId" : jet1.jetId,
-            # "jet1_puId" : jet1.puId,
+            "jet1_puId" : jet1.puId,
             "jet2_pt" : jet2.pt,
             "jet2_eta" : jet2.eta,
             "jet1_mass" : jet1.mass,
@@ -1405,7 +1405,7 @@ class EventProcessor(processor.ProcessorABC):
             "jet2_phi" : jet2.phi,
             "jet2_qgl" : jet2.qgl,
             "jet2_jetId" : jet2.jetId,
-            # "jet2_puId" : jet2.puId,
+            "jet2_puId" : jet2.puId,
             "jj_mass" : dijet.mass,
             "jj_pt" : dijet.pt,
             "jj_eta" : dijet.eta,

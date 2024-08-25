@@ -77,6 +77,8 @@ def fsr_recoveryV1(df):
     pz = ak.zeros_like(df.Muon.pt)
     e = ak.zeros_like(df.Muon.pt)
 
+    # print(f"fsr recovery py: {py.compute()}")
+    # print(f"fsr recovery px: {px.compute()}")
     fsr = {
         "pt": df.Muon.matched_fsrPhoton.pt,
         "eta": df.Muon.matched_fsrPhoton.eta,
@@ -100,6 +102,9 @@ def fsr_recoveryV1(df):
     # print(f"total nmuons applied with fsrPhotons: {ak.sum(mask,axis=None)}")
     eta = np.arcsinh(pz / pt)
     phi = np.arctan2(py, px)
+    # print(f"fsr recovery py: {py.compute()}")
+    # print(f"fsr recovery px: {px.compute()}")
+    # print(f"fsr recovery phi: {phi.compute()}")
     mass = np.sqrt(e**2 - px**2 - py**2 - pz**2)
     # print(f"type(eta): {(eta.type)}")
     # print(f"type(phi): {(phi.type)}")
@@ -113,7 +118,11 @@ def fsr_recoveryV1(df):
     # df["Muon", "mass_fsr"] = df.Muon.mass
     df["Muon", "iso_fsr"] = ak.where(mask, iso, df.Muon.pfRelIso04_all)
     fsr_event_mask = ak.sum(mask, axis=1) > 0
-    # print(f"fsr_event_mask len : {ak.sum(fsr_event_mask)}")
+    # print(f"fsr_event_mask cases being true : {ak.sum(fsr_event_mask).compute()}")
+    # print(f"df.Muon.phi_fsr : {df.Muon.phi_fsr.compute()}")
+    # print(f"df.Muon.phi_fsr is none sum: {ak.sum(ak.is_none(df.Muon.phi_fsr)).compute()}")
+    # print(f"df.Muon.iso_fsr is none sum: {ak.sum(ak.is_none(df.Muon.iso_fsr)).compute()}")
+    
     # print(f"df[mask].Muon.pt_fsr: {df[fsr_event_mask].Muon.pt_fsr}")
     # print(f"df[mask].Muon.pt: {df[fsr_event_mask].Muon.pt}")
     # print(f"fsr[pt][mask]: \n {fsr['pt'][fsr_event_mask]}")
