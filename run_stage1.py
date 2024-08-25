@@ -406,8 +406,7 @@ if __name__ == "__main__":
                     if not os.path.exists(save_path):
                         os.makedirs(save_path)
 
-                    # to_persist.persist().to_parquet(save_path)
-                    dak.to_parquet(to_persist, save_path, compute=True) # run-time test for old method
+                    to_persist.persist().to_parquet(save_path)
                     # print(f"to_compute: {to_compute}")
                     # dask_computed = dask.compute(to_compute)
                     # dask_computed = dask.persist(to_compute)
