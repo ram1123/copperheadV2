@@ -407,15 +407,6 @@ if __name__ == "__main__":
                         os.makedirs(save_path)
 
                     to_persist.persist().to_parquet(save_path)
-                    # print(f"to_compute: {to_compute}")
-                    # dask_computed = dask.compute(to_compute)
-                    # dask_computed = dask.persist(to_compute)
-                    # print(f"dask_computed: {dask_computed}")
-    
-                    # do garbage collection and memory trimming-----------
-                    # client.run(gc.collect)
-                    # client.run(trim_memory)
-                    #-----------------------------------------------------
                     
                     var_elapsed = round(time.time() - var_step, 3)
                     print(f"Finished file_idx {idx} in {var_elapsed} s.")
