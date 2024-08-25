@@ -527,7 +527,6 @@ class EventProcessor(processor.ProcessorABC):
         
         # calculate sum of gen weight b4 skimming off bad events
         if is_mc:
-            events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
             if self.test_mode: # for small files local testing
                 sumWeights = ak.sum(events.genWeight, axis=0) # for testing
                 print(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
