@@ -150,10 +150,22 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, apply vbf cut for vbf category, else, ggH category cut",
     )
+    parser.add_argument(
+    "--vbf_filter_study",
+    dest="do_vbf_filter_study",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, apply vbf cut for vbf category, else, ggH category cut",
+    )
     #---------------------------------------------------------
     # gather arguments
     args = parser.parse_args()
     available_processes = []
+    # if doing VBF filter study, add the vbf filter sample to the DY group
+    if args.do_vbf_filter_study:
+        vbf_filter_sample =  "dy_m105_160_vbf_amc"
+        group_DY_processes.appoend(vbf_filter_sample)
+    
     # take data
     data_samples = args.data_samples
     if len(data_samples) >0:
@@ -211,12 +223,15 @@ if __name__ == "__main__":
         if "dimuon" in particle:
             variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
+            variables2plot.append(f"{particle}_eta")
             variables2plot.append(f"{particle}_cos_theta_cs")
             variables2plot.append(f"{particle}_phi_cs")
             variables2plot.append(f"{particle}_cos_theta_eta")
             variables2plot.append(f"{particle}_phi_eta")
             variables2plot.append(f"mmj_min_dPhi")
             variables2plot.append(f"mmj_min_dEta")
+            variables2plot.append(f"rpt")
+            variables2plot.append(f"ll_zstar_log")
         elif "dijet" in particle:
             # variables2plot.append(f"gjj_mass")
             variables2plot.append(f"jj_mass")
@@ -229,19 +244,11 @@ if __name__ == "__main__":
                 variables2plot.append(f"{particle}2_{kinematic}")
         elif ("jet" in particle):
             variables2plot.append(f"njets")
-            # for kinematic in kinematic_vars:
-            #     # plot both leading and subleading muons/jets
-            #     variables2plot.append(f"{particle}1_{kinematic}")
-            #     variables2plot.append(f"{particle}2_{kinematic}")
-        # if ("mu" in particle) or ("jet" in particle):
-        #     for kinematic in kinematic_vars:
-        #         # plot both leading and subleading muons/jets
-        #         variables2plot.append(f"{particle}1_{kinematic}")
-        #         variables2plot.append(f"{particle}2_{kinematic}")
-        # elif "dimuon" in particle:
-        #     variables2plot.append(f"{particle}_mass")
-        #     # for kinematic in kinematic_vars:
-        #     #     variables2plot.append(f"{particle}_{kinematic}")
+            for kinematic in kinematic_vars:
+                # plot both leading and subleading muons/jets
+                variables2plot.append(f"{particle}1_{kinematic}")
+                variables2plot.append(f"{particle}2_{kinematic}")
+       
         else:
             print(f"Unsupported variable: {particle} is given!")
     print(f"variables2plot: {variables2plot}")
@@ -375,64 +382,37 @@ if __name__ == "__main__":
                 btag_cut =(events.nBtagLoose >= 2) | (events.nBtagMedium >= 1)
                 if args.vbf_cat_mode:
                     
-                    # original start --------------------------
                     print("vbf mode!")
                     prod_cat_cut =  vbf_cut
-                    # original end-----------------
-                    # test start ------------------------------------------
-                    # print("no Category mode!")
-                    # prod_cat_cut = ak.ones_like(vbf_cut)
-                    # test end -----------------------------------------
                     # apply additional cut to MC samples if vbf 
                     # VBF filter cut start -------------------------------------------------
-                    if "dy_" in process:
-                        if ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc"):
-                            print("dy_VBF_filter extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                            # extra cut to make dy_VBF_filter(nanoAODv9) to be same as nanoAODv6 
-                            extra_gjetCut = (events.gjet1_pt < 10) | (events.gjet2_pt < 10) 
-                            extra_gjetCut = ak.fill_none( ~extra_gjetCut, value=False)
-                            prod_cat_cut =  (prod_cat_cut  
-                                        & vbf_filter
-                                         # & extra_gjetCut
-                            )
-                        elif process == "dy_M-100To200":
-                            print("dy_M-100To200 extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) 
-                            prod_cat_cut =  (
-                                prod_cat_cut  
-                                & ~vbf_filter 
-                            )
-                        else:
-                            print(f"no extra processing for {process}")
-                            pass
+                    if args.do_vbf_filter_study:
+                        print("applying VBF filter gen cut!")
+                        if "dy_" in process:
+                            if ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc"):
+                                print("dy_VBF_filter extra!")
+                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
+                                # extra cut to make dy_VBF_filter(nanoAODv9) to be same as nanoAODv6 
+                                extra_gjetCut = (events.gjet1_pt < 10) | (events.gjet2_pt < 10) 
+                                extra_gjetCut = ak.fill_none( ~extra_gjetCut, value=False)
+                                prod_cat_cut =  (prod_cat_cut  
+                                            & vbf_filter
+                                             # & extra_gjetCut
+                                )
+                            elif process == "dy_M-100To200":
+                                print("dy_M-100To200 extra!")
+                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) 
+                                prod_cat_cut =  (
+                                    prod_cat_cut  
+                                    & ~vbf_filter 
+                                )
+                            else:
+                                print(f"no extra processing for {process}")
+                                pass
                     # VBF filter cut end -------------------------------------------------
                 else: # we're interested in ggH category
                     print("ggH mode!")
                     prod_cat_cut =  ~vbf_cut
-                    # VBF filter cut start -------------------------------------------------
-                    if "dy_" in process:
-                        if (process == "dy_VBF_filter") or (process =="dy_m105_160_vbf_amc"):
-                            print("dy_VBF_filter extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                            # extra cut to make dy_VBF_filter(nanoAODv9) to be same as nanoAODv6 
-                            extra_gjetCut = (events.gjet1_pt < 10) | (events.gjet2_pt < 10) 
-                            extra_gjetCut = ak.fill_none( ~extra_gjetCut, value=False)
-                            prod_cat_cut =  (prod_cat_cut  
-                                        & vbf_filter
-                                         # & extra_gjetCut
-                            )
-                        elif process == "dy_M-100To200":
-                            print("dy_M-100To200 extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) 
-                            prod_cat_cut =  (
-                                prod_cat_cut  
-                                & ~vbf_filter 
-                            )
-                        else:
-                            print(f"no extra processing for {process}")
-                            pass
-                    # VBF filter cut end -------------------------------------------------
                 # print(f"prod_cat_cut sum b4: {ak.sum(prod_cat_cut).compute()}")
                 
                
@@ -904,28 +884,30 @@ if __name__ == "__main__":
                 if args.vbf_cat_mode:
                     print("vbf mode!")
                     prod_cat_cut =  vbf_cut
-                    if "dy_" in process:
-                        if process == "dy_VBF_filter":
-                            print("dy_VBF_filter extra!")
-                            vbf_filter = (
-                                ak.fill_none((events.gjj_mass > 350), value=False) 
-                                # & ak.fill_none((events.gjj_dR > 0.3), value=False)
-                                # & ak.fill_none((events.gjet1_pt > 35), value=False)
-                             )
-                            
-                            prod_cat_cut =  (prod_cat_cut  
-                                        & vbf_filter
-                            )
-                        elif process == "dy_M-100To200":
-                            print("dy_M-100To200 extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # | ak.fill_none((events.gjj_dR > 0.3), value=False)
-                            prod_cat_cut =  (
-                                prod_cat_cut  
-                                & ~vbf_filter 
-                            )
-                        else:
-                            print(f"no extra processing for {process}")
-                            pass
+                    if args.do_vbf_filter_study:
+                        print("applying VBF filter gen cut!")
+                        if "dy_" in process:
+                            if process == "dy_VBF_filter":
+                                print("dy_VBF_filter extra!")
+                                vbf_filter = (
+                                    ak.fill_none((events.gjj_mass > 350), value=False) 
+                                    # & ak.fill_none((events.gjj_dR > 0.3), value=False)
+                                    # & ak.fill_none((events.gjet1_pt > 35), value=False)
+                                 )
+                                
+                                prod_cat_cut =  (prod_cat_cut  
+                                            & vbf_filter
+                                )
+                            elif process == "dy_M-100To200":
+                                print("dy_M-100To200 extra!")
+                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # | ak.fill_none((events.gjj_dR > 0.3), value=False)
+                                prod_cat_cut =  (
+                                    prod_cat_cut  
+                                    & ~vbf_filter 
+                                )
+                            else:
+                                print(f"no extra processing for {process}")
+                                pass
                 else: # we're interested in ggH category
                     print("ggH mode!")
                     prod_cat_cut =  ~vbf_cut
