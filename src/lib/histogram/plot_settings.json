@@ -137,7 +137,7 @@
     },
     "jet1_pt": {
         "variable": "jet1_pt",
-        "binning_linspace": [25, 300, 30],
+        "binning_linspace": [25, 250, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(jet1)$ [GeV]",
@@ -161,7 +161,7 @@
     },
     "jet2_pt": {
         "variable": "jet2_pt",
-        "binning_linspace": [25, 120, 30],
+        "binning_linspace": [25, 250, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(jet2)$ [GeV]",
@@ -185,7 +185,7 @@
     },
     "mu1_pt": {
         "variable": "mu1_pt",
-        "binning_linspace": [20, 300, 30],
+        "binning_linspace": [20, 200, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(mu1)$ [GeV]",
@@ -209,7 +209,7 @@
     },
     "mu2_pt": {
         "variable": "mu2_pt",
-        "binning_linspace": [20, 300, 30],
+        "binning_linspace": [20, 120, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(mu2)$ [GeV]",
