@@ -63,6 +63,22 @@
         "xlabel": "\\phi_{CS}$",
         "color": "royalblue"
     },
+    "rpt": {
+        "variable": "rpt",
+        "binning_linspace": [0, 1, 30],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$R_{p_T}$",
+        "color": "royalblue"
+    },
+    "ll_zstar_log": {
+        "variable": "ll_zstar_log",
+        "binning_linspace": [-2.4, 2.4, 30],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "ll_zstar_log",
+        "color": "royalblue"
+    },
     "mmj_min_dEta": {
         "variable": "mmj_min_dEta",
         "binning_linspace": [0, 8, 30],
@@ -145,7 +161,7 @@
     },
     "jet2_pt": {
         "variable": "jet2_pt",
-        "binning_linspace": [25, 300, 30],
+        "binning_linspace": [25, 120, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(jet2)$ [GeV]",
