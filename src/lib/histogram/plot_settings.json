@@ -15,6 +15,22 @@
         "xlabel": "$p_T(\\mu\\mu)$ [GeV]",
         "color": "royalblue"
     },
+    "dimuon_eta": {
+        "variable": "dimuon_eta",
+        "binning_linspace": [-5, 5, 30],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$\\eta(\\mu\\mu)$ [GeV]",
+        "color": "royalblue"
+    },
+    "dimuon_rapidity": {
+        "variable": "dimuon_rapidity",
+        "binning_linspace": [-5, 5, 30],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$y(\\mu\\mu)$ [GeV]",
+        "color": "royalblue"
+    },
     "dimuon_cos_theta_cs": {
         "variable": "dimuon_cos_theta_cs",
         "binning_linspace": [-1, 1, 30],
@@ -26,6 +42,22 @@
     "dimuon_phi_cs": {
         "variable": "dimuon_phi_cs",
         "binning_linspace": [-3.15, 3.15, 30],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "\\phi_{CS}$",
+        "color": "royalblue"
+    },
+    "dimuon_cos_theta_eta": {
+        "variable": "dimuon_cos_theta_eta",
+        "binning_linspace": [-1, 1, 30],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$cos(\\theta_{CS})$",
+        "color": "royalblue"
+    },
+    "dimuon_phi_eta": {
+        "variable": "dimuon_phi_eta",
+        "binning_linspace": [0, 3.15, 30],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "\\phi_{CS}$",
@@ -53,6 +85,14 @@
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "N Jets",
+        "color": "royalblue"
+    },
+    "gjj_mass": {
+        "variable": "gjj_mass",
+        "binning_linspace": [0, 2500, 30],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$gen m_{jj}$ [GeV]",
         "color": "royalblue"
     },
     "jj_mass": {
