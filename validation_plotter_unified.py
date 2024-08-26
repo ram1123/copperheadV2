@@ -4,8 +4,8 @@ import numpy as np
 import json
 import argparse
 import os
-from lib.histogram.ROOT_utils import setTDRStyle, CMS_lumi, reweightROOTH_data, reweightROOTH_mc #reweightROOTH
-from lib.histogram.plotting import plotDataMC_compare
+from src.lib.histogram.ROOT_utils import setTDRStyle, CMS_lumi, reweightROOTH_data, reweightROOTH_mc #reweightROOTH
+from src.lib.histogram.plotting import plotDataMC_compare
 from distributed import Client
 import time    
 import tqdm
@@ -246,7 +246,7 @@ if __name__ == "__main__":
             print(f"Unsupported variable: {particle} is given!")
     print(f"variables2plot: {variables2plot}")
     # obtain plot settings from config file
-    with open("./lib/histogram/plot_settings.json", "r") as file:
+    with open("./src/lib/histogram/plot_settings.json", "r") as file:
         plot_settings = json.load(file)
     status = args.status.replace("_", " ")
     
