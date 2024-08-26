@@ -801,7 +801,15 @@ if __name__ == "__main__":
             pad.Update();
             CMS_lumi(canvas, args.lumi, up=True, reduceSize=True, status=status);
             pad.RedrawAxis("sameaxis");
-            full_save_path = f"{args.save_path}/{args.year}/ROOT/Reg_{args.region}"
+
+            # -------------------------------------------------------
+            # All data are prepped, now plot Data/MC histogram
+            # -------------------------------------------------------
+            if args.vbf_cat_mode:
+                production_cat = "vbf"
+            else:
+                production_cat = "ggh"
+            full_save_path = f"{args.save_path}/{args.year}/ROOT/Reg_{args.region}/Cat_{production_cat}"
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             canvas.SaveAs(f"{full_save_path}/{var}.pdf");
@@ -1068,7 +1076,11 @@ if __name__ == "__main__":
             # -------------------------------------------------------
             # All data are prepped, now plot Data/MC histogram
             # -------------------------------------------------------
-            full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}"
+            if args.vbf_cat_mode:
+                production_cat = "vbf"
+            else:
+                production_cat = "ggh"
+            full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{production_cat}"
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             full_save_fname = f"{full_save_path}/{var}.pdf"
