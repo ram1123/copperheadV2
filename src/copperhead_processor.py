@@ -177,7 +177,6 @@ class EventProcessor(processor.ProcessorABC):
             "do_fsr" : True,
             "do_geofit" : True, # False
             "do_beamConstraint": True, # if True, override do_geofit
-            "year" : "2018",
             "do_nnlops" : True,
             "do_pdf" : True,
         }
@@ -194,7 +193,6 @@ class EventProcessor(processor.ProcessorABC):
             self.zpt_path = "zpt_weights/2016_value"
         else:
             self.zpt_path = "zpt_weights_all"
-        # print(f"self.zpt_path: {self.zpt_path}")
         # Calibration of event-by-event mass resolution
         for mode in ["Data", "MC"]:
             if "2016" in year:
@@ -202,9 +200,9 @@ class EventProcessor(processor.ProcessorABC):
             else:
                 yearUL=year #Work around before there are seperate new files for pre and postVFP
             label = f"res_calib_{mode}_{yearUL}"
-            path = self.config["res_calib_path"]
-            file_path = f"{path}/{label}.root"
-            extractor_instance.add_weight_sets([f"{label} {label} {file_path}"])
+            file_path = self.config["res_calib_path"][mode]
+            calib_str = f"{label} {label} {file_path}"
+            extractor_instance.add_weight_sets([calib_str])
 
         # PU ID weights
         jetpuid_filename = self.config["jetpuid_sf_file"]
@@ -214,10 +212,11 @@ class EventProcessor(processor.ProcessorABC):
         self.evaluator = extractor_instance.make_evaluator()
 
     def process(self, events: coffea_nanoevent):
+        year = self.config["year"]
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
-
+    
 
 
         """
@@ -335,10 +334,12 @@ class EventProcessor(processor.ProcessorABC):
         if do_pu_wgt:
             print("doing PU re-wgt!")
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
-            if NanoAODv > 9:
+            print(f"year: {year}")
+            if ("22" in year) or ("23" in year) or ("24" in year):
                 run_campaign = 3
             else:
                 run_campaign = 2
+            print(f"run_campaign: {run_campaign}")
             if is_mc:
                 pu_wgts = pu_evaluator(
                             self.config,
@@ -899,6 +900,7 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_mass" : dimuon.mass,
             "dimuon_pt" : dimuon.pt,
             "dimuon_eta" : dimuon.eta,
+            "dimuon_rapidity" : dimuon.rapidity,
             "dimuon_phi" : dimuon.phi,
             "dimuon_dEta" : dimuon_dEta,
             "dimuon_dPhi" : dimuon_dPhi,
@@ -1380,7 +1382,7 @@ class EventProcessor(processor.ProcessorABC):
             "jet1_phi" : jet1.phi,
             "jet1_qgl" : jet1.qgl,
             "jet1_jetId" : jet1.jetId,
-            "jet1_puId" : jet1.puId,
+            # "jet1_puId" : jet1.puId,
             "jet2_pt" : jet2.pt,
             "jet2_eta" : jet2.eta,
             "jet1_mass" : jet1.mass,
@@ -1404,7 +1406,7 @@ class EventProcessor(processor.ProcessorABC):
             "jet2_phi" : jet2.phi,
             "jet2_qgl" : jet2.qgl,
             "jet2_jetId" : jet2.jetId,
-            "jet2_puId" : jet2.puId,
+            # "jet2_puId" : jet2.puId,
             "jj_mass" : dijet.mass,
             "jj_pt" : dijet.pt,
             "jj_eta" : dijet.eta,
