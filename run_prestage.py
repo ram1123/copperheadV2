@@ -172,13 +172,17 @@ if __name__ == "__main__":
         if len(bkg_samples) >0:
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
-                    new_sample_list.append("dy_M-50")
+                    # new_sample_list.append("dy_M-50")
                     new_sample_list.append("dy_M-100To200")
-                    new_sample_list.append("dy_VBF_filter")
-                    new_sample_list.append("dy_m105_160_vbf_amc")
-                    new_sample_list.append("dy_VBF_filter_customJMEoff")
-                    new_sample_list.append("dy_M-50To120")
-                    new_sample_list.append("dy_M-120To200")
+                    # new_sample_list.append("dy_VBF_filter")
+                    # new_sample_list.append("dy_m105_160_vbf_amc")
+                    # new_sample_list.append("dy_VBF_filter_customJMEoff")
+                    # new_sample_list.append("dy_M-50To120")
+                    # new_sample_list.append("dy_M-120To200")
+                    # new_sample_list.append("dy_VBF_filter_Amandeep10_6_26")
+                    # new_sample_list.append("dy_VBF_filter_Amandeep10_6_32")
+                
+
                 
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                     new_sample_list.append("ttjets_dl")
@@ -245,52 +249,67 @@ if __name__ == "__main__":
                 # test start -----------------------------------------------------------
                 load_path = "/eos/purdue/store/user/hyeonseo/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano/240614_155758/"
                 fnames = glob.glob(f"{load_path}/*/*.root")
-            elif (args.NanoAODv >= 12) and is_data :
+            elif sample_name == "dy_VBF_filter_Amandeep10_6_26":
                 """
-                temp condition for privately produced Run2 data in NanoAOD v12 format
+                load directly from local files
                 """
-                if year == "2016preVFP":
-                    if sample_name == "data_B":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_151941/*/*.root"
-                    elif sample_name == "data_C":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152121/*/*.root"
-                    elif sample_name == "data_D":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152208/*/*.root"
-                    elif sample_name == "data_E":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152315/*/*.root"
-                    elif sample_name == "data_F":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152432/*/*.root"
-                    else:
-                        print("unknown v12 Data run!")
-                        raise ValueError
-                elif year == "2016postVFP":
-                    if sample_name == "data_F":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/240517_201444/*/*.root"
-                    elif sample_name == "data_G":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/240517_201522/*/*.root"
-                    elif sample_name == "data_H":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/240517_201559/*/*.root"
-                    else:
-                        print("unknown v12 Data run!")
-                elif year == "2017":
-                    if sample_name == "data_B":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095548/*/*.root"
-                    elif sample_name == "data_C":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095646/*/*.root"
-                    elif sample_name == "data_D":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095712/*/*.root"
-                    elif sample_name == "data_E":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095505/*/*.root"
-                    elif sample_name == "data_F":
-                        load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095808/*/*.root"
-                    else:
-                        print("unknown v12 Data run!")
-                        raise ValueError
-                else:
-                    print("Uncompatible year for privately produced data nanoaodV12!")
-                    raise ValueError
-                print(f"fnames load_path: {load_path}")
-                fnames = glob.glob(f"{load_path}")
+                # test start -----------------------------------------------------------
+                load_path = "/eos/purdue//store/user/amkaur/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/Flat_NanoAODSIM__CMSSW_10_6_26/240827_142843/0000/"
+                fnames = glob.glob(f"{load_path}/*.root")
+            elif sample_name == "dy_VBF_filter_Amandeep10_6_32":
+                """
+                load directly from local files
+                """
+                # test start -----------------------------------------------------------
+                load_path = "/eos/purdue//store/user/amkaur/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/Flat_NanoAODSIM__CMSSW_10_6_32_patch1/240827_143020/0000/"
+                fnames = glob.glob(f"{load_path}/*.root")
+            # comment out the NanoAODv >= 12 condition bc it was for a test, but this code could still be useful, so I am keep it for now
+                # elif (args.NanoAODv >= 12) and is_data :
+                #     """
+                #     temp condition for privately produced Run2 data in NanoAOD v12 format
+                #     """
+                #     if year == "2016preVFP":
+                #         if sample_name == "data_B":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_151941/*/*.root"
+                #         elif sample_name == "data_C":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152121/*/*.root"
+                #         elif sample_name == "data_D":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152208/*/*.root"
+                #         elif sample_name == "data_E":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152315/*/*.root"
+                #         elif sample_name == "data_F":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16preVFP_NanoAODv12/240518_152432/*/*.root"
+                #         else:
+                #             print("unknown v12 Data run!")
+                #             raise ValueError
+                #     elif year == "2016postVFP":
+                #         if sample_name == "data_F":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/240517_201444/*/*.root"
+                #         elif sample_name == "data_G":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/240517_201522/*/*.root"
+                #         elif sample_name == "data_H":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL16postVFP_NanoAODv12/240517_201559/*/*.root"
+                #         else:
+                #             print("unknown v12 Data run!")
+                #     elif year == "2017":
+                #         if sample_name == "data_B":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095548/*/*.root"
+                #         elif sample_name == "data_C":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095646/*/*.root"
+                #         elif sample_name == "data_D":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095712/*/*.root"
+                #         elif sample_name == "data_E":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095505/*/*.root"
+                #         elif sample_name == "data_F":
+                #             load_path = "/eos/purdue/store/user/vscheure/SingleMuon/UL17_NanoAODv12_2/240520_095808/*/*.root"
+                #         else:
+                #             print("unknown v12 Data run!")
+                #             raise ValueError
+                #     else:
+                #         print("Uncompatible year for privately produced data nanoaodV12!")
+                #         raise ValueError
+                #     print(f"fnames load_path: {load_path}")
+                #     fnames = glob.glob(f"{load_path}")
             else:
                 das_query = dataset[sample_name]
                 print(f"das_query: {das_query}")
