@@ -15,10 +15,16 @@ from collections import OrderedDict
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F"]
 # group_DY_processes = ["dy_M-100To200", "dy_M-50"] # dy_M-50 is not used in ggH BDT training input
-group_DY_processes = ["dy_M-100To200"]
+# group_DY_processes = ["dy_M-100To200"]
 # group_DY_processes = ["dy_M-100To200","dy_VBF_filter"]
-# group_DY_processes = ["dy_M-100To200","dy_m105_160_vbf_amc"]
+group_DY_processes = [
+    "dy_M-50",
+    "dy_M-100To200",
+    "dy_m105_160_vbf_amc",
+    "dy_VBF_filter_customJMEoff"
+]
 # group_DY_processes = ["dy_M-100To200","dy_VBF_filter_customJMEoff"]
+# group_DY_processes = [] # just VBf filter
 
 group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop"]
 group_Ewk_processes = ["ewk_lljj_mll50_mjj120"]
@@ -164,7 +170,8 @@ if __name__ == "__main__":
     # if doing VBF filter study, add the vbf filter sample to the DY group
     if args.do_vbf_filter_study:
         vbf_filter_sample =  "dy_m105_160_vbf_amc"
-        group_DY_processes.appoend(vbf_filter_sample)
+        # group_DY_processes.append(vbf_filter_sample)
+        available_processes.append(vbf_filter_sample)
     
     # take data
     data_samples = args.data_samples
@@ -179,8 +186,9 @@ if __name__ == "__main__":
     if len(bkg_samples) >0:
         for bkg_sample in bkg_samples:
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
+                pass
                 # available_processes.append("dy_M-50")
-                available_processes.append("dy_M-100To200")
+                # available_processes.append("dy_M-100To200")
                 # available_processes.append("dy_VBF_filter")
                 # available_processes.append("dy_m105_160_vbf_amc")
                 # available_processes.append("dy_VBF_filter_customJMEoff")
@@ -224,6 +232,7 @@ if __name__ == "__main__":
             variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
             variables2plot.append(f"{particle}_eta")
+            variables2plot.append(f"{particle}_rapidity")
             variables2plot.append(f"{particle}_cos_theta_cs")
             variables2plot.append(f"{particle}_phi_cs")
             variables2plot.append(f"{particle}_cos_theta_eta")
@@ -274,6 +283,7 @@ if __name__ == "__main__":
     time_step = time.time()
 
     # load saved parquet files. This increases memory use, but increases runtime significantly
+    print(f"available_processes: {available_processes}")
     loaded_events = {} # intialize dictionary containing all the arrays
     for process in tqdm.tqdm(available_processes):
         print(f"loading process {process}..")
@@ -918,8 +928,8 @@ if __name__ == "__main__":
                     region &
                     ~btag_cut # btag cut is for VH and ttH categories
                 )
-                # print(f"category_selection: {category_selection}")
-                # print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
+                print(f"category_selection length: {len(category_selection)}")
+                print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
                 # print(f"category_selection {process} : {category_selection}")
                 
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
@@ -975,7 +985,7 @@ if __name__ == "__main__":
                 else: # put into "other" bkg group
                     print("other activated")
                     group_other_vals.append(values)
-                    group_otherweights.append(weights)
+                    group_other_weights.append(weights)
             
             
             # -------------------------------------------------------
