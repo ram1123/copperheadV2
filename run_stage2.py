@@ -86,12 +86,17 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
         ],
         "phifixedBDT_2018" : [
                 'dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld' #, 'njets'
-        ], # AN 19-124
-        
+        ], # AN 19-124 -> this is what I use
+         "WgtOff" : [
+                'dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'
+         ],
+        "WgtOff_includeQGL" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
     }
     
-    model_name = "phifixedBDT_2018"
+    # model_name = "phifixedBDT_2018"
     # model_name = "BDTperyear_2018"
+    # model_name = "WgtOff"
+    model_name = "WgtOff_includeQGL"
 
     training_features = train_feat_dict[model_name]
     print(f"len(training_features): {len(training_features)}")
@@ -127,11 +132,14 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
     none_val = -99.0
     for field in events.fields:
         events[field] = ak.fill_none(events[field], value= none_val)
-        inf_cond = (np.inf == events[field]) | (-np.inf == events[field]) 
-        events[field] = ak.where(inf_cond, none_val, events[field])
+        # inf_cond = (np.inf == events[field]) | (-np.inf == events[field]) 
+        # events[field] = ak.where(inf_cond, none_val, events[field])
 
     parameters = {
-    "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
+    # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
+        # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_final_2018/",
+        "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_WgtOff_includeQGL_2018/",
+        "year" : "2018",
     }
     processed_events = evaluate_bdt(events, "nominal", model_name, training_features, parameters) 
 
@@ -314,7 +322,8 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
 
     parameters = {
     # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/",
-    "models_path" : "/depot/cms/hmm/copperhead/trained_models/",
+        "models_path" : "/depot/cms/hmm/copperhead/trained_models/",
+        
     }
     processed_events = evaluate_dnn(events, "nominal", model_name, training_features, parameters) 
     # filter in only the variables you need to do stage3
@@ -377,6 +386,14 @@ if __name__ == "__main__":
     action="store",
     help="list of samples to process for stage2. Current valid inputs are data, signal and DY",
     )
+    parser.add_argument(
+    "-frac",
+    "--fraction",
+    dest="fraction",
+    default=None,
+    action="store",
+    help="fraction value used in stage1. By default we assume it to be 1.0",
+    )
     start_time = time.time()
     client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
     args = parser.parse_args()
@@ -390,8 +407,11 @@ if __name__ == "__main__":
     if len(args.samples) == 0:
         print("samples list is zero!")
         raise ValueError
-    
-    load_path = f"{args.load_path}/{args.year}/f1_0"
+    if args.fraction is None: # fraction == 1.0
+        load_path = f"{args.load_path}/{args.year}/f1_0"
+    else:
+        frac_str = args.fraction.replace(".", "_")
+        load_path = f"{args.load_path}/{args.year}/f{frac_str}"
     print(f"load_path: {load_path}")
     # load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0"
     # full_load_path = load_path+f"/data_C/*/*.parquet"
