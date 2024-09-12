@@ -21,7 +21,8 @@ group_DY_processes = [
     "dy_M-50",
     "dy_M-100To200",
     "dy_m105_160_vbf_amc",
-    "dy_VBF_filter_customJMEoff"
+    "dy_VBF_filter_customJMEoff",
+    "dy_VBF_filter_fromGridpack",
 ]
 # group_DY_processes = ["dy_M-100To200","dy_VBF_filter_customJMEoff"]
 # group_DY_processes = [] # just VBf filter
@@ -170,7 +171,8 @@ if __name__ == "__main__":
     # if doing VBF filter study, add the vbf filter sample to the DY group
     if args.do_vbf_filter_study:
         vbf_filter_sample =  "dy_m105_160_vbf_amc"
-        # group_DY_processes.append(vbf_filter_sample)
+        # vbf_filter_sample =  "dy_VBF_filter_customJMEoff"
+        # vbf_filter_sample =  "dy_VBF_filter_fromGridpack"
         available_processes.append(vbf_filter_sample)
     
     # take data
@@ -186,13 +188,8 @@ if __name__ == "__main__":
     if len(bkg_samples) >0:
         for bkg_sample in bkg_samples:
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
-                pass
                 # available_processes.append("dy_M-50")
-                # available_processes.append("dy_M-100To200")
-                # available_processes.append("dy_VBF_filter")
-                # available_processes.append("dy_m105_160_vbf_amc")
-                # available_processes.append("dy_VBF_filter_customJMEoff")
-            
+                available_processes.append("dy_M-100To200")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
                 available_processes.append("ttjets_sl")
@@ -216,8 +213,10 @@ if __name__ == "__main__":
         for sig_sample in sig_samples:
             if sig_sample.upper() == "GGH": # enforce upper case to prevent confusion
                 available_processes.append("ggh_powheg")
+                available_processes.append("vbf_powheg")
             elif sig_sample.upper() == "VBF": # enforce upper case to prevent confusion
                 available_processes.append("vbf_powheg")
+                available_processes.append("ggh_powheg")
             else:
                 print(f"unknown signal {sig_sample} was given!")
     # gather variables to plot:
@@ -232,6 +231,7 @@ if __name__ == "__main__":
             variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
             variables2plot.append(f"{particle}_eta")
+            variables2plot.append(f"{particle}_phi")
             variables2plot.append(f"{particle}_rapidity")
             variables2plot.append(f"{particle}_cos_theta_cs")
             variables2plot.append(f"{particle}_phi_cs")
@@ -244,6 +244,7 @@ if __name__ == "__main__":
         elif "dijet" in particle:
             # variables2plot.append(f"gjj_mass")
             variables2plot.append(f"jj_mass")
+            variables2plot.append(f"jj_pt")
             variables2plot.append(f"jj_dEta")
             variables2plot.append(f"jj_dPhi")
         elif ("mu" in particle) :
@@ -288,6 +289,7 @@ if __name__ == "__main__":
     for process in tqdm.tqdm(available_processes):
         print(f"loading process {process}..")
         full_load_path = args.load_path+f"/{process}/*/*.parquet"
+        print(f"full_load_path: {full_load_path}")
         events = dak.from_parquet(full_load_path)
         # print(f"events.fields: {events.fields}")
 
@@ -402,12 +404,8 @@ if __name__ == "__main__":
                             if ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc"):
                                 print("dy_VBF_filter extra!")
                                 vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                                # extra cut to make dy_VBF_filter(nanoAODv9) to be same as nanoAODv6 
-                                extra_gjetCut = (events.gjet1_pt < 10) | (events.gjet2_pt < 10) 
-                                extra_gjetCut = ak.fill_none( ~extra_gjetCut, value=False)
                                 prod_cat_cut =  (prod_cat_cut  
                                             & vbf_filter
-                                             # & extra_gjetCut
                                 )
                             elif process == "dy_M-100To200":
                                 print("dy_M-100To200 extra!")
@@ -723,7 +721,13 @@ if __name__ == "__main__":
                     mc_ratio.SetMarkerColor(0);
                     mc_ratio.SetMarkerSize(0);
                     mc_ratio.SetFillColor(ROOT.kGray);
-                
+
+                    # debugging code start ------------------------------------------------
+                    for idx in range(1, num_hist.GetNbinsX()+1):
+                        err=num_hist.GetBinError(idx, 0)
+                        print(f"Data/MC ratio bin idx {idx} error: {err}")
+                    # debugging code end ------------------------------------------------
+                    
                     # get ratio line 
                     ratio_line = data_hist_stacked.Clone("num_hist");
                     for idx in range(1, mc_ratio.GetNbinsX()+1):
@@ -901,16 +905,13 @@ if __name__ == "__main__":
                                 print("dy_VBF_filter extra!")
                                 vbf_filter = (
                                     ak.fill_none((events.gjj_mass > 350), value=False) 
-                                    # & ak.fill_none((events.gjj_dR > 0.3), value=False)
-                                    # & ak.fill_none((events.gjet1_pt > 35), value=False)
                                  )
-                                
                                 prod_cat_cut =  (prod_cat_cut  
                                             & vbf_filter
                                 )
                             elif process == "dy_M-100To200":
                                 print("dy_M-100To200 extra!")
-                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) # | ak.fill_none((events.gjj_dR > 0.3), value=False)
+                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) 
                                 prod_cat_cut =  (
                                     prod_cat_cut  
                                     & ~vbf_filter 
