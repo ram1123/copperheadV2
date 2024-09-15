@@ -8,7 +8,7 @@ from omegaconf import OmegaConf
 
 from typing import Tuple, List, Dict
 import ROOT as rt
-from lib.fit_functions import MakeFEWZxBernDof3
+from src.lib.fit_functions import MakeFEWZxBernDof3
 import argparse
 import os
 
@@ -63,7 +63,7 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, save
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
 
-def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, save_path: str):
+def plotBkgBySubCat_normalized(mass:rt.RooRealVar, model_dict_by_subCat: Dict, save_path: str):
     """
     takes the dictionary of all Bkg RooAbsPdf models grouped by same sub-category, and plot them
     in the frame() of mass and saves the plots on a given directory path
@@ -92,6 +92,46 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, save_path: s
         normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
         normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
         # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+        for ix in range(len(subCat_list)):
+            model = subCat_list[ix]
+            name = model.GetName()
+            color = color_list[ix]
+            model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
+            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+        frame.Draw()
+        legend.Draw()        
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
+
+def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by_subCat:Dict, save_path: str):
+    """
+    takes the dictionary of all Bkg RooAbsPdf models grouped by same sub-category, and plot them
+    in the frame() of mass and saves the plots on a given directory path
+    """
+    # make the save_path directory if it doesn't exist
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        
+    color_list = [
+        rt.kGreen,
+        rt.kBlue,
+        rt.kRed,
+        rt.kOrange,
+        rt.kViolet,
+    ]
+    
+    for subCat_idx, subCat_list in model_dict_by_subCat.items():
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        frame = mass.frame()
+        frame.SetTitle(f"Normalized Shape Plot of Sub-Category {subCat_idx} PDFs")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+        data_hist = data_dict_by_subCat[subCat_idx]
+        data_hist.plotOn(frame)
         for ix in range(len(subCat_list)):
             model = subCat_list[ix]
             name = model.GetName()
@@ -186,10 +226,14 @@ if __name__ == "__main__":
     processed_eventsData = ak.from_parquet(load_path)
     print("events loaded!")
     
+    device = "cpu"
+    # device = "cuda"
+    # rt.RooAbsReal.setCudaMode(True)
     # Create model for physics sample
     # -------------------------------------------------------------
     # Create observables
-    mass_name = "mh_ggh"
+    # mass_name = "mh_ggh"
+    mass_name = "cat0_ggh"
     mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
     nbins = 800
     mass.setBins(nbins)
@@ -203,34 +247,38 @@ if __name__ == "__main__":
     # Initialize BWZ Redux
     # --------------------------------------------------------------
 
-    # original start --------------------------------------------------
-    # name = f"BWZ_Redux_a_coeff"
-    # a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
-    # name = f"BWZ_Redux_b_coeff"
-    # b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
-    # name = f"BWZ_Redux_c_coeff"
-    # c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
-    # original end --------------------------------------------------
+    
 
     # # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
-    # new start --------------------------------------------------
+    # # old start --------------------------------------------------
     name = f"BWZ_Redux_a_coeff"
     a_coeff = rt.RooRealVar(name,name, -0.02,-0.03,0.03)
     name = f"BWZ_Redux_b_coeff"
     b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
     name = f"BWZ_Redux_c_coeff"
     c_coeff = rt.RooRealVar(name,name, 0.5,-5.0,5.0)
-    # # new end --------------------------------------------------
+    # # old end --------------------------------------------------
 
+    # # original start --------------------------------------------------
+    # name = f"BWZ_Redux_a_coeff"
+    # a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
+    # name = f"BWZ_Redux_b_coeff"
+    # b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
+    # name = f"BWZ_Redux_c_coeff"
+    # c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
+    # # original end --------------------------------------------------
     
     # subCat 0
     name = "subCat0_BWZ_Redux"
     coreBWZRedux_SubCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
      
     # Construct background pdf
-    a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
-    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
-    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -0.5, 0.5)
+    # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
+    # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
+    # a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -0.5, 0.5)
+    a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, -0.1)
+    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.0, -0.5, -0.1)
+    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", -0.0, -0.5, -0.1)
 
     name = "subCat0_SMF"
     subCat0_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
@@ -249,9 +297,12 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat1 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
+    # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
+    # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
+    # a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -0.5, 0.5)
     a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
-    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
-    a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -0.5, 0.5)
+    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.0, -0.5, 0.5)
+    a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.0, -0.5, 0.5)
     name =  "subCat1_SMF"
     subCat1_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat1, 
@@ -269,8 +320,10 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat2 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
-    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
+    # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
+    # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
+    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.00, -0.001, 0.001)
+    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.00, -0.001, 0.001)
     name = "subCat2_SMF"
     subCat2_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat2, 
@@ -285,8 +338,10 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat3 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -1, 1)
-    a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
+    # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -1, 1)
+    # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
+    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.06, 0.05, 0.5)
+    a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.00, -0.5, 0.5)
     name = "subCat3_SMF"
     subCat3_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat3, 
@@ -301,8 +356,10 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat4 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -1, 1)
-    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.5, 0.5)
+    # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -1, 1)
+    # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.5, 0.5)
+    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2, 0.2, 1)
+    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.0, -0.5, 1)
     name = "subCat4_SMF"
     subCat4_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat4, 
@@ -519,23 +576,15 @@ if __name__ == "__main__":
     # Initialize FEWZxBernstein
     # --------------------------------------------------------------
     
-    # original start --------------------------------------------------
-    # name = f"FEWZxBern_c1"
-    # c1 = rt.RooRealVar(name,name, 0.2,-2,2)
-    # name = f"FEWZxBern_c2"
-    # c2 = rt.RooRealVar(name,name, 1.0,-2,2)
-    # name = f"FEWZxBern_c3"
-    # c3 = rt.RooRealVar(name,name, 0.5,-2,2)
-    # original end --------------------------------------------------
 
-    # new start --------------------------------------------------
+    # old start --------------------------------------------------
     name = f"FEWZxBern_c1"
     c1 = rt.RooRealVar(name,name, 0.2,-2,2)
     name = f"FEWZxBern_c2"
     c2 = rt.RooRealVar(name,name, 1.0,-2,2)
     name = f"FEWZxBern_c3"
     c3 = rt.RooRealVar(name,name, 0.1,-2,2)
-    # new end --------------------------------------------------
+    # old end --------------------------------------------------
     
     name = "subCat0_FEWZxBern"
     coreFEWZxBern_SubCat0, params_FEWZxBern_SubCat0 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3) 
@@ -728,8 +777,8 @@ if __name__ == "__main__":
      
     start = time.time()
 
-    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu",  PrintLevel=0 ,Save=True, Strategy=0)
-    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend="cpu", PrintLevel=0 ,Save=True,)
+    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0)
+    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
     end = time.time()
     
     fitResult.Print()
@@ -767,7 +816,10 @@ if __name__ == "__main__":
     # Obtain signal MC events
     # ---------------------------------------------------
 
-    load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
+    # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
+    load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_ggh.parquet" # Fig 6.15 was only with ggH process, though with all 2016, 2017 and 2018
+    # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC*.parquet"
+    
     processed_eventsSignalMC = ak.from_parquet(load_path)
     print("signal events loaded")
     
@@ -975,8 +1027,8 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # subCat 0
-    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, )
-    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend="cpu", Save=True, )
+    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, )
     fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
@@ -987,8 +1039,8 @@ if __name__ == "__main__":
     n2_subCat0.setConstant(True)
 
     # subCat 1
-    _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend="cpu", Save=True, )
-    fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend="cpu", Save=True, )
+    _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
     fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
@@ -999,8 +1051,8 @@ if __name__ == "__main__":
     n2_subCat1.setConstant(True)
 
     # subCat 2
-    _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend="cpu", Save=True, )
-    fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend="cpu", Save=True, )
+    _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
     fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
@@ -1011,8 +1063,8 @@ if __name__ == "__main__":
     n2_subCat2.setConstant(True)
 
     # subCat 3
-    _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend="cpu", Save=True, )
-    fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend="cpu", Save=True, )
+    _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
     fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
@@ -1023,8 +1075,8 @@ if __name__ == "__main__":
     n2_subCat3.setConstant(True)
 
     # subCat 4
-    _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend="cpu", Save=True, )
-    fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend="cpu", Save=True, )
+    _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
     fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
@@ -1085,7 +1137,7 @@ if __name__ == "__main__":
     
     canvas.Update()
     canvas.Draw()
-    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat1 .pdf")
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat1.pdf")
 
     # subCat 2
     
@@ -1106,7 +1158,7 @@ if __name__ == "__main__":
     
     canvas.Update()
     canvas.Draw()
-    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat2 .pdf")
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat2.pdf")
 
     # subCat 3
     
@@ -1127,7 +1179,7 @@ if __name__ == "__main__":
     
     canvas.Update()
     canvas.Draw()
-    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat3 .pdf")
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat3.pdf")
 
     # subCat 4
     
@@ -1148,18 +1200,23 @@ if __name__ == "__main__":
     
     canvas.Update()
     canvas.Draw()
-    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat4 .pdf")
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat4.pdf")
 
     # ---------------------------------------------------
     # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
 
     fout = rt.TFile(f"./workspaces/{category}_CatWorkspaceV2.root","RECREATE")
-    wout = rt.RooWorkspace("workspace","workspace")
+    wout = rt.RooWorkspace("w","workspace")
     
     # subCat 0 
     
-    roo_histData_subCat0.SetName("data_subCat0"); # import binned data
+    # roo_histData_subCat0.SetName("data_subCat0"); # import binned data
+    # matching names consistent with UCSD's naming scheme
+    roo_histData_subCat0.SetName("data_cat0_ggh");
+    corePdf_subCat0.SetName("bkg_cat0_ggh_pdf");
+    signal_subCat0.SetName("ggH_cat0_ggh_pdf"); 
+    sig_norm_subCat0.SetName(signal_subCat0.GetName()+"_norm"); 
     wout.Import(roo_histData_subCat0);
     wout.Import(cat_subCat0);
     wout.Import(bkg_subCat0_norm);
@@ -1192,68 +1249,82 @@ if __name__ == "__main__":
     plotSigBySample(mass, sig_dict_by_sample, plot_save_path)
         
 
-    # # -------------------------------------------------------------------------
-    # # do Bkg plotting loop divided into core-function
-    # # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # do Bkg plotting loop divided into core-function
+    # -------------------------------------------------------------------------
     
-    # model_dict_by_coreFunction = {
-    #     "BWZRedux" : [
-    #         model_subCat0_BWZRedux, 
-    #         model_subCat1_BWZRedux,
-    #         model_subCat2_BWZRedux,
-    #         model_subCat3_BWZRedux,
-    #         model_subCat4_BWZRedux,
-    #     ],
-    #     "sumExp" : [
-    #         model_subCat0_sumExp, 
-    #         model_subCat1_sumExp,
-    #         model_subCat2_sumExp,
-    #         model_subCat3_sumExp,
-    #         model_subCat4_sumExp,
-    #     ],
-    #     "FEWZxBern" : [
-    #         model_subCat0_FEWZxBern, 
-    #         model_subCat1_FEWZxBern,
-    #         model_subCat2_FEWZxBern,
-    #         model_subCat3_FEWZxBern,
-    #         model_subCat4_FEWZxBern,
-    #     ],
-    # }
-    # plotBkgByCoreFunc(mass, model_dict_by_coreFunction, plot_save_path)
+    model_dict_by_coreFunction = {
+        "BWZRedux" : [
+            model_subCat0_BWZRedux, 
+            model_subCat1_BWZRedux,
+            model_subCat2_BWZRedux,
+            model_subCat3_BWZRedux,
+            model_subCat4_BWZRedux,
+        ],
+        "sumExp" : [
+            model_subCat0_sumExp, 
+            model_subCat1_sumExp,
+            model_subCat2_sumExp,
+            model_subCat3_sumExp,
+            model_subCat4_sumExp,
+        ],
+        "FEWZxBern" : [
+            model_subCat0_FEWZxBern, 
+            model_subCat1_FEWZxBern,
+            model_subCat2_FEWZxBern,
+            model_subCat3_FEWZxBern,
+            model_subCat4_FEWZxBern,
+        ],
+        "SMF" : [
+            subCat0_SMF, 
+            subCat1_SMF,
+            subCat2_SMF,
+            subCat3_SMF,
+            subCat4_SMF,
+        ],
+    }
+    plotBkgByCoreFunc(mass, model_dict_by_coreFunction, plot_save_path)
+    
 
+    # -------------------------------------------------------------------------
+    # do Bkg plotting loop divided into Sub Categories
+    # -------------------------------------------------------------------------
 
-    # # -------------------------------------------------------------------------
-    # # do Bkg plotting loop divided into Sub Categories
-    # # -------------------------------------------------------------------------
-
-    # model_dict_by_subCat = {
-    #     0 : [
-    #         model_subCat0_BWZRedux, 
-    #         model_subCat0_sumExp,
-    #         model_subCat0_FEWZxBern,
-    #     ],
-    #     1 : [
-    #         model_subCat1_BWZRedux, 
-    #         model_subCat1_sumExp,
-    #         model_subCat1_FEWZxBern,
-    #     ],
-    #     2 : [
-    #         model_subCat2_BWZRedux, 
-    #         model_subCat2_sumExp,
-    #         model_subCat2_FEWZxBern,
-    #     ],
-    #     3 : [
-    #         model_subCat3_BWZRedux, 
-    #         model_subCat3_sumExp,
-    #         model_subCat3_FEWZxBern,
-    #     ],
-    #     4 : [
-    #         model_subCat4_BWZRedux, 
-    #         model_subCat4_sumExp,
-    #         model_subCat4_FEWZxBern,
-    #     ],
-    # }
-    # plotBkgBySubCat(mass, model_dict_by_subCat, plot_save_path)
+    model_dict_by_subCat = {
+        0 : [
+            model_subCat0_BWZRedux, 
+            model_subCat0_sumExp,
+            model_subCat0_FEWZxBern,
+        ],
+        1 : [
+            model_subCat1_BWZRedux, 
+            model_subCat1_sumExp,
+            model_subCat1_FEWZxBern,
+        ],
+        2 : [
+            model_subCat2_BWZRedux, 
+            model_subCat2_sumExp,
+            model_subCat2_FEWZxBern,
+        ],
+        3 : [
+            model_subCat3_BWZRedux, 
+            model_subCat3_sumExp,
+            model_subCat3_FEWZxBern,
+        ],
+        4 : [
+            model_subCat4_BWZRedux, 
+            model_subCat4_sumExp,
+            model_subCat4_FEWZxBern,
+        ],
+    }
+    data_dict_by_subCat = {
+        0 : roo_histData_subCat0,
+        1 : roo_histData_subCat1,
+        2 : roo_histData_subCat2,
+        3 : roo_histData_subCat3,
+        4 : roo_histData_subCat4,
+    }
+    plotBkgBySubCat(mass, model_dict_by_subCat, data_dict_by_subCat, plot_save_path)
 
     
 
