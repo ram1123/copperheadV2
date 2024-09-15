@@ -277,8 +277,8 @@ if __name__ == "__main__":
     # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
     # a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -0.5, 0.5)
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, -0.1)
-    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.0, -0.5, -0.1)
-    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", -0.0, -0.5, -0.1)
+    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.0, -0.5, +0.1)
+    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", -0.0, -0.5, +0.1)
 
     name = "subCat0_SMF"
     subCat0_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
