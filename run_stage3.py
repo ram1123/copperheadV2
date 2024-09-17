@@ -234,8 +234,7 @@ if __name__ == "__main__":
     # Create model for physics sample
     # -------------------------------------------------------------
     # Create observables
-    # mass_name = "mh_ggh"
-    mass_name = "cat0_ggh"
+    mass_name = "mh_ggh"
     mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
     nbins = 800
     mass.setBins(nbins)
@@ -874,7 +873,7 @@ if __name__ == "__main__":
     corePdf_subCat0 = rt.RooMultiPdf("CorePdf_subCat0","CorePdf_subCat0",cat_subCat0,pdf_list_subCat0)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat0.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat0.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_datasetData_subCat0.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     bkg_subCat0_norm = rt.RooRealVar(corePdf_subCat0.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
 
 
@@ -896,7 +895,7 @@ if __name__ == "__main__":
     corePdf_subCat1 = rt.RooMultiPdf("CorePdf_subCat1","CorePdf_subCat1",cat_subCat1,pdf_list_subCat1)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat1.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat1.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_datasetData_subCat1.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     bkg_subCat1_norm = rt.RooRealVar(corePdf_subCat1.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
 
     # subCat 2 
@@ -917,7 +916,7 @@ if __name__ == "__main__":
     corePdf_subCat2 = rt.RooMultiPdf("CorePdf_subCat2","CorePdf_subCat2",cat_subCat2,pdf_list_subCat2)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat2.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat2.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_datasetData_subCat2.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     bkg_subCat2_norm = rt.RooRealVar(corePdf_subCat2.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
 
     # subCat 3 
@@ -938,7 +937,7 @@ if __name__ == "__main__":
     corePdf_subCat3 = rt.RooMultiPdf("CorePdf_subCat3","CorePdf_subCat3",cat_subCat3,pdf_list_subCat3)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat3.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat3.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_datasetData_subCat3.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     bkg_subCat3_norm = rt.RooRealVar(corePdf_subCat3.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
 
     # subCat 4
@@ -959,7 +958,7 @@ if __name__ == "__main__":
     corePdf_subCat4 = rt.RooMultiPdf("CorePdf_subCat4","CorePdf_subCat4",cat_subCat4,pdf_list_subCat4)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat4.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat4.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_datasetData_subCat4.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     bkg_subCat4_norm = rt.RooRealVar(corePdf_subCat4.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     
 
@@ -1421,7 +1420,11 @@ if __name__ == "__main__":
     roo_histData_subCat0.SetName("data_cat0_ggh");
     corePdf_subCat0.SetName("bkg_cat0_ggh_pdf");
     bkg_subCat0_norm.SetName(corePdf_subCat0.GetName()+"_norm"); 
+    # make norm for data
+    nevents = roo_histData_subCat0.sumEntries()
+    roo_histData_subCat0_norm = rt.RooRealVar(roo_histData_subCat0.GetName()+"_norm","Background normalization value",nevents,0,3*nevents)
     wout.Import(roo_histData_subCat0);
+    wout.Import(roo_histData_subCat0_norm);
     wout.Import(cat_subCat0);
     wout.Import(bkg_subCat0_norm);
     wout.Import(corePdf_subCat0);
@@ -1431,10 +1434,12 @@ if __name__ == "__main__":
     fout = rt.TFile(f"{workspace_path}/workspace_sig_cat0_{category}.root","RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
-    signal_subCat0.SetName("ggH_cat0_ggh_pdf"); 
+    signal_subCat0.SetName("ggH_cat0_ggh_pdf");
+    roo_histData_subCat0_signal.SetName("data_ggH_cat0_ggh");
     sig_norm_subCat0.SetName(signal_subCat0.GetName()+"_norm"); 
     wout.Import(sig_norm_subCat0);
     wout.Import(signal_subCat0); 
+    wout.Import(roo_histData_subCat0_signal); 
     # wout.Print();
     wout.Write();
     
@@ -1457,9 +1462,11 @@ if __name__ == "__main__":
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     signal_subCat1.SetName("ggH_cat1_ggh_pdf"); 
+    roo_histData_subCat1_signal.SetName("data_ggH_cat1_ggh");
     sig_norm_subCat1.SetName(signal_subCat1.GetName()+"_norm"); 
     wout.Import(sig_norm_subCat1);
     wout.Import(signal_subCat1); 
+    wout.Import(roo_histData_subCat1_signal); 
     # wout.Print();
     wout.Write();
 
@@ -1481,9 +1488,11 @@ if __name__ == "__main__":
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     signal_subCat2.SetName("ggH_cat2_ggh_pdf"); 
+    roo_histData_subCat2_signal.SetName("data_ggH_cat2_ggh");
     sig_norm_subCat2.SetName(signal_subCat2.GetName()+"_norm"); 
     wout.Import(sig_norm_subCat2);
     wout.Import(signal_subCat2); 
+    wout.Import(roo_histData_subCat2_signal); 
     # wout.Print();
     wout.Write();
 
@@ -1506,9 +1515,11 @@ if __name__ == "__main__":
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     signal_subCat3.SetName("ggH_cat3_ggh_pdf"); 
+    roo_histData_subCat3_signal.SetName("data_ggH_cat3_ggh");
     sig_norm_subCat3.SetName(signal_subCat3.GetName()+"_norm"); 
     wout.Import(sig_norm_subCat3);
     wout.Import(signal_subCat3); 
+    wout.Import(roo_histData_subCat3_signal); 
     # wout.Print();
     wout.Write();
 
@@ -1530,9 +1541,11 @@ if __name__ == "__main__":
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     signal_subCat4.SetName("ggH_cat4_ggh_pdf"); 
+    roo_histData_subCat4_signal.SetName("data_ggH_cat4_ggh");
     sig_norm_subCat4.SetName(signal_subCat4.GetName()+"_norm"); 
     wout.Import(sig_norm_subCat4);
     wout.Import(signal_subCat4); 
+    wout.Import(roo_histData_subCat4_signal); 
     # wout.Print();
     wout.Write();
     
