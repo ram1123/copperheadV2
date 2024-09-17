@@ -54,6 +54,8 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, save
         for ix in range(len(coreFunction_list)):
             model = coreFunction_list[ix]
             name = model.GetName()
+            print(f"index {ix} with name: {name}")
+            model.Print("v")
             color = color_list[ix]
             model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
             legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
@@ -251,34 +253,43 @@ if __name__ == "__main__":
 
     # # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
     # # old start --------------------------------------------------
-    name = f"BWZ_Redux_a_coeff"
-    a_coeff = rt.RooRealVar(name,name, -0.02,-0.03,0.03)
-    name = f"BWZ_Redux_b_coeff"
-    b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
-    name = f"BWZ_Redux_c_coeff"
-    c_coeff = rt.RooRealVar(name,name, 0.5,-5.0,5.0)
-    # # old end --------------------------------------------------
-
-    # # original start --------------------------------------------------
     # name = f"BWZ_Redux_a_coeff"
-    # a_coeff = rt.RooRealVar(name,name, -0.0146,-0.02,0.03)
+    # a_coeff = rt.RooRealVar(name,name, -0.02,-0.03,0.03)
     # name = f"BWZ_Redux_b_coeff"
     # b_coeff = rt.RooRealVar(name,name, -0.000111,-0.001,0.001)
     # name = f"BWZ_Redux_c_coeff"
-    # c_coeff = rt.RooRealVar(name,name, 0.462,-5.0,5.0)
-    # # original end --------------------------------------------------
+    # c_coeff = rt.RooRealVar(name,name, 0.5,-5.0,5.0)
+    # # old end --------------------------------------------------
+
+    # # AN start --------------------------------------------------
+    name = f"BWZ_Redux_a_coeff"
+    a_coeff = rt.RooRealVar(name,name, 0.06231018619106862,-0.1,0.1)
+    name = f"BWZ_Redux_b_coeff"
+    b_coeff = rt.RooRealVar(name,name, -0.0001684318108879923,-0.1,0.1)
+    name = f"BWZ_Redux_c_coeff"
+    c_coeff = rt.RooRealVar(name,name, 2.14876669663328,0,5.0)
+    # # AN end --------------------------------------------------
     
     # subCat 0
     name = "subCat0_BWZ_Redux"
     coreBWZRedux_SubCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
      
     # Construct background pdf
+    # old start --------------------------------------------------------------------
     # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
     # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
     # a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -0.5, 0.5)
-    a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, -0.1)
-    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.0, -0.5, +0.1)
-    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", -0.0, -0.5, +0.1)
+    # old end --------------------------------------------------------------------
+    # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.03756867559, -1, 1)
+    # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.001975507853, -0.5, 0.5)
+    # a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", -0.001975507853, -0.5, 0.5)
+    a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.03756867559, -0.06, 0.06)
+    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.001975507853, -0.06, 0.06)
+    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", -0.001975507853, -0.06, 0.06)
+    a0_subCat0.setConstant(True)
+    a1_subCat0.setConstant(True)
+    a3_subCat0.setConstant(True)
+    
 
     name = "subCat0_SMF"
     subCat0_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
@@ -297,17 +308,26 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat1 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
+    """
+    NOTE: unlike what's written on line 1721 of Run2 AN, workspace root file in 
+    https://gitlab.cern.ch/cms-analysis/hig/HIG-19-006/datacards/-/blob/master/ggH/ucsd/workspace_bkg_cat1_ggh.root?ref_type=heads
+    doesn't have a third degree of freedom
+    """
     # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
     # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
     # a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -0.5, 0.5)
-    a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
-    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.0, -0.5, 0.5)
-    a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.0, -0.5, 0.5)
+    # values from AN workspace
+    # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.01949329222, -1, 1)
+    # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", -0.001657932368, -0.5, 0.5)
+    a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.01949329222, -0.06, 0.06)
+    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", -0.001657932368, -0.06, 0.06)
+    a0_subCat1.setConstant(True)
+    a1_subCat1.setConstant(True)
     name =  "subCat1_SMF"
     subCat1_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat1, 
                               a1_subCat1, 
-                              a3_subCat1
+                              # a3_subCat1
                              ])
      
     # Construct the composite model
@@ -322,8 +342,12 @@ if __name__ == "__main__":
     # Construct the background pdf
     # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
     # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
-    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.00, -0.001, 0.001)
-    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.00, -0.001, 0.001)
+    # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.04460447882, -0.001, 0.001)
+    # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", -3.46E-05, -0.001, 0.001)
+    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.04460447882, -0.06, 0.06)
+    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", -3.46E-05, -0.06, 0.06)
+    a0_subCat2.setConstant(True)
+    a1_subCat2.setConstant(True)
     name = "subCat2_SMF"
     subCat2_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat2, 
@@ -340,8 +364,12 @@ if __name__ == "__main__":
     # Construct the background pdf
     # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -1, 1)
     # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
-    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.06, 0.05, 0.5)
-    a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.00, -0.5, 0.5)
+    # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, 0.05, 0.5)
+    # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", -8.79E-06, -0.5, 0.5)
+    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, -0.06, 0.08)
+    a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", -8.79E-06, -0.06, 0.06)
+    a0_subCat3.setConstant(True)
+    a1_subCat3.setConstant(True)
     name = "subCat3_SMF"
     subCat3_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat3, 
@@ -358,8 +386,12 @@ if __name__ == "__main__":
     # Construct the background pdf
     # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -1, 1)
     # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.5, 0.5)
-    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2, 0.2, 1)
-    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.0, -0.5, 1)
+    # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, 0.2, 1)
+    # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.5, 1)
+    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, -0.06, 0.06)
+    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.06, 0.06)
+    a0_subCat4.setConstant(True)
+    a1_subCat4.setConstant(True)
     name = "subCat4_SMF"
     subCat4_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat4, 
@@ -450,14 +482,27 @@ if __name__ == "__main__":
     # original end --------------------------------------------------
 
     # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
-    # new start --------------------------------------------------
+    # # new start --------------------------------------------------
+    # name = f"RooSumTwoExpPdf_a1_coeff"
+    # a1_coeff = rt.RooRealVar(name,name, 0.00001,-2.0,1)
+    # name = f"RooSumTwoExpPdf_a2_coeff"
+    # a2_coeff = rt.RooRealVar(name,name, 0.1,-2.0,1)
+    # name = f"RooSumTwoExpPdf_f_coeff"
+    # f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
+    # # new end --------------------------------------------------
+
+
+    # AN start --------------------------------------------------
     name = f"RooSumTwoExpPdf_a1_coeff"
-    a1_coeff = rt.RooRealVar(name,name, 0.00001,-2.0,1)
+    a1_coeff = rt.RooRealVar(name,name, -0.034803252906117965,-1.0,0.0)
     name = f"RooSumTwoExpPdf_a2_coeff"
-    a2_coeff = rt.RooRealVar(name,name, 0.1,-2.0,1)
+    a2_coeff = rt.RooRealVar(name,name, -0.1497754374262389,-1.0,0)
     name = f"RooSumTwoExpPdf_f_coeff"
-    f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
-    # new end --------------------------------------------------
+    f_coeff = rt.RooRealVar(name,name, 0.7549173445209436,0.0,1.0)
+    # AN end --------------------------------------------------
+    a1_coeff.setConstant(True)
+    a2_coeff.setConstant(True)
+    f_coeff.setConstant(True)
     
     name = "subCat0_sumExp"
     coreSumExp_SubCat0 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
@@ -481,7 +526,7 @@ if __name__ == "__main__":
     subCat1_SumExp_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat1, 
                               a1_subCat1, 
-                              a3_subCat1
+                              # a3_subCat1
                              ])
      
     # Construct the composite model
@@ -577,14 +622,37 @@ if __name__ == "__main__":
     # --------------------------------------------------------------
     
 
-    # old start --------------------------------------------------
+    # # old start --------------------------------------------------
+    # name = f"FEWZxBern_c1"
+    # c1 = rt.RooRealVar(name,name, 0.2,-2,2)
+    # name = f"FEWZxBern_c2"
+    # c2 = rt.RooRealVar(name,name, 1.0,-2,2)
+    # name = f"FEWZxBern_c3"
+    # c3 = rt.RooRealVar(name,name, 0.1,-2,2)
+    # # old end --------------------------------------------------
+
+    # # an start --------------------------------------------------
+    # name = f"FEWZxBern_c1"
+    # c1 = rt.RooRealVar(name,name, 0.956483450832728,0.5,1.5)
+    # name = f"FEWZxBern_c2"
+    # c2 = rt.RooRealVar(name,name, 0.9607652348517792,0.5,1.5)
+    # name = f"FEWZxBern_c3"
+    # c3 = rt.RooRealVar(name,name, 0.9214633453188963,0.5,1.5)
+    # # an end --------------------------------------------------
+
+
+    # new start --------------------------------------------------
     name = f"FEWZxBern_c1"
-    c1 = rt.RooRealVar(name,name, 0.2,-2,2)
+    c1 = rt.RooRealVar(name,name, 0.1,-10,10)
     name = f"FEWZxBern_c2"
-    c2 = rt.RooRealVar(name,name, 1.0,-2,2)
+    c2 = rt.RooRealVar(name,name, 0.2,-10,10)
     name = f"FEWZxBern_c3"
-    c3 = rt.RooRealVar(name,name, 0.1,-2,2)
-    # old end --------------------------------------------------
+    c3 = rt.RooRealVar(name,name, 0.1,-10,10)
+    # new end --------------------------------------------------
+
+    # c1.setConstant(True)
+    # c2.setConstant(True)
+    # c3.setConstant(True)
     
     name = "subCat0_FEWZxBern"
     coreFEWZxBern_SubCat0, params_FEWZxBern_SubCat0 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3) 
@@ -608,7 +676,7 @@ if __name__ == "__main__":
     subCat1_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat1, 
                               a1_subCat1, 
-                              a3_subCat1
+                              # a3_subCat1
                              ])
      
     # Construct the composite model
@@ -789,7 +857,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # subCat 0 
-    cat_subCat0 = rt.RooCategory("pdf_index_subCat0","Index of Pdf which is active");
+    cat_subCat0 = rt.RooCategory("pdf_index_ggh","Index of Pdf which is active"); # name of category index should stay same across subCategories
     
     # // Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
     # // 0 == BWZ_Redux
@@ -808,7 +876,91 @@ if __name__ == "__main__":
     corePdf_subCat0.setCorrectionFactor(penalty) 
     nevents = roo_datasetData_subCat0.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     bkg_subCat0_norm = rt.RooRealVar(corePdf_subCat0.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
+
+
+    # subCat 1 
+    cat_subCat1 = rt.RooCategory("pdf_index_ggh","Index of Pdf which is active"); # name of category index should stay same across subCategories
     
+    # // Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
+    # // 0 == BWZ_Redux
+    # // 1 == sumExp
+    # // 2 == PowerSum
+    
+    # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
+    # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
+    pdf_list_subCat1 = rt.RooArgList(
+        model_subCat1_BWZRedux,
+        model_subCat1_sumExp,
+        model_subCat1_FEWZxBern,
+    )
+    corePdf_subCat1 = rt.RooMultiPdf("CorePdf_subCat1","CorePdf_subCat1",cat_subCat1,pdf_list_subCat1)
+    penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
+    corePdf_subCat1.setCorrectionFactor(penalty) 
+    nevents = roo_datasetData_subCat1.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    bkg_subCat1_norm = rt.RooRealVar(corePdf_subCat1.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
+
+    # subCat 2 
+    cat_subCat2 = rt.RooCategory("pdf_index_ggh","Index of Pdf which is active"); # name of category index should stay same across subCategories
+    
+    # // Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
+    # // 0 == BWZ_Redux
+    # // 1 == sumExp
+    # // 2 == PowerSum
+    
+    # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
+    # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
+    pdf_list_subCat2 = rt.RooArgList(
+        model_subCat2_BWZRedux,
+        model_subCat2_sumExp,
+        model_subCat2_FEWZxBern,
+    )
+    corePdf_subCat2 = rt.RooMultiPdf("CorePdf_subCat2","CorePdf_subCat2",cat_subCat2,pdf_list_subCat2)
+    penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
+    corePdf_subCat2.setCorrectionFactor(penalty) 
+    nevents = roo_datasetData_subCat2.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    bkg_subCat2_norm = rt.RooRealVar(corePdf_subCat2.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
+
+    # subCat 3 
+    cat_subCat3 = rt.RooCategory("pdf_index_ggh","Index of Pdf which is active"); # name of category index should stay same across subCategories
+    
+    # // Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
+    # // 0 == BWZ_Redux
+    # // 1 == sumExp
+    # // 2 == PowerSum
+    
+    # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
+    # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
+    pdf_list_subCat3 = rt.RooArgList(
+        model_subCat3_BWZRedux,
+        model_subCat3_sumExp,
+        model_subCat3_FEWZxBern,
+    )
+    corePdf_subCat3 = rt.RooMultiPdf("CorePdf_subCat3","CorePdf_subCat3",cat_subCat3,pdf_list_subCat3)
+    penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
+    corePdf_subCat3.setCorrectionFactor(penalty) 
+    nevents = roo_datasetData_subCat3.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    bkg_subCat3_norm = rt.RooRealVar(corePdf_subCat3.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
+
+    # subCat 4
+    cat_subCat4 = rt.RooCategory("pdf_index_ggh","Index of Pdf which is active"); # name of category index should stay same across subCategories
+    
+    # // Make a RooMultiPdf object. The order of the pdfs will be the order of their index, ie for below
+    # // 0 == BWZ_Redux
+    # // 1 == sumExp
+    # // 2 == PowerSum
+    
+    # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
+    # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
+    pdf_list_subCat4 = rt.RooArgList(
+        model_subCat4_BWZRedux,
+        model_subCat4_sumExp,
+        model_subCat4_FEWZxBern,
+    )
+    corePdf_subCat4 = rt.RooMultiPdf("CorePdf_subCat4","CorePdf_subCat4",cat_subCat4,pdf_list_subCat4)
+    penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
+    corePdf_subCat4.setCorrectionFactor(penalty) 
+    nevents = roo_datasetData_subCat4.numEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    bkg_subCat4_norm = rt.RooRealVar(corePdf_subCat4.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     
 
 
@@ -828,7 +980,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------
     
     # subCat 0
-    MH_subCat0 = rt.RooRealVar("MH_subCat0" , "MH_subCat0", 125, 115,135)
+    MH_subCat0 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat0.setConstant(True) # this shouldn't change, I think
     sigma_subCat0 = rt.RooRealVar("sigma_subCat0" , "sigma_subCat0", 2, .1, 4.0)
     alpha1_subCat0 = rt.RooRealVar("alpha1_subCat0" , "alpha1_subCat0", 2, 0.01, 65)
@@ -836,13 +988,20 @@ if __name__ == "__main__":
     alpha2_subCat0 = rt.RooRealVar("alpha2_subCat0" , "alpha2_subCat0", 2.0, 0.01, 65)
     n2_subCat0 = rt.RooRealVar("n2_subCat0" , "n2_subCat0", 25, 0.01, 100)
     
+    CMS_hmm_sigma_cat0_ggh = rt.RooRealVar("CMS_hmm_sigma_cat0_ggh" , "CMS_hmm_sigma_cat0_ggh", 0, -5 , 5 )
+    CMS_hmm_sigma_cat0_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat0_ggh_fsigma = rt.RooFormulaVar("ggH_cat0_ggh_fsigma", "ggH_cat0_ggh_fsigma",'@0*(1+@1)',[sigma_subCat0, CMS_hmm_sigma_cat0_ggh])
+    CMS_hmm_peak_cat0_ggh = rt.RooRealVar("CMS_hmm_peak_cat0_ggh" , "CMS_hmm_peak_cat0_ggh", 0, -5 , 5 )
+    CMS_hmm_peak_cat0_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat0_ggh_fpeak = rt.RooFormulaVar("ggH_cat0_ggh_fpeak", "ggH_cat0_ggh_fpeak",'@0*(1+@1)',[MH_subCat0, CMS_hmm_peak_cat0_ggh])
+    
     # n1_subCat0.setConstant(True) # freeze for stability
     # n2_subCat0.setConstant(True) # freeze for stability
     name = "signal_subCat0"
-    signal_subCat0 = rt.RooCrystalBall(name,name,mass, MH_subCat0, sigma_subCat0, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
+    signal_subCat0 = rt.RooCrystalBall(name,name,mass, ggH_cat0_ggh_fpeak, ggH_cat0_ggh_fsigma, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
 
     # subCat 1
-    MH_subCat1 = rt.RooRealVar("MH_subCat1" , "MH_subCat1", 125, 115,135)
+    MH_subCat1 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat1.setConstant(True) # this shouldn't change, I think
     sigma_subCat1 = rt.RooRealVar("sigma_subCat1" , "sigma_subCat1", 2, .1, 4.0)
     alpha1_subCat1 = rt.RooRealVar("alpha1_subCat1" , "alpha1_subCat1", 2, 0.01, 65)
@@ -850,52 +1009,80 @@ if __name__ == "__main__":
     alpha2_subCat1 = rt.RooRealVar("alpha2_subCat1" , "alpha2_subCat1", 2.0, 0.01, 65)
     n2_subCat1 = rt.RooRealVar("n2_subCat1" , "n2_subCat1", 25, 0.01, 100)
     
+    CMS_hmm_sigma_cat1_ggh = rt.RooRealVar("CMS_hmm_sigma_cat1_ggh" , "CMS_hmm_sigma_cat1_ggh", 0, -5 , 5 )
+    CMS_hmm_sigma_cat1_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat1_ggh_fsigma = rt.RooFormulaVar("ggH_cat1_ggh_fsigma", "ggH_cat1_ggh_fsigma",'@0*(1+@1)',[sigma_subCat1, CMS_hmm_sigma_cat1_ggh])
+    CMS_hmm_peak_cat1_ggh = rt.RooRealVar("CMS_hmm_peak_cat1_ggh" , "CMS_hmm_peak_cat1_ggh", 0, -5 , 5 )
+    CMS_hmm_peak_cat1_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat1_ggh_fpeak = rt.RooFormulaVar("ggH_cat1_ggh_fpeak", "ggH_cat1_ggh_fpeak",'@0*(1+@1)',[MH_subCat1, CMS_hmm_peak_cat1_ggh])
+    
     # n1_subCat1.setConstant(True) # freeze for stability
     # n2_subCat1.setConstant(True) # freeze for stability
     name = "signal_subCat1"
-    signal_subCat1 = rt.RooCrystalBall(name,name,mass, MH_subCat1, sigma_subCat1, alpha1_subCat1, n1_subCat1, alpha2_subCat1, n2_subCat1)
+    signal_subCat1 = rt.RooCrystalBall(name,name,mass, ggH_cat1_ggh_fpeak, ggH_cat1_ggh_fsigma, alpha1_subCat1, n1_subCat1, alpha2_subCat1, n2_subCat1)
 
     # subCat 2
-    MH_subCat2 = rt.RooRealVar("MH_subCat2" , "MH_subCat2", 125, 115,135)
+    MH_subCat2 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat2.setConstant(True) # this shouldn't change, I think
     sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 2, .1, 4.0)
     alpha1_subCat2 = rt.RooRealVar("alpha1_subCat2" , "alpha1_subCat2", 2, 0.01, 65)
     n1_subCat2 = rt.RooRealVar("n1_subCat2" , "n1_subCat2", 10, 0.01, 100)
     alpha2_subCat2 = rt.RooRealVar("alpha2_subCat2" , "alpha2_subCat2", 2.0, 0.01, 65)
     n2_subCat2 = rt.RooRealVar("n2_subCat2" , "n2_subCat2", 25, 0.01, 100)
+
+    CMS_hmm_sigma_cat2_ggh = rt.RooRealVar("CMS_hmm_sigma_cat2_ggh" , "CMS_hmm_sigma_cat2_ggh", 0, -5 , 5 )
+    CMS_hmm_sigma_cat2_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat2_ggh_fsigma = rt.RooFormulaVar("ggH_cat2_ggh_fsigma", "ggH_cat2_ggh_fsigma",'@0*(1+@1)',[sigma_subCat2, CMS_hmm_sigma_cat2_ggh])
+    CMS_hmm_peak_cat2_ggh = rt.RooRealVar("CMS_hmm_peak_cat2_ggh" , "CMS_hmm_peak_cat2_ggh", 0, -5 , 5 )
+    CMS_hmm_peak_cat2_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat2_ggh_fpeak = rt.RooFormulaVar("ggH_cat2_ggh_fpeak", "ggH_cat2_ggh_fpeak",'@0*(1+@1)',[MH_subCat2, CMS_hmm_peak_cat2_ggh])
     
     # n1_subCat2.setConstant(True) # freeze for stability
     # n2_subCat2.setConstant(True) # freeze for stability
     name = "signal_subCat2"
-    signal_subCat2 = rt.RooCrystalBall(name,name,mass, MH_subCat2, sigma_subCat2, alpha1_subCat2, n1_subCat2, alpha2_subCat2, n2_subCat2)
+    signal_subCat2 = rt.RooCrystalBall(name,name,mass, ggH_cat2_ggh_fpeak, ggH_cat2_ggh_fsigma, alpha1_subCat2, n1_subCat2, alpha2_subCat2, n2_subCat2)
 
     # subCat 3
-    MH_subCat3 = rt.RooRealVar("MH_subCat3" , "MH_subCat3", 125, 115,135)
+    MH_subCat3 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat3.setConstant(True) # this shouldn't change, I think
     sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 2, .1, 4.0)
     alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 2, 0.01, 65)
     n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 10, 0.01, 100)
     alpha2_subCat3 = rt.RooRealVar("alpha2_subCat3" , "alpha2_subCat3", 2.0, 0.01, 65)
     n2_subCat3 = rt.RooRealVar("n2_subCat3" , "n2_subCat3", 25, 0.01, 100)
+
+    CMS_hmm_sigma_cat3_ggh = rt.RooRealVar("CMS_hmm_sigma_cat3_ggh" , "CMS_hmm_sigma_cat3_ggh", 0, -5 , 5 )
+    CMS_hmm_sigma_cat3_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat3_ggh_fsigma = rt.RooFormulaVar("ggH_cat3_ggh_fsigma", "ggH_cat3_ggh_fsigma",'@0*(1+@1)',[sigma_subCat3, CMS_hmm_sigma_cat3_ggh])
+    CMS_hmm_peak_cat3_ggh = rt.RooRealVar("CMS_hmm_peak_cat3_ggh" , "CMS_hmm_peak_cat3_ggh", 0, -5 , 5 )
+    CMS_hmm_peak_cat3_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat3_ggh_fpeak = rt.RooFormulaVar("ggH_cat3_ggh_fpeak", "ggH_cat3_ggh_fpeak",'@0*(1+@1)',[MH_subCat3, CMS_hmm_peak_cat3_ggh])
     
     # n1_subCat3.setConstant(True) # freeze for stability
     # n2_subCat3.setConstant(True) # freeze for stability
     name = "signal_subCat3"
-    signal_subCat3 = rt.RooCrystalBall(name,name,mass, MH_subCat3, sigma_subCat3, alpha1_subCat3, n1_subCat3, alpha2_subCat3, n2_subCat3)
+    signal_subCat3 = rt.RooCrystalBall(name,name,mass, ggH_cat3_ggh_fpeak, ggH_cat3_ggh_fsigma, alpha1_subCat3, n1_subCat3, alpha2_subCat3, n2_subCat3)
 
     # subCat 4
-    MH_subCat4 = rt.RooRealVar("MH_subCat4" , "MH_subCat4", 125, 115,135)
+    MH_subCat4 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat4.setConstant(True) # this shouldn't change, I think
     sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 2, .1, 4.0)
     alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 2, 0.01, 65)
     n1_subCat4 = rt.RooRealVar("n1_subCat4" , "n1_subCat4", 10, 0.01, 100)
     alpha2_subCat4 = rt.RooRealVar("alpha2_subCat4" , "alpha2_subCat4", 2.0, 0.01, 65)
     n2_subCat4 = rt.RooRealVar("n2_subCat4" , "n2_subCat4", 25, 0.01, 100)
+
+    CMS_hmm_sigma_cat4_ggh = rt.RooRealVar("CMS_hmm_sigma_cat4_ggh" , "CMS_hmm_sigma_cat4_ggh", 0, -5 , 5 )
+    CMS_hmm_sigma_cat4_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat4_ggh_fsigma = rt.RooFormulaVar("ggH_cat4_ggh_fsigma", "ggH_cat4_ggh_fsigma",'@0*(1+@1)',[sigma_subCat4, CMS_hmm_sigma_cat4_ggh])
+    CMS_hmm_peak_cat4_ggh = rt.RooRealVar("CMS_hmm_peak_cat4_ggh" , "CMS_hmm_peak_cat4_ggh", 0, -5 , 5 )
+    CMS_hmm_peak_cat4_ggh.setConstant(True) # this is going to be param in datacard
+    ggH_cat4_ggh_fpeak = rt.RooFormulaVar("ggH_cat4_ggh_fpeak", "ggH_cat4_ggh_fpeak",'@0*(1+@1)',[MH_subCat4, CMS_hmm_peak_cat4_ggh])
     
     # n1_subCat4.setConstant(True) # freeze for stability
     # n2_subCat4.setConstant(True) # freeze for stability
     name = "signal_subCat4"
-    signal_subCat4 = rt.RooCrystalBall(name,name,mass, MH_subCat4, sigma_subCat4, alpha1_subCat4, n1_subCat4, alpha2_subCat4, n2_subCat4)
+    signal_subCat4 = rt.RooCrystalBall(name,name,mass, ggH_cat4_ggh_fpeak, ggH_cat4_ggh_fsigma, alpha1_subCat4, n1_subCat4, alpha2_subCat4, n2_subCat4)
     
     
     # ---------------------------------------------------
@@ -1038,6 +1225,10 @@ if __name__ == "__main__":
     alpha2_subCat0.setConstant(True)
     n2_subCat0.setConstant(True)
 
+    # unfreeze the param for datacard
+    CMS_hmm_sigma_cat0_ggh.setConstant(False)
+    CMS_hmm_peak_cat0_ggh.setConstant(False)
+
     # subCat 1
     _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
     fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
@@ -1049,6 +1240,10 @@ if __name__ == "__main__":
     n1_subCat1.setConstant(True)
     alpha2_subCat1.setConstant(True)
     n2_subCat1.setConstant(True)
+
+    # unfreeze the param for datacard
+    CMS_hmm_sigma_cat1_ggh.setConstant(False)
+    CMS_hmm_peak_cat1_ggh.setConstant(False)
 
     # subCat 2
     _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
@@ -1062,6 +1257,10 @@ if __name__ == "__main__":
     alpha2_subCat2.setConstant(True)
     n2_subCat2.setConstant(True)
 
+    # unfreeze the param for datacard
+    CMS_hmm_sigma_cat2_ggh.setConstant(False)
+    CMS_hmm_peak_cat2_ggh.setConstant(False)
+    
     # subCat 3
     _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
     fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
@@ -1074,6 +1273,10 @@ if __name__ == "__main__":
     alpha2_subCat3.setConstant(True)
     n2_subCat3.setConstant(True)
 
+    # unfreeze the param for datacard
+    CMS_hmm_sigma_cat3_ggh.setConstant(False)
+    CMS_hmm_peak_cat3_ggh.setConstant(False)
+
     # subCat 4
     _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
     fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
@@ -1085,6 +1288,10 @@ if __name__ == "__main__":
     n1_subCat4.setConstant(True)
     alpha2_subCat4.setConstant(True)
     n2_subCat4.setConstant(True)
+
+    # unfreeze the param for datacard
+    CMS_hmm_sigma_cat4_ggh.setConstant(False)
+    CMS_hmm_peak_cat4_ggh.setConstant(False)
     
     # -------------------------------------------------------------------------
     # Plotting
@@ -1205,28 +1412,129 @@ if __name__ == "__main__":
     # ---------------------------------------------------
     # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
-
-    fout = rt.TFile(f"./workspaces/{category}_CatWorkspaceV2.root","RECREATE")
-    wout = rt.RooWorkspace("w","workspace")
+    workspace_path = "./workspaces"
     
     # subCat 0 
-    
-    # roo_histData_subCat0.SetName("data_subCat0"); # import binned data
+    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat0_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     roo_histData_subCat0.SetName("data_cat0_ggh");
     corePdf_subCat0.SetName("bkg_cat0_ggh_pdf");
-    signal_subCat0.SetName("ggH_cat0_ggh_pdf"); 
-    sig_norm_subCat0.SetName(signal_subCat0.GetName()+"_norm"); 
+    bkg_subCat0_norm.SetName(corePdf_subCat0.GetName()+"_norm"); 
     wout.Import(roo_histData_subCat0);
     wout.Import(cat_subCat0);
     wout.Import(bkg_subCat0_norm);
     wout.Import(corePdf_subCat0);
+    # wout.Print();
+    wout.Write();
+
+    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat0_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
+    # matching names consistent with UCSD's naming scheme
+    signal_subCat0.SetName("ggH_cat0_ggh_pdf"); 
+    sig_norm_subCat0.SetName(signal_subCat0.GetName()+"_norm"); 
     wout.Import(sig_norm_subCat0);
     wout.Import(signal_subCat0); 
-    wout.Print();
+    # wout.Print();
+    wout.Write();
+    
+
+    # subCat 1 
+    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat1_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
+    # matching names consistent with UCSD's naming scheme
+    roo_histData_subCat1.SetName("data_cat1_ggh");
+    corePdf_subCat1.SetName("bkg_cat1_ggh_pdf");
+    bkg_subCat1_norm.SetName(corePdf_subCat1.GetName()+"_norm");
+    wout.Import(roo_histData_subCat1);
+    wout.Import(cat_subCat1);
+    wout.Import(bkg_subCat1_norm);
+    wout.Import(corePdf_subCat1);
+    # wout.Print();
+    wout.Write();
+
+    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat1_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
+    # matching names consistent with UCSD's naming scheme
+    signal_subCat1.SetName("ggH_cat1_ggh_pdf"); 
+    sig_norm_subCat1.SetName(signal_subCat1.GetName()+"_norm"); 
+    wout.Import(sig_norm_subCat1);
+    wout.Import(signal_subCat1); 
+    # wout.Print();
+    wout.Write();
+
+    # subCat 2
+    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat2_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
+    # matching names consistent with UCSD's naming scheme
+    roo_histData_subCat2.SetName("data_cat2_ggh");
+    corePdf_subCat2.SetName("bkg_cat2_ggh_pdf");
+    bkg_subCat2_norm.SetName(corePdf_subCat2.GetName()+"_norm");
+    wout.Import(roo_histData_subCat2);
+    wout.Import(cat_subCat2);
+    wout.Import(bkg_subCat2_norm);
+    wout.Import(corePdf_subCat2);
+    # wout.Print();
+    wout.Write();
+
+    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat2_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
+    # matching names consistent with UCSD's naming scheme
+    signal_subCat2.SetName("ggH_cat2_ggh_pdf"); 
+    sig_norm_subCat2.SetName(signal_subCat2.GetName()+"_norm"); 
+    wout.Import(sig_norm_subCat2);
+    wout.Import(signal_subCat2); 
+    # wout.Print();
     wout.Write();
 
 
+    # subCat 3
+    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat3_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
+    # matching names consistent with UCSD's naming scheme
+    roo_histData_subCat3.SetName("data_cat3_ggh");
+    corePdf_subCat3.SetName("bkg_cat3_ggh_pdf");
+    bkg_subCat3_norm.SetName(corePdf_subCat3.GetName()+"_norm");
+    wout.Import(roo_histData_subCat3);
+    wout.Import(cat_subCat3);
+    wout.Import(bkg_subCat3_norm);
+    wout.Import(corePdf_subCat3);
+    # wout.Print();
+    wout.Write();
+
+    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat3_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
+    # matching names consistent with UCSD's naming scheme
+    signal_subCat3.SetName("ggH_cat3_ggh_pdf"); 
+    sig_norm_subCat3.SetName(signal_subCat3.GetName()+"_norm"); 
+    wout.Import(sig_norm_subCat3);
+    wout.Import(signal_subCat3); 
+    # wout.Print();
+    wout.Write();
+
+    # subCat 4
+    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat4_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
+    # matching names consistent with UCSD's naming scheme
+    roo_histData_subCat4.SetName("data_cat4_ggh");
+    corePdf_subCat4.SetName("bkg_cat4_ggh_pdf");
+    bkg_subCat4_norm.SetName(corePdf_subCat4.GetName()+"_norm");
+    wout.Import(roo_histData_subCat4);
+    wout.Import(cat_subCat4);
+    wout.Import(bkg_subCat4_norm);
+    wout.Import(corePdf_subCat4);
+    # wout.Print();
+    wout.Write();
+
+    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat4_{category}.root","RECREATE")
+    wout = rt.RooWorkspace("w","workspace")
+    # matching names consistent with UCSD's naming scheme
+    signal_subCat4.SetName("ggH_cat4_ggh_pdf"); 
+    sig_norm_subCat4.SetName(signal_subCat4.GetName()+"_norm"); 
+    wout.Import(sig_norm_subCat4);
+    wout.Import(signal_subCat4); 
+    # wout.Print();
+    wout.Write();
     
     # ---------------------------------------------------
     # Group plotting start here
