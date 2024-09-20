@@ -203,7 +203,7 @@ if __name__ == "__main__":
     "-y",
     "--year",
     dest="year",
-    default="2018",
+    default="all",
     action="store",
     help="string value of year we are calculating",
     )
@@ -223,7 +223,11 @@ if __name__ == "__main__":
 
     category = args.category.lower()
     # load_path = "/work/users/yun79/stage2_output/ggH/test/processed_events_data.parquet"
-    load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
+    # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
+    if args.year=="all":
+        load_path = f"{args.load_path}/{category}/*/processed_events_data.parquet"
+    else:
+        load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
     print(f"load_path: {load_path}")
     processed_eventsData = ak.from_parquet(load_path)
     print("events loaded!")
@@ -296,7 +300,7 @@ if __name__ == "__main__":
 
     
     # Construct composite pdf
-    name = "model_subCat0_SMFxBWZRedux"
+    name = "model_SubCat0_SMFxBWZRedux"
     model_subCat0_BWZRedux = rt.RooProdPdf(name, name, [coreBWZRedux_SubCat0, subCat0_SMF])
 
 
@@ -753,8 +757,10 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat3_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    # print(f"roo_datasetData_subCat3_FEWZxBern name: {roo_datasetData_subCat3_FEWZxBern.GetName()}")
     roo_histData_subCat3_FEWZxBern = rt.RooDataHist("subCat3_rooHist_FEWZxBern","subCat3_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat3_FEWZxBern)
     data_subCat3_FEWZxBern = roo_histData_subCat3_FEWZxBern
+    # print(f"data_subCat3_FEWZxBern name: {data_subCat3_FEWZxBern.GetName()}")
 
 
     # do for cat idx 4
@@ -868,7 +874,7 @@ if __name__ == "__main__":
     pdf_list_subCat0 = rt.RooArgList(
         model_subCat0_BWZRedux,
         model_subCat0_sumExp,
-        model_subCat0_FEWZxBern,
+        # model_subCat0_FEWZxBern,
     )
     corePdf_subCat0 = rt.RooMultiPdf("CorePdf_subCat0","CorePdf_subCat0",cat_subCat0,pdf_list_subCat0)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
@@ -890,7 +896,7 @@ if __name__ == "__main__":
     pdf_list_subCat1 = rt.RooArgList(
         model_subCat1_BWZRedux,
         model_subCat1_sumExp,
-        model_subCat1_FEWZxBern,
+        # model_subCat1_FEWZxBern,
     )
     corePdf_subCat1 = rt.RooMultiPdf("CorePdf_subCat1","CorePdf_subCat1",cat_subCat1,pdf_list_subCat1)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
@@ -911,7 +917,7 @@ if __name__ == "__main__":
     pdf_list_subCat2 = rt.RooArgList(
         model_subCat2_BWZRedux,
         model_subCat2_sumExp,
-        model_subCat2_FEWZxBern,
+        # model_subCat2_FEWZxBern,
     )
     corePdf_subCat2 = rt.RooMultiPdf("CorePdf_subCat2","CorePdf_subCat2",cat_subCat2,pdf_list_subCat2)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
@@ -932,7 +938,7 @@ if __name__ == "__main__":
     pdf_list_subCat3 = rt.RooArgList(
         model_subCat3_BWZRedux,
         model_subCat3_sumExp,
-        model_subCat3_FEWZxBern,
+        # model_subCat3_FEWZxBern,
     )
     corePdf_subCat3 = rt.RooMultiPdf("CorePdf_subCat3","CorePdf_subCat3",cat_subCat3,pdf_list_subCat3)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
@@ -953,7 +959,7 @@ if __name__ == "__main__":
     pdf_list_subCat4 = rt.RooArgList(
         model_subCat4_BWZRedux,
         model_subCat4_sumExp,
-        model_subCat4_FEWZxBern,
+        # model_subCat4_FEWZxBern,
     )
     corePdf_subCat4 = rt.RooMultiPdf("CorePdf_subCat4","CorePdf_subCat4",cat_subCat4,pdf_list_subCat4)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
@@ -968,7 +974,10 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
-    load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_ggh.parquet" # Fig 6.15 was only with ggH process, though with all 2016, 2017 and 2018
+    if args.year=="all":
+        load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh.parquet"
+    else:
+        load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_ggh.parquet" # Fig 6.15 was only with ggH process, though with all 2016, 2017 and 2018
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC*.parquet"
     
     processed_eventsSignalMC = ak.from_parquet(load_path)
@@ -981,11 +990,19 @@ if __name__ == "__main__":
     # subCat 0
     MH_subCat0 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat0.setConstant(True) # this shouldn't change, I think
-    sigma_subCat0 = rt.RooRealVar("sigma_subCat0" , "sigma_subCat0", 2, .1, 4.0)
-    alpha1_subCat0 = rt.RooRealVar("alpha1_subCat0" , "alpha1_subCat0", 2, 0.01, 65)
-    n1_subCat0 = rt.RooRealVar("n1_subCat0" , "n1_subCat0", 10, 0.01, 100)
-    alpha2_subCat0 = rt.RooRealVar("alpha2_subCat0" , "alpha2_subCat0", 2.0, 0.01, 65)
-    n2_subCat0 = rt.RooRealVar("n2_subCat0" , "n2_subCat0", 25, 0.01, 100)
+    # sigma_subCat0 = rt.RooRealVar("sigma_subCat0" , "sigma_subCat0", 2, .1, 4.0)
+    # alpha1_subCat0 = rt.RooRealVar("alpha1_subCat0" , "alpha1_subCat0", 2, 0.01, 65)
+    # n1_subCat0 = rt.RooRealVar("n1_subCat0" , "n1_subCat0", 10, 0.01, 100)
+    # alpha2_subCat0 = rt.RooRealVar("alpha2_subCat0" , "alpha2_subCat0", 2.0, 0.01, 65)
+    # n2_subCat0 = rt.RooRealVar("n2_subCat0" , "n2_subCat0", 25, 0.01, 100)
+
+    # copying parameters from official AN workspace as starting params
+    sigma_subCat0 = rt.RooRealVar("sigma_subCat0" , "sigma_subCat0", 1.8228, .1, 4.0)
+    alpha1_subCat0 = rt.RooRealVar("alpha1_subCat0" , "alpha1_subCat0", 1.12842, 0.01, 65)
+    n1_subCat0 = rt.RooRealVar("n1_subCat0" , "n1_subCat0", 4.019960, 0.01, 100)
+    alpha2_subCat0 = rt.RooRealVar("alpha2_subCat0" , "alpha2_subCat0", 1.3132, 0.01, 65)
+    n2_subCat0 = rt.RooRealVar("n2_subCat0" , "n2_subCat0", 9.97411, 0.01, 100)
+    
     
     CMS_hmm_sigma_cat0_ggh = rt.RooRealVar("CMS_hmm_sigma_cat0_ggh" , "CMS_hmm_sigma_cat0_ggh", 0, -5 , 5 )
     CMS_hmm_sigma_cat0_ggh.setConstant(True) # this is going to be param in datacard
@@ -1002,11 +1019,18 @@ if __name__ == "__main__":
     # subCat 1
     MH_subCat1 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat1.setConstant(True) # this shouldn't change, I think
-    sigma_subCat1 = rt.RooRealVar("sigma_subCat1" , "sigma_subCat1", 2, .1, 4.0)
-    alpha1_subCat1 = rt.RooRealVar("alpha1_subCat1" , "alpha1_subCat1", 2, 0.01, 65)
-    n1_subCat1 = rt.RooRealVar("n1_subCat1" , "n1_subCat1", 10, 0.01, 100)
-    alpha2_subCat1 = rt.RooRealVar("alpha2_subCat1" , "alpha2_subCat1", 2.0, 0.01, 65)
-    n2_subCat1 = rt.RooRealVar("n2_subCat1" , "n2_subCat1", 25, 0.01, 100)
+    # sigma_subCat1 = rt.RooRealVar("sigma_subCat1" , "sigma_subCat1", 2, .1, 4.0)
+    # alpha1_subCat1 = rt.RooRealVar("alpha1_subCat1" , "alpha1_subCat1", 2, 0.01, 65)
+    # n1_subCat1 = rt.RooRealVar("n1_subCat1" , "n1_subCat1", 10, 0.01, 100)
+    # alpha2_subCat1 = rt.RooRealVar("alpha2_subCat1" , "alpha2_subCat1", 2.0, 0.01, 65)
+    # n2_subCat1 = rt.RooRealVar("n2_subCat1" , "n2_subCat1", 25, 0.01, 100)
+
+    # copying parameters from official AN workspace as starting params
+    sigma_subCat1 = rt.RooRealVar("sigma_subCat1" , "sigma_subCat1", 1.503280, .1, 4.0)
+    alpha1_subCat1 = rt.RooRealVar("alpha1_subCat1" , "alpha1_subCat1", 1.3364, 0.01, 65)
+    n1_subCat1 = rt.RooRealVar("n1_subCat1" , "n1_subCat1", 2.815022, 0.01, 100)
+    alpha2_subCat1 = rt.RooRealVar("alpha2_subCat1" , "alpha2_subCat1", 1.57127749, 0.01, 65)
+    n2_subCat1 = rt.RooRealVar("n2_subCat1" , "n2_subCat1", 9.99687, 0.01, 100)
     
     CMS_hmm_sigma_cat1_ggh = rt.RooRealVar("CMS_hmm_sigma_cat1_ggh" , "CMS_hmm_sigma_cat1_ggh", 0, -5 , 5 )
     CMS_hmm_sigma_cat1_ggh.setConstant(True) # this is going to be param in datacard
@@ -1107,7 +1131,7 @@ if __name__ == "__main__":
 
     # define normalization value from signal MC event weights 
     
-    norm_val = np.sum(wgt_subCat0_SigMC)
+    norm_val = np.sum(wgt_subCat0_SigMC)* 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
     sig_norm_subCat0 = rt.RooRealVar(signal_subCat0.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat0 norm_val: {norm_val}")
     sig_norm_subCat0.setConstant(True)
@@ -1131,7 +1155,7 @@ if __name__ == "__main__":
 
     # define normalization value from signal MC event weights 
     
-    norm_val = np.sum(wgt_subCat1_SigMC)
+    norm_val = np.sum(wgt_subCat1_SigMC)* 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
     sig_norm_subCat1 = rt.RooRealVar(signal_subCat1.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat1 norm_val: {norm_val}")
     sig_norm_subCat1.setConstant(True)
@@ -1155,7 +1179,7 @@ if __name__ == "__main__":
 
     # define normalization value from signal MC event weights 
     
-    norm_val = np.sum(wgt_subCat2_SigMC)
+    norm_val = np.sum(wgt_subCat2_SigMC) * 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
     sig_norm_subCat2 = rt.RooRealVar(signal_subCat2.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat2 norm_val: {norm_val}")
     sig_norm_subCat2.setConstant(True)
@@ -1179,7 +1203,7 @@ if __name__ == "__main__":
 
     # define normalization value from signal MC event weights 
     
-    norm_val = np.sum(wgt_subCat3_SigMC)
+    norm_val = np.sum(wgt_subCat3_SigMC)* 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
     sig_norm_subCat3 = rt.RooRealVar(signal_subCat3.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat3 norm_val: {norm_val}")
     sig_norm_subCat3.setConstant(True)
@@ -1203,7 +1227,7 @@ if __name__ == "__main__":
 
     # define normalization value from signal MC event weights 
     
-    norm_val = np.sum(wgt_subCat4_SigMC)
+    norm_val = np.sum(wgt_subCat4_SigMC)* 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
     sig_norm_subCat4 = rt.RooRealVar(signal_subCat4.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat4 norm_val: {norm_val}")
     sig_norm_subCat4.setConstant(True)
@@ -1423,8 +1447,8 @@ if __name__ == "__main__":
     # make norm for data
     nevents = roo_histData_subCat0.sumEntries()
     roo_histData_subCat0_norm = rt.RooRealVar(roo_histData_subCat0.GetName()+"_norm","Background normalization value",nevents,0,3*nevents)
-    wout.Import(roo_histData_subCat0);
     wout.Import(roo_histData_subCat0_norm);
+    wout.Import(roo_histData_subCat0);
     wout.Import(cat_subCat0);
     wout.Import(bkg_subCat0_norm);
     wout.Import(corePdf_subCat0);
@@ -1451,6 +1475,10 @@ if __name__ == "__main__":
     roo_histData_subCat1.SetName("data_cat1_ggh");
     corePdf_subCat1.SetName("bkg_cat1_ggh_pdf");
     bkg_subCat1_norm.SetName(corePdf_subCat1.GetName()+"_norm");
+    # make norm for data
+    nevents = roo_histData_subCat1.sumEntries()
+    roo_histData_subCat1_norm = rt.RooRealVar(roo_histData_subCat1.GetName()+"_norm","Background normalization value",nevents,0,3*nevents)
+    wout.Import(roo_histData_subCat1_norm);
     wout.Import(roo_histData_subCat1);
     wout.Import(cat_subCat1);
     wout.Import(bkg_subCat1_norm);
@@ -1477,6 +1505,10 @@ if __name__ == "__main__":
     roo_histData_subCat2.SetName("data_cat2_ggh");
     corePdf_subCat2.SetName("bkg_cat2_ggh_pdf");
     bkg_subCat2_norm.SetName(corePdf_subCat2.GetName()+"_norm");
+    # make norm for data
+    nevents = roo_histData_subCat2.sumEntries()
+    roo_histData_subCat2_norm = rt.RooRealVar(roo_histData_subCat2.GetName()+"_norm","Background normalization value",nevents,0,3*nevents)
+    wout.Import(roo_histData_subCat2_norm);
     wout.Import(roo_histData_subCat2);
     wout.Import(cat_subCat2);
     wout.Import(bkg_subCat2_norm);
@@ -1504,6 +1536,10 @@ if __name__ == "__main__":
     roo_histData_subCat3.SetName("data_cat3_ggh");
     corePdf_subCat3.SetName("bkg_cat3_ggh_pdf");
     bkg_subCat3_norm.SetName(corePdf_subCat3.GetName()+"_norm");
+    # make norm for data
+    nevents = roo_histData_subCat3.sumEntries()
+    roo_histData_subCat3_norm = rt.RooRealVar(roo_histData_subCat3.GetName()+"_norm","Background normalization value",nevents,0,3*nevents)
+    wout.Import(roo_histData_subCat3_norm);
     wout.Import(roo_histData_subCat3);
     wout.Import(cat_subCat3);
     wout.Import(bkg_subCat3_norm);
@@ -1530,6 +1566,10 @@ if __name__ == "__main__":
     roo_histData_subCat4.SetName("data_cat4_ggh");
     corePdf_subCat4.SetName("bkg_cat4_ggh_pdf");
     bkg_subCat4_norm.SetName(corePdf_subCat4.GetName()+"_norm");
+    # make norm for data
+    nevents = roo_histData_subCat4.sumEntries()
+    roo_histData_subCat4_norm = rt.RooRealVar(roo_histData_subCat4.GetName()+"_norm","Background normalization value",nevents,0,3*nevents)
+    wout.Import(roo_histData_subCat4_norm);
     wout.Import(roo_histData_subCat4);
     wout.Import(cat_subCat4);
     wout.Import(bkg_subCat4_norm);
