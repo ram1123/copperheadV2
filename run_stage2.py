@@ -57,7 +57,7 @@ def getCategoryCutNames(category:str) -> List[str]:
     # print(f"getCategoryCutNames out_list: {out_list}")
     return out_list
         
-def process4gghCategory(events: ak.Record) -> ak.Record:
+def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     """
     Takes the given stage1 output, runs MVA, and returns a new 
     ak.Record with MVA score + relevant info from stage1 output
@@ -91,12 +91,16 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
                 'dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'
          ],
         "WgtOff_includeQGL" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
+        "WgtON_includeQGL" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
+        "WgtON_includeQGL_AN_BDT" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
     }
     
     # model_name = "phifixedBDT_2018"
     # model_name = "BDTperyear_2018"
     # model_name = "WgtOff"
-    model_name = "WgtOff_includeQGL"
+    # model_name = "WgtOff_includeQGL"
+    # model_name = "WgtON_includeQGL"
+    model_name = "WgtON_includeQGL_AN_BDT"
 
     training_features = train_feat_dict[model_name]
     print(f"len(training_features): {len(training_features)}")
@@ -134,19 +138,20 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
         events[field] = ak.fill_none(events[field], value= none_val)
         # inf_cond = (np.inf == events[field]) | (-np.inf == events[field]) 
         # events[field] = ak.where(inf_cond, none_val, events[field])
-
+    print(f"process4gghCategory year: {year}")
     parameters = {
     # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
         # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_final_2018/",
-        "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_WgtOff_includeQGL_2018/",
-        "year" : "2018",
+        # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_WgtOff_includeQGL_2018/",
+        "models_path" : f"/depot/cms/users/yun79/hmm/trained_MVAs/bdt_{model_name}_{year}/",
+        "year" : year,
     }
+    print(f"parameters models path: {parameters['models_path']}")
     processed_events = evaluate_bdt(events, "nominal", model_name, training_features, parameters) 
 
     # load BDT score edges for subcategory divison
     BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
     edges = OmegaConf.load(BDTedges_load_path)
-    year = "2018"
     edges = np.array(edges[year])
     # edges = 1-edges
     print(f"subCat BDT edges: {edges}")
@@ -190,6 +195,7 @@ def process4gghCategory(events: ak.Record) -> ak.Record:
     fields2save = [
         "dimuon_mass",
         "BDT_score",
+        "BDT_score_val",
         "subCategory_idx",
         "wgt_nominal_total",
         "h_peak",
@@ -220,6 +226,8 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
     events["dimuon_ebe_mass_res_rel"] = events.dimuon_ebe_mass_res / events.dimuon_mass
     events["rpt"] = events.mmjj_pt / (events.dimuon_pt + events.jet1_pt + events.jet2_pt)# as of writing this code, rpt variable is calculated, but not saved during stage1
+    print("Warning find a way to fix the year thing")
+    raise ValueError
     events["year"] = ak.ones_like(events.mu1_pt)* 2018
 
     # original start --------------------------------------
@@ -421,17 +429,10 @@ if __name__ == "__main__":
     # full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
     # full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
     category = args.category.lower()
+    
     for sample in args.samples:
         if sample.lower() == "data":
             full_load_path = load_path+f"/data_*/*/*.parquet"
-        # elif sample.lower() == "signal":
-        #     if category == "ggh": # ggH
-        #         full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
-        #     elif category == "vbf": # VBF
-        #         full_load_path = load_path+f"/vbf_powheg/*/*.parquet"
-        #     else:
-        #         print("unsupported category")
-        #         raise ValueError
         elif sample.lower() == "ggh":
             full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
         elif sample.lower() == "vbf":
@@ -440,16 +441,29 @@ if __name__ == "__main__":
             full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
         elif sample.lower() == "ewk":
             full_load_path = load_path+f"/ewk_lljj_mll50_mjj120/*/*.parquet"
+        elif sample.lower() == "tt":
+            full_load_path = load_path+f"/ttjets*/*/*.parquet"
+        elif sample.lower() == "st":
+            full_load_path = load_path+f"/st_tw*/*/*.parquet"
         else:
             print(f"unsupported sample!")
             raise ValueError
             
-        print(f"full_load_path: {full_load_path}")
-    
+        # print(f"full_load_path: {full_load_path}")
+        # if "data" in full_load_path:
+        #     data_filelist.append(full_load_path)
+        # elif ("ggh" in full_load_path) or ("vbf" in full_load_path):
+        #     sig_MC_filelist.append(full_load_path)
+        # else:
+        #     bkg_MC_filelist.append(full_load_path)
+        
+        # print(f"bkg_MC_filelist: {bkg_MC_filelist}")
+        # print(f"sig_MC_filelist: {sig_MC_filelist}")
+        # print(f"data_filelist: {data_filelist}")
         
         events = dak.from_parquet(full_load_path)
         if category == "ggh":
-            processed_events = process4gghCategory(events)      
+            processed_events = process4gghCategory(events, args.year)      
         elif category == "vbf":
             processed_events = process4vbfCategory(events) 
         else: 
@@ -472,6 +486,10 @@ if __name__ == "__main__":
             save_filename = f"{save_path}/processed_events_bkgMC_dy.parquet" 
         elif "ewk" in full_load_path:
             save_filename = f"{save_path}/processed_events_bkgMC_ewk.parquet" 
+        elif "tt" in full_load_path:
+            save_filename = f"{save_path}/processed_events_bkgMC_tt.parquet" 
+        elif "st" in full_load_path:
+            save_filename = f"{save_path}/processed_events_bkgMC_st.parquet" 
         else:
             print ("unsupported sample given!")
             raise ValueError
@@ -484,6 +502,7 @@ if __name__ == "__main__":
             pass
         ak.to_parquet(processed_events, save_filename)
 
+    
     end_time = time.time()
     print(f"stage2 done in {end_time-start_time} seconds")
 

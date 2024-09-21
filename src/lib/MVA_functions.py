@@ -42,7 +42,7 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
     """
     
     """
-    print(f"sum df.h_peak: {ak.sum(df.h_peak)}")
+    # print(f"sum df.h_peak: {ak.sum(df.h_peak)}")
     # overwrite dimuon mass for regions not in h_peak
 
     
@@ -61,6 +61,7 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
     #model = f"{model}_{parameters['years'][0]}"
     # score_name = f"score_{model}_{variation}"
     score_name = "BDT_score"
+    year = parameters["year"]
 
     # df.loc[:, score_name] = 0
     score_total = np.zeros(len(df['dimuon_pt']))
@@ -70,11 +71,13 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
     for i in range(nfolds):
         # eval_folds are the list of test dataset chunks that each bdt is trained to evaluate
         eval_folds = [(i + f) % nfolds for f in [3]]
-        # eval_filter = df.event.mod(nfolds).isin(eval_folds)
         eval_filter = (df.event % nfolds ) == (np.array(eval_folds) * ak.ones_like(df.event))
-        scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
+        # eval_filter = df.event.mod(nfolds).isin(eval_folds)
+        # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
+        scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
         scalers = np.load(scalers_path, allow_pickle=True)
-        model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
+        # model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
+        model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
 
         bdt_model = pickle.load(open(model_path, "rb"))
         df_i = df[eval_filter]
@@ -82,13 +85,13 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         # print(len
         if len(df_i) == 0:
             continue
-        print(f"scalers: {scalers.shape}")
-        print(f"df_i: {df_i}")
+        # print(f"scalers: {scalers.shape}")
+        # print(f"df_i: {df_i}")
         df_i_feat = df_i[features]
         # df_i_feat = np.transpose(np.array(ak.unzip(df_i_feat)))
         df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
-        print(f"df_i_feat[:,0]: {df_i_feat[:,0]}")
-        print(f'df_i.dimuon_cos_theta_cs: {df_i.dimuon_cos_theta_cs}')
+        # print(f"df_i_feat[:,0]: {df_i_feat[:,0]}")
+        # print(f'df_i.dimuon_cos_theta_cs: {df_i.dimuon_cos_theta_cs}')
         # print(f"type df_i_feat: {type(df_i_feat)}")
         # print(f"df_i_feat: {df_i_feat.shape}")
         df_i_feat = ak.Array(df_i_feat)
@@ -97,14 +100,56 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
             print(f"model: {model}")
             prediction = np.array(
                 bdt_model.predict_proba(df_i_feat)[:, 1]
-                # bdt_model.predict_proba(df_i_feat)[:, 0]
             ).ravel()
-            print(f"prediction: {prediction}")
+            # print(f"prediction: {prediction}")
             # df.loc[eval_filter, score_name] = prediction  # np.arctanh((prediction))
             # score_total = ak.where(eval_filter, prediction, score_total)
             score_total[eval_filter] = prediction
 
     df[score_name] = score_total
+
+    # do the same for validation score
+    score_name_val = "BDT_score_val"
+    score_total_val = np.zeros(len(df['dimuon_pt']))
+
+    for i in range(nfolds):
+        # val_folds are the list of test dataset chunks that each bdt is trained to evaluate
+        val_folds = [(i+f)%nfolds for f in [2]]
+        # val_filter = df.event.mod(nfolds).isin(val_folds)
+        val_filter = (df.event % nfolds ) == (np.array(val_folds) * ak.ones_like(df.event))
+        # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
+        scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
+        scalers = np.load(scalers_path, allow_pickle=True)
+        # model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
+        model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
+
+        bdt_model = pickle.load(open(model_path, "rb"))
+        df_i = df[val_filter]
+        # print(f"df_i: {len(df_i)}")
+        # print(len
+        if len(df_i) == 0:
+            continue
+        # print(f"scalers: {scalers.shape}")
+        # print(f"df_i: {df_i}")
+        df_i_feat = df_i[features]
+        # df_i_feat = np.transpose(np.array(ak.unzip(df_i_feat)))
+        df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
+        # print(f"df_i_feat[:,0]: {df_i_feat[:,0]}")
+        # print(f'df_i.dimuon_cos_theta_cs: {df_i.dimuon_cos_theta_cs}')
+        # print(f"type df_i_feat: {type(df_i_feat)}")
+        # print(f"df_i_feat: {df_i_feat.shape}")
+        df_i_feat = ak.Array(df_i_feat)
+        df_i = (df_i_feat - scalers[0]) / scalers[1]
+        if len(df_i) > 0:
+            print(f"model: {model}")
+            prediction = np.array(
+                bdt_model.predict_proba(df_i_feat)[:, 1]
+            ).ravel()
+            # print(f"prediction: {prediction}")
+            score_total_val[val_filter] = prediction
+
+    df[score_name_val] = score_total_val
+    
     return df
 
 # -----------------------------------------------------------------------------------------------------------------
@@ -153,9 +198,9 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str],
     """
     print(f"sum df.h_peak: {ak.sum(df.h_peak)}")
 
-    # temporary fix to due to some bug according to Valerie
-    df['mmj_min_dEta'] = df["mmj2_dEta"]
-    df['mmj_min_dPhi'] = df["mmj2_dPhi"]
+    # # temporary fix to due to some bug according to Valerie
+    # df['mmj_min_dEta'] = df["mmj2_dEta"]
+    # df['mmj_min_dPhi'] = df["mmj2_dPhi"]
     
     # overwrite dimuon mass for regions not in h_peak
     not_h_peak = (df.h_peak ==0)
@@ -169,6 +214,7 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str],
     score_name = "DNN_score"
 
     score_total = np.zeros(len(df['dimuon_pt']))
+    score_raw = np.zeros(len(df['dimuon_pt'])) # raw sigmoid output
     
     nfolds = 4
 
@@ -177,6 +223,7 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str],
         eval_folds = [(i + f) % nfolds for f in [3]]
         eval_filter = (df.event % nfolds ) == (np.array(eval_folds) * ak.ones_like(df.event))
         scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
+        print(f"scalers_path: {scalers_path}")
         scalers = np.load(scalers_path, allow_pickle=True)
         df_i = df[eval_filter]
         if len(df_i) == 0:
@@ -202,10 +249,12 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str],
 
         prediction = dnn_model(df_i).detach().numpy().flatten()
         print(f"prediction: {prediction.shape}")
-        prediction = (prediction - 1/2)*2 # temporary shift the sigmoid result to have range of a tanh
+        # prediction = (prediction - 1/2)*2 # temporary shift the sigmoid result to have range of a tanh
             
         score_total[eval_filter] = np.arctanh(prediction)
+        score_raw[eval_filter] = prediction
     df[score_name] = score_total
+    df[score_name+"_sigmoid"] = score_raw
     print(f"dnn score_total: {score_total}")
     print(f"dnn score_total max: {np.max(score_total)}")
     print(f"dnn score_total min: {np.min(score_total)}")
