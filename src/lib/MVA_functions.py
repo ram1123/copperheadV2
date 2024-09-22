@@ -49,8 +49,8 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
 
 
     # temporary fix to due to some bug according to Valerie
-    df['mmj_min_dEta'] = df["mmj2_dEta"]
-    df['mmj_min_dPhi'] = df["mmj2_dPhi"]
+    # df['mmj_min_dEta'] = df["mmj2_dEta"]
+    # df['mmj_min_dPhi'] = df["mmj2_dPhi"]
 
     # temporary definition of event bc I don't have it, and we need it for 4-fold method to work
     if "event" not in df.fields:
