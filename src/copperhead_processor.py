@@ -197,6 +197,8 @@ class EventProcessor(processor.ProcessorABC):
         for mode in ["Data", "MC"]:
             if "2016" in year:
                 yearUL = "2016"
+            elif ("22" in year) or ("23" in year):# temporary solution until I can generate my own dimuon mass resolution
+                yearUL = "2018"
             else:
                 yearUL=year #Work around before there are seperate new files for pre and postVFP
             label = f"res_calib_{mode}_{yearUL}"
@@ -1057,8 +1059,11 @@ class EventProcessor(processor.ProcessorABC):
         dpt2 = (mu2.ptErr / mu2.pt) * muon_E
         if test_mode:
             print(f"muons mass_resolution dpt1: {dpt1}")
-        if "2016" in self.config["year"]:
+        year = self.config["year"]
+        if "2016" in year:
             yearUL = "2016"
+        elif ("22" in year) or ("23" in year):# temporary solution until I can generate my own dimuon mass resolution
+            yearUL = "2018"
         else:
             yearUL = self.config["year"] #Work around before there are seperate new files for pre and postVFP
         if is_mc:
