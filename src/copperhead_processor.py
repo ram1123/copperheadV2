@@ -1364,9 +1364,12 @@ class EventProcessor(processor.ProcessorABC):
             mmj2_dPhi,
         )
         # print(f"mmj_min_dPhi: {mmj_min_dPhi.compute()}")
-        zeppenfeld = dimuon.eta - 0.5 * (
-            jet1.eta + jet2.eta
-        )
+        # zeppenfeld = dimuon.eta - 0.5 * (
+        #     jet1.eta + jet2.eta
+        # )
+        # zeppenfeld definition in  line 1118 in the AN
+        zeppenfeld = dimuon.rapidity - 0.5 * (jet1.rapidity + jet2.rapidity) 
+        zeppenfeld = zeppenfeld / np.abs(jet1.rapidity + jet2.rapidity)
         mmjj = dimuon + dijet
 
         rpt = mmjj.pt / (
@@ -1381,9 +1384,7 @@ class EventProcessor(processor.ProcessorABC):
         jet_loop_out_dict = {
             "jet1_pt" : jet1.pt,
             "jet1_eta" : jet1.eta,
-            "jet1_rap" : jet1.rapidity, # max rel err: 0.7394
-            # "jet1_rap" : jet1_Lvec.rapidity, # max rel erro: 3.445459052224462e-05
-            # "jet1_rap" : jet1_rapidity, # no error
+            "jet1_rapidity" : jet1.rapidity, # max rel err: 0.7394
             "jet1_phi" : jet1.phi,
             "jet1_qgl" : jet1.qgl,
             "jet1_jetId" : jet1.jetId,
@@ -1405,9 +1406,7 @@ class EventProcessor(processor.ProcessorABC):
             "jet1_mass_jec" : jet1.mass_jec,
             "jet2_mass_jec" : jet2.mass_jec,
             #-------------------------
-            "jet2_rap" : jet2.rapidity, # max rel err: 0.781
-            # "jet2_rap" : jet2_Lvec.rapidity, # max rel err: 4.212372628654057e-05
-            # "jet2_rap" : jet2_rapidity, # no error
+            "jet2_rapidity" : jet2.rapidity, # max rel err: 0.781
             "jet2_phi" : jet2.phi,
             "jet2_qgl" : jet2.qgl,
             "jet2_jetId" : jet2.jetId,

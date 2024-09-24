@@ -104,7 +104,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # zip.to_parquet(filename)
     # raise ValueError
     # save input events for CI testing end ---------------------------------------------
-    
+    print(f"n of partitions: {events.Muon.pt}")
     out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
@@ -126,6 +126,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'jet2_eta': (out_collections["jet2_eta"]),
             'jet1_phi': (out_collections["jet1_phi"]),
             'jet2_phi': (out_collections["jet2_phi"]),
+            'jet1_rapidity': (out_collections["jet1_rapidity"]),
+            'jet2_rapidity': (out_collections["jet2_rapidity"]),
             'jet1_mass': (out_collections["jet1_mass"]),
             'jet2_mass': (out_collections["jet2_mass"]),
             'jet1_qgl': (out_collections["jet1_qgl"]),
@@ -152,6 +154,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'dimuon_dR': (out_collections["dimuon_dR"]),
             'dimuon_dEta': (out_collections["dimuon_dEta"]),
             'dimuon_eta': (out_collections["dimuon_eta"]),
+            'dimuon_rapidity': (out_collections["dimuon_rapidity"]),
             'dimuon_phi': (out_collections["dimuon_phi"]),
             'dimuon_pt': (out_collections["dimuon_pt"]),
             'dimuon_pt_log': np.log(out_collections["dimuon_pt"]),
@@ -380,8 +383,11 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # max_file_len = 15
                 # max_file_len = 50
-                # max_file_len = 30
-                max_file_len = 900
+                # max_file_len = 100
+                max_file_len = 200
+                # max_file_len = 25
+                # max_file_len = 900
+                # max_file_len = 10
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
                 print(f"max_file_len: {max_file_len}")
