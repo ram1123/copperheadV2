@@ -681,7 +681,7 @@ class EventProcessor(processor.ProcessorABC):
 
 
         self.prepare_jets(events, NanoAODv=NanoAODv)
-        print("test ject vector right after prepare_jets")
+        # print("test ject vector right after prepare_jets")
         # testJetVector(events.Jet)
 
         # ------------------------------------------------------------#
@@ -761,9 +761,6 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
             # original initial weight end ----------------
-            # hard code to match lumi weight of valerie's code start ----
-            # weights.add("lumi_weight", weight=ak.ones_like(events.genWeight)*0.012550352440399929)
-            # hard code to match lumi weight of valerie's code end ----
             
             if do_pu_wgt:
                 print("adding PU wgts!")
@@ -1373,15 +1370,12 @@ class EventProcessor(processor.ProcessorABC):
             mmj2_dPhi,
         )
         # print(f"mmj_min_dPhi: {mmj_min_dPhi.compute()}")
-        # zeppenfeld = dimuon.eta - 0.5 * (
-        #     jet1.eta + jet2.eta
-        # )
         # zeppenfeld definition in  line 1118 in the AN
         dimuon_rapidity = getRapidity(dimuon)
         jet1_rapidity = getRapidity(jet1)
         jet2_rapidity = getRapidity(jet2)
-        zeppenfeld = dimuon.rapidity - 0.5 * (jet1_rapidity + jet2_rapidity) 
-        zeppenfeld = zeppenfeld / np.abs(jet1_rapidity + jet2_rapidity)
+        zeppenfeld = dimuon_rapidity - 0.5 * (jet1_rapidity + jet2_rapidity) 
+        zeppenfeld = zeppenfeld / np.abs(jet1_rapidity - jet2_rapidity)
         mmjj = dimuon + dijet
 
         rpt = mmjj.pt / (
@@ -1491,7 +1485,8 @@ class EventProcessor(processor.ProcessorABC):
 
         # Cut has to be defined here because we will use it in
         # b-tag weights calculation
-        vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) & (jet1.pt > 35)
+        # vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) & (jet1.pt > 35) # not sure why 35 jet1 pt cut is here
+        vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) 
         vbf_cut = ak.fill_none(vbf_cut, value=False)
         jet_loop_out_dict.update({"vbf_cut": vbf_cut})
 
