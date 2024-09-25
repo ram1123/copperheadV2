@@ -6,7 +6,7 @@ from coffea.lookup_tools import dense_lookup
 import awkward as ak
 import dask_awkward as dak
 from omegaconf import OmegaConf
-
+import correctionlib
 
 # PU SF --------------------------------------------------------------------
 # def pu_lookups(parameters, mode="nom", auto=[]):
@@ -134,24 +134,40 @@ def checkIntegral(wgt1, wgt2, ref):
 #         pu_weights[var][ntrueint < 1] = 1
 #     return pu_weights
 
-def pu_evaluator(parameters, ntrueint, onTheSpot=False):
+def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2):
     """
     params:
     numevents = integer value of 
     ntrueint = np array for making dense lookup
+    distinction for run2 and run3 is not the most elegant method, but it should
+    be good enough for the time being
     """
-    if onTheSpot:
-        lookups = pu_lookups(parameters, auto=ak.to_numpy(ntrueint.compute()))
+    if Run ==2:
+        if onTheSpot:
+            lookups = pu_lookups(parameters, auto=ak.to_numpy(ntrueint.compute()))
+        else:
+            lookups = pu_lookups(parameters, auto=[])
+        #print("Hello")
+        pu_weights = {}
+        for var, lookup in lookups.items():
+            # print(f"lookup(ntrueint): {lookup(ntrueint)}")
+            pu_weights[var] = lookup(ntrueint)
+            pu_weights[var] = ak.where((ntrueint > 100), 1, pu_weights[var])
+            pu_weights[var] = ak.where((ntrueint < 1), 1, pu_weights[var])
+            # print(f"pu_weights[{var}]: {pu_weights[var].compute()}")
+    elif Run==3:
+        jsonGz_path = parameters["pu_file_mc"]
+        print(f"jsonGz_path: {jsonGz_path}")
+        ceval = correctionlib.CorrectionSet.from_file(jsonGz_path)
+        key = list(ceval.keys())[0]
+        pu_lookup = ceval[key]
+        pu_weights = {}
+        pu_weights["nom"] = pu_lookup.evaluate(ntrueint,"nominal")
+        pu_weights["up"] = pu_lookup.evaluate(ntrueint,"up")
+        pu_weights["down"] = pu_lookup.evaluate(ntrueint,"down")
     else:
-        lookups = pu_lookups(parameters, auto=[])
-    #print("Hello")
-    pu_weights = {}
-    for var, lookup in lookups.items():
-        # print(f"lookup(ntrueint): {lookup(ntrueint)}")
-        pu_weights[var] = lookup(ntrueint)
-        pu_weights[var] = ak.where((ntrueint > 100), 1, pu_weights[var])
-        pu_weights[var] = ak.where((ntrueint < 1), 1, pu_weights[var])
-        # print(f"pu_weights[{var}]: {pu_weights[var].compute()}")
+        print("ERROR: unacceptable Run value is given!")
+        raise ValueError
     return pu_weights
 
 
@@ -965,12 +981,12 @@ def add_pdf_variations(events, config, dataset):
             max_replicas = 100
         pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]]
 
-        #---------------- No idea why output instead of weights
-        for i in range(100):
-            if (i < max_replicas) and do_pdf:
-                output[f"pdf_mcreplica{i}"] = pdf_wgts[:, i]
-            else:
-                output[f"pdf_mcreplica{i}"] = np.nan
+        #---------------- No idea why output instead of weights comment out for now
+        # for i in range(100):
+        #     if (i < max_replicas):
+        #         output[f"pdf_mcreplica{i}"] = pdf_wgts[:, i]
+        #     else:
+        #         output[f"pdf_mcreplica{i}"] = np.nan
         #--------------------------------------------
     
     else:
@@ -978,26 +994,27 @@ def add_pdf_variations(events, config, dataset):
         pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]]
         # pdf_wgts = np.array(pdf_wgts)
         # print(f"add_pdf_variations pdf_wgts: {pdf_wgts}")
-        pdf_std = ak.std(pdf_wgts, axis=1)
-        pdf_vars = {
-            # "up": (1 + 2 * pdf_wgts.std()),
-            # "down": (1 - 2 * pdf_wgts.std()),
-            "up": (1 + 2 * pdf_std),
-            "down": (1 - 2 * pdf_std),
-        }
-        # pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]][0]
-        # # print(f"pdf_wgts: {pdf_wgts.compute()}")
-        # pdf_std = ak.std(pdf_wgts, axis=0)
-        # print(f"pdf_std: {pdf_std.compute()}")
-        # pdf_vars = {
-        #     # "up": (1 + 2 * pdf_wgts.std()),
-        #     # "down": (1 - 2 * pdf_wgts.std()),
-        #     "up": (1 + 2 * pdf_std* ak.ones_like(events.LHEPdfWeight[:,0])),
-        #     "down": (1 - 2 * pdf_std* ak.ones_like(events.LHEPdfWeight[:,0])),
-        # }
-        # # print(f"add_pdf_variations pdf_vars up: {ak.to_numpy(pdf_vars['up'])}")
-        # # print(f"add_pdf_variations pdf_vars down: {ak.to_numpy(pdf_vars['down'])}")
-        return pdf_vars
+    
+    pdf_std = ak.std(pdf_wgts, axis=1)
+    pdf_vars = {
+        # "up": (1 + 2 * pdf_wgts.std()),
+        # "down": (1 - 2 * pdf_wgts.std()),
+        "up": (1 + 2 * pdf_std),
+        "down": (1 - 2 * pdf_std),
+    }
+    # pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]][0]
+    # # print(f"pdf_wgts: {pdf_wgts.compute()}")
+    # pdf_std = ak.std(pdf_wgts, axis=0)
+    # print(f"pdf_std: {pdf_std.compute()}")
+    # pdf_vars = {
+    #     # "up": (1 + 2 * pdf_wgts.std()),
+    #     # "down": (1 - 2 * pdf_wgts.std()),
+    #     "up": (1 + 2 * pdf_std* ak.ones_like(events.LHEPdfWeight[:,0])),
+    #     "down": (1 - 2 * pdf_std* ak.ones_like(events.LHEPdfWeight[:,0])),
+    # }
+    # # print(f"add_pdf_variations pdf_vars up: {ak.to_numpy(pdf_vars['up'])}")
+    # # print(f"add_pdf_variations pdf_vars down: {ak.to_numpy(pdf_vars['down'])}")
+    return pdf_vars
         
 
 
