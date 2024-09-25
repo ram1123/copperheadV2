@@ -200,11 +200,9 @@ def jet_id(jets, config):
     pass_jet_id = ak.ones_like(jets.jetId, dtype=bool)
     if "loose" in config["jet_id"]:
         pass_jet_id = jets.jetId >= 1
-    elif "tight" in config["jet_id"]:
-        if "2016" in config["year"]: 
-            pass_jet_id = jets.jetId >= 3
-        else:
-            pass_jet_id = jets.jetId >= 2
+    elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
+        pass_jet_id = jets.jetId >= 2
+            
     return pass_jet_id
 
 

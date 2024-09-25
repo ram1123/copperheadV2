@@ -199,7 +199,8 @@ class EventProcessor(processor.ProcessorABC):
         zpt_filename = self.config["zpt_weights_file"]
         extractor_instance.add_weight_sets([f"* * {zpt_filename}"])
         if "2016" in year:
-            self.zpt_path = "zpt_weights/2016_value"
+            # self.zpt_path = "zpt_weights/2016_value"
+            self.zpt_path = "zpt_weights_all"
         else:
             self.zpt_path = "zpt_weights_all"
         # Calibration of event-by-event mass resolution
@@ -1227,18 +1228,15 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
 
         pass_jet_id = jet_id(jets, self.config)
-        
-        
-        # jet PUID disabled as it's not applicable for jets with JEC and pt> 50,
-        # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
+               
         print(f"jet loop NanoAODv: {NanoAODv}")
         if NanoAODv == 9 : 
             pass_jet_puid = jet_puid(jets, self.config)
-            # # only apply jet puid to jets with pt < 50, else, pass
-            # bool_filter = ak.ones_like(pass_jet_puid, dtype="bool")
-            # pass_jet_puid = ak.where((jets.pt <50),pass_jet_puid, bool_filter)
-            # # Jet PUID scale factors, which also takes pt < 50 into account within the function
-            
+            # only apply jet puid to jets with pt < 50, else, pass
+            # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
+            bool_filter = ak.ones_like(pass_jet_puid, dtype="bool")
+            pass_jet_puid = ak.where((jets.pt <50),pass_jet_puid, bool_filter)
+            # Jet PUID scale factors, which also takes pt < 50 into account within the function
             if is_mc:  
                 print("doing jet puid weights!")
                 jet_puid_opt = self.config["jet_puid"]
