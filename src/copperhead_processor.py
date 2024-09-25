@@ -25,6 +25,15 @@ ak_array = TypeVar('ak_array')
 
 save_path = "/depot/cms/users/yun79/results/stage1/DNN_test//2018/f0_1/data_B/0" # for debugging
 
+def getRapidity(obj):
+    px = obj.pt * np.cos(obj.phi)
+    py = obj.pt * np.sin(obj.phi)
+    pz = obj.pt * np.sinh(obj.eta)
+    e = np.sqrt(px**2 + py**2 + pz**2 + obj.mass**2)
+    rap = 0.5 * np.log((e + pz) / (e - pz))
+    return rap
+
+
 def _mass2_kernel(t, x, y, z):
     return t * t - x * x - y * y - z * z
 
@@ -172,7 +181,7 @@ class EventProcessor(processor.ProcessorABC):
         self.test_mode = test_mode
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : False, # False
+            "do_trigger_match" : True, # False
             "do_roccor" : True,# False
             "do_fsr" : True,
             "do_geofit" : True, # False
@@ -266,46 +275,46 @@ class EventProcessor(processor.ProcessorABC):
         
         
 # --------------------------------------------------------        
-        # if self.config["do_trigger_match"]:
-        #     """
-        #     Apply trigger matching. We take the two leading pT reco muons and try to have at least one of the muons
-        #     to be matched with the trigger object that fired our HLT. If none of the muons did it, then we reject the 
-        #     event. This operation is computationally expensive, so perhaps worth considering not implementing it if 
-        #     it has neglible impact
-        #     reference: https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv9/2018UL/doc_TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8_RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1.html
+        if self.config["do_trigger_match"]:
+            """
+            Apply trigger matching. We take the two leading pT reco muons and try to have at least one of the muons
+            to be matched with the trigger object that fired our HLT. If none of the muons did it, then we reject the 
+            event. This operation is computationally expensive, so perhaps worth considering not implementing it if 
+            it has neglible impact
+            reference: https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv9/2018UL/doc_TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8_RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1.html
             
-        #     TODO: The impact this operation has onto the statistics is supposedly very low, but I have to check that
-        #     """
-        #     isoMu_filterbit = 2
-        #     mu_id = 13
-        #     pt_threshold = 24 
-        #     dr_threshold = 0.1 # for matching gen muons to reco muons
-        #     IsoMu24_muons = (events.TrigObj.id == mu_id) &  \
-            #             ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
-        #             (events.TrigObj.pt > pt_threshold)
-        #     #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
-        #     padded_muons = ak.pad_none(events.Muon, 2) # pad in case we have only one muon or zero in an event
-        #     # padded_muons = ak.pad_none(events.Muon, 4)
-        #     # print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
-        #     mu1 = padded_muons[:,0]
-        #     mu2 = padded_muons[:,1]
-        #     mu1_match = (mu1.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
-        #         (mu1.pt > pt_threshold)
-        #     mu1_match = ak.sum(mu1_match, axis=1)
-        #     mu1_match = ak.fill_none(mu1_match, value=False)
-        #     mu2_match = (mu2.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
-        #         (mu2.pt > pt_threshold)
-        #     mu2_match =  ak.sum(mu2_match, axis=1)
-        #     mu2_match = ak.fill_none(mu2_match, value=False)
+            TODO: The impact this operation has onto the statistics is supposedly very low, but I have to check that
+            """
+            isoMu_filterbit = 2
+            mu_id = 13
+            pt_threshold = 24 
+            dr_threshold = 0.1 # for matching gen muons to reco muons
+            IsoMu24_muons = (events.TrigObj.id == mu_id) &  \
+                        ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
+                    (events.TrigObj.pt > pt_threshold)
+            #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
+            padded_muons = ak.pad_none(events.Muon, 2) # pad in case we have only one muon or zero in an event
+            # padded_muons = ak.pad_none(events.Muon, 4)
+            # print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
+            mu1 = padded_muons[:,0]
+            mu2 = padded_muons[:,1]
+            mu1_match = (mu1.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+                (mu1.pt > pt_threshold)
+            mu1_match = ak.sum(mu1_match, axis=1)
+            mu1_match = ak.fill_none(mu1_match, value=False)
+            mu2_match = (mu2.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+                (mu2.pt > pt_threshold)
+            mu2_match =  ak.sum(mu2_match, axis=1)
+            mu2_match = ak.fill_none(mu2_match, value=False)
 
-        #     trigger_match = (mu1_match >0) | (mu2_match > 0)
+            trigger_match = (mu1_match >0) | (mu2_match > 0)
+            event_filter = event_filter & trigger_match
 # --------------------------------------------------------            
 
             
             
 
 # just reading test start --------------------------------------------------------------------------        
-        #     event_filter = event_filter & trigger_match
 
             
         # # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
@@ -902,7 +911,7 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_mass" : dimuon.mass,
             "dimuon_pt" : dimuon.pt,
             "dimuon_eta" : dimuon.eta,
-            "dimuon_rapidity" : dimuon.rapidity,
+            "dimuon_rapidity" : getRapidity(dimuon),
             "dimuon_phi" : dimuon.phi,
             "dimuon_dEta" : dimuon_dEta,
             "dimuon_dPhi" : dimuon_dPhi,
@@ -1368,8 +1377,11 @@ class EventProcessor(processor.ProcessorABC):
         #     jet1.eta + jet2.eta
         # )
         # zeppenfeld definition in  line 1118 in the AN
-        zeppenfeld = dimuon.rapidity - 0.5 * (jet1.rapidity + jet2.rapidity) 
-        zeppenfeld = zeppenfeld / np.abs(jet1.rapidity + jet2.rapidity)
+        dimuon_rapidity = getRapidity(dimuon)
+        jet1_rapidity = getRapidity(jet1)
+        jet2_rapidity = getRapidity(jet2)
+        zeppenfeld = dimuon.rapidity - 0.5 * (jet1_rapidity + jet2_rapidity) 
+        zeppenfeld = zeppenfeld / np.abs(jet1_rapidity + jet2_rapidity)
         mmjj = dimuon + dijet
 
         rpt = mmjj.pt / (
@@ -1384,7 +1396,7 @@ class EventProcessor(processor.ProcessorABC):
         jet_loop_out_dict = {
             "jet1_pt" : jet1.pt,
             "jet1_eta" : jet1.eta,
-            "jet1_rapidity" : jet1.rapidity, # max rel err: 0.7394
+            "jet1_rapidity" : jet1_rapidity, # max rel err: 0.7394
             "jet1_phi" : jet1.phi,
             "jet1_qgl" : jet1.qgl,
             "jet1_jetId" : jet1.jetId,
@@ -1406,7 +1418,7 @@ class EventProcessor(processor.ProcessorABC):
             "jet1_mass_jec" : jet1.mass_jec,
             "jet2_mass_jec" : jet2.mass_jec,
             #-------------------------
-            "jet2_rapidity" : jet2.rapidity, # max rel err: 0.781
+            "jet2_rapidity" : jet2_rapidity, # max rel err: 0.781
             "jet2_phi" : jet2.phi,
             "jet2_qgl" : jet2.qgl,
             "jet2_jetId" : jet2.jetId,
