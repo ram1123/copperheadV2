@@ -1232,10 +1232,6 @@ class EventProcessor(processor.ProcessorABC):
         print(f"jet loop NanoAODv: {NanoAODv}")
         if NanoAODv == 9 : 
             pass_jet_puid = jet_puid(jets, self.config)
-            # only apply jet puid to jets with pt < 50, else, pass
-            # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
-            bool_filter = ak.ones_like(pass_jet_puid, dtype="bool")
-            pass_jet_puid = ak.where((jets.pt <50),pass_jet_puid, bool_filter)
             # Jet PUID scale factors, which also takes pt < 50 into account within the function
             if is_mc:  
                 print("doing jet puid weights!")
@@ -1483,7 +1479,7 @@ class EventProcessor(processor.ProcessorABC):
 
         # Cut has to be defined here because we will use it in
         # b-tag weights calculation
-        # vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) & (jet1.pt > 35) # not sure why 35 jet1 pt cut is here
+        # vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) & (jet1.pt > 35) # the extra jet1 pt cut is for Dmitry's Vbf cut, but that doesn't exist on AN-19-124's ggH category cut
         vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) 
         vbf_cut = ak.fill_none(vbf_cut, value=False)
         jet_loop_out_dict.update({"vbf_cut": vbf_cut})

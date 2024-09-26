@@ -211,6 +211,8 @@ def jet_puid(jets, config):
     year = config["year"]
     puId = jets.puId
     # jet puid for standard wps are different for 2016 vs 2017,2018 as shown in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL#Working_Points
+    # only apply jet puid to jets with pt < 50, else, pass
+    # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
     if "2016" in year:
         jet_puid_wps = {
             "loose": (puId >= 1) | (jets.pt > 50),
