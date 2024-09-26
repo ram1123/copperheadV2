@@ -48,7 +48,9 @@ class CustomVbfCut: # specified in line 827 of AN-19-124
     def __init__(self):
         pass
     def filterCategory(events): # apparently self is not needed
-        vbf_cut = ak.fill_none(events.vbf_cut, value=False) # this require jj_mass > 400 AND jj_dEta > 2.5
+        # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # this require jj_mass > 400 AND jj_dEta > 2.5
+        vbf_cut = (events.jj_mass > 400) & (events.jj_dEta > 2.5) 
+        vbf_cut = ak.fill_none(vbf_cut, value=False)
         return vbf_cut
 
 class CustomJet1PtCut: # specified in line 827 of AN-19-124
@@ -64,5 +66,7 @@ class CustomInvVbfCut: # specified in line 830 of AN-19-124
     def __init__(self):
         pass
     def filterCategory(events): # apparently self is not needed
-        vbf_cut = ak.fill_none(events.vbf_cut, value=False) # this require jj_mass > 400 AND jj_dEta > 2.5
+        # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # this require jj_mass > 400 AND jj_dEta > 2.5
+        vbf_cut = (events.jj_mass > 400) & (events.jj_dEta > 2.5) 
+        vbf_cut = ak.fill_none(vbf_cut, value=False)
         return ~vbf_cut
