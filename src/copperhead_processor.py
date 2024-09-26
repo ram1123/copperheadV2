@@ -1348,8 +1348,10 @@ class EventProcessor(processor.ProcessorABC):
         # dimuon = muons[:,0] + muons[:,1]
         mmj1_dEta = abs(dimuon.eta - jet1.eta)
         mmj2_dEta = abs(dimuon.eta - jet2.eta)
+        
+        min_dEta_filter  = ak.fill_none((mmj1_dEta < mmj2_dEta), value=True)
         mmj_min_dEta = ak.where(
-            (mmj1_dEta < mmj2_dEta),
+            min_dEta_filter,
             mmj1_dEta,
             mmj2_dEta,
         )
@@ -1358,8 +1360,10 @@ class EventProcessor(processor.ProcessorABC):
         mmj2_dPhi = abs(dimuon.delta_phi(jet2))
         mmj1_dR = dimuon.delta_r(jet1)
         mmj2_dR = dimuon.delta_r(jet2)
+        
+        min_dPhi_filter = ak.fill_none((mmj1_dPhi < mmj2_dPhi), value=True)
         mmj_min_dPhi = ak.where(
-            (mmj1_dPhi < mmj2_dPhi),
+            min_dPhi_filter,
             mmj1_dPhi,
             mmj2_dPhi,
         )
