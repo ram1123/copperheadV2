@@ -43,7 +43,7 @@ class CustomInvBtagCut:
         btag_cut = ak.fill_none(btag_cut, value=False)
         return ~btag_cut
 
-class CustomVbfCut:
+class CustomVbfCut: # specified in line 827 of AN-19-124
     name = "VbfCut"
     def __init__(self):
         pass
@@ -51,7 +51,15 @@ class CustomVbfCut:
         vbf_cut = ak.fill_none(events.vbf_cut, value=False) # this require jj_mass > 400 AND jj_dEta > 2.5
         return vbf_cut
 
-class CustomInvVbfCut:
+class CustomJet1PtCut: # specified in line 827 of AN-19-124
+    name = "Jet1PtCut"
+    def __init__(self):
+        pass
+    def filterCategory(events): # apparently self is not needed
+        jet1_ptCut = ak.fill_none(events.jet1_pt > 35, value=False) 
+        return jet1_ptCut
+
+class CustomInvVbfCut: # specified in line 830 of AN-19-124
     name = "InvVbfCut"
     def __init__(self):
         pass
