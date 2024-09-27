@@ -182,9 +182,9 @@ class EventProcessor(processor.ProcessorABC):
         dict_update = {
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : True, # False
-            "do_roccor" : True,# False
-            "do_fsr" : True,
-            "do_geofit" : True, # False
+            "do_roccor" : True,# True
+            "do_fsr" : True, # True
+            "do_geofit" : True, # True
             "do_beamConstraint": True, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
@@ -389,7 +389,7 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
         else:
             # if no fsr, just copy 'pt' to 'pt_fsr'
-            applied_fsr = (ak.zeros_like(events.Muon.pt) != 0) # boolean array of Falses
+            applied_fsr = ak.zeros_like(events.Muon.pt, dtype="bool") # boolean array of Falses
             events["Muon", "pt_fsr"] = events.Muon.pt
         
        
@@ -563,7 +563,7 @@ class EventProcessor(processor.ProcessorABC):
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
-        applied_fsr = ak.to_packed(applied_fsr[event_filter==True])
+        # applied_fsr = ak.to_packed(applied_fsr[event_filter==True]) # not sure the purpose of this line
 
         # print("testJetVector right after event filtering")
         # testJetVector(events.Jet)
@@ -927,8 +927,8 @@ class EventProcessor(processor.ProcessorABC):
         }
         if is_mc:
             mc_dict = {
-                "HTXS_Higgs_pt" : events.HTXS.Higgs_pt, # for nnlops weight for ggH signal sample
-                "HTXS_njets30" : events.HTXS.njets30, # for nnlops weight for ggH signal sample
+                # "HTXS_Higgs_pt" : events.HTXS.Higgs_pt, # for nnlops weight for ggH signal sample
+                # "HTXS_njets30" : events.HTXS.njets30, # for nnlops weight for ggH signal sample
                 "gjet1_pt" : gjet1.pt,
                 "gjet1_eta" : gjet1.eta,
                 "gjet1_phi" : gjet1.phi,

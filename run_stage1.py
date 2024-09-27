@@ -358,7 +358,7 @@ if __name__ == "__main__":
         else:
             # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
             # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='6 GiB') 
-            client = Client(n_workers=41,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
             print("Local scale Client created")
         #-------------------------------------------------------------------------------------
         #-----------------------------------------------------------
