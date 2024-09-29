@@ -6,6 +6,7 @@ import awkward as ak
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 
 
@@ -47,11 +48,6 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
 
     
 
-
-    # temporary fix to due to some bug according to Valerie
-    # df['mmj_min_dEta'] = df["mmj2_dEta"]
-    # df['mmj_min_dPhi'] = df["mmj2_dPhi"]
-
     # temporary definition of event bc I don't have it, and we need it for 4-fold method to work
     if "event" not in df.fields:
         df["event"] = np.arange(len(df.dimuon_pt))
@@ -73,8 +69,11 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         eval_folds = [(i + f) % nfolds for f in [3]]
         eval_filter = (df.event % nfolds ) == (np.array(eval_folds) * ak.ones_like(df.event))
         # eval_filter = df.event.mod(nfolds).isin(eval_folds)
+        print(f"eval_folds: {eval_folds}")
+        print(f"eval_filter: {eval_filter}")
         # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
         scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
+        print(f"scalers_path: {scalers_path}")
         scalers = np.load(scalers_path, allow_pickle=True)
         # model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
         model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
@@ -88,22 +87,16 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         # print(f"scalers: {scalers.shape}")
         # print(f"df_i: {df_i}")
         df_i_feat = df_i[features]
-        # df_i_feat = np.transpose(np.array(ak.unzip(df_i_feat)))
         df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
-        # print(f"df_i_feat[:,0]: {df_i_feat[:,0]}")
-        # print(f'df_i.dimuon_cos_theta_cs: {df_i.dimuon_cos_theta_cs}')
-        # print(f"type df_i_feat: {type(df_i_feat)}")
         # print(f"df_i_feat: {df_i_feat.shape}")
         df_i_feat = ak.Array(df_i_feat)
-        df_i = (df_i_feat - scalers[0]) / scalers[1]
-        if len(df_i) > 0:
+        df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+        if len(df_i_feat) > 0:
             print(f"model: {model}")
             prediction = np.array(
                 bdt_model.predict_proba(df_i_feat)[:, 1]
             ).ravel()
             # print(f"prediction: {prediction}")
-            # df.loc[eval_filter, score_name] = prediction  # np.arctanh((prediction))
-            # score_total = ak.where(eval_filter, prediction, score_total)
             score_total[eval_filter] = prediction
 
     df[score_name] = score_total
@@ -117,6 +110,8 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         val_folds = [(i+f)%nfolds for f in [2]]
         # val_filter = df.event.mod(nfolds).isin(val_folds)
         val_filter = (df.event % nfolds ) == (np.array(val_folds) * ak.ones_like(df.event))
+        print(f"val_folds: {val_folds}")
+        print(f"val_filter: {val_filter}")
         # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
         scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
         scalers = np.load(scalers_path, allow_pickle=True)
@@ -132,15 +127,12 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         # print(f"scalers: {scalers.shape}")
         # print(f"df_i: {df_i}")
         df_i_feat = df_i[features]
-        # df_i_feat = np.transpose(np.array(ak.unzip(df_i_feat)))
         df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
-        # print(f"df_i_feat[:,0]: {df_i_feat[:,0]}")
-        # print(f'df_i.dimuon_cos_theta_cs: {df_i.dimuon_cos_theta_cs}')
         # print(f"type df_i_feat: {type(df_i_feat)}")
         # print(f"df_i_feat: {df_i_feat.shape}")
         df_i_feat = ak.Array(df_i_feat)
-        df_i = (df_i_feat - scalers[0]) / scalers[1]
-        if len(df_i) > 0:
+        df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+        if len(df_i_feat) > 0:
             print(f"model: {model}")
             prediction = np.array(
                 bdt_model.predict_proba(df_i_feat)[:, 1]
@@ -149,6 +141,23 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
             score_total_val[val_filter] = prediction
 
     df[score_name_val] = score_total_val
+    
+    # quick plot of eval score distribution start --------------------------
+    # binning = np.linspace(start=0,stop=1, num=60) 
+    
+    # wgt = df["wgt_nominal_total"]
+    # wgt = wgt / np.sum(wgt) # normalize
+    # score_eval = df[score_name]
+    # hist_eval, edges = np.histogram(score_eval, bins=binning, weights=wgt)
+    # plt.stairs(hist_eval, edges, label = "Eval score")
+    # score_val = df[score_name_val]
+    # hist_val, edges = np.histogram(score_val, bins=binning, weights=wgt)
+    # plt.stairs(hist_val, edges, label = "Val score")
+    # plt.xlabel('BDT Score')
+    # plt.legend()
+    # plt.savefig(f"6_5.png")
+    # plt.clf()
+    # quick plot of eval score distribution end --------------------------
     
     return df
 
