@@ -56,6 +56,13 @@ def getCategoryCutNames(category:str) -> List[str]:
     out_list += category_config[category]
     # print(f"getCategoryCutNames out_list: {out_list}")
     return out_list
+
+def getDeltaPhi(phi1,phi2):
+    """
+    This is the Dmitry's old direct implementation od dPhi
+    """
+    dphi = abs(np.mod(phi1 - phi2 + np.pi, 2 * np.pi) - np.pi)
+    return dphi
         
 def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     """
@@ -72,8 +79,24 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     events["dimuon_pt_log"] = np.log(events.dimuon_pt)
     events["jj_mass_log"] = np.log(events.jj_mass)
     events["ll_zstar_log"] = np.log(events.ll_zstar)
-    events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
-    events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
+    # events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
+    # events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
+
+    # recalculate BDT variables that you're not certain is up to date from stage 1
+    min_dEta_filter  = ak.fill_none((events.mmj1_dEta < events.mmj2_dEta), value=True)
+    events["mmj_min_dEta"]  = ak.where(
+        min_dEta_filter,
+        events.mmj1_dEta,
+        events.mmj2_dEta,
+    )
+    min_dPhi_filter = ak.fill_none((events.mmj1_dPhi < events.mmj2_dPhi), value=True)
+    events["mmj_min_dPhi"] = ak.where(
+        min_dPhi_filter,
+        events.mmj1_dPhi,
+        events.mmj2_dPhi,
+    )
+    # events["jj_dPhi"] = getDeltaPhi(events.jet1_phi, events.jet2_phi)
+    
 
     train_feat_dict = {
         "BDTperyear_2018" : [
@@ -93,14 +116,55 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
         "WgtOff_includeQGL" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
         "WgtON_includeQGL" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
         "WgtON_includeQGL_AN_BDT" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
+       "WgtON_original_AN_BDT" : ['dimuon_cos_theta_cs', 'dimuon_phi_cs', 'dimuon_pt', 'dimuon_rapidity','jet1_eta', 'jet1_pt', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'] ,
+        "WgtON_original_AN_BDT_DyOnly" : ['dimuon_cos_theta_cs', 'dimuon_phi_cs', 'dimuon_pt', 'dimuon_rapidity','jet1_eta', 'jet1_pt', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'] ,
+        "WgtON_original_AN_BDT_DyOnly_noDimuRap" : ['dimuon_cos_theta_cs', 'dimuon_phi_cs', 'dimuon_pt','jet1_eta', 'jet1_pt', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'] ,
+        "WgtON_original_AN_BDT_Sept27" : [
+            'dimuon_pt', 
+            'dimuon_rapidity',
+            'dimuon_cos_theta_cs', 
+            'dimuon_phi_cs', 
+            'mu1_pt_over_mass', 
+            'mu1_eta', 
+            'mu2_pt_over_mass', 
+            'mu2_eta', 
+            'jet1_eta', 
+            'jet1_pt', 
+            'jet2_pt', 
+            'mmj1_dEta', 
+            'mmj1_dPhi',  
+            'jj_dEta', 
+            'jj_dPhi', 
+            'jj_mass', 
+            'zeppenfeld', 
+            'mmj_min_dEta', 
+            'mmj_min_dPhi', 
+            'njets'
+        ],
+        "WgtON_original_AN_BDT_noDimuRap_Sept27" : [
+            'dimuon_pt', 
+            'dimuon_cos_theta_cs', 
+            'dimuon_phi_cs', 
+            'mu1_pt_over_mass', 
+            'mu1_eta', 
+            'mu2_pt_over_mass', 
+            'mu2_eta', 
+            'jet1_eta', 
+            'jet1_pt', 
+            'jet2_pt', 
+            'mmj1_dEta', 
+            'mmj1_dPhi',  
+            'jj_dEta', 
+            'jj_dPhi', 
+            'jj_mass', 
+            'zeppenfeld', 
+            'mmj_min_dEta', 
+            'mmj_min_dPhi', 
+            'njets'
+        ],
     }
     
-    # model_name = "phifixedBDT_2018"
-    # model_name = "BDTperyear_2018"
-    # model_name = "WgtOff"
-    # model_name = "WgtOff_includeQGL"
-    # model_name = "WgtON_includeQGL"
-    model_name = "WgtON_includeQGL_AN_BDT"
+    model_name = "WgtON_original_AN_BDT_Sept27"
 
     training_features = train_feat_dict[model_name]
     print(f"len(training_features): {len(training_features)}")
@@ -115,14 +179,15 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     # ----------------------------------
    
     # load fields to load
-    fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "vbf_cut", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
+    fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
     # load data to memory using compute()
     events = ak.zip({
         field : events[field] for field in fields2load
     }).compute()
 
     # filter events for ggH category
-    region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
+    # region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
+    region = events.h_peak | events.h_sidebands 
     category_str = "ggh"
     cut_names = getCategoryCutNames(category_str)
     gghCat_selection = (
@@ -131,13 +196,14 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     )
     
     events = events[gghCat_selection]
-    
-    # make sure to replace nans with -99.0 values   
-    none_val = -99.0
+
+    # make sure to replace nans with zeros,  unless it's delta phis, in which case it's -1, as specified in line 1117 of the AN
     for field in events.fields:
-        events[field] = ak.fill_none(events[field], value= none_val)
-        # inf_cond = (np.inf == events[field]) | (-np.inf == events[field]) 
-        # events[field] = ak.where(inf_cond, none_val, events[field])
+        if "dPhi" in field:
+            none_val = -1.0
+        else:
+            none_val = 0.0
+        events[field] = ak.fill_none(events[field], value=none_val)
     print(f"process4gghCategory year: {year}")
     parameters = {
     # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
@@ -185,18 +251,33 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
         cut = (BDT_score > lo) & (BDT_score <= hi)
         # cut = (BDT_score <= lo) & (BDT_score > hi)
         subCat_idx = ak.where(cut, i, subCat_idx)
-    print(f"subCat_idx: {subCat_idx}")
+    # print(f"subCat_idx: {subCat_idx}")
     # test if any remain has -1 value
     print(f"ak.sum(subCat_idx==-1): {ak.sum(subCat_idx==-1)}")
     processed_events["subCategory_idx"] = subCat_idx
     # new end -----------------------------------------------------------------
 
+    # add subcat idx if using validation scores
+    BDT_score = processed_events["BDT_score_val"]
+    subCat_idx = -1*ak.ones_like(BDT_score)
+    for i in range(len(edges) - 1):
+        lo = edges[i]
+        hi = edges[i + 1]
+        cut = (BDT_score > lo) & (BDT_score <= hi)
+        # cut = (BDT_score <= lo) & (BDT_score > hi)
+        subCat_idx = ak.where(cut, i, subCat_idx)
+    # print(f"subCat_idx: {subCat_idx}")
+    # test if any remain has -1 value
+    print(f"val ak.sum(subCat_idx==-1): {ak.sum(subCat_idx==-1)}")
+    processed_events["subCategory_idx_val"] = subCat_idx
+    
     # filter in only the variables you need to do stage3
     fields2save = [
         "dimuon_mass",
-        "BDT_score",
-        "BDT_score_val",
-        "subCategory_idx",
+        "BDT_score", # eval fold
+        "BDT_score_val", # val fold
+        "subCategory_idx", # eval fold
+        "subCategory_idx_val", # val fold
         "wgt_nominal_total",
         "h_peak",
         "h_sidebands",
@@ -325,8 +406,6 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     none_val = -99.0
     for field in events.fields:
         events[field] = ak.fill_none(events[field], value= none_val)
-        inf_cond = (np.inf == events[field]) | (-np.inf == events[field]) 
-        events[field] = ak.where(inf_cond, none_val, events[field])
 
     parameters = {
     # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/",
@@ -421,13 +500,6 @@ if __name__ == "__main__":
         frac_str = args.fraction.replace(".", "_")
         load_path = f"{args.load_path}/{args.year}/f{frac_str}"
     print(f"load_path: {load_path}")
-    # load_path = "/depot/cms/users/yun79/results/stage1/test_VBF-filter_JECon_07June2024/2018/f1_0"
-    # full_load_path = load_path+f"/data_C/*/*.parquet"
-    # full_load_path = load_path+f"/data_D/*/*.parquet"
-    # full_load_path = load_path+f"/data_*/*/*.parquet"
-    # full_load_path = load_path+f"/data_A/*/*.parquet"
-    # full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
-    # full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
     category = args.category.lower()
     
     for sample in args.samples:
@@ -445,6 +517,12 @@ if __name__ == "__main__":
             full_load_path = load_path+f"/ttjets*/*/*.parquet"
         elif sample.lower() == "st":
             full_load_path = load_path+f"/st_tw*/*/*.parquet"
+        elif sample.lower() == "ww":
+            full_load_path = load_path+f"/ww_*/*/*.parquet"
+        elif sample.lower() == "wz":
+            full_load_path = load_path+f"/wz_*/*/*.parquet"
+        elif sample.lower() == "zz":
+            full_load_path = load_path+f"/zz/*/*.parquet"
         else:
             print(f"unsupported sample!")
             raise ValueError
@@ -476,20 +554,26 @@ if __name__ == "__main__":
         # make save path if it doesn't exist
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        if "data" in full_load_path.lower():
+        if sample.lower() == "data":
             save_filename = f"{save_path}/processed_events_data.parquet"  
-        elif "ggh_powheg" in full_load_path: # signal
+        elif sample.lower() == "ggh": # signal
             save_filename = f"{save_path}/processed_events_sigMC_ggh.parquet" 
-        elif "vbf_powheg" in full_load_path: # signal
+        elif sample.lower() == "vbf": # signal
             save_filename = f"{save_path}/processed_events_sigMC_vbf.parquet" 
-        elif "dy_M-100To200" in full_load_path:
+        elif sample.lower() == "dy":
             save_filename = f"{save_path}/processed_events_bkgMC_dy.parquet" 
-        elif "ewk" in full_load_path:
+        elif sample.lower() == "ewk":
             save_filename = f"{save_path}/processed_events_bkgMC_ewk.parquet" 
-        elif "tt" in full_load_path:
+        elif sample.lower() == "tt":
             save_filename = f"{save_path}/processed_events_bkgMC_tt.parquet" 
-        elif "st" in full_load_path:
+        elif sample.lower() == "st":
             save_filename = f"{save_path}/processed_events_bkgMC_st.parquet" 
+        elif sample.lower() == "ww":
+            save_filename = f"{save_path}/processed_events_bkgMC_ww.parquet" 
+        elif sample.lower() == "wz":
+            save_filename = f"{save_path}/processed_events_bkgMC_wz.parquet" 
+        elif sample.lower() == "zz":
+            save_filename = f"{save_path}/processed_events_bkgMC_zz.parquet" 
         else:
             print ("unsupported sample given!")
             raise ValueError
