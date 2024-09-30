@@ -71,7 +71,7 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         eval_filter = (df.event % nfolds ) == (np.array(eval_folds) * ak.ones_like(df.event))
         # eval_filter = df.event.mod(nfolds).isin(eval_folds)
         print(f"eval_folds: {eval_folds}")
-        print(f"eval_filter: {eval_filter}")
+        # print(f"eval_filter: {eval_filter}")
         # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
         scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
         print(f"scalers_path: {scalers_path}")
@@ -112,7 +112,7 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         # val_filter = df.event.mod(nfolds).isin(val_folds)
         val_filter = (df.event % nfolds ) == (np.array(val_folds) * ak.ones_like(df.event))
         print(f"val_folds: {val_folds}")
-        print(f"val_filter: {val_filter}")
+        # print(f"val_filter: {val_filter}")
         # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
         scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
         scalers = np.load(scalers_path, allow_pickle=True)
@@ -149,10 +149,10 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
 
     for i in range(nfolds):
         train_folds = [(i+f)%nfolds for f in [0,1]]
-        event = ak.to_data_frame(df.event) # convert to pd.df to apply mod() and isin() function
-        train_filter = event.mod(nfolds).isin(train_folds).values
+        event = ak.to_dataframe(df.event) # convert to pd.df to apply mod() and isin() function
+        train_filter = event.mod(nfolds).isin(train_folds).values.ravel()
         print(f"train_folds: {train_folds}")
-        print(f"train_filter: {train_filter}")
+        # print(f"train_filter: {train_filter}")
         # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
         scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
         scalers = np.load(scalers_path, allow_pickle=True)
