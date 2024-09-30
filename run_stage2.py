@@ -179,7 +179,7 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     # ----------------------------------
    
     # load fields to load
-    fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
+    fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"] #, "event"
     # load data to memory using compute()
     events = ak.zip({
         field : events[field] for field in fields2load
@@ -276,11 +276,13 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
         "dimuon_mass",
         "BDT_score", # eval fold
         "BDT_score_val", # val fold
+        "BDT_score_train", # train fold
         "subCategory_idx", # eval fold
         "subCategory_idx_val", # val fold
         "wgt_nominal_total",
         "h_peak",
         "h_sidebands",
+        "event", # This is not strictly necessary
     ]
     
     processed_events = ak.zip({

@@ -50,13 +50,14 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
 
     # temporary definition of event bc I don't have it, and we need it for 4-fold method to work
     if "event" not in df.fields:
+        print("Events not in Fields, using np arange instead")
         df["event"] = np.arange(len(df.dimuon_pt))
     
     features = prepare_features(df,training_features, variation=variation, add_year=False)
     # features = training_features
     #model = f"{model}_{parameters['years'][0]}"
     # score_name = f"score_{model}_{variation}"
-    score_name = "BDT_score"
+    score_name = "BDT_score" # this is evaluation BDT score
     year = parameters["year"]
 
     # df.loc[:, score_name] = 0
@@ -142,22 +143,45 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
 
     df[score_name_val] = score_total_val
     
-    # quick plot of eval score distribution start --------------------------
-    # binning = np.linspace(start=0,stop=1, num=60) 
-    
-    # wgt = df["wgt_nominal_total"]
-    # wgt = wgt / np.sum(wgt) # normalize
-    # score_eval = df[score_name]
-    # hist_eval, edges = np.histogram(score_eval, bins=binning, weights=wgt)
-    # plt.stairs(hist_eval, edges, label = "Eval score")
-    # score_val = df[score_name_val]
-    # hist_val, edges = np.histogram(score_val, bins=binning, weights=wgt)
-    # plt.stairs(hist_val, edges, label = "Val score")
-    # plt.xlabel('BDT Score')
-    # plt.legend()
-    # plt.savefig(f"6_5.png")
-    # plt.clf()
-    # quick plot of eval score distribution end --------------------------
+    # do the same for training score
+    score_name_train = "BDT_score_train"
+    score_total_train = np.zeros(len(df['dimuon_pt']))
+
+    for i in range(nfolds):
+        train_folds = [(i+f)%nfolds for f in [0,1]]
+        event = ak.to_data_frame(df.event) # convert to pd.df to apply mod() and isin() function
+        train_filter = event.mod(nfolds).isin(train_folds).values
+        print(f"train_folds: {train_folds}")
+        print(f"train_filter: {train_filter}")
+        # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
+        scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
+        scalers = np.load(scalers_path, allow_pickle=True)
+        # model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
+        model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
+
+        bdt_model = pickle.load(open(model_path, "rb"))
+        df_i = df[train_filter]
+        # print(f"df_i: {len(df_i)}")
+        # print(len
+        if len(df_i) == 0:
+            continue
+        # print(f"scalers: {scalers.shape}")
+        # print(f"df_i: {df_i}")
+        df_i_feat = df_i[features]
+        df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
+        # print(f"type df_i_feat: {type(df_i_feat)}")
+        # print(f"df_i_feat: {df_i_feat.shape}")
+        df_i_feat = ak.Array(df_i_feat)
+        df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+        if len(df_i_feat) > 0:
+            print(f"model: {model}")
+            prediction = np.array(
+                bdt_model.predict_proba(df_i_feat)[:, 1]
+            ).ravel()
+            # print(f"prediction: {prediction}")
+            score_total_train[train_filter] = prediction
+
+    df[score_name_train] = score_total_train
     
     return df
 
