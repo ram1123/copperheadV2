@@ -12,18 +12,43 @@ from src.lib.fit_functions import MakeFEWZxBernDof3
 import argparse
 import os
 
+def normalizeFlatHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
+    """
+    Takes rootHistogram and returns a new copy with histogram values normalized to sum to one
+    """
+    x_name = x.GetName()
+    # copy nbins and range from, rooHist, but make it empty, and fill with flat distribution
+    THist = rooHist.createHistogram(x_name).Clone("clone") # clone it just in case
+    THist.Reset()
+    nEntries = 100000
+    # print(f"THist.GetXaxis().GetXmin(): {THist.GetXaxis().GetXmin()}")
+    # print(f"THist.GetXaxis().GetXmax(): {THist.GetXaxis().GetXmax()}")
+    values = np.random.uniform(
+        low=THist.GetXaxis().GetXmin(), 
+        high=THist.GetXaxis().GetXmax(), 
+        size=nEntries
+    )
+    weight = np.ones_like(values)
+    THist.FillN(nEntries, values, weight)
+    THist.Scale(1.0 / THist.Integral()) # normalize
+    print(f"THist.Integral(): {THist.Integral()}")
+    normalizedHist_name = rooHist.GetName() + "_normalized"
+    roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist) 
+    return roo_hist_normalized
+
 def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
     """
     Takes rootHistogram and returns a new copy with histogram values normalized to sum to one
     """
     x_name = x.GetName()
-    THist = rooHist.createHistogram(x_name)
+    THist = rooHist.createHistogram(x_name).Clone("clone") # clone it just in case
     THist.Scale(1/THist.Integral())
+    print(f"THist.Integral(): {THist.Integral()}")
     normalizedHist_name = rooHist.GetName() + "_normalized"
     roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist) 
     return roo_hist_normalized
     
-def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, save_path: str):
+def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, rooHist_list, save_path: str):
     """
     takes the dictionary of all Bkg RooAbsPdf models grouped by same corefunctions, and plot them
     in the frame() of mass and saves the plots on a given directory path
@@ -47,16 +72,21 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, save
         frame.SetTitle(f"Normalized Shape Plot of {core_type} PDFs")
         frame.SetXTitle(f"Dimuon Mass (GeV)")
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
-        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        
         # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
         for ix in range(len(coreFunction_list)):
+        # for ix in [0,4]:
+            # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+            color = color_list[ix]
+            hist = rooHist_list[ix]
+            normalized_hist = normalizeRooHist(mass, hist)
+            # normalized_hist = normalizeFlatHist(mass, hist)
+            normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+            # normalized_hist.plotOn(frame, LineColor=color,MarkerColor=color)
             model = coreFunction_list[ix]
             name = model.GetName()
             print(f"index {ix} with name: {name}")
-            model.Print("v")
-            color = color_list[ix]
+            # model.Print("v")
             model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
             legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
         frame.Draw()
@@ -122,12 +152,13 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by
         rt.kOrange,
         rt.kViolet,
     ]
-    
+    max_list = [1300, 1000, 400, 300, 90]
     for subCat_idx, subCat_list in model_dict_by_subCat.items():
         name = "Canvas"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         frame = mass.frame()
+        frame.SetMaximum(max_list[subCat_idx])
         frame.SetTitle(f"Normalized Shape Plot of Sub-Category {subCat_idx} PDFs")
         frame.SetXTitle(f"Dimuon Mass (GeV)")
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
@@ -144,7 +175,8 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by
         legend.Draw()        
         canvas.Update()
         canvas.Draw()
-        canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
+        # canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
+        canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.png")
 
 
 
@@ -249,6 +281,9 @@ if __name__ == "__main__":
     # fit_range = "loSB,hiSB" # we're fitting bkg only
     fit_range = "hiSB,loSB" # we're fitting bkg only
     
+    subCatIdx_name = "subCategory_idx"
+    # subCatIdx_name = "subCategory_idx_val"
+
     # Initialize BWZ Redux
     # --------------------------------------------------------------
 
@@ -369,10 +404,10 @@ if __name__ == "__main__":
     # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
     # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, 0.05, 0.5)
     # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", -8.79E-06, -0.5, 0.5)
-    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, -0.06, 0.08)
+    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, -0.06, 0.1)
     a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", -8.79E-06, -0.06, 0.06)
-    a0_subCat3.setConstant(True)
-    a1_subCat3.setConstant(True)
+    # a0_subCat3.setConstant(True)
+    # a1_subCat3.setConstant(True)
     name = "subCat3_SMF"
     subCat3_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat3, 
@@ -391,10 +426,12 @@ if __name__ == "__main__":
     # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.5, 0.5)
     # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, 0.2, 1)
     # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.5, 1)
-    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, -0.06, 0.06)
-    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.06, 0.06)
-    a0_subCat4.setConstant(True)
-    a1_subCat4.setConstant(True)
+    # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, -0.06, 0.56) # AN val
+    # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.06, 0.06) # AN val
+    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, -0.06, 1.06) # experiment
+    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.06, 0.06) # experiment
+    # a0_subCat4.setConstant(True)
+    # a1_subCat4.setConstant(True)
     name = "subCat4_SMF"
     subCat4_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat4, 
@@ -409,7 +446,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------
      
     # do for cat idx 0
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 0)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 0)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat0 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -417,7 +454,7 @@ if __name__ == "__main__":
     data_subCat0_BWZRedux = roo_histData_subCat0
 
     # do for cat idx 1
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 1)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 1)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -425,7 +462,7 @@ if __name__ == "__main__":
     data_subCat1_BWZRedux = roo_histData_subCat1
 
     # do for cat idx 2
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 2)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 2)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat2 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -433,7 +470,7 @@ if __name__ == "__main__":
     data_subCat2_BWZRedux = roo_histData_subCat2
 
     # do for cat idx 3
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 3)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 3)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat3 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -441,7 +478,7 @@ if __name__ == "__main__":
     data_subCat3_BWZRedux = roo_histData_subCat3
 
     # do for cat idx 4
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 4)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 4)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat4 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -503,9 +540,9 @@ if __name__ == "__main__":
     name = f"RooSumTwoExpPdf_f_coeff"
     f_coeff = rt.RooRealVar(name,name, 0.7549173445209436,0.0,1.0)
     # AN end --------------------------------------------------
-    a1_coeff.setConstant(True)
-    a2_coeff.setConstant(True)
-    f_coeff.setConstant(True)
+    # a1_coeff.setConstant(True)
+    # a2_coeff.setConstant(True)
+    # f_coeff.setConstant(True)
     
     name = "subCat0_sumExp"
     coreSumExp_SubCat0 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
@@ -579,7 +616,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------
      
     # do for cat idx 0
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 0)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 0)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat0_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -587,7 +624,7 @@ if __name__ == "__main__":
     data_subCat0_sumExp = roo_histData_subCat0_sumExp
 
     # do for cat idx 1
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 1)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 1)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -595,7 +632,7 @@ if __name__ == "__main__":
     data_subCat1_sumExp = roo_histData_subCat1_sumExp
 
     # do for cat idx 2
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 2)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 2)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat2_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -603,7 +640,7 @@ if __name__ == "__main__":
     data_subCat2_sumExp = roo_histData_subCat2_sumExp
 
     # do for cat idx 3
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 3)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 3)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat3_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -612,7 +649,7 @@ if __name__ == "__main__":
 
 
     # do for cat idx 4
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 4)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 4)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat4_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -729,7 +766,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------
      
     # do for cat idx 0
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 0)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 0)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat0_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -737,7 +774,7 @@ if __name__ == "__main__":
     data_subCat0_FEWZxBern = roo_histData_subCat0_FEWZxBern
 
     # do for cat idx 1
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 1)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 1)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -745,7 +782,7 @@ if __name__ == "__main__":
     data_subCat1_FEWZxBern = roo_histData_subCat1_FEWZxBern
 
     # do for cat idx 2
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 2)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 2)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat2_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -753,7 +790,7 @@ if __name__ == "__main__":
     data_subCat2_FEWZxBern = roo_histData_subCat2_FEWZxBern
 
     # do for cat idx 3
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 3)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 3)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat3_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -764,7 +801,7 @@ if __name__ == "__main__":
 
 
     # do for cat idx 4
-    subCat_filter = (processed_eventsData["subCategory_idx"] == 4)
+    subCat_filter = (processed_eventsData[subCatIdx_name] == 4)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat4_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
@@ -811,11 +848,11 @@ if __name__ == "__main__":
             "subCat2_sumExp": data_subCat2_sumExp,
             "subCat3_sumExp": data_subCat3_sumExp,
             "subCat4_sumExp": data_subCat4_sumExp,
-            "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
-            "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            # "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
+            # "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
+            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -836,11 +873,11 @@ if __name__ == "__main__":
                                     "subCat2_sumExp": model_subCat2_sumExp,
                                     "subCat3_sumExp": model_subCat3_sumExp,
                                     "subCat4_sumExp": model_subCat4_sumExp,
-                                    "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
-                                    "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+                                    # "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
+                                    # "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
+                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
     )
@@ -981,6 +1018,7 @@ if __name__ == "__main__":
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC*.parquet"
     
     processed_eventsSignalMC = ak.from_parquet(load_path)
+    print(f"ggH yield: {np.sum(processed_eventsSignalMC.wgt_nominal_total)}")
     print("signal events loaded")
     
     # ---------------------------------------------------
@@ -1002,6 +1040,13 @@ if __name__ == "__main__":
     n1_subCat0 = rt.RooRealVar("n1_subCat0" , "n1_subCat0", 4.019960, 0.01, 100)
     alpha2_subCat0 = rt.RooRealVar("alpha2_subCat0" , "alpha2_subCat0", 1.3132, 0.01, 65)
     n2_subCat0 = rt.RooRealVar("n2_subCat0" , "n2_subCat0", 9.97411, 0.01, 100)
+
+    # # temporary test
+    # sigma_subCat0.setConstant(True)
+    # alpha1_subCat0.setConstant(True)
+    # n1_subCat0.setConstant(True)
+    # alpha2_subCat0.setConstant(True)
+    # n2_subCat0.setConstant(True)
     
     
     CMS_hmm_sigma_cat0_ggh = rt.RooRealVar("CMS_hmm_sigma_cat0_ggh" , "CMS_hmm_sigma_cat0_ggh", 0, -5 , 5 )
@@ -1031,6 +1076,13 @@ if __name__ == "__main__":
     n1_subCat1 = rt.RooRealVar("n1_subCat1" , "n1_subCat1", 2.815022, 0.01, 100)
     alpha2_subCat1 = rt.RooRealVar("alpha2_subCat1" , "alpha2_subCat1", 1.57127749, 0.01, 65)
     n2_subCat1 = rt.RooRealVar("n2_subCat1" , "n2_subCat1", 9.99687, 0.01, 100)
+
+    # # temporary test
+    # sigma_subCat1.setConstant(True)
+    # alpha1_subCat1.setConstant(True)
+    # n1_subCat1.setConstant(True)
+    # alpha2_subCat1.setConstant(True)
+    # n2_subCat1.setConstant(True)
     
     CMS_hmm_sigma_cat1_ggh = rt.RooRealVar("CMS_hmm_sigma_cat1_ggh" , "CMS_hmm_sigma_cat1_ggh", 0, -5 , 5 )
     CMS_hmm_sigma_cat1_ggh.setConstant(True) # this is going to be param in datacard
@@ -1047,11 +1099,25 @@ if __name__ == "__main__":
     # subCat 2
     MH_subCat2 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat2.setConstant(True) # this shouldn't change, I think
-    sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 2, .1, 4.0)
-    alpha1_subCat2 = rt.RooRealVar("alpha1_subCat2" , "alpha1_subCat2", 2, 0.01, 65)
-    n1_subCat2 = rt.RooRealVar("n1_subCat2" , "n1_subCat2", 10, 0.01, 100)
-    alpha2_subCat2 = rt.RooRealVar("alpha2_subCat2" , "alpha2_subCat2", 2.0, 0.01, 65)
-    n2_subCat2 = rt.RooRealVar("n2_subCat2" , "n2_subCat2", 25, 0.01, 100)
+    # sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 2, .1, 4.0)
+    # alpha1_subCat2 = rt.RooRealVar("alpha1_subCat2" , "alpha1_subCat2", 2, 0.01, 65)
+    # n1_subCat2 = rt.RooRealVar("n1_subCat2" , "n1_subCat2", 10, 0.01, 100)
+    # alpha2_subCat2 = rt.RooRealVar("alpha2_subCat2" , "alpha2_subCat2", 2.0, 0.01, 65)
+    # n2_subCat2 = rt.RooRealVar("n2_subCat2" , "n2_subCat2", 25, 0.01, 100)
+
+    # copying parameters from official AN workspace as starting params
+    sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 1.36025, .1, 4.0)
+    alpha1_subCat2 = rt.RooRealVar("alpha1_subCat2" , "alpha1_subCat2", 1.4173626, 0.01, 65)
+    n1_subCat2 = rt.RooRealVar("n1_subCat2" , "n1_subCat2", 2.42748, 0.01, 100)
+    alpha2_subCat2 = rt.RooRealVar("alpha2_subCat2" , "alpha2_subCat2", 1.629120, 0.01, 65)
+    n2_subCat2 = rt.RooRealVar("n2_subCat2" , "n2_subCat2", 9.983334, 0.01, 100)
+
+    # # temporary test
+    # sigma_subCat2.setConstant(True)
+    # alpha1_subCat2.setConstant(True)
+    # n1_subCat2.setConstant(True)
+    # alpha2_subCat2.setConstant(True)
+    # n2_subCat2.setConstant(True)
 
     CMS_hmm_sigma_cat2_ggh = rt.RooRealVar("CMS_hmm_sigma_cat2_ggh" , "CMS_hmm_sigma_cat2_ggh", 0, -5 , 5 )
     CMS_hmm_sigma_cat2_ggh.setConstant(True) # this is going to be param in datacard
@@ -1068,11 +1134,25 @@ if __name__ == "__main__":
     # subCat 3
     MH_subCat3 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat3.setConstant(True) # this shouldn't change, I think
-    sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 2, .1, 4.0)
-    alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 2, 0.01, 65)
-    n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 10, 0.01, 100)
-    alpha2_subCat3 = rt.RooRealVar("alpha2_subCat3" , "alpha2_subCat3", 2.0, 0.01, 65)
-    n2_subCat3 = rt.RooRealVar("n2_subCat3" , "n2_subCat3", 25, 0.01, 100)
+    # sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 2, .1, 4.0)
+    # alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 2, 0.01, 65)
+    # n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 10, 0.01, 100)
+    # alpha2_subCat3 = rt.RooRealVar("alpha2_subCat3" , "alpha2_subCat3", 2.0, 0.01, 65)
+    # n2_subCat3 = rt.RooRealVar("n2_subCat3" , "n2_subCat3", 25, 0.01, 100)
+
+    # copying parameters from official AN workspace as starting params
+    sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 1.25359, .1, 4.0)
+    alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 1.4199, 0.01, 65)
+    n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 2.409953, 0.01, 100)
+    alpha2_subCat3 = rt.RooRealVar("alpha2_subCat3" , "alpha2_subCat3", 1.64675, 0.01, 65)
+    n2_subCat3 = rt.RooRealVar("n2_subCat3" , "n2_subCat3", 9.670221, 0.01, 100)
+
+    # # temporary test
+    # sigma_subCat3.setConstant(True)
+    # alpha1_subCat3.setConstant(True)
+    # n1_subCat3.setConstant(True)
+    # alpha2_subCat3.setConstant(True)
+    # n2_subCat3.setConstant(True)
 
     CMS_hmm_sigma_cat3_ggh = rt.RooRealVar("CMS_hmm_sigma_cat3_ggh" , "CMS_hmm_sigma_cat3_ggh", 0, -5 , 5 )
     CMS_hmm_sigma_cat3_ggh.setConstant(True) # this is going to be param in datacard
@@ -1089,11 +1169,25 @@ if __name__ == "__main__":
     # subCat 4
     MH_subCat4 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     MH_subCat4.setConstant(True) # this shouldn't change, I think
-    sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 2, .1, 4.0)
-    alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 2, 0.01, 65)
-    n1_subCat4 = rt.RooRealVar("n1_subCat4" , "n1_subCat4", 10, 0.01, 100)
-    alpha2_subCat4 = rt.RooRealVar("alpha2_subCat4" , "alpha2_subCat4", 2.0, 0.01, 65)
-    n2_subCat4 = rt.RooRealVar("n2_subCat4" , "n2_subCat4", 25, 0.01, 100)
+    # sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 2, .1, 4.0)
+    # alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 2, 0.01, 65)
+    # n1_subCat4 = rt.RooRealVar("n1_subCat4" , "n1_subCat4", 10, 0.01, 100)
+    # alpha2_subCat4 = rt.RooRealVar("alpha2_subCat4" , "alpha2_subCat4", 2.0, 0.01, 65)
+    # n2_subCat4 = rt.RooRealVar("n2_subCat4" , "n2_subCat4", 25, 0.01, 100)
+
+    # copying parameters from official AN workspace as starting params
+    sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 1.28250, .1, 4.0)
+    alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 1.47936, 0.01, 65)
+    n1_subCat4 = rt.RooRealVar("n1_subCat4" , "n1_subCat4", 2.24104, 0.01, 100)
+    alpha2_subCat4 = rt.RooRealVar("alpha2_subCat4" , "alpha2_subCat4", 1.67898, 0.01, 65)
+    n2_subCat4 = rt.RooRealVar("n2_subCat4" , "n2_subCat4", 8.8719, 0.01, 100)
+
+    # # temporary test
+    # sigma_subCat4.setConstant(True)
+    # alpha1_subCat4.setConstant(True)
+    # n1_subCat4.setConstant(True)
+    # alpha2_subCat4.setConstant(True)
+    # n2_subCat4.setConstant(True)
 
     CMS_hmm_sigma_cat4_ggh = rt.RooRealVar("CMS_hmm_sigma_cat4_ggh" , "CMS_hmm_sigma_cat4_ggh", 0, -5 , 5 )
     CMS_hmm_sigma_cat4_ggh.setConstant(True) # this is going to be param in datacard
@@ -1113,7 +1207,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # subCat 0
-    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 0)
+    subCat_filter = (processed_eventsSignalMC[subCatIdx_name] == 0)
     subCat_mass_arr = ak.to_numpy(
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
@@ -1130,14 +1224,15 @@ if __name__ == "__main__":
     data_subCat0_signal = roo_histData_subCat0_signal
 
     # define normalization value from signal MC event weights 
-    
-    norm_val = np.sum(wgt_subCat0_SigMC)* 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
+    flat_MC_SF = 1.00
+    # flat_MC_SF = 0.92 # temporary flat SF to match my Data/MC agreement to that of AN's
+    norm_val = np.sum(wgt_subCat0_SigMC)* flat_MC_SF 
     sig_norm_subCat0 = rt.RooRealVar(signal_subCat0.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat0 norm_val: {norm_val}")
     sig_norm_subCat0.setConstant(True)
 
     # subCat 1
-    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 1)
+    subCat_filter = (processed_eventsSignalMC[subCatIdx_name] == 1)
     subCat_mass_arr = ak.to_numpy(
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
@@ -1155,13 +1250,13 @@ if __name__ == "__main__":
 
     # define normalization value from signal MC event weights 
     
-    norm_val = np.sum(wgt_subCat1_SigMC)* 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
+    norm_val = np.sum(wgt_subCat1_SigMC)* flat_MC_SF
     sig_norm_subCat1 = rt.RooRealVar(signal_subCat1.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat1 norm_val: {norm_val}")
     sig_norm_subCat1.setConstant(True)
 
     # subCat 2
-    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 2)
+    subCat_filter = (processed_eventsSignalMC[subCatIdx_name] == 2)
     subCat_mass_arr = ak.to_numpy(
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
@@ -1179,13 +1274,13 @@ if __name__ == "__main__":
 
     # define normalization value from signal MC event weights 
     
-    norm_val = np.sum(wgt_subCat2_SigMC) * 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
+    norm_val = np.sum(wgt_subCat2_SigMC) * flat_MC_SF
     sig_norm_subCat2 = rt.RooRealVar(signal_subCat2.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat2 norm_val: {norm_val}")
     sig_norm_subCat2.setConstant(True)
 
     # subCat 3
-    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 3)
+    subCat_filter = (processed_eventsSignalMC[subCatIdx_name] == 3)
     subCat_mass_arr = ak.to_numpy(
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
@@ -1203,13 +1298,13 @@ if __name__ == "__main__":
 
     # define normalization value from signal MC event weights 
     
-    norm_val = np.sum(wgt_subCat3_SigMC)* 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
+    norm_val = np.sum(wgt_subCat3_SigMC)* flat_MC_SF
     sig_norm_subCat3 = rt.RooRealVar(signal_subCat3.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat3 norm_val: {norm_val}")
     sig_norm_subCat3.setConstant(True)
     
     # subCat 4
-    subCat_filter = (processed_eventsSignalMC["subCategory_idx"] == 4)
+    subCat_filter = (processed_eventsSignalMC[subCatIdx_name] == 4)
     subCat_mass_arr = ak.to_numpy(
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
@@ -1227,7 +1322,7 @@ if __name__ == "__main__":
 
     # define normalization value from signal MC event weights 
     
-    norm_val = np.sum(wgt_subCat4_SigMC)* 0.95 # reduce by 5 percent bc my Data/MC agreement is about 5 percent off from AN
+    norm_val = np.sum(wgt_subCat4_SigMC)* flat_MC_SF
     sig_norm_subCat4 = rt.RooRealVar(signal_subCat4.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat4 norm_val: {norm_val}")
     sig_norm_subCat4.setConstant(True)
@@ -1239,7 +1334,8 @@ if __name__ == "__main__":
     # subCat 0
     _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, )
     fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, )
-    fit_result.Print()
+    # if fit_result is not None:
+        # fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat0.setConstant(True)
@@ -1255,7 +1351,8 @@ if __name__ == "__main__":
     # subCat 1
     _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
     fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
-    fit_result.Print()
+    # if fit_result is not None:
+        # fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat1.setConstant(True)
@@ -1271,7 +1368,8 @@ if __name__ == "__main__":
     # subCat 2
     _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
     fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
-    fit_result.Print()
+    # if fit_result is not None:
+        # fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat2.setConstant(True)
@@ -1287,7 +1385,8 @@ if __name__ == "__main__":
     # subCat 3
     _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
     fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
-    fit_result.Print()
+    # if fit_result is not None:
+        # fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat3.setConstant(True)
@@ -1303,7 +1402,8 @@ if __name__ == "__main__":
     # subCat 4
     _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
     fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
-    fit_result.Print()
+    # if fit_result is not None:
+        # fit_result.Print()
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat4.setConstant(True)
@@ -1320,7 +1420,7 @@ if __name__ == "__main__":
     # Plotting
     # -------------------------------------------------------------------------
 
-    plot_save_path = "./validation/figs/2018"
+    plot_save_path = f"./validation/figs/{args.year}"
     if not os.path.exists(plot_save_path):
         os.makedirs(plot_save_path)
     # -------------------------------------------------------------------------
@@ -1629,13 +1729,13 @@ if __name__ == "__main__":
             model_subCat3_sumExp,
             model_subCat4_sumExp,
         ],
-        "FEWZxBern" : [
-            model_subCat0_FEWZxBern, 
-            model_subCat1_FEWZxBern,
-            model_subCat2_FEWZxBern,
-            model_subCat3_FEWZxBern,
-            model_subCat4_FEWZxBern,
-        ],
+        # "FEWZxBern" : [
+        #     model_subCat0_FEWZxBern, 
+        #     model_subCat1_FEWZxBern,
+        #     model_subCat2_FEWZxBern,
+        #     model_subCat3_FEWZxBern,
+        #     model_subCat4_FEWZxBern,
+        # ],
         "SMF" : [
             subCat0_SMF, 
             subCat1_SMF,
@@ -1644,7 +1744,14 @@ if __name__ == "__main__":
             subCat4_SMF,
         ],
     }
-    plotBkgByCoreFunc(mass, model_dict_by_coreFunction, plot_save_path)
+    rooHist_list = [ # for normalization histogram reference
+        roo_histData_subCat0,
+        roo_histData_subCat1,
+        roo_histData_subCat2,
+        roo_histData_subCat3,
+        roo_histData_subCat4
+    ]
+    plotBkgByCoreFunc(mass, model_dict_by_coreFunction, rooHist_list, plot_save_path)
     
 
     # -------------------------------------------------------------------------
@@ -1655,27 +1762,27 @@ if __name__ == "__main__":
         0 : [
             model_subCat0_BWZRedux, 
             model_subCat0_sumExp,
-            model_subCat0_FEWZxBern,
+            # model_subCat0_FEWZxBern,
         ],
         1 : [
             model_subCat1_BWZRedux, 
             model_subCat1_sumExp,
-            model_subCat1_FEWZxBern,
+            # model_subCat1_FEWZxBern,
         ],
         2 : [
             model_subCat2_BWZRedux, 
             model_subCat2_sumExp,
-            model_subCat2_FEWZxBern,
+            # model_subCat2_FEWZxBern,
         ],
         3 : [
             model_subCat3_BWZRedux, 
             model_subCat3_sumExp,
-            model_subCat3_FEWZxBern,
+            # model_subCat3_FEWZxBern,
         ],
         4 : [
             model_subCat4_BWZRedux, 
             model_subCat4_sumExp,
-            model_subCat4_FEWZxBern,
+            # model_subCat4_FEWZxBern,
         ],
     }
     data_dict_by_subCat = {
