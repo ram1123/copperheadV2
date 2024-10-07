@@ -228,19 +228,20 @@ if __name__ == "__main__":
         raise ValueError
     for particle in args.variables:
         if "dimuon" in particle:
-            variables2plot.append(f"{particle}_mass")
-            variables2plot.append(f"{particle}_pt")
-            variables2plot.append(f"{particle}_eta")
-            variables2plot.append(f"{particle}_phi")
-            variables2plot.append(f"{particle}_rapidity")
-            variables2plot.append(f"{particle}_cos_theta_cs")
-            variables2plot.append(f"{particle}_phi_cs")
-            variables2plot.append(f"{particle}_cos_theta_eta")
-            variables2plot.append(f"{particle}_phi_eta")
-            variables2plot.append(f"mmj_min_dPhi")
-            variables2plot.append(f"mmj_min_dEta")
-            variables2plot.append(f"rpt")
-            variables2plot.append(f"ll_zstar_log")
+            # variables2plot.append(f"{particle}_mass")
+            # variables2plot.append(f"{particle}_pt")
+            # variables2plot.append(f"{particle}_eta")
+            # variables2plot.append(f"{particle}_phi")
+            # variables2plot.append(f"{particle}_rapidity")
+            # variables2plot.append(f"{particle}_cos_theta_cs")
+            # variables2plot.append(f"{particle}_phi_cs")
+            # variables2plot.append(f"{particle}_cos_theta_eta")
+            # variables2plot.append(f"{particle}_phi_eta")
+            # variables2plot.append(f"mmj_min_dPhi")
+            # variables2plot.append(f"mmj_min_dEta")
+            # variables2plot.append(f"rpt")
+            # variables2plot.append(f"ll_zstar_log")
+            variables2plot.append(f"dimuon_ebe_mass_res")
         elif "dijet" in particle:
             # variables2plot.append(f"gjj_mass")
             variables2plot.append(f"jj_mass")
@@ -301,7 +302,7 @@ if __name__ == "__main__":
         # select only needed variables to load to save run time
         # ------------------------------------------------------
         
-        fields2load = variables2plot + ["wgt_nominal_total","fraction", "h_sidebands", "h_peak", "z_peak", "vbf_cut","nBtagLoose", "nBtagMedium",]
+        fields2load = variables2plot + ["wgt_nominal_total","fraction", "h_sidebands", "h_peak", "z_peak", "vbf_cut","nBtagLoose", "nBtagMedium", "zeppenfeld"]
         # # add in weights
         # for field in events.fields:
         #     if "wgt_nominal" in field:
@@ -343,6 +344,14 @@ if __name__ == "__main__":
                 print(f"variable {var} not configured in plot settings!")
                 continue
             binning = np.linspace(*plot_settings[var]["binning_linspace"])
+            if args.linear_scale:
+                do_logscale = False
+            else:
+                do_logscale = True
+            # also check if logscale config is mentioned in plot_settings, if yes, that config takes priority
+            if "logscale" in plot_settings[var].keys():
+                do_logscale = plot_settings[var]["logscale"]
+                
             group_data_hists = []
             group_DY_hists = []
             group_Top_hists = []
@@ -784,7 +793,7 @@ if __name__ == "__main__":
             pad.RedrawAxis("sameaxis");
                 
             pad.cd();
-            if not args.linear_scale:
+            if do_logscale:
                 dummy_hist.GetYaxis().SetRangeUser(0.01, 1e9);
                 pad.SetLogy();
             else:
@@ -946,6 +955,12 @@ if __name__ == "__main__":
                 weights = weights*category_selection
                 # print(f"weights.shape: {weights[weights>0].shape}")
                 values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
+                # temporary overwrite start -------------------------
+                # we have bad ll_zstar_log caluclation, so we re-calculate on the spot
+                if var == "ll_zstar_log":
+                    print("ll_zstar_log overwrite!")
+                    values = ak.to_numpy(np.log(np.abs(events["zeppenfeld"])))
+                # temporary overwrite end -------------------------
                 # print(f"values[0]: {values[0]}")
                 values_filter = values!=-999.0
                 values = values[values_filter]
@@ -1099,7 +1114,7 @@ if __name__ == "__main__":
                 y_title = plot_settings[var].get("ylabel"),
                 lumi = args.lumi,
                 status = status,
-                log_scale = do_log_scale,
+                log_scale = do_logscale,
             )
             
 

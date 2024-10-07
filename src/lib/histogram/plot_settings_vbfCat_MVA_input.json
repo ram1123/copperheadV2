@@ -63,6 +63,14 @@
         "xlabel": "\\phi_{CS}$",
         "color": "royalblue"
     },
+    "dimuon_ebe_mass_res": {
+        "variable": "dimuon_ebe_mass_res",
+        "binning_linspace": [0, 20, 31],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$\\sigma_{m_{\\mu\\mu}}$",
+        "color": "royalblue"
+    },
     "rpt": {
         "variable": "rpt",
         "binning_linspace": [0, 1, 31],
