@@ -253,17 +253,21 @@ if __name__ == "__main__":
                 variables2plot.append(f"{particle}1_{kinematic}")
                 variables2plot.append(f"{particle}2_{kinematic}")
         elif ("jet" in particle):
-            variables2plot.append(f"njets")
-            for kinematic in kinematic_vars:
-                # plot both leading and subleading muons/jets
-                variables2plot.append(f"{particle}1_{kinematic}")
-                variables2plot.append(f"{particle}2_{kinematic}")
+            # variables2plot.append(f"njets")
+            # for kinematic in kinematic_vars:
+            #     # plot both leading and subleading muons/jets
+            #     variables2plot.append(f"{particle}1_{kinematic}")
+            #     variables2plot.append(f"{particle}2_{kinematic}")
+            variables2plot.append(f"jet1_qgl")
+            variables2plot.append(f"jet2_qgl")
        
         else:
             print(f"Unsupported variable: {particle} is given!")
     print(f"variables2plot: {variables2plot}")
     # obtain plot settings from config file
-    with open("./src/lib/histogram/plot_settings.json", "r") as file:
+    # plot_setting_fname = "./src/lib/histogram/plot_settings_stage1.json"
+    plot_setting_fname = "./src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+    with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
     status = args.status.replace("_", " ")
     
@@ -830,6 +834,13 @@ if __name__ == "__main__":
             #-----------------------------------------------
             # intialize variables for filling histograms
             binning = np.linspace(*plot_settings[var]["binning_linspace"])
+            if args.linear_scale:
+                do_logscale = False
+            else:
+                do_logscale = True
+            # also check if logscale config is mentioned in plot_settings, if yes, that config takes priority
+            if "logscale" in plot_settings[var].keys():
+                do_logscale = plot_settings[var]["logscale"]
 
 
             group_data_vals = []
@@ -901,11 +912,9 @@ if __name__ == "__main__":
                     if args.do_vbf_filter_study:
                         print("applying VBF filter gen cut!")
                         if "dy_" in process:
-                            if process == "dy_VBF_filter":
+                            if ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc"):
                                 print("dy_VBF_filter extra!")
-                                vbf_filter = (
-                                    ak.fill_none((events.gjj_mass > 350), value=False) 
-                                 )
+                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
                                 prod_cat_cut =  (prod_cat_cut  
                                             & vbf_filter
                                 )
@@ -1077,7 +1086,8 @@ if __name__ == "__main__":
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             full_save_fname = f"{full_save_path}/{var}.pdf"
-            
+
+           
             plotDataMC_compare(
                 binning, 
                 data_dict, 
@@ -1089,6 +1099,7 @@ if __name__ == "__main__":
                 y_title = plot_settings[var].get("ylabel"),
                 lumi = args.lumi,
                 status = status,
+                log_scale = do_log_scale,
             )
             
 
