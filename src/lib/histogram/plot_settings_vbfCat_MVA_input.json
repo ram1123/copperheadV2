@@ -182,7 +182,7 @@
         "ylabel": "Events",
         "xlabel": "$QGL (jet1)$",
         "color": "royalblue",
-        "logscale": false,
+        "logscale": false
     },
     "jet2_pt": {
         "variable": "jet2_pt",
@@ -215,7 +215,7 @@
         "ylabel": "Events",
         "xlabel": "$QGL (jet2)$",
         "color": "royalblue",
-        "logscale": false,
+        "logscale": false
     },
     "mu1_pt": {
         "variable": "mu1_pt",
