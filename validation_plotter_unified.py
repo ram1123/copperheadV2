@@ -228,19 +228,19 @@ if __name__ == "__main__":
         raise ValueError
     for particle in args.variables:
         if "dimuon" in particle:
-            # variables2plot.append(f"{particle}_mass")
-            # variables2plot.append(f"{particle}_pt")
-            # variables2plot.append(f"{particle}_eta")
-            # variables2plot.append(f"{particle}_phi")
-            # variables2plot.append(f"{particle}_rapidity")
-            # variables2plot.append(f"{particle}_cos_theta_cs")
-            # variables2plot.append(f"{particle}_phi_cs")
-            # variables2plot.append(f"{particle}_cos_theta_eta")
-            # variables2plot.append(f"{particle}_phi_eta")
-            # variables2plot.append(f"mmj_min_dPhi")
-            # variables2plot.append(f"mmj_min_dEta")
-            # variables2plot.append(f"rpt")
-            # variables2plot.append(f"ll_zstar_log")
+            variables2plot.append(f"{particle}_mass")
+            variables2plot.append(f"{particle}_pt")
+            variables2plot.append(f"{particle}_eta")
+            variables2plot.append(f"{particle}_phi")
+            variables2plot.append(f"{particle}_rapidity")
+            variables2plot.append(f"{particle}_cos_theta_cs")
+            variables2plot.append(f"{particle}_phi_cs")
+            variables2plot.append(f"{particle}_cos_theta_eta")
+            variables2plot.append(f"{particle}_phi_eta")
+            variables2plot.append(f"mmj_min_dPhi")
+            variables2plot.append(f"mmj_min_dEta")
+            variables2plot.append(f"rpt")
+            variables2plot.append(f"ll_zstar_log")
             variables2plot.append(f"dimuon_ebe_mass_res")
         elif "dijet" in particle:
             # variables2plot.append(f"gjj_mass")
@@ -254,11 +254,11 @@ if __name__ == "__main__":
                 variables2plot.append(f"{particle}1_{kinematic}")
                 variables2plot.append(f"{particle}2_{kinematic}")
         elif ("jet" in particle):
-            # variables2plot.append(f"njets")
-            # for kinematic in kinematic_vars:
-            #     # plot both leading and subleading muons/jets
-            #     variables2plot.append(f"{particle}1_{kinematic}")
-            #     variables2plot.append(f"{particle}2_{kinematic}")
+            variables2plot.append(f"njets")
+            for kinematic in kinematic_vars:
+                # plot both leading and subleading muons/jets
+                variables2plot.append(f"{particle}1_{kinematic}")
+                variables2plot.append(f"{particle}2_{kinematic}")
             variables2plot.append(f"jet1_qgl")
             variables2plot.append(f"jet2_qgl")
        
@@ -302,7 +302,7 @@ if __name__ == "__main__":
         # select only needed variables to load to save run time
         # ------------------------------------------------------
         
-        fields2load = variables2plot + ["wgt_nominal_total","fraction", "h_sidebands", "h_peak", "z_peak", "vbf_cut","nBtagLoose", "nBtagMedium", "zeppenfeld"]
+        fields2load = variables2plot + ["wgt_nominal_total","fraction", "h_sidebands", "h_peak", "z_peak", "vbf_cut","nBtagLoose", "nBtagMedium", "zeppenfeld", "jj_mass", "jet1_pt", "jj_dEta", "dimuon_pt", "jet2_pt","jj_pt"]
         # # add in weights
         # for field in events.fields:
         #     if "wgt_nominal" in field:
@@ -311,6 +311,10 @@ if __name__ == "__main__":
         is_data = "data" in process.lower()
         if not is_data: # MC sample
              fields2load += ["gjj_mass", "gjj_dR", "gjet1_pt", "gjet2_pt"]
+
+        # filter out redundant fields by using the set object
+        fields2load = list(set(fields2load))
+        
         events = events[fields2load]
         # load data to memory using compute()
         events = ak.zip({
@@ -388,7 +392,9 @@ if __name__ == "__main__":
                 fraction_weight = 1/events.fraction # TBF, all fractions should be same
 
                 # obtain the category selection
-                vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
+                # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
+                vbf_cut = (events.jj_mass > 400) & (events.jj_dEta > 2.5) 
+                vbf_cut = ak.fill_none(vbf_cut, value=False)
                 # print("doing root style!")
                 # print(f"args.region: {args.region}")
                 if args.region == "signal":
@@ -408,7 +414,7 @@ if __name__ == "__main__":
                 if args.vbf_cat_mode:
                     
                     print("vbf mode!")
-                    prod_cat_cut =  vbf_cut
+                    prod_cat_cut =  vbf_cut & ak.fill_none(events.jet1_pt > 35, value=False) 
                     # apply additional cut to MC samples if vbf 
                     # VBF filter cut start -------------------------------------------------
                     if args.do_vbf_filter_study:
@@ -888,10 +894,7 @@ if __name__ == "__main__":
                 #-----------------------------------------------    
                 # obtain the category selection
 
-                fraction_weight = ak.to_numpy(1/events.fraction) # TBF, all fractions should be same
-                # print(f"fraction_weight: {fraction_weight[0]}")
-                # print(f"fraction_weight: {fraction_weight[4]}")
-
+                
 
                 # ------------------------------------------------
                 # take the mass region and category cuts 
@@ -914,10 +917,13 @@ if __name__ == "__main__":
 
                 # do category cut
                 btag_cut =ak.fill_none((events.nBtagLoose >= 2), value=False) | ak.fill_none((events.nBtagMedium >= 1), value=False)
-                vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
+                # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
+                vbf_cut = (events.jj_mass > 400) & (events.jj_dEta > 2.5) 
+                vbf_cut = ak.fill_none(vbf_cut, value=False)
                 if args.vbf_cat_mode:
                     print("vbf mode!")
-                    prod_cat_cut =  vbf_cut
+                    prod_cat_cut =  vbf_cut & ak.fill_none(events.jet1_pt > 35, value=False) 
+                    print("applying jet1 pt 35 Gev cut!")
                     if args.do_vbf_filter_study:
                         print("applying VBF filter gen cut!")
                         if "dy_" in process:
@@ -950,16 +956,40 @@ if __name__ == "__main__":
                 print(f"category_selection length: {len(category_selection)}")
                 print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
                 # print(f"category_selection {process} : {category_selection}")
-                
+
+                # filter events fro selected category
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
-                weights = weights*category_selection
-                # print(f"weights.shape: {weights[weights>0].shape}")
+                # weights = weights*category_selection
+                weights = weights[category_selection]
+                
+                # 
+                events = events[category_selection]
+                fraction_weight = ak.to_numpy(1/events.fraction) # TBF, all fractions should be same
                 values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
+                # print(f"weights.shape: {weights[weights>0].shape}")
+                
                 # temporary overwrite start -------------------------
                 # we have bad ll_zstar_log caluclation, so we re-calculate on the spot
                 if var == "ll_zstar_log":
                     print("ll_zstar_log overwrite!")
                     values = ak.to_numpy(np.log(np.abs(events["zeppenfeld"])))
+                elif var == "rpt":
+                    print("rpt overwrite!")
+                    numerator = np.abs(events["jj_pt"] + events["dimuon_pt"])
+                    denominator = np.abs(events["jet1_pt"]) + np.abs(events["jet2_pt"]) +  np.abs(events["dimuon_pt"])
+                    values = ak.to_numpy(numerator/denominator)
+                    # debug
+                    print(f"events.jj_pt is nan: {np.any(np.isnan(events.jj_pt))}")
+                    print(f"events.dimuon_pt is nan: {np.any(np.isnan(events.dimuon_pt))}")
+                    print(f"events.jet1_pt is nan: {np.any(np.isnan(events.jet1_pt))}")
+                    print(f"events.jet2_pt is nan: {np.any(np.isnan(events.jet2_pt))}")
+                    print(f"events.jj_pt is none: {np.any(ak.is_none(events.jj_pt))}")
+                    print(f"events.dimuon_pt is none: {np.any(ak.is_none(events.dimuon_pt))}")
+                    print(f"events.jet1_pt is none: {np.any(ak.is_none(events.jet1_pt))}")
+                    print(f"events.jet2_pt is none: {np.any(ak.is_none(events.jet2_pt))}")
+                    
+                print(f"values is nan: {np.any(np.isnan(values))}")
+                print(f"values is none: {np.any(ak.is_none(values))}")
                 # temporary overwrite end -------------------------
                 # print(f"values[0]: {values[0]}")
                 values_filter = values!=-999.0
