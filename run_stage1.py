@@ -197,8 +197,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             # vbf ?? ------------------------------------------------
             "vbf_cut" : (out_collections["vbf_cut"]),
             # "pass_leading_pt" : (out_collections["pass_leading_pt"]),
-            "ll_zstar" : (out_collections["ll_zstar"]),
-            "ll_zstar_log" : np.log(out_collections["ll_zstar"]),
+            "ll_zstar_log" : np.log(np.abs(out_collections["zeppenfeld"])),
             "zeppenfeld" : (out_collections["zeppenfeld"]),
             "event" : (out_collections["event"]),
             "rpt" : (out_collections["rpt"]),
@@ -383,8 +382,8 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # max_file_len = 15
                 # max_file_len = 50
-                # max_file_len = 100
-                max_file_len = 200
+                max_file_len = 100
+                # max_file_len = 200
                 # max_file_len = 25
                 # max_file_len = 900
                 # max_file_len = 10

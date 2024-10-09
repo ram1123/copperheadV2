@@ -1380,9 +1380,7 @@ class EventProcessor(processor.ProcessorABC):
             dimuon.pt + jet1.pt + jet2.pt
         )
 
-        # calculate ll_zstar
-        ll_ystar = dimuon.rapidity - (jet1.rapidity + jet1.rapidity) / 2
-        ll_zstar = abs(ll_ystar / (jet1.rapidity - jet1.rapidity))
+
 
     
         jet_loop_out_dict = {
@@ -1436,7 +1434,6 @@ class EventProcessor(processor.ProcessorABC):
             "rpt" : rpt,
             "zeppenfeld" : zeppenfeld,
             "njets" : njets,
-            "ll_zstar" : ll_zstar,
             
         }
         if is_mc:
