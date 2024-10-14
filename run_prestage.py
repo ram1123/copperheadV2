@@ -114,6 +114,13 @@ if __name__ == "__main__":
     action="store",
     help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
     )
+    parser.add_argument( # temp flag to test the 2 percent data discrepancy in ggH cat between mine and official workspace
+    "--run2_rereco",
+    dest="run2_rereco",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, uses skips bad files when calling preprocessing",
+    )
     args = parser.parse_args()
     # make NanoAODv into an interger variable
     args.NanoAODv = int(args.NanoAODv)
@@ -126,7 +133,8 @@ if __name__ == "__main__":
     # print(f"args.bkg_samples: {args.bkg_samples}")
     os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
     if args.fraction is None: # do the normal prestage setup
-        allowlist_sites=["T2_US_Purdue"] # take data only from purdue for now
+        # allowlist_sites=["T2_US_Purdue"] # take data only from purdue for now
+        allowlist_sites=["T2_US_Purdue", "T2_US_MIT"]
         total_events = 0
         # get dask client
         # turning off seperate client test start --------------------------------------------------------
@@ -153,7 +161,10 @@ if __name__ == "__main__":
         filelist = glob.glob("./configs/datasets" + "/*.yaml")
         dataset_confs = [OmegaConf.load(f) for f in filelist]
         datasets = OmegaConf.merge(*dataset_confs)
-        dataset = datasets[year]
+        if args.run2_rereco: # temp condition for RERECO data case
+            dataset = datasets[f"{year}_RERECO"]
+        else: # normal
+            dataset = datasets[year]
         new_sample_list = []
        
         # take data
@@ -173,7 +184,7 @@ if __name__ == "__main__":
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                     # new_sample_list.append("dy_M-50")
-                    new_sample_list.append("dy_M-100To200")
+                    # new_sample_list.append("dy_M-100To200")
                     # new_sample_list.append("dy_VBF_filter")
                     # new_sample_list.append("dy_m105_160_vbf_amc")
                     # new_sample_list.append("dy_VBF_filter_customJMEoff")
@@ -181,6 +192,12 @@ if __name__ == "__main__":
                     # new_sample_list.append("dy_M-120To200")
                     # new_sample_list.append("dy_VBF_filter_Amandeep10_6_26")
                     # new_sample_list.append("dy_VBF_filter_Amandeep10_6_32")
+                    # new_sample_list.append("dy_VBF_filter_Amandeep_fromGenSim")
+                    new_sample_list.append("dy_VBF_filter_fromGridpack")
+                    
+                    # Run3 specific datasets:
+                    # new_sample_list.append("dy_M-50To120")
+                    # new_sample_list.append("dy_M-120To200")
                 
 
                 
@@ -207,6 +224,7 @@ if __name__ == "__main__":
             for sig_sample in sig_samples:
                 if sig_sample.upper() == "GGH": # enforce upper case to prevent confusion
                     new_sample_list.append("ggh_powheg")
+                    # new_sample_list.append("ggh_amcPS")
                 elif sig_sample.upper() == "VBF": # enforce upper case to prevent confusion
                     new_sample_list.append("vbf_powheg")
                 else:
@@ -223,9 +241,13 @@ if __name__ == "__main__":
         dataset = dataset_dict # overwrite dataset bc we don't need it anymore
         print(f"dataset: {dataset}")
         print(f"new dataset: {dataset.keys()}")
-        
+        print(f"year: {year}")
+        print(f"type(year): {type(year)}")
+        print(f"len(year): {len(year)}")
+        print(f"args.run2_rereco: {args.run2_rereco}")
         for sample_name in tqdm.tqdm(dataset.keys()):
             is_data =  ("data" in sample_name)
+            
             if sample_name == "dy_VBF_filter":
                 """
                 temporary condition bc IDK a way to integrate prod/phys03 CMSDAS datasets into rucio utils
@@ -242,27 +264,73 @@ if __name__ == "__main__":
                 load_path = "/eos/purdue/store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM"
                 fnames = glob.glob(f"{load_path}/*/*/*.root")
                 
-            elif sample_name == "dy_VBF_filter_customJMEoff":
+            elif sample_name == "dy_VBF_filter_fromGridpack":
                 """
                 load directly from local files
                 """
                 # test start -----------------------------------------------------------
-                load_path = "/eos/purdue/store/user/hyeonseo/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano/240614_155758/"
-                fnames = glob.glob(f"{load_path}/*/*.root")
-            elif sample_name == "dy_VBF_filter_Amandeep10_6_26":
-                """
-                load directly from local files
-                """
-                # test start -----------------------------------------------------------
-                load_path = "/eos/purdue//store/user/amkaur/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/Flat_NanoAODSIM__CMSSW_10_6_26/240827_142843/0000/"
+                load_path = "/eos/purdue/store/user/hyeonseo/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/Flat_NanoAODSIMv9_CMSSW_10_6_26_BigRun/240904_151935/0000/"
                 fnames = glob.glob(f"{load_path}/*.root")
-            elif sample_name == "dy_VBF_filter_Amandeep10_6_32":
-                """
-                load directly from local files
-                """
-                # test start -----------------------------------------------------------
-                load_path = "/eos/purdue//store/user/amkaur/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/Flat_NanoAODSIM__CMSSW_10_6_32_patch1/240827_143020/0000/"
-                fnames = glob.glob(f"{load_path}/*.root")
+
+            # override the the data path if doing rereco data test
+            
+            # elif args.run2_rereco:
+            #     if year == "2018":
+            #         if sample_name == "data_A":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018A-17Sep2018-v2/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_B":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018B-17Sep2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_C":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018C-17Sep2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_D":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRnano18D_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18D_NANOV10b_un2018D-22Jan2019-v2/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #     elif year == "2017":
+            #         if sample_name == "data_B":
+            #             load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017B-31Mar2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_C":
+            #             load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017C-31Mar2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_D":
+            #             load_path = "/eos/purdue//store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017D-31Mar2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_E":
+            #             load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017E-31Mar2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_F":
+            #             load_path = "/eos/purdue//store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #     elif year == "2016":
+            #         if sample_name == "data_B":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_un2016B-17Jul2018_ver2-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_C":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016C-17Jul2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_D":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016D-17Jul2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_E":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016E-17Jul2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_F":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016F-17Jul2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_G":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016G-17Jul2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         elif sample_name == "data_H":
+            #             load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016H-17Jul2018-v1/"
+            #             fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #     else:
+            #         print("unknown sample case!")
+            #         raise ValueError
+                
+                
             # comment out the NanoAODv >= 12 condition bc it was for a test, but this code could still be useful, so I am keep it for now
                 # elif (args.NanoAODv >= 12) and is_data :
                 #     """
@@ -330,6 +398,7 @@ if __name__ == "__main__":
                 )
                 fnames = [file[0] for file in outfiles if file != []]
                 fnames = [fname.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
+               
                 
                 # random.shuffle(fnames)
                 if args.xcache:
@@ -337,6 +406,7 @@ if __name__ == "__main__":
             
             print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
+            fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
             # print(f"fnames: {fnames}")
 
             
