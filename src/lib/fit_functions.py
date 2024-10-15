@@ -44,14 +44,6 @@ def MakeFEWZxBernDof3(
     # collect all variables that we don't want destroyed by Python once function ends
     out_dict = {}
 
-    c_start_val_map = {
-        # 1 : 0.17,
-        # 2 : 0.15,
-        # 3 : 0.05,
-        1 : 0.351,
-        2 : 0.178,
-        3 : 0.110,
-    }
     # make BernStein of order == dof
     n_coeffs = 3
     BernCoeff_list = [c1, c2, c3]

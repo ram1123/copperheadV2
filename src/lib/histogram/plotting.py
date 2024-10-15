@@ -99,6 +99,12 @@ def plotDataMC_compare(
     if log_scale:
         ax_main.set_yscale('log')
         ax_main.set_ylim(0.01, 1e9)
+        # temporary overwrite to match the range of AN plots
+        if x_title == "ll_zstar_log":
+            ax_main.set_ylim(0.1,  599.48425032)
+        elif x_title == "$R_{p_T}$":
+            ax_main.set_ylim(0.35938137,  774.26368268)
+            
     
 
     # -----------------------------------------
