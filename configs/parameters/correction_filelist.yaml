@@ -3,6 +3,9 @@ roccor_file:
   2016postVFP: data/roch_corr/RoccoR2016bUL.txt
   '2017': data/roch_corr/RoccoR2017UL.txt
   '2018': data/roch_corr/RoccoR2018UL.txt
+  2016_RERECO: data/roch_corr/RoccoR2016bUL.txt
+  '2017_RERECO': data/roch_corr/RoccoR2017UL.txt
+  '2018_RERECO': data/roch_corr/RoccoR2018UL.txt
   2022preEE: data/roch_corr/RoccoR2018UL.txt
   2022postEE: data/roch_corr/RoccoR2018UL.txt
 res_calib_path:
@@ -16,6 +19,15 @@ res_calib_path:
     MC: data/res_calib/res_calib_MC_2017.root
     Data: data/res_calib/res_calib_Data_2017.root
   '2018':
+    MC: data/res_calib/res_calib_MC_2018.root
+    Data: data/res_calib/res_calib_Data_2018.root
+  2016_RERECO: # temporary value 
+    MC: data/res_calib/res_calib_MC_2016.root
+    Data: data/res_calib/res_calib_Data_2016.root
+  '2017_RERECO': # temporary value 
+    MC: data/res_calib/res_calib_MC_2017.root
+    Data: data/res_calib/res_calib_Data_2017.root
+  '2018_RERECO': # temporary value 
     MC: data/res_calib/res_calib_MC_2018.root
     Data: data/res_calib/res_calib_Data_2018.root
   2022preEE:

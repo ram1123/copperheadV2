@@ -9,6 +9,13 @@ hlt:
   - IsoMu27
   '2018':
   - IsoMu24
+  2016_RERECO:
+  - IsoMu24
+  - IsoTkMu24
+  '2017_RERECO':
+  - IsoMu27
+  '2018_RERECO':
+  - IsoMu24
   2022preEE:
   - IsoMu24
   2022postEE:

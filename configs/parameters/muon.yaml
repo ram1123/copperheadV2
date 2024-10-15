@@ -3,6 +3,9 @@ muon_pt_cut:
   2016postVFP: 20.0
   '2017': 20.0
   '2018': 20.0
+  2016_RERECO: 20.0
+  '2017_RERECO': 20.0
+  '2018_RERECO': 20.0
   2022preEE: 20.0
   2022postEE: 20.0
 muon_eta_cut:
@@ -10,6 +13,9 @@ muon_eta_cut:
   2016postVFP: 2.4
   '2017': 2.4
   '2018': 2.4
+  2016_RERECO: 2.4
+  '2017_RERECO': 2.4
+  '2018_RERECO': 2.4
   2022preEE: 2.4
   2022postEE: 2.4
 muon_iso_cut:
@@ -17,6 +23,9 @@ muon_iso_cut:
   2016postVFP: 0.25
   '2017': 0.25
   '2018': 0.25
+  2016_RERECO: 0.25
+  '2017_RERECO': 0.25
+  '2018_RERECO': 0.25
   2022preEE: 0.25
   2022postEE: 0.25
 muon_id:
@@ -24,6 +33,9 @@ muon_id:
   2016postVFP: mediumId
   '2017': mediumId
   '2018': mediumId
+  2016_RERECO: mediumId
+  '2017_RERECO': mediumId
+  '2018_RERECO': mediumId
   2022preEE: mediumId
   2022postEE: mediumId
 muon_flags:
@@ -31,6 +43,9 @@ muon_flags:
   2016postVFP: []
   '2017': []
   '2018': []
+  2016_RERECO: []
+  '2017_RERECO': []
+  '2018_RERECO': []
   2022preEE: []
   2022postEE: []
 muon_leading_pt:
@@ -38,6 +53,9 @@ muon_leading_pt:
   2016postVFP: 26.0
   '2017': 29.0
   '2018': 26.0
+  2016_RERECO: 26.0
+  '2017_RERECO': 29.0
+  '2018_RERECO': 26.0
   2022preEE: 26.0
   2022postEE: 26.0
 muon_trigmatch_iso:
@@ -45,6 +63,9 @@ muon_trigmatch_iso:
   2016postVFP: 0.15
   '2017': 0.15
   '2018': 0.15
+  2016_RERECO: 0.15
+  '2017_RERECO': 0.15
+  '2018_RERECO': 0.15
   2022preEE: 0.15
   2022postEE: 0.15
 muon_trigmatch_dr:
@@ -52,6 +73,9 @@ muon_trigmatch_dr:
   2016postVFP: 0.1
   '2017': 0.1
   '2018': 0.1
+  2016_RERECO: 0.1
+  '2017_RERECO': 0.1
+  '2018_RERECO': 0.1
   2022preEE: 0.1
   2022postEE: 0.1
 muon_trigmatch_id:
@@ -59,5 +83,8 @@ muon_trigmatch_id:
   2016postVFP: tightId
   '2017': tightId
   '2018': tightId
+  2016_RERECO: tightId
+  '2017_RERECO': tightId
+  '2018_RERECO': tightId
   2022preEE: tightId
   2022postEE: tightId
