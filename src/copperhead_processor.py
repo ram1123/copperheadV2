@@ -181,7 +181,7 @@ class EventProcessor(processor.ProcessorABC):
         self.test_mode = test_mode
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : True, # False
+            "do_trigger_match" : False, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
@@ -205,10 +205,12 @@ class EventProcessor(processor.ProcessorABC):
             self.zpt_path = "zpt_weights_all"
         # Calibration of event-by-event mass resolution
         for mode in ["Data", "MC"]:
-            if "2016" in year:
+            if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
                 yearUL = "2016"
             elif ("22" in year) or ("23" in year):# temporary solution until I can generate my own dimuon mass resolution
                 yearUL = "2018"
+            elif "RERECO" in year: # 2017_RERECO. 2018_RERECO
+                yearUL=year.replace("_RERECO","")
             else:
                 yearUL=year #Work around before there are seperate new files for pre and postVFP
             label = f"res_calib_{mode}_{yearUL}"
@@ -288,7 +290,13 @@ class EventProcessor(processor.ProcessorABC):
             """
             isoMu_filterbit = 2
             mu_id = 13
-            pt_threshold = 24 
+            # pt_threshold = 24 
+            # if "2017" in year: # line 371 of AN-19-124
+            #     pt_threshold = 29
+            # else: # for 2016, 2018 dunno about Run3
+            #     pt_threshold = 26
+            pt_threshold = self.config["muon_leading_pt"] # line 371 of AN-19-124. "muon_leading_pt" is deceptive name, but that's where we saved the threshold
+
             dr_threshold = 0.1 # for matching gen muons to reco muons
             IsoMu24_muons = (events.TrigObj.id == mu_id) &  \
                         ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
@@ -461,6 +469,7 @@ class EventProcessor(processor.ProcessorABC):
             (events.Electron.pt > self.config["electron_pt_cut"])
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
             & events.Electron[electron_id]
+            & (abs(events.Electron.eta) < 1.444) | (abs(events.Electron.eta) > 1.566)# temp addition for quick test
         )
         
         # some temporary testing code start -----------------------------------------
@@ -522,18 +531,18 @@ class EventProcessor(processor.ProcessorABC):
         # better original end ---------------------------------------------------------------
 
         # test start ----------------------------------------------------------------
-        # NOTE: if you want to keep this method, (which I don't btw since the original
-        # code above is conceptually more correct at this moment), you should optimize
-        # this code, bc this was just something I put together for quick testing
-        muons_padded = ak.pad_none(muons, target=2)
-        sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
-        muons_sorted = (muons_padded[sorted_args])
-        mu1 = muons_sorted[:,0]
-        pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
-        pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
+        # # NOTE: if you want to keep this method, (which I don't btw since the original
+        # # code above is conceptually more correct at this moment), you should optimize
+        # # this code, bc this was just something I put together for quick testing
+        # muons_padded = ak.pad_none(muons, target=2)
+        # sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
+        # muons_sorted = (muons_padded[sorted_args])
+        # mu1 = muons_sorted[:,0]
+        # pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
+        # pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
 
 
-        event_filter = event_filter & pass_leading_pt
+        # event_filter = event_filter & pass_leading_pt
         # test end -----------------------------------------------------------------------
 
         
@@ -573,7 +582,7 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
-        pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
+        # pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
         
             
@@ -695,7 +704,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = True # True       
+        do_jec = False # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -923,7 +932,7 @@ class EventProcessor(processor.ProcessorABC):
             "mu2_pt_raw" : mu2.pt_raw,
             "mu1_pt_fsr" : mu1.pt_fsr,
             "mu2_pt_fsr" : mu2.pt_fsr,
-            "pass_leading_pt" : pass_leading_pt,
+            # "pass_leading_pt" : pass_leading_pt,
         }
         if is_mc:
             mc_dict = {
@@ -1067,12 +1076,14 @@ class EventProcessor(processor.ProcessorABC):
         if test_mode:
             print(f"muons mass_resolution dpt1: {dpt1}")
         year = self.config["year"]
-        if "2016" in year:
+        if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
             yearUL = "2016"
         elif ("22" in year) or ("23" in year):# temporary solution until I can generate my own dimuon mass resolution
             yearUL = "2018"
+        elif "RERECO" in year: # 2017_RERECO. 2018_RERECO
+            yearUL=year.replace("_RERECO","")
         else:
-            yearUL = self.config["year"] #Work around before there are seperate new files for pre and postVFP
+            yearUL = year 
         if is_mc:
             label = f"res_calib_MC_{yearUL}"
         else:
