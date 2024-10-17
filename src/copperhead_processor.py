@@ -240,7 +240,7 @@ class EventProcessor(processor.ProcessorABC):
         # print("testJetVector right as process starts")
         # testJetVector(events.Jet)
         
-        event_filter = ak.ones_like(events.HLT.IsoMu24) # 1D boolean array to be used to filter out bad events
+        event_filter = ak.ones_like(events.event, dtype="bool") # 1D boolean array to be used to filter out bad events
         dataset = events.metadata['dataset']
         print(f"dataset: {dataset}")
         print(f"events.metadata: {events.metadata}")
@@ -327,9 +327,11 @@ class EventProcessor(processor.ProcessorABC):
 
             
         # # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
+        HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
         for HLT_str in self.config["hlt"]:
-            event_filter = event_filter & events.HLT[HLT_str]
-
+            # HLT_filter = HLT_filter | events.HLT[HLT_str]
+            HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
+        event_filter = event_filter & HLT_filter
 
         # ------------------------------------------------------------#
         # Skimming end, filter out events and prepare for pre-selection
@@ -343,6 +345,7 @@ class EventProcessor(processor.ProcessorABC):
 
         
         else:
+            print(f'self.config["lumimask"]: {self.config["lumimask"]}')
             lumi_info = LumiMask(self.config["lumimask"])
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
 
@@ -469,7 +472,7 @@ class EventProcessor(processor.ProcessorABC):
             (events.Electron.pt > self.config["electron_pt_cut"])
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
             & events.Electron[electron_id]
-            & (abs(events.Electron.eta) < 1.444) | (abs(events.Electron.eta) > 1.566)# temp addition for quick test
+            # & (abs(events.Electron.eta) < 1.444) | (abs(events.Electron.eta) > 1.566)# temp addition for quick test
         )
         
         # some temporary testing code start -----------------------------------------
@@ -531,18 +534,18 @@ class EventProcessor(processor.ProcessorABC):
         # better original end ---------------------------------------------------------------
 
         # test start ----------------------------------------------------------------
-        # # NOTE: if you want to keep this method, (which I don't btw since the original
-        # # code above is conceptually more correct at this moment), you should optimize
-        # # this code, bc this was just something I put together for quick testing
-        # muons_padded = ak.pad_none(muons, target=2)
-        # sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
-        # muons_sorted = (muons_padded[sorted_args])
-        # mu1 = muons_sorted[:,0]
-        # pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
-        # pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
+        # NOTE: if you want to keep this method, (which I don't btw since the original
+        # code above is conceptually more correct at this moment), you should optimize
+        # this code, bc this was just something I put together for quick testing
+        muons_padded = ak.pad_none(muons, target=2)
+        sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
+        muons_sorted = (muons_padded[sorted_args])
+        mu1 = muons_sorted[:,0]
+        pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
+        pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
 
 
-        # event_filter = event_filter & pass_leading_pt
+        event_filter = event_filter & pass_leading_pt
         # test end -----------------------------------------------------------------------
 
         
