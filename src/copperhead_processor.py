@@ -33,7 +33,6 @@ def getRapidity(obj):
     rap = 0.5 * np.log((e + pz) / (e - pz))
     return rap
 
-
 def _mass2_kernel(t, x, y, z):
     return t * t - x * x - y * y - z * z
 
