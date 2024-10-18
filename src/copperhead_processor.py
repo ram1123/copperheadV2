@@ -352,13 +352,11 @@ class EventProcessor(processor.ProcessorABC):
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
 
         
-        # original muon selection ------------------------------------------------
+
         muon_selection = (
-            (events.Muon.pt_raw > self.config["muon_pt_cut"])
+            (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
             # (events.Muon.pt > self.config["muon_pt_cut"]) # testing
             & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
-            & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
-            # & events.Muon[muon_id]
             & events.Muon[self.config["muon_id"]]
         )
         
@@ -371,11 +369,20 @@ class EventProcessor(processor.ProcessorABC):
 
         
        
-        # original muon selection end ------------------------------------------------
 
 
-        # muons = events.Muon[muon_selection]
-        # events["Muon"] = muons
+
+        # calculate FSR recovery, but don't apply it until trigger matching is done
+        # but apply muon iso overwrite, so base muon selection could be done
+        do_fsr = self.config["do_fsr"]
+        if do_fsr:
+            print(f"doing fsr!")
+            # applied_fsr = fsr_recovery(events)
+            applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
+            events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
+
+        # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
+        muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]) 
         
         # -------------------------------------------------------- 
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
@@ -420,22 +427,16 @@ class EventProcessor(processor.ProcessorABC):
             trigger_match = (mu1_match >0) | (mu2_match > 0)
             event_filter = event_filter & trigger_match
 # --------------------------------------------------------        
-        # FSR recovery
-        do_fsr = self.config["do_fsr"]
-        # do_fsr = False
+
+        # apply FSR correction, since trigger match is calculated
         if do_fsr:
-            print(f"doing fsr!")
-            # applied_fsr = fsr_recovery(events)
-            applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
             events["Muon", "pt"] = events.Muon.pt_fsr
             events["Muon", "eta"] = events.Muon.eta_fsr
             events["Muon", "phi"] = events.Muon.phi_fsr
-            events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
         else:
             # if no fsr, just copy 'pt' to 'pt_fsr'
             applied_fsr = ak.zeros_like(events.Muon.pt, dtype="bool") # boolean array of Falses
             events["Muon", "pt_fsr"] = events.Muon.pt
-        
        
         #-----------------------------------------------------------------
         
@@ -540,19 +541,19 @@ class EventProcessor(processor.ProcessorABC):
         # better original end ---------------------------------------------------------------
 
         # test start ----------------------------------------------------------------
-        # NOTE: if you want to keep this method, (which I don't btw since the original
-        # code above is conceptually more correct at this moment), you should optimize
-        # this code, bc this was just something I put together for quick testing
+        # # NOTE: if you want to keep this method, (which I don't btw since the original
+        # # code above is conceptually more correct at this moment), you should optimize
+        # # this code, bc this was just something I put together for quick testing
 
-        muons_padded = ak.pad_none(muons, target=2)
-        sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
-        muons_sorted = (muons_padded[sorted_args])
-        mu1 = muons_sorted[:,0]
-        pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
-        pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
+        # muons_padded = ak.pad_none(muons, target=2)
+        # sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
+        # muons_sorted = (muons_padded[sorted_args])
+        # mu1 = muons_sorted[:,0]
+        # pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
+        # pass_leading_pt = ak.fill_none(pass_leading_pt, value=False) 
 
 
-        event_filter = event_filter & pass_leading_pt
+        # event_filter = event_filter & pass_leading_pt
         # test end -----------------------------------------------------------------------
 
         
