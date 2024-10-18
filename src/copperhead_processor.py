@@ -181,7 +181,7 @@ class EventProcessor(processor.ProcessorABC):
         self.test_mode = test_mode
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : False, # False
+            "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
@@ -707,7 +707,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = False # True       
+        do_jec = True # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1091,6 +1091,7 @@ class EventProcessor(processor.ProcessorABC):
             label = f"res_calib_MC_{yearUL}"
         else:
             label = f"res_calib_Data_{yearUL}"
+        print(f"yearUL: {yearUL}")
         calibration =  self.evaluator[label]( # this is a coffea.dense_lookup instance
             mu1.pt, 
             abs(mu1.eta), 
