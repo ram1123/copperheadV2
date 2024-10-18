@@ -276,48 +276,7 @@ class EventProcessor(processor.ProcessorABC):
         # LHE cut original end -----------------------------------------------------------------------------
         
         
-# --------------------------------------------------------        
-        if self.config["do_trigger_match"]:
-            """
-            Apply trigger matching. We take the two leading pT reco muons and try to have at least one of the muons
-            to be matched with the trigger object that fired our HLT. If none of the muons did it, then we reject the 
-            event. This operation is computationally expensive, so perhaps worth considering not implementing it if 
-            it has neglible impact
-            reference: https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv9/2018UL/doc_TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8_RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1.html
-            
-            TODO: The impact this operation has onto the statistics is supposedly very low, but I have to check that
-            """
-            isoMu_filterbit = 2
-            mu_id = 13
-            # pt_threshold = 24 
-            # if "2017" in year: # line 371 of AN-19-124
-            #     pt_threshold = 29
-            # else: # for 2016, 2018 dunno about Run3
-            #     pt_threshold = 26
-            pt_threshold = self.config["muon_leading_pt"] # line 371 of AN-19-124. "muon_leading_pt" is deceptive name, but that's where we saved the threshold
-
-            dr_threshold = 0.1 # for matching gen muons to reco muons
-            IsoMu24_muons = (events.TrigObj.id == mu_id) &  \
-                        ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
-                    (events.TrigObj.pt > pt_threshold)
-            #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
-            padded_muons = ak.pad_none(events.Muon, 2) # pad in case we have only one muon or zero in an event
-            # padded_muons = ak.pad_none(events.Muon, 4)
-            # print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
-            mu1 = padded_muons[:,0]
-            mu2 = padded_muons[:,1]
-            mu1_match = (mu1.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
-                (mu1.pt > pt_threshold)
-            mu1_match = ak.sum(mu1_match, axis=1)
-            mu1_match = ak.fill_none(mu1_match, value=False)
-            mu2_match = (mu2.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
-                (mu2.pt > pt_threshold)
-            mu2_match =  ak.sum(mu2_match, axis=1)
-            mu2_match = ak.fill_none(mu2_match, value=False)
-
-            trigger_match = (mu1_match >0) | (mu2_match > 0)
-            event_filter = event_filter & trigger_match
-# --------------------------------------------------------            
+    
 
             
             
@@ -386,6 +345,50 @@ class EventProcessor(processor.ProcessorABC):
             print("doing rochester!")
             apply_roccor(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
+
+        # -------------------------------------------------------- 
+        # apply tirgger match after Rochester, but b4 FSR recovery as implied in line 373 of AN-19-124
+        if self.config["do_trigger_match"]:
+            """
+            Apply trigger matching. We take the two leading pT reco muons and try to have at least one of the muons
+            to be matched with the trigger object that fired our HLT. If none of the muons did it, then we reject the 
+            event. This operation is computationally expensive, so perhaps worth considering not implementing it if 
+            it has neglible impact
+            reference: https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv9/2018UL/doc_TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8_RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1.html
+            
+            TODO: The impact this operation has onto the statistics is supposedly very low, but I have to check that
+            """
+            isoMu_filterbit = 2
+            mu_id = 13
+            # pt_threshold = 24 
+            # if "2017" in year: # line 371 of AN-19-124
+            #     pt_threshold = 29
+            # else: # for 2016, 2018 dunno about Run3
+            #     pt_threshold = 26
+            pt_threshold = self.config["muon_leading_pt"] # line 371 of AN-19-124. "muon_leading_pt" is deceptive name, but that's where we saved the threshold
+
+            dr_threshold = 0.1 # for matching gen muons to reco muons
+            IsoMu24_muons = (events.TrigObj.id == mu_id) &  \
+                        ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
+                    (events.TrigObj.pt > pt_threshold)
+            #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
+            padded_muons = ak.pad_none(events.Muon, 2) # pad in case we have only one muon or zero in an event
+            # padded_muons = ak.pad_none(events.Muon, 4)
+            # print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
+            mu1 = padded_muons[:,0]
+            mu2 = padded_muons[:,1]
+            mu1_match = (mu1.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+                (mu1.pt > pt_threshold)
+            mu1_match = ak.sum(mu1_match, axis=1)
+            mu1_match = ak.fill_none(mu1_match, value=False)
+            mu2_match = (mu2.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+                (mu2.pt > pt_threshold)
+            mu2_match =  ak.sum(mu2_match, axis=1)
+            mu2_match = ak.fill_none(mu2_match, value=False)
+
+            trigger_match = (mu1_match >0) | (mu2_match > 0)
+            event_filter = event_filter & trigger_match
+# --------------------------------------------------------        
         # FSR recovery
         do_fsr = self.config["do_fsr"]
         # do_fsr = False
