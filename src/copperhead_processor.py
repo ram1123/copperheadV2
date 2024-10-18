@@ -328,7 +328,8 @@ class EventProcessor(processor.ProcessorABC):
                             onTheSpot=False, # use locally saved true PU dist
                             Run = run_campaign
                     )
-       
+
+                
         # # Save raw variables before computing any corrections
         # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
         # attempt at fixing fsr issue start -------------------------------------------------------------------
@@ -337,7 +338,29 @@ class EventProcessor(processor.ProcessorABC):
         events["Muon", "phi_raw"] = ak.ones_like(events.Muon.phi) * events.Muon.phi
         events["Muon", "pfRelIso04_all_raw"] = ak.ones_like(events.Muon.pfRelIso04_all) * events.Muon.pfRelIso04_all
         # attempt at fixing fsr issue end ---------------------------------------------------------------
-    
+
+        # --------------------------------------------------------#
+        # Select muons that pass pT, eta, isolation cuts, 
+        # muon ID and quality flags
+        # Select events with 2 good muons, no electrons,
+        # passing quality cuts and at least one good PV
+        # --------------------------------------------------------#
+
+        # Apply event quality flags MET filter
+        evnt_qual_flg_selection = ak.ones_like(event_filter)
+        for evt_qual_flg in self.config["event_flags"]:
+            evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
+
+        
+        # original muon selection ------------------------------------------------
+        muon_selection = (
+            (events.Muon.pt_raw > self.config["muon_pt_cut"])
+            # (events.Muon.pt > self.config["muon_pt_cut"]) # testing
+            & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+            & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
+            # & events.Muon[muon_id]
+            & events.Muon[self.config["muon_id"]]
+        )
         
         # # --------------------------------------------------------
         # # # Apply Rochester correction
@@ -346,8 +369,16 @@ class EventProcessor(processor.ProcessorABC):
             apply_roccor(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
 
+        
+       
+        # original muon selection end ------------------------------------------------
+
+
+        # muons = events.Muon[muon_selection]
+        # events["Muon"] = muons
+        
         # -------------------------------------------------------- 
-        # apply tirgger match after Rochester, but b4 FSR recovery as implied in line 373 of AN-19-124
+        # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
         if self.config["do_trigger_match"]:
             """
             Apply trigger matching. We take the two leading pT reco muons and try to have at least one of the muons
@@ -372,7 +403,7 @@ class EventProcessor(processor.ProcessorABC):
                         ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
                     (events.TrigObj.pt > pt_threshold)
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
-            padded_muons = ak.pad_none(events.Muon, 2) # pad in case we have only one muon or zero in an event
+            padded_muons = ak.pad_none(events.Muon[muon_selection], 2) # pad in case we have only one muon or zero in an event
             # padded_muons = ak.pad_none(events.Muon, 4)
             # print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
             mu1 = padded_muons[:,0]
@@ -428,33 +459,6 @@ class EventProcessor(processor.ProcessorABC):
             else: 
                 print(f"doing neither beam constraint nor geofit!")
                 pass
-
-
-        # --------------------------------------------------------#
-        # Select muons that pass pT, eta, isolation cuts,
-        # muon ID and quality flags
-        # Select events with 2 good muons, no electrons,
-        # passing quality cuts and at least one good PV
-        # --------------------------------------------------------#
-
-        # Apply event quality flags
-        evnt_qual_flg_selection = ak.ones_like(event_filter)
-        for evt_qual_flg in self.config["event_flags"]:
-            evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
-
-        
-        # muon_id = "mediumId" if "medium" in self.config["muon_id"] else "looseId"
-        # print(f"copperhead2 EventProcessor muon_id: {muon_id}")
-        # original muon selection ------------------------------------------------
-        muon_selection = (
-            (events.Muon.pt_raw > self.config["muon_pt_cut"])
-            # (events.Muon.pt > self.config["muon_pt_cut"]) # testing
-            & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
-            & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
-            # & events.Muon[muon_id]
-            & events.Muon[self.config["muon_id"]]
-        )
-        # original muon selection end ------------------------------------------------
 
 
         muons = events.Muon[muon_selection]
@@ -539,6 +543,7 @@ class EventProcessor(processor.ProcessorABC):
         # NOTE: if you want to keep this method, (which I don't btw since the original
         # code above is conceptually more correct at this moment), you should optimize
         # this code, bc this was just something I put together for quick testing
+
         muons_padded = ak.pad_none(muons, target=2)
         sorted_args = ak.argsort(muons_padded.pt, ascending=False) # leadinig pt is ordered by pt
         muons_sorted = (muons_padded[sorted_args])
