@@ -12,6 +12,7 @@ from src.lib.fit_functions import MakeFEWZxBernDof3
 import argparse
 import os
 
+
 def normalizeFlatHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
     """
     Takes rootHistogram and returns a new copy with histogram values normalized to sum to one
@@ -89,8 +90,10 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, rooH
             # model.Print("v")
             model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
             legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+        frame.SetMaximum(0.0042)
         frame.Draw()
-        legend.Draw()        
+        legend.Draw()       
+        canvas.SetTicks(2, 2)
         canvas.Update()
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
@@ -180,7 +183,7 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by
 
 
 
-def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, save_path: str):
+def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list: List, save_path: str):
     """
     takes the dictionary of all Signal RooAbsPdf models grouped by same sample, and plot them
     in the frame() of mass and saves the plots on a given directory path
@@ -201,14 +204,18 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, save_path: s
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         frame = mass.frame()
+        frame.SetMaximum(0.017)
+        frame.SetMinimum(-0.002)
         frame.SetTitle(f"Normalized Shape Plot of {model_type} PDFs")
         frame.SetXTitle(f"Dimuon Mass (GeV)")
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        normalized_hist = normalizeRooHist(mass, roo_histData_subCat1)
-        normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0) )
+        
         # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
         for ix in range(len(model_list)):
+            sig_hist = sigHist_list[ix]
+            normalized_hist = normalizeRooHist(mass, sig_hist)
+            normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True  )
             model = model_list[ix]
             name = model.GetName()
             color = color_list[ix]
@@ -258,6 +265,8 @@ if __name__ == "__main__":
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
     if args.year=="all":
         load_path = f"{args.load_path}/{category}/*/processed_events_data.parquet"
+    elif args.year=="2016only":
+        load_path = f"{args.load_path}/{category}/2016*/processed_events_data.parquet"
     else:
         load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
     print(f"load_path: {load_path}")
@@ -307,7 +316,10 @@ if __name__ == "__main__":
     name = f"BWZ_Redux_c_coeff"
     c_coeff = rt.RooRealVar(name,name, 2.14876669663328,0,5.0)
     # # AN end --------------------------------------------------
-    
+    # a_coeff.setConstant(True)
+    # b_coeff.setConstant(True)
+    # c_coeff.setConstant(True)
+
     # subCat 0
     name = "subCat0_BWZ_Redux"
     coreBWZRedux_SubCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
@@ -324,9 +336,9 @@ if __name__ == "__main__":
     a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.03756867559, -0.06, 0.06)
     a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.001975507853, -0.06, 0.06)
     a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", -0.001975507853, -0.06, 0.06)
-    a0_subCat0.setConstant(True)
-    a1_subCat0.setConstant(True)
-    a3_subCat0.setConstant(True)
+    # a0_subCat0.setConstant(True)
+    # a1_subCat0.setConstant(True)
+    # a3_subCat0.setConstant(True)
     
 
     name = "subCat0_SMF"
@@ -355,12 +367,12 @@ if __name__ == "__main__":
     # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
     # a3_subCat1 = rt.RooRealVar("a3_subCat1", "a3_subCat1", 0.5, -0.5, 0.5)
     # values from AN workspace
-    # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.01949329222, -1, 1)
-    # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", -0.001657932368, -0.5, 0.5)
-    a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.01949329222, -0.06, 0.06)
+    # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.01949329222, -0.06, 0.06)
+    # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", -0.001657932368, -0.06, 0.06)
+    a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.01949329222, -0.1, 0.1)
     a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", -0.001657932368, -0.06, 0.06)
-    a0_subCat1.setConstant(True)
-    a1_subCat1.setConstant(True)
+    # a0_subCat1.setConstant(True)
+    # a1_subCat1.setConstant(True)
     name =  "subCat1_SMF"
     subCat1_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat1, 
@@ -380,12 +392,12 @@ if __name__ == "__main__":
     # Construct the background pdf
     # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
     # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
-    # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.04460447882, -0.001, 0.001)
-    # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", -3.46E-05, -0.001, 0.001)
-    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.04460447882, -0.06, 0.06)
-    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", -3.46E-05, -0.06, 0.06)
-    a0_subCat2.setConstant(True)
-    a1_subCat2.setConstant(True)
+    # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.04460447882, -0.001, 0.06)
+    # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", -3.46E-05, -0.001, 0.06)
+    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.04460447882, -0.1, 0.1)
+    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", -3.46E-05, -0.1, 0.1)
+    # a0_subCat2.setConstant(True)
+    # a1_subCat2.setConstant(True)
     name = "subCat2_SMF"
     subCat2_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat2, 
@@ -404,7 +416,7 @@ if __name__ == "__main__":
     # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
     # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, 0.05, 0.5)
     # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", -8.79E-06, -0.5, 0.5)
-    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, -0.06, 0.1)
+    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, -0.06, 0.2)
     a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", -8.79E-06, -0.06, 0.06)
     # a0_subCat3.setConstant(True)
     # a1_subCat3.setConstant(True)
@@ -825,11 +837,11 @@ if __name__ == "__main__":
     sample.defineType("subCat2_sumExp")
     sample.defineType("subCat3_sumExp")
     sample.defineType("subCat4_sumExp")
-    sample.defineType("subCat0_FEWZxBern")
-    sample.defineType("subCat1_FEWZxBern")
-    sample.defineType("subCat2_FEWZxBern")
-    sample.defineType("subCat3_FEWZxBern")
-    sample.defineType("subCat4_FEWZxBern")
+    # sample.defineType("subCat0_FEWZxBern")
+    # sample.defineType("subCat1_FEWZxBern")
+    # sample.defineType("subCat2_FEWZxBern")
+    # sample.defineType("subCat3_FEWZxBern")
+    # sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -1013,6 +1025,8 @@ if __name__ == "__main__":
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
     if args.year=="all":
         load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh.parquet"
+    elif args.year=="2016only":
+        load_path = f"{args.load_path}/{category}/2016*/processed_events_sigMC_ggh.parquet"
     else:
         load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_ggh.parquet" # Fig 6.15 was only with ggH process, though with all 2016, 2017 and 2018
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC*.parquet"
@@ -1026,8 +1040,12 @@ if __name__ == "__main__":
     # ---------------------------------------------------
     
     # subCat 0
-    MH_subCat0 = rt.RooRealVar("MH" , "MH", 125, 115,135)
-    MH_subCat0.setConstant(True) # this shouldn't change, I think
+    # original start ------------------------------------------------------
+    # MH_subCat0 = rt.RooRealVar("MH" , "MH", 125, 115,135)
+    # MH_subCat0.setConstant(True) # this shouldn't change, I think
+    # original end ------------------------------------------------------
+    MH_subCat0 = rt.RooRealVar("MH" , "MH", 124.805, 120,130) # matching AN
+    
     # sigma_subCat0 = rt.RooRealVar("sigma_subCat0" , "sigma_subCat0", 2, .1, 4.0)
     # alpha1_subCat0 = rt.RooRealVar("alpha1_subCat0" , "alpha1_subCat0", 2, 0.01, 65)
     # n1_subCat0 = rt.RooRealVar("n1_subCat0" , "n1_subCat0", 10, 0.01, 100)
@@ -1062,8 +1080,12 @@ if __name__ == "__main__":
     signal_subCat0 = rt.RooCrystalBall(name,name,mass, ggH_cat0_ggh_fpeak, ggH_cat0_ggh_fsigma, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
 
     # subCat 1
-    MH_subCat1 = rt.RooRealVar("MH" , "MH", 125, 115,135)
-    MH_subCat1.setConstant(True) # this shouldn't change, I think
+    # original start ------------------------------------------------------
+    # MH_subCat1 = rt.RooRealVar("MH" , "MH", 125, 115,135)
+    # MH_subCat1.setConstant(True) # this shouldn't change, I think
+    # original end ------------------------------------------------------
+    MH_subCat1 = rt.RooRealVar("MH" , "MH", 124.853, 120,130) # matching AN
+    
     # sigma_subCat1 = rt.RooRealVar("sigma_subCat1" , "sigma_subCat1", 2, .1, 4.0)
     # alpha1_subCat1 = rt.RooRealVar("alpha1_subCat1" , "alpha1_subCat1", 2, 0.01, 65)
     # n1_subCat1 = rt.RooRealVar("n1_subCat1" , "n1_subCat1", 10, 0.01, 100)
@@ -1097,8 +1119,12 @@ if __name__ == "__main__":
     signal_subCat1 = rt.RooCrystalBall(name,name,mass, ggH_cat1_ggh_fpeak, ggH_cat1_ggh_fsigma, alpha1_subCat1, n1_subCat1, alpha2_subCat1, n2_subCat1)
 
     # subCat 2
-    MH_subCat2 = rt.RooRealVar("MH" , "MH", 125, 115,135)
-    MH_subCat2.setConstant(True) # this shouldn't change, I think
+    # original start ------------------------------------------------------
+    # MH_subCat2 = rt.RooRealVar("MH" , "MH", 125, 115,135)
+    # MH_subCat2.setConstant(True) # this shouldn't change, I think
+    # original end ------------------------------------------------------
+    MH_subCat2 = rt.RooRealVar("MH" , "MH", 124.878, 120,130) # matching AN
+    
     # sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 2, .1, 4.0)
     # alpha1_subCat2 = rt.RooRealVar("alpha1_subCat2" , "alpha1_subCat2", 2, 0.01, 65)
     # n1_subCat2 = rt.RooRealVar("n1_subCat2" , "n1_subCat2", 10, 0.01, 100)
@@ -1132,8 +1158,12 @@ if __name__ == "__main__":
     signal_subCat2 = rt.RooCrystalBall(name,name,mass, ggH_cat2_ggh_fpeak, ggH_cat2_ggh_fsigma, alpha1_subCat2, n1_subCat2, alpha2_subCat2, n2_subCat2)
 
     # subCat 3
-    MH_subCat3 = rt.RooRealVar("MH" , "MH", 125, 115,135)
-    MH_subCat3.setConstant(True) # this shouldn't change, I think
+    # original start ------------------------------------------------------
+    # MH_subCat3 = rt.RooRealVar("MH" , "MH", 125, 115,135)
+    # MH_subCat3.setConstant(True) # this shouldn't change, I think
+    # original end ------------------------------------------------------
+    MH_subCat3 = rt.RooRealVar("MH" , "MH", 124.894, 120,130) # matching AN
+    
     # sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 2, .1, 4.0)
     # alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 2, 0.01, 65)
     # n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 10, 0.01, 100)
@@ -1167,8 +1197,12 @@ if __name__ == "__main__":
     signal_subCat3 = rt.RooCrystalBall(name,name,mass, ggH_cat3_ggh_fpeak, ggH_cat3_ggh_fsigma, alpha1_subCat3, n1_subCat3, alpha2_subCat3, n2_subCat3)
 
     # subCat 4
-    MH_subCat4 = rt.RooRealVar("MH" , "MH", 125, 115,135)
-    MH_subCat4.setConstant(True) # this shouldn't change, I think
+    # original start ------------------------------------------------------
+    # MH_subCat4 = rt.RooRealVar("MH" , "MH", 125, 115,135)
+    # MH_subCat4.setConstant(True) # this shouldn't change, I think
+    # original end ------------------------------------------------------
+    MH_subCat4 = rt.RooRealVar("MH" , "MH", 124.901, 120,130) # matching AN
+    
     # sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 2, .1, 4.0)
     # alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 2, 0.01, 65)
     # n1_subCat4 = rt.RooRealVar("n1_subCat4" , "n1_subCat4", 10, 0.01, 100)
@@ -1227,6 +1261,7 @@ if __name__ == "__main__":
     flat_MC_SF = 1.00
     # flat_MC_SF = 0.92 # temporary flat SF to match my Data/MC agreement to that of AN's
     norm_val = np.sum(wgt_subCat0_SigMC)* flat_MC_SF 
+    # norm_val = 254.528077 # quick test
     sig_norm_subCat0 = rt.RooRealVar(signal_subCat0.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat0 norm_val: {norm_val}")
     sig_norm_subCat0.setConstant(True)
@@ -1251,6 +1286,7 @@ if __name__ == "__main__":
     # define normalization value from signal MC event weights 
     
     norm_val = np.sum(wgt_subCat1_SigMC)* flat_MC_SF
+    # norm_val = 295.214 # quick test
     sig_norm_subCat1 = rt.RooRealVar(signal_subCat1.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat1 norm_val: {norm_val}")
     sig_norm_subCat1.setConstant(True)
@@ -1275,6 +1311,7 @@ if __name__ == "__main__":
     # define normalization value from signal MC event weights 
     
     norm_val = np.sum(wgt_subCat2_SigMC) * flat_MC_SF
+    # norm_val = 124.0364 # quick test
     sig_norm_subCat2 = rt.RooRealVar(signal_subCat2.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat2 norm_val: {norm_val}")
     sig_norm_subCat2.setConstant(True)
@@ -1299,6 +1336,7 @@ if __name__ == "__main__":
     # define normalization value from signal MC event weights 
     
     norm_val = np.sum(wgt_subCat3_SigMC)* flat_MC_SF
+    # norm_val = 116.4918 # quick test
     sig_norm_subCat3 = rt.RooRealVar(signal_subCat3.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat3 norm_val: {norm_val}")
     sig_norm_subCat3.setConstant(True)
@@ -1323,6 +1361,7 @@ if __name__ == "__main__":
     # define normalization value from signal MC event weights 
     
     norm_val = np.sum(wgt_subCat4_SigMC)* flat_MC_SF
+    # norm_val = 45.423052 # quick test
     sig_norm_subCat4 = rt.RooRealVar(signal_subCat4.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat4 norm_val: {norm_val}")
     sig_norm_subCat4.setConstant(True)
@@ -1706,8 +1745,14 @@ if __name__ == "__main__":
             signal_subCat4,
         ]
     }
-
-    plotSigBySample(mass, sig_dict_by_sample, plot_save_path)
+    sigHist_list = [ # for signal function normalization
+        roo_histData_subCat0_signal,
+        roo_histData_subCat1_signal,
+        roo_histData_subCat2_signal,
+        roo_histData_subCat3_signal,
+        roo_histData_subCat4_signal
+    ]
+    plotSigBySample(mass, sig_dict_by_sample, sigHist_list, plot_save_path)
         
 
     # -------------------------------------------------------------------------
