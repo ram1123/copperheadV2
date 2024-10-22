@@ -75,12 +75,9 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     events: ak.Record of stage1 output
     """
     # load and obtain MVA outputs
-    events["dimuon_dEta"] = np.abs(events.mu1_pt - events.mu2_pt)
-    events["dimuon_pt_log"] = np.log(events.dimuon_pt)
-    events["jj_mass_log"] = np.log(events.jj_mass)
-    events["ll_zstar_log"] = np.log(events.ll_zstar)
-    # events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
-    # events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
+    # events["dimuon_dEta"] = np.abs(events.mu1_pt - events.mu2_pt)
+    # events["dimuon_pt_log"] = np.log(events.dimuon_pt)
+    # events["jj_mass_log"] = np.log(events.jj_mass)
 
     # recalculate BDT variables that you're not certain is up to date from stage 1
     min_dEta_filter  = ak.fill_none((events.mmj1_dEta < events.mmj2_dEta), value=True)
@@ -165,6 +162,7 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     }
     
     model_name = "WgtON_original_AN_BDT_Sept27"
+    # model_name = "WgtON_original_AN_BDT_noDimuRap_Sept27"
 
     training_features = train_feat_dict[model_name]
     print(f"len(training_features): {len(training_features)}")
@@ -304,7 +302,6 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     events["dimuon_dEta"] = np.abs(events.mu1_pt - events.mu2_pt)
     events["dimuon_pt_log"] = np.log(events.dimuon_pt)
     events["jj_mass_log"] = np.log(events.jj_mass)
-    events["ll_zstar_log"] = np.log(events.ll_zstar)
     events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
     events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
     events["dimuon_ebe_mass_res_rel"] = events.dimuon_ebe_mass_res / events.dimuon_mass
@@ -418,6 +415,7 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     # filter in only the variables you need to do stage3
     fields2save = [
         "dimuon_mass",
+        "dimuon_pt",
         "DNN_score",
         "DNN_score_sigmoid",
         "wgt_nominal_total",
