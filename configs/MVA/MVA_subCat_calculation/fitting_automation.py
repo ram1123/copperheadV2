@@ -184,6 +184,7 @@ def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str):
     sig_event_l = []
     for era, load_path in load_paths.items():
         score_edges = score_edge_dict[era]
+        nSubCats = len(score_edges)-1
         print(f"separateNfit score_edges:{score_edges}")
         
         print(f"separateNfit load_path: {load_path}")
@@ -262,7 +263,8 @@ def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str):
     # ---------------------------------------------------------------------------------------------
     # start background channel fitting
     # ---------------------------------------------------------------------------------------------
-    subCats = [0,1]
+    # subCats = [0,1]
+    subCats = range((nSubCats))
     bkg_fit_pdfs = []
     bkg_roohists = []
     # initialize lists so that python garbage collector doesn't delete them
@@ -532,9 +534,13 @@ if __name__ == "__main__":
     BDT_thresholds = {}
     # sig_eff = 0.45
     # sig_effs = np.arange(0.99, 0.0, step=-0.01)
-    sig_effs = list(np.arange(0.99, 0.0, step=-0.1))
+    # sig_effs = list(np.arange(0.99, 0.0, step=-0.1)) # temp value
+    sig_effs = list(np.arange(0.99, 0.0, step=-0.05)) 
+    print(f"sig_effs: {sig_effs}")
     sig_eff_bin_edges = [] # this will be added with sig_eff values that gives max exp significance for each iteration
-    for iter_idx in range(3):
+    max_iters = 10
+    current_max_signifiance = 0 # this value will be compared to see if we want to end the iteration prematurely
+    for iter_idx in range(max_iters):
         print(f"starting iteration {iter_idx}!")
         exp_signficances = {}
         for sig_eff in sig_effs:
@@ -624,3 +630,11 @@ if __name__ == "__main__":
         print(f"sig_effs b4 removal: {sig_effs}")        
         sig_effs.remove(sig_eff)
         print(f"sig_effs after removal: {sig_effs}")     
+        significance_discrepancy = (max_significance-current_max_signifiance)/max_significance # intentionally have abs() in case the new significance is not improvement
+        print(f"significance_discrepancy: {significance_discrepancy}") 
+        if significance_discrepancy > 0.01:
+            current_max_signifiance = max_significance
+        else: # end the loop
+            print("new significance less than 1 percent improvement")
+            break
+            
