@@ -10,6 +10,7 @@ import glob
 from typing import Tuple, List, Dict
 import ROOT as rt
 import os
+from pathlib import Path
 
 import pandas as pd
 import subprocess
@@ -559,10 +560,26 @@ if __name__ == "__main__":
             plot_save_path = f"quick_plots/iter{iter_idx}/{sig_eff_str}"
             print(f"separateNfit plot_save_path: {plot_save_path}")
             separateNfit(load_paths, BDT_thresholds, plot_save_path)
+
+            # -------------------------------------------------------------------------------
+            # Fitting and saving to workspace is done, now run combine for significance calculation
+            # -------------------------------------------------------------------------------
             
+            # generate the datacards
+            datacard_template = Path('datacards/template.txt').read_text()
+            for ix in range(iter_idx+2): # we need two datacards if iter_idx == 0
+                datacard_subCat = datacard_template.replace("SubCategoryIdx", str(ix))
+                with open(f"datacard_cat{ix}_ggh.txt", "w") as new_datacard:
+                    new_datacard.write(datacard_subCat)
+                
             # combine the datacards
+            combineCardArg = ["combineCards.py"]
+            for ix in range(iter_idx+2): # we need two datacards if iter_idx == 0
+                combineCardArg.append(f"datacard_cat{ix}_ggh.txt")
+            print(f"combineCardArg: {combineCardArg}")
             with open("datacard_comb_sig_all_ggh_test.txt", "w") as text_file:
-                 subprocess.call(["combineCards.py", "datacard_cat0_ggh.txt", "datacard_cat1_ggh.txt"], stdout=text_file)
+                 # subprocess.call(["combineCards.py", "datacards/datacard_cat0_ggh.txt", "datacards/datacard_cat1_ggh.txt"], stdout=text_file)
+                subprocess.call(combineCardArg, stdout=text_file)
             
             # text2workspace
             subprocess.run(["text2workspace.py", "-m", "125", "datacard_comb_sig_all_ggh_test.txt"])
