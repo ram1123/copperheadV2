@@ -161,12 +161,13 @@ def calculateSubCat(processed_events, score_edges):
     print(f"ak.min(BDT_score) :{ak.min(BDT_score)}")
     subCat_idx = -1*ak.ones_like(BDT_score)
     for i in range(len(score_edges) - 1):
+        print(f"calculateSubCat i: {i}")
         lo = score_edges[i]
         hi = score_edges[i + 1]
         cut = (BDT_score > lo) & (BDT_score <= hi)
         # cut = (BDT_score <= lo) & (BDT_score > hi)
         subCat_idx = ak.where(cut, i, subCat_idx)
-    # print(f"subCat_idx: {subCat_idx}")
+    print(f"subCat_idx: {subCat_idx}")
     # test if any remain has -1 value
     print(f"ak.sum(subCat_idx==-1): {ak.sum(subCat_idx==-1)}")
     print(f"ak.min(subCat_idx): {ak.min(subCat_idx)}")
@@ -531,7 +532,7 @@ if __name__ == "__main__":
     BDT_thresholds = {}
     # sig_eff = 0.45
     # sig_effs = np.arange(0.99, 0.0, step=-0.01)
-    sig_effs = list(np.arange(0.99, 0.97, step=-0.01))
+    sig_effs = list(np.arange(0.99, 0.0, step=-0.1))
     sig_eff_bin_edges = [] # this will be added with sig_eff values that gives max exp significance for each iteration
     for iter_idx in range(3):
         print(f"starting iteration {iter_idx}!")
