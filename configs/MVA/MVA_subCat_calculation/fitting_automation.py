@@ -11,7 +11,7 @@ from typing import Tuple, List, Dict
 import ROOT as rt
 import os
 from pathlib import Path
-
+import copy
 import pandas as pd
 import subprocess
 import re
@@ -176,10 +176,11 @@ def calculateSubCat(processed_events, score_edges):
     processed_events["subCategory_idx"] = subCat_idx
     return processed_events
 
-def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str):
+def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str, verbose_val = -1):
     """
     keys of both load_paths and score_edge_dict refer to the era values (ie 2016preVFP, 2016postVFP, 2017 and 2018)
     and keys on load_paths and score_edge_dict are intended to be identical
+    verbose_val is the corresponding PrintLevel for RooAbsPdf.fitTo function
     """
     bkg_event_l = []
     sig_event_l = []
@@ -298,8 +299,8 @@ def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str):
    
         # apply bkg fit
         # subCat 0
-        _ = BWZRedux_SubCat.fitTo(data_subCat_BWZRedux,  EvalBackend=device, Save=True, )
-        fit_result = BWZRedux_SubCat.fitTo(data_subCat_BWZRedux,  EvalBackend=device, Save=True, )
+        _ = BWZRedux_SubCat.fitTo(data_subCat_BWZRedux,  EvalBackend=device, Save=True, PrintLevel=verbose_val)
+        fit_result = BWZRedux_SubCat.fitTo(data_subCat_BWZRedux,  EvalBackend=device, Save=True, PrintLevel=verbose_val)
 
         bkg_fit_pdfs.append(BWZRedux_SubCat)
         bkg_roohists.append(data_subCat_BWZRedux)
@@ -377,7 +378,6 @@ def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str):
     ggH_cat_ggh_fsigma_l = []
     ggH_cat_ggh_fpeak_l = []
     for subCat_idx in subCats:
-        # subCat 0
         MH_subCat = rt.RooRealVar("MH" , "MH", 124.805, 120,130) # matching AN
         MH_l.append(MH_subCat)
         
@@ -415,7 +415,6 @@ def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str):
         # Define signal MC samples to fit to
         # ---------------------------------------------------
     
-        # subCat 0
         subCat_filter = (processed_eventsSignalMC[subCatIdx_name] == subCat_idx)
         subCat_mass_arr = ak.to_numpy(
             processed_eventsSignalMC.dimuon_mass[subCat_filter]
@@ -444,9 +443,8 @@ def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str):
         # Fit signal model individually, not simultaneous. Sigma, and left and right tails are different for each category
         # ---------------------------------------------------
     
-        # subCat 0
-        _ = signal_subCat.fitTo(data_subCat_signal,  EvalBackend=device, Save=True, )
-        fit_result = signal_subCat.fitTo(data_subCat_signal,  EvalBackend=device, Save=True, )
+        _ = signal_subCat.fitTo(data_subCat_signal,  EvalBackend=device, Save=True, PrintLevel=verbose_val)
+        fit_result = signal_subCat.fitTo(data_subCat_signal,  EvalBackend=device, Save=True, PrintLevel=verbose_val)
         sig_fit_pdfs.append(signal_subCat)
         sig_roohists.append(data_subCat_signal)
     
@@ -484,7 +482,6 @@ def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str):
         # do signal plotting with fit and data
         # -------------------------------------------------------------------------
     
-        # subCat 0
         
         name = "Canvas"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
@@ -530,31 +527,49 @@ if __name__ == "__main__":
         "2017",
         "2018",
     ]
-    stage2_out_name = "BDT_WgtON_original_AN_BDT_Sept27"
+    # stage2_out_name = "BDT_WgtON_original_AN_BDT_Sept27"
+    stage2_out_name = "BDT_WgtON_original_AN_BDTV2_Oct22"
     load_paths = {}
     BDT_thresholds = {}
     # sig_eff = 0.45
-    # sig_effs = np.arange(0.99, 0.0, step=-0.01)
+    sig_effs = list(np.arange(0.99, 0.0, step=-0.01))
+    # sig_effs = list(np.arange(0.55, 0.45, step=-0.01))
+    sig_effs = [round(sig_eff,2) for sig_eff in sig_effs] # idk why but converting list from numpy breaks a little
+    
     # sig_effs = list(np.arange(0.99, 0.0, step=-0.1)) # temp value
-    sig_effs = list(np.arange(0.99, 0.0, step=-0.05)) 
+    # sig_effs = list(np.arange(0.99, 0.0, step=-0.05)) 
     print(f"sig_effs: {sig_effs}")
     sig_eff_bin_edges = [] # this will be added with sig_eff values that gives max exp significance for each iteration
+    # sig_effs.remove(0.48) # temp manual removal
+    # sig_eff_bin_edges.append(0.48) # temp manual addition
     max_iters = 10
     current_max_signifiance = 0 # this value will be compared to see if we want to end the iteration prematurely
     for iter_idx in range(max_iters):
         print(f"starting iteration {iter_idx}!")
         exp_signficances = {}
         for sig_eff in sig_effs:
+            current_sig_eff_bin_edges = sorted(copy.deepcopy(sig_eff_bin_edges) + [sig_eff])
+            print(f"current_sig_eff_bin_edges: {current_sig_eff_bin_edges}")
+            print(f"sig_eff: {sig_eff}")
+            print(f"sig_eff_bin_edges: {sig_eff_bin_edges}")
             for year in years:
                 load_path = f"/work/users/yun79/stage2_output/{stage2_out_name}/ggh/{year}"
                 load_paths[year] = load_path
                 BDT_df = pd.read_csv(f"BDT_threshold_{year}.csv")
-                bool_filter = np.isclose(BDT_df["sig_eff"], sig_eff)
-                threshold = BDT_df["BDT_threshold"][bool_filter].values[0] # extract the float value
-                print(f"{year} threshold: {threshold}")
-                BDT_thresholds[year] = [0, threshold, 1.0] + sig_eff_bin_edges
-                BDT_thresholds[year] = sorted(BDT_thresholds[year])
-                print(f"BDT_thresholds[year]: {BDT_thresholds[year]}")
+                BDT_score_edges = [0, 1.0] # initialize the subCategory score edges. it will be sorted later
+                for target_sig_eff in current_sig_eff_bin_edges:
+                    bool_filter = np.isclose(BDT_df["sig_eff"], target_sig_eff)
+                    if np.sum(bool_filter) > 1:
+                        print(f"np.sum(bool_filter): {np.sum(bool_filter)}")
+                        print("ERROR more than one value matching the target signal efficiency!")
+                        raise ValueError
+                    threshold = BDT_df["BDT_threshold"][bool_filter].values[0] # extract the float value
+                    print(f"{year} threshold: {threshold}")
+                    # BDT_thresholds[year] = [0, threshold, 1.0] + sig_eff_bin_edges
+                    # BDT_thresholds[year] = sorted(BDT_thresholds[year])
+                    BDT_score_edges.append(threshold)
+                BDT_thresholds[year] = sorted(BDT_score_edges) # sort and add it to the BDT_thresholds
+                print(f"BDT_thresholds[{year}]: {BDT_thresholds[year]}")
     
             sig_eff_str = str(round(sig_eff,2)).replace(".", "_")
             plot_save_path = f"quick_plots/iter{iter_idx}/{sig_eff_str}"
@@ -639,19 +654,23 @@ if __name__ == "__main__":
 
         # after the loop, pick the sig_eff with the best expected significance value
         max_significance = np.max(out_df["exp_signifiance"])
-        sig_eff = out_df["sig_eff"][np.argmax(out_df["exp_signifiance"])]
-        sig_eff_bin_edges.append(sig_eff)
+        max_sig_eff = out_df["sig_eff"][np.argmax(out_df["exp_signifiance"])]
+        
         print(f"max_significance: {max_significance}")
-        print(f"sig_eff: {sig_eff}")
+        # print(f"sig_eff: {sig_eff}")
         # remove the sig eff from the search list for the next iteration
-        print(f"sig_effs b4 removal: {sig_effs}")        
-        sig_effs.remove(sig_eff)
+        # print(f"sig_effs b4 removal: {sig_effs}")        
+        
         print(f"sig_effs after removal: {sig_effs}")     
         significance_discrepancy = (max_significance-current_max_signifiance)/max_significance # intentionally have abs() in case the new significance is not improvement
         print(f"significance_discrepancy: {significance_discrepancy}") 
         if significance_discrepancy > 0.01:
             current_max_signifiance = max_significance
+            sig_effs.remove(max_sig_eff)
+            sig_eff_bin_edges.append(max_sig_eff)
+            print(f"iter {iter_idx} final MVA bin edges: {sig_eff_bin_edges}")
         else: # end the loop
+            print(f"iter {iter_idx} final MVA bin edges: {sig_eff_bin_edges}")
             print("new significance less than 1 percent improvement")
             break
             
