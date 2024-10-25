@@ -15,6 +15,44 @@ import time
 import sys, inspect
 import configs.categories.category_cuts as category_cuts
 
+def renameFieldsToV2(events):
+    V2_fields = [
+        "jet1_pt",
+        'jet1_eta', 
+        'jet2_pt', 
+        'mmj1_dEta', 
+        'mmj1_dPhi',  
+        'jj_dEta', 
+        'jj_dPhi', 
+        'jj_mass', 
+        'zeppenfeld', 
+        'mmj_min_dEta', 
+        'mmj_min_dPhi', 
+        'njets',
+        "nBtagLoose",
+        "nBtagMedium",
+        "mmj2_dEta",
+        "mmj2_dPhi",
+        "dimuon_rapidity",
+        "wgt_nominal_total",
+        "zeppenfeld",
+    ]
+    for V2_field in V2_fields:
+        if V2_field == "dimuon_rapidity":
+            V1_field = "dimuon_eta"
+        elif V2_field == "wgt_nominal_total":
+            V1_field = "wgt_nominal"
+        else:
+            V1_field = V2_field+"_nominal"
+        events[V2_field] = events[V1_field]
+
+    # manuall add in region fields
+    # V2_field = "h_peak"
+    # events[V2_field] = events["region"] == "h-peak"
+    # V2_field = "h_sidebands"
+    # events[V2_field] = events["region"] == "h-sidebands"
+    return events
+
 def categoryWrapper(name: str, events) -> ak.Array:
     """
     wrapper function to take a string representation of cuts and applying the python implementation 
@@ -177,15 +215,21 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     # ----------------------------------
    
     # load fields to load
-    fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"] #, "event"
+    fields2load = training_features + [
+        # "h_peak", "h_sidebands", 
+        "nBtagLoose", "nBtagMedium", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"] #, "event"
     # load data to memory using compute()
-    events = ak.zip({
-        field : events[field] for field in fields2load
-    }).compute()
+    # original start -------------------------------
+    # events = ak.zip({
+    #     field : events[field] for field in fields2load
+    # }).compute()
+    # original end -------------------------------
 
     # filter events for ggH category
     # region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
-    region = events.h_peak | events.h_sidebands 
+    # region = events.h_peak | events.h_sidebands 
+    dimuon_mass = events.dimuon_mass
+    region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
     category_str = "ggh"
     cut_names = getCategoryCutNames(category_str)
     gghCat_selection = (
@@ -203,12 +247,16 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
             none_val = 0.0
         events[field] = ak.fill_none(events[field], value=none_val)
     print(f"process4gghCategory year: {year}")
+    if year == "2016": # I didn't train a separate BDT for rereco eras
+        year_param = "2016preVFP"
+    else:
+        year_param = year
     parameters = {
     # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
         # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_final_2018/",
         # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_WgtOff_includeQGL_2018/",
         "models_path" : f"/depot/cms/users/yun79/hmm/trained_MVAs/bdt_{model_name}_{year}/",
-        "year" : year,
+        "year" : year_param,
     }
     print(f"parameters models path: {parameters['models_path']}")
     processed_events = evaluate_bdt(events, "nominal", model_name, training_features, parameters) 
@@ -384,7 +432,13 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
     # do preprocessing
     # ----------------------------------
     training_features = prepare_features(events,training_features, variation=variation, add_year=False)
+    # original start -----------------------------------------------------
     fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "vbf_cut", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
+    # original end -----------------------------------------------------
+
+    # temporary save everything start -----------------------------------------------
+    # fields2load = events.fields# temp overwrite to koeep everything
+    # temporary save everything end -----------------------------------------------
     # load data to memory using compute()
     events = ak.zip({
         field : events[field] for field in fields2load
@@ -412,6 +466,7 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
         
     }
     processed_events = evaluate_dnn(events, "nominal", model_name, training_features, parameters) 
+    # original start -----------------------------------------------------
     # filter in only the variables you need to do stage3
     fields2save = [
         "dimuon_mass",
@@ -423,6 +478,12 @@ def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
         "h_sidebands",
     ]
     fields2save += training_features # this line is for debugging
+    # original end -----------------------------------------------------
+
+    # temporary save everything start -----------------------------------------------
+    # fields2save = fields2load
+    # temporary save everything end -----------------------------------------------
+    
     processed_events = ak.zip({
         field : processed_events[field] for field in fields2save
     })
@@ -498,13 +559,18 @@ if __name__ == "__main__":
         load_path = f"{args.load_path}/{args.year}/f1_0"
     else:
         frac_str = args.fraction.replace(".", "_")
-        load_path = f"{args.load_path}/{args.year}/f{frac_str}"
+        # load_path = f"{args.load_path}/{args.year}/f{frac_str}"
+        load_path = f"{args.load_path}/{args.year}/"
     print(f"load_path: {load_path}")
     category = args.category.lower()
     
     for sample in args.samples:
         if sample.lower() == "data":
-            full_load_path = load_path+f"/data_*/*/*.parquet"
+            # full_load_path = load_path+f"/data_*/*/*.parquet" # original
+            # altering to match copperheadV1's stasge1 output to work with copperheadV2
+            full_load_path = load_path+f"/data_*/*.parquet"
+            # full_load_path = load_path+f"/data_B/*.parquet"
+            full_load_path = glob.glob(full_load_path)
         elif sample.lower() == "ggh":
             full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
         elif sample.lower() == "vbf":
@@ -540,6 +606,44 @@ if __name__ == "__main__":
         # print(f"data_filelist: {data_filelist}")
         
         events = dak.from_parquet(full_load_path)
+        # making so taht copperheadV1 results work start -------------------------------------------
+        fields2load = [
+            "jet1_pt_nominal",
+            'jet1_eta_nominal', 
+            'jet2_pt_nominal', 
+            'mmj1_dEta_nominal', 
+            'mmj1_dPhi_nominal',  
+            'jj_dEta_nominal', 
+            'jj_dPhi_nominal', 
+            'jj_mass_nominal', 
+            'zeppenfeld_nominal', 
+            'mmj_min_dEta_nominal', 
+            'mmj_min_dPhi_nominal', 
+            'njets_nominal',
+            "nBtagLoose_nominal",
+            "nBtagMedium_nominal",
+            "mmj2_dEta_nominal",
+            "mmj2_dPhi_nominal",
+            "wgt_nominal",
+            'dimuon_mass', 
+            'dimuon_pt', 
+            'dimuon_eta', 
+            'dimuon_cos_theta_cs', 
+            'dimuon_phi_cs', 
+            'mu1_pt_over_mass', 
+            'mu1_eta', 
+            'mu2_pt_over_mass', 
+            'mu2_eta', 
+            'zeppenfeld_nominal', 
+        ]
+        events = ak.zip({
+            field : events[field] for field in fields2load
+        }).compute()
+        events = renameFieldsToV2(events)
+        # making so taht copperheadV1 results work end -------------------------------------------
+        
+        
+        print("done loading events!")
         if category == "ggh":
             processed_events = process4gghCategory(events, args.year)      
         elif category == "vbf":
