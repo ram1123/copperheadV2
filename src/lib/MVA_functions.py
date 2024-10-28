@@ -86,12 +86,24 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         if len(df_i) == 0:
             continue
         # print(f"scalers: {scalers.shape}")
-        # print(f"df_i: {df_i}")
+        print(f"df_i: {df_i}")
         df_i_feat = df_i[features]
         df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
         # print(f"df_i_feat: {df_i_feat.shape}")
         df_i_feat = ak.Array(df_i_feat)
+        is_inf = (df_i_feat == np.inf) | (df_i_feat == -np.inf)
+        print(f"ak.sum(is_inf) b4: {ak.sum(is_inf)}")
+        print(f"is_inf b4: {is_inf}")
         df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+        print(f"scalers[1]: {scalers[1]}")
+        print(f"type(df_i_feat): {type(df_i_feat)}")
+        print(f"df_i_feat: {df_i_feat}")
+        print(f"df_i_feat.fields: {df_i_feat.fields}")
+        for ix in range(len(df_i_feat)):
+            is_inf = (df_i_feat[ix] == np.inf) | (df_i_feat[ix] == -np.inf)
+            print(f"ak.sum(is_inf): {ak.sum(is_inf)}")
+            df_i_feat[ix][is_inf] = ak.where(is_inf, 0, df_i_feat[ix])
+        
         if len(df_i_feat) > 0:
             print(f"model: {model}")
             prediction = np.array(
@@ -133,6 +145,8 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         # print(f"df_i_feat: {df_i_feat.shape}")
         df_i_feat = ak.Array(df_i_feat)
         df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+        is_inf = (df_i_feat == np.inf) | (df_i_feat == -np.inf)
+        df_i_feat[is_inf] = 0
         if len(df_i_feat) > 0:
             print(f"model: {model}")
             prediction = np.array(
@@ -173,6 +187,8 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         # print(f"df_i_feat: {df_i_feat.shape}")
         df_i_feat = ak.Array(df_i_feat)
         df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+        is_inf = (df_i_feat == np.inf) | (df_i_feat == -np.inf)
+        df_i_feat[is_inf] = 0
         if len(df_i_feat) > 0:
             print(f"model: {model}")
             prediction = np.array(
