@@ -19,9 +19,9 @@ def apply_geofit(
     """
     d0_BS_charge = events.Muon.dxybs * events.Muon.charge
     # print(f"apply_geofit ak.sum(opposite_fsr_mask) : {ak.sum(opposite_fsr_mask)}")
-    mask = opposite_fsr_mask & (abs(events.Muon.dxybs) < 999999.0)
+    mask = opposite_fsr_mask & (abs(d0_BS_charge) < 999999.0)
     # print(f"apply_geofit ak.sum(mask) : {ak.sum(mask)}")
-    
+    print(f"geofit year: {year}")
     pt = events.Muon.pt
     eta = events.Muon.eta
 
@@ -48,16 +48,4 @@ def apply_geofit(
         pt_corr = ak.where(cuts[eta_i], value, pt_corr)
     
     events["Muon", "pt_gf"] = ak.where(mask, pt - pt_corr, pt)
-    # print(f"apply_geofit pt_corr: {pt_corr[mask].compute()}")
-    # print(f"apply_geofit max pt_corr: {ak.max(abs(pt_corr[mask].compute()))}")
-    # print(f"apply_geofit min pt_corr: {ak.min(abs(pt_corr[mask].compute()))}")
-    # print(f"apply_geofit abs(pt - pt_corr): {abs(pt - pt_corr).compute()}")
-    # print(f"apply_geofit max pt_corr: {ak.max(abs(pt).compute())}")
-    
-    # print(f"apply_geofit events.Muon.pt: {events.Muon.pt}")
-    # print(f"apply_geofit events.Muon.pt_gf: {events.Muon.pt_gf}")
-    # print(f"apply_geofit events.Muon.pt_gf long: {ak.to_numpy(ak.flatten(events.Muon.pt_gf))}")
-    # print(f"apply_geofit ak.sum(events.Muon.pt_gf != events.Muon.pt): {ak.sum(events.Muon.pt_gf != events.Muon.pt)}")
-    # print(f"apply_geofit ak.sum(mask): {ak.sum(mask)}")
-    # print(f"apply_geofit mask: {mask.compute()}")
     return mask, pt_corr # return these values for debugging purposes

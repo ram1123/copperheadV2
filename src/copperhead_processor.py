@@ -180,7 +180,7 @@ class EventProcessor(processor.ProcessorABC):
         self.test_mode = test_mode
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : True, # False
+            "do_trigger_match" : False, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
@@ -238,7 +238,17 @@ class EventProcessor(processor.ProcessorABC):
         """
         # print("testJetVector right as process starts")
         # testJetVector(events.Jet)
-        
+        # numevents = len(events)
+        # print(f"numevents: {numevents}")
+        # print(f"events.events: {events.event.compute()}")
+        event_match = events.event==95324165 # debugging
+        # print(f"event match: {ak.sum(event_match).compute()}")
+        # raise ValueError
+        # print(f"events.MET.pt: {events.MET.pt.compute()}")
+        # print(f"df.Muon.pt: {events.Muon.pt.compute()}")
+        # print(f"df.Muon.eta: {events.Muon.eta.compute()}")
+        # print(f"df.Muon.phi: {events.Muon.phi.compute()}")
+        # print(f"df.Muon.pfRelIso04_all: {events.Muon.pfRelIso04_all.compute()}")
         event_filter = ak.ones_like(events.event, dtype="bool") # 1D boolean array to be used to filter out bad events
         dataset = events.metadata['dataset']
         print(f"dataset: {dataset}")
@@ -366,6 +376,7 @@ class EventProcessor(processor.ProcessorABC):
             print("doing rochester!")
             apply_roccor(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
+            # print(f"df.Muon.pt: {events.Muon.pt.compute()}")
 
         
        
@@ -383,10 +394,13 @@ class EventProcessor(processor.ProcessorABC):
 
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]) 
+        # print(f"muon_selectiont: {ak.to_dataframe(muon_selection.compute())}")
         
         # -------------------------------------------------------- 
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
         if self.config["do_trigger_match"]:
+            do_seperate_mu1_leading_pt_cut = False
+            print("doing trigger match!")
             """
             Apply trigger matching. We take the two leading pT reco muons and try to have at least one of the muons
             to be matched with the trigger object that fired our HLT. If none of the muons did it, then we reject the 
@@ -426,6 +440,10 @@ class EventProcessor(processor.ProcessorABC):
 
             trigger_match = (mu1_match >0) | (mu2_match > 0)
             event_filter = event_filter & trigger_match
+        else:
+            do_seperate_mu1_leading_pt_cut = True
+            print("NO trigger match! Doing leading mu pass instead!")
+            
 # --------------------------------------------------------        
 
         # apply FSR correction, since trigger match is calculated
@@ -456,16 +474,23 @@ class EventProcessor(processor.ProcessorABC):
             if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
                 print(f"doing geofit!")
                 gf_filter, gf_pt_corr = apply_geofit(events, self.config["year"], ~applied_fsr)
-                events["Muon", "pt"] = events.Muon.pt_gf
+                events["Muon", "pt"] = events.Muon.pt_gf # original
             else: 
                 print(f"doing neither beam constraint nor geofit!")
-                pass
 
 
         muons = events.Muon[muon_selection]
         # muons = ak.to_packed(events.Muon[muon_selection])
-        
-        # print(f"muons.pt: {muons.pt.compute()}")
+
+        # do the separate mu1 leading pt cut that copperheadV1 does instead of trigger matching
+        if do_seperate_mu1_leading_pt_cut:
+            muons_padded = ak.pad_none(muons, 2)
+            sorted_args = ak.argsort(muons_padded.pt, ascending=False)
+            muons_sorted = (muons_padded[sorted_args])
+            mu1 = muons_sorted[:,0]
+            # mu1 = padded_muons[:,0]
+            pass_leading_pt = ak.fill_none((mu1.pt_raw > self.config["muon_leading_pt"]), value=False)
+            event_filter = event_filter & pass_leading_pt
         
         # count muons that pass the muon selection
         nmuons = ak.num(muons, axis=1)
@@ -505,6 +530,9 @@ class EventProcessor(processor.ProcessorABC):
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
 
         )
+        # event_selection = ak.to_dataframe(event_filter.compute())
+        # print(f"output.event_selection: {event_selection}")
+        # event_selection.to_csv("event_selection_V2.csv")
 
         
 
@@ -583,6 +611,7 @@ class EventProcessor(processor.ProcessorABC):
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
+        event_match = event_match[event_filter==True]
         # applied_fsr = ak.to_packed(applied_fsr[event_filter==True]) # not sure the purpose of this line
 
         # print("testJetVector right after event filtering")
@@ -620,6 +649,9 @@ class EventProcessor(processor.ProcessorABC):
         dimuon_dEta = abs(mu1.eta - mu2.eta)
         dimuon_dPhi = abs(mu1.delta_phi(mu2))
         dimuon = mu1+mu2
+
+        # print(f"event match dimuon: {dimuon.mass[event_match].compute()}")
+        # raise ValueError
         
         dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode)
         rel_dimuon_ebe_mass_res = dimuon_ebe_mass_res/dimuon.mass
@@ -715,7 +747,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = True # True       
+        do_jec = False # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -925,6 +957,12 @@ class EventProcessor(processor.ProcessorABC):
             "mu2_charge" : mu2.charge,
             "mu1_iso" : mu1.pfRelIso04_all,
             "mu2_iso" : mu2.pfRelIso04_all,
+            "mu1_pt_roch" : mu1.pt_roch,
+            "mu1_pt_fsr" : mu1.pt_fsr,
+            # "mu1_pt_gf" : mu1.pt_gf,
+            "mu2_pt_roch" : mu2.pt_roch,
+            "mu2_pt_fsr" : mu2.pt_fsr,
+            # "mu2_pt_gf" : mu2.pt_gf,
             "nmuons" : nmuons,
             "dimuon_mass" : dimuon.mass,
             "dimuon_pt" : dimuon.pt,
@@ -990,6 +1028,7 @@ class EventProcessor(processor.ProcessorABC):
                 do_jec = do_jec,
                 do_jecunc = do_jecunc,
                 do_jerunc = do_jerunc,
+                event_match=event_match # debugging
             )
                     
             out_dict.update(jet_loop_dict) 
@@ -1170,6 +1209,7 @@ class EventProcessor(processor.ProcessorABC):
         do_jec = False, 
         do_jecunc = False,
         do_jerunc = False,
+        event_match = None
     ):
         is_mc = events.metadata["is_mc"]
         dataset = events.metadata["dataset"]
@@ -1274,7 +1314,7 @@ class EventProcessor(processor.ProcessorABC):
         # Select jets
         # ------------------------------------------------------------#
         # apply HEM Veto, written in "HEM effect in 2018" appendix K of the main long AN
-        HEMVeto = ak.ones_like(clean) == 1 # 1D array saying True
+        HEMVeto = ak.ones_like(clean, dtype="bool") # 1D array saying True
         if year == "2018":
             HEMVeto_filter = (
                 (jets.pt >= 20.0)
@@ -1353,7 +1393,7 @@ class EventProcessor(processor.ProcessorABC):
         jet1 = paddedSorted_jets[:,0]
         jet2 = paddedSorted_jets[:,1]
         # test end ----------------------------------------
-               
+        # print(f"event match jet2 pt: {ak.to_numpy(jet2.pt[event_match].compute())}")
 
         dijet = jet1+jet2
         # print(f"type jet1: {type(jet1.compute())}")

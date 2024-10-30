@@ -198,10 +198,17 @@ def get_jec_factories(jec_parameters: dict, year):
 def jet_id(jets, config):
     # print(f"jets parameters: {parameters}")
     pass_jet_id = ak.ones_like(jets.jetId, dtype=bool)
-    if "loose" in config["jet_id"]:
-        pass_jet_id = jets.jetId >= 1
-    elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
-        pass_jet_id = jets.jetId >= 2
+    year = config["year"]
+    if ("2016" in year) and ("RERECO" in year):  # 2016RERECO
+        if "loose" in config["jet_id"]:
+            pass_jet_id = jets.jetId >= 1
+        elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
+            pass_jet_id = jets.jetId >= 3
+    else: # 2017RERECO, 2018RERECO, all UL and Run3 
+        if "loose" in config["jet_id"]:
+            pass_jet_id = jets.jetId >= 1 # loose for UL is not specified in https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format weird
+        elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
+            pass_jet_id = jets.jetId >= 2
             
     return pass_jet_id
 
@@ -209,11 +216,15 @@ def jet_id(jets, config):
 def jet_puid(jets, config):
     jet_puid_opt = config["jet_puid"]
     year = config["year"]
-    puId = jets.puId
+    if year=="2017_RERECO":
+        print("using puId 17!")
+        puId = jets.puId17 
+    else:
+        puId = jets.puId
     # jet puid for standard wps are different for 2016 vs 2017,2018 as shown in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL#Working_Points
     # only apply jet puid to jets with pt < 50, else, pass
     # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
-    if "2016" in year:
+    if ("2016" in year) and ("RERECO" not in year): #Only 2016 UL samples are different
         jet_puid_wps = {
             "loose": (puId >= 1) | (jets.pt > 50),
             "medium": (puId >= 3) | (jets.pt > 50),
@@ -229,8 +240,11 @@ def jet_puid(jets, config):
     
     if "2017" in year: # for misreco due ot ECAL endcap noise
         eta_window = (abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0)
-        pass_jet_puid = (eta_window & jet_puid_wps["tight"]) | ( # tight puid in the noisy eta window, else loose
-            (~eta_window) & jet_puid_wps[jet_puid_opt]
+        # pass_jet_puid = (eta_window & jet_puid_wps["tight"]) | ( # tight puid in the noisy eta window, else loose
+        #     (~eta_window) & jet_puid_wps[jet_puid_opt]
+        # )
+        pass_jet_puid = (eta_window & (puId >= 7)) | (
+                (~eta_window) & jet_puid_wps["loose"]
         )
     else:
         pass_jet_puid = jet_puid_wps[jet_puid_opt]
