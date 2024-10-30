@@ -271,7 +271,87 @@ if __name__ == "__main__":
                 # test start -----------------------------------------------------------
                 load_path = "/eos/purdue/store/user/hyeonseo/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/Flat_NanoAODSIMv9_CMSSW_10_6_26_BigRun/240904_151935/0000/"
                 fnames = glob.glob(f"{load_path}/*.root")
+            
+            
+            elif year == "2017_RERECO":
+                if sample_name == "data_B":
+                    load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017B-31Mar2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_C":
+                    load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017C-31Mar2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_D":
+                    load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017D-31Mar2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_E":
+                    load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017E-31Mar2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_F":
+                    load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
 
+                    bad_files = [ # this is obtained from quick_tests/quick_bad_fil_collector.ipynb
+                        "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1634.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1635.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1636.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1637.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1638.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1639.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1640.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1641.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1642.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1643.root",
+                    ]
+                    fnames = set(fnames)
+                    bad_files = set(bad_files)
+                    fnames = list(fnames.difference(bad_files)) # remove bad files from fnames and turn it back to a list
+
+
+
+            elif year == "2018_RERECO":
+                if sample_name == "data_A":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018A-17Sep2018-v2/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_B":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018B-17Sep2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_C":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018C-17Sep2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_D":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18D_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18D_NANOV10b_un2018D-22Jan2019-v2/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                    fnames_copy = []
+                    for fname in fnames:
+                        if "nano18D_NANO_4814" in fname: # this file is also problematic in copperheadV1
+                            print("nano18D_NANO_4814.root removed!")
+                            continue
+                        fnames_copy.append(fname)
+                    fnames = fnames_copy
+
+            elif year == "2016_RERECO":
+                if sample_name == "data_B":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_un2016B-17Jul2018_ver2-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_C":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016C-17Jul2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_D":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016D-17Jul2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_E":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016E-17Jul2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_F":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016F-17Jul2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_G":
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016G-17Jul2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif sample_name == "data_H":
+                    load_path = "/eos/purdue//store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_Run2016H-17Jul2018-v1/"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
+            
             # override the the data path if doing rereco data test
             
             # elif args.run2_rereco:
@@ -398,7 +478,7 @@ if __name__ == "__main__":
                 )
                 fnames = [file[0] for file in outfiles if file != []]
                 fnames = [fname.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
-               
+                
                 
                 # random.shuffle(fnames)
                 if args.xcache:
@@ -406,6 +486,7 @@ if __name__ == "__main__":
             
             print(f"sample_name: {sample_name}")
             print(f"len(fnames): {len(fnames)}")
+            
             fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
             # print(f"fnames: {fnames}")
 

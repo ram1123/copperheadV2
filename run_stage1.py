@@ -172,18 +172,18 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             'mmjj_phi': (out_collections["mmjj_phi"]),
             
 
-            # 'jet1_pt_raw': (out_collections["jet1_pt_raw"]),
-            # 'jet1_mass_raw': (out_collections["jet1_mass_raw"]),
-            # 'jet1_rho': (out_collections["jet1_rho"]),
-            # 'jet1_area': (out_collections["jet1_area"]),
-            # 'jet1_pt_jec': (out_collections["jet1_pt_jec"]),
-            # 'jet1_mass_jec': (out_collections["jet1_mass_jec"]),
-            # 'jet2_pt_raw': (out_collections["jet2_pt_raw"]),
-            # 'jet2_mass_raw': (out_collections["jet2_mass_raw"]),
-            # 'jet2_rho': (out_collections["jet2_rho"]),
-            # 'jet2_area': (out_collections["jet2_area"]),
-            # 'jet2_pt_jec': (out_collections["jet2_pt_jec"]),
-            # 'jet2_mass_jec': (out_collections["jet2_mass_jec"]),
+            'jet1_pt_raw': (out_collections["jet1_pt_raw"]),
+            'jet1_mass_raw': (out_collections["jet1_mass_raw"]),
+            'jet1_rho': (out_collections["jet1_rho"]),
+            'jet1_area': (out_collections["jet1_area"]),
+            'jet1_pt_jec': (out_collections["jet1_pt_jec"]),
+            'jet1_mass_jec': (out_collections["jet1_mass_jec"]),
+            'jet2_pt_raw': (out_collections["jet2_pt_raw"]),
+            'jet2_mass_raw': (out_collections["jet2_mass_raw"]),
+            'jet2_rho': (out_collections["jet2_rho"]),
+            'jet2_area': (out_collections["jet2_area"]),
+            'jet2_pt_jec': (out_collections["jet2_pt_jec"]),
+            'jet2_mass_jec': (out_collections["jet2_mass_jec"]),
         
             # fraction -------------------------------------
             "fraction" : dataset_fraction*(ak.ones_like(out_collections["njets"])), 
@@ -201,11 +201,26 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             "zeppenfeld" : (out_collections["zeppenfeld"]),
             "event" : (out_collections["event"]),
             "rpt" : (out_collections["rpt"]),
+            "mu1_pt_roch" : (out_collections["mu1_pt_roch"]),
+            "mu1_pt_raw" : (out_collections["mu1_pt_raw"]),
+            "mu2_pt_raw" : (out_collections["mu2_pt_raw"]),
+            "mu1_pt_fsr" : (out_collections["mu1_pt_fsr"]),
+            # "mu1_pt_gf" : (out_collections["mu1_pt_gf"]),
+            "mu2_pt_roch" : (out_collections["mu2_pt_roch"]),
+            "mu2_pt_fsr" : (out_collections["mu2_pt_fsr"]),
+            # "mu2_pt_gf" : (out_collections["mu2_pt_gf"]),
             # temporary test start ------------------------------------
             # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
             # temporary test end ------------------------------------
     }
-
+    # debugging --------------------------------------------
+    # btag_cut =ak.fill_none((skim_dict["nBtagLoose"] >= 2), value=False) | ak.fill_none((skim_dict["nBtagMedium"] >= 1), value=False)
+    # vbf_cut = (skim_dict["jj_mass"] > 400) & (skim_dict["jj_dEta"] > 2.5) & (skim_dict["jet1_pt"] > 35) 
+    # vbf_cut = ak.fill_none(vbf_cut, value=False)
+    # vbf_cut = vbf_cut & (~btag_cut)
+    # vbf_cut = ak.to_dataframe(vbf_cut.compute())
+    # vbf_cut.to_csv("vbf_cut_V2.csv")
+    # debugging --------------------------------------------
     
     # add in weights
     weight_dict = {}
@@ -382,8 +397,8 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # max_file_len = 15
                 # max_file_len = 50
-                max_file_len = 100
-                # max_file_len = 200
+                # max_file_len = 100
+                max_file_len = 8000
                 # max_file_len = 25
                 # max_file_len = 900
                 # max_file_len = 10
