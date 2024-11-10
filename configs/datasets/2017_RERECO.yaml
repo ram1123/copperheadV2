@@ -4,3 +4,5 @@
   data_D: /SingleMuon/Run2017D-02Apr2020-v1/NANOAOD
   data_E: /SingleMuon/Run2017E-02Apr2020-v1/NANOAOD
   data_F: /SingleMuon/Run2017F-02Apr2020-v1/NANOAOD
+  ggh_amcPS: dummy
+  vbf_powheg: dummy

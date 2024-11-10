@@ -1,5 +1,6 @@
 import coffea.processor as processor
 from coffea.lookup_tools import extractor
+from coffea.btag_tools import BTagScaleFactor
 import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
@@ -189,7 +190,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_pdf" : True,
         }
         self.config.update(dict_update)
-        
+        print(f"self.config: {self.config}")
 
         # --- Evaluator
         extractor_instance = extractor()
@@ -322,6 +323,7 @@ class EventProcessor(processor.ProcessorABC):
         if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
             do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
 
+        
         if do_pu_wgt:
             print("doing PU re-wgt!")
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
@@ -336,7 +338,8 @@ class EventProcessor(processor.ProcessorABC):
                             self.config,
                             events.Pileup.nTrueInt,
                             onTheSpot=False, # use locally saved true PU dist
-                            Run = run_campaign
+                            Run = run_campaign,
+                            is_rereco = ("RERECO" in year),
                     )
 
                 
@@ -1578,11 +1581,16 @@ class EventProcessor(processor.ProcessorABC):
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
                 btag_systs = self.config["btag_systs"] #if do_btag_syst else []
-                btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
-                # original start -------------------------------------
-                # btag_wgt, btag_syst = btag_weights_json(
-                #     self, btag_systs, jets, weights, bjet_sel_mask, btag_json
+                # if "RERECO" in year:
+                #     btag_json = BTagScaleFactor(
+                #     self.config["btag_sf_csv"],
+                #     BTagScaleFactor.RESHAPE,
+                #     "iterativefit,iterativefit,iterativefit",
                 # )
+                # else:
+                #     btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
+                # original start -------------------------------------
+                btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
                 # original end -------------------------------------
                 
                 # keep dims start -------------------------------------
