@@ -72,12 +72,12 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         # eval_filter = df.event.mod(nfolds).isin(eval_folds)
         print(f"eval_folds: {eval_folds}")
         # print(f"eval_filter: {eval_filter}")
-        # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
-        scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
+        scalers_path = f"{parameters['models_path']}/{model}_{year}/scalers_{model}_{year}_{i}.npy"
+        # scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
         print(f"scalers_path: {scalers_path}")
         scalers = np.load(scalers_path, allow_pickle=True)
-        # model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
-        model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
+        model_path = f"{parameters['models_path']}/{model}_{year}/{model}_{year}_{i}.pkl"
+        # model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
 
         bdt_model = pickle.load(open(model_path, "rb"))
         df_i = df[eval_filter]
@@ -86,24 +86,12 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         if len(df_i) == 0:
             continue
         # print(f"scalers: {scalers.shape}")
-        print(f"df_i: {df_i}")
+        # print(f"df_i: {df_i}")
         df_i_feat = df_i[features]
         df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
         # print(f"df_i_feat: {df_i_feat.shape}")
         df_i_feat = ak.Array(df_i_feat)
-        is_inf = (df_i_feat == np.inf) | (df_i_feat == -np.inf)
-        print(f"ak.sum(is_inf) b4: {ak.sum(is_inf)}")
-        print(f"is_inf b4: {is_inf}")
         df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
-        print(f"scalers[1]: {scalers[1]}")
-        print(f"type(df_i_feat): {type(df_i_feat)}")
-        print(f"df_i_feat: {df_i_feat}")
-        print(f"df_i_feat.fields: {df_i_feat.fields}")
-        for ix in range(len(df_i_feat)):
-            is_inf = (df_i_feat[ix] == np.inf) | (df_i_feat[ix] == -np.inf)
-            print(f"ak.sum(is_inf): {ak.sum(is_inf)}")
-            df_i_feat[ix][is_inf] = ak.where(is_inf, 0, df_i_feat[ix])
-        
         if len(df_i_feat) > 0:
             print(f"model: {model}")
             prediction = np.array(
@@ -115,89 +103,85 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
     df[score_name] = score_total
 
     # do the same for validation score
-    score_name_val = "BDT_score_val"
-    score_total_val = np.zeros(len(df['dimuon_pt']))
+    # score_name_val = "BDT_score_val"
+    # score_total_val = np.zeros(len(df['dimuon_pt']))
 
-    for i in range(nfolds):
-        # val_folds are the list of test dataset chunks that each bdt is trained to evaluate
-        val_folds = [(i+f)%nfolds for f in [2]]
-        # val_filter = df.event.mod(nfolds).isin(val_folds)
-        val_filter = (df.event % nfolds ) == (np.array(val_folds) * ak.ones_like(df.event))
-        print(f"val_folds: {val_folds}")
-        # print(f"val_filter: {val_filter}")
-        # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
-        scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
-        scalers = np.load(scalers_path, allow_pickle=True)
-        # model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
-        model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
+    # for i in range(nfolds):
+    #     # val_folds are the list of test dataset chunks that each bdt is trained to evaluate
+    #     val_folds = [(i+f)%nfolds for f in [2]]
+    #     # val_filter = df.event.mod(nfolds).isin(val_folds)
+    #     val_filter = (df.event % nfolds ) == (np.array(val_folds) * ak.ones_like(df.event))
+    #     print(f"val_folds: {val_folds}")
+    #     # print(f"val_filter: {val_filter}")
+    #     # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
+    #     scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
+    #     scalers = np.load(scalers_path, allow_pickle=True)
+    #     # model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
+    #     model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
 
-        bdt_model = pickle.load(open(model_path, "rb"))
-        df_i = df[val_filter]
-        # print(f"df_i: {len(df_i)}")
-        # print(len
-        if len(df_i) == 0:
-            continue
-        # print(f"scalers: {scalers.shape}")
-        # print(f"df_i: {df_i}")
-        df_i_feat = df_i[features]
-        df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
-        # print(f"type df_i_feat: {type(df_i_feat)}")
-        # print(f"df_i_feat: {df_i_feat.shape}")
-        df_i_feat = ak.Array(df_i_feat)
-        df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
-        is_inf = (df_i_feat == np.inf) | (df_i_feat == -np.inf)
-        df_i_feat[is_inf] = 0
-        if len(df_i_feat) > 0:
-            print(f"model: {model}")
-            prediction = np.array(
-                bdt_model.predict_proba(df_i_feat)[:, 1]
-            ).ravel()
-            # print(f"prediction: {prediction}")
-            score_total_val[val_filter] = prediction
+    #     bdt_model = pickle.load(open(model_path, "rb"))
+    #     df_i = df[val_filter]
+    #     # print(f"df_i: {len(df_i)}")
+    #     # print(len
+    #     if len(df_i) == 0:
+    #         continue
+    #     # print(f"scalers: {scalers.shape}")
+    #     # print(f"df_i: {df_i}")
+    #     df_i_feat = df_i[features]
+    #     df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
+    #     # print(f"type df_i_feat: {type(df_i_feat)}")
+    #     # print(f"df_i_feat: {df_i_feat.shape}")
+    #     df_i_feat = ak.Array(df_i_feat)
+    #     df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+    #     if len(df_i_feat) > 0:
+    #         print(f"model: {model}")
+    #         prediction = np.array(
+    #             bdt_model.predict_proba(df_i_feat)[:, 1]
+    #         ).ravel()
+    #         # print(f"prediction: {prediction}")
+    #         score_total_val[val_filter] = prediction
 
-    df[score_name_val] = score_total_val
+    # df[score_name_val] = score_total_val
     
     # do the same for training score
-    score_name_train = "BDT_score_train"
-    score_total_train = np.zeros(len(df['dimuon_pt']))
+    # score_name_train = "BDT_score_train"
+    # score_total_train = np.zeros(len(df['dimuon_pt']))
 
-    for i in range(nfolds):
-        train_folds = [(i+f)%nfolds for f in [0,1]]
-        event = ak.to_dataframe(df.event) # convert to pd.df to apply mod() and isin() function
-        train_filter = event.mod(nfolds).isin(train_folds).values.ravel()
-        print(f"train_folds: {train_folds}")
-        # print(f"train_filter: {train_filter}")
-        # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
-        scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
-        scalers = np.load(scalers_path, allow_pickle=True)
-        # model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
-        model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
+    # for i in range(nfolds):
+    #     train_folds = [(i+f)%nfolds for f in [0,1]]
+    #     event = ak.to_dataframe(df.event) # convert to pd.df to apply mod() and isin() function
+    #     train_filter = event.mod(nfolds).isin(train_folds).values.ravel()
+    #     print(f"train_folds: {train_folds}")
+    #     # print(f"train_filter: {train_filter}")
+    #     # scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
+    #     scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
+    #     scalers = np.load(scalers_path, allow_pickle=True)
+    #     # model_path = f"{parameters['models_path']}/{model}/{model}_{i}.pkl"
+    #     model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
 
-        bdt_model = pickle.load(open(model_path, "rb"))
-        df_i = df[train_filter]
-        # print(f"df_i: {len(df_i)}")
-        # print(len
-        if len(df_i) == 0:
-            continue
-        # print(f"scalers: {scalers.shape}")
-        # print(f"df_i: {df_i}")
-        df_i_feat = df_i[features]
-        df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
-        # print(f"type df_i_feat: {type(df_i_feat)}")
-        # print(f"df_i_feat: {df_i_feat.shape}")
-        df_i_feat = ak.Array(df_i_feat)
-        df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
-        is_inf = (df_i_feat == np.inf) | (df_i_feat == -np.inf)
-        df_i_feat[is_inf] = 0
-        if len(df_i_feat) > 0:
-            print(f"model: {model}")
-            prediction = np.array(
-                bdt_model.predict_proba(df_i_feat)[:, 1]
-            ).ravel()
-            # print(f"prediction: {prediction}")
-            score_total_train[train_filter] = prediction
+    #     bdt_model = pickle.load(open(model_path, "rb"))
+    #     df_i = df[train_filter]
+    #     # print(f"df_i: {len(df_i)}")
+    #     # print(len
+    #     if len(df_i) == 0:
+    #         continue
+    #     # print(f"scalers: {scalers.shape}")
+    #     # print(f"df_i: {df_i}")
+    #     df_i_feat = df_i[features]
+    #     df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
+    #     # print(f"type df_i_feat: {type(df_i_feat)}")
+    #     # print(f"df_i_feat: {df_i_feat.shape}")
+    #     df_i_feat = ak.Array(df_i_feat)
+    #     df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+    #     if len(df_i_feat) > 0:
+    #         print(f"model: {model}")
+    #         prediction = np.array(
+    #             bdt_model.predict_proba(df_i_feat)[:, 1]
+    #         ).ravel()
+    #         # print(f"prediction: {prediction}")
+    #         score_total_train[train_filter] = prediction
 
-    df[score_name_train] = score_total_train
+    # df[score_name_train] = score_total_train
     
     return df
 
@@ -308,5 +292,4 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str],
     print(f"dnn score_total max: {np.max(score_total)}")
     print(f"dnn score_total min: {np.min(score_total)}")
     return df
-
 

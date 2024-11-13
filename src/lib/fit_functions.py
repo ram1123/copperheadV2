@@ -30,7 +30,7 @@ def getFEWZ_vals(FEWZ_histo):
 
 
 def MakeFEWZxBernDof3(
-        name:str, 
+        name_final:str, 
         title:str, 
         mass: rt.RooRealVar, 
         c1: rt.RooRealVar, c2: rt.RooRealVar, c3: rt.RooRealVar
@@ -98,7 +98,8 @@ def MakeFEWZxBernDof3(
     # roo_spline_pdf = rt.RooGenericPdf(name, "@0", rt.RooArgList(roo_spline_func))      
     # out_dict[name] = roo_spline_pdf # add model to make python remember  
 
-    final_model = rt.RooProdPdf(name, title, [bern_model, roo_spline_pdf]) 
+    # final_model = rt.RooProdPdf(name_final, title, [bern_model, roo_spline_pdf]) 
+    final_model = rt.RooGenericPdf(name_final, "@0*@1", rt.RooArgList(bern_model, roo_spline_pdf))  
    
     return (final_model, out_dict)
 
