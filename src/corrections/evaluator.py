@@ -38,7 +38,7 @@ import correctionlib
 #         lookups[mode] = lookup
 #     return lookups
 
-def pu_lookups(parameters, mode="nom", auto=[]):
+def pu_lookups(parameters, mode="nom", auto=[], is_rereco=False):
     lookups = {}
     branch = {"nom": "pileup", "up": "pileup_plus", "down": "pileup_minus"}
     for mode in ["nom", "up", "down"]:
@@ -51,12 +51,15 @@ def pu_lookups(parameters, mode="nom", auto=[]):
         # ----------------------------------------
         if len(auto) == 0:
             # pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
-            with open(parameters["pu_file_mc"]) as file:
-                # config = json.loads(file.read())
-                # print(f"pu file: {file}")
-                config = OmegaConf.load(file)
-                # print(f"config: {config}")
-            pu_hist_mc = np.array(config["pu_mc"])
+            if is_rereco:
+                pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
+            else:
+                with open(parameters["pu_file_mc"]) as file:
+                    # config = json.loads(file.read())
+                    # print(f"pu file: {file}")
+                    config = OmegaConf.load(file)
+                    # print(f"config: {config}")
+                pu_hist_mc = np.array(config["pu_mc"])
         else:
             pu_hist_mc = np.histogram(auto, bins=range(nbins + 1))[0]
         #----------------------------------------------------
@@ -134,7 +137,7 @@ def checkIntegral(wgt1, wgt2, ref):
 #         pu_weights[var][ntrueint < 1] = 1
 #     return pu_weights
 
-def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2):
+def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
     """
     params:
     numevents = integer value of 
@@ -146,7 +149,7 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2):
         if onTheSpot:
             lookups = pu_lookups(parameters, auto=ak.to_numpy(ntrueint.compute()))
         else:
-            lookups = pu_lookups(parameters, auto=[])
+            lookups = pu_lookups(parameters, auto=[], is_rereco=is_rereco)
         #print("Hello")
         pu_weights = {}
         for var, lookup in lookups.items():
@@ -242,7 +245,7 @@ class NNLOPS_Evaluator(object):
         )
         njet1_interp_out = dak.map_partitions(
             njet1_interp,
-            ak.where((hig_pt < 800), hig_pt, 800.0)
+            ak.where((hig_pt < 625), hig_pt, 625.0)
         )
         # print(f"njet1_interp_out: {njet1_interp_out.compute()}")
         # njet1_interp_out =  np.interp(
@@ -1476,6 +1479,12 @@ def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid):
         yearname = "UL2017"
     elif year == "2018":
         yearname = "UL2018"
+    elif year == "2016_RERECO":
+        yearname = "2016"
+    elif year == "2017_RERECO":
+        yearname = "2017"
+    elif year == "2018_RERECO":
+        yearname = "2018"
     # define 1D array of ones for other arrays to copy off of
     ones = ak.fill_none(
         ak.pad_none(jets.pt, target=1, clip=True)[:,0], 
