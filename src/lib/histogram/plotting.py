@@ -4,7 +4,17 @@ import numpy as np
 from typing import List, Dict, Tuple
 import cmsstyle as CMS
 import mplhep as hep
+from hist.intervals import poisson_interval
 
+stat_err_opts = {
+    "step": "post",
+    "label": "Stat. unc.",
+    "hatch": "//////",
+    "facecolor": "none",
+    "edgecolor": (0, 0, 0, 0.5),
+    "linewidth": 0,
+}
+ratio_err_opts = {"step": "post", "facecolor": (0, 0, 0, 0.3), "linewidth": 0}
 
 def getHistAndErrs(
     binning: np.array, 
@@ -128,7 +138,8 @@ def plotDataMC_compare(
     # -----------------------------------------
     # Data/MC ratio
     # -----------------------------------------
-    if plot_ratio:
+    if plot_ratio: 
+        # compute Data/MC ratio
         # get bkg_MC errors
         bkg_mc_w2_sum = np.sum(np.asarray(bkg_MC_histW2_l), axis=0)
         bkg_mc_err = np.sqrt(bkg_mc_w2_sum)
@@ -146,6 +157,25 @@ def plotDataMC_compare(
         hep.histplot(ratio_hist, 
                      bins=binning, histtype='errorbar', yerr=ratio_err, 
                      color='black', label='Ratio', ax=ax_ratio)
+        
+        # compute MC uncertainty 
+        # source: https://github.com/kondratyevd/hmumu-coffea/blob/master/python/plotter.py#L228
+        den = bkg_mc_sum[inf_filter]
+        den_sumw2 = bkg_mc_w2_sum
+        if sum(den) > 0:
+            unity = np.ones_like(den)
+            w2 = np.zeros_like(den)
+            w2[den > 0] = den_sumw2[den > 0] / den[den > 0] ** 2
+            den_unc = poisson_interval(unity, w2)
+            ax_ratio.fill_between(
+                binning,
+                np.r_[den_unc[0], den_unc[0, -1]],
+                np.r_[den_unc[1], den_unc[1, -1]],
+                label="Stat. unc.",
+                **ratio_err_opts,
+            )
+
+        
         ax_ratio.axhline(1, color='gray', linestyle='--')
         ax_ratio.set_xlabel(x_title)
         ax_ratio.set_ylabel('Data / MC')
