@@ -213,10 +213,8 @@ if __name__ == "__main__":
         for sig_sample in sig_samples:
             if sig_sample.upper() == "GGH": # enforce upper case to prevent confusion
                 available_processes.append("ggh_powheg")
-                available_processes.append("vbf_powheg")
             elif sig_sample.upper() == "VBF": # enforce upper case to prevent confusion
                 available_processes.append("vbf_powheg")
-                available_processes.append("ggh_powheg")
             else:
                 print(f"unknown signal {sig_sample} was given!")
     # gather variables to plot:
@@ -228,20 +226,20 @@ if __name__ == "__main__":
         raise ValueError
     for particle in args.variables:
         if "dimuon" in particle:
-            variables2plot.append(f"{particle}_mass")
-            variables2plot.append(f"{particle}_pt")
-            variables2plot.append(f"{particle}_eta")
-            variables2plot.append(f"{particle}_phi")
-            variables2plot.append(f"{particle}_rapidity")
-            variables2plot.append(f"{particle}_cos_theta_cs")
-            variables2plot.append(f"{particle}_phi_cs")
-            variables2plot.append(f"{particle}_cos_theta_eta")
-            variables2plot.append(f"{particle}_phi_eta")
-            variables2plot.append(f"mmj_min_dPhi")
-            variables2plot.append(f"mmj_min_dEta")
+            # variables2plot.append(f"{particle}_mass")
+            # variables2plot.append(f"{particle}_pt")
+            # variables2plot.append(f"{particle}_eta")
+            # variables2plot.append(f"{particle}_phi")
+            # variables2plot.append(f"{particle}_rapidity")
+            # variables2plot.append(f"{particle}_cos_theta_cs")
+            # variables2plot.append(f"{particle}_phi_cs")
+            # variables2plot.append(f"{particle}_cos_theta_eta")
+            # variables2plot.append(f"{particle}_phi_eta")
+            # variables2plot.append(f"mmj_min_dPhi")
+            # variables2plot.append(f"mmj_min_dEta")
             variables2plot.append(f"rpt")
             variables2plot.append(f"ll_zstar_log")
-            variables2plot.append(f"dimuon_ebe_mass_res")
+            # variables2plot.append(f"dimuon_ebe_mass_res")
         elif "dijet" in particle:
             # variables2plot.append(f"gjj_mass")
             variables2plot.append(f"jj_mass")
@@ -973,20 +971,20 @@ if __name__ == "__main__":
                 if var == "ll_zstar_log":
                     print("ll_zstar_log overwrite!")
                     values = ak.to_numpy(np.log(np.abs(events["zeppenfeld"])))
-                elif var == "rpt":
-                    print("rpt overwrite!")
-                    numerator = np.abs(events["jj_pt"] + events["dimuon_pt"])
-                    denominator = np.abs(events["jet1_pt"]) + np.abs(events["jet2_pt"]) +  np.abs(events["dimuon_pt"])
-                    values = ak.to_numpy(numerator/denominator)
-                    # debug
-                    print(f"events.jj_pt is nan: {np.any(np.isnan(events.jj_pt))}")
-                    print(f"events.dimuon_pt is nan: {np.any(np.isnan(events.dimuon_pt))}")
-                    print(f"events.jet1_pt is nan: {np.any(np.isnan(events.jet1_pt))}")
-                    print(f"events.jet2_pt is nan: {np.any(np.isnan(events.jet2_pt))}")
-                    print(f"events.jj_pt is none: {np.any(ak.is_none(events.jj_pt))}")
-                    print(f"events.dimuon_pt is none: {np.any(ak.is_none(events.dimuon_pt))}")
-                    print(f"events.jet1_pt is none: {np.any(ak.is_none(events.jet1_pt))}")
-                    print(f"events.jet2_pt is none: {np.any(ak.is_none(events.jet2_pt))}")
+                # elif var == "rpt":
+                #     print("rpt overwrite!")
+                #     numerator = np.abs(events["jj_pt"] + events["dimuon_pt"])
+                #     denominator = np.abs(events["jet1_pt"]) + np.abs(events["jet2_pt"]) +  np.abs(events["dimuon_pt"])
+                #     values = ak.to_numpy(numerator/denominator)
+                #     # debug
+                #     print(f"events.jj_pt is nan: {np.any(np.isnan(events.jj_pt))}")
+                #     print(f"events.dimuon_pt is nan: {np.any(np.isnan(events.dimuon_pt))}")
+                #     print(f"events.jet1_pt is nan: {np.any(np.isnan(events.jet1_pt))}")
+                #     print(f"events.jet2_pt is nan: {np.any(np.isnan(events.jet2_pt))}")
+                #     print(f"events.jj_pt is none: {np.any(ak.is_none(events.jj_pt))}")
+                #     print(f"events.dimuon_pt is none: {np.any(ak.is_none(events.dimuon_pt))}")
+                #     print(f"events.jet1_pt is none: {np.any(ak.is_none(events.jet1_pt))}")
+                #     print(f"events.jet2_pt is none: {np.any(ak.is_none(events.jet2_pt))}")
                     
                 print(f"values is nan: {np.any(np.isnan(values))}")
                 print(f"values is none: {np.any(ak.is_none(values))}")
