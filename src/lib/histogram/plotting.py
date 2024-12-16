@@ -125,6 +125,7 @@ def plotDataMC_compare(
             values = sig_mc_sample_arrs["values"]
             weights = sig_mc_sample_arrs["weights"]
             sig_MC_hist, _ = getHistAndErrs(binning, values, weights)
+            # print(f"{sig_mc_sample} hist: {sig_MC_hist}")
             hep.histplot(
                 sig_MC_hist, 
                 bins=binning, 
@@ -138,14 +139,17 @@ def plotDataMC_compare(
     # -----------------------------------------
     # Data/MC ratio
     # -----------------------------------------
+    data_hist = ak.to_numpy(data_hist)
     if plot_ratio: 
         # compute Data/MC ratio
         # get bkg_MC errors
         bkg_mc_w2_sum = np.sum(np.asarray(bkg_MC_histW2_l), axis=0)
         bkg_mc_err = np.sqrt(bkg_mc_w2_sum)
         # initialize ratio histogram and fill in values
+        data_hist = ak.to_numpy(data_hist) # make sure data hist is numpy array, not awkward. it seems like np.zeros_like() propagates ak arrays
         ratio_hist = np.zeros_like(data_hist)
         bkg_mc_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
+        bkg_mc_sum = ak.to_numpy(bkg_mc_sum)
         inf_filter = bkg_mc_sum>0
         ratio_hist[inf_filter] = data_hist[inf_filter]/  bkg_mc_sum[inf_filter]
         # add relative uncertainty of data and bkg_mc by adding by quadrature
@@ -160,7 +164,8 @@ def plotDataMC_compare(
         
         # compute MC uncertainty 
         # source: https://github.com/kondratyevd/hmumu-coffea/blob/master/python/plotter.py#L228
-        den = bkg_mc_sum[inf_filter]
+        # den = bkg_mc_sum[inf_filter]
+        den = bkg_mc_sum
         den_sumw2 = bkg_mc_w2_sum
         if sum(den) > 0:
             unity = np.ones_like(den)
@@ -193,6 +198,7 @@ def plotDataMC_compare(
     ax_main.legend(loc="upper right")
     if title != "":
         ax_main.set_title(title)
-    # save figure, we assume that the directory exists
-    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
+    else: # if title is not specified, add the typicaly CMS label in its place
+        hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
+     # save figure, we assume that the directory exists
     plt.savefig(save_full_path)
