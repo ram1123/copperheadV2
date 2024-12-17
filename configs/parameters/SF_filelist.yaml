@@ -195,9 +195,9 @@ zpt_weights_file:
   2016postVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root
   '2017': data/reweight_zpt_2018_nJetBinned_new.histo.root
   '2018': data/reweight_zpt_2018_nJetBinned_new.histo.root
-  2016_RERECO: data/reweight_zpt_2018_nJetBinned_new.histo.root
-  '2017_RERECO': data/reweight_zpt_2018_nJetBinned_new.histo.root
-  '2018_RERECO': data/reweight_zpt_2018_nJetBinned_new.histo.root
+  2016_RERECO: data/zpt_weights.histo.json
+  '2017_RERECO': data/zpt_weights.histo.json
+  '2018_RERECO': data/zpt_weights.histo.json
   2022preEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
   2022postEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
 jetpuid_sf_file:
