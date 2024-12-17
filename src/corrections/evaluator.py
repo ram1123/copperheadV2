@@ -62,6 +62,8 @@ def pu_lookups(parameters, mode="nom", auto=[], is_rereco=False):
                 pu_hist_mc = np.array(config["pu_mc"])
         else:
             pu_hist_mc = np.histogram(auto, bins=range(nbins + 1))[0]
+            # auto = sum_before = dak.map_partitions(ak.sum, weights, keepdims=True)
+            # pu_hist_mc = dak.map_partitions(ak.sum, weights, keepdims=True)[0]
         #----------------------------------------------------
 
         lookup = dense_lookup.dense_lookup(pu_reweight(pu_hist_data, pu_hist_mc), edges)
@@ -147,6 +149,7 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
     """
     if Run ==2:
         if onTheSpot:
+            # lookups = pu_lookups(parameters, auto=ntrueint)
             lookups = pu_lookups(parameters, auto=ak.to_numpy(ntrueint.compute()))
         else:
             lookups = pu_lookups(parameters, auto=[], is_rereco=is_rereco)
@@ -1033,19 +1036,33 @@ def qgl_weights_keepDim(jet1, jet2, njets, isHerwig):
     """
 
     qgl1 = get_qgl_weights(jet1, isHerwig)
-    qgl1 = ak.fill_none(qgl1, value=1.0)
+    # print(f"qgl1 b4: {ak.to_numpy(qgl1.compute())}")
+    # qgl1 = ak.fill_none(qgl1, value=1.0)
     qgl2 = get_qgl_weights(jet2, isHerwig)
 
     
     qgl_nom = (qgl1*qgl2)
+    # print(f"njets: {ak.to_numpy(njets.compute())}")
+    
+    # print(f"qgl1: {ak.to_numpy(qgl1.compute())}")
+    # print(f"qgl2: {ak.to_numpy(qgl2.compute())}")
+    # print(f"jet1.pt: {ak.to_numpy(jet1.pt.compute())}")
+    # print(f"len jet1.pt: {len(jet1.pt.compute())}")
+    # print(f"qgl_nom: {ak.to_numpy(qgl_nom.compute())}")
     ones = ak.ones_like(qgl1) # qgl1 is picked bc we assume there's no none values in it. ones_like function copies None values as well
     qgl_nom = ak.where((njets==1), ones, qgl_nom)  # 1D array
 
 
     njet_selection = njets > 2 # think this is a bug, but have to double check
     qgl_mean = dak.map_partitions(np.mean, qgl_nom[njet_selection], keepdims=True)
+    # print(f"qgl_mean: {ak.to_numpy(qgl_mean.compute())}")
+    # print(f"qgl nom b4: {ak.to_numpy(qgl_nom[njet_selection].compute())}")
     qgl_nom = qgl_nom/ qgl_mean
+    # print(f"qgl nom after: {ak.to_numpy(qgl_nom[njet_selection].compute())}")
     qgl_nom = ak.fill_none(qgl_nom, value=1.0) # we got rid of jet2==None case, but jet1 could still be None
+    # qgl_final = ak.to_numpy(qgl_nom.compute())
+    # print(f"qgl nom final: {qgl_final}")
+    # print(f"qgl nom final sum: {np.sum(qgl_final)}")
 
 
     qgl_down = ak.ones_like(qgl_nom, dtype="float")
@@ -1053,79 +1070,82 @@ def qgl_weights_keepDim(jet1, jet2, njets, isHerwig):
     wgts = {"nom": qgl_nom, "up": qgl_nom * qgl_nom, "down": qgl_down}
     return wgts
 
-def qgl_weights(jet1, jet2, njets, isHerwig):
-    """
-    We assume that event filtering/selection has been already applied
-    params:
-    jet1 = leading pt jet variable if doens't exist, it's padded with None
-    jet2 = subleading pt jet variable if doens't exist, it's padded with None
-    """
-    # qgl = pd.DataFrame(index=output.index, columns=["wgt", "wgt_down"]).fillna(1.0)
+# def qgl_weights(jet1, jet2, njets, isHerwig):
+#     """
+#     We assume that event filtering/selection has been already applied
+#     params:
+#     jet1 = leading pt jet variable if doens't exist, it's padded with None
+#     jet2 = subleading pt jet variable if doens't exist, it's padded with None
+#     """
+#     # qgl = pd.DataFrame(index=output.index, columns=["wgt", "wgt_down"]).fillna(1.0)
     
     
-    # qgl1 = get_qgl_weights(jet1, isHerwig).fillna(1.0)
-    # qgl2 = get_qgl_weights(jet2, isHerwig).fillna(1.0)
-    # qgl.wgt *= qgl1 * qgl2
-    qgl1 = get_qgl_weights(jet1, isHerwig)
-    qgl1 = ak.fill_none(qgl1, value=1.0)
-    qgl2 = get_qgl_weights(jet2, isHerwig)
-    # print(f"qgl_weights jet1: {qgl1.compute()}")
-    # print(f"qgl_weights jet2: {qgl2.compute()}")
+#     # qgl1 = get_qgl_weights(jet1, isHerwig).fillna(1.0)
+#     # qgl2 = get_qgl_weights(jet2, isHerwig).fillna(1.0)
+#     # qgl.wgt *= qgl1 * qgl2
+#     qgl1 = get_qgl_weights(jet1, isHerwig)
+#     qgl1 = ak.fill_none(qgl1, value=1.0)
+#     qgl2 = get_qgl_weights(jet2, isHerwig)
+#     # print(f"qgl_weights jet1: {qgl1.compute()}")
+#     # print(f"qgl_weights jet2: {qgl2.compute()}")
     
-    qgl_nom = (qgl1*qgl2)
-    ones = ak.ones_like(qgl1) # qgl1 is picked bc we assume there's no none values in it. ones_like function copies None values as well
-    qgl_nom = ak.where((njets==1), ones, qgl_nom)  # 1D array
+#     qgl_nom = (qgl1*qgl2)
+#     ones = ak.ones_like(qgl1) # qgl1 is picked bc we assume there's no none values in it. ones_like function copies None values as well
+#     qgl_nom = ak.where((njets==1), ones, qgl_nom)  # 1D array
 
-    # print(f"qgl_weights qgl_nom b4: {qgl_nom.compute()}")
-    # qgl.wgt[variables.njets == 1] = 1.0 # fill_none does this
-    # qgl.wgt = qgl.wgt / qgl.wgt[selected].mean()
-    # selected = output.event_selection & (njets > 2)
-    njet_selection = njets > 2 # think this is a bug, but have to double check
-    sum = ak.sum(qgl_nom[njet_selection], axis=None)
-    count = ak.count(qgl_nom[njet_selection], axis=None)
-    qgl_mean = sum/count
-    # qgl_nom = qgl_nom/ qgl_mean
-    qgl_nom = qgl_nom/ (ak.ones_like(qgl_nom)*qgl_mean)
-    # print(f"qgl_weights qgl_nom after: {ak.to_numpy(qgl_nom)}")
-    qgl_nom = ak.fill_none(qgl_nom, value=1.0) # we got rid of jet2==None case, but jet1 could still be None
-    # print(f"qgl_weights qgl_nom after after: {ak.to_numpy(qgl_nom)}")
-    # print(f"qgl_weights qgl_nom[njet_selection]: {ak.to_numpy(qgl_nom[njet_selection])}")
+#     # print(f"qgl_weights qgl_nom b4: {qgl_nom.compute()}")
+#     # qgl.wgt[variables.njets == 1] = 1.0 # fill_none does this
+#     # qgl.wgt = qgl.wgt / qgl.wgt[selected].mean()
+#     # selected = output.event_selection & (njets > 2)
+#     njet_selection = njets > 2 # think this is a bug, but have to double check
+#     sum = ak.sum(qgl_nom[njet_selection], axis=None)
+#     count = ak.count(qgl_nom[njet_selection], axis=None)
+#     qgl_mean = sum/count
+#     # qgl_nom = qgl_nom/ qgl_mean
+#     qgl_nom = qgl_nom/ (ak.ones_like(qgl_nom)*qgl_mean)
+#     # print(f"qgl_weights qgl_nom after: {ak.to_numpy(qgl_nom)}")
+#     qgl_nom = ak.fill_none(qgl_nom, value=1.0) # we got rid of jet2==None case, but jet1 could still be None
+#     # print(f"qgl_weights qgl_nom after after: {ak.to_numpy(qgl_nom)}")
+#     # print(f"qgl_weights qgl_nom[njet_selection]: {ak.to_numpy(qgl_nom[njet_selection])}")
 
-    # print(f"qgl_nom: {ak.to_numpy(qgl_nom.compute())}")
+#     # print(f"qgl_nom: {ak.to_numpy(qgl_nom.compute())}")
 
-    qgl_down = ak.ones_like(qgl_nom, dtype="float")
+#     qgl_down = ak.ones_like(qgl_nom, dtype="float")
 
-    wgts = {"nom": qgl_nom, "up": qgl_nom * qgl_nom, "down": qgl_down}
-    return wgts
+#     wgts = {"nom": qgl_nom, "up": qgl_nom * qgl_nom, "down": qgl_down}
+#     return wgts
 
-def qgl_weights_eager(jet1, jet2, njets, isHerwig):
-    """
-    Eager version of calculating qgl weights. This is a workaround
-    dask_awkward.mean() not supported over axis=0 or axis=None
-    """
-    qgl1 = get_qgl_weights(jet1, isHerwig)
-    qgl1 = ak.fill_none(qgl1, value=1.0)
-    qgl2 = get_qgl_weights(jet2, isHerwig)
-    # qgl2 = ak.fill_none(qgl2, value=1.0)
-    qgl_nom = (qgl1*qgl2)
-    # qgl_nom = ak.fill_none(qgl_nom, value=1.0)
-    print(f"(qgl1*qgl2): {ak.to_numpy((qgl1*qgl2).compute())}")
-    print(f"ak.sum(njets==1): {ak.sum(njets==1).compute()}")
-    print(f"(njets==1): {ak.to_numpy((njets==1).compute())}")
-    ones = ak.ones_like(qgl1) # qgl1 is picked bc we assume there's no none values in it. ones_like function copies None values as well
-    qgl_nom = ak.where((njets==1), ones, qgl_nom) 
-    print(f"qgl_nom after njet==1 selection: {ak.to_numpy((qgl_nom).compute())}")
-    return qgl_nom
+# def qgl_weights_eager(jet1, jet2, njets, isHerwig):
+#     """
+#     Eager version of calculating qgl weights. This is a workaround
+#     dask_awkward.mean() not supported over axis=0 or axis=None
+#     """
+#     qgl1 = get_qgl_weights(jet1, isHerwig)
+#     qgl1 = ak.fill_none(qgl1, value=1.0)
+#     qgl2 = get_qgl_weights(jet2, isHerwig)
+#     # qgl2 = ak.fill_none(qgl2, value=1.0)
+#     qgl_nom = (qgl1*qgl2)
+    
+#     # qgl_nom = ak.fill_none(qgl_nom, value=1.0)
+#     print(f"(qgl1*qgl2): {ak.to_numpy((qgl1*qgl2).compute())}")
+#     print(f"ak.sum(njets==1): {ak.sum(njets==1).compute()}")
+#     print(f"(njets==1): {ak.to_numpy((njets==1).compute())}")
+#     ones = ak.ones_like(qgl1) # qgl1 is picked bc we assume there's no none values in it. ones_like function copies None values as well
+#     qgl_nom = ak.where((njets==1), ones, qgl_nom) 
+#     print(f"qgl_nom after njet==1 selection: {ak.to_numpy((qgl_nom).compute())}")
+#     return qgl_nom
 
 def get_qgl_weights(jet, isHerwig):
     # df = pd.DataFrame(index=jet.index, columns=["weights"])
-    qgl_weights = ak.ones_like(jet.pt, dtype="float")
+    qgl_weights = ak.ones_like(jet.pt, dtype="float") 
+    # print(f"qgl_weights: {qgl_weights.compute()}")
 
     wgt_mask = (jet.partonFlavour != 0) & (abs(jet.eta) < 2) & (jet.qgl > 0)
     light = wgt_mask & (abs(jet.partonFlavour) < 4)
     gluon = wgt_mask & (jet.partonFlavour == 21)
 
     qgl = jet.qgl
+    # print(f"get qgl: {ak.to_numpy(qgl.compute())}")
 
     if isHerwig:
         # df.weights[light] = (
@@ -1216,13 +1236,15 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
     
     
-    btag_json=btag_file["deepJet_shape"]
+    # btag_json=btag_file["deepJet_shape"]
+    btag_json=btag_file["deepCSV_shape"]
     correctionlib_out = btag_json.evaluate(
         "central",
         jets.hadronFlavour,
         abs(jets.eta),
         jets.pt,
-        jets.btagDeepFlavB,
+        # jets.btagDeepFlavB,
+        jets.btagDeepB,
     )
 
     btag_wgt = ak.prod(correctionlib_out, axis=1) # for events with no qualified jets(empty row), the value is 1.0
@@ -1297,14 +1319,15 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
     
     
-    # btag_json=btag_file["deepCSV_shape"]
-    btag_json=btag_file["deepJet_shape"]
+    btag_json=btag_file["deepCSV_shape"]
+    # btag_json=btag_file["deepJet_shape"]
     correctionlib_out = btag_json.evaluate(
         "central",
         jets.hadronFlavour,
         abs(jets.eta),
         jets.pt,
-        jets.btagDeepFlavB,
+        # jets.btagDeepFlavB,
+        jets.btagDeepB,
     )
     # print(f"correctionlib_out: {correctionlib_out.compute()}")
     # correctionlib_out = ak.pad_none(correctionlib_out, target=1)

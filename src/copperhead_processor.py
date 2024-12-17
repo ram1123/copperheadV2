@@ -10,7 +10,7 @@ from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
 from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 # from src.corrections.weight import Weights
-from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations, qgl_weights, qgl_weights_eager, qgl_weights_keepDim, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights
+from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -181,7 +181,7 @@ class EventProcessor(processor.ProcessorABC):
         self.test_mode = test_mode
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : False, # False
+            "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
@@ -190,7 +190,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_pdf" : True,
         }
         self.config.update(dict_update)
-        print(f"self.config: {self.config}")
+        # print(f"self.config: {self.config}")
 
         # --- Evaluator
         extractor_instance = extractor()
@@ -216,6 +216,8 @@ class EventProcessor(processor.ProcessorABC):
             label = f"res_calib_{mode}_{yearUL}"
             file_path = self.config["res_calib_path"][mode]
             calib_str = f"{label} {label} {file_path}"
+            print(f"file_path: {file_path}")
+            print(f"calib_str: {calib_str}")
             extractor_instance.add_weight_sets([calib_str])
 
         # PU ID weights
@@ -337,7 +339,7 @@ class EventProcessor(processor.ProcessorABC):
                 pu_wgts = pu_evaluator(
                             self.config,
                             events.Pileup.nTrueInt,
-                            onTheSpot=False, # use locally saved true PU dist
+                            onTheSpot=False, # False
                             Run = run_campaign,
                             is_rereco = ("RERECO" in year),
                     )
@@ -591,6 +593,7 @@ class EventProcessor(processor.ProcessorABC):
         
         # calculate sum of gen weight b4 skimming off bad events
         if is_mc:
+            # if True:
             if self.test_mode: # for small files local testing
                 sumWeights = ak.sum(events.genWeight, axis=0) # for testing
                 print(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
@@ -750,7 +753,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = False # True       
+        do_jec = True # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -771,10 +774,8 @@ class EventProcessor(processor.ProcessorABC):
                     raise ValueError
                 
             print("do jec!")
-            print("test ject vector b4 JEC")
             # testJetVector(jets)
             jets = factory.build(jets)
-            print("test ject vector after JEC")
             # testJetVector(jets)
 
         else:
@@ -818,9 +819,10 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
             # original initial weight end ----------------
             
-            if do_pu_wgt:
-                print("adding PU wgts!")
-                weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
+            # if do_pu_wgt:
+                # print("adding PU wgts!")
+                # weights.add("pu_wgt", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
+                # print(f"pu_wgts['nom']: {ak.to_numpy(pu_wgts['nom'].compute())}")
             # L1 prefiring weights
             if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
                 L1_nom = events.L1PreFiringWeight.Nom
@@ -831,6 +833,7 @@ class EventProcessor(processor.ProcessorABC):
                     weightUp=L1_up,
                     weightDown=L1_down
                 )
+                # print(f"L1_nom: {ak.to_numpy(L1_nom.compute())}")
         else: # data-> just add in ak ones for consistency
             weights.add("ones", weight=ak.values_astype(ak.ones_like(events.HLT.IsoMu24), "float32"))
         
@@ -851,11 +854,8 @@ class EventProcessor(processor.ProcessorABC):
             if do_nnlops:
                 print("doing NNLOPS!")
                 nnlopsw = nnlops_weights(events.HTXS.Higgs_pt, events.HTXS.njets30, self.config, events.metadata["dataset"])
+                # print(f"nnlopsw: {ak.to_numpy(nnlopsw.compute())}")
                 weights.add("nnlops", weight=nnlopsw)
-                # print(f"nnlopsw: \n  {ak.to_numpy(nnlopsw.compute())}")
-        #     # else:
-        #     #     weights.add_weight("nnlops", how="dummy")
-        #     # print(f'copperheadV1 weights.df nnlops: \n {weights.df.to_string()}')
             # moved nnlops reweighting outside of dak process-----------------
             
 
@@ -865,21 +865,21 @@ class EventProcessor(processor.ProcessorABC):
             muID, muIso, muTrig = musf_evaluator(
                 musf_lookup, self.config["year"], mu1, mu2
             )
-            weights.add("muID", 
-                    weight=muID["nom"],
-                    weightUp=muID["up"],
-                    weightDown=muID["down"]
-            )
-            weights.add("muIso", 
-                    weight=muIso["nom"],
-                    weightUp=muIso["up"],
-                    weightDown=muIso["down"]
-            )
-            weights.add("muTrig", 
-                    weight=muTrig["nom"],
-                    weightUp=muTrig["up"],
-                    weightDown=muTrig["down"]
-            )
+            # weights.add("muID", 
+            #         weight=muID["nom"],
+            #         weightUp=muID["up"],
+            #         weightDown=muID["down"]
+            # )
+            # weights.add("muIso", 
+            #         weight=muIso["nom"],
+            #         weightUp=muIso["up"],
+            #         weightDown=muIso["down"]
+            # )
+            # weights.add("muTrig", 
+            #         weight=muTrig["nom"],
+            #         weightUp=muTrig["up"],
+            #         weightDown=muTrig["down"]
+            # )
             #do mu SF end -------------------------------------
 
             
@@ -905,12 +905,12 @@ class EventProcessor(processor.ProcessorABC):
             
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             dataset = events.metadata["dataset"]
-            # do_thu = (
-            #     ("vbf" in dataset)
-            #     and ("dy" not in dataset)
-            #     and ("nominal" in pt_variations)
-            #     and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
-            # )
+            do_thu = (
+                ("vbf" in dataset)
+                and ("dy" not in dataset)
+                and ("nominal" in pt_variations)
+                and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
+            )
             do_thu = False
             if do_thu:
                 print("doing THU!")
@@ -960,11 +960,11 @@ class EventProcessor(processor.ProcessorABC):
             "mu2_charge" : mu2.charge,
             "mu1_iso" : mu1.pfRelIso04_all,
             "mu2_iso" : mu2.pfRelIso04_all,
-            "mu1_pt_roch" : mu1.pt_roch,
-            "mu1_pt_fsr" : mu1.pt_fsr,
+            # "mu1_pt_roch" : mu1.pt_roch,
+            # "mu1_pt_fsr" : mu1.pt_fsr,
             # "mu1_pt_gf" : mu1.pt_gf,
-            "mu2_pt_roch" : mu2.pt_roch,
-            "mu2_pt_fsr" : mu2.pt_fsr,
+            # "mu2_pt_roch" : mu2.pt_roch,
+            # "mu2_pt_fsr" : mu2.pt_fsr,
             # "mu2_pt_gf" : mu2.pt_gf,
             "nmuons" : nmuons,
             "dimuon_mass" : dimuon.mass,
@@ -1104,6 +1104,8 @@ class EventProcessor(processor.ProcessorABC):
         # original zpt end ------------------------------
 
         # add in weights
+        # print(f"wgt_nominal_total: {ak.to_numpy(wgt_nominal.compute())}")
+        # print(f"len wgt_nominal_total:{ak.num(wgt_nominal, axis=0).compute()}")
         weight_dict = {"wgt_nominal_total" : wgt_nominal}
         for weight_type in list(weights.weightStatistics.keys()):
             wgt_name = "wgt_nominal_" + weight_type
@@ -1219,34 +1221,7 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         if (not is_mc) and variation != "nominal":
             return
-        # variables = pd.DataFrame(index=output.index)
-        # print(f"variables: {variables}")
-
-        """
-        keep the below code for records, but idk if this is important or something I can get rid of 
-        jet_columns = [
-            "pt",
-            "eta",
-            "phi",
-            "jetId",
-            "qgl",
-            "puId",
-            "mass",
-            "btagDeepFlavB",
-            "has_matched_gen",
-        ]
-        if "puId17" in events.Jet.fields:
-            jet_columns += ["puId17"]
         
-        if is_mc:
-            jet_columns += ["partonFlavour", "hadronFlavour"]
-        if variation == "nominal":
-            # pt_jec and mass_jec are same as pt and mass
-            # if do_jec:
-                # jet_columns += ["pt_jec", "mass_jec"] 
-            if is_mc and do_jerunc:
-                jet_columns += ["pt_orig", "mass_orig"]
-        """
         # Find jets that have selected muons within dR<0.4 from them
 
         # matched_mu_pt = jets.matched_muons.pt_fsr
@@ -1308,9 +1283,9 @@ class EventProcessor(processor.ProcessorABC):
                     self.evaluator, year, jets, pt_name,
                     jet_puid_opt, pass_jet_puid
                 )
-                weights.add("jetpuid_wgt", 
-                        weight=jetpuid_weight,
-                )
+                # weights.add("jetpuid_wgt", 
+                #         weight=jetpuid_weight,
+                # )
         else: # NanoAODv12 doesn't have Jet_PuID yet
             pass_jet_puid = ak.ones_like(pass_jet_id, dtype="bool")
         # ------------------------------------------------------------#
@@ -1396,6 +1371,7 @@ class EventProcessor(processor.ProcessorABC):
         jet1 = paddedSorted_jets[:,0]
         jet2 = paddedSorted_jets[:,1]
         # test end ----------------------------------------
+        print(f"jet1.qgl: {jet1.qgl.compute()}")
         # print(f"event match jet2 pt: {ak.to_numpy(jet2.pt[event_match].compute())}")
 
         dijet = jet1+jet2
@@ -1565,7 +1541,7 @@ class EventProcessor(processor.ProcessorABC):
             # keep dims start -------------------------------------
             qgl_wgts = qgl_weights_keepDim(jet1, jet2, njets, isHerwig)
             # keep dims end -------------------------------------
-            weights.add("qgl", 
+            weights.add("qgl_wgt", 
                         weight=qgl_wgts["nom"],
                         weightUp=qgl_wgts["up"],
                         weightDown=qgl_wgts["down"]
@@ -1574,23 +1550,23 @@ class EventProcessor(processor.ProcessorABC):
             
 
         #     # # --- Btag weights  start--- #
-            do_btag_wgt = True # True
+            do_btag_wgt = False # True
             if NanoAODv ==12:
                 do_btag_wgt = False # temporary condition
             if do_btag_wgt:
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
                 btag_systs = self.config["btag_systs"] #if do_btag_syst else []
-                # if "RERECO" in year:
-                #     btag_json = BTagScaleFactor(
-                #     self.config["btag_sf_csv"],
-                #     BTagScaleFactor.RESHAPE,
-                #     "iterativefit,iterativefit,iterativefit",
-                # )
-                # else:
-                #     btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
+                if "RERECO" in year:
+                    btag_json = BTagScaleFactor(
+                    self.config["btag_sf_csv"],
+                    BTagScaleFactor.RESHAPE,
+                    "iterativefit,iterativefit,iterativefit",
+                )
+                else:
+                    btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
                 # original start -------------------------------------
-                btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
+                # btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
                 # original end -------------------------------------
                 
                 # keep dims start -------------------------------------
@@ -1621,14 +1597,21 @@ class EventProcessor(processor.ProcessorABC):
 
         # Separate from ttH and VH phase space
 
-        # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-        btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
+        if "RERECO" in year:
+            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
+            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5) 
+        else: # UL
+            # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+            # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            
+        
         nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
         nBtagLoose = ak.fill_none(nBtagLoose, value=0)
             
-
-        # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-        btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5) # original value
+        
+        
         nBtagMedium = ak.num(ak.to_packed(jets[btagMedium_filter]), axis=1)
         nBtagMedium = ak.fill_none(nBtagMedium, value=0)
             
