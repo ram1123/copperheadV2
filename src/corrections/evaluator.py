@@ -8,6 +8,14 @@ import dask_awkward as dak
 from omegaconf import OmegaConf
 import correctionlib
 
+def get_corr_inputs(input_dict, corr_obj):
+    """
+    Helper function for getting values of input variables
+    given a dictionary and a correction object.
+    """
+    input_values = [input_dict[inp.name] for inp in corr_obj.inputs]
+    return input_values
+
 # PU SF --------------------------------------------------------------------
 # def pu_lookups(parameters, mode="nom", auto=[]):
 #     lookups = {}
@@ -1027,6 +1035,120 @@ def add_pdf_variations(events, config, dataset):
 
 # QGL SF-------------------------------------------------------------------------
 
+def qgl_weights_V2(jets, config, isHerwig):
+    """
+    source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/QuarkGluonLikelihood#Recommendation_for_13_TeV_data_a
+    """
+    # print(f"qgl jets: {jets.compute()}")
+    # fname = config["jmar_sf_file"]
+    # jmar_evaluator = correctionlib.CorrectionSet.from_file(fname)
+    # map_name = "Gluon_Pythia"
+    # sf = jmar_evaluator[map_name]
+    # out_wgts = {
+    #     "nom": None,
+    #     "up": None,
+    #     "down": None
+    # }
+    # input_dict = {
+    #     "eta" : jets.eta, 
+    #     "pt" : jets.pt, 
+    #     "discriminant": jets.qgl
+    # }
+    # for systematic in out_wgts.keys():
+    #     input_dict["systematic"] = systematic
+    #     inputs = get_corr_inputs(input_dict, sf)
+    #     sf_val = sf.evaluate(*inputs)
+    #     print(f"qgl sf_val: {sf_val.compute()}")
+    #     sf_val = ak.prod(sf_val, axis=1)
+    #     print(f"qgl sf_val after prod: {sf_val.compute()}")
+    #     sf_val = ak.fill_none(sf_val, value=1)
+    #     print(f"qgl {systematic} weight: {sf_val.compute()}")
+    #     out_wgts[systematic] = sf_val
+
+
+    wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)
+    lightOrGluon = (abs(jets.partonFlavour) < 4) | (jets.partonFlavour == 21)
+    jets = jets[wgt_mask & lightOrGluon]
+    nevents_selected = ak.ones_like(jets.pt[:, :1]) # if there's no jets, you select nothing 
+    nevents_selected = (ak.sum(jets.pt,axis=1) > 0) # if there's no jets, you select nothing 
+    # print(f"jets: {jets.compute()}")
+    # print(f"nevents_selected: {nevents_selected.compute()}")
+    nevents_selected = dak.map_partitions(np.sum, nevents_selected, keepdims=True) # needed due to "Check that the total normalization is unchanged (the scope of this sf is not to change the production cross section)"
+    # reinitialize light and gluon masks
+    light = (abs(jets.partonFlavour) < 4)
+    gluon = (jets.partonFlavour == 21)
+
+    qgl = jets.qgl
+    qgl_weights = ak.ones_like(jets.pt)
+    
+
+    if isHerwig: 
+        light_val =  (
+            1.16636 * qgl ** 3
+            - 2.45101 * qgl ** 2
+            + 1.86096 * qgl
+            + 0.596896
+        )
+        gluon_val = (
+            -63.2397 * qgl ** 7
+            + 111.455 * qgl ** 6
+            - 16.7487 * qgl ** 5
+            - 72.8429 * qgl ** 4
+            + 56.7714 * qgl ** 3
+            - 19.2979 * qgl ** 2
+            + 3.41825 * qgl
+            + 0.919838
+        )
+    else:
+        light_val = (
+            -0.666978 * qgl ** 3
+            + 0.929524 * qgl ** 2
+            - 0.255505 * qgl
+            + 0.981581
+        )
+        # qgl_weights = ak.where(light, light_val, qgl_weights)
+        gluon_val= (
+            -55.7067 * qgl ** 7
+            + 113.218 * qgl ** 6
+            - 21.1421 * qgl ** 5
+            - 99.927 * qgl ** 4
+            + 92.8668 * qgl ** 3
+            - 34.3663 * qgl ** 2
+            + 6.27 * qgl
+            + 0.612992
+        )
+    
+    qgl_weights = ak.where(light, light_val, qgl_weights)
+    qgl_weights = ak.where(gluon, gluon_val, qgl_weights)
+    # apply SF, then normalize
+    qgl_weights = ak.prod(qgl_weights, axis=1) 
+    # print(f"qgl_weights b4 norm: {qgl_weights.compute()}")
+
+    # now we need to normalize the qgl weights to be same as before as a whole
+    qgl_wgt_applied = qgl_weights!= 1.0 # we assume if one, then the sf weren't applied
+    sf_values = qgl_weights[qgl_wgt_applied] 
+    # print(f"sf_values: {sf_values.compute()}")
+    current_normalization = dak.map_partitions(np.sum, sf_values, keepdims=True)
+    norm_factor = nevents_selected/current_normalization
+    # print(f"nevents_selected: {nevents_selected.compute()}")
+    # print(f"current_normalization: {current_normalization.compute()}")
+    # print(f"norm_factor: {norm_factor.compute()}")
+    qgl_weights = ak.where(qgl_wgt_applied, (qgl_weights * norm_factor), qgl_weights)
+    # print(f"qgl_weights after norm: {qgl_weights.compute()}")
+
+    # debug 
+    # sf_values = qgl_weights[qgl_wgt_applied] 
+    # sanity_check_norm = dak.map_partitions(np.sum, sf_values, keepdims=True)
+    # print(f"sanity_check_norm: {sanity_check_norm.compute()}")
+    
+    # padd events with no jets with ones
+    # qgl_weights = ak.fill_none(ak.pad_none(qgl_weights, target=1), value=1.0) 
+    # print(f"qgl_weights after pad and fill none: {qgl_weights.compute()}")
+    qgl_down = ak.ones_like(qgl_weights) # temporary overwrite
+    wgts = {"nom": qgl_weights, "up": qgl_weights * qgl_weights, "down": qgl_down}
+    # print(f"wgts: {wgts}")
+    return wgts
+
 def qgl_weights_keepDim(jet1, jet2, njets, isHerwig):
     """
     We assume that event filtering/selection has been already applied
@@ -1491,9 +1613,74 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
 
 #     return btag.wgt, btag_syst
 
-# jet puid weight
 
-def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid):
+
+
+
+
+# -----------------------------------------------------------
+#
+# jet puid weight
+#
+# -----------------------------------------------------------
+
+def get_jetpuid_weights(year, jets, config):
+    """
+    Source: https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/jmarExample.py?ref_type=heads#L47-52
+    """
+    jet_puid_wp = config["jet_puid"]
+    # print(f"jet puid jets: {jets.compute()}")
+
+    # no need to re-weight jets with pt>= 50
+    jets = jets[jets.pt < 50]
+
+    # if "2017" in year: # we apply the old method, which takes into account the leakage areas (which I am not certain the official code supports)
+    #     pt_name = "pt"
+    #     puId = jets.puId
+    #     jetpuid_weight = get_jetpuid_weights_old(
+    #         evaluator, year, jets, pt_name,
+    #         jet_puid_wp, pass_jet_puid
+    #     )
+    #     return jetpuid_weight
+    # else:
+    fname = config["jmar_sf_file"]
+    puid_evaluator = correctionlib.CorrectionSet.from_file(fname)
+    wp_converter = {
+        "loose" : "L",
+        "medium" : "M",
+        "tight" : "T",
+    }
+    wp = wp_converter[jet_puid_wp]
+    map_name = "PUJetID_eff"
+    sf = puid_evaluator[map_name]
+
+    # max_pt_edge = 57.5 
+    # jet_pt = ak.where((jets.pt < max_pt_edge),jets.pt, max_pt_edge)
+    # input_dict = {
+    #     "eta" : jets.eta, 
+    #     "pt" : jet_pt, 
+    #     "systematic" : "nom", 
+    #     "workingpoint": wp
+    # }
+    input_dict = {
+        "eta" : jets.eta, 
+        "pt" : jets.pt, 
+        "systematic" : "nom", 
+        "workingpoint": wp
+    }
+    inputs = get_corr_inputs(input_dict, sf)
+    sf_val = sf.evaluate(*inputs)
+    # print(f"jet puid sf_val: {sf_val}")
+    # print(f"jet puid sf_val: {sf_val.compute()}")
+    sf_val = ak.prod(sf_val, axis=1)
+    # print(f"jet puid sf_val after prod: {sf_val.compute()}")
+    sf_val = ak.fill_none(sf_val, value=1) # unncessary, but just in case
+    # print(f"jet puid weight: {sf_val.compute()}")
+    return sf_val
+
+
+
+def get_jetpuid_weights_old(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid):
     if year == "2016preVFP":
         yearname = "UL2016APV"
     elif year == "2016postVFP":
@@ -1674,3 +1861,10 @@ def get_jetpuid_weights(evaluator, year, jets, pt_name, jet_puid_opt, jet_puid):
         # print(f"puid_weight after: {puid_weight}")
         # print(f"puid_weight: {ak.to_numpy(puid_weight.compute())}")
     return puid_weight
+
+
+
+
+
+
+

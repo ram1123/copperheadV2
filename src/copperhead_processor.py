@@ -10,7 +10,7 @@ from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
 from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
 # from src.corrections.weight import Weights
-from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights
+from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -865,21 +865,21 @@ class EventProcessor(processor.ProcessorABC):
             muID, muIso, muTrig = musf_evaluator(
                 musf_lookup, self.config["year"], mu1, mu2
             )
-            # weights.add("muID", 
-            #         weight=muID["nom"],
-            #         weightUp=muID["up"],
-            #         weightDown=muID["down"]
-            # )
-            # weights.add("muIso", 
-            #         weight=muIso["nom"],
-            #         weightUp=muIso["up"],
-            #         weightDown=muIso["down"]
-            # )
-            # weights.add("muTrig", 
-            #         weight=muTrig["nom"],
-            #         weightUp=muTrig["up"],
-            #         weightDown=muTrig["down"]
-            # )
+            weights.add("muID", 
+                    weight=muID["nom"],
+                    weightUp=muID["up"],
+                    weightDown=muID["down"]
+            )
+            weights.add("muIso", 
+                    weight=muIso["nom"],
+                    weightUp=muIso["up"],
+                    weightDown=muIso["down"]
+            )
+            weights.add("muTrig", 
+                    weight=muTrig["nom"],
+                    weightUp=muTrig["up"],
+                    weightDown=muTrig["down"]
+            )
             #do mu SF end -------------------------------------
 
             
@@ -1271,21 +1271,21 @@ class EventProcessor(processor.ProcessorABC):
         pass_jet_id = jet_id(jets, self.config)
                
         print(f"jet loop NanoAODv: {NanoAODv}")
+        is_2017 = "2017" in year
         if NanoAODv == 9 : 
             pass_jet_puid = jet_puid(jets, self.config)
             # Jet PUID scale factors, which also takes pt < 50 into account within the function
             if is_mc:  
-                print("doing jet puid weights!")
-                jet_puid_opt = self.config["jet_puid"]
-                pt_name = "pt"
-                puId = jets.puId
-                jetpuid_weight = get_jetpuid_weights(
-                    self.evaluator, year, jets, pt_name,
-                    jet_puid_opt, pass_jet_puid
-                )
-                # weights.add("jetpuid_wgt", 
-                #         weight=jetpuid_weight,
-                # )
+                if is_2017:
+                    print("doing jet puid weights!")
+                    jet_puid_opt = self.config["jet_puid"]
+                    pt_name = "pt"
+                    puId = jets.puId
+                    jetpuid_weight = get_jetpuid_weights_old(
+                        self.evaluator, year, jets, pt_name,
+                        jet_puid_opt, pass_jet_puid
+                    )
+                    # we add the jetpuid_weight later in the code
         else: # NanoAODv12 doesn't have Jet_PuID yet
             pass_jet_puid = ak.ones_like(pass_jet_id, dtype="bool")
         # ------------------------------------------------------------#
@@ -1327,17 +1327,20 @@ class EventProcessor(processor.ProcessorABC):
         # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
 
         jets = ak.to_packed(jets[jet_selection]) 
-        # jets = jets[jet_selection]
+
+        # apply jetpuid if not have done already
+        if not is_2017 and is_mc:
+            jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
+        
+        if is_mc:
+            # now we add jetpuid_wgt
+            weights.add("jetpuid_wgt", 
+                    weight=jetpuid_weight,
+            )
 
         
         
-        # print(f"jets after selection: {jets}")
-        # print(f"jets._meta after selection: {str(jets._meta.compute())}")
-        # print(f"jet_selection._meta: {str(jet_selection._meta.compute())}")
-        # print(f"jets._meta after selection: {repr(jets._meta)}")
-        # print(f"jet_selection._meta: {repr(jet_selection._meta)}")
-        # print(f"dak.necessary_columns(jets.pt) after selection: {dak.necessary_columns(jets.pt)}")
-        # 
+
         
         # jets = ak.where(jet_selection, jets, None)
         # muons = events.Muon 
@@ -1371,7 +1374,6 @@ class EventProcessor(processor.ProcessorABC):
         jet1 = paddedSorted_jets[:,0]
         jet2 = paddedSorted_jets[:,1]
         # test end ----------------------------------------
-        print(f"jet1.qgl: {jet1.qgl.compute()}")
         # print(f"event match jet2 pt: {ak.to_numpy(jet2.pt[event_match].compute())}")
 
         dijet = jet1+jet2
@@ -1534,12 +1536,10 @@ class EventProcessor(processor.ProcessorABC):
         #     # --- QGL weights  start --- #
             isHerwig = "herwig" in dataset
             print("adding QGL weights!")
-            # original start -------------------------------------
-            # qgl_wgts = qgl_weights(jet1, jet2, njets, isHerwig)
-            # original end -------------------------------------
             
             # keep dims start -------------------------------------
-            qgl_wgts = qgl_weights_keepDim(jet1, jet2, njets, isHerwig)
+            # qgl_wgts = qgl_weights_keepDim(jet1, jet2, njets, isHerwig)
+            qgl_wgts = qgl_weights_V2(jets, self.config, isHerwig)
             # keep dims end -------------------------------------
             weights.add("qgl_wgt", 
                         weight=qgl_wgts["nom"],
@@ -1634,7 +1634,7 @@ class EventProcessor(processor.ProcessorABC):
         # Fill outputs
         # --------------------------------------------------------------#
 
-    #     variables.update({"wgt_nominal": weights.get_weight("nominal")})
+        # variables.update({"wgt_nominal": weights.get_weight("nominal")})
 
     #     # All variables are affected by jet pT because of jet selections:
     #     # a jet may or may not be selected depending on pT variation.
