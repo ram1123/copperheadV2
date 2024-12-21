@@ -2,8 +2,8 @@ roccor_file:
   2016preVFP: data/roch_corr/RoccoR2016aUL.txt
   2016postVFP: data/roch_corr/RoccoR2016bUL.txt
   '2017': data/roch_corr/RoccoR2017UL.txt
-  # '2018': data/roch_corr/RoccoR2018UL.txt # UL original
-  '2018': data/roch_corr/RoccoR2018.txt # rereco test
+  '2018': data/roch_corr/RoccoR2018UL.txt # UL original
+  # '2018': data/roch_corr/RoccoR2018.txt # rereco test
   2016_RERECO: data/roch_corr/RoccoR2016.txt
   '2017_RERECO': data/roch_corr/RoccoR2017.txt
   '2018_RERECO': data/roch_corr/RoccoR2018.txt

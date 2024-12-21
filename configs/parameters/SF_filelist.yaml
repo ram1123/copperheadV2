@@ -87,30 +87,30 @@ muSFFileList:
     scale: 1.0
   '2018':
   - id:
-    # - data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root # UL
-    # - NUM_MediumID_DEN_TrackerMuons_abseta_pt # UL
-    - data/muon_sf/year2018/RunABCD_SF_ID.root # rereco
-    - NUM_MediumID_DEN_genTracks_pt_abseta # rereco
+    - data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root # UL
+    - NUM_MediumID_DEN_TrackerMuons_abseta_pt # UL
+    # - data/muon_sf/year2018/RunABCD_SF_ID.root # rereco
+    # - NUM_MediumID_DEN_genTracks_pt_abseta # rereco
     iso:
-    # - data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root # UL
-    # - NUM_TightRelIso_DEN_MediumID_abseta_pt # UL
-    - data/muon_sf/year2018/RunABCD_SF_ISO.root # rereco
-    - NUM_TightRelIso_DEN_MediumID_pt_abseta # rereco
+    - data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root # UL
+    - NUM_TightRelIso_DEN_MediumID_abseta_pt # UL
+    # - data/muon_sf/year2018/RunABCD_SF_ISO.root # rereco
+    # - NUM_TightRelIso_DEN_MediumID_pt_abseta # rereco
     trig:
     - data/muon_sf/mu2018/EfficienciesStudies_2018_trigger_EfficienciesAndSF_2018Data_BeforeMuonHLTUpdate.root
     - IsoMu24_PtEtaBins/efficienciesDATA/abseta_pt_DATA
     - IsoMu24_PtEtaBins/efficienciesMC/abseta_pt_MC
     scale: 0.14981586876464678 # 8.95 / 59.74
   - id:
-    # - data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root # UL
-    # - NUM_MediumID_DEN_TrackerMuons_abseta_pt # UL
-    - data/muon_sf/year2018/RunABCD_SF_ID.root # rereco
-    - NUM_MediumID_DEN_genTracks_pt_abseta # rereco
+    - data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root # UL
+    - NUM_MediumID_DEN_TrackerMuons_abseta_pt # UL
+    # - data/muon_sf/year2018/RunABCD_SF_ID.root # rereco
+    # - NUM_MediumID_DEN_genTracks_pt_abseta # rereco
     iso:
-    # - data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root # UL
-    # - NUM_TightRelIso_DEN_MediumID_abseta_pt # UL
-    - data/muon_sf/year2018/RunABCD_SF_ISO.root # rereco
-    - NUM_TightRelIso_DEN_MediumID_pt_abseta # rereco
+    - data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root # UL
+    - NUM_TightRelIso_DEN_MediumID_abseta_pt # UL
+    # - data/muon_sf/year2018/RunABCD_SF_ISO.root # rereco
+    # - NUM_TightRelIso_DEN_MediumID_pt_abseta # rereco
     trig:
     - data/muon_sf/mu2018/EfficienciesStudies_2018_trigger_EfficienciesAndSF_2018Data_AfterMuonHLTUpdate.root
     - IsoMu24_PtEtaBins/efficienciesDATA/abseta_pt_DATA

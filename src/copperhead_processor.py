@@ -836,7 +836,13 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights) # temporary commenting out
 
             cross_section = self.config["cross_sections"][dataset]
+            # check if there's a year-wise different cross section
+            try:
+                cross_section = cross_section[year] # we assume cross_section is a map (Omegaconf)
+            except:
+                cross_section = cross_section # we assume this is a number
             print(f"cross_section: {cross_section}")
+            print(f"type(cross_section): {type(cross_section)}")
             integrated_lumi = self.config["integrated_lumis"]
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
