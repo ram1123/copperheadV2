@@ -184,9 +184,9 @@ if __name__ == "__main__":
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                     # new_sample_list.append("dy_M-50")
-                    # new_sample_list.append("dy_M-100To200")
+                    new_sample_list.append("dy_M-100To200")
                     # new_sample_list.append("dy_VBF_filter")
-                    new_sample_list.append("dy_m105_160_vbf_amc")
+                    # new_sample_list.append("dy_m105_160_vbf_amc")
                     # new_sample_list.append("dy_VBF_filter_customJMEoff")
                     # new_sample_list.append("dy_M-50To120")
                     # new_sample_list.append("dy_M-120To200")
@@ -214,7 +214,9 @@ if __name__ == "__main__":
                     new_sample_list.append("wz_1l1nu2q")
                     new_sample_list.append("zz")
                 elif bkg_sample.upper() == "EWK": # enforce upper case to prevent confusion
-                    new_sample_list.append("ewk_lljj_mll50_mjj120")
+                    # new_sample_list.append("ewk_lljj_mll50_mjj120")
+                    new_sample_list.append("ewk_lljj_mll105_160_ptj0")
+                    new_sample_list.append("ewk_lljj_mll105_160_py_dipole")
                 else:
                     print(f"unknown background {bkg_sample} was given!")
             
@@ -223,10 +225,10 @@ if __name__ == "__main__":
         if len(sig_samples) >0:
             for sig_sample in sig_samples:
                 if sig_sample.upper() == "GGH": # enforce upper case to prevent confusion
-                    new_sample_list.append("ggh_powheg")
+                    new_sample_list.append("ggh_powhegPS")
                     # new_sample_list.append("ggh_amcPS")
                 elif sig_sample.upper() == "VBF": # enforce upper case to prevent confusion
-                    new_sample_list.append("vbf_powheg")
+                    new_sample_list.append("vbf_powheg_dipole")
                 else:
                     print(f"unknown signal {sig_sample} was given!")
         
@@ -235,8 +237,9 @@ if __name__ == "__main__":
             try:
                 dataset_dict[sample_name] = dataset[sample_name]
                 
-            except:
-                print(f"Sample {sample_name} doesn't exist. Skipping")
+            except Exception as e:
+                # print(f"Sample {sample_name} doesn't exist. Skipping")
+                print(f"Sample {sample_name} gives error {e}. Skipping")
                 continue
         dataset = dataset_dict # overwrite dataset bc we don't need it anymore
         print(f"dataset: {dataset}")
@@ -246,7 +249,8 @@ if __name__ == "__main__":
         print(f"args.run2_rereco: {args.run2_rereco}")
         for sample_name in tqdm.tqdm(dataset.keys()):
             is_data =  ("data" in sample_name)
-            
+
+            # This is temporary overwrite of samples that are private (not supported by rucio yet), thus the das_query is "dummy" in dataset yml files
             if sample_name == "dy_VBF_filter":
                 """
                 temporary condition bc IDK a way to integrate prod/phys03 CMSDAS datasets into rucio utils
@@ -271,9 +275,16 @@ if __name__ == "__main__":
                 load_path = "/eos/purdue/store/user/hyeonseo/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/Flat_NanoAODSIMv9_CMSSW_10_6_26_BigRun/240904_151935/0000/"
                 fnames = glob.glob(f"{load_path}/*.root")
             
-            elif year == "2018" and (sample_name == "dy_m105_160_vbf_amc"): # temporary overwrite for BDT input test Nov 14 2024
-                load_path = "/eos/purdue/store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/"
-                fnames = glob.glob(f"{load_path}/*/*/*/*.root")
+            elif year == "2018":
+                if (sample_name == "dy_m105_160_vbf_amc"): # temporary overwrite for BDT input test Nov 14 2024
+                    load_path = "/eos/purdue/store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/"
+                    fnames = glob.glob(f"{load_path}/*/*/*/*.root")
+                elif (sample_name == "ewk_lljj_mll105_160_ptj0"):
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10b/EWK_LLJJ_MLL_105-160_SM_5f_LO_TuneCH3_13TeV-madgraph-herwig7_corrected/" # taken from RERECO
+                    fnames = glob.glob(f"{load_path}/*/*/*/*.root")
+                elif (sample_name == "ewk_lljj_mll105_160_py_dipole"):
+                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10c/EWK_LLJJ_MLL_105-160_TuneCP5_13TeV-madgraph-pythia_dipole/" # taken from RERECO
+                    fnames = glob.glob(f"{load_path}/*/*/*/*.root")
             elif year == "2017_RERECO":
                 if sample_name == "data_B":
                     load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017B-31Mar2018-v1/"
@@ -315,32 +326,36 @@ if __name__ == "__main__":
 
 
 
-            elif year == "2018_RERECO":
-                if sample_name == "data_A":
-                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018A-17Sep2018-v2/"
-                    fnames = glob.glob(f"{load_path}/*/*/*.root")
-                elif sample_name == "data_B":
-                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018B-17Sep2018-v1/"
-                    fnames = glob.glob(f"{load_path}/*/*/*.root")
-                elif sample_name == "data_C":
-                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018C-17Sep2018-v1/"
-                    fnames = glob.glob(f"{load_path}/*/*/*.root")
-                elif sample_name == "data_D":
-                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18D_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18D_NANOV10b_un2018D-22Jan2019-v2/"
-                    fnames = glob.glob(f"{load_path}/*/*/*.root")
-                    fnames_copy = []
-                    for fname in fnames:
-                        if "nano18D_NANO_4814" in fname: # this file is also problematic in copperheadV1
-                            print("nano18D_NANO_4814.root removed!")
-                            continue
-                        fnames_copy.append(fname)
-                    fnames = fnames_copy
-                elif sample_name == "ggh_amcPS": # actually amcPS
-                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10b/GluGluHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnloFXFX_pythia8/"
-                    fnames = glob.glob(f"{load_path}/*/*/*/*.root")
-                elif sample_name == "vbf_powheg": 
-                    load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10b/VBFHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/" # technically vbf_powhegPS
-                    fnames = glob.glob(f"{load_path}/*/*/*/*.root")
+            # elif year == "2018_RERECO":
+            #     print(f"sample_name: {sample_name}")
+            #     if sample_name == "data_A":
+            #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018A-17Sep2018-v2/"
+            #         fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #     elif sample_name == "data_B":
+            #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018B-17Sep2018-v1/"
+            #         fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #     elif sample_name == "data_C":
+            #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18ABC_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18ABC_NANOV10b_un2018C-17Sep2018-v1/"
+            #         fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #     elif sample_name == "data_D":
+            #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18D_NANOV10b/SingleMuon/RunIISummer16MiniAODv3_FSRnano18D_NANOV10b_un2018D-22Jan2019-v2/"
+            #         fnames = glob.glob(f"{load_path}/*/*/*.root")
+            #         fnames_copy = []
+            #         for fname in fnames:
+            #             if "nano18D_NANO_4814" in fname: # this file is also problematic in copperheadV1
+            #                 print("nano18D_NANO_4814.root removed!")
+            #                 continue
+            #             fnames_copy.append(fname)
+            #         fnames = fnames_copy
+            #     elif sample_name == "ggh_amcPS": # actually amcPS
+            #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10b/GluGluHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnloFXFX_pythia8/"
+            #         fnames = glob.glob(f"{load_path}/*/*/*/*.root")
+            #     elif sample_name == "ggh_powheg": 
+            #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10b/GluGluHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/"
+            #         fnames = glob.glob(f"{load_path}/*/*/*/*.root")
+            #     elif sample_name == "vbf_powheg": 
+            #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10b/VBFHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/" # technically vbf_powhegPS
+            #         fnames = glob.glob(f"{load_path}/*/*/*/*.root")
 
             elif year == "2016_RERECO":
                 print("2016_RERECO !")
@@ -479,9 +494,10 @@ if __name__ == "__main__":
                 #         raise ValueError
                 #     print(f"fnames load_path: {load_path}")
                 #     fnames = glob.glob(f"{load_path}")
-            else:
-                das_query = dataset[sample_name]
-                print(f"das_query: {das_query}")
+
+            # This is the default method
+            das_query = dataset[sample_name]
+            if "dummy" not in das_query:
                 
                 rucio_client = rucio_utils.get_rucio_client()
                 outlist, outtree = rucio_utils.query_dataset(
@@ -506,11 +522,12 @@ if __name__ == "__main__":
                     fnames = get_Xcache_filelist(fnames)
             
             print(f"sample_name: {sample_name}")
+            print(f"das_query: {das_query}")
             print(f"len(fnames): {len(fnames)}")
-            print(f"fnames: {fnames}")
+            # print(f"fnames: {fnames}")
             
-            fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
-            
+            fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading 
+            # print(f"fnames: {fnames[:5]}")
 
             
             """
@@ -543,13 +560,15 @@ if __name__ == "__main__":
                         uproot_options={"timeout":2400},
                 ).events()               
                 # print(f"runs.fields: {runs.fields}")
-                if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
-                # if True: 
-                    preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                else:
+                # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
+                if "genEventSumw" in runs.fields:
                     preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                     preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                else: # nanoAODv6 
+                    preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                    preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                
+                    
                 total_events += preprocess_metadata["nGenEvts"] 
 
     
