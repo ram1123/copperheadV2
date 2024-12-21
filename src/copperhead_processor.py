@@ -1100,7 +1100,6 @@ class EventProcessor(processor.ProcessorABC):
             # we explicitly don't directly add zpt weights to the weights variables 
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
             # once kind of screws with the dak awkward array
-            print("doing zpt weight!")
             # # valerie
             # zpt_weight =\ 
             #          self.evaluator[self.zpt_path](dimuon.pt, njets)
@@ -1109,9 +1108,9 @@ class EventProcessor(processor.ProcessorABC):
             zpt_weight =\
                     self.evaluator[self.zpt_path](dimuon.pt)
             # print(f"zpt_weight: {zpt_weight.compute()}")
-            ptOfInterest = (mu1.pt > 75) & (mu1.pt < 150)
+            # ptOfInterest = (mu1.pt > 75) & (mu1.pt < 150)
             # print(f"ptOfInterest sum: {ak.to_numpy(ak.sum(ptOfInterest).compute())}")
-            zpt_filtered = zpt_weight[ptOfInterest].compute()
+            # zpt_filtered = zpt_weight[ptOfInterest].compute()
             # print(f"zpt_filtered: {ak.to_numpy(zpt_filtered)}")
             # print(f"len zpt_filtered: {len(ak.to_numpy(zpt_filtered))}")
 
@@ -1138,8 +1137,9 @@ class EventProcessor(processor.ProcessorABC):
             print("adding btag wgts!")
             wgt_nominal = wgt_nominal*out_dict["wgt_nominal_btag_wgt"]
         # original  zpt start -------------------
-        # if do_zpt:
-        #     wgt_nominal = wgt_nominal*out_dict["wgt_nominal_zpt_wgt"]
+        if do_zpt:
+            print("adding zpt wgts!")
+            wgt_nominal = wgt_nominal*out_dict["wgt_nominal_zpt_wgt"]
         # original zpt end ------------------------------
 
         # add in weights
@@ -1358,7 +1358,7 @@ class EventProcessor(processor.ProcessorABC):
             & clean
             & (jets.pt > self.config["jet_pt_cut"])
             & (abs(jets.eta) < self.config["jet_eta_cut"])
-            # & HEMVeto
+            & HEMVeto
         )
         # original jet_selection end ----------------------------------------------
 
