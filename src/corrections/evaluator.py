@@ -365,6 +365,7 @@ def get_musf_lookup(parameters):
         # print(f'lepton sf scaleFactors["trig"][0: {scaleFactors["trig"][0]}')
         trig_file = uproot.open(scaleFactors["trig"][0])
         mu_id_vals += id_file[scaleFactors["id"][1]].values() * scaleFactors["scale"]
+        # print(f"{scaleFactors} mu_id_vals : {mu_id_vals}")
         mu_id_err += (
             id_file[scaleFactors["id"][1]].variances() ** 0.5 * scaleFactors["scale"]
         )
@@ -399,10 +400,19 @@ def get_musf_lookup(parameters):
             trig_file[scaleFactors["trig"][1]].axis(1).edges(),
         ]
 
+    # print(f"mu_id_vals: {mu_id_vals}")
+    # print(f"mu_id_edges: {mu_id_edges}")
+    # print(f"mu_iso_vals: {mu_iso_vals}")
+    # print(f"mu_iso_edges: {mu_iso_edges}")
+    # print(f"mu_trig_vals_data: {mu_trig_vals_data}")
+    # print(f"mu_trig_vals_mc: {mu_trig_vals_mc}")
+    
     mu_id_sf = dense_lookup.dense_lookup(mu_id_vals, mu_id_edges)
     mu_id_err = dense_lookup.dense_lookup(mu_id_err, mu_id_edges)
     mu_iso_sf = dense_lookup.dense_lookup(mu_iso_vals, mu_iso_edges)
     mu_iso_err = dense_lookup.dense_lookup(mu_iso_err, mu_iso_edges)
+    # print(f"mu_id_sf: {mu_id_sf}")
+    # print(f"mu_iso_sf: {mu_iso_sf}")
 
     mu_trig_eff_data = dense_lookup.dense_lookup(mu_trig_vals_data, mu_trig_edges)
     # print(f'lepton sf mu_trig_vals_mc: {mu_trig_vals_mc}')
@@ -410,7 +420,9 @@ def get_musf_lookup(parameters):
     mu_trig_eff_mc = dense_lookup.dense_lookup(mu_trig_vals_mc, mu_trig_edges)
     mu_trig_err_data = dense_lookup.dense_lookup(mu_trig_err_data, mu_trig_edges)
     mu_trig_err_mc = dense_lookup.dense_lookup(mu_trig_err_mc, mu_trig_edges)
-
+    # print(f"mu_trig_eff_data: {mu_trig_eff_data}")
+    # print(f"mu_trig_eff_mc: {mu_trig_eff_mc}")
+    
     return {
         "mu_id_sf": mu_id_sf,
         "mu_id_err": mu_id_err,
@@ -422,94 +434,6 @@ def get_musf_lookup(parameters):
         "mu_trig_err_mc": mu_trig_err_mc,
     }
 
-
-
-# def musf_evaluator(lookups, year, muons):
-#     sf = {
-#         # "muID_nom": ak.ones_like(muons.pt[:,0]),
-#         # "muID_up": ak.ones_like(muons.pt[:,0]),
-#         # "muID_down": ak.ones_like(muons.pt[:,0]),
-#         # "muIso_nom": ak.ones_like(muons.pt[:,0]),
-#         # "muIso_up": ak.ones_like(muons.pt[:,0]),
-#         # "muIso_down": ak.ones_like(muons.pt[:,0]),
-#         # "muTrig_nom": ak.ones_like(muons.pt[:,0]),
-#         # "muTrig_up": ak.ones_like(muons.pt[:,0]),
-#         # "muTrig_down": ak.ones_like(muons.pt[:,0]),
-#     }
-
-#     for how in ["nom", "up", "down"]:
-#         sf[f"trig_num_{how}"] = 1.0
-#         sf[f"trig_denom_{how}"] = 1.0
-
-#     pt = muons.pt_raw
-#     eta = muons.eta_raw
-#     abs_eta = abs(muons.eta_raw)
-#     # pt = muons.pt
-#     # eta = muons.eta
-#     # abs_eta = abs(muons.eta)
-
-#     if "2016" in year:
-#         muID_ = lookups["mu_id_sf"](eta, pt)
-#         muIso_ = lookups["mu_iso_sf"](eta, pt)
-#         muIDerr = lookups["mu_id_err"](eta, pt)
-#         muIsoerr = lookups["mu_iso_err"](eta, pt)
-#     else:
-#         muID_ = lookups["mu_id_sf"](pt, abs_eta)
-#         muIso_ = lookups["mu_iso_sf"](pt, abs_eta)
-#         muIDerr = lookups["mu_id_err"](pt, abs_eta)
-#         muIsoerr = lookups["mu_iso_err"](pt, abs_eta)
-
-#     muTrig_data = lookups["mu_trig_eff_data"](abs_eta, pt)
-#     muTrig_mc = lookups["mu_trig_eff_mc"](abs_eta, pt)
-#     muTrigerr_data = lookups["mu_trig_err_data"](abs_eta, pt)
-#     muTrigerr_mc = lookups["mu_trig_err_mc"](abs_eta, pt)
-
-#     sf["trig_num_nom"] = ak.prod(1.0 - muTrig_data, axis=1)
-#     sf["trig_num_up"] = ak.prod(1.0 - (muTrig_data - muTrigerr_data), axis=1)
-#     sf["trig_num_down"] = ak.prod(1.0 - (muTrig_data + muTrigerr_data), axis=1)
-#     sf["trig_denom_nom"] = ak.prod(1.0 - muTrig_mc, axis=1)
-#     sf["trig_denom_up"] = ak.prod(1.0 - (muTrig_mc - muTrigerr_mc), axis=1)
-#     sf["trig_denom_down"] = ak.prod(1.0 - (muTrig_mc + muTrigerr_mc), axis=1)
-
-#     # print(f'copperheadV2 lepton sf  sf["trig_num_nom"]: \n {ak.to_numpy(sf["trig_num_nom"])}')
-#     # print(f'copperheadV2 lepton sf  sf["trig_num_up"]: \n {ak.to_numpy(sf["trig_num_up"])}')
-#     # print(f'copperheadV2 lepton sf  sf["trig_num_down"]: \n {ak.to_numpy(sf["trig_num_down"])}')
-#     # print(f'copperheadV2 lepton sf  sf["trig_denom_nom"]: \n {ak.to_numpy(sf["trig_denom_nom"])}')
-#     # print(f'copperheadV2 lepton sf  sf["trig_denom_up"]: \n {ak.to_numpy(sf["trig_denom_up"])}')
-#     # print(f'copperheadV2 lepton sf  sf["trig_denom_down"]: \n {ak.to_numpy(sf["trig_denom_down"])}')
-
-    
-#     sf["muID_nom"] =  ak.prod(muID_, axis=1)
-#     sf["muID_up"] = ak.prod(muID_ + muIDerr, axis=1)
-#     sf["muID_down"] = ak.prod(muID_ - muIDerr, axis=1)
-#     sf["muIso_nom"] = ak.prod(muIso_, axis=1)
-#     sf["muIso_up"] = ak.prod(muIso_ + muIsoerr, axis=1)
-#     sf["muIso_down"] = ak.prod(muIso_ - muIsoerr, axis=1)
-    
-#     # print(f'copperheadV2 lepton sf  sf["muID_nom"]: \n {ak.to_numpy(sf["muID_nom"])}')
-#     # print(f'copperheadV2 lepton sf  sf["muID_up"]: \n {ak.to_numpy(sf["muID_up"])}')
-#     # print(f'copperheadV2 lepton sf  sf["muID_down"]: \n {ak.to_numpy(sf["muID_down"])}')
-#     # print(f'copperheadV2 lepton sf  sf["muIso_nom"]: \n {ak.to_numpy(sf["muIso_nom"])}')
-#     # print(f'copperheadV2 lepton sf  sf["muIso_up"]: \n {ak.to_numpy(sf["muIso_up"])}')
-#     # print(f'copperheadV2 lepton sf  sf["muIso_down"]: \n {ak.to_numpy(sf["muIso_down"])}')
-
-#     #for trig SF
-#     for how in ["nom", "up", "down"]:
-#         sf[f"trig_num_{how}"] = 1 - sf[f"trig_num_{how}"]
-#         sf[f"trig_denom_{how}"] = 1 - sf[f"trig_denom_{how}"]
-#         cut = sf[f"trig_denom_{how}"] != 0
-#         # sf.loc[cut, f"muTrig_{how}"] = (
-#         #     sf.loc[cut, f"trig_num_{how}"] / sf.loc[cut, f"trig_denom_{how}"]
-#         # )
-#         cut_val = sf[f"trig_num_{how}"] / sf[f"trig_denom_{how}"]
-#         # print(f'copperheadV2 lepton sf {how} cut_val: \n {ak.to_numpy(cut_val)}')
-#         # print(f'copperheadV2 lepton sf ak.ones_like(muons.pt[:,0]): \n {ak.to_numpy(ak.ones_like(muons.pt[:,0]))}')
-#         sf[f"muTrig_{how}"] = ak.where(cut, cut_val, ak.ones_like(muons.pt[:,0]))
-#     muID = {"nom": sf["muID_nom"], "up": sf["muID_up"], "down": sf["muID_down"]}
-#     muIso = {"nom": sf["muIso_nom"], "up": sf["muIso_up"], "down": sf["muIso_down"]}
-#     muTrig = {"nom": sf["muTrig_nom"], "up": sf["muTrig_up"], "down": sf["muTrig_down"]}
-#     # print(f'copperheadV2 lepton sf  sf["muTrig_nom"]: \n {(sf["muTrig_nom"])}')
-#     return muID, muIso, muTrig
 
 def musf_evaluator(lookups, year, mu1, mu2):
     sf = {
@@ -543,7 +467,9 @@ def musf_evaluator(lookups, year, mu1, mu2):
             muIso_ = lookups["mu_iso_sf"](pt, abs_eta)
             muIDerr = lookups["mu_id_err"](pt, abs_eta)
             muIsoerr = lookups["mu_iso_err"](pt, abs_eta)
-    
+
+        # sf_input_names = [inp.name for inp in lookups["mu_id_sf"].inputs]
+        # print(f"muid sf names: {sf_input_names}")
         muTrig_data = lookups["mu_trig_eff_data"](abs_eta, pt)
         muTrig_mc = lookups["mu_trig_eff_mc"](abs_eta, pt)
         muTrigerr_data = lookups["mu_trig_err_data"](abs_eta, pt)
@@ -564,14 +490,21 @@ def musf_evaluator(lookups, year, mu1, mu2):
         sf["muIso_down"] = sf["muIso_down"] * (muIso_ - muIsoerr)
     
    
-
+    # sf[f"trig_num_{how}"] = 1 - sf[f"trig_num_{how}"]
+    #     sf[f"trig_denom_{how}"] = 1 - sf[f"trig_denom_{how}"]
+    #     cut = sf[f"trig_denom_{how}"] != 0
+    #     sf.loc[cut, f"muTrig_{how}"] = (
+    #         sf.loc[cut, f"trig_num_{how}"] / sf.loc[cut, f"trig_denom_{how}"]
+    #     )
     #for trig SF
     for how in ["nom", "up", "down"]:
         sf[f"trig_num_{how}"] = 1 - sf[f"trig_num_{how}"]
         sf[f"trig_denom_{how}"] = 1 - sf[f"trig_denom_{how}"]
         cut = sf[f"trig_denom_{how}"] != 0
         cut_val = sf[f"trig_num_{how}"] / sf[f"trig_denom_{how}"]
-        sf[f"muTrig_{how}"] = ak.where(cut, cut_val, ak.ones_like(mu1.pt))
+        # sf[f"muTrig_{how}"] = ak.where(cut, cut_val, ak.ones_like(mu1.pt))
+        sf[f"muTrig_{how}"] = ak.where(cut, cut_val, sf[f"muTrig_{how}"])
+    # print(f'sf[f"muTrig_nom"]: {sf[f"muTrig_nom"].compute()}')
     muID = {"nom": sf["muID_nom"], "up": sf["muID_up"], "down": sf["muID_down"]}
     muIso = {"nom": sf["muIso_nom"], "up": sf["muIso_up"], "down": sf["muIso_down"]}
     muTrig = {"nom": sf["muTrig_nom"], "up": sf["muTrig_up"], "down": sf["muTrig_down"]}
@@ -1064,11 +997,13 @@ def qgl_weights_V2(jets, config, isHerwig):
     #     sf_val = ak.fill_none(sf_val, value=1)
     #     print(f"qgl {systematic} weight: {sf_val.compute()}")
     #     out_wgts[systematic] = sf_val
-
+    print(f"isHerwig: {isHerwig}")
+    # print(f"jets.qgl: {jets.qgl.compute()}")
 
     wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)
     lightOrGluon = (abs(jets.partonFlavour) < 4) | (jets.partonFlavour == 21)
     jets = jets[wgt_mask & lightOrGluon]
+    njets = ak.num(jets, axis=1)
     nevents_selected = ak.ones_like(jets.pt[:, :1]) # if there's no jets, you select nothing 
     nevents_selected = (ak.sum(jets.pt,axis=1) > 0) # if there's no jets, you select nothing 
     # print(f"jets: {jets.compute()}")
@@ -1122,23 +1057,37 @@ def qgl_weights_V2(jets, config, isHerwig):
     qgl_weights = ak.where(gluon, gluon_val, qgl_weights)
     # apply SF, then normalize
     qgl_weights = ak.prod(qgl_weights, axis=1) 
-    # print(f"qgl_weights b4 norm: {qgl_weights.compute()}")
+    # print(f"qgl_weights b4 norm: {ak.to_numpy(qgl_weights.compute())}")
 
     # now we need to normalize the qgl weights to be same as before as a whole
+    # my method start -----------------------------------------------------------------
     qgl_wgt_applied = qgl_weights!= 1.0 # we assume if one, then the sf weren't applied
     sf_values = qgl_weights[qgl_wgt_applied] 
     # print(f"sf_values: {sf_values.compute()}")
     current_normalization = dak.map_partitions(np.sum, sf_values, keepdims=True)
-    norm_factor = nevents_selected/current_normalization
+    norm_factor = nevents_selected/current_normalization 
+    
     # print(f"nevents_selected: {nevents_selected.compute()}")
     # print(f"current_normalization: {current_normalization.compute()}")
     # print(f"norm_factor: {norm_factor.compute()}")
     qgl_weights = ak.where(qgl_wgt_applied, (qgl_weights * norm_factor), qgl_weights)
+    # my method end -----------------------------------------------------------------
+
+    # Dmitry's method start -----------------------------------------------------------------
+    # qgl_weights = ak.where((njets == 1), 1.0, qgl_weights)
+    # sf_values = qgl_weights[(njets > 2)] 
+    # norm_factor = 1/dak.map_partitions(np.mean, sf_values, keepdims=True) # change norm factor to mean, which is what Dmitry uses
+    # qgl_wgt_applied = qgl_weights!= 1.0 
+    # print(f"sf_values: {sf_values.compute()}")
+    # print(f"qgl mean: {1/norm_factor.compute()}")
+    # # print(f"qgl_weights b4 norm: {qgl_weights.compute()}")
+    # qgl_weights = ak.where(qgl_wgt_applied, (qgl_weights * norm_factor), qgl_weights)
+    # Dmitry's method end -----------------------------------------------------------------
     # print(f"qgl_weights after norm: {qgl_weights.compute()}")
 
     # debug 
-    # sf_values = qgl_weights[qgl_wgt_applied] 
-    # sanity_check_norm = dak.map_partitions(np.sum, sf_values, keepdims=True)
+    sf_values = qgl_weights[qgl_wgt_applied] 
+    sanity_check_norm = dak.map_partitions(np.sum, sf_values, keepdims=True)
     # print(f"sanity_check_norm: {sanity_check_norm.compute()}")
     
     # padd events with no jets with ones

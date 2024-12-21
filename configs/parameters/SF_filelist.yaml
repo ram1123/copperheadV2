@@ -87,27 +87,35 @@ muSFFileList:
     scale: 1.0
   '2018':
   - id:
-    - data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root
-    - NUM_MediumID_DEN_TrackerMuons_abseta_pt
+    # - data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root # UL
+    # - NUM_MediumID_DEN_TrackerMuons_abseta_pt # UL
+    - data/muon_sf/year2018/RunABCD_SF_ID.root # rereco
+    - NUM_MediumID_DEN_genTracks_pt_abseta # rereco
     iso:
-    - data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root
-    - NUM_TightRelIso_DEN_MediumID_abseta_pt
+    # - data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root # UL
+    # - NUM_TightRelIso_DEN_MediumID_abseta_pt # UL
+    - data/muon_sf/year2018/RunABCD_SF_ISO.root # rereco
+    - NUM_TightRelIso_DEN_MediumID_pt_abseta # rereco
     trig:
     - data/muon_sf/mu2018/EfficienciesStudies_2018_trigger_EfficienciesAndSF_2018Data_BeforeMuonHLTUpdate.root
     - IsoMu24_PtEtaBins/efficienciesDATA/abseta_pt_DATA
     - IsoMu24_PtEtaBins/efficienciesMC/abseta_pt_MC
-    scale: 0.14981586876464678
+    scale: 0.14981586876464678 # 8.95 / 59.74
   - id:
-    - data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root
-    - NUM_MediumID_DEN_TrackerMuons_abseta_pt
+    # - data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root # UL
+    # - NUM_MediumID_DEN_TrackerMuons_abseta_pt # UL
+    - data/muon_sf/year2018/RunABCD_SF_ID.root # rereco
+    - NUM_MediumID_DEN_genTracks_pt_abseta # rereco
     iso:
-    - data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root
-    - NUM_TightRelIso_DEN_MediumID_abseta_pt
+    # - data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root # UL
+    # - NUM_TightRelIso_DEN_MediumID_abseta_pt # UL
+    - data/muon_sf/year2018/RunABCD_SF_ISO.root # rereco
+    - NUM_TightRelIso_DEN_MediumID_pt_abseta # rereco
     trig:
     - data/muon_sf/mu2018/EfficienciesStudies_2018_trigger_EfficienciesAndSF_2018Data_AfterMuonHLTUpdate.root
     - IsoMu24_PtEtaBins/efficienciesDATA/abseta_pt_DATA
     - IsoMu24_PtEtaBins/efficienciesMC/abseta_pt_MC
-    scale: 0.8501841312353532
+    scale: 0.8501841312353532 # 50.79 / 59.74
   2016_RERECO:
   - id:
     - data/muon_sf/year2016/RunBCDEF_SF_ID.root
@@ -194,13 +202,14 @@ zpt_weights_file:
   2016preVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root
   2016postVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root
   '2017': data/reweight_zpt_2018_nJetBinned_new.histo.root
-  '2018': data/reweight_zpt_2018_nJetBinned_new.histo.root
+  # '2018': data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
+  '2018': data/zpt_weights.histo.json # Dmitry's zpt
   2016_RERECO: data/zpt_weights.histo.json
   '2017_RERECO': data/zpt_weights.histo.json
   '2018_RERECO': data/zpt_weights.histo.json
   2022preEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
   2022postEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
-jetpuid_sf_file:
+jetpuid_sf_file: # old method as of Dec 16 2024, but needed for 2017 UL
   2016preVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   2016postVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   '2017': data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
@@ -210,3 +219,13 @@ jetpuid_sf_file:
   '2018_RERECO': data/PUIDMaps.root
   2022preEE: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   2022postEE: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
+jmar_sf_file:
+  2016preVFP: data/POG/JME/2016preVFP_UL/jmar.json.gz
+  2016postVFP: data/POG/JME/2016postVFP_UL/jmar.json.gz
+  '2017': data/POG/JME/2017_UL/jmar.json.gz # while this is listed, we use jetpuid_sf_file for 2017 (old method)
+  '2018': data/POG/JME/2018_UL/jmar.json.gz
+  2016_RERECO: dummy
+  '2017_RERECO': dummy
+  '2018_RERECO': dummy
+  2022preEE: dummy
+  2022postEE: dummy
