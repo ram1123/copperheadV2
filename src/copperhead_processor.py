@@ -1603,7 +1603,8 @@ class EventProcessor(processor.ProcessorABC):
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(vbf_cut) #& two_jets & vbf_cut
                 btag_systs = self.config["btag_systs"] #if do_btag_syst else []
-                if "RERECO" in year:
+                # if "RERECO" in year:
+                if True:
                     btag_json = BTagScaleFactor(
                     self.config["btag_sf_csv"],
                     BTagScaleFactor.RESHAPE,
@@ -1611,9 +1612,6 @@ class EventProcessor(processor.ProcessorABC):
                 )
                 else:
                     btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
-                # original start -------------------------------------
-                # btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
-                # original end -------------------------------------
                 
                 # keep dims start -------------------------------------
                 btag_wgt, btag_syst = btag_weights_jsonKeepDim(
