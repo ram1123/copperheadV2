@@ -1261,7 +1261,7 @@ class EventProcessor(processor.ProcessorABC):
         if (not is_mc) and variation != "nominal":
             return
         
-        # Find jets that have selected muons within dR<0.4 from them
+        # Find jets that have selected muons within dR<0.4 from them -> line 465 of AN-19-124
 
         # matched_mu_pt = jets.matched_muons.pt_fsr
         matched_mu_pt = jets.matched_muons.pt_fsr if "pt_fsr" in jets.matched_muons.fields else jets.matched_muons.pt
@@ -1612,6 +1612,8 @@ class EventProcessor(processor.ProcessorABC):
                 )
                 else:
                     btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
+                    # btag_json=btag_file["deepJet_shape"]
+                    btag_json=btag_file["deepCSV_shape"]
                 
                 # keep dims start -------------------------------------
                 btag_wgt, btag_syst = btag_weights_jsonKeepDim(

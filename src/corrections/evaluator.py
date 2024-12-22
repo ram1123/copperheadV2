@@ -1296,26 +1296,34 @@ def get_qgl_weights(jet, isHerwig):
 
 # Btag SF-------------------------------------------------------------------------
 
-def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, btag_file):
+def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, btag_json):
     """
     We assume jets to be non padded jet that has passed the base jet selection.
     I don't think jets need to be sorted after JEC for this to work, however
     """
     # btag = pd.DataFrame(index=bjet_sel_mask.index)
-    btag_jet_selection = abs(jets.eta) < 2.4
+    btag_jet_selection = abs(jets.eta) < 2.4 # AN says 2.5 on line 624
     jets = ak.to_packed(jets[btag_jet_selection])
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
     
     
-    # btag_json=btag_file["deepJet_shape"]
-    btag_json=btag_file["deepCSV_shape"]
-    correctionlib_out = btag_json.evaluate(
+    # correctionlib_out = btag_json.evaluate( # UL
+    #     "central",
+    #     jets.hadronFlavour,
+    #     abs(jets.eta),
+    #     jets.pt,
+    #     # jets.btagDeepFlavB,
+    #     jets.btagDeepB,
+    # )
+
+    correctionlib_out = btag_json.eval( # RERECO
         "central",
         jets.hadronFlavour,
         abs(jets.eta),
         jets.pt,
         # jets.btagDeepFlavB,
         jets.btagDeepB,
+        True
     )
 
     btag_wgt = ak.prod(correctionlib_out, axis=1) # for events with no qualified jets(empty row), the value is 1.0
@@ -1349,22 +1357,38 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                 # enforce input hadronFlavour to match the target, otherwise, the lookup table will fail
                 dummy_flavor = flavor*ak.ones_like(jets.hadronFlavour)
                 hadronFlavour = ak.where(btag_mask, jets.hadronFlavour, dummy_flavor)
-                sys_wgts =  btag_json.evaluate(
+                # sys_wgts =  btag_json.evaluate( # UL
+                #     f"up_{sys}",
+                #     hadronFlavour,
+                #     abs(jets.eta),
+                #     jets.pt,
+                #     jets.btagDeepB,
+                # )
+                sys_wgts =  btag_json.eval(
                     f"up_{sys}",
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
                     jets.btagDeepB,
+                    True
                 )
                 btag_wgt_up = ak.where(btag_mask, sys_wgts, btag_wgt_up)
 
                     
-                sys_wgts =  btag_json.evaluate(
+                # sys_wgts =  btag_json.evaluate( # UL
+                #     f"down_{sys}",
+                #     hadronFlavour,
+                #     abs(jets.eta),
+                #     jets.pt,
+                #     jets.btagDeepB,
+                # )
+                sys_wgts =  btag_json.eval(
                     f"down_{sys}",
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
                     jets.btagDeepB,
+                    True
                 )
                 btag_wgt_down = ak.where(btag_mask, sys_wgts, btag_wgt_down)
 
@@ -1376,7 +1400,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
     weights = weights.weight()
     sum_before = dak.map_partitions(ak.sum, weights, keepdims=True)
     sum_after = dak.map_partitions(ak.sum, weights*btag_wgt, keepdims=True)
-    btag_wgt = btag_wgt * sum_before / sum_after
+    btag_wgt = btag_wgt * sum_before / sum_after # normalize to match the cross section
     return btag_wgt, btag_syst
 
 def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file):
