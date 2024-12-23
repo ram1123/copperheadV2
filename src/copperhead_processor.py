@@ -1263,12 +1263,17 @@ class EventProcessor(processor.ProcessorABC):
         
         # Find jets that have selected muons within dR<0.4 from them -> line 465 of AN-19-124
 
-        # matched_mu_pt = jets.matched_muons.pt_fsr
-        matched_mu_pt = jets.matched_muons.pt_fsr if "pt_fsr" in jets.matched_muons.fields else jets.matched_muons.pt
+        # matched_mu_pt = jets.matched_muons.pt_fsr if "pt_fsr" in jets.matched_muons.fields else jets.matched_muons.pt
+        matched_mu_pt = jets.matched_muons.pt_raw # afaik, matched muons are muons that are within dr < 0.4 to jets
+        matched_mu_eta = jets.matched_muons.eta_raw
         matched_mu_iso = jets.matched_muons.pfRelIso04_all
         matched_mu_id = jets.matched_muons[self.config["muon_id"]]
-        matched_mu_pass = (
+        print(f'self.config["muon_id": {self.config["muon_id"]}')
+        print(f"matched_mu_id: {matched_mu_id.compute()}")
+        print(f"jets.matched_muons: {jets.matched_muons.compute()}")
+        matched_mu_pass = ( # AN-19-124 line 465: "Jets are also cleaned w.r.t. the selected muon candidates by requiring a geometrical separation of ∆R ( j, µ ) > 0.4"
             (matched_mu_pt > self.config["muon_pt_cut"])
+            & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
             & (matched_mu_iso < self.config["muon_iso_cut"])
             & matched_mu_id
         )
@@ -1611,7 +1616,7 @@ class EventProcessor(processor.ProcessorABC):
                     "iterativefit,iterativefit,iterativefit",
                 )
                 else:
-                    btag_json =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
+                    btag_file =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
                     # btag_json=btag_file["deepJet_shape"]
                     btag_json=btag_file["deepCSV_shape"]
                 

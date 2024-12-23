@@ -1339,6 +1339,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
         5: ["jes", "hf", "hfstats1", "hfstats2"],
         # 21: ["jes", "lf", "lfstats1", "lfstats2"],
     }# printiing the correctionlib input description returns: "hadron flavor definition: 5=b, 4=c, 0=udsg", so corretionlib lookup table only accepts flavours of 0, 4 or 5
+    # in the btagging.json.gz deepCSV shape description: "The scale factors have 8 default uncertainty sources (hf,lf,hfstats1/2,lfstats1/2,cferr1/2). All except the cferr1/2 uncertainties are to be applied to light and b jets. The cferr1/2 uncertainties are to be applied to c jets. hf/lfstats1/2 uncertainties are to be decorrelated between years, the others correlated. Additional jes-varied scale factors are supplied to be applied for the jes variations." 
     
     btag_syst = {}
     for sys in systs:
@@ -1364,7 +1365,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                 #     jets.pt,
                 #     jets.btagDeepB,
                 # )
-                sys_wgts =  btag_json.eval(
+                sys_wgts =  btag_json.eval( # RERECO
                     f"up_{sys}",
                     hadronFlavour,
                     abs(jets.eta),
@@ -1382,7 +1383,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                 #     jets.pt,
                 #     jets.btagDeepB,
                 # )
-                sys_wgts =  btag_json.eval(
+                sys_wgts =  btag_json.eval( # RERECO
                     f"down_{sys}",
                     hadronFlavour,
                     abs(jets.eta),
