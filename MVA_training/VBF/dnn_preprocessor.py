@@ -5,6 +5,8 @@ import glob
 import pandas as pd
 
 
+import os 
+
 # def getParquetFiles(path):
     # return glob.glob(path)
 
@@ -115,9 +117,9 @@ def weighted_std(values, weights):
     values, weights -- Numpy ndarrays with the same shape.
     """
     average = np.average(values, weights=weights, axis=0)
-    print(f"average.shape: {average.shape}")
+    # print(f"average.shape: {average.shape}")
     variance = np.average((values - average)**2, weights=weights, axis=0)
-    print(f"variance.shape: {variance.shape}")
+    # print(f"variance.shape: {variance.shape}")
     return np.sqrt(variance)
 
 def preprocess(base_path, region="h-peak", category="vbf"):
@@ -176,13 +178,14 @@ def preprocess(base_path, region="h-peak", category="vbf"):
         filenames += glob.glob(f"{base_path}/{process}/*/*.parquet")
     # print(filenames)
     bkg_events = dak.from_parquet(filenames)
-    print(f"bkg_events fields: {bkg_events.fields}")
-    print(f"bkg_events wgt total :{bkg_events.wgt_nominal_total.compute()}")
-    print(f"bkg_events wgt :{bkg_events.wgt_nominal.compute()}")
+    # print(f"bkg_events fields: {bkg_events.fields}")
+    # print(f"bkg_events wgt total :{bkg_events.wgt_nominal_total.compute()}")
+    # print(f"bkg_events wgt :{bkg_events.wgt_nominal.compute()}")
     
     
     training_features = prepare_features(sig_events, training_features) # add variation to features
-    print(f"training_features: {training_features}")
+    # print(f"training_features: {training_features}")
+    print(f"len training_features: {len(training_features)}")
     features2load = training_features + ["event","wgt_nominal"]
 
     loop_dict = {
@@ -201,6 +204,9 @@ def preprocess(base_path, region="h-peak", category="vbf"):
     df_total = pd.concat(df_l)
     print(df_total)
     print(f"df_total.isnull().values.any(): {df_total.isnull().values.any()}")
+    # sanity check
+    print(f"signal weight sum: {np.sum(df_total.wgt_nominal[df_total.label==1])}")
+    print(f"bkg weight sum: {np.sum(df_total.wgt_nominal[df_total.label==0])}")
 
     # divide our data into 4 folds
     nfolds = 4
@@ -209,7 +215,7 @@ def preprocess(base_path, region="h-peak", category="vbf"):
         val_folds = [(i+f)%nfolds for f in [2]]
         eval_folds = [(i+f)%nfolds for f in [3]]
 
-        print(f"Train classifier #{i+1} out of {nfolds}")
+        print(f"Classifier #{i+1} out of {nfolds}")
         print(f"Training folds: {train_folds}")
         print(f"Validation folds: {val_folds}")
         print(f"Evaluation folds: {eval_folds}")
@@ -221,14 +227,32 @@ def preprocess(base_path, region="h-peak", category="vbf"):
         # scale data, save the mean and std
         x_train = df_total[training_features].values[train_filter]
         wgt_train = df_total["wgt_nominal"].values[train_filter]
-        x_mean = np.mean(x_train,axis=0)
-        x_std = np.std(x_train,axis=0)
+        x_mean = np.average(x_train,axis=0, weights=wgt_train)
+        x_std = weighted_std(x_train, wgt_train)
+        print(f"x_mean: {x_mean}")
+        print(f"x_std: {x_std}")
         model_name = "test"
         # np.save(f"output/trained_models/{model}/scalers_{fold_idx}", [x_mean, x_std])
-        np.save(f"dnn/trained_models/{model_name}/scalers_{fold_idx}", [x_mean, x_std])
+        save_path = f"dnn/trained_models/{model_name}"
+        if not os.path.exists(save_path): 
+            os.makedirs(save_path) 
+        np.save(f"{save_path}/scalers_{i}", [x_mean, x_std])
 
         # apply scaling to data, and save the data for training
-        training_data = (x_train[inputs]-x_mean)/x_std
+        x_train = (x_train-x_mean)/x_std
+
+        x_val = df_total[training_features].values[val_filter]
+        x_val = (x_val-x_mean)/x_std
+        x_eval = df_total[training_features].values[eval_filter]
+        x_eval = (x_eval-x_mean)/x_std
+
+        data_dict = {
+            "train": x_train,
+            "validation" : x_val,
+            "evaluation" : x_eval,
+        }
+        for mode, data in data_dict.items():
+            np.save(f"{save_path}/data_{mode}_{i}", data)
         
     
     
