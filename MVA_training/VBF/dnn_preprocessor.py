@@ -161,21 +161,24 @@ def preprocess(base_path, region="h-peak", category="vbf"):
     # TODO: add mixup
     # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
     sig_processes = ["vbf_powheg_dipole"]
-    bkg_processes = ["dy_M-100To200", "ewk_lljj_mll105_160_ptj0","ttjets_dl","ttjets_sl"]
+    # bkg_processes = ["dy_M-100To200", "ewk_lljj_mll105_160_ptj0","ttjets_dl","ttjets_sl"]
+    bkg_processes = ["dy_M-100To200",] # TODO: figure out why EWK and TTjet samples don't like wgt_nominal fields but are ok with any other field
     
     filenames = []
     for process in sig_processes:
         filenames += glob.glob(f"{base_path}/{process}/*/*.parquet")
     # print(filenames)
     sig_events = dak.from_parquet(filenames)
-    print(sig_events.fields)
+    
 
     filenames = []
     for process in bkg_processes:
         filenames += glob.glob(f"{base_path}/{process}/*/*.parquet")
     # print(filenames)
     bkg_events = dak.from_parquet(filenames)
-
+    print(f"bkg_events fields: {bkg_events.fields}")
+    print(f"bkg_events wgt total :{bkg_events.wgt_nominal_total.compute()}")
+    print(f"bkg_events wgt :{bkg_events.wgt_nominal.compute()}")
     
     
     training_features = prepare_features(sig_events, training_features) # add variation to features
