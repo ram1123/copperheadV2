@@ -4,7 +4,6 @@ import awkward as ak
 import glob
 import pandas as pd
 
-base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco/stage1_output/2018/f1_0/"
 
 # def getParquetFiles(path):
     # return glob.glob(path)
@@ -234,6 +233,12 @@ def preprocess(base_path, region="h-peak", category="vbf"):
     # save the resulting df for training
     
     
+if __name__ == "__main__":  
+    from distributed import LocalCluster, Client
+    cluster = LocalCluster(processes=True)
+    cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
+    client = Client(cluster)
     
-
-preprocess(base_path)
+    base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco/stage1_output/2018/f1_0/"
+    
+    preprocess(base_path)
