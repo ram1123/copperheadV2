@@ -3,7 +3,7 @@ import numpy as np
 import awkward as ak
 import glob
 import pandas as pd
-
+import itertools
 
 import os 
 
@@ -122,7 +122,281 @@ def weighted_std(values, weights):
     # print(f"variance.shape: {variance.shape}")
     return np.sqrt(variance)
 
-def preprocess(base_path, region="h-peak", category="vbf"):
+# def mixup(x_train, label_train):
+#     """
+#     apply cartesian product on x_train then apply mixup
+#     source: https://www.w3resource.com/python-exercises/numpy/python-numpy-exercise-111.php
+#     """
+#     x=x_train
+#     y=x_train
+#     # Using np.tile and np.repeat to create a grid of repeated elements from 'x' and 'y'
+#     # The grid is created by replicating 'x' along rows and 'y' along columns
+#     cartesian_prod_x = np.transpose([np.tile(x, len(y)), np.repeat(y, len(x))])
+
+#     # do the same for label
+#     x=label_train
+#     y=label_train
+#     cartesian_prod_label = np.transpose([np.tile(x, len(y)), np.repeat(y, len(x))])
+#     # print(cartesian_prod)
+#     frac = 0.5
+#     x_train_mixup = frac*cartesian_prod[:,0] + (1-frac)*cartesian_prod[:,1]
+#     # print(x_train_mixup)
+#     return x_train_mixup
+
+
+# def applyMixup(x_train,label_train):
+#     chunks = np.array_split(large_array, num_chunks)
+#     # 
+
+# def applyMixup(x_train):
+#     """
+#     apply cartesian product on x_train then apply mixup
+#     source: https://www.w3resource.com/python-exercises/numpy/python-numpy-exercise-111.php
+#     """
+#     # Compute all combinations of these arrays
+
+#     combinations = list(itertools.product(x_train, x_train))
+#     print("combination done")
+#     result =np.array(combinations)
+#     frac = 0.5
+#     x_train_mixup = frac*result[:,0] + (1-frac)*result[:,1]
+#         # print(x_train_mixup)
+#     return x_train_mixup
+
+"""mixup code start. credits to https://github.com/makeyourownmaker/mixupy """
+
+
+import sys
+import random
+import numpy as np
+import pandas as pd
+
+
+def mixup(data, alpha=4, concat=False, batch_size=None):
+    """
+    Create convex combinations of pairs of examples and their labels
+    for data augmentation and regularisation
+
+    This function enlarges training sets using linear interpolations of
+    features and associated labels as described in
+    https://arxiv.org/abs/1710.09412.
+
+    The data must be numeric.  Non-finite values are not permitted.
+    Factors should be one-hot encoded.  Duplicate values will not
+    be removed.
+
+    For now, only binary classification is supported.  Meaning the y
+    coloumn must contain only numeric 0 and 1 values.
+
+    Alpha values must be greater than or equal to zero.  Alpha equal to
+    zero specifies no interpolation.
+
+    The mixup function returns a pandas dataframe containing interpolated
+    x and y values.  Optionally, the original values can be concatenated
+    with the new values.
+
+    Parameters
+    __________
+    data : pandas dataframe
+      Original features and labels
+    alpha : float, optional
+      Hyperparameter specifying strength of interpolation
+    concat : bool, optional
+      Concatenate mixup data with original data
+    batch_size : int, optional
+      How many mixup values to produce
+
+    Returns
+    _______
+    A pandas dataframe containing interpolated x and y values and
+    optionally the original values
+
+    Examples
+    ________
+    >>> data_mix = mixup(data, 'y')
+
+    See also
+    ________
+    https://github.com/makeyourownmaker/mixupy
+    """
+
+    _check_data(data)
+    _check_params(alpha, concat, batch_size)
+
+    data_len = data.shape[0]
+
+    if batch_size is None:
+        batch_size = data_len
+
+    # Used to shuffle data2
+    if batch_size <= data_len:
+        # no replacement
+        index = random.sample(range(0, data_len), batch_size)
+    else:
+        # with replacement
+        index = np.random.randint(0, data_len, size=batch_size)
+
+    data_orig = data
+
+    # Make data1 same size as data2
+    data1 = resize_data(data, batch_size)
+
+    data2 = data1.loc[index]
+    data2 = data2.reset_index(drop=True)
+
+    # x <- lam * x1 + (1. - lam) * x2
+    # y <- lam * y1 + (1. - lam) * y2
+    lam = np.random.beta(alpha, alpha, size=(batch_size, 1))
+    data_mix = lam * data1 + (1.0 - lam) * data2
+
+    data_new = data_mix
+
+    if concat is True:
+        data_new = pd.concat([data_orig, data_mix])
+
+    data_new.columns = data_orig.columns
+
+    return data_new
+
+
+def resize_data(data, batch_size):
+    """Resize data by repeating/removing rows"""
+
+    data_orig = data
+    data_len = data.shape[0]
+
+    if data_len < batch_size:
+        rep_times = batch_size // data_len
+
+        for _ in range(rep_times):
+            data = pd.concat([data, data_orig])
+
+        data = data.reset_index(drop=True)
+
+    if data_len < batch_size:
+        data = data.loc[: batch_size - 1, :]
+    else:
+        # print(f"data len: {len(data)}")
+        # print(f"batch_size type: {type(batch_size)}")
+        data = data.loc[: int(batch_size), :]
+
+    return data
+
+
+def printe(errmsg):
+    """Print error message and exit"""
+
+    print(errmsg)
+    sys.exit(1)
+
+
+def _check_data_is_numeric(data):
+    """Check data is numeric (int or float)"""
+
+    # numerics = data.apply(lambda s: pd.to_numeric(s, errors='coerce').notnull().all())
+    numerics = data.shape[1] == data.select_dtypes(include=np.number).shape[1]
+
+    if numerics is False:
+        errmsg = (
+            "Values must be numeric in 'data':\n"
+            + " non-numeric values found\n"
+            + str(data.dtypes)
+        )
+        printe(errmsg)
+
+    return 0
+
+
+def _check_data_is_finite(data):
+    """Check data is finite - no NAs and no infs"""
+
+    errmsg = "Values must be finite in 'data':\n"
+    nas = pd.isna(data).sum()
+
+    if np.sum(nas) > 0:
+        errmsg += " 'na's found at \n" + str(nas)
+        printe(errmsg)
+
+    # infs = np.isinf(data).sum()
+    infs = np.isinf(data.select_dtypes(include=np.number)).sum()
+
+    if np.sum(infs) > 0:
+        errmsg += " 'inf's found at\n" + str(infs)
+        printe(errmsg)
+
+    return 0
+
+
+def _check_data(data):
+
+    if not isinstance(data, pd.DataFrame):
+        errmsg = "'data' must be pandas dataframe.\n" + "  'data' is ", type(data), "\n"
+        printe(errmsg)
+
+    if data.shape[0] < 2:
+        errmsg = (
+            "'data' must have 2 or more rows.\n" + "  'data' has ",
+            data.shape[0],
+            " rows.\n",
+        )
+        printe(errmsg)
+
+    if data.shape[1] < 2:
+        errmsg = (
+            "'data' must have 2 or more columns.\n" + "  'data' has ",
+            data.shape[1],
+            " columns.\n",
+        )
+        printe(errmsg)
+
+    _check_data_is_numeric(data)
+    _check_data_is_finite(data)
+
+    return 0
+
+
+def _check_params(alpha, concat, batch_size):
+
+    if not isinstance(alpha, (int, float)):
+        errmsg = "'alpha' must be integer or float\n" + "  'alpha' is ", alpha, "\n"
+        printe(errmsg)
+
+    if alpha < 0:
+        errmsg = (
+            "'alpha' must be greater than or equal to 0.\n" + "  'alpha' is ",
+            alpha,
+            "\n",
+        )
+        printe(errmsg)
+
+    if not isinstance(concat, bool):
+        errmsg = "'concat' must be True or False:\n" + "  'concat' is ", concat, "\n"
+        printe(errmsg)
+
+    if batch_size is not None and not isinstance(batch_size, int):
+        errmsg = (
+            "'batch_size' must be an integer\n" + "  'batch_size' is ",
+            batch_size,
+            "\n",
+        )
+        printe(errmsg)
+
+    if batch_size is not None and batch_size <= 0:
+        errmsg = (
+            "'batch_size' must be greater than 0.\n" + "  'batch_size' is ",
+            batch_size,
+            "\n",
+        )
+        printe(errmsg)
+
+    return 0
+
+"""mixup code end """
+
+
+
+
+def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True):
     # training_features = [
     #     "dimuon_mass",
     #     "dimuon_pt",
@@ -224,9 +498,20 @@ def preprocess(base_path, region="h-peak", category="vbf"):
         val_filter = df_total.event.mod(nfolds).isin(val_folds)
         eval_filter = df_total.event.mod(nfolds).isin(eval_folds)
 
+        df_train = df_total[train_filter]
+        df_val = df_total[val_filter]
+        df_eval = df_total[eval_filter]
+
+        print(f"df_train b4 mixup: {df_train}")
+        if do_mixup:
+            addToOriginalData = True
+            df_train = mixup(df_train, concat=addToOriginalData, batch_size = len(df_total)*2) # batch size is subject to change ofc
+            print(f"df_train after mixup: {df_train}")
+        
         # scale data, save the mean and std
-        x_train = df_total[training_features].values[train_filter]
-        wgt_train = df_total["wgt_nominal"].values[train_filter]
+        x_train = df_train[training_features].values
+        label_train = df_train.label.values
+        wgt_train = df_train.wgt_nominal.values
         x_mean = np.average(x_train,axis=0, weights=wgt_train)
         x_std = weighted_std(x_train, wgt_train)
         print(f"x_mean: {x_mean}")
@@ -240,19 +525,23 @@ def preprocess(base_path, region="h-peak", category="vbf"):
 
         # apply scaling to data, and save the data for training
         x_train = (x_train-x_mean)/x_std
-
-        x_val = df_total[training_features].values[val_filter]
+        print(f"x_train.shape b4 mixup: {x_train.shape}")
+        print(f"x_train.shape after mixup: {x_train.shape}")
+        x_val = df_val[training_features].values
         x_val = (x_val-x_mean)/x_std
-        x_eval = df_total[training_features].values[eval_filter]
+        label_val = df_val.label.values
+        x_eval = df_eval[training_features].values
         x_eval = (x_eval-x_mean)/x_std
+        label_eval = df_eval.label.values
 
         data_dict = {
-            "train": x_train,
-            "validation" : x_val,
-            "evaluation" : x_eval,
+            "train": [x_train, label_train],
+            "validation" : [x_val, label_val],
+            "evaluation" : [x_eval, label_eval],
         }
         for mode, data in data_dict.items():
-            np.save(f"{save_path}/data_{mode}_{i}", data)
+            np.save(f"{save_path}/data_input_{mode}_{i}", data[0])
+            np.save(f"{save_path}/data_label_{mode}_{i}", data[1])
         
     
     
