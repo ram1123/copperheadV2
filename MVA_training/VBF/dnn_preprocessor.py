@@ -4,6 +4,7 @@ import awkward as ak
 import glob
 import pandas as pd
 import itertools
+import argparse
 
 import os 
 
@@ -396,7 +397,7 @@ def _check_params(alpha, concat, batch_size):
 
 
 
-def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True):
+def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_label="test"):
     # training_features = [
     #     "dimuon_mass",
     #     "dimuon_pt",
@@ -503,6 +504,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True):
         df_eval = df_total[eval_filter]
 
         print(f"df_train b4 mixup: {df_train}")
+        # do_mixup = False
         if do_mixup:
             addToOriginalData = True
             df_train = mixup(df_train, concat=addToOriginalData, batch_size = len(df_total)*2) # batch size is subject to change ofc
@@ -516,17 +518,15 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True):
         x_std = weighted_std(x_train, wgt_train)
         print(f"x_mean: {x_mean}")
         print(f"x_std: {x_std}")
-        model_name = "test"
         # np.save(f"output/trained_models/{model}/scalers_{fold_idx}", [x_mean, x_std])
-        save_path = f"dnn/trained_models/{model_name}"
+        save_path = f"dnn/trained_models/{run_label}"
         if not os.path.exists(save_path): 
             os.makedirs(save_path) 
         np.save(f"{save_path}/scalers_{i}", [x_mean, x_std])
 
         # apply scaling to data, and save the data for training
         x_train = (x_train-x_mean)/x_std
-        print(f"x_train.shape b4 mixup: {x_train.shape}")
-        print(f"x_train.shape after mixup: {x_train.shape}")
+
         x_val = df_val[training_features].values
         x_val = (x_val-x_mean)/x_std
         label_val = df_val.label.values
@@ -545,9 +545,16 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True):
         
     
     
-    # calculate the scale, save it
-    # save the resulting df for training
-    
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-l",
+    "--label",
+    dest="label",
+    default="test",
+    action="store",
+    help="Unique run label (to create output path)",
+)
+args = parser.parse_args()
     
 if __name__ == "__main__":  
     from distributed import LocalCluster, Client
@@ -557,4 +564,4 @@ if __name__ == "__main__":
     
     base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco/stage1_output/2018/f1_0/"
     
-    preprocess(base_path)
+    preprocess(base_path, run_label=args.label)
