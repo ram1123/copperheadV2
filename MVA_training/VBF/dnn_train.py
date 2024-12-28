@@ -10,6 +10,7 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import os 
+import argparse
 
 # def getParquetFiles(path):
     # return glob.glob(path)
@@ -218,10 +219,18 @@ def dnn_train(model, data_dict, batch_size=1024, nepochs=101):
     # calculate the scale, save it
     # save the resulting df for training
     
-    
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-l",
+    "--label",
+    dest="label",
+    default="test",
+    action="store",
+    help="Unique run label (to create output path)",
+)
+args = parser.parse_args()
 if __name__ == "__main__":  
-    model_name = "test"
-    save_path = f"dnn/trained_models/{model_name}"
+    save_path = f"dnn/trained_models/{args.label}"
     nfolds = 4 
     model = Net(22)
     for i in range(nfolds):       
