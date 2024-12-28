@@ -11,6 +11,8 @@ import torch.nn as nn
 import torch.optim as optim
 import os 
 import argparse
+from sklearn.metrics import roc_auc_score
+
 
 # def getParquetFiles(path):
     # return glob.glob(path)
@@ -146,7 +148,7 @@ class NumpyDataset(Dataset):
         return self.input_arr[idx], self.label_arr[idx]
 
 
-def dnn_train(model, data_dict, batch_size=1024, nepochs=101):
+def dnn_train(model, data_dict, batch_size=1024, nepochs=301):
     # nepochs = 50 # temporary overwrite
     # divide our data into 4 folds
     input_arr_train, label_arr_train = data_dict["train"]
@@ -200,18 +202,31 @@ def dnn_train(model, data_dict, batch_size=1024, nepochs=101):
         print(f"fold {i} epoch {epoch} train average batch loss: {np.mean(batch_losses)}")
         if (epoch % 5) == 0:
             model.eval()
+            
             valid_loss = 0
             batch_losses = []
-            for batch_idx, (inputs, labels) in enumerate(dataloader_valid):
-                inputs = inputs.to(device)
-                labels = labels.to(device).reshape((-1,1))
-                pred = model(inputs)
-                loss = loss_fn(pred, labels)
-                batch_loss = loss.item()
-                valid_loss += batch_loss
-                batch_losses.append(batch_loss)
+            pred_l = []
+            label_l = []
+            with torch.no_grad():
+                for batch_idx, (inputs, labels) in enumerate(dataloader_valid):
+                    inputs = inputs.to(device)
+                    labels = labels.to(device).reshape((-1,1))
+                    pred = model(inputs)
+                    loss = loss_fn(pred, labels)
+                    batch_loss = loss.item()
+                    valid_loss += batch_loss
+                    batch_losses.append(batch_loss)
+                    pred_l.append(pred.cpu().numpy())
+                    label_l.append(labels.cpu().numpy())
+    
+                pred_l = np.concatenate(pred_l, axis=0).flatten()
+                label_l = np.concatenate(label_l, axis=0).flatten()
+                # print(f"pred_l: {pred_l}")
+                # print(f"label_l: {label_l}")
+                auc_score = roc_auc_score(label_l, pred_l)
             print(f"fold {i} epoch {epoch} validation total loss: {valid_loss}")
             print(f"fold {i} epoch {epoch} validation average batch loss: {np.mean(batch_losses)}")
+            print(f"fold {i} epoch {epoch} validation AUC: {auc_score}")
             model.train() # turn model back to train mode
             
     
@@ -231,7 +246,7 @@ parser.add_argument(
 args = parser.parse_args()
 if __name__ == "__main__":  
     save_path = f"dnn/trained_models/{args.label}"
-    nfolds = 4 
+    nfolds = 1 #4 
     model = Net(22)
     for i in range(nfolds):       
         input_arr_train = np.load(f"{save_path}/data_input_train_{i}.npy")
