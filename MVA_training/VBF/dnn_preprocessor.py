@@ -173,7 +173,7 @@ import numpy as np
 import pandas as pd
 
 
-def mixup(data, alpha=4, concat=False, batch_size=None):
+def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
     """
     Create convex combinations of pairs of examples and their labels
     for data augmentation and regularisation
@@ -220,7 +220,9 @@ def mixup(data, alpha=4, concat=False, batch_size=None):
     ________
     https://github.com/makeyourownmaker/mixupy
     """
-
+    random.seed(seed) 
+    np.random.seed(seed)
+    
     _check_data(data)
     _check_params(alpha, concat, batch_size)
 
@@ -232,34 +234,103 @@ def mixup(data, alpha=4, concat=False, batch_size=None):
     # Used to shuffle data2
     if batch_size <= data_len:
         # no replacement
-        index = random.sample(range(0, data_len), batch_size)
+        # index = random.sample(range(0, data_len), batch_size)
+        index1 = random.sample(range(0, data_len), batch_size)
+        index2 = random.sample(range(0, data_len), batch_size)
+        print(f"mixup index with no replacement: {index1}")
+        print(f"mixup index with no replacement: {index2}")
     else:
         # with replacement
-        index = np.random.randint(0, data_len, size=batch_size)
+        # index = np.random.randint(0, data_len, size=batch_size)
+        index1 = np.random.randint(0, data_len, size=batch_size)
+        index2 = np.random.randint(0, data_len, size=batch_size)
+        print(f"mixup index with replacement: {index1}")
+        print(f"mixup index with replacement: {index2}")
 
+
+    # data = data.sample(frac=1)
     data_orig = data
 
-    # Make data1 same size as data2
-    data1 = resize_data(data, batch_size)
+    # print(f"data_orig: {data_orig}")
+    # Cut data into specified size
+    # data1 = resize_data(data, batch_size).reset_index(drop=True)
+    data1 = data_orig.iloc[index1]
+    data1 = data1.reset_index(drop=True)
 
-    data2 = data1.loc[index]
+    # data2 = data1.loc[index]
+    data2 = data_orig.iloc[index2]
     data2 = data2.reset_index(drop=True)
 
     # x <- lam * x1 + (1. - lam) * x2
     # y <- lam * y1 + (1. - lam) * y2
-    lam = np.random.beta(alpha, alpha, size=(batch_size, 1))
-    # lam = 0.5
+    # lam = np.random.beta(alpha, alpha, size=(batch_size, 1))
+    lam = 0.5
     data_mix = lam * data1 + (1.0 - lam) * data2
-
+    if data_mix.isna().any().any():
+        print("Error: NaN values encountered!")
+        raise ValueError
+    
     data_new = data_mix
 
     if concat is True:
         data_new = pd.concat([data_orig, data_mix])
 
-    data_new.columns = data_orig.columns
-
+    # print(f"data1: {data1.head()}")
+    # print(f"data2: {data2.head()}")
+    # print(f"data_mix: {data_mix.head()}")
     return data_new
 
+def cartesian(arrays, out=None):
+    """
+    Generate a Cartesian product of input arrays.
+
+    Parameters
+    ----------
+    arrays : list of array-like
+        1-D arrays to form the Cartesian product of.
+    out : ndarray
+        Array to place the Cartesian product in.
+
+    Returns
+    -------
+    out : ndarray
+        2-D array of shape (M, len(arrays)) containing Cartesian products
+        formed of input arrays.
+
+    Examples
+    --------
+    >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
+    array([[1, 4, 6],
+           [1, 4, 7],
+           [1, 5, 6],
+           [1, 5, 7],
+           [2, 4, 6],
+           [2, 4, 7],
+           [2, 5, 6],
+           [2, 5, 7],
+           [3, 4, 6],
+           [3, 4, 7],
+           [3, 5, 6],
+           [3, 5, 7]])
+
+    """
+
+    arrays = [np.asarray(x) for x in arrays]
+    dtype = arrays[0].dtype
+
+    n = np.prod([x.size for x in arrays])
+    if out is None:
+        out = np.zeros([n, len(arrays)], dtype=dtype)
+
+    #m = n / arrays[0].size
+    m = int(n / arrays[0].size)
+    out[:,0] = np.repeat(arrays[0], m)
+    if arrays[1:]:
+        cartesian(arrays[1:], out=out[0:m, 1:])
+        for j in range(1, arrays[0].size):
+        #for j in xrange(1, arrays[0].size):
+            out[j*m:(j+1)*m, 1:] = out[0:m, 1:]
+    return out
 
 def resize_data(data, batch_size):
     """Resize data by repeating/removing rows"""
@@ -278,10 +349,8 @@ def resize_data(data, batch_size):
     if data_len < batch_size:
         data = data.loc[: batch_size - 1, :]
     else:
-        # print(f"data len: {len(data)}")
-        # print(f"batch_size type: {type(batch_size)}")
-        data = data.loc[: int(batch_size), :]
-
+        # data = data.loc[: int(batch_size), :]
+        data = data.iloc[: int(batch_size)]
     return data
 
 
@@ -472,7 +541,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
     for label, events in loop_dict.items():
         df = preprocess_loop(events, features2load, region=region, category=category, label=label)
         # print(f"df: {df.head()}")
-        print(f"df.label: {df.label.head()}")
+        print(f"df.label: {df.label}")
         df_l.append(df)
 
     
@@ -526,10 +595,13 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
 
         # do_mixup = False
         if do_mixup:
+            print(f"df_train b4: {df_train}")
+            
             addToOriginalData = True
             multiplier = 10
+            
             df_train = mixup(df_train, concat=addToOriginalData, batch_size = len(df_train)*multiplier) # batch size is subject to change ofc
-            # print(f"df_train after mixup: {df_train}")
+            print(f"df_train after mixup: {df_train}")
             # once mixup is done, recalculate the x, label and wgt for train
             x_train = df_train[training_features].values
             label_train = df_train.label.values
