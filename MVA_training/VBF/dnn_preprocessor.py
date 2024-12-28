@@ -248,6 +248,7 @@ def mixup(data, alpha=4, concat=False, batch_size=None):
     # x <- lam * x1 + (1. - lam) * x2
     # y <- lam * y1 + (1. - lam) * y2
     lam = np.random.beta(alpha, alpha, size=(batch_size, 1))
+    # lam = 0.5
     data_mix = lam * data1 + (1.0 - lam) * data2
 
     data_new = data_mix
@@ -503,15 +504,11 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
         df_val = df_total[val_filter]
         df_eval = df_total[eval_filter]
 
-        print(f"df_train b4 mixup: {df_train}")
-        # do_mixup = False
-        if do_mixup:
-            addToOriginalData = True
-            df_train = mixup(df_train, concat=addToOriginalData, batch_size = len(df_total)*2) # batch size is subject to change ofc
-            print(f"df_train after mixup: {df_train}")
         
-        # scale data, save the mean and std
+        
+        # scale data, save the mean and std. This has to be done b4 mixup
         x_train = df_train[training_features].values
+        print(f"x_train shape b4 mixup: {x_train.shape}")
         label_train = df_train.label.values
         wgt_train = df_train.wgt_nominal.values
         x_mean = np.average(x_train,axis=0, weights=wgt_train)
@@ -523,6 +520,22 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
         if not os.path.exists(save_path): 
             os.makedirs(save_path) 
         np.save(f"{save_path}/scalers_{i}", [x_mean, x_std])
+
+
+        # print(f"df_train b4 mixup: {df_train}")
+
+        # do_mixup = False
+        if do_mixup:
+            addToOriginalData = True
+            multiplier = 10
+            df_train = mixup(df_train, concat=addToOriginalData, batch_size = len(df_train)*multiplier) # batch size is subject to change ofc
+            # print(f"df_train after mixup: {df_train}")
+            # once mixup is done, recalculate the x, label and wgt for train
+            x_train = df_train[training_features].values
+            label_train = df_train.label.values
+            wgt_train = df_train.wgt_nominal.values # idk if this is needed
+            print(f"x_train shape after mixup: {x_train.shape}")
+            
 
         # apply scaling to data, and save the data for training
         x_train = (x_train-x_mean)/x_std
