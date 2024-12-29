@@ -511,17 +511,17 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
     bkg_processes = ["dy_M-100To200", "ewk_lljj_mll105_160_ptj0","ttjets_dl","ttjets_sl"]
     # bkg_processes = ["dy_M-100To200",] # TODO: figure out why EWK and TTjet samples don't like wgt_nominal fields but are ok with any other field
 
-    sig_events_l = []
+    sig_events_dict = {}
     for process in sig_processes:
         filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
         sig_events = dak.from_parquet(filenames)
-        sig_events_l.append(sig_events)
+        sig_events_dict[process] = sig_events
     
-    bkg_events_l = []
+    bkg_events_dict = {}
     for process in bkg_processes:
         filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
         bkg_events = dak.from_parquet(filenames)
-        bkg_events_l.append(bkg_events)
+        bkg_events_dict[process] = bkg_events
 
     
     
@@ -531,16 +531,27 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
     features2load = training_features + ["event","wgt_nominal"]
 
     loop_dict = {
-        "signal" : sig_events_l,
-        "background" : bkg_events_l,
+        "signal" : sig_events_dict,
+        "background" : bkg_events_dict,
     }
     df_l = []
-    for label, events_l in loop_dict.items():
-        print(f"{label} events list: {events_l}")
-        for events in events_l:
+    for label, events_dict in loop_dict.items():
+        print(f"{label} events dict: {events_dict}")
+        for process, events in events_dict.items(): # lopp through each process's events
             df = preprocess_loop(events, features2load, region=region, category=category, label=label)
+            if "dy_" in process.lower():
+                df["process"] = "dy" # add in process type
+            elif "ttjet" in process.lower():
+                df["process"] = "top" # add in process type
+            elif "ewk" in process.lower():
+                df["process"] = "ewk" # add in process type
+            elif "vbf" in process.lower():
+                df["process"] = "vbf" # add in process type
+            elif "ggh" in process.lower():
+                df["process"] = "ggh" # add in process type
             # print(f"df: {df.head()}")
             print(f"df.label: {df.label}")
+            print(f"df.process: {df.process}")
             df_l.append(df)
 
     
@@ -592,13 +603,15 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
 
         # print(f"df_train b4 mixup: {df_train}")
 
-        do_mixup = True
+        do_mixup = False
         if do_mixup:
             print(f"df_train b4: {df_train}")
             
             addToOriginalData = True
             multiplier = 5
-            
+            if "process" in df_train.columns: # can't have non-numeric value for mixup, We don't need it for training anyways
+                df_train = df_train.drop("process", axis=1)
+                
             df_train = mixup(df_train, concat=addToOriginalData, batch_size = len(df_train)*multiplier) # batch size is subject to change ofc
             print(f"df_train after mixup: {df_train}")
             # once mixup is done, recalculate the x, label and wgt for train
@@ -618,14 +631,36 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
         x_eval = (x_eval-x_mean)/x_std
         label_eval = df_eval.label.values
 
+        # old way start --------------------------------------
+        # data_dict = {
+        #     "train": [x_train, label_train],
+        #     "validation" : [x_val, label_val],
+        #     "evaluation" : [x_eval, label_eval],
+        # }
+        # for mode, data in data_dict.items():
+        #     np.save(f"{save_path}/data_input_{mode}_{i}", data[0])
+        #     np.save(f"{save_path}/data_label_{mode}_{i}", data[1])
+        # old way end --------------------------------------
+
+        # new way start --------------------------------------
+        # update the values on df and save that bc we need "process" column for analysis
+        # print(f"df_train b4 scale: {df_train}")
+        # print(f"df_val b4 scale: {df_val}")
+        # print(f"df_eval b4 scale: {df_eval}")
+        df_train[training_features] = x_train
+        df_val[training_features] = x_val
+        df_eval[training_features] = x_eval
+        # print(f"df_train after scale: {df_train}")
+        # print(f"df_val after scale: {df_val}")
+        # print(f"df_eval after scale: {df_eval}")
         data_dict = {
-            "train": [x_train, label_train],
-            "validation" : [x_val, label_val],
-            "evaluation" : [x_eval, label_eval],
+            "train": df_train,
+            "validation" : df_val,
+            "evaluation" : df_eval,
         }
-        for mode, data in data_dict.items():
-            np.save(f"{save_path}/data_input_{mode}_{i}", data[0])
-            np.save(f"{save_path}/data_label_{mode}_{i}", data[1])
+        for mode, data_df in data_dict.items():
+            data_df.to_parquet(f"{save_path}/data_df_{mode}_{i}")
+        # new way end --------------------------------------
         
     
     

@@ -12,6 +12,7 @@ import torch.optim as optim
 import os 
 import argparse
 from sklearn.metrics import roc_auc_score
+import matplotlib.pyplot as plt
 
 
 # def getParquetFiles(path):
@@ -147,26 +148,40 @@ class NumpyDataset(Dataset):
         # Retrieve a sample and its corresponding label
         return self.input_arr[idx], self.label_arr[idx]
 
+# def dnn_train(model, data_dict, batch_size=10*1024, nepochs=1001):
+def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=501, save_path=""):
+    if save_path == "save_path":
+        print("ERROR: please define the save path for the results")
+        raise ValueError
+    if len(training_features) == 0:
+        print("ERROR: please define the training features the DNN will train on")
+        raise ValueError
 
-def dnn_train(model, data_dict, batch_size=1024, nepochs=301):
     # nepochs = 50 # temporary overwrite
     # divide our data into 4 folds
-    input_arr_train, label_arr_train = data_dict["train"]
-    input_arr_valid, label_arr_valid = data_dict["validation"]
+    # input_arr_train, label_arr_train = data_dict["train"]
+    # input_arr_valid, label_arr_valid = data_dict["validation"]
+    df_train = data_dict["train"]
+    df_valid = data_dict["validation"]
+    input_arr_train = df_train[training_features].values
+    label_arr_train = df_train.label.values
+    input_arr_valid = df_valid[training_features].values
+    label_arr_valid = df_valid.label.values
     
     loss_fn = torch.nn.BCELoss()
     # Iterating through the DataLoader
     # 
-    
     device = "cuda"
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
+    dataset_train = NumpyDataset(input_arr_train, label_arr_train)
+    dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid)
+    dataloader_valid = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False)
     for epoch in range(nepochs):
         model.train()
-        dataset_train = NumpyDataset(input_arr_train, label_arr_train)
+        # every epoch, reshuffle train data loader (could be unncessary)
         dataloader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
-        dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid)
-        dataloader_valid = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False)
+        
         epoch_loss = 0
         batch_losses = []
         for batch_idx, (inputs, labels) in enumerate(dataloader_train):
@@ -207,6 +222,7 @@ def dnn_train(model, data_dict, batch_size=1024, nepochs=301):
             batch_losses = []
             pred_l = []
             label_l = []
+            # x_l = [] # sanity check
             with torch.no_grad():
                 for batch_idx, (inputs, labels) in enumerate(dataloader_valid):
                     inputs = inputs.to(device)
@@ -218,22 +234,105 @@ def dnn_train(model, data_dict, batch_size=1024, nepochs=301):
                     batch_losses.append(batch_loss)
                     pred_l.append(pred.cpu().numpy())
                     label_l.append(labels.cpu().numpy())
+                    # x_l.append(inputs.cpu().numpy()) # sanity check
     
-                pred_l = np.concatenate(pred_l, axis=0).flatten()
-                label_l = np.concatenate(label_l, axis=0).flatten()
+                pred_total = np.concatenate(pred_l, axis=0).flatten()
+                label_total = np.concatenate(label_l, axis=0).flatten()
+                # x_total = np.concatenate(x_l, axis=0) # sanity check
+                
                 # print(f"pred_l: {pred_l}")
                 # print(f"label_l: {label_l}")
-                auc_score = roc_auc_score(label_l, pred_l)
+                auc_score = roc_auc_score(label_total, pred_total)
             print(f"fold {i} epoch {epoch} validation total loss: {valid_loss}")
             print(f"fold {i} epoch {epoch} validation average batch loss: {np.mean(batch_losses)}")
             print(f"fold {i} epoch {epoch} validation AUC: {auc_score}")
+
+            # plot the score distributions
+            
+            
+            # Example data: replace these with your actual DNN scores for background and signal
+            dnn_scores_signal = pred_total[label_total==1]  # Simulated DNN scores for signal
+            dnn_scores_background = pred_total[label_total==0]   # Simulated DNN scores for background
+            # print(f"fold {i} epoch {epoch} validation pred_total: {pred_total.shape}")
+            # print(f"fold {i} epoch {epoch} validation label_total: {label_total.shape}")
+            # print(f"fold {i} epoch {epoch} validation dnn_scores_signal: {dnn_scores_signal}")
+            # print(f"fold {i} epoch {epoch} validation dnn_scores_background: {dnn_scores_background}")
+            
+            # Create histograms and normalize them separated by signal and background
+            bins = np.linspace(0, 1, 30)  # Adjust bin edges as needed
+            
+            # Histogram for signal, normalized to one
+            hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, density=True)
+            bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
+            
+            # Histogram for background, normalized to one
+            hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, density=True)
+            bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+            
+            # Plotting
+            plt.figure(figsize=(10, 6))
+            plt.plot(bin_centers_signal, hist_signal, label='Signal', drawstyle='steps-mid')
+            plt.plot(bin_centers_background, hist_background, label='Background', drawstyle='steps-mid')
+            plt.xlabel('DNN Score')
+            plt.ylabel('Density')
+            plt.title('Normalized DNN Score Distributions')
+            plt.legend()
+            # plt.show()
+            
+            fold_save_path = f"{save_path}/fold{i}"
+            if not os.path.exists(fold_save_path):
+                os.makedirs(fold_save_path)
+            
+            plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_bySigBkg.png")
+            plt.clf()
+
+            # Create histograms and normalize them separated by process samples
+            processes = ["dy", "top", "ewk", "vbf", "ggh"]
+
+            # # sanity check that pred and labels have same row idx as df_valid
+            # print(f"x_total: {x_total[:10, :]}")
+            # print(f"df_valid: {df_valid.iloc[:10]}")
+            
+            for proc in processes:
+                proc_filter = df_valid.process == proc
+                # print(f"proc_filter: {proc_filter}")
+                dnn_scores = pred_total[proc_filter]
+                hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, density=True)
+                bin_centers_proc = 0.5 * (bins_proc[:-1] + bins_proc[1:])
+                plt.plot(bin_centers_proc, hist_proc, label=proc, drawstyle='steps-mid')
+            plt.xlabel('DNN Score')
+            plt.ylabel('Density')
+            plt.title('Normalized DNN Score Distributions')
+            plt.legend()
+            plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_byProcess.png")
+            plt.clf()
+
+            
             model.train() # turn model back to train mode
             
     
     
     # calculate the scale, save it
     # save the resulting df for training
-    
+def prepare_features(df, features, variation="nominal"):
+    """
+    slightly different from the once in dnn_preprocecssor replacing events with df
+    """
+    features_var = []
+    for trf in features:
+        if "soft" in trf:
+            variation_current = "nominal"
+        else:
+            variation_current = variation
+        
+        if f"{trf}_{variation_current}" in df.columns:
+            features_var.append(f"{trf}_{variation_current}")
+        elif trf in df.columns:
+            features_var.append(trf)
+        else:
+            print(f"Variable {trf} not found in training dataframe!")
+    return features_var
+   
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "-l",
@@ -246,19 +345,35 @@ parser.add_argument(
 args = parser.parse_args()
 if __name__ == "__main__":  
     save_path = f"dnn/trained_models/{args.label}"
+    training_features = [
+        'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_eta', \
+         'dimuon_cos_theta_cs', 'dimuon_phi_cs',
+         'jet1_pt', 'jet1_eta', 'jet1_phi', 'jet1_qgl', 'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_qgl',\
+         'jj_mass', 'jj_mass_log', 'jj_dEta', 'rpt', 'll_zstar_log', 'mmj_min_dEta', 'nsoftjets5', 'htsoft2'
+    ]
+    
     nfolds = 1 #4 
     model = Net(22)
     for i in range(nfolds):       
-        input_arr_train = np.load(f"{save_path}/data_input_train_{i}.npy")
-        label_arr_train = np.load(f"{save_path}/data_label_train_{i}.npy")
-        input_arr_valid = np.load(f"{save_path}/data_input_validation_{i}.npy")
-        label_arr_valid = np.load(f"{save_path}/data_label_validation_{i}.npy")
+        # input_arr_train = np.load(f"{save_path}/data_input_train_{i}.npy")
+        # label_arr_train = np.load(f"{save_path}/data_label_train_{i}.npy")
+        # input_arr_valid = np.load(f"{save_path}/data_input_validation_{i}.npy")
+        # label_arr_valid = np.load(f"{save_path}/data_label_validation_{i}.npy")
+        # data_dict = {
+        #     "train": (input_arr_train, label_arr_train),
+        #     "validation": (input_arr_valid, label_arr_valid)
+        # }
+        # dnn_train(model, data_dict, save_path=save_path)
+        df_train = pd.read_parquet(f"{save_path}/data_df_train_{i}") # these have been already scaled
+        df_valid = pd.read_parquet(f"{save_path}/data_df_validation_{i}") # these have been already scaled
+
+        training_features = prepare_features(df_train, training_features) # add variation to the name
+        print(f"new training_features: {training_features}")
         data_dict = {
-            "train": (input_arr_train, label_arr_train),
-            "validation": (input_arr_valid, label_arr_valid)
+            "train": df_train,
+            "validation": df_valid
         }
-        
-        dnn_train(model, data_dict)
+        dnn_train(model, data_dict,training_features=training_features, save_path=save_path,)
 
 
 
