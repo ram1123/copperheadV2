@@ -263,8 +263,8 @@ def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
 
     # x <- lam * x1 + (1. - lam) * x2
     # y <- lam * y1 + (1. - lam) * y2
-    # lam = np.random.beta(alpha, alpha, size=(batch_size, 1))
-    lam = 0.5
+    lam = np.random.beta(alpha, alpha, size=(batch_size, 1))
+    # lam = 0.5
     data_mix = lam * data1 + (1.0 - lam) * data2
     if data_mix.isna().any().any():
         print("Error: NaN values encountered!")
@@ -507,25 +507,22 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
     ]
     # TODO: add mixup
     # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
-    sig_processes = ["vbf_powheg_dipole"]
-    # bkg_processes = ["dy_M-100To200", "ewk_lljj_mll105_160_ptj0","ttjets_dl","ttjets_sl"]
-    bkg_processes = ["dy_M-100To200",] # TODO: figure out why EWK and TTjet samples don't like wgt_nominal fields but are ok with any other field
-    
-    filenames = []
-    for process in sig_processes:
-        filenames += glob.glob(f"{base_path}/{process}/*/*.parquet")
-    # print(filenames)
-    sig_events = dak.from_parquet(filenames)
-    
+    sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
+    bkg_processes = ["dy_M-100To200", "ewk_lljj_mll105_160_ptj0","ttjets_dl","ttjets_sl"]
+    # bkg_processes = ["dy_M-100To200",] # TODO: figure out why EWK and TTjet samples don't like wgt_nominal fields but are ok with any other field
 
-    filenames = []
+    sig_events_l = []
+    for process in sig_processes:
+        filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
+        sig_events = dak.from_parquet(filenames)
+        sig_events_l.append(sig_events)
+    
+    bkg_events_l = []
     for process in bkg_processes:
-        filenames += glob.glob(f"{base_path}/{process}/*/*.parquet")
-    # print(filenames)
-    bkg_events = dak.from_parquet(filenames)
-    # print(f"bkg_events fields: {bkg_events.fields}")
-    # print(f"bkg_events wgt total :{bkg_events.wgt_nominal_total.compute()}")
-    # print(f"bkg_events wgt :{bkg_events.wgt_nominal.compute()}")
+        filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
+        bkg_events = dak.from_parquet(filenames)
+        bkg_events_l.append(bkg_events)
+
     
     
     training_features = prepare_features(sig_events, training_features) # add variation to features
@@ -534,15 +531,17 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
     features2load = training_features + ["event","wgt_nominal"]
 
     loop_dict = {
-        "signal" : sig_events,
-        "background" : bkg_events,
+        "signal" : sig_events_l,
+        "background" : bkg_events_l,
     }
     df_l = []
-    for label, events in loop_dict.items():
-        df = preprocess_loop(events, features2load, region=region, category=category, label=label)
-        # print(f"df: {df.head()}")
-        print(f"df.label: {df.label}")
-        df_l.append(df)
+    for label, events_l in loop_dict.items():
+        print(f"{label} events list: {events_l}")
+        for events in events_l:
+            df = preprocess_loop(events, features2load, region=region, category=category, label=label)
+            # print(f"df: {df.head()}")
+            print(f"df.label: {df.label}")
+            df_l.append(df)
 
     
     # merge sig and bkg dfs
@@ -593,12 +592,12 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
 
         # print(f"df_train b4 mixup: {df_train}")
 
-        # do_mixup = False
+        do_mixup = True
         if do_mixup:
             print(f"df_train b4: {df_train}")
             
             addToOriginalData = True
-            multiplier = 10
+            multiplier = 5
             
             df_train = mixup(df_train, concat=addToOriginalData, batch_size = len(df_train)*multiplier) # batch size is subject to change ofc
             print(f"df_train after mixup: {df_train}")
