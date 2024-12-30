@@ -7,6 +7,7 @@ import itertools
 import argparse
 
 import os 
+import copy
 
 # def getParquetFiles(path):
     # return glob.glob(path)
@@ -45,12 +46,12 @@ def applyCatAndFeatFilter(events, features: list, region="h-peak", category="vbf
     
     if category.lower() == "vbf":
         btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        cat_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35) 
-        cat_cut = cat_cut & (~btag_cut) # btag cut is for VH and ttH categories
+        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35) 
+        cat_cut = vbf_cut & (~btag_cut) # btag cut is for VH and ttH categories
     elif category.lower()== "ggh":
         btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        cat_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5)
-        cat_cut = cat_cut & (~btag_cut) # btag cut is for VH and ttH categories
+        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5)
+        cat_cut = (~vbf_cut) & (~btag_cut) # btag cut is for VH and ttH categories
     else: # no category cut is applied
         cat_cut = ak.ones_like(dimuon_mass, dtype="bool")
         
@@ -88,6 +89,7 @@ def preprocess_loop(events, features2load, region="h-peak", category="vbf", labe
     print(f"features2load: {features2load}")
     # features2load = training_features + ["event"]
     events = applyCatAndFeatFilter(events, features2load, region=region, category=category)
+    # events = applyCatAndFeatFilter(events, features2load, region=region, category="ggh")
     events = fillEventNans(events)
 
     # turn to pandas df add label (signal=1, bkg=0)
@@ -237,15 +239,15 @@ def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
         # index = random.sample(range(0, data_len), batch_size)
         index1 = random.sample(range(0, data_len), batch_size)
         index2 = random.sample(range(0, data_len), batch_size)
-        print(f"mixup index with no replacement: {index1}")
-        print(f"mixup index with no replacement: {index2}")
+        # print(f"mixup index with no replacement: {index1}")
+        # print(f"mixup index with no replacement: {index2}")
     else:
         # with replacement
         # index = np.random.randint(0, data_len, size=batch_size)
         index1 = np.random.randint(0, data_len, size=batch_size)
         index2 = np.random.randint(0, data_len, size=batch_size)
-        print(f"mixup index with replacement: {index1}")
-        print(f"mixup index with replacement: {index2}")
+        # print(f"mixup index with replacement: {index1}")
+        # print(f"mixup index with replacement: {index2}")
 
 
     # data = data.sample(frac=1)
@@ -467,7 +469,7 @@ def _check_params(alpha, concat, batch_size):
 
 
 
-def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_label="test"):
+def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_label="test"):
     # training_features = [
     #     "dimuon_mass",
     #     "dimuon_pt",
@@ -509,7 +511,8 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
     # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
     sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
     bkg_processes = ["dy_M-100To200", "ewk_lljj_mll105_160_ptj0","ttjets_dl","ttjets_sl"]
-    # bkg_processes = ["dy_M-100To200",] # TODO: figure out why EWK and TTjet samples don't like wgt_nominal fields but are ok with any other field
+    # sig_processes = ["ggh_powhegPS"] # testing
+    # bkg_processes = ["ewk_lljj_mll105_160_ptj0"] # testing
 
     sig_events_dict = {}
     for process in sig_processes:
@@ -603,16 +606,33 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=True, run_la
 
         # print(f"df_train b4 mixup: {df_train}")
 
-        do_mixup = False
         if do_mixup:
-            print(f"df_train b4: {df_train}")
-            
             addToOriginalData = True
-            multiplier = 5
-            if "process" in df_train.columns: # can't have non-numeric value for mixup, We don't need it for training anyways
-                df_train = df_train.drop("process", axis=1)
-                
-            df_train = mixup(df_train, concat=addToOriginalData, batch_size = len(df_train)*multiplier) # batch size is subject to change ofc
+            print(f"df_train b4: {df_train.process}")
+            df_mixup = copy.deepcopy(df_train)
+            processes2keep = ["ggh", "ewk"]
+            proc_filter = np.full(len(df_mixup), False, dtype=bool)
+            for process in processes2keep:
+                proc_filter = proc_filter | (df_mixup.process == process)
+            df_mixup = df_mixup[proc_filter]
+            print(f"df_mixup : {df_mixup.process}")
+
+            # drop process column. can't have non-numeric value for mixup, We don't need it for training anyways
+            df_mixup = df_mixup.drop("process", axis=1)
+            df_train = df_train.drop("process", axis=1)
+
+            
+            multiplier = 3
+            
+
+            df_mixup = mixup(df_train, batch_size = int(len(df_train)*multiplier)) # batch size is subject to change ofc
+
+            if addToOriginalData:
+                df_train = pd.concat([df_train, df_mixup])
+            else:
+                df_train = df_mixup
+
+            
             print(f"df_train after mixup: {df_train}")
             # once mixup is done, recalculate the x, label and wgt for train
             x_train = df_train[training_features].values
@@ -673,6 +693,14 @@ parser.add_argument(
     action="store",
     help="Unique run label (to create output path)",
 )
+parser.add_argument(
+    "-cat",
+    "--category",
+    dest="category",
+    default="vbf",
+    action="store",
+    help="production mode category. Options: vbf or ggh",
+)
 args = parser.parse_args()
     
 if __name__ == "__main__":  
@@ -682,5 +710,5 @@ if __name__ == "__main__":
     client = Client(cluster)
     
     base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco/stage1_output/2018/f1_0/"
-    
-    preprocess(base_path, run_label=args.label)
+    preprocess(base_path, run_label=args.label, category=args.category)
+    print("Success!")
