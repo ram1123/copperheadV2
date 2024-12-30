@@ -13,7 +13,20 @@ import os
 import argparse
 from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
+import mplhep as hep
+plt.style.use(hep.style.CMS)
 
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=1, gamma=2):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(self, inputs, targets):
+        BCE_loss = nn.functional.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+        pt = torch.exp(-BCE_loss)  # Probabilities of correct classification
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
+        return focal_loss.mean()
 
 # def getParquetFiles(path):
     # return glob.glob(path)
@@ -169,6 +182,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
     label_arr_valid = df_valid.label.values
     
     loss_fn = torch.nn.BCELoss()
+    # loss_fn = FocalLoss(alpha=1, gamma=2)
     # Iterating through the DataLoader
     # 
     device = "cuda"
@@ -248,9 +262,10 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
             print(f"fold {i} epoch {epoch} validation AUC: {auc_score}")
 
             # plot the score distributions
+
+            # transform the score
+            pred_total = np.arctanh(pred_total)
             
-            
-            # Example data: replace these with your actual DNN scores for background and signal
             dnn_scores_signal = pred_total[label_total==1]  # Simulated DNN scores for signal
             dnn_scores_background = pred_total[label_total==0]   # Simulated DNN scores for background
             # print(f"fold {i} epoch {epoch} validation pred_total: {pred_total.shape}")
@@ -259,7 +274,8 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
             # print(f"fold {i} epoch {epoch} validation dnn_scores_background: {dnn_scores_background}")
             
             # Create histograms and normalize them separated by signal and background
-            bins = np.linspace(0, 1, 30)  # Adjust bin edges as needed
+            # bins = np.linspace(0, 1, 30)  # Adjust bin edges as needed
+            bins = np.linspace(0, 2.8, 30)  # Adjust bin edges as needed
             
             # Histogram for signal, normalized to one
             hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, density=True)
@@ -273,9 +289,9 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
             plt.figure(figsize=(10, 6))
             plt.plot(bin_centers_signal, hist_signal, label='Signal', drawstyle='steps-mid')
             plt.plot(bin_centers_background, hist_background, label='Background', drawstyle='steps-mid')
-            plt.xlabel('DNN Score')
+            plt.xlabel('arctanh Score')
             plt.ylabel('Density')
-            plt.title('Normalized DNN Score Distributions')
+            plt.title('Normalized DNN Score Distributions Sig vs Bkg')
             plt.legend()
             # plt.show()
             
@@ -300,13 +316,69 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
                 hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, density=True)
                 bin_centers_proc = 0.5 * (bins_proc[:-1] + bins_proc[1:])
                 plt.plot(bin_centers_proc, hist_proc, label=proc, drawstyle='steps-mid')
-            plt.xlabel('DNN Score')
+            plt.xlabel('arctanh Score')
             plt.ylabel('Density')
-            plt.title('Normalized DNN Score Distributions')
+            plt.title('Normalized DNN Score Distributions by Sample')
             plt.legend()
             plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_byProcess.png")
             plt.clf()
 
+
+
+            # Do the logscale plot
+            fig, ax_main = plt.subplots()
+            
+
+            ax_main.set_yscale('log')
+            ax_main.set_ylim(0.01, 1e9)
+
+            # stack bkg
+
+            bkg_processes = ["ewk", "top", "dy"] # smallest samples first
+            bkg_hist_l = []
+            for proc in bkg_processes:
+                proc_filter = df_valid.process == proc
+                dnn_scores = pred_total[proc_filter]
+                wgt = df_valid.wgt_nominal[proc_filter]
+                hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt)
+                bkg_hist_l.append(hist_proc)
+            
+            hep.histplot(
+                bkg_hist_l, 
+                bins=bins, 
+                stack=True, 
+                histtype='fill', 
+                label=bkg_processes, 
+                sort='label_r',
+                ax=ax_main,
+            )
+            
+
+            # plot signal, no stack
+
+            sig_processes = ["vbf", "ggh"]
+
+            for proc in sig_processes:
+                proc_filter = df_valid.process == proc
+                dnn_scores = pred_total[proc_filter]
+                wgt = df_valid.wgt_nominal[proc_filter]
+                hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt)
+                hep.histplot(
+                    hist_proc, 
+                    bins=bins, 
+                    histtype='step', 
+                    label=proc, 
+                    # color =  "black",
+                    ax=ax_main,
+                )
+
+            ax_main.set_xlabel('arctanh Score')
+            ax_main.set_ylabel("Yield")
+            plt.title('DNN Score Distributions')
+            plt.legend()
+            plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_stackedDist_byProcess.png")
+            plt.clf()
+            
             
             model.train() # turn model back to train mode
             
