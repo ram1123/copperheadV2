@@ -177,7 +177,7 @@ class NumpyDataset(Dataset):
         return self.input_arr[idx], self.label_arr[idx]
 
 # def dnn_train(model, data_dict, batch_size=10*1024, nepochs=1001):
-def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=501, save_path=""):
+def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=501, save_path=""):
     if save_path == "save_path":
         print("ERROR: please define the save path for the results")
         raise ValueError
@@ -292,7 +292,23 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
             
             # Create histograms and normalize them separated by signal and background
             # bins = np.linspace(0, 1, 30)  # Adjust bin edges as needed
-            bins = np.linspace(0, 2.8, 30)  # Adjust bin edges as needed
+            # bins = np.linspace(0, 2.8, 30)  # Adjust bin edges as needed
+            bins = np.array([
+                0,
+                0.07,
+                0.432,
+                0.71,
+                0.926,
+                1.114,
+                1.28,
+                1.428,
+                1.564,
+                1.686,
+                1.798,
+                1.9,
+                2.0,
+                2.8,
+            ])
             
             # Histogram for signal, normalized to one
             hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, density=True)
@@ -366,8 +382,8 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
                 # print(f"proc_filter: {proc_filter}")
                 dnn_scores = pred_total[proc_filter]
                 wgt_proc = df_valid.wgt_nominal[proc_filter]
-                hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, density=True, weights=wgt_proc)
-                # print(f"{proc} hist: {hist_proc}")
+                hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt_proc)
+                print(f"{proc} hist: {hist_proc}")
                 bin_centers_proc = 0.5 * (bins_proc[:-1] + bins_proc[1:])
                 plt.plot(bin_centers_proc, hist_proc, label=proc, drawstyle='steps-mid')
             plt.xlabel('arctanh Score')
@@ -397,6 +413,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
                 dnn_scores = pred_total[proc_filter]
                 wgt = df_valid.wgt_nominal[proc_filter]
                 hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt)
+                print(f"{proc} hist: {hist_proc}")
                 bkg_hist_l.append(hist_proc)
             
             hep.histplot(
@@ -419,6 +436,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
                 dnn_scores = pred_total[proc_filter]
                 wgt = df_valid.wgt_nominal[proc_filter]
                 hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt)
+                print(f"{proc} hist: {hist_proc}")
                 hep.histplot(
                     hist_proc, 
                     bins=bins, 
