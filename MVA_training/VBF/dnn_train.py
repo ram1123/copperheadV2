@@ -176,8 +176,7 @@ class NumpyDataset(Dataset):
         # Retrieve a sample and its corresponding label
         return self.input_arr[idx], self.label_arr[idx]
 
-# def dnn_train(model, data_dict, batch_size=10*1024, nepochs=1001):
-def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=501, save_path=""):
+def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=101, save_path=""):
     if save_path == "save_path":
         print("ERROR: please define the save path for the results")
         raise ValueError
@@ -430,6 +429,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             # plot signal, no stack
 
             sig_processes = ["vbf", "ggh"]
+            sig_hist_l = []
 
             for proc in sig_processes:
                 proc_filter = df_valid.process == proc
@@ -437,6 +437,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 wgt = df_valid.wgt_nominal[proc_filter]
                 hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt)
                 print(f"{proc} hist: {hist_proc}")
+                sig_hist_l.append(hist_proc)
                 hep.histplot(
                     hist_proc, 
                     bins=bins, 
@@ -448,15 +449,25 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
 
             ax_main.set_xlabel('arctanh Score')
             ax_main.set_ylabel("Yield")
+
+            sig_hist_total = np.sum(sig_hist_l)
+            bkg_hist_total = np.sum(bkg_hist_l)
+            significance = calculateSignificance(sig_hist_total, bkg_hist_total)
+            significance = str(significance)[:5]
+            props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+            ax_main.text(0.05, 0.95, f"Significance: {significance}", transform=ax_main.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+
             plt.title('DNN Score Distributions')
             plt.legend()
             plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_stackedDist_byProcess.png")
             plt.clf()
+
+            
             
             
             model.train() # turn model back to train mode
             
-    
+
     
     # calculate the scale, save it
     # save the resulting df for training
@@ -478,6 +489,15 @@ def prepare_features(df, features, variation="nominal"):
         else:
             print(f"Variable {trf} not found in training dataframe!")
     return features_var
+
+
+def calculateSignificance(sig_hist, bkg_hist):
+    """
+    S <<B approximation of asimov significance as defined in eqn 4.1 of improvements paper
+    """
+    value = ( sig_hist / np.sqrt(bkg_hist) )**2
+    value = np.sum(value)
+    return np.sqrt(value)
    
 parser = argparse.ArgumentParser()
 parser.add_argument(
