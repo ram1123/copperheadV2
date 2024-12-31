@@ -28,6 +28,21 @@ class FocalLoss(nn.Module):
         focal_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
         return focal_loss.mean()
 
+
+class HingeLoss(nn.Module):
+    """
+    source: chatgpt, but verified on https://lightning.ai/docs/torchmetrics/stable/classification/hinge_loss.html
+    """
+    def __init__(self):
+        super(HingeLoss, self).__init__()
+    
+    def forward(self, outputs, targets):
+        # Map targets {0, 1} -> {-1, 1}
+        targets = 2 * targets - 1  # Convert 0 -> -1, 1 -> 1
+        # Calculate hinge loss
+        loss = torch.mean(torch.clamp(1 - outputs * targets, min=0))
+        return loss
+
 # def getParquetFiles(path):
     # return glob.glob(path)
 
@@ -183,6 +198,8 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
     
     loss_fn = torch.nn.BCELoss()
     # loss_fn = FocalLoss(alpha=1, gamma=2)
+    # loss_fn = HingeLoss()
+    
     # Iterating through the DataLoader
     # 
     device = "cuda"
@@ -302,6 +319,41 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
             plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_bySigBkg.png")
             plt.clf()
 
+
+
+            
+             # do the signal ratio plot
+
+            # Histogram for signal, normalized to one
+            wgt_signal = df_valid.wgt_nominal[label_total==1]
+            hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, weights=wgt_signal)
+            bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
+            
+            # Histogram for background, normalized to one
+            wgt_background = df_valid.wgt_nominal[label_total==0]
+            hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, weights=wgt_background)
+            bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+
+            # hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins)
+            # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
+            
+            # hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins)
+            # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+            sigBkg_ratio = np.zeros_like(hist_background)
+            nan_filter = hist_background !=0
+            sigBkg_ratio[nan_filter] = hist_signal[nan_filter] /hist_background[nan_filter]
+
+             # Plotting
+            plt.figure(figsize=(10, 6))
+            plt.plot(bin_centers_signal, sigBkg_ratio, label='Sig/Bkg', drawstyle='steps-mid')
+            plt.xlabel('arctanh Score')
+            plt.ylabel('Sig/Bkg')
+            plt.title('Sig / Bkg DNN Score Distributions ')
+            plt.legend()
+            plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_sigBkgRatio.png")
+            plt.clf()
+            
+
             # Create histograms and normalize them separated by process samples
             processes = ["dy", "top", "ewk", "vbf", "ggh"]
 
@@ -313,7 +365,9 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
                 proc_filter = df_valid.process == proc
                 # print(f"proc_filter: {proc_filter}")
                 dnn_scores = pred_total[proc_filter]
-                hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, density=True)
+                wgt_proc = df_valid.wgt_nominal[proc_filter]
+                hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, density=True, weights=wgt_proc)
+                # print(f"{proc} hist: {hist_proc}")
                 bin_centers_proc = 0.5 * (bins_proc[:-1] + bins_proc[1:])
                 plt.plot(bin_centers_proc, hist_proc, label=proc, drawstyle='steps-mid')
             plt.xlabel('arctanh Score')
@@ -323,6 +377,8 @@ def dnn_train(model, data_dict, training_features=[], batch_size=1024, nepochs=5
             plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_byProcess.png")
             plt.clf()
 
+
+           
 
 
             # Do the logscale plot
