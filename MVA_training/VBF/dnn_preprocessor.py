@@ -605,27 +605,32 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
 
 
         # print(f"df_train b4 mixup: {df_train}")
-
+        do_mixup = True
         if do_mixup:
             addToOriginalData = True
             print(f"df_train b4: {df_train.process}")
             df_mixup = copy.deepcopy(df_train)
-            processes2keep = ["ggh", "ewk"]
+            processes2keep = ["ggh", "vbf"]
             proc_filter = np.full(len(df_mixup), False, dtype=bool)
             for process in processes2keep:
                 proc_filter = proc_filter | (df_mixup.process == process)
             df_mixup = df_mixup[proc_filter]
-            print(f"df_mixup : {df_mixup.process}")
+            print(f"df_mixup process: {df_mixup.process}")
+            print(f"df_mixup label: {np.all(df_mixup.label==1)}")
 
             # drop process column. can't have non-numeric value for mixup, We don't need it for training anyways
             df_mixup = df_mixup.drop("process", axis=1)
             df_train = df_train.drop("process", axis=1)
 
             
-            multiplier = 3
+            multiplier = 1
             
 
-            df_mixup = mixup(df_train, batch_size = int(len(df_train)*multiplier)) # batch size is subject to change ofc
+            # df_mixup = mixup(df_train, batch_size = int(len(df_train)*multiplier)) # batch size is subject to change ofc
+            df_mixup = mixup(df_mixup, batch_size = int(len(df_mixup)*multiplier)) # batch size is subject to change ofc
+
+            # print("non zero mixup labels: ",np.sum((df_mixup.label == 1) |(df_mixup.label == 0)))
+            print(f"df_mixup label after mixup: {np.all(df_mixup.label==1)}")
 
             if addToOriginalData:
                 df_train = pd.concat([df_train, df_mixup])
