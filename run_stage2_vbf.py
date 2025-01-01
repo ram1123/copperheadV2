@@ -29,6 +29,21 @@ from coffea.ml_tools.torch_wrapper import torch_wrapper
 import argparse
 import pickle
 
+def fillEventNans(events, category="vbf"):
+    """
+    checked that this function is unnecssary for vbf category, but have it for robustness
+    """
+    if category == "vbf":
+        for field in events.fields:
+            if "phi" in field:
+                events[field] = ak.fill_none(events[field], value=-10) # we're working on a DNN, so significant deviation may be warranted
+            else: # for all other fields (this may need to be changed)
+                events[field] = ak.fill_none(events[field], value=0)
+    else:
+        print("ERROR: unsupported category!")
+        raise ValueError
+    return events
+
 def applyCatAndFeatFilter(events, region="h-peak", category="vbf"):
     """
     
@@ -162,6 +177,10 @@ parser.add_argument(
 )
 args = parser.parse_args()
 if __name__ == "__main__":  
+    from distributed import LocalCluster, Client
+    cluster = LocalCluster(processes=True)
+    cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
+    client = Client(cluster)
 
     # Preprocessing
     common_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_C/0"
@@ -186,7 +205,7 @@ if __name__ == "__main__":
     region = "h-peak"
     category = "vbf"
     events = applyCatAndFeatFilter(events, region=region, category=category)
-
+    events = fillEventNans(events, category=category) # for vbf category, this may be unncessary
     
     
     
@@ -217,8 +236,10 @@ if __name__ == "__main__":
     # print(dnn_score) # This is the lazy evaluated dask array! Use this directly for histogram filling
     # print(dnn_score.compute()) # Eagerly evaluated result
     # print("Success!")
+
+    nan_val = -999.0
     
-    input_arr_dict = { feat : [] for feat in training_features}
+    input_arr_dict = { feat : nan_val*ak.ones_like(events.event) for feat in training_features}
     print(f" input_arr_dict b4: {input_arr_dict}")
     for fold in range(nfolds): 
         model_loath_path = f"{save_path}/fold{fold}/best_model_torchJit_ver.pt"
@@ -230,16 +251,31 @@ if __name__ == "__main__":
         # print(f" eval_filter b4: {eval_filter.compute()}")
         for eval_fold in eval_folds:
             eval_filter = eval_filter | ((events.event % nfolds) == eval_fold)
-        print(f" eval_filter after: {eval_filter.compute()}")
-        print(f" events.event: {events.event.compute()}")
-        print(f" events.event% nfolds: {events.event.compute()% nfolds}")
+        # print(f" eval_filter after: {eval_filter.compute()}")
+        # print(f" events.event: {events.event.compute()}")
+        # print(f" events.event% nfolds: {events.event.compute()% nfolds}")
         
         for feat in training_features:
-            input_arr = events[feat][eval_filter]
-            print(f"{feat} input_arr : {input_arr.compute()}")
-            input_arr_dict[feat].append(input_arr)
+            # input_arr = events[feat][eval_filter]
+            # # print(f"{feat} input_arr : {input_arr.compute()}")
+            # input_arr_dict[feat].append(input_arr)
+            input_arr = input_arr_dict[feat] 
+            input_arr = ak.where(eval_filter, events[feat], input_arr)
+            input_arr_dict[feat] = input_arr
 
         # print(f" input_arr_dict after: {input_arr_dict}")
+        
+    # debug:
+    for feat in training_features:
+        input_arr = input_arr_dict[feat] 
+        print(f"{feat} input_arr : {input_arr.compute()}")
+        # check if we missed any nan_values
+        any_nan = ak.any(input_arr ==nan_val)
+        print(f"{feat} any_nan: {any_nan.compute()}")
+        # merge the fold values
+        # for feat in input_arr_dict.keys():
+            # input_arr_dict[feat] = ak.concatenate(input_arr_dict[feat], axis=0) # maybe compute individually for each fold?
+            
 
         
 
