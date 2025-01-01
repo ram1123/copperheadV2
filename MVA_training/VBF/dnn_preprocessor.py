@@ -8,6 +8,7 @@ import argparse
 
 import os 
 import copy
+import pickle
 
 # def getParquetFiles(path):
     # return glob.glob(path)
@@ -507,6 +508,21 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
          'jet1_pt', 'jet1_eta', 'jet1_phi', 'jet1_qgl', 'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_qgl',\
          'jj_mass', 'jj_mass_log', 'jj_dEta', 'rpt', 'll_zstar_log', 'mmj_min_dEta', 'nsoftjets5', 'htsoft2'
     ]
+    # generate directory to save training_features
+    save_path = f"dnn/trained_models/{run_label}"
+    if not os.path.exists(save_path): 
+        os.makedirs(save_path) 
+
+    
+
+    # Create a list
+    my_list = ['apple', 'banana', 'cherry']
+    
+    # Pickle the list into a file
+    with open(f'{save_path}/training_features.pkl', 'wb') as f:
+        pickle.dump(training_features, f)
+    
+    
     # TODO: add mixup
     # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
     sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
@@ -598,14 +614,12 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         print(f"x_mean: {x_mean}")
         print(f"x_std: {x_std}")
         # np.save(f"output/trained_models/{model}/scalers_{fold_idx}", [x_mean, x_std])
-        save_path = f"dnn/trained_models/{run_label}"
-        if not os.path.exists(save_path): 
-            os.makedirs(save_path) 
+        
         np.save(f"{save_path}/scalers_{i}", [x_mean, x_std])
 
 
         # print(f"df_train b4 mixup: {df_train}")
-        do_mixup = True
+        do_mixup = False
         if do_mixup:
             addToOriginalData = True
             print(f"df_train b4: {df_train.process}")

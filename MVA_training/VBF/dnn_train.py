@@ -9,6 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
+import pickle
 import os 
 import argparse
 from sklearn.metrics import roc_auc_score
@@ -183,8 +184,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
     if len(training_features) == 0:
         print("ERROR: please define the training features the DNN will train on")
         raise ValueError
-
-    # nepochs = 50 # temporary overwrite
+    
     # divide our data into 4 folds
     # input_arr_train, label_arr_train = data_dict["train"]
     # input_arr_valid, label_arr_valid = data_dict["validation"]
@@ -207,6 +207,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
     dataset_train = NumpyDataset(input_arr_train, label_arr_train)
     dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid)
     dataloader_valid = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False)
+    best_significance = 0
     for epoch in range(nepochs):
         model.train()
         # every epoch, reshuffle train data loader (could be unncessary)
@@ -236,16 +237,11 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             batch_loss = loss.item()
             epoch_loss += batch_loss
             batch_losses.append(batch_loss)
-            # print(f"running_loss: {running_loss}")
-            # if i % 1000 == 999:
-            #     last_loss = running_loss / 1000 # loss per batch
-            #     print('  batch {} loss: {}'.format(i + 1, last_loss))
-            #     tb_x = epoch_index * len(training_loader) + i + 1
-            #     tb_writer.add_scalar('Loss/train', last_loss, tb_x)
-            #     running_loss = 0.
+
         print(f"fold {i} epoch {epoch} train total loss: {epoch_loss}")
         print(f"fold {i} epoch {epoch} train average batch loss: {np.mean(batch_losses)}")
-        if (epoch % 5) == 0:
+        validate_interval = 5
+        if (epoch==0) or ((epoch % validate_interval) == (validate_interval-1)):
             model.eval()
             
             valid_loss = 0
@@ -453,7 +449,20 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             sig_hist_total = np.sum(sig_hist_l)
             bkg_hist_total = np.sum(bkg_hist_l)
             significance = calculateSignificance(sig_hist_total, bkg_hist_total)
-            significance = str(significance)[:5]
+            if significance > best_significance:
+                best_significance = significance
+                # save state_dict
+                torch.save(model.state_dict(), f'{fold_save_path}/best_model_weights.pt')
+                # save torch jit version for coffea torch_wrapper while you're at it
+                dummy_input = torch.rand(100, len(training_features))
+                # temporarily move model to cpu
+                model.to("cpu")
+                torch.jit.trace(model, dummy_input).save(f'{fold_save_path}/best_model_torchJit_ver.pt')
+                model.to(device)
+                print(f"new best significance for fold {i} is {best_significance} from {epoch} epoch")
+
+            # add significance to plot
+            significance = str(significance)[:5] # round to 3 d.p.
             props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
             ax_main.text(0.05, 0.95, f"Significance: {significance}", transform=ax_main.transAxes, fontsize=14, verticalalignment='top', bbox=props)
 
@@ -511,14 +520,16 @@ parser.add_argument(
 args = parser.parse_args()
 if __name__ == "__main__":  
     save_path = f"dnn/trained_models/{args.label}"
-    training_features = [
-        'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_eta', \
-         'dimuon_cos_theta_cs', 'dimuon_phi_cs',
-         'jet1_pt', 'jet1_eta', 'jet1_phi', 'jet1_qgl', 'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_qgl',\
-         'jj_mass', 'jj_mass_log', 'jj_dEta', 'rpt', 'll_zstar_log', 'mmj_min_dEta', 'nsoftjets5', 'htsoft2'
-    ]
+    # training_features = [
+    #     'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_eta', \
+    #      'dimuon_cos_theta_cs', 'dimuon_phi_cs',
+    #      'jet1_pt', 'jet1_eta', 'jet1_phi', 'jet1_qgl', 'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_qgl',\
+    #      'jj_mass', 'jj_mass_log', 'jj_dEta', 'rpt', 'll_zstar_log', 'mmj_min_dEta', 'nsoftjets5', 'htsoft2'
+    # ]
+    with open(f'{save_path}/training_features.pkl', 'rb') as f:
+        training_features = pickle.load(f)
     
-    nfolds = 1 #4 
+    nfolds = 4 #4 
     model = Net(22)
     for i in range(nfolds):       
         # input_arr_train = np.load(f"{save_path}/data_input_train_{i}.npy")
@@ -539,7 +550,9 @@ if __name__ == "__main__":
             "train": df_train,
             "validation": df_valid
         }
-        dnn_train(model, data_dict,training_features=training_features, save_path=save_path,)
+        nepochs = 10 # 100
+        batch_size = 65536
+        dnn_train(model, data_dict,training_features=training_features, save_path=save_path,batch_size=batch_size,nepochs=nepochs)
 
 
 
