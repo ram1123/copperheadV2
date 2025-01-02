@@ -143,14 +143,15 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     """
     sample_dict = {}
     data_l = []
+    return_filelist_dict = {}
     for data_letter in data_samples:
         data_l.append(f"data_{data_letter.upper()}")
 
     data_filelist = []
     for sample in data_l:
-        data_filelist += glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        return_filelist_dict[sample] = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
 
-    sample_dict["data"] = data_filelist
+    # sample_dict["data"] = data_filelist
 
     # ------------------------------------
     # work on sig MC
@@ -178,9 +179,10 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
         sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
         if len(sample_filelist) == 0: 
             print(f"No {sample} files were found!")
-        sig_filelist += sample_filelist # adding emtpy list if harmless
+            continue
+        return_filelist_dict[sample] = sample_filelist 
 
-    sample_dict["signal"] = sig_filelist
+    # sample_dict["signal"] = sig_filelist
 
     
     # ------------------------------------
@@ -224,11 +226,12 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
         sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
         if len(sample_filelist) == 0: 
             print(f"No {sample} files were found!")
-        bkg_filelist += sample_filelist # adding emtpy list if harmless
-    sample_dict["background"] = bkg_filelist
+            continue
+        return_filelist_dict[sample] = sample_filelist 
+    # sample_dict["background"] = bkg_filelist
 
     # print(f"sample_dict: {sample_dict}")
-    return sample_dict
+    return return_filelist_dict
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -325,6 +328,7 @@ if __name__ == "__main__":
 
     # stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0/data_C/0"
     stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0"
+    # full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
     full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
     
     for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
