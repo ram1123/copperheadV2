@@ -28,6 +28,7 @@ import torch.nn.functional as F
 from coffea.ml_tools.torch_wrapper import torch_wrapper
 import argparse
 import pickle
+import time
 
 def fillEventNans(events, category="vbf"):
     """
@@ -100,7 +101,7 @@ class DNNWrapper(torch_wrapper):
         # Soln #3
         # arr = ak.to_packed(arr)
 
-        print(f"arr: {arr.compute()}")
+        # print(f"arr: {arr.compute()}")
         return [
             ak.values_astype(arr, "float32"), #only modification we do is is force float32
         ], {}
@@ -182,19 +183,45 @@ parser.add_argument(
     action="store",
     help="Unique run label (to create output path)",
 )
+parser.add_argument(
+    "-gate",
+    "--use_gateway",
+    dest="use_gateway",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, uses dask gateway client instead of local",
+    )
+
 args = parser.parse_args()
 if __name__ == "__main__":  
-    from distributed import LocalCluster, Client
-    cluster = LocalCluster(processes=True)
-    cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
-    client = Client(cluster)
+    start_time = time.time()
+    if args.use_gateway:
+        from dask_gateway import Gateway
+        gateway = Gateway(
+            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+        )
+        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+        client = gateway.connect(cluster_info.name).get_client()
+        print("Gateway Client created")
+    # # #-----------------------------------------------------------
+    else:
+        from distributed import LocalCluster, Client
+        cluster = LocalCluster(processes=True)
+        cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
+        client = Client(cluster)
+        print("Local scale Client created")
+    
 
     # Preprocessing
-    common_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_C/0"
+    # common_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_C/0"
+    common_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_*/0"
     events = dak.from_parquet(f"{common_path}/*.parquet")
     # events = dak.from_parquet(f"part000.parquet")
     
-    save_path = f"MVA_training/VBF/dnn/trained_models/{args.label}"
+    # save_path = f"MVA_training/VBF/dnn/trained_models/{args.label}"
+    save_path = f"/work/users/yun79/valerie/fork/copperheadV2/MVA_training/VBF/dnn/trained_models/{args.label}"
+    
     with open(f'{save_path}/training_features.pkl', 'rb') as f:
         training_features = pickle.load(f)
     print(f"training_features: {training_features}")
@@ -273,17 +300,17 @@ if __name__ == "__main__":
 
         # print(f" input_arr_dict after: {input_arr_dict}")
         
-    # debug:
-    for feat in training_features:
-        input_arr_total = input_arr_dict[feat] 
-        print(f"{feat} input_arr_total : {input_arr_total.compute()}")
-        # check if we missed any nan_values
-        any_nan = ak.any(input_arr_total ==nan_val)
-        print(f"{feat} any_nan: {any_nan.compute()}")
-        # merge the fold values
-        # raise ValueError
-        # for feat in input_arr_dict.keys():
-            # input_arr_dict[feat] = ak.concatenate(input_arr_dict[feat], axis=0) # maybe compute individually for each fold?
+    # # debug:
+    # for feat in training_features:
+    #     input_arr_total = input_arr_dict[feat] 
+    #     print(f"{feat} input_arr_total : {input_arr_total.compute()}")
+    #     # check if we missed any nan_values
+    #     any_nan = ak.any(input_arr_total ==nan_val)
+    #     print(f"{feat} any_nan: {any_nan.compute()}")
+    #     # merge the fold values
+    #     # raise ValueError
+    #     # for feat in input_arr_dict.keys():
+    #         # input_arr_dict[feat] = ak.concatenate(input_arr_dict[feat], axis=0) # maybe compute individually for each fold?
 
     # ---------------------------------------------------
     # Now evaluate DNN score
@@ -300,51 +327,58 @@ if __name__ == "__main__":
         dnnWrap = DNNWrapper(model_loath_path)
         dnn_score_fold = dnnWrap(input_arr)
         dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
-        print(f"{fold} fold dnn_score: {dnn_score.compute()}")
+        # print(f"{fold} fold dnn_score: {dnn_score.compute()}")
 
-    # debug:
-    any_nan = ak.any(dnn_score ==nan_val)
-    print(f"dnn_score any_nan: {any_nan.compute()}")
-    raise ValueError
+    # # debug:
+    # any_nan = ak.any(dnn_score ==nan_val)
+    # print(f"dnn_score any_nan: {any_nan.compute()}")
+    # raise ValueError
 
+        
+    # ---------------------------------------------------
+    # Now onto converting DNN score as histograms
+    # ---------------------------------------------------
 
         
 
-        
-
-
-# regions = ["h-peak", "h-sidebands"]
-# channels = ["vbf"]
-# score_hist = (
-#         hda.Hist.new.StrCat(regions, name="region")
-#         .StrCat(channels, name="channel")
-#         .StrCat(["value", "sumw2"], name="val_sumw2")
-# )
-# bins = np.linspace(110, 150, num=50)
-# score_hist = score_hist.Var(bins, name="dnn_score")
-
-# score_hist = score_hist.Double()
-# to_fill = {
-#     "region" : "h-peak",
-#     "channel" : "vbf",
-#     "val_sumw2" : "value",
-#     "dnn_score" : dnn_score
+    regions = ["h-peak", "h-sidebands"]
+    channels = ["vbf"]
+    score_hist = (
+            hda.Hist.new.StrCat(regions, name="region")
+            .StrCat(channels, name="channel")
+            .StrCat(["value", "sumw2"], name="val_sumw2")
+    )
+    bins = np.linspace(0, 1, num=50)
+    score_hist = score_hist.Var(bins, name="dnn_score")
     
-# }
-
-# score_hist.fill(**to_fill)
-
-
-# import matplotlib.pyplot as plt
-
-# project_dict = {
-#     "region" : "h-peak",
-#     "channel" : "vbf",
-#     "val_sumw2" : "value",
-# }
-
-# fig, ax = plt.subplots()
-# score_hist[project_dict].project("dnn_score").plot1d(ax=ax)
-# # ax.set_xscale("log")
-# ax.legend(title="DNN score")
-# plt.savefig("test.png")
+    score_hist = score_hist.Double()
+    to_fill = {
+        "region" : "h-peak",
+        "channel" : "vbf",
+        "val_sumw2" : "value",
+        "dnn_score" : ak.flatten(dnn_score)
+        
+    }
+    
+    score_hist.fill(**to_fill)
+    print("score_hist is filled!")
+    score_hist = score_hist.compute()
+    
+    
+    import matplotlib.pyplot as plt
+    
+    project_dict = {
+        "region" : "h-peak",
+        "channel" : "vbf",
+        "val_sumw2" : "value",
+    }
+    
+    fig, ax = plt.subplots()
+    score_hist[project_dict].project("dnn_score").plot1d(ax=ax)
+    # ax.set_xscale("log")
+    ax.legend(title="DNN score")
+    plt.savefig("test.png")
+    print("Success!")
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"Execution time : {execution_time:.4f} seconds")
