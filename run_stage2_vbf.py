@@ -176,9 +176,25 @@ def getFoldFilter(events, fold_vals, nfolds):
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "-l",
-    "--label",
-    dest="label",
+    "-y",
+    "--year",
+    dest="year",
+    default="2018",
+    action="store",
+    help="string value of year we are calculating",
+)
+parser.add_argument(
+    "-ml",
+    "--model_label",
+    dest="model_label",
+    default="test",
+    action="store",
+    help="Unique run label (to create output path)",
+)
+parser.add_argument(
+    "-rl",
+    "--run_label",
+    dest="run_label",
     default="test",
     action="store",
     help="Unique run label (to create output path)",
@@ -211,173 +227,187 @@ if __name__ == "__main__":
         cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
         client = Client(cluster)
         print("Local scale Client created")
-    
+
+    base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.run_label}"
+
+    hist_save_path = f"{base_path}/stage2_histograms/score_{args.model_label}/"
+        
 
     # Preprocessing
-    # common_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_C/0"
-    common_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_*/0"
-    events = dak.from_parquet(f"{common_path}/*.parquet")
+    # stage1_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_C/0"
+    stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0/data_C/0"
+    # stage1_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_*/0"
+    events = dak.from_parquet(f"{stage1_path}/*.parquet")
     # events = dak.from_parquet(f"part000.parquet")
     
-    # save_path = f"MVA_training/VBF/dnn/trained_models/{args.label}"
-    save_path = f"/work/users/yun79/valerie/fork/copperheadV2/MVA_training/VBF/dnn/trained_models/{args.label}"
+    # model_trained_path = f"MVA_training/VBF/dnn/trained_models/{args.model_label}"
+    model_trained_path = f"/work/users/yun79/valerie/fork/copperheadV2/MVA_training/VBF/dnn/trained_models/{args.model_label}"
     
-    with open(f'{save_path}/training_features.pkl', 'rb') as f:
+    with open(f'{model_trained_path}/training_features.pkl', 'rb') as f:
         training_features = pickle.load(f)
     print(f"training_features: {training_features}")
-    training_features = prepare_features(events, training_features) # add variations where applicable
-    print(f"new training_features: {training_features}")
-    print(f"new training_features: {len(training_features)}")
-
-    # features2load = ["event","wgt_nominal", "nBtagLoose", "jj_dEta", "jj_mass"]
-    # features2load = prepare_features(events, features2load) # add variations where applicable
-    # print(f"new features2load: {features2load}")
-
-    # features2load = list(set(features2load + training_features))
-    # print(f"final features2load: {features2load}")
-    # raise ValueError
-    region = "h-peak"
-    category = "vbf"
-    events = applyCatAndFeatFilter(events, region=region, category=category)
-    events = fillEventNans(events, category=category) # for vbf category, this may be unncessary
+    variations = ["nominal"]
+    for variation in variations:
+        print(f"working on {variation}")
+        training_features = prepare_features(events, training_features, variation=variation) # add variations where applicable
+        print(f"new training_features: {training_features}")
+        print(f"new training_features: {len(training_features)}")
     
+        # features2load = ["event","wgt_nominal", "nBtagLoose", "jj_dEta", "jj_mass"]
+        # features2load = prepare_features(events, features2load) # add variations where applicable
+        # print(f"new features2load: {features2load}")
     
-    
-    
-    
-    nfolds = 4 #4 
-
-    # dnn_score_l = []
-
-    # events = dak.from_parquet(f"part000.parquet")
-    # # events = events[:3]
-    
-    
-    
-    
-    # # print(events.event.compute())
-    # input_arr = ak.concatenate( # Fold 5 event-level variables into a singular array
-    #     [
-    #         events.dimuon_mass[:, np.newaxis],
-    #         events.mu2_pt[:, np.newaxis],
-    #         events.mu1_pt[:, np.newaxis],
-    #     ],
-    #     axis=1,
-    # )
-    # print(input_arr.compute())
-    # dwrap = DNNWrapper("test_model.pt")
-    # dnn_score = dwrap(input_arr)
-    # print(dnn_score) # This is the lazy evaluated dask array! Use this directly for histogram filling
-    # print(dnn_score.compute()) # Eagerly evaluated result
-    # print("Success!")
-
-    nan_val = -999.0
-    
-    input_arr_dict = { feat : nan_val*ak.ones_like(events.event) for feat in training_features}
-    print(f" input_arr_dict b4: {input_arr_dict}")
-    for fold in range(nfolds): 
-        
-        eval_folds = [(fold+f)%nfolds for f in [3]]
-        print(f" eval_folds: {eval_folds}")
-        # 
-        # eval_filter = ak.zeros_like(events.event, dtype="bool")
-        # # print(f" eval_filter b4: {eval_filter.compute()}")
-        # for eval_fold in eval_folds:
-        #     eval_filter = eval_filter | ((events.event % nfolds) == eval_fold)
-        eval_filter = getFoldFilter(events, eval_folds, nfolds)
-
-
-        
-        # print(f" eval_filter after: {eval_filter.compute()}")
-        # print(f" events.event: {events.event.compute()}")
-        # print(f" events.event% nfolds: {events.event.compute()% nfolds}")
+        # features2load = list(set(features2load + training_features))
+        # print(f"final features2load: {features2load}")
+        # raise ValueError
+        region = "h-peak"
+        category = "vbf"
+        events = applyCatAndFeatFilter(events, region=region, category=category)
+        events = fillEventNans(events, category=category) # for vbf category, this may be unncessary
         
         
-        for feat in training_features:
-            input_arr_fold = input_arr_dict[feat] 
-            input_arr_fold = ak.where(eval_filter, events[feat], input_arr_fold)
-            input_arr_dict[feat] = input_arr_fold
-
-        # print(f" input_arr_dict after: {input_arr_dict}")
         
-    # # debug:
-    # for feat in training_features:
-    #     input_arr_total = input_arr_dict[feat] 
-    #     print(f"{feat} input_arr_total : {input_arr_total.compute()}")
-    #     # check if we missed any nan_values
-    #     any_nan = ak.any(input_arr_total ==nan_val)
-    #     print(f"{feat} any_nan: {any_nan.compute()}")
-    #     # merge the fold values
-    #     # raise ValueError
-    #     # for feat in input_arr_dict.keys():
-    #         # input_arr_dict[feat] = ak.concatenate(input_arr_dict[feat], axis=0) # maybe compute individually for each fold?
-
-    # ---------------------------------------------------
-    # Now evaluate DNN score
-    # ---------------------------------------------------
-    input_arr = ak.concatenate(
-        [input_arr_dict[feat][:, np.newaxis] for feat in training_features], # np.newaxis is added so that we can concat on axis=1
-        axis=1
-    )
-    dnn_score = nan_val*ak.ones_like(events.event)
-    for fold in range(nfolds): 
-        eval_folds = [(fold+f)%nfolds for f in [3]]
-        eval_filter = getFoldFilter(events, eval_folds, nfolds)
-        model_loath_path = f"{save_path}/fold{fold}/best_model_torchJit_ver.pt"
-        dnnWrap = DNNWrapper(model_loath_path)
-        dnn_score_fold = dnnWrap(input_arr)
-        dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
-        # print(f"{fold} fold dnn_score: {dnn_score.compute()}")
-
-    # # debug:
-    # any_nan = ak.any(dnn_score ==nan_val)
-    # print(f"dnn_score any_nan: {any_nan.compute()}")
-    # raise ValueError
-
         
-    # ---------------------------------------------------
-    # Now onto converting DNN score as histograms
-    # ---------------------------------------------------
-
         
-
-    regions = ["h-peak", "h-sidebands"]
-    channels = ["vbf"]
-    score_hist = (
-            hda.Hist.new.StrCat(regions, name="region")
-            .StrCat(channels, name="channel")
-            .StrCat(["value", "sumw2"], name="val_sumw2")
-    )
-    bins = np.linspace(0, 1, num=50)
-    score_hist = score_hist.Var(bins, name="dnn_score")
+        nfolds = 4 #4 
     
-    score_hist = score_hist.Double()
-    to_fill = {
-        "region" : "h-peak",
-        "channel" : "vbf",
-        "val_sumw2" : "value",
-        "dnn_score" : ak.flatten(dnn_score)
+        # dnn_score_l = []
+    
+        # events = dak.from_parquet(f"part000.parquet")
+        # # events = events[:3]
         
-    }
+        
+        
+        
+        # # print(events.event.compute())
+        # input_arr = ak.concatenate( # Fold 5 event-level variables into a singular array
+        #     [
+        #         events.dimuon_mass[:, np.newaxis],
+        #         events.mu2_pt[:, np.newaxis],
+        #         events.mu1_pt[:, np.newaxis],
+        #     ],
+        #     axis=1,
+        # )
+        # print(input_arr.compute())
+        # dwrap = DNNWrapper("test_model.pt")
+        # dnn_score = dwrap(input_arr)
+        # print(dnn_score) # This is the lazy evaluated dask array! Use this directly for histogram filling
+        # print(dnn_score.compute()) # Eagerly evaluated result
+        # print("Success!")
     
-    score_hist.fill(**to_fill)
-    print("score_hist is filled!")
-    score_hist = score_hist.compute()
+        nan_val = -999.0
+        
+        input_arr_dict = { feat : nan_val*ak.ones_like(events.event) for feat in training_features}
+        print(f" input_arr_dict b4: {input_arr_dict}")
+        for fold in range(nfolds): 
+            
+            eval_folds = [(fold+f)%nfolds for f in [3]]
+            print(f" eval_folds: {eval_folds}")
+            # 
+            # eval_filter = ak.zeros_like(events.event, dtype="bool")
+            # # print(f" eval_filter b4: {eval_filter.compute()}")
+            # for eval_fold in eval_folds:
+            #     eval_filter = eval_filter | ((events.event % nfolds) == eval_fold)
+            eval_filter = getFoldFilter(events, eval_folds, nfolds)
     
     
-    import matplotlib.pyplot as plt
+            
+            # print(f" eval_filter after: {eval_filter.compute()}")
+            # print(f" events.event: {events.event.compute()}")
+            # print(f" events.event% nfolds: {events.event.compute()% nfolds}")
+            
+            
+            for feat in training_features:
+                input_arr_fold = input_arr_dict[feat] 
+                input_arr_fold = ak.where(eval_filter, events[feat], input_arr_fold)
+                input_arr_dict[feat] = input_arr_fold
     
-    project_dict = {
-        "region" : "h-peak",
-        "channel" : "vbf",
-        "val_sumw2" : "value",
-    }
+            # print(f" input_arr_dict after: {input_arr_dict}")
+            
+        # # debug:
+        # for feat in training_features:
+        #     input_arr_total = input_arr_dict[feat] 
+        #     print(f"{feat} input_arr_total : {input_arr_total.compute()}")
+        #     # check if we missed any nan_values
+        #     any_nan = ak.any(input_arr_total ==nan_val)
+        #     print(f"{feat} any_nan: {any_nan.compute()}")
+        #     # merge the fold values
+        #     # raise ValueError
+        #     # for feat in input_arr_dict.keys():
+        #         # input_arr_dict[feat] = ak.concatenate(input_arr_dict[feat], axis=0) # maybe compute individually for each fold?
     
-    fig, ax = plt.subplots()
-    score_hist[project_dict].project("dnn_score").plot1d(ax=ax)
-    # ax.set_xscale("log")
-    ax.legend(title="DNN score")
-    plt.savefig("test.png")
+        # ---------------------------------------------------
+        # Now evaluate DNN score
+        # ---------------------------------------------------
+        input_arr = ak.concatenate(
+            [input_arr_dict[feat][:, np.newaxis] for feat in training_features], # np.newaxis is added so that we can concat on axis=1
+            axis=1
+        )
+        dnn_score = nan_val*ak.ones_like(events.event)
+        for fold in range(nfolds): 
+            eval_folds = [(fold+f)%nfolds for f in [3]]
+            eval_filter = getFoldFilter(events, eval_folds, nfolds)
+            model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
+            dnnWrap = DNNWrapper(model_load_path)
+            dnn_score_fold = dnnWrap(input_arr)
+            dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
+            # print(f"{fold} fold dnn_score: {dnn_score.compute()}")
+    
+        # # debug:
+        # any_nan = ak.any(dnn_score ==nan_val)
+        # print(f"dnn_score any_nan: {any_nan.compute()}")
+        # raise ValueError
+    
+            
+        # ---------------------------------------------------
+        # Now onto converting DNN score as histograms
+        # ---------------------------------------------------
+    
+            
+    
+        regions = ["h-peak", "h-sidebands"]
+        channels = ["vbf"]
+        score_hist = (
+                hda.Hist.new.StrCat(regions, name="region")
+                .StrCat(channels, name="channel")
+                .StrCat(["value", "sumw2"], name="val_sumw2")
+        )
+        bins = np.linspace(0, 1, num=50)
+        score_hist = score_hist.Var(bins, name="dnn_score")
+        
+        score_hist = score_hist.Double()
+        to_fill = {
+            "region" : "h-peak",
+            "channel" : "vbf",
+            "val_sumw2" : "value",
+            "dnn_score" : ak.flatten(dnn_score)
+            
+        }
+        
+        score_hist.fill(**to_fill)
+        print("score_hist is filled!")
+        score_hist = score_hist.compute()
+        # ---------------------------------------------------
+        # Save Hist 
+        # ---------------------------------------------------
+        
+        
+        # ---------------------------------------------------
+        # Plot Hist for debugging
+        # ---------------------------------------------------
+        import matplotlib.pyplot as plt
+        
+        project_dict = {
+            "region" : "h-peak",
+            "channel" : "vbf",
+            "val_sumw2" : "value",
+        }
+        
+        fig, ax = plt.subplots()
+        score_hist[project_dict].project("dnn_score").plot1d(ax=ax)
+        # ax.set_xscale("log")
+        ax.legend(title="DNN score")
+        plt.savefig("test.png")
     print("Success!")
     end_time = time.time()
     execution_time = end_time - start_time
