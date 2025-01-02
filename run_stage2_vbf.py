@@ -166,6 +166,13 @@ def prepare_features(events, features, variation="nominal"):
 # # torch.jit.trace(model, input).save("test_model.pt")
 
 
+def getFoldFilter(events, fold_vals, nfolds):
+    fold_filter = ak.zeros_like(events.event, dtype="bool")
+    # print(f" eval_filter b4: {eval_filter.compute()}")
+    for fold_value in fold_vals:
+        fold_filter = fold_filter | ((events.event % nfolds) == fold_value)
+    return fold_filter
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "-l",
@@ -242,40 +249,64 @@ if __name__ == "__main__":
     input_arr_dict = { feat : nan_val*ak.ones_like(events.event) for feat in training_features}
     print(f" input_arr_dict b4: {input_arr_dict}")
     for fold in range(nfolds): 
-        model_loath_path = f"{save_path}/fold{fold}/best_model_torchJit_ver.pt"
-        dnnWrap = DNNWrapper(model_loath_path)
+        
         eval_folds = [(fold+f)%nfolds for f in [3]]
         print(f" eval_folds: {eval_folds}")
         # 
-        eval_filter = ak.zeros_like(events.event, dtype="bool")
-        # print(f" eval_filter b4: {eval_filter.compute()}")
-        for eval_fold in eval_folds:
-            eval_filter = eval_filter | ((events.event % nfolds) == eval_fold)
+        # eval_filter = ak.zeros_like(events.event, dtype="bool")
+        # # print(f" eval_filter b4: {eval_filter.compute()}")
+        # for eval_fold in eval_folds:
+        #     eval_filter = eval_filter | ((events.event % nfolds) == eval_fold)
+        eval_filter = getFoldFilter(events, eval_folds, nfolds)
+
+
+        
         # print(f" eval_filter after: {eval_filter.compute()}")
         # print(f" events.event: {events.event.compute()}")
         # print(f" events.event% nfolds: {events.event.compute()% nfolds}")
         
+        
         for feat in training_features:
-            # input_arr = events[feat][eval_filter]
-            # # print(f"{feat} input_arr : {input_arr.compute()}")
-            # input_arr_dict[feat].append(input_arr)
-            input_arr = input_arr_dict[feat] 
-            input_arr = ak.where(eval_filter, events[feat], input_arr)
-            input_arr_dict[feat] = input_arr
+            input_arr_fold = input_arr_dict[feat] 
+            input_arr_fold = ak.where(eval_filter, events[feat], input_arr_fold)
+            input_arr_dict[feat] = input_arr_fold
 
         # print(f" input_arr_dict after: {input_arr_dict}")
         
     # debug:
     for feat in training_features:
-        input_arr = input_arr_dict[feat] 
-        print(f"{feat} input_arr : {input_arr.compute()}")
+        input_arr_total = input_arr_dict[feat] 
+        print(f"{feat} input_arr_total : {input_arr_total.compute()}")
         # check if we missed any nan_values
-        any_nan = ak.any(input_arr ==nan_val)
+        any_nan = ak.any(input_arr_total ==nan_val)
         print(f"{feat} any_nan: {any_nan.compute()}")
         # merge the fold values
+        # raise ValueError
         # for feat in input_arr_dict.keys():
             # input_arr_dict[feat] = ak.concatenate(input_arr_dict[feat], axis=0) # maybe compute individually for each fold?
-            
+
+    # ---------------------------------------------------
+    # Now evaluate DNN score
+    # ---------------------------------------------------
+    input_arr = ak.concatenate(
+        [input_arr_dict[feat][:, np.newaxis] for feat in training_features], # np.newaxis is added so that we can concat on axis=1
+        axis=1
+    )
+    dnn_score = nan_val*ak.ones_like(events.event)
+    for fold in range(nfolds): 
+        eval_folds = [(fold+f)%nfolds for f in [3]]
+        eval_filter = getFoldFilter(events, eval_folds, nfolds)
+        model_loath_path = f"{save_path}/fold{fold}/best_model_torchJit_ver.pt"
+        dnnWrap = DNNWrapper(model_loath_path)
+        dnn_score_fold = dnnWrap(input_arr)
+        dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
+        print(f"{fold} fold dnn_score: {dnn_score.compute()}")
+
+    # debug:
+    any_nan = ak.any(dnn_score ==nan_val)
+    print(f"dnn_score any_nan: {any_nan.compute()}")
+    raise ValueError
+
 
         
 
