@@ -341,6 +341,15 @@ if __name__ == "__main__":
             continue
             
         events_stage1 = dak.from_parquet(sample_l)
+
+        # reparitition events if npartitions are too little to decrease memory usage (ie histograming vbf requires > 10 GB per worker otherwise)
+        min_partition_size = 50
+        print(f"events_stage1.npartitions b4 repartition: {events_stage1.npartitions}")
+        if events_stage1.npartitions < min_partition_size :
+            events_stage1 = events_stage1.repartition(npartitions=min_partition_size)
+            print(f"events_stage1.npartitions after repartition: {events_stage1.npartitions}")
+        # raise ValueError
+        
         # Preprocessing
         # stage1_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_C/0"
         
@@ -525,6 +534,7 @@ if __name__ == "__main__":
         # done with variation loop, compute hist
         # ---------------------------------------------------
         score_hist = score_hist.compute()
+        
         
 
         # ---------------------------------------------------
