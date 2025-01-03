@@ -149,7 +149,10 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
     data_filelist = []
     for sample in data_l:
-        return_filelist_dict[sample] = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        data_filelist += glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        # return_filelist_dict[sample] = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+    
+    return_filelist_dict["data"] = data_filelist # keep data as one sample list for speedup
 
     # sample_dict["data"] = data_filelist
 
