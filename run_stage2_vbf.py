@@ -174,8 +174,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     for sig_sample in sig_samples:
         sig_sample = sig_sample.upper()
         if sig_sample in sig_sample_dict.keys():
-            sig_sample_l += sig_sample_l[sig_sample]
-
+            sig_sample_l += sig_sample_dict[sig_sample]
+    print(f"sig_sample_l: {sig_sample_l}")
 
     sig_filelist = []
     for sample in sig_sample_l:
@@ -223,6 +223,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
         bkg_sample = bkg_sample.upper()
         if bkg_sample in bkg_sample_dict.keys():
            bkg_sample_l += bkg_sample_dict[bkg_sample]
+    print(f"bkg_sample_l: {bkg_sample_l}")
 
     bkg_filelist = []
     for sample in bkg_sample_l:
@@ -339,7 +340,7 @@ if __name__ == "__main__":
             print(f"No files for {sample_type} is found! Skipping!")
             continue
             
-        events = dak.from_parquet(sample_l)
+        events_stage1 = dak.from_parquet(sample_l)
         # Preprocessing
         # stage1_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_C/0"
         
@@ -353,12 +354,29 @@ if __name__ == "__main__":
         with open(f'{model_trained_path}/training_features.pkl', 'rb') as f:
             training_features = pickle.load(f)
         print(f"training_features: {training_features}")
-        variations = ["nominal"]
+        
+        # ------------------------------------------
+        # Initialize sample histograme to save later
+        # ------------------------------------------
+        variations = ["nominal"] # full list of possible variations to loop over
+        regions = ["h-peak", "h-sidebands"] # full list of possible regions to loop over
+        channels = ["vbf"] # full list of possible channels to loop over
+        score_hist = (
+                hda.Hist.new.StrCat(regions, name="region")
+                .StrCat(channels, name="channel")
+                .StrCat(["value", "sumw2"], name="val_sumw2")
+        )
+        bins = np.linspace(0, 1, num=50)
+        score_hist = score_hist.Var(bins, name="dnn_score")
+        # add axis for systematic variation
+        score_hist = score_hist.StrCat(variations, name="variation")
+        
+        score_hist = score_hist.Double()
+
+        
         for variation in variations:
             print(f"working on {variation}")
-            training_features = prepare_features(events, training_features, variation=variation) # add variations where applicable
-            print(f"new training_features: {training_features}")
-            print(f"new training_features: {len(training_features)}")
+            
         
             # features2load = ["event","wgt_nominal", "nBtagLoose", "jj_dEta", "jj_mass"]
             # features2load = prepare_features(events, features2load) # add variations where applicable
@@ -369,9 +387,12 @@ if __name__ == "__main__":
             # raise ValueError
             region = "h-peak"
             category = "vbf"
-            events = applyCatAndFeatFilter(events, region=region, category=category)
+            events = applyCatAndFeatFilter(events_stage1, region=region, category=category)
             events = fillEventNans(events, category=category) # for vbf category, this may be unncessary
-            
+
+            training_features = prepare_features(events, training_features, variation=variation) # add variations where applicable
+            print(f"new training_features: {training_features}")
+            print(f"new training_features: {len(training_features)}")
             
             
             
@@ -448,15 +469,21 @@ if __name__ == "__main__":
                 axis=1
             )
             dnn_score = nan_val*ak.ones_like(events.event)
+            # print(f"dnn_score b4: {dnn_score.compute()}")
             for fold in range(nfolds): 
                 eval_folds = [(fold+f)%nfolds for f in [3]]
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
                 model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
                 dnnWrap = DNNWrapper(model_load_path)
                 dnn_score_fold = dnnWrap(input_arr)
+                # print(f"{fold} fold dnn_score_fold b4 flatten: {dnn_score_fold.compute()}")
+                dnn_score_fold = ak.flatten(dnn_score_fold, axis=1) # DNN outpout is 2 dimensional
+                
                 dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
+                # print(f"{fold} fold dnn_score_fold after flatten: {dnn_score_fold.compute()}")
                 # print(f"{fold} fold dnn_score: {dnn_score.compute()}")
-        
+                
+            # print(f"dnn_score b4 after: {dnn_score.compute()}")
             # # debug:
             # any_nan = ak.any(dnn_score ==nan_val)
             # print(f"dnn_score any_nan: {any_nan.compute()}")
@@ -469,58 +496,68 @@ if __name__ == "__main__":
         
                 
         
-            regions = ["h-peak", "h-sidebands"]
-            channels = ["vbf"]
-            score_hist = (
-                    hda.Hist.new.StrCat(regions, name="region")
-                    .StrCat(channels, name="channel")
-                    .StrCat(["value", "sumw2"], name="val_sumw2")
-            )
-            bins = np.linspace(0, 1, num=50)
-            score_hist = score_hist.Var(bins, name="dnn_score")
             
-            score_hist = score_hist.Double()
             to_fill = {
                 "region" : "h-peak",
                 "channel" : "vbf",
-                "val_sumw2" : "value",
-                "dnn_score" : ak.flatten(dnn_score)
+                "variation" : variation,
+                "dnn_score" : dnn_score
                 
             }
+            weight = events.wgt_nominal
+            # print(f"weight len: {ak.num(weight, axis=0).compute()}")
+            # print(f"ak.flatten(dnn_score) len: {ak.num(dnn_score, axis=0).compute()}")
             
-            score_hist.fill(**to_fill)
-            print("score_hist is filled!")
-            score_hist = score_hist.compute()
-            # ---------------------------------------------------
-            # Save Hist 
-            # ---------------------------------------------------
-            hist_save_path = f"{base_path}/stage2_histograms/score_{args.model_label}/"
+            to_fill_value = to_fill.copy()
+            to_fill_value["val_sumw2"] = "value"
+            # to_fill_value["variation"] = variation
+            score_hist.fill(**to_fill_value, weight=weight)
+            # score_hist.fill(**to_fill_value)
+    
+            to_fill_sumw2 = to_fill.copy()
+            to_fill_sumw2["val_sumw2"] = "sumw2"
+            # to_fill_sumw2["variation"] = variation
+            score_hist.fill(**to_fill_sumw2, weight=weight * weight)
+            print(f"score_hist is filled for {sample_type}, {variation} variation!")
 
-            if not os.path.exists(hist_save_path):
-                os.makedirs(hist_save_path)
-            
-            with open(f"{hist_save_path}/{sample_type}_hist.pkl", "wb") as file:
-                pickle.dump(score_hist, file)
-                # print(f"{sample_type} histogram successfully!")
-                print(f"{sample_type} histogram on {hist_save_path}!")
 
-            
-            # ---------------------------------------------------
-            # Plot Hist for debugging
-            # ---------------------------------------------------
-            
-            
-            project_dict = {
-                "region" : "h-peak",
-                "channel" : "vbf",
-                "val_sumw2" : "value",
-            }
-            
-            fig, ax = plt.subplots()
-            score_hist[project_dict].project("dnn_score").plot1d(ax=ax)
-            # ax.set_xscale("log")
-            ax.legend(title="DNN score")
-            plt.savefig(f"{sample_type}_test.png")
+        # ---------------------------------------------------
+        # done with variation loop, compute hist
+        # ---------------------------------------------------
+        score_hist = score_hist.compute()
+        
+
+        # ---------------------------------------------------
+        # Save Hist 
+        # ---------------------------------------------------
+        hist_save_path = f"{base_path}/stage2_histograms/score_{args.model_label}/"
+
+        if not os.path.exists(hist_save_path):
+            os.makedirs(hist_save_path)
+        
+        with open(f"{hist_save_path}/{sample_type}_hist.pkl", "wb") as file:
+            pickle.dump(score_hist, file)
+            # print(f"{sample_type} histogram successfully!")
+            print(f"{sample_type} histogram on {hist_save_path}!")
+
+        
+        # ---------------------------------------------------
+        # Plot Hist for debugging
+        # ---------------------------------------------------
+        
+        
+        project_dict = {
+            "region" : "h-peak",
+            "channel" : "vbf",
+            "val_sumw2" : "value",
+            "variation" : "nominal",
+        }
+        
+        fig, ax = plt.subplots()
+        score_hist[project_dict].project("dnn_score").plot1d(ax=ax)
+        # ax.set_xscale("log")
+        ax.legend(title="DNN score")
+        plt.savefig(f"{sample_type}_test.png")
     print("Success!")
     end_time = time.time()
     execution_time = end_time - start_time
