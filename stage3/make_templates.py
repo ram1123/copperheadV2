@@ -14,6 +14,7 @@ import dask.dataframe as dd
 import pickle
 import itertools
 import ROOT
+import os
 
 class Variable(object):
     def __init__(self, name_, caption_, nbins_, xmin_, xmax_):
@@ -93,13 +94,13 @@ def getTH1D_from_numpy(group_hist, bin_edges, group_sumw2, centers, name):
         # print(f"w2 {w2}, for idx {i}")
         sumw2_array[i] = w2
     
-    # Verify the new Sumw2 values
-    print("Updated Sumw2 values:")
-    for i in range(0, n_bins + 1):
-        print(f"Bin {i}, Sumw2: {sumw2_array[i]}")
-    print("Updated hist values:")
-    for i in range(0, n_bins + 1):
-        print(f"Bin {i}, content: {hist.GetBinContent(i)}")
+    # # Debugging: Verify the new Sumw2 values
+    # print("Updated Sumw2 values:")
+    # for i in range(0, n_bins + 1):
+    #     print(f"Bin {i}, Sumw2: {sumw2_array[i]}")
+    # print("Updated hist values:")
+    # for i in range(0, n_bins + 1):
+    #     print(f"Bin {i}, content: {hist.GetBinContent(i)}")
     return hist
         
 def to_templates(client, parameters, hist_df=None):
@@ -255,6 +256,7 @@ def make_templates(args, parameters={}):
         # print(f"add_EWK_PartonShower: {add_EWK_PartonShower}")
         # manually add parton shower variations end -------------------------------
         # print(f"wgt_variations: {wgt_variations}")
+
         for variation in wgt_variations:
             # print(f"variation: {variation}")
             # print(f"channel: {channel}")
@@ -305,14 +307,24 @@ def make_templates(args, parameters={}):
                 # print(f"{group} the_sumw2_baseline: {the_sumw2_baseline}")
 
                 # vals_variation = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].values 
-                hist_variation = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].values.sum()
+                hist_variation = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].values.sum() # no need to sum() different histograms yet
+                hist_variation = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].values
+                if len(hist_variation) ==0:
+                    print(f"No template found for {group} variation_dataset: {variation_dataset}. Skipping!")
+                    continue
+
+                hist_variation = hist_variation.sum()
+                print(f"{group} hist_variation: {hist_variation}")
+                print(f"{group} hist_df: {hist_df}")
+                print(f"{group} variation_dataset: {variation_dataset}")
 
                 the_hist_nominal_variation = hist_variation[slicer_nominal].project(var.name).values()
                 the_sumw2_variation = hist_variation[slicer_sumw2].project(var.name).values()
-                # print(f"{group} the_hist_nominal_variation: {the_hist_nominal_variation}")
-                # print(f"{group} the_sumw2_variation: {the_sumw2_variation}")
-                # print(f"{group} the_hist_nominal_variation: {type(the_hist_nominal_variation)}")
-                # print(f"{group} the_sumw2_variation: {type(the_sumw2_variation)}")
+                
+                print(f"{group} the_hist_nominal_variation: {the_hist_nominal_variation}")
+                print(f"{group} the_sumw2_variation: {the_sumw2_variation}")
+                print(f"{group} the_hist_nominal_variation: {type(the_hist_nominal_variation)}")
+                print(f"{group} the_sumw2_variation: {type(the_sumw2_variation)}")
                 
 
                 edges = hist_baseline[slicer_nominal].project(var.name).axes[0].edges
@@ -581,13 +593,14 @@ def make_templates(args, parameters={}):
 
     if parameters["save_templates"]:
         out_dir = parameters["global_path"]
-        mkdir(out_dir)
+        # mkdir(out_dir)
         out_dir += "/" + parameters["label"]
-        mkdir(out_dir)
+        # mkdir(out_dir)
         out_dir += "/" + "stage3_templates"
-        mkdir(out_dir)
+        # mkdir(out_dir)
         out_dir += "/" + var.name
-        mkdir(out_dir)
+        # mkdir(out_dir)
+        os.makedirs(out_dir, exist_ok=True)
 
         # out_fn = f"{out_dir}/{channel}_{region}_{year}.root"
         out_fn = f"{out_dir}/{channel}_{region}_{year_savepath}.root"
