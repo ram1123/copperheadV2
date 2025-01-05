@@ -11,7 +11,9 @@ If accessing datasets via `xRootD` will be needed:
 source setup_proxy.sh
 ```
 
-This would start the GRID certificate password prompt, and then once given the password, the conda env would be activated. Once voms proxy and conda env is activated, we can start on the tutorial.ipynb
+This would start the GRID certificate password prompt, and then once given the password, the conda env would be activated. Once voms proxy and conda env is activated, we can start on the tutorial.ipynb for ggH category
+
+For VBF-category, our temporary implementation is to activate coffea_latest env and them execute stage1_sh.sh -> stage2_vbf_sh.sh -> stage3_vbf_sh.sh
 
 
 ## Planned High-level arrangement of code in CopperheadV2
