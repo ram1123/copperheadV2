@@ -8,7 +8,7 @@ import pandas as pd
 import warnings
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
-from uproot3_methods.classes.TH1 import from_numpy
+# from uproot3_methods.classes.TH1 import from_numpy
 import glob
 import dask.dataframe as dd
 import pickle
