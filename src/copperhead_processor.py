@@ -26,6 +26,10 @@ ak_array = TypeVar('ak_array')
 
 save_path = "/depot/cms/users/yun79/results/stage1/DNN_test//2018/f0_1/data_B/0" # for debugging
 
+"""
+TODO!: add the correct btag working points for rereco samples that you will be working with when adding rereco samples
+"""
+
 def getRapidity(obj):
     px = obj.pt * np.cos(obj.phi)
     py = obj.pt * np.sin(obj.phi)
@@ -207,7 +211,7 @@ class EventProcessor(processor.ProcessorABC):
         self.test_mode = test_mode
         dict_update = {
             # "hlt" :["IsoMu24"],
-            "do_trigger_match" : False, # False
+            "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
@@ -977,7 +981,6 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Fill Muon variables and gjet variables
         # ------------------------------------------------------------#
-        # dimuon_mass = p4_sum_mass(mu1,mu2)
         out_dict = {
             "event" : events.event,
             "mu1_pt" : mu1.pt,
@@ -998,7 +1001,6 @@ class EventProcessor(processor.ProcessorABC):
             # "mu2_pt_gf" : mu2.pt_gf,
             "nmuons" : nmuons,
             "dimuon_mass" : dimuon.mass,
-            # "dimuon_mass" : dimuon_mass,
             "dimuon_pt" : dimuon.pt,
             "dimuon_eta" : dimuon.eta,
             "dimuon_rapidity" : getRapidity(dimuon),
@@ -1007,6 +1009,7 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_dPhi" : dimuon_dPhi,
             "dimuon_dR" : dimuon_dR,
             "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
+            "rel_dimuon_ebe_mass_res" : rel_dimuon_ebe_mass_res,
             "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
             "dimuon_phi_cs" : dimuon_phi_cs,
             "dimuon_cos_theta_eta" : dimuon_cos_theta_eta,
@@ -1268,20 +1271,25 @@ class EventProcessor(processor.ProcessorABC):
         matched_mu_eta = jets.matched_muons.eta_raw
         matched_mu_iso = jets.matched_muons.pfRelIso04_all
         matched_mu_id = jets.matched_muons[self.config["muon_id"]]
-        print(f'self.config["muon_id": {self.config["muon_id"]}')
-        print(f"matched_mu_id: {matched_mu_id.compute()}")
-        print(f"jets.matched_muons: {jets.matched_muons.compute()}")
-        matched_mu_pass = ( # AN-19-124 line 465: "Jets are also cleaned w.r.t. the selected muon candidates by requiring a geometrical separation of ∆R ( j, µ ) > 0.4"
+        # print(f'self.config["muon_id": {self.config["muon_id"]}')
+        # print(f"matched_mu_id: {matched_mu_id.compute()}")
+        # print(f"jets.matched_muons: {jets.matched_muons.compute()}")
+        # AN-19-124 line 465: "Jets are also cleaned w.r.t. the selected muon candidates by requiring a geometrical separation of ∆R ( j, µ ) > 0.4"
+        matched_mu_pass = ( # apply the same muon selection condition from before
             (matched_mu_pt > self.config["muon_pt_cut"])
             & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
             & (matched_mu_iso < self.config["muon_iso_cut"])
             & matched_mu_id
         )
+        # print(f"matched_mu_pass: {matched_mu_pass.compute()}")
+        # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
         if self.test_mode:
             print(f"jet loop matched_mu_pass b4 : {matched_mu_pass}")
         matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
         clean = ~(ak.fill_none(matched_mu_pass, value=False))
-        
+        # print(f"clean: {clean.compute()}")
+        # print(f"jets: {jets.compute()}")
+
         # skip selecting particular JEC variation for now
         # # Select particular JEC variation
         # if "_up" in variation:
@@ -1467,7 +1475,9 @@ class EventProcessor(processor.ProcessorABC):
         rpt = mmjj.pt / (
             dimuon.pt + jet1.pt + jet2.pt
         )
-
+        # pt_centrality formua is in eqn A.1 fron AN-19-124
+        pt_centrality = dimuon.pt - abs(jet1.pt + jet2.pt)/2
+        pt_centrality = pt_centrality / abs(jet1.pt - jet2.pt)
 
 
     
@@ -1520,6 +1530,7 @@ class EventProcessor(processor.ProcessorABC):
             "mmjj_phi" : mmjj.phi,
             "mmjj_mass" : mmjj.mass,
             "rpt" : rpt,
+            "pt_centrality" : pt_centrality,
             "zeppenfeld" : zeppenfeld,
             "njets" : njets,
             

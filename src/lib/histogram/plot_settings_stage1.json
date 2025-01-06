@@ -71,6 +71,14 @@
         "xlabel": "$R_{p_T}$",
         "color": "royalblue"
     },
+    "pt_centrality": {
+        "variable": "pt_centrality",
+        "binning_linspace": [0, 20, 31],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$p_T centrality$",
+        "color": "royalblue"
+    },
     "ll_zstar_log": {
         "variable": "ll_zstar_log",
         "binning_linspace": [-2.4, 2.4, 30],
