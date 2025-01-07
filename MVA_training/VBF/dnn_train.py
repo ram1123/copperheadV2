@@ -179,37 +179,63 @@ class NumpyDataset(Dataset):
         return self.input_arr[idx], self.label_arr[idx]
 
 
-def plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path):
-            
-    # Histogram for signal, normalized to one
-    hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, density=True)
-    # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
-    
-    # Histogram for background, normalized to one
-    hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, density=True)
-    # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
-    
-    # Plotting
+def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False):
+    """
+    TODO: add weights
+    """
     fig, ax_main = plt.subplots()
     plt.yscale('log')
-    plt.ylim((0.01, 1e9))
+    plt.ylim((0.001, 1e9))
+    for stage, output_dict in score_dict.items():
+        pred_total = output_dict["prediction"]
+        label_total = output_dict["label"]
+        if transformPrediction:
+            pred_total = np.arctanh(pred_total)
+        dnn_scores_signal = pred_total[label_total==1]  # Simulated DNN scores for signal
+        dnn_scores_background = pred_total[label_total==0]   # Simulated DNN scores for background
+        # Histogram for signal, normalized to one
+        hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins)
+        # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
+        
+        # Histogram for background, normalized to one
+        hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins)
+        # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+        hep.histplot(
+            hist_signal, 
+            bins=bins, 
+            histtype='step', 
+            label=f"Signal - {stage}", 
+            ax=ax_main,
+        )
+        hep.histplot(
+            hist_background, 
+            bins=bins, 
+            histtype='step', 
+            label=f"Bkg - {stage}", 
+            ax=ax_main,
+        )
+    # Plotting
+    
     # plt.plot(bin_centers_signal, hist_signal, label='Signal', drawstyle='steps-mid')
     # plt.plot(bin_centers_background, hist_background, label='Background', drawstyle='steps-mid')
     # hists = [hist_signal, hist_background]
     # labels = ["signal", "Background"]
-    hist_dict = {
-        "Signal": hist_signal,
-        "Background" : hist_background,
-    }
-    for label, hist in hist_dict.items():
-        hep.histplot(
-            hist, 
-            bins=bins, 
-            histtype='step', 
-            label=label, 
-            ax=ax_main,
-        )
-    plt.xlabel('arctanh Score')
+    # hist_dict = {
+    #     "Signal": hist_signal,
+    #     "Background" : hist_background,
+    # }
+    # for label, hist in hist_dict.items():
+    #     hep.histplot(
+    #         hist, 
+    #         bins=bins, 
+    #         histtype='step', 
+    #         label=label, 
+    #         ax=ax_main,
+    #     )
+    if transformPrediction:
+        plt.xlabel('arctanh Score')
+    else:
+        plt.xlabel('DNN Score')
     plt.ylabel('Events')
     plt.title('DNN Score Distributions Sig vs Bkg')
     plt.legend()
@@ -288,6 +314,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     dataset_train = NumpyDataset(input_arr_train, label_arr_train)
+    dataloader_train_ordered = DataLoader(dataset_train, batch_size=batch_size, shuffle=False) # for plotting
     dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid)
     dataloader_valid = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False)
     dataset_eval = NumpyDataset(input_arr_eval, label_arr_eval)
@@ -329,7 +356,6 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
         if (epoch==0) or ((epoch % validate_interval) == (validate_interval-1)):            
             
             # x_l = [] # sanity check
-            score_dict = {}
             # with torch.no_grad():
             #     # valid_loss = 0
             #     # batch_losses = []
@@ -354,6 +380,30 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             #     # # print(f"pred_l: {pred_l}")
             #     # # print(f"label_l: {label_l}")
             valid_loop_dict = dnnEvaluateLoop(model, dataloader_valid, loss_fn, device=device)
+            train_loop_dict = dnnEvaluateLoop(model, dataloader_train_ordered, loss_fn, device=device)
+            eval_loop_dict = dnnEvaluateLoop(model, dataloader_eval, loss_fn, device=device)
+            score_dict = {
+                "train" :  {
+                    "prediction": train_loop_dict["prediction"],
+                    "label": train_loop_dict["label"],
+                    # "weight": df_train.wgt_nominal,
+                },
+                # "validation" : {
+                #     "prediction": valid_loop_dict["prediction"],
+                #     "label": valid_loop_dict["label"],
+                # },
+                # "evaluation" :  {
+                #     "prediction": eval_loop_dict["prediction"],
+                #     "label": eval_loop_dict["label"],
+                # },
+                "valid+eval" : {
+                    "prediction": np.concatenate([valid_loop_dict["prediction"], eval_loop_dict["prediction"]], axis=0),
+                    "label":  np.concatenate([valid_loop_dict["label"], eval_loop_dict["label"]], axis=0),
+                    # "weight": np.concatenate([df_valid.wgt_nominal, df_eval.wgt_nominal], axis=0),,
+                },
+            }
+            
+            
             pred_total = valid_loop_dict["prediction"]
             label_total = valid_loop_dict["label"]
             valid_loss = valid_loop_dict["total_loss"]
@@ -370,24 +420,32 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             if not os.path.exists(fold_save_path):
                 os.makedirs(fold_save_path)
 
-            # plot Sig vs Bkg from 0 to 1
+            # # plot Sig vs Bkg from 0 to 1
+            # # dnn_scores_signal = pred_total[label_total==1]  # Simulated DNN scores for signal
+            # # dnn_scores_background = pred_total[label_total==0] # Simulated DNN scores for background
+            # # bins = np.linspace(0, 1, 30) 
+            # # plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_bySigBkg.png"
+            # # plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
+            
+            # # transform the score
+            # pred_total = np.arctanh(pred_total)
+            
             # dnn_scores_signal = pred_total[label_total==1]  # Simulated DNN scores for signal
-            # dnn_scores_background = pred_total[label_total==0] # Simulated DNN scores for background
-            # bins = np.linspace(0, 1, 30) 
+            # dnn_scores_background = pred_total[label_total==0]   # Simulated DNN scores for background
+            # # print(f"fold {i} epoch {epoch} validation pred_total: {pred_total.shape}")
+            # # print(f"fold {i} epoch {epoch} validation label_total: {label_total.shape}")
+            # # print(f"fold {i} epoch {epoch} validation dnn_scores_signal: {dnn_scores_signal}")
+            # # print(f"fold {i} epoch {epoch} validation dnn_scores_background: {dnn_scores_background}")
             
-            # transform the score
-            pred_total = np.arctanh(pred_total)
+            # # Create histograms and normalize them separated by signal and background
+            # # bins = np.linspace(0, 1, 30)  # Adjust bin edges as needed
+            # # bins = np.linspace(0, 2.8, 30)  # Adjust bin edges as needed
+
+            bins = np.linspace(0, 1, 30) 
+            plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_combined_dist_bySigBkg.png"
+            # plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
+            plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False)
             
-            dnn_scores_signal = pred_total[label_total==1]  # Simulated DNN scores for signal
-            dnn_scores_background = pred_total[label_total==0]   # Simulated DNN scores for background
-            # print(f"fold {i} epoch {epoch} validation pred_total: {pred_total.shape}")
-            # print(f"fold {i} epoch {epoch} validation label_total: {label_total.shape}")
-            # print(f"fold {i} epoch {epoch} validation dnn_scores_signal: {dnn_scores_signal}")
-            # print(f"fold {i} epoch {epoch} validation dnn_scores_background: {dnn_scores_background}")
-            
-            # Create histograms and normalize them separated by signal and background
-            # bins = np.linspace(0, 1, 30)  # Adjust bin edges as needed
-            # bins = np.linspace(0, 2.8, 30)  # Adjust bin edges as needed
             bins = np.array([
                 0,
                 0.07,
@@ -404,45 +462,48 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 2.0,
                 2.8,
             ])
-            plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_bySigBkg.png"
-
-            plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
-            raise ValueError
+            plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_combined_transformedDist_bySigBkg.png"
+            
+            # plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
+            plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=True)
+            # raise ValueError
             
 
 
 
-            
-            # do the signal ratio plot
+            # # ------------------------------------------
+            # # do the signal ratio plot
+            # # ------------------------------------------
 
-            # Histogram for signal, normalized to one
-            wgt_signal = df_valid.wgt_nominal[label_total==1]
-            hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, weights=wgt_signal)
-            bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
-            
-            # Histogram for background, normalized to one
-            wgt_background = df_valid.wgt_nominal[label_total==0]
-            hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, weights=wgt_background)
-            bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
 
-            # hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins)
+            # # Histogram for signal, normalized to one
+            # wgt_signal = df_valid.wgt_nominal[label_total==1]
+            # hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, weights=wgt_signal)
             # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
             
-            # hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins)
+            # # Histogram for background, normalized to one
+            # wgt_background = df_valid.wgt_nominal[label_total==0]
+            # hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, weights=wgt_background)
             # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
-            sigBkg_ratio = np.zeros_like(hist_background)
-            nan_filter = hist_background !=0
-            sigBkg_ratio[nan_filter] = hist_signal[nan_filter] /hist_background[nan_filter]
 
-             # Plotting
-            plt.figure(figsize=(10, 6))
-            plt.plot(bin_centers_signal, sigBkg_ratio, label='Sig/Bkg', drawstyle='steps-mid')
-            plt.xlabel('arctanh Score')
-            plt.ylabel('Sig/Bkg')
-            plt.title('Sig / Bkg DNN Score Distributions ')
-            plt.legend()
-            plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_sigBkgRatio.png")
-            plt.clf()
+            # # hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins)
+            # # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
+            
+            # # hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins)
+            # # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+            # sigBkg_ratio = np.zeros_like(hist_background)
+            # nan_filter = hist_background !=0
+            # sigBkg_ratio[nan_filter] = hist_signal[nan_filter] /hist_background[nan_filter]
+
+            #  # Plotting
+            # plt.figure(figsize=(10, 6))
+            # plt.plot(bin_centers_signal, sigBkg_ratio, label='Sig/Bkg', drawstyle='steps-mid')
+            # plt.xlabel('arctanh Score')
+            # plt.ylabel('Sig/Bkg')
+            # plt.title('Sig / Bkg DNN Score Distributions ')
+            # plt.legend()
+            # plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_sigBkgRatio.png")
+            # plt.clf()
             
 
             # Create histograms and normalize them separated by process samples
