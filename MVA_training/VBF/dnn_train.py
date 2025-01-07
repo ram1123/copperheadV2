@@ -16,6 +16,7 @@ from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
 import mplhep as hep
 plt.style.use(hep.style.CMS)
+# hep.style.use("CMS")
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=1, gamma=2):
@@ -177,6 +178,46 @@ class NumpyDataset(Dataset):
         # Retrieve a sample and its corresponding label
         return self.input_arr[idx], self.label_arr[idx]
 
+
+def plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path):
+            
+    # Histogram for signal, normalized to one
+    hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, density=True)
+    # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
+    
+    # Histogram for background, normalized to one
+    hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, density=True)
+    # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+    
+    # Plotting
+    fig, ax_main = plt.subplots()
+    plt.yscale('log')
+    plt.ylim((0.01, 1e9))
+    # plt.plot(bin_centers_signal, hist_signal, label='Signal', drawstyle='steps-mid')
+    # plt.plot(bin_centers_background, hist_background, label='Background', drawstyle='steps-mid')
+    # hists = [hist_signal, hist_background]
+    # labels = ["signal", "Background"]
+    hist_dict = {
+        "Signal": hist_signal,
+        "Background" : hist_background,
+    }
+    for label, hist in hist_dict.items():
+        hep.histplot(
+            hist, 
+            bins=bins, 
+            histtype='step', 
+            label=label, 
+            ax=ax_main,
+        )
+    plt.xlabel('arctanh Score')
+    plt.ylabel('Events')
+    plt.title('DNN Score Distributions Sig vs Bkg')
+    plt.legend()
+    
+    plt.savefig(plt_save_path)
+    plt.clf()
+    
+
 def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=101, save_path=""):
     if save_path == "save_path":
         print("ERROR: please define the save path for the results")
@@ -188,12 +229,16 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
     # divide our data into 4 folds
     # input_arr_train, label_arr_train = data_dict["train"]
     # input_arr_valid, label_arr_valid = data_dict["validation"]
+    print(f"data_dict.keys(): {data_dict.keys()}")
     df_train = data_dict["train"]
     df_valid = data_dict["validation"]
+    df_eval = data_dict["evaluation"]
     input_arr_train = df_train[training_features].values
     label_arr_train = df_train.label.values
     input_arr_valid = df_valid[training_features].values
     label_arr_valid = df_valid.label.values
+    input_arr_eval = df_eval[training_features].values
+    label_arr_eval = df_eval.label.values
     
     loss_fn = torch.nn.BCELoss()
     # loss_fn = FocalLoss(alpha=1, gamma=2)
@@ -207,6 +252,8 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
     dataset_train = NumpyDataset(input_arr_train, label_arr_train)
     dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid)
     dataloader_valid = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False)
+    dataset_eval = NumpyDataset(input_arr_eval, label_arr_eval)
+    dataloader_eval = DataLoader(dataset_eval, batch_size=batch_size, shuffle=False)
     best_significance = 0
     for epoch in range(nepochs):
         model.train()
@@ -249,6 +296,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             pred_l = []
             label_l = []
             # x_l = [] # sanity check
+            score_dict = {}
             with torch.no_grad():
                 for batch_idx, (inputs, labels) in enumerate(dataloader_valid):
                     inputs = inputs.to(device)
@@ -269,12 +317,22 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 # print(f"pred_l: {pred_l}")
                 # print(f"label_l: {label_l}")
                 auc_score = roc_auc_score(label_total, pred_total)
-            print(f"fold {i} epoch {epoch} validation total loss: {valid_loss}")
-            print(f"fold {i} epoch {epoch} validation average batch loss: {np.mean(batch_losses)}")
-            print(f"fold {i} epoch {epoch} validation AUC: {auc_score}")
+                print(f"fold {i} epoch {epoch} validation total loss: {valid_loss}")
+                print(f"fold {i} epoch {epoch} validation average batch loss: {np.mean(batch_losses)}")
+                print(f"fold {i} epoch {epoch} validation AUC: {auc_score}")
 
+            # ------------------------------------------------
             # plot the score distributions
+            # ------------------------------------------------
+            fold_save_path = f"{save_path}/fold{i}"
+            if not os.path.exists(fold_save_path):
+                os.makedirs(fold_save_path)
 
+            # plot Sig vs Bkg from 0 to 1
+            # dnn_scores_signal = pred_total[label_total==1]  # Simulated DNN scores for signal
+            # dnn_scores_background = pred_total[label_total==0] # Simulated DNN scores for background
+            # bins = np.linspace(0, 1, 30) 
+            
             # transform the score
             pred_total = np.arctanh(pred_total)
             
@@ -304,36 +362,16 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 2.0,
                 2.8,
             ])
+            plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_bySigBkg.png"
+
+            plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
+            raise ValueError
             
-            # Histogram for signal, normalized to one
-            hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, density=True)
-            bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
-            
-            # Histogram for background, normalized to one
-            hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, density=True)
-            bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
-            
-            # Plotting
-            plt.figure(figsize=(10, 6))
-            plt.plot(bin_centers_signal, hist_signal, label='Signal', drawstyle='steps-mid')
-            plt.plot(bin_centers_background, hist_background, label='Background', drawstyle='steps-mid')
-            plt.xlabel('arctanh Score')
-            plt.ylabel('Density')
-            plt.title('Normalized DNN Score Distributions Sig vs Bkg')
-            plt.legend()
-            # plt.show()
-            
-            fold_save_path = f"{save_path}/fold{i}"
-            if not os.path.exists(fold_save_path):
-                os.makedirs(fold_save_path)
-            
-            plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_bySigBkg.png")
-            plt.clf()
 
 
 
             
-             # do the signal ratio plot
+            # do the signal ratio plot
 
             # Histogram for signal, normalized to one
             wgt_signal = df_valid.wgt_nominal[label_total==1]
@@ -543,12 +581,14 @@ if __name__ == "__main__":
         # dnn_train(model, data_dict, save_path=save_path)
         df_train = pd.read_parquet(f"{save_path}/data_df_train_{i}") # these have been already scaled
         df_valid = pd.read_parquet(f"{save_path}/data_df_validation_{i}") # these have been already scaled
+        df_eval = pd.read_parquet(f"{save_path}/data_df_evaluation_{i}") # these have been already scaled
 
         training_features = prepare_features(df_train, training_features) # add variation to the name
         print(f"new training_features: {training_features}")
         data_dict = {
             "train": df_train,
-            "validation": df_valid
+            "validation": df_valid,
+            "evaluation": df_eval,
         }
         nepochs = 10 # 100
         batch_size = 65536

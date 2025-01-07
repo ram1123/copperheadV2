@@ -475,15 +475,15 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     #     "dimuon_mass",
     #     "dimuon_pt",
     #     "dimuon_pt_log",
-    #     "dimuon_eta",
-    #     # "dimuon_ebe_mass_res",
-    #     # "dimuon_ebe_mass_res_rel",
-    #     # "dimuon_cos_theta_cs",
-    #     # "dimuon_phi_cs",
+    #     "dimuon_rapidity",
+    #     "dimuon_ebe_mass_res",
+    #     "rel_dimuon_ebe_mass_res",
     #     "dimuon_pisa_mass_res",
     #     "dimuon_pisa_mass_res_rel",
-    #     "dimuon_cos_theta_cs_pisa",
-    #     "dimuon_phi_cs_pisa",
+    #     "dimuon_cos_theta_cs",
+    #     "dimuon_phi_cs",
+        # "dimuon_cos_theta_eta",
+    #     "dimuon_phi_eta",
     #     "jet1_pt",
     #     "jet1_eta",
     #     "jet1_phi",
@@ -499,11 +499,11 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     #     "ll_zstar_log",
     #     "mmj_min_dEta",
     #     "nsoftjets5",
-        # "htsoft2",
-        # "year",
+    #     "htsoft2",
+    #     "year",
     # ]
     training_features = [
-        'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_eta', \
+        'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity', \
          'dimuon_cos_theta_cs', 'dimuon_phi_cs',
          'jet1_pt', 'jet1_eta', 'jet1_phi', 'jet1_qgl', 'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_qgl',\
          'jj_mass', 'jj_mass_log', 'jj_dEta', 'rpt', 'll_zstar_log', 'mmj_min_dEta', 'nsoftjets5', 'htsoft2'
@@ -513,12 +513,8 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     if not os.path.exists(save_path): 
         os.makedirs(save_path) 
 
-    
-
-    # Create a list
-    my_list = ['apple', 'banana', 'cherry']
-    
-    # Pickle the list into a file
+        
+    # Pickle the training_features list into a file
     with open(f'{save_path}/training_features.pkl', 'wb') as f:
         pickle.dump(training_features, f)
     
@@ -670,28 +666,13 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         x_eval = (x_eval-x_mean)/x_std
         label_eval = df_eval.label.values
 
-        # old way start --------------------------------------
-        # data_dict = {
-        #     "train": [x_train, label_train],
-        #     "validation" : [x_val, label_val],
-        #     "evaluation" : [x_eval, label_eval],
-        # }
-        # for mode, data in data_dict.items():
-        #     np.save(f"{save_path}/data_input_{mode}_{i}", data[0])
-        #     np.save(f"{save_path}/data_label_{mode}_{i}", data[1])
-        # old way end --------------------------------------
 
-        # new way start --------------------------------------
         # update the values on df and save that bc we need "process" column for analysis
-        # print(f"df_train b4 scale: {df_train}")
-        # print(f"df_val b4 scale: {df_val}")
-        # print(f"df_eval b4 scale: {df_eval}")
         df_train[training_features] = x_train
         df_val[training_features] = x_val
         df_eval[training_features] = x_eval
-        # print(f"df_train after scale: {df_train}")
-        # print(f"df_val after scale: {df_val}")
-        # print(f"df_eval after scale: {df_eval}")
+
+        # save the df
         data_dict = {
             "train": df_train,
             "validation" : df_val,
@@ -699,7 +680,6 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         }
         for mode, data_df in data_dict.items():
             data_df.to_parquet(f"{save_path}/data_df_{mode}_{i}")
-        # new way end --------------------------------------
         
     
     
