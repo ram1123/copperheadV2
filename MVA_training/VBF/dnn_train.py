@@ -217,6 +217,44 @@ def plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path):
     plt.savefig(plt_save_path)
     plt.clf()
     
+def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
+    """
+    helper function running through the evaluation
+    """
+    model.eval() 
+    total_loss = 0
+    batch_losses = []
+    pred_l = []
+    label_l = []
+    with torch.no_grad():
+        for batch_idx, (inputs, labels) in enumerate(dataloader):
+            inputs = inputs.to(device)
+            labels = labels.to(device).reshape((-1,1))
+            pred = model(inputs)
+            loss = loss_fn(pred, labels)
+            batch_loss = loss.item()
+            total_loss += batch_loss
+            batch_losses.append(batch_loss)
+            pred_l.append(pred.cpu().numpy())
+            label_l.append(labels.cpu().numpy())
+            # x_l.append(inputs.cpu().numpy()) # sanity check
+    
+        pred_total = np.concatenate(pred_l, axis=0).flatten()
+        label_total = np.concatenate(label_l, axis=0).flatten()
+        # x_total = np.concatenate(x_l, axis=0) # sanity check
+    
+    # print(f"pred_l: {pred_l}")
+    # print(f"label_l: {label_l}")
+    auc_score = roc_auc_score(label_total, pred_total)
+    return_dict = {
+        "label" : label_total,
+        "prediction" : pred_total,
+        "total_loss" : total_loss,
+        "batch_losses" : batch_losses,
+    }
+    model.train() # turn back to train mode  
+    return return_dict
+
 
 def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=101, save_path=""):
     if save_path == "save_path":
@@ -229,7 +267,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
     # divide our data into 4 folds
     # input_arr_train, label_arr_train = data_dict["train"]
     # input_arr_valid, label_arr_valid = data_dict["validation"]
-    print(f"data_dict.keys(): {data_dict.keys()}")
+    # print(f"data_dict.keys(): {data_dict.keys()}")
     df_train = data_dict["train"]
     df_valid = data_dict["validation"]
     df_eval = data_dict["evaluation"]
@@ -288,38 +326,42 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
         print(f"fold {i} epoch {epoch} train total loss: {epoch_loss}")
         print(f"fold {i} epoch {epoch} train average batch loss: {np.mean(batch_losses)}")
         validate_interval = 5
-        if (epoch==0) or ((epoch % validate_interval) == (validate_interval-1)):
-            model.eval()
+        if (epoch==0) or ((epoch % validate_interval) == (validate_interval-1)):            
             
-            valid_loss = 0
-            batch_losses = []
-            pred_l = []
-            label_l = []
             # x_l = [] # sanity check
             score_dict = {}
-            with torch.no_grad():
-                for batch_idx, (inputs, labels) in enumerate(dataloader_valid):
-                    inputs = inputs.to(device)
-                    labels = labels.to(device).reshape((-1,1))
-                    pred = model(inputs)
-                    loss = loss_fn(pred, labels)
-                    batch_loss = loss.item()
-                    valid_loss += batch_loss
-                    batch_losses.append(batch_loss)
-                    pred_l.append(pred.cpu().numpy())
-                    label_l.append(labels.cpu().numpy())
-                    # x_l.append(inputs.cpu().numpy()) # sanity check
+            # with torch.no_grad():
+            #     # valid_loss = 0
+            #     # batch_losses = []
+            #     # pred_l = []
+            #     # label_l = []
+            #     # for batch_idx, (inputs, labels) in enumerate(dataloader_valid):
+            #     #     inputs = inputs.to(device)
+            #     #     labels = labels.to(device).reshape((-1,1))
+            #     #     pred = model(inputs)
+            #     #     loss = loss_fn(pred, labels)
+            #     #     batch_loss = loss.item()
+            #     #     valid_loss += batch_loss
+            #     #     batch_losses.append(batch_loss)
+            #     #     pred_l.append(pred.cpu().numpy())
+            #     #     label_l.append(labels.cpu().numpy())
+            #     #     # x_l.append(inputs.cpu().numpy()) # sanity check
     
-                pred_total = np.concatenate(pred_l, axis=0).flatten()
-                label_total = np.concatenate(label_l, axis=0).flatten()
-                # x_total = np.concatenate(x_l, axis=0) # sanity check
+            #     # pred_total = np.concatenate(pred_l, axis=0).flatten()
+            #     # label_total = np.concatenate(label_l, axis=0).flatten()
+            #     # # x_total = np.concatenate(x_l, axis=0) # sanity check
                 
-                # print(f"pred_l: {pred_l}")
-                # print(f"label_l: {label_l}")
-                auc_score = roc_auc_score(label_total, pred_total)
-                print(f"fold {i} epoch {epoch} validation total loss: {valid_loss}")
-                print(f"fold {i} epoch {epoch} validation average batch loss: {np.mean(batch_losses)}")
-                print(f"fold {i} epoch {epoch} validation AUC: {auc_score}")
+            #     # # print(f"pred_l: {pred_l}")
+            #     # # print(f"label_l: {label_l}")
+            valid_loop_dict = dnnEvaluateLoop(model, dataloader_valid, loss_fn, device=device)
+            pred_total = valid_loop_dict["prediction"]
+            label_total = valid_loop_dict["label"]
+            valid_loss = valid_loop_dict["total_loss"]
+            batch_losses = valid_loop_dict["batch_losses"]
+            auc_score = roc_auc_score(label_total, pred_total)
+            print(f"fold {i} epoch {epoch} validation total loss: {valid_loss}")
+            print(f"fold {i} epoch {epoch} validation average batch loss: {np.mean(batch_losses)}")
+            print(f"fold {i} epoch {epoch} validation AUC: {auc_score}")
 
             # ------------------------------------------------
             # plot the score distributions
@@ -490,6 +532,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             if significance > best_significance:
                 best_significance = significance
                 # save state_dict
+                model.eval()
                 torch.save(model.state_dict(), f'{fold_save_path}/best_model_weights.pt')
                 # save torch jit version for coffea torch_wrapper while you're at it
                 dummy_input = torch.rand(100, len(training_features))
@@ -497,6 +540,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 model.to("cpu")
                 torch.jit.trace(model, dummy_input).save(f'{fold_save_path}/best_model_torchJit_ver.pt')
                 model.to(device)
+                model.train() # turn model back to train mode
                 print(f"new best significance for fold {i} is {best_significance} from {epoch} epoch")
 
             # add significance to plot
@@ -512,7 +556,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             
             
             
-            model.train() # turn model back to train mode
+            
             
 
     
