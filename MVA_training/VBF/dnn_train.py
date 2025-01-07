@@ -185,20 +185,24 @@ def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False):
     """
     fig, ax_main = plt.subplots()
     plt.yscale('log')
-    plt.ylim((0.001, 1e9))
+    plt.ylim((0.001, 1e3))
     for stage, output_dict in score_dict.items():
         pred_total = output_dict["prediction"]
         label_total = output_dict["label"]
+        wgt_total = output_dict["weight"]
         if transformPrediction:
             pred_total = np.arctanh(pred_total)
+            plt.ylim((0.001, 1e5))
         dnn_scores_signal = pred_total[label_total==1]  # Simulated DNN scores for signal
         dnn_scores_background = pred_total[label_total==0]   # Simulated DNN scores for background
+        wgt_total_signal = wgt_total[label_total==1]  
+        wgt_total_background = wgt_total[label_total==0]   
         # Histogram for signal, normalized to one
-        hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins)
+        hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, weights=wgt_total_signal)
         # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
         
         # Histogram for background, normalized to one
-        hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins)
+        hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, weights=wgt_total_background)
         # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
         hep.histplot(
             hist_signal, 
@@ -386,7 +390,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 "train" :  {
                     "prediction": train_loop_dict["prediction"],
                     "label": train_loop_dict["label"],
-                    # "weight": df_train.wgt_nominal,
+                    "weight": df_train.wgt_nominal.values,
                 },
                 # "validation" : {
                 #     "prediction": valid_loop_dict["prediction"],
@@ -399,10 +403,18 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 "valid+eval" : {
                     "prediction": np.concatenate([valid_loop_dict["prediction"], eval_loop_dict["prediction"]], axis=0),
                     "label":  np.concatenate([valid_loop_dict["label"], eval_loop_dict["label"]], axis=0),
-                    # "weight": np.concatenate([df_valid.wgt_nominal, df_eval.wgt_nominal], axis=0),,
+                    "weight": np.concatenate([df_valid.wgt_nominal.values, df_eval.wgt_nominal.values], axis=0),
                 },
             }
-            
+
+            # # debugging
+            # train_label = train_loop_dict["label"]
+            # random_idxs = random_indices = np.random.choice(len(train_label), size=100, replace=False)
+            # train_label = train_label[random_idxs]
+            # df_train_label = df_train.label.values[random_idxs]
+            # # print(f"train_label: {train_label}")
+            # # print(f"df_train.label: {df_train.label.values[random_idxs]}")
+            # print(f"labels same: {np.all(df_train_label==train_label)}")
             
             pred_total = valid_loop_dict["prediction"]
             label_total = valid_loop_dict["label"]
@@ -519,7 +531,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 dnn_scores = pred_total[proc_filter]
                 wgt_proc = df_valid.wgt_nominal[proc_filter]
                 hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt_proc)
-                print(f"{proc} hist: {hist_proc}")
+                # print(f"{proc} hist: {hist_proc}")
                 bin_centers_proc = 0.5 * (bins_proc[:-1] + bins_proc[1:])
                 plt.plot(bin_centers_proc, hist_proc, label=proc, drawstyle='steps-mid')
             plt.xlabel('arctanh Score')
@@ -549,7 +561,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 dnn_scores = pred_total[proc_filter]
                 wgt = df_valid.wgt_nominal[proc_filter]
                 hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt)
-                print(f"{proc} hist: {hist_proc}")
+                # print(f"{proc} hist: {hist_proc}")
                 bkg_hist_l.append(hist_proc)
             
             hep.histplot(
@@ -573,7 +585,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 dnn_scores = pred_total[proc_filter]
                 wgt = df_valid.wgt_nominal[proc_filter]
                 hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt)
-                print(f"{proc} hist: {hist_proc}")
+                # print(f"{proc} hist: {hist_proc}")
                 sig_hist_l.append(hist_proc)
                 hep.histplot(
                     hist_proc, 
@@ -695,7 +707,7 @@ if __name__ == "__main__":
             "validation": df_valid,
             "evaluation": df_eval,
         }
-        nepochs = 10 # 100
+        nepochs = 100 # 100
         batch_size = 65536
         dnn_train(model, data_dict,training_features=training_features, save_path=save_path,batch_size=batch_size,nepochs=nepochs)
 
