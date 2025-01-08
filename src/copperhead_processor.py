@@ -1157,11 +1157,11 @@ class EventProcessor(processor.ProcessorABC):
         # apply vbf filter phase cut if DY test end ---------------------------------
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         wgt_nominal = weights.weight()
-        if "wgt_nominal_btag_wgt" in out_dict.keys():
-            # btag is seperated due to requiring information of other weights, and adding it directly to the weights varibles
-            # screws up with the values
-            print("adding btag wgts!")
-            wgt_nominal = wgt_nominal*out_dict["wgt_nominal_btag_wgt"]
+        # if "wgt_nominal_btag_wgt" in out_dict.keys():
+        #     # btag is seperated due to requiring information of other weights, and adding it directly to the weights varibles
+        #     # screws up with the values
+        #     print("adding btag wgts!")
+        #     wgt_nominal = wgt_nominal*out_dict["wgt_nominal_btag_wgt"]
         # original  zpt start -------------------
         if do_zpt:
             print("adding zpt wgts!")
@@ -1660,6 +1660,10 @@ class EventProcessor(processor.ProcessorABC):
                 btag_wgt, btag_syst = btag_weights_jsonKeepDim(
                             self, btag_systs, jets, weights, bjet_sel_mask, btag_json
                 )
+                weights.add("btag_wgt", 
+                        weight=btag_wgt,
+                )
+                # TODO: add btag systematics by adding seperate wgts
                 # keep dims end -------------------------------------
                 # print(f"btag_wgt: {ak.to_numpy(btag_wgt.compute())}")
                 # print(f"btag_syst['jes_up']: {ak.to_numpy(btag_syst['jes']['up'].compute())}")
@@ -1714,10 +1718,10 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"do_btag_wgt: {do_btag_wgt}")
         # raise ValueError
         # if is_mc and do_btag_wgt and (variation=="nominal"):
-        if is_mc and do_btag_wgt :
-            jet_loop_out_dict.update({
-                "wgt_nominal_btag_wgt": btag_wgt
-            })
+        # if is_mc and do_btag_wgt :
+        #     jet_loop_out_dict.update({
+        #         "wgt_nominal_btag_wgt": btag_wgt
+        #     })
 
 
         # --------------------------------------------------------------#

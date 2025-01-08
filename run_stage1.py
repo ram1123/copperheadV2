@@ -108,10 +108,11 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
-    print(f"out_collections keys: {out_collections.keys()}")
+    # print(f"out_collections keys: {out_collections.keys()}")
 
     skim_dict = out_collections
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
+    print(f"skim_dict.wgt_nominal: {skim_dict['wgt_nominal_total'].compute()}")
     # ------------------------------------------
     # skim_dict =  {
     #         'mu1_pt': (out_collections["mu1_pt"]),
@@ -421,6 +422,7 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # max_file_len = 15
                 # max_file_len = 130
+                # max_file_len = 70
                 max_file_len = 200
                 # max_file_len = 8000
                 # max_file_len = 25
