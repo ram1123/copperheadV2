@@ -1,4 +1,63 @@
 jec_parameters:
+  jet_algorithm:
+    2016_RERECO: AK4PFchs
+    '2017_RERECO': AK4PFchs
+    '2018_RERECO': AK4PFchs
+    2016preVFP: AK4PFchs
+    2016postVFP: AK4PFchs
+    '2017': AK4PFchs
+    '2018': AK4PFchs
+    2022preEE: AK4PFPuppi
+    2022postEE: AK4PFPuppi
+  jec_unc_to_consider:
+    2016preVFP:
+    - Absolute
+    - Absolute_2016
+    - BBEC1
+    - BBEC1_2016
+    - EC2
+    - EC2_2016
+    - HF
+    - HF_2016
+    - RelativeBal
+    - RelativeSample_2016
+    - FlavorQCD
+    2016postVFP:
+    - Absolute
+    - Absolute_2016
+    - BBEC1
+    - BBEC1_2016
+    - EC2
+    - EC2_2016
+    - HF
+    - HF_2016
+    - RelativeBal
+    - RelativeSample_2016
+    - FlavorQCD
+    '2017':
+    - Absolute
+    - Absolute_2017
+    - BBEC1
+    - BBEC1_2017
+    - EC2
+    - EC2_2017
+    - HF
+    - HF_2017
+    - RelativeBal
+    - RelativeSample_2017
+    - FlavorQCD
+    '2018':
+    - Absolute
+    - Absolute_2018
+    - BBEC1
+    - BBEC1_2018
+    - EC2
+    - EC2_2018
+    - HF
+    - HF_2018
+    - RelativeBal
+    - RelativeSample_2018
+    - FlavorQCD
   jec_variations:
     2016preVFP:
     - Absolute_up
