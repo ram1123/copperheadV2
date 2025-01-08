@@ -1,4 +1,5 @@
 from coffea.jetmet_tools import CorrectedJetsFactory, JECStack
+# from src.corrections.custom_jec import CorrectedJetsFactory, JECStack
 from coffea.lookup_tools import extractor
 import numpy as np
 import awkward as ak
@@ -34,6 +35,8 @@ import os
 #     return names
 
 def jec_names_and_sources(jec_pars):
+    # print(f"jec_pars: {jec_pars}")
+    # jet_alg = jec_pars["jet_algorithm"]
     names = {}
     suffix = {
         "jec_names": [f"_{level}_AK4PFchs" for level in jec_pars["jec_levels_mc"]],
@@ -106,7 +109,7 @@ def get_name_map(stack):
     name_map["ptGenJet"] = "pt_gen"
     name_map["ptRaw"] = "pt_raw"
     name_map["massRaw"] = "mass_raw"
-    name_map["Rho"] = "PU_rho"
+    name_map["Rho"] = "rho"
     # print(f"name_map: {name_map}")
     return name_map
 
@@ -276,7 +279,8 @@ def fill_softjets(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
         print(f"jets jet2.pt: {jet2.pt}")
         print(f"jets mu1.pt: {mu1.pt}")
         print(f"jets mu2.pt: {mu2.pt}")
-    
+
+    # line 2966 of AN-19-124: "The two identified muons and the charged PF candidates associated to the two leading jets in the event are not included in the soft-jet definition"
     dR_m1 = saj.delta_r(mu1)
     dR_m2 = saj.delta_r(mu2)
     dR_j1 = saj.delta_r(jet1)
