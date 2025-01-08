@@ -20,7 +20,7 @@ from itertools import islice
 import copy
 import argparse
 from dask.distributed import performance_report
-from src.corrections.evaluator import nnlops_weights, qgl_weights
+from src.corrections.evaluator import nnlops_weights
 import os
 from omegaconf import OmegaConf
 from coffea.nanoevents.methods import vector
@@ -104,115 +104,126 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # zip.to_parquet(filename)
     # raise ValueError
     # save input events for CI testing end ---------------------------------------------
-    print(f"n of partitions: {events.Muon.pt}")
+    # print(f"n of partitions: {events.Muon.pt}")
     out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
-    # ------------------------------------------
-    skim_dict =  {
-            'mu1_pt': (out_collections["mu1_pt"]),
-            'mu2_pt': (out_collections["mu2_pt"]),
-            'mu1_eta': (out_collections["mu1_eta"]),
-            'mu2_eta': (out_collections["mu2_eta"]),
-            'mu1_phi': (out_collections["mu1_phi"]),
-            'mu2_phi': (out_collections["mu2_phi"]),
-            'mu1_iso': (out_collections["mu1_iso"]),
-            'mu2_iso': (out_collections["mu2_iso"]),
-            "mu1_pt_over_mass" : (out_collections["mu1_pt"] / out_collections["dimuon_mass"]) ,
-            "mu2_pt_over_mass" : (out_collections["mu2_pt"] / out_collections["dimuon_mass"]) ,
-            'jet1_pt': (out_collections["jet1_pt"]),
-            'jet2_pt': (out_collections["jet2_pt"]),
-            'jet1_eta': (out_collections["jet1_eta"]),
-            'jet2_eta': (out_collections["jet2_eta"]),
-            'jet1_phi': (out_collections["jet1_phi"]),
-            'jet2_phi': (out_collections["jet2_phi"]),
-            'jet1_rapidity': (out_collections["jet1_rapidity"]),
-            'jet2_rapidity': (out_collections["jet2_rapidity"]),
-            'jet1_mass': (out_collections["jet1_mass"]),
-            'jet2_mass': (out_collections["jet2_mass"]),
-            'jet1_qgl': (out_collections["jet1_qgl"]),
-            'jet2_qgl': (out_collections["jet2_qgl"]),
-            'njets': (out_collections["njets"]),
-            # jj variables------------------------------
-            'jj_dEta': (out_collections["jj_dEta"]),
-            'jj_dPhi': (out_collections["jj_dPhi"]),
-            'jj_mass': (out_collections["jj_mass"]),
-            'jj_mass_log': np.log(out_collections["jj_mass"]),
-            'jj_pt': (out_collections["jj_pt"]),
-            'jj_eta': (out_collections["jj_eta"]),
-            'jj_phi': (out_collections["jj_phi"]),
-            # weights -----------------------------------------
-            # 'weights': (out_collections["weights"]),    
-            # #dimuon variables-----------------------
-            'dimuon_mass': (out_collections["dimuon_mass"]),
-            'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
-            'dimuon_cos_theta_cs': (out_collections["dimuon_cos_theta_cs"]),
-            'dimuon_phi_cs': (out_collections["dimuon_phi_cs"]),
-            'dimuon_cos_theta_eta': (out_collections["dimuon_cos_theta_eta"]),
-            'dimuon_phi_eta': (out_collections["dimuon_phi_eta"]),
-            'dimuon_dPhi': (out_collections["dimuon_dPhi"]),
-            'dimuon_dR': (out_collections["dimuon_dR"]),
-            'dimuon_dEta': (out_collections["dimuon_dEta"]),
-            'dimuon_eta': (out_collections["dimuon_eta"]),
-            'dimuon_rapidity': (out_collections["dimuon_rapidity"]),
-            'dimuon_phi': (out_collections["dimuon_phi"]),
-            'dimuon_pt': (out_collections["dimuon_pt"]),
-            'dimuon_pt_log': np.log(out_collections["dimuon_pt"]),
+    print(f"out_collections keys: {out_collections.keys()}")
 
-            # # mmj variables ------------------------------
-            'mmj1_dEta': (out_collections["mmj1_dEta"]),
-            'mmj1_dPhi': (out_collections["mmj1_dPhi"]),
-            'mmj2_dEta': (out_collections["mmj2_dEta"]),
-            'mmj2_dPhi': (out_collections["mmj2_dPhi"]),
-            'mmj_min_dEta': (out_collections["mmj_min_dEta"]),
-            'mmj_min_dPhi': (out_collections["mmj_min_dPhi"]),
-            'mmjj_mass': (out_collections["mmjj_mass"]),
-            'mmjj_pt': (out_collections["mmjj_pt"]),
-            'mmjj_eta': (out_collections["mmjj_eta"]),
-            'mmjj_phi': (out_collections["mmjj_phi"]),
+    skim_dict = out_collections
+    skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
+    # ------------------------------------------
+    # skim_dict =  {
+    #         'mu1_pt': (out_collections["mu1_pt"]),
+    #         'mu2_pt': (out_collections["mu2_pt"]),
+    #         'mu1_eta': (out_collections["mu1_eta"]),
+    #         'mu2_eta': (out_collections["mu2_eta"]),
+    #         'mu1_phi': (out_collections["mu1_phi"]),
+    #         'mu2_phi': (out_collections["mu2_phi"]),
+    #         # 'mu1_iso': (out_collections["mu1_iso"]),
+    #         # 'mu2_iso': (out_collections["mu2_iso"]),
+    #         "mu1_pt_over_mass" : (out_collections["mu1_pt"] / out_collections["dimuon_mass"]) ,
+    #         "mu2_pt_over_mass" : (out_collections["mu2_pt"] / out_collections["dimuon_mass"]) ,
+    #         'jet1_pt_nominal': (out_collections["jet1_pt"]),
+    #         'jet2_pt_nominal': (out_collections["jet2_pt"]),
+    #         'jet1_eta_nominal': (out_collections["jet1_eta"]),
+    #         'jet2_eta_nominal': (out_collections["jet2_eta"]),
+    #         'jet1_phi_nominal': (out_collections["jet1_phi"]),
+    #         'jet2_phi_nominal': (out_collections["jet2_phi"]),
+    #         'jet1_rapidity_nominal': (out_collections["jet1_rapidity"]),
+    #         'jet2_rapidity_nominal': (out_collections["jet2_rapidity"]),
+    #         'jet1_mass_nominal': (out_collections["jet1_mass"]),
+    #         'jet2_mass_nominal': (out_collections["jet2_mass"]),
+    #         'jet1_qgl_nominal': (out_collections["jet1_qgl"]),
+    #         'jet2_qgl_nominal': (out_collections["jet2_qgl"]),
+    #         'njets_nominal': (out_collections["njets"]),
+    #         # jj variables------------------------------
+    #         'jj_dEta_nominal': (out_collections["jj_dEta"]),
+    #         'jj_dPhi_nominal': (out_collections["jj_dPhi"]),
+    #         'jj_mass_nominal': (out_collections["jj_mass"]),
+    #         'jj_mass_log_nominal': np.log(out_collections["jj_mass"]),
+    #         'jj_pt_nominal': (out_collections["jj_pt"]),
+    #         'jj_eta_nominal': (out_collections["jj_eta"]),
+    #         'jj_phi_nominal': (out_collections["jj_phi"]),
+    #         # weights -----------------------------------------
+    #         'wgt_nominal': (out_collections["wgt_nominal_total"]),    
+    #         # #dimuon variables-----------------------
+    #         'dimuon_mass': (out_collections["dimuon_mass"]),
+    #         'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
+    #         'dimuon_ebe_mass_res_rel': (out_collections["dimuon_ebe_mass_res_rel"]),
+    #         'dimuon_cos_theta_cs': (out_collections["dimuon_cos_theta_cs"]),
+    #         'dimuon_phi_cs': (out_collections["dimuon_phi_cs"]),
+    #         'dimuon_cos_theta_eta': (out_collections["dimuon_cos_theta_eta"]),
+    #         'dimuon_phi_eta': (out_collections["dimuon_phi_eta"]),
+    #         'dimuon_dPhi': (out_collections["dimuon_dPhi"]),
+    #         'dimuon_dR': (out_collections["dimuon_dR"]),
+    #         'dimuon_dEta': (out_collections["dimuon_dEta"]),
+    #         'dimuon_eta': (out_collections["dimuon_eta"]),
+    #         'dimuon_rapidity': (out_collections["dimuon_rapidity"]),
+    #         'dimuon_phi': (out_collections["dimuon_phi"]),
+    #         'dimuon_pt': (out_collections["dimuon_pt"]),
+    #         'dimuon_pt_log': np.log(out_collections["dimuon_pt"]),
+
+    #         # # mmj variables ------------------------------
+    #         'mmj1_dEta_nominal': (out_collections["mmj1_dEta"]),
+    #         'mmj1_dPhi_nominal': (out_collections["mmj1_dPhi"]),
+    #         'mmj2_dEta_nominal': (out_collections["mmj2_dEta"]),
+    #         'mmj2_dPhi_nominal': (out_collections["mmj2_dPhi"]),
+    #         'mmj_min_dEta_nominal': (out_collections["mmj_min_dEta"]),
+    #         'mmj_min_dPhi_nominal': (out_collections["mmj_min_dPhi"]),
+    #         'mmjj_mass_nominal': (out_collections["mmjj_mass"]),
+    #         'mmjj_pt_nominal': (out_collections["mmjj_pt"]),
+    #         'mmjj_eta_nominal': (out_collections["mmjj_eta"]),
+    #         'mmjj_phi_nominal': (out_collections["mmjj_phi"]),
             
 
-            'jet1_pt_raw': (out_collections["jet1_pt_raw"]),
-            'jet1_mass_raw': (out_collections["jet1_mass_raw"]),
-            'jet1_rho': (out_collections["jet1_rho"]),
-            'jet1_area': (out_collections["jet1_area"]),
-            'jet1_pt_jec': (out_collections["jet1_pt_jec"]),
-            'jet1_mass_jec': (out_collections["jet1_mass_jec"]),
-            'jet2_pt_raw': (out_collections["jet2_pt_raw"]),
-            'jet2_mass_raw': (out_collections["jet2_mass_raw"]),
-            'jet2_rho': (out_collections["jet2_rho"]),
-            'jet2_area': (out_collections["jet2_area"]),
-            'jet2_pt_jec': (out_collections["jet2_pt_jec"]),
-            'jet2_mass_jec': (out_collections["jet2_mass_jec"]),
+    #         # 'jet1_pt_raw': (out_collections["jet1_pt_raw"]),
+    #         # 'jet1_mass_raw': (out_collections["jet1_mass_raw"]),
+    #         # 'jet1_rho': (out_collections["jet1_rho"]),
+    #         # 'jet1_area': (out_collections["jet1_area"]),
+    #         # 'jet1_pt_jec': (out_collections["jet1_pt_jec"]),
+    #         # 'jet1_mass_jec': (out_collections["jet1_mass_jec"]),
+    #         # 'jet2_pt_raw': (out_collections["jet2_pt_raw"]),
+    #         # 'jet2_mass_raw': (out_collections["jet2_mass_raw"]),
+    #         # 'jet2_rho': (out_collections["jet2_rho"]),
+    #         # 'jet2_area': (out_collections["jet2_area"]),
+    #         # 'jet2_pt_jec': (out_collections["jet2_pt_jec"]),
+    #         # 'jet2_mass_jec': (out_collections["jet2_mass_jec"]),
         
-            # fraction -------------------------------------
-            "fraction" : dataset_fraction*(ak.ones_like(out_collections["njets"])), 
-            # Btagging WPs ------------------------------------
-            "nBtagLoose" : (out_collections["nBtagLoose"]),
-            "nBtagMedium" : (out_collections["nBtagMedium"]),
-            # regions -------------------------------------
-            "z_peak" : (out_collections["z_peak"]),
-            "h_sidebands" : (out_collections["h_sidebands"]),
-            "h_peak" : (out_collections["h_peak"]),
-            # vbf ?? ------------------------------------------------
-            "vbf_cut" : (out_collections["vbf_cut"]),
-            # "pass_leading_pt" : (out_collections["pass_leading_pt"]),
-            "ll_zstar_log" : np.log(np.abs(out_collections["zeppenfeld"])),
-            "zeppenfeld" : (out_collections["zeppenfeld"]),
-            "event" : (out_collections["event"]),
-            "rpt" : (out_collections["rpt"]),
-            "mu1_pt_roch" : (out_collections["mu1_pt_roch"]),
-            "mu1_pt_raw" : (out_collections["mu1_pt_raw"]),
-            "mu2_pt_raw" : (out_collections["mu2_pt_raw"]),
-            "mu1_pt_fsr" : (out_collections["mu1_pt_fsr"]),
-            # "mu1_pt_gf" : (out_collections["mu1_pt_gf"]),
-            "mu2_pt_roch" : (out_collections["mu2_pt_roch"]),
-            "mu2_pt_fsr" : (out_collections["mu2_pt_fsr"]),
-            # "mu2_pt_gf" : (out_collections["mu2_pt_gf"]),
-            # temporary test start ------------------------------------
-            # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
-            # temporary test end ------------------------------------
-    }
+    #         # fraction -------------------------------------
+    #         "fraction" : dataset_fraction*(ak.ones_like(out_collections["njets"])), 
+    #         # Btagging WPs ------------------------------------
+    #         "nBtagLoose_nominal" : (out_collections["nBtagLoose"]),
+    #         "nBtagMedium_nominal" : (out_collections["nBtagMedium"]),
+    #         # regions -------------------------------------
+    #         "z_peak" : (out_collections["z_peak"]),
+    #         "h_sidebands" : (out_collections["h_sidebands"]),
+    #         "h_peak" : (out_collections["h_peak"]),
+    #         # vbf ?? ------------------------------------------------
+    #         "vbf_cut" : (out_collections["vbf_cut"]),
+    #         # "pass_leading_pt" : (out_collections["pass_leading_pt"]),
+    #         "ll_zstar_log_nominal" : np.log(np.abs(out_collections["zeppenfeld"])),
+    #         "zeppenfeld_nominal" : (out_collections["zeppenfeld"]),
+    #         "event" : (out_collections["event"]),
+    #         "rpt_nominal" : (out_collections["rpt"]),
+    #         "pt_centrality_nominal" : (out_collections["pt_centrality"]),
+        
+
+        
+    #         # "mu1_pt_roch" : (out_collections["mu1_pt_roch"]),
+    #         # "mu1_pt_raw" : (out_collections["mu1_pt_raw"]),
+    #         # "mu2_pt_raw" : (out_collections["mu2_pt_raw"]),
+    #         # "mu1_pt_fsr" : (out_collections["mu1_pt_fsr"]),
+    #         # # "mu1_pt_gf" : (out_collections["mu1_pt_gf"]),
+    #         # "mu2_pt_roch" : (out_collections["mu2_pt_roch"]),
+    #         # "mu2_pt_fsr" : (out_collections["mu2_pt_fsr"]),
+    #         # "mu2_pt_gf" : (out_collections["mu2_pt_gf"]),
+    #         # temporary test start ------------------------------------
+    #         # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
+    #         # temporary test end ------------------------------------
+    # }
+
+    
     # debugging --------------------------------------------
     # btag_cut =ak.fill_none((skim_dict["nBtagLoose"] >= 2), value=False) | ak.fill_none((skim_dict["nBtagMedium"] >= 1), value=False)
     # vbf_cut = (skim_dict["jj_mass"] > 400) & (skim_dict["jj_dEta"] > 2.5) & (skim_dict["jet1_pt"] > 35) 
@@ -220,6 +231,16 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # vbf_cut = vbf_cut & (~btag_cut)
     # vbf_cut = ak.to_dataframe(vbf_cut.compute())
     # vbf_cut.to_csv("vbf_cut_V2.csv")
+    # print(f"dimuon_mass is none any: {ak.any(ak.is_none(out_collections['dimuon_mass'])).compute()}")
+    # print(f"wgt_nominal_total is none any: {ak.any(ak.is_none(out_collections['wgt_nominal_total'])).compute()}")
+    # mu1_pt = out_collections['mu1_pt']
+    # ptOfInterest = (mu1_pt > 75) & (mu1_pt < 150)
+    # # print(f"dimuon mass: {ak.to_numpy(out_collections['dimuon_mass'][ptOfInterest].compute())}")
+    # # print(f"mu1 pT: {ak.to_numpy(out_collections['mu1_pt'][ptOfInterest].compute())}")
+    # wgtOfInterest = ak.to_numpy(out_collections['wgt_nominal_total'][ptOfInterest].compute())
+    # # print(f"wgt nominal: {wgtOfInterest}")
+    # print(f"wgt nominal len: {len(wgtOfInterest)}")
+    # print(f"wgt nominal sum: {np.sum(wgtOfInterest)}")
     # debugging --------------------------------------------
     
     # add in weights
@@ -339,6 +360,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     # make NanoAODv into an interger variable
+    print(f"args.NanoAODv: {args.NanoAODv}")
+    print(f"args.year: {args.year}")
     args.NanoAODv = int(args.NanoAODv)
     # check for NanoAOD versions
     allowed_nanoAODvs = [9, 12]
@@ -354,6 +377,7 @@ if __name__ == "__main__":
     
 
     config = getParametersForYr("./configs/parameters/" , args.year)
+    # print(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
     if not test_mode: # full scale implementation
@@ -386,7 +410,7 @@ if __name__ == "__main__":
         # add in NanoAODv info into samples metadata for coffea processor
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
-        start_save_path = args.save_path + f"/{args.year}"
+        start_save_path = args.save_path + f"/stage1_output/{args.year}"
         print(f"start_save_path: {start_save_path}")
         # with performance_report(filename="dask-report.html"):
         # for dataset, sample in samples.items():
@@ -396,9 +420,9 @@ if __name__ == "__main__":
             # for dataset, sample in samples.items():
                 sample_step = time.time()
                 # max_file_len = 15
-                # max_file_len = 50
-                # max_file_len = 100
-                max_file_len = 8000
+                # max_file_len = 130
+                max_file_len = 200
+                # max_file_len = 8000
                 # max_file_len = 25
                 # max_file_len = 900
                 # max_file_len = 10
