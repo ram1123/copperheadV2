@@ -1158,6 +1158,7 @@ class EventProcessor(processor.ProcessorABC):
         #     )
         # apply vbf filter phase cut if DY test end ---------------------------------
         print(f"weight statistics: {weights.weightStatistics.keys()}")
+        print(f"weight variations: {weights.variations}")
         wgt_nominal = weights.weight()
 
         # add in weights
@@ -1655,6 +1656,14 @@ class EventProcessor(processor.ProcessorABC):
                 weights.add("btag_wgt", 
                         weight=btag_wgt,
                 )
+                 # --- Btag weights variations --- #
+                for name, bs in btag_syst.items():
+                    print(f"{name} value: {bs}")
+                    weights.add(f"btag_{name}", 
+                        weight=ak.ones_like(btag_wgt),
+                        weightUp=bs["up"],
+                        weightDown=bs["down"]
+                    )
                 # TODO: add btag systematics by adding seperate wgts
                 # keep dims end -------------------------------------
                 # print(f"btag_wgt: {ak.to_numpy(btag_wgt.compute())}")
