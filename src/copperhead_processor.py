@@ -1140,8 +1140,10 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"zpt_filtered: {ak.to_numpy(zpt_filtered)}")
             # print(f"len zpt_filtered: {len(ak.to_numpy(zpt_filtered))}")
 
-            out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
-            
+            # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
+            weights.add("zpt_wgt", 
+                    weight=zpt_weight,
+            )
 
         
 
@@ -1157,16 +1159,6 @@ class EventProcessor(processor.ProcessorABC):
         # apply vbf filter phase cut if DY test end ---------------------------------
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         wgt_nominal = weights.weight()
-        # if "wgt_nominal_btag_wgt" in out_dict.keys():
-        #     # btag is seperated due to requiring information of other weights, and adding it directly to the weights varibles
-        #     # screws up with the values
-        #     print("adding btag wgts!")
-        #     wgt_nominal = wgt_nominal*out_dict["wgt_nominal_btag_wgt"]
-        # original  zpt start -------------------
-        if do_zpt:
-            print("adding zpt wgts!")
-            wgt_nominal = wgt_nominal*out_dict["wgt_nominal_zpt_wgt"]
-        # original zpt end ------------------------------
 
         # add in weights
         # print(f"wgt_nominal_total: {ak.to_numpy(wgt_nominal.compute())}")
