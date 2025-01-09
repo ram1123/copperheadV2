@@ -112,7 +112,13 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     skim_dict = out_collections
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
-    print(f"skim_dict.wgt_nominal: {skim_dict['wgt_nominal_total'].compute()}")
+    # print(f"skim_dict.keys(): {skim_dict.keys()}")
+    # print(f"skim_dict.wgt_nominal: {skim_dict['wgt_nominal'].compute()}")
+    for field in skim_dict.keys():
+        if "wgt" in field:
+            print(field)
+
+    
     # ------------------------------------------
     # skim_dict =  {
     #         'mu1_pt': (out_collections["mu1_pt"]),

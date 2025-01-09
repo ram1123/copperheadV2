@@ -1158,20 +1158,30 @@ class EventProcessor(processor.ProcessorABC):
         #     )
         # apply vbf filter phase cut if DY test end ---------------------------------
         print(f"weight statistics: {weights.weightStatistics.keys()}")
-        print(f"weight variations: {weights.variations}")
+        # print(f"weight variations: {weights.variations}")
         wgt_nominal = weights.weight()
 
         # add in weights
-        # print(f"wgt_nominal_total: {ak.to_numpy(wgt_nominal.compute())}")
-        # print(f"len wgt_nominal_total:{ak.num(wgt_nominal, axis=0).compute()}")
-        weight_dict = {"wgt_nominal_total" : wgt_nominal}
-        for weight_type in list(weights.weightStatistics.keys()):
-            wgt_name = "wgt_nominal_" + weight_type
-            # print(f"wgt_name: {wgt_name}")
-            weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
-        out_dict.update(weight_dict)
+        
+        weight_dict = {"wgt_nominal" : wgt_nominal}
+
+        # loop through weight variations
+        for variation in weights.variations:
+            wgt_variation = weights.weight(variation)
+            variation_name = "wgt_" + variation.replace("Up", "_up").replace("Down", "_down") # match the naming scheme of copperhead
+            weight_dict[variation_name] = wgt_variation
+
+        
+        # temporarily shut off partial weights start -----------------------------------------
+        # for weight_type in list(weights.weightStatistics.keys()):
+        #     wgt_name = "wgt_nominal_" + weight_type
+        #     # print(f"wgt_name: {wgt_name}")
+        #     weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
+        # temporarily shut off partial weights end -----------------------------------------
+        
         # print(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 5: {ak.zip(out_dict).to_parquet(save_path)}")
+        out_dict.update(weight_dict)
         return out_dict
         
     def postprocess(self, accumulator):
@@ -1659,7 +1669,7 @@ class EventProcessor(processor.ProcessorABC):
                  # --- Btag weights variations --- #
                 for name, bs in btag_syst.items():
                     print(f"{name} value: {bs}")
-                    weights.add(f"btag_{name}", 
+                    weights.add(f"btag_wgt_{name}", 
                         weight=ak.ones_like(btag_wgt),
                         weightUp=bs["up"],
                         weightDown=bs["down"]
