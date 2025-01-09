@@ -41,11 +41,13 @@ def apply_geofit(
         "2017_RERECO": {"eta_1": 582.32, "eta_2": 974.05, "eta_3": 1263.4},
         "2018_RERECO": {"eta_1": 650.84, "eta_2": 988.37, "eta_3": 1484.6},
     }
-    pt_corr = pt
+    # pt_corr = pt
+    pt_corr = ak.zeros_like(pt)
     for eta_i in ["eta_1", "eta_2", "eta_3"]:
         value = factors[year][eta_i] * d0_BS_charge * pt * pt / 10000.0
         # print(f"apply_geofit value: {value}")
         pt_corr = ak.where(cuts[eta_i], value, pt_corr)
+        # pt_corr == pt_roch - pt_gen
     
     events["Muon", "pt_gf"] = ak.where(mask, pt - pt_corr, pt)
     return mask, pt_corr # return these values for debugging purposes
