@@ -36,20 +36,33 @@ import os
 
 def jec_names_and_sources(jec_pars):
     # print(f"jec_pars: {jec_pars}")
-    # jet_alg = jec_pars["jet_algorithm"]
+    jet_alg = jec_pars["jet_algorithm"]
     names = {}
+    # suffix = {
+    #     "jec_names": [f"_{level}_AK4PFchs" for level in jec_pars["jec_levels_mc"]],
+    #     "jec_names_data": [
+    #         f"_{level}_AK4PFchs" for level in jec_pars["jec_levels_data"]
+    #     ],
+    #     "junc_names": ["_Uncertainty_AK4PFchs"],
+    #     "junc_names_data": ["_Uncertainty_AK4PFchs"],
+    #     "junc_sources": ["_UncertaintySources_AK4PFchs"],
+    #     "junc_sources_data": ["_UncertaintySources_AK4PFchs"],
+    #     "jer_names": ["_PtResolution_AK4PFchs"],
+    #     "jersf_names": ["_SF_AK4PFchs"],
+    # }
     suffix = {
-        "jec_names": [f"_{level}_AK4PFchs" for level in jec_pars["jec_levels_mc"]],
+        "jec_names": [f"_{level}_{jet_alg}" for level in jec_pars["jec_levels_mc"]],
         "jec_names_data": [
-            f"_{level}_AK4PFchs" for level in jec_pars["jec_levels_data"]
+            f"_{level}_{jet_alg}" for level in jec_pars["jec_levels_data"]
         ],
-        "junc_names": ["_Uncertainty_AK4PFchs"],
-        "junc_names_data": ["_Uncertainty_AK4PFchs"],
-        "junc_sources": ["_UncertaintySources_AK4PFchs"],
-        "junc_sources_data": ["_UncertaintySources_AK4PFchs"],
-        "jer_names": ["_PtResolution_AK4PFchs"],
-        "jersf_names": ["_SF_AK4PFchs"],
+        "junc_names": [f"_Uncertainty_{jet_alg}"],
+        "junc_names_data": [f"_Uncertainty_{jet_alg}"],
+        "junc_sources": [f"_UncertaintySources_{jet_alg}"],
+        "junc_sources_data": [f"_UncertaintySources_{jet_alg}"],
+        "jer_names": [f"_PtResolution_{jet_alg}"],
+        "jersf_names": [f"_SF_{jet_alg}"],
     }
+    # print(f"JEC suffix: {suffix}")
 
     for key, suff in suffix.items():
         if "data" in key:
