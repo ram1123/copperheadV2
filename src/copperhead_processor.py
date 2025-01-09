@@ -497,6 +497,9 @@ class EventProcessor(processor.ProcessorABC):
         # apply Beam constraint or geofit or nothing if neither
         if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
             print(f"doing beam constraint!")
+            """
+            TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
+            """
             # print(f"events.Muon.fields: {events.Muon.fields}")
             BSConstraint_mask = (
                 (events.Muon.bsConstrainedChi2 <30)
@@ -1557,7 +1560,7 @@ class EventProcessor(processor.ProcessorABC):
             f"rpt_{variation}" : rpt,
             f"pt_centrality_{variation}" : pt_centrality,
             f"zeppenfeld_{variation}" : zeppenfeld,
-            f"ll_zstar_log_nominal_{variation}" : np.log(np.abs(zeppenfeld)),
+            f"ll_zstar_log_{variation}" : np.log(np.abs(zeppenfeld)),
             f"njets_{variation}" : njets,
             
         }
@@ -1647,8 +1650,8 @@ class EventProcessor(processor.ProcessorABC):
                 print("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(njets) #& two_jets & vbf_cut
                 btag_systs = self.config["btag_systs"] #if do_btag_syst else []
-                # if "RERECO" in year:
-                if True:
+                if "RERECO" in year:
+                # if True:
                     btag_json = BTagScaleFactor(
                     self.config["btag_sf_csv"],
                     BTagScaleFactor.RESHAPE,

@@ -1307,24 +1307,24 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
     
     
-    # correctionlib_out = btag_json.evaluate( # UL
-    #     "central",
-    #     jets.hadronFlavour,
-    #     abs(jets.eta),
-    #     jets.pt,
-    #     # jets.btagDeepFlavB,
-    #     jets.btagDeepB,
-    # )
-
-    correctionlib_out = btag_json.eval( # RERECO
+    correctionlib_out = btag_json.evaluate( # UL
         "central",
         jets.hadronFlavour,
         abs(jets.eta),
         jets.pt,
         # jets.btagDeepFlavB,
         jets.btagDeepB,
-        True
     )
+
+    # correctionlib_out = btag_json.eval( # RERECO
+    #     "central",
+    #     jets.hadronFlavour,
+    #     abs(jets.eta),
+    #     jets.pt,
+    #     # jets.btagDeepFlavB,
+    #     jets.btagDeepB,
+    #     True
+    # )
 
     btag_wgt = ak.prod(correctionlib_out, axis=1) # for events with no qualified jets(empty row), the value is 1.0
     btag_wgt = ak.where((btag_wgt < 0.01), 1.0, btag_wgt)
@@ -1358,39 +1358,39 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                 # enforce input hadronFlavour to match the target, otherwise, the lookup table will fail
                 dummy_flavor = flavor*ak.ones_like(jets.hadronFlavour)
                 hadronFlavour = ak.where(btag_mask, jets.hadronFlavour, dummy_flavor)
-                # sys_wgts =  btag_json.evaluate( # UL
-                #     f"up_{sys}",
-                #     hadronFlavour,
-                #     abs(jets.eta),
-                #     jets.pt,
-                #     jets.btagDeepB,
-                # )
-                sys_wgts =  btag_json.eval( # RERECO
+                sys_wgts =  btag_json.evaluate( # UL
                     f"up_{sys}",
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
                     jets.btagDeepB,
-                    True
                 )
-                btag_wgt_up = ak.where(btag_mask, sys_wgts, btag_wgt_up)
-
-                    
-                # sys_wgts =  btag_json.evaluate( # UL
-                #     f"down_{sys}",
+                # sys_wgts =  btag_json.eval( # RERECO
+                #     f"up_{sys}",
                 #     hadronFlavour,
                 #     abs(jets.eta),
                 #     jets.pt,
                 #     jets.btagDeepB,
+                #     True
                 # )
-                sys_wgts =  btag_json.eval( # RERECO
+                btag_wgt_up = ak.where(btag_mask, sys_wgts, btag_wgt_up)
+
+                    
+                sys_wgts =  btag_json.evaluate( # UL
                     f"down_{sys}",
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
                     jets.btagDeepB,
-                    True
                 )
+                # sys_wgts =  btag_json.eval( # RERECO
+                #     f"down_{sys}",
+                #     hadronFlavour,
+                #     abs(jets.eta),
+                #     jets.pt,
+                #     jets.btagDeepB,
+                #     True
+                # )
                 btag_wgt_down = ak.where(btag_mask, sys_wgts, btag_wgt_down)
 
         btag_wgt_up = ak.prod(btag_wgt_up, axis=1)
