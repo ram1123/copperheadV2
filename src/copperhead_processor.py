@@ -22,6 +22,7 @@ from coffea.nanoevents.methods import vector
 import sys
 from src.corrections.custom_jec import ApplyJetCorrections
 
+
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
 
@@ -495,8 +496,10 @@ class EventProcessor(processor.ProcessorABC):
         #-----------------------------------------------------------------
         
         # apply Beam constraint or geofit or nothing if neither
+        doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
         if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
             print(f"doing beam constraint!")
+            doing_BS_correction = True
             """
             TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
             """
@@ -692,7 +695,7 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"event match dimuon: {dimuon.mass[event_match].compute()}")
         # raise ValueError
         
-        dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode)
+        dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode, doing_BS_correction=doing_BS_correction)
         dimuon_ebe_mass_res_rel = dimuon_ebe_mass_res/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
         dimuon_cos_theta_eta, dimuon_phi_eta = etaFrame_variables(mu1,mu2)
@@ -1125,7 +1128,9 @@ class EventProcessor(processor.ProcessorABC):
         # do zpt weight at the very end
         dataset = events.metadata["dataset"]
         do_zpt = ('dy' in dataset) and is_mc
+        do_zpt = False
         if do_zpt:
+            print("doing zpt!")
             # we explicitly don't directly add zpt weights to the weights variables 
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
             # once kind of screws with the dak awkward array
@@ -1194,7 +1199,7 @@ class EventProcessor(processor.ProcessorABC):
         pass
 
     
-    def get_mass_resolution(self, dimuon, mu1,mu2, is_mc:bool, test_mode=False):
+    def get_mass_resolution(self, dimuon, mu1,mu2, is_mc:bool, doing_BS_correction=False, test_mode=False):
         # Returns absolute mass resolution!
         muon_E = dimuon.mass /2
         dpt1 = (mu1.ptErr / mu1.pt) * muon_E
@@ -1210,16 +1215,31 @@ class EventProcessor(processor.ProcessorABC):
             yearUL=year.replace("_RERECO","")
         else:
             yearUL = year 
-        if is_mc:
-            label = f"res_calib_MC_{yearUL}"
+        if doing_BS_correction and (not "2016" in year): # apply resolution calibration from BeamSpot constraint correction
+            # TODO: add 2016pre and 2016post versions too
+            print("Doing BS constraint correction mass calibration!")
+            
+            # Load the correction set
+            correction_set = correctionlib.CorrectionSet.from_file(self.config["BS_res_calib_path"])
+            
+            
+            # Access the specific correction by name
+            correction = correction_set["BS_ebe_mass_res_calibration"]
+            print(f"correction_set: {correction_set}")
+            print(f"correction: {correction}")
+            
+            calibration = correction.evaluate(mu1.pt, abs(mu1.eta), abs(mu2.eta))
         else:
-            label = f"res_calib_Data_{yearUL}"
-        print(f"yearUL: {yearUL}")
-        calibration =  self.evaluator[label]( # this is a coffea.dense_lookup instance
-            mu1.pt, 
-            abs(mu1.eta), 
-            abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
-        )
+            if is_mc:
+                label = f"res_calib_MC_{yearUL}"
+            else:
+                label = f"res_calib_Data_{yearUL}"
+            print(f"yearUL: {yearUL}")
+            calibration =  self.evaluator[label]( # this is a coffea.dense_lookup instance
+                mu1.pt, 
+                abs(mu1.eta), 
+                abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
+            )
     
         return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
         # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
