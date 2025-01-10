@@ -34,6 +34,22 @@ if __name__ == "__main__":
         action=argparse.BooleanOptionalAction,
         help="If true, uses dask gateway client instead of local",
     )
+    parser.add_argument(
+        "-y",
+        "--year",
+        dest="year",
+        default="2018",
+        action="store",
+        help="string value of year we are calculating",
+    )
+    parser.add_argument(
+        "-l",
+        "--label",
+        dest="label",
+        default="test",
+        action="store",
+        help="Unique run label (to create output path)",
+    )
     args = parser.parse_args()
     if args.use_gateway:
         from dask_gateway import Gateway
@@ -50,8 +66,9 @@ if __name__ == "__main__":
         print("Local scale Client created")
 
     
-    run_label = "V2_Jan09_ForZptReWgt"
-    year = "2018"
+    # run_label = "V2_Jan09_ForZptReWgt"
+    run_label = args.label
+    year = args.year
     base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0" # define the save path of stage1 outputs
     # load the data and dy samples
     data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
@@ -103,12 +120,12 @@ if __name__ == "__main__":
         SF_hists.append(SF_hist)
 
         # debugging print
+        print(f"njet {njet} data_hist: {ak.to_numpy(data_hist)}")
+        print(f"njet {njet} dy_hist: {ak.to_numpy(dy_hist)}")
+        print(f"njet {njet} SF_hist: {ak.to_numpy(SF_hist)}")
         # print(f"njet {njet} data_hist: {ak.to_numpy(data_hist)}")
         # print(f"njet {njet} dy_hist: {ak.to_numpy(dy_hist)}")
-        # print(f"njet {njet} SF_hist: {ak.to_numpy(SF_hist)}")
-        # print(f"njet {njet} data_hist: {ak.to_numpy(data_hist)}")
-        # print(f"njet {njet} dy_hist: {ak.to_numpy(dy_hist)}")
-        print(f"njet {njet} SF_hist: {', '.join(map(str, SF_hist))}")
+        # print(f"njet {njet} SF_hist: {', '.join(map(str, SF_hist))}")
 
     # Define a correction with three input parameters
     correctionlib_content = np.concatenate(SF_hists)
