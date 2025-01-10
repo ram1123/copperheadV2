@@ -111,7 +111,9 @@ if __name__ == "__main__":
         print(f"njet {njet} SF_hist: {', '.join(map(str, SF_hist))}")
 
     # Define a correction with three input parameters
-    correctionlib_content = np.cocatenate(SF_hists)
+    correctionlib_content = np.concatenate(SF_hists)
+    print(f"correctionlib_content: {correctionlib_content}")
+    
     njet_edges = [-0.01, 0.99, 1.99, 50] #njet edges in float format -> njets==0, ==1 or >= 2
     correction = schema.Correction(
         name="Zpt_rewgt",
@@ -142,8 +144,6 @@ if __name__ == "__main__":
     )
     
     # Save the correction set to a JSON file
-    # with open("muon_correction.json", "w") as f:
-    #     f.write(correction_set.json(exclude_unset=True, indent=2))
     
     json_name = f"ZptReWgt_{year}UL.json"
     
@@ -151,5 +151,39 @@ if __name__ == "__main__":
         fout.write(correction_set.json(exclude_unset=True))
 
 
+    """
+    validate the SF are saved correctly in correctionlib using test cases
+    """
+    import awkward as ak
+    
+    # Load the correction set
+    correction_set = correctionlib.CorrectionSet.from_file(json_name)
+    
+    # Access the specific correction by name
+    correction = correction_set["Zpt_rewgt"]
+    
+    # Create an evaluator for the correction
+    def evaluate_correction(njet, dimuon_pt):
+        return correction.evaluate(njet, dimuon_pt)
+    
+    # Test the evaluator with some example inputs
+    test_data = [
+        [35.0, 0.5],     # njet>=2, bin 0
+        [35.0, 4],     # njet>=2, bin 1
+        [2.0, 210],     # njet>=2, last bin
+        [1.0, 0.5],     # njet==1, bin 1
+        [1.0, 4],     # njet==1, bin 1
+        [1.0, 210],     # njet==1, last bin
+        [0.0, 0.5],     # njet==1, bin 1
+        [0.0, 4],     # njet==1, bin 1
+        [0.0, 210],     # njet==1, last bin
+    ]
+    test_data = ak.Array(test_data)
+    # Evaluate the correction for each input triplet
+    results = [evaluate_correction(njet, dimuon_pt) for njet, dimuon_pt in test_data]
+    
+    # Print results
+    for (njet, dimuon_pt), result in zip(test_data, results):
+        print(f"njet: {njet}, dimuon_pt: {dimuon_pt}, scale factor: {result}")
     
     
