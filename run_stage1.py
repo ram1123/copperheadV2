@@ -114,9 +114,11 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
     # print(f"skim_dict.keys(): {skim_dict.keys()}")
     # print(f"skim_dict.wgt_nominal: {skim_dict['wgt_nominal'].compute()}")
-    for field in skim_dict.keys():
-        if "wgt" in field:
-            print(field)
+
+    # # debugging
+    # for field in skim_dict.keys():
+    #     if "wgt" in field:
+    #         print(field)
 
     
     # ------------------------------------------
@@ -427,9 +429,9 @@ if __name__ == "__main__":
             # for dataset, sample in samples.items():
                 sample_step = time.time()
                 # max_file_len = 15
-                # max_file_len = 130
+                max_file_len = 130
                 # max_file_len = 70
-                max_file_len = 200
+                # max_file_len = 200
                 # max_file_len = 8000
                 # max_file_len = 25
                 # max_file_len = 900
