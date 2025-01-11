@@ -793,7 +793,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = True # True       
+        do_jec = False # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1122,13 +1122,13 @@ class EventProcessor(processor.ProcessorABC):
         # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
         
         # print(f"out_dict.compute 3: {ak.zip(out_dict).to_parquet(save_path)}")
-        njets = out_dict[f"njets_{variation}"]
+        njets = out_dict[f"njets_nominal"] 
         # print(f"njets: {ak.to_numpy(njets.compute())}")
 
         # do zpt weight at the very end
         dataset = events.metadata["dataset"]
         do_zpt = ('dy' in dataset) and is_mc
-        do_zpt = False
+        # do_zpt = False # temporary overwrite to obtain for zpt re-wgt
         if do_zpt:
             print("doing zpt!")
             # we explicitly don't directly add zpt weights to the weights variables 
@@ -1138,15 +1138,17 @@ class EventProcessor(processor.ProcessorABC):
             # zpt_weight =\ 
             #          self.evaluator[self.zpt_path](dimuon.pt, njets)
 
-            # dmitry
-            zpt_weight =\
-                    self.evaluator[self.zpt_path](dimuon.pt)
-            # print(f"zpt_weight: {zpt_weight.compute()}")
-            # ptOfInterest = (mu1.pt > 75) & (mu1.pt < 150)
-            # print(f"ptOfInterest sum: {ak.to_numpy(ak.sum(ptOfInterest).compute())}")
-            # zpt_filtered = zpt_weight[ptOfInterest].compute()
-            # print(f"zpt_filtered: {ak.to_numpy(zpt_filtered)}")
-            # print(f"len zpt_filtered: {len(ak.to_numpy(zpt_filtered))}")
+            # # dmitry's old zpt
+            # zpt_weight =\
+            #         self.evaluator[self.zpt_path](dimuon.pt)
+
+            # new zpt wgt Jan 09 2025
+            print(f"self.zpt_path: {self.zpt_path}")
+            correction_set = correctionlib.CorrectionSet.from_file(self.config["new_zpt_weights_file"])
+    
+            # Access the specific correction by name
+            correction = correction_set["Zpt_rewgt"]
+            zpt_weight = correction.evaluate(njets, dimuon.pt)
 
             # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
             weights.add("zpt_wgt", 
@@ -1181,10 +1183,10 @@ class EventProcessor(processor.ProcessorABC):
 
         
         # temporarily shut off partial weights start -----------------------------------------
-        # for weight_type in list(weights.weightStatistics.keys()):
-        #     wgt_name = "wgt_nominal_" + weight_type
-        #     # print(f"wgt_name: {wgt_name}")
-        #     weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
+        for weight_type in list(weights.weightStatistics.keys()):
+            wgt_name = "separate_wgt_" + weight_type
+            # print(f"wgt_name: {wgt_name}")
+            weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
         # temporarily shut off partial weights end -----------------------------------------
         
         # print(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
@@ -1339,31 +1341,53 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"clean: {clean.compute()}")
         # print(f"jets: {jets.compute()}")
 
-        # skip selecting particular JEC variation for now
         # # Select particular JEC variation
-        # if "_up" in variation:
-        #     unc_name = "JES_" + variation.replace("_up", "")
-        #     if unc_name not in jets.fields:
-        #         return
-        #     jets = jets[unc_name]["up"][jet_columns]
-        # elif "_down" in variation:
-        #     unc_name = "JES_" + variation.replace("_down", "")
-        #     if unc_name not in jets.fields:
-        #         return
-        #     jets = jets[unc_name]["down"][jet_columns]
-        # else:
-        #     jets = jets[jet_columns]
-
-
-    #         # We use JER corrections only for systematics, so we shouldn't
-    #         # update the kinematics. Use original values,
-    #         # unless JEC were applied.
-        """
-        if is_mc and do_jerunc and not do_jec: # NOTE: I don't think this is needed anymore since jets variable is the original events.Jet if do_jec==False
-            events["Jet","pt"] = jets["pt_orig"]
-            events["Jet","mass"] = jets["mass_orig"]
-            jets = events.Jet
-        """
+        # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
+        #     print("doing JER unc!")
+        #     jer_mask_dict ={
+        #         "jer1" : abs(jets.eta) < 1.93,
+        #         "jer2" : (abs(jets.eta) > 1.93) & (abs(jets.eta) < 2.5),
+        #         "jer3" : (abs(jets.eta) > 2.5) & (abs(jets.eta) < 3.0) & (jets.pt < 50),
+        #         "jer4" : (abs(jets.eta) > 2.5) & (abs(jets.eta) < 3.0) & (jets.pt > 50),
+        #         "jer5" : (abs(jets.eta) > 3.0) & (abs(jets.eta) < 5.0) & (jets.pt < 50),
+        #         "jer6" : (abs(jets.eta) > 3.0) & (abs(jets.eta) < 5.0) & (jets.pt > 50),
+        #     }
+        #     jets_nominal = jets
+        #     print(f"JER variation: {variation}")
+        #     if "_up" in variation:
+        #         unc_name = variation.replace("_up", "")
+        #         print(f"unc_name: {unc_name}")
+        #         jets_jer_up = jets['JER']['up']
+        #         jer_mask = jer_mask_dict[unc_name]
+        #         jets = ak.where(jer_mask, jets_jer_up, jets_nominal)
+        #     elif "_down" in variation:
+        #         unc_name = variation.replace("_down", "")
+        #         print(f"unc_name: {unc_name}")
+        #         jets_jer_down = jets['JER']['down']
+        #         jer_mask = jer_mask_dict[unc_name]
+        #         jets = ak.where(jer_mask, jets_jer_down, jets_nominal)
+        # else: # if jec uncertainty
+        #     if "_up" in variation:
+        #         print("doing JEC unc!")
+        #         unc_name = "JES_" + variation.replace("_up", "")
+        #         if unc_name not in jets.fields:
+        #             return
+        #         jets = jets[unc_name]["up"]
+        #     elif "_down" in variation:
+        #         print("doing JEC unc!")
+        #         unc_name = "JES_" + variation.replace("_down", "")
+        #         if unc_name not in jets.fields:
+        #             return
+        #         jets = jets[unc_name]["down"]
+        #     else:
+        #         jets = jets
+                
+        
+        # if variation == "nominal":
+        #     # Update pt and mass if JEC was applied
+        #     if do_jec:
+        #         jets["pt"] = jets["pt_jec"]
+        #         jets["mass"] = jets["mass_jec"]
 
         # # ------------------------------------------------------------#
         # # Apply jetID and PUID
@@ -1559,6 +1583,7 @@ class EventProcessor(processor.ProcessorABC):
             f"jet2_jetId_{variation}" : jet2.jetId,
             # f"jet2_puId_{variation}" : jet2.puId,
             f"jj_mass_{variation}" : dijet.mass,
+            # f"jj_mass_{variation}" : p4_sum_mass(jet1,jet2),
             f'jj_mass_log_{variation}': np.log(dijet.mass),
             f"jj_pt_{variation}" : dijet.pt,
             f"jj_eta_{variation}" : dijet.eta,
