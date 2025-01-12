@@ -793,7 +793,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = False # True       
+        do_jec = True # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1255,7 +1255,7 @@ class EventProcessor(processor.ProcessorABC):
             fixedGridRhoFastjetAll = events.Rho.fixedGridRhoFastjetAll
         else: # if v9
             fixedGridRhoFastjetAll = events.fixedGridRhoFastjetAll
-        events["Jet", "rho"] = ak.broadcast_arrays(fixedGridRhoFastjetAll, events.Jet.pt)[0]
+        events["Jet", "PU_rho"] = ak.broadcast_arrays(fixedGridRhoFastjetAll, events.Jet.pt)[0] # IMPORTANT: do NOT override "rho" in jets. rho is used for something else, thus we NEED to use PU_rho
     
         if events.metadata["is_mc"]:
             # pt_gen is used for JEC (one of the factory name map values)            
