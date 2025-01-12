@@ -374,11 +374,9 @@ if __name__ == "__main__":
         is_data = "data" in process.lower()
         if not is_data: # MC sample
             if not zpt_on:
+                print("Adding seperate zpt wgt!")
                 if "separate_wgt_zpt_wgt" in events.fields:
                     fields2load.append("separate_wgt_zpt_wgt")
-                else:
-                    print("Error Zpt rewgt was not saved separately!")
-                    raise ValueError
             
 
         # filter out redundant fields by using the set object
@@ -726,7 +724,6 @@ if __name__ == "__main__":
             status = status,
             log_scale = do_logscale,
         )
-        raise ValueError
         full_save_fname = f"{full_save_path}/{var}.png"
         plotDataMC_compare(
             binning, 
