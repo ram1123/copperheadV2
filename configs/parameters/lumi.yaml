@@ -1,8 +1,8 @@
-integrated_lumis:
+integrated_lumis: # source: https://github.com/TopEFT/topeft/blob/252c6454e06e49adfe351b9234b6fd7f5fbabf9e/topeft/json/lumi.json, https://twiki.cern.ch/twiki/bin/viewauth/CMS/LumiRecommendationsRun2#Luminosity_for_pp_13_TeV_data
   2016preVFP: 19500.0
-  2016postVFP: 16800.0
-  '2017': 41530.0
-  '2018': 59970.0
+  2016postVFP: 16810.0
+  '2017': 41480.0
+  '2018': 59830.0
   2022preEE: 59970.0
   2022postEE: 59970.0
   2016_RERECO: 35920.0
