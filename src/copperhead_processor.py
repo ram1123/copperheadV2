@@ -1662,7 +1662,6 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         # # Calculate QGL weights, btag SF and apply btag veto
         # # ------------------------------------------------------------#
-        do_btag_wgt = False
         if is_mc and (variation == "nominal"):
         #     # --- QGL weights  start --- #
             isHerwig = "herwig" in dataset
@@ -1774,13 +1773,7 @@ class EventProcessor(processor.ProcessorABC):
             f"nBtagMedium_{variation}": nBtagMedium,
         }
         jet_loop_out_dict.update(temp_out_dict)
-        # print(f"do_btag_wgt: {do_btag_wgt}")
-        # raise ValueError
-        # if is_mc and do_btag_wgt and (variation=="nominal"):
-        # if is_mc and do_btag_wgt :
-        #     jet_loop_out_dict.update({
-        #         "wgt_nominal_btag_wgt": btag_wgt
-        #     })
+
 
 
         # --------------------------------------------------------------#
