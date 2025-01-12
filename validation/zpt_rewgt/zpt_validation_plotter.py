@@ -19,7 +19,6 @@ import matplotlib
 main_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")) # in order to import plotDataMC_compare
 sys.path.append(main_dir)
 from src.lib.histogram.plotting import plotDataMC_compare
-raise ValueError
 
 
 # real process arrangement
@@ -115,7 +114,7 @@ if __name__ == "__main__":
     "-save",
     "--save_path",
     dest="save_path",
-    default="./validation/figs/",
+    default="./plots/",
     action="store",
     help="save path",
     )
@@ -163,13 +162,6 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, uses dask gateway client instead of local",
     )
-    # parser.add_argument(
-    # "--vbf",
-    # dest="vbf_cat_mode",
-    # default=False, 
-    # action=argparse.BooleanOptionalAction,
-    # help="If true, apply vbf cut for vbf category, else, ggH category cut",
-    # )
     parser.add_argument(
     "-cat",
     "--category",
@@ -179,22 +171,33 @@ if __name__ == "__main__":
     help="define production mode category. optionsare ggh, vbf and nocat (no category cut)",
     )
     parser.add_argument(
-    "--vbf_filter_study",
-    dest="do_vbf_filter_study",
-    default=False, 
-    action=argparse.BooleanOptionalAction,
-    help="If true, apply vbf filter cut for dy samples",
+    "-plotset",
+    "--plot_setting",
+    dest="plot_setting",
+    default="",
+    action="store",
+    help="path to load json file with plott binning and xlabels",
+    )
+    parser.add_argument(
+    "--zpt_on",
+    dest="zpt_on",
+    type=lambda x: x.lower() == 'true',  # Convert input string to a boolean
+    default=False,  # Default value if the argument is not provided
+    help="If false, divide zpt separate weight",
+    )
+    parser.add_argument(
+    "-jetm",
+    "--jet_multiplicity",
+    dest="jet_multiplicity",
+    default="0",
+    action="store",
+    help="Integer values of jet multiplicity to filter. Available options are: 0, 1 and 2",
     )
     #---------------------------------------------------------
     # gather arguments
     args = parser.parse_args()
     available_processes = []
     # if doing VBF filter study, add the vbf filter sample to the DY group
-    if args.do_vbf_filter_study:
-        vbf_filter_sample =  "dy_m105_160_vbf_amc"
-        # vbf_filter_sample =  "dy_VBF_filter_customJMEoff"
-        # vbf_filter_sample =  "dy_VBF_filter_fromGridpack"
-        available_processes.append(vbf_filter_sample)
     
     # take data
     data_samples = args.data_samples
@@ -296,9 +299,12 @@ if __name__ == "__main__":
         else:
             print(f"Unsupported variable: {particle} is given!")
     print(f"variables2plot: {variables2plot}")
-    # obtain plot settings from config file
-    # plot_setting_fname = "./src/lib/histogram/plot_settings_stage1.json"
-    plot_setting_fname = "./src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+    # plot_setting_fname = "../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+    plot_setting_fname = args.plot_setting
+    if plot_setting_fname == "":
+        print("ERROR, valid plotting setting json file needs to be given")
+        raise ValueError
+
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
     status = args.status.replace("_", " ")
@@ -318,7 +324,8 @@ if __name__ == "__main__":
         print("Local scale Client created")
     # record time
     time_step = time.time()
-
+    zpt_on = args.zpt_on
+    jet_multiplicity = int(args.jet_multiplicity)
     # load saved parquet files. This increases memory use, but increases runtime significantly
     print(f"available_processes: {available_processes}")
     loaded_events = {} # intialize dictionary containing all the arrays
@@ -355,9 +362,7 @@ if __name__ == "__main__":
             "jet1_pt_nominal", 
             "jj_dEta_nominal", 
             "dimuon_pt", 
-            "jet2_pt_nominal",
-            "jj_pt_nominal",
-            "zeppenfeld_nominal",
+            "njets_nominal",
         ]
 
             
@@ -368,10 +373,12 @@ if __name__ == "__main__":
                 
         is_data = "data" in process.lower()
         if not is_data: # MC sample
-            fields2load += ["gjj_mass", "gjj_dR", "gjet1_pt", "gjet2_pt"]
-            # temp addition
-            # if "separate_wgt_zpt_wgt" in events.fields:
-                # fields2load.append("separate_wgt_zpt_wgt")
+            if not zpt_on:
+                if "separate_wgt_zpt_wgt" in events.fields:
+                    fields2load.append("separate_wgt_zpt_wgt")
+                else:
+                    print("Error Zpt rewgt was not saved separately!")
+                    raise ValueError
             
 
         # filter out redundant fields by using the set object
@@ -450,9 +457,9 @@ if __name__ == "__main__":
                 # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
                 # temporary over write
                 # print(f"events.fields: {events.fields}")
-                # if "separate_wgt_zpt_wgt" in events.fields:
-                #     print("removing Zpt rewgt!")
-                #     weights = weights/events["separate_wgt_zpt_wgt"]
+                if (not zpt_on) and ("separate_wgt_zpt_wgt" in events.fields):
+                    print("removing Zpt rewgt!")
+                    weights = weights/events["separate_wgt_zpt_wgt"]
 
                 
                 # print(f"weights {process} b4 numpy: {weights}")
@@ -498,25 +505,6 @@ if __name__ == "__main__":
                 prod_cat_cut =  vbf_cut & ak.fill_none(events.jet1_pt_nominal > 35, value=False) 
                 prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
                 print("applying jet1 pt 35 Gev cut!")
-                if args.do_vbf_filter_study:
-                    print("applying VBF filter gen cut!")
-                    if "dy_" in process:
-                        if ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc"):
-                            print("dy_VBF_filter extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                            prod_cat_cut =  (prod_cat_cut  
-                                        & vbf_filter
-                            )
-                        elif process == "dy_m105_160_amc":
-                            print("dy_M-100To200 extra!")
-                            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) 
-                            prod_cat_cut =  (
-                                prod_cat_cut  
-                                & ~vbf_filter 
-                            )
-                        else:
-                            print(f"no extra processing for {process}")
-                            pass
             # else: # we're interested in ggH category
             elif args.category == "ggh":
                 print("ggH mode!")
@@ -528,10 +516,17 @@ if __name__ == "__main__":
             else:
                 print("Error: invalid category option!")
                 raise ValueError
-        
+
+            # do jet multiplicty cut
+            if jet_multiplicity != 2:
+                jet_multiplicity_cut = events.njets_nominal == jet_multiplicity
+            else :
+                jet_multiplicity_cut = events.njets_nominal >= jet_multiplicity
+            
             category_selection = (
                 prod_cat_cut & 
-                region 
+                region &
+                jet_multiplicity_cut
             )
             print(f"category_selection length: {len(category_selection)}")
             print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
@@ -709,14 +704,30 @@ if __name__ == "__main__":
         # else:
         #     production_cat = "ggh"
         # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{production_cat}"
-        full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{args.category}/{args.label}"
-
+        if zpt_on:
+            full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity}/ZptReWgt_On"
+        else:
+            full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity}/ZptReWgt_Off"
         
         if not os.path.exists(full_save_path):
             os.makedirs(full_save_path)
+            
         full_save_fname = f"{full_save_path}/{var}.pdf"
-
-       
+        plotDataMC_compare(
+            binning, 
+            data_dict, 
+            bkg_MC_dict, 
+            full_save_fname,
+            sig_MC_dict=sig_MC_dict,
+            title = "", 
+            x_title = plot_settings[plot_var].get("xlabel"), 
+            y_title = plot_settings[plot_var].get("ylabel"),
+            lumi = args.lumi,
+            status = status,
+            log_scale = do_logscale,
+        )
+        raise ValueError
+        full_save_fname = f"{full_save_path}/{var}.png"
         plotDataMC_compare(
             binning, 
             data_dict, 
