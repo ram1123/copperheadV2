@@ -3,6 +3,7 @@ import numpy as np
 import awkward as ak
 import argparse
 import sys
+from distributed import LocalCluster, Client, progress
 np.set_printoptions(threshold=sys.maxsize)
 import correctionlib
 from correctionlib import schemav2 as schema
@@ -62,7 +63,10 @@ if __name__ == "__main__":
         print(f"client: {client}")
         print("Gateway Client found")
     else:
-        client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+        from distributed import LocalCluster, Client
+        cluster = LocalCluster(processes=True)
+        cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
+        client = Client(cluster)
         print("Local scale Client created")
 
     
@@ -70,6 +74,11 @@ if __name__ == "__main__":
     run_label = args.label
     year = args.year
     base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0" # define the save path of stage1 outputs
+
+    # # temporary overwrite
+    # year = "2016"
+    # base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{run_label}/stage1_output/2016*/f1_0" # define the save path of stage1 outputs
+    
     # load the data and dy samples
     data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
     dy_events = dak.from_parquet(f"{base_path}/dy_M-50/*/*.parquet")
@@ -77,17 +86,27 @@ if __name__ == "__main__":
     # apply z-peak region filter and nothing else
     data_events = filterRegion(data_events, region="z-peak")
     dy_events = filterRegion(dy_events, region="z-peak")
-
-    pt_bin_edges = np.array([ # this is the bin edges that valerie used from old zpt rewgts
-            0.        ,   3.33333333,   6.66666667,  10.        ,
-            13.33333333,  16.66666667,  20.        ,  23.33333333,
-            26.66666667,  30.        ,  33.33333333,  36.66666667,
-            40.        ,  43.33333333,  46.66666667,  50.        ,
-            53.33333333,  56.66666667,  60.        ,  63.33333333,
-            66.66666667,  70.        ,  73.33333333,  76.66666667,
-            80.        ,  93.33333333, 116.66666667, 140.        ,
-           163.33333333, 186.66666667, 200.        
-    ])
+    if "2016" in year:
+        pt_bin_edges = np.array([ # binnning optimized by me for 2016 eras
+                0.        ,   3.33333333,   6.66666667,  10.        ,
+                13.33333333,  16.66666667,  20.        ,  23.33333333,
+                26.66666667,  30.        ,  33.33333333,  36.66666667,
+                40.        ,  43.33333333,  46.66666667,  50.        ,
+                53.33333333,  56.66666667,  60.        ,  70.        , 
+                100.        ,  200.  
+        ])
+    else: # 2017 and 2018
+        pt_bin_edges = np.array([ # this is the bin edges that valerie used from old zpt rewgts used for 2018 and 2018
+                0.        ,   3.33333333,   6.66666667,  10.        ,
+                13.33333333,  16.66666667,  20.        ,  23.33333333,
+                26.66666667,  30.        ,  33.33333333,  36.66666667,
+                40.        ,  43.33333333,  46.66666667,  50.        ,
+                53.33333333,  56.66666667,  60.        ,  63.33333333,
+                66.66666667,  70.        ,  73.33333333,  76.66666667,
+                80.        ,  93.33333333, 116.66666667, 140.        ,
+               163.33333333, 186.66666667, 200.        
+        ])
+    
     dimuon_pt_dict = {
         # "0njet" : {
         #     "dimuon_pt": [],
@@ -120,8 +139,8 @@ if __name__ == "__main__":
         SF_hists.append(SF_hist)
 
         # debugging print
-        print(f"njet {njet} data_hist: {ak.to_numpy(data_hist)}")
-        print(f"njet {njet} dy_hist: {ak.to_numpy(dy_hist)}")
+        # print(f"njet {njet} data_hist: {ak.to_numpy(data_hist)}")
+        # print(f"njet {njet} dy_hist: {ak.to_numpy(dy_hist)}")
         print(f"njet {njet} SF_hist: {ak.to_numpy(SF_hist)}")
         # print(f"njet {njet} data_hist: {ak.to_numpy(data_hist)}")
         # print(f"njet {njet} dy_hist: {ak.to_numpy(dy_hist)}")
