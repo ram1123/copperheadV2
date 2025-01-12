@@ -816,7 +816,8 @@ class EventProcessor(processor.ProcessorABC):
                 factory = self.jec_factories_mc["jec"]
             else:
                 for run in self.config["jec_parameters"]["runs"]:
-                    # print(f"run: {run}")
+                    print(f"run: {run}")
+                    print(f"dataset: {dataset}")
                     if run in dataset:
                         factory = self.jec_factories_data[run]
                 if factory == None:
@@ -1009,6 +1010,11 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Fill Muon variables and gjet variables
         # ------------------------------------------------------------#
+        if "2016" in year:
+            dnn_year = 2016
+        else:
+            dnn_year = int(year)
+        print(f"dnn_year: {dnn_year}")
         out_dict = {
             "event" : events.event,
             "mu1_pt" : mu1.pt,
@@ -1048,6 +1054,7 @@ class EventProcessor(processor.ProcessorABC):
             "mu1_pt_fsr" : mu1.pt_fsr,
             "mu2_pt_fsr" : mu2.pt_fsr,
             # "pass_leading_pt" : pass_leading_pt,
+            "year" : ak.ones_like(nmuons) * dnn_year
         }
         if is_mc:
             mc_dict = {
@@ -1149,6 +1156,9 @@ class EventProcessor(processor.ProcessorABC):
             # Access the specific correction by name
             correction = correction_set["Zpt_rewgt"]
             zpt_weight = correction.evaluate(njets, dimuon.pt)
+            # clip zpt weights to one for dimuon pt cases bigger than 200 GeV (line 672 of AN-19-124)
+            ones = ak.ones_like(zpt_weight)
+            zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
             # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
             weights.add("zpt_wgt", 
@@ -1634,14 +1644,14 @@ class EventProcessor(processor.ProcessorABC):
         sj_dict = {}
         cutouts = [2,5]
         nmuons = ak.num(events.Muon, axis=1)
-        if variation == "nominal":
-            for cutout in cutouts:
-                sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout)
-                sj_out = {
-                    key+"_"+variation : val \
-                    for key, val in sj_out.items()
-                }
-                sj_dict.update(sj_out)
+        # PLEASE NOTE: SoftJET variables are all from Nominal variation despite variation names
+        for cutout in cutouts:
+            sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout) # obtain nominal softjet values
+            sj_out = { # add variation even thought it's always nominal
+                key+"_"+variation : val \
+                for key, val in sj_out.items()
+            }
+            sj_dict.update(sj_out)
 
         print(f"sj_dict.keys(): {sj_dict.keys()}")
         jet_loop_out_dict.update(sj_dict)
