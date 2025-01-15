@@ -254,8 +254,8 @@ class EventProcessor(processor.ProcessorABC):
         zpt_filename = self.config["zpt_weights_file"]
         extractor_instance.add_weight_sets([f"* * {zpt_filename}"])
         if "2016" in year:
-            # self.zpt_path = "zpt_weights/2016_value"
-            self.zpt_path = "zpt_weights_all"
+            self.zpt_path = "zpt_weights/2016_value"
+            # self.zpt_path = "zpt_weights_all"
         else:
             # self.zpt_path = "zpt_weights_all" # valerie
             self.zpt_path = "zpt_weights/2017_value" # Dmitry
@@ -1584,7 +1584,7 @@ class EventProcessor(processor.ProcessorABC):
         # pt_centrality formua is in eqn A.1 fron AN-19-124
         # pt_centrality = dimuon.pt - abs(jet1.pt + jet2.pt)/2
         # pt_centrality = pt_centrality / abs(jet1.pt - jet2.pt)
-        pt_centrality = dimuon.pt - dijet/2
+        pt_centrality = dimuon.pt - dijet.pt/2
         j12_subtract_pt = p4_subtract_pt(jet1, jet2) # pt of momentum vector subtraction of jet1 and jet2
         pt_centrality = pt_centrality / j12_subtract_pt
 
