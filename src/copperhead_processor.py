@@ -69,6 +69,29 @@ def p4_sum_mass(obj1, obj2):
     result_rap = 0.5 * np.log((result_e + result_pz) / (result_e - result_pz))
     return result_mass
 
+def p4_subtract_pt(obj1, obj2):
+    """
+    obtain the pt vector subtraction of two variables
+    """
+    result_px = ak.zeros_like(obj1.pt)
+    result_py = ak.zeros_like(obj1.pt)
+    result_pz = ak.zeros_like(obj1.pt)
+    result_e = ak.zeros_like(obj1.pt)
+    coeff = 1.0
+    for obj in [obj1, obj2]:
+        # px_ = obj.pt * np.cos(obj.phi)
+        # py_ = obj.pt * np.sin(obj.phi)
+        # pz_ = obj.pt * np.sinh(obj.eta)
+        px_ = obj.px 
+        py_ = obj.py 
+        pz_ = obj.pz 
+        result_px = result_px + coeff*px_
+        result_py = result_py + coeff*py_
+        result_pz = result_pz + coeff*pz_
+        coeff = -1*coeff # switch coeff
+    result_pt = np.sqrt(result_px**2 + result_py**2)
+    return result_pt
+
 def testJetVector(jets):
     """
     This is a helper function in debugging observed inconsistiency in Jet variables after
@@ -1145,20 +1168,20 @@ class EventProcessor(processor.ProcessorABC):
             # zpt_weight =\ 
             #          self.evaluator[self.zpt_path](dimuon.pt, njets)
 
-            # # dmitry's old zpt
-            # zpt_weight =\
-            #         self.evaluator[self.zpt_path](dimuon.pt)
+            # dmitry's old zpt
+            zpt_weight =\
+                    self.evaluator[self.zpt_path](dimuon.pt)
 
             # new zpt wgt Jan 09 2025
-            print(f"self.zpt_path: {self.zpt_path}")
-            correction_set = correctionlib.CorrectionSet.from_file(self.config["new_zpt_weights_file"])
+            # print(f"self.zpt_path: {self.zpt_path}")
+            # correction_set = correctionlib.CorrectionSet.from_file(self.config["new_zpt_weights_file"])
     
-            # Access the specific correction by name
-            correction = correction_set["Zpt_rewgt"]
-            zpt_weight = correction.evaluate(njets, dimuon.pt)
-            # clip zpt weights to one for dimuon pt cases bigger than 200 GeV (line 672 of AN-19-124)
-            ones = ak.ones_like(zpt_weight)
-            zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
+            # # Access the specific correction by name
+            # correction = correction_set["Zpt_rewgt"]
+            # zpt_weight = correction.evaluate(njets, dimuon.pt)
+            # # clip zpt weights to one for dimuon pt cases bigger than 200 GeV (line 672 of AN-19-124)
+            # ones = ak.ones_like(zpt_weight)
+            # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
             # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
             weights.add("zpt_wgt", 
@@ -1559,8 +1582,11 @@ class EventProcessor(processor.ProcessorABC):
             dimuon.pt + jet1.pt + jet2.pt
         )
         # pt_centrality formua is in eqn A.1 fron AN-19-124
-        pt_centrality = dimuon.pt - abs(jet1.pt + jet2.pt)/2
-        pt_centrality = pt_centrality / abs(jet1.pt - jet2.pt)
+        # pt_centrality = dimuon.pt - abs(jet1.pt + jet2.pt)/2
+        # pt_centrality = pt_centrality / abs(jet1.pt - jet2.pt)
+        pt_centrality = dimuon.pt - dijet/2
+        j12_subtract_pt = p4_subtract_pt(jet1, jet2) # pt of momentum vector subtraction of jet1 and jet2
+        pt_centrality = pt_centrality / j12_subtract_pt
 
         jet_loop_out_dict = {
             f"jet1_pt_{variation}" : jet1.pt,
