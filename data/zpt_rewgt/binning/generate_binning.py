@@ -7,7 +7,7 @@ from distributed import LocalCluster, Client, progress
 np.set_printoptions(threshold=sys.maxsize)
 import os
 from omegaconf import OmegaConf
-
+import copy
 
 def filterRegion(events, region="h-peak"):
     dimuon_mass = events.dimuon_mass
@@ -129,8 +129,7 @@ if __name__ == "__main__":
     data_events = filterRegion(data_events, region="z-peak")
     dy_events = filterRegion(dy_events, region="z-peak")
     
-    # compute the events to local memory
-    SF_hists = []
+    njet_field = "njets_nominal"
     # for njet in [0,1,2]:
     for njet in [1,2]:
         if njet != 2:
@@ -146,6 +145,7 @@ if __name__ == "__main__":
         
         old_bins = initial_bins
         current_bins = copy.deepcopy(old_bins)
+        new_bins = copy.deepcopy(current_bins)
         # loop over old bins and divide them into two equal bins
         print(f"current_bins: {current_bins}")
         
