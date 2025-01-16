@@ -816,7 +816,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = True # True       
+        do_jec = False # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1042,6 +1042,8 @@ class EventProcessor(processor.ProcessorABC):
             "event" : events.event,
             "mu1_pt" : mu1.pt,
             "mu2_pt" : mu2.pt,
+            "mu1_pt_over_mass" : mu1.pt / dimuon.mass,
+            "mu2_pt_over_mass" : mu2.pt / dimuon.mass,
             "mu1_eta" : mu1.eta,
             "mu2_eta" : mu2.eta,
             "mu1_phi" : mu1.phi,
@@ -1581,12 +1583,12 @@ class EventProcessor(processor.ProcessorABC):
         rpt = mmjj.pt / (
             dimuon.pt + jet1.pt + jet2.pt
         )
-        # pt_centrality formua is in eqn A.1 fron AN-19-124
-        # pt_centrality = dimuon.pt - abs(jet1.pt + jet2.pt)/2
-        # pt_centrality = pt_centrality / abs(jet1.pt - jet2.pt)
-        pt_centrality = dimuon.pt - dijet.pt/2
-        j12_subtract_pt = p4_subtract_pt(jet1, jet2) # pt of momentum vector subtraction of jet1 and jet2
-        pt_centrality = pt_centrality / j12_subtract_pt
+        # pt_centrality formula is in eqn A.1 fron AN-19-124
+        pt_centrality = dimuon.pt - abs(jet1.pt + jet2.pt)/2
+        pt_centrality = pt_centrality / abs(jet1.pt - jet2.pt)
+        # pt_centrality = dimuon.pt - dijet.pt/2
+        # j12_subtract_pt = p4_subtract_pt(jet1, jet2) # pt of momentum vector subtraction of jet1 and jet2
+        # pt_centrality = pt_centrality / j12_subtract_pt
 
         jet_loop_out_dict = {
             f"jet1_pt_{variation}" : jet1.pt,
