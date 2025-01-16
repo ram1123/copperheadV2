@@ -20,7 +20,6 @@ from itertools import islice
 import copy
 import argparse
 from dask.distributed import performance_report
-from src.corrections.evaluator import nnlops_weights
 import os
 from omegaconf import OmegaConf
 from coffea.nanoevents.methods import vector
@@ -79,6 +78,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
         },
     ).events()
+
     
     # save input events for CI testing start ---------------------------------------------
     # dir = f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}'
@@ -233,65 +233,46 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # }
 
     
-    # debugging --------------------------------------------
-    # btag_cut =ak.fill_none((skim_dict["nBtagLoose"] >= 2), value=False) | ak.fill_none((skim_dict["nBtagMedium"] >= 1), value=False)
-    # vbf_cut = (skim_dict["jj_mass"] > 400) & (skim_dict["jj_dEta"] > 2.5) & (skim_dict["jet1_pt"] > 35) 
-    # vbf_cut = ak.fill_none(vbf_cut, value=False)
-    # vbf_cut = vbf_cut & (~btag_cut)
-    # vbf_cut = ak.to_dataframe(vbf_cut.compute())
-    # vbf_cut.to_csv("vbf_cut_V2.csv")
-    # print(f"dimuon_mass is none any: {ak.any(ak.is_none(out_collections['dimuon_mass'])).compute()}")
-    # print(f"wgt_nominal_total is none any: {ak.any(ak.is_none(out_collections['wgt_nominal_total'])).compute()}")
-    # mu1_pt = out_collections['mu1_pt']
-    # ptOfInterest = (mu1_pt > 75) & (mu1_pt < 150)
-    # # print(f"dimuon mass: {ak.to_numpy(out_collections['dimuon_mass'][ptOfInterest].compute())}")
-    # # print(f"mu1 pT: {ak.to_numpy(out_collections['mu1_pt'][ptOfInterest].compute())}")
-    # wgtOfInterest = ak.to_numpy(out_collections['wgt_nominal_total'][ptOfInterest].compute())
-    # # print(f"wgt nominal: {wgtOfInterest}")
-    # print(f"wgt nominal len: {len(wgtOfInterest)}")
-    # print(f"wgt nominal sum: {np.sum(wgtOfInterest)}")
-    # debugging --------------------------------------------
+    # # add in weights
+    # weight_dict = {}
+    # for key, value in out_collections.items():
+    #     if "wgt_nominal" in key:
+    #         # print(f"wgt name: {key}")
+    #         weight_dict[key] = value
+    # skim_dict.update(weight_dict)   
     
-    # add in weights
-    weight_dict = {}
-    for key, value in out_collections.items():
-        if "wgt_nominal" in key:
-            # print(f"wgt name: {key}")
-            weight_dict[key] = value
-    skim_dict.update(weight_dict)   
-    
-    # add in nsoftjets and htsoft variables
-    softj_vars = {}
-    for key, value in out_collections.items():
-        if "nsoftjets" in key:
-            softj_vars[key] = value
-        elif "htsoft" in key:
-            softj_vars[key] = value
-    skim_dict.update(softj_vars)
+    # # add in nsoftjets and htsoft variables
+    # softj_vars = {}
+    # for key, value in out_collections.items():
+    #     if "nsoftjets" in key:
+    #         softj_vars[key] = value
+    #     elif "htsoft" in key:
+    #         softj_vars[key] = value
+    # skim_dict.update(softj_vars)
     # print(f"softj_vars.keys(): {softj_vars.keys()}")
     # print(f"stage1 skim compute1: {ak.zip(skim_dict).compute()}")
     # gen jet variables start ------------------------------
-    is_mc = dataset_dict["metadata"]["is_mc"]
-    if is_mc:
-        mc_dict = {
-            "gjet1_pt":  (out_collections["gjet1_pt"]),
-            "gjet1_eta":  (out_collections["gjet1_eta"]),
-            "gjet1_phi":  (out_collections["gjet1_phi"]),
-            "gjet1_mass":  (out_collections["gjet1_mass"]),
-            "gjet2_pt":  (out_collections["gjet2_pt"]),
-            "gjet2_eta":  (out_collections["gjet2_eta"]),
-            "gjet2_phi":  (out_collections["gjet2_phi"]),
-            "gjet2_mass":  (out_collections["gjet2_mass"]),
-            "gjj_pt":  (out_collections["gjj_pt"]),
-            "gjj_eta":  (out_collections["gjj_eta"]),
-            "gjj_phi":  (out_collections["gjj_phi"]),
-            "gjj_mass":  (out_collections["gjj_mass"]),
-            "gjj_dEta":  (out_collections["gjj_dEta"]),
-            "gjj_dPhi":  (out_collections["gjj_dPhi"]),
-            "gjj_dR":  (out_collections["gjj_dR"]),
+    # is_mc = dataset_dict["metadata"]["is_mc"]
+    # if is_mc:
+    #     mc_dict = {
+    #         "gjet1_pt":  (out_collections["gjet1_pt"]),
+    #         "gjet1_eta":  (out_collections["gjet1_eta"]),
+    #         "gjet1_phi":  (out_collections["gjet1_phi"]),
+    #         "gjet1_mass":  (out_collections["gjet1_mass"]),
+    #         "gjet2_pt":  (out_collections["gjet2_pt"]),
+    #         "gjet2_eta":  (out_collections["gjet2_eta"]),
+    #         "gjet2_phi":  (out_collections["gjet2_phi"]),
+    #         "gjet2_mass":  (out_collections["gjet2_mass"]),
+    #         "gjj_pt":  (out_collections["gjj_pt"]),
+    #         "gjj_eta":  (out_collections["gjj_eta"]),
+    #         "gjj_phi":  (out_collections["gjj_phi"]),
+    #         "gjj_mass":  (out_collections["gjj_mass"]),
+    #         "gjj_dEta":  (out_collections["gjj_dEta"]),
+    #         "gjj_dPhi":  (out_collections["gjj_dPhi"]),
+    #         "gjj_dR":  (out_collections["gjj_dR"]),
             
-        }
-        skim_dict.update(mc_dict)
+    #     }
+    #     skim_dict.update(mc_dict)
     # gen jet variables end ------------------------------
     # print(f"stage1 skim compute2: {ak.zip(skim_dict).compute()}")
     # print(f"skim_dict.keys(): {skim_dict.keys()}")
@@ -431,6 +412,7 @@ if __name__ == "__main__":
                 # max_file_len = 15
                 max_file_len = 130
                 # max_file_len = 70
+                # max_file_len = 100
                 # max_file_len = 200
                 # max_file_len = 8000
                 # max_file_len = 25
@@ -459,7 +441,6 @@ if __name__ == "__main__":
                         os.remove(file)
                     if not os.path.exists(save_path):
                         os.makedirs(save_path)
-
                     to_persist.persist().to_parquet(save_path)
                     
                     var_elapsed = round(time.time() - var_step, 3)
