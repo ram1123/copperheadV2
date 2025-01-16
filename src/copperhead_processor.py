@@ -21,6 +21,8 @@ import copy
 from coffea.nanoevents.methods import vector
 import sys
 from src.corrections.custom_jec import ApplyJetCorrections
+from omegaconf import OmegaConf
+
 
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
@@ -31,6 +33,36 @@ save_path = "/depot/cms/users/yun79/results/stage1/DNN_test//2018/f0_1/data_B/0"
 """
 TODO!: add the correct btag working points for rereco samples that you will be working with when adding rereco samples
 """
+
+def getZptWgts(dimuon_pt, njets, nbins, year):
+    config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
+    wgt_config = OmegaConf.load(config_path)
+    max_order = 9
+    zpt_wgt = ak.ones_like(dimuon_pt)
+    jet_multiplicies = [0,1,2]
+    # print(f"zpt_wgt: {zpt_wgt}")
+    
+    for jet_multiplicity in jet_multiplicies:
+        zpt_wgt_by_jet = ak.zeros_like(dimuon_pt)
+        for order in range(max_order+1): # p goes from 0 to max_order
+            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"p{order}"]
+            # print(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
+            polynomial_term = coeff*dimuon_pt**order
+            zpt_wgt_by_jet = zpt_wgt_by_jet + polynomial_term
+            # print(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
+            # print(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet: {zpt_wgt_by_jet}")
+
+        if jet_multiplicity != 2:
+            njet_mask = njets == jet_multiplicity
+        else:
+            njet_mask = njets >= 2 # njet 2 is inclusive
+        # print(f"njet{jet_multiplicity} order  zpt_wgt_by_jet: {zpt_wgt_by_jet}")
+        zpt_wgt = ak.where(njet_mask, zpt_wgt_by_jet, zpt_wgt) # if matching jet multiplicity, apply the values
+        # print(f"zpt_wgt after njet {jet_multiplicity}: {zpt_wgt}")
+    cutOff_mask = dimuon_pt < 200 # ignore wgts from dimuon pT > 200
+    zpt_wgt = ak.where(cutOff_mask, zpt_wgt, ak.ones_like(dimuon_pt))
+    return zpt_wgt
+
 
 def getRapidity(obj):
     px = obj.pt * np.cos(obj.phi)
@@ -253,13 +285,20 @@ class EventProcessor(processor.ProcessorABC):
         # Z-pT reweighting 
         zpt_filename = self.config["zpt_weights_file"]
         extractor_instance.add_weight_sets([f"* * {zpt_filename}"])
+       
         if "2016" in year:
-            self.zpt_path = "zpt_weights/2016_value"
-            # self.zpt_path = "zpt_weights_all"
+            # self.zpt_path = "zpt_weights_all" # Valerie
+            self.zpt_path = "zpt_weights/2016_value" # Dmitry
         else:
-            # self.zpt_path = "zpt_weights_all" # valerie
+            # self.zpt_path = "zpt_weights_all" # Valerie
             self.zpt_path = "zpt_weights/2017_value" # Dmitry
         # Calibration of event-by-event mass resolution
+
+        # add valerie Zpt
+        zpt_filename = self.config["zpt_weights_file_valerie"]
+        extractor_instance.add_weight_sets([f"* * {zpt_filename}"])
+        self.zpt_path_valerie = "zpt_weights_all" # Valerie
+        
         for mode in ["Data", "MC"]:
             if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
                 yearUL = "2016"
@@ -929,9 +968,10 @@ class EventProcessor(processor.ProcessorABC):
             # + jec_pars["jer_variations"]
         )
         if is_mc:
+            pass
             # pt_variations += self.config["jec_parameters"]["jec_variations"]
             # pt_variations += self.config["jec_parameters"]["jer_variations"]
-            pt_variations += ['Absolute_up', 'Absolute_down',]
+            # pt_variations += ['Absolute_up', 'Absolute_down',]
         
         if is_mc:
             # moved nnlops reweighting outside of dak process and to run_stage1-----------------
@@ -1166,13 +1206,27 @@ class EventProcessor(processor.ProcessorABC):
             # we explicitly don't directly add zpt weights to the weights variables 
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
             # once kind of screws with the dak awkward array
-            # # valerie
-            # zpt_weight =\ 
-            #          self.evaluator[self.zpt_path](dimuon.pt, njets)
+            # valerie
+            zpt_weight_valerie =\
+                     self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
+            out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
             # dmitry's old zpt
-            zpt_weight =\
+            zpt_weight_dmitry =\
                     self.evaluator[self.zpt_path](dimuon.pt)
+            out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
+
+            zpt_weight = zpt_weight_dmitry
+
+            # print(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
+            # print(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
+
+            zpt_weight_min_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
+            out_dict["zpt_weight_min_nbins50"] = zpt_weight_min_nbins50
+            zpt_weight_min_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
+            out_dict["zpt_weight_min_nbins100"] = zpt_weight_min_nbins100
+            # print(f"zpt_weight_min_nbins50: {zpt_weight_min_nbins50.compute()}")
+            # print(f"zpt_weight_min_nbins100: {zpt_weight_min_nbins100.compute()}")
 
             # new zpt wgt Jan 09 2025
             # print(f"self.zpt_path: {self.zpt_path}")
