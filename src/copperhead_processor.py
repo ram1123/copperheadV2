@@ -59,6 +59,7 @@ def getZptWgts(dimuon_pt, njets, nbins, year):
         # print(f"njet{jet_multiplicity} order  zpt_wgt_by_jet: {zpt_wgt_by_jet}")
         zpt_wgt = ak.where(njet_mask, zpt_wgt_by_jet, zpt_wgt) # if matching jet multiplicity, apply the values
         # print(f"zpt_wgt after njet {jet_multiplicity}: {zpt_wgt}")
+    
     cutOff_mask = dimuon_pt < 200 # ignore wgts from dimuon pT > 200
     zpt_wgt = ak.where(cutOff_mask, zpt_wgt, ak.ones_like(dimuon_pt))
     return zpt_wgt
@@ -1221,10 +1222,10 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
             # print(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
 
-            zpt_weight_min_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
-            out_dict["zpt_weight_min_nbins50"] = zpt_weight_min_nbins50
-            zpt_weight_min_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
-            out_dict["zpt_weight_min_nbins100"] = zpt_weight_min_nbins100
+            zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
+            out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
+            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
+            out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
             # print(f"zpt_weight_min_nbins50: {zpt_weight_min_nbins50.compute()}")
             # print(f"zpt_weight_min_nbins100: {zpt_weight_min_nbins100.compute()}")
 
