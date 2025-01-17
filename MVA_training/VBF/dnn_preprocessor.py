@@ -477,7 +477,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     #     "dimuon_pt_log",
     #     "dimuon_rapidity",
     #     "dimuon_ebe_mass_res",
-    #     "rel_dimuon_ebe_mass_res",
+    #     "dimuon_ebe_mass_res_rel",
     #     "dimuon_pisa_mass_res",
     #     "dimuon_pisa_mass_res_rel",
     #     "dimuon_cos_theta_cs",
@@ -498,8 +498,9 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     #     "rpt",
     #     "ll_zstar_log",
     #     "mmj_min_dEta",
-    #     "nsoftjets5",
-    #     "htsoft2",
+    #     "nsoftjets2", # replace nsoftjets5 with 2 bc VBF BDT input
+        # "htsoft2",
+        # "pt_centrality",
     #     "year",
     # ]
     training_features = [
