@@ -30,9 +30,6 @@ group_DY_processes = [
     "dy_M-50",
     "dy_M-100To200",
     "dy_m105_160_amc",
-    "dy_m105_160_vbf_amc",
-    "dy_VBF_filter_customJMEoff",
-    "dy_VBF_filter_fromGridpack",
 ]
 # group_DY_processes = ["dy_M-100To200","dy_VBF_filter_customJMEoff"]
 # group_DY_processes = [] # just VBf filter
@@ -189,9 +186,16 @@ if __name__ == "__main__":
     "-jetm",
     "--jet_multiplicity",
     dest="jet_multiplicity",
-    default="0",
+    default="-1",
     action="store",
-    help="Integer values of jet multiplicity to filter. Available options are: 0, 1 and 2",
+    help="Integer values of jet multiplicity to filter. Available options are: -1, 0, 1 and 2. -1 just means that no jet multiplicty cut is applied",
+    )
+    parser.add_argument(
+    "--zpt_wgt_name",
+    dest="zpt_wgt_name",
+    default="no_zpt",
+    action="store",
+    help="zpt wgt name",
     )
     #---------------------------------------------------------
     # gather arguments
@@ -212,7 +216,7 @@ if __name__ == "__main__":
     if len(bkg_samples) >0:
         for bkg_sample in bkg_samples:
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
-                # available_processes.append("dy_M-50")
+                available_processes.append("dy_M-50")
                 available_processes.append("dy_M-100To200")
                 available_processes.append("dy_m105_160_amc")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
@@ -299,7 +303,7 @@ if __name__ == "__main__":
         else:
             print(f"Unsupported variable: {particle} is given!")
     print(f"variables2plot: {variables2plot}")
-    # plot_setting_fname = "../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+    
     plot_setting_fname = args.plot_setting
     if plot_setting_fname == "":
         print("ERROR, valid plotting setting json file needs to be given")
@@ -372,11 +376,14 @@ if __name__ == "__main__":
         #         fields2load.append(field)
                 
         is_data = "data" in process.lower()
-        if not is_data: # MC sample
-            if not zpt_on:
-                print("Adding seperate zpt wgt!")
-                if "separate_wgt_zpt_wgt" in events.fields:
-                    fields2load.append("separate_wgt_zpt_wgt")
+        if (not is_data) and ("dy" in process.lower()): # DY MC sample
+            fields2load.append("zpt_weight_valerie")
+            fields2load.append("zpt_weight_dmitry")
+            fields2load.append("zpt_weight_mine_nbins50")
+            fields2load.append("zpt_weight_mine_nbins100")
+            # if not zpt_on:
+            #     if "separate_wgt_zpt_wgt" in events.fields:
+            #         fields2load.append("separate_wgt_zpt_wgt")
             
 
         # filter out redundant fields by using the set object
@@ -455,9 +462,15 @@ if __name__ == "__main__":
                 # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
                 # temporary over write
                 # print(f"events.fields: {events.fields}")
-                if (not zpt_on) and ("separate_wgt_zpt_wgt" in events.fields):
-                    print("removing Zpt rewgt!")
-                    weights = weights/events["separate_wgt_zpt_wgt"]
+                # if (not zpt_on) and ("separate_wgt_zpt_wgt" in events.fields):
+                #     print("removing Zpt rewgt!")
+                #     weights = weights/events["separate_wgt_zpt_wgt"]
+
+                zpt_wgt_name = args.zpt_wgt_name
+                if zpt_wgt_name != "no_zpt":
+                    if zpt_wgt_name in events.fields:
+                        print(f"applying Zpt rewgt {zpt_wgt_name}!")
+                        weights = weights * events[zpt_wgt_name]
 
                 
                 # print(f"weights {process} b4 numpy: {weights}")
@@ -476,17 +489,18 @@ if __name__ == "__main__":
 
             # do mass region cut
             mass = events.dimuon_mass
-            z_peak = ((mass > 76) & (mass < 106))
+            z_peak = ((mass > 70) & (mass < 110))
             h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
             h_peak = ((mass > 115.03) & (mass < 135.03))
+            print(f"args.region: {args.region}")
             if args.region == "signal":
                 region = h_sidebands | h_peak
-            elif args.region == "h_peak":
+            elif args.region == "h-peak":
                 region = h_peak 
-            elif args.region == "h_sidebands":
+            elif args.region == "h-sidebands":
                 print("h_sidebands region chosen!")
                 region = h_sidebands 
-            elif args.region == "z_peak":
+            elif args.region == "z-peak":
                 region = z_peak 
             else: 
                 print("ERROR: acceptable region!")
@@ -516,7 +530,10 @@ if __name__ == "__main__":
                 raise ValueError
 
             # do jet multiplicty cut
-            if jet_multiplicity != 2:
+            print(f"jet_multiplicity: {jet_multiplicity}")
+            if jet_multiplicity == -1: # no njet cut, so all true
+                jet_multiplicity_cut = ak.ones_like(events.njets_nominal, dtype="bool")
+            elif jet_multiplicity != 2:
                 jet_multiplicity_cut = events.njets_nominal == jet_multiplicity
             else :
                 jet_multiplicity_cut = events.njets_nominal >= jet_multiplicity
@@ -702,10 +719,17 @@ if __name__ == "__main__":
         # else:
         #     production_cat = "ggh"
         # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{production_cat}"
-        if zpt_on:
-            full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity}/ZptReWgt_On"
+
+        
+        if jet_multiplicity == -1: # rename jet multiplicity if -1
+            jet_multiplicity_name = "Inclusive"
         else:
-            full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity}/ZptReWgt_Off"
+            jet_multiplicity_name = str(jet_multiplicity)
+        # if zpt_on:
+        #     full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity_name}/ZptReWgt_On"
+        # else:
+        #     full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity_name}/ZptReWgt_Off"
+        full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity_name}/{args.zpt_wgt_name}"
         
         if not os.path.exists(full_save_path):
             os.makedirs(full_save_path)
