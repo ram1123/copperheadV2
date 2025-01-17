@@ -1217,8 +1217,6 @@ class EventProcessor(processor.ProcessorABC):
                     self.evaluator[self.zpt_path](dimuon.pt)
             out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
 
-            zpt_weight = zpt_weight_dmitry
-
             # print(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
             # print(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
 
@@ -1240,10 +1238,10 @@ class EventProcessor(processor.ProcessorABC):
             # ones = ak.ones_like(zpt_weight)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
-            # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
-            weights.add("zpt_wgt", 
-                    weight=zpt_weight,
-            )
+            # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
+            # weights.add("zpt_wgt", 
+            #         weight=zpt_weight,
+            # )
 
         
 
