@@ -8,10 +8,12 @@ from omegaconf import OmegaConf
 
 from typing import Tuple, List, Dict
 import ROOT as rt
+import ROOT
 from src.lib.fit_functions import MakeFEWZxBernDof3
 import argparse
 import os
 import copy
+import pandas as pd
 
 def normalizeFlatHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
     """
@@ -256,6 +258,14 @@ if __name__ == "__main__":
     action="store",
     help="string value production category we're working on",
     )
+    parser.add_argument(
+    "-l",
+    "--label",
+    dest="label",
+    default="",
+    action="store",
+    help="MVA model name to load",
+    )
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
@@ -265,15 +275,31 @@ if __name__ == "__main__":
     category = args.category.lower()
     # load_path = "/work/users/yun79/stage2_output/ggH/test/processed_events_data.parquet"
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
+    # if args.year=="all":
+    #     load_path = f"{args.load_path}/{category}/*/processed_events_data.parquet"
+    # elif args.year=="2016only":
+    #     load_path = f"{args.load_path}/{category}/2016*/processed_events_data.parquet"
+    # else:
+    #     load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
+
+    # remove category we assume that the load_path already has category specified
     if args.year=="all":
-        load_path = f"{args.load_path}/{category}/*/processed_events_data.parquet"
+        load_path = f"{args.load_path}/*/processed_events_data.parquet"
     elif args.year=="2016only":
-        load_path = f"{args.load_path}/{category}/2016*/processed_events_data.parquet"
+        load_path = f"{args.load_path}/2016*/processed_events_data.parquet"
     else:
-        load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
+        load_path = f"{args.load_path}/{args.year}/processed_events_data.parquet"
     print(f"load_path: {load_path}")
     processed_eventsData = ak.from_parquet(load_path)
+    print(f"processed_eventsData length: {ak.num(processed_eventsData.dimuon_mass, axis=0)}")
     print("events loaded!")
+
+    
+
+    # Define your list of column names
+    column_list = ["year", "category", "dataset", "yield"]
+    yield_df = pd.DataFrame(columns=column_list)
+
     
     device = "cpu"
     # device = "cuda"
@@ -1068,7 +1094,19 @@ if __name__ == "__main__":
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat0.setCorrectionFactor(penalty) 
     nevents = roo_datasetData_subCat0.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    print(f"roo_datasetData_subCat0 sumentries: {nevents}")
     bkg_subCat0_norm = rt.RooRealVar(corePdf_subCat0.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
+    
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat0"],
+        "dataset": ["data"], 
+        "yield": [nevents]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
+    
 
 
     # subCat 1 
@@ -1090,8 +1128,20 @@ if __name__ == "__main__":
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat1.setCorrectionFactor(penalty) 
     nevents = roo_datasetData_subCat1.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    print(f"roo_datasetData_subCat1 sumentries: {nevents}")
     bkg_subCat1_norm = rt.RooRealVar(corePdf_subCat1.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
-
+    
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat1"],
+        "dataset": ["data"], 
+        "yield": [nevents]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
+    
+    
     # subCat 2 
     cat_subCat2 = rt.RooCategory("pdf_index_ggh","Index of Pdf which is active"); # name of category index should stay same across subCategories
     
@@ -1111,8 +1161,19 @@ if __name__ == "__main__":
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat2.setCorrectionFactor(penalty) 
     nevents = roo_datasetData_subCat2.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    print(f"roo_datasetData_subCat2 sumentries: {nevents}")
     bkg_subCat2_norm = rt.RooRealVar(corePdf_subCat2.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
-
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat2"],
+        "dataset": ["data"], 
+        "yield": [nevents]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
+    
+        
     # subCat 3 
     cat_subCat3 = rt.RooCategory("pdf_index_ggh","Index of Pdf which is active"); # name of category index should stay same across subCategories
     
@@ -1132,7 +1193,18 @@ if __name__ == "__main__":
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat3.setCorrectionFactor(penalty) 
     nevents = roo_datasetData_subCat3.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    print(f"roo_datasetData_subCat3 sumentries: {nevents}")
     bkg_subCat3_norm = rt.RooRealVar(corePdf_subCat3.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat3"],
+        "dataset": ["data"], 
+        "yield": [nevents]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
+    
 
     # subCat 4
     cat_subCat4 = rt.RooCategory("pdf_index_ggh","Index of Pdf which is active"); # name of category index should stay same across subCategories
@@ -1153,9 +1225,21 @@ if __name__ == "__main__":
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat4.setCorrectionFactor(penalty) 
     nevents = roo_datasetData_subCat4.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    print(f"roo_datasetData_subCat4 sumentries: {nevents}")
     bkg_subCat4_norm = rt.RooRealVar(corePdf_subCat4.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat4"],
+        "dataset": ["data"], 
+        "yield": [nevents]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
     
+    print(f"yield_df after Data: \n {yield_df}")
 
+    
 
     # ---------------------------------------------------
     # Obtain signal MC events
@@ -1170,7 +1254,13 @@ if __name__ == "__main__":
     else:
         load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_ggh.parquet" # Fig 6.15 was only with ggH process, though with all 2016, 2017 and 2018
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC*.parquet"
-    
+    if args.year=="all":
+        load_path = f"{args.load_path}/*/processed_events_sigMC_ggh.parquet"
+        # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_amcPS.parquet"
+    elif args.year=="2016only":
+        load_path = f"{args.load_path}/2016*/processed_events_sigMC_ggh.parquet"
+    else:
+        load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_ggh.parquet"
     processed_eventsSignalMC = ak.from_parquet(load_path)
     print(f"ggH yield: {np.sum(processed_eventsSignalMC.wgt_nominal)}")
     print("signal events loaded")
@@ -1397,6 +1487,15 @@ if __name__ == "__main__":
     roo_histData_subCat0_signal = rt.RooDataHist("subCat0_rooHist_signal", "subCat0_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat0_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat0_signal = roo_histData_subCat0_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat0"],
+        "dataset": ["ggH"], 
+        "yield": [data_subCat0_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
 
     # define normalization value from signal MC event weights 
     flat_MC_SF = 1.00
@@ -1423,6 +1522,16 @@ if __name__ == "__main__":
     roo_histData_subCat1_signal = rt.RooDataHist("subCat1_rooHist_signal", "subCat1_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat1_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat1_signal = roo_histData_subCat1_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat1"],
+        "dataset": ["ggH"], 
+        "yield": [data_subCat1_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
+    
 
     # define normalization value from signal MC event weights 
     
@@ -1448,6 +1557,15 @@ if __name__ == "__main__":
     roo_histData_subCat2_signal = rt.RooDataHist("subCat2_rooHist_signal", "subCat2_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat2_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat2_signal = roo_histData_subCat2_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat2"],
+        "dataset": ["ggH"], 
+        "yield": [data_subCat2_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
 
     # define normalization value from signal MC event weights 
     
@@ -1473,6 +1591,15 @@ if __name__ == "__main__":
     roo_histData_subCat3_signal = rt.RooDataHist("subCat3_rooHist_signal", "subCat3_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat3_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat3_signal = roo_histData_subCat3_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat3"],
+        "dataset": ["ggH"], 
+        "yield": [data_subCat3_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
 
     # define normalization value from signal MC event weights 
     
@@ -1498,6 +1625,16 @@ if __name__ == "__main__":
     roo_histData_subCat4_signal = rt.RooDataHist("subCat4_rooHist_signal", "subCat4_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat4_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat4_signal = roo_histData_subCat4_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat4"],
+        "dataset": ["ggH"], 
+        "yield": [data_subCat4_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
+    print(f"yield_df after ggH: {yield_df}")
 
     # define normalization value from signal MC event weights 
     
@@ -1512,8 +1649,10 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # subCat 0
-    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True,)
+    # fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True,)
+    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1527,8 +1666,10 @@ if __name__ == "__main__":
     
 
     # subCat 1
-    _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
+    # fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
+    _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1542,8 +1683,10 @@ if __name__ == "__main__":
     
 
     # subCat 2
-    _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
+    # fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
+    _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1557,8 +1700,10 @@ if __name__ == "__main__":
     
     
     # subCat 3
-    _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
+    # fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
+    _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1576,8 +1721,10 @@ if __name__ == "__main__":
 
 
     # subCat 4
-    _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
+    # fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
+    _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1594,12 +1741,12 @@ if __name__ == "__main__":
 
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
     if args.year=="all":
-        load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_vbf.parquet"
+        load_path = f"{args.load_path}/*/processed_events_sigMC_vbf.parquet"
         # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_qqh_amcPS.parquet"
     elif args.year=="2016only":
-        load_path = f"{args.load_path}/{category}/2016*/processed_events_sigMC_vbf.parquet"
+        load_path = f"{args.load_path}/2016*/processed_events_sigMC_vbf.parquet"
     else:
-        load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_vbf.parquet" # Fig 6.15 was only with qqH process, though with all 2016, 2017 and 2018
+        load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_vbf.parquet" # Fig 6.15 was only with qqH process, though with all 2016, 2017 and 2018
     
     processed_eventsSignalMC_vbf = ak.from_parquet(load_path)
     print(f"qqH yield: {np.sum(processed_eventsSignalMC_vbf.wgt_nominal)}")
@@ -1749,6 +1896,15 @@ if __name__ == "__main__":
     roo_histData_subCat0_vbf_signal = rt.RooDataHist("subCat0_vbf_rooHist_signal", "subCat0_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat0_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat0_vbf_signal = roo_histData_subCat0_vbf_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat0"],
+        "dataset": ["VBF"], 
+        "yield": [data_subCat0_vbf_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
 
     # define normalization value from signal MC event weights 
     flat_MC_SF = 1.00
@@ -1775,6 +1931,15 @@ if __name__ == "__main__":
     roo_histData_subCat1_vbf_signal = rt.RooDataHist("subCat1_vbf_rooHist_signal", "subCat1_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat1_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat1_vbf_signal = roo_histData_subCat1_vbf_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat1"],
+        "dataset": ["VBF"], 
+        "yield": [data_subCat1_vbf_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
 
     # define normalization value from signal MC event weights 
     
@@ -1800,6 +1965,15 @@ if __name__ == "__main__":
     roo_histData_subCat2_vbf_signal = rt.RooDataHist("subCat2_vbf_rooHist_signal", "subCat2_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat2_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat2_vbf_signal = roo_histData_subCat2_vbf_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat2"],
+        "dataset": ["VBF"], 
+        "yield": [data_subCat2_vbf_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
 
     # define normalization value from signal MC event weights 
     
@@ -1825,6 +1999,15 @@ if __name__ == "__main__":
     roo_histData_subCat3_vbf_signal = rt.RooDataHist("subCat3_vbf_rooHist_signal", "subCat3_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat3_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat3_vbf_signal = roo_histData_subCat3_vbf_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat3"],
+        "dataset": ["VBF"], 
+        "yield": [data_subCat3_vbf_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
 
     # define normalization value from signal MC event weights 
     
@@ -1850,6 +2033,16 @@ if __name__ == "__main__":
     roo_histData_subCat4_vbf_signal = rt.RooDataHist("subCat4_vbf_rooHist_signal", "subCat4_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat4_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat4_vbf_signal = roo_histData_subCat4_vbf_signal
+    # add yield
+    new_row = {
+        "year": [args.year],
+        "category": ["cat4"],
+        "dataset": ["VBF"], 
+        "yield": [data_subCat4_vbf_signal.sumEntries()]
+    }
+    new_row = pd.DataFrame(new_row)
+    yield_df = pd.concat([yield_df, new_row], ignore_index=True)
+    print(f"yield_df after VBF: \n {yield_df}")
 
     # define normalization value from signal MC event weights 
     
@@ -1863,8 +2056,10 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # subCat 0
-    _ = signal_subCat0_vbf.fitTo(data_subCat0_vbf_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat0_vbf.fitTo(data_subCat0_vbf_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat0_vbf.fitTo(data_subCat0_vbf_signal,  EvalBackend=device, Save=True, )
+    # fit_result = signal_subCat0_vbf.fitTo(data_subCat0_vbf_signal,  EvalBackend=device, Save=True, )
+    _ = signal_subCat0_vbf.fitTo(data_subCat0_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat0_vbf.fitTo(data_subCat0_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1877,8 +2072,10 @@ if __name__ == "__main__":
 
 
     # subCat 1
-    _ = signal_subCat1_vbf.fitTo(data_subCat1_vbf_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat1_vbf.fitTo(data_subCat1_vbf_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat1_vbf.fitTo(data_subCat1_vbf_signal,  EvalBackend=device, Save=True, )
+    # fit_result = signal_subCat1_vbf.fitTo(data_subCat1_vbf_signal,  EvalBackend=device, Save=True, )
+    _ = signal_subCat1_vbf.fitTo(data_subCat1_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat1_vbf.fitTo(data_subCat1_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1892,8 +2089,10 @@ if __name__ == "__main__":
 
 
     # subCat 2
-    _ = signal_subCat2_vbf.fitTo(data_subCat2_vbf_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat2_vbf.fitTo(data_subCat2_vbf_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat2_vbf.fitTo(data_subCat2_vbf_signal,  EvalBackend=device, Save=True, )
+    # fit_result = signal_subCat2_vbf.fitTo(data_subCat2_vbf_signal,  EvalBackend=device, Save=True, )
+    _ = signal_subCat2_vbf.fitTo(data_subCat2_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat2_vbf.fitTo(data_subCat2_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1907,8 +2106,10 @@ if __name__ == "__main__":
 
     
     # subCat 3
-    _ = signal_subCat3_vbf.fitTo(data_subCat3_vbf_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat3_vbf.fitTo(data_subCat3_vbf_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat3_vbf.fitTo(data_subCat3_vbf_signal,  EvalBackend=device, Save=True, )
+    # fit_result = signal_subCat3_vbf.fitTo(data_subCat3_vbf_signal,  EvalBackend=device, Save=True, )
+    _ = signal_subCat3_vbf.fitTo(data_subCat3_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat3_vbf.fitTo(data_subCat3_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1926,8 +2127,10 @@ if __name__ == "__main__":
 
 
     # subCat 4
-    _ = signal_subCat4_vbf.fitTo(data_subCat4_vbf_signal,  EvalBackend=device, Save=True, )
-    fit_result = signal_subCat4_vbf.fitTo(data_subCat4_vbf_signal,  EvalBackend=device, Save=True, )
+    # _ = signal_subCat4_vbf.fitTo(data_subCat4_vbf_signal,  EvalBackend=device, Save=True, )
+    # fit_result = signal_subCat4_vbf.fitTo(data_subCat4_vbf_signal,  EvalBackend=device, Save=True, )
+    _ = signal_subCat4_vbf.fitTo(data_subCat4_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat4_vbf.fitTo(data_subCat4_vbf_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # if fit_result is not None:
         # fit_result.Print()
 
@@ -1938,21 +2141,34 @@ if __name__ == "__main__":
     alpha2_subCat4_vbf.setConstant(True)
     n2_subCat4_vbf.setConstant(True)
 
-    
+
+    base_path = f"./validation/figs/{args.year}/{args.label}"
+    # plot_save_path = f"./validation/figs/{args.year}"
+    plot_save_path = base_path
+    if not os.path.exists(plot_save_path):
+        os.makedirs(plot_save_path)
+        
+    # -------------------------------------------------------------------------
+    # Save yield_df
+    # -------------------------------------------------------------------------
+    summed_values = yield_df.groupby("dataset", as_index=False)["yield"].sum()
+    summed_values["year"] = args.year
+    summed_values["category"] = "combined"
+    yield_df = pd.concat([yield_df, summed_values], ignore_index=True)
+    # print(f"yield_df after all: \n {yield_df}")
+    yield_df = yield_df.sort_values(by=["dataset", "category"], ascending=[False, True])
+    yield_df.to_csv(f"{base_path}/yield_df.csv")
     
     # -------------------------------------------------------------------------
     # Plotting
     # -------------------------------------------------------------------------
-
-    plot_save_path = f"./validation/figs/{args.year}"
-    if not os.path.exists(plot_save_path):
-        os.makedirs(plot_save_path)
+    
     # -------------------------------------------------------------------------
     # do signal ggH plotting with fit and data
     # -------------------------------------------------------------------------
     
     # subCat 0
-    
+    print(f"data_subCat0_signal.sumEntries(): {data_subCat0_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -1967,13 +2183,14 @@ if __name__ == "__main__":
     
     frame.Draw()
     legend.Draw()
+        
     
     canvas.Update()
     canvas.Draw()
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat0.pdf")
 
     # subCat 1
-    
+    print(f"data_subCat1_signal.sumEntries(): {data_subCat1_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -1994,7 +2211,7 @@ if __name__ == "__main__":
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat1.pdf")
 
     # subCat 2
-    
+    print(f"data_subCat2_signal.sumEntries(): {data_subCat2_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -2015,7 +2232,7 @@ if __name__ == "__main__":
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat2.pdf")
 
     # subCat 3
-    
+    print(f"data_subCat3_signal.sumEntries(): {data_subCat3_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -2036,7 +2253,7 @@ if __name__ == "__main__":
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat3.pdf")
 
     # subCat 4
-    
+    print(f"data_subCat4_signal.sumEntries(): {data_subCat4_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -2061,7 +2278,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
     
     # subCat 0
-    
+    print(f"data_subCat0_vbf_signal.sumEntries(): {data_subCat0_vbf_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -2082,7 +2299,7 @@ if __name__ == "__main__":
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat0_vbf.pdf")
 
     # subCat 1
-    
+    print(f"data_subCat1_vbf_signal.sumEntries(): {data_subCat1_vbf_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -2103,7 +2320,7 @@ if __name__ == "__main__":
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat1_vbf.pdf")
 
     # subCat 2
-    
+    print(f"data_subCat2_vbf_signal.sumEntries(): {data_subCat2_vbf_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -2124,7 +2341,7 @@ if __name__ == "__main__":
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat2_vbf.pdf")
 
     # subCat 3
-    
+    print(f"data_subCat3_vbf_signal.sumEntries(): {data_subCat3_vbf_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -2145,7 +2362,7 @@ if __name__ == "__main__":
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat3_vbf.pdf")
 
     # subCat 4
-    
+    print(f"data_subCat4_vbf_signal.sumEntries(): {data_subCat4_vbf_signal.sumEntries()}")
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
@@ -2168,7 +2385,10 @@ if __name__ == "__main__":
     # ---------------------------------------------------
     # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
-    workspace_path = "./workspaces"
+    # workspace_path = "./workspaces"
+    workspace_path = f"{base_path}/workspaces"
+    if not os.path.exists(workspace_path):
+        os.makedirs(workspace_path)
 
 
     # unfreeze the hmm sigma and peak b4 saving
