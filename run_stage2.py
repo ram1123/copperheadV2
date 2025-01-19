@@ -6,7 +6,7 @@ from distributed import Client
 from omegaconf import OmegaConf
 
 from typing import Tuple, List, Dict
-import ROOT as rt
+# import ROOT as rt
 import glob, os
 
 from src.lib.MVA_functions import prepare_features, evaluate_bdt, evaluate_dnn
@@ -14,6 +14,24 @@ import argparse
 import time
 import sys, inspect
 import configs.categories.category_cuts as category_cuts
+import json
+
+
+def prepare_features(events, features, variation="nominal"):
+    features_var = []
+    for trf in features:
+        if "soft" in trf:
+            variation_current = "nominal"
+        else:
+            variation_current = variation
+        
+        if f"{trf}_{variation_current}" in events.fields:
+            features_var.append(f"{trf}_{variation_current}")
+        elif trf in events.fields:
+            features_var.append(trf)
+        else:
+            print(f"Variable {trf} not found in training dataframe!")
+    return features_var
 
 def renameFieldsToV2(events):
     V2_fields = [
@@ -102,7 +120,7 @@ def getDeltaPhi(phi1,phi2):
     dphi = abs(np.mod(phi1 - phi2 + np.pi, 2 * np.pi) - np.pi)
     return dphi
         
-def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
+def process4gghCategory(events: ak.Record, year:str, model_name:str) -> ak.Record:
     """
     Takes the given stage1 output, runs MVA, and returns a new 
     ak.Record with MVA score + relevant info from stage1 output
@@ -117,19 +135,19 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     # events["dimuon_pt_log"] = np.log(events.dimuon_pt)
     # events["jj_mass_log"] = np.log(events.jj_mass)
 
-    # recalculate BDT variables that you're not certain is up to date from stage 1
-    min_dEta_filter  = ak.fill_none((events.mmj1_dEta < events.mmj2_dEta), value=True)
-    events["mmj_min_dEta"]  = ak.where(
-        min_dEta_filter,
-        events.mmj1_dEta,
-        events.mmj2_dEta,
-    )
-    min_dPhi_filter = ak.fill_none((events.mmj1_dPhi < events.mmj2_dPhi), value=True)
-    events["mmj_min_dPhi"] = ak.where(
-        min_dPhi_filter,
-        events.mmj1_dPhi,
-        events.mmj2_dPhi,
-    )
+    # # recalculate BDT variables that you're not certain is up to date from stage 1
+    # min_dEta_filter  = ak.fill_none((events.mmj1_dEta < events.mmj2_dEta), value=True)
+    # events["mmj_min_dEta"]  = ak.where(
+    #     min_dEta_filter,
+    #     events.mmj1_dEta,
+    #     events.mmj2_dEta,
+    # )
+    # min_dPhi_filter = ak.fill_none((events.mmj1_dPhi < events.mmj2_dPhi), value=True)
+    # events["mmj_min_dPhi"] = ak.where(
+    #     min_dPhi_filter,
+    #     events.mmj1_dPhi,
+    #     events.mmj2_dPhi,
+    # )
     # events["jj_dPhi"] = getDeltaPhi(events.jet1_phi, events.jet2_phi)
     
 
@@ -197,13 +215,23 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
             'mmj_min_dPhi', 
             'njets'
         ],
+        "phifixedBDT" : ['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'],
     }
     
-    model_name = "WgtON_original_AN_BDT_Sept27"
+    # model_name = "WgtON_original_AN_BDT_Sept27"
     # model_name = "WgtON_original_AN_BDT_noDimuRap_Sept27"
+    # model_name = "phifixedBDT"
 
-    training_features = train_feat_dict[model_name]
-    print(f"len(training_features): {len(training_features)}")
+    # training_features = train_feat_dict[model_name]
+    # print(f"len(training_features): {len(training_features)}")
+
+
+    # f"/work/users/yun79/Run2_MVA_trainer/output/bdt_V2_UL_Jan18_2025_2017/training_features.json"
+    model_path = f"/work/users/yun79/Run2_MVA_trainer/output/bdt_{model_name}_{year}"
+    training_feat_path = f"{model_path}/training_features.json"
+    print(f"trainig_feat_path: {training_feat_path}")
+    with open(training_feat_path, 'r') as file:
+        training_features = json.load(file)
 
     # load training features from the ak.Record
     for training_feature in training_features:
@@ -215,21 +243,22 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     # ----------------------------------
    
     # load fields to load
-    fields2load = training_features + [
-        # "h_peak", "h_sidebands", 
-        "nBtagLoose", "nBtagMedium", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"] #, "event"
+    fields2load = ["nBtagLoose", "nBtagMedium", "dimuon_mass", "wgt_nominal", "mmj2_dEta", "mmj2_dPhi", "event"]
+    fields2load = prepare_features(events, fields2load) # add variation to the name
+    fields2load = list(set(fields2load + training_features)) # remove redundant fields
+
+    print(f"fields2load: {fields2load}")
+
     # load data to memory using compute()
     # original start -------------------------------
-    # events = ak.zip({
-    #     field : events[field] for field in fields2load
-    # }).compute()
+    events = ak.zip({
+        field : events[field] for field in fields2load
+    }).compute()
     # original end -------------------------------
 
     # filter events for ggH category
-    # region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
-    # region = events.h_peak | events.h_sidebands 
     dimuon_mass = events.dimuon_mass
-    region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
+    region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0) # signal region
     category_str = "ggh"
     cut_names = getCategoryCutNames(category_str)
     gghCat_selection = (
@@ -247,15 +276,22 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
             none_val = 0.0
         events[field] = ak.fill_none(events[field], value=none_val)
     print(f"process4gghCategory year: {year}")
-    if year == "2016": # I didn't train a separate BDT for rereco eras
+    if year == "2016_RERECO": # I didn't train a separate BDT for rereco eras
+        year_param = "2016preVFP"
+    elif "RERECO" in year: # ie 2017_RERECO
+        year_param = year.replace("_RERECO", "")
+    elif year == "2016postVFP": # temporary condition bc I couldn't train 2016postVFP yet
         year_param = "2016preVFP"
     else:
         year_param = year
     parameters = {
-    # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/"
+    # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/",
+        # 
         # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_final_2018/",
         # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_WgtOff_includeQGL_2018/",
-        "models_path" : f"/depot/cms/users/yun79/hmm/trained_MVAs/bdt_{model_name}_{year}/",
+        # "models_path" : f"/depot/cms/users/yun79/hmm/trained_MVAs/bdt_{model_name}_{year_param}/",
+        "models_path" : f"/depot/cms/users/yun79/hmm/trained_MVAs/bdt_{model_name}_{year_param}",
+        # "models_path" : model_path,
         "year" : year_param,
     }
     print(f"parameters models path: {parameters['models_path']}")
@@ -264,70 +300,26 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     # load BDT score edges for subcategory divison
     BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
     edges = OmegaConf.load(BDTedges_load_path)
-    edges = np.array(edges[year])
+    edges = np.array(edges[year_param])
     # edges = 1-edges
     print(f"subCat BDT edges: {edges}")
 
-    # Calculate the subCategory index 
-    # original start --------------------------------------------------------------
-    # BDT_score = processed_events["BDT_score"]
-    # print(f"BDT_score :{BDT_score}")
-    # n_edges = len(edges)
-    # BDT_score_repeat = ak.concatenate([BDT_score[:,np.newaxis] for i in range(n_edges)], axis=1)
-    # # BDT_score_repeat
-    # n_rows = len(BDT_score_repeat)
-    # edges_repeat = np.repeat(edges[np.newaxis,:],n_rows,axis=0)
-    # # edges_repeat.shape
-    # edge_idx = ak.sum( (BDT_score_repeat >= edges_repeat), axis=1)
-    # # edge_idx = ak.sum( (BDT_score_repeat <= edges_repeat), axis=1)
-    # subCat_idx =  edge_idx - 1 # sub category index starts at zero
-    # print(f"subCat_idx: {subCat_idx}")
-    # processed_events["subCategory_idx"] = subCat_idx
-    # original end -----------------------------------------------------------------
-
-    # new start --------------------------------------------------------------
     BDT_score = processed_events["BDT_score"]
-    print(f"BDT_score :{BDT_score}")
-    print(f"ak.max(BDT_score) :{ak.max(BDT_score)}")
-    print(f"ak.min(BDT_score) :{ak.min(BDT_score)}")
-    subCat_idx = -1*ak.ones_like(BDT_score)
-    for i in range(len(edges) - 1):
-        lo = edges[i]
-        hi = edges[i + 1]
-        cut = (BDT_score > lo) & (BDT_score <= hi)
-        # cut = (BDT_score <= lo) & (BDT_score > hi)
-        subCat_idx = ak.where(cut, i, subCat_idx)
-    # print(f"subCat_idx: {subCat_idx}")
-    # test if any remain has -1 value
-    print(f"ak.sum(subCat_idx==-1): {ak.sum(subCat_idx==-1)}")
+    subCat_idx = np.digitize(BDT_score, edges) -1 # digitize starts at one, not zero
     processed_events["subCategory_idx"] = subCat_idx
-    # new end -----------------------------------------------------------------
 
-    # add subcat idx if using validation scores
-    BDT_score = processed_events["BDT_score_val"]
-    subCat_idx = -1*ak.ones_like(BDT_score)
-    for i in range(len(edges) - 1):
-        lo = edges[i]
-        hi = edges[i + 1]
-        cut = (BDT_score > lo) & (BDT_score <= hi)
-        # cut = (BDT_score <= lo) & (BDT_score > hi)
-        subCat_idx = ak.where(cut, i, subCat_idx)
-    # print(f"subCat_idx: {subCat_idx}")
-    # test if any remain has -1 value
-    print(f"val ak.sum(subCat_idx==-1): {ak.sum(subCat_idx==-1)}")
-    processed_events["subCategory_idx_val"] = subCat_idx
     
     # filter in only the variables you need to do stage3
     fields2save = [
         "dimuon_mass",
         "BDT_score", # eval fold
-        "BDT_score_val", # val fold
-        "BDT_score_train", # train fold
+        # "BDT_score_val", # val fold
+        # "BDT_score_train", # train fold
         "subCategory_idx", # eval fold
-        "subCategory_idx_val", # val fold
-        "wgt_nominal_total",
-        "h_peak",
-        "h_sidebands",
+        # "subCategory_idx_val", # val fold
+        "wgt_nominal",
+        # "h_peak",
+        # "h_sidebands",
         "event", # This is not strictly necessary
     ]
     
@@ -336,158 +328,160 @@ def process4gghCategory(events: ak.Record, year:str) -> ak.Record:
     })
     return processed_events
 
-def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
-    """
-    Takes the given stage1 output, runs MVA, and returns a new 
-    ak.Record with MVA score + relevant info from stage1 output
-    for VBF category
+# def process4vbfCategory(events: ak.Record, variation="nominal") -> ak.Record:
+#     """
+#     Takes the given stage1 output, runs MVA, and returns a new 
+#     ak.Record with MVA score + relevant info from stage1 output
+#     for VBF category
 
-    Params
-    ------------------------------------------------------------
-    events: ak.Record of stage1 output
-    """
-    # load and obtain MVA outputs
-    events["dimuon_dEta"] = np.abs(events.mu1_pt - events.mu2_pt)
-    events["dimuon_pt_log"] = np.log(events.dimuon_pt)
-    events["jj_mass_log"] = np.log(events.jj_mass)
-    events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
-    events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
-    events["dimuon_ebe_mass_res_rel"] = events.dimuon_ebe_mass_res / events.dimuon_mass
-    events["rpt"] = events.mmjj_pt / (events.dimuon_pt + events.jet1_pt + events.jet2_pt)# as of writing this code, rpt variable is calculated, but not saved during stage1
-    print("Warning find a way to fix the year thing")
-    raise ValueError
-    events["year"] = ak.ones_like(events.mu1_pt)* 2018
+#     Params
+#     ------------------------------------------------------------
+#     events: ak.Record of stage1 output
+#     """
+#     # load and obtain MVA outputs
+#     events["dimuon_dEta"] = np.abs(events.mu1_pt - events.mu2_pt)
+#     events["dimuon_pt_log"] = np.log(events.dimuon_pt)
+#     events["jj_mass_log"] = np.log(events.jj_mass)
+#     events["mu1_pt_over_mass"] = events.mu1_pt / events.dimuon_mass
+#     events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
+#     events["dimuon_ebe_mass_res_rel"] = events.dimuon_ebe_mass_res / events.dimuon_mass
+#     events["rpt"] = events.mmjj_pt / (events.dimuon_pt + events.jet1_pt + events.jet2_pt)# as of writing this code, rpt variable is calculated, but not saved during stage1
+#     print("Warning find a way to fix the year thing")
+#     raise ValueError
+#     events["year"] = ak.ones_like(events.mu1_pt)* 2018
 
-    # original start --------------------------------------
-    # training_features = [
-    #     "dimuon_mass",
-    #     "dimuon_pt",
-    #     "dimuon_pt_log",
-    #     "dimuon_eta",
-    #     "dimuon_ebe_mass_res",
-    #     "dimuon_ebe_mass_res_rel",
-    #     "dimuon_cos_theta_cs",
-    #     "dimuon_phi_cs",
-    #     # "dimuon_pisa_mass_res",
-    #     # "dimuon_pisa_mass_res_rel",
-    #     # "dimuon_cos_theta_cs_pisa",
-    #     # "dimuon_phi_cs_pisa",
-    #     "jet1_pt",
-    #     "jet1_eta",
-    #     "jet1_phi",
-    #     "jet1_qgl",
-    #     "jet2_pt",
-    #     "jet2_eta",
-    #     "jet2_phi",
-    #     "jet2_qgl",
-    #     "jj_mass",
-    #     "jj_mass_log",
-    #     "jj_dEta",
-    #     "rpt",
-    #     "ll_zstar_log",
-    #     "mmj_min_dEta",
-    #     "nsoftjets5",
-    #     "htsoft2",
-    # ]
-    # model_name = "PhiFixedVBF"
-    # original end --------------------------------------
+#     # original start --------------------------------------
+#     # training_features = [
+#     #     "dimuon_mass",
+#     #     "dimuon_pt",
+#     #     "dimuon_pt_log",
+#     #     "dimuon_eta",
+#     #     "dimuon_ebe_mass_res",
+#     #     "dimuon_ebe_mass_res_rel",
+#     #     "dimuon_cos_theta_cs",
+#     #     "dimuon_phi_cs",
+#     #     # "dimuon_pisa_mass_res",
+#     #     # "dimuon_pisa_mass_res_rel",
+#     #     # "dimuon_cos_theta_cs_pisa",
+#     #     # "dimuon_phi_cs_pisa",
+#     #     "jet1_pt",
+#     #     "jet1_eta",
+#     #     "jet1_phi",
+#     #     "jet1_qgl",
+#     #     "jet2_pt",
+#     #     "jet2_eta",
+#     #     "jet2_phi",
+#     #     "jet2_qgl",
+#     #     "jj_mass",
+#     #     "jj_mass_log",
+#     #     "jj_dEta",
+#     #     "rpt",
+#     #     "ll_zstar_log",
+#     #     "mmj_min_dEta",
+#     #     "nsoftjets5",
+#     #     "htsoft2",
+#     # ]
+#     # model_name = "PhiFixedVBF"
+#     # original end --------------------------------------
 
-    # teset start ----------------------------------
-    training_features = [
-        "dimuon_mass",
-        "dimuon_pt",
-        "dimuon_pt_log",
-        "dimuon_eta",
-        "dimuon_ebe_mass_res",
-        "dimuon_ebe_mass_res_rel",
-        "dimuon_cos_theta_cs",
-        "dimuon_phi_cs",
-        "jet1_pt",
-        "jet1_eta",
-        "jet1_phi",
-        "jet1_qgl",
-        "jet2_pt",
-        "jet2_eta",
-        "jet2_phi",
-        "jet2_qgl",
-        "jj_mass",
-        "jj_mass_log",
-        "jj_dEta",
-        "rpt",
-        "ll_zstar_log",
-        "mmj_min_dEta",
-        "nsoftjets5",
-        "htsoft2",
-        "year",
-    ]
-    model_name = "pytorch_jun27"
-    # test end --------------------------------------
-    len(training_features)
-    # load training features from the ak.Record
-    for training_feature in training_features:
-        if training_feature not in events.fields:
-            print(f"mssing feature: {training_feature}")
+#     # teset start ----------------------------------
+#     training_features = [
+#         "dimuon_mass",
+#         "dimuon_pt",
+#         "dimuon_pt_log",
+#         "dimuon_eta",
+#         "dimuon_ebe_mass_res",
+#         "dimuon_ebe_mass_res_rel",
+#         "dimuon_cos_theta_cs",
+#         "dimuon_phi_cs",
+#         "jet1_pt",
+#         "jet1_eta",
+#         "jet1_phi",
+#         "jet1_qgl",
+#         "jet2_pt",
+#         "jet2_eta",
+#         "jet2_phi",
+#         "jet2_qgl",
+#         "jj_mass",
+#         "jj_mass_log",
+#         "jj_dEta",
+#         "rpt",
+#         "ll_zstar_log",
+#         "mmj_min_dEta",
+#         "nsoftjets5",
+#         "htsoft2",
+#         "year",
+#     ]
+#     model_name = "pytorch_jun27"
+#     # test end --------------------------------------
+#     len(training_features)
+#     # load training features from the ak.Record
+#     for training_feature in training_features:
+#         if training_feature not in events.fields:
+#             print(f"mssing feature: {training_feature}")
 
-    # ----------------------------------
-    # do preprocessing
-    # ----------------------------------
-    training_features = prepare_features(events,training_features, variation=variation, add_year=False)
-    # original start -----------------------------------------------------
-    fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "vbf_cut", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
-    # original end -----------------------------------------------------
+#     # ----------------------------------
+#     # do preprocessing
+#     # ----------------------------------
+#     training_features = prepare_features(events,training_features, variation=variation, add_year=False)
+#     # original start -----------------------------------------------------
+#     fields2load = training_features + ["h_peak", "h_sidebands", "nBtagLoose", "nBtagMedium", "vbf_cut", "dimuon_mass", "wgt_nominal_total", "mmj2_dEta", "mmj2_dPhi"]
+#     # original end -----------------------------------------------------
 
-    # temporary save everything start -----------------------------------------------
-    # fields2load = events.fields# temp overwrite to koeep everything
-    # temporary save everything end -----------------------------------------------
-    # load data to memory using compute()
-    events = ak.zip({
-        field : events[field] for field in fields2load
-    }).compute()
+#     # temporary save everything start -----------------------------------------------
+#     # fields2load = events.fields# temp overwrite to koeep everything
+#     # temporary save everything end -----------------------------------------------
 
-    # filter events for VBF category
-    region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
-    category_str = "vbf"
-    cut_names = getCategoryCutNames(category_str)
-    vbfCat_selection = (
-        categoryWrapperLoop(cut_names, events)
-        & region
-    )
+#     fields2load = list(set(fields2load)) # remove redundancies
+#     # load data to memory using compute()
+#     events = ak.zip({
+#         field : events[field] for field in fields2load
+#     }).compute()
+
+#     # filter events for VBF category
+#     region = (events.h_peak != 0) | (events.h_sidebands != 0) # signal region cut
+#     category_str = "vbf"
+#     cut_names = getCategoryCutNames(category_str)
+#     vbfCat_selection = (
+#         categoryWrapperLoop(cut_names, events)
+#         & region
+#     )
     
-    events = events[vbfCat_selection]
+#     events = events[vbfCat_selection]
     
-    # make sure to replace nans with -99.0 values   
-    none_val = -99.0
-    for field in events.fields:
-        events[field] = ak.fill_none(events[field], value= none_val)
+#     # make sure to replace nans with -99.0 values   
+#     none_val = -99.0
+#     for field in events.fields:
+#         events[field] = ak.fill_none(events[field], value= none_val)
 
-    parameters = {
-    # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/",
-        "models_path" : "/depot/cms/hmm/copperhead/trained_models/",
+#     parameters = {
+#     # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/",
+#         "models_path" : "/depot/cms/hmm/copperhead/trained_models/",
         
-    }
-    processed_events = evaluate_dnn(events, "nominal", model_name, training_features, parameters) 
-    # original start -----------------------------------------------------
-    # filter in only the variables you need to do stage3
-    fields2save = [
-        "dimuon_mass",
-        "dimuon_pt",
-        "DNN_score",
-        "DNN_score_sigmoid",
-        "wgt_nominal_total",
-        "h_peak",
-        "h_sidebands",
-    ]
-    fields2save += training_features # this line is for debugging
-    # original end -----------------------------------------------------
+#     }
+#     processed_events = evaluate_dnn(events, "nominal", model_name, training_features, parameters) 
+#     # original start -----------------------------------------------------
+#     # filter in only the variables you need to do stage3
+#     fields2save = [
+#         "dimuon_mass",
+#         "dimuon_pt",
+#         "DNN_score",
+#         "DNN_score_sigmoid",
+#         "wgt_nominal_total",
+#         "h_peak",
+#         "h_sidebands",
+#     ]
+#     fields2save += training_features # this line is for debugging
+#     # original end -----------------------------------------------------
 
-    # temporary save everything start -----------------------------------------------
-    # fields2save = fields2load
-    # temporary save everything end -----------------------------------------------
+#     # temporary save everything start -----------------------------------------------
+#     # fields2save = fields2load
+#     # temporary save everything end -----------------------------------------------
     
-    processed_events = ak.zip({
-        field : processed_events[field] for field in fields2save
-    })
-    return processed_events
+#     processed_events = ak.zip({
+#         field : processed_events[field] for field in fields2save
+#     })
+#     return processed_events
 
 
 if __name__ == "__main__":
@@ -517,6 +511,14 @@ if __name__ == "__main__":
     help="string value of year we are calculating",
     )
     parser.add_argument(
+    "-model",
+    "--model_name",
+    dest="model_name",
+    default="",
+    action="store",
+    help="MVA model name to load",
+    )
+    parser.add_argument(
     "-cat",
     "--category",
     dest="category",
@@ -543,7 +545,7 @@ if __name__ == "__main__":
     help="fraction value used in stage1. By default we assume it to be 1.0",
     )
     start_time = time.time()
-    client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
+    client =  Client(n_workers=20,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
@@ -559,22 +561,25 @@ if __name__ == "__main__":
         load_path = f"{args.load_path}/{args.year}/f1_0"
     else:
         frac_str = args.fraction.replace(".", "_")
-        # load_path = f"{args.load_path}/{args.year}/f{frac_str}"
-        load_path = f"{args.load_path}/{args.year}/"
+        load_path = f"{args.load_path}/{args.year}/f{frac_str}"
+        # load_path = f"{args.load_path}/{args.year}/"
     print(f"load_path: {load_path}")
     category = args.category.lower()
-    
+
+    print(f"args.samples: {args.samples}")
     for sample in args.samples:
         if sample.lower() == "data":
-            # full_load_path = load_path+f"/data_*/*/*.parquet" # original
+            full_load_path = load_path+f"/data_*/*/*.parquet" # original
             # altering to match copperheadV1's stasge1 output to work with copperheadV2
-            full_load_path = load_path+f"/data_*/*.parquet"
+            # full_load_path = load_path+f"/data_*/*.parquet"
             # full_load_path = load_path+f"/data_B/*.parquet"
             full_load_path = glob.glob(full_load_path)
         elif sample.lower() == "ggh":
-            full_load_path = load_path+f"/ggh_powheg/*/*.parquet"
+            full_load_path = load_path+f"/ggh_powhegPS/*/*.parquet"
+        elif sample.lower() == "ggh_amcps":
+            full_load_path = load_path+f"/ggh_amcPS/*/*.parquet"
         elif sample.lower() == "vbf":
-            full_load_path = load_path+f"/vbf_powheg/*/*.parquet"
+            full_load_path = load_path+f"/vbf_powheg_dipole/*/*.parquet"
         elif sample.lower() == "dy":
             full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
         elif sample.lower() == "ewk":
@@ -604,48 +609,49 @@ if __name__ == "__main__":
         # print(f"bkg_MC_filelist: {bkg_MC_filelist}")
         # print(f"sig_MC_filelist: {sig_MC_filelist}")
         # print(f"data_filelist: {data_filelist}")
-        
+        # print(f"full_load_path: {full_load_path}")
         events = dak.from_parquet(full_load_path)
+        
         # making so taht copperheadV1 results work start -------------------------------------------
-        fields2load = [
-            "jet1_pt_nominal",
-            'jet1_eta_nominal', 
-            'jet2_pt_nominal', 
-            'mmj1_dEta_nominal', 
-            'mmj1_dPhi_nominal',  
-            'jj_dEta_nominal', 
-            'jj_dPhi_nominal', 
-            'jj_mass_nominal', 
-            'zeppenfeld_nominal', 
-            'mmj_min_dEta_nominal', 
-            'mmj_min_dPhi_nominal', 
-            'njets_nominal',
-            "nBtagLoose_nominal",
-            "nBtagMedium_nominal",
-            "mmj2_dEta_nominal",
-            "mmj2_dPhi_nominal",
-            "wgt_nominal",
-            'dimuon_mass', 
-            'dimuon_pt', 
-            'dimuon_eta', 
-            'dimuon_cos_theta_cs', 
-            'dimuon_phi_cs', 
-            'mu1_pt_over_mass', 
-            'mu1_eta', 
-            'mu2_pt_over_mass', 
-            'mu2_eta', 
-            'zeppenfeld_nominal', 
-        ]
-        events = ak.zip({
-            field : events[field] for field in fields2load
-        }).compute()
-        events = renameFieldsToV2(events)
+        # fields2load = [
+        #     "jet1_pt_nominal",
+        #     'jet1_eta_nominal', 
+        #     'jet2_pt_nominal', 
+        #     'mmj1_dEta_nominal', 
+        #     'mmj1_dPhi_nominal',  
+        #     'jj_dEta_nominal', 
+        #     'jj_dPhi_nominal', 
+        #     'jj_mass_nominal', 
+        #     'zeppenfeld_nominal', 
+        #     'mmj_min_dEta_nominal', 
+        #     'mmj_min_dPhi_nominal', 
+        #     'njets_nominal',
+        #     "nBtagLoose_nominal",
+        #     "nBtagMedium_nominal",
+        #     "mmj2_dEta_nominal",
+        #     "mmj2_dPhi_nominal",
+        #     "wgt_nominal",
+        #     'dimuon_mass', 
+        #     'dimuon_pt', 
+        #     'dimuon_eta', 
+        #     'dimuon_cos_theta_cs', 
+        #     'dimuon_phi_cs', 
+        #     'mu1_pt_over_mass', 
+        #     'mu1_eta', 
+        #     'mu2_pt_over_mass', 
+        #     'mu2_eta', 
+        #     'zeppenfeld_nominal', 
+        # ]
+        # events = ak.zip({
+        #     field : events[field] for field in fields2load
+        # }).compute()
+        # events = renameFieldsToV2(events)
         # making so taht copperheadV1 results work end -------------------------------------------
         
         
         print("done loading events!")
         if category == "ggh":
-            processed_events = process4gghCategory(events, args.year)      
+            processed_events = process4gghCategory(events, args.year, args.model_name)      
         elif category == "vbf":
             processed_events = process4vbfCategory(events) 
         else: 
@@ -662,6 +668,8 @@ if __name__ == "__main__":
             save_filename = f"{save_path}/processed_events_data.parquet"  
         elif sample.lower() == "ggh": # signal
             save_filename = f"{save_path}/processed_events_sigMC_ggh.parquet" 
+        elif sample.lower() == "ggh_amcps": # signal
+            save_filename = f"{save_path}/processed_events_sigMC_ggh_amcPS.parquet" 
         elif sample.lower() == "vbf": # signal
             save_filename = f"{save_path}/processed_events_sigMC_vbf.parquet" 
         elif sample.lower() == "dy":
