@@ -225,9 +225,14 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str) -> ak.Recor
     # training_features = train_feat_dict[model_name]
     # print(f"len(training_features): {len(training_features)}")
 
-
+    # temporary addition since I don't have 2016postVFP trained yet
+    if year == "2016postVFP":
+        year_param = "2016preVFP"
+    else:
+        year_param = year
+        
     # f"/work/users/yun79/Run2_MVA_trainer/output/bdt_V2_UL_Jan18_2025_2017/training_features.json"
-    model_path = f"/work/users/yun79/Run2_MVA_trainer/output/bdt_{model_name}_{year}"
+    model_path = f"/work/users/yun79/Run2_MVA_trainer/output/bdt_{model_name}_{year_param}"
     training_feat_path = f"{model_path}/training_features.json"
     print(f"trainig_feat_path: {training_feat_path}")
     with open(training_feat_path, 'r') as file:
@@ -300,7 +305,8 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str) -> ak.Recor
     # load BDT score edges for subcategory divison
     BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
     edges = OmegaConf.load(BDTedges_load_path)
-    edges = np.array(edges[year_param])
+    # edges = np.array(edges[year_param])
+    edges = np.array(edges[year])
     # edges = 1-edges
     print(f"subCat BDT edges: {edges}")
 
@@ -659,7 +665,8 @@ if __name__ == "__main__":
             raise ValueError
         # define save path and save
         # save_path = "/work/users/yun79/stage2_output/ggH/test"
-        save_path = f"{args.save_path}/{category}/{args.year}"
+        # save_path = f"{args.save_path}/{category}/{args.year}"
+        save_path = f"{args.save_path}/{args.year}"
         print(f"save_path: {save_path}")
         # make save path if it doesn't exist
         if not os.path.exists(save_path):

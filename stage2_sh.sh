@@ -21,13 +21,18 @@ model="V2_UL_Jan18_2025"
 # python stage2/ggH/calculate_score_edges.py -load $stage2_save_path --year $year 
 # python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
 
-year="2017"
+# year="2017"
+# python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
+# python stage2/ggH/calculate_score_edges.py -load $stage2_save_path --year $year 
+# python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
+
+
+year="2016postVFP"
 python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
 python stage2/ggH/calculate_score_edges.py -load $stage2_save_path --year $year 
 python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
 
-
-year="2016preVFP"
-python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
-python stage2/ggH/calculate_score_edges.py -load $stage2_save_path --year $year 
-python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
+# year="2016preVFP"
+# python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
+# python stage2/ggH/calculate_score_edges.py -load $stage2_save_path --year $year 
+# python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
