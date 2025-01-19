@@ -48,12 +48,15 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
 
     
 
-    # temporary definition of event bc I don't have it, and we need it for 4-fold method to work
-    if "event" not in df.fields:
-        print("Events not in Fields, using np arange instead")
-        df["event"] = np.arange(len(df.dimuon_pt))
+    # # temporary definition of event bc I don't have it, and we need it for 4-fold method to work
+    # if "event" not in df.fields:
+    #     print("Events not in Fields, using np arange instead")
+    #     df["event"] = np.arange(len(df.dimuon_pt))
     
-    features = prepare_features(df,training_features, variation=variation, add_year=False)
+    # features = prepare_features(df,training_features, variation=variation, add_year=False)
+    features = training_features
+
+    print(f"evaludate bdt features: {features}")
     # features = training_features
     #model = f"{model}_{parameters['years'][0]}"
     # score_name = f"score_{model}_{variation}"
@@ -72,13 +75,13 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         # eval_filter = df.event.mod(nfolds).isin(eval_folds)
         print(f"eval_folds: {eval_folds}")
         # print(f"eval_filter: {eval_filter}")
-        scalers_path = f"{parameters['models_path']}/{model}_{year}/scalers_{model}_{year}_{i}.npy"
-        # scalers_path = f"{parameters['models_path']}/scalers_{model}_{year}_{i}.npy"
-        print(f"scalers_path: {scalers_path}")
-        scalers = np.load(scalers_path, allow_pickle=True)
-        model_path = f"{parameters['models_path']}/{model}_{year}/{model}_{year}_{i}.pkl"
-        # model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
-
+        # scalers_path = f"{parameters['models_path']}/{model}_{year}/scalers_{model}_{year}_{i}.npy"
+        # print(f"scalers_path: {scalers_path}")
+        # scalers = np.load(scalers_path, allow_pickle=True)
+        # model_path = f"{parameters['models_path']}/{model}_{year}/{model}_{year}_{i}.pkl"
+        model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
+        # print(f"model_path: {model_path}")
+        
         bdt_model = pickle.load(open(model_path, "rb"))
         df_i = df[eval_filter]
         # print(f"df_i: {len(df_i)}")
@@ -88,10 +91,15 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         # print(f"scalers: {scalers.shape}")
         # print(f"df_i: {df_i}")
         df_i_feat = df_i[features]
+        # print(f"df_i_feat: {df_i_feat}")
+        # print(f"bdt_model.feature_names_in_: {bdt_model.feature_names_in_}")
+        # scale the features
         df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
         # print(f"df_i_feat: {df_i_feat.shape}")
-        df_i_feat = ak.Array(df_i_feat)
-        df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+        # df_i_feat = ak.Array(df_i_feat)
+        # df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
+
+        df_i_feat = ak.to_numpy(df_i_feat)
         if len(df_i_feat) > 0:
             print(f"model: {model}")
             prediction = np.array(
