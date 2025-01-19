@@ -214,7 +214,8 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list
         
         # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
         for ix in range(len(model_list)):
-            sig_hist = sigHist_list[ix]
+            # sig_hist = sigHist_list[ix]
+            sig_hist = sigHist_list[0]
             normalized_hist = normalizeRooHist(mass, sig_hist)
             normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True  )
             model = model_list[ix]
@@ -565,8 +566,8 @@ if __name__ == "__main__":
     coreSumExp_SubCat0 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
      
     name = "subCat0_SMF_sumExp"
-    # subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0]) # original
-    subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0_sumExp, a1_subCat0_sumExp, a3_subCat0_sumExp]) 
+    subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0]) # original
+    # subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0_sumExp, a1_subCat0_sumExp, a3_subCat0_sumExp]) 
 
 
     
@@ -583,14 +584,14 @@ if __name__ == "__main__":
     a1_subCat1_sumExp = rt.RooRealVar("a1_subCat1_sumExp", "a1_subCat1_sumExp", 0.5, -0.5, 0.5)
     
     name = "subCat1_SMF_sumExp"
-    # subCat1_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-    #                          [a0_subCat1, 
-    #                           a1_subCat1, 
-    #                          ])
     subCat1_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-                             [a0_subCat1_sumExp, 
-                              a1_subCat1_sumExp, 
+                             [a0_subCat1, 
+                              a1_subCat1, 
                              ])
+    # subCat1_SumExp_SMF = rt.RooChebychev(name, name, mass, 
+    #                          [a0_subCat1_sumExp, 
+    #                           a1_subCat1_sumExp, 
+    #                          ])
      
     # Construct the composite model
     name = "model_SubCat1_SMFxSumExp"
@@ -605,14 +606,14 @@ if __name__ == "__main__":
     a1_subCat2_sumExp = rt.RooRealVar("a1_subCat2_sumExp", "a1_subCat2_sumExp", 0.5, -0.5, 0.5)
     
     name = "subCat2_SMF_sumExp"
-    # subCat2_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-    #                          [a0_subCat2, 
-    #                           a1_subCat2, 
-    #                          ])
     subCat2_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-                             [a0_subCat2_sumExp, 
-                              a1_subCat2_sumExp, 
+                             [a0_subCat2, 
+                              a1_subCat2, 
                              ])
+    # subCat2_SumExp_SMF = rt.RooChebychev(name, name, mass, 
+    #                          [a0_subCat2_sumExp, 
+    #                           a1_subCat2_sumExp, 
+    #                          ])
     name = "model_SubCat2_SMFxSumExp"
     model_subCat2_sumExp = rt.RooProdPdf(name, name, [coreSumExp_SubCat2, subCat2_SumExp_SMF])    
 
@@ -625,14 +626,14 @@ if __name__ == "__main__":
     a1_subCat3_sumExp = rt.RooRealVar("a1_subCat3_sumExp", "a1_subCat3_sumExp", 0.5, -0.5, 0.5)
     
     name = "subCat3_SMF_sumExp"
-    # subCat3_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-    #                          [a0_subCat3, 
-    #                           a1_subCat3, 
-    #                          ])
     subCat3_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-                             [a0_subCat3_sumExp, 
-                              a1_subCat3_sumExp, 
+                             [a0_subCat3, 
+                              a1_subCat3, 
                              ])
+    # subCat3_SumExp_SMF = rt.RooChebychev(name, name, mass, 
+    #                          [a0_subCat3_sumExp, 
+    #                           a1_subCat3_sumExp, 
+    #                          ])
     name = "model_SubCat3_SMFxSumExp"
     model_subCat3_sumExp = rt.RooProdPdf(name, name, [coreSumExp_SubCat3, subCat3_SumExp_SMF])    
 
@@ -645,14 +646,14 @@ if __name__ == "__main__":
     a1_subCat4_sumExp = rt.RooRealVar("a1_subCat4_sumExp", "a1_subCat4_sumExp", 0.5, -0.5, 0.5)
     
     name = "subCat4_SMF_sumExp"
-    # subCat4_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-    #                          [a0_subCat4, 
-    #                           a1_subCat4, 
-    #                          ])
     subCat4_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-                             [a0_subCat4_sumExp, 
-                              a1_subCat4_sumExp, 
+                             [a0_subCat4, 
+                              a1_subCat4, 
                              ])
+    # subCat4_SumExp_SMF = rt.RooChebychev(name, name, mass, 
+    #                          [a0_subCat4_sumExp, 
+    #                           a1_subCat4_sumExp, 
+    #                          ])
     name = "model_SubCat4_SMFxSumExp"
     model_subCat4_sumExp = rt.RooProdPdf(name, name, [coreSumExp_SubCat4, subCat4_SumExp_SMF])    
      
@@ -1162,8 +1163,8 @@ if __name__ == "__main__":
 
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
     if args.year=="all":
-        # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh.parquet"
-        load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_amcPS.parquet"
+        load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh.parquet"
+        # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_amcPS.parquet"
     elif args.year=="2016only":
         load_path = f"{args.load_path}/{category}/2016*/processed_events_sigMC_ggh.parquet"
     else:
@@ -1171,7 +1172,7 @@ if __name__ == "__main__":
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC*.parquet"
     
     processed_eventsSignalMC = ak.from_parquet(load_path)
-    print(f"ggH yield: {np.sum(processed_eventsSignalMC.wgt_nominal_total)}")
+    print(f"ggH yield: {np.sum(processed_eventsSignalMC.wgt_nominal)}")
     print("signal events loaded")
     
     # ---------------------------------------------------
@@ -1223,7 +1224,7 @@ if __name__ == "__main__":
     # MH_subCat1 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     # MH_subCat1.setConstant(True) # this shouldn't change, I think
     # original end ------------------------------------------------------
-    MH_subCat1 = rt.RooRealVar("MH" , "MH", 124.853, 120,130) # matching AN
+    MH_subCat1 = MH_subCat0 
     
     # sigma_subCat1 = rt.RooRealVar("sigma_subCat1" , "sigma_subCat1", 2, .1, 4.0)
     # alpha1_subCat1 = rt.RooRealVar("alpha1_subCat1" , "alpha1_subCat1", 2, 0.01, 65)
@@ -1262,7 +1263,7 @@ if __name__ == "__main__":
     # MH_subCat2 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     # MH_subCat2.setConstant(True) # this shouldn't change, I think
     # original end ------------------------------------------------------
-    MH_subCat2 = rt.RooRealVar("MH" , "MH", 124.878, 120,130) # matching AN
+    MH_subCat2 = MH_subCat0 
     
     # sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 2, .1, 4.0)
     # alpha1_subCat2 = rt.RooRealVar("alpha1_subCat2" , "alpha1_subCat2", 2, 0.01, 65)
@@ -1301,7 +1302,7 @@ if __name__ == "__main__":
     # MH_subCat3 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     # MH_subCat3.setConstant(True) # this shouldn't change, I think
     # original end ------------------------------------------------------
-    MH_subCat3 = rt.RooRealVar("MH" , "MH", 124.894, 120,130) # matching AN
+    MH_subCat3 = MH_subCat0
     
 
     sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 0.1, .1, 10.0)
@@ -1341,7 +1342,7 @@ if __name__ == "__main__":
     # MH_subCat4 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     # MH_subCat4.setConstant(True) # this shouldn't change, I think
     # original end ------------------------------------------------------
-    MH_subCat4 = rt.RooRealVar("MH" , "MH", 124.901, 120,130) # matching AN
+    MH_subCat4 = MH_subCat0
     
     # sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 2, .1, 4.0)
     # alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 2, 0.01, 65)
@@ -1386,7 +1387,7 @@ if __name__ == "__main__":
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
     wgt_subCat0_SigMC = ak.to_numpy(
-        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+        processed_eventsSignalMC.wgt_nominal[subCat_filter]
     ) # weights
 
     # generate a weighted histogram 
@@ -1412,7 +1413,7 @@ if __name__ == "__main__":
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
     wgt_subCat1_SigMC = ak.to_numpy(
-        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+        processed_eventsSignalMC.wgt_nominal[subCat_filter]
     ) # weights
     
     # generate a weighted histogram 
@@ -1437,7 +1438,7 @@ if __name__ == "__main__":
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
     wgt_subCat2_SigMC = ak.to_numpy(
-        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+        processed_eventsSignalMC.wgt_nominal[subCat_filter]
     ) # weights
     
     # generate a weighted histogram 
@@ -1462,7 +1463,7 @@ if __name__ == "__main__":
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
     wgt_subCat3_SigMC = ak.to_numpy(
-        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+        processed_eventsSignalMC.wgt_nominal[subCat_filter]
     ) # weights
     
     # generate a weighted histogram 
@@ -1487,7 +1488,7 @@ if __name__ == "__main__":
         processed_eventsSignalMC.dimuon_mass[subCat_filter]
     ) # mass values
     wgt_subCat4_SigMC = ak.to_numpy(
-        processed_eventsSignalMC.wgt_nominal_total[subCat_filter]
+        processed_eventsSignalMC.wgt_nominal[subCat_filter]
     ) # weights
     
     # generate a weighted histogram 
@@ -1523,9 +1524,7 @@ if __name__ == "__main__":
     alpha2_subCat0.setConstant(True)
     n2_subCat0.setConstant(True)
 
-    # unfreeze the param for datacard
-    CMS_hmm_sigma_cat0_ggh.setConstant(False)
-    CMS_hmm_peak_cat0_ggh.setConstant(False)
+    
 
     # subCat 1
     _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, )
@@ -1540,9 +1539,7 @@ if __name__ == "__main__":
     alpha2_subCat1.setConstant(True)
     n2_subCat1.setConstant(True)
 
-    # unfreeze the param for datacard
-    CMS_hmm_sigma_cat1_ggh.setConstant(False)
-    CMS_hmm_peak_cat1_ggh.setConstant(False)
+    
 
     # subCat 2
     _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
@@ -1557,9 +1554,7 @@ if __name__ == "__main__":
     alpha2_subCat2.setConstant(True)
     n2_subCat2.setConstant(True)
 
-    # unfreeze the param for datacard
-    CMS_hmm_sigma_cat2_ggh.setConstant(False)
-    CMS_hmm_peak_cat2_ggh.setConstant(False)
+    
     
     # subCat 3
     _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
@@ -1579,9 +1574,6 @@ if __name__ == "__main__":
     # alpha2_subCat3.setConstant(False)
     # n2_subCat3.setConstant(False)
 
-    # unfreeze the param for datacard
-    CMS_hmm_sigma_cat3_ggh.setConstant(False)
-    CMS_hmm_peak_cat3_ggh.setConstant(False)
 
     # subCat 4
     _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
@@ -1596,9 +1588,357 @@ if __name__ == "__main__":
     alpha2_subCat4.setConstant(True)
     n2_subCat4.setConstant(True)
 
-    # unfreeze the param for datacard
-    CMS_hmm_sigma_cat4_ggh.setConstant(False)
-    CMS_hmm_peak_cat4_ggh.setConstant(False)
+    # ---------------------------------------------------
+    # Obtain signal MC events for VBF
+    # ---------------------------------------------------
+
+    # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
+    if args.year=="all":
+        load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_vbf.parquet"
+        # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_qqh_amcPS.parquet"
+    elif args.year=="2016only":
+        load_path = f"{args.load_path}/{category}/2016*/processed_events_sigMC_vbf.parquet"
+    else:
+        load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_vbf.parquet" # Fig 6.15 was only with qqH process, though with all 2016, 2017 and 2018
+    
+    processed_eventsSignalMC_vbf = ak.from_parquet(load_path)
+    print(f"qqH yield: {np.sum(processed_eventsSignalMC_vbf.wgt_nominal)}")
+    print("signal events loaded")
+    
+    # ---------------------------------------------------
+    # Define vbf signal model's Doubcl Crystal Ball PDF
+    # ---------------------------------------------------
+    
+    # subCat 0
+    
+    sigma_subCat0_vbf = rt.RooRealVar("sigma_subCat0_vbf" , "sigma_subCat0_vbf", 2, .1, 4.0)
+    alpha1_subCat0_vbf = rt.RooRealVar("alpha1_subCat0_vbf" , "alpha1_subCat0_vbf", 2, 0.01, 65)
+    n1_subCat0_vbf = rt.RooRealVar("n1_subCat0_vbf" , "n1_subCat0_vbf", 10, 0.01, 100)
+    alpha2_subCat0_vbf = rt.RooRealVar("alpha2_subCat0_vbf" , "alpha2_subCat0_vbf", 2.0, 0.01, 65)
+    n2_subCat0_vbf = rt.RooRealVar("n2_subCat0_vbf" , "n2_subCat0_vbf", 25, 0.01, 100)
+
+    # # temporary test
+    # sigma_subCat0_vbf.setConstant(True)
+    # alpha1_subCat0_vbf.setConstant(True)
+    # n1_subCat0_vbf.setConstant(True)
+    # alpha2_subCat0_vbf.setConstant(True)
+    # n2_subCat0_vbf.setConstant(True)
+    
+
+    qqH_cat0_ggh_fsigma = rt.RooFormulaVar("qqH_cat0_ggh_fsigma", "qqH_cat0_ggh_fsigma",'@0*(1+@1)',[sigma_subCat0_vbf, CMS_hmm_sigma_cat0_ggh])
+    qqH_cat0_ggh_fpeak = rt.RooFormulaVar("qqH_cat0_qqh_fpeak", "qqH_cat0_ggh_fpeak",'@0*(1+@1)',[MH_subCat0, CMS_hmm_peak_cat0_ggh])
+    
+    # n1_subCat0_vbf.setConstant(True) # freeze for stability
+    # n2_subCat0_vbf.setConstant(True) # freeze for stability
+    name = "signal_subCat0_vbf"
+    signal_subCat0_vbf = rt.RooCrystalBall(name,name,mass, qqH_cat0_ggh_fpeak, qqH_cat0_ggh_fsigma, alpha1_subCat0_vbf, n1_subCat0_vbf, alpha2_subCat0_vbf, n2_subCat0_vbf)
+
+    # subCat 1
+
+    
+    sigma_subCat1_vbf = rt.RooRealVar("sigma_subCat1_vbf" , "sigma_subCat1_vbf", 2, .1, 4.0)
+    alpha1_subCat1_vbf = rt.RooRealVar("alpha1_subCat1_vbf" , "alpha1_subCat1_vbf", 2, 0.01, 65)
+    n1_subCat1_vbf = rt.RooRealVar("n1_subCat1_vbf" , "n1_subCat1_vbf", 10, 0.01, 100)
+    alpha2_subCat1_vbf = rt.RooRealVar("alpha2_subCat1_vbf" , "alpha2_subCat1_vbf", 2.0, 0.01, 65)
+    n2_subCat1_vbf = rt.RooRealVar("n2_subCat1_vbf" , "n2_subCat1_vbf", 25, 0.01, 100)
+
+    # # temporary test
+    # sigma_subCat1_vbf.setConstant(True)
+    # alpha1_subCat1_vbf.setConstant(True)
+    # n1_subCat1_vbf.setConstant(True)
+    # alpha2_subCat1_vbf.setConstant(True)
+    # n2_subCat1_vbf.setConstant(True)
+    
+    qqH_cat1_ggh_fsigma = rt.RooFormulaVar("qqH_cat1_ggh_fsigma", "qqH_cat1_ggh_fsigma",'@0*(1+@1)',[sigma_subCat1_vbf, CMS_hmm_sigma_cat1_ggh])
+    qqH_cat1_ggh_fpeak = rt.RooFormulaVar("qqH_cat1_ggh_fpeak", "qqH_cat1_ggh_fpeak",'@0*(1+@1)',[MH_subCat1, CMS_hmm_peak_cat1_ggh])
+    
+    # n1_subCat1_vbf.setConstant(True) # freeze for stability
+    # n2_subCat1_vbf.setConstant(True) # freeze for stability
+    name = "signal_subCat1_vbf"
+    signal_subCat1_vbf = rt.RooCrystalBall(name,name,mass, qqH_cat1_ggh_fpeak, qqH_cat1_ggh_fsigma, alpha1_subCat1_vbf, n1_subCat1_vbf, alpha2_subCat1_vbf, n2_subCat1_vbf)
+
+    # subCat 2
+   
+    sigma_subCat2_vbf = rt.RooRealVar("sigma_subCat2_vbf" , "sigma_subCat2_vbf", 2, .1, 4.0)
+    alpha1_subCat2_vbf = rt.RooRealVar("alpha1_subCat2_vbf" , "alpha1_subCat2_vbf", 2, 0.01, 65)
+    n1_subCat2_vbf = rt.RooRealVar("n1_subCat2_vbf" , "n1_subCat2_vbf", 10, 0.01, 100)
+    alpha2_subCat2_vbf = rt.RooRealVar("alpha2_subCat2_vbf" , "alpha2_subCat2_vbf", 2.0, 0.01, 65)
+    n2_subCat2_vbf = rt.RooRealVar("n2_subCat2_vbf" , "n2_subCat2_vbf", 25, 0.01, 100)
+
+    # # temporary test
+    # sigma_subCat2_vbf.setConstant(True)
+    # alpha1_subCat2_vbf.setConstant(True)
+    # n1_subCat2_vbf.setConstant(True)
+    # alpha2_subCat2_vbf.setConstant(True)
+    # n2_subCat2_vbf.setConstant(True)
+
+    qqH_cat2_ggh_fsigma = rt.RooFormulaVar("qqH_cat2_ggh_fsigma", "qqH_cat2_ggh_fsigma",'@0*(1+@1)',[sigma_subCat2_vbf, CMS_hmm_sigma_cat2_ggh])
+    qqH_cat2_ggh_fpeak = rt.RooFormulaVar("qqH_cat2_ggh_fpeak", "qqH_cat2_ggh_fpeak",'@0*(1+@1)',[MH_subCat2, CMS_hmm_peak_cat2_ggh])
+    
+    # n1_subCat2_vbf.setConstant(True) # freeze for stability
+    # n2_subCat2_vbf.setConstant(True) # freeze for stability
+    name = "signal_subCat2_vbf"
+    signal_subCat2_vbf = rt.RooCrystalBall(name,name,mass, qqH_cat2_ggh_fpeak, qqH_cat2_ggh_fsigma, alpha1_subCat2_vbf, n1_subCat2_vbf, alpha2_subCat2_vbf, n2_subCat2_vbf)
+
+    # subCat 3
+
+    sigma_subCat3_vbf = rt.RooRealVar("sigma_subCat3_vbf" , "sigma_subCat3_vbf", 0.1, .1, 10.0)
+    alpha1_subCat3_vbf = rt.RooRealVar("alpha1_subCat3_vbf" , "alpha1_subCat3_vbf", 2, 0.01, 200)
+    n1_subCat3_vbf = rt.RooRealVar("n1_subCat3_vbf" , "n1_subCat3_vbf", 25, 0.01, 200)
+    alpha2_subCat3_vbf = rt.RooRealVar("alpha2_subCat3_vbf" , "alpha2_subCat3_vbf", 2, 0.01, 65)
+    n2_subCat3_vbf = rt.RooRealVar("n2_subCat3_vbf" , "n2_subCat3_vbf", 25, 0.01, 200)
+
+
+    # # temporary test
+    # sigma_subCat3_vbf.setConstant(True)
+    # alpha1_subCat3_vbf.setConstant(True)
+    # n1_subCat3_vbf.setConstant(True)
+    # alpha2_subCat3_vbf.setConstant(True)
+    # n2_subCat3_vbf.setConstant(True)
+
+    qqH_cat3_ggh_fsigma = rt.RooFormulaVar("qqH_cat3_ggh_fsigma", "qqH_cat3_ggh_fsigma",'@0*(1+@1)',[sigma_subCat3_vbf, CMS_hmm_sigma_cat3_ggh])
+    qqH_cat3_ggh_fpeak = rt.RooFormulaVar("qqH_cat3_ggh_fpeak", "qqH_cat3_ggh_fpeak",'@0*(1+@1)',[MH_subCat3, CMS_hmm_peak_cat3_ggh])
+    
+    # n1_subCat3_vbf.setConstant(True) # freeze for stability
+    # n2_subCat3_vbf.setConstant(True) # freeze for stability
+    name = "signal_subCat3_vbf"
+    signal_subCat3_vbf = rt.RooCrystalBall(name,name,mass, qqH_cat3_ggh_fpeak, qqH_cat3_ggh_fsigma, alpha1_subCat3_vbf, n1_subCat3_vbf, alpha2_subCat3_vbf, n2_subCat3_vbf)
+
+    # subCat 4
+    
+    sigma_subCat4_vbf = rt.RooRealVar("sigma_subCat4_vbf" , "sigma_subCat4_vbf", 2, .1, 4.0)
+    alpha1_subCat4_vbf = rt.RooRealVar("alpha1_subCat4_vbf" , "alpha1_subCat4_vbf", 2, 0.01, 65)
+    n1_subCat4_vbf = rt.RooRealVar("n1_subCat4_vbf" , "n1_subCat4_vbf", 10, 0.01, 100)
+    alpha2_subCat4_vbf = rt.RooRealVar("alpha2_subCat4_vbf" , "alpha2_subCat4_vbf", 2.0, 0.01, 65)
+    n2_subCat4_vbf = rt.RooRealVar("n2_subCat4_vbf" , "n2_subCat4_vbf", 25, 0.01, 100)
+
+
+    # # temporary test
+    # sigma_subCat4_vbf.setConstant(True)
+    # alpha1_subCat4_vbf.setConstant(True)
+    # n1_subCat4_vbf.setConstant(True)
+    # alpha2_subCat4_vbf.setConstant(True)
+    # n2_subCat4_vbf.setConstant(True)
+
+    qqH_cat4_ggh_fsigma = rt.RooFormulaVar("qqH_cat4_ggh_fsigma", "qqH_cat4_ggh_fsigma",'@0*(1+@1)',[sigma_subCat4_vbf, CMS_hmm_sigma_cat4_ggh])
+    qqH_cat4_ggh_fpeak = rt.RooFormulaVar("qqH_cat4_ggh_fpeak", "qqH_cat4_ggh_fpeak",'@0*(1+@1)',[MH_subCat4, CMS_hmm_peak_cat4_ggh])
+    
+    # n1_subCat4_vbf.setConstant(True) # freeze for stability
+    # n2_subCat4_vbf.setConstant(True) # freeze for stability
+    name = "signal_subCat4_vbf"
+    signal_subCat4_vbf = rt.RooCrystalBall(name,name,mass, qqH_cat4_ggh_fpeak, qqH_cat4_ggh_fsigma, alpha1_subCat4_vbf, n1_subCat4_vbf, alpha2_subCat4_vbf, n2_subCat4_vbf)
+    
+    
+    # ---------------------------------------------------
+    # Define signal MC samples to fit to for qqH
+    # ---------------------------------------------------
+
+    # subCat 0
+    subCat_filter = (processed_eventsSignalMC_vbf[subCatIdx_name] == 0)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC_vbf.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat0_vbf_SigMC = ak.to_numpy(
+        processed_eventsSignalMC_vbf.wgt_nominal[subCat_filter]
+    ) # weights
+
+    # generate a weighted histogram 
+    roo_histData_subCat0_vbf_signal = rt.TH1F("subCat0_vbf_rooHist_signal", "subCat0_vbf_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat0_vbf_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat0_vbf_SigMC) # fill the histograms with mass and weights 
+    roo_histData_subCat0_vbf_signal = rt.RooDataHist("subCat0_vbf_rooHist_signal", "subCat0_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat0_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
+    data_subCat0_vbf_signal = roo_histData_subCat0_vbf_signal
+
+    # define normalization value from signal MC event weights 
+    flat_MC_SF = 1.00
+    # flat_MC_SF = 0.92 # temporary flat SF to match my Data/MC agreement to that of AN's
+    norm_val = np.sum(wgt_subCat0_vbf_SigMC)* flat_MC_SF 
+    # norm_val = 254.528077 # quick test
+    sig_norm_subCat0_vbf = rt.RooRealVar(signal_subCat0_vbf.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat0_vbf norm_val: {norm_val}")
+    sig_norm_subCat0_vbf.setConstant(True)
+
+    # subCat 1
+    subCat_filter = (processed_eventsSignalMC_vbf[subCatIdx_name] == 1)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC_vbf.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat1_vbf_SigMC = ak.to_numpy(
+        processed_eventsSignalMC_vbf.wgt_nominal[subCat_filter]
+    ) # weights
+    
+    # generate a weighted histogram 
+    roo_histData_subCat1_vbf_signal = rt.TH1F("subCat1_vbf_rooHist_signal", "subCat1_vbf_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat1_vbf_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat1_vbf_SigMC) # fill the histograms with mass and weights 
+    roo_histData_subCat1_vbf_signal = rt.RooDataHist("subCat1_vbf_rooHist_signal", "subCat1_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat1_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
+    data_subCat1_vbf_signal = roo_histData_subCat1_vbf_signal
+
+    # define normalization value from signal MC event weights 
+    
+    norm_val = np.sum(wgt_subCat1_vbf_SigMC)* flat_MC_SF
+    # norm_val = 295.214 # quick test
+    sig_norm_subCat1_vbf = rt.RooRealVar(signal_subCat1_vbf.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat1_vbf norm_val: {norm_val}")
+    sig_norm_subCat1_vbf.setConstant(True)
+
+    # subCat 2
+    subCat_filter = (processed_eventsSignalMC_vbf[subCatIdx_name] == 2)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC_vbf.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat2_vbf_SigMC = ak.to_numpy(
+        processed_eventsSignalMC_vbf.wgt_nominal[subCat_filter]
+    ) # weights
+    
+    # generate a weighted histogram 
+    roo_histData_subCat2_vbf_signal = rt.TH1F("subCat2_vbf_rooHist_signal", "subCat2_vbf_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat2_vbf_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat2_vbf_SigMC) # fill the histograms with mass and weights 
+    roo_histData_subCat2_vbf_signal = rt.RooDataHist("subCat2_vbf_rooHist_signal", "subCat2_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat2_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
+    data_subCat2_vbf_signal = roo_histData_subCat2_vbf_signal
+
+    # define normalization value from signal MC event weights 
+    
+    norm_val = np.sum(wgt_subCat2_vbf_SigMC) * flat_MC_SF
+    # norm_val = 124.0364 # quick test
+    sig_norm_subCat2_vbf = rt.RooRealVar(signal_subCat2_vbf.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat2_vbf norm_val: {norm_val}")
+    sig_norm_subCat2_vbf.setConstant(True)
+
+    # subCat 3
+    subCat_filter = (processed_eventsSignalMC_vbf[subCatIdx_name] == 3)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC_vbf.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat3_vbf_SigMC = ak.to_numpy(
+        processed_eventsSignalMC_vbf.wgt_nominal[subCat_filter]
+    ) # weights
+    
+    # generate a weighted histogram 
+    roo_histData_subCat3_vbf_signal = rt.TH1F("subCat3_vbf_rooHist_signal", "subCat3_vbf_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat3_vbf_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat3_vbf_SigMC) # fill the histograms with mass and weights 
+    roo_histData_subCat3_vbf_signal = rt.RooDataHist("subCat3_vbf_rooHist_signal", "subCat3_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat3_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
+    data_subCat3_vbf_signal = roo_histData_subCat3_vbf_signal
+
+    # define normalization value from signal MC event weights 
+    
+    norm_val = np.sum(wgt_subCat3_vbf_SigMC)* flat_MC_SF
+    # norm_val = 116.4918 # quick test
+    sig_norm_subCat3_vbf = rt.RooRealVar(signal_subCat3_vbf.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat3_vbf norm_val: {norm_val}")
+    sig_norm_subCat3_vbf.setConstant(True)
+    
+    # subCat 4
+    subCat_filter = (processed_eventsSignalMC_vbf[subCatIdx_name] == 4)
+    subCat_mass_arr = ak.to_numpy(
+        processed_eventsSignalMC_vbf.dimuon_mass[subCat_filter]
+    ) # mass values
+    wgt_subCat4_vbf_SigMC = ak.to_numpy(
+        processed_eventsSignalMC_vbf.wgt_nominal[subCat_filter]
+    ) # weights
+    
+    # generate a weighted histogram 
+    roo_histData_subCat4_vbf_signal = rt.TH1F("subCat4_vbf_rooHist_signal", "subCat4_vbf_rooHist_signal", nbins, mass.getMin(), mass.getMax())
+       
+    roo_histData_subCat4_vbf_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat4_vbf_SigMC) # fill the histograms with mass and weights 
+    roo_histData_subCat4_vbf_signal = rt.RooDataHist("subCat4_vbf_rooHist_signal", "subCat4_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat4_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
+    data_subCat4_vbf_signal = roo_histData_subCat4_vbf_signal
+
+    # define normalization value from signal MC event weights 
+    
+    norm_val = np.sum(wgt_subCat4_vbf_SigMC)* flat_MC_SF
+    sig_norm_subCat4_vbf = rt.RooRealVar(signal_subCat4_vbf.GetName()+"_norm","Number of signal events",norm_val)
+    print(f"signal_subCat4_vbf norm_val: {norm_val}")
+    sig_norm_subCat4_vbf.setConstant(True)
+    
+    # ---------------------------------------------------
+    # Fit signal model individually, not simultaneous. Sigma, and left and right tails are different for each category
+    # ---------------------------------------------------
+
+    # subCat 0
+    _ = signal_subCat0_vbf.fitTo(data_subCat0_vbf_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat0_vbf.fitTo(data_subCat0_vbf_signal,  EvalBackend=device, Save=True, )
+    # if fit_result is not None:
+        # fit_result.Print()
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat0_vbf.setConstant(True)
+    alpha1_subCat0_vbf.setConstant(True)
+    n1_subCat0_vbf.setConstant(True)
+    alpha2_subCat0_vbf.setConstant(True)
+    n2_subCat0_vbf.setConstant(True)
+
+
+    # subCat 1
+    _ = signal_subCat1_vbf.fitTo(data_subCat1_vbf_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat1_vbf.fitTo(data_subCat1_vbf_signal,  EvalBackend=device, Save=True, )
+    # if fit_result is not None:
+        # fit_result.Print()
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat1_vbf.setConstant(True)
+    alpha1_subCat1_vbf.setConstant(True)
+    n1_subCat1_vbf.setConstant(True)
+    alpha2_subCat1_vbf.setConstant(True)
+    n2_subCat1_vbf.setConstant(True)
+
+
+
+    # subCat 2
+    _ = signal_subCat2_vbf.fitTo(data_subCat2_vbf_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat2_vbf.fitTo(data_subCat2_vbf_signal,  EvalBackend=device, Save=True, )
+    # if fit_result is not None:
+        # fit_result.Print()
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat2_vbf.setConstant(True)
+    alpha1_subCat2_vbf.setConstant(True)
+    n1_subCat2_vbf.setConstant(True)
+    alpha2_subCat2_vbf.setConstant(True)
+    n2_subCat2_vbf.setConstant(True)
+
+
+    
+    # subCat 3
+    _ = signal_subCat3_vbf.fitTo(data_subCat3_vbf_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat3_vbf.fitTo(data_subCat3_vbf_signal,  EvalBackend=device, Save=True, )
+    # if fit_result is not None:
+        # fit_result.Print()
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat3_vbf.setConstant(True)
+    alpha1_subCat3_vbf.setConstant(True)
+    n1_subCat3_vbf.setConstant(True)
+    alpha2_subCat3_vbf.setConstant(True)
+    n2_subCat3_vbf.setConstant(True)
+    # sigma_subCat3_vbf.setConstant(False)
+    # alpha1_subCat3_vbf.setConstant(False)
+    # n1_subCat3_vbf.setConstant(False)
+    # alpha2_subCat3_vbf.setConstant(False)
+    # n2_subCat3_vbf.setConstant(False)
+
+
+    # subCat 4
+    _ = signal_subCat4_vbf.fitTo(data_subCat4_vbf_signal,  EvalBackend=device, Save=True, )
+    fit_result = signal_subCat4_vbf.fitTo(data_subCat4_vbf_signal,  EvalBackend=device, Save=True, )
+    # if fit_result is not None:
+        # fit_result.Print()
+
+    # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
+    sigma_subCat4_vbf.setConstant(True)
+    alpha1_subCat4_vbf.setConstant(True)
+    n1_subCat4_vbf.setConstant(True)
+    alpha2_subCat4_vbf.setConstant(True)
+    n2_subCat4_vbf.setConstant(True)
+
+    
     
     # -------------------------------------------------------------------------
     # Plotting
@@ -1608,7 +1948,7 @@ if __name__ == "__main__":
     if not os.path.exists(plot_save_path):
         os.makedirs(plot_save_path)
     # -------------------------------------------------------------------------
-    # do signal plotting with fit and data
+    # do signal ggH plotting with fit and data
     # -------------------------------------------------------------------------
     
     # subCat 0
@@ -1716,10 +2056,136 @@ if __name__ == "__main__":
     canvas.Draw()
     canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat4.pdf")
 
+    # -------------------------------------------------------------------------
+    # do signal VBF plotting with fit and data
+    # -------------------------------------------------------------------------
+    
+    # subCat 0
+    
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat0_vbf_signal.GetName()
+    data_subCat0_vbf_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat0_vbf.GetName()
+    signal_subCat0_vbf.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat0_vbf.pdf")
+
+    # subCat 1
+    
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat1_vbf_signal.GetName()
+    data_subCat1_vbf_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat1_vbf.GetName()
+    signal_subCat1_vbf.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat1_vbf.pdf")
+
+    # subCat 2
+    
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat2_vbf_signal.GetName()
+    data_subCat2_vbf_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat2_vbf.GetName()
+    signal_subCat2_vbf.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat2_vbf.pdf")
+
+    # subCat 3
+    
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat3_vbf_signal.GetName()
+    data_subCat3_vbf_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat3_vbf.GetName()
+    signal_subCat3_vbf.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat3_vbf.pdf")
+
+    # subCat 4
+    
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    name = data_subCat4_vbf_signal.GetName()
+    data_subCat4_vbf_signal.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+    name = signal_subCat4_vbf.GetName()
+    signal_subCat4_vbf.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_{category}_subCat4_vbf.pdf")
+
     # ---------------------------------------------------
     # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
     workspace_path = "./workspaces"
+
+
+    # unfreeze the hmm sigma and peak b4 saving
+    CMS_hmm_sigma_cat0_ggh.setConstant(False)
+    CMS_hmm_peak_cat0_ggh.setConstant(False)
+
+    CMS_hmm_sigma_cat1_ggh.setConstant(False)
+    CMS_hmm_peak_cat1_ggh.setConstant(False)
+    
+    CMS_hmm_sigma_cat2_ggh.setConstant(False)
+    CMS_hmm_peak_cat2_ggh.setConstant(False)
+    
+    CMS_hmm_sigma_cat3_ggh.setConstant(False)
+    CMS_hmm_peak_cat3_ggh.setConstant(False)
+    
+    CMS_hmm_sigma_cat4_ggh.setConstant(False)
+    CMS_hmm_peak_cat4_ggh.setConstant(False)
     
     # subCat 0 
     fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat0_{category}.root","RECREATE")
@@ -1748,6 +2214,14 @@ if __name__ == "__main__":
     wout.Import(sig_norm_subCat0);
     wout.Import(signal_subCat0); 
     wout.Import(roo_histData_subCat0_signal); 
+    
+    signal_subCat0_vbf.SetName("qqH_cat0_ggh_pdf");
+    roo_histData_subCat0_vbf_signal.SetName("data_qqH_cat0_ggh");
+    sig_norm_subCat0_vbf.SetName(signal_subCat0_vbf.GetName()+"_norm"); 
+    wout.Import(signal_subCat0_vbf);
+    wout.Import(roo_histData_subCat0_vbf_signal); 
+    wout.Import(sig_norm_subCat0_vbf); 
+    
     # wout.Print();
     wout.Write();
     
@@ -1779,6 +2253,13 @@ if __name__ == "__main__":
     wout.Import(sig_norm_subCat1);
     wout.Import(signal_subCat1); 
     wout.Import(roo_histData_subCat1_signal); 
+
+    signal_subCat1_vbf.SetName("qqH_cat1_ggh_pdf"); 
+    roo_histData_subCat1_vbf_signal.SetName("data_qqH_cat1_ggh");
+    sig_norm_subCat1_vbf.SetName(signal_subCat1_vbf.GetName()+"_norm"); 
+    wout.Import(sig_norm_subCat1_vbf);
+    wout.Import(signal_subCat1_vbf); 
+    wout.Import(roo_histData_subCat1_vbf_signal); 
     # wout.Print();
     wout.Write();
 
@@ -1809,6 +2290,13 @@ if __name__ == "__main__":
     wout.Import(sig_norm_subCat2);
     wout.Import(signal_subCat2); 
     wout.Import(roo_histData_subCat2_signal); 
+
+    signal_subCat2_vbf.SetName("qqH_cat2_ggh_pdf"); 
+    roo_histData_subCat2_vbf_signal.SetName("data_qqH_cat2_ggh");
+    sig_norm_subCat2_vbf.SetName(signal_subCat2_vbf.GetName()+"_norm"); 
+    wout.Import(sig_norm_subCat2_vbf);
+    wout.Import(signal_subCat2_vbf); 
+    wout.Import(roo_histData_subCat2_vbf_signal); 
     # wout.Print();
     wout.Write();
 
@@ -1840,6 +2328,13 @@ if __name__ == "__main__":
     wout.Import(sig_norm_subCat3);
     wout.Import(signal_subCat3); 
     wout.Import(roo_histData_subCat3_signal); 
+
+    signal_subCat3_vbf.SetName("qqH_cat3_ggh_pdf"); 
+    roo_histData_subCat3_vbf_signal.SetName("data_qqH_cat3_ggh");
+    sig_norm_subCat3_vbf.SetName(signal_subCat3_vbf.GetName()+"_norm"); 
+    wout.Import(sig_norm_subCat3_vbf);
+    wout.Import(signal_subCat3_vbf); 
+    wout.Import(roo_histData_subCat3_vbf_signal); 
     # wout.Print();
     wout.Write();
 
@@ -1870,6 +2365,13 @@ if __name__ == "__main__":
     wout.Import(sig_norm_subCat4);
     wout.Import(signal_subCat4); 
     wout.Import(roo_histData_subCat4_signal); 
+
+    signal_subCat4_vbf.SetName("qqH_cat4_ggh_pdf"); 
+    roo_histData_subCat4_vbf_signal.SetName("data_qqH_cat4_ggh");
+    sig_norm_subCat4_vbf.SetName(signal_subCat4_vbf.GetName()+"_norm"); 
+    wout.Import(sig_norm_subCat4_vbf);
+    wout.Import(signal_subCat4_vbf); 
+    wout.Import(roo_histData_subCat4_vbf_signal);
     # wout.Print();
     wout.Write();
     
@@ -1888,7 +2390,7 @@ if __name__ == "__main__":
             signal_subCat2,
             signal_subCat3,
             signal_subCat4,
-        ]
+        ],
     }
     sigHist_list = [ # for signal function normalization
         roo_histData_subCat0_signal,
@@ -1896,6 +2398,24 @@ if __name__ == "__main__":
         roo_histData_subCat2_signal,
         roo_histData_subCat3_signal,
         roo_histData_subCat4_signal
+    ]
+    plotSigBySample(mass, sig_dict_by_sample, sigHist_list, plot_save_path)
+
+    sig_dict_by_sample = {
+        "vbf_signal" : [
+            signal_subCat0_vbf, 
+            signal_subCat1_vbf,
+            signal_subCat2_vbf,
+            signal_subCat3_vbf,
+            signal_subCat4_vbf,
+        ]
+    }
+    sigHist_list = [ # for signal function normalization
+        roo_histData_subCat0_vbf_signal,
+        roo_histData_subCat1_vbf_signal,
+        roo_histData_subCat2_vbf_signal,
+        roo_histData_subCat3_vbf_signal,
+        roo_histData_subCat4_vbf_signal
     ]
     plotSigBySample(mass, sig_dict_by_sample, sigHist_list, plot_save_path)
         
