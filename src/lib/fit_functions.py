@@ -47,6 +47,8 @@ def MakeFEWZxBernDof3(
     # make BernStein of order == dof
     n_coeffs = 3
     BernCoeff_list = [c1, c2, c3]
+    # n_coeffs = 1
+    # BernCoeff_list = [c1,]
     name = f"BernsteinFast"
     bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add model to make python remember
@@ -59,17 +61,20 @@ def MakeFEWZxBernDof3(
     FEWZ_file = rt.TFile("./data/NNLO_Bourilkov_2017.root", "READ")
     # FEWZ_histo = FEWZ_file.Get("full_36fb")
     FEWZ_histo = FEWZ_file.Get("full_shape")
+
+    rebin_factor = 1
+    FEWZ_histo = FEWZ_histo.Rebin(rebin_factor, "hist_rebinned")
     
     x_arr, y_arr = getFEWZ_vals(FEWZ_histo)
     
 
-    # Roospline start ---------------------------------    
+    # # Roospline start ---------------------------------    
     x_arr_vec = rt.vector("double")(x_arr)
     y_arr_vec = rt.vector("double")(y_arr)
     name = "fewz_roospline_func"
-    roo_spline_func = rt.RooSpline(name, name, mass, x_arr_vec, y_arr_vec)
+    roo_spline_func = rt.RooSpline(name, name, mass, x_arr_vec, y_arr_vec, order=3)
     out_dict[name] = roo_spline_func
-    # Roospline end ------------------------------------
+    # # Roospline end ------------------------------------
 
     # Roospline1D start ---------------------------------    
     # x0 = (ctypes.c_double * len(x_arr))(*x_arr)
@@ -79,6 +84,7 @@ def MakeFEWZxBernDof3(
     # roo_spline_func = rt.RooSpline1D(name, name, mass, n,x0, y0)
     # out_dict[name] = roo_spline_func
     # Roospline1D end ------------------------------------
+
     
 
     # turn roo_spline_func into pdf
@@ -99,7 +105,9 @@ def MakeFEWZxBernDof3(
     # out_dict[name] = roo_spline_pdf # add model to make python remember  
 
     # final_model = rt.RooProdPdf(name_final, title, [bern_model, roo_spline_pdf]) 
-    final_model = rt.RooGenericPdf(name_final, "@0*@1", rt.RooArgList(bern_model, roo_spline_pdf))  
+    final_model = rt.RooGenericPdf(name_final, "@0*@1", rt.RooArgList(roo_spline_pdf, bern_model))  
+    # final_model = bern_model
+    # final_model = roo_spline_pdf
    
     return (final_model, out_dict)
 

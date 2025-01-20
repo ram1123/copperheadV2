@@ -744,11 +744,11 @@ if __name__ == "__main__":
 
     # # an start --------------------------------------------------
     name = f"FEWZxBern_c1"
-    c1 = rt.RooRealVar(name,name, 0.956483450832728,0.5,1.5)
+    c1 = rt.RooRealVar(name,name, 0.956483450832728,-10,10)
     name = f"FEWZxBern_c2"
-    c2 = rt.RooRealVar(name,name, 0.9607652348517792,0.5,1.5)
+    c2 = rt.RooRealVar(name,name, 0.9607652348517792,-10,10)
     name = f"FEWZxBern_c3"
-    c3 = rt.RooRealVar(name,name, 0.9214633453188963,0.5,1.5)
+    c3 = rt.RooRealVar(name,name, 0.9214633453188963,-10,10)
     # # an end --------------------------------------------------
 
 
