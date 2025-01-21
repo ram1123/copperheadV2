@@ -49,7 +49,8 @@ def MakeFEWZxBernDof3(
         name_final:str, 
         title:str, 
         mass: rt.RooRealVar, 
-        c1: rt.RooRealVar, c2: rt.RooRealVar, c3: rt.RooRealVar
+        # c1: rt.RooRealVar, c2: rt.RooRealVar, c3: rt.RooRealVar
+        BernCoeff_list,
     ) ->Tuple[rt.RooProdPdf, Dict]:
     """
     params:
@@ -61,13 +62,13 @@ def MakeFEWZxBernDof3(
     out_dict = {}
 
     # make BernStein of order == dof
-    n_coeffs = 3
-    BernCoeff_list = [c1, c2, c3]
+    # n_coeffs = 3
+    # BernCoeff_list = [c1, c2, c3]
     # n_coeffs = 1
     # BernCoeff_list = [c1,]
     name = f"BernsteinFast"
-    bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
-    # bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
+    # bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
+    bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add model to make python remember
 
 
@@ -79,7 +80,7 @@ def MakeFEWZxBernDof3(
     FEWZ_histo = FEWZ_file.Get("full_36fb")
     # FEWZ_histo = FEWZ_file.Get("full_shape") # 50 bins in total
 
-    rebin_factor = 2#5 
+    rebin_factor = 5#5 
     FEWZ_histo = FEWZ_histo.Rebin(rebin_factor, "hist_rebinned")
     # FEWZ_data = rt.RooDataHist("fewzdata","fewzdata",mass,FEWZ_histo) # this is RoofitHist data
     

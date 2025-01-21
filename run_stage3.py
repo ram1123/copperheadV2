@@ -743,30 +743,41 @@ if __name__ == "__main__":
     # # old end --------------------------------------------------
 
     # # an start --------------------------------------------------
-    name = f"FEWZxBern_c1"
-    c1 = rt.RooRealVar(name,name, 0.956483450832728,-10,10)
-    name = f"FEWZxBern_c2"
-    c2 = rt.RooRealVar(name,name, 0.9607652348517792,-10,10)
-    name = f"FEWZxBern_c3"
-    c3 = rt.RooRealVar(name,name, 0.9214633453188963,-10,10)
+    # name = f"FEWZxBern_c1"
+    # c1 = rt.RooRealVar(name,name, 0.956483450832728,0.5,1.5)
+    # name = f"FEWZxBern_c2"
+    # c2 = rt.RooRealVar(name,name, 0.9607652348517792,0.5,1.5)
+    # name = f"FEWZxBern_c3"
+    # c3 = rt.RooRealVar(name,name, 0.9214633453188963,0.5,1.5)
     # # an end --------------------------------------------------
 
 
-    # new start --------------------------------------------------
+    # # new start --------------------------------------------------
     # name = f"FEWZxBern_c1"
-    # c1 = rt.RooRealVar(name,name, 0.1,-10,10)
+    # c1 = rt.RooRealVar(name,name, 0.956483450832728,-10,10)
     # name = f"FEWZxBern_c2"
-    # c2 = rt.RooRealVar(name,name, 0.2,-10,10)
+    # c2 = rt.RooRealVar(name,name, 0.9607652348517792,-10,10)
     # name = f"FEWZxBern_c3"
-    # c3 = rt.RooRealVar(name,name, 0.1,-10,10)
+    # c3 = rt.RooRealVar(name,name, 0.9214633453188963,-10,10)
+    # # new end --------------------------------------------------
+    
+    # new start --------------------------------------------------
+    name = f"FEWZxBern_c1"
+    c1 = rt.RooRealVar(name,name, 0.25,-10,10)
+    name = f"FEWZxBern_c2"
+    c2 = rt.RooRealVar(name,name, 0.25,-10,10)
+    name = f"FEWZxBern_c3"
+    c3 = rt.RooRealVar(name,name, 0.25,-10,10)
+    name = f"FEWZxBern_c4"
+    c4 = rt.RooRealVar(name,name, 0.25,-10,10)
     # new end --------------------------------------------------
-
+    BernCoeff_list = [c1, c2, c3, c4] # we use RooBernstein, which requires n+1 parameters https://root.cern.ch/doc/master/classRooBernstein.html
     # c1.setConstant(True)
     # c2.setConstant(True)
     # c3.setConstant(True)
     
     name = "subCat0_FEWZxBern"
-    coreFEWZxBern_SubCat0, params_FEWZxBern_SubCat0 = MakeFEWZxBernDof3(name, name, mass, c1, c2, c3) 
+    coreFEWZxBern_SubCat0, params_FEWZxBern_SubCat0 = MakeFEWZxBernDof3(name, name, mass, BernCoeff_list) 
      
     name = "subCat0_SMF_FEWZxBern"
     subCat0_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
@@ -929,13 +940,23 @@ if __name__ == "__main__":
     # Perform a simultaneous fit
     # ---------------------------------------------------
      
-    start = time.time()
+    # start = time.time()
 
-    _ = allSubCat_simPdf.fitTo(allSubCat_combData, rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0)
-    fitResult = allSubCat_simPdf.fitTo(allSubCat_combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
-    end = time.time()
+    # _ = allSubCat_simPdf.fitTo(allSubCat_combData, rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0)
+    # fitResult = allSubCat_simPdf.fitTo(allSubCat_combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    # end = time.time()
     
+    # fitResult.Print()
+
+    # fit core functions separately
+    _ = coreBWZRedux_SubCat0.fitTo(data_allSubCat_BWZ, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    fitResult = coreBWZRedux_SubCat0.fitTo(data_allSubCat_BWZ, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
     fitResult.Print()
+    _ = coreSumExp_SubCat0.fitTo(data_allSubCat_sumExp, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    fitResult = coreSumExp_SubCat0.fitTo(data_allSubCat_sumExp, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    fitResult.Print()
+    
+    
     # freeze core pdf params
     # BWZ redux
     a_coeff.setConstant(True)
@@ -956,6 +977,7 @@ if __name__ == "__main__":
     c1.setConstant(True)
     c2.setConstant(True)
     c3.setConstant(True)
+    c4.setConstant(True)
     
     #----------------------------------------------------------------------------
     # Now do core-Pdf fitting with all SMF
@@ -973,11 +995,11 @@ if __name__ == "__main__":
     sample.defineType("subCat2_sumExp")
     sample.defineType("subCat3_sumExp")
     sample.defineType("subCat4_sumExp")
-    # sample.defineType("subCat0_FEWZxBern")
-    # sample.defineType("subCat1_FEWZxBern")
-    # sample.defineType("subCat2_FEWZxBern")
-    # sample.defineType("subCat3_FEWZxBern")
-    # sample.defineType("subCat4_FEWZxBern")
+    sample.defineType("subCat0_FEWZxBern")
+    sample.defineType("subCat1_FEWZxBern")
+    sample.defineType("subCat2_FEWZxBern")
+    sample.defineType("subCat3_FEWZxBern")
+    sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -996,11 +1018,11 @@ if __name__ == "__main__":
             "subCat2_sumExp": data_subCat2_sumExp,
             "subCat3_sumExp": data_subCat3_sumExp,
             "subCat4_sumExp": data_subCat4_sumExp,
-            # "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
-            # "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
+            "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
+            "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+            "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -1021,11 +1043,11 @@ if __name__ == "__main__":
                                     "subCat2_sumExp": model_subCat2_sumExp,
                                     "subCat3_sumExp": model_subCat3_sumExp,
                                     "subCat4_sumExp": model_subCat4_sumExp,
-                                    # "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
-                                    # "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+                                    "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
+                                    "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
+                                    "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+                                    "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+                                    "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
     )
@@ -1035,11 +1057,70 @@ if __name__ == "__main__":
      
     start = time.time()
 
-    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0)
-    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0,SumW2Error=True)
+    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,SumW2Error=True)
     end = time.time()
     
     fitResult.Print()
+
+
+    # # Perform simultaneous SMF fit only for FEWZxBern
+    # print("Doing separate FEWZxBern sim fit only!")
+    # sample_FEWZxBern = rt.RooCategory("sample_FEWZxBern", "sample_FEWZxBern")
+    # sample_FEWZxBern.defineType("subCat0_FEWZxBern")
+    # sample_FEWZxBern.defineType("subCat1_FEWZxBern")
+    # sample_FEWZxBern.defineType("subCat2_FEWZxBern")
+    # sample_FEWZxBern.defineType("subCat3_FEWZxBern")
+    # sample_FEWZxBern.defineType("subCat4_FEWZxBern")
+     
+    # # Construct combined dataset in (x,sample)
+    # combData_FEWZxBern = rt.RooDataSet(
+    #     "combData_FEWZxBern",
+    #     "combined data for FEWZxBern",
+    #     {mass},
+    #     Index=sample_FEWZxBern,
+    #     Import={
+    #         "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
+    #         "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
+    #         "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+    #         "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+    #         "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+    #     },
+    # )
+    # # ---------------------------------------------------
+    # # Construct a simultaneous pdf in (x, sample)
+    # # -----------------------------------------------------------------------------------
+     
+    # simPdf_FEWZxBern = rt.RooSimultaneous(
+    #                             "simPdf_FEWZxBern", 
+    #                             "simultaneous pdf", 
+    #                             {
+    #                                 "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
+    #                                 "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
+    #                                 "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+    #                                 "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+    #                                 "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+    #                             }, 
+    #                             sample_FEWZxBern,
+    # )
+    # # ---------------------------------------------------
+    # # Perform a simultaneous fit
+    # # ---------------------------------------------------
+     
+    # start = time.time()
+
+    # # _ = simPdf_FEWZxBern.fitTo(combData_FEWZxBern, rt.RooFit.Minimizer("Minuit", "Migrad"), rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0,SumW2Error=True)
+    # # fitResult = simPdf_FEWZxBern.fitTo(combData_FEWZxBern, rt.RooFit.Minimizer("Minuit", "Migrad"), rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,SumW2Error=True)
+    # _ = simPdf_FEWZxBern.fitTo(combData_FEWZxBern, rt.RooFit.Minos(True), rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True)
+    # fitResult = simPdf_FEWZxBern.fitTo(combData_FEWZxBern, rt.RooFit.Minos(True), rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True)
+    # end = time.time()
+    # print(f"fitResult: {fitResult}")
+    # fitResult.Print()
+
+
+
+
+    
 
     # set the rest of the parameters constant
     # a0_subCat0.setConstant(True)
@@ -1068,6 +1149,7 @@ if __name__ == "__main__":
     c1.setConstant(False)
     c2.setConstant(False)
     c3.setConstant(False)
+    c4.setConstant(False)
     
     print(f"runtime: {end-start} seconds")
 
@@ -2666,6 +2748,13 @@ if __name__ == "__main__":
             model_subCat3_FEWZxBern,
             model_subCat4_FEWZxBern,
         ],
+        # "FEWZxBern" : [
+        #     coreFEWZxBern_SubCat0, 
+        #     coreFEWZxBern_SubCat1,
+        #     coreFEWZxBern_SubCat2,
+        #     coreFEWZxBern_SubCat3,
+        #     coreFEWZxBern_SubCat4,
+        # ],
         "SMF" : [
             subCat0_SMF, 
             subCat1_SMF,
