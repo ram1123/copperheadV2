@@ -30,7 +30,8 @@ if __name__ == "__main__":
 
     # full_load_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Jan17_JecDefault_valerieZpt/ggh/stage2_output/ggh/2018/processed_events_sig*.parquet"
     # extract only the signal samples (VBF and ggH)
-    full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sig*.parquet"
+    # full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sig*.parquet"
+    full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sigMC_ggh.parquet" # ignore VBF signal sample
     # full_load_path = f"{sysargs.load_path}/ggh/{sysargs.year}/processed_events_sig*.parquet"
     events = dak.from_parquet(full_load_path)
     
@@ -56,15 +57,20 @@ if __name__ == "__main__":
     
     for i, cum_weight in enumerate(cumulative_weights):
         current_yield = cum_weight 
+        # print(f"current_yield : {current_yield}")
         if current_yield >= target_yields_cum_sum[target_index]:
+            # print(f"target_yields_cum_sum[target_index] : {target_yields_cum_sum[target_index]}")
+            # print(f"current_yield : {current_yield}")
             bin_edges.append(sorted_data[i])
             target_index += 1
             if target_index >= len(target_yields_cum_sum):
                 break
     
     
-    
-    bin_edges[-1] = 1.1 # always switch the last bin edge to maximum value and a bit
+    if len(bin_edges) < (len(target_yields) +1 ):
+        bin_edges.append(1.1) # add the last bin edge to maximum value and a bit
+    else:
+        bin_edges[-1] = 1.1 # switch the last bin edge to maximum value and a bit
     print("Bin edges:", bin_edges)
     hist, _ = np.histogram(signal_score, bins=bin_edges, weights=signal_wgt)
     # sanity check
