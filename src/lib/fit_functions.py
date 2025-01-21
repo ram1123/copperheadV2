@@ -4,27 +4,43 @@ import numpy as np
 import awkward as ak
 import ctypes
 
+# def getFEWZ_vals(FEWZ_histo):
+#     """
+#     Function from https://github.com/green-cabbage/copperhead_fork2/blob/Run3/stage3/fitter.py#L686-L705
+#     It's not the most elegant, but it works, so I am leaving it as it is
+#     """
+#     n_points = FEWZ_histo.GetNbinsX()
+#     x_vals = []
+#     y_vals = []
+#     for i in range(n_points):
+#         if i<0 or i >=42:
+#             continue
+#         if (FEWZ_histo.GetBinCenter(i)) < 110.0:
+#             x_vals.append(110.0)
+#             y_vals.append(FEWZ_histo.GetBinContent(i+1)*1.05) 
+#             continue
+#         if (FEWZ_histo.GetBinCenter(i)) >150:
+#             x_vals.append(150.0)
+#             y_vals.append(FEWZ_histo.GetBinContent(i)*0.95)  
+#             continue
+#         x_vals.append(FEWZ_histo.GetBinCenter(i))
+#         y_vals.append(FEWZ_histo.GetBinContent(i))
+#     return (np.array(x_vals), np.array(y_vals))
+
 def getFEWZ_vals(FEWZ_histo):
     """
     Function from https://github.com/green-cabbage/copperhead_fork2/blob/Run3/stage3/fitter.py#L686-L705
     It's not the most elegant, but it works, so I am leaving it as it is
     """
-    n_points = FEWZ_histo.GetNbinsX()
+    hist = FEWZ_histo
     x_vals = []
     y_vals = []
-    for i in range(n_points):
-        if i<0 or i >=42:
-            continue
-        if (FEWZ_histo.GetBinCenter(i)) < 110.0:
-            x_vals.append(110.0)
-            y_vals.append(FEWZ_histo.GetBinContent(i+1)*1.05) 
-            continue
-        if (FEWZ_histo.GetBinCenter(i)) >150:
-            x_vals.append(150.0)
-            y_vals.append(FEWZ_histo.GetBinContent(i)*0.95)  
-            continue
-        x_vals.append(FEWZ_histo.GetBinCenter(i))
-        y_vals.append(FEWZ_histo.GetBinContent(i))
+    for i in range(1, hist.GetNbinsX() + 1):
+        bin_center = hist.GetBinCenter(i)  # x value
+        bin_content = hist.GetBinContent(i)  # y value
+    
+        x_vals.append(bin_center)
+        y_vals.append(bin_content)
     return (np.array(x_vals), np.array(y_vals))
     
 
@@ -51,6 +67,7 @@ def MakeFEWZxBernDof3(
     # BernCoeff_list = [c1,]
     name = f"BernsteinFast"
     bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
+    # bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add model to make python remember
 
 
@@ -59,11 +76,13 @@ def MakeFEWZxBernDof3(
 
     # this ROOT files has branches full_36fb, full_xsec, full_shape -> all three has the same shape (same hist once normalized)
     FEWZ_file = rt.TFile("./data/NNLO_Bourilkov_2017.root", "READ")
-    # FEWZ_histo = FEWZ_file.Get("full_36fb")
-    FEWZ_histo = FEWZ_file.Get("full_shape")
+    FEWZ_histo = FEWZ_file.Get("full_36fb")
+    # FEWZ_histo = FEWZ_file.Get("full_shape") # 50 bins in total
 
-    rebin_factor = 1
+    rebin_factor = 2#5 
     FEWZ_histo = FEWZ_histo.Rebin(rebin_factor, "hist_rebinned")
+    # FEWZ_data = rt.RooDataHist("fewzdata","fewzdata",mass,FEWZ_histo) # this is RoofitHist data
+    
     
     x_arr, y_arr = getFEWZ_vals(FEWZ_histo)
     
@@ -92,20 +111,20 @@ def MakeFEWZxBernDof3(
     # so no need to "normalize" rooSpline into a PDF. Also, I tried both full_36fb and full_shape bracnhes of 
     # FEWZ histograms (they have same shape, but different values), and I saw no difference in fit function plot,
     # loosely suggesting automatic normalization
-    roo_spline_pdf = roo_spline_func
+    # roo_spline_pdf = roo_spline_func
     
     
-    # name = "fewz_roospline_pdf"
-    # roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
-    # out_dict[name] = roo_spline_pdf # add model to make python remember  
+    name = "fewz_roospline_pdf"
+    roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
+    out_dict[name] = roo_spline_pdf # add model to make python remember  
 
     # RooWrapperPdf doesn't seem to work well with FitTo. Just freezes for a long time
     # name = "fewz_roospline_pdf"
     # roo_spline_pdf = rt.RooGenericPdf(name, "@0", rt.RooArgList(roo_spline_func))      
     # out_dict[name] = roo_spline_pdf # add model to make python remember  
 
-    # final_model = rt.RooProdPdf(name_final, title, [bern_model, roo_spline_pdf]) 
-    final_model = rt.RooGenericPdf(name_final, "@0*@1", rt.RooArgList(roo_spline_pdf, bern_model))  
+    final_model = rt.RooProdPdf(name_final, name_final, [bern_model, roo_spline_pdf]) 
+    # final_model = rt.RooGenericPdf(name_final, "@0*@1", rt.RooArgList(roo_spline_pdf, bern_model))  
     # final_model = bern_model
     # final_model = roo_spline_pdf
    
