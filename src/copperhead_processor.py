@@ -1212,20 +1212,21 @@ class EventProcessor(processor.ProcessorABC):
                      self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
             out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
-            # dmitry's old zpt
-            zpt_weight_dmitry =\
-                    self.evaluator[self.zpt_path](dimuon.pt)
-            out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
+            # # dmitry's old zpt
+            # zpt_weight_dmitry =\
+            #         self.evaluator[self.zpt_path](dimuon.pt)
+            # out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
 
-            # print(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
-            # print(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
+            # # print(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
+            # # print(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
 
-            zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
-            out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
-            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
-            out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
-            # print(f"zpt_weight_min_nbins50: {zpt_weight_min_nbins50.compute()}")
-            # print(f"zpt_weight_min_nbins100: {zpt_weight_min_nbins100.compute()}")
+            # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
+            # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
+            # zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
+            # out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
+
+            
+
 
             # new zpt wgt Jan 09 2025
             # print(f"self.zpt_path: {self.zpt_path}")
@@ -1238,10 +1239,13 @@ class EventProcessor(processor.ProcessorABC):
             # ones = ak.ones_like(zpt_weight)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
+            zpt_weight = zpt_weight_valerie
+            ones = ak.ones_like(zpt_weight)
+            zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
             # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
-            # weights.add("zpt_wgt", 
-            #         weight=zpt_weight,
-            # )
+            weights.add("zpt_wgt", 
+                    weight=zpt_weight,
+            )
 
         
 
