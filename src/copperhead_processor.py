@@ -37,21 +37,34 @@ TODO!: add the correct btag working points for rereco samples that you will be w
 def getZptWgts(dimuon_pt, njets, nbins, year):
     config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
     wgt_config = OmegaConf.load(config_path)
-    max_order = 9
+    max_order = 5 #9
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
     # print(f"zpt_wgt: {zpt_wgt}")
     
     for jet_multiplicity in jet_multiplicies:
+        
         zpt_wgt_by_jet = ak.zeros_like(dimuon_pt)
+        # zpt_wgt_by_jet = ak.ones_like(dimuon_pt) * -1 # debugging
+        # polynomial fit 
+        zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(max_order+1): # p goes from 0 to max_order
             coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"p{order}"]
             # print(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
             polynomial_term = coeff*dimuon_pt**order
-            zpt_wgt_by_jet = zpt_wgt_by_jet + polynomial_term
+            zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
             # print(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
-            # print(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet: {zpt_wgt_by_jet}")
-
+            # print(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
+        poly_fit_cutoff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["x_max"]
+        zpt_wgt_by_jet = ak.where((poly_fit_cutoff >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
+        
+        # horizontal line beyond poly_fit_cutoff
+        coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"horizontal_c0"]
+        zpt_wgt_by_jet_horizontal = ak.ones_like(dimuon_pt) * coeff
+        zpt_wgt_by_jet = ak.where((poly_fit_cutoff < dimuon_pt), zpt_wgt_by_jet_horizontal, zpt_wgt_by_jet)
+        # print(f"zpt_wgt_by_jet testing: {ak.all(zpt_wgt_by_jet != -1).compute()}")
+        # raise ValueError
+        
         if jet_multiplicity != 2:
             njet_mask = njets == jet_multiplicity
         else:
@@ -491,7 +504,7 @@ class EventProcessor(processor.ProcessorABC):
             # applied_fsr = fsr_recovery(events)
             applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
-
+        
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]) 
         # print(f"muon_selectiont: {ak.to_dataframe(muon_selection.compute())}")
@@ -1212,18 +1225,18 @@ class EventProcessor(processor.ProcessorABC):
                      self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
             out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
-            # # dmitry's old zpt
-            # zpt_weight_dmitry =\
-            #         self.evaluator[self.zpt_path](dimuon.pt)
-            # out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
+            # dmitry's old zpt
+            zpt_weight_dmitry =\
+                    self.evaluator[self.zpt_path](dimuon.pt)
+            out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
 
-            # # print(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
-            # # print(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
+            # print(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
+            # print(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
 
-            # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
-            # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
-            # zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
-            # out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
+            zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
+            out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
+            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
+            out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
 
             
 
@@ -1239,13 +1252,13 @@ class EventProcessor(processor.ProcessorABC):
             # ones = ak.ones_like(zpt_weight)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
-            zpt_weight = zpt_weight_valerie
-            ones = ak.ones_like(zpt_weight)
-            zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
-            # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
-            weights.add("zpt_wgt", 
-                    weight=zpt_weight,
-            )
+            # zpt_weight = zpt_weight_valerie
+            # ones = ak.ones_like(zpt_weight)
+            # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
+            # # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
+            # weights.add("zpt_wgt", 
+            #         weight=zpt_weight,
+            # )
 
         
 
