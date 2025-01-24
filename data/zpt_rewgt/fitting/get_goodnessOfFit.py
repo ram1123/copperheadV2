@@ -5,30 +5,46 @@ from omegaconf import OmegaConf
 # dictionary of all orders of polynomial from f-test
 f_orders = {
     "2018" : {
-        "njet0" : 9,
-        "njet1" : 8,
-        "njet2" : 7,
+        "njet0" : 5,
+        "njet1" : 4,
+        "njet2" : 4,
     },
-    "2017" : {
-        "njet0" : 6,
-        "njet1" : 8,
-        "njet2" : 7,
-    },
-    "2016postVFP" : {
-        "njet0" : 6,
-        "njet1" : 8,
-        "njet2" : 7,
-    },
-    "2016preVFP" : {
-        "njet0" : 6,
-        "njet1" : 8,
-        "njet2" : 7,
-    },
+    # "2017" : {
+    #     "njet0" : 6,
+    #     "njet1" : 8,
+    #     "njet2" : 7,
+    # },
+    # "2016postVFP" : {
+    #     "njet0" : 6,
+    #     "njet1" : 8,
+    #     "njet2" : 7,
+    # },
+    # "2016preVFP" : {
+    #     "njet0" : 6,
+    #     "njet1" : 8,
+    #     "njet2" : 7,
+    # },
 }
 
+poly_fit_ranges = {
+    "2018" : {
+        "njet0" : [0, 85],
+        "njet1" : [0, 50],
+        "njet2" : [0, 50],
+    },
+    "2017" : {
+        "njet0" : [0, 85],
+        "njet1" : [0, 50],
+        "njet2" : [0, 50],
+    },
+}
+global_fit_xmax = 200
 
-years = ["2018", "2017", "2016postVFP", "2016preVFP"]
+
+# years = ["2018", "2017", "2016postVFP", "2016preVFP"]
+years = ["2018",]
 nbins = [50, 100]
+# nbins = [100]
 jet_multiplicities = [0,1,2]
 # year = 2017
 # year = "2016postVFP"
@@ -36,15 +52,15 @@ jet_multiplicities = [0,1,2]
 # njet = 0
 save_dict = {} # to match the config setup, it's 
 
-
+test_val = 110
 
 
 for year in years:
     
     out_dict_by_year = {}
     
-    for njet in jet_multiplicities:
-    # for njet in [1,2]:
+    # for njet in jet_multiplicities:
+    for njet in [0]:
         file = ROOT.TFile(f"{year}_njet{njet}.root", "READ")
         save_path = "./plots"
         workspace = file.Get("zpt_Workspace")
@@ -54,6 +70,12 @@ for year in years:
         order = f_orders[year][f"njet{njet}"]
         out_dict_by_nbin = {}
         for target_nbins in nbins:
+            fit_xmin, fit_xmax = poly_fit_ranges[year][f"njet{njet}"]
+            print(f"{year} njet{njet} fit_range: {fit_xmin}, {fit_xmax}")
+            # hist_data.GetXaxis().SetRangeUser(*fit_range)
+            # hist_dy.GetXaxis().SetRangeUser(*fit_range)
+
+            
             hist_data = workspace.obj("hist_data").Clone("hist_data_clone")
             hist_dy = workspace.obj("hist_dy").Clone("hist_dy_clone")
             orig_nbins = hist_data.GetNbinsX()
@@ -70,10 +92,16 @@ for year in years:
             polynomial_func = ROOT.TF1(f"poly{order}", polynomial_expr, -5, 5)
             # Define the TF1 function with the generated expression
             fit_func = polynomial_func
-            _ = hist_SF.Fit(fit_func, "S")
-            _ = hist_SF.Fit(fit_func, "L S")
-            fit_results = hist_SF.Fit(fit_func, "S")
+            _ = hist_SF.Fit(fit_func, "L S", xmin=fit_xmin, xmax=fit_xmax)
+            _ = hist_SF.Fit(fit_func, "L S", xmin=fit_xmin, xmax=fit_xmax)
+            fit_results = hist_SF.Fit(fit_func, "L S", xmin=fit_xmin, xmax=fit_xmax)
 
+
+
+            # fit straight line
+            horizontal_line = ROOT.TF1("horizontal_line", "[0]", 0, 10) 
+            fit_results = hist_SF.Fit(horizontal_line, "S R+", xmin=fit_xmax, xmax=global_fit_xmax)
+            
             # good setup
     
             chi2 = fit_func.GetChisquare()
@@ -92,12 +120,16 @@ for year in years:
             hist_SF.Draw()
             fit_func.SetLineColor(ROOT.kRed)  # Change color for each fit
             fit_func.Draw("SAME")  # Draw the fit function on the same canvas
+            # horizontal_line.SetLineColor(ROOT.kGreen)  # Change color for each fit
+            horizontal_line.Draw("SAME")  # Draw the fit function on the same canvas
+            # polynomial_func2.Draw("SAME")  # Draw the fit function on the same canvas
     
             
             # Add a legend
             legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)  # Legend coordinates (x1, y1, x2, y2)
             legend.AddEntry(hist_SF, "hist_SF", "l")  # "l" means line style
-            legend.AddEntry(fit_func, "fit", "l")
+            legend.AddEntry(fit_func, "poly fit", "l")
+            legend.AddEntry(horizontal_line, "horizontal line fit", "l")
             legend.Draw()
     
             # Add a text box using TPaveText
@@ -118,7 +150,11 @@ for year in years:
             for i in range(1, hist.GetNbinsX() + 1):
                 data = hist.GetBinContent(i)
                 error = hist.GetBinError(i)
-                fit_value = fit_func.Eval(hist.GetBinCenter(i))
+                x_value = hist.GetBinCenter(i)
+                if x_value <= fit_xmax :
+                    fit_value = fit_func.Eval(x_value)
+                else: 
+                    fit_value = horizontal_line.Eval(x_value)
                 if error > 0:  # Avoid division by zero
                     pull = (data - fit_value) / error
                     pull_hist.SetBinContent(i, pull)
@@ -141,7 +177,8 @@ for year in years:
             # ---------------------------------------------------
 
             # first make a baseline dict
-            max_order = 9
+            # max_order = 9
+            max_order = 5
             param_dict = {}
             for ix in range(max_order+1):
                 param_dict[f"p{ix}"] = 0.0
@@ -152,13 +189,24 @@ for year in years:
             for ix in range(num_params):
                 param_value = fit_func.GetParameter(ix)  # Fitted parameter value
                 param_error = fit_func.GetParError(ix)  # Fitted parameter uncertainty
+                # print(f"{year} njet {njet}  Parameter {i}: {param_value:} ± {param_error:}")
+                # print(f"{year} njet {njet}  Parameter {i} rel err: {param_error/ param_value *100} % ")
                 param_dict[f"p{ix}"] = param_value
                 param_dict[f"p{ix}_err"] = param_error
+
+            # add straight_line constant poarameter
+            param_dict[f"horizontal_c0"] = horizontal_line.GetParameter(0)
+            # add xrange
+            param_dict["polynomial_range"] = {
+                "x_min" : fit_xmin,
+                "x_max" : fit_xmax
+            }
             
-                out_dict_by_nbin[target_nbins] = param_dict
+            out_dict_by_nbin[target_nbins] = param_dict
 
             out_dict_by_year[f"njet_{njet}"] = out_dict_by_nbin
+
     
     save_dict[year] = out_dict_by_year
     config = OmegaConf.create(save_dict)
-    OmegaConf.save(config=config, f="./zpt_rewgt_params.yaml")
+    # OmegaConf.save(config=config, f="./zpt_rewgt_params.yaml")
