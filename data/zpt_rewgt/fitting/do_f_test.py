@@ -16,10 +16,19 @@ poly_fit_ranges = {
         "njet1" : [0, 55],
         "njet2" : [0, 60],
     },
+    "2016postVFP" : {
+        "njet0" : [0, 70],
+        "njet1" : [0, 45],
+        "njet2" : [0, 50],
+    },
+    # "2016preVFP" : {
+    #     "njet0" : [0, 70],
+    #     "njet1" : [0, 55],
+    #     "njet2" : [0, 60],
+    # },
 }
 
-
-year = "2017"
+year = "2016postVFP"
 # year = "2016postVFP"
 # year = "2018"
 # njet = 0

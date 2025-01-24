@@ -15,15 +15,15 @@ f_orders = { # to recalculate these, re-run f-test on do_f_test.py
         "njet1" : 4,
         "njet2" : 4,
     },
-    # "2016postVFP" : {
-    #     "njet0" : 6,
-    #     "njet1" : 8,
-    #     "njet2" : 7,
-    # },
+    "2016postVFP" : {
+        "njet0" : 5,
+        "njet1" : 4,
+        "njet2" : 4,
+    },
     # "2016preVFP" : {
-    #     "njet0" : 6,
-    #     "njet1" : 8,
-    #     "njet2" : 7,
+        # "njet0" : 5,
+        # "njet1" : 4,
+        # "njet2" : 4,
     # },
 }
 
@@ -38,12 +38,22 @@ poly_fit_ranges = {
         "njet1" : [0, 55],
         "njet2" : [0, 60],
     },
+    "2016postVFP" : {
+        "njet0" : [0, 70],
+        "njet1" : [0, 45],
+        "njet2" : [0, 50],
+    },
+    # "2016preVFP" : {
+    #     "njet0" : [0, 70],
+    #     "njet1" : [0, 55],
+    #     "njet2" : [0, 60],
+    # },
 }
 global_fit_xmax = 200
 
 
 # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-years = ["2017",]
+years = ["2016postVFP",]
 nbins = [50, 100]
 # nbins = [100]
 jet_multiplicities = [0,1,2]
@@ -60,8 +70,8 @@ for year in years:
     
     out_dict_by_year = {}
     
-    # for njet in jet_multiplicities:
-    for njet in [2]:
+    for njet in jet_multiplicities:
+    # for njet in [2]:
         file = ROOT.TFile(f"{year}_njet{njet}.root", "READ")
         save_path = "./plots"
         workspace = file.Get("zpt_Workspace")
