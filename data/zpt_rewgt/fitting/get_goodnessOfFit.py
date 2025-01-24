@@ -1,19 +1,20 @@
 import ROOT
 from scipy.stats import f
 from omegaconf import OmegaConf
+import os
 
 # dictionary of all orders of polynomial from f-test
-f_orders = {
+f_orders = { # to recalculate these, re-run f-test on do_f_test.py
     "2018" : {
         "njet0" : 5,
         "njet1" : 4,
         "njet2" : 4,
     },
-    # "2017" : {
-    #     "njet0" : 6,
-    #     "njet1" : 8,
-    #     "njet2" : 7,
-    # },
+    "2017" : {
+        "njet0" : 5,
+        "njet1" : 4,
+        "njet2" : 4,
+    },
     # "2016postVFP" : {
     #     "njet0" : 6,
     #     "njet1" : 8,
@@ -33,16 +34,16 @@ poly_fit_ranges = {
         "njet2" : [0, 50],
     },
     "2017" : {
-        "njet0" : [0, 85],
-        "njet1" : [0, 50],
-        "njet2" : [0, 50],
+        "njet0" : [0, 70],
+        "njet1" : [0, 55],
+        "njet2" : [0, 60],
     },
 }
 global_fit_xmax = 200
 
 
 # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-years = ["2018",]
+years = ["2017",]
 nbins = [50, 100]
 # nbins = [100]
 jet_multiplicities = [0,1,2]
@@ -60,7 +61,7 @@ for year in years:
     out_dict_by_year = {}
     
     # for njet in jet_multiplicities:
-    for njet in [0]:
+    for njet in [2]:
         file = ROOT.TFile(f"{year}_njet{njet}.root", "READ")
         save_path = "./plots"
         workspace = file.Get("zpt_Workspace")
@@ -208,5 +209,10 @@ for year in years:
 
     
     save_dict[year] = out_dict_by_year
-    config = OmegaConf.create(save_dict)
-    # OmegaConf.save(config=config, f="./zpt_rewgt_params.yaml")
+    yaml_path = "./zpt_rewgt_params.yaml"
+    if os.path.isfile(yaml_path): # if yaml exists, append to existing config (values with same keys will be overwirtten
+        config = OmegaConf.load(yaml_path)
+        config = OmegaConf.merge(config, save_dict)
+    else:
+        config = OmegaConf.create(save_dict)
+    OmegaConf.save(config=config, f=yaml_path)
