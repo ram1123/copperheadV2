@@ -20,11 +20,11 @@ f_orders = { # to recalculate these, re-run f-test on do_f_test.py
         "njet1" : 4,
         "njet2" : 4,
     },
-    # "2016preVFP" : {
-        # "njet0" : 5,
-        # "njet1" : 4,
-        # "njet2" : 4,
-    # },
+    "2016preVFP" : {
+        "njet0" : 4,
+        "njet1" : 4,
+        "njet2" : 4,
+    },
 }
 
 poly_fit_ranges = {
@@ -43,17 +43,17 @@ poly_fit_ranges = {
         "njet1" : [0, 45],
         "njet2" : [0, 50],
     },
-    # "2016preVFP" : {
-    #     "njet0" : [0, 70],
-    #     "njet1" : [0, 55],
-    #     "njet2" : [0, 60],
-    # },
+    "2016preVFP" : {
+        "njet0" : [0, 70],
+        "njet1" : [0, 55],
+        "njet2" : [0, 55],
+    },
 }
 global_fit_xmax = 200
 
 
 # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-years = ["2016postVFP",]
+years = ["2016preVFP",]
 nbins = [50, 100]
 # nbins = [100]
 jet_multiplicities = [0,1,2]

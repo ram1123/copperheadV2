@@ -21,19 +21,19 @@ poly_fit_ranges = {
         "njet1" : [0, 45],
         "njet2" : [0, 50],
     },
-    # "2016preVFP" : {
-    #     "njet0" : [0, 70],
-    #     "njet1" : [0, 55],
-    #     "njet2" : [0, 60],
-    # },
+    "2016preVFP" : {
+        "njet0" : [0, 70],
+        "njet1" : [0, 55],
+        "njet2" : [0, 55],
+    },
 }
 
-year = "2016postVFP"
+year = "2016preVFP"
 # year = "2016postVFP"
 # year = "2018"
 # njet = 0
 # for njet in [0,1,2]:
-for njet in [1]:
+for njet in [2]:
     file = ROOT.TFile(f"{year}_njet{njet}.root", "READ")
     save_path = "./plots"
     workspace = file.Get("zpt_Workspace")
