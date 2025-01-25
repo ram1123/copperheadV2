@@ -189,7 +189,7 @@ btag_systs:
   - hf
   - lfstats1
   - lfstats2
-event_flags:
+event_flags: # MET/Noise filters source: https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2#Recipe_for_BadPFMuonDz_filter_in
   2016preVFP:
   - BadPFMuonFilter
   - EcalDeadCellTriggerPrimitiveFilter
@@ -197,7 +197,9 @@ event_flags:
   - HBHENoiseIsoFilter
   - globalSuperTightHalo2016Filter
   - goodVertices
-  - BadChargedCandidateFilter
+  # - BadChargedCandidateFilter # not recommended see run2 table in https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2
+  # - BadPFMuonDzFilter #UL addition
+  # - eeBadScFilter
   2016postVFP:
   - BadPFMuonFilter
   - EcalDeadCellTriggerPrimitiveFilter
@@ -205,7 +207,9 @@ event_flags:
   - HBHENoiseIsoFilter
   - globalSuperTightHalo2016Filter
   - goodVertices
-  - BadChargedCandidateFilter
+  # - BadChargedCandidateFilter # not recommended see run2 table in https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2
+  # - BadPFMuonDzFilter #UL addition
+  # - eeBadScFilter
   '2017':
   - BadPFMuonFilter
   - EcalDeadCellTriggerPrimitiveFilter
@@ -213,7 +217,10 @@ event_flags:
   - HBHENoiseIsoFilter
   - globalSuperTightHalo2016Filter
   - goodVertices
-  - BadChargedCandidateFilter
+  # - BadChargedCandidateFilter # not recommended see run2 table in https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2
+  # - BadPFMuonDzFilter #UL addition
+  # - eeBadScFilter
+  # - ecalBadCalibFilter
   '2018':
   - BadPFMuonFilter
   - EcalDeadCellTriggerPrimitiveFilter
@@ -221,7 +228,10 @@ event_flags:
   - HBHENoiseIsoFilter
   - globalSuperTightHalo2016Filter
   - goodVertices
-  - BadChargedCandidateFilter
+  # - BadChargedCandidateFilter # not recommended see run2 table in https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2
+  # - BadPFMuonDzFilter #UL addition
+  # - eeBadScFilter
+  # - ecalBadCalibFilter
   2016_RERECO:
   - BadPFMuonFilter
   - EcalDeadCellTriggerPrimitiveFilter
