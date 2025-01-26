@@ -34,6 +34,22 @@ save_path = "/depot/cms/users/yun79/results/stage1/DNN_test//2018/f0_1/data_B/0"
 TODO!: add the correct btag working points for rereco samples that you will be working with when adding rereco samples
 """
 
+
+# def passGoodPV_cut(events):
+#     """
+#     Manually apply GOdd pv cut defined as:
+#     NdfPV > 4; |zPV| < 24cm; nPV > 0 
+#     """
+#     dof_cut = events.PV.ndof > 4
+#     z_cut = abs(events.PV.z) < 24
+#     nPV_cut = events.PV.npvs > 0
+#     out_filter = (dof_cut & 
+#                 z_cut &
+#                 nPV_cut
+#     )
+#     # print(f"passGoodPV_cut is any none: {ak.any(ak.is_none(out_filter)).compute()}")
+#     return out_filter
+
 def getZptWgts(dimuon_pt, njets, nbins, year):
     config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
     wgt_config = OmegaConf.load(config_path)
@@ -411,6 +427,7 @@ class EventProcessor(processor.ProcessorABC):
         # # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
         HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
         for HLT_str in self.config["hlt"]:
+            print(f"HLT_str: {HLT_str}")
             # HLT_filter = HLT_filter | events.HLT[HLT_str]
             HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
         event_filter = event_filter & HLT_filter
@@ -473,15 +490,15 @@ class EventProcessor(processor.ProcessorABC):
         # --------------------------------------------------------#
 
         # Apply event quality flags MET filter
-        evnt_qual_flg_selection = ak.ones_like(event_filter)
+        evnt_qual_flg_selection = ak.ones_like(event_filter, dtype="bool")
         for evt_qual_flg in self.config["event_flags"]:
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
 
         
 
         muon_selection = (
-            (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
-            & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+            (events.Muon.pt_raw >= self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
+            & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"])
             & events.Muon[self.config["muon_id"]]
         )
         
@@ -504,6 +521,7 @@ class EventProcessor(processor.ProcessorABC):
             # applied_fsr = fsr_recovery(events)
             applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
+
         
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]) 
@@ -531,22 +549,23 @@ class EventProcessor(processor.ProcessorABC):
             # else: # for 2016, 2018 dunno about Run3
             #     pt_threshold = 26
             pt_threshold = self.config["muon_leading_pt"] # line 371 of AN-19-124. "muon_leading_pt" is deceptive name, but that's where we saved the threshold
+            # pt_threshold = 0 # temporaray overwrite
 
             dr_threshold = 0.1 # for matching gen muons to reco muons
-            IsoMu24_muons = (events.TrigObj.id == mu_id) &  \
+            trig_muons = (events.TrigObj.id == mu_id) &  \
                         ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
-                    (events.TrigObj.pt > pt_threshold)
+                    (events.TrigObj.pt >= pt_threshold)
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
             padded_muons = ak.pad_none(events.Muon[muon_selection], 2) # pad in case we have only one muon or zero in an event
             # padded_muons = ak.pad_none(events.Muon, 4)
             # print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
             mu1 = padded_muons[:,0]
             mu2 = padded_muons[:,1]
-            mu1_match = (mu1.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+            mu1_match = (mu1.delta_r(events.TrigObj[trig_muons]) <= dr_threshold) & \
                 (mu1.pt > pt_threshold)
             mu1_match = ak.sum(mu1_match, axis=1)
             mu1_match = ak.fill_none(mu1_match, value=False)
-            mu2_match = (mu2.delta_r(events.TrigObj[IsoMu24_muons]) < dr_threshold) & \
+            mu2_match = (mu2.delta_r(events.TrigObj[trig_muons]) <= dr_threshold) & \
                 (mu2.pt > pt_threshold)
             mu2_match =  ak.sum(mu2_match, axis=1)
             mu2_match = ak.fill_none(mu2_match, value=False)
@@ -613,7 +632,7 @@ class EventProcessor(processor.ProcessorABC):
         nmuons = ak.num(muons, axis=1)
         # print(f"nmuons: {nmuons.compute()}")
         # Find opposite-sign muons
-        mm_charge = ak.prod(muons.charge, axis=1)
+        mm_charge = ak.prod(muons.charge, axis=1) # techinally not a product of two leading pT muon charge, but (nmuons==2) cut ensures that there's only two muons
         
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
         print(f"electron_id: {electron_id}")
@@ -635,6 +654,9 @@ class EventProcessor(processor.ProcessorABC):
         # some temporary testing code end -----------------------------------------
         
         electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0) 
+        # electron_veto_test = ak.sum(electron_selection, axis=1) == 0 # temporary test
+        # print(f"electron veto test: {ak.all(electron_veto_test == electron_veto).compute()}")
+        # print(f"electron veto is none: {ak.any(ak.is_none(electron_veto_test)).compute()}")
 
         
         event_filter = (
@@ -869,7 +891,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = False # True       
+        do_jec = True # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -878,16 +900,7 @@ class EventProcessor(processor.ProcessorABC):
         # cache = events.caches[0]
         factory = None
         useclib = False
-        if do_jec and useclib: # Andrea's method
-            print("do Andrea's jec!")
-            # events_cache = events.caches[0]
-            print(f"jets b4 jec: {jets}")
-            jec_parameters = self.config["jec_parameters"]
-            jets = ApplyJetCorrections(jec_parameters, year, dataset).build(jets)  #Run3 ready
-            print(f"jets after jec: {jets}")
-            raise ValueError
-            # jets = ApplyJetSystematics(year,cleanedJets,syst_var)
-        elif do_jec: # old method
+        if do_jec: # old method
             if is_mc:
                 factory = self.jec_factories_mc["jec"]
             else:
@@ -920,6 +933,7 @@ class EventProcessor(processor.ProcessorABC):
         # # # Compute JER uncertainties
         # # if events.metadata["is_mc"] and do_jerunc:
         # #     jets = self.jec_factories_mc["jer"].build(jets, lazy_cache=cache)
+        # TODO: revert the JET pt and mass to just JET jec pt and mass, we only need JER uncertainties
         
         # # # TODO: JER nuisances
 
@@ -1225,18 +1239,18 @@ class EventProcessor(processor.ProcessorABC):
                      self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
             out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
-            # dmitry's old zpt
-            zpt_weight_dmitry =\
-                    self.evaluator[self.zpt_path](dimuon.pt)
-            out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
+            # # dmitry's old zpt
+            # zpt_weight_dmitry =\
+            #         self.evaluator[self.zpt_path](dimuon.pt)
+            # out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
 
-            # print(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
-            # print(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
+            # # print(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
+            # # print(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
 
-            zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
-            out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
-            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
-            out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
+            # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
+            # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
+            # zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
+            # out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
 
             
 
@@ -1252,13 +1266,13 @@ class EventProcessor(processor.ProcessorABC):
             # ones = ak.ones_like(zpt_weight)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
-            # zpt_weight = zpt_weight_valerie
+            zpt_weight = zpt_weight_valerie
             # ones = ak.ones_like(zpt_weight)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
-            # # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
-            # weights.add("zpt_wgt", 
-            #         weight=zpt_weight,
-            # )
+            # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
+            weights.add("zpt_wgt", 
+                    weight=zpt_weight,
+            )
 
         
 
