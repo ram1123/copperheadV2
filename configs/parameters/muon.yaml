@@ -81,7 +81,7 @@ muon_trigmatch_dr:
 muon_trigmatch_pt:
   2016preVFP: 24.0
   2016postVFP: 24.0
-  '2017': 27.0
+  '2017': 24.0 #27.0
   '2018': 24.0
   2016_RERECO: 24.0
   '2017_RERECO': 27.0

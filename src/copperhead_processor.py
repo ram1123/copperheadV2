@@ -555,38 +555,6 @@ class EventProcessor(processor.ProcessorABC):
             pass_pt = events.TrigObj.pt >= pt_threshold
 
 
-            #--------------------------------------------
-            isoMu_filterbit = 2 # source https://cms-talk.web.cern.ch/t/understanding-trigobj-filterbits-in-nanoaodv9/21646/2
-            isoTkMu_filterbit = 8
-            
-
-            #check if trigger candidates are indeed from isomu24
-            pass_filterbit = (events.TrigObj.filterBits & isoMu_filterbit) > 0
-            # print(f"pass_filterbit: {pass_filterbit[:20].compute()}")
-            # raise ValueError
-            isoMu_trigger_cands = events.TrigObj[pass_pt & pass_id & pass_filterbit]
-            # check if my method is consistent with HLT
-            isoMu_trigObj = ak.num(isoMu_trigger_cands, axis=1) > 0
-            isoMu24_HLT_match = (events.HLT.IsoMu24 == isoMu_trigObj)
-            HLT = events.HLT.IsoMu24
-            # print(f"isoMu_trigObj sum: {ak.sum(isoMu_trigObj).compute()}")
-            # print(f"IsoMu24 sum: {ak.sum(HLT).compute()}")
-            
-            # test if ever trigObj is not found when HLT is fired bc we don't expect that
-            bool_arr = ak.zeros_like(HLT, dtype="bool")
-            bool_arr = ak.where((~isoMu24_HLT_match),HLT,bool_arr)
-            print(f"Sum of cases when trig obj true when HLT false: {ak.sum(bool_arr).compute()}")
-            
-            # isoMu24_HLT_NotMatch = (events.HLT.IsoMu24 != isoMu_trigObj).compute()
-            print(f"isoMu24_HLT_match rate: {ak.sum(isoMu24_HLT_match)/ak.num(isoMu24_HLT_match, axis=0)}")
-            print(f"isoMu24_HLT_NotMatch rate: {ak.sum(~isoMu24_HLT_match)/ak.num(isoMu24_HLT_match, axis=0)}")
-            raise ValueError
-            #------------------------------------------
-
-            
-            # isoMu_filterbit = 2 
-            # isoTkMu_filterbit = 8
-
             pass_filterbit_total = ak.zeros_like(events.TrigObj.filterBits, dtype="bool")
             # grab muon candidates passing any one of the used HLTs
             for HLT_str in self.config["hlt"]:
