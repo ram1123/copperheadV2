@@ -72,7 +72,7 @@ def filterRegion(events, region="h-peak"):
     return events
     
 if __name__ == '__main__':
-    client =  Client(n_workers=15,  threads_per_worker=2, processes=True, memory_limit='8 GiB') 
+    client =  Client(n_workers=8,  threads_per_worker=2, processes=True, memory_limit='8 GiB') 
     fields_2compute = [
         "wgt_nominal",
         "nBtagLoose_nominal",
@@ -99,11 +99,11 @@ if __name__ == '__main__':
         "event",
     ]
     dataset_dict = {
-                    # "data" : ["data_*"],
+                    "data" : ["data_*"],
                     # "DY" : ["dy_M-100To200"],
                     # "TT" : ["ttjets*"],
                     # "ST" : ["*top"],
-                    "VV" : ["ww*","wz*", "zz"],
+                    # "VV" : ["ww*","wz*", "zz"],
                     # "EWK" : ["ewk_lljj_mll50_mjj120"],
                     # "ggH" : ["ggh_powhegPS"],
                     # "VBF" : ["vbf_powheg_dipole"],
@@ -111,11 +111,11 @@ if __name__ == '__main__':
     datasets = ["data", "DY", "TT", "ST", "VV", "EWK", "ggH", "VBF"]
     years = [
         "2018",
-        # "2017",
-        # "2016postVFP",
-        # "2016preVFP",
+        "2017",
+        "2016postVFP",
+        "2016preVFP",
     ]
-    regions = ["signal"]
+    region = "signal" # make this a constant bc we're adding too many loops
     categories = [
         "ggh",
         "vbf",
@@ -127,56 +127,63 @@ if __name__ == '__main__':
     # label = "V2_Jan17_JecDefault_valerieZpt"
     # label="test_test"
     label="V2_Jan25_JecOn_valerieZpt"
-    categories = ["ggh", "vbf", "nocat"]
+    categories = [
+        "ggh", 
+        # "vbf", 
+        # "nocat"
+    ]
     
     column_list = ["label","region", "category", "dataset", "yield"]
     yield_df = pd.DataFrame(columns=column_list)
     
     
-    
     total_integral = 0
-    for dataset, dataset_samples in dataset_dict.items():
-        for year in years:
-            load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
-            # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/rereco_yun_Dec05_btagSystFixed_JesJerUncOn/stage1_output/{year}/"
-            filelist = []
-            for dataset_sample_name in dataset_samples:
-                # filelist = glob.glob(f"{load_path}/data_*")
-                sample_filelist = glob.glob(f"{load_path}/{dataset_sample_name}")
-                filelist += sample_filelist
-            print(filelist)
-            
-            for region in regions:
+    for category in categories:
+        for dataset, dataset_samples in dataset_dict.items():
+            for year in years:
+                load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
+                # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/rereco_yun_Dec05_btagSystFixed_JesJerUncOn/stage1_output/{year}/"
+                filelist = []
+                for dataset_sample_name in dataset_samples:
+                    # filelist = glob.glob(f"{load_path}/data_*")
+                    sample_filelist = glob.glob(f"{load_path}/{dataset_sample_name}")
+                    filelist += sample_filelist
+                print(filelist)
+                
+                
                 for file in filelist:
                     # events = dak.from_parquet(f"{file}/*.parquet")
                     events = dak.from_parquet(f"{file}/*/*.parquet")
                     # print(events.fields)
                     # events.fields
                     events = ak.zip({field: events[field] for field in fields_2compute}).compute()
-                    
-                    # print(region)
-                    # raise ValueError
                     events = filterRegion(events, region=region)
-                    events = applyGGH_cutV1(events)
-                    # events = applyVBF_cutV1(events)
+                    if category.lower() == "ggh":
+                        events = applyGGH_cutV1(events)
+                    elif category.lower() == "vbf":
+                        events = applyVBF_cutV1(events)
+                    elif category.lower() == "nocat":
+                        pass # keep stage1 output as is
+                    else:
+                        print("Error: not supported category!")
+                        raise ValueError
+                    # 
                     # events = applyttH_hadronic_cut(events)
                     
                     # sample_yield = ak.num(events.dimuon_mass, axis=0)
                     sample_yield = ak.sum(events.wgt_nominal, axis=0)
                     print(f"sample_yield for {file}: {sample_yield}")
                     total_integral += sample_yield
-        print(f"total integral for {region} region : {total_integral}")
-        # dataset= "data"
-        category = "ggh"
-        new_row = {
-                "label": [label],
-                "region": [region],
-                "category": [category],
-                "dataset": [dataset], 
-                "yield": [total_integral]
-            }
-        new_row = pd.DataFrame(new_row)
-        yield_df = pd.concat([yield_df, new_row], ignore_index=True)
+            print(f"total integral for {region} region : {total_integral}")
+            new_row = {
+                    "label": [label],
+                    "region": [region],
+                    "category": [category],
+                    "dataset": [dataset], 
+                    "yield": [total_integral]
+                }
+            new_row = pd.DataFrame(new_row)
+            yield_df = pd.concat([yield_df, new_row], ignore_index=True)
 
     # save the yield df at the end
     yield_df.to_csv(f"yield_df_{label}.csv")
