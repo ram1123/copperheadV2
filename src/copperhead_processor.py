@@ -544,18 +544,14 @@ class EventProcessor(processor.ProcessorABC):
             """
             
             mu_id = 13
-            # pt_threshold = self.config["muon_leading_pt"] # line 371 of AN-19-124. "muon_leading_pt" is deceptive name, but that's where we saved the threshold
-            # pt_threshold = 0 # temporaray overwrite
-            # pt_threshold = 24
             pt_threshold = self.config["muon_trigmatch_pt"] - 0.5 # leave a little room for uncertainties 
-            print(f"pt_threshold: {pt_threshold}")
-            # dr_threshold = 0.1 # for matching gen muons to reco muons
             dr_threshold = self.config["muon_trigmatch_dr"]
+            print(f"pt_threshold: {pt_threshold}")
             print(f"dr_threshold: {dr_threshold}")
+            
             pass_id = abs(events.TrigObj.id) == mu_id
             pass_pt = events.TrigObj.pt >= pt_threshold
-
-
+            # start TrigObject matching
             pass_filterbit_total = ak.zeros_like(events.TrigObj.filterBits, dtype="bool")
             # grab muon candidates passing any one of the used HLTs
             for HLT_str in self.config["hlt"]:
@@ -563,16 +559,11 @@ class EventProcessor(processor.ProcessorABC):
                     trig_filterbit = 8 # isoTkMu; source https://cms-talk.web.cern.ch/t/understanding-trigobj-filterbits-in-nanoaodv9/21646/2
                 else:
                     trig_filterbit = 2 # isoMu; source https://cms-talk.web.cern.ch/t/understanding-trigobj-filterbits-in-nanoaodv9/21646/2
-                # print(f"{HLT_str} trig_filterbit: {trig_filterbit}")
                 pass_filterbit = (events.TrigObj.filterBits & trig_filterbit) > 0
-                # print(f"{HLT_str} pass_filterbit: {pass_filterbit[:20].compute()}")
                 pass_filterbit_total = pass_filterbit_total | pass_filterbit
-            # print(f"Trigger pass_filterbit_total: {pass_filterbit_total[:20].compute()}")
 
             trigger_cands_filter = pass_pt & pass_id & pass_filterbit_total
             trigger_cands = events.TrigObj[trigger_cands_filter]
-            # print(f"Trigger trigger_cands_filter: {trigger_cands_filter[:20].compute()}")
-            # print(f"trigger_cands: {trigger_cands.pt[:20].compute()}")
             
 
 
@@ -581,10 +572,7 @@ class EventProcessor(processor.ProcessorABC):
             sorted_args = ak.argsort(padded_muons.pt, ascending=False)
             muons_sorted = (padded_muons[sorted_args])
             mu1 = muons_sorted[:,0]
-            mu2 = muons_sorted[:,1]
 
-            # print(f"mu1: {mu1.pt[:20].compute()}")
-            # print(f"mu1.delta_r(trigger_cands): {mu1.delta_r(trigger_cands)[:20].compute()}")
             mu1_dr_match = mu1.delta_r(trigger_cands) <= dr_threshold
             
             mu1_dr_match = ak.sum(mu1_dr_match, axis=1) > 0
@@ -592,13 +580,8 @@ class EventProcessor(processor.ProcessorABC):
             mu1_leading_pt_match = mu1.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu1_leading_pt_match = ak.fill_none(mu1_leading_pt_match, value=False)
             mu1_trigger_match = mu1_dr_match & mu1_leading_pt_match
-            # print(f"mu1_leading_pt_match: {mu1_leading_pt_match[:20].compute()}")
-            # print(f"mu1_trigger_match: {mu1_trigger_match[:20].compute()}")
 
-
-
-            # print(f"mu2: {mu2.pt[:20].compute()}")
-            # print(f"mu2.delta_r(trigger_cands): {mu2.delta_r(trigger_cands)[:20].compute()}")
+            mu2 = muons_sorted[:,1]
             mu2_dr_match = mu2.delta_r(trigger_cands) <= dr_threshold
             
             mu2_dr_match = ak.sum(mu2_dr_match, axis=1) > 0
@@ -606,14 +589,8 @@ class EventProcessor(processor.ProcessorABC):
             mu2_leading_pt_match = mu2.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu2_leading_pt_match = ak.fill_none(mu2_leading_pt_match, value=False)
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
-            # print(f"mu2_dr_match: {mu2_dr_match[:20].compute()}")
-            # print(f"mu2_leading_pt_match: {mu2_leading_pt_match[:20].compute()}")
-            # print(f"mu2_trigger_match: {mu2_trigger_match[:20].compute()}")
             
-            # raise ValueError
-
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
-            # print(f"trigger_match: {trigger_match[:20].compute()}")
             event_filter = event_filter & trigger_match
             
         else:
