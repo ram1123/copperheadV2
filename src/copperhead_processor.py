@@ -500,6 +500,7 @@ class EventProcessor(processor.ProcessorABC):
             (events.Muon.pt_raw >= self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
             & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"])
             & events.Muon[self.config["muon_id"]]
+            # & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
         
         # # --------------------------------------------------------
@@ -566,12 +567,12 @@ class EventProcessor(processor.ProcessorABC):
                 pass_filterbit = (events.TrigObj.filterBits & trig_filterbit) > 0
                 # print(f"{HLT_str} pass_filterbit: {pass_filterbit[:20].compute()}")
                 pass_filterbit_total = pass_filterbit_total | pass_filterbit
-            print(f"Trigger pass_filterbit_total: {pass_filterbit_total[:20].compute()}")
+            # print(f"Trigger pass_filterbit_total: {pass_filterbit_total[:20].compute()}")
 
             trigger_cands_filter = pass_pt & pass_id & pass_filterbit_total
             trigger_cands = events.TrigObj[trigger_cands_filter]
             # print(f"Trigger trigger_cands_filter: {trigger_cands_filter[:20].compute()}")
-            print(f"trigger_cands: {trigger_cands.pt[:20].compute()}")
+            # print(f"trigger_cands: {trigger_cands.pt[:20].compute()}")
             
 
 
@@ -582,8 +583,8 @@ class EventProcessor(processor.ProcessorABC):
             mu1 = muons_sorted[:,0]
             mu2 = muons_sorted[:,1]
 
-            print(f"mu1: {mu1.pt[:20].compute()}")
-            print(f"mu1.delta_r(trigger_cands): {mu1.delta_r(trigger_cands)[:20].compute()}")
+            # print(f"mu1: {mu1.pt[:20].compute()}")
+            # print(f"mu1.delta_r(trigger_cands): {mu1.delta_r(trigger_cands)[:20].compute()}")
             mu1_dr_match = mu1.delta_r(trigger_cands) <= dr_threshold
             
             mu1_dr_match = ak.sum(mu1_dr_match, axis=1) > 0
@@ -591,13 +592,13 @@ class EventProcessor(processor.ProcessorABC):
             mu1_leading_pt_match = mu1.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu1_leading_pt_match = ak.fill_none(mu1_leading_pt_match, value=False)
             mu1_trigger_match = mu1_dr_match & mu1_leading_pt_match
-            print(f"mu1_leading_pt_match: {mu1_leading_pt_match[:20].compute()}")
-            print(f"mu1_trigger_match: {mu1_trigger_match[:20].compute()}")
+            # print(f"mu1_leading_pt_match: {mu1_leading_pt_match[:20].compute()}")
+            # print(f"mu1_trigger_match: {mu1_trigger_match[:20].compute()}")
 
 
 
-            print(f"mu2: {mu2.pt[:20].compute()}")
-            print(f"mu2.delta_r(trigger_cands): {mu2.delta_r(trigger_cands)[:20].compute()}")
+            # print(f"mu2: {mu2.pt[:20].compute()}")
+            # print(f"mu2.delta_r(trigger_cands): {mu2.delta_r(trigger_cands)[:20].compute()}")
             mu2_dr_match = mu2.delta_r(trigger_cands) <= dr_threshold
             
             mu2_dr_match = ak.sum(mu2_dr_match, axis=1) > 0
@@ -605,14 +606,14 @@ class EventProcessor(processor.ProcessorABC):
             mu2_leading_pt_match = mu2.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu2_leading_pt_match = ak.fill_none(mu2_leading_pt_match, value=False)
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
-            print(f"mu2_dr_match: {mu2_dr_match[:20].compute()}")
-            print(f"mu2_leading_pt_match: {mu2_leading_pt_match[:20].compute()}")
-            print(f"mu2_trigger_match: {mu2_trigger_match[:20].compute()}")
+            # print(f"mu2_dr_match: {mu2_dr_match[:20].compute()}")
+            # print(f"mu2_leading_pt_match: {mu2_leading_pt_match[:20].compute()}")
+            # print(f"mu2_trigger_match: {mu2_trigger_match[:20].compute()}")
             
             # raise ValueError
 
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
-            print(f"trigger_match: {trigger_match[:20].compute()}")
+            # print(f"trigger_match: {trigger_match[:20].compute()}")
             event_filter = event_filter & trigger_match
             
         else:
@@ -1493,6 +1494,7 @@ class EventProcessor(processor.ProcessorABC):
             & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
             & (matched_mu_iso < self.config["muon_iso_cut"])
             & matched_mu_id
+            # & (jets.matched_muons.isGlobal | jets.matched_muons.isTracker) # Table 3.5 AN-19-124
         )
         # print(f"matched_mu_pass: {matched_mu_pass.compute()}")
         # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
