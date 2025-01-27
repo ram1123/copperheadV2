@@ -547,6 +547,7 @@ class EventProcessor(processor.ProcessorABC):
             # pt_threshold = 0 # temporaray overwrite
             # pt_threshold = 24
             pt_threshold = self.config["muon_trigmatch_pt"] #- 0.5 # leave a little room for uncertainties 
+            print(f"pt_threshold: {pt_threshold}")
             # dr_threshold = 0.1 # for matching gen muons to reco muons
             dr_threshold = self.config["muon_trigmatch_dr"]
             pass_id = abs(events.TrigObj.id) == mu_id
@@ -557,23 +558,27 @@ class EventProcessor(processor.ProcessorABC):
 
             #check if trigger candidates are indeed from isomu24
             pass_filterbit = (events.TrigObj.filterBits & isoMu_filterbit) > 0
+            # print(f"pass_filterbit: {pass_filterbit[:20].compute()}")
+            # raise ValueError
             isoMu_trigger_cands = events.TrigObj[pass_pt & pass_id & pass_filterbit]
             # check if my method is consistent with HLT
             isoMu_trigObj = ak.num(isoMu_trigger_cands, axis=1) > 0
-            isoMu24_HLT_match = (events.HLT.IsoMu24 == isoMu_trigObj).compute()
+            isoMu24_HLT_match = (events.HLT.IsoMu27 == isoMu_trigObj).compute()
+            print(f"isoMu_trigObj sum: {ak.sum(isoMu_trigObj).compute()}")
+            print(f"IsoMu27 sum: {ak.sum(events.HLT.IsoMu27).compute()}")
             # isoMu24_HLT_NotMatch = (events.HLT.IsoMu24 != isoMu_trigObj).compute()
             print(f"isoMu24_HLT_match rate: {ak.sum(isoMu24_HLT_match)/ak.num(isoMu24_HLT_match, axis=0)}")
             print(f"isoMu24_HLT_NotMatch rate: {ak.sum(~isoMu24_HLT_match)/ak.num(isoMu24_HLT_match, axis=0)}")
             
-            pass_filterbit = (events.TrigObj.filterBits & isoTkMu_filterbit) > 0
-            isoTkMu_trigger_cands = events.TrigObj[pass_pt & pass_id & pass_filterbit]
+            # pass_filterbit = (events.TrigObj.filterBits & isoTkMu_filterbit) > 0
+            # isoTkMu_trigger_cands = events.TrigObj[pass_pt & pass_id & pass_filterbit]
 
-            # check if my method is consistent with HLT
-            isoTkMu_trigObj = ak.num(isoTkMu_trigger_cands, axis=1) > 0
-            isoTkMu24_HLT_match = (events.HLT.IsoTkMu24 == isoTkMu_trigObj).compute()
-            # isoMu24_HLT_NotMatch = (events.HLT.IsoMu24 != isoMu_trigObj).compute()
-            print(f"Track Mu24_HLT_match rate: {ak.sum(isoTkMu24_HLT_match)/ak.num(isoTkMu24_HLT_match, axis=0)}")
-            print(f"Track Mu24_HLT_NotMatch rate: {ak.sum(~isoTkMu24_HLT_match)/ak.num(isoTkMu24_HLT_match, axis=0)}")
+            # # check if my method is consistent with HLT
+            # isoTkMu_trigObj = ak.num(isoTkMu_trigger_cands, axis=1) > 0
+            # isoTkMu24_HLT_match = (events.HLT.IsoTkMu24 == isoTkMu_trigObj).compute()
+            # # isoMu24_HLT_NotMatch = (events.HLT.IsoMu24 != isoMu_trigObj).compute()
+            # print(f"Track Mu24_HLT_match rate: {ak.sum(isoTkMu24_HLT_match)/ak.num(isoTkMu24_HLT_match, axis=0)}")
+            # print(f"Track Mu24_HLT_NotMatch rate: {ak.sum(~isoTkMu24_HLT_match)/ak.num(isoTkMu24_HLT_match, axis=0)}")
 
             
             raise ValueError
