@@ -541,37 +541,67 @@ class EventProcessor(processor.ProcessorABC):
             
             TODO: The impact this operation has onto the statistics is supposedly very low, but I have to check that
             """
-            isoMu_filterbit = 2
+            
             mu_id = 13
-            # pt_threshold = 24 
-            # if "2017" in year: # line 371 of AN-19-124
-            #     pt_threshold = 29
-            # else: # for 2016, 2018 dunno about Run3
-            #     pt_threshold = 26
-            pt_threshold = self.config["muon_leading_pt"] # line 371 of AN-19-124. "muon_leading_pt" is deceptive name, but that's where we saved the threshold
+            # pt_threshold = self.config["muon_leading_pt"] # line 371 of AN-19-124. "muon_leading_pt" is deceptive name, but that's where we saved the threshold
             # pt_threshold = 0 # temporaray overwrite
+            # pt_threshold = 24
+            pt_threshold = self.config["muon_trigmatch_pt"] #- 0.5 # leave a little room for uncertainties 
+            # dr_threshold = 0.1 # for matching gen muons to reco muons
+            dr_threshold = self.config["muon_trigmatch_dr"]
+            pass_id = abs(events.TrigObj.id) == mu_id
+            pass_pt = events.TrigObj.pt >= pt_threshold
+            isoMu_filterbit = 2 # source https://cms-talk.web.cern.ch/t/understanding-trigobj-filterbits-in-nanoaodv9/21646/2
+            isoTkMu_filterbit = 8
+            
 
-            dr_threshold = 0.1 # for matching gen muons to reco muons
-            trig_muons = (events.TrigObj.id == mu_id) &  \
-                        ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & \
-                    (events.TrigObj.pt >= pt_threshold)
-            #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
-            padded_muons = ak.pad_none(events.Muon[muon_selection], 2) # pad in case we have only one muon or zero in an event
-            # padded_muons = ak.pad_none(events.Muon, 4)
-            # print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
-            mu1 = padded_muons[:,0]
-            mu2 = padded_muons[:,1]
-            mu1_match = (mu1.delta_r(events.TrigObj[trig_muons]) <= dr_threshold) & \
-                (mu1.pt > pt_threshold)
-            mu1_match = ak.sum(mu1_match, axis=1)
-            mu1_match = ak.fill_none(mu1_match, value=False)
-            mu2_match = (mu2.delta_r(events.TrigObj[trig_muons]) <= dr_threshold) & \
-                (mu2.pt > pt_threshold)
-            mu2_match =  ak.sum(mu2_match, axis=1)
-            mu2_match = ak.fill_none(mu2_match, value=False)
+            #check if trigger candidates are indeed from isomu24
+            pass_filterbit = (events.TrigObj.filterBits & isoMu_filterbit) > 0
+            isoMu_trigger_cands = events.TrigObj[pass_pt & pass_id & pass_filterbit]
+            # check if my method is consistent with HLT
+            isoMu_trigObj = ak.num(isoMu_trigger_cands, axis=1) > 0
+            isoMu24_HLT_match = (events.HLT.IsoMu24 == isoMu_trigObj).compute()
+            # isoMu24_HLT_NotMatch = (events.HLT.IsoMu24 != isoMu_trigObj).compute()
+            print(f"isoMu24_HLT_match rate: {ak.sum(isoMu24_HLT_match)/ak.num(isoMu24_HLT_match, axis=0)}")
+            print(f"isoMu24_HLT_NotMatch rate: {ak.sum(~isoMu24_HLT_match)/ak.num(isoMu24_HLT_match, axis=0)}")
+            
+            pass_filterbit = (events.TrigObj.filterBits & isoTkMu_filterbit) > 0
+            isoTkMu_trigger_cands = events.TrigObj[pass_pt & pass_id & pass_filterbit]
 
-            trigger_match = (mu1_match >0) | (mu2_match > 0)
-            event_filter = event_filter & trigger_match
+            # check if my method is consistent with HLT
+            isoTkMu_trigObj = ak.num(isoTkMu_trigger_cands, axis=1) > 0
+            isoTkMu24_HLT_match = (events.HLT.IsoTkMu24 == isoTkMu_trigObj).compute()
+            # isoMu24_HLT_NotMatch = (events.HLT.IsoMu24 != isoMu_trigObj).compute()
+            print(f"Track Mu24_HLT_match rate: {ak.sum(isoTkMu24_HLT_match)/ak.num(isoTkMu24_HLT_match, axis=0)}")
+            print(f"Track Mu24_HLT_NotMatch rate: {ak.sum(~isoTkMu24_HLT_match)/ak.num(isoTkMu24_HLT_match, axis=0)}")
+
+            
+            raise ValueError
+
+            
+            
+            # # trig_muons = (events.TrigObj.id == mu_id) &  \
+            #             # ((events.TrigObj.filterBits & isoMu_filterbit) == isoMu_filterbit) & 
+            #         # (events.TrigObj.pt >= pt_threshold)
+            # #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
+            # padded_muons = ak.pad_none(events.Muon[muon_selection], 2) # pad in case we have only one muon or zero in an event
+            # # padded_muons = ak.pad_none(events.Muon, 4)
+            # # print(f"copperhead2 EventProcessor padded_muons: \n {padded_muons}")
+            # sorted_args = ak.argsort(padded_muons.pt, ascending=False)
+            # muons_sorted = (padded_muons[sorted_args])
+            # mu1 = muons_sorted[:,0]
+            # mu2 = muons_sorted[:,1]
+            # mu1_match = (mu1.delta_r(events.TrigObj[trig_muons]) <= dr_threshold) & \
+            #     (mu1.pt >= pt_threshold)
+            # mu1_match = ak.sum(mu1_match, axis=1)
+            # mu1_match = ak.fill_none(mu1_match, value=False)
+            # mu2_match = (mu2.delta_r(events.TrigObj[trig_muons]) <= dr_threshold) & \
+            #     (mu2.pt >= pt_threshold)
+            # mu2_match =  ak.sum(mu2_match, axis=1)
+            # mu2_match = ak.fill_none(mu2_match, value=False)
+
+            # trigger_match = (mu1_match >0) | (mu2_match > 0)
+            # event_filter = event_filter & trigger_match
         else:
             do_seperate_mu1_leading_pt_cut = True
             print("NO trigger match! Doing leading mu pass instead!")
@@ -891,7 +921,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = True # True       
+        do_jec = False # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
