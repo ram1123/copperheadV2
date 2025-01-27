@@ -98,48 +98,86 @@ if __name__ == '__main__':
         # "region",
         "event",
     ]
-     
-    # year = "2018"
-    # year = "2016postVFP"
-    # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/rereco_yun_Dec05_btagSystFixed_JesJerUncOn/stage1_output/{year}/"
-    # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/ul_yun_Dec10/stage1_output/{year}/"
-    # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/ul_yun_Dec12_L1JecOff/stage1_output/{year}/"
-    # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/ul_yun_Dec12_JecOff/stage1_output/{year}/"
-    # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/ul_yun_Dec12_JecOff_JesJerUncOn/stage1_output/{year}/"
-    # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/ul_yun_Dec15_JecOff_JesJerUncOn_2016LumiFix/stage1_output/{year}/"
-    
-    # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec20_RERECO_MuIdMuIsoRoccor/stage1_output/{year}/f1_0"
+    dataset_dict = {
+                    # "data" : ["data_*"],
+                    # "DY" : ["dy_M-100To200"],
+                    # "TT" : ["ttjets*"],
+                    # "ST" : ["*top"],
+                    "VV" : ["ww*","wz*", "zz"],
+                    # "EWK" : ["ewk_lljj_mll50_mjj120"],
+                    # "ggH" : ["ggh_powhegPS"],
+                    # "VBF" : ["vbf_powheg_dipole"],
+   }
+    datasets = ["data", "DY", "TT", "ST", "VV", "EWK", "ggH", "VBF"]
+    years = [
+        "2018",
+        # "2017",
+        # "2016postVFP",
+        # "2016preVFP",
+    ]
+    regions = ["signal"]
+    categories = [
+        "ggh",
+        "vbf",
+        "nocat",
+    ]
+
+
     
     # label = "V2_Jan17_JecDefault_valerieZpt"
-    label = "test_test"
+    # label="test_test"
+    label="V2_Jan25_JecOn_valerieZpt"
+    categories = ["ggh", "vbf", "nocat"]
+    
+    column_list = ["label","region", "category", "dataset", "yield"]
+    yield_df = pd.DataFrame(columns=column_list)
+    
+    
+    
     total_integral = 0
-    for year in ["2018", "2017", "2016postVFP", "2016preVFP"]:
-    # for year in ["2018", "2017", "2016"]:
-        load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
-        # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/rereco_yun_Dec05_btagSystFixed_JesJerUncOn/stage1_output/{year}/"
-        filelist = glob.glob(f"{load_path}/data_*")
-        print(filelist)
-        
-        for region in ["signal"]:
-            for file in filelist:
-                # events_data = dak.from_parquet(f"{file}/*.parquet")
-                events_data = dak.from_parquet(f"{file}/*/*.parquet")
-                # print(events_data.fields)
-                # events_data.fields
-                events_data = ak.zip({field: events_data[field] for field in fields_2compute}).compute()
-                
-                # print(region)
-                # raise ValueError
-                events_data = filterRegion(events_data, region=region)
-                events_data = applyGGH_cutV1(events_data)
-                # events_data = applyVBF_cutV1(events_data)
-                # events_data = applyttH_hadronic_cut(events_data)
-                
-                data_yield = ak.num(events_data.dimuon_mass, axis=0)
-                # data_yield = ak.num(events_data.dimuon_mass, axis=0).compute()
-                # ak.to_dataframe(events_data).to_csv("event_dataC_V1.csv")
-                # df = pd.DataFrame({field: ak.fill_none(events_data[field], value=-999.9) for field in events_data.fields})
-                # df.to_csv("event_dataC_V1.csv")
-                print(f"data_yield for {file}: {data_yield}")
-                total_integral += data_yield
-    print(f"total integral for {region} region : {total_integral}")
+    for dataset, dataset_samples in dataset_dict.items():
+        for year in years:
+            load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
+            # load_path =f"//depot/cms/users/yun79/hmm/copperheadV1clean/rereco_yun_Dec05_btagSystFixed_JesJerUncOn/stage1_output/{year}/"
+            filelist = []
+            for dataset_sample_name in dataset_samples:
+                # filelist = glob.glob(f"{load_path}/data_*")
+                sample_filelist = glob.glob(f"{load_path}/{dataset_sample_name}")
+                filelist += sample_filelist
+            print(filelist)
+            
+            for region in regions:
+                for file in filelist:
+                    # events = dak.from_parquet(f"{file}/*.parquet")
+                    events = dak.from_parquet(f"{file}/*/*.parquet")
+                    # print(events.fields)
+                    # events.fields
+                    events = ak.zip({field: events[field] for field in fields_2compute}).compute()
+                    
+                    # print(region)
+                    # raise ValueError
+                    events = filterRegion(events, region=region)
+                    events = applyGGH_cutV1(events)
+                    # events = applyVBF_cutV1(events)
+                    # events = applyttH_hadronic_cut(events)
+                    
+                    # sample_yield = ak.num(events.dimuon_mass, axis=0)
+                    sample_yield = ak.sum(events.wgt_nominal, axis=0)
+                    print(f"sample_yield for {file}: {sample_yield}")
+                    total_integral += sample_yield
+        print(f"total integral for {region} region : {total_integral}")
+        # dataset= "data"
+        category = "ggh"
+        new_row = {
+                "label": [label],
+                "region": [region],
+                "category": [category],
+                "dataset": [dataset], 
+                "yield": [total_integral]
+            }
+        new_row = pd.DataFrame(new_row)
+        yield_df = pd.concat([yield_df, new_row], ignore_index=True)
+
+    # save the yield df at the end
+    yield_df.to_csv(f"yield_df_{label}.csv")
+    print("Success!")
