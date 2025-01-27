@@ -78,6 +78,16 @@ muon_trigmatch_dr:
   '2018_RERECO': 0.1
   2022preEE: 0.1
   2022postEE: 0.1
+muon_trigmatch_pt:
+  2016preVFP: 24.0
+  2016postVFP: 24.0
+  '2017': 27.0
+  '2018': 24.0
+  2016_RERECO: 24.0
+  '2017_RERECO': 27.0
+  '2018_RERECO': 24.0
+  2022preEE: 24.0
+  2022postEE: 24.0
 muon_trigmatch_id:
   2016preVFP: tightId
   2016postVFP: tightId
