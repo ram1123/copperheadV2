@@ -233,10 +233,10 @@ jetpuid_sf_file: # old method as of Dec 16 2024, but needed for 2017 UL
   2022preEE: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   2022postEE: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
 jmar_sf_file:
-  2016preVFP: data/POG/JME/2016preVFP_UL/jmar.json.gz
-  2016postVFP: data/POG/JME/2016postVFP_UL/jmar.json.gz
-  '2017': data/POG/JME/2017_UL/jmar.json.gz # while this is listed, we use jetpuid_sf_file for 2017 (old method)
-  '2018': data/POG/JME/2018_UL/jmar.json.gz
+  2016preVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jmar.json.gz
+  2016postVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016postVFP_UL/jmar.json.gz
+  '2017': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2017_UL/jmar.json.gz # while this is listed, we use jetpuid_sf_file for 2017 (old method)
+  '2018': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jmar.json.gz
   2016_RERECO: dummy
   '2017_RERECO': dummy
   '2018_RERECO': dummy
