@@ -366,19 +366,6 @@ class EventProcessor(processor.ProcessorABC):
         Apply LHE cuts for DY sample stitching
         Basically remove events that has dilepton mass between 100 and 200 GeV
         """
-        # print("testJetVector right as process starts")
-        # testJetVector(events.Jet)
-        # numevents = len(events)
-        # print(f"numevents: {numevents}")
-        # print(f"events.events: {events.event.compute()}")
-        # event_match = events.event==95324165 # debugging
-        # print(f"event match: {ak.sum(event_match).compute()}")
-        # raise ValueError
-        # print(f"events.MET.pt: {events.MET.pt.compute()}")
-        # print(f"df.Muon.pt: {events.Muon.pt.compute()}")
-        # print(f"df.Muon.eta: {events.Muon.eta.compute()}")
-        # print(f"df.Muon.phi: {events.Muon.phi.compute()}")
-        # print(f"df.Muon.pfRelIso04_all: {events.Muon.pfRelIso04_all.compute()}")
         event_filter = ak.ones_like(events.event, dtype="bool") # 1D boolean array to be used to filter out bad events
         dataset = events.metadata['dataset']
         print(f"dataset: {dataset}")
@@ -421,16 +408,15 @@ class EventProcessor(processor.ProcessorABC):
             
             
 
-# just reading test start --------------------------------------------------------------------------        
 
             
         # # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
-        HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
-        for HLT_str in self.config["hlt"]:
-            print(f"HLT_str: {HLT_str}")
-            # HLT_filter = HLT_filter | events.HLT[HLT_str]
-            HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
-        event_filter = event_filter & HLT_filter
+        # HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
+        # for HLT_str in self.config["hlt"]:
+        #     print(f"HLT_str: {HLT_str}")
+        #     # HLT_filter = HLT_filter | events.HLT[HLT_str]
+        #     HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
+        # event_filter = event_filter & HLT_filter
 
         # ------------------------------------------------------------#
         # Skimming end, filter out events and prepare for pre-selection
@@ -500,7 +486,7 @@ class EventProcessor(processor.ProcessorABC):
             (events.Muon.pt_raw >= self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
             & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"])
             & events.Muon[self.config["muon_id"]]
-            # & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
+            & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
         
         # # --------------------------------------------------------
@@ -544,7 +530,7 @@ class EventProcessor(processor.ProcessorABC):
             """
             
             mu_id = 13
-            pt_threshold = self.config["muon_trigmatch_pt"] - 0.5 # leave a little room for uncertainties 
+            pt_threshold = self.config["muon_trigmatch_pt"] #- 0.5 # leave a little room for uncertainties 
             dr_threshold = self.config["muon_trigmatch_dr"]
             print(f"pt_threshold: {pt_threshold}")
             print(f"dr_threshold: {dr_threshold}")
@@ -652,6 +638,7 @@ class EventProcessor(processor.ProcessorABC):
         # count muons that pass the muon selection
         nmuons = ak.num(muons, axis=1)
         # print(f"nmuons: {nmuons.compute()}")
+        
         # Find opposite-sign muons
         mm_charge = ak.prod(muons.charge, axis=1) # techinally not a product of two leading pT muon charge, but (nmuons==2) cut ensures that there's only two muons
         
@@ -662,6 +649,7 @@ class EventProcessor(processor.ProcessorABC):
             (events.Electron.pt > self.config["electron_pt_cut"])
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
             & events.Electron[electron_id]
+            & ~((1.444 < abs(events.Electron.eta)) & (abs(events.Electron.eta) <1.566)) # ecal gap rejection
         )
         
         # some temporary testing code start -----------------------------------------
@@ -673,8 +661,23 @@ class EventProcessor(processor.ProcessorABC):
         # else:
         #     electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0) 
         # some temporary testing code end -----------------------------------------
+
+        selected_electrons = events.Electron[electron_selection]
+        nelectrons = ak.num(selected_electrons, axis=1)
+        electron_veto = (nelectrons == 0) 
+
+        # # check cases where either: nelectrons + nmuons > 4
+        # edge_cases = nelectrons + nmuons
+        # # print(f"edge_cases: {edge_cases[:20].compute()}")
+        # print(f"edge_cases > 4 sum: {ak.sum(edge_cases> 4).compute()}")
+        # raise ValueError
+
+        # # check Ecal Gap:
+        # ecal_gap = (1.444 < abs(selected_electrons.eta)) & (abs(selected_electrons.eta) <1.566)
+        # ecal_gap = ak.sum(ecal_gap, axis=1) > 0
+        # print(f"ecal gap sum: {ak.sum(ecal_gap).compute()}")
+        # print(f"total nevens: {ak.num(event_filter, axis=0).compute()}")
         
-        electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0) 
         # electron_veto_test = ak.sum(electron_selection, axis=1) == 0 # temporary test
         # print(f"electron veto test: {ak.all(electron_veto_test == electron_veto).compute()}")
         # print(f"electron veto is none: {ak.any(ak.is_none(electron_veto_test)).compute()}")
@@ -1471,7 +1474,7 @@ class EventProcessor(processor.ProcessorABC):
             & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
             & (matched_mu_iso < self.config["muon_iso_cut"])
             & matched_mu_id
-            # & (jets.matched_muons.isGlobal | jets.matched_muons.isTracker) # Table 3.5 AN-19-124
+            & (jets.matched_muons.isGlobal | jets.matched_muons.isTracker) # Table 3.5 AN-19-124
         )
         # print(f"matched_mu_pass: {matched_mu_pass.compute()}")
         # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
