@@ -402,11 +402,11 @@ jec_parameters:
     2016postVFP: Summer19UL16_V7_MC
     '2017': Summer19UL17_V5_MC
     '2018': Summer19UL18_V5_MC
-    2016_RERECO: Summer19UL16_V7_MC
-    '2017_RERECO': Summer19UL17_V5_MC
-    '2018_RERECO': Summer19UL18_V5_MC
-    2022preEE: Summer19UL18_V5_MC
-    2022postEE: Summer19UL18_V5_MC
+    2016_RERECO: Summer19UL16_V7_MC # these are wrong
+    '2017_RERECO': Summer19UL17_V5_MC # these are wrong
+    '2018_RERECO': Summer19UL18_V5_MC # these are wrong
+    2022preEE: Summer19UL18_V5_MC # these are wrong
+    2022postEE: Summer19UL18_V5_MC # these are wrong
   jer_tags:
     2016preVFP: Summer20UL16APV_JRV3_MC
     2016postVFP: Summer20UL16_JRV3_MC

@@ -37,3 +37,13 @@ res_calib_path:
   2022postEE:
     MC: data/res_calib/res_calib_MC_2018.root
     Data: data/res_calib/res_calib_Data_2018.root
+BS_res_calib_path:
+  2016preVFP: dummy # not yet implemented
+  2016postVFP: dummy # not yet implemented
+  '2017': data/res_calib/res_calib_BS_correction_2017UL.json
+  '2018': data/res_calib/res_calib_BS_correction_2018UL.json
+  2016_RERECO: dummy
+  '2017_RERECO': dummy
+  '2018_RERECO': dummy
+  2022preEE: dummy
+  2022postEE: dummy
