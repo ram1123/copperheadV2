@@ -410,13 +410,13 @@ class EventProcessor(processor.ProcessorABC):
 
 
             
-        # # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
-        # HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
-        # for HLT_str in self.config["hlt"]:
-        #     print(f"HLT_str: {HLT_str}")
-        #     # HLT_filter = HLT_filter | events.HLT[HLT_str]
-        #     HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
-        # event_filter = event_filter & HLT_filter
+        # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
+        HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
+        for HLT_str in self.config["hlt"]:
+            print(f"HLT_str: {HLT_str}")
+            # HLT_filter = HLT_filter | events.HLT[HLT_str]
+            HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
+        event_filter = event_filter & HLT_filter
 
         # ------------------------------------------------------------#
         # Skimming end, filter out events and prepare for pre-selection
@@ -552,7 +552,7 @@ class EventProcessor(processor.ProcessorABC):
             trigger_cands = events.TrigObj[trigger_cands_filter]
             
 
-
+                                               
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
             padded_muons = ak.pad_none(events.Muon[muon_selection], 2) # pad in case we have only one muon or zero in an event
             sorted_args = ak.argsort(padded_muons.pt, ascending=False)
@@ -645,11 +645,12 @@ class EventProcessor(processor.ProcessorABC):
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
         print(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
+        ecal_gap = (1.444 < abs(events.Electron.eta)) & (abs(events.Electron.eta) <1.566)
         electron_selection = (
             (events.Electron.pt > self.config["electron_pt_cut"])
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
             & events.Electron[electron_id]
-            & ~((1.444 < abs(events.Electron.eta)) & (abs(events.Electron.eta) <1.566)) # ecal gap rejection
+            & ~ecal_gap # reject electrons in ecal gap region, as specified in table 3.5 of AN-19-124
         )
         
         # some temporary testing code start -----------------------------------------
