@@ -531,9 +531,9 @@ class EventProcessor(processor.ProcessorABC):
             
             mu_id = 13
             pt_threshold = self.config["muon_trigmatch_pt"] #- 0.5 # leave a little room for uncertainties 
-            dr_threshold = self.config["muon_trigmatch_dr"]
+            
             print(f"pt_threshold: {pt_threshold}")
-            print(f"dr_threshold: {dr_threshold}")
+            
             
             pass_id = abs(events.TrigObj.id) == mu_id
             pass_pt = events.TrigObj.pt >= pt_threshold
@@ -552,6 +552,9 @@ class EventProcessor(processor.ProcessorABC):
             trigger_cands = events.TrigObj[trigger_cands_filter]
             
 
+            dr_threshold = self.config["muon_trigmatch_dr"]
+            # dr_threshold = 0.2
+            print(f"dr_threshold: {dr_threshold}")
                                                
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
             padded_muons = ak.pad_none(events.Muon[muon_selection], 2) # pad in case we have only one muon or zero in an event
@@ -578,7 +581,42 @@ class EventProcessor(processor.ProcessorABC):
             
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
             event_filter = event_filter & trigger_match
+
+            # print(f"trigger_match sum with dr threshold {dr_threshold}: {ak.sum(trigger_match).compute()}")
             
+        
+            # # check which events HLT and trigger match don't align, and print five events
+            # test_nevents = 5
+            # HLT_disagreement = (trigger_match != HLT_filter) & (~HLT_filter)
+
+            # print(f"HLT_disagreement len: {ak.num(HLT_disagreement, axis=0).compute()}")
+            # print(f"HLT_disagreement sum: {ak.sum(HLT_disagreement).compute()}")
+            
+            # print(f"{HLT_str} decision: {events.HLT[HLT_str][HLT_disagreement][: test_nevents].compute()}")
+            # print(f"trigger_match: {trigger_match[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"event number: {events.event[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"event run: {events.run[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject matched with mu1: {mu1_trigger_match[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject matched with mu2: {mu2_trigger_match[HLT_disagreement][: test_nevents].compute()}")
+
+            # print(f"TrigObject candidate id: {trigger_cands.id[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject candidate pt: {trigger_cands.pt[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject candidate eta: {trigger_cands.eta[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject candidate phi: {trigger_cands.phi[HLT_disagreement][: test_nevents].compute()}")
+            # # print(f"mu1.delta_r(trigger_cands): {mu1.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
+            # # print(f"mu2.delta_r(trigger_cands): {mu2.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu1 pt: {mu1.pt[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu1 eta: {mu1.eta[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu1 phi: {mu1.phi[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu2 pt: {mu2.pt[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu2 eta: {mu2.eta[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu2 phi: {mu2.phi[HLT_disagreement][: test_nevents].compute()}")
+
+            # raise ValueError
+            
+            
+            
+        
         else:
             do_seperate_mu1_leading_pt_cut = True
             print("NO trigger match! Doing leading mu pass instead!")
@@ -815,8 +853,6 @@ class EventProcessor(processor.ProcessorABC):
         dimuon_dPhi = abs(mu1.delta_phi(mu2))
         dimuon = mu1+mu2
 
-        # print(f"event match dimuon: {dimuon.mass[event_match].compute()}")
-        # raise ValueError
         
         dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode, doing_BS_correction=doing_BS_correction)
         dimuon_ebe_mass_res_rel = dimuon_ebe_mass_res/dimuon.mass
@@ -1912,6 +1948,13 @@ class EventProcessor(processor.ProcessorABC):
         
         nBtagMedium = ak.num(ak.to_packed(jets[btagMedium_filter]), axis=1)
         nBtagMedium = ak.fill_none(nBtagMedium, value=0)
+
+        # #quick sanity check
+        # print(f"nBtagLoose : {nBtagLoose[:20].compute()}")
+        # print(f"btagLoose_filter sum : {ak.sum(btagLoose_filter, axis=1)[:20].compute()}")
+        # print(f"nBtagMedium : {nBtagMedium[:20].compute()}")
+        # print(f"btagMedium_filter sum : {ak.sum(btagMedium_filter, axis=1)[:20].compute()}")
+        # raise ValueError
             
         # print(f"nBtagLoose: {jets.btagDeepFlavB.compute()}")
         # print(f"nBtagLoose: {ak.to_numpy(nBtagLoose.compute())}")
