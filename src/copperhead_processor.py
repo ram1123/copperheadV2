@@ -94,6 +94,42 @@ def getZptWgts(dimuon_pt, njets, nbins, year):
     return zpt_wgt
 
 
+def merge_zpt_wgt(yun_wgt, valerie_wgt, njets, year):
+    """
+    helper function that merges yun_wgt and valerie_wgt defined by jet multiplicity
+    """
+    val_filter_dict_run2 = {
+        "2018": {0: False, 1: False, 2: True},
+        "2017": {0: True, 1: False, 2: True},
+        "2016postVFP": False,
+        "2016preVFP": False,
+    }
+    val_filter_dict = val_filter_dict_run2[year]
+    # print(f"val_filter_dict: {val_filter_dict}")
+    if val_filter_dict == False:
+        return yun_wgt
+    else: # divide by njet multiplicity
+        val_filter = ak.zeros_like(valerie_wgt, dtype="bool")
+        for njet_multiplicity_target, use_flag in val_filter_dict.items():
+            # print(f"njet_multiplicity_target: {njet_multiplicity_target}")
+            # print(f"{year} njet {njet_multiplicity_target} use_flag: {use_flag}")
+            if use_flag == False: # skip
+                print("skipping!")
+                continue 
+            # If true, generate a boolean 1-D array
+            if njet_multiplicity_target != 2:
+                use_valerie_zpt =  njets == njet_multiplicity_target
+            else:
+                use_valerie_zpt =  njets >= njet_multiplicity_target
+            val_filter = val_filter | use_valerie_zpt
+
+            # print(f"{year} njet {njet_multiplicity_target} use_valerie_zpt: {use_valerie_zpt[:20].compute()}")
+            # print(f"{year} njet {njet_multiplicity_target} njets: {njets[:20].compute()}")
+        # print(f"{year}  val_filter: {val_filter[:20].compute()}")
+        # raise ValueError
+        final_filter = ak.where(val_filter, valerie_wgt, yun_wgt)
+        return final_filter
+
 def getRapidity(obj):
     px = obj.pt * np.cos(obj.phi)
     py = obj.pt * np.sin(obj.phi)
@@ -441,7 +477,7 @@ class EventProcessor(processor.ProcessorABC):
 
         
         if do_pu_wgt:
-            print("doing PU re-wgt!")
+            
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
             print(f"year: {year}")
             if ("22" in year) or ("23" in year) or ("24" in year):
@@ -450,6 +486,7 @@ class EventProcessor(processor.ProcessorABC):
                 run_campaign = 2
             print(f"run_campaign: {run_campaign}")
             if is_mc:
+                print("doing PU re-wgt!")
                 pu_wgts = pu_evaluator(
                             self.config,
                             events.Pileup.nTrueInt,
@@ -553,7 +590,6 @@ class EventProcessor(processor.ProcessorABC):
             
 
             dr_threshold = self.config["muon_trigmatch_dr"]
-            # dr_threshold = 0.2
             print(f"dr_threshold: {dr_threshold}")
                                                
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
@@ -952,7 +988,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = False # True       
+        do_jec = True # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1298,7 +1334,7 @@ class EventProcessor(processor.ProcessorABC):
             # valerie
             zpt_weight_valerie =\
                      self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
-            out_dict["zpt_weight_valerie"] = zpt_weight_valerie
+            # out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
             # # dmitry's old zpt
             # zpt_weight_dmitry =\
@@ -1310,8 +1346,8 @@ class EventProcessor(processor.ProcessorABC):
 
             # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
             # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
-            # zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
-            # out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
+            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
+            out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
 
             
 
@@ -1327,8 +1363,8 @@ class EventProcessor(processor.ProcessorABC):
             # ones = ak.ones_like(zpt_weight)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
-            zpt_weight = zpt_weight_valerie
-            # ones = ak.ones_like(zpt_weight)
+            # zpt_weight = zpt_weight_valerie
+            zpt_weight = merge_zpt_wgt(zpt_weight_mine_nbins100, zpt_weight_valerie, njets, year)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
             # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
             weights.add("zpt_wgt", 
