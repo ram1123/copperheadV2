@@ -762,16 +762,25 @@ if __name__ == "__main__":
     # # new end --------------------------------------------------
     
     # new start --------------------------------------------------
+    # name = f"FEWZxBern_c1"
+    # c1 = rt.RooRealVar(name,name, 0.25,-10,10)
+    # name = f"FEWZxBern_c2"
+    # c2 = rt.RooRealVar(name,name, 0.25,-10,10)
+    # name = f"FEWZxBern_c3"
+    # c3 = rt.RooRealVar(name,name, 0.25,-10,10)
+    # name = f"FEWZxBern_c4"
+    # c4 = rt.RooRealVar(name,name, 0.25,-10,10)
     name = f"FEWZxBern_c1"
-    c1 = rt.RooRealVar(name,name, 0.25,-10,10)
+    c1 = rt.RooRealVar(name,name, 1.00,-10,10)
     name = f"FEWZxBern_c2"
-    c2 = rt.RooRealVar(name,name, 0.25,-10,10)
+    c2 = rt.RooRealVar(name,name, 1.00,-10,10)
     name = f"FEWZxBern_c3"
-    c3 = rt.RooRealVar(name,name, 0.25,-10,10)
-    name = f"FEWZxBern_c4"
-    c4 = rt.RooRealVar(name,name, 0.25,-10,10)
+    c3 = rt.RooRealVar(name,name, 1.00,-10,10)
+    # name = f"FEWZxBern_c4"
+    # c4 = rt.RooRealVar(name,name, 0.25,-10,10)
     # new end --------------------------------------------------
-    BernCoeff_list = [c1, c2, c3, c4] # we use RooBernstein, which requires n+1 parameters https://root.cern.ch/doc/master/classRooBernstein.html
+    # BernCoeff_list = [c1, c2, c3, c4] # we use RooBernstein, which requires n+1 parameters https://root.cern.ch/doc/master/classRooBernstein.html
+    BernCoeff_list = [c1, c2, c3]
     # c1.setConstant(True)
     # c2.setConstant(True)
     # c3.setConstant(True)
@@ -926,16 +935,16 @@ if __name__ == "__main__":
     # Construct a simultaneous pdf in (x, sample)
     # -----------------------------------------------------------------------------------
      
-    allSubCat_simPdf = rt.RooSimultaneous(
-                                "allSubCat_simPdf", 
-                                "all cat simultaneous pdf", 
-                                {
-                                    "allsubCat_BWZRedux": coreBWZRedux_SubCat0, 
-                                    "allsubCat_sumExp": coreSumExp_SubCat0,
-                                    # "allsubCat_FEWZxBern": coreFEWZxBern_SubCat0,
-                                }, 
-                                allSubCat_sample,
-    )
+    # allSubCat_simPdf = rt.RooSimultaneous(
+    #                             "allSubCat_simPdf", 
+    #                             "all cat simultaneous pdf", 
+    #                             {
+    #                                 "allsubCat_BWZRedux": coreBWZRedux_SubCat0, 
+    #                                 "allsubCat_sumExp": coreSumExp_SubCat0,
+    #                                 # "allsubCat_FEWZxBern": coreFEWZxBern_SubCat0,
+    #                             }, 
+    #                             allSubCat_sample,
+    # )
     # ---------------------------------------------------
     # Perform a simultaneous fit
     # ---------------------------------------------------
@@ -977,7 +986,7 @@ if __name__ == "__main__":
     c1.setConstant(True)
     c2.setConstant(True)
     c3.setConstant(True)
-    c4.setConstant(True)
+    # c4.setConstant(True)
     
     #----------------------------------------------------------------------------
     # Now do core-Pdf fitting with all SMF
@@ -1149,7 +1158,7 @@ if __name__ == "__main__":
     c1.setConstant(False)
     c2.setConstant(False)
     c3.setConstant(False)
-    c4.setConstant(False)
+    # c4.setConstant(False)
     
     print(f"runtime: {end-start} seconds")
 

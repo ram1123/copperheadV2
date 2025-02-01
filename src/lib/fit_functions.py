@@ -67,8 +67,9 @@ def MakeFEWZxBernDof3(
     # n_coeffs = 1
     # BernCoeff_list = [c1,]
     name = f"BernsteinFast"
-    # bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
-    bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
+    n_coeffs = len(BernCoeff_list)
+    bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
+    # bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add model to make python remember
 
 
