@@ -343,9 +343,9 @@ if __name__ == "__main__":
     name = f"BWZ_Redux_a_coeff"
     a_coeff = rt.RooRealVar(name,name, -0.02,-0.5,0.5)
     name = f"BWZ_Redux_b_coeff"
-    b_coeff = rt.RooRealVar(name,name, -0.000111,-0.1,0.1)
+    b_coeff = rt.RooRealVar(name,name, -0.000111,-0.02,0.02)
     name = f"BWZ_Redux_c_coeff"
-    c_coeff = rt.RooRealVar(name,name, 0.5,-10.0,10.0)
+    c_coeff = rt.RooRealVar(name,name, 2.0, 0.0, 4.0)
     # # old end --------------------------------------------------
 
     # # AN start --------------------------------------------------
@@ -473,7 +473,7 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat4 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -0.4, 0.4)
+    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -0.4, 0.5)
     a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.4, 0.4)
     # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, -0.06, 0.56) # AN val
     # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.06, 0.06) # AN val
@@ -538,26 +538,6 @@ if __name__ == "__main__":
     # --------------------------------------------------------------
     # Initialize Sum Exponential
     # --------------------------------------------------------------
-    # name = f"RooSumTwoExpPdf_a1_coeff"
-    # a1_coeff = rt.RooRealVar(name,name, -0.0603,-2.0,1)
-    # name = f"RooSumTwoExpPdf_a2_coeff"
-    # a2_coeff = rt.RooRealVar(name,name, -0.0450,-2.0,1)
-    # name = f"RooSumTwoExpPdf_f_coeff"
-    # f_coeff = rt.RooRealVar(name,name, 0.742,0.0,1.0)
-
-    # name = f"RooSumTwoExpPdf_a1_coeff"
-    # a1_coeff = rt.RooRealVar(name,name, -0.2,-2.0,1)
-    # name = f"RooSumTwoExpPdf_a2_coeff"
-    # a2_coeff = rt.RooRealVar(name,name, -0.09,-2.0,1)
-    # name = f"RooSumTwoExpPdf_f_coeff"
-    # f_coeff = rt.RooRealVar(name,name, 0.02,0.0,1.0)
-
-    # name = f"RooSumTwoExpPdf_a1_coeff"
-    # a1_coeff = rt.RooRealVar(name,name, -0.059609,-2.0,1)
-    # name = f"RooSumTwoExpPdf_a2_coeff"
-    # a2_coeff = rt.RooRealVar(name,name, -0.0625122,-2.0,1)
-    # name = f"RooSumTwoExpPdf_f_coeff"
-    # f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
 
     # original start --------------------------------------------------
     # name = f"RooSumTwoExpPdf_a1_coeff"
@@ -571,9 +551,9 @@ if __name__ == "__main__":
     # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
     # # new start --------------------------------------------------
     name = f"RooSumTwoExpPdf_a1_coeff"
-    a1_coeff = rt.RooRealVar(name,name, 0.00001,-2.0,1)
+    a1_coeff = rt.RooRealVar(name,name, 0.00001, -0.1, 0.1)
     name = f"RooSumTwoExpPdf_a2_coeff"
-    a2_coeff = rt.RooRealVar(name,name, 0.1,-2.0,1)
+    a2_coeff = rt.RooRealVar(name,name, 0.0001, -0.5, 0.5)
     name = f"RooSumTwoExpPdf_f_coeff"
     f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
     # # new end --------------------------------------------------
@@ -973,7 +953,6 @@ if __name__ == "__main__":
     fitResult = coreSumExp_SubCat0.fitTo(data_allSubCat_sumExp, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
     fitResult.Print()
     
-    
     # freeze core pdf params
     # BWZ redux
     a_coeff.setConstant(True)
@@ -1079,7 +1058,7 @@ if __name__ == "__main__":
     end = time.time()
     
     fitResult.Print()
-    raise ValueError
+    
 
     # # Perform simultaneous SMF fit only for FEWZxBern
     # print("Doing separate FEWZxBern sim fit only!")
