@@ -165,24 +165,35 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by
         canvas.cd()
         frame = mass.frame()
         frame.SetMaximum(max_list[subCat_idx])
-        frame.SetTitle(f"Normalized Shape Plot of Sub-Category {subCat_idx} PDFs")
+        frame.SetTitle(f"SMF x Core Func of Sub-Category {subCat_idx}")
         frame.SetXTitle(f"Dimuon Mass (GeV)")
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
         data_hist = data_dict_by_subCat[subCat_idx]
-        data_hist.plotOn(frame)
+        data_hist.plotOn(frame, Name=data_hist.GetName())
         for ix in range(len(subCat_list)):
             model = subCat_list[ix]
             name = model.GetName()
             color = color_list[ix]
             model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range("full"), Name=name, LineColor=color)
             legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+
+            # add chi2 dof
+            ndf = model.getParameters(ROOT.RooArgSet(mass)).getSize()
+            print(model.GetName())
+            print(data_hist.GetName())
+            chi2_ndf = frame.chiSquare(model.GetName(), data_hist.GetName(), ndf)
+            model_name = model.GetName()
+            print(f"{model_name} ndf: {ndf}")
+            chi2_text = model_name +" chi2/ndf = {:.3f}".format(chi2_ndf)
+            legend.AddEntry("", chi2_text, "")
+        
         frame.Draw()
         legend.Draw()        
         canvas.Update()
         canvas.Draw()
-        # canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
-        canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.png")
+        canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
+        # canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.png")
 
 
 
@@ -233,6 +244,7 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument(
     "-load",
@@ -354,23 +366,23 @@ if __name__ == "__main__":
      
     # Construct background pdf
     # old start --------------------------------------------------------------------
-    a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.1, -1, 1)
+    a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.01, -0.3, 0.3)
     a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
-    a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", 0.5, -0.5, 0.5)
+    a2_subCat0 = rt.RooRealVar("a2_subCat0", "a2_subCat0", 0.5, -0.5, 0.5)
     # old end --------------------------------------------------------------------
     # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.03756867559, -1, 1)
     # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.001975507853, -0.5, 0.5)
-    # a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", -0.001975507853, -0.5, 0.5)
+    # a2_subCat0 = rt.RooRealVar("a2_subCat0", "a2_subCat0", -0.001975507853, -0.5, 0.5)
     # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.03756867559, -0.06, 0.06)
     # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.001975507853, -0.06, 0.06)
-    # a3_subCat0 = rt.RooRealVar("a3_subCat0", "a3_subCat0", -0.001975507853, -0.06, 0.06)
+    # a2_subCat0 = rt.RooRealVar("a2_subCat0", "a2_subCat0", -0.001975507853, -0.06, 0.06)
     # a0_subCat0.setConstant(True)
     # a1_subCat0.setConstant(True)
-    # a3_subCat0.setConstant(True)
+    # a2_subCat0.setConstant(True)
     
 
     name = "subCat0_SMF"
-    subCat0_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
+    subCat0_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a2_subCat0])
 
 
     
@@ -391,7 +403,7 @@ if __name__ == "__main__":
     https://gitlab.cern.ch/cms-analysis/hig/HIG-19-006/datacards/-/blob/master/ggH/ucsd/workspace_bkg_cat1_ggh.root?ref_type=heads
     doesn't have a third degree of freedom
     """
-    a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", -0.1, -1, 1)
+    a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.1, -0.5, 0.5)
     a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
     # values from AN workspace
     # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.01949329222, -0.06, 0.06)
@@ -417,7 +429,7 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat2 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", -0.1, -1, 1)
+    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.1, -0.3, 0.3)
     a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
     # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.04460447882, -0.001, 0.06)
     # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", -3.46E-05, -0.001, 0.06)
@@ -439,7 +451,7 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat3 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -1, 1)
+    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -0.3, 0.3)
     a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
     # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, 0.05, 0.5)
     # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", -8.79E-06, -0.5, 0.5)
@@ -461,14 +473,10 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat4 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -5, 5)
-    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.5, 0.5)
-    # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, 0.2, 1)
-    # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.5, 1)
+    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -0.4, 0.4)
+    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.4, 0.4)
     # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, -0.06, 0.56) # AN val
     # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.06, 0.06) # AN val
-    # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.2274725556, -0.06, 1.06) # experiment
-    # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.0006481800973, -0.06, 0.06) # experiment
     # a0_subCat4.setConstant(True)
     # a1_subCat4.setConstant(True)
     name = "subCat4_SMF"
@@ -586,14 +594,14 @@ if __name__ == "__main__":
     # sumexp subcat
     a0_subCat0_sumExp = rt.RooRealVar("a0_subCat0_sumExp", "a0_subCat0_sumExp", -0.1, -1, 1)
     a1_subCat0_sumExp = rt.RooRealVar("a1_subCat0_sumExp", "a1_subCat0_sumExp", 0.5, -0.5, 0.5)
-    a3_subCat0_sumExp = rt.RooRealVar("a3_subCat0_sumExp", "a3_subCat0_sumExp", 0.5, -0.5, 0.5)
+    a2_subCat0_sumExp = rt.RooRealVar("a2_subCat0_sumExp", "a2_subCat0_sumExp", 0.5, -0.5, 0.5)
     
     name = "subCat0_sumExp"
     coreSumExp_SubCat0 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
      
     name = "subCat0_SMF_sumExp"
-    subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0]) # original
-    # subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0_sumExp, a1_subCat0_sumExp, a3_subCat0_sumExp]) 
+    subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a2_subCat0]) # original
+    # subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0_sumExp, a1_subCat0_sumExp, a2_subCat0_sumExp]) 
 
 
     
@@ -771,11 +779,11 @@ if __name__ == "__main__":
     # name = f"FEWZxBern_c4"
     # c4 = rt.RooRealVar(name,name, 0.25,-10,10)
     name = f"FEWZxBern_c1"
-    c1 = rt.RooRealVar(name,name, 1.00,-10,10)
+    c1 = rt.RooRealVar(name,name, 1.00, 0,1.5)
     name = f"FEWZxBern_c2"
-    c2 = rt.RooRealVar(name,name, 1.00,-10,10)
+    c2 = rt.RooRealVar(name,name, 1.00, 0,1.5)
     name = f"FEWZxBern_c3"
-    c3 = rt.RooRealVar(name,name, 1.00,-10,10)
+    c3 = rt.RooRealVar(name,name, 1.00, 0,1.5)
     # name = f"FEWZxBern_c4"
     # c4 = rt.RooRealVar(name,name, 0.25,-10,10)
     # new end --------------------------------------------------
@@ -789,7 +797,7 @@ if __name__ == "__main__":
     coreFEWZxBern_SubCat0, params_FEWZxBern_SubCat0 = MakeFEWZxBernDof3(name, name, mass, BernCoeff_list) 
      
     name = "subCat0_SMF_FEWZxBern"
-    subCat0_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
+    subCat0_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a2_subCat0])
 
 
     
@@ -1071,7 +1079,7 @@ if __name__ == "__main__":
     end = time.time()
     
     fitResult.Print()
-
+    raise ValueError
 
     # # Perform simultaneous SMF fit only for FEWZxBern
     # print("Doing separate FEWZxBern sim fit only!")
@@ -1142,7 +1150,7 @@ if __name__ == "__main__":
     # a1_subCat2.setConstant(True)
     # a1_subCat3.setConstant(True)
     # a1_subCat4.setConstant(True)
-    # a3_subCat0.setConstant(True)
+    # a2_subCat0.setConstant(True)
 
     # BWZ redux
     a_coeff.setConstant(False)
@@ -2822,6 +2830,103 @@ if __name__ == "__main__":
     }
     plotBkgBySubCat(mass, model_dict_by_subCat, data_dict_by_subCat, plot_save_path)
 
+    # -------------------------------------------------------------------------
+    # do background core function plotting
+    # -------------------------------------------------------------------------
+    data_name = "Run2 Data" # for Legend
+    
+    # BWZ redux
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    fit_range = "hiSB,loSB"
+    plot_range = "full"
+    name = data_allSubCat_BWZ.GetName()
+    data_allSubCat_BWZ.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),data_name, "P")
+    name = coreBWZRedux_SubCat0.GetName()
+    coreBWZRedux_SubCat0.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range(plot_range), Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+
+    ndf = coreBWZRedux_SubCat0.getParameters(ROOT.RooArgSet(mass)).getSize()
+    chi2_ndf = frame.chiSquare(coreBWZRedux_SubCat0.GetName(), data_allSubCat_BWZ.GetName(), ndf)
+    print(f"ndf: {ndf}")
+    chi2_text = "chi2/ndf = {:.3f}".format(chi2_ndf)
+    legend.AddEntry("", chi2_text, "")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_BWZ_redux.pdf")
+
+
+    # Sum Exp
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    fit_range = "hiSB,loSB"
+    plot_range = "full"
+    name = data_allSubCat_FEWZxBern.GetName()
+    # name = "Run2 Data"
+    data_allSubCat_FEWZxBern.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),data_name, "P")
+    name = coreSumExp_SubCat0.GetName()
+    coreSumExp_SubCat0.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range(plot_range), Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+
+    ndf = coreSumExp_SubCat0.getParameters(ROOT.RooArgSet(mass)).getSize()
+    chi2_ndf = frame.chiSquare(coreSumExp_SubCat0.GetName(), data_allSubCat_FEWZxBern.GetName(), ndf)
+    print(f"ndf: {ndf}")
+    chi2_text = "chi2/ndf = {:.3f}".format(chi2_ndf)
+    legend.AddEntry("", chi2_text, "")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_sumExp.pdf")
+
+    # FEWZ Bern
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    frame = mass.frame()
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    fit_range = "hiSB,loSB"
+    plot_range = "full"
+    name = data_allSubCat_FEWZxBern.GetName()
+    # name = "Run2 Data"
+    data_allSubCat_FEWZxBern.plotOn(frame, DataError="SumW2", Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),data_name, "P")
+    name = coreFEWZxBern_SubCat0.GetName()
+    coreFEWZxBern_SubCat0.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range(plot_range), Name=name)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+
+    ndf = coreFEWZxBern_SubCat0.getParameters(ROOT.RooArgSet(mass)).getSize()
+    chi2_ndf = frame.chiSquare(coreFEWZxBern_SubCat0.GetName(), data_allSubCat_FEWZxBern.GetName(), ndf)
+    print(f"ndf: {ndf}")
+    chi2_text = "chi2/ndf = {:.3f}".format(chi2_ndf)
+    legend.AddEntry("", chi2_text, "")
+    
+    frame.Draw()
+    legend.Draw()
+    
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(f"{plot_save_path}/stage3_plot_FEWZxBern.pdf")
+
     
 
+    end_time = time.time()
+
+    # Calculate and print the elapsed time
+    elapsed_time = end_time - start_time
+    print(f"Success! Execution time: {elapsed_time:.3f} seconds")
 
