@@ -551,9 +551,9 @@ if __name__ == "__main__":
     # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
     # # new start --------------------------------------------------
     name = f"RooSumTwoExpPdf_a1_coeff"
-    a1_coeff = rt.RooRealVar(name,name, 0.00001, -0.1, 0.1)
+    a1_coeff = rt.RooRealVar(name,name, 0.00001, -0.1, 0.0)
     name = f"RooSumTwoExpPdf_a2_coeff"
-    a2_coeff = rt.RooRealVar(name,name, 0.0001, -0.5, 0.5)
+    a2_coeff = rt.RooRealVar(name,name, 0.0001, -0.5, 0.0)
     name = f"RooSumTwoExpPdf_f_coeff"
     f_coeff = rt.RooRealVar(name,name, 0.9,0.0,1.0)
     # # new end --------------------------------------------------
@@ -759,11 +759,11 @@ if __name__ == "__main__":
     # name = f"FEWZxBern_c4"
     # c4 = rt.RooRealVar(name,name, 0.25,-10,10)
     name = f"FEWZxBern_c1"
-    c1 = rt.RooRealVar(name,name, 1.00, 0,1.5)
+    c1 = rt.RooRealVar(name,name, 1.00, 0.5, 1.5)
     name = f"FEWZxBern_c2"
-    c2 = rt.RooRealVar(name,name, 1.00, 0,1.5)
+    c2 = rt.RooRealVar(name,name, 1.00, 0.5, 1.5)
     name = f"FEWZxBern_c3"
-    c3 = rt.RooRealVar(name,name, 1.00, 0,1.5)
+    c3 = rt.RooRealVar(name,name, 1.00, 0.5, 1.5)
     # name = f"FEWZxBern_c4"
     # c4 = rt.RooRealVar(name,name, 0.25,-10,10)
     # new end --------------------------------------------------
@@ -900,25 +900,25 @@ if __name__ == "__main__":
     data_allSubCat_sumExp = copy.deepcopy(roo_histData_allSubCat)
     data_allSubCat_FEWZxBern = copy.deepcopy(roo_histData_allSubCat)
     
-    # Define category to distinguish physics and control samples events
-    allSubCat_sample = rt.RooCategory("allSubCat_sample", "allSubCat_sample")
-    allSubCat_sample.defineType("allsubCat_BWZRedux")
-    allSubCat_sample.defineType("allsubCat_sumExp")
-    # allSubCat_sample.defineType("allsubCat_FEWZxBern")
+    # # Define category to distinguish physics and control samples events
+    # allSubCat_sample = rt.RooCategory("allSubCat_sample", "allSubCat_sample")
+    # allSubCat_sample.defineType("allsubCat_BWZRedux")
+    # allSubCat_sample.defineType("allsubCat_sumExp")
+    # # allSubCat_sample.defineType("allsubCat_FEWZxBern")
 
      
-    # Construct combined dataset in (x,allSubCat_sample)
-    allSubCat_combData = rt.RooDataSet(
-        "allSubCat_combData",
-        "all subCat combined data",
-        {mass},
-        Index=allSubCat_sample,
-        Import={
-            "allsubCat_BWZRedux": data_allSubCat_BWZ, 
-            "allsubCat_sumExp": data_allSubCat_sumExp,
-            # "allsubCat_FEWZxBern": data_allSubCat_FEWZxBern,
-        },
-    )
+    # # Construct combined dataset in (x,allSubCat_sample)
+    # allSubCat_combData = rt.RooDataSet(
+    #     "allSubCat_combData",
+    #     "all subCat combined data",
+    #     {mass},
+    #     Index=allSubCat_sample,
+    #     Import={
+    #         "allsubCat_BWZRedux": data_allSubCat_BWZ, 
+    #         "allsubCat_sumExp": data_allSubCat_sumExp,
+    #         # "allsubCat_FEWZxBern": data_allSubCat_FEWZxBern,
+    #     },
+    # )
     # ---------------------------------------------------
     # Construct a simultaneous pdf in (x, sample)
     # -----------------------------------------------------------------------------------
@@ -1299,6 +1299,11 @@ if __name__ == "__main__":
         model_subCat4_sumExp,
         model_subCat4_FEWZxBern,
     )
+    # pdf_list_subCat4 = rt.RooArgList( # FastScan debugging
+    #     model_subCat4_FEWZxBern,
+    #     model_subCat4_sumExp,
+    #     model_subCat4_BWZRedux,
+    # )
     corePdf_subCat4 = rt.RooMultiPdf("CorePdf_subCat4","CorePdf_subCat4",cat_subCat4,pdf_list_subCat4)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat4.setCorrectionFactor(penalty) 
