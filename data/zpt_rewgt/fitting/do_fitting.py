@@ -82,13 +82,13 @@ if __name__ == "__main__":
             # print(f"data_dict: {data_dict}")
             # print(f"dy_dict: {dy_dict}")
     
-            binning_path = f"../binning/{year}_njet{njet}.yml"
-            # Load the YAML file
-            config = OmegaConf.load(binning_path)
+            # binning_path = f"../binning/{year}_njet{njet}.yml"
+            # # Load the YAML file
+            # config = OmegaConf.load(binning_path)
             
-            binning = config["rewgt_binning"]
-            # Convert the list of bin edges to a C-style array
-            # binning_array = np.array(binning)
+            # binning = config["rewgt_binning"]
+            # # Convert the list of bin edges to a C-style array
+            # # binning_array = np.array(binning)
             binning_array = np.linspace(0,200, 501)
             
             # Step 2: Create the histogram with variable bin widths
