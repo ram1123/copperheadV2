@@ -19,8 +19,8 @@ jet_eta_cut:
   2022preEE: 4.7
   2022postEE: 4.7
 jet_id:
-  2016preVFP: loose
-  2016postVFP: loose
+  2016preVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
+  2016postVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
   '2017': tight
   '2018': tight
   2016_RERECO: loose

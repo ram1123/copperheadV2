@@ -27,6 +27,24 @@ import ctypes
 #         y_vals.append(FEWZ_histo.GetBinContent(i))
 #     return (np.array(x_vals), np.array(y_vals))
 
+
+def getFEWZ_roospline(x):
+    """
+    Extract RooSpline1D instance that we assume has been saved in ucsd_workspace/fewz.root
+    with the name "fewz_1j_spl_order1_cat_ggh" (which we will keep)
+    replace the variable that the RooSpline1D was constructed with, with our own variable "x"
+    so fitTo could work with the rest of the roofit pdfs
+    """
+    ucsd_spline = rt.TFile("ucsd_workspace/fewz.root")["fewz_1j_spl_order1_cat_ggh"]
+    ucsd_var = ucsd_spline.getVariables()[0]
+    # replace the variable with our variable
+    customizer = rt.RooCustomizer(ucsd_spline, "")
+    customizer.replaceArg(ucsd_var, x)
+    roo_spline_func = customizer.build()
+    name = "fewz_1j_spl_order1_cat_ggh"
+    roo_spline_func.SetName(name)
+    return roo_spline_func
+
 def getFEWZ_vals(FEWZ_histo):
     """
     Function from https://github.com/green-cabbage/copperhead_fork2/blob/Run3/stage3/fitter.py#L686-L705
@@ -67,8 +85,9 @@ def MakeFEWZxBernDof3(
     # n_coeffs = 1
     # BernCoeff_list = [c1,]
     name = f"BernsteinFast"
-    # bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
-    bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
+    n_coeffs = len(BernCoeff_list)
+    bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
+    # bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
     out_dict[name] = bern_model # add model to make python remember
 
 
@@ -80,7 +99,8 @@ def MakeFEWZxBernDof3(
     FEWZ_histo = FEWZ_file.Get("full_36fb")
     # FEWZ_histo = FEWZ_file.Get("full_shape") # 50 bins in total
 
-    rebin_factor = 5#5 
+    # rebin_factor = 5#5 
+    rebin_factor = 2#5 
     FEWZ_histo = FEWZ_histo.Rebin(rebin_factor, "hist_rebinned")
     # FEWZ_data = rt.RooDataHist("fewzdata","fewzdata",mass,FEWZ_histo) # this is RoofitHist data
     
@@ -89,13 +109,18 @@ def MakeFEWZxBernDof3(
     
 
     # # Roospline start ---------------------------------    
-    x_arr_vec = rt.vector("double")(x_arr)
-    y_arr_vec = rt.vector("double")(y_arr)
-    name = "fewz_roospline_func"
-    roo_spline_func = rt.RooSpline(name, name, mass, x_arr_vec, y_arr_vec, order=3)
-    out_dict[name] = roo_spline_func
+    # x_arr_vec = rt.vector("double")(x_arr)
+    # y_arr_vec = rt.vector("double")(y_arr)
+    # name = "fewz_roospline_func"
+    # roo_spline_func = rt.RooSpline(name, name, mass, x_arr_vec, y_arr_vec, order=3)
+    # out_dict[name] = roo_spline_func
     # # Roospline end ------------------------------------
 
+
+    
+    roo_spline_func = getFEWZ_roospline(mass) # extract from ucsd 's fews root file
+    out_dict[roo_spline_func.GetName()] = roo_spline_func
+    
     # Roospline1D start ---------------------------------    
     # x0 = (ctypes.c_double * len(x_arr))(*x_arr)
     # y0 = (ctypes.c_double * len(y_arr))(*y_arr)
@@ -115,8 +140,106 @@ def MakeFEWZxBernDof3(
     # roo_spline_pdf = roo_spline_func
     
     
-    name = "fewz_roospline_pdf"
+    name = "fewz_1j_spl_pdf"
     roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
+    out_dict[name] = roo_spline_pdf # add model to make python remember  
+
+    # RooWrapperPdf doesn't seem to work well with FitTo. Just freezes for a long time
+    # name = "fewz_roospline_pdf"
+    # roo_spline_pdf = rt.RooGenericPdf(name, "@0", rt.RooArgList(roo_spline_func))      
+    # out_dict[name] = roo_spline_pdf # add model to make python remember  
+
+    final_model = rt.RooProdPdf(name_final, name_final, [bern_model, roo_spline_pdf]) 
+    # final_model = rt.RooGenericPdf(name_final, "@0*@1", rt.RooArgList(roo_spline_pdf, bern_model))  
+    # final_model = bern_model
+    # final_model = roo_spline_pdf
+   
+    return (final_model, out_dict)
+
+
+def MakeFEWZxBernDof3_ucsd(
+        name_final:str, 
+        title:str, 
+        mass: rt.RooRealVar, 
+        # c1: rt.RooRealVar, c2: rt.RooRealVar, c3: rt.RooRealVar
+        BernCoeff_list,
+    ) ->Tuple[rt.RooProdPdf, Dict]:
+    """
+    params:
+    mass = rt.RooRealVar that we will fitTo
+    dof = degrees of freedom given to this model. Since the spline
+    has no dof, all the dof is inserted to the Bernstein
+    """
+    # collect all variables that we don't want destroyed by Python once function ends
+    out_dict = {}
+
+    # make BernStein of order == dof
+    # n_coeffs = 3
+    # BernCoeff_list = [c1, c2, c3]
+    # n_coeffs = 1
+    # BernCoeff_list = [c1,]
+    name = f"BernsteinFast"
+    n_coeffs = len(BernCoeff_list)
+    bern_model = rt.RooBernsteinFast(n_coeffs)(name, name, mass, BernCoeff_list)
+    # bern_model = rt.RooBernstein(name, name, mass, BernCoeff_list)
+    out_dict[name] = bern_model # add model to make python remember
+
+
+    
+    # make the spline portion
+
+    # this ROOT files has branches full_36fb, full_xsec, full_shape -> all three has the same shape (same hist once normalized)
+    FEWZ_file = rt.TFile("./data/NNLO_Bourilkov_2017.root", "READ")
+    FEWZ_histo = FEWZ_file.Get("full_36fb")
+    # FEWZ_histo = FEWZ_file.Get("full_shape") # 50 bins in total
+
+    # rebin_factor = 5#5 
+    rebin_factor = 2#5 
+    FEWZ_histo = FEWZ_histo.Rebin(rebin_factor, "hist_rebinned")
+    # FEWZ_data = rt.RooDataHist("fewzdata","fewzdata",mass,FEWZ_histo) # this is RoofitHist data
+    
+    
+    x_arr, y_arr = getFEWZ_vals(FEWZ_histo)
+    
+
+    # # Roospline start ---------------------------------    
+    # x_arr_vec = rt.vector("double")(x_arr)
+    # y_arr_vec = rt.vector("double")(y_arr)
+    # name = "fewz_roospline_func"
+    # roo_spline_func = rt.RooSpline(name, name, mass, x_arr_vec, y_arr_vec, order=3)
+    # out_dict[name] = roo_spline_func
+    # # Roospline end ------------------------------------
+
+    # Roospline1D start ---------------------------------    
+    # x0 = (ctypes.c_double * len(x_arr))(*x_arr)
+    # y0 = (ctypes.c_double * len(y_arr))(*y_arr)
+    # n = len(x0)
+    # name = "fewz_roospline_func"
+    # roo_spline_func = rt.RooSpline1D(name, name, mass, n,x0, y0)
+    # out_dict[name] = roo_spline_func
+    # Roospline1D end ------------------------------------
+
+    # ucsd start ------------------------------------
+    ucsd_workspace = rt.TFile("ucsd_workspace/workspace_bkg_cat0_ggh.root")["w"]
+    roo_spline_func = ucsd_workspace.obj("fewz_1j_spl_order1_cat_ggh") # extract from ucsd root file
+    name = "fewz_roospline_func"
+    out_dict[name] = roo_spline_func
+    # ucsd end ------------------------------------
+    
+
+    # turn roo_spline_func into pdf
+    # RooProdPDF seems to automatically normalize the pdfs on https://root.cern.ch/doc/master/classRooProdPdf.html,
+    # so no need to "normalize" rooSpline into a PDF. Also, I tried both full_36fb and full_shape bracnhes of 
+    # FEWZ histograms (they have same shape, but different values), and I saw no difference in fit function plot,
+    # loosely suggesting automatic normalization
+    # roo_spline_pdf = roo_spline_func
+
+    
+    
+    name = "fewz_roospline_pdf"
+    # roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
+    roo_spline_pdf = ucsd_workspace.obj("fewz_1j_spl_pdf")
+    
     out_dict[name] = roo_spline_pdf # add model to make python remember  
 
     # RooWrapperPdf doesn't seem to work well with FitTo. Just freezes for a long time
