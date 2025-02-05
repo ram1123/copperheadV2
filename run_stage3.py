@@ -357,7 +357,7 @@ if __name__ == "__main__":
     column_list = ["year", "category", "dataset", "yield"]
     yield_df = pd.DataFrame(columns=column_list)
 
-    do_binned_fit = False # if False, then do unbinned fitting
+    do_binned_fit = True # if False, then do unbinned fitting
     
     device = "cpu"
     # device = "cuda"
@@ -1012,15 +1012,15 @@ if __name__ == "__main__":
     fitResult.Print()
     
     # freeze core pdf params
-    # BWZ redux
-    a_coeff.setConstant(True)
-    b_coeff.setConstant(True)
-    c_coeff.setConstant(True)
+    # # BWZ redux
+    # a_coeff.setConstant(True)
+    # b_coeff.setConstant(True)
+    # c_coeff.setConstant(True)
     
-    # sumExp
-    a1_coeff.setConstant(True)
-    a2_coeff.setConstant(True)
-    f_coeff.setConstant(True)
+    # # sumExp
+    # a1_coeff.setConstant(True)
+    # a2_coeff.setConstant(True)
+    # f_coeff.setConstant(True)
 
     # fit FEWZxBern separately
     _ = coreFEWZxBern_SubCat0.fitTo(data_allSubCat_FEWZxBern, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
@@ -1029,10 +1029,10 @@ if __name__ == "__main__":
 
     # raise ValueError
 
-    # FEWZxBern
-    c1.setConstant(True)
-    c2.setConstant(True)
-    c3.setConstant(True)
+    # # FEWZxBern
+    # c1.setConstant(True)
+    # c2.setConstant(True)
+    # c3.setConstant(True)
     
     #----------------------------------------------------------------------------
     # Now do core-Pdf fitting with all SMF
@@ -1044,17 +1044,17 @@ if __name__ == "__main__":
     sample.defineType("subCat1_BWZRedux")
     sample.defineType("subCat2_BWZRedux")
     sample.defineType("subCat3_BWZRedux")
-    # sample.defineType("subCat4_BWZRedux")
+    sample.defineType("subCat4_BWZRedux")
     sample.defineType("subCat0_sumExp")
     sample.defineType("subCat1_sumExp")
     sample.defineType("subCat2_sumExp")
     sample.defineType("subCat3_sumExp")
-    # sample.defineType("subCat4_sumExp")
+    sample.defineType("subCat4_sumExp")
     sample.defineType("subCat0_FEWZxBern")
     sample.defineType("subCat1_FEWZxBern")
     sample.defineType("subCat2_FEWZxBern")
     sample.defineType("subCat3_FEWZxBern")
-    # sample.defineType("subCat4_FEWZxBern")
+    sample.defineType("subCat4_FEWZxBern")
      
     # Construct combined dataset in (x,sample)
     combData = rt.RooDataSet(
@@ -1067,17 +1067,17 @@ if __name__ == "__main__":
             "subCat1_BWZRedux": data_subCat1_BWZRedux,
             "subCat2_BWZRedux": data_subCat2_BWZRedux,
             "subCat3_BWZRedux": data_subCat3_BWZRedux,
-            # "subCat4_BWZRedux": data_subCat4_BWZRedux,
+            "subCat4_BWZRedux": data_subCat4_BWZRedux,
             "subCat0_sumExp": data_subCat0_sumExp, 
             "subCat1_sumExp": data_subCat1_sumExp,
             "subCat2_sumExp": data_subCat2_sumExp,
             "subCat3_sumExp": data_subCat3_sumExp,
-            # "subCat4_sumExp": data_subCat4_sumExp,
+            "subCat4_sumExp": data_subCat4_sumExp,
             "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
             "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
             "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
             "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            # "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
         },
     )
     # ---------------------------------------------------
@@ -1092,97 +1092,16 @@ if __name__ == "__main__":
                                     "subCat1_BWZRedux": model_subCat1_BWZRedux,
                                     "subCat2_BWZRedux": model_subCat2_BWZRedux,
                                     "subCat3_BWZRedux": model_subCat3_BWZRedux,
-                                    # "subCat4_BWZRedux": model_subCat4_BWZRedux,
+                                    "subCat4_BWZRedux": model_subCat4_BWZRedux,
                                     "subCat0_sumExp": model_subCat0_sumExp, 
                                     "subCat1_sumExp": model_subCat1_sumExp,
                                     "subCat2_sumExp": model_subCat2_sumExp,
                                     "subCat3_sumExp": model_subCat3_sumExp,
-                                    # "subCat4_sumExp": model_subCat4_sumExp,
+                                    "subCat4_sumExp": model_subCat4_sumExp,
                                     "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
                                     "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
                                     "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
                                     "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
-                                    # "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
-                                }, 
-                                sample,
-    )
-    # ---------------------------------------------------
-    # Perform a simultaneous fit
-    # ---------------------------------------------------
-     
-    start = time.time()
-
-    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0,SumW2Error=True)
-    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,SumW2Error=True)
-    end = time.time()
-    
-    fitResult.Print()
-    
-    # subcat4 specific fit
-    # Define category to distinguish physics and control samples events
-    sample = rt.RooCategory("sample", "sample")
-    # sample.defineType("subCat0_BWZRedux")
-    # sample.defineType("subCat1_BWZRedux")
-    # sample.defineType("subCat2_BWZRedux")
-    # sample.defineType("subCat3_BWZRedux")
-    sample.defineType("subCat4_BWZRedux")
-    # sample.defineType("subCat0_sumExp")
-    # sample.defineType("subCat1_sumExp")
-    # sample.defineType("subCat2_sumExp")
-    # sample.defineType("subCat3_sumExp")
-    sample.defineType("subCat4_sumExp")
-    # sample.defineType("subCat0_FEWZxBern")
-    # sample.defineType("subCat1_FEWZxBern")
-    # sample.defineType("subCat2_FEWZxBern")
-    # sample.defineType("subCat3_FEWZxBern")
-    sample.defineType("subCat4_FEWZxBern")
-     
-    # Construct combined dataset in (x,sample)
-    combData = rt.RooDataSet(
-        "combData",
-        "combined data",
-        {mass},
-        Index=sample,
-        Import={
-            # "subCat0_BWZRedux": data_subCat0_BWZRedux, 
-            # "subCat1_BWZRedux": data_subCat1_BWZRedux,
-            # "subCat2_BWZRedux": data_subCat2_BWZRedux,
-            # "subCat3_BWZRedux": data_subCat3_BWZRedux,
-            "subCat4_BWZRedux": data_subCat4_BWZRedux,
-            # "subCat0_sumExp": data_subCat0_sumExp, 
-            # "subCat1_sumExp": data_subCat1_sumExp,
-            # "subCat2_sumExp": data_subCat2_sumExp,
-            # "subCat3_sumExp": data_subCat3_sumExp,
-            "subCat4_sumExp": data_subCat4_sumExp,
-            # "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
-            # "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
-            # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
-            # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
-            "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
-        },
-    )
-    # ---------------------------------------------------
-    # Construct a simultaneous pdf in (x, sample)
-    # -----------------------------------------------------------------------------------
-     
-    simPdf = rt.RooSimultaneous(
-                                "simPdf", 
-                                "simultaneous pdf", 
-                                {
-                                    # "subCat0_BWZRedux": model_subCat0_BWZRedux, 
-                                    # "subCat1_BWZRedux": model_subCat1_BWZRedux,
-                                    # "subCat2_BWZRedux": model_subCat2_BWZRedux,
-                                    # "subCat3_BWZRedux": model_subCat3_BWZRedux,
-                                    "subCat4_BWZRedux": model_subCat4_BWZRedux,
-                                    # "subCat0_sumExp": model_subCat0_sumExp, 
-                                    # "subCat1_sumExp": model_subCat1_sumExp,
-                                    # "subCat2_sumExp": model_subCat2_sumExp,
-                                    # "subCat3_sumExp": model_subCat3_sumExp,
-                                    "subCat4_sumExp": model_subCat4_sumExp,
-                                    # "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
-                                    # "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
-                                    # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
-                                    # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
                                     "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
                                 }, 
                                 sample,
@@ -1198,6 +1117,88 @@ if __name__ == "__main__":
     end = time.time()
     
     fitResult.Print()
+    
+    # # subcat4 specific fit
+    # # Define category to distinguish physics and control samples events
+    # sample = rt.RooCategory("sample", "sample")
+    # # sample.defineType("subCat0_BWZRedux")
+    # # sample.defineType("subCat1_BWZRedux")
+    # # sample.defineType("subCat2_BWZRedux")
+    # # sample.defineType("subCat3_BWZRedux")
+    # sample.defineType("subCat4_BWZRedux")
+    # # sample.defineType("subCat0_sumExp")
+    # # sample.defineType("subCat1_sumExp")
+    # # sample.defineType("subCat2_sumExp")
+    # # sample.defineType("subCat3_sumExp")
+    # sample.defineType("subCat4_sumExp")
+    # # sample.defineType("subCat0_FEWZxBern")
+    # # sample.defineType("subCat1_FEWZxBern")
+    # # sample.defineType("subCat2_FEWZxBern")
+    # # sample.defineType("subCat3_FEWZxBern")
+    # sample.defineType("subCat4_FEWZxBern")
+     
+    # # Construct combined dataset in (x,sample)
+    # combData = rt.RooDataSet(
+    #     "combData",
+    #     "combined data",
+    #     {mass},
+    #     Index=sample,
+    #     Import={
+    #         # "subCat0_BWZRedux": data_subCat0_BWZRedux, 
+    #         # "subCat1_BWZRedux": data_subCat1_BWZRedux,
+    #         # "subCat2_BWZRedux": data_subCat2_BWZRedux,
+    #         # "subCat3_BWZRedux": data_subCat3_BWZRedux,
+    #         "subCat4_BWZRedux": data_subCat4_BWZRedux,
+    #         # "subCat0_sumExp": data_subCat0_sumExp, 
+    #         # "subCat1_sumExp": data_subCat1_sumExp,
+    #         # "subCat2_sumExp": data_subCat2_sumExp,
+    #         # "subCat3_sumExp": data_subCat3_sumExp,
+    #         "subCat4_sumExp": data_subCat4_sumExp,
+    #         # "subCat0_FEWZxBern": data_subCat0_FEWZxBern, 
+    #         # "subCat1_FEWZxBern": data_subCat1_FEWZxBern,
+    #         # "subCat2_FEWZxBern": data_subCat2_FEWZxBern,
+    #         # "subCat3_FEWZxBern": data_subCat3_FEWZxBern,
+    #         "subCat4_FEWZxBern": data_subCat4_FEWZxBern,
+    #     },
+    # )
+    # # ---------------------------------------------------
+    # # Construct a simultaneous pdf in (x, sample)
+    # # -----------------------------------------------------------------------------------
+     
+    # simPdf = rt.RooSimultaneous(
+    #                             "simPdf", 
+    #                             "simultaneous pdf", 
+    #                             {
+    #                                 # "subCat0_BWZRedux": model_subCat0_BWZRedux, 
+    #                                 # "subCat1_BWZRedux": model_subCat1_BWZRedux,
+    #                                 # "subCat2_BWZRedux": model_subCat2_BWZRedux,
+    #                                 # "subCat3_BWZRedux": model_subCat3_BWZRedux,
+    #                                 "subCat4_BWZRedux": model_subCat4_BWZRedux,
+    #                                 # "subCat0_sumExp": model_subCat0_sumExp, 
+    #                                 # "subCat1_sumExp": model_subCat1_sumExp,
+    #                                 # "subCat2_sumExp": model_subCat2_sumExp,
+    #                                 # "subCat3_sumExp": model_subCat3_sumExp,
+    #                                 "subCat4_sumExp": model_subCat4_sumExp,
+    #                                 # "subCat0_FEWZxBern": model_subCat0_FEWZxBern, 
+    #                                 # "subCat1_FEWZxBern": model_subCat1_FEWZxBern,
+    #                                 # "subCat2_FEWZxBern": model_subCat2_FEWZxBern,
+    #                                 # "subCat3_FEWZxBern": model_subCat3_FEWZxBern,
+    #                                 "subCat4_FEWZxBern": model_subCat4_FEWZxBern,
+    #                             }, 
+    #                             sample,
+    # )
+    # # ---------------------------------------------------
+    # # Perform a simultaneous fit
+    # # ---------------------------------------------------
+     
+    # start = time.time()
+
+    # _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0,SumW2Error=True)
+    # fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,SumW2Error=True)
+    # end = time.time()
+    
+    # fitResult.Print()
+    # raise ValueError
 
 
     
