@@ -357,6 +357,7 @@ if __name__ == "__main__":
     column_list = ["year", "category", "dataset", "yield"]
     yield_df = pd.DataFrame(columns=column_list)
 
+    do_binned_fit = False # if False, then do unbinned fitting
     
     device = "cpu"
     # device = "cuda"
@@ -401,9 +402,7 @@ if __name__ == "__main__":
     # name = f"BWZ_Redux_c_coeff"
     # c_coeff = rt.RooRealVar(name,name, 2.14876669663328,0,5.0)
     # # AN end --------------------------------------------------
-    # a_coeff.setConstant(True)
-    # b_coeff.setConstant(True)
-    # c_coeff.setConstant(True)
+
 
     # subCat 0
     name = "subCat0_BWZ_Redux"
@@ -540,41 +539,46 @@ if __name__ == "__main__":
     subCat_filter = (processed_eventsData[subCatIdx_name] == 0)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
-    roo_datasetData_subCat0 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat0 = rt.RooDataHist("subCat0_rooHist_BWZRedux","subCat0_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat0)
-    data_subCat0_BWZRedux = roo_datasetData_subCat0
+    roo_histData_subCat0 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    if do_binned_fit:
+        roo_histData_subCat0 = rt.RooDataHist("subCat0_rooHist_BWZRedux","subCat0_rooHist_BWZRedux", rt.RooArgSet(mass), roo_histData_subCat0)
+    data_subCat0_BWZRedux = roo_histData_subCat0
 
     # do for cat idx 1
     subCat_filter = (processed_eventsData[subCatIdx_name] == 1)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
-    roo_datasetData_subCat1 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat1 = rt.RooDataHist("subCat1_rooHist_BWZRedux","subCat1_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat1)
-    data_subCat1_BWZRedux = roo_datasetData_subCat1
+    roo_histData_subCat1 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    if do_binned_fit:
+        roo_histData_subCat1 = rt.RooDataHist("subCat1_rooHist_BWZRedux","subCat1_rooHist_BWZRedux", rt.RooArgSet(mass), roo_histData_subCat1)
+    data_subCat1_BWZRedux = roo_histData_subCat1
 
     # do for cat idx 2
     subCat_filter = (processed_eventsData[subCatIdx_name] == 2)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
-    roo_datasetData_subCat2 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat2 = rt.RooDataHist("subCat2_rooHist_BWZRedux","subCat2_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat2)
-    data_subCat2_BWZRedux = roo_datasetData_subCat2
+    roo_histData_subCat2 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    if do_binned_fit:
+        roo_histData_subCat2 = rt.RooDataHist("subCat2_rooHist_BWZRedux","subCat2_rooHist_BWZRedux", rt.RooArgSet(mass), roo_histData_subCat2)
+    data_subCat2_BWZRedux = roo_histData_subCat2
 
     # do for cat idx 3
     subCat_filter = (processed_eventsData[subCatIdx_name] == 3)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
-    roo_datasetData_subCat3 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat3 = rt.RooDataHist("subCat3_rooHist_BWZRedux","subCat3_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat3)
-    data_subCat3_BWZRedux = roo_datasetData_subCat3
+    roo_histData_subCat3 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    if do_binned_fit:
+        roo_histData_subCat3 = rt.RooDataHist("subCat3_rooHist_BWZRedux","subCat3_rooHist_BWZRedux", rt.RooArgSet(mass), roo_histData_subCat3)
+    data_subCat3_BWZRedux = roo_histData_subCat3
 
     # do for cat idx 4
     subCat_filter = (processed_eventsData[subCatIdx_name] == 4)
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
-    roo_datasetData_subCat4 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat4 = rt.RooDataHist("subCat4_rooHist_BWZRedux","subCat4_rooHist_BWZRedux", rt.RooArgSet(mass), roo_datasetData_subCat4)
-    data_subCat4_BWZRedux = roo_datasetData_subCat4
+    roo_histData_subCat4 = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
+    if do_binned_fit:
+        roo_histData_subCat4 = rt.RooDataHist("subCat4_rooHist_BWZRedux","subCat4_rooHist_BWZRedux", rt.RooArgSet(mass), roo_histData_subCat4)
+    data_subCat4_BWZRedux = roo_histData_subCat4
 
 
 
@@ -723,7 +727,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat0_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat0_sumExp = rt.RooDataHist("subCat0_rooHist_sumExp","subCat0_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat0_sumExp)
+    if do_binned_fit:
+        roo_datasetData_subCat0_sumExp = rt.RooDataHist("subCat0_rooHist_sumExp","subCat0_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat0_sumExp)
     data_subCat0_sumExp = roo_datasetData_subCat0_sumExp
 
     # do for cat idx 1
@@ -731,7 +736,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat1_sumExp = rt.RooDataHist("subCat1_rooHist_sumExp","subCat1_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat1_sumExp)
+    if do_binned_fit:
+        roo_datasetData_subCat1_sumExp = rt.RooDataHist("subCat1_rooHist_sumExp","subCat1_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat1_sumExp)
     data_subCat1_sumExp = roo_datasetData_subCat1_sumExp
 
     # do for cat idx 2
@@ -739,7 +745,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat2_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat2_sumExp = rt.RooDataHist("subCat2_rooHist_sumExp","subCat2_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat2_sumExp)
+    if do_binned_fit:
+        roo_datasetData_subCat2_sumExp = rt.RooDataHist("subCat2_rooHist_sumExp","subCat2_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat2_sumExp)
     data_subCat2_sumExp = roo_datasetData_subCat2_sumExp
 
     # do for cat idx 3
@@ -747,7 +754,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat3_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat3_sumExp = rt.RooDataHist("subCat3_rooHist_sumExp","subCat3_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat3_sumExp)
+    if do_binned_fit:
+        roo_datasetData_subCat3_sumExp = rt.RooDataHist("subCat3_rooHist_sumExp","subCat3_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat3_sumExp)
     data_subCat3_sumExp = roo_datasetData_subCat3_sumExp
 
 
@@ -756,7 +764,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat4_sumExp = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat4_sumExp = rt.RooDataHist("subCat4_rooHist_sumExp","subCat4_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat4_sumExp)
+    if do_binned_fit:
+        roo_datasetData_subCat4_sumExp = rt.RooDataHist("subCat4_rooHist_sumExp","subCat4_rooHist_sumExp", rt.RooArgSet(mass), roo_datasetData_subCat4_sumExp)
     data_subCat4_sumExp = roo_datasetData_subCat4_sumExp
 
 
@@ -894,7 +903,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat0_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat0_FEWZxBern = rt.RooDataHist("subCat0_rooHist_FEWZxBern","subCat0_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat0_FEWZxBern)
+    if do_binned_fit:
+        roo_datasetData_subCat0_FEWZxBern = rt.RooDataHist("subCat0_rooHist_FEWZxBern","subCat0_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat0_FEWZxBern)
     data_subCat0_FEWZxBern = roo_datasetData_subCat0_FEWZxBern
 
     # do for cat idx 1
@@ -902,7 +912,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat1_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat1_FEWZxBern = rt.RooDataHist("subCat1_rooHist_FEWZxBern","subCat1_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat1_FEWZxBern)
+    if do_binned_fit:
+        roo_datasetData_subCat1_FEWZxBern = rt.RooDataHist("subCat1_rooHist_FEWZxBern","subCat1_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat1_FEWZxBern)
     data_subCat1_FEWZxBern = roo_datasetData_subCat1_FEWZxBern
 
     # do for cat idx 2
@@ -910,7 +921,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat2_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat2_FEWZxBern = rt.RooDataHist("subCat2_rooHist_FEWZxBern","subCat2_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat2_FEWZxBern)
+    if do_binned_fit:
+        roo_datasetData_subCat2_FEWZxBern = rt.RooDataHist("subCat2_rooHist_FEWZxBern","subCat2_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat2_FEWZxBern)
     data_subCat2_FEWZxBern = roo_datasetData_subCat2_FEWZxBern
 
     # do for cat idx 3
@@ -918,7 +930,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat3_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat3_FEWZxBern = rt.RooDataHist("subCat3_rooHist_FEWZxBern","subCat3_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat3_FEWZxBern)
+    if do_binned_fit:
+        roo_datasetData_subCat3_FEWZxBern = rt.RooDataHist("subCat3_rooHist_FEWZxBern","subCat3_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat3_FEWZxBern)
     data_subCat3_FEWZxBern = roo_datasetData_subCat3_FEWZxBern
 
 
@@ -927,7 +940,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass[subCat_filter]
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_datasetData_subCat4_FEWZxBern = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_datasetData_subCat4_FEWZxBern = rt.RooDataHist("subCat4_rooHist_FEWZxBern","subCat4_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat4_FEWZxBern)
+    if do_binned_fit:
+        roo_datasetData_subCat4_FEWZxBern = rt.RooDataHist("subCat4_rooHist_FEWZxBern","subCat4_rooHist_FEWZxBern", rt.RooArgSet(mass), roo_datasetData_subCat4_FEWZxBern)
     data_subCat4_FEWZxBern = roo_datasetData_subCat4_FEWZxBern
 
     #----------------------------------------------------------------------------
@@ -938,7 +952,8 @@ if __name__ == "__main__":
     subCat_mass_arr = processed_eventsData.dimuon_mass
     subCat_mass_arr  = ak.to_numpy(subCat_mass_arr) # convert to numpy for rt.RooDataSet
     roo_histData_allSubCat = rt.RooDataSet.from_numpy({mass_name: subCat_mass_arr}, [mass])
-    # roo_histData_allSubCat = rt.RooDataHist("allSubCat_rooHist","allSubCat_rooHist", rt.RooArgSet(mass), roo_histData_allSubCat)
+    if do_binned_fit:
+        roo_histData_allSubCat = rt.RooDataHist("allSubCat_rooHist","allSubCat_rooHist", rt.RooArgSet(mass), roo_histData_allSubCat)
     data_allSubCat_BWZ = roo_histData_allSubCat
     data_allSubCat_sumExp = copy.deepcopy(roo_histData_allSubCat)
     data_allSubCat_FEWZxBern = copy.deepcopy(roo_histData_allSubCat)
@@ -1018,7 +1033,6 @@ if __name__ == "__main__":
     c1.setConstant(True)
     c2.setConstant(True)
     c3.setConstant(True)
-    # c4.setConstant(True)
     
     #----------------------------------------------------------------------------
     # Now do core-Pdf fitting with all SMF
@@ -1201,7 +1215,6 @@ if __name__ == "__main__":
     c1.setConstant(False)
     c2.setConstant(False)
     c3.setConstant(False)
-    # c4.setConstant(False)
     
     print(f"runtime: {end-start} seconds")
 
@@ -1384,7 +1397,7 @@ if __name__ == "__main__":
     corePdf_subCat0 = rt.RooMultiPdf("CorePdf_subCat0","CorePdf_subCat0",cat_subCat0,pdf_list_subCat0)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat0.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat0.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_histData_subCat0.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     print(f"roo_datasetData_subCat0 sumentries: {nevents}")
     bkg_subCat0_norm = rt.RooRealVar(corePdf_subCat0.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     
@@ -1418,7 +1431,7 @@ if __name__ == "__main__":
     corePdf_subCat1 = rt.RooMultiPdf("CorePdf_subCat1","CorePdf_subCat1",cat_subCat1,pdf_list_subCat1)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat1.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat1.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_histData_subCat1.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     print(f"roo_datasetData_subCat1 sumentries: {nevents}")
     bkg_subCat1_norm = rt.RooRealVar(corePdf_subCat1.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     
@@ -1451,7 +1464,7 @@ if __name__ == "__main__":
     corePdf_subCat2 = rt.RooMultiPdf("CorePdf_subCat2","CorePdf_subCat2",cat_subCat2,pdf_list_subCat2)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat2.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat2.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_histData_subCat2.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     print(f"roo_datasetData_subCat2 sumentries: {nevents}")
     bkg_subCat2_norm = rt.RooRealVar(corePdf_subCat2.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     # add yield
@@ -1483,7 +1496,7 @@ if __name__ == "__main__":
     corePdf_subCat3 = rt.RooMultiPdf("CorePdf_subCat3","CorePdf_subCat3",cat_subCat3,pdf_list_subCat3)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat3.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat3.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_histData_subCat3.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     print(f"roo_datasetData_subCat3 sumentries: {nevents}")
     bkg_subCat3_norm = rt.RooRealVar(corePdf_subCat3.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     # add yield
@@ -1520,7 +1533,7 @@ if __name__ == "__main__":
     corePdf_subCat4 = rt.RooMultiPdf("CorePdf_subCat4","CorePdf_subCat4",cat_subCat4,pdf_list_subCat4)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat4.setCorrectionFactor(penalty) 
-    nevents = roo_datasetData_subCat4.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
+    nevents = roo_histData_subCat4.sumEntries() # these are data, so all weights are one, thus no need to sum over the weights, though ofc you can just do that too
     print(f"roo_datasetData_subCat4 sumentries: {nevents}")
     bkg_subCat4_norm = rt.RooRealVar(corePdf_subCat4.GetName()+"_norm","Background normalization value",nevents,0,3*nevents) # free floating value
     # add yield
