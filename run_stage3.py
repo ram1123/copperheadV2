@@ -413,9 +413,9 @@ if __name__ == "__main__":
     # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.01, -0.3, 0.3)
     # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
     # a2_subCat0 = rt.RooRealVar("a2_subCat0", "a2_subCat0", 0.5, -0.5, 0.5)
-    a0_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", -3.76E-02, -0.1, 0.1)
-    a1_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", -1.98E-03, -0.1, 0.1)
-    a2_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", 2.59E-03, -0.1, 0.1)
+    a0_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", -3.76E-02, -0.1, 0.0)
+    a1_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", -1.98E-03, -0.1, 0.0)
+    a2_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", 2.59E-03, 0.0, 0.1)
 
     
 
@@ -444,8 +444,8 @@ if __name__ == "__main__":
     """
     # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.1, -0.5, 0.5)
     # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
-    a0_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", 1.95E-02, -0.1, 0.1)
-    a1_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", -1.66E-03, -0.1, 0.1)
+    a0_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", 1.95E-02, 0.0, 0.1)
+    a1_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", -1.66E-03, -0.1, 0.0)
 
     name =  "subCat1_SMF"
     subCat1_SMF = rt.RooChebychev(name, name, mass, 
@@ -466,8 +466,8 @@ if __name__ == "__main__":
     # Construct the background pdf
     # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.1, -0.3, 0.3)
     # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
-    a0_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", 4.46E-02, -0.1, 0.1)
-    a1_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", -3.46E-05, -0.1, 0.1)
+    a0_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", 4.46E-02, 0.0, 0.1)
+    a1_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", -3.46E-05, -0.1, 0.0)
 
     
     name = "subCat2_SMF"
@@ -486,8 +486,8 @@ if __name__ == "__main__":
     # Construct the background pdf
     # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -0.3, 0.3)
     # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
-    a0_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", 7.37E-02, -0.1, 0.1)
-    a1_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", -8.79E-06, -0.1, 0.1)
+    a0_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", 7.37E-02, 0.0, 0.1)
+    a1_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", -8.79E-06, -0.1, 0.0)
     
     name = "subCat3_SMF"
     subCat3_SMF = rt.RooChebychev(name, name, mass, 
@@ -506,7 +506,7 @@ if __name__ == "__main__":
     # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.227473, 0.0, 0.5)
     # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.00064818, -0.4, 0.0)
     a0_subCat4 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", 0.227473, 0.0, 0.5)
-    a1_subCat4 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", -0.00064818, -0.4, 0.0)
+    a1_subCat4 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", -0.00064818, -0.1, 0.0)
 
     
     name = "subCat4_SMF"
@@ -1015,8 +1015,6 @@ if __name__ == "__main__":
     _ = coreFEWZxBern_SubCat0.fitTo(data_allSubCat_FEWZxBern, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
     fitResult = coreFEWZxBern_SubCat0.fitTo(data_allSubCat_FEWZxBern, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
     fitResult.Print()
-
-    # raise ValueError
 
     # FEWZxBern
     c1.setConstant(True)
