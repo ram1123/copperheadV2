@@ -405,24 +405,18 @@ if __name__ == "__main__":
 
 
     # subCat 0
-    name = "subCat0_BWZ_Redux"
+    # name = "subCat0_BWZ_Redux"
+    name = "bwzr_cat_ggh_pdf"
     coreBWZRedux_SubCat0 = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
      
     # Construct background pdf
-    # old start --------------------------------------------------------------------
-    a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.01, -0.3, 0.3)
-    a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
-    a2_subCat0 = rt.RooRealVar("a2_subCat0", "a2_subCat0", 0.5, -0.5, 0.5)
-    # old end --------------------------------------------------------------------
-    # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.03756867559, -1, 1)
-    # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.001975507853, -0.5, 0.5)
-    # a2_subCat0 = rt.RooRealVar("a2_subCat0", "a2_subCat0", -0.001975507853, -0.5, 0.5)
-    # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.03756867559, -0.06, 0.06)
-    # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", -0.001975507853, -0.06, 0.06)
-    # a2_subCat0 = rt.RooRealVar("a2_subCat0", "a2_subCat0", -0.001975507853, -0.06, 0.06)
-    # a0_subCat0.setConstant(True)
-    # a1_subCat0.setConstant(True)
-    # a2_subCat0.setConstant(True)
+    # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.01, -0.3, 0.3)
+    # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
+    # a2_subCat0 = rt.RooRealVar("a2_subCat0", "a2_subCat0", 0.5, -0.5, 0.5)
+    a0_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", -0.01, -0.3, 0.3)
+    a1_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", 0.5, -0.5, 0.5)
+    a2_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", 0.5, -0.5, 0.5)
+
     
 
     name = "subCat0_SMF"
@@ -431,8 +425,8 @@ if __name__ == "__main__":
 
     
     # Construct composite pdf
-    # name = "model_SubCat0_SMFxBWZRedux"
-    name = "bwzr_cat_ggh_pdf"
+    name = "model_SubCat0_SMFxBWZRedux"
+    # name = "bwzr_cat_ggh_pdf"
     model_subCat0_BWZRedux = rt.RooProdPdf(name, name, [coreBWZRedux_SubCat0, subCat0_SMF])
 
 
@@ -448,15 +442,11 @@ if __name__ == "__main__":
     https://gitlab.cern.ch/cms-analysis/hig/HIG-19-006/datacards/-/blob/master/ggH/ucsd/workspace_bkg_cat1_ggh.root?ref_type=heads
     doesn't have a third degree of freedom
     """
-    a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.1, -0.5, 0.5)
-    a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
-    # values from AN workspace
-    # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.01949329222, -0.06, 0.06)
-    # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", -0.001657932368, -0.06, 0.06)
-    # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.01949329222, -0.1, 0.1)
-    # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", -0.001657932368, -0.06, 0.06)
-    # a0_subCat1.setConstant(True)
-    # a1_subCat1.setConstant(True)
+    # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.1, -0.5, 0.5)
+    # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
+    a0_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", 0.1, -0.5, 0.5)
+    a1_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", 0.5, -0.5, 0.5)
+
     name =  "subCat1_SMF"
     subCat1_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat1, 
@@ -474,14 +464,12 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat2 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.1, -0.3, 0.3)
-    a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
-    # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.04460447882, -0.001, 0.06)
-    # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", -3.46E-05, -0.001, 0.06)
-    # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.04460447882, -0.1, 0.1)
-    # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", -3.46E-05, -0.1, 0.1)
-    # a0_subCat2.setConstant(True)
-    # a1_subCat2.setConstant(True)
+    # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.1, -0.3, 0.3)
+    # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
+    a0_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", 0.1, -0.3, 0.3)
+    a1_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", 0.5, -0.5, 0.5)
+
+    
     name = "subCat2_SMF"
     subCat2_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat2, 
@@ -496,14 +484,11 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat3 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -0.3, 0.3)
-    a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
-    # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, 0.05, 0.5)
-    # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", -8.79E-06, -0.5, 0.5)
-    # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", 0.07374242573, -0.06, 0.2)
-    # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", -8.79E-06, -0.06, 0.06)
-    # a0_subCat3.setConstant(True)
-    # a1_subCat3.setConstant(True)
+    # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -0.3, 0.3)
+    # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
+    a0_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", -0.1, -0.3, 0.3)
+    a1_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", 0.5, -0.5, 0.5)
+    
     name = "subCat3_SMF"
     subCat3_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat3, 
@@ -518,10 +503,12 @@ if __name__ == "__main__":
     coreBWZRedux_SubCat4 = coreBWZRedux_SubCat0
     
     # Construct the background pdf
-    a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.227473, 0.0, 0.5)
-    a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.00064818, -0.4, 0.0)
-    # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", -0.1, -0.4, 0.5)
-    # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", 0.5, -0.4, 0.4)
+    # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.227473, 0.0, 0.5)
+    # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.00064818, -0.4, 0.0)
+    a0_subCat4 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", 0.227473, 0.0, 0.5)
+    a1_subCat4 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", -0.00064818, -0.4, 0.0)
+
+    
     name = "subCat4_SMF"
     subCat4_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat4, 
@@ -624,7 +611,8 @@ if __name__ == "__main__":
     a1_subCat0_sumExp = rt.RooRealVar("a1_subCat0_sumExp", "a1_subCat0_sumExp", 0.5, -0.5, 0.5)
     a2_subCat0_sumExp = rt.RooRealVar("a2_subCat0_sumExp", "a2_subCat0_sumExp", 0.5, -0.5, 0.5)
     
-    name = "subCat0_sumExp"
+    # name = "subCat0_sumExp"
+    name = "exp_cat_ggh_pdf"
     coreSumExp_SubCat0 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
      
     name = "subCat0_SMF_sumExp"
@@ -827,7 +815,8 @@ if __name__ == "__main__":
     # c2.setConstant(True)
     # c3.setConstant(True)
     
-    name = "subCat0_FEWZxBern"
+    # name = "subCat0_FEWZxBern"
+    name = "fewz_1j_spl_cat_ggh_pdf"
     coreFEWZxBern_SubCat0, params_FEWZxBern_SubCat0 = MakeFEWZxBernDof3(name, name, mass, BernCoeff_list) 
      
     name = "subCat0_SMF_FEWZxBern"
@@ -1012,15 +1001,15 @@ if __name__ == "__main__":
     fitResult.Print()
     
     # freeze core pdf params
-    # # BWZ redux
-    # a_coeff.setConstant(True)
-    # b_coeff.setConstant(True)
-    # c_coeff.setConstant(True)
+    # BWZ redux
+    a_coeff.setConstant(True)
+    b_coeff.setConstant(True)
+    c_coeff.setConstant(True)
     
-    # # sumExp
-    # a1_coeff.setConstant(True)
-    # a2_coeff.setConstant(True)
-    # f_coeff.setConstant(True)
+    # sumExp
+    a1_coeff.setConstant(True)
+    a2_coeff.setConstant(True)
+    f_coeff.setConstant(True)
 
     # fit FEWZxBern separately
     _ = coreFEWZxBern_SubCat0.fitTo(data_allSubCat_FEWZxBern, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
@@ -1029,10 +1018,10 @@ if __name__ == "__main__":
 
     # raise ValueError
 
-    # # FEWZxBern
-    # c1.setConstant(True)
-    # c2.setConstant(True)
-    # c3.setConstant(True)
+    # FEWZxBern
+    c1.setConstant(True)
+    c2.setConstant(True)
+    c3.setConstant(True)
     
     #----------------------------------------------------------------------------
     # Now do core-Pdf fitting with all SMF
@@ -1117,6 +1106,7 @@ if __name__ == "__main__":
     end = time.time()
     
     fitResult.Print()
+    # raise ValueError
     
     # # subcat4 specific fit
     # # Define category to distinguish physics and control samples events
@@ -1198,7 +1188,7 @@ if __name__ == "__main__":
     # end = time.time()
     
     # fitResult.Print()
-    # raise ValueError
+    # 
 
 
     
@@ -1227,9 +1217,12 @@ if __name__ == "__main__":
     # sumExp
     
     # sumexp subcat 0
-    a0_subCat0_sumExp = rt.RooRealVar("a0_subCat0_sumExp", "a0_subCat0_sumExp", a0_subCat0.getVal(), a0_subCat0.getMin(), a0_subCat0.getMax())
-    a1_subCat0_sumExp = rt.RooRealVar("a1_subCat0_sumExp", "a1_subCat0_sumExp", a1_subCat0.getVal(), a1_subCat0.getMin(), a1_subCat0.getMax())
-    a2_subCat0_sumExp = rt.RooRealVar("a2_subCat0_sumExp", "a2_subCat0_sumExp", a2_subCat0.getVal(), a2_subCat0.getMin(), a2_subCat0.getMax())
+    # a0_subCat0_sumExp = rt.RooRealVar("a0_subCat0_sumExp", "a0_subCat0_sumExp", a0_subCat0.getVal(), a0_subCat0.getMin(), a0_subCat0.getMax())
+    # a1_subCat0_sumExp = rt.RooRealVar("a1_subCat0_sumExp", "a1_subCat0_sumExp", a1_subCat0.getVal(), a1_subCat0.getMin(), a1_subCat0.getMax())
+    # a2_subCat0_sumExp = rt.RooRealVar("a2_subCat0_sumExp", "a2_subCat0_sumExp", a2_subCat0.getVal(), a2_subCat0.getMin(), a2_subCat0.getMax())
+    a0_subCat0_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", "exp_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", a0_subCat0.getVal(), a0_subCat0.getMin(), a0_subCat0.getMax())
+    a1_subCat0_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", "exp_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", a1_subCat0.getVal(), a1_subCat0.getMin(), a1_subCat0.getMax())
+    a2_subCat0_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", "exp_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", a2_subCat0.getVal(), a2_subCat0.getMin(), a2_subCat0.getMax())
     
      
     name = "subCat0_SMF_sumExp"
@@ -1243,8 +1236,10 @@ if __name__ == "__main__":
     # subCat 1
     name = "subCat1_sumExp"
     
-    a0_subCat1_sumExp = rt.RooRealVar("a0_subCat1_sumExp", "a0_subCat1_sumExp", a0_subCat1.getVal(), a0_subCat1.getMin(), a0_subCat1.getMax())
-    a1_subCat1_sumExp = rt.RooRealVar("a1_subCat1_sumExp", "a1_subCat1_sumExp", a1_subCat1.getVal(), a1_subCat1.getMin(), a1_subCat1.getMax())
+    # a0_subCat1_sumExp = rt.RooRealVar("a0_subCat1_sumExp", "a0_subCat1_sumExp", a0_subCat1.getVal(), a0_subCat1.getMin(), a0_subCat1.getMax())
+    # a1_subCat1_sumExp = rt.RooRealVar("a1_subCat1_sumExp", "a1_subCat1_sumExp", a1_subCat1.getVal(), a1_subCat1.getMin(), a1_subCat1.getMax())
+    a0_subCat1_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", "exp_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", a0_subCat1.getVal(), a0_subCat1.getMin(), a0_subCat1.getMax())
+    a1_subCat1_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", "exp_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", a1_subCat1.getVal(), a1_subCat1.getMin(), a1_subCat1.getMax())
     
     name = "subCat1_SMF_sumExp"
     subCat1_SumExp_SMF = rt.RooChebychev(name, name, mass, 
@@ -1259,8 +1254,10 @@ if __name__ == "__main__":
     # subCat 2
     name = "subCat2_sumExp"
 
-    a0_subCat2_sumExp = rt.RooRealVar("a0_subCat2_sumExp", "a0_subCat2_sumExp", a0_subCat2.getVal(), a0_subCat2.getMin(), a0_subCat2.getMax())
-    a1_subCat2_sumExp = rt.RooRealVar("a1_subCat2_sumExp", "a1_subCat2_sumExp", a1_subCat2.getVal(), a1_subCat2.getMin(), a1_subCat2.getMax())
+    # a0_subCat2_sumExp = rt.RooRealVar("a0_subCat2_sumExp", "a0_subCat2_sumExp", a0_subCat2.getVal(), a0_subCat2.getMin(), a0_subCat2.getMax())
+    # a1_subCat2_sumExp = rt.RooRealVar("a1_subCat2_sumExp", "a1_subCat2_sumExp", a1_subCat2.getVal(), a1_subCat2.getMin(), a1_subCat2.getMax())
+    a0_subCat2_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", "exp_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", a0_subCat2.getVal(), a0_subCat2.getMin(), a0_subCat2.getMax())
+    a1_subCat2_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", "exp_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", a1_subCat2.getVal(), a1_subCat2.getMin(), a1_subCat2.getMax())
     
     name = "subCat2_SMF_sumExp"
     subCat2_SumExp_SMF = rt.RooChebychev(name, name, mass, 
@@ -1273,8 +1270,10 @@ if __name__ == "__main__":
     # subCat 3
     name = "subCat3_sumExp"
 
-    a0_subCat3_sumExp = rt.RooRealVar("a0_subCat3_sumExp", "a0_subCat3_sumExp", a0_subCat3.getVal(), a0_subCat3.getMin(), a0_subCat3.getMax())
-    a1_subCat3_sumExp = rt.RooRealVar("a1_subCat3_sumExp", "a1_subCat3_sumExp", a1_subCat3.getVal(), a1_subCat3.getMin(), a1_subCat3.getMax())
+    # a0_subCat3_sumExp = rt.RooRealVar("a0_subCat3_sumExp", "a0_subCat3_sumExp", a0_subCat3.getVal(), a0_subCat3.getMin(), a0_subCat3.getMax())
+    # a1_subCat3_sumExp = rt.RooRealVar("a1_subCat3_sumExp", "a1_subCat3_sumExp", a1_subCat3.getVal(), a1_subCat3.getMin(), a1_subCat3.getMax())
+    a0_subCat3_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", "exp_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", a0_subCat3.getVal(), a0_subCat3.getMin(), a0_subCat3.getMax())
+    a1_subCat3_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", "exp_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", a1_subCat3.getVal(), a1_subCat3.getMin(), a1_subCat3.getMax())
     
     name = "subCat3_SMF_sumExp"
     subCat3_SumExp_SMF = rt.RooChebychev(name, name, mass, 
@@ -1287,8 +1286,10 @@ if __name__ == "__main__":
     # subCat 4
     name = "subCat4_sumExp"
 
-    a0_subCat4_sumExp = rt.RooRealVar("a0_subCat4_sumExp", "a0_subCat4_sumExp", a0_subCat4.getVal(), a0_subCat4.getMin(), a0_subCat4.getMax())
-    a1_subCat4_sumExp = rt.RooRealVar("a1_subCat4_sumExp", "a1_subCat4_sumExp", a1_subCat4.getVal(), a1_subCat4.getMin(), a1_subCat4.getMax())
+    # a0_subCat4_sumExp = rt.RooRealVar("a0_subCat4_sumExp", "a0_subCat4_sumExp", a0_subCat4.getVal(), a0_subCat4.getMin(), a0_subCat4.getMax())
+    # a1_subCat4_sumExp = rt.RooRealVar("a1_subCat4_sumExp", "a1_subCat4_sumExp", a1_subCat4.getVal(), a1_subCat4.getMin(), a1_subCat4.getMax())
+    a0_subCat4_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", "exp_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", a0_subCat4.getVal(), a0_subCat4.getMin(), a0_subCat4.getMax())
+    a1_subCat4_sumExp = rt.RooRealVar("exp_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", "exp_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", a1_subCat4.getVal(), a1_subCat4.getMin(), a1_subCat4.getMax())
     
     name = "subCat4_SMF_sumExp"
     subCat4_SumExp_SMF = rt.RooChebychev(name, name, mass, 
@@ -1300,9 +1301,12 @@ if __name__ == "__main__":
 
     # FEWZxBern----------------------------------------------------------
     # subCat 0
-    a0_subCat0_FEWZxBern = rt.RooRealVar("a0_subCat0_FEWZxBern", "a0_subCat0_FEWZxBern", a0_subCat0.getVal(), a0_subCat0.getMin(), a0_subCat0.getMax())
-    a1_subCat0_FEWZxBern = rt.RooRealVar("a1_subCat0_FEWZxBern", "a1_subCat0_FEWZxBern", a1_subCat0.getVal(), a1_subCat0.getMin(), a1_subCat0.getMax())
-    a2_subCat0_FEWZxBern = rt.RooRealVar("a2_subCat0_FEWZxBern", "a2_subCat0_FEWZxBern", a2_subCat0.getVal(), a2_subCat0.getMin(), a2_subCat0.getMax())
+    # a0_subCat0_FEWZxBern = rt.RooRealVar("a0_subCat0_FEWZxBern", "a0_subCat0_FEWZxBern", a0_subCat0.getVal(), a0_subCat0.getMin(), a0_subCat0.getMax())
+    # a1_subCat0_FEWZxBern = rt.RooRealVar("a1_subCat0_FEWZxBern", "a1_subCat0_FEWZxBern", a1_subCat0.getVal(), a1_subCat0.getMin(), a1_subCat0.getMax())
+    # a2_subCat0_FEWZxBern = rt.RooRealVar("a2_subCat0_FEWZxBern", "a2_subCat0_FEWZxBern", a2_subCat0.getVal(), a2_subCat0.getMin(), a2_subCat0.getMax())
+    a0_subCat0_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", a0_subCat0.getVal(), a0_subCat0.getMin(), a0_subCat0.getMax())
+    a1_subCat0_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", a1_subCat0.getVal(), a1_subCat0.getMin(), a1_subCat0.getMax())
+    a2_subCat0_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", a2_subCat0.getVal(), a2_subCat0.getMin(), a2_subCat0.getMax())
      
     name = "subCat0_SMF_FEWZxBern"
     subCat0_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0_FEWZxBern, a1_subCat0_FEWZxBern, a2_subCat0_FEWZxBern])
@@ -1317,8 +1321,10 @@ if __name__ == "__main__":
     name = "subCat1_FEWZxBern"
     coreFEWZxBern_SubCat1 = coreFEWZxBern_SubCat0
     
-    a0_subCat1_FEWZxBern = rt.RooRealVar("a0_subCat1_FEWZxBern", "a0_subCat1_FEWZxBern", a0_subCat1.getVal(), a0_subCat1.getMin(), a0_subCat1.getMax())
-    a1_subCat1_FEWZxBern = rt.RooRealVar("a1_subCat1_FEWZxBern", "a1_subCat1_FEWZxBern", a1_subCat1.getVal(), a1_subCat1.getMin(), a1_subCat1.getMax())
+    # a0_subCat1_FEWZxBern = rt.RooRealVar("a0_subCat1_FEWZxBern", "a0_subCat1_FEWZxBern", a0_subCat1.getVal(), a0_subCat1.getMin(), a0_subCat1.getMax())
+    # a1_subCat1_FEWZxBern = rt.RooRealVar("a1_subCat1_FEWZxBern", "a1_subCat1_FEWZxBern", a1_subCat1.getVal(), a1_subCat1.getMin(), a1_subCat1.getMax())
+    a0_subCat1_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", a0_subCat1.getVal(), a0_subCat1.getMin(), a0_subCat1.getMax())
+    a1_subCat1_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", a1_subCat1.getVal(), a1_subCat1.getMin(), a1_subCat1.getMax())
 
     name = "subCat1_SMF_FEWZxBern"
     subCat1_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, 
@@ -1334,8 +1340,10 @@ if __name__ == "__main__":
     name = "subCat2_FEWZxBern"
     coreFEWZxBern_SubCat2 = coreFEWZxBern_SubCat0
     
-    a0_subCat2_FEWZxBern = rt.RooRealVar("a0_subCat2_FEWZxBern", "a0_subCat2_FEWZxBern", a0_subCat2.getVal(), a0_subCat2.getMin(), a0_subCat2.getMax())
-    a1_subCat2_FEWZxBern = rt.RooRealVar("a1_subCat2_FEWZxBern", "a1_subCat2_FEWZxBern", a1_subCat2.getVal(), a1_subCat2.getMin(), a1_subCat2.getMax())
+    # a0_subCat2_FEWZxBern = rt.RooRealVar("a0_subCat2_FEWZxBern", "a0_subCat2_FEWZxBern", a0_subCat2.getVal(), a0_subCat2.getMin(), a0_subCat2.getMax())
+    # a1_subCat2_FEWZxBern = rt.RooRealVar("a1_subCat2_FEWZxBern", "a1_subCat2_FEWZxBern", a1_subCat2.getVal(), a1_subCat2.getMin(), a1_subCat2.getMax())
+    a0_subCat2_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", a0_subCat2.getVal(), a0_subCat2.getMin(), a0_subCat2.getMax())
+    a1_subCat2_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", a1_subCat2.getVal(), a1_subCat2.getMin(), a1_subCat2.getMax())
 
     name = "subCat2_SMF_FEWZxBern"
     subCat2_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, 
@@ -1349,8 +1357,10 @@ if __name__ == "__main__":
     name = "subCat3_FEWZxBern"
     coreFEWZxBern_SubCat3 = coreFEWZxBern_SubCat0
     
-    a0_subCat3_FEWZxBern = rt.RooRealVar("a0_subCat3_FEWZxBern", "a0_subCat3_FEWZxBern", a0_subCat3.getVal(), a0_subCat3.getMin(), a0_subCat3.getMax())
-    a1_subCat3_FEWZxBern = rt.RooRealVar("a1_subCat3_FEWZxBern", "a1_subCat3_FEWZxBern", a1_subCat3.getVal(), a1_subCat3.getMin(), a1_subCat3.getMax())
+    # a0_subCat3_FEWZxBern = rt.RooRealVar("a0_subCat3_FEWZxBern", "a0_subCat3_FEWZxBern", a0_subCat3.getVal(), a0_subCat3.getMin(), a0_subCat3.getMax())
+    # a1_subCat3_FEWZxBern = rt.RooRealVar("a1_subCat3_FEWZxBern", "a1_subCat3_FEWZxBern", a1_subCat3.getVal(), a1_subCat3.getMin(), a1_subCat3.getMax())
+    a0_subCat3_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", a0_subCat3.getVal(), a0_subCat3.getMin(), a0_subCat3.getMax())
+    a1_subCat3_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", a1_subCat3.getVal(), a1_subCat3.getMin(), a1_subCat3.getMax())
 
     name = "subCat3_SMF_FEWZxBern"
     subCat3_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, 
@@ -1364,8 +1374,10 @@ if __name__ == "__main__":
     name = "subCat4_FEWZxBern"
     coreFEWZxBern_SubCat4 = coreFEWZxBern_SubCat0
     
-    a0_subCat4_FEWZxBern = rt.RooRealVar("a0_subCat4_FEWZxBern", "a0_subCat4_FEWZxBern", a0_subCat4.getVal(), a0_subCat4.getMin(), a0_subCat4.getMax())
-    a1_subCat4_FEWZxBern = rt.RooRealVar("a1_subCat4_FEWZxBern", "a1_subCat4_FEWZxBern", a1_subCat4.getVal(), a1_subCat4.getMin(), a1_subCat4.getMax())
+    # a0_subCat4_FEWZxBern = rt.RooRealVar("a0_subCat4_FEWZxBern", "a0_subCat4_FEWZxBern", a0_subCat4.getVal(), a0_subCat4.getMin(), a0_subCat4.getMax())
+    # a1_subCat4_FEWZxBern = rt.RooRealVar("a1_subCat4_FEWZxBern", "a1_subCat4_FEWZxBern", a1_subCat4.getVal(), a1_subCat4.getMin(), a1_subCat4.getMax())
+    a0_subCat4_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", a0_subCat4.getVal(), a0_subCat4.getMin(), a0_subCat4.getMax())
+    a1_subCat4_FEWZxBern = rt.RooRealVar("fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", "fewz_1j_spl_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", a1_subCat4.getVal(), a1_subCat4.getMin(), a1_subCat4.getMax())
 
     name = "subCat4_SMF_FEWZxBern"
     subCat4_FEWZxBern_SMF = rt.RooChebychev(name, name, mass, 
