@@ -1,0 +1,67 @@
+import ROOT as rt
+import ROOT 
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plotROC(background_yields, signal_yields, label:str):
+    # Compute cumulative sums (assuming a cut-based selection, e.g., loosest to tightest cut)
+    signal_cumsum = np.cumsum(signal_yields)
+    background_cumsum = np.cumsum(background_yields)
+    # Compute total signal and background
+    total_signal = np.sum(signal_yields)
+    total_background = np.sum(background_yields)
+    
+    # Compute efficiencies
+    signal_efficiency = signal_cumsum / total_signal
+    background_efficiency = background_cumsum / total_background
+    plt.plot(signal_efficiency, background_efficiency, marker='o', linestyle='-', label=f"{label} ROC Curve")
+
+
+
+
+purdue_bkg_yields = []
+purdue_sig_yields = []
+
+for cat_ix in range(5):
+    ws = rt.TFile(f"my_workspace/workspace_bkg_cat{cat_ix}_ggh.root")["w"]
+    bkg_yield = ws.obj(f"data_cat{cat_ix}_ggh").sumEntries()
+    purdue_bkg_yields.append(bkg_yield)
+
+    ws = rt.TFile(f"my_workspace/workspace_sig_cat{cat_ix}_ggh.root")["w"]
+    sig_yield = ws.obj(f"data_ggH_cat{cat_ix}_ggh_m125").sumEntries()
+    purdue_sig_yields.append(sig_yield)
+
+
+print(f"purdue_bkg_yields : {purdue_bkg_yields}")
+print(f"purdue_sig_yields : {purdue_sig_yields}")
+
+purdue_bkg_yields = np.array(purdue_bkg_yields)
+purdue_sig_yields = np.array(purdue_sig_yields)
+
+
+# background_yields=ucsd_bkg_yields
+# signal_yields=ucsd_sig_yields
+# # Compute cumulative sums (assuming a cut-based selection, e.g., loosest to tightest cut)
+# signal_cumsum = np.cumsum(signal_yields)
+# background_cumsum = np.cumsum(background_yields)
+
+# # Compute total signal and background
+# total_signal = np.sum(signal_yields)
+# total_background = np.sum(background_yields)
+
+# # Compute efficiencies
+# signal_efficiency = signal_cumsum / total_signal
+# background_efficiency = background_cumsum / total_background
+
+# Plot ROC curve
+plt.figure(figsize=(7, 5))
+plotROC(ucsd_bkg_yields, ucsd_sig_yields, "UCSD")
+plotROC(purdue_bkg_yields, purdue_sig_yields, "UCSD")
+plt.ylabel("Background Efficiency")
+plt.yscale("log")
+plt.xlabel("Signal Efficiency")
+plt.title("ROC Curve")
+plt.grid()
+plt.legend()
+# plt.show()
+plt.savefig("quickROC_curve.png")
