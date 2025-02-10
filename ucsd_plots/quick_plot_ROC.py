@@ -33,13 +33,13 @@ for cat_ix in range(5):
     ucsd_sig_yields.append(sig_yield)
 
 
-print(f"ucsd_bkg_yields : {ucsd_bkg_yields}")
-print(f"ucsd_sig_yields : {ucsd_sig_yields}")
-
 ucsd_bkg_yields = np.array(ucsd_bkg_yields)
 ucsd_sig_yields = np.array(ucsd_sig_yields)
 
-
+print(f"ucsd_bkg_yields : {ucsd_bkg_yields}")
+print(f"ucsd_sig_yields : {ucsd_sig_yields}")
+print(f"ucsd_bkg_yields percentage: {ucsd_bkg_yields/sum(ucsd_bkg_yields)}")
+print(f"ucsd_sig_yields percentage: {ucsd_sig_yields/sum(ucsd_sig_yields)}")
 
 purdue_bkg_yields = []
 purdue_sig_yields = []

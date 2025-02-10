@@ -25,6 +25,17 @@ def addRooHists(x: rt.RooRealVar,rooHist_l: List[rt.RooDataHist]) -> rt.RooDataH
     roo_hist_combined.Print("v")
     return roo_hist_combined
 
+
+
+def rebinnHist(mass, rooHist):
+    x_name = mass.GetName()
+    THist = rooHist.createHistogram(x_name).Clone("clone") 
+    # target_nbins = 100
+    rebin_factor = 8
+    THist = THist.Rebin(rebin_factor, "hist_rebinned")
+    rebinned_rooHist = rt.RooDataHist(rooHist.GetName(), rooHist.GetName(), rt.RooArgSet(mass), THist)
+    return rebinned_rooHist
+
 def plotCombinedCorefunc_comparison(mass:rt.RooRealVar, rooHist_list, UCSD_corefunc_dict, Purdue_corefunc_dict, save_path: str):
     """
     takes the dictionary of all Bkg RooAbsPdf models grouped by same corefunctions, and plot them
@@ -57,11 +68,11 @@ def plotCombinedCorefunc_comparison(mass:rt.RooRealVar, rooHist_list, UCSD_coref
         legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
     
         model_name = UCSD_corefunc.GetName()
-        UCSD_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kGreen)
+        UCSD_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"),  ROOT.RooFit.DataError(None), Name=model_name, LineColor=rt.kGreen)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UCSD {corefunc_name}", "L")
     
         model_name = Purdue_corefunc.GetName()
-        Purdue_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kBlue)
+        Purdue_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"),  ROOT.RooFit.DataError(None), Name=model_name, LineColor=rt.kBlue)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"Purdue {corefunc_name}", "L")
     
         # model = UCSD_corefunc
@@ -86,7 +97,61 @@ def plotCombinedCorefunc_comparison(mass:rt.RooRealVar, rooHist_list, UCSD_coref
         canvas.SaveAs(f"{save_path}/combinedRooHistData_{corefunc_name}_comparison.pdf")
 
 
-def plotCorefuncComparisonBySubCat(mass:rt.RooRealVar, model_dict_by_subCat_n_corefunc: Dict, data_dict_by_subCat:Dict, save_path: str):
+# def plotCorefuncComparisonBySubCat(mass:rt.RooRealVar, model_dict_by_subCat_n_corefunc: Dict, data_dict_by_subCat:Dict, save_path: str):
+#     """
+#     takes the dictionary of all Bkg RooAbsPdf models grouped by same sub-category, and plot them
+#     in the frame() of mass and saves the plots on a given directory path
+#     """
+#     # make the save_path directory if it doesn't exist
+#     if not os.path.exists(save_path):
+#         os.makedirs(save_path)
+        
+#     color_list = [
+#         rt.kGreen,
+#         rt.kBlue,
+#         rt.kRed,
+#         rt.kOrange,
+#         rt.kViolet,
+#     ]
+#     max_list = [1300, 1000, 400, 300, 90]
+#     for subCat_idx, corefunc_dict in model_dict_by_subCat_n_corefunc.items():
+#         UCSD_corefunc_dict = corefunc_dict["UCSD"]
+#         Purdue_corefunc_dict = corefunc_dict["Purdue"]
+#         for corefunc_name, UCSD_corefunc in UCSD_corefunc_dict.items():
+#             Purdue_corefunc = Purdue_corefunc_dict[corefunc_name]
+#             name = "Canvas"
+#             canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+#             canvas.cd()
+#             frame = mass.frame()
+#             # frame.SetMaximum(max_list[subCat_idx])
+#             frame.SetXTitle(f"Dimuon Mass (GeV)")
+#             legend = rt.TLegend(0.65,0.55,0.9,0.7)
+#             # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+#             # data_hist = data_dict_by_subCat[subCat_idx]
+#             # data_hist.plotOn(frame, Name=data_hist.GetName())
+#             # for ix in range(len(subCat_list)):
+
+#             name = f"category {subCat_idx} data"
+#             data_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+#             legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+        
+#             model_name = UCSD_corefunc.GetName()
+#             UCSD_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kGreen)
+#             legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UCSD {corefunc_name} cat{subCat_idx}", "L")
+        
+#             model_name = Purdue_corefunc.GetName()
+#             Purdue_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kBlue)
+#             legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"Purdue {corefunc_name} cat{subCat_idx}", "L")
+
+#             frame.Draw()
+#             legend.Draw() 
+#             canvas.SetTicks(2, 2)
+#             canvas.Update()
+#             canvas.Draw()
+#             canvas.SaveAs(f"{save_path}/bkgFitComparison_{corefunc_name}_subCat{subCat_idx}.pdf")
+
+
+def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_subCat:Dict, save_path: str, label="data"):
     """
     takes the dictionary of all Bkg RooAbsPdf models grouped by same sub-category, and plot them
     in the frame() of mass and saves the plots on a given directory path
@@ -102,93 +167,38 @@ def plotCorefuncComparisonBySubCat(mass:rt.RooRealVar, model_dict_by_subCat_n_co
         rt.kOrange,
         rt.kViolet,
     ]
-    max_list = [1300, 1000, 400, 300, 90]
-    for subCat_idx, corefunc_dict in model_dict_by_subCat_n_corefunc.items():
-        UCSD_corefunc_dict = corefunc_dict["UCSD"]
-        Purdue_corefunc_dict = corefunc_dict["Purdue"]
-        for corefunc_name, UCSD_corefunc in UCSD_corefunc_dict.items():
-            Purdue_corefunc = Purdue_corefunc_dict[corefunc_name]
-            name = "Canvas"
-            canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-            canvas.cd()
-            frame = mass.frame()
-            # frame.SetMaximum(max_list[subCat_idx])
-            frame.SetXTitle(f"Dimuon Mass (GeV)")
-            legend = rt.TLegend(0.65,0.55,0.9,0.7)
-            # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-            # data_hist = data_dict_by_subCat[subCat_idx]
-            # data_hist.plotOn(frame, Name=data_hist.GetName())
-            # for ix in range(len(subCat_list)):
+    print(f"data_dict_by_subCat: {data_dict_by_subCat}")
+    for subCat_idx, data_dict in data_dict_by_subCat.items():
+        # print(data_dict)
+        # raise ValueError
+        UCSD_data = data_dict["UCSD"]
+        Purdue_data = data_dict["Purdue"]
+        UCSD_data = rebinnHist(mass, UCSD_data)
+        Purdue_data = rebinnHist(mass, Purdue_data)
 
-            name = f"category {subCat_idx} data"
-            data_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
-            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
         
-            model_name = UCSD_corefunc.GetName()
-            UCSD_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kGreen)
-            legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UCSD {corefunc_name} cat{subCat_idx}", "L")
-        
-            model_name = Purdue_corefunc.GetName()
-            Purdue_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kBlue)
-            legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"Purdue {corefunc_name} cat{subCat_idx}", "L")
-
-            frame.Draw()
-            legend.Draw() 
-            canvas.SetTicks(2, 2)
-            canvas.Update()
-            canvas.Draw()
-            canvas.SaveAs(f"{save_path}/bkgFitComparison_{corefunc_name}_subCat{subCat_idx}.pdf")
-
-
-def plotCorefuncComparisonBySubCat(mass:rt.RooRealVar, data_dict_by_subCat:Dict, save_path: str):
-    """
-    takes the dictionary of all Bkg RooAbsPdf models grouped by same sub-category, and plot them
-    in the frame() of mass and saves the plots on a given directory path
-    """
-    # make the save_path directory if it doesn't exist
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-        
-    color_list = [
-        rt.kGreen,
-        rt.kBlue,
-        rt.kRed,
-        rt.kOrange,
-        rt.kViolet,
-    ]
-    for subCat_idx, corefunc_dict in data_dict_by_subCat.items():
-        UCSD_corefunc_dict = corefunc_dict["UCSD"]
-        Purdue_corefunc_dict = corefunc_dict["Purdue"]
-        Purdue_corefunc = Purdue_corefunc_dict[corefunc_name]
         name = "Canvas"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         frame = mass.frame()
         frame.SetXTitle(f"Dimuon Mass (GeV)")
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
-        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-        # data_hist = data_dict_by_subCat[subCat_idx]
-        # data_hist.plotOn(frame, Name=data_hist.GetName())
-        # for ix in range(len(subCat_list)):
 
-        name = f"category {subCat_idx} data"
-        data_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
-        legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "P")
+        name = f"UCSD {subCat_idx} data"
+        UCSD_data.plotOn(frame, ROOT.RooFit.DrawOption("HIST L"), Name=name, LineColor=rt.kGreen)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UCSD cat{subCat_idx}_{label}", "L")
     
-        model_name = UCSD_corefunc.GetName()
-        UCSD_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kGreen)
-        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UCSD {corefunc_name} cat{subCat_idx}", "L")
-    
-        model_name = Purdue_corefunc.GetName()
-        Purdue_corefunc.plotOn(frame, rt.RooFit.NormRange("hiSB,loSB"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kBlue)
-        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"Purdue {corefunc_name} cat{subCat_idx}", "L")
+        name = f"Purdue {subCat_idx} data"
+        Purdue_data.plotOn(frame,  ROOT.RooFit.DrawOption("HIST L"), Name=name, LineColor=rt.kBlue)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"Purdue cat{subCat_idx}_{label}", "L")
 
         frame.Draw()
         legend.Draw() 
         canvas.SetTicks(2, 2)
         canvas.Update()
         canvas.Draw()
-        canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}.pdf")
+        canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}.pdf")
+        canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}.png")
 
 if __name__ == "__main__":
 
@@ -273,18 +283,27 @@ if __name__ == "__main__":
     #     }
     #     Purdue_model_dict_by_subCat_n_corefunc[cat_ix] = corefunc_dict
         
-    plotCorefuncComparisonBySubCat(mass, model_dict_by_subCat_n_corefunc, data_dict_by_subCat, plot_save_path)
+    # plotCorefuncComparisonBySubCat(mass, model_dict_by_subCat_n_corefunc, data_dict_by_subCat, plot_save_path)
 
 
+    ucsd_rooHist_list = []
+    
+    for cat_ix in range(5):
+        file = rt.TFile(f"../ucsd_workspace/workspace_bkg_cat{cat_ix}_ggh.root")
+        ucsd_rooHist_list.append(file["w"].obj(f"data_cat{cat_ix}_ggh"))
+    
+    ucsd_combinedRooHist = addRooHists(mass, ucsd_rooHist_list)
+    
     purdue_rooHist_list = []
     for cat_ix in range(5):
         file = rt.TFile(f"my_workspace/workspace_bkg_cat{cat_ix}_ggh.root")
         purdue_rooHist_list.append(file["w"].obj(f"data_cat{cat_ix}_ggh"))
-    purdue_combinedRooHist = addRooHists(mass, rooHist_list)
+    
+    purdue_combinedRooHist = addRooHists(mass, purdue_rooHist_list)
     
     data_dict_by_combinedNsubcat = {
         "combined" : {
-            "UCSD" : combinedRooHist,
+            "UCSD" : ucsd_combinedRooHist,
             "Purdue" : purdue_combinedRooHist
                      },
     }
@@ -295,7 +314,47 @@ if __name__ == "__main__":
         out_dict["UCSD"] = data_hist
         file = rt.TFile(f"my_workspace/workspace_bkg_cat{cat_ix}_ggh.root")
         data_hist = file["w"].obj(f"data_cat{cat_ix}_ggh")
-        out_dict["Pudue"] = data_hist
+        out_dict["Purdue"] = data_hist
         data_dict_by_combinedNsubcat[f"cat{cat_ix}"] = out_dict
+
+    plotCorefuncComparisonByCombined_n_SubCat(mass, data_dict_by_combinedNsubcat, plot_save_path, label="data")
+
+
+    # ------------------------------------------
+    # do the same with signal histogram
+    # ------------------------------------------
+    
+    ucsd_rooHist_list = []
+    
+    for cat_ix in range(5):
+        file = rt.TFile(f"../ucsd_workspace/workspace_sig_cat{cat_ix}_ggh.root")
+        ucsd_rooHist_list.append(file["w"].obj(f"data_ggH_cat{cat_ix}_ggh_m125"))
+    
+    ucsd_combinedRooHist = addRooHists(mass, ucsd_rooHist_list)
+    
+    purdue_rooHist_list = []
+    for cat_ix in range(5):
+        file = rt.TFile(f"my_workspace/workspace_sig_cat{cat_ix}_ggh.root")
+        purdue_rooHist_list.append(file["w"].obj(f"data_ggH_cat{cat_ix}_ggh"))
+    
+    purdue_combinedRooHist = addRooHists(mass, purdue_rooHist_list)
+
+    data_dict_by_combinedNsubcat = {
+        "combined" : {
+            "UCSD" : ucsd_combinedRooHist,
+            "Purdue" : purdue_combinedRooHist
+                     },
+    }
+    for cat_ix in range(5):
+        out_dict = {}
+        file = rt.TFile(f"../ucsd_workspace/workspace_sig_cat{cat_ix}_ggh.root")
+        data_hist = file["w"].obj(f"data_ggH_cat{cat_ix}_ggh_m125")
+        out_dict["UCSD"] = data_hist
+        file = rt.TFile(f"my_workspace/workspace_sig_cat{cat_ix}_ggh.root")
+        data_hist = file["w"].obj(f"data_ggH_cat{cat_ix}_ggh")
+        out_dict["Purdue"] = data_hist
+        data_dict_by_combinedNsubcat[f"cat{cat_ix}"] = out_dict
+
+    plotCorefuncComparisonByCombined_n_SubCat(mass, data_dict_by_combinedNsubcat, plot_save_path, label="ggh_MC")
 
 
