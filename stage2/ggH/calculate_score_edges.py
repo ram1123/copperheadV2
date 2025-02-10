@@ -38,7 +38,10 @@ if __name__ == "__main__":
     signal_score = ak.to_numpy(events.BDT_score.compute())
     signal_wgt = ak.to_numpy(events.wgt_nominal.compute())
     signal_wgt = signal_wgt /np.sum(signal_wgt) # normalize wgt
-    target_yields = [0.3, 0.35, 0.15, 0.15, 0.05]
+    # target_yields = [0.3, 0.35, 0.15, 0.15, 0.05]
+    # target_yields = [0.3, 0.35, 0.15625089, 0.13934911, 0.0544]
+    target_yields = [0.30457106, 0.35325641, 0.14842342, 0.13939539, 0.05435372]
+    # target_yields = [0.3, 0.33, 0.15, 0.15, 0.07]
     print(sum(target_yields))
     target_yields_cum_sum = np.cumsum(np.array(target_yields))
     # sort data
