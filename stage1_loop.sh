@@ -17,10 +17,9 @@ data_l="A B C D"
 bkg_l="dy_M-50"
 sig_l=""
 chunksize=300000
-# save_path="/depot/cms/users/shar1172/hmm/copperheadV1clean/V2_Jan16_JecDefault_plotEveryonesZptWgt/"
-save_path="/depot/cms/users/shar1172/hmm/copperheadV1clean/V2_Jan17_JecDefault_valerieZpt/"
+save_path="/depot/cms/users/$USER/hmm/copperhead_outputs_10Feb"
 
-# python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway --log-level DEBUG
+python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway --log-level DEBUG
 
-python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway --log-level DEBUG
-# python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv 
+python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway --log-level DEBUG 
+# python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --log-level DEBUG &> run_stage1_localCluster.log
