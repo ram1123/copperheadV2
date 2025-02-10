@@ -3,6 +3,7 @@ import ROOT as rt
 import os
 import uproot
 from typing import Tuple, List, Dict
+import pandas as pd
 
 def addRooHists(x: rt.RooRealVar,rooHist_l: List[rt.RooDataHist]) -> rt.RooDataHist :
     """
@@ -151,7 +152,7 @@ def plotCombinedCorefunc_comparison(mass:rt.RooRealVar, rooHist_list, UCSD_coref
 #             canvas.SaveAs(f"{save_path}/bkgFitComparison_{corefunc_name}_subCat{subCat_idx}.pdf")
 
 
-def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_subCat:Dict, save_path: str, label="data"):
+def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_subCat:Dict, save_path: str, return_df=False, label="data"):
     """
     takes the dictionary of all Bkg RooAbsPdf models grouped by same sub-category, and plot them
     in the frame() of mass and saves the plots on a given directory path
@@ -167,6 +168,8 @@ def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_s
         rt.kOrange,
         rt.kViolet,
     ]
+    columns = ["Institution", "mean", "sigma"]
+    out_df = pd.DataFrame(columns=columns)
     print(f"data_dict_by_subCat: {data_dict_by_subCat}")
     for subCat_idx, data_dict in data_dict_by_subCat.items():
         # print(data_dict)
@@ -183,15 +186,32 @@ def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_s
         frame = mass.frame()
         frame.SetXTitle(f"Dimuon Mass (GeV)")
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
-
+        legend.AddEntry("", f"Category: {subCat_idx}", "")
+        
         name = f"UCSD {subCat_idx} data"
-        UCSD_data.plotOn(frame, ROOT.RooFit.DrawOption("HIST L"), Name=name, LineColor=rt.kGreen)
-        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UCSD cat{subCat_idx}_{label}", "L")
+        UCSD_data.plotOn(frame, ROOT.RooFit.DrawOption("E"), Name=name, LineColor=rt.kGreen)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UCSD", "L")
     
         name = f"Purdue {subCat_idx} data"
-        Purdue_data.plotOn(frame,  ROOT.RooFit.DrawOption("HIST L"), Name=name, LineColor=rt.kBlue)
-        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"Purdue cat{subCat_idx}_{label}", "L")
+        Purdue_data.plotOn(frame,  ROOT.RooFit.DrawOption("E"), Name=name, LineColor=rt.kBlue)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"Purdue", "L")
 
+        ucsd_mean_val = UCSD_data.mean(mass)
+        ucsd_std_dev = UCSD_data.sigma(mass)
+        purdue_mean_val = Purdue_data.mean(mass)
+        purdue_std_dev = Purdue_data.sigma(mass)
+
+        if "mc" in label.lower():
+            legend.AddEntry("", f"Mean UCSD: {ucsd_mean_val:.3f}",  "")
+            legend.AddEntry("", f"Mean Purdue: {purdue_mean_val:.3f}",  "")
+            legend.AddEntry("", f"Sigma UCSD: {ucsd_std_dev:.3f}",  "")
+            legend.AddEntry("", f"Sigma Purdue: {purdue_std_dev:.3f}",  "")
+
+        
+        # print(f"Mean: {mean_val:.3f}")
+        # print(f"Standard Deviation: {std_dev:.3f}")
+
+        
         frame.Draw()
         legend.Draw() 
         canvas.SetTicks(2, 2)
@@ -199,6 +219,23 @@ def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_s
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}.pdf")
         canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}.png")
+
+
+        # add mean and std dev values
+        df_data = {
+            "Institution" : ["UCSD", "Purdue"],
+            "Category" : [subCat_idx, subCat_idx],
+            "mean": [ucsd_mean_val, purdue_mean_val],
+            "sigma" : [ucsd_std_dev, purdue_std_dev],
+        }
+        out_df = pd.concat([out_df, pd.DataFrame(df_data)], ignore_index=True)
+
+    # end of loop, return out df if requested
+    if return_df: 
+        return out_df
+    else: 
+        return None
+
 
 if __name__ == "__main__":
 
@@ -355,6 +392,7 @@ if __name__ == "__main__":
         out_dict["Purdue"] = data_hist
         data_dict_by_combinedNsubcat[f"cat{cat_ix}"] = out_dict
 
-    plotCorefuncComparisonByCombined_n_SubCat(mass, data_dict_by_combinedNsubcat, plot_save_path, label="ggh_MC")
+    ggh_df = plotCorefuncComparisonByCombined_n_SubCat(mass, data_dict_by_combinedNsubcat, plot_save_path, label="ggh_MC", return_df=True)
+    print(ggh_df)
 
 

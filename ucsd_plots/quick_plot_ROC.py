@@ -54,11 +54,15 @@ for cat_ix in range(5):
     purdue_sig_yields.append(sig_yield)
 
 
-print(f"purdue_bkg_yields : {purdue_bkg_yields}")
-print(f"purdue_sig_yields : {purdue_sig_yields}")
-
 purdue_bkg_yields = np.array(purdue_bkg_yields)
 purdue_sig_yields = np.array(purdue_sig_yields)
+
+print(f"purdue_bkg_yields : {purdue_bkg_yields}")
+print(f"purdue_sig_yields : {purdue_sig_yields}")
+print(f"purdue_bkg_yields percentage: {purdue_bkg_yields/sum(purdue_bkg_yields)}")
+print(f"purdue_sig_yields percentage: {purdue_sig_yields/sum(purdue_sig_yields)}")
+
+
 
 
 # background_yields=ucsd_bkg_yields
@@ -80,10 +84,13 @@ plt.figure(figsize=(7, 5))
 plotROC(ucsd_bkg_yields, ucsd_sig_yields, "UCSD")
 plotROC(purdue_bkg_yields, purdue_sig_yields, "Purdue")
 plt.ylabel("Background Efficiency")
-plt.yscale("log")
+# plt.yscale("log")
 plt.xlabel("Signal Efficiency")
 plt.title("ROC Curve")
+plt.xlim(0.8, 1.0)
+plt.ylim(0.9,1.0)
 plt.grid()
 plt.legend()
 # plt.show()
 plt.savefig("quickROC_curve.png")
+plt.savefig("quickROC_curve.pdf")
