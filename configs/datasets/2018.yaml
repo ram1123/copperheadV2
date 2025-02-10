@@ -3,7 +3,8 @@
   data_B: /SingleMuon/Run2018B-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD
   data_C: /SingleMuon/Run2018C-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD
   data_D: /SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v1/NANOAOD
-  dy_M-50: /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X*/NANOAODSIM # quark antiquark pair fusion to Z boson, which decays to lepton dilepton pair
+  dy_M-50: /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM 
+  # quark antiquark pair fusion to Z boson, which decays to lepton dilepton pair
   dy_M-100To200: /DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM
   dy_VBF_filter: dummy
   dy_m105_160_vbf_amc: dummy

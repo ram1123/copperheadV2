@@ -1,41 +1,26 @@
 #!/bin/bash
 # Stop execution on any error
-# set -e
+set -e
 
-# year="2018"
+# If there is `from src.<something> import <something>
+# export PYTHONPATH=$PYTHONPATH:/depot/cms/users/shar1172/copperheadV2/
+
+year="2018"
 # year="2017"
 # year="2016postVFP"
 # year="2016preVFP"
 
-# data_l="A B C D E F G H"
-data_l=""
-bkg_l="DY"
-sig_l="ggH VBF"
-chunksize=300000
-# save_path="/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Jan16_JecDefault_plotEveryonesZptWgt/"
-# save_path="/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Jan17_JecDefault_plotEveryonesZptWgt/"
-save_path="/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Jan17_JecDefault_valerieZpt/"
-
-# year="2018"
-# python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l
-# NanoAODv=9
-# python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --use_gateway
-
-# year="2017"
-# python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l
-# NanoAODv=9
-# python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --use_gateway
-
-# bkg_l="DY ST"
-year="2016postVFP"
-# python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l
 NanoAODv=9
-python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --use_gateway
-python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --use_gateway
-python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --use_gateway
-python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --use_gateway
 
-# year="2016preVFP"
-# python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l
-# NanoAODv=9
-# python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway
+# data_l="A B C D E F G H"
+data_l="A B C D"
+bkg_l="dy_M-50"
+sig_l=""
+chunksize=300000
+# save_path="/depot/cms/users/shar1172/hmm/copperheadV1clean/V2_Jan16_JecDefault_plotEveryonesZptWgt/"
+save_path="/depot/cms/users/shar1172/hmm/copperheadV1clean/V2_Jan17_JecDefault_valerieZpt/"
+
+# python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway --log-level DEBUG
+
+python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway --log-level DEBUG
+# python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv 

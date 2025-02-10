@@ -38,6 +38,10 @@ import gc
 import ctypes
 from src.lib.get_parameters import getParametersForYr
 
+import logging
+from utils import logger
+
+
 def trim_memory() -> int:
      libc = ctypes.CDLL("libc.so.6")
      return libc.malloc_trim(0)
@@ -79,32 +83,6 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         },
     ).events()
 
-    
-    # save input events for CI testing start ---------------------------------------------
-    # dir = f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}'
-    # if not os.path.exists(dir):
-    #     os.makedirs(dir)
-    # # save dataset_dict as input
-    # input_dataset = OmegaConf.create(dataset_dict)
-    # filename = dir + '/dataset_dict.yaml'
-    # try:
-    #     os.remove(filename)
-    # except OSError:
-    #     pass
-    # with open(filename, "w") as file:
-    #     OmegaConf.save(config=input_dataset, f=file.name)
-    # # now save output to compare as target
-    # filename = f'./test/stage1_outputs/{dataset_dict["metadata"]["dataset"]}'
-    # try:
-    #     os.remove(filename)
-    # except OSError:
-    #     pass
-    # out_collections = processor.process(events)
-    # zip = ak.zip(out_collections, depth_limit=1)
-    # zip.to_parquet(filename)
-    # raise ValueError
-    # save input events for CI testing end ---------------------------------------------
-    # print(f"n of partitions: {events.Muon.pt}")
     out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
@@ -112,201 +90,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     skim_dict = out_collections
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
-    # print(f"skim_dict.keys(): {skim_dict.keys()}")
-    # print(f"skim_dict.wgt_nominal: {skim_dict['wgt_nominal'].compute()}")
-
-    # # debugging
-    # for field in skim_dict.keys():
-    #     if "wgt" in field:
-    #         print(field)
-
-    
-    # ------------------------------------------
-    # skim_dict =  {
-    #         'mu1_pt': (out_collections["mu1_pt"]),
-    #         'mu2_pt': (out_collections["mu2_pt"]),
-    #         'mu1_eta': (out_collections["mu1_eta"]),
-    #         'mu2_eta': (out_collections["mu2_eta"]),
-    #         'mu1_phi': (out_collections["mu1_phi"]),
-    #         'mu2_phi': (out_collections["mu2_phi"]),
-    #         # 'mu1_iso': (out_collections["mu1_iso"]),
-    #         # 'mu2_iso': (out_collections["mu2_iso"]),
-    #         "mu1_pt_over_mass" : (out_collections["mu1_pt"] / out_collections["dimuon_mass"]) ,
-    #         "mu2_pt_over_mass" : (out_collections["mu2_pt"] / out_collections["dimuon_mass"]) ,
-    #         'jet1_pt_nominal': (out_collections["jet1_pt"]),
-    #         'jet2_pt_nominal': (out_collections["jet2_pt"]),
-    #         'jet1_eta_nominal': (out_collections["jet1_eta"]),
-    #         'jet2_eta_nominal': (out_collections["jet2_eta"]),
-    #         'jet1_phi_nominal': (out_collections["jet1_phi"]),
-    #         'jet2_phi_nominal': (out_collections["jet2_phi"]),
-    #         'jet1_rapidity_nominal': (out_collections["jet1_rapidity"]),
-    #         'jet2_rapidity_nominal': (out_collections["jet2_rapidity"]),
-    #         'jet1_mass_nominal': (out_collections["jet1_mass"]),
-    #         'jet2_mass_nominal': (out_collections["jet2_mass"]),
-    #         'jet1_qgl_nominal': (out_collections["jet1_qgl"]),
-    #         'jet2_qgl_nominal': (out_collections["jet2_qgl"]),
-    #         'njets_nominal': (out_collections["njets"]),
-    #         # jj variables------------------------------
-    #         'jj_dEta_nominal': (out_collections["jj_dEta"]),
-    #         'jj_dPhi_nominal': (out_collections["jj_dPhi"]),
-    #         'jj_mass_nominal': (out_collections["jj_mass"]),
-    #         'jj_mass_log_nominal': np.log(out_collections["jj_mass"]),
-    #         'jj_pt_nominal': (out_collections["jj_pt"]),
-    #         'jj_eta_nominal': (out_collections["jj_eta"]),
-    #         'jj_phi_nominal': (out_collections["jj_phi"]),
-    #         # weights -----------------------------------------
-    #         'wgt_nominal': (out_collections["wgt_nominal_total"]),    
-    #         # #dimuon variables-----------------------
-    #         'dimuon_mass': (out_collections["dimuon_mass"]),
-    #         'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
-    #         'dimuon_ebe_mass_res_rel': (out_collections["dimuon_ebe_mass_res_rel"]),
-    #         'dimuon_cos_theta_cs': (out_collections["dimuon_cos_theta_cs"]),
-    #         'dimuon_phi_cs': (out_collections["dimuon_phi_cs"]),
-    #         'dimuon_cos_theta_eta': (out_collections["dimuon_cos_theta_eta"]),
-    #         'dimuon_phi_eta': (out_collections["dimuon_phi_eta"]),
-    #         'dimuon_dPhi': (out_collections["dimuon_dPhi"]),
-    #         'dimuon_dR': (out_collections["dimuon_dR"]),
-    #         'dimuon_dEta': (out_collections["dimuon_dEta"]),
-    #         'dimuon_eta': (out_collections["dimuon_eta"]),
-    #         'dimuon_rapidity': (out_collections["dimuon_rapidity"]),
-    #         'dimuon_phi': (out_collections["dimuon_phi"]),
-    #         'dimuon_pt': (out_collections["dimuon_pt"]),
-    #         'dimuon_pt_log': np.log(out_collections["dimuon_pt"]),
-
-    #         # # mmj variables ------------------------------
-    #         'mmj1_dEta_nominal': (out_collections["mmj1_dEta"]),
-    #         'mmj1_dPhi_nominal': (out_collections["mmj1_dPhi"]),
-    #         'mmj2_dEta_nominal': (out_collections["mmj2_dEta"]),
-    #         'mmj2_dPhi_nominal': (out_collections["mmj2_dPhi"]),
-    #         'mmj_min_dEta_nominal': (out_collections["mmj_min_dEta"]),
-    #         'mmj_min_dPhi_nominal': (out_collections["mmj_min_dPhi"]),
-    #         'mmjj_mass_nominal': (out_collections["mmjj_mass"]),
-    #         'mmjj_pt_nominal': (out_collections["mmjj_pt"]),
-    #         'mmjj_eta_nominal': (out_collections["mmjj_eta"]),
-    #         'mmjj_phi_nominal': (out_collections["mmjj_phi"]),
-            
-
-    #         # 'jet1_pt_raw': (out_collections["jet1_pt_raw"]),
-    #         # 'jet1_mass_raw': (out_collections["jet1_mass_raw"]),
-    #         # 'jet1_rho': (out_collections["jet1_rho"]),
-    #         # 'jet1_area': (out_collections["jet1_area"]),
-    #         # 'jet1_pt_jec': (out_collections["jet1_pt_jec"]),
-    #         # 'jet1_mass_jec': (out_collections["jet1_mass_jec"]),
-    #         # 'jet2_pt_raw': (out_collections["jet2_pt_raw"]),
-    #         # 'jet2_mass_raw': (out_collections["jet2_mass_raw"]),
-    #         # 'jet2_rho': (out_collections["jet2_rho"]),
-    #         # 'jet2_area': (out_collections["jet2_area"]),
-    #         # 'jet2_pt_jec': (out_collections["jet2_pt_jec"]),
-    #         # 'jet2_mass_jec': (out_collections["jet2_mass_jec"]),
-        
-    #         # fraction -------------------------------------
-    #         "fraction" : dataset_fraction*(ak.ones_like(out_collections["njets"])), 
-    #         # Btagging WPs ------------------------------------
-    #         "nBtagLoose_nominal" : (out_collections["nBtagLoose"]),
-    #         "nBtagMedium_nominal" : (out_collections["nBtagMedium"]),
-    #         # regions -------------------------------------
-    #         "z_peak" : (out_collections["z_peak"]),
-    #         "h_sidebands" : (out_collections["h_sidebands"]),
-    #         "h_peak" : (out_collections["h_peak"]),
-    #         # vbf ?? ------------------------------------------------
-    #         "vbf_cut" : (out_collections["vbf_cut"]),
-    #         # "pass_leading_pt" : (out_collections["pass_leading_pt"]),
-    #         "ll_zstar_log_nominal" : np.log(np.abs(out_collections["zeppenfeld"])),
-    #         "zeppenfeld_nominal" : (out_collections["zeppenfeld"]),
-    #         "event" : (out_collections["event"]),
-    #         "rpt_nominal" : (out_collections["rpt"]),
-    #         "pt_centrality_nominal" : (out_collections["pt_centrality"]),
-        
-
-        
-    #         # "mu1_pt_roch" : (out_collections["mu1_pt_roch"]),
-    #         # "mu1_pt_raw" : (out_collections["mu1_pt_raw"]),
-    #         # "mu2_pt_raw" : (out_collections["mu2_pt_raw"]),
-    #         # "mu1_pt_fsr" : (out_collections["mu1_pt_fsr"]),
-    #         # # "mu1_pt_gf" : (out_collections["mu1_pt_gf"]),
-    #         # "mu2_pt_roch" : (out_collections["mu2_pt_roch"]),
-    #         # "mu2_pt_fsr" : (out_collections["mu2_pt_fsr"]),
-    #         # "mu2_pt_gf" : (out_collections["mu2_pt_gf"]),
-    #         # temporary test start ------------------------------------
-    #         # "M105to160normalizedWeight" : (out_collections["M105to160normalizedWeight"]),
-    #         # temporary test end ------------------------------------
-    # }
-
-    
-    # # add in weights
-    # weight_dict = {}
-    # for key, value in out_collections.items():
-    #     if "wgt_nominal" in key:
-    #         # print(f"wgt name: {key}")
-    #         weight_dict[key] = value
-    # skim_dict.update(weight_dict)   
-    
-    # # add in nsoftjets and htsoft variables
-    # softj_vars = {}
-    # for key, value in out_collections.items():
-    #     if "nsoftjets" in key:
-    #         softj_vars[key] = value
-    #     elif "htsoft" in key:
-    #         softj_vars[key] = value
-    # skim_dict.update(softj_vars)
-    # print(f"softj_vars.keys(): {softj_vars.keys()}")
-    # print(f"stage1 skim compute1: {ak.zip(skim_dict).compute()}")
-    # gen jet variables start ------------------------------
-    # is_mc = dataset_dict["metadata"]["is_mc"]
-    # if is_mc:
-    #     mc_dict = {
-    #         "gjet1_pt":  (out_collections["gjet1_pt"]),
-    #         "gjet1_eta":  (out_collections["gjet1_eta"]),
-    #         "gjet1_phi":  (out_collections["gjet1_phi"]),
-    #         "gjet1_mass":  (out_collections["gjet1_mass"]),
-    #         "gjet2_pt":  (out_collections["gjet2_pt"]),
-    #         "gjet2_eta":  (out_collections["gjet2_eta"]),
-    #         "gjet2_phi":  (out_collections["gjet2_phi"]),
-    #         "gjet2_mass":  (out_collections["gjet2_mass"]),
-    #         "gjj_pt":  (out_collections["gjj_pt"]),
-    #         "gjj_eta":  (out_collections["gjj_eta"]),
-    #         "gjj_phi":  (out_collections["gjj_phi"]),
-    #         "gjj_mass":  (out_collections["gjj_mass"]),
-    #         "gjj_dEta":  (out_collections["gjj_dEta"]),
-    #         "gjj_dPhi":  (out_collections["gjj_dPhi"]),
-    #         "gjj_dR":  (out_collections["gjj_dR"]),
-            
-    #     }
-    #     skim_dict.update(mc_dict)
-    # gen jet variables end ------------------------------
-    # print(f"stage1 skim compute2: {ak.zip(skim_dict).compute()}")
-    # print(f"skim_dict.keys(): {skim_dict.keys()}")
-    # # define save path
-    # fraction = round(dataset_dict["metadata"]["fraction"], 3)
-    # fraction_str = str(fraction).replace('.', '_')
-    # sample_name = dataset_dict['metadata']['dataset']
-    # save_path = save_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
-    # print(f"save_path: {save_path}")
-    # # remove previously existing files
-    # filelist = glob.glob(f"{save_path}/*.parquet")
-    # print(f"len(filelist): {len(filelist)}")
-    # for file in filelist:
-    #     os.remove(file)
-    # if not os.path.exists(save_path):
-    #     os.makedirs(save_path)
-    
     #----------------------------------
     skim_zip = ak.zip(skim_dict, depth_limit=1)
-    # print(f"skim_zip: {skim_zip}")
-    # skim_zip.persist().to_parquet(save_path)
-    # raise ValueError
     return skim_zip
-    # return "Success!"
-    # 
-    # zip = dask.compute(skim_dict)
-    # print(f"stage1 zip compute: {zip.compute()}")
-    # zip.to_parquet(save_path, compute=True)
-    # print("zip to parquet done!")
-    # skim = dak.to_parquet(zip, save_path, compute=False)
-    # print(f"stage1 skim compute4: {skim.compute()}")
-    # print(f"stage1 skim persisted: {skim.persist()}")
-    # return zip
-
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -344,30 +130,34 @@ if __name__ == "__main__":
     "-aod_v",
     "--NanoAODv",
     dest="NanoAODv",
-    default="9",
-    action="store",
+    type=int,
+    default=9,
+    choices = [9, 12],
     help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
     )
+    parser.add_argument(
+     "--log-level",
+     default=logging.ERROR,
+     type=lambda x: getattr(logging, x),
+     help="Configure the logging level."
+     )    
     args = parser.parse_args()
+
+    logger.setLevel(args.log_level)
+    
     # make NanoAODv into an interger variable
     print(f"args.NanoAODv: {args.NanoAODv}")
     print(f"args.year: {args.year}")
-    args.NanoAODv = int(args.NanoAODv)
-    # check for NanoAOD versions
-    allowed_nanoAODvs = [9, 12]
-    if not (args.NanoAODv in allowed_nanoAODvs):
-        print("wrong NanoAOD version is given!")
-        raise ValueError
+
     time_step = time.time()
     
     warnings.filterwarnings('ignore')
+
     """
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
     
-
     config = getParametersForYr("./configs/parameters/" , args.year)
-    # print(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
     if not test_mode: # full scale implementation
@@ -378,62 +168,40 @@ if __name__ == "__main__":
                 "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
                 proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
             )
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+            cluster_info = gateway.list_clusters()[0] # get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
-            print(f"client: {client}")
-            print("Gateway Client created")
-        # # #-----------------------------------------------------------
+            logger.debug(f"client: {client}")
+            logger.debug("Gateway Client created")
+             
         else:
-            # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
-            # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='6 GiB') 
             client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
-            print("Local scale Client created")
+            logger.debug("Local scale Client created")
         #-------------------------------------------------------------------------------------
-        #-----------------------------------------------------------
-        # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
-        #---------------------------------------------------------
-        # print("cluster scale up")
-        # sample_path = "./prestage_output/processor_samples.json"
         sample_path = "./prestage_output/fraction_processor_samples.json"
         with open(sample_path) as file:
             samples = json.loads(file.read())
+
+        logger.debug(f'samples: {samples}')
         # add in NanoAODv info into samples metadata for coffea processor
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
         start_save_path = args.save_path + f"/stage1_output/{args.year}"
-        print(f"start_save_path: {start_save_path}")
-        # with performance_report(filename="dask-report.html"):
-        # for dataset, sample in samples.items():
-        # dask.config.set(scheduler='single-threaded')
+        logger.info(f"start_save_path: {start_save_path}")
+
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
-            # for dataset, sample in samples.items():
                 sample_step = time.time()
-                # max_file_len = 15
                 max_file_len = 130
-                # max_file_len = 70
-                # max_file_len = 100
-                # max_file_len = 200
-                # max_file_len = 8000
-                # max_file_len = 25
-                # max_file_len = 900
-                # max_file_len = 10
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
-                # print(f"smaller_files: {smaller_files}")
-                print(f"max_file_len: {max_file_len}")
-                print(f"len(smaller_files): {len(smaller_files)}")
-                # for idx in range(len(smaller_files)):
-                # for idx in tqdm.tqdm(range(2, len(smaller_files)), leave=False):
+                logger.debug(f"max_file_len: {max_file_len}")
+                logger.debug(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    # print("restarting workers!")
-                    # client.restart(wait_for_workers = False)
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
-                    # print(f"var_step: {var_step}")
                     to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
-                    print(f"save_path: {save_path}")
+                    logger.debug(f"save_path: {save_path}")
                     # remove previously existing files and make path if doesn't exist
                     filelist = glob.glob(f"{save_path}/*.parquet")
                     print(f"len(filelist): {len(filelist)}")

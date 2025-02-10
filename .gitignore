@@ -5,3 +5,6 @@ prestage_output/
 voms_proxy.txt
 *.html
 .sites*.json
+*.root
+*.pdf
+*.png
