@@ -20,7 +20,6 @@ from itertools import islice
 import copy
 import argparse
 from dask.distributed import performance_report
-import os
 from omegaconf import OmegaConf
 from coffea.nanoevents.methods import vector
 
@@ -71,6 +70,8 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None):
     if save_path is None:
         save_path = "/depot/cms/users/yun79/results/stage1/test/" # default
+        #FIXME: Do we really need this? As there will always be the save path. 
+        #       We may protect at start of this file. if no save path is given just exit the program
         # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
     # print(f"dataset_dict: {dataset_dict['files']}")
     events = NanoEventsFactory.from_root(
@@ -202,19 +203,23 @@ if __name__ == "__main__":
                     to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
                     logger.debug(f"save_path: {save_path}")
-                    # remove previously existing files and make path if doesn't exist
-                    filelist = glob.glob(f"{save_path}/*.parquet")
-                    print(f"len(filelist): {len(filelist)}")
-                    for file in filelist:
-                        os.remove(file)
                     if not os.path.exists(save_path):
+                        logger.debug(f"Path: {save_path} is going to be created")
                         os.makedirs(save_path)
+                    else:
+                        # remove previously existing files and make path if doesn't exist
+                        filelist = glob.glob(f"{save_path}/*.parquet")
+                        logger.debug(f"len(filelist): {len(filelist)}")
+                        for file in filelist:
+                            logger.debug(f"Going to delete file: {file}")
+                            os.remove(file)    
+                    logger.debug("Directory created or cleaned")
                     to_persist.persist().to_parquet(save_path)
                     
                     var_elapsed = round(time.time() - var_step, 3)
-                    print(f"Finished file_idx {idx} in {var_elapsed} s.")
+                    logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
                 sample_elapsed = round(time.time() - sample_step, 3)
-                print(f"Finished sample {dataset} in {sample_elapsed} s.")
+                logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
                 
     else:
         # dataset_loop(coffea_processor, xrootd_path+fname, test=test_mode)

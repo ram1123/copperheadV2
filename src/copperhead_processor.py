@@ -1364,7 +1364,8 @@ class EventProcessor(processor.ProcessorABC):
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
             # zpt_weight = zpt_weight_valerie
-            zpt_weight = merge_zpt_wgt(zpt_weight_mine_nbins100, zpt_weight_valerie, njets, year)
+            # zpt_weight = merge_zpt_wgt(zpt_weight_mine_nbins100, zpt_weight_valerie, njets, year)
+            zpt_weight = merge_zpt_wgt(zpt_weight_mine_nbins100)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
             # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
             weights.add("zpt_wgt", 
