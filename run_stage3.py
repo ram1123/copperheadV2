@@ -1632,7 +1632,8 @@ if __name__ == "__main__":
     # n1_subCat0.setConstant(True) # freeze for stability
     # n2_subCat0.setConstant(True) # freeze for stability
     name = "signal_subCat0"
-    signal_subCat0 = rt.RooCrystalBall(name,name,mass, ggH_cat0_ggh_fpeak, ggH_cat0_ggh_fsigma, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
+    # signal_subCat0 = rt.RooCrystalBall(name,name,mass, ggH_cat0_ggh_fpeak, ggH_cat0_ggh_fsigma, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
+    signal_subCat0 = rt.RooDoubleCBFast(name,name,mass, ggH_cat0_ggh_fpeak, ggH_cat0_ggh_fsigma, alpha1_subCat0, n1_subCat0, alpha2_subCat0, n2_subCat0)
 
     # subCat 1
     # original start ------------------------------------------------------
@@ -1666,7 +1667,8 @@ if __name__ == "__main__":
     # n1_subCat1.setConstant(True) # freeze for stability
     # n2_subCat1.setConstant(True) # freeze for stability
     name = "signal_subCat1"
-    signal_subCat1 = rt.RooCrystalBall(name,name,mass, ggH_cat1_ggh_fpeak, ggH_cat1_ggh_fsigma, alpha1_subCat1, n1_subCat1, alpha2_subCat1, n2_subCat1)
+    # signal_subCat1 = rt.RooCrystalBall(name,name,mass, ggH_cat1_ggh_fpeak, ggH_cat1_ggh_fsigma, alpha1_subCat1, n1_subCat1, alpha2_subCat1, n2_subCat1)
+    signal_subCat1 = rt.RooDoubleCBFast(name,name,mass, ggH_cat1_ggh_fpeak, ggH_cat1_ggh_fsigma, alpha1_subCat1, n1_subCat1, alpha2_subCat1, n2_subCat1)
 
     # subCat 2
     # original start ------------------------------------------------------
@@ -1705,7 +1707,8 @@ if __name__ == "__main__":
     # n1_subCat2.setConstant(True) # freeze for stability
     # n2_subCat2.setConstant(True) # freeze for stability
     name = "signal_subCat2"
-    signal_subCat2 = rt.RooCrystalBall(name,name,mass, ggH_cat2_ggh_fpeak, ggH_cat2_ggh_fsigma, alpha1_subCat2, n1_subCat2, alpha2_subCat2, n2_subCat2)
+    # signal_subCat2 = rt.RooCrystalBall(name,name,mass, ggH_cat2_ggh_fpeak, ggH_cat2_ggh_fsigma, alpha1_subCat2, n1_subCat2, alpha2_subCat2, n2_subCat2)
+    signal_subCat2 = rt.RooDoubleCBFast(name,name,mass, ggH_cat2_ggh_fpeak, ggH_cat2_ggh_fsigma, alpha1_subCat2, n1_subCat2, alpha2_subCat2, n2_subCat2)
 
     # subCat 3
     # original start ------------------------------------------------------
@@ -1749,7 +1752,8 @@ if __name__ == "__main__":
     # n1_subCat3.setConstant(True) # freeze for stability
     # n2_subCat3.setConstant(True) # freeze for stability
     name = "signal_subCat3"
-    signal_subCat3 = rt.RooCrystalBall(name,name,mass, ggH_cat3_ggh_fpeak, ggH_cat3_ggh_fsigma, alpha1_subCat3, n1_subCat3, alpha2_subCat3, n2_subCat3)
+    # signal_subCat3 = rt.RooCrystalBall(name,name,mass, ggH_cat3_ggh_fpeak, ggH_cat3_ggh_fsigma, alpha1_subCat3, n1_subCat3, alpha2_subCat3, n2_subCat3)
+    signal_subCat3 = rt.RooDoubleCBFast(name,name,mass, ggH_cat3_ggh_fpeak, ggH_cat3_ggh_fsigma, alpha1_subCat3, n1_subCat3, alpha2_subCat3, n2_subCat3)
 
     # subCat 4
     # original start ------------------------------------------------------
@@ -1782,7 +1786,9 @@ if __name__ == "__main__":
     # n1_subCat4.setConstant(True) # freeze for stability
     # n2_subCat4.setConstant(True) # freeze for stability
     name = "signal_subCat4"
-    signal_subCat4 = rt.RooCrystalBall(name,name,mass, ggH_cat4_ggh_fpeak, ggH_cat4_ggh_fsigma, alpha1_subCat4, n1_subCat4, alpha2_subCat4, n2_subCat4)
+    # signal_subCat4 = rt.RooCrystalBall(name,name,mass, ggH_cat4_ggh_fpeak, ggH_cat4_ggh_fsigma, alpha1_subCat4, n1_subCat4, alpha2_subCat4, n2_subCat4)
+    signal_subCat4 = rt.RooDoubleCBFast(name,name,mass, ggH_cat4_ggh_fpeak, ggH_cat4_ggh_fsigma, alpha1_subCat4, n1_subCat4, alpha2_subCat4, n2_subCat4)
+
     
     
     # ---------------------------------------------------
