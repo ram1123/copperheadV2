@@ -1610,7 +1610,7 @@ if __name__ == "__main__":
     # MH_subCat0 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     # MH_subCat0.setConstant(True) # this shouldn't change, I think
     # original end ------------------------------------------------------
-    MH_subCat0 = rt.RooRealVar("MH" , "MH", 124.805, 120,130) # matching AN
+    MH_subCat0 = rt.RooRealVar("MH" , "MH", 124.80516052246094, 120,130) # matching AN
     MH_subCat0.setConstant(True) 
     
 
@@ -1640,7 +1640,8 @@ if __name__ == "__main__":
     # MH_subCat1 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     # MH_subCat1.setConstant(True) # this shouldn't change, I think
     # original end ------------------------------------------------------
-    MH_subCat1 = MH_subCat0 
+    MH_subCat1 = rt.RooRealVar("MH" , "MH", 124.85295104980469, 120,130) # matching AN
+    MH_subCat1.setConstant(True) 
     
 
     # copying parameters from official AN workspace as starting params
@@ -1675,7 +1676,8 @@ if __name__ == "__main__":
     # MH_subCat2 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     # MH_subCat2.setConstant(True) # this shouldn't change, I think
     # original end ------------------------------------------------------
-    MH_subCat2 = MH_subCat0 
+    MH_subCat2 = rt.RooRealVar("MH" , "MH", 124.87848663330078, 120,130) # matching AN
+    MH_subCat2.setConstant(True) 
     
     # sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 2, .1, 4.0)
     # alpha1_subCat2 = rt.RooRealVar("alpha1_subCat2" , "alpha1_subCat2", 2, 0.01, 65)
@@ -1684,7 +1686,7 @@ if __name__ == "__main__":
     # n2_subCat2 = rt.RooRealVar("n2_subCat2" , "n2_subCat2", 25, 0.01, 100)
 
     # copying parameters from official AN workspace as starting params
-    sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 1.36025, .1, 4.0)
+    sigma_subCat2 = rt.RooRealVar("sigma_subCat2" , "sigma_subCat2", 1.3602590560913086, .1, 4.0)
     alpha1_subCat2 = rt.RooRealVar("alpha1_subCat2" , "alpha1_subCat2", 1.4173626, 0.01, 65)
     n1_subCat2 = rt.RooRealVar("n1_subCat2" , "n1_subCat2", 2.42748, 0.01, 100)
     alpha2_subCat2 = rt.RooRealVar("alpha2_subCat2" , "alpha2_subCat2", 1.629120, 0.01, 65)
@@ -1715,14 +1717,15 @@ if __name__ == "__main__":
     # MH_subCat3 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     # MH_subCat3.setConstant(True) # this shouldn't change, I think
     # original end ------------------------------------------------------
-    MH_subCat3 = MH_subCat0
+    MH_subCat3 = rt.RooRealVar("MH" , "MH", 124.89420318603516, 120,130) # matching AN
+    MH_subCat3.setConstant(True) 
     
 
-    sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 0.1, .1, 10.0)
-    alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 2, 0.01, 200)
-    n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 25, 0.01, 200)
-    alpha2_subCat3 = rt.RooRealVar("alpha2_subCat3" , "alpha2_subCat3", 2, 0.01, 65)
-    n2_subCat3 = rt.RooRealVar("n2_subCat3" , "n2_subCat3", 25, 0.01, 200)
+    sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 1.253594994544983, .1, 10.0)
+    alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 1.4199763536453247, 0.01, 200)
+    n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 2.4099531173706055, 0.01, 200)
+    alpha2_subCat3 = rt.RooRealVar("alpha2_subCat3" , "alpha2_subCat3", 1.6467519998550415, 0.01, 65)
+    n2_subCat3 = rt.RooRealVar("n2_subCat3" , "n2_subCat3", 9.670221328735352, 0.01, 200)
 
     # # copying parameters from official AN workspace as starting params
     # sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 1.25359, .1, 10.0)
@@ -1760,7 +1763,8 @@ if __name__ == "__main__":
     # MH_subCat4 = rt.RooRealVar("MH" , "MH", 125, 115,135)
     # MH_subCat4.setConstant(True) # this shouldn't change, I think
     # original end ------------------------------------------------------
-    MH_subCat4 = MH_subCat0
+    MH_subCat4 = rt.RooRealVar("MH" , "MH", 124.90092468261719, 120,130) # matching AN
+    MH_subCat4.setConstant(True) 
     
     # sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 2, .1, 4.0)
     # alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 2, 0.01, 65)
@@ -1769,7 +1773,7 @@ if __name__ == "__main__":
     # n2_subCat4 = rt.RooRealVar("n2_subCat4" , "n2_subCat4", 25, 0.01, 100)
 
     # copying parameters from official AN workspace as starting params
-    sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 1.28250, .1, 4.0)
+    sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 1.2825090, .1, 4.0)
     alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 1.47936, 0.01, 65)
     n1_subCat4 = rt.RooRealVar("n1_subCat4" , "n1_subCat4", 2.24104, 0.01, 100)
     alpha2_subCat4 = rt.RooRealVar("alpha2_subCat4" , "alpha2_subCat4", 1.67898, 0.01, 65)
@@ -2003,8 +2007,8 @@ if __name__ == "__main__":
     
 
     # subCat 2
-    _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    # _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    # fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     _ = signal_subCat2.fitTo(data_subCat2_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
     fit_result = signal_subCat2.fitTo(data_subCat2_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
 
