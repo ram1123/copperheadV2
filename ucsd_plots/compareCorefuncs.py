@@ -152,6 +152,57 @@ def plotCombinedCorefunc_comparison(mass:rt.RooRealVar, rooHist_list, UCSD_coref
 #             canvas.SaveAs(f"{save_path}/bkgFitComparison_{corefunc_name}_subCat{subCat_idx}.pdf")
 
 
+def plotSignalModelComparisonBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by_subCat:Dict, save_path: str, label="ggh"):
+    """
+    takes the dictionary of all Bkg RooAbsPdf models grouped by same sub-category, and plot them
+    in the frame() of mass and saves the plots on a given directory path
+    """
+    # make the save_path directory if it doesn't exist
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        
+    color_list = [
+        rt.kGreen,
+        rt.kBlue,
+        rt.kRed,
+        rt.kOrange,
+        rt.kViolet,
+    ]
+    for subCat_name, sigmodel_dict in model_dict_by_subCat.items():
+        UCSD_sigmodel = sigmodel_dict["UCSD"]
+        Purdue_sigmodel = sigmodel_dict["Purdue"]
+        data_hist = data_dict_by_subCat[subCat_name]
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        frame = mass.frame()
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        legend.AddEntry("", f"Category {subCat_name}", "")
+
+        data_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+            
+        model_name = UCSD_sigmodel.GetName()
+        UCSD_sigmodel.plotOn(frame, Name=model_name, LineColor=rt.kGreen)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UCSD", "L")
+    
+        model_name = Purdue_sigmodel.GetName()
+        # Purdue_sigmodel.removeStringAttribute("h_peak")
+        Purdue_sigmodel.plotOn(frame,rt.RooFit.NormRange("h_peak"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kBlue)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"Purdue", "L")
+
+        UCSD_sigmodel.Print("V")
+        Purdue_sigmodel.Print("V")
+
+        frame.Draw()
+        legend.Draw() 
+        canvas.SetTicks(2, 2)
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"{save_path}/{label}_signalComparison_{subCat_name}.pdf")
+        canvas.SaveAs(f"{save_path}/{label}_signalComparison_{subCat_name}.png")
+
+
 def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_subCat:Dict, save_path: str, return_df=False, label="data"):
     """
     takes the dictionary of all Bkg RooAbsPdf models grouped by same sub-category, and plot them
@@ -168,8 +219,7 @@ def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_s
         rt.kOrange,
         rt.kViolet,
     ]
-    columns = ["Institution", "mean", "sigma"]
-    out_df = pd.DataFrame(columns=columns)
+    out_df = pd.DataFrame()
     print(f"data_dict_by_subCat: {data_dict_by_subCat}")
     for subCat_idx, data_dict in data_dict_by_subCat.items():
         # print(data_dict)
@@ -222,11 +272,18 @@ def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_s
 
 
         # add mean and std dev values
+        # df_data = {
+        #     "Institution" : ["UCSD", "Purdue"],
+        #     "Category" : [subCat_idx, subCat_idx],
+        #     "mean": [ucsd_mean_val, purdue_mean_val],
+        #     "sigma" : [ucsd_std_dev, purdue_std_dev],
+        # }
         df_data = {
-            "Institution" : ["UCSD", "Purdue"],
-            "Category" : [subCat_idx, subCat_idx],
-            "mean": [ucsd_mean_val, purdue_mean_val],
-            "sigma" : [ucsd_std_dev, purdue_std_dev],
+            "Category" : [subCat_idx],
+            "UCSD_mean": [ucsd_mean_val],
+            "UCSD_sigma" : [ucsd_std_dev],
+            "Purdue_mean": [purdue_mean_val],
+            "Purdue_sigma" : [purdue_std_dev],
         }
         out_df = pd.concat([out_df, pd.DataFrame(df_data)], ignore_index=True)
 
@@ -360,6 +417,10 @@ if __name__ == "__main__":
     # ------------------------------------------
     # do the same with signal histogram
     # ------------------------------------------
+
+    # ------------------------------------------
+    # ggH signal
+    # ------------------------------------------
     
     ucsd_rooHist_list = []
     
@@ -394,5 +455,75 @@ if __name__ == "__main__":
 
     ggh_df = plotCorefuncComparisonByCombined_n_SubCat(mass, data_dict_by_combinedNsubcat, plot_save_path, label="ggh_MC", return_df=True)
     print(ggh_df)
+
+    ggh_df.to_csv("ggh_df.csv")
+
+    
+    # ------------------------------------------
+    # compare ggH signal fits
+    # ------------------------------------------
+
+    
+    data_dict_by_subCat = {}
+    model_dict_by_subCat = {}
+    for ix in range(5):
+        cat_ix = f"cat{ix}"
+        file = rt.TFile(f"../ucsd_workspace/workspace_sig_cat{ix}_ggh.root")
+        # file["w"].Print("v")
+        # raise ValueError
+        data_hist = file["w"].obj(f"data_ggH_cat{ix}_ggh_m125")
+        # data_dict_by_subCat[cat_ix] = data_hist
+        data_dict_by_subCat[cat_ix] = rt.TFile(f"my_workspace/workspace_sig_cat{ix}_ggh.root")["w"].obj(f"data_ggH_cat{ix}_ggh")
+    
+        UCSD_model = file["w"].obj(f"ggH_cat{ix}_ggh_pdf")
+        Purdue_model = rt.TFile(f"my_workspace/workspace_sig_cat{ix}_ggh.root")["w"].obj(f"ggH_cat{ix}_ggh_pdf")
+        model_dict_by_subCat[cat_ix] = {
+            "UCSD" : UCSD_model,
+            "Purdue" : Purdue_model,
+        }
+    plotSignalModelComparisonBySubCat(mass, model_dict_by_subCat, data_dict_by_subCat, plot_save_path, label="ggh")
+
+    raise ValueError
+    
+    # # ------------------------------------------
+    # # VBF signal
+    # # ------------------------------------------
+    
+    # ucsd_rooHist_list = []
+    
+    # for cat_ix in range(5):
+    #     file = rt.TFile(f"../ucsd_workspace/workspace_sig_cat{cat_ix}_ggh.root")
+    #     ucsd_rooHist_list.append(file["w"].obj(f"data_qqH_cat{cat_ix}_ggh_m125"))
+    
+    # ucsd_combinedRooHist = addRooHists(mass, ucsd_rooHist_list)
+    
+    # purdue_rooHist_list = []
+    # for cat_ix in range(5):
+    #     file = rt.TFile(f"my_workspace/workspace_sig_cat{cat_ix}_ggh.root")
+    #     purdue_rooHist_list.append(file["w"].obj(f"data_qqH_cat{cat_ix}_ggh"))
+    
+    # purdue_combinedRooHist = addRooHists(mass, purdue_rooHist_list)
+
+    # data_dict_by_combinedNsubcat = {
+    #     "combined" : {
+    #         "UCSD" : ucsd_combinedRooHist,
+    #         "Purdue" : purdue_combinedRooHist
+    #                  },
+    # }
+    # for cat_ix in range(5):
+    #     out_dict = {}
+    #     file = rt.TFile(f"../ucsd_workspace/workspace_sig_cat{cat_ix}_ggh.root")
+    #     data_hist = file["w"].obj(f"data_qqH_cat{cat_ix}_ggh_m125")
+    #     out_dict["UCSD"] = data_hist
+    #     file = rt.TFile(f"my_workspace/workspace_sig_cat{cat_ix}_ggh.root")
+    #     data_hist = file["w"].obj(f"data_qqH_cat{cat_ix}_ggh")
+    #     out_dict["Purdue"] = data_hist
+    #     data_dict_by_combinedNsubcat[f"cat{cat_ix}"] = out_dict
+
+    # vbf_df = plotCorefuncComparisonByCombined_n_SubCat(mass, data_dict_by_combinedNsubcat, plot_save_path, label="vbf_MC", return_df=True)
+    # print(ggh_df)
+
+    # vbf_df.to_csv("vbf_df.csv")
+
 
 

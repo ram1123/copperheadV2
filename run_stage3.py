@@ -1973,10 +1973,10 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # subCat 0
-    _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    # if fit_result is not None:
-        # fit_result.Print()
+    # _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    # fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    _ = signal_subCat0.fitTo(data_subCat0_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat0.setConstant(True)
@@ -1988,10 +1988,10 @@ if __name__ == "__main__":
     
 
     # subCat 1
-    _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    # if fit_result is not None:
-        # fit_result.Print()
+    # _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    # fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    _ = signal_subCat1.fitTo(data_subCat1_signal, rt.RooFit.Range("h_peak") , EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat1.fitTo(data_subCat1_signal, rt.RooFit.Range("h_peak") , EvalBackend=device, Save=True, SumW2Error=True)
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat1.setConstant(True)
@@ -2003,12 +2003,10 @@ if __name__ == "__main__":
     
 
     # subCat 2
-    # _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
-    # fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, )
     _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    # if fit_result is not None:
-        # fit_result.Print()
+    _ = signal_subCat2.fitTo(data_subCat2_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat2.fitTo(data_subCat2_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat2.setConstant(True)
@@ -2020,12 +2018,10 @@ if __name__ == "__main__":
     
     
     # subCat 3
-    # _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
-    # fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, )
-    _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    # if fit_result is not None:
-        # fit_result.Print()
+    # _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    # fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    _ = signal_subCat3.fitTo(data_subCat3_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat3.fitTo(data_subCat3_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat3.setConstant(True)
@@ -2041,12 +2037,11 @@ if __name__ == "__main__":
 
 
     # subCat 4
-    # _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
-    # fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, )
-    _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    # if fit_result is not None:
-        # fit_result.Print()
+    # _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    # fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, SumW2Error=True)
+    _ = signal_subCat4.fitTo(data_subCat4_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat4.fitTo(data_subCat4_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
+
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat4.setConstant(True)
