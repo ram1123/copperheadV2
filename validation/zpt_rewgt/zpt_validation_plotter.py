@@ -35,11 +35,13 @@ group_DY_processes = [
 # group_DY_processes = [] # just VBf filter
 
 group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop"]
-group_Ewk_processes = ["ewk_lljj_mll105_160_ptj0"]
+group_Ewk_processes = ["ewk_lljj_mll50_mjj120"]
 group_VV_processes = ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"]# diboson
 # group_ggH_processes = ["ggh_amcPS"]
 group_ggH_processes = ["ggh_powhegPS"]
 group_VBF_processes = ["vbf_powheg_dipole"]
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -111,7 +113,7 @@ if __name__ == "__main__":
     "-save",
     "--save_path",
     dest="save_path",
-    default="./plots/",
+    default="./test_plots/",
     action="store",
     help="save path",
     )
@@ -232,7 +234,7 @@ if __name__ == "__main__":
                 # available_processes.append("wz_1l1nu2q")
                 available_processes.append("zz")
             elif bkg_sample.upper() == "EWK": # enforce upper case to prevent confusion
-                available_processes.append("ewk_lljj_mll105_160_ptj0")
+                available_processes.append("ewk_lljj_mll50_mjj120")
             else:
                 print(f"unknown background {bkg_sample} was given!")
         
@@ -258,8 +260,8 @@ if __name__ == "__main__":
         if "dimuon" in particle:
             variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
-            # variables2plot.append(f"{particle}_eta")
-            # variables2plot.append(f"{particle}_phi")
+            variables2plot.append(f"{particle}_eta")
+            variables2plot.append(f"{particle}_phi")
             # variables2plot.append(f"{particle}_cos_theta_cs")
             # variables2plot.append(f"{particle}_phi_cs")
             # variables2plot.append(f"mmj_min_dPhi_nominal")
@@ -377,10 +379,10 @@ if __name__ == "__main__":
                 
         is_data = "data" in process.lower()
         if (not is_data) and ("dy" in process.lower()): # DY MC sample
-            fields2load.append("zpt_weight_valerie")
-            fields2load.append("zpt_weight_dmitry")
-            fields2load.append("zpt_weight_mine_nbins50")
-            fields2load.append("zpt_weight_mine_nbins100")
+            # fields2load.append("zpt_weight_valerie")
+            # fields2load.append("zpt_weight_dmitry")
+            fields2load.append("separate_wgt_zpt_wgt")
+            # fields2load.append("zpt_weight_mine_nbins100")
             # if not zpt_on:
             #     if "separate_wgt_zpt_wgt" in events.fields:
             #         fields2load.append("separate_wgt_zpt_wgt")
@@ -459,19 +461,12 @@ if __name__ == "__main__":
             else: # MC
                 weights = ak.fill_none(events["wgt_nominal"], value=0.0)
                 
-                # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
-                # temporary over write
-                # print(f"events.fields: {events.fields}")
-                # if (not zpt_on) and ("separate_wgt_zpt_wgt" in events.fields):
-                #     print("removing Zpt rewgt!")
-                #     weights = weights/events["separate_wgt_zpt_wgt"]
 
                 zpt_wgt_name = args.zpt_wgt_name
-                if zpt_wgt_name != "no_zpt":
-                    if zpt_wgt_name in events.fields:
-                        print(f"applying Zpt rewgt {zpt_wgt_name}!")
-                        weights = weights * events[zpt_wgt_name]
-
+                if zpt_wgt_name == "no_zpt":
+                    if "separate_wgt_zpt_wgt" in events.fields:
+                        print("removing Zpt rewgt!")
+                        weights = weights/events["separate_wgt_zpt_wgt"]
                 
                 # print(f"weights {process} b4 numpy: {weights}")
                 weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
@@ -762,6 +757,7 @@ if __name__ == "__main__":
             status = status,
             log_scale = do_logscale,
         )
+        
         
 
 

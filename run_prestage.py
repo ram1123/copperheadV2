@@ -19,6 +19,7 @@ import glob
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")
 from omegaconf import OmegaConf
+import sys
 
 import logging
 from utils import logger
@@ -30,7 +31,27 @@ def get_Xcache_filelist(fnames: list):
         x_cache_fname = "root://cms-xcache.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
     return new_fnames
-    
+
+def find_keys_in_yaml(yaml_data, keys_to_find):
+    """
+    Recursively searches for specific keys in a nested OmegaConf YAML structure.
+    """
+    found_values = {}
+
+    def recursive_search(data, parent_key=""):
+        if isinstance(data, dict) or OmegaConf.is_dict(data):
+            for key, value in data.items():
+                if key in keys_to_find:
+                    found_values[key] = value
+                recursive_search(value, key)
+        elif isinstance(data, list) or OmegaConf.is_list(data):
+            for item in data:
+                recursive_search(item, parent_key)
+
+    recursive_search(yaml_data)
+    return found_values
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -48,6 +69,12 @@ if __name__ == "__main__":
     default="10000",
     action="store",
     help="chunksize",
+    )
+    parser.add_argument(
+        "--yaml",
+        dest="dataset_yaml_file",
+        default="configs/datasets/dataset.yaml",
+        help="path of yaml file containing the dataset names"
     )
     parser.add_argument(
     "-frac",
@@ -162,21 +189,19 @@ if __name__ == "__main__":
         big_sample_info = {}
         
         # load dataset sample paths from yaml files
-        filelist = glob.glob("./configs/datasets/*.yaml")
-        logger.debug(f"filelist: {filelist}")
-        
-        dataset_confs = [OmegaConf.load(f) for f in filelist]
-        datasets = OmegaConf.merge(*dataset_confs)
+        datasets = OmegaConf.load(args.dataset_yaml_file)
         if args.run2_rereco: # temp condition for RERECO data case
-            dataset = datasets[f"{year}_RERECO"]
+            dataset = datasets.years[f"{year}_RERECO"]
         else: # normal
-            dataset = datasets[year]
+            dataset = datasets.years[f"{year}"]
         new_sample_list = []
 
         logger.info(f'dataset: {dataset}')
         
-        # take data
-        data_l =  [sample_name for sample_name in dataset.keys() if "data" in sample_name]
+        # take data and add to the list: `new_sample_list[]`
+        logger.debug(f'data: {dataset["Data"].keys()}')
+        data_l =  [sample_name for sample_name in dataset['Data'].keys() if "data" in sample_name]
+        logger.debug(data_l)
         data_samples = args.data_samples
         logger.info(f"data_samples: {data_samples}")
         
@@ -184,9 +209,13 @@ if __name__ == "__main__":
             for data_letter in data_samples:
                 for sample_name in data_l:
                     if data_letter in sample_name:
+                        logger.debug(sample_name)
                         new_sample_list.append(sample_name)
-        # take bkg
-        bkg_l = [sample_name for sample_name in dataset.keys() if "data" not in sample_name]
+                        
+        logger.debug(f"new sample list: {new_sample_list}")
+        
+        # take bkg and add to the list: `new_sample_list[]`
+        bkg_l = [sample_name for sample_name in dataset.keys() if "data" not in sample_name.lower()]
         logger.info(f"background samples: {bkg_l}")
         bkg_samples = args.bkg_samples
         logger.info(f"bkg_samples: {bkg_samples}")
@@ -194,11 +223,12 @@ if __name__ == "__main__":
             for bkg_letter in bkg_samples:
                 for bkg_name in bkg_l:
                     if bkg_letter in bkg_name:
-                        new_sample_list.append(bkg_name)
-
+                        for bkgs in dataset[bkg_name].keys():
+                            new_sample_list.append(bkgs)
+                        
         logger.debug(f"new sample list: {new_sample_list}")
 
-        # take sig
+        # take sig and add to the list: `new_sample_list[]`
         sig_samples = args.sig_samples
         logger.info(f"signal samples: {sig_samples}")
         if len(sig_samples) >0:
@@ -211,10 +241,13 @@ if __name__ == "__main__":
                     print(f"unknown signal {sig_sample} was given!")
 
         logger.debug(f"Sample list: {new_sample_list}")
+
         dataset_dict = {}
-        for sample_name in new_sample_list:
+        for sample_name_temp in new_sample_list:
             try:
-                dataset_dict[sample_name] = dataset[sample_name]
+                # dataset_dict[sample_name_temp] = dataset[sample_name_temp]
+                temp_dict = find_keys_in_yaml(dataset, sample_name_temp)
+                dataset_dict.update(temp_dict)
             except Exception as e:
                 logger.error(f"Sample {sample_name} gives error {e}. Skipping")
                 continue
@@ -226,7 +259,7 @@ if __name__ == "__main__":
         logger.debug(f"Is run2_rereco: {args.run2_rereco}")
 
         fnames = ""
-        
+
         for sample_name in tqdm.tqdm(dataset.keys()):
             is_data =  ("data" in sample_name)
             logger.debug(f"Sample Name: {sample_name}")
@@ -341,6 +374,7 @@ if __name__ == "__main__":
             
             # This is the default method
             das_query = dataset[sample_name]
+            logger.debug(f"das query: {das_query}")
 
             if "dummy" not in das_query:
                 allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL"]        
@@ -488,12 +522,10 @@ if __name__ == "__main__":
         #save the sample info
         directory = "./prestage_output"
         filename = directory+"/processor_samples.json"
-        dupli_fname = directory+"/fraction_processor_samples.json" # duplicated fname in case you want to skip fractioning
+        # dupli_fname = directory+"/fraction_processor_samples.json" # duplicated fname in case you want to skip fractioning
         if not os.path.exists(directory):
             os.makedirs(directory)
         with open(filename, "w") as file:
-                json.dump(big_sample_info, file)
-        with open(dupli_fname, "w") as file: # FIXME: Why this line?
                 json.dump(big_sample_info, file)
     
         elapsed = round(time.time() - time_step, 3)

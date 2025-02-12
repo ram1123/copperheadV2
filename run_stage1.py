@@ -31,7 +31,7 @@ logger.setLevel(logging.ERROR)
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
-test_mode = False
+# test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
 import gc
 import ctypes
@@ -69,11 +69,11 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
 
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None):
     if save_path is None:
-        save_path = "/depot/cms/users/yun79/results/stage1/test/" # default
+        save_path = "/depot/cms/users/shar1172/results/stage1/test/" # default
         #FIXME: Do we really need this? As there will always be the save path. 
         #       We may protect at start of this file. if no save path is given just exit the program
         # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
-    # print(f"dataset_dict: {dataset_dict['files']}")
+    # logger.info(f"dataset_dict: {dataset_dict['files']}")
     events = NanoEventsFactory.from_root(
         dataset_dict["files"],
         schemaclass=NanoAODSchema,
@@ -87,7 +87,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
-    # print(f"out_collections keys: {out_collections.keys()}")
+    # logger.info(f"out_collections keys: {out_collections.keys()}")
 
     skim_dict = out_collections
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
@@ -142,15 +142,23 @@ if __name__ == "__main__":
      type=lambda x: getattr(logging, x),
      help="Configure the logging level."
      )    
+    parser.add_argument(
+        "--test_mode",
+        action="store_true", 
+        help="If need to run over fractional dataset samples for test run"
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
+    test_mode = args.test_mode
+    logger.debug(f"Test mode: {test_mode}")
     
     # make NanoAODv into an interger variable
-    print(f"args.NanoAODv: {args.NanoAODv}")
-    print(f"args.year: {args.year}")
+    logger.info(f"args.NanoAODv: {args.NanoAODv}")
+    logger.info(f"args.year: {args.year}")
 
     time_step = time.time()
+    
     
     warnings.filterwarnings('ignore')
 
@@ -178,7 +186,7 @@ if __name__ == "__main__":
             client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
             logger.debug("Local scale Client created")
         #-------------------------------------------------------------------------------------
-        sample_path = "./prestage_output/fraction_processor_samples.json"
+        sample_path = "./prestage_output/processor_samples.json"
         with open(sample_path) as file:
             samples = json.loads(file.read())
 
@@ -192,7 +200,7 @@ if __name__ == "__main__":
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
                 sample_step = time.time()
-                max_file_len = 130
+                max_file_len = 20 # FIXME: How to fix this? If this is large then it crashes and closes the DASK.
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 logger.debug(f"max_file_len: {max_file_len}")
                 logger.debug(f"len(smaller_files): {len(smaller_files)}")
@@ -222,29 +230,27 @@ if __name__ == "__main__":
                 logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
                 
     else:
-        # dataset_loop(coffea_processor, xrootd_path+fname, test=test_mode)
+        sample_path = "./prestage_output/fraction_processor_samples.json"
+        logger.debug(f"Sample path: {sample_path}")
+        with open(sample_path) as file:
+            samples = json.loads(file.read())
+        
+        logger.debug(f"samples.keys(): {samples.keys()}")
 
+        client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+        logger.info("Local scale Client created")
+        
         sample_path = "./prestage_output/fraction_processor_samples.json"
         with open(sample_path) as file:
             samples = json.loads(file.read())
-        # print(f"samples.keys(): {samples.keys()}")
+        for dataset in samples.keys():
+            samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
 
         with performance_report(filename="dask-report.html"):
-            # for dataset, sample in samples.items():
             for dataset, sample in tqdm.tqdm(samples.items()):
-                
-                # testing
-                # if ("dy_M-100To200" not in dataset) and ("data_A" not in dataset):
-                # if ("dy_M-100To200" not in dataset) :
-                # if ("ggh_powheg" not in dataset) and ("vbf_powheg" not in dataset):
-                #     continue
-                # print(f"dataset: {dataset}")
+                logger.debug(f"dataset: {dataset}")
                 dataset_loop(coffea_processor, sample, test=test_mode)
         
-    
-
-    
-
-    
     elapsed = round(time.time() - time_step, 3)
-    print(f"Finished everything in {elapsed} s.")
+    logger.info(f"Finished everything in {elapsed} s.")
+    

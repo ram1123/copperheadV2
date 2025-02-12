@@ -9,6 +9,23 @@ source setup_env.sh
 # Run first two column of DaskGatewaySLURM.ipynb to start the DASK.
 ```
 
+## Step - 1:
+
+***Summary*** : 
+
+### How to run
+
+```bash
+bash stage1_loop.sh <StageNo>
+```
+
+To run pre-stage the `StageNo` should be "0". For running `Stage1` the argument should be 1.
+
+### Improvements
+
+1. Remove "dummy" from the yaml file. Instead add the `/store` path. And add in the code that if the dataset name starts from `/store` then fetch all root files from that path instead of querying using `dasgoclient`.
+
+
 ## Step - 1: Skim, $Z_{p_T}$ correction
 
 
@@ -23,3 +40,26 @@ source setup_env.sh
 4. How to save the weight into the skimmed file:
    - Run: `work/users/shar1172/HMuMu/copperheadV2/src/copperhead_processor.py`
    - The function that saves weight in above script is `getZptWgts()`
+
+
+# Run on the Hammer
+
+## Setup to run on the Hammer
+
+```bash
+source /etc/profile.d/modules.sh
+module --force purge
+module load anaconda/2020.11
+source setup_env.sh
+```
+
+## Run the script
+
+```bash
+python Scripts/Investigate_ParquetFile.py
+```
+
+
+
+
+
