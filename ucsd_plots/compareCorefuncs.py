@@ -37,6 +37,19 @@ def rebinnHist(mass, rooHist):
     rebinned_rooHist = rt.RooDataHist(rooHist.GetName(), rooHist.GetName(), rt.RooArgSet(mass), THist)
     return rebinned_rooHist
 
+def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
+    """
+    Takes rootHistogram and returns a new copy with histogram values normalized to sum to one
+    """
+    x_name = x.GetName()
+    THist = rooHist.createHistogram(x_name).Clone("clone") # clone it just in case
+    THist.Scale(1/THist.Integral())
+    print(f"THist.Integral(): {THist.Integral()}")
+    normalizedHist_name = rooHist.GetName() + "_normalized"
+    roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist) 
+    return roo_hist_normalized
+    
+
 def plotCombinedCorefunc_comparison(mass:rt.RooRealVar, rooHist_list, UCSD_corefunc_dict, Purdue_corefunc_dict, save_path: str):
     """
     takes the dictionary of all Bkg RooAbsPdf models grouped by same corefunctions, and plot them
@@ -189,6 +202,7 @@ def plotSignalModelComparisonBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: 
         model_name = Purdue_sigmodel.GetName()
         # Purdue_sigmodel.removeStringAttribute("h_peak")
         Purdue_sigmodel.plotOn(frame,rt.RooFit.NormRange("h_peak"), rt.RooFit.Range("full"), Name=model_name, LineColor=rt.kBlue)
+        # Purdue_sigmodel.plotOn(frame, Name=model_name, LineColor=rt.kBlue)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"Purdue", "L")
 
         UCSD_sigmodel.Print("V")
@@ -203,7 +217,7 @@ def plotSignalModelComparisonBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: 
         canvas.SaveAs(f"{save_path}/{label}_signalComparison_{subCat_name}.png")
 
 
-def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_subCat:Dict, save_path: str, return_df=False, label="data"):
+def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_subCat:Dict, save_path: str, return_df=False, label="data", normalize=False):
     """
     takes the dictionary of all Bkg RooAbsPdf models grouped by same sub-category, and plot them
     in the frame() of mass and saves the plots on a given directory path
@@ -229,6 +243,9 @@ def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_s
         UCSD_data = rebinnHist(mass, UCSD_data)
         Purdue_data = rebinnHist(mass, Purdue_data)
 
+        if normalize:
+            UCSD_data = normalizeRooHist(mass, UCSD_data)
+            Purdue_data = normalizeRooHist(mass, Purdue_data)
         
         name = "Canvas"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
@@ -267,8 +284,12 @@ def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_s
         canvas.SetTicks(2, 2)
         canvas.Update()
         canvas.Draw()
-        canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}.pdf")
-        canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}.png")
+        if normalize:
+            canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}_normalized.pdf")
+            canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}_normalized.png")
+        else:
+            canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}.pdf")
+            canvas.SaveAs(f"{save_path}/bkgFitComparison_dataHisComparision_subCat{subCat_idx}_{label}.png")
 
 
         # add mean and std dev values
@@ -412,7 +433,11 @@ if __name__ == "__main__":
         data_dict_by_combinedNsubcat[f"cat{cat_ix}"] = out_dict
 
     plotCorefuncComparisonByCombined_n_SubCat(mass, data_dict_by_combinedNsubcat, plot_save_path, label="data")
+    
+    plotCorefuncComparisonByCombined_n_SubCat(mass, data_dict_by_combinedNsubcat, plot_save_path, label="data", normalize=True)
 
+
+    raise ValueError
 
     # ------------------------------------------
     # do the same with signal histogram
