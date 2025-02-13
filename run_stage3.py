@@ -403,11 +403,11 @@ if __name__ == "__main__":
     # # trying bigger range do that I don't get warning message from combine like: [WARNING] Found parameter BWZ_Redux_a_coeff at boundary (within ~1sigma)
     # # old start --------------------------------------------------
     name = f"bwzr_cat_ggh_coef1"
-    a_coeff = rt.RooRealVar(name,name, 0.0623102,-0.5,0.5)
+    a_coeff = rt.RooRealVar(name,name, 0.0623102,-0.1,0.1)
     name = f"bwzr_cat_ggh_coef2"
-    b_coeff = rt.RooRealVar(name,name, -0.000168432,-0.02,0.02)
+    b_coeff = rt.RooRealVar(name,name, -0.000168432,-0.1,0.1)
     name = f"bwzr_cat_ggh_coef3"
-    c_coeff = rt.RooRealVar(name,name, 2.14877, 0.0, 4.0)
+    c_coeff = rt.RooRealVar(name,name, 2.14877, 0.0, 5.0)
     # # old end --------------------------------------------------
 
     # # AN start --------------------------------------------------
@@ -429,9 +429,9 @@ if __name__ == "__main__":
     # a0_subCat0 = rt.RooRealVar("a0_subCat0", "a0_subCat0", -0.01, -0.3, 0.3)
     # a1_subCat0 = rt.RooRealVar("a1_subCat0", "a1_subCat0", 0.5, -0.5, 0.5)
     # a2_subCat0 = rt.RooRealVar("a2_subCat0", "a2_subCat0", 0.5, -0.5, 0.5)
-    a0_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", -3.76E-02, -0.1, 0.0)
-    a1_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", -1.98E-03, -0.1, 0.0)
-    a2_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", 2.59E-03, 0.0, 0.1)
+    a0_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_1_cat0_ggh", -3.76E-02, -10, 10)
+    a1_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_2_cat0_ggh", -1.98E-03,  -10, 10)
+    a2_subCat0 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", "bwzr_cat_ggh_pdf_transfer_order3_coef_3_cat0_ggh", 2.59E-03,  -10, 10)
 
     
 
@@ -460,8 +460,8 @@ if __name__ == "__main__":
     """
     # a0_subCat1 = rt.RooRealVar("a0_subCat1", "a0_subCat1", 0.1, -0.5, 0.5)
     # a1_subCat1 = rt.RooRealVar("a1_subCat1", "a1_subCat1", 0.5, -0.5, 0.5)
-    a0_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", 1.95E-02, 0.0, 0.1)
-    a1_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", -1.66E-03, -0.1, 0.0)
+    a0_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat1_ggh", 1.95E-02, -10, 10)
+    a1_subCat1 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat1_ggh", -1.66E-03, -10, 10)
 
     name =  "subCat1_SMF"
     subCat1_SMF = rt.RooChebychev(name, name, mass, 
@@ -482,8 +482,8 @@ if __name__ == "__main__":
     # Construct the background pdf
     # a0_subCat2 = rt.RooRealVar("a0_subCat2", "a0_subCat2", 0.1, -0.3, 0.3)
     # a1_subCat2 = rt.RooRealVar("a1_subCat2", "a1_subCat2", 0.5, -0.5, 0.5)
-    a0_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", 4.46E-02, 0.0, 0.1)
-    a1_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", -3.46E-05, -0.1, 0.0)
+    a0_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat2_ggh", 4.46E-02, -10, 10)
+    a1_subCat2 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat2_ggh", -3.46E-05, -10, 10)
 
     
     name = "subCat2_SMF"
@@ -502,8 +502,8 @@ if __name__ == "__main__":
     # Construct the background pdf
     # a0_subCat3 = rt.RooRealVar("a0_subCat3", "a0_subCat3", -0.1, -0.3, 0.3)
     # a1_subCat3 = rt.RooRealVar("a1_subCat3", "a1_subCat3", 0.5, -0.5, 0.5)
-    a0_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", 7.37E-02, 0.0, 0.1)
-    a1_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", -8.79E-06, -0.1, 0.0)
+    a0_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat3_ggh", 7.37E-02, -10, 10)
+    a1_subCat3 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat3_ggh", -8.79E-06, -10, 10)
     
     name = "subCat3_SMF"
     subCat3_SMF = rt.RooChebychev(name, name, mass, 
@@ -521,8 +521,8 @@ if __name__ == "__main__":
     # Construct the background pdf
     # a0_subCat4 = rt.RooRealVar("a0_subCat4", "a0_subCat4", 0.227473, 0.0, 0.5)
     # a1_subCat4 = rt.RooRealVar("a1_subCat4", "a1_subCat4", -0.00064818, -0.4, 0.0)
-    a0_subCat4 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", 0.227473, 0.0, 0.5)
-    a1_subCat4 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", -0.00064818, -0.1, 0.0)
+    a0_subCat4 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_1_cat4_ggh", 0.227473, -10, 10)
+    a1_subCat4 = rt.RooRealVar("bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", "bwzr_cat_ggh_pdf_transfer_order2_coef_2_cat4_ggh", -0.00064818, -10, 10)
 
     
     name = "subCat4_SMF"
@@ -622,18 +622,13 @@ if __name__ == "__main__":
     # a2_coeff.setConstant(True)
     # f_coeff.setConstant(True)
 
-    # sumexp subcat
-    a0_subCat0_sumExp = rt.RooRealVar("a0_subCat0_sumExp", "a0_subCat0_sumExp", -0.1, -1, 1)
-    a1_subCat0_sumExp = rt.RooRealVar("a1_subCat0_sumExp", "a1_subCat0_sumExp", 0.5, -0.5, 0.5)
-    a2_subCat0_sumExp = rt.RooRealVar("a2_subCat0_sumExp", "a2_subCat0_sumExp", 0.5, -0.5, 0.5)
-    
+
     # name = "subCat0_sumExp"
     name = "exp_cat_ggh_pdf"
     coreSumExp_SubCat0 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
      
     name = "subCat0_SMF_sumExp"
     subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a2_subCat0]) # original
-    # subCat0_SumExp_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0_sumExp, a1_subCat0_sumExp, a2_subCat0_sumExp]) 
 
 
     
@@ -646,18 +641,14 @@ if __name__ == "__main__":
     # coreSumExp_SubCat1 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
     coreSumExp_SubCat1 = coreSumExp_SubCat0
     
-    a0_subCat1_sumExp = rt.RooRealVar("a0_subCat1_sumExp", "a0_subCat1_sumExp", -0.1, -1, 1)
-    a1_subCat1_sumExp = rt.RooRealVar("a1_subCat1_sumExp", "a1_subCat1_sumExp", 0.5, -0.5, 0.5)
+
     
     name = "subCat1_SMF_sumExp"
     subCat1_SumExp_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat1, 
                               a1_subCat1, 
                              ])
-    # subCat1_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-    #                          [a0_subCat1_sumExp, 
-    #                           a1_subCat1_sumExp, 
-    #                          ])
+
      
     # Construct the composite model
     name = "model_SubCat1_SMFxSumExp"
@@ -668,18 +659,13 @@ if __name__ == "__main__":
     # coreSumExp_SubCat2 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
     coreSumExp_SubCat2 = coreSumExp_SubCat0
 
-    a0_subCat2_sumExp = rt.RooRealVar("a0_subCat2_sumExp", "a0_subCat2_sumExp", -0.1, -1, 1)
-    a1_subCat2_sumExp = rt.RooRealVar("a1_subCat2_sumExp", "a1_subCat2_sumExp", 0.5, -0.5, 0.5)
     
     name = "subCat2_SMF_sumExp"
     subCat2_SumExp_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat2, 
                               a1_subCat2, 
                              ])
-    # subCat2_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-    #                          [a0_subCat2_sumExp, 
-    #                           a1_subCat2_sumExp, 
-    #                          ])
+
     name = "model_SubCat2_SMFxSumExp"
     model_subCat2_sumExp = rt.RooProdPdf(name, name, [coreSumExp_SubCat2, subCat2_SumExp_SMF])    
 
@@ -688,18 +674,13 @@ if __name__ == "__main__":
     # coreSumExp_SubCat3 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
     coreSumExp_SubCat3 = coreSumExp_SubCat0
 
-    a0_subCat3_sumExp = rt.RooRealVar("a0_subCat3_sumExp", "a0_subCat3_sumExp", -0.1, -1, 1)
-    a1_subCat3_sumExp = rt.RooRealVar("a1_subCat3_sumExp", "a1_subCat3_sumExp", 0.5, -0.5, 0.5)
     
     name = "subCat3_SMF_sumExp"
     subCat3_SumExp_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat3, 
                               a1_subCat3, 
                              ])
-    # subCat3_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-    #                          [a0_subCat3_sumExp, 
-    #                           a1_subCat3_sumExp, 
-    #                          ])
+
     name = "model_SubCat3_SMFxSumExp"
     model_subCat3_sumExp = rt.RooProdPdf(name, name, [coreSumExp_SubCat3, subCat3_SumExp_SMF])    
 
@@ -708,18 +689,14 @@ if __name__ == "__main__":
     # coreSumExp_SubCat4 = rt.RooSumTwoExpPdf(name, name, mass, a1_coeff, a2_coeff, f_coeff) 
     coreSumExp_SubCat4 = coreSumExp_SubCat0
 
-    a0_subCat4_sumExp = rt.RooRealVar("a0_subCat4_sumExp", "a0_subCat4_sumExp", -0.1, -5, 5)
-    a1_subCat4_sumExp = rt.RooRealVar("a1_subCat4_sumExp", "a1_subCat4_sumExp", 0.5, -0.5, 0.5)
     
     name = "subCat4_SMF_sumExp"
     subCat4_SumExp_SMF = rt.RooChebychev(name, name, mass, 
                              [a0_subCat4, 
                               a1_subCat4, 
                              ])
-    # subCat4_SumExp_SMF = rt.RooChebychev(name, name, mass, 
-    #                          [a0_subCat4_sumExp, 
-    #                           a1_subCat4_sumExp, 
-    #                          ])
+
+    
     name = "model_SubCat4_SMFxSumExp"
     model_subCat4_sumExp = rt.RooProdPdf(name, name, [coreSumExp_SubCat4, subCat4_SumExp_SMF])    
      
@@ -777,52 +754,14 @@ if __name__ == "__main__":
     # Initialize FEWZxBernstein
     # --------------------------------------------------------------
     
-
-    # # old start --------------------------------------------------
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef1"
-    # c1 = rt.RooRealVar(name,name, 0.2,-2,2)
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef2"
-    # c2 = rt.RooRealVar(name,name, 1.0,-2,2)
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef3"
-    # c3 = rt.RooRealVar(name,name, 0.1,-2,2)
-    # # old end --------------------------------------------------
-
-    # # an start --------------------------------------------------
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef1"
-    # c1 = rt.RooRealVar(name,name, 0.956483450832728,0.5,1.5)
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef2"
-    # c2 = rt.RooRealVar(name,name, 0.9607652348517792,0.5,1.5)
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef3"
-    # c3 = rt.RooRealVar(name,name, 0.9214633453188963,0.5,1.5)
-    # # an end --------------------------------------------------
-
-
-    # # new start --------------------------------------------------
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef1"
-    # c1 = rt.RooRealVar(name,name, 0.956483450832728,-10,10)
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef2"
-    # c2 = rt.RooRealVar(name,name, 0.9607652348517792,-10,10)
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef3"
-    # c3 = rt.RooRealVar(name,name, 0.9214633453188963,-10,10)
-    # # new end --------------------------------------------------
     
     # new start --------------------------------------------------
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef1"
-    # c1 = rt.RooRealVar(name,name, 0.25,-10,10)
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef2"
-    # c2 = rt.RooRealVar(name,name, 0.25,-10,10)
-    # name = f"fewz_1j_spl_order3_bern_cat_ggh_coef3"
-    # c3 = rt.RooRealVar(name,name, 0.25,-10,10)
-    # name = f"FEWZxBern_c4"
-    # c4 = rt.RooRealVar(name,name, 0.25,-10,10)
     name = f"fewz_1j_spl_order3_bern_cat_ggh_coef1"
-    c1 = rt.RooRealVar(name,name, 0.956483, 0.5, 1.5)
+    c1 = rt.RooRealVar(name,name, 0.956483, -10, 10)
     name = f"fewz_1j_spl_order3_bern_cat_ggh_coef2"
-    c2 = rt.RooRealVar(name,name, 0.960765, 0.5, 1.5)
+    c2 = rt.RooRealVar(name,name, 0.960765, -10, 10)
     name = f"fewz_1j_spl_order3_bern_cat_ggh_coef3"
-    c3 = rt.RooRealVar(name,name, 0.921463, 0.5, 1.5)
-    # name = f"FEWZxBern_c4"
-    # c4 = rt.RooRealVar(name,name, 0.25,-10,10)
+    c3 = rt.RooRealVar(name,name, 0.921463, -10, 10)
     # new end --------------------------------------------------
     
     # BernCoeff_list = [c1, c2, c3, c4] # we use RooBernstein, which requires n+1 parameters https://root.cern.ch/doc/master/classRooBernstein.html
@@ -1720,26 +1659,13 @@ if __name__ == "__main__":
     MH_subCat3 = rt.RooRealVar("MH" , "MH", 124.89420318603516, 120,130) # matching AN
     MH_subCat3.setConstant(True) 
     
-
+    # copying parameters from official AN workspace as starting params
     sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 1.253594994544983, .1, 10.0)
     alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 1.4199763536453247, 0.01, 200)
     n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 2.4099531173706055, 0.01, 200)
     alpha2_subCat3 = rt.RooRealVar("alpha2_subCat3" , "alpha2_subCat3", 1.6467519998550415, 0.01, 65)
     n2_subCat3 = rt.RooRealVar("n2_subCat3" , "n2_subCat3", 9.670221328735352, 0.01, 200)
 
-    # # copying parameters from official AN workspace as starting params
-    # sigma_subCat3 = rt.RooRealVar("sigma_subCat3" , "sigma_subCat3", 1.25359, .1, 10.0)
-    # alpha1_subCat3 = rt.RooRealVar("alpha1_subCat3" , "alpha1_subCat3", 1.4199, 0.01, 200)
-    # n1_subCat3 = rt.RooRealVar("n1_subCat3" , "n1_subCat3", 2.409953, 0.01, 200)
-    # alpha2_subCat3 = rt.RooRealVar("alpha2_subCat3" , "alpha2_subCat3", 1.64675, 0.01, 65)
-    # n2_subCat3 = rt.RooRealVar("n2_subCat3" , "n2_subCat3", 9.670221, 0.01, 200)
-
-    # # temporary test
-    # sigma_subCat3.setConstant(True)
-    # alpha1_subCat3.setConstant(True)
-    # n1_subCat3.setConstant(True)
-    # alpha2_subCat3.setConstant(True)
-    # n2_subCat3.setConstant(True)
 
     CMS_hmm_sigma_cat3_ggh = rt.RooRealVar("CMS_hmm_sigma_cat3_ggh" , "CMS_hmm_sigma_cat3_ggh", 0, -5 , 5 )
     CMS_hmm_sigma_cat3_ggh.setConstant(True) # this is going to be param in datacard
