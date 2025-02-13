@@ -123,7 +123,8 @@ if __name__ == "__main__":
     rereco_events = []
     rereco_years = ["2016", "2017", "2018"]
     for year in rereco_years:
-        rereco_load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean//rereco_yun_Dec05_btagSystFixed_JesJerUncOn//stage1_output/{year}/"
+        rereco_label = "rereco_yun_Dec05_btagSystFixed_JesJerUncOn"
+        rereco_load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean//{rereco_label}//stage1_output/{year}/"
         file = f"{rereco_load_path}/ggh_amcPS"
         print(f"file: {file}")
     
@@ -147,7 +148,8 @@ if __name__ == "__main__":
     ul_events = []
     ul_years = ["2016preVFP", "2016postVFP","2017", "2018"]
     for year in ul_years:
-        ul_load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean//V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix/stage1_output/{year}/f1_0"
+        ul_label = "V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix"
+        ul_load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{ul_label}/stage1_output/{year}/f1_0"
         file = f"{ul_load_path}/ggh_powhegPS"
         print(f"file: {file}")
         
@@ -183,7 +185,7 @@ if __name__ == "__main__":
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
-    frame.SetTitle(f"ggH sample comparison for Run2")
+    frame.SetTitle(f"Normalized ggH sample comparison for Run2")
     frame.SetXTitle(f"Dimuon Mass (GeV)")
     legend = rt.TLegend(0.65,0.55,0.9,0.7)
     
@@ -200,7 +202,7 @@ if __name__ == "__main__":
     model_name = ul_hist.GetName()
     ul_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kBlue)
     legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UL powheg", "L")
-    legend.AddEntry("", f"Sigma UL: {rereco_hist.sigma(mass):.5f}",  "")
+    legend.AddEntry("", f"Sigma UL: {ul_hist.sigma(mass):.5f}",  "")
     
     
     frame.Draw()
@@ -279,7 +281,7 @@ if __name__ == "__main__":
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
-    frame.SetTitle(f"ggH sample comparison for 2017 and 2018")
+    frame.SetTitle(f"Normalized ggH sample comparison for 2017 and 2018")
     frame.SetXTitle(f"Dimuon Mass (GeV)")
     legend = rt.TLegend(0.65,0.55,0.9,0.7)
     
@@ -296,7 +298,7 @@ if __name__ == "__main__":
     model_name = ul_hist.GetName()
     ul_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kBlue)
     legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UL powheg", "L")
-    legend.AddEntry("", f"Sigma UL: {rereco_hist.sigma(mass):.5f}",  "")
+    legend.AddEntry("", f"Sigma UL: {ul_hist.sigma(mass):.5f}",  "")
     
     
     frame.Draw()
