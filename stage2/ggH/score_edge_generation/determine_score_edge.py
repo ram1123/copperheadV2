@@ -3,6 +3,7 @@ import awkward as ak
 import numpy as np
 import argparse
 from omegaconf import OmegaConf
+import time
 
 
 def calculate_AMS(sig_yields, bkg_yields):
@@ -30,11 +31,9 @@ def obtain_BDT_edges(target_yields_cum_sum, years, load_path):
     score_edge_dict = {}
     for year in years:
     
-        # full_load_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Jan17_JecDefault_valerieZpt/ggh/stage2_output/ggh/2018/processed_events_sig*.parquet"
-        # extract only the signal samples (VBF and ggH)
+
         # full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sig*.parquet"
         full_load_path = f"{load_path}/{year}/processed_events_sigMC_ggh.parquet" # ignore VBF signal sample
-        # full_load_path = f"{sysargs.load_path}/ggh/{sysargs.year}/processed_events_sig*.parquet"
         events = dak.from_parquet(full_load_path)
         
         signal_score = ak.to_numpy(events.BDT_score.compute())
@@ -90,6 +89,52 @@ def obtain_BDT_edges(target_yields_cum_sum, years, load_path):
     return score_edge_dict
 
 
+def get_signal_yields(bdt_score_edges, year:str, load_path:str):
+    """
+
+    return: out_arr of size len(bdt_score_edges) -1, value in each bin represnting signal yield in that category
+    """
+    full_load_path = f"{load_path}/{year}/processed_events_sigMC*.parquet"  # include all signal
+    events = dak.from_parquet(full_load_path)
+    signal_score = ak.to_numpy(events.BDT_score.compute())
+    signal_wgt = ak.to_numpy(events.wgt_nominal.compute())
+
+    subCat_idx = np.digitize(signal_score, bdt_score_edges) -1 # idx starts with 0
+    print(f"np.max(subCat_idx): {np.max(subCat_idx)}")
+    print(f"np.min(subCat_idx): {np.min(subCat_idx)}")
+
+    out_arr = np.zeros(len(bdt_score_edges)-1)
+
+    for ix in range(len(out_arr)):
+        cat_filter = (ix == subCat_idx)
+        cat_wgt_sum = np.sum(signal_wgt[cat_filter])
+        out_arr[ix] = cat_wgt_sum
+        
+    print(f"{year} np.sum(out_arr): {np.sum(out_arr)}")
+    return out_arr
+
+def get_background_yields(bdt_score_edges, year:str, load_path:str):
+    """
+    return: out_arr of size len(bdt_score_edges) -1, value in each bin represnting signal yield in that category
+    """
+    full_load_path = f"{load_path}/{year}/processed_events_data.parquet"  # use data for bkg
+    events = dak.from_parquet(full_load_path)
+    background_score = ak.to_numpy(events.BDT_score.compute())
+    background_wgt = ak.to_numpy(events.wgt_nominal.compute())
+
+    subCat_idx = np.digitize(background_score, bdt_score_edges) -1 # idx starts with 0
+    print(f"np.max(subCat_idx): {np.max(subCat_idx)}")
+    print(f"np.min(subCat_idx): {np.min(subCat_idx)}")
+
+    out_arr = np.zeros(len(bdt_score_edges)-1)
+
+    for ix in range(len(out_arr)):
+        cat_filter = (ix == subCat_idx)
+        cat_wgt_sum = np.sum(background_wgt[cat_filter])
+        out_arr[ix] = cat_wgt_sum
+        
+    print(f"{year} np.sum(out_arr): {np.sum(out_arr)}")
+    return out_arr
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -110,7 +155,7 @@ if __name__ == "__main__":
     help="path were stage2 output is saved",
     )
 
-
+    start_time = time.time()
     """
     pseudocode:
 
@@ -135,6 +180,8 @@ if __name__ == "__main__":
     
     sysargs = parser.parse_args()
 
+    load_path = sysargs.load_path
+
     # target_yields = [0.30457106, 0.35325641, 0.14842342, 0.13939539, 0.05435372]
     # target_yields_cum_sum = np.cumsum(np.array(target_yields))
     # print(f"target_yields len: {len(target_yields)}")
@@ -145,10 +192,32 @@ if __name__ == "__main__":
     # years = ["2018"]
     years = ["2016preVFP", "2016postVFP", "2017", "2018"]
 
-    BDT_score_edges = obtain_BDT_edges(target_yields_cum_sum, years, sysargs.load_path)
-    print(f"BDT_score_edges: {BDT_score_edges}")
+    BDT_score_edge_dict = obtain_BDT_edges(target_yields_cum_sum, years, load_path)
+    print(f"BDT_score_edge_dict: {BDT_score_edge_dict}")
 
+    signal_arrs = []
+    background_arrs = []
+    for year, bdt_score_edges in BDT_score_edge_dict.items():
+        signal_arr = get_signal_yields(bdt_score_edges, year, load_path)
+        signal_arrs.append(signal_arr)
+        background_arr = get_background_yields(bdt_score_edges, year, load_path)
+        background_arrs.append(background_arr)
+
+    print(f"signal_arrs: {signal_arrs}")
+    signal_yield = sum(signal_arrs)
+    print(f"signal_yield: {signal_yield}")
+    print(f"signal_yield sum: {np.sum(signal_yield)}")
+
+
+    print(f"background_arrs: {background_arrs}")
+    background_yield = sum(background_arrs)
+    print(f"background_yield: {background_yield}")
+    print(f"background_yield sum: {np.sum(background_yield)}")
     
+    end_time = time.time()
+    
+    execution_time = end_time - start_time
+    print(f"Execution time: {execution_time:.6f} seconds")
 
     # # save the new bin edges
     # config_path = f"/work/users/yun79/valerie/fork/copperheadV2/configs/MVA/ggH/BDT_edges.yaml"
