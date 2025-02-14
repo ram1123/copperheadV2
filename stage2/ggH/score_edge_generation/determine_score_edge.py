@@ -26,7 +26,70 @@ def calculate_AMS(sig_yields, bkg_yields):
     combined_ams = np.sqrt(ams_sum) # add by quadrature
     return combined_ams
 
-# def obtain_BDT_edges(year, ):
+def obtain_BDT_edges(target_yields_cum_sum, years, load_path):
+    score_edge_dict = {}
+    for year in years:
+    
+        # full_load_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Jan17_JecDefault_valerieZpt/ggh/stage2_output/ggh/2018/processed_events_sig*.parquet"
+        # extract only the signal samples (VBF and ggH)
+        # full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sig*.parquet"
+        full_load_path = f"{load_path}/{year}/processed_events_sigMC_ggh.parquet" # ignore VBF signal sample
+        # full_load_path = f"{sysargs.load_path}/ggh/{sysargs.year}/processed_events_sig*.parquet"
+        events = dak.from_parquet(full_load_path)
+        
+        signal_score = ak.to_numpy(events.BDT_score.compute())
+        signal_wgt = ak.to_numpy(events.wgt_nominal.compute())
+        signal_wgt = signal_wgt /np.sum(signal_wgt) # normalize wgt
+        
+        
+        # sort data
+        sorted_indices = np.argsort(signal_score)
+        signal_score = signal_score[sorted_indices]
+        signal_wgt =signal_wgt[sorted_indices]
+        print(f"target_yields_cum_sum: {target_yields_cum_sum}")
+    
+        # Compute cumulative weights
+        cumulative_weights = np.cumsum(signal_wgt)
+        # Find bin edges
+        sorted_data = signal_score
+        bin_edges = [0.0]  # Start with the minimum value
+        current_yield = 0
+        target_index = 0
+        
+        for i, cum_weight in enumerate(cumulative_weights):
+            current_yield = cum_weight 
+            # print(f"current_yield : {current_yield}")
+            if current_yield >= target_yields_cum_sum[target_index]:
+                bin_edges.append(sorted_data[i])
+                target_index += 1
+                if target_index >= len(target_yields_cum_sum):
+                    break
+        
+        
+        if len(bin_edges) < (len(target_yields_cum_sum) +1 ):
+            bin_edges.append(1.1) # add the last bin edge to maximum value and a bit
+        else:
+            bin_edges[-1] = 1.1 # switch the last bin edge to maximum value and a bit
+        print("Bin edges:", bin_edges)
+        # raise ValueError
+        hist, _ = np.histogram(signal_score, bins=bin_edges, weights=signal_wgt)
+
+        
+        # sanity check
+        target_yields = np.diff(target_yields_cum_sum, prepend=0)
+        print(f"target_yields: {target_yields}")
+        print(f"binnning histogram distribution: {hist}")
+        print(f"np.sum(hist): {np.sum(hist)}")
+        signal_subcat_idx = np.digitize(signal_score, bin_edges) -1 # digitize starts at one, not zero
+        print(f"signal_subcat_idx: {signal_subcat_idx}")
+        print(f"np.max(signal_score): {np.max(signal_score)}")
+
+        score_edge_dict[year] = bin_edges 
+    
+    # print(f"score_edge_dict: {score_edge_dict}")
+    return score_edge_dict
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -55,7 +118,7 @@ if __name__ == "__main__":
 
     obtain BDT edges are the target signal effs for each era
     for each era: 
-    get target yields and score
+    get BDT score edges
     
     obtain the signal yields (ggH + VBF) and bkg yields (data) for each bin
     obtain combined AMS for said bin
@@ -81,68 +144,11 @@ if __name__ == "__main__":
     print(f"target_yields_cum_sum: {target_yields_cum_sum}")
     # years = ["2018"]
     years = ["2016preVFP", "2016postVFP", "2017", "2018"]
-    score_edge_dict = {}
-    for year in years:
-    
-        # full_load_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Jan17_JecDefault_valerieZpt/ggh/stage2_output/ggh/2018/processed_events_sig*.parquet"
-        # extract only the signal samples (VBF and ggH)
-        # full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sig*.parquet"
-        full_load_path = f"{sysargs.load_path}/{year}/processed_events_sigMC_ggh.parquet" # ignore VBF signal sample
-        # full_load_path = f"{sysargs.load_path}/ggh/{sysargs.year}/processed_events_sig*.parquet"
-        events = dak.from_parquet(full_load_path)
-        
-        signal_score = ak.to_numpy(events.BDT_score.compute())
-        signal_wgt = ak.to_numpy(events.wgt_nominal.compute())
-        signal_wgt = signal_wgt /np.sum(signal_wgt) # normalize wgt
-        
-        
-        # sort data
-        sorted_indices = np.argsort(signal_score)
-        signal_score = signal_score[sorted_indices]
-        signal_wgt =signal_wgt[sorted_indices]
-        print(f"target_yields_cum_sum: {target_yields_cum_sum}")
-    
-        # Compute cumulative weights
-        cumulative_weights = np.cumsum(signal_wgt)
-        # Find bin edges
-        sorted_data = signal_score
-        bin_edges = [0.0]  # Start with the minimum value
-        current_yield = 0
-        target_index = 0
-        
-        for i, cum_weight in enumerate(cumulative_weights):
-            current_yield = cum_weight 
-            # print(f"current_yield : {current_yield}")
-            if current_yield >= target_yields_cum_sum[target_index]:
-                # print(f"target_yields_cum_sum[target_index] : {target_yields_cum_sum[target_index]}")
-                # print(f"current_yield : {current_yield}")
-                bin_edges.append(sorted_data[i])
-                target_index += 1
-                if target_index >= len(target_yields_cum_sum):
-                    break
-        
-        
-        if len(bin_edges) < (len(target_yields_cum_sum) +1 ):
-            bin_edges.append(1.1) # add the last bin edge to maximum value and a bit
-        else:
-            bin_edges[-1] = 1.1 # switch the last bin edge to maximum value and a bit
-        print("Bin edges:", bin_edges)
-        # raise ValueError
-        hist, _ = np.histogram(signal_score, bins=bin_edges, weights=signal_wgt)
 
-        
-        # sanity check
-        target_yields = np.diff(target_yields_cum_sum, prepend=0)
-        print(f"target_yields: {target_yields}")
-        print(f"binnning histogram distribution: {hist}")
-        print(f"np.sum(hist): {np.sum(hist)}")
-        signal_subcat_idx = np.digitize(signal_score, bin_edges) -1 # digitize starts at one, not zero
-        print(f"signal_subcat_idx: {signal_subcat_idx}")
-        print(f"np.max(signal_score): {np.max(signal_score)}")
+    BDT_score_edges = obtain_BDT_edges(target_yields_cum_sum, years, sysargs.load_path)
+    print(f"BDT_score_edges: {BDT_score_edges}")
 
-        score_edge_dict[year] = bin_edges 
     
-    print(f"score_edge_dict: {score_edge_dict}")
 
     # # save the new bin edges
     # config_path = f"/work/users/yun79/valerie/fork/copperheadV2/configs/MVA/ggH/BDT_edges.yaml"
