@@ -16,16 +16,16 @@ def calculate_AMS(sig_yields, bkg_yields):
     """
     assert len(sig_yields) == len(bkg_yields)
     
-    ams_sum = 0
+    ams_sq_sum = 0
 
     for ix in range(len(sig_yields)):
         S = sig_yields[ix]
         B = bkg_yields[ix]
         AMS = (S + B) * np.log(1 + S/B) - S
         AMS = np.sqrt(2*AMS)
-        ams_sum += AMS
+        ams_sq_sum += AMS**2
         
-    combined_ams = np.sqrt(ams_sum) # add by quadrature
+    combined_ams = np.sqrt(ams_sq_sum) # add by quadrature
     return combined_ams
 
 def obtain_BDT_edges(target_sig_effs, years, load_path):
@@ -139,14 +139,6 @@ def get_background_yields(bdt_score_edges, year:str, load_path:str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="Year to process (2016preVFP, 2016postVFP, 2017 or 2018)",
-    )
     parser.add_argument(
     "-load",
     "--load_path",

@@ -20,7 +20,23 @@ if __name__ == "__main__":
 
         
         for removed_eff in not_common_effs:
-            plt.axvline(x=removed_eff, color='red', linestyle='--', linewidth=2, alpha=0.7, label=f'X={removed_eff:.1f}')
+            plt.axvline(x=removed_eff, color='grey', linestyle='--', linewidth=2, alpha=0.7, label=f'X={removed_eff:.1f}')
+            plt.text(removed_eff, plt.ylim()[0] - 0.5, f'{removed_eff:.2f}', ha='center', va='top', fontsize=12, color='red')
+
+        # plot bright red vertical line over the sig eff with max AMS
+        max_ix = np.argmax(sig_df["Significance"])
+        max_sig_eff = df_sig_eff[max_ix]
+        plt.axvline(x=max_sig_eff, color='red', linestyle='--', linewidth=2, alpha=0.7, label=f'X={max_sig_eff:.1f}')
+        plt.text(max_sig_eff, plt.ylim()[0] - 0.5, f'{max_sig_eff:.2f}', ha='center', va='top', fontsize=12, color='red')
+
+        print(f"not_common_effs: {not_common_effs}")
+        print(f"max_sig_eff: {max_sig_eff}")
+        # # Update x-ticks to include vertical line positions
+        # xticks = list(plt.xticks()[0])  # Get current x-ticks
+        # xticks.extend([max_sig_eff])  # Add vertical line positions
+        xticks = list(not_common_effs) + [max_sig_eff]
+        print(xticks)
+        plt.xticks(sorted(xticks))  # Set updated ticks
 
         
         plt.xlabel("Signal Efficiency")
@@ -28,4 +44,3 @@ if __name__ == "__main__":
         plt.savefig(f"iter{load_path}_significances.png")
         plt.clf()
 
-        
