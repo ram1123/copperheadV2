@@ -11,6 +11,7 @@ import pandas as pd
 import itertools
 import glob
 import ROOT as rt
+import ROOT
 
 plt.style.use(hep.style.CMS)
 
@@ -162,13 +163,68 @@ def fitPlot_ggh(dimuon_mass, wgt, label, save_filename):
     as fit DCB sigma and chi2_dof
     """
     mass_name = "mh_ggh"
-    mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
+    # mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
+    mass = rt.RooRealVar(mass_name, mass_name, 120, 115, 135)
     nbins = 100
     mass.setBins(nbins)
     hist = generateRooHist(mass, dimuon_mass, wgt, name=f"{label} hist")
     print(f"fitPlot_ggh hist: {hist}")
+
+    # --------------------------------------------------
+    # Fitting
+    # --------------------------------------------------
     
-    return sigma, chi2_dof
+    MH = rt.RooRealVar("MH" , "MH", 125, 110, 150)
+    # MH.setConstant(True)
+    sigma = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
+    alpha1 = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
+    n1 = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
+    alpha2 = rt.RooRealVar("alpha2" , "alpha2", 1.3132, 0.01, 65)
+    n2 = rt.RooRealVar("n2" , "n2", 9.97411, 0.01, 100)
+    name = f"DCB fit"
+    model = rt.RooDoubleCBFast(name,name,mass, MH, sigma, alpha1, n1, alpha2, n2)
+
+    device = "cpu"
+    _ = model.fitTo(hist,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = model.fitTo(hist,  EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result.Print()
+
+    # --------------------------------------------------
+    # plotting
+    # --------------------------------------------------
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
+    
+    frame = mass.frame()
+    frame.SetTitle(f"{label}")
+    frame.SetXTitle(f"Dimuon Mass (GeV)")
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    hist.plotOn(frame, Name=hist.GetName())
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "MC", "L")
+    model.plotOn(frame, Name=model.GetName(), LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "DCB fit", "L")
+
+    # add chi2 dof
+    ndf = model.getParameters(ROOT.RooArgSet(mass)).getSize()
+    print(f"ndf: {ndf}")
+    chi2_ndf = frame.chiSquare(model.GetName(), hist.GetName(), ndf)
+    chi2_text = " chi2/ndf = {:.3f}".format(chi2_ndf)
+    legend.AddEntry("", chi2_text, "")
+
+    # add sigma
+    sigma_val = sigma.getVal()
+    sigma_text = " fit sigma = {:.3f}".format(sigma_val)
+    legend.AddEntry("", sigma_text, "")
+    
+    frame.Draw()
+    legend.Draw()        
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs(save_filename)
+    
+    return sigma_val, chi2_ndf
+    # return None
     
 
 
