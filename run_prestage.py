@@ -203,7 +203,7 @@ if __name__ == "__main__":
         data_l =  [sample_name for sample_name in dataset['Data'].keys() if "data" in sample_name]
         logger.debug(data_l)
         data_samples = args.data_samples
-        logger.info(f"data_samples: {data_samples}")
+        logger.info(f"data_samples to read: {data_samples}")
         
         if len(data_samples) >0:
             for data_letter in data_samples:
@@ -212,11 +212,11 @@ if __name__ == "__main__":
                         logger.debug(sample_name)
                         new_sample_list.append(sample_name)
                         
-        logger.debug(f"new sample list: {new_sample_list}")
+        logger.debug(f"Loaded samples: {new_sample_list}")
         
         # take bkg and add to the list: `new_sample_list[]`
         bkg_l = [sample_name for sample_name in dataset.keys() if "data" not in sample_name.lower()]
-        logger.info(f"background samples: {bkg_l}")
+        logger.info(f"background samples to read: {bkg_l}")
         bkg_samples = args.bkg_samples
         logger.info(f"bkg_samples: {bkg_samples}")
         if len(bkg_samples) >0:
@@ -226,11 +226,11 @@ if __name__ == "__main__":
                         for bkgs in dataset[bkg_name].keys():
                             new_sample_list.append(bkgs)
                         
-        logger.debug(f"new sample list: {new_sample_list}")
+        logger.debug(f"Loaded samples: {new_sample_list}")
 
         # take sig and add to the list: `new_sample_list[]`
         sig_samples = args.sig_samples
-        logger.info(f"signal samples: {sig_samples}")
+        logger.info(f"signal samples to load: {sig_samples}")
         if len(sig_samples) >0:
             for sig_sample in sig_samples: # FIXME: Why custom? We should just read from YAML file. No hardcoding needed here.
                 if sig_sample.upper() == "GGH": # enforce upper case to prevent confusion
@@ -240,7 +240,7 @@ if __name__ == "__main__":
                 else:
                     logger.debug(f"unknown signal {sig_sample} was given!")
 
-        logger.debug(f"Sample list: {new_sample_list}")
+        logger.debug(f"Loaded samples: {new_sample_list}")
 
         dataset_dict = {}
         for sample_name_temp in new_sample_list:
@@ -379,23 +379,19 @@ if __name__ == "__main__":
             if "dummy" not in das_query:
                 allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL"]        
                 rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
-                try:
-                    # Use the rucio_client
-                    outlist, outtree = rucio_utils.query_dataset(
-                        das_query,
-                        client=rucio_client,
-                        tree=True,
-                        scope="cms",
-                    )
-                    outfiles, outsites, sites_counts = rucio_utils.get_dataset_files_replicas(
-                        outlist[0],
-                        allowlist_sites=allowlist_sites,
-                        mode="full",
-                        client=rucio_client,
-                    )
-                finally:
-                    # Close the session
-                    await rucio_client.close()
+                outlist, outtree = rucio_utils.query_dataset(
+                    das_query,
+                    client=rucio_client,
+                    tree=True,
+                    scope="cms",
+                )
+                outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
+                    outlist[0],
+                    allowlist_sites=allowlist_sites,
+                    mode="full",
+                    client=rucio_client,
+                    # partial_allowed=True
+                )
                 fnames = [file[0] for file in outfiles if file != []]
                 # fnames = [fname.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
                 # random.shuffle(fnames)

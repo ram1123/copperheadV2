@@ -61,5 +61,10 @@ python Scripts/Investigate_ParquetFile.py
 
 
 
+# Improvements
+
+- [ ] Update how the pre-stage JSON files are saved. It should be saved with year name, so that we don't need to run pre-stage everytime.
+    - [ ] Also, if we already run for data and running for MC then it should append info to the JSON file.
+- [ ] 
 
 
