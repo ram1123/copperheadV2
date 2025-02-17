@@ -163,9 +163,9 @@ def fitPlot_ggh(dimuon_mass, wgt, label, save_filename):
     as fit DCB sigma and chi2_dof
     """
     mass_name = "mh_ggh"
-    # mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
-    mass = rt.RooRealVar(mass_name, mass_name, 120, 115, 135)
-    nbins = 100
+    mass = rt.RooRealVar(mass_name, mass_name, 120, 115, 135) # signal region
+    # nbins = 100
+    nbins = 80
     mass.setBins(nbins)
     hist = generateRooHist(mass, dimuon_mass, wgt, name=f"{label} hist")
     print(f"fitPlot_ggh hist: {hist}")
@@ -225,15 +225,53 @@ def fitPlot_ggh(dimuon_mass, wgt, label, save_filename):
     
     return sigma_val, chi2_ndf
     
+def plotMuonEtas(amc_events, powheg_events):
+    """
+    plot side by side muon eta variables to see if there's a discrepancy
+    between two different mc modeling samples
+    """
+    # Apply a CMS or ATLAS style
+    hep.style.use("CMS")  # You can also use "ATLAS"
+    
+    # Example muon eta values for two events (Replace these with actual data)
+    muon_eta_event1 = np.random.uniform(-2.4, 2.4, size=10)  
+    muon_eta_event2 = np.random.uniform(-2.4, 2.4, size=10)  
+    
+    # Define histogram parameters
+    bins = 30
+    range_eta = (-2.4, 2.4)
 
-
-
-V1_fields_2compute = [
-    "wgt_nominal",
-    "dimuon_mass",
-    "mu1_eta",
-    "mu2_eta"
-]
+    # normalize wgts
+    wgts_amc = amc_events.wgt_nominal/np.sum(amc_events.wgt_nominal)
+    wgts_powheg = powheg_events.wgt_nominal/np.sum(powheg_events.wgt_nominal)
+    
+    # Compute histograms
+    hist_amc, bin_edges = np.histogram(amc_events.mu1_eta, bins=bins, range=range_eta, weights=wgts_amc)
+    hist_powheg, _ = np.histogram(powheg_events.mu1_eta, bins=bins, range=range_eta, weights=wgts_powheg)
+    
+    # Compute bin centers
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    
+    # Create figure
+    plt.figure(figsize=(8, 6))
+    
+    # Plot histograms as step plots
+    plt.step(bin_centers, hist_amc, where="mid", linewidth=2, label="AMC")
+    plt.step(bin_centers, hist_powheg, where="mid", linewidth=2, label="Powheg")
+    
+    # Labels, legend, and title
+    plt.xlabel(r"Muon $\eta$")
+    plt.ylabel("Entries")
+    plt.title("Muon $\eta$ Distribution for Two Events")
+    plt.legend()
+    plt.savefit("test.pdf")
+    
+    V1_fields_2compute = [
+        "wgt_nominal",
+        "dimuon_mass",
+        "mu1_eta",
+        "mu2_eta"
+    ]
 
 
 
@@ -241,16 +279,18 @@ if __name__ == "__main__":
     client =  Client(n_workers=15,  threads_per_worker=2, processes=True, memory_limit='8 GiB') 
 
    
+    
+    # rerecoPowheg_years = ["2017", "2018"]
+    years = ["2017", "2018"]
+
     rerecoPowheg_events = []
-    rerecoPowheg_years = ["2017", "2018"]
-    for year in rerecoPowheg_years:
+    for year in years:
         rerecoPowheg_load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean//rereco_yun_Dec05_btagSystFixed_JesJerUncOn//stage1_output/{year}/"
         file = f"{rerecoPowheg_load_path}/ggh_powhegPS"
         print(f"file: {file}")
     
         
         rerecoPowheg_events_data = dak.from_parquet(f"{file}/*.parquet")
-        
         rerecoPowheg_events_data = filterRegion(rerecoPowheg_events_data, region="signal")
         rerecoPowheg_events_data = applyGGH_cutV1(rerecoPowheg_events_data)
         rerecoPowheg_events_data = ak.zip({field: rerecoPowheg_events_data[field] for field in V1_fields_2compute}).compute()
@@ -259,17 +299,41 @@ if __name__ == "__main__":
         rerecoPowheg_events.append(rerecoPowheg_events_data)
         # print(rerecoPowheg_events_data)
         # raise ValueError
-        
-    rerecoPowheg_events = ak.concatenate(rerecoPowheg_events, axis=0)
-    print(f"rerecoPowheg_events len: {len(rerecoPowheg_events)}")
-    print(f"rerecoPowheg_events sum wgts: {ak.sum(rerecoPowheg_events.wgt_nominal)}")
-    
-    # add rereco amc 
 
     
+    rerecoPowheg_events = ak.concatenate(rerecoPowheg_events, axis=0)
+    # print(f"rerecoPowheg_events len: {len(rerecoPowheg_events)}")
+    # print(f"rerecoPowheg_events sum wgts: {ak.sum(rerecoPowheg_events.wgt_nominal)}")
+    
+
+    
+    # add rereco amc 
+    rerecoAmc_events = []
+    for year in years:
+        rerecoAmc_load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean//rereco_yun_Dec05_btagSystFixed_JesJerUncOn//stage1_output/{year}/"
+        file = f"{rerecoAmc_load_path}/ggh_amcPS"
+        print(f"file: {file}")
+    
+        
+        rerecoAmc_events_data = dak.from_parquet(f"{file}/*.parquet")
+        
+        rerecoAmc_events_data = filterRegion(rerecoAmc_events_data, region="signal")
+        rerecoAmc_events_data = applyGGH_cutV1(rerecoAmc_events_data)
+        rerecoAmc_events_data = ak.zip({field: rerecoAmc_events_data[field] for field in V1_fields_2compute}).compute()
+        print(len(rerecoAmc_events_data))
+        # print((rerecoAmc_events_data))
+        rerecoAmc_events.append(rerecoAmc_events_data)
+        # print(rerecoAmc_events_data)
+        # raise ValueError
+        
+    rerecoAmc_events = ak.concatenate(rerecoAmc_events, axis=0)
+    # print(f"rerecoAmc_events len: {len(rerecoAmc_events)}")
+    # print(f"rerecoAmc_events sum wgts: {ak.sum(rerecoAmc_events.wgt_nominal)}")
+    # raise ValueError
+    
     ul_events = []
-    ul_years = ["2017", "2018"]
-    for year in ul_years:
+    # ul_years = ["2017", "2018"]
+    for year in years:
         ul_load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean//V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix/stage1_output/{year}/f1_0"
         file = f"{ul_load_path}/ggh_powhegPS"
         print(f"file: {file}")
@@ -290,6 +354,7 @@ if __name__ == "__main__":
 
     rerecoPowheg_events = addEtaCategories(rerecoPowheg_events)
     ul_events = addEtaCategories(ul_events)
+    rerecoAmc_events = addEtaCategories(rerecoAmc_events)
 
 
     out_table = pd.DataFrame()
@@ -297,6 +362,7 @@ if __name__ == "__main__":
 
     for eta_cat in possible_eta_categories:
         rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterEtaCat(rerecoPowheg_events, eta_cat)
+        rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterEtaCat(rerecoAmc_events, eta_cat)
         ul_dimuon_mass, ul_wgt = filterEtaCat(ul_events, eta_cat)
 
         # now plot
@@ -308,19 +374,31 @@ if __name__ == "__main__":
         save_filename = f"plots/gghMC_{label}.pdf"
         ul_sigma, ul_chi2_dof = fitPlot_ggh(ul_dimuon_mass, ul_wgt, label, save_filename)
 
+        label = f"rerecoAmc_etacat{eta_cat}"
+        save_filename = f"plots/gghMC_{label}.pdf"
+        rerecoAmc_sigma, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename)
+
+        
         out_dict = {
             "Eta Category" : [eta_cat],
-            "Rereco Sigma" : [rerecoPowheg_sigma],
+            "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
+            "Rereco AMC Sigma" : [rerecoAmc_sigma],
             "UL Sigma" : [ul_sigma],
-            "Rereco Chi2 Dof" : [rerecoPowheg_chi2_dof],
+            "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
+            "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
             "UL Chi2 Dof" : [ul_chi2_dof],
         }
         # add the computed values
         out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
     
-    out_table.to_csv("powhegRerecoUl_etaCat_table.csv")
-    # raise ValueError
-    
+    # out_table.to_csv("powhegRerecoUl_etaCat_table.csv")
+    out_table.to_csv("RerecoUl_etaCat_table.csv")
+
+
+
+    # 
+    plotMuonEtas(rerecoAmc_events, rerecoPowheg_events)
+
     # # mass_name = "mh_ggh"
     # # mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
     # # nbins = 100
