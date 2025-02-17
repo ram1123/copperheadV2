@@ -1,4 +1,5 @@
 import logging
+import os
 
 class bcolors:
     HEADER = '\033[95m'
@@ -47,3 +48,12 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(ColorLogFormatter())
 logger.addHandler(stream_handler)
 logger.setLevel(logging.ERROR)
+
+
+def ifPathExists(load_path):
+    if not os.path.exists(load_path):
+        logger.error(f"Path: {load_path} does not exists")
+        sys.exit()
+    else:
+        logger.info(f"Path exists: {load_path}")
+    

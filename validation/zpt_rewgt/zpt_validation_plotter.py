@@ -116,7 +116,7 @@ if __name__ == "__main__":
     "-save",
     "--save_path",
     dest="save_path",
-    default="./test_plots/",
+    default="./ValidationPlots/",
     action="store",
     help="save path",
     )
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
      "--log-level",
-     default=logging.ERROR,
+     default=logging.DEBUG,
      type=lambda x: getattr(logging, x),
      help="Configure the logging level."
      )    
@@ -218,14 +218,17 @@ if __name__ == "__main__":
     
     # take data
     data_samples = args.data_samples
+    logger.debug(f"data_samples: {data_samples}")
     if len(data_samples) >0:
         for data_letter in data_samples:
             available_processes.append(f"data_{data_letter.upper()}")
         
         # # take data as one group to save load time 
         # available_processes.append(f"data_*")
+    logger.info(f"available_processes: {available_processes}")
     # take bkg
     bkg_samples = args.bkg_samples
+    logger.debug(f"bkg_samples: {bkg_samples}")
     if len(bkg_samples) >0:
         for bkg_sample in bkg_samples:
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
@@ -247,10 +250,12 @@ if __name__ == "__main__":
             elif bkg_sample.upper() == "EWK": # enforce upper case to prevent confusion
                 available_processes.append("ewk_lljj_mll50_mjj120")
             else:
-                print(f"unknown background {bkg_sample} was given!")
+                logger.debug(f"unknown background {bkg_sample} was given!")
         
+    logger.info(f"available_processes: {available_processes}")
     # take sig
     sig_samples = args.sig_samples
+    logger.debug(f"sig_samples: {sig_samples}")
     if len(sig_samples) >0:
         for sig_sample in sig_samples:
             if sig_sample.upper() == "GGH": # enforce upper case to prevent confusion
@@ -259,13 +264,14 @@ if __name__ == "__main__":
             elif sig_sample.upper() == "VBF": # enforce upper case to prevent confusion
                 available_processes.append("vbf_powheg_dipole")
             else:
-                print(f"unknown signal {sig_sample} was given!")
+                logger.debug(f"unknown signal {sig_sample} was given!")
+    logger.info(f"available_processes: {available_processes}")
     # gather variables to plot:
     kinematic_vars = ['pt', 'eta', 'phi']
     # kinematic_vars = ['pt']
     variables2plot = []
     if len(args.variables) == 0:
-        print("no variables to plot!")
+        logger.error("no variables to plot!")
         raise ValueError
     for particle in args.variables:
         if "dimuon" in particle:
@@ -314,12 +320,12 @@ if __name__ == "__main__":
             variables2plot.append(f"jet2_qgl_nominal")
        
         else:
-            print(f"Unsupported variable: {particle} is given!")
-    print(f"variables2plot: {variables2plot}")
+            logger.warning(f"Unsupported variable: {particle} is given!")
+    logger.info(f"variables2plot: {variables2plot}")
     
     plot_setting_fname = args.plot_setting
     if plot_setting_fname == "":
-        print("ERROR, valid plotting setting json file needs to be given")
+        logger.error("ERROR, valid plotting setting json file needs to be given")
         raise ValueError
 
     with open(plot_setting_fname, "r") as file:
@@ -335,30 +341,32 @@ if __name__ == "__main__":
             )
             cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
-            print("Gateway Client created")
+            logger.debug("Gateway Client created")
     else:
         client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
-        print("Local scale Client created")
+        logger.debug("Local scale Client created")
     # record time
     time_step = time.time()
     zpt_on = args.zpt_on
     jet_multiplicity = int(args.jet_multiplicity)
     # load saved parquet files. This increases memory use, but increases runtime significantly
-    print(f"available_processes: {available_processes}")
+    logger.info(f"available_processes: {available_processes}")
     loaded_events = {} # intialize dictionary containing all the arrays
+    logger.info(f"Samples to be loaded from path: {args.load_path}")
     for process in tqdm.tqdm(available_processes):
-        print(f"loading process {process}..")
+        logger.debug(f"loading process {process}..")
         # full_load_path = args.load_path+f"/{process}/*.parquet"
         full_load_path = args.load_path+f"/{process}/*/*.parquet"
         if len(glob.glob(full_load_path)) ==0: # check if there's files in the load path
             full_load_path = args.load_path+f"/{process}/*.parquet" # try coppperheadV1 path, if this also is empty, then skip
-        print(f"full_load_path: {full_load_path}")
+        logger.info(f"full_load_path: {full_load_path}")
         try:
             events = dak.from_parquet(full_load_path)
         except:
-            print(f"full_load_path: {full_load_path} Not available. Skipping")
-            continue
-        # print(f"events.fields: {events.fields}")
+            logger.warning(f"full_load_path: {full_load_path} Not available. Skipping")
+            # sys.exit()
+            continue;
+        # logger.debug(f"events.fields: {events.fields}")
 
         # ------------------------------------------------------
         # select only needed variables to load to save run time
@@ -408,7 +416,7 @@ if __name__ == "__main__":
             field : events[field] for field in events.fields
         }).compute()
         loaded_events[process] = events
-    print("finished loading parquet files!")
+    logger.info("finished loading parquet files!")
 
     
     # hep.style.use("CMS")
@@ -425,7 +433,7 @@ if __name__ == "__main__":
         else:
             plot_var = var
         if plot_var not in plot_settings.keys():
-            print(f"variable {var} not configured in plot settings!")
+            logger.error(f"variable {var} not configured in plot settings!")
             continue
         #-----------------------------------------------
         # intialize variables for filling histograms
@@ -437,7 +445,7 @@ if __name__ == "__main__":
         # also check if logscale config is mentioned in plot_settings, if yes, that config takes priority
         # if "logscale" in plot_settings[plot_var].keys():
         #     do_logscale = plot_settings[plot_var]["logscale"]
-        print(f"do_logscale: {do_logscale} ")
+        logger.debug(f"do_logscale: {do_logscale} ")
 
         group_data_vals = []
         group_DY_vals = []
@@ -459,14 +467,14 @@ if __name__ == "__main__":
 
         
         for process in available_processes:    
-            print(f"process: {process}")
+            logger.info(f"process: {process}")
             try:
                 events = loaded_events[process]
             except:
-                print(f"skipping {process}")
+                logger.warning(f"skipping {process}")
                 continue
             is_data = "data" in process.lower()
-            print(f"is_data: {is_data}")
+            logger.info(f"is_data: {is_data}")
             if is_data:
                 weights = ak.to_numpy(ak.fill_none(events["wgt_nominal"], value=0.0))
             else: # MC
@@ -476,10 +484,10 @@ if __name__ == "__main__":
                 zpt_wgt_name = args.zpt_wgt_name
                 if zpt_wgt_name == "no_zpt":
                     if "separate_wgt_zpt_wgt" in events.fields:
-                        print("removing Zpt rewgt!")
+                        logger.info("removing Zpt rewgt!")
                         weights = weights/events["separate_wgt_zpt_wgt"]
                 
-                # print(f"weights {process} b4 numpy: {weights}")
+                # logger.debug(f"weights {process} b4 numpy: {weights}")
                 weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
                 # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                 # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
@@ -498,18 +506,18 @@ if __name__ == "__main__":
             z_peak = ((mass > 70) & (mass < 110))
             h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
             h_peak = ((mass > 115.03) & (mass < 135.03))
-            print(f"args.region: {args.region}")
+            logger.info(f"args.region: {args.region}")
             if args.region == "signal":
                 region = h_sidebands | h_peak
             elif args.region == "h-peak":
                 region = h_peak 
             elif args.region == "h-sidebands":
-                print("h_sidebands region chosen!")
+                logger.info("h_sidebands region chosen!")
                 region = h_sidebands 
             elif args.region == "z-peak":
                 region = z_peak 
             else: 
-                print("ERROR: acceptable region!")
+                logger.error("ERROR: acceptable region!")
                 raise ValueError
 
             # do category cut
@@ -519,24 +527,24 @@ if __name__ == "__main__":
             vbf_cut = ak.fill_none(vbf_cut, value=False)
             # if args.vbf_cat_mode:
             if args.category == "vbf":
-                print("vbf mode!")
+                logger.debug("vbf mode!")
                 prod_cat_cut =  vbf_cut & ak.fill_none(events.jet1_pt_nominal > 35, value=False) 
                 prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-                print("applying jet1 pt 35 Gev cut!")
+                logger.debug("applying jet1 pt 35 Gev cut!")
             # else: # we're interested in ggH category
             elif args.category == "ggh":
-                print("ggH mode!")
+                logger.debug("ggH mode!")
                 prod_cat_cut =  ~vbf_cut 
                 prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
             elif args.category == "nocat":
-                print("nocat mode!")
+                logger.debug("nocat mode!")
                 prod_cat_cut =  ak.ones_like(vbf_cut, dtype="bool")
             else:
-                print("Error: invalid category option!")
+                logger.error("Error: invalid category option!")
                 raise ValueError
 
             # do jet multiplicty cut
-            print(f"jet_multiplicity: {jet_multiplicity}")
+            logger.info(f"jet_multiplicity: {jet_multiplicity}")
             if jet_multiplicity == -1: # no njet cut, so all true
                 jet_multiplicity_cut = ak.ones_like(events.njets_nominal, dtype="bool")
             elif jet_multiplicity != 2:
@@ -549,9 +557,9 @@ if __name__ == "__main__":
                 region &
                 jet_multiplicity_cut
             )
-            print(f"category_selection length: {len(category_selection)}")
-            print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
-            # print(f"category_selection {process} : {category_selection}")
+            logger.debug(f"category_selection length: {len(category_selection)}")
+            logger.debug(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
+            # logger.debug(f"category_selection {process} : {category_selection}")
 
             # filter events fro selected category
             category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
@@ -561,81 +569,81 @@ if __name__ == "__main__":
             # 
             events = events[category_selection]
             fraction_weight = ak.ones_like(events.wgt_nominal) # TBF, all fractions should be same
-            print(f"var: {var}")
+            logger.info(f"var: {var}")
             values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
-            # print(f"weights.shape: {weights[weights>0].shape}")
+            # logger.debug(f"weights.shape: {weights[weights>0].shape}")
             
             # temporary overwrite start -------------------------
             # we have bad ll_zstar_log caluclation, so we re-calculate on the spot
             # if var == "ll_zstar_log":
-            #     print("ll_zstar_log overwrite!")
+            #     logger.debug("ll_zstar_log overwrite!")
             #     values = ak.to_numpy(np.log(np.abs(events["zeppenfeld"])))
             # elif var == "rpt":
-            #     print("rpt overwrite!")
+            #     logger.debug("rpt overwrite!")
             #     numerator = np.abs(events["jj_pt"] + events["dimuon_pt"])
             #     denominator = np.abs(events["jet1_pt"]) + np.abs(events["jet2_pt"]) +  np.abs(events["dimuon_pt"])
             #     values = ak.to_numpy(numerator/denominator)
             #     # debug
-            #     print(f"events.jj_pt is nan: {np.any(np.isnan(events.jj_pt))}")
-            #     print(f"events.dimuon_pt is nan: {np.any(np.isnan(events.dimuon_pt))}")
-            #     print(f"events.jet1_pt is nan: {np.any(np.isnan(events.jet1_pt))}")
-            #     print(f"events.jet2_pt is nan: {np.any(np.isnan(events.jet2_pt))}")
-            #     print(f"events.jj_pt is none: {np.any(ak.is_none(events.jj_pt))}")
-            #     print(f"events.dimuon_pt is none: {np.any(ak.is_none(events.dimuon_pt))}")
-            #     print(f"events.jet1_pt is none: {np.any(ak.is_none(events.jet1_pt))}")
-            #     print(f"events.jet2_pt is none: {np.any(ak.is_none(events.jet2_pt))}")
+            #     logger.debug(f"events.jj_pt is nan: {np.any(np.isnan(events.jj_pt))}")
+            #     logger.debug(f"events.dimuon_pt is nan: {np.any(np.isnan(events.dimuon_pt))}")
+            #     logger.debug(f"events.jet1_pt is nan: {np.any(np.isnan(events.jet1_pt))}")
+            #     logger.debug(f"events.jet2_pt is nan: {np.any(np.isnan(events.jet2_pt))}")
+            #     logger.debug(f"events.jj_pt is none: {np.any(ak.is_none(events.jj_pt))}")
+            #     logger.debug(f"events.dimuon_pt is none: {np.any(ak.is_none(events.dimuon_pt))}")
+            #     logger.debug(f"events.jet1_pt is none: {np.any(ak.is_none(events.jet1_pt))}")
+            #     logger.debug(f"events.jet2_pt is none: {np.any(ak.is_none(events.jet2_pt))}")
                 
-            print(f"values is nan: {np.any(np.isnan(values))}")
-            print(f"values is none: {np.any(ak.is_none(values))}")
+            logger.debug(f"values is nan: {np.any(np.isnan(values))}")
+            logger.debug(f"values is none: {np.any(ak.is_none(values))}")
             # temporary overwrite end -------------------------
-            # print(f"values[0]: {values[0]}")
+            # logger.debug(f"values[0]: {values[0]}")
             values_filter = values!=-999.0
             values = values[values_filter]
             weights = weights[values_filter]
             # MC samples are already normalized by their xsec*lumi, but data is not
             if process in group_data_processes:
                 fraction_weight = fraction_weight[values_filter]
-                # print(f"fraction_weight: {fraction_weight}")
+                # logger.debug(f"fraction_weight: {fraction_weight}")
                 weights = weights*fraction_weight
-            # print(f"weights.shape: {weights[weights>0].shape}")
+            # logger.debug(f"weights.shape: {weights[weights>0].shape}")
 
             if process in group_data_processes:
-                print("data activated")
+                logger.debug("data activated")
                 group_data_vals.append(values)
                 group_data_weights.append(weights)
             #-------------------------------------------------------
             elif process in group_DY_processes:
-                print("DY activated")
+                logger.debug("DY activated")
                 group_DY_vals.append(values)
                 group_DY_weights.append(weights)
             #-------------------------------------------------------
             elif process in group_Top_processes:
-                print("top activated")
+                logger.debug("top activated")
                 group_Top_vals.append(values)
                 group_Top_weights.append(weights)
             #-------------------------------------------------------
             elif process in group_Ewk_processes:
-                print("Ewk activated")
+                logger.debug("Ewk activated")
                 group_Ewk_vals.append(values)
                 group_Ewk_weights.append(weights)
             #-------------------------------------------------------
             elif process in group_VV_processes:
-                print("VV activated")
+                logger.debug("VV activated")
                 group_VV_vals.append(values)
                 group_VV_weights.append(weights)
             #-------------------------------------------------------
             elif process in group_ggH_processes:
-                print("ggH activated")
+                logger.debug("ggH activated")
                 group_ggH_vals.append(values)
                 group_ggH_weights.append(weights)
             #-------------------------------------------------------
             elif process in group_VBF_processes:
-                print("VBF activated")
+                logger.debug("VBF activated")
                 group_VBF_vals.append(values)
                 group_VBF_weights.append(weights)
             #-------------------------------------------------------
             else: # put into "other" bkg group
-                print("other activated")
+                logger.debug("other activated")
                 group_other_vals.append(values)
                 group_other_weights.append(weights)
         
@@ -777,7 +785,7 @@ if __name__ == "__main__":
         
 
         var_elapsed = round(time.time() - var_step, 3)
-        print(f"Finished processing {var} in {var_elapsed} s.")
+        logger.info(f"Finished processing {var} in {var_elapsed} s.")
     
     time_elapsed = round(time.time() - time_step, 3)
-    print(f"Finished in {time_elapsed} s.")
+    logger.info(f"Finished in {time_elapsed} s.")

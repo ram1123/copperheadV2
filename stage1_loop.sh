@@ -10,7 +10,8 @@ datasetYAML="configs/datasets/dataset.yaml"
 NanoAODv=9
 
 # years=("2018" "2017" "2016postVFP" "2016preVFP")
-years=("2016postVFP" "2016preVFP") 
+# years=("2016postVFP" "2016preVFP") 
+years=("2018") 
 
 declare -A data_l_dict # Associative array because of non-integer key.
 data_l_dict["2016preVFP"]="B C D E F"
@@ -25,6 +26,7 @@ sig_l=""
 chunksize=300000
 label="WithPurdueZptWgt_DYWithoutLHECut_16Feb_AllYear"
 save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
+# load_path = f"/depot/cms/users/{username}/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0/"
 
 mode=$1  # Options: "prestage" or "stage1"
 
@@ -35,30 +37,40 @@ for year in "${years[@]}"; do
     data_l="${data_l_dict[$year]}"
     echo "Data: $data_l"
 
+    command0="python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway "
+    command2="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l "
+
+    if [[ "$2" == "test" ]]; then
+        command0+="--log-level DEBUG -frac 0.1"
+        command1+="--log-level DEBUG --test_mod"
+        command2+="--log-level DEBUG --debug"
+    else
+        command0+=" --log-level INFO"
+        command1+=" --log-level INFO"
+        command2+=" --log-level INFO"    
+    fi
+    
     if [[ "$mode" == "0" ]]; then
         echo "Running pre-stage for year $year..."
-        if [[ "$2" == "test" ]]; then
-            echo "python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway --log-level DEBUG -frac 0.1"
-            python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway --log-level DEBUG -frac 0.1
-        else
-            echo "python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway --log-level INFO"
-            python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway --log-level INFO
-        fi
+        echo "Executing: $command0"  # Print the command for debugging
+        eval $command0        
     elif [[ "$mode" == "1" ]]; then
         echo "Running stage1 for year $year..."
-        if [[ "$2" == "test" ]]; then
-            echo "python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway --log-level DEBUG --test_mode"
-            python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway --log-level DEBUG --test_mode
-        else
-            echo "python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway --log-level INFO"
-            python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway --log-level INFO
-        fi
+        echo "Executing: $command1"  # Print the command for debugging
+        eval $command1  
     elif [[ "$mode" == "all" ]]; then
-        python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway --log-level INFO
-        python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway --log-level INFO
+        echo "Running pre-stage for year $year..."
+        echo "Executing: $command0"  # Print the command for debugging
+        eval $command0 
+        
+        echo "Running stage1 for year $year..."
+        echo "Executing: $command1"  # Print the command for debugging
+        eval $command1          
     elif [[ "$mode" == "2" ]]; then
-        echo "Running validation step..." # FIXME: Hardcoded year and other value in the validation.py.
-        python validation/zpt_rewgt/validation.py
+        echo "Running validation step..." 
+        echo "Executing: $command2"  # Print the command for debugging
+        eval $command2
     else
         echo "Error: Invalid mode. Please use '0' for prestage or '1' for stage1 or 2 for making validation plots."
         exit 1
