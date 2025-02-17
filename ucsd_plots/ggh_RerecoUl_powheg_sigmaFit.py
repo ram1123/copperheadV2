@@ -8,6 +8,7 @@ import json
 import mplhep as hep
 import glob
 import pandas as pd
+import itertools
 
 plt.style.use(hep.style.CMS)
 
@@ -136,6 +137,19 @@ def addEtaCategories(events):
     return events
 
 
+def generate_eta_categories():
+    """Generate all possible combinations of mu1_eta and mu2_eta categories."""
+    eta_categories = ["B", "O", "E"]
+    combinations = list(itertools.product(eta_categories, repeat=2))
+    # category_list = [f"{mu1}_{mu2}" for mu1, mu2 in combinations]
+    category_list = [f"{mu1}{mu2}" for mu1, mu2 in combinations]
+    return category_list
+
+def filterEtaCat(events, eta_cat):
+    cat_filter = events.EtaCat == eta_cat
+    dimuon_mass = events.dimuon_mass[cat_filter]
+    wgt = events.wgt_nominal[cat_filter]
+    return dimuon_mass, wgt
 
 V1_fields_2compute = [
     "wgt_nominal",
@@ -201,52 +215,65 @@ if __name__ == "__main__":
     
 
     rereco_events = addEtaCategories(rereco_events)
-    # ak.to_dataframe(rereco_events)[:30].to_csv("test.csv")
-    # raise ValueError
+    ul_events = addEtaCategories(ul_events)
 
+    # # method 1
+    # possible_eta_categories = ak.to_dataframe(rereco_events["EtaCat"])
+    # possible_eta_categories = possible_eta_categories['values'].unique().tolist()
+
+    # method 2
+    possible_eta_categories = generate_eta_categories()
+
+    # print(f"possible_eta_categories: {possible_eta_categories}")
     
-    mass_name = "mh_ggh"
-    mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
-    nbins = 100
-    mass.setBins(nbins)
-    rereco_hist  = generateRooHist(mass, rereco_events, name="rereco hist")
-    rereco_hist = normalizeRooHist(mass, rereco_hist)
+    for eta_cat in possible_eta_categories:
+        rereco_dimuon_mass, rereco_wgt = filterEtaCat(rereco_events, eta_cat)
+        print(f"{eta_cat} rereco_wgt: {rereco_wgt}")
+        print(f"{eta_cat} rereco_dimuon_mass: {rereco_dimuon_mass}")
+    raise ValueError
     
-    ul_hist  = generateRooHist(mass, ul_events, name="ul hist")
-    ul_hist = normalizeRooHist(mass, ul_hist)
+    # mass_name = "mh_ggh"
+    # mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
+    # nbins = 100
+    # mass.setBins(nbins)
+    # rereco_hist  = generateRooHist(mass, rereco_events, name="rereco hist")
+    # rereco_hist = normalizeRooHist(mass, rereco_hist)
     
-    
-    name = "Canvas"
-    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-    canvas.cd()
-    frame = mass.frame()
-    frame.SetTitle(f"Normalized ggH sample comparison for 2017 and 2018")
-    frame.SetXTitle(f"Dimuon Mass (GeV)")
-    legend = rt.TLegend(0.65,0.55,0.9,0.7)
-    
-    name = "ggH MC sample"
-    legend.AddEntry("", name, "")
-    
-    model_name = rereco_hist.GetName()
-    rereco_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kGreen)
-    legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"RERECO powheg", "L")
-    legend.AddEntry("", f"Sigma RERECO: {rereco_hist.sigma(mass):.5f}",  "")
+    # ul_hist  = generateRooHist(mass, ul_events, name="ul hist")
+    # ul_hist = normalizeRooHist(mass, ul_hist)
     
     
+    # name = "Canvas"
+    # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    # canvas.cd()
+    # frame = mass.frame()
+    # frame.SetTitle(f"Normalized ggH sample comparison for 2017 and 2018")
+    # frame.SetXTitle(f"Dimuon Mass (GeV)")
+    # legend = rt.TLegend(0.65,0.55,0.9,0.7)
     
-    model_name = ul_hist.GetName()
-    ul_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kBlue)
-    legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UL powheg", "L")
-    legend.AddEntry("", f"Sigma UL: {ul_hist.sigma(mass):.5f}",  "")
+    # name = "ggH MC sample"
+    # legend.AddEntry("", name, "")
+    
+    # model_name = rereco_hist.GetName()
+    # rereco_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kGreen)
+    # legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"RERECO powheg", "L")
+    # legend.AddEntry("", f"Sigma RERECO: {rereco_hist.sigma(mass):.5f}",  "")
     
     
-    frame.Draw()
-    legend.Draw() 
-    canvas.SetTicks(2, 2)
-    canvas.Update()
-    canvas.Draw()
     
-    canvas.SaveAs(f"test.png")
+    # model_name = ul_hist.GetName()
+    # ul_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kBlue)
+    # legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UL powheg", "L")
+    # legend.AddEntry("", f"Sigma UL: {ul_hist.sigma(mass):.5f}",  "")
+    
+    
+    # frame.Draw()
+    # legend.Draw() 
+    # canvas.SetTicks(2, 2)
+    # canvas.Update()
+    # canvas.Draw()
+    
+    # canvas.SaveAs(f"test.png")
 
 
 
