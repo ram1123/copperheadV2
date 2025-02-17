@@ -9,6 +9,8 @@ import mplhep as hep
 import glob
 import pandas as pd
 import itertools
+import glob
+import ROOT as rt
 
 plt.style.use(hep.style.CMS)
 
@@ -17,14 +19,7 @@ plt.style.use(hep.style.CMS)
 """
 Compare ggH MC histograms to see if there's a diff in sigma
 """
-import glob
-import dask_awkward as dak
-import awkward as ak
-from distributed import LocalCluster, Client, progress
-import time
-import numpy as np
-import pandas as pd
-import ROOT as rt
+
 
 def applyVBF_cutV1(events):
     btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
@@ -82,13 +77,22 @@ def filterRegion(events, region="h-peak"):
     events = events[region]
     return events
 
-def generateRooHist(mass, events, name=""):
+def generateRooHist(x, events, name=""):
     dimuon_mass = ak.to_numpy(events.dimuon_mass)
     wgts = ak.to_numpy(events.wgt_nominal)
-    nbins = mass.getBins()
-    TH = rt.TH1D("TH", "TH", nbins, mass.getMin(), mass.getMax())
+    nbins = x.getBins()
+    TH = rt.TH1D("TH", "TH", nbins, x.getMin(), x.getMax())
     TH.FillN(len(dimuon_mass), dimuon_mass, wgts) # fill the histograms with mass and weights 
-    roohist = rt.RooDataHist(name, name, rt.RooArgSet(mass), TH)
+    roohist = rt.RooDataHist(name, name, rt.RooArgSet(x), TH)
+    return roohist
+
+def generateRooHist(x, dimuon_mass, wgts, name=""):
+    dimuon_mass = ak.to_numpy(dimuon_mass)
+    wgts = ak.to_numpy(wgts)
+    nbins = x.getBins()
+    TH = rt.TH1D("TH", "TH", nbins, x.getMin(), x.getMax())
+    TH.FillN(len(dimuon_mass), dimuon_mass, wgts) # fill the histograms with mass and weights 
+    roohist = rt.RooDataHist(name, name, rt.RooArgSet(x), TH)
     return roohist
 
 def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
@@ -151,6 +155,24 @@ def filterEtaCat(events, eta_cat):
     wgt = events.wgt_nominal[cat_filter]
     return dimuon_mass, wgt
 
+def fitPlot_ggh(dimuon_mass, wgt, label, save_filename):
+    """
+    generate histogram from dimuon mass and wgt, fit DCB
+    aftwards, plot the histogram and return the fit params
+    as fit DCB sigma and chi2_dof
+    """
+    mass_name = "mh_ggh"
+    mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
+    nbins = 100
+    mass.setBins(nbins)
+    hist = generateRooHist(mass, dimuon_mass, wgt, name=f"{label} hist")
+    print(f"fitPlot_ggh hist: {hist}")
+    
+    return sigma, chi2_dof
+    
+
+
+
 V1_fields_2compute = [
     "wgt_nominal",
     "dimuon_mass",
@@ -204,10 +226,8 @@ if __name__ == "__main__":
         ul_events_data = applyGGH_cutV1(ul_events_data)
         ul_events_data = ak.zip({field: ul_events_data[field] for field in V1_fields_2compute}).compute()
         print(len(ul_events_data))
-        # print((ul_events_data))
         ul_events.append(ul_events_data)
-        # print(ul_events_data)
-        # raise ValueError
+
         
     ul_events = ak.concatenate(ul_events, axis=0)
     print(f"ul_events len: {len(ul_events)}")
@@ -217,19 +237,18 @@ if __name__ == "__main__":
     rereco_events = addEtaCategories(rereco_events)
     ul_events = addEtaCategories(ul_events)
 
-    # # method 1
-    # possible_eta_categories = ak.to_dataframe(rereco_events["EtaCat"])
-    # possible_eta_categories = possible_eta_categories['values'].unique().tolist()
 
-    # method 2
     possible_eta_categories = generate_eta_categories()
 
-    # print(f"possible_eta_categories: {possible_eta_categories}")
-    
     for eta_cat in possible_eta_categories:
         rereco_dimuon_mass, rereco_wgt = filterEtaCat(rereco_events, eta_cat)
-        print(f"{eta_cat} rereco_wgt: {rereco_wgt}")
-        print(f"{eta_cat} rereco_dimuon_mass: {rereco_dimuon_mass}")
+        ul_dimuon_mass, ul_wgt = filterEtaCat(ul_events, eta_cat)
+
+        # now plot
+        label = f"rerecoPowheg_etacat{eta_cat}"
+        save_filename = f"plots/gghMC_{label}.png"
+        fitPlot_ggh(rereco_dimuon_mass, rereco_wgt, label, save_filename)
+    
     raise ValueError
     
     # mass_name = "mh_ggh"
