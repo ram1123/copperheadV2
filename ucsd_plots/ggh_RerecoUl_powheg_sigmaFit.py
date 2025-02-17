@@ -224,7 +224,6 @@ def fitPlot_ggh(dimuon_mass, wgt, label, save_filename):
     canvas.SaveAs(save_filename)
     
     return sigma_val, chi2_ndf
-    # return None
     
 
 
@@ -241,33 +240,32 @@ V1_fields_2compute = [
 if __name__ == "__main__":
     client =  Client(n_workers=15,  threads_per_worker=2, processes=True, memory_limit='8 GiB') 
 
-    """
-    do the same, but with powheg samples. Weirdly, 2016 rereco powheg samples are non-existent, so skip 2016
-    """
-    
-    rereco_events = []
-    rereco_years = ["2017", "2018"]
-    for year in rereco_years:
-        rereco_load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean//rereco_yun_Dec05_btagSystFixed_JesJerUncOn//stage1_output/{year}/"
-        file = f"{rereco_load_path}/ggh_powhegPS"
+   
+    rerecoPowheg_events = []
+    rerecoPowheg_years = ["2017", "2018"]
+    for year in rerecoPowheg_years:
+        rerecoPowheg_load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean//rereco_yun_Dec05_btagSystFixed_JesJerUncOn//stage1_output/{year}/"
+        file = f"{rerecoPowheg_load_path}/ggh_powhegPS"
         print(f"file: {file}")
     
         
-        rereco_events_data = dak.from_parquet(f"{file}/*.parquet")
+        rerecoPowheg_events_data = dak.from_parquet(f"{file}/*.parquet")
         
-        rereco_events_data = filterRegion(rereco_events_data, region="signal")
-        rereco_events_data = applyGGH_cutV1(rereco_events_data)
-        rereco_events_data = ak.zip({field: rereco_events_data[field] for field in V1_fields_2compute}).compute()
-        print(len(rereco_events_data))
-        # print((rereco_events_data))
-        rereco_events.append(rereco_events_data)
-        # print(rereco_events_data)
+        rerecoPowheg_events_data = filterRegion(rerecoPowheg_events_data, region="signal")
+        rerecoPowheg_events_data = applyGGH_cutV1(rerecoPowheg_events_data)
+        rerecoPowheg_events_data = ak.zip({field: rerecoPowheg_events_data[field] for field in V1_fields_2compute}).compute()
+        print(len(rerecoPowheg_events_data))
+        # print((rerecoPowheg_events_data))
+        rerecoPowheg_events.append(rerecoPowheg_events_data)
+        # print(rerecoPowheg_events_data)
         # raise ValueError
         
-    rereco_events = ak.concatenate(rereco_events, axis=0)
-    print(f"rereco_events len: {len(rereco_events)}")
-    print(f"rereco_events sum wgts: {ak.sum(rereco_events.wgt_nominal)}")
+    rerecoPowheg_events = ak.concatenate(rerecoPowheg_events, axis=0)
+    print(f"rerecoPowheg_events len: {len(rerecoPowheg_events)}")
+    print(f"rerecoPowheg_events sum wgts: {ak.sum(rerecoPowheg_events.wgt_nominal)}")
     
+    # add rereco amc 
+
     
     ul_events = []
     ul_years = ["2017", "2018"]
@@ -290,65 +288,81 @@ if __name__ == "__main__":
     print(f"ul_events sum wgts: {ak.sum(ul_events.wgt_nominal)}")
     
 
-    rereco_events = addEtaCategories(rereco_events)
+    rerecoPowheg_events = addEtaCategories(rerecoPowheg_events)
     ul_events = addEtaCategories(ul_events)
 
 
+    out_table = pd.DataFrame()
     possible_eta_categories = generate_eta_categories()
 
     for eta_cat in possible_eta_categories:
-        rereco_dimuon_mass, rereco_wgt = filterEtaCat(rereco_events, eta_cat)
+        rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterEtaCat(rerecoPowheg_events, eta_cat)
         ul_dimuon_mass, ul_wgt = filterEtaCat(ul_events, eta_cat)
 
         # now plot
         label = f"rerecoPowheg_etacat{eta_cat}"
-        save_filename = f"plots/gghMC_{label}.png"
-        fitPlot_ggh(rereco_dimuon_mass, rereco_wgt, label, save_filename)
+        save_filename = f"plots/gghMC_{label}.pdf"
+        rerecoPowheg_sigma, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename)
+
+        label = f"ulPowheg_etacat{eta_cat}"
+        save_filename = f"plots/gghMC_{label}.pdf"
+        ul_sigma, ul_chi2_dof = fitPlot_ggh(ul_dimuon_mass, ul_wgt, label, save_filename)
+
+        out_dict = {
+            "Eta Category" : [eta_cat],
+            "Rereco Sigma" : [rerecoPowheg_sigma],
+            "UL Sigma" : [ul_sigma],
+            "Rereco Chi2 Dof" : [rerecoPowheg_chi2_dof],
+            "UL Chi2 Dof" : [ul_chi2_dof],
+        }
+        # add the computed values
+        out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
     
-    raise ValueError
+    out_table.to_csv("powhegRerecoUl_etaCat_table.csv")
+    # raise ValueError
     
-    # mass_name = "mh_ggh"
-    # mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
-    # nbins = 100
-    # mass.setBins(nbins)
-    # rereco_hist  = generateRooHist(mass, rereco_events, name="rereco hist")
-    # rereco_hist = normalizeRooHist(mass, rereco_hist)
+    # # mass_name = "mh_ggh"
+    # # mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
+    # # nbins = 100
+    # # mass.setBins(nbins)
+    # # rerecoPowheg_hist  = generateRooHist(mass, rerecoPowheg_events, name="rereco hist")
+    # # rerecoPowheg_hist = normalizeRooHist(mass, rerecoPowheg_hist)
     
-    # ul_hist  = generateRooHist(mass, ul_events, name="ul hist")
-    # ul_hist = normalizeRooHist(mass, ul_hist)
-    
-    
-    # name = "Canvas"
-    # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-    # canvas.cd()
-    # frame = mass.frame()
-    # frame.SetTitle(f"Normalized ggH sample comparison for 2017 and 2018")
-    # frame.SetXTitle(f"Dimuon Mass (GeV)")
-    # legend = rt.TLegend(0.65,0.55,0.9,0.7)
-    
-    # name = "ggH MC sample"
-    # legend.AddEntry("", name, "")
-    
-    # model_name = rereco_hist.GetName()
-    # rereco_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kGreen)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"RERECO powheg", "L")
-    # legend.AddEntry("", f"Sigma RERECO: {rereco_hist.sigma(mass):.5f}",  "")
+    # # ul_hist  = generateRooHist(mass, ul_events, name="ul hist")
+    # # ul_hist = normalizeRooHist(mass, ul_hist)
     
     
+    # # name = "Canvas"
+    # # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    # # canvas.cd()
+    # # frame = mass.frame()
+    # # frame.SetTitle(f"Normalized ggH sample comparison for 2017 and 2018")
+    # # frame.SetXTitle(f"Dimuon Mass (GeV)")
+    # # legend = rt.TLegend(0.65,0.55,0.9,0.7)
     
-    # model_name = ul_hist.GetName()
-    # ul_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kBlue)
-    # legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UL powheg", "L")
-    # legend.AddEntry("", f"Sigma UL: {ul_hist.sigma(mass):.5f}",  "")
+    # # name = "ggH MC sample"
+    # # legend.AddEntry("", name, "")
+    
+    # # model_name = rerecoPowheg_hist.GetName()
+    # # rerecoPowheg_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kGreen)
+    # # legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"RERECO powheg", "L")
+    # # legend.AddEntry("", f"Sigma RERECO: {rerecoPowheg_hist.sigma(mass):.5f}",  "")
     
     
-    # frame.Draw()
-    # legend.Draw() 
-    # canvas.SetTicks(2, 2)
-    # canvas.Update()
-    # canvas.Draw()
     
-    # canvas.SaveAs(f"test.png")
+    # # model_name = ul_hist.GetName()
+    # # ul_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kBlue)
+    # # legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UL powheg", "L")
+    # # legend.AddEntry("", f"Sigma UL: {ul_hist.sigma(mass):.5f}",  "")
+    
+    
+    # # frame.Draw()
+    # # legend.Draw() 
+    # # canvas.SetTicks(2, 2)
+    # # canvas.Update()
+    # # canvas.Draw()
+    
+    # # canvas.SaveAs(f"test.png")
 
 
 
