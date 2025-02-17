@@ -9,3 +9,4 @@ export X509_USER_PROXY=$VOMS_TRG
 export WORKDIR=$PWD
 export XRD_REQUESTTIMEOUT=2400
 source /cvmfs/cms.cern.ch/cmsset_default.sh
+export PYTHONPATH="/depot/cms/users/$USER/copperheadV2:$PYTHONPATH"

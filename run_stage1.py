@@ -37,8 +37,7 @@ import gc
 import ctypes
 from src.lib.get_parameters import getParametersForYr
 
-import logging
-from utils import logger
+from modules.utils import logger
 
 
 def trim_memory() -> int:
@@ -74,6 +73,11 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         #       We may protect at start of this file. if no save path is given just exit the program
         # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
     # logger.info(f"dataset_dict: {dataset_dict['files']}")
+    logger.debug(f"dataset: {dataset_dict}")
+    logger.debug(f"file index: {file_idx}")
+    logger.debug(f"test: {test}")
+    logger.debug(f"Output path: {save_path}")
+    
     events = NanoEventsFactory.from_root(
         dataset_dict["files"],
         schemaclass=NanoAODSchema,
@@ -87,7 +91,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
-    # logger.info(f"out_collections keys: {out_collections.keys()}")
+    logger.info(f"out_collections keys: {out_collections.keys()}")
 
     skim_dict = out_collections
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
@@ -137,6 +141,13 @@ if __name__ == "__main__":
     help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
     )
     parser.add_argument(
+        "-maxfile",
+        "--max_file_len",
+        dest="max_file_len",
+        default = 100,
+        help = "How many maximum files to process simultaneously.",
+    )
+    parser.add_argument(
      "--log-level",
      default=logging.ERROR,
      type=lambda x: getattr(logging, x),
@@ -152,6 +163,7 @@ if __name__ == "__main__":
     logger.setLevel(args.log_level)
     test_mode = args.test_mode
     logger.debug(f"Test mode: {test_mode}")
+    # sys.exit()
     
     # make NanoAODv into an interger variable
     logger.info(f"args.NanoAODv: {args.NanoAODv}")
@@ -200,9 +212,9 @@ if __name__ == "__main__":
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
                 sample_step = time.time()
-                max_file_len = 20 # FIXME: How to fix this? If this is large then it crashes and closes the DASK.
-                smaller_files = list(divide_chunks(sample["files"], max_file_len))
-                logger.debug(f"max_file_len: {max_file_len}")
+                # max_file_len = 100 # FIXME: How to fix this? If this is large then it crashes and closes the DASK.
+                smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
+                logger.debug(f"max_file_len: {args.max_file_len}")
                 logger.debug(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     smaller_sample = copy.deepcopy(sample)

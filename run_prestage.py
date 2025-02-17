@@ -22,7 +22,7 @@ from omegaconf import OmegaConf
 import sys
 
 import logging
-from utils import logger
+from modules.utils import logger
 
 def get_Xcache_filelist(fnames: list):
     new_fnames = []
@@ -184,7 +184,7 @@ if __name__ == "__main__":
             cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
             client = Client(cluster)
             # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
-            print("Local scale Client created")
+            logger.info("Local scale Client created")
 
         big_sample_info = {}
         
@@ -238,7 +238,7 @@ if __name__ == "__main__":
                 elif sig_sample.upper() == "VBF": # enforce upper case to prevent confusion
                     new_sample_list.append("vbf_powheg_dipole")
                 else:
-                    print(f"unknown signal {sig_sample} was given!")
+                    logger.debug(f"unknown signal {sig_sample} was given!")
 
         logger.debug(f"Sample list: {new_sample_list}")
 
@@ -338,8 +338,8 @@ if __name__ == "__main__":
                     fnames = glob.glob(f"{load_path}/*/*/*/*.root")
 
             elif year == "2016_RERECO":
-                print("2016_RERECO !")
-                print(f"sample_name: {sample_name}")
+                logger.debug("2016_RERECO !")
+                logger.debug(f"sample_name: {sample_name}")
                 if sample_name == "data_B":
                     load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016DATAV8a/SingleMuon/RunIIData17_FSRNANO2016DATAV8a_un2016B-17Jul2018_ver2-v1/"
                     fnames = glob.glob(f"{load_path}/*/*/*.root")
@@ -379,25 +379,29 @@ if __name__ == "__main__":
             if "dummy" not in das_query:
                 allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL"]        
                 rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
-                outlist, outtree = rucio_utils.query_dataset(
-                    das_query,
-                    client=rucio_client,
-                    tree=True,
-                    scope="cms",
-                )
-                outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
-                    outlist[0],
-                    allowlist_sites=allowlist_sites,
-                    mode="full",
-                    client=rucio_client,
-                    # partial_allowed=True
-                )
+                try:
+                    # Use the rucio_client
+                    outlist, outtree = rucio_utils.query_dataset(
+                        das_query,
+                        client=rucio_client,
+                        tree=True,
+                        scope="cms",
+                    )
+                    outfiles, outsites, sites_counts = rucio_utils.get_dataset_files_replicas(
+                        outlist[0],
+                        allowlist_sites=allowlist_sites,
+                        mode="full",
+                        client=rucio_client,
+                    )
+                finally:
+                    # Close the session
+                    await rucio_client.close()
                 fnames = [file[0] for file in outfiles if file != []]
                 # fnames = [fname.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
                 # random.shuffle(fnames)
                 if args.xcache:
                     fnames = get_Xcache_filelist(fnames)
-                # print(f"fnames: {fnames}")
+                # logger.debug(f"fnames: {fnames}")
                         
             logger.debug(f"file names: {fnames}")
             logger.debug(f"sample_name: {sample_name}")
@@ -417,21 +421,22 @@ if __name__ == "__main__":
             }
             if is_data: # data sample
                 file_input = {fname : {"object_path": "Events"} for fname in fnames}
+                logger.debug(f"file_input: {file_input}")
                 events = NanoEventsFactory.from_root(
                         file_input,
                         metadata={},
                         schemaclass=NanoAODSchema,
                         uproot_options={"timeout":2400},
                 ).events()
-                print(f"file_input: {file_input}")
-                print(f"events.fields: {events.fields}")
+                logger.debug(f"file_input: {file_input}")
+                logger.debug(f"events.fields: {events.fields}")
                 preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 total_events += preprocess_metadata["data_entries"] 
             else: # if MC
                 file_input = {fname : {"object_path": "Runs"} for fname in fnames}
-                print(f"file_input: {file_input}")
-                # print(f"file_input: {file_input}")
-                # print(len(file_input.keys()))
+                logger.debug(f"file_input: {file_input}")
+                # logger.debug(f"file_input: {file_input}")
+                # logger.debug(len(file_input.keys()))
                 runs = NanoEventsFactory.from_root(
                         file_input,
                         metadata={},
@@ -463,8 +468,8 @@ if __name__ == "__main__":
                         uproot_options={"timeout":2400},
                 ).events()  
                 genEventCount = runs.genEventCount.compute()
-                # print(f"(genEventCount): {(genEventCount)}")
-                # print(f"len(genEventCount): {len(genEventCount)}")
+                # logger.debug(f"(genEventCount): {(genEventCount)}")
+                # logger.debug(f"len(genEventCount): {len(genEventCount)}")
                 
                 assert len(fnames) == len(genEventCount)
                 file_dict = {}
@@ -480,7 +485,7 @@ if __name__ == "__main__":
                 final_output = {
                     sample_name :{"files" :file_dict}
                 }
-                # print(f"final_output: {final_output}")
+                # logger.debug(f"final_output: {final_output}")
                 pre_stage_data = final_output
             else:
                 """
@@ -494,7 +499,7 @@ if __name__ == "__main__":
                 final_output = {
                     sample_name :{"files" :file_dict}
                 }
-                # print(f"final_output: {final_output}")
+                # logger.debug(f"final_output: {final_output}")
                 step_size = int(args.chunksize)
                 files_available, files_total = preprocess(
                     final_output,
@@ -502,7 +507,7 @@ if __name__ == "__main__":
                     align_clusters=False,
                     skip_bad_files=args.skipBadFiles,
                 )
-                # print(f"files_available: {files_available}")
+                # logger.debug(f"files_available: {files_available}")
                 pre_stage_data = files_available
 
             # test end2  --------------------------------------------------------------
@@ -546,7 +551,7 @@ if __name__ == "__main__":
                 new_N_evnts = int(tot_N_evnts*fraction)
                 old_N_evnts = new_samples[sample_name]['metadata']["data_entries"] if is_data else new_samples[sample_name]['metadata']["nGenEvts"]
                 if is_data:
-                    print("data!")
+                    logger.debug("data!")
                     new_samples[sample_name]['metadata']["data_entries"] = new_N_evnts
                 else:
                     new_samples[sample_name]['metadata']["nGenEvts"] = new_N_evnts
@@ -554,7 +559,7 @@ if __name__ == "__main__":
                 # new_samples[sample_name]['metadata']["fraction"] = fraction
                 # state new fraction
                 new_samples[sample_name]['metadata']['fraction'] = new_N_evnts/old_N_evnts
-                print(f"new_samples[sample_name]['metadata']['fraction']: {new_samples[sample_name]['metadata']['fraction']}")
+                logger.debug(f"new_samples[sample_name]['metadata']['fraction']: {new_samples[sample_name]['metadata']['fraction']}")
                 # new_samples[sample_name]['metadata']["original_fraction"] = fraction
                 
                 # loop through the files to correct the steps
@@ -591,5 +596,5 @@ if __name__ == "__main__":
                 json.dump(new_samples, file)
     
         elapsed = round(time.time() - time_step, 3)
-        print(f"Finished everything in {elapsed} s.")
+        logger.info(f"Finished everything in {elapsed} s.")
 

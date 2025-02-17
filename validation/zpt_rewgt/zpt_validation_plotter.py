@@ -15,6 +15,9 @@ import mplhep as hep
 import matplotlib.pyplot as plt
 import matplotlib
 
+import logging
+from modules.utils import logger
+
 # Add the parent directory to the system path
 main_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")) # in order to import plotDataMC_compare
 sys.path.append(main_dir)
@@ -142,7 +145,7 @@ if __name__ == "__main__":
     parser.add_argument(
     "--linear_scale",
     dest="linear_scale",
-    default=False, 
+    default=True, 
     action=argparse.BooleanOptionalAction,
     help="If true, provide plots in linear scale",
     )
@@ -199,9 +202,17 @@ if __name__ == "__main__":
     action="store",
     help="zpt wgt name",
     )
+    parser.add_argument(
+     "--log-level",
+     default=logging.ERROR,
+     type=lambda x: getattr(logging, x),
+     help="Configure the logging level."
+     )    
     #---------------------------------------------------------
     # gather arguments
     args = parser.parse_args()
+    logger.setLevel(args.log_level)
+    
     available_processes = []
     # if doing VBF filter study, add the vbf filter sample to the DY group
     
@@ -260,8 +271,8 @@ if __name__ == "__main__":
         if "dimuon" in particle:
             variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
-            variables2plot.append(f"{particle}_eta")
-            variables2plot.append(f"{particle}_phi")
+            # variables2plot.append(f"{particle}_eta")
+            # variables2plot.append(f"{particle}_phi")
             # variables2plot.append(f"{particle}_cos_theta_cs")
             # variables2plot.append(f"{particle}_phi_cs")
             # variables2plot.append(f"mmj_min_dPhi_nominal")
@@ -728,7 +739,8 @@ if __name__ == "__main__":
         
         if not os.path.exists(full_save_path):
             os.makedirs(full_save_path)
-            
+
+        do_logscale = False
         full_save_fname = f"{full_save_path}/{var}.pdf"
         plotDataMC_compare(
             binning, 
@@ -743,7 +755,8 @@ if __name__ == "__main__":
             status = status,
             log_scale = do_logscale,
         )
-        full_save_fname = f"{full_save_path}/{var}.png"
+        do_logscale = True
+        full_save_fname = f"{full_save_path}/{var}_log.pdf"
         plotDataMC_compare(
             binning, 
             data_dict, 

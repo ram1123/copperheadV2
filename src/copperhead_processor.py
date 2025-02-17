@@ -23,12 +23,15 @@ import sys
 from src.corrections.custom_jec import ApplyJetCorrections
 from omegaconf import OmegaConf
 
+import logging 
+from modules.utils import logger
+
 
 
 coffea_nanoevent = TypeVar('coffea_nanoevent') 
 ak_array = TypeVar('ak_array')
 
-save_path = "/depot/cms/users/yun79/results/stage1/DNN_test//2018/f0_1/data_B/0" # for debugging
+# save_path = "/depot/cms/users/yun79/results/stage1/DNN_test//2018/f0_1/data_B/0" # for debugging
 
 """
 TODO!: add the correct btag working points for rereco samples that you will be working with when adding rereco samples
@@ -323,7 +326,6 @@ def getPhiCS(
     
 
 class EventProcessor(processor.ProcessorABC):
-    # def __init__(self, config_path: str,**kwargs):
     def __init__(self, config: dict, test_mode=False, **kwargs):
         """
         TODO: replace all of these with self.config dict variable which is taken from a
@@ -343,11 +345,12 @@ class EventProcessor(processor.ProcessorABC):
             "do_pdf" : True,
         }
         self.config.update(dict_update)
-        # print(f"self.config: {self.config}")
+        logger.debug(f"self.config: {self.config}")
 
         # --- Evaluator
         extractor_instance = extractor()
         year = self.config["year"]
+        
         # Z-pT reweighting 
         zpt_filename = self.config["zpt_weights_file"]
         extractor_instance.add_weight_sets([f"* * {zpt_filename}"])
@@ -404,40 +407,44 @@ class EventProcessor(processor.ProcessorABC):
         """
         event_filter = ak.ones_like(events.event, dtype="bool") # 1D boolean array to be used to filter out bad events
         dataset = events.metadata['dataset']
-        print(f"dataset: {dataset}")
-        print(f"events.metadata: {events.metadata}")
+        logger.info(f"Dataset keyword: {dataset}")
+        logger.info(f"events.metadata: {events.metadata}")
         NanoAODv = events.metadata['NanoAODv']
         is_mc = events.metadata['is_mc']
-        print(f"NanoAODv: {NanoAODv}")
+        logger.info(f"NanoAOD version: {NanoAODv}")
         # LHE cut original start -----------------------------------------------------------------------------
-        if dataset == 'dy_M-50': # if dy_M-50, apply LHE cut
-            print("doing dy_M-50 LHE cut!")
-            LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
-            bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
-            LHE_leptons = LHE_particles[bool_filter]
-
-
-            """
-            TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
-            When I had a quick look, all LHE_leptons had either two or zero leptons per event, never one, 
-            so just indexing first and second could work
-            """
-            max_idxs = ak.argmax(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for normal lepton
-            min_idxs = ak.argmin(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for anti lepton
-            LHE_lepton_barless = LHE_leptons[max_idxs]
-            LHE_lepton_bar = LHE_leptons[min_idxs]
-            LHE_dilepton_mass =  (LHE_lepton_barless +LHE_lepton_bar).mass
-
-            # LHE_filter = ak.flatten(((LHE_dilepton_mass > 100) & (LHE_dilepton_mass < 200)))
-            LHE_filter = (((LHE_dilepton_mass > 100) & (LHE_dilepton_mass < 200)))[:,0]
-            # print(f"LHE_filter: {LHE_filter.compute()}")
-            LHE_filter = ak.fill_none(LHE_filter, value=False) 
-            LHE_filter = (LHE_filter== False) # we want True to indicate that we want to keep the event
-            # print(f"copperhead2 EventProcessor LHE_filter[32]: \n{ak.to_numpy(LHE_filter[32])}")
-
-            event_filter = event_filter & LHE_filter
-        # LHE cut original end -----------------------------------------------------------------------------
+        # events.LHEPart
         
+        # if dataset == 'dy_M-50': # if dy_M-50, apply LHE cut
+        #     logger.info("Applying the LHE level cut to the dy_M-50 sample...")
+        #     LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
+        #     bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
+        #     LHE_leptons = LHE_particles[bool_filter]
+
+
+        #     """
+        #     TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
+        #     When I had a quick look, all LHE_leptons had either two or zero leptons per event, never one, 
+        #     so just indexing first and second could work
+        #     """
+        #     max_idxs = ak.argmax(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for normal lepton
+        #     min_idxs = ak.argmin(LHE_leptons.pdgId , axis=1,keepdims=True) # get idx for anti lepton
+        #     LHE_lepton_barless = LHE_leptons[max_idxs]
+        #     LHE_lepton_bar = LHE_leptons[min_idxs]
+        #     LHE_dilepton_mass =  (LHE_lepton_barless + LHE_lepton_bar).mass
+
+        #     # LHE_filter = ak.flatten(((LHE_dilepton_mass > 100) & (LHE_dilepton_mass < 200)))
+        #     LHE_filter = (((LHE_dilepton_mass > 100) & (LHE_dilepton_mass < 200)))[:,0]
+        #     logger.debug(f"Dilepton Mass: {LHE_dilepton_mass.compute()},   LHE filter decision: {LHE_filter.compute()}")
+            
+        #     LHE_filter = ak.fill_none(LHE_filter, value=False) 
+        #     LHE_filter = (LHE_filter== False) # we want True to indicate that we want to keep the event
+        #     # print(f"copperhead2 EventProcessor LHE_filter[32]: \n{ak.to_numpy(LHE_filter[32])}")
+
+        #     event_filter = event_filter & LHE_filter
+             
+        # LHE cut original end -----------------------------------------------------------------------------
+        # sys.exit()
         
     
 
@@ -449,9 +456,9 @@ class EventProcessor(processor.ProcessorABC):
         # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
         HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
         for HLT_str in self.config["hlt"]:
-            print(f"HLT_str: {HLT_str}")
             # HLT_filter = HLT_filter | events.HLT[HLT_str]
             HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
+            logger.debug(f"HLT_str: {HLT_str},   HLT_filter: {HLT_filter}")
         event_filter = event_filter & HLT_filter
 
         # ------------------------------------------------------------#
@@ -479,7 +486,7 @@ class EventProcessor(processor.ProcessorABC):
         if do_pu_wgt:
             
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
-            print(f"year: {year}")
+            logger.debug(f"year: {year}")
             if ("22" in year) or ("23" in year) or ("24" in year):
                 run_campaign = 3
             else:
@@ -1007,7 +1014,7 @@ class EventProcessor(processor.ProcessorABC):
                     if run in dataset:
                         factory = self.jec_factories_data[run]
                 if factory == None:
-                    print("JEC factory not recognized!")
+                    logger.error("JEC factory not recognized!")
                     raise ValueError
                 
             print("do old jec!")
@@ -1454,7 +1461,7 @@ class EventProcessor(processor.ProcessorABC):
                 label = f"res_calib_MC_{yearUL}"
             else:
                 label = f"res_calib_Data_{yearUL}"
-            print(f"yearUL: {yearUL}")
+            logger.debug(f"yearUL: {yearUL}")
             calibration =  self.evaluator[label]( # this is a coffea.dense_lookup instance
                 mu1.pt, 
                 abs(mu1.eta), 

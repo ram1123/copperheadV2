@@ -201,4 +201,9 @@ def plotDataMC_compare(
     else: # if title is not specified, add the typicaly CMS label in its place
         hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
      # save figure, we assume that the directory exists
+    print(f"Saving: {save_full_path}")
     plt.savefig(save_full_path)
+
+    # Also save plot as png
+    print(f"Saving: {save_full_path.replace('.pdf', '.png')} as png")
+    plt.savefig(save_full_path.replace(".pdf", ".png"))
