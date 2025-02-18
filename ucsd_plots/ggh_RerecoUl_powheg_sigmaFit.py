@@ -157,7 +157,7 @@ def filterEtaCat(events, eta_cat):
     wgt = events.wgt_nominal[cat_filter]
     return dimuon_mass, wgt
 
-def fitPlot_ggh(dimuon_mass, wgt, label, save_filename):
+def fitPlot_ggh(dimuon_mass, wgt, label, save_filename, save_plot=True):
     """
     generate histogram from dimuon mass and wgt, fit DCB
     aftwards, plot the histogram and return the fit params
@@ -222,52 +222,14 @@ def fitPlot_ggh(dimuon_mass, wgt, label, save_filename):
     legend.Draw()        
     canvas.Update()
     canvas.Draw()
-    canvas.SaveAs(save_filename)
+    if save_plot:
+        canvas.SaveAs(save_filename)
     
     return sigma_val, chi2_ndf
-    
-# def plotMuonEtas(amc_events, powheg_events):
-#     """
-#     plot side by side muon eta variables to see if there's a discrepancy
-#     between two different mc modeling samples
-#     """
-#     # Apply a CMS or ATLAS style
-#     hep.style.use("CMS")  # You can also use "ATLAS"
-    
-#     # Example muon eta values for two events (Replace these with actual data)
-#     muon_eta_event1 = np.random.uniform(-2.4, 2.4, size=10)  
-#     muon_eta_event2 = np.random.uniform(-2.4, 2.4, size=10)  
-    
-#     # Define histogram parameters
-#     bins = 30
-#     range_eta = (-2.4, 2.4)
 
-#     # normalize wgts
-#     wgts_amc = amc_events.wgt_nominal/np.sum(amc_events.wgt_nominal)
-#     wgts_powheg = powheg_events.wgt_nominal/np.sum(powheg_events.wgt_nominal)
-    
-#     # Compute histograms
-#     hist_amc, bin_edges = np.histogram(amc_events.mu1_eta, bins=bins, range=range_eta, weights=wgts_amc)
-#     hist_powheg, _ = np.histogram(powheg_events.mu1_eta, bins=bins, range=range_eta, weights=wgts_powheg)
-    
-#     # Compute bin centers
-#     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-    
-#     # Create figure
-#     plt.figure(figsize=(8, 6))
-    
-#     # Plot histograms as step plots
-#     plt.step(bin_centers, hist_amc, where="mid", linewidth=2, label="AMC")
-#     plt.step(bin_centers, hist_powheg, where="mid", linewidth=2, label="Powheg")
-    
-#     # Labels, legend, and title
-#     plt.xlabel(r"Muon $\eta$")
-#     plt.ylabel("Entries")
-#     plt.title("Muon $\eta$ Distribution for Two Events")
-#     plt.legend()
-#     plt.savefig("test.pdf")
 
-def plotMuonEtas(amc_events, powheg_events):
+
+def plotRerecoPowhegVsAmc(amc_events, powheg_events):
     """
     plot side by side muon eta variables to see if there's a discrepancy
     between two different mc modeling samples
@@ -335,7 +297,42 @@ def plotMuonEtas(amc_events, powheg_events):
         canvas.Draw()
         canvas.SaveAs(f"RerecMcModelComparison_{kine_var}.pdf")
 
+def addPtCategories(events, kinematic_var):
+    """
+    take mu1_pt and divide into pT categories used in the dimuon ebe mass resolution calibration
+    """
+    # Define bin edges
+    bin_edges = [30, 45, 52, 62, 200]
+    # bin_edges = [0, 45, 52, 62, 200]
+    
+    # Create labels with min and max bin edges
+    bin_labels = [f'[{bin_edges[i]},{bin_edges[i+1]})' for i in range(len(bin_edges) - 1)]
+    # first convert necessary info to pd df bc that's what chatgpt is using
+    # df = pd.DataFrame({
+    #     "mu1_pt" : ak.to_numpy(events.mu1_pt),
+    # })
+    df = pd.DataFrame({
+        kinematic_var : ak.to_numpy(events[kinematic_var]),
+    })
+    # df = pd.DataFrame({
+    #     "mu1_pt" : ak.to_numpy(events.dimuon_pt),
+    # })
+    
+    # Categorize mu1_pt into bins
+    category_name = f'{kinematic_var}_category'
+    df[category_name] = pd.cut(df[kinematic_var], bins=bin_edges, labels=bin_labels, right=False)
 
+    events_df = ak.to_dataframe(events) # convert events to df bc ak zips don't handle strings well
+    events_df[category_name] = df[category_name]
+    return events_df, bin_labels
+
+def filterPtCat(df, pt_cat, column_name):
+    # df = ak.to_dataframe(events)
+    print(f"df.columns : {df.columns}")
+    cat_filter = df[column_name] == pt_cat
+    dimuon_mass = df["dimuon_mass"][cat_filter]
+    wgt = df["wgt_nominal"][cat_filter]
+    return dimuon_mass, wgt
 
 
 V1_fields_2compute = [
@@ -472,10 +469,53 @@ if __name__ == "__main__":
     # out_table.to_csv("RerecoUl_etaCat_table.csv")
 
 
+    # # -----------------------------------------------
+    # # Plot muon kinematics between amc and powheg
+    # # -----------------------------------------------
+    # plotRerecoPowhegVsAmc(rerecoAmc_events, rerecoPowheg_events)
 
-    # 
-    plotMuonEtas(rerecoAmc_events, rerecoPowheg_events)
+    # -----------------------------------------------
+    # adding sigma table but as with pt_categories this time 
+    # -----------------------------------------------
+    # kinematic_vars = ["mu1_pt", "dimuon_pt"]
+    kinematic_vars = ["dimuon_pt"]
 
+    for kinematic_var in kinematic_vars:
+        out_table = pd.DataFrame()
+        rerecoPowheg_df, possible_pt_cats = addPtCategories(rerecoPowheg_events, kinematic_var)
+        rerecoAmc_df, _ = addPtCategories(rerecoAmc_events, kinematic_var)
+    
+        for pt_cat in possible_pt_cats:
+            print(f"pt_cat: {pt_cat}")
+            col_name = f"{kinematic_var}_category"
+            rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterPtCat(rerecoPowheg_df, pt_cat, col_name)
+            rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterPtCat(rerecoAmc_df, pt_cat, col_name)
+    
+    
+            # obtain the sigma and chi2 values
+            label = f"rerecoPowheg_ptcat{pt_cat}"
+            save_filename = f"plots/gghMC_{label}.pdf"
+            rerecoPowheg_sigma, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename, save_plot=False)
+    
+    
+            label = f"rerecoAmc_ptcat{pt_cat}"
+            save_filename = f"plots/gghMC_{label}.pdf"
+            rerecoAmc_sigma, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename, save_plot=False)
+                    
+            out_dict = {
+                f"{kinematic_var} Category" : [pt_cat],
+                "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
+                "Rereco AMC Sigma" : [rerecoAmc_sigma],
+                "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
+                "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
+                "Rereco Powheg yield" : [np.sum(rerecoPowheg_wgt)],
+                "Rereco AMC yield" : [np.sum(rerecoAmc_wgt)],
+            }
+            # add the computed values
+            out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
+        
+        out_table.to_csv(f"RerecoUl_Cat_table_{kinematic_var}.csv")
+    
 
 
 
