@@ -272,53 +272,81 @@ def plotMuonEtas(amc_events, powheg_events):
     plot side by side muon eta variables to see if there's a discrepancy
     between two different mc modeling samples
     """
-    eta_name = "mu_eta"
-    eta = rt.RooRealVar(eta_name, eta_name, 0, -2.5, 2.5) # signal region
-    # nbins = 100
-    nbins = 30
-    eta.setBins(nbins)
-    # enforce float values
-    # mu_eta = ak.values_astype(amc_events.mu1_eta, np.float64)
-    # wgts = ak.values_astype(amc_events.wgt_nominal, np.float64)
-    mu_eta = amc_events.mu1_eta
-    wgts = amc_events.wgt_nominal
-    print(f"is any mu_eta : {ak.any(ak.is_none(mu_eta))}")
-    print(f"is any wgts : {ak.any(ak.is_none(wgts))}")
-    hist_amc = generateRooHist(eta, mu_eta, wgts, name=f"amc mu1 eta")
-    hist_amc = normalizeRooHist(eta, hist_amc)
     
-    hist_powheg = generateRooHist(eta, powheg_events.mu1_eta, powheg_events.wgt_nominal, name=f"powheg mu1 eta")
-    hist_powheg = normalizeRooHist(eta, hist_powheg)
 
-    # ------------------------------------
-    # Plotting
-    # ------------------------------------
-    name = "Canvas"
-    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-    canvas.cd()
-    
-    frame = eta.frame()
-    frame.SetTitle(f"{label}")
-    frame.SetXTitle(f"Dimuon Mass (GeV)")
-    legend = rt.TLegend(0.65,0.55,0.9,0.7)
-    
-    hist_amc.plotOn(frame, Name=hist_amc.GetName(), LineColor=rt.kGreen)
-    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "AMC", "L")
-    hist_powheg.plotOn(frame, Name=hist_powheg.GetName(), LineColor=rt.kBlue)
-    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "Powheg", "L")
+    kinematics = [
+        "mu1_eta",
+        "mu2_eta",
+        "mu1_pt",
+        "mu2_pt",
+        "dimuon_pt",
+        "dimuon_eta",
+    ]
+    # import binning and xtitle from json
 
-    frame.Draw()
-    legend.Draw()        
-    canvas.Update()
-    canvas.Draw()
-    canvas.SaveAs("test.pdf")
+    
+    
+    
+    for kine_var in kinematics:
+
+        plot_setting_fname = "../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+        with open(plot_setting_fname, "r") as file:
+            plot_settings = json.load(file)
+        plot_settings = plot_settings[kine_var]
+        xmin, xmax, n_edges = plot_settings["binning_linspace"]
+        
+        x_var_name = "mu_x_var"
+        # x_var = rt.RooRealVar(x_var_name, x_var_name, 0, -2.5, 2.5) # signal region
+        x_var = rt.RooRealVar(x_var_name, x_var_name, 0, xmin, xmax) # signal region
+        nbins = n_edges -1
+        x_var.setBins(nbins)
+        
+        # variable = amc_events[kine_var]
+        # wgts = amc_events.wgt_nominal
+
+        hist_amc = generateRooHist(x_var, amc_events[kine_var], amc_events.wgt_nominal, name=f"amc mu1 x_var")
+        hist_amc = normalizeRooHist(x_var, hist_amc)
+        
+        hist_powheg = generateRooHist(x_var, powheg_events[kine_var], powheg_events.wgt_nominal, name=f"powheg mu1 x_var")
+        hist_powheg = normalizeRooHist(x_var, hist_powheg)
+    
+        # ------------------------------------
+        # Plotting
+        # ------------------------------------
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        
+        frame = x_var.frame()
+        frame.SetTitle(f"Normalized Rereco AMC vs Powheg")
+        # frame.SetXTitle(f"Leading Mu x_var")
+        frame.SetXTitle(plot_settings["xlabel"])
+        frame.SetYTitle(f"Normalized Yield")
+        legend = rt.TLegend(0.75,0.70,0.9,0.8)
+        
+        hist_amc.plotOn(frame, ROOT.RooFit.DrawOption("E"), Name=hist_amc.GetName(), LineColor=rt.kGreen)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), "AMC", "L")
+        hist_powheg.plotOn(frame, ROOT.RooFit.DrawOption("E"), Name=hist_powheg.GetName(), LineColor=rt.kBlue)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), "Powheg", "L")
+    
+        frame.Draw()
+        legend.Draw()        
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"RerecMcModelComparison_{kine_var}.pdf")
+
+
 
 
 V1_fields_2compute = [
     "wgt_nominal",
     "dimuon_mass",
     "mu1_eta",
-    "mu2_eta"
+    "mu2_eta",
+    "mu1_pt",
+    "mu2_pt",
+    "dimuon_pt",
+    "dimuon_eta",
 ]
 
 
@@ -405,8 +433,8 @@ if __name__ == "__main__":
     rerecoAmc_events = addEtaCategories(rerecoAmc_events)
 
 
-    out_table = pd.DataFrame()
-    possible_eta_categories = generate_eta_categories()
+    # out_table = pd.DataFrame()
+    # possible_eta_categories = generate_eta_categories()
 
     # for eta_cat in possible_eta_categories:
     #     rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterEtaCat(rerecoPowheg_events, eta_cat)
@@ -435,6 +463,8 @@ if __name__ == "__main__":
     #         "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
     #         "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
     #         "UL Chi2 Dof" : [ul_chi2_dof],
+    #         "Rereco Powheg yield" : [np.sum(rerecoPowheg_wgt)],
+    #         "Rereco AMC yield" : [np.sum(rerecoAmc_wgt)],
     #     }
     #     # add the computed values
     #     out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
@@ -445,6 +475,8 @@ if __name__ == "__main__":
 
     # 
     plotMuonEtas(rerecoAmc_events, rerecoPowheg_events)
+
+
 
 
 
