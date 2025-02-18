@@ -282,7 +282,7 @@ def plotRerecoPowhegVsAmc(amc_events, powheg_events):
         frame = x_var.frame()
         frame.SetTitle(f"Normalized Rereco AMC vs Powheg")
         # frame.SetXTitle(f"Leading Mu x_var")
-        frame.SetXTitle(plot_settings["xlabel"])
+        frame.SetXTitle(plot_settings["xlabel"].replace("$",""))
         frame.SetYTitle(f"Normalized Yield")
         legend = rt.TLegend(0.75,0.70,0.9,0.8)
         
@@ -302,8 +302,10 @@ def addPtCategories(events, kinematic_var):
     take mu1_pt and divide into pT categories used in the dimuon ebe mass resolution calibration
     """
     # Define bin edges
-    bin_edges = [30, 45, 52, 62, 200]
-    # bin_edges = [0, 45, 52, 62, 200]
+    if kinematic_var == "dimuon_pt":
+        bin_edges = [0, 10, 30, 45, 52, 62, 200]
+    else:
+        bin_edges = [30, 45, 52, 62, 200]
     
     # Create labels with min and max bin edges
     bin_labels = [f'[{bin_edges[i]},{bin_edges[i+1]})' for i in range(len(bin_edges) - 1)]
@@ -469,16 +471,16 @@ if __name__ == "__main__":
     # out_table.to_csv("RerecoUl_etaCat_table.csv")
 
 
-    # # -----------------------------------------------
-    # # Plot muon kinematics between amc and powheg
-    # # -----------------------------------------------
-    # plotRerecoPowhegVsAmc(rerecoAmc_events, rerecoPowheg_events)
+    # -----------------------------------------------
+    # Plot muon kinematics between amc and powheg
+    # -----------------------------------------------
+    plotRerecoPowhegVsAmc(rerecoAmc_events, rerecoPowheg_events)
 
     # -----------------------------------------------
     # adding sigma table but as with pt_categories this time 
     # -----------------------------------------------
-    # kinematic_vars = ["mu1_pt", "dimuon_pt"]
-    kinematic_vars = ["dimuon_pt"]
+    kinematic_vars = ["mu1_pt", "mu2_pt", "dimuon_pt"]
+    # kinematic_vars = ["dimuon_pt"]
 
     for kinematic_var in kinematic_vars:
         out_table = pd.DataFrame()
