@@ -88,8 +88,9 @@ def generateRooHist(x, events, name=""):
     return roohist
 
 def generateRooHist(x, dimuon_mass, wgts, name=""):
-    dimuon_mass = ak.to_numpy(dimuon_mass)
-    wgts = ak.to_numpy(wgts)
+    print("generateRooHist version 2")
+    dimuon_mass = np.asarray(ak.to_numpy(dimuon_mass)).astype(np.float64) # explicit float64 format is required
+    wgts = np.asarray(ak.to_numpy(wgts)).astype(np.float64) # explicit float64 format is required
     nbins = x.getBins()
     TH = rt.TH1D("TH", "TH", nbins, x.getMin(), x.getMax())
     TH.FillN(len(dimuon_mass), dimuon_mass, wgts) # fill the histograms with mass and weights 
@@ -225,53 +226,100 @@ def fitPlot_ggh(dimuon_mass, wgt, label, save_filename):
     
     return sigma_val, chi2_ndf
     
+# def plotMuonEtas(amc_events, powheg_events):
+#     """
+#     plot side by side muon eta variables to see if there's a discrepancy
+#     between two different mc modeling samples
+#     """
+#     # Apply a CMS or ATLAS style
+#     hep.style.use("CMS")  # You can also use "ATLAS"
+    
+#     # Example muon eta values for two events (Replace these with actual data)
+#     muon_eta_event1 = np.random.uniform(-2.4, 2.4, size=10)  
+#     muon_eta_event2 = np.random.uniform(-2.4, 2.4, size=10)  
+    
+#     # Define histogram parameters
+#     bins = 30
+#     range_eta = (-2.4, 2.4)
+
+#     # normalize wgts
+#     wgts_amc = amc_events.wgt_nominal/np.sum(amc_events.wgt_nominal)
+#     wgts_powheg = powheg_events.wgt_nominal/np.sum(powheg_events.wgt_nominal)
+    
+#     # Compute histograms
+#     hist_amc, bin_edges = np.histogram(amc_events.mu1_eta, bins=bins, range=range_eta, weights=wgts_amc)
+#     hist_powheg, _ = np.histogram(powheg_events.mu1_eta, bins=bins, range=range_eta, weights=wgts_powheg)
+    
+#     # Compute bin centers
+#     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    
+#     # Create figure
+#     plt.figure(figsize=(8, 6))
+    
+#     # Plot histograms as step plots
+#     plt.step(bin_centers, hist_amc, where="mid", linewidth=2, label="AMC")
+#     plt.step(bin_centers, hist_powheg, where="mid", linewidth=2, label="Powheg")
+    
+#     # Labels, legend, and title
+#     plt.xlabel(r"Muon $\eta$")
+#     plt.ylabel("Entries")
+#     plt.title("Muon $\eta$ Distribution for Two Events")
+#     plt.legend()
+#     plt.savefig("test.pdf")
+
 def plotMuonEtas(amc_events, powheg_events):
     """
     plot side by side muon eta variables to see if there's a discrepancy
     between two different mc modeling samples
     """
-    # Apply a CMS or ATLAS style
-    hep.style.use("CMS")  # You can also use "ATLAS"
+    eta_name = "mu_eta"
+    eta = rt.RooRealVar(eta_name, eta_name, 0, -2.5, 2.5) # signal region
+    # nbins = 100
+    nbins = 30
+    eta.setBins(nbins)
+    # enforce float values
+    # mu_eta = ak.values_astype(amc_events.mu1_eta, np.float64)
+    # wgts = ak.values_astype(amc_events.wgt_nominal, np.float64)
+    mu_eta = amc_events.mu1_eta
+    wgts = amc_events.wgt_nominal
+    print(f"is any mu_eta : {ak.any(ak.is_none(mu_eta))}")
+    print(f"is any wgts : {ak.any(ak.is_none(wgts))}")
+    hist_amc = generateRooHist(eta, mu_eta, wgts, name=f"amc mu1 eta")
+    hist_amc = normalizeRooHist(eta, hist_amc)
     
-    # Example muon eta values for two events (Replace these with actual data)
-    muon_eta_event1 = np.random.uniform(-2.4, 2.4, size=10)  
-    muon_eta_event2 = np.random.uniform(-2.4, 2.4, size=10)  
-    
-    # Define histogram parameters
-    bins = 30
-    range_eta = (-2.4, 2.4)
+    hist_powheg = generateRooHist(eta, powheg_events.mu1_eta, powheg_events.wgt_nominal, name=f"powheg mu1 eta")
+    hist_powheg = normalizeRooHist(eta, hist_powheg)
 
-    # normalize wgts
-    wgts_amc = amc_events.wgt_nominal/np.sum(amc_events.wgt_nominal)
-    wgts_powheg = powheg_events.wgt_nominal/np.sum(powheg_events.wgt_nominal)
+    # ------------------------------------
+    # Plotting
+    # ------------------------------------
+    name = "Canvas"
+    canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+    canvas.cd()
     
-    # Compute histograms
-    hist_amc, bin_edges = np.histogram(amc_events.mu1_eta, bins=bins, range=range_eta, weights=wgts_amc)
-    hist_powheg, _ = np.histogram(powheg_events.mu1_eta, bins=bins, range=range_eta, weights=wgts_powheg)
+    frame = eta.frame()
+    frame.SetTitle(f"{label}")
+    frame.SetXTitle(f"Dimuon Mass (GeV)")
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
     
-    # Compute bin centers
-    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-    
-    # Create figure
-    plt.figure(figsize=(8, 6))
-    
-    # Plot histograms as step plots
-    plt.step(bin_centers, hist_amc, where="mid", linewidth=2, label="AMC")
-    plt.step(bin_centers, hist_powheg, where="mid", linewidth=2, label="Powheg")
-    
-    # Labels, legend, and title
-    plt.xlabel(r"Muon $\eta$")
-    plt.ylabel("Entries")
-    plt.title("Muon $\eta$ Distribution for Two Events")
-    plt.legend()
-    plt.savefit("test.pdf")
-    
-    V1_fields_2compute = [
-        "wgt_nominal",
-        "dimuon_mass",
-        "mu1_eta",
-        "mu2_eta"
-    ]
+    hist_amc.plotOn(frame, Name=hist_amc.GetName(), LineColor=rt.kGreen)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "AMC", "L")
+    hist_powheg.plotOn(frame, Name=hist_powheg.GetName(), LineColor=rt.kBlue)
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "Powheg", "L")
+
+    frame.Draw()
+    legend.Draw()        
+    canvas.Update()
+    canvas.Draw()
+    canvas.SaveAs("test.pdf")
+
+
+V1_fields_2compute = [
+    "wgt_nominal",
+    "dimuon_mass",
+    "mu1_eta",
+    "mu2_eta"
+]
 
 
 
@@ -360,88 +408,43 @@ if __name__ == "__main__":
     out_table = pd.DataFrame()
     possible_eta_categories = generate_eta_categories()
 
-    for eta_cat in possible_eta_categories:
-        rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterEtaCat(rerecoPowheg_events, eta_cat)
-        rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterEtaCat(rerecoAmc_events, eta_cat)
-        ul_dimuon_mass, ul_wgt = filterEtaCat(ul_events, eta_cat)
+    # for eta_cat in possible_eta_categories:
+    #     rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterEtaCat(rerecoPowheg_events, eta_cat)
+    #     rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterEtaCat(rerecoAmc_events, eta_cat)
+    #     ul_dimuon_mass, ul_wgt = filterEtaCat(ul_events, eta_cat)
 
-        # now plot
-        label = f"rerecoPowheg_etacat{eta_cat}"
-        save_filename = f"plots/gghMC_{label}.pdf"
-        rerecoPowheg_sigma, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename)
+    #     # now plot
+    #     label = f"rerecoPowheg_etacat{eta_cat}"
+    #     save_filename = f"plots/gghMC_{label}.pdf"
+    #     rerecoPowheg_sigma, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename)
 
-        label = f"ulPowheg_etacat{eta_cat}"
-        save_filename = f"plots/gghMC_{label}.pdf"
-        ul_sigma, ul_chi2_dof = fitPlot_ggh(ul_dimuon_mass, ul_wgt, label, save_filename)
+    #     label = f"ulPowheg_etacat{eta_cat}"
+    #     save_filename = f"plots/gghMC_{label}.pdf"
+    #     ul_sigma, ul_chi2_dof = fitPlot_ggh(ul_dimuon_mass, ul_wgt, label, save_filename)
 
-        label = f"rerecoAmc_etacat{eta_cat}"
-        save_filename = f"plots/gghMC_{label}.pdf"
-        rerecoAmc_sigma, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename)
+    #     label = f"rerecoAmc_etacat{eta_cat}"
+    #     save_filename = f"plots/gghMC_{label}.pdf"
+    #     rerecoAmc_sigma, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename)
 
         
-        out_dict = {
-            "Eta Category" : [eta_cat],
-            "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
-            "Rereco AMC Sigma" : [rerecoAmc_sigma],
-            "UL Sigma" : [ul_sigma],
-            "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
-            "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
-            "UL Chi2 Dof" : [ul_chi2_dof],
-        }
-        # add the computed values
-        out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
+    #     out_dict = {
+    #         "Eta Category" : [eta_cat],
+    #         "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
+    #         "Rereco AMC Sigma" : [rerecoAmc_sigma],
+    #         "UL Sigma" : [ul_sigma],
+    #         "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
+    #         "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
+    #         "UL Chi2 Dof" : [ul_chi2_dof],
+    #     }
+    #     # add the computed values
+    #     out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
     
-    # out_table.to_csv("powhegRerecoUl_etaCat_table.csv")
-    out_table.to_csv("RerecoUl_etaCat_table.csv")
+    # out_table.to_csv("RerecoUl_etaCat_table.csv")
 
 
 
     # 
     plotMuonEtas(rerecoAmc_events, rerecoPowheg_events)
-
-    # # mass_name = "mh_ggh"
-    # # mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
-    # # nbins = 100
-    # # mass.setBins(nbins)
-    # # rerecoPowheg_hist  = generateRooHist(mass, rerecoPowheg_events, name="rereco hist")
-    # # rerecoPowheg_hist = normalizeRooHist(mass, rerecoPowheg_hist)
-    
-    # # ul_hist  = generateRooHist(mass, ul_events, name="ul hist")
-    # # ul_hist = normalizeRooHist(mass, ul_hist)
-    
-    
-    # # name = "Canvas"
-    # # canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-    # # canvas.cd()
-    # # frame = mass.frame()
-    # # frame.SetTitle(f"Normalized ggH sample comparison for 2017 and 2018")
-    # # frame.SetXTitle(f"Dimuon Mass (GeV)")
-    # # legend = rt.TLegend(0.65,0.55,0.9,0.7)
-    
-    # # name = "ggH MC sample"
-    # # legend.AddEntry("", name, "")
-    
-    # # model_name = rerecoPowheg_hist.GetName()
-    # # rerecoPowheg_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kGreen)
-    # # legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"RERECO powheg", "L")
-    # # legend.AddEntry("", f"Sigma RERECO: {rerecoPowheg_hist.sigma(mass):.5f}",  "")
-    
-    
-    
-    # # model_name = ul_hist.GetName()
-    # # ul_hist.plotOn(frame,  rt.RooFit.DrawOption("E"), Name=name, LineColor=rt.kBlue)
-    # # legend.AddEntry(frame.getObject(int(frame.numItems())-1), f"UL powheg", "L")
-    # # legend.AddEntry("", f"Sigma UL: {ul_hist.sigma(mass):.5f}",  "")
-    
-    
-    # # frame.Draw()
-    # # legend.Draw() 
-    # # canvas.SetTicks(2, 2)
-    # # canvas.Update()
-    # # canvas.Draw()
-    
-    # # canvas.SaveAs(f"test.png")
-
 
 
 
