@@ -156,7 +156,22 @@ if __name__ == "__main__":
      default=logging.ERROR,
      type=lambda x: getattr(logging, x),
      help="Configure the logging level."
-     )
+    )
+    # argument for prestage output and output file
+    parser.add_argument(
+        "--prestage_output",
+        dest="prestage_output",
+        default="./prestage_output",
+        action="store",
+        help="path to prestage output directory",
+    )
+    # parser.add_argument(
+    #     "--output_file",
+    #     dest="output_file",
+    #     default="processor_samples.json",
+    #     action="store",
+    #     help="name of the output file",
+    # )
     args = parser.parse_args()
     time_step = time.time()
 
@@ -413,9 +428,9 @@ if __name__ == "__main__":
             big_sample_info.update(pre_stage_data)
 
         #save the sample info
-        directory = "./prestage_output"
-        filename = directory+"/processor_samples.json"
-        # dupli_fname = directory+"/fraction_processor_samples.json" # duplicated fname in case you want to skip fractioning
+        # directory = "./prestage_output"
+        directory = args.prestage_output
+        filename = directory+"/processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         if not os.path.exists(directory):
             os.makedirs(directory)
         with open(filename, "w") as file:
@@ -427,8 +442,8 @@ if __name__ == "__main__":
 
     else: # take the pre existing samples.json and prune off files we don't need
         fraction = float(args.fraction)
-        directory = "./prestage_output"
-        sample_path = directory + "/processor_samples.json"
+        directory = args.prestage_output
+        sample_path = directory+"/processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(sample_path) as file:
             samples = json.loads(file.read())
         new_samples = copy.deepcopy(samples) # copy old sample, overwrite it later
@@ -478,7 +493,7 @@ if __name__ == "__main__":
                         event_counter += file_dict["steps"][end_idx][1]
 
         #save the sample info
-        filename = directory+"/fraction_processor_samples.json"
+        filename = directory+"/fraction_processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(filename, "w") as file:
                 json.dump(new_samples, file)
 

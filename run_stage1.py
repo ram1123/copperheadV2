@@ -29,7 +29,7 @@ import logging
 logger = logging.getLogger("distributed.utils_perf")
 logger.setLevel(logging.ERROR)
 import warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning) 
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
@@ -43,7 +43,7 @@ from modules.utils import logger
 def trim_memory() -> int:
      libc = ctypes.CDLL("libc.so.6")
      return libc.malloc_trim(0)
-    
+
 # # test code limiting memory leak -----------------------------------
 # import gc
 # client.run(gc.collect)  # collect garbage on all workers
@@ -69,7 +69,7 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None):
     if save_path is None:
         save_path = "/depot/cms/users/shar1172/results/stage1/test/" # default
-        #FIXME: Do we really need this? As there will always be the save path. 
+        #FIXME: Do we really need this? As there will always be the save path.
         #       We may protect at start of this file. if no save path is given just exit the program
         # save_path = "/depot/cms/hmm/yun79/copperheadV2/results/stage1/test/"
     # logger.info(f"dataset_dict: {dataset_dict['files']}")
@@ -77,7 +77,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     logger.debug(f"file index: {file_idx}")
     logger.debug(f"test: {test}")
     logger.debug(f"Output path: {save_path}")
-    
+
     events = NanoEventsFactory.from_root(
         dataset_dict["files"],
         schemaclass=NanoAODSchema,
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     parser.add_argument(
     "--use_gateway",
     dest="use_gateway",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, uses dask gateway client instead of local",
     )
@@ -152,10 +152,10 @@ if __name__ == "__main__":
      default=logging.ERROR,
      type=lambda x: getattr(logging, x),
      help="Configure the logging level."
-     )    
+     )
     parser.add_argument(
         "--test_mode",
-        action="store_true", 
+        action="store_true",
         help="If need to run over fractional dataset samples for test run"
     )
     args = parser.parse_args()
@@ -164,20 +164,20 @@ if __name__ == "__main__":
     test_mode = args.test_mode
     logger.debug(f"Test mode: {test_mode}")
     # sys.exit()
-    
+
     # make NanoAODv into an interger variable
     logger.info(f"args.NanoAODv: {args.NanoAODv}")
     logger.info(f"args.year: {args.year}")
 
     time_step = time.time()
-    
-    
+
+
     warnings.filterwarnings('ignore')
 
     """
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
-    
+
     config = getParametersForYr("./configs/parameters/" , args.year)
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
@@ -193,12 +193,13 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug(f"client: {client}")
             logger.debug("Gateway Client created")
-             
+
         else:
-            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             logger.debug("Local scale Client created")
         #-------------------------------------------------------------------------------------
-        sample_path = "./prestage_output/processor_samples.json"
+        sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
+        logger.debug(f"Sample path: {sample_path}")
         with open(sample_path) as file:
             samples = json.loads(file.read())
 
@@ -232,29 +233,24 @@ if __name__ == "__main__":
                         logger.debug(f"len(filelist): {len(filelist)}")
                         for file in filelist:
                             logger.debug(f"Going to delete file: {file}")
-                            os.remove(file)    
+                            os.remove(file)
                     logger.debug("Directory created or cleaned")
                     to_persist.persist().to_parquet(save_path)
-                    
+
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
                 sample_elapsed = round(time.time() - sample_step, 3)
                 logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
-                
-    else:
-        sample_path = "./prestage_output/fraction_processor_samples.json"
-        logger.debug(f"Sample path: {sample_path}")
-        with open(sample_path) as file:
-            samples = json.loads(file.read())
-        
-        logger.debug(f"samples.keys(): {samples.keys()}")
 
-        client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+    else:
+        client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
         logger.info("Local scale Client created")
-        
-        sample_path = "./prestage_output/fraction_processor_samples.json"
+
+        sample_path = "./prestage_output/fraction_processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(sample_path) as file:
             samples = json.loads(file.read())
+        logger.debug(f'samples: {samples}')
+
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
 
@@ -262,7 +258,6 @@ if __name__ == "__main__":
             for dataset, sample in tqdm.tqdm(samples.items()):
                 logger.debug(f"dataset: {dataset}")
                 dataset_loop(coffea_processor, sample, test=test_mode)
-        
+
     elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished everything in {elapsed} s.")
-    

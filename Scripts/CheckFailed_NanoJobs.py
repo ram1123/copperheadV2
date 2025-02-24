@@ -97,11 +97,11 @@ def main():
     """Main processing function."""
     # Define years and corresponding input/output files for each year
     years_and_input_files = {
-        '2018v1': 'HMuMu_UL2018_3Feb.txt',
-        '2018': 'HMuMu_UL2018_3Feb_AllJobs.txt',
-        '2017': 'HMuMu_UL2017_3Feb_AllJobs.txt',
-        '2016APV': 'HMuMu_UL2017_8Feb_2016APV.txt',
-        '2016': 'HMuMu_UL2017_8Feb_2016.txt',
+        '2018v1': '../HMuMu_UL2018_3Feb.txt',
+        '2018': '../HMuMu_UL2018_3Feb_AllJobs.txt',
+        '2017': '../HMuMu_UL2017_3Feb_AllJobs.txt',
+        '2016APV': '../HMuMu_UL2017_8Feb_2016APV.txt',
+        '2016': '../HMuMu_UL2017_8Feb_2016.txt',
     }
 
     years_and_output_dirs = {
@@ -114,6 +114,7 @@ def main():
 
     # List of years to process
     years = ['2018v1', '2018', '2017', '2016APV', '2016']
+    # years = ['2018']
     additional_string = "21Feb"
 
     # Process files for each year

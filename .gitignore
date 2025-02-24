@@ -8,3 +8,5 @@ voms_proxy.txt
 *.root
 *.pdf
 *.png
+log*.txt
+*.txt

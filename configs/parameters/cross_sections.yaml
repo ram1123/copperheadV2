@@ -2,7 +2,8 @@ cross_sections:
   test: 6200.0
   dy_M-50: 6195.8
   dy_M-50_nocut: 6450.0
-  dy_M-100To200: 247.9
+  # dy_M-100To200: 247.9 # OLD
+  dy_M-100To200: 233.8592627 # Updated based on the calculation from miNNLO samples
   dy_VBF_filter: 2.01  # subjet to change
   dy_VBF_filter_customJMEoff: 2.01 # subjet to change
   dy_VBF_filter_fromGenSim: 2.01 # subjet to change

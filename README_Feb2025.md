@@ -9,9 +9,38 @@ source setup_env.sh
 # Run first two column of DaskGatewaySLURM.ipynb to start the DASK.
 ```
 
+1. Run the pre-stage to get the dataset information.
+   ```bash
+   bash stage1_loop.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m 0
+   ```
+2. Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting.
+   ```bash
+   bash stage1_loop.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m 1
+   ```
+
+## Per-event mass calibration
+
+```bash
+bash stage1_loop.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "calib"
+```
+
+- To adjust the fitting one can change the parameters in the script `src/lib/ebeMassResCalibration/ebeMassResPlotter.py`
+
+## Z-pT reweighting
+
+```bash
+bash stage1_loop.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt"
+```
+
+### Z-pT reweighting - validation
+
+```bash
+bash stage1_loop.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt_val"
+```
+
 ## Step - 1:
 
-***Summary*** : 
+***Summary*** :
 
 ### How to run
 
@@ -65,6 +94,6 @@ python Scripts/Investigate_ParquetFile.py
 
 - [ ] Update how the pre-stage JSON files are saved. It should be saved with year name, so that we don't need to run pre-stage everytime.
     - [ ] Also, if we already run for data and running for MC then it should append info to the JSON file.
-- [ ] 
+- [ ]
 
 
