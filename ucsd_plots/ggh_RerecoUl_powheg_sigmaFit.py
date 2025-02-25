@@ -196,7 +196,7 @@ def fitPlot_ggh(dimuon_mass, wgt, label, save_filename, save_plot=True):
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
-    
+   
     frame = mass.frame()
     frame.SetTitle(f"{label}")
     frame.SetXTitle(f"Dimuon Mass (GeV)")
@@ -215,6 +215,7 @@ def fitPlot_ggh(dimuon_mass, wgt, label, save_filename, save_plot=True):
 
     # add sigma
     sigma_val = sigma.getVal()
+    sigma_err = sigma.getError()
     sigma_text = " fit sigma = {:.3f}".format(sigma_val)
     legend.AddEntry("", sigma_text, "")
     
@@ -225,7 +226,7 @@ def fitPlot_ggh(dimuon_mass, wgt, label, save_filename, save_plot=True):
     if save_plot:
         canvas.SaveAs(save_filename)
     
-    return sigma_val, chi2_ndf
+    return sigma_val, sigma_err, chi2_ndf
 
 
 
@@ -432,43 +433,48 @@ if __name__ == "__main__":
     rerecoAmc_events = addEtaCategories(rerecoAmc_events)
 
 
-    # out_table = pd.DataFrame()
-    # possible_eta_categories = generate_eta_categories()
+    out_table = pd.DataFrame()
+    possible_eta_categories = generate_eta_categories()
 
-    # for eta_cat in possible_eta_categories:
-    #     rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterEtaCat(rerecoPowheg_events, eta_cat)
-    #     rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterEtaCat(rerecoAmc_events, eta_cat)
-    #     ul_dimuon_mass, ul_wgt = filterEtaCat(ul_events, eta_cat)
+    for eta_cat in possible_eta_categories:
+        rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterEtaCat(rerecoPowheg_events, eta_cat)
+        rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterEtaCat(rerecoAmc_events, eta_cat)
+        ul_dimuon_mass, ul_wgt = filterEtaCat(ul_events, eta_cat)
 
-    #     # now plot
-    #     label = f"rerecoPowheg_etacat{eta_cat}"
-    #     save_filename = f"plots/gghMC_{label}.pdf"
-    #     rerecoPowheg_sigma, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename)
+        # now plot
+        label = f"rerecoPowheg_etacat{eta_cat}"
+        save_filename = f"plots/gghMC_{label}.pdf"
+        rerecoPowheg_sigma, rerecoPowheg_sigma_err, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename)
 
-    #     label = f"ulPowheg_etacat{eta_cat}"
-    #     save_filename = f"plots/gghMC_{label}.pdf"
-    #     ul_sigma, ul_chi2_dof = fitPlot_ggh(ul_dimuon_mass, ul_wgt, label, save_filename)
+        label = f"ulPowheg_etacat{eta_cat}"
+        save_filename = f"plots/gghMC_{label}.pdf"
+        ul_sigma, ul_sigma_err, ul_chi2_dof = fitPlot_ggh(ul_dimuon_mass, ul_wgt, label, save_filename)
 
-    #     label = f"rerecoAmc_etacat{eta_cat}"
-    #     save_filename = f"plots/gghMC_{label}.pdf"
-    #     rerecoAmc_sigma, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename)
+        label = f"rerecoAmc_etacat{eta_cat}"
+        save_filename = f"plots/gghMC_{label}.pdf"
+        rerecoAmc_sigma, rerecoAmc_sigma_err, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename)
 
         
-    #     out_dict = {
-    #         "Eta Category" : [eta_cat],
-    #         "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
-    #         "Rereco AMC Sigma" : [rerecoAmc_sigma],
-    #         "UL Sigma" : [ul_sigma],
-    #         "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
-    #         "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
-    #         "UL Chi2 Dof" : [ul_chi2_dof],
-    #         "Rereco Powheg yield" : [np.sum(rerecoPowheg_wgt)],
-    #         "Rereco AMC yield" : [np.sum(rerecoAmc_wgt)],
-    #     }
-    #     # add the computed values
-    #     out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
+        out_dict = {
+            "Eta Category" : [eta_cat],
+            "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
+            "Rereco Powheg Sigma Error" : [rerecoPowheg_sigma_err],
+            "Rereco AMC Sigma" : [rerecoAmc_sigma],
+            "Rereco AMC Sigma Error" : [rerecoAmc_sigma_err],
+            "UL Sigma Powheg" : [ul_sigma],
+            "UL Sigma Powheg Error" : [ul_sigma_err],
+            "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
+            "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
+            "UL Chi2 Dof" : [ul_chi2_dof],
+            "Rereco Powheg yield" : [np.sum(rerecoPowheg_wgt)],
+            "Rereco AMC yield" : [np.sum(rerecoAmc_wgt)],
+        }
+        # add the computed values
+        out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
     
-    # out_table.to_csv("RerecoUl_etaCat_table.csv")
+    out_table.to_csv("RerecoUl_etaCat_table.csv")
+
+    raise ValueError
 
 
     # -----------------------------------------------
@@ -479,8 +485,8 @@ if __name__ == "__main__":
     # -----------------------------------------------
     # adding sigma table but as with pt_categories this time 
     # -----------------------------------------------
-    kinematic_vars = ["mu1_pt", "mu2_pt", "dimuon_pt"]
-    # kinematic_vars = ["dimuon_pt"]
+    # kinematic_vars = ["mu1_pt", "mu2_pt", "dimuon_pt"]
+    kinematic_vars = ["dimuon_pt"]
 
     for kinematic_var in kinematic_vars:
         out_table = pd.DataFrame()
@@ -497,17 +503,19 @@ if __name__ == "__main__":
             # obtain the sigma and chi2 values
             label = f"rerecoPowheg_ptcat{pt_cat}"
             save_filename = f"plots/gghMC_{label}.pdf"
-            rerecoPowheg_sigma, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename, save_plot=False)
+            rerecoPowheg_sigma, rerecoPowheg_sigma_err, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename, save_plot=False)
     
     
             label = f"rerecoAmc_ptcat{pt_cat}"
             save_filename = f"plots/gghMC_{label}.pdf"
-            rerecoAmc_sigma, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename, save_plot=False)
+            rerecoAmc_sigma, rerecoAmc_sigma_err, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename, save_plot=False)
                     
             out_dict = {
                 f"{kinematic_var} Category" : [pt_cat],
                 "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
+                "Rereco Powheg Sigma Err" : [rerecoPowheg_sigma_err],
                 "Rereco AMC Sigma" : [rerecoAmc_sigma],
+                "Rereco AMC Sigma Err" : [rerecoAmc_sigma_err],
                 "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
                 "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
                 "Rereco Powheg yield" : [np.sum(rerecoPowheg_wgt)],
