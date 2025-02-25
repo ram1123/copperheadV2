@@ -33,20 +33,45 @@ def is_root_file_corrupt_uproot(file_path, tree_name="Events"):
 
 # Function to check if a ROOT file is corrupt using ROOT library
 def is_root_file_corrupt_ROOT(file_path):
-    """Check if ROOT file can be opened and is not in a zombie state."""
+    """Check if ROOT file can be opened, is not in a zombie state, and contains a valid 'Events' tree."""
+    print(f"Checking file: {file_path}")
     try:
-        # Using ROOT's own method to handle remote files
         file = ROOT.TFile.Open(file_path, "READ")
         if not file or not file.IsOpen():
             logger.warning(f"ROOT file '{file_path}' failed to open.")
             return True  # ROOT file failed to open
+
         if file.IsZombie():
             logger.warning(f"ROOT file '{file_path}' is in a zombie state.")
+            file.Close()
             return True  # ROOT file is in a zombie state
+
+        # Check if the 'Events' tree exists and has valid entries
+        tree = file.Get("Events")
+        if not tree:
+            logger.warning(f"Tree 'Events' not found in {file_path}.")
+            file.Close()
+            return True  # Tree 'Events' not found
+
+        # Check if the tree has entries
+        if tree.GetEntries() == 0:
+            logger.warning(f"Tree 'Events' in '{file_path}' has 0 entries.")
+            file.Close()
+            return True  # ROOT file is empty
+
+        # Close the file properly if all checks pass
+        file.Close()
         return False  # ROOT file is valid
+
     except Exception as e:
         logger.error(f"Error opening ROOT file '{file_path}': {e}")
-        return True  # File is corrupted or inaccessible
+
+    # Ensure the file is closed
+    if 'file' in locals() and file.IsOpen():
+        file.Close()
+
+    return True  # File is corrupted or inaccessible
+
 
 # Function to process missing & corrupt files using Dask for parallelization
 def check_missing_files(input_file, output_dir, year, additional_string):
@@ -115,7 +140,7 @@ def main():
     # List of years to process
     years = ['2018v1', '2018', '2017', '2016APV', '2016']
     # years = ['2018']
-    additional_string = "21Feb"
+    additional_string = "24Feb"
 
     # Process files for each year
     for year in years:
