@@ -272,23 +272,39 @@ def plotRerecoPowhegVsAmc(amc_events, powheg_events):
         
         hist_powheg = generateRooHist(x_var, powheg_events[kine_var], powheg_events.wgt_nominal, name=f"powheg mu1 x_var")
         hist_powheg = normalizeRooHist(x_var, hist_powheg)
-    
+
+        
         # ------------------------------------
         # Plotting
         # ------------------------------------
         name = "Canvas"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
+
+        # Define upper and lower pads
+        pad1 = ROOT.TPad("pad1", "Distribution", 0, 0.3, 1, 1.0)
+        pad2 = ROOT.TPad("pad2", "Ratio", 0, 0.0, 1, 0.3)
+        
+        # Adjust margins
+        pad1.SetBottomMargin(0)  # Upper plot does not need bottom margin
+        pad2.SetTopMargin(0)     # Lower plot does not need top margin
+        pad2.SetBottomMargin(0.3)
+        
+        pad1.Draw() # value plot
+        pad2.Draw() # ratio plot
+    
+        pad1.cd()
         
         frame = x_var.frame()
         frame.SetTitle(f"Normalized Rereco AMC vs Powheg")
         # frame.SetXTitle(f"Leading Mu x_var")
-        frame.SetXTitle(plot_settings["xlabel"].replace("$",""))
+        X_title = plot_settings["xlabel"].replace("$","")
+        # frame.SetXTitle(X_title)
         frame.SetYTitle(f"Normalized Yield")
         legend = rt.TLegend(0.75,0.70,0.9,0.8)
         
         hist_amc.plotOn(frame, ROOT.RooFit.DrawOption("E"), Name=hist_amc.GetName(), LineColor=rt.kGreen)
-        legend.AddEntry(frame.getObject(int(frame.numItems())-1), "AMC", "L")
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), "MD@NLO", "L")
         hist_powheg.plotOn(frame, ROOT.RooFit.DrawOption("E"), Name=hist_powheg.GetName(), LineColor=rt.kBlue)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1), "Powheg", "L")
     
@@ -296,6 +312,38 @@ def plotRerecoPowhegVsAmc(amc_events, powheg_events):
         legend.Draw()        
         canvas.Update()
         canvas.Draw()
+
+        # Draw the lower plot (Ratio)
+        pad2.cd()
+        th_powheg = hist_powheg.createHistogram(x_var_name)
+        th_amc = hist_amc.createHistogram(x_var_name)
+        th_powheg.Print()
+        ratio_hist = th_powheg.Clone("ratio") # powheg/amc
+        ratio_hist.Divide(th_amc)
+
+        ratio_hist.SetStats(0)
+        ratio_hist.SetMarkerStyle(20)
+        ratio_hist.SetTitle("")
+
+        ratio_hist.SetXTitle(X_title)
+        ratio_hist.GetYaxis().SetTitle("Ratio")
+        ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)  # Set y-axis range
+        ratio_hist.GetYaxis().SetTitleSize(0.05)
+        ratio_hist.GetYaxis().SetLabelSize(0.08)
+        ratio_hist.GetXaxis().SetTitleSize(0.1)
+        ratio_hist.GetXaxis().SetLabelSize(0.08)
+
+
+        ratio_hist.Draw("EP")
+
+
+        # Draw a horizontal line at y=1
+        line = ROOT.TLine(ratio_hist.GetXaxis().GetXmin(), 1, ratio_hist.GetXaxis().GetXmax(), 1)
+        line.SetLineColor(ROOT.kBlack)
+        line.SetLineStyle(2)
+        line.Draw()
+        
+
         canvas.SaveAs(f"RerecMcModelComparison_{kine_var}.pdf")
 
 def addPtCategories(events, kinematic_var):
@@ -436,45 +484,44 @@ if __name__ == "__main__":
     out_table = pd.DataFrame()
     possible_eta_categories = generate_eta_categories()
 
-    for eta_cat in possible_eta_categories:
-        rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterEtaCat(rerecoPowheg_events, eta_cat)
-        rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterEtaCat(rerecoAmc_events, eta_cat)
-        ul_dimuon_mass, ul_wgt = filterEtaCat(ul_events, eta_cat)
+    # for eta_cat in possible_eta_categories:
+    #     rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterEtaCat(rerecoPowheg_events, eta_cat)
+    #     rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterEtaCat(rerecoAmc_events, eta_cat)
+    #     ul_dimuon_mass, ul_wgt = filterEtaCat(ul_events, eta_cat)
 
-        # now plot
-        label = f"rerecoPowheg_etacat{eta_cat}"
-        save_filename = f"plots/gghMC_{label}.pdf"
-        rerecoPowheg_sigma, rerecoPowheg_sigma_err, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename)
+    #     # now plot
+    #     label = f"rerecoPowheg_etacat{eta_cat}"
+    #     save_filename = f"plots/gghMC_{label}.pdf"
+    #     rerecoPowheg_sigma, rerecoPowheg_sigma_err, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename)
 
-        label = f"ulPowheg_etacat{eta_cat}"
-        save_filename = f"plots/gghMC_{label}.pdf"
-        ul_sigma, ul_sigma_err, ul_chi2_dof = fitPlot_ggh(ul_dimuon_mass, ul_wgt, label, save_filename)
+    #     label = f"ulPowheg_etacat{eta_cat}"
+    #     save_filename = f"plots/gghMC_{label}.pdf"
+    #     ul_sigma, ul_sigma_err, ul_chi2_dof = fitPlot_ggh(ul_dimuon_mass, ul_wgt, label, save_filename)
 
-        label = f"rerecoAmc_etacat{eta_cat}"
-        save_filename = f"plots/gghMC_{label}.pdf"
-        rerecoAmc_sigma, rerecoAmc_sigma_err, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename)
+    #     label = f"rerecoAmc_etacat{eta_cat}"
+    #     save_filename = f"plots/gghMC_{label}.pdf"
+    #     rerecoAmc_sigma, rerecoAmc_sigma_err, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename)
 
         
-        out_dict = {
-            "Eta Category" : [eta_cat],
-            "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
-            "Rereco Powheg Sigma Error" : [rerecoPowheg_sigma_err],
-            "Rereco AMC Sigma" : [rerecoAmc_sigma],
-            "Rereco AMC Sigma Error" : [rerecoAmc_sigma_err],
-            "UL Sigma Powheg" : [ul_sigma],
-            "UL Sigma Powheg Error" : [ul_sigma_err],
-            "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
-            "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
-            "UL Chi2 Dof" : [ul_chi2_dof],
-            "Rereco Powheg yield" : [np.sum(rerecoPowheg_wgt)],
-            "Rereco AMC yield" : [np.sum(rerecoAmc_wgt)],
-        }
-        # add the computed values
-        out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
+    #     out_dict = {
+    #         "Eta Category" : [eta_cat],
+    #         "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
+    #         "Rereco Powheg Sigma Error" : [rerecoPowheg_sigma_err],
+    #         "Rereco AMC Sigma" : [rerecoAmc_sigma],
+    #         "Rereco AMC Sigma Error" : [rerecoAmc_sigma_err],
+    #         "UL Sigma Powheg" : [ul_sigma],
+    #         "UL Sigma Powheg Error" : [ul_sigma_err],
+    #         "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
+    #         "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
+    #         "UL Chi2 Dof" : [ul_chi2_dof],
+    #         "Rereco Powheg yield" : [np.sum(rerecoPowheg_wgt)],
+    #         "Rereco AMC yield" : [np.sum(rerecoAmc_wgt)],
+    #     }
+    #     # add the computed values
+    #     out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
     
-    out_table.to_csv("RerecoUl_etaCat_table.csv")
+    # out_table.to_csv("RerecoUl_etaCat_table.csv")
 
-    raise ValueError
 
 
     # -----------------------------------------------
@@ -482,49 +529,49 @@ if __name__ == "__main__":
     # -----------------------------------------------
     plotRerecoPowhegVsAmc(rerecoAmc_events, rerecoPowheg_events)
 
-    # -----------------------------------------------
-    # adding sigma table but as with pt_categories this time 
-    # -----------------------------------------------
-    # kinematic_vars = ["mu1_pt", "mu2_pt", "dimuon_pt"]
-    kinematic_vars = ["dimuon_pt"]
+    # # -----------------------------------------------
+    # # adding sigma table but as with pt_categories this time 
+    # # -----------------------------------------------
+    # # kinematic_vars = ["mu1_pt", "mu2_pt", "dimuon_pt"]
+    # kinematic_vars = ["dimuon_pt"]
 
-    for kinematic_var in kinematic_vars:
-        out_table = pd.DataFrame()
-        rerecoPowheg_df, possible_pt_cats = addPtCategories(rerecoPowheg_events, kinematic_var)
-        rerecoAmc_df, _ = addPtCategories(rerecoAmc_events, kinematic_var)
+    # for kinematic_var in kinematic_vars:
+    #     out_table = pd.DataFrame()
+    #     rerecoPowheg_df, possible_pt_cats = addPtCategories(rerecoPowheg_events, kinematic_var)
+    #     rerecoAmc_df, _ = addPtCategories(rerecoAmc_events, kinematic_var)
     
-        for pt_cat in possible_pt_cats:
-            print(f"pt_cat: {pt_cat}")
-            col_name = f"{kinematic_var}_category"
-            rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterPtCat(rerecoPowheg_df, pt_cat, col_name)
-            rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterPtCat(rerecoAmc_df, pt_cat, col_name)
-    
-    
-            # obtain the sigma and chi2 values
-            label = f"rerecoPowheg_ptcat{pt_cat}"
-            save_filename = f"plots/gghMC_{label}.pdf"
-            rerecoPowheg_sigma, rerecoPowheg_sigma_err, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename, save_plot=False)
+    #     for pt_cat in possible_pt_cats:
+    #         print(f"pt_cat: {pt_cat}")
+    #         col_name = f"{kinematic_var}_category"
+    #         rerecoPowheg_dimuon_mass, rerecoPowheg_wgt = filterPtCat(rerecoPowheg_df, pt_cat, col_name)
+    #         rerecoAmc_dimuon_mass, rerecoAmc_wgt = filterPtCat(rerecoAmc_df, pt_cat, col_name)
     
     
-            label = f"rerecoAmc_ptcat{pt_cat}"
-            save_filename = f"plots/gghMC_{label}.pdf"
-            rerecoAmc_sigma, rerecoAmc_sigma_err, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename, save_plot=False)
+    #         # obtain the sigma and chi2 values
+    #         label = f"rerecoPowheg_ptcat{pt_cat}"
+    #         save_filename = f"plots/gghMC_{label}.pdf"
+    #         rerecoPowheg_sigma, rerecoPowheg_sigma_err, rerecoPowheg_chi2_dof = fitPlot_ggh(rerecoPowheg_dimuon_mass, rerecoPowheg_wgt, label, save_filename, save_plot=False)
+    
+    
+    #         label = f"rerecoAmc_ptcat{pt_cat}"
+    #         save_filename = f"plots/gghMC_{label}.pdf"
+    #         rerecoAmc_sigma, rerecoAmc_sigma_err, rerecoAmc_chi2_dof = fitPlot_ggh(rerecoAmc_dimuon_mass, rerecoAmc_wgt, label, save_filename, save_plot=False)
                     
-            out_dict = {
-                f"{kinematic_var} Category" : [pt_cat],
-                "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
-                "Rereco Powheg Sigma Err" : [rerecoPowheg_sigma_err],
-                "Rereco AMC Sigma" : [rerecoAmc_sigma],
-                "Rereco AMC Sigma Err" : [rerecoAmc_sigma_err],
-                "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
-                "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
-                "Rereco Powheg yield" : [np.sum(rerecoPowheg_wgt)],
-                "Rereco AMC yield" : [np.sum(rerecoAmc_wgt)],
-            }
-            # add the computed values
-            out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
+    #         out_dict = {
+    #             f"{kinematic_var} Category" : [pt_cat],
+    #             "Rereco Powheg Sigma" : [rerecoPowheg_sigma],
+    #             "Rereco Powheg Sigma Err" : [rerecoPowheg_sigma_err],
+    #             "Rereco AMC Sigma" : [rerecoAmc_sigma],
+    #             "Rereco AMC Sigma Err" : [rerecoAmc_sigma_err],
+    #             "Rereco Powheg Chi2 Dof" : [rerecoPowheg_chi2_dof],
+    #             "Rereco AMC Chi2 Dof" : [rerecoAmc_chi2_dof],
+    #             "Rereco Powheg yield" : [np.sum(rerecoPowheg_wgt)],
+    #             "Rereco AMC yield" : [np.sum(rerecoAmc_wgt)],
+    #         }
+    #         # add the computed values
+    #         out_table = pd.concat([out_table, pd.DataFrame(out_dict)], ignore_index=True)
         
-        out_table.to_csv(f"RerecoUl_Cat_table_{kinematic_var}.csv")
+    #     out_table.to_csv(f"RerecoUl_Cat_table_{kinematic_var}.csv")
     
 
 
