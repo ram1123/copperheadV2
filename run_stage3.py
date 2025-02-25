@@ -61,7 +61,9 @@ def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist
     """
     x_name = x.GetName()
     THist = rooHist.createHistogram(x_name).Clone("clone") # clone it just in case
-    THist.Scale(1/THist.Integral())
+    abs_yield = THist.Integral()
+    if abs_yield > 0:
+        THist.Scale(1/abs_yield)
     print(f"THist.Integral(): {THist.Integral()}")
     normalizedHist_name = rooHist.GetName() + "_normalized"
     roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist) 
@@ -1826,11 +1828,11 @@ if __name__ == "__main__":
     # define normalization value from signal MC event weights 
     
     norm_val = np.sum(wgt_subCat2_SigMC) * flat_MC_SF
-    # norm_val = 124.0364 # quick test
     sig_norm_subCat2 = rt.RooRealVar(signal_subCat2.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat2 norm_val: {norm_val}")
     sig_norm_subCat2.setConstant(True)
 
+    
     # subCat 3
     subCat_filter = (processed_eventsSignalMC[subCatIdx_name] == 3)
     subCat_mass_arr = ak.to_numpy(
@@ -1842,9 +1844,12 @@ if __name__ == "__main__":
     
     # generate a weighted histogram 
     roo_histData_subCat3_signal = rt.TH1F("subCat3_rooHist_signal", "subCat3_rooHist_signal", nbins, mass.getMin(), mass.getMax())
-       
-    roo_histData_subCat3_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat3_SigMC) # fill the histograms with mass and weights 
+
+    if len(subCat_mass_arr) > 0:
+        roo_histData_subCat3_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat3_SigMC) # fill the histograms with mass and weights 
+    
     roo_histData_subCat3_signal = rt.RooDataHist("subCat3_rooHist_signal", "subCat3_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat3_signal) # convert to RooDataHist with (picked same name, bc idk)
+    
     
     data_subCat3_signal = roo_histData_subCat3_signal
     # add yield
@@ -1860,7 +1865,7 @@ if __name__ == "__main__":
     # define normalization value from signal MC event weights 
     
     norm_val = np.sum(wgt_subCat3_SigMC)* flat_MC_SF
-    # norm_val = 116.4918 # quick test
+    
     sig_norm_subCat3 = rt.RooRealVar(signal_subCat3.GetName()+"_norm","Number of signal events",norm_val)
     print(f"signal_subCat3 norm_val: {norm_val}")
     sig_norm_subCat3.setConstant(True)
@@ -1876,8 +1881,9 @@ if __name__ == "__main__":
     
     # generate a weighted histogram 
     roo_histData_subCat4_signal = rt.TH1F("subCat4_rooHist_signal", "subCat4_rooHist_signal", nbins, mass.getMin(), mass.getMax())
-       
-    roo_histData_subCat4_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat4_SigMC) # fill the histograms with mass and weights 
+
+    if len(subCat_mass_arr) > 0:
+        roo_histData_subCat4_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat4_SigMC) # fill the histograms with mass and weights 
     roo_histData_subCat4_signal = rt.RooDataHist("subCat4_rooHist_signal", "subCat4_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat4_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat4_signal = roo_histData_subCat4_signal
@@ -1907,8 +1913,8 @@ if __name__ == "__main__":
     # subCat 0
     # _ = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # fit_result = signal_subCat0.fitTo(data_subCat0_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    _ = signal_subCat0.fitTo(data_subCat0_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
+    _ = signal_subCat0.fitTo(data_subCat0_signal,  rt.RooFit.Range("full"), EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat0.fitTo(data_subCat0_signal,  rt.RooFit.Range("full"), EvalBackend=device, Save=True, SumW2Error=True)
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat0.setConstant(True)
@@ -1922,8 +1928,8 @@ if __name__ == "__main__":
     # subCat 1
     # _ = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # fit_result = signal_subCat1.fitTo(data_subCat1_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    _ = signal_subCat1.fitTo(data_subCat1_signal, rt.RooFit.Range("h_peak") , EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat1.fitTo(data_subCat1_signal, rt.RooFit.Range("h_peak") , EvalBackend=device, Save=True, SumW2Error=True)
+    _ = signal_subCat1.fitTo(data_subCat1_signal, rt.RooFit.Range("full") , EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat1.fitTo(data_subCat1_signal, rt.RooFit.Range("full") , EvalBackend=device, Save=True, SumW2Error=True)
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat1.setConstant(True)
@@ -1937,8 +1943,8 @@ if __name__ == "__main__":
     # subCat 2
     # _ = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # fit_result = signal_subCat2.fitTo(data_subCat2_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    _ = signal_subCat2.fitTo(data_subCat2_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat2.fitTo(data_subCat2_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
+    _ = signal_subCat2.fitTo(data_subCat2_signal,  rt.RooFit.Range("full"), EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat2.fitTo(data_subCat2_signal,  rt.RooFit.Range("full"), EvalBackend=device, Save=True, SumW2Error=True)
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat2.setConstant(True)
@@ -1952,8 +1958,8 @@ if __name__ == "__main__":
     # subCat 3
     # _ = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # fit_result = signal_subCat3.fitTo(data_subCat3_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    _ = signal_subCat3.fitTo(data_subCat3_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat3.fitTo(data_subCat3_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
+    _ = signal_subCat3.fitTo(data_subCat3_signal,  rt.RooFit.Range("full"), EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat3.fitTo(data_subCat3_signal,  rt.RooFit.Range("full"), EvalBackend=device, Save=True, SumW2Error=True)
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
     sigma_subCat3.setConstant(True)
@@ -1971,8 +1977,8 @@ if __name__ == "__main__":
     # subCat 4
     # _ = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, SumW2Error=True)
     # fit_result = signal_subCat4.fitTo(data_subCat4_signal,  EvalBackend=device, Save=True, SumW2Error=True)
-    _ = signal_subCat4.fitTo(data_subCat4_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = signal_subCat4.fitTo(data_subCat4_signal,  rt.RooFit.Range("h_peak"), EvalBackend=device, Save=True, SumW2Error=True)
+    _ = signal_subCat4.fitTo(data_subCat4_signal,  rt.RooFit.Range("full"), EvalBackend=device, Save=True, SumW2Error=True)
+    fit_result = signal_subCat4.fitTo(data_subCat4_signal,  rt.RooFit.Range("full"), EvalBackend=device, Save=True, SumW2Error=True)
 
 
     # freeze Signal's shape parameters before adding to workspace as specified in line 1339 of the Run2 RERECO AN
@@ -1981,6 +1987,8 @@ if __name__ == "__main__":
     n1_subCat4.setConstant(True)
     alpha2_subCat4.setConstant(True)
     n2_subCat4.setConstant(True)
+
+    
 
     # ---------------------------------------------------
     # Obtain signal MC events for VBF
@@ -2219,8 +2227,9 @@ if __name__ == "__main__":
     
     # generate a weighted histogram 
     roo_histData_subCat3_vbf_signal = rt.TH1F("subCat3_vbf_rooHist_signal", "subCat3_vbf_rooHist_signal", nbins, mass.getMin(), mass.getMax())
-       
-    roo_histData_subCat3_vbf_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat3_vbf_SigMC) # fill the histograms with mass and weights 
+
+    if len(subCat_mass_arr) > 0:
+        roo_histData_subCat3_vbf_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat3_vbf_SigMC) # fill the histograms with mass and weights 
     roo_histData_subCat3_vbf_signal = rt.RooDataHist("subCat3_vbf_rooHist_signal", "subCat3_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat3_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat3_vbf_signal = roo_histData_subCat3_vbf_signal
@@ -2254,7 +2263,8 @@ if __name__ == "__main__":
     # generate a weighted histogram 
     roo_histData_subCat4_vbf_signal = rt.TH1F("subCat4_vbf_rooHist_signal", "subCat4_vbf_rooHist_signal", nbins, mass.getMin(), mass.getMax())
        
-    roo_histData_subCat4_vbf_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat4_vbf_SigMC) # fill the histograms with mass and weights 
+    if len(subCat_mass_arr) > 0:
+        roo_histData_subCat4_vbf_signal.FillN(len(subCat_mass_arr), subCat_mass_arr, wgt_subCat4_vbf_SigMC) # fill the histograms with mass and weights 
     roo_histData_subCat4_vbf_signal = rt.RooDataHist("subCat4_vbf_rooHist_signal", "subCat4_vbf_rooHist_signal", rt.RooArgSet(mass), roo_histData_subCat4_vbf_signal) # convert to RooDataHist with (picked same name, bc idk)
     
     data_subCat4_vbf_signal = roo_histData_subCat4_vbf_signal
