@@ -37,7 +37,7 @@ def get_expected_output_file(input_file):
 
 def main():
     # Specify the path to the input text file
-    input_file = "missing_or_corrupt_files_2017_21Feb.txt"  # Change this to your actual file path
+    input_file = "missing_or_corrupt_files_2018_24Feb.txt"  # Change this to your actual file path
 
     # Get expected output files and delete them
     get_expected_output_file(input_file)
