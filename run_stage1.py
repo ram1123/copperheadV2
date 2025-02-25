@@ -144,7 +144,7 @@ if __name__ == "__main__":
         "-maxfile",
         "--max_file_len",
         dest="max_file_len",
-        default = 100,
+        default = 150,
         help = "How many maximum files to process simultaneously.",
     )
     parser.add_argument(

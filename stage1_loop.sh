@@ -13,6 +13,7 @@ usage() {
     echo "  -l <label>   Label (default: Default_nanoAODv9)"
     echo "  -s           Skip bad files (default: 0)"
     echo "  -d           Enable debug mode (default: 0)"
+    echo "  -f           Run only 10% of the sampeles for debugging (default: 0)"
     exit 1
 }
 
@@ -36,6 +37,7 @@ while getopts $options option; do
         l) label=$OPTARG ;;
         s) skipBadFiles="1" ;;
         d) debug="1" ;;
+        f) frac="1" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
@@ -63,11 +65,19 @@ if [[ "$debug" == "1" ]]; then
     years=("2018")
     # Also update the associated data list.
     data_l_dict["2018"]="A"
-    bkg_l="DY"
+    bkg_l=""
 fi
 
 chunksize=300000
 save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
+
+# Check if any log_*.txt file exists then move it to log_old folder
+if [ -f log_*.txt ]; then
+    if [ ! -d log_old ]; then
+        mkdir log_old
+    fi
+    mv log_*.txt log_old/
+fi
 
 # log file with timestamp
 log_file="log_$(date +%Y%m%d_%H%M%S).txt"
@@ -92,15 +102,21 @@ for year in "${years[@]}"; do
     command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway "
     command2="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
     command3="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
+    command4="python src/lib/ebeMassResCalibration/calibration_factor.py --path $save_path"
 
     if [[ "$debug" == "1" ]]; then
-        command0+="--log-level DEBUG -frac 0.1" #
-        command1+="--log-level DEBUG --test_mode" #
+        command0+="--log-level DEBUG " #
+        command1+="--log-level DEBUG " #
         command2+="--log-level DEBUG --debug"
     else
         command0+=" --log-level INFO"
         command1+=" --log-level INFO"
         command2+=" --log-level INFO"
+    fi
+
+    if [[ "$frac" == "1" ]]; then
+        command0+=" --frac 0.1"
+        command1+=" --test_mode"
     fi
 
     if [[ "$skipBadFiles" == "1" ]]; then
