@@ -326,7 +326,7 @@ def plotRerecoPowhegVsAmc(amc_events, powheg_events):
         ratio_hist.SetTitle("")
 
         ratio_hist.SetXTitle(X_title)
-        ratio_hist.GetYaxis().SetTitle("Ratio")
+        ratio_hist.GetYaxis().SetTitle("Powheg / MD@NLO")
         ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)  # Set y-axis range
         ratio_hist.GetYaxis().SetTitleSize(0.05)
         ratio_hist.GetYaxis().SetLabelSize(0.08)
