@@ -6,6 +6,7 @@ import ROOT as rt
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
+import json
 
 # surpress RooFit printout
 rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
@@ -425,6 +426,99 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibrat
     # consider script to wait a second for stability?
     time.sleep(1)
     return df_fit
+
+def save_calibration_json(df_merged, json_filename="calibration_factors.json"):
+    """
+    Given a DataFrame (df_merged) with columns "cat_name" and "calibration_factor",
+    write out a JSON file with the following multibinning structure.
+
+    The calibration categories are assumed to be labeled as:
+      "<pt_bin>_<eta1><eta2>"
+    with:
+      pt_bin in {"30-45", "45-52", "52-62", "62-200"}
+      eta1, eta2 in {"B", "O", "E"}
+    corresponding to the following bin edges:
+      leading_mu_pt: [30.0, 45.0, 52.0, 62.0, 200.0]
+      leading_mu_abseta: [0.0, 0.9, 1.8, 2.4]
+      subleading_mu_abseta: [0.0, 0.9, 1.8, 2.4]
+
+    The "content" field will be a flattened list of 36 calibration factors ordered as:
+    For each pt_bin (in order: "30-45", "45-52", "52-62", "62-200"),
+      for each leading muon eta bin (B, O, E),
+      for each subleading muon eta bin (B, O, E),
+      use the calibration factor from the corresponding category.
+    If a category is missing, a default value of 1.0 is used.
+    """
+    # Define the bin edges and labels
+    pt_bins = ["30-45", "45-52", "52-62", "62-200"]
+    eta_bins = ["B", "O", "E"]
+
+    content = []
+    # Loop in the required order: for each pt bin, for each leading eta, for each subleading eta.
+    for pt_bin in pt_bins:
+        for eta1 in eta_bins:
+            for eta2 in eta_bins:
+                cat_name = f"{pt_bin}_{eta1}{eta2}"
+                # Look for the row in df_merged with the matching cat_name.
+                row = df_merged[df_merged["cat_name"] == cat_name]
+                if not row.empty:
+                    calib_factor = float(row["calibration_factor"].values[0])
+                else:
+                    calib_factor = 1.0  # default if missing
+                content.append(calib_factor)
+
+    # Build the JSON structure.
+    json_dict = {
+        "schema_version": 2,
+        "corrections": [
+            {
+                "name": "BS_ebe_mass_res_calibration",
+                "description": "Dimuon Mass resolution calibration with BeamSpot Constraint correction applied",
+                "version": 1,
+                "inputs": [
+                    {
+                        "name": "leading_mu_pt",
+                        "type": "real",
+                        "description": "Transverse momentum of the leading muon (GeV)"
+                    },
+                    {
+                        "name": "leading_mu_abseta",
+                        "type": "real",
+                        "description": "Absolute pseudorapidity of the leading muon"
+                    },
+                    {
+                        "name": "subleading_mu_abseta",
+                        "type": "real",
+                        "description": "Absolute pseudorapidity of the subleading muon"
+                    }
+                ],
+                "output": {
+                    "name": "correction_factor",
+                    "type": "real"
+                },
+                "data": {
+                    "nodetype": "multibinning",
+                    "inputs": [
+                        "leading_mu_pt",
+                        "leading_mu_abseta",
+                        "subleading_mu_abseta"
+                    ],
+                    "edges": [
+                        [30.0, 45.0, 52.0, 62.0, 200.0],
+                        [0.0, 0.9, 1.8, 2.4],
+                        [0.0, 0.9, 1.8, 2.4]
+                    ],
+                    "content": content,
+                    "flow": "clamp"
+                }
+            }
+        ]
+    }
+
+    with open(json_filename, "w") as f:
+        json.dump(json_dict, f, indent=4)
+    print(f"Calibration JSON saved to {json_filename}")
+
 
 def closure_test_from_df(df, additional_string, output_plot="closure_test.png"):
     """
