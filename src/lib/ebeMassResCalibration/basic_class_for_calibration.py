@@ -4,6 +4,11 @@ Collection of basic functions  for the mass resolution calibration
 import numpy as np
 import ROOT as rt
 import time
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# surpress RooFit printout
+rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
 
 # Define the calibration categories ---
 def get_calib_categories(events):
@@ -92,7 +97,7 @@ def get_calib_categories(events):
 
     return categories
 
-def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100, logfile="CalibrationLog.txt"):
+def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="CalibrationLog.txt"):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -202,6 +207,12 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100, logfile="Calibratio
     # canvas.Draw()
     print(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
 
+    # save to df_fit
+    # df_fit.loc[cat_idx] = [sigma.getVal(), sigma.getError()]
+    # df_fit = df_fit.append({"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}, ignore_index=True)
+    new_row = pd.DataFrame({"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}, index=[0])
+    df_fit = pd.concat([df_fit, new_row], ignore_index=True)
+
     # Save the cat_idx and sigma value to a log file
     with open(logfile, "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
@@ -211,8 +222,9 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins=100, logfile="Calibratio
     del canvas
     # # consider script to wait a second for stability?
     # time.sleep(1)
+    return df_fit
 
-def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100, logfile="CalibrationLog.txt"):
+def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="CalibrationLog.txt"):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -398,6 +410,12 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100, logfile="CalibrationL
     print(f"alpha2: {alpha2.getVal()}")
     print(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
 
+    # save cat_idx and sigma value to a pandas dataframe
+    # df_fit = df_fit.append({"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}, ignore_index=True)
+    new_row = pd.DataFrame([{"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}])
+    df_fit = pd.concat([df_fit, new_row], ignore_index=True)
+
+
     # Save the cat_idx and sigma value to a log file
     with open(logfile, "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
@@ -406,3 +424,54 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins=100, logfile="CalibrationL
     del canvas
     # consider script to wait a second for stability?
     time.sleep(1)
+    return df_fit
+
+def closure_test_from_df(df, additional_string, output_plot="closure_test.png"):
+    """
+    Given a DataFrame with columns:
+         cat_name, fit_val, fit_err, median_val, calibration_factor,
+    produce a closure test plot that compares the fitted resolution (fit_val)
+    to the median predicted resolution (median_val) for each calibration category.
+
+    A reference line y = x is drawn to indicate perfect agreement.
+
+    Parameters:
+      df         : Pandas DataFrame with the required columns.
+      output_plot: Filename for the closure test plot.
+
+    Returns:
+      The input DataFrame (unchanged).
+    """
+    # Check that the necessary columns exist
+    required_cols = {"cat_name", "fit_val", "fit_err", "median_val", "calibration_factor"}
+    if not required_cols.issubset(df.columns):
+        raise ValueError(f"Input DataFrame must contain columns: {required_cols}")
+
+    # Create the closure test plot.
+    plt.figure(figsize=(8,6))
+    plt.errorbar(df["median_val"], df["fit_val"], yerr=df["fit_err"], fmt='o', label="Categories")
+
+    # Plot the reference y = x line.
+    x_min = df["median_val"].min()
+    x_max = df["median_val"].max()
+    x_vals = np.linspace(0, x_max*1.2, 100)
+    plt.plot(x_vals, x_vals, "r--", label="y = x")
+
+    # plot the 10% dotted line for reference
+    y_10 = x_vals * 1.1
+    plt.plot(x_vals, y_10, "g--", label="y = 1.1x")
+    y_10 = x_vals * 0.9
+    plt.plot(x_vals, y_10, "g--", label="y = 0.9x")
+
+
+
+    plt.xlabel("Median Predicted Resolution (GeV)")
+    plt.ylabel("Fitted Resolution (GeV)")
+    plt.title("Closure Test: Fitted vs. Predicted Resolution")
+    plt.legend()
+    output_plot = output_plot.replace(".png", f"_{additional_string}.png")
+    plt.savefig(output_plot)
+    plt.close()
+
+    print(f"Closure test plot saved as {output_plot}")
+    return df
