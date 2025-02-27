@@ -14,6 +14,7 @@ from basic_class_for_calibration import get_calib_categories
 from basic_class_for_calibration import generateBWxDCB_plot
 from basic_class_for_calibration import generateVoigtian_plot
 from basic_class_for_calibration import closure_test_from_df
+from basic_class_for_calibration import save_calibration_json
 
 import logging
 from modules.utils import logger
@@ -174,8 +175,8 @@ def main():
     total_time_start = time.time()
 
     out_String = "2018_C"
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_*/*/part*.parquet"
-    INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_C/*/part*.parquet"
+    INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_*/*/part*.parquet"
+    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_C/*/part*.parquet"
 
     # Step 1: Mass Fitting in ZCR
     df_fit = step1_mass_fitting_zcr(INPUT_DATASET)
@@ -200,6 +201,11 @@ def main():
 
     # Step 4: Save the final merged DataFrame to a CSV file.
     step4_save_csv(df_merged, "calibration_factors_"+out_String+".csv")
+
+    # Step 5: Save the calibration factors to a JSON file.
+    save_calibration_json(df_merged, "calibration_factors_"+out_String+".json")
+
+    # 
 
     # Step 5: Closure test
     closure_test_from_df(df_merged, out_String)

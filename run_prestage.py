@@ -247,13 +247,12 @@ if __name__ == "__main__":
         sig_samples = args.sig_samples
         logger.info(f"signal samples to load: {sig_samples}")
         if len(sig_samples) >0:
-            for sig_sample in sig_samples: # FIXME: Why custom? We should just read from YAML file. No hardcoding needed here.
-                if sig_sample.upper() == "GGH": # enforce upper case to prevent confusion
-                    new_sample_list.append("ggh_powhegPS")
-                elif sig_sample.upper() == "VBF": # enforce upper case to prevent confusion
-                    new_sample_list.append("vbf_powheg_dipole")
-                else:
-                    logger.debug(f"unknown signal {sig_sample} was given!")
+            for sig_sample in sig_samples:
+                for bkg_letter in bkg_l: # bkg_l contains both bkg and signal samples keys
+                    logger.debug(f"bkg_letter: {bkg_letter}, sig_sample: {sig_sample}")
+                    if bkg_letter in sig_sample:
+                        for bkgs in dataset[bkg_letter].keys():
+                            new_sample_list.append(bkgs)
 
         logger.debug(f"Loaded samples: {new_sample_list}")
 

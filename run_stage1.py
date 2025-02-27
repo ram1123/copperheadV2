@@ -97,7 +97,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
     #----------------------------------
     skim_zip = ak.zip(skim_dict, depth_limit=1)
-    return skim_zip
+
+    df = ak.to_dataframe(skim_zip)
+    df.to_parquet(save_path)
+    # return skim_zip
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -144,7 +147,7 @@ if __name__ == "__main__":
         "-maxfile",
         "--max_file_len",
         dest="max_file_len",
-        default = 150,
+        default = 500,
         help = "How many maximum files to process simultaneously.",
     )
     parser.add_argument(
@@ -218,10 +221,12 @@ if __name__ == "__main__":
                 logger.debug(f"max_file_len: {args.max_file_len}")
                 logger.debug(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
+                    # if idx == 7: continue
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
+                    logger.debug(f"Smaller sample: {smaller_sample['files']}")
                     var_step = time.time()
-                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
+                    # to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
                     logger.debug(f"save_path: {save_path}")
                     if not os.path.exists(save_path):
@@ -235,7 +240,9 @@ if __name__ == "__main__":
                             logger.debug(f"Going to delete file: {file}")
                             os.remove(file)
                     logger.debug("Directory created or cleaned")
-                    to_persist.persist().to_parquet(save_path)
+                    # to_persist.persist().to_parquet(save_path)
+                    # to_persist.to_parquet(save_path, compression="snappy")
+                    dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=save_path)
 
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")

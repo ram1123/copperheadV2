@@ -453,19 +453,30 @@ def save_calibration_json(df_merged, json_filename="calibration_factors.json"):
     pt_bins = ["30-45", "45-52", "52-62", "62-200"]
     eta_bins = ["B", "O", "E"]
 
+    calib_dict = dict(zip(df_merged["cat_name"], df_merged["calibration_factor"]))
+
     content = []
-    # Loop in the required order: for each pt bin, for each leading eta, for each subleading eta.
+    # Loop over pt bins:
     for pt_bin in pt_bins:
-        for eta1 in eta_bins:
-            for eta2 in eta_bins:
-                cat_name = f"{pt_bin}_{eta1}{eta2}"
-                # Look for the row in df_merged with the matching cat_name.
-                row = df_merged[df_merged["cat_name"] == cat_name]
-                if not row.empty:
-                    calib_factor = float(row["calibration_factor"].values[0])
-                else:
-                    calib_factor = 1.0  # default if missing
-                content.append(calib_factor)
+        if pt_bin == "30-45":
+            # For pt bin "30-45", we have only three merged categories.
+            # Loop over all 9 (leading, subleading) combinations but choose the factor based solely on subleading muon.
+            for eta1 in eta_bins:
+                for eta2 in eta_bins:
+                    if eta2 == "B":
+                        cat_name = "30-45_BB_OB_EB"
+                    elif eta2 == "O":
+                        cat_name = "30-45_BO_OO_EO"
+                    elif eta2 == "E":
+                        cat_name = "30-45_BE_OE_EE"
+                    factor = calib_dict.get(cat_name, 1.0)
+                    content.append(factor)
+        else:
+            # For other pt bins, there are 9 cells: loop over leading eta then subleading eta.
+            for eta1 in eta_bins:
+                for eta2 in eta_bins:
+                    cat_name = f"{pt_bin}_{eta1}{eta2}"
+                    content.append(calib_dict.get(cat_name, 1.0))
 
     # Build the JSON structure.
     json_dict = {
@@ -569,3 +580,42 @@ def closure_test_from_df(df, additional_string, output_plot="closure_test.png"):
 
     print(f"Closure test plot saved as {output_plot}")
     return df
+
+def closure_test_from_calibrated_df(df_fit, df_calibrated, additional_string, output_plot="closure_test.png"):
+    df_merged = pd.merge(df_fit, df_calibrated, on="cat_name", how="inner")
+    df = df_merged
+    required_cols = {"cat_name", "fit_val", "fit_err", "median_val"}
+    if not required_cols.issubset(df.columns):
+        raise ValueError(f"Input DataFrame must contain columns: {required_cols}")
+
+    # Create the closure test plot.
+    plt.figure(figsize=(8,6))
+    plt.errorbar(df["median_val"], df["fit_val"], yerr=df["fit_err"], fmt='o', label="Categories")
+
+    # Plot the reference y = x line.
+    x_min = df["median_val"].min()
+    x_max = df["median_val"].max()
+    x_vals = np.linspace(0.5, x_max*1.1, 100)
+    plt.plot(x_vals, x_vals, "r--", label="y = x")
+
+    # plot the 10% dotted line for reference
+    y_10 = x_vals * 1.1
+    plt.plot(x_vals, y_10, "g--", label="y = 1.1x")
+    y_10 = x_vals * 0.9
+    plt.plot(x_vals, y_10, "g--", label="y = 0.9x")
+
+
+
+    
+    plt.xlabel("Predicted $\sigma_{\\mu\\mu}$ [GeV]") # plt.xlabel("Median Predicted Resolution (GeV)")
+    plt.ylabel("Measured $\sigma_{\\mu\\mu}$ [GeV]") #plt.ylabel("Fitted Resolution (GeV)")
+    plt.title("Closure Test: Measured vs. Predicted Resolution [2018 C]")
+    plt.legend()
+    output_plot = output_plot.replace(".png", f"_{additional_string}.png")
+    plt.savefig(output_plot)
+    plt.close()
+
+    print(f"Closure test plot saved as {output_plot}")
+    # return df_merged    
+
+    

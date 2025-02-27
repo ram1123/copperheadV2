@@ -26,7 +26,7 @@ debug="0"
 mode="0"
 skipBadFiles="0"
 
-options=":hc:m:v:y:l:d"
+options=":hc:m:v:y:l:df"
 while getopts $options option; do
     case "$option" in
         h) usage ;;
@@ -57,15 +57,16 @@ data_l_dict["2017"]="B C D E F"
 data_l_dict["2018"]="A B C D"
 
 bkg_l="DY Top VV"
-sig_l=""
+sig_l="Higgs"
 
 # If debug is on, then run only for one era in each year.
 if [[ "$debug" == "1" ]]; then
     echo "Debug mode is on. Running only for 2018."
     years=("2018")
     # Also update the associated data list.
-    data_l_dict["2018"]="A"
+    data_l_dict["2018"]=""
     bkg_l=""
+    sig_l="Higgs"
 fi
 
 chunksize=300000
@@ -115,7 +116,7 @@ for year in "${years[@]}"; do
     fi
 
     if [[ "$frac" == "1" ]]; then
-        command0+=" --frac 0.1"
+        command0+=" -frac 0.1"
         command1+=" --test_mode"
     fi
 
