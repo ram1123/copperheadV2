@@ -1,8 +1,10 @@
 cross_sections:
   test: 6200.0
-  dy_M-50: 6195.8
+  dy_M-50: 6077.22 # precision: NNLO source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
   dy_M-50_nocut: 6450.0
-  dy_M-100To200: 247.9
+  # dy_M-100To200: 247.9 # precision: NLO source: GenAnalyzer tool at https://github.com/green-cabbage/genproductions
+  dy_M-100To200: 233.8592627 # precision: NNLO
+  dy_M-100To200_MiNNLO: 77.95
   dy_VBF_filter: 2.01  # subjet to change
   dy_VBF_filter_customJMEoff: 2.01 # subjet to change
   dy_VBF_filter_fromGenSim: 2.01 # subjet to change
@@ -42,22 +44,22 @@ cross_sections:
   st_top: 136.02
   st_t_top: 3.4
   st_t_antitop: 80.95
-  # st_tw_top: 32.51
-  # st_tw_antitop: 32.45
-  st_tw_top: 35.85 # rereco
-  st_tw_antitop: 35.85 # rereco
-  ttjets_dl: 86.65
-  ttjets_sl: 358.57
-  # ww_2l2nu: 11.09
-  # wz_3lnu: 5.22
-  # wz_2l2q: 6.45
-  # wz_1l1nu2q: 9.12
-  # zz: 12.17
-  ww_2l2nu: 12.178 # rereco
-  wz_3lnu: 4.102 # rereco
-  wz_2l2q: 5.606 # rereco
-  wz_1l1nu2q: 7.031227 # rereco
-  zz: 0.5664 # rereco
+  st_tw_top: 32.45 # UL
+  st_tw_antitop: 32.45 # UL
+  # st_tw_top: 35.85 # rereco
+  # st_tw_antitop: 35.85 # rereco
+  ttjets_dl: 86.65 # UL
+  ttjets_sl: 358.57 # UL
+  ww_2l2nu: 11.09 # UL
+  wz_3lnu: 5.22 # UL
+  wz_2l2q: 6.45 # UL
+  wz_1l1nu2q: 9.12 # UL
+  zz: 12.17 # UL
+  # ww_2l2nu: 12.178 # rereco
+  # wz_3lnu: 4.102 # rereco
+  # wz_2l2q: 5.606 # rereco
+  # wz_1l1nu2q: 7.031227 # rereco
+  # zz: 0.5664 # rereco
   ttw: 0.2001
   ttz: 0.2529
   www: 0.2086
