@@ -95,3 +95,19 @@ cross_sections:
   wph: 0.000183
   zh: 0.000192
   tth: 0.00011
+  dyTo2Mu_M-10To50:
+      2022preEE: -99.00
+  dyTo2Mu_M-50To120:
+      2022preEE: -99.00
+  dyTo2Mu_M-120To200:
+      2022preEE: -99.00
+  dyTo2Mu_M-105To160_2j:
+      2022preEE: -99.00
+  dyTo2L_M-10To50:
+      2022preEE: -99.00
+  dyTo2L_M-50_0j:
+      2022preEE: -99.00
+  dyTo2L_M-50_1j:
+      2022preEE: -99.00
+  dyTo2L_M-50_2j:
+      2022preEE: -99.00
