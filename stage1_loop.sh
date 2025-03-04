@@ -46,8 +46,10 @@ done
 # if year is not set then take the default value of years
 if [[ -z "$year" ]]; then
     years=("2018" "2017" "2016postVFP" "2016preVFP")
+    echo "Reading default year: 2018, 2017 and 2016"
 else
     years=($year)
+    echo "Reading year: $years"
 fi
 
 declare -A data_l_dict # Associative array because of non-integer key.
@@ -62,11 +64,13 @@ sig_l="Higgs"
 # If debug is on, then run only for one era in each year.
 if [[ "$debug" == "1" ]]; then
     echo "Debug mode is on. Running only for 2018."
+    # years=("2016postVFP" "2016preVFP")
     years=("2018")
     # Also update the associated data list.
-    data_l_dict["2018"]=""
+    # data_l_dict["2018"]="A B C D"
+    # data_l_dict["2017"]="B C D E F"
     bkg_l=""
-    sig_l="Higgs"
+    sig_l=""
 fi
 
 chunksize=300000

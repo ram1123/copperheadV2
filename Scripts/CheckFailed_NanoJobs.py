@@ -8,10 +8,8 @@ import sys
 import ROOT
 import logging
 
-# ROOT Error Handling: Suppress non-critical warnings
 ROOT.gErrorIgnoreLevel = ROOT.kError  # Only show errors, not warnings
 
-# Set up logging for better tracking and debugging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger()
 
@@ -92,7 +90,7 @@ def check_missing_files(input_file, output_dir, year, additional_string):
     )
     cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
     client = gateway.connect(cluster_info.name).get_client()
-    logger.info(f"Dask client: {client}")
+    # logger.info(f"Dask client: {client}")
 
     # Create Dask delayed tasks for ROOT file corruption check
     tasks = [dask.delayed(is_root_file_corrupt_ROOT)(file) for file in df['expected_output_file']]
@@ -114,19 +112,21 @@ def check_missing_files(input_file, output_dir, year, additional_string):
     missing_files_df.to_csv(output_filename, sep=' ', header=False, index=False)
 
     # Print results
-    logger.info(f"Missing or corrupt files: {len(missing_files_df)}")
-    logger.info(f"The list of missing or corrupt files is saved to '{output_filename}'")
+    # logger.info(f"Missing or corrupt files: {len(missing_files_df)}")
+    # logger.info(f"The list of missing or corrupt files is saved to '{output_filename}'")
+
+    logger.info(f"{output_filename}: Missing or corrupt files: {len(missing_files_df)}")
 
 # Main function to process all years
 def main():
     """Main processing function."""
     # Define years and corresponding input/output files for each year
     years_and_input_files = {
-        '2018v1': '../HMuMu_UL2018_3Feb.txt',
-        '2018': '../HMuMu_UL2018_3Feb_AllJobs.txt',
-        '2017': '../HMuMu_UL2017_3Feb_AllJobs.txt',
-        '2016APV': '../HMuMu_UL2017_8Feb_2016APV.txt',
-        '2016': '../HMuMu_UL2017_8Feb_2016.txt',
+        '2018v1': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_3Feb.txt',
+        '2018': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_3Feb_AllJobs.txt',
+        '2017': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_3Feb_AllJobs.txt',
+        '2016APV': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_8Feb_2016APV.txt',
+        '2016': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_8Feb_2016.txt',
     }
 
     years_and_output_dirs = {
@@ -138,9 +138,11 @@ def main():
     }
 
     # List of years to process
-    years = ['2018v1', '2018', '2017', '2016APV', '2016']
+    # years = ['2018v1', '2018', '2017', '2016APV', '2016']
+    years = ['2018', '2017', '2016APV', '2016']
+    # years = ['2017', '2016APV', '2016']
     # years = ['2018']
-    additional_string = "24Feb"
+    additional_string = "03March"
 
     # Process files for each year
     for year in years:
