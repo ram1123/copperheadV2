@@ -1,3 +1,9 @@
+```bash
+bash stage1_loop.sh  -c configs/datasets/dataset.yaml -v 12 -l Run3_nanoAODv12_TEST -m 0 
+bash stage1_loop.sh  -c configs/datasets/dataset.yaml -v 12 -l Run3_nanoAODv12_TEST -m 0 -d
+
+```
+
 # 03 March 2025
 
 ```bash

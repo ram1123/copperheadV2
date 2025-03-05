@@ -48,6 +48,16 @@ min_dr_mu_jet:
   '2018_RERECO': 0.4
   2022preEE: 0.4
   2022postEE: 0.4
+btag_id:
+  2016preVFP: btagDeepB
+  2016postVFP: btagDeepB
+  '2017': btagDeepB
+  '2018': btagDeepB
+  2016_RERECO: btagDeepB
+  '2017_RERECO': btagDeepB
+  '2018_RERECO': btagDeepB
+  2022preEE: btagPNetB
+  2022postEE: btagPNetB
 btag_loose_wp: # for DeepCSV, DeepJet is different
   2016preVFP: 0.2027
   2016postVFP: 0.1918

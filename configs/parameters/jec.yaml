@@ -58,6 +58,18 @@ jec_parameters:
     - RelativeBal
     - RelativeSample_2018
     - FlavorQCD
+    '2022preEE': # temp placeholder
+    - Absolute
+    - Absolute_2018
+    - BBEC1
+    - BBEC1_2018
+    - EC2
+    - EC2_2018
+    - HF
+    - HF_2018
+    - RelativeBal
+    - RelativeSample_2018
+    - FlavorQCD
   jec_variations:
     2016preVFP:
     - Absolute_up

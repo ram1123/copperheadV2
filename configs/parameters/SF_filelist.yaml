@@ -207,21 +207,25 @@ zpt_weights_file:
   '2017': data/zpt_weights.histo.json # Dmitry's zpt
   # '2018': data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
   '2018': data/zpt_weights.histo.json # Dmitry's zpt
+  2022preEE: data/zpt_weights.histo.json
+  2022postEE: data/zpt_weights.histo.json
 zpt_weights_file_valerie:
   2016preVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
   2016postVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
   '2017': data/reweight_zpt_2018_nJetBinned_new.histo.root
   '2018': data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
-new_zpt_weights_file:
-  2016preVFP: data/zpt_rewgt/ZptReWgt_2016preVFPUL.json # New zpt rewgt Jan 09 2025
-  2016postVFP: data/zpt_rewgt/ZptReWgt_2016postVFPUL.json # New zpt rewgt Jan 09 2025
-  '2017': data/zpt_rewgt/ZptReWgt_2017UL.json # New zpt rewgt Jan 09 2025
-  '2018': data/zpt_rewgt/ZptReWgt_2018UL.json # New zpt rewgt Jan 09 2025
-  2016_RERECO: data/zpt_weights.histo.json
-  '2017_RERECO': data/zpt_weights.histo.json
-  '2018_RERECO': data/zpt_weights.histo.json
-  2022preEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
-  2022postEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
+  2022preEE: data/reweight_zpt_2018_nJetBinned_new.histo.root 
+  2022postEE: data/reweight_zpt_2018_nJetBinned_new.histo.root 
+# new_zpt_weights_file:
+#   2016preVFP: data/zpt_rewgt/ZptReWgt_2016preVFPUL.json # New zpt rewgt Jan 09 2025
+#   2016postVFP: data/zpt_rewgt/ZptReWgt_2016postVFPUL.json # New zpt rewgt Jan 09 2025
+#   '2017': data/zpt_rewgt/ZptReWgt_2017UL.json # New zpt rewgt Jan 09 2025
+#   '2018': data/zpt_rewgt/ZptReWgt_2018UL.json # New zpt rewgt Jan 09 2025
+#   2016_RERECO: data/zpt_weights.histo.json
+#   '2017_RERECO': data/zpt_weights.histo.json
+#   '2018_RERECO': data/zpt_weights.histo.json
+#   2022preEE: data/zpt_rewgt/ZptReWgt_2018UL.json # New zpt rewgt Jan 09 2025
+#   2022postEE: data/zpt_rewgt/ZptReWgt_2018UL.json # New zpt rewgt Jan 09 2025
 jetpuid_sf_file: # old method as of Dec 16 2024, but needed for 2017 UL
   2016preVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   2016postVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root

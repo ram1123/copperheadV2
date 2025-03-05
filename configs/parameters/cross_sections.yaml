@@ -66,7 +66,13 @@ cross_sections:
   wzz: 0.05565
   zzz: 0.01398
   # ggh_powheg: 0.01057
-  ggh_powhegPS: 0.01057
+  # ggh_powhegPS: 0.01057
+  ggh_powhegPS:
+    '2016preVFP': 0.01057
+    '2016postVFP': 0.01057
+    '2017': 0.01057
+    '2018': 0.01057
+    2022preEE: 0.0112233600
   ggh_amcPS: 0.01057
   ggh_amcPS_TuneCP5down: 0.01057
   ggh_amcPS_TuneCP5up: 0.01057
@@ -76,7 +82,13 @@ cross_sections:
   vbf_sync: 0.0008210722
   # vbf_powheg: 0.0008210722
   vbf_powheg_herwig: 0.0008210722
-  vbf_powheg_dipole: 0.0008210722
+  # vbf_powheg_dipole: 0.0008210722
+  vbf_powheg_dipole:
+    '2016preVFP': 0.0008210722
+    '2016postVFP': 0.0008210722
+    '2017': 0.0008210722
+    '2018': 0.0008210722
+    2022preEE: 0.00087847200
   vbf_powhegPS: 0.0008210722
   vbf_amc_herwig: 0.0008210722
   vbf_amcPS_TuneCP5down: 0.0008210722
@@ -106,8 +118,8 @@ cross_sections:
   dyTo2L_M-10To50:
       2022preEE: -99.00
   dyTo2L_M-50_0j:
-      2022preEE: -99.00
+      2022preEE: 6296.00 # temp
   dyTo2L_M-50_1j:
-      2022preEE: -99.00
+      2022preEE: 3656.00 # temp
   dyTo2L_M-50_2j:
-      2022preEE: -99.00
+      2022preEE: 1668.00 # temp
