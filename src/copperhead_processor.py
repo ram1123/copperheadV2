@@ -59,6 +59,11 @@ def getZptWgts(dimuon_pt, njets, nbins, year):
     max_order = 5 #9
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
+
+    # temporaray overwrite of zpt wgt year -------------
+    if "2022" in year:
+        year = "2018" 
+    #-------------------------------------------------
     # print(f"zpt_wgt: {zpt_wgt}")
 
     for jet_multiplicity in jet_multiplicies:
@@ -724,7 +729,9 @@ class EventProcessor(processor.ProcessorABC):
         mm_charge = ak.prod(muons.charge, axis=1) # techinally not a product of two leading pT muon charge, but (nmuons==2) cut ensures that there's only two muons
 
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
-        print(f"electron_id: {electron_id}")
+        # print(f"electron_id: {electron_id}")
+        print(f"electron_id in events.Electron.fields: {electron_id in events.Electron.fields}")
+        
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
         ecal_gap = (1.444 < abs(events.Electron.eta)) & (abs(events.Electron.eta) <1.566)
         electron_selection = (
@@ -990,12 +997,13 @@ class EventProcessor(processor.ProcessorABC):
 
         year = self.config["year"]
         jets = events.Jet
-        self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
-            self.config["jec_parameters"],
-            year
-        )
+        # self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
+        #     self.config["jec_parameters"],
+        #     year
+        # )
+        self.jec_factories_mc, self.jec_factories_data = None, None
 
-        do_jec = True # True
+        do_jec = False # True
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing
@@ -1207,6 +1215,8 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         if "2016" in year:
             dnn_year = 2016
+        elif "2022" in year:
+            dnn_year = 2022
         else:
             dnn_year = int(year)
         print(f"dnn_year: {dnn_year}")
@@ -1309,18 +1319,20 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
 
-        # # fill in the regions
-        mass = dimuon.mass
-        z_peak = ((mass > 76) & (mass < 106))
-        h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
-        h_peak = ((mass > 115.03) & (mass < 135.03))
-        region_dict = {
-            "z_peak" : ak.fill_none(z_peak, value=False),
-            "h_sidebands" : ak.fill_none(h_sidebands, value=False),
-            "h_peak" : ak.fill_none(h_peak, value=False),
-        }
+        # deprecated feature ---------------------------------
+        # # fill in the regions 
+        # mass = dimuon.mass
+        # z_peak = ((mass > 76) & (mass < 106))
+        # h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
+        # h_peak = ((mass > 115.03) & (mass < 135.03))
+        # region_dict = {
+        #     "z_peak" : ak.fill_none(z_peak, value=False),
+        #     "h_sidebands" : ak.fill_none(h_sidebands, value=False),
+        #     "h_peak" : ak.fill_none(h_peak, value=False),
+        # }
 
-        out_dict.update(region_dict)
+        # out_dict.update(region_dict)
+        # deprecated feature ---------------------------------
 
 
 
@@ -1341,8 +1353,8 @@ class EventProcessor(processor.ProcessorABC):
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
             # once kind of screws with the dak awkward array
             # valerie
-            zpt_weight_valerie =\
-                     self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
+            # zpt_weight_valerie =\
+                     # self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
             # out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
             # # dmitry's old zpt
@@ -1976,16 +1988,11 @@ class EventProcessor(processor.ProcessorABC):
         #         weights.add_weight(f"btag_wgt_{name}", bs, how="only_vars")
 
         # Separate from ttH and VH phase space
-
-        if "RERECO" in year:
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-        else: # UL
-            # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
-            # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-            # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+        btag_id = self.config["btag_id"]
+        print(f"btag_id: {btag_id}")
+        
+        btagLoose_filter = (jets[btag_id] > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+        btagMedium_filter = (jets[btag_id] > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
 
 
         nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
