@@ -402,10 +402,11 @@ def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False):
     This function should be applied to reco muons in MC!
     """
 
-    if nested:
-        eta_f, phi_f, nmuons = ak.flatten(eta), ak.flatten(phi), ak.num(eta)
-    else:
-        eta_f, phi_f, pt_f, nmuons = eta, phi, pt, 1
+    # if nested:
+    #     eta_f, phi_f, nmuons = ak.flatten(eta), ak.flatten(phi), ak.num(eta)
+    # else:
+    #     eta_f, phi_f, pt_f, nmuons = eta, phi, pt, 1
+    eta_f, phi_f, pt_f, nmuons = eta, phi, pt, 1
 
     stat_a_f = cset.get("a_mc").evaluate(eta_f, phi_f, "stat")
     stat_m_f = cset.get("m_mc").evaluate(eta_f, phi_f, "stat")
@@ -413,6 +414,7 @@ def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False):
 
     # if nested:
     #     stat_a, stat_m, stat_rho = ak.unflatten(stat_a_f, nmuons), ak.unflatten(stat_m_f, nmuons), ak.unflatten(stat_rho_f, nmuons)
+    stat_a, stat_m, stat_rho = stat_a_f, stat_m_f, stat_rho_f
 
     unc = pt*pt * (stat_m*stat_m / (pt*pt) + stat_a*stat_a + 2*charge*stat_rho*stat_m/pt*stat_a)**.5
 
