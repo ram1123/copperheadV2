@@ -3,7 +3,7 @@ integrated_lumis: # source: https://github.com/TopEFT/topeft/blob/252c6454e06e49
   2016postVFP: 16810.0
   '2017': 41480.0
   '2018': 59830.0
-  2022preEE: 7980.4
+  2022preEE: 8000 # 7980.4
   2022postEE: 59970.0
   2016_RERECO: 35920.0
   2017_RERECO: 41529.0

@@ -7,8 +7,8 @@ roccor_file:
   2016_RERECO: data/roch_corr/RoccoR2016.txt
   '2017_RERECO': data/roch_corr/RoccoR2017.txt
   '2018_RERECO': data/roch_corr/RoccoR2018.txt
-  2022preEE: data/roch_corr/RoccoR2018UL.txt
-  2022postEE: data/roch_corr/RoccoR2018UL.txt
+  2022preEE: data/roch_corr/2022_Summer22.json
+  2022postEE: data/roch_corr/2022_Summer22EE.json
 res_calib_path:
   2016preVFP:
     MC: data/res_calib/res_calib_MC_2016.root

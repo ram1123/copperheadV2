@@ -3,7 +3,8 @@ import awkward as ak
 from coffea.lookup_tools import txt_converters, rochester_lookup
 import pandas as pd
 import correctionlib.schemav2 as cs
-
+from src.corrections.MuonScaRe import pt_resol, pt_scale, pt_resol_var, pt_scale_var
+import correctionlib
 
 def apply_roccor(events, roccor_file_path: str, is_mc:bool, test_mode=False):
     rochester_data = txt_converters.convert_rochester_file(
@@ -105,3 +106,81 @@ def apply_roccor(events, roccor_file_path: str, is_mc:bool, test_mode=False):
     # uncommenting these lines below add really significant more compute time. not reccommended unless necessary
     # events["Muon", "pt_roch_up"] = events.Muon.pt_roch + events.Muon.pt * errors
     # events["Muon", "pt_roch_down"] = events.Muon.pt_roch - events.Muon.pt * errors
+
+
+def apply_roccorRun3(events, roccor_file_path: str, is_mc:bool, test_mode=False):
+    cset = correctionlib.CorrectionSet.from_file(roccor_file_path)
+    if is_mc: # MC: both scale correction to gen Z peak AND resolution correction to Z width in data
+        
+        events["Muon", "ptscalecorr"] = pt_scale(
+            0, # 1 for data, 0 for mc 
+            events.Muon.pt, 
+            events.Muon.eta, 
+            events.Muon.phi, 
+            events.Muon.charge, 
+            cset, 
+            nested=True
+        )
+        
+        events["Muon", "ptcorr"] = pt_resol( # TODO: find out why pt_scale isn't used for ptcorr for MC, bc for data pt_scale is used
+            events.Muon.ptscalecorr, 
+            events.Muon.eta, 
+            events.Muon.nTrackerLayers, 
+            cset, 
+            nested=True
+        )
+        
+        # uncertainties
+        events["Muon", "ptscalecorr_up"] = pt_scale_var(
+            events.Muon.ptcorr, 
+            events.Muon.eta, 
+            events.Muon.phi, 
+            events.Muon.charge,
+            "up",
+            cset, 
+            nested=True
+        )
+        events["Muon", "ptscalecorr_dn"] = pt_scale_var(
+            events.Muon.ptcorr, 
+            events.Muon.eta, 
+            events.Muon.phi, 
+            events.Muon.charge,
+            "dn",
+            cset, 
+            nested=True
+        )
+        
+        events["Muon", "ptcorr_resolup"] = pt_resol_var(
+            events.Muon.ptscalecorr, 
+            events.Muon.ptcorr, 
+            events.Muon.eta, 
+            "up",
+            cset, 
+            nested=True
+        )
+        events["Muon", "ptcorr_resoldn"] = pt_resol_var(
+            events.Muon.ptscalecorr, 
+            events.Muon.ptcorr, 
+            events.Muon.eta, 
+            "dn",
+            cset, 
+            nested=True
+        )
+    else: # data
+        events["Muon", "ptcorr"] = pt_scale(
+            1, # 1 for data, 0 for mc 
+            events.Muon.pt, 
+            events.Muon.eta, 
+            events.Muon.phi, 
+            events.Muon.charge, 
+            cset, 
+            nested=True # for awkward arrays. Set False for 1d arrays
+        )
+
+    # rename the rochester corrected pt to one we use
+    events["Muon", "pt_roch"] = events["Muon", "ptcorr"]
+
+
+
+    
+        

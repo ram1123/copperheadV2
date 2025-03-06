@@ -5,7 +5,7 @@ import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
 import correctionlib
-from src.corrections.rochester import apply_roccor
+from src.corrections.rochester import apply_roccor, apply_roccorRun3
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
 from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
@@ -543,10 +543,17 @@ class EventProcessor(processor.ProcessorABC):
         if self.config["do_roccor"]:
             print("doing rochester!")
             # print(f"df.Muon.pt b4 roccor: {events.Muon.pt.compute()}")
-            apply_roccor(events, self.config["roccor_file"], is_mc)
-            events["Muon", "pt"] = events.Muon.pt_roch
-            # print(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
-
+            if ".txt" in self.config["roccor_file"]:
+                print("doing Run2 Rochester!")
+                apply_roccor(events, self.config["roccor_file"], is_mc)
+                events["Muon", "pt"] = events.Muon.pt_roch
+            elif ".json" in self.config["roccor_file"]:
+                print("doing Run3 Rochester!")
+                apply_roccorRun3(events, self.config["roccor_file"], is_mc)
+                events["Muon", "pt"] = events.Muon.pt_roch
+            else:
+                print("ERROR: no valid rochester correction file was given!")
+                raise ValueError
 
 
         # calculate FSR recovery, but don't apply it until trigger matching is done
@@ -1692,12 +1699,14 @@ class EventProcessor(processor.ProcessorABC):
         # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
 
         jets = ak.to_packed(jets[jet_selection])
+        print(f'self.config["apply_jetpuid"]: {self.config["apply_jetpuid"]}')
 
         # apply jetpuid if not have done already
         if not is_2017 and is_mc:
-            jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
+            if self.config["apply_jetpuid"]:
+                jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
 
-        if is_mc:
+        if is_mc and self.config["apply_jetpuid"]:
             # now we add jetpuid_wgt
             weights.add("jetpuid_wgt",
                     weight=jetpuid_weight,
