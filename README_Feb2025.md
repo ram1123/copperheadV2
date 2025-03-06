@@ -6,7 +6,7 @@
 git clone https://github.com/green-cabbage/copperheadV2.git
 cd copperheadV2
 source setup_env.sh
-# Run first two column of DaskGatewaySLURM.ipynb to start the DASK.
+# Run first seven column of DaskGatewaySLURM.ipynb to start the DASK.
 ```
 
 1. Run the pre-stage to get the dataset information.
@@ -16,6 +16,11 @@ source setup_env.sh
 2. Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting.
    ```bash
    bash stage1_loop.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m 1
+   ```
+
+   If you want to run all the steps in one go then run the following command:
+   ```bash
+   bash stage1_loop.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m all
    ```
 
 ## Per-event mass calibration
@@ -61,14 +66,15 @@ To run pre-stage the `StageNo` should be "0". For running `Stage1` the argument 
 ## Step - 2: Get Z-pT reweight
 
 1. Get weight, data/DY, in the jet multiplicity bins
-   * Code located in `data/Zpt_rewgt/fitting/do_fitting.py`
-   * It extracts p_T(mumu) from data and DY in the Z-peak region. Also, the ratio of data/dy in nJet bins. Then save them as .root file
+    * Code located in `data/zpt_rewgt/fitting/do_fitting.py`
+    * It extracts p_T(mumu) from data and DY in the Z-peak region. Also, the ratio of data/dy in nJet bins. Then save them as .root file
+        - This needs yml file having binning information. To get it run: `python ../binning/generate_binning.py`
 2. Fit the ratio data/dy: `do_f_test.py`
-   * From here, get the polynomial that fits our data best as per f-test.
+    * From here, get the polynomial that fits our data best as per f-test.
 3. Run `get_goodnessofFit.py`: Fits and saves the polynomial info in the YAML file.
 4. How to save the weight into the skimmed file:
-   - Run: `work/users/shar1172/HMuMu/copperheadV2/src/copperhead_processor.py`
-   - The function that saves weight in above script is `getZptWgts()`
+    - Run: `work/users/shar1172/HMuMu/copperheadV2/src/copperhead_processor.py`
+    - The function that saves weight in above script is `getZptWgts()`
 
 
 # Run on the Hammer

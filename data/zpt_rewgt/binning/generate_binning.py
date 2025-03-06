@@ -39,7 +39,7 @@ def ranges_overlap(range1, range2):
     """
     start1, end1 = range1
     start2, end2 = range2
-        
+
     # Check for overlap
     return max(start1, start2) < min(end1, end2)
 
@@ -58,18 +58,18 @@ def checkNewCharacteristic(new_hist, new_hist_err):
     # obtain up and down histogram ranges
     lower_bin_down_up = (
         new_hist[0] - new_hist_err[0],
-        new_hist[0] + new_hist_err[0] 
+        new_hist[0] + new_hist_err[0]
     )
     upper_bin_down_up = (
         new_hist[1] - new_hist_err[1],
-        new_hist[1] + new_hist_err[1] 
+        new_hist[1] + new_hist_err[1]
     )
     # check if either lower bin edge range or upper one has zero difference. Then return False
     if abs(lower_bin_down_up[0]-lower_bin_down_up[1]) ==0:
         return False
     elif abs(upper_bin_down_up[0]-upper_bin_down_up[1]) ==0:
         return False
-    
+
     no_range_overlap = not ranges_overlap(lower_bin_down_up, upper_bin_down_up) # no range overlap means there was a characateristic we missed
     new_characteristic = no_range_overlap
 
@@ -96,7 +96,7 @@ def getSF_hist(data_event, dy_event, binning):
     dy_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
     dy_hist = ak.to_numpy(dy_hist)
     dy_hist_err = np.sqrt(ak.to_numpy(dy_hist_w2))
-    
+
     # initialize ratio histogram and fill in values
     ratio_hist = np.zeros_like(data_hist)
     inf_filter = dy_hist>0
@@ -115,24 +115,26 @@ if __name__ == "__main__":
     client = Client(cluster)
     print("Local scale Client created")
 
-    run_label = "V2_Jan09_ForZptReWgt"
+    # run_label = "V2_Jan09_ForZptReWgt"
     # run_label = args.label
+    run_label = "WithPurdueZptWgt_DYWithoutLHECut_16Feb_AllYear" # shar1172
     year = "2018"
-    base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0" # define the save path of stage1 outputs
-    
-    
+    # base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0" # define the save path of stage1 outputs
+    base_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0"
+
+
     # load the data and dy samples
     data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
     dy_events = dak.from_parquet(f"{base_path}/dy_M-50/*/*.parquet")
-    
+
     # apply z-peak region filter and nothing else
     data_events = filterRegion(data_events, region="z-peak")
     dy_events = filterRegion(dy_events, region="z-peak")
-    
+
     njet_field = "njets_nominal"
-    # for njet in [0,1,2]:
-    for njet in [1,2]:
-        if njet != 2:
+    for njet in [0,1,2]:
+        # for njet in [1,2]:
+        if njet < 2:
             data_events_loop = data_events[data_events[njet_field] ==njet]
             dy_events_loop = dy_events[dy_events[njet_field] ==njet]
         else:
@@ -142,13 +144,13 @@ if __name__ == "__main__":
         xmax = 200
         xmin = 0
         initial_bins = np.linspace(xmin, xmax, 5)
-        
+
         old_bins = initial_bins
         current_bins = copy.deepcopy(old_bins)
         new_bins = copy.deepcopy(current_bins)
         # loop over old bins and divide them into two equal bins
         print(f"current_bins: {current_bins}")
-        
+
         bin_has_changed = True
         fields2load = ["wgt_nominal", "dimuon_pt"]
         data_dict = {field: data_events_loop[field].compute() for field in fields2load}
@@ -161,17 +163,17 @@ if __name__ == "__main__":
             print(f"njet {njet} loop start ---------------------------------------------------------------------")
             print(f"current_bins length: {len(current_bins)}")
             print(f"current_bins: {', '.join(map(str, current_bins.tolist()))}")
-            
+
             for bin_idx in range(len(current_bins)-1):
                 bin_low_edge = current_bins[bin_idx]
                 bin_high_edge = current_bins[bin_idx+1]
-                
+
                 bin_mid = getMidpoint(bin_low_edge, bin_high_edge)
                 # check if this bin_mid value has been already tested and if so, skip
                 if bin_mid in bin_values_already_tested:
                     print(f"{bin_mid} has been already tested. Skipping!")
                     continue
-                
+
                 # Make new Binning and plot histogram
                 new_binning = np.array([bin_low_edge, bin_mid, bin_high_edge])
                 # new_hist, edges = np.histogram(data, bins=new_binning)
@@ -189,18 +191,18 @@ if __name__ == "__main__":
                     # add new bin edge and sort
                     new_bins = list(new_bins) + [bin_mid]
                     new_bins = list(set(new_bins)) # remove any redundant values as sanity check
-                    new_bins = np.array(sorted(new_bins)) 
+                    new_bins = np.array(sorted(new_bins))
                     print(f"adding edge {bin_mid}")
                     # print(f"new_bins: {new_bins}")
-                    bin_has_changed = True 
+                    bin_has_changed = True
                 else:
                     print(f"NOT adding edge {bin_mid}")
                     bin_values_already_tested.append(bin_mid)
-            
+
             # repeat until no new bin edge has been added, then end loop
             if bin_has_changed:
                 current_bins = new_bins
-            else: 
+            else:
                 print("No new bins were found. Ending Loop!")
                 print(f"njet {njet} final binning: {current_bins}")
                 break # end loop of no bin has changed
@@ -209,14 +211,14 @@ if __name__ == "__main__":
         Test one more time to make sure no characteristic was lost
         """
         print(f"current_bins: {', '.join(map(str, current_bins.tolist()))}")
-        
+
         for bin_idx in range(len(current_bins)-1):
             bin_low_edge = current_bins[bin_idx]
             bin_high_edge = current_bins[bin_idx+1]
-            
+
             bin_mid = getMidpoint(bin_low_edge, bin_high_edge)
             # check if this bin_mid value has been already tested and if so, skip
-            
+
             # Make new Binning and plot histogram
             new_binning = np.array([bin_low_edge, bin_mid, bin_high_edge])
             # new_hist, edges = np.histogram(data, bins=new_binning)
@@ -234,7 +236,7 @@ if __name__ == "__main__":
         # save_path = "binning"
         # # Create the directory if it doesn't exist
         # os.makedirs(save_path, exist_ok=True)
-        
+
         binning_path = f"2018_njet{njet}.yml"
         data = {"rewgt_binning": current_bins.tolist()}
         # Save the data to a YAML file

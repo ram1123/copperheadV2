@@ -7,7 +7,7 @@ usage() {
     echo "Options:"
     echo "  -h            Show this help message"
     echo "  -c <file>    Dataset YAML file (default: configs/datasets/dataset.yaml)"
-    echo "  -m <mode>    Mode: 0 (prestage), 1 (stage1), all (both), zpt_val (validation), cali (mass calibration) (default: 0)"
+    echo "  -m <mode>    Mode: 0 (prestage), 1 (stage1), all (both), zpt_val (validation), calib (mass calibration) (default: 0)"
     echo "  -v <version> NanoAOD version (default: 9)"
     echo "  -y <year>    Year (default: (\"2018\" \"2017\" \"2016postVFP\" \"2016preVFP\"))"
     echo "  -l <label>   Label (default: Default_nanoAODv9)"
@@ -103,7 +103,7 @@ for year in "${years[@]}"; do
     echo "Background: $bkg_l" >> $log_file
     echo "Signal: $sig_l" >> $log_file
 
-    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway "
+    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv "
     command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway "
     command2="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
     command3="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
@@ -154,7 +154,7 @@ for year in "${years[@]}"; do
         echo "command2: $command2" >> $log_file
         eval $command2
     # Run the mass calibration fitting step
-    elif [[ "$mode" == "cali" ]]; then
+    elif [[ "$mode" == "calib" ]]; then
         echo "Running mass calibration"
         echo "Executing: $command3"  # Print the command for debugging
         echo "command: $command3" >> $log_file

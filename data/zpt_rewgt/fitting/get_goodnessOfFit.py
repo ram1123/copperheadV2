@@ -11,9 +11,9 @@ f_orders = { # to recalculate these, re-run f-test on do_f_test.py
         "njet2" : 4,
     },
     "2017" : {
-        "njet0" : 5,
+        "njet0" : 4,
         "njet1" : 4,
-        "njet2" : 4,
+        "njet2" : 5,
     },
     "2016postVFP" : {
         "njet0" : 5,
@@ -53,27 +53,29 @@ global_fit_xmax = 200
 
 
 # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-years = ["2016preVFP",]
+# years = ["2016preVFP",]
+years = ["2017"]
 nbins = [50, 100]
 # nbins = [100]
 jet_multiplicities = [0,1,2]
-# year = 2017
-# year = "2016postVFP"
-# year = "2018"
 # njet = 0
-save_dict = {} # to match the config setup, it's 
+save_dict = {} # to match the config setup, it's
 
 test_val = 110
 
+run_label = "WithPurdueZptWgt_DYWithoutLHECut_16Feb_AllYear" # shar1172
+outputDirectory = f"./plots_WS_{run_label}"
 
 for year in years:
-    
+
     out_dict_by_year = {}
-    
+
     for njet in jet_multiplicities:
     # for njet in [2]:
-        file = ROOT.TFile(f"{year}_njet{njet}.root", "READ")
-        save_path = "./plots"
+        file = ROOT.TFile(f"{outputDirectory}/{year}_njet{njet}.root", "READ")
+        save_path = "./plots_goodnessOfFit"
+        if not os.path.exists(save_path):   # Create the directory if it doesn't exist
+            os.makedirs(save_path)
         workspace = file.Get("zpt_Workspace")
         # target_nbins = 50
         # for target_nbins in [25, 50, 100, 250]:
@@ -86,18 +88,18 @@ for year in years:
             # hist_data.GetXaxis().SetRangeUser(*fit_range)
             # hist_dy.GetXaxis().SetRangeUser(*fit_range)
 
-            
+
             hist_data = workspace.obj("hist_data").Clone("hist_data_clone")
             hist_dy = workspace.obj("hist_dy").Clone("hist_dy_clone")
             orig_nbins = hist_data.GetNbinsX()
             rebin_coeff = int(orig_nbins/target_nbins)
             print(f"rebin_coeff: {rebin_coeff}")
-            hist_data = hist_data.Rebin(rebin_coeff, "rebinned hist_data") 
-            hist_dy = hist_dy.Rebin(rebin_coeff, "rebinned hist_dy") 
-            
+            hist_data = hist_data.Rebin(rebin_coeff, "rebinned hist_data")
+            hist_dy = hist_dy.Rebin(rebin_coeff, "rebinned hist_dy")
+
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
-            
+
             # Fit with the lower-order polynomial
             polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(order + 1)])
             polynomial_func = ROOT.TF1(f"poly{order}", polynomial_expr, -5, 5)
@@ -110,17 +112,17 @@ for year in years:
 
 
             # fit straight line
-            horizontal_line = ROOT.TF1("horizontal_line", "[0]", 0, 10) 
+            horizontal_line = ROOT.TF1("horizontal_line", "[0]", 0, 10)
             fit_results = hist_SF.Fit(horizontal_line, "S R+", xmin=fit_xmax, xmax=global_fit_xmax)
-            
+
             # good setup
-    
+
             chi2 = fit_func.GetChisquare()
             ndf = fit_func.GetNDF()
             chi2_dof = chi2/ndf
             p_value = ROOT.TMath.Prob(chi2, ndf)
-    
-    
+
+
             canvas = ROOT.TCanvas("canvas", f"{target_nbins} bins SF hist", 800, 800)
             canvas.Divide(1, 2)  # Split canvas into 2 rows
             canvas.cd(1)
@@ -134,24 +136,24 @@ for year in years:
             # horizontal_line.SetLineColor(ROOT.kGreen)  # Change color for each fit
             horizontal_line.Draw("SAME")  # Draw the fit function on the same canvas
             # polynomial_func2.Draw("SAME")  # Draw the fit function on the same canvas
-    
-            
+
+
             # Add a legend
             legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)  # Legend coordinates (x1, y1, x2, y2)
             legend.AddEntry(hist_SF, "hist_SF", "l")  # "l" means line style
             legend.AddEntry(fit_func, "poly fit", "l")
             legend.AddEntry(horizontal_line, "horizontal line fit", "l")
             legend.Draw()
-    
+
             # Add a text box using TPaveText
             text_box = ROOT.TPaveText(0.0, 0.7, 0.4, 0.9, "NDC")  # NDC for normalized coordinates (0-1 range)
             text_box.SetFillColor(0)  # Transparent background
             text_box.SetBorderSize(1)  # Border thickness
-            text_box.AddText("Fit Results:") 
+            text_box.AddText("Fit Results:")
             text_box.AddText(f"chi2 / DOF = {float('%.4g' % chi2_dof)}")
             text_box.AddText(f"P value = {float('%.4g' % p_value)}")
             text_box.Draw()
-            
+
             # Update the canvas
             canvas.Update()
 
@@ -164,12 +166,12 @@ for year in years:
                 x_value = hist.GetBinCenter(i)
                 if x_value <= fit_xmax :
                     fit_value = fit_func.Eval(x_value)
-                else: 
+                else:
                     fit_value = horizontal_line.Eval(x_value)
                 if error > 0:  # Avoid division by zero
                     pull = (data - fit_value) / error
                     pull_hist.SetBinContent(i, pull)
-            
+
             # Draw the pull distribution on the bottom pad
             canvas.cd(2)
             ROOT.gPad.SetPad(0, 0, 1, 0.4)  # Bottom pad takes 40% of the canvas
@@ -177,8 +179,8 @@ for year in years:
             pull_hist.SetMarkerStyle(20)
             pull_hist.SetTitle("Pull Distribution;X-axis;Pull")
             pull_hist.Draw("P")  # "P" for marker plot
-            
-            
+
+
             # Save the canvas
             canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit.png")
             # canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit.pdf")
@@ -194,7 +196,7 @@ for year in years:
             for ix in range(max_order+1):
                 param_dict[f"p{ix}"] = 0.0
                 param_dict[f"p{ix}_err"] = 0.0
-            
+
             num_params = fit_func.GetNpar()  # Number of parameters in the fit
             print("Fitted parameters and uncertainties:")
             for ix in range(num_params):
@@ -212,12 +214,12 @@ for year in years:
                 "x_min" : fit_xmin,
                 "x_max" : fit_xmax
             }
-            
+
             out_dict_by_nbin[target_nbins] = param_dict
 
             out_dict_by_year[f"njet_{njet}"] = out_dict_by_nbin
 
-    
+
     save_dict[year] = out_dict_by_year
     yaml_path = "./zpt_rewgt_params.yaml"
     if os.path.isfile(yaml_path): # if yaml exists, append to existing config (values with same keys will be overwirtten

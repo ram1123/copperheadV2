@@ -1,12 +1,13 @@
 .ipynb_checkpoints/
+*.csv
 __pycache__/
-prestage_output/
-*.parquet
 voms_proxy.txt
 *.html
 .sites*.json
+prestage_output/
+*.parquet
 *.root
 *.pdf
 *.png
-log*.txt
 *.txt
+*.ps
