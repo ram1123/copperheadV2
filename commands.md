@@ -1,3 +1,8 @@
+# 06 March 2025
+
+```bash
+bash stage1_loop.sh -l WithPurdueZptWgt_DYWithoutLHECut_16Feb_AllYear  -m zpt_fit -d
+```
 # 03 March 2025
 
 ```bash

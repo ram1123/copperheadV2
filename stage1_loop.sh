@@ -43,6 +43,13 @@ while getopts $options option; do
     esac
 done
 
+# function to print and execute the command
+function run_command() {
+    echo "Executing: $1"
+    echo "Executing: $1" >> $log_file
+    eval $1
+}
+
 # if year is not set then take the default value of years
 if [[ -z "$year" ]]; then
     years=("2018" "2017" "2016postVFP" "2016preVFP")
@@ -148,6 +155,35 @@ for year in "${years[@]}"; do
         echo "Executing: $command1"  # Print the command for debugging
         echo "command1: $command1" >> $log_file
         eval $command1
+    elif [[ "$mode" == "zpt_fit" ]]; then
+        echo "Running fitting step..."
+
+        # Loop over the number of bins
+        # for nbins in 200; do
+        for nbins in 25 50 100 200 500; do
+            command2a="python data/zpt_rewgt/fitting/do_fitting.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _bin$nbins"
+            # command2b="python data/zpt_rewgt/fitting/do_f_test.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _bin$nbins"
+            # command2c="python data/zpt_rewgt/fitting/get_goodnessOfFit.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _bin$nbins"
+
+            command2b_New="python data/zpt_rewgt/fitting/get_ZpT_Weights.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _bin$nbins"
+
+            echo "Executing: $command2a"
+            echo "command2a: $command2a" >> $log_file
+            eval $command2a
+
+            echo "Executing: $command2b"
+            echo "command2b: $command2b" >> $log_file
+            # eval $command2b
+
+            echo "Executing: $command2b_New"
+            echo "command2b_New: $command2b_New" >> $log_file
+            eval $command2b_New
+
+            echo "Executing: $command2c"
+            echo "command2c: $command2c" >> $log_file
+            # eval $command2c
+        done
+
     elif [[ "$mode" == "zpt_val" ]]; then
         echo "Running validation step..."
         echo "Executing: $command2"  # Print the command for debugging

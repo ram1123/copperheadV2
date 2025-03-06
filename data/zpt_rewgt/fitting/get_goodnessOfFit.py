@@ -2,13 +2,17 @@ import ROOT
 from scipy.stats import f
 from omegaconf import OmegaConf
 import os
+import argparse
+import logging
+
+from modules.utils import logger
 
 # dictionary of all orders of polynomial from f-test
 f_orders = { # to recalculate these, re-run f-test on do_f_test.py
     "2018" : {
-        "njet0" : 5,
-        "njet1" : 4,
-        "njet2" : 4,
+        "njet0" : 8,
+        "njet1" : 7,
+        "njet2" : 6,
     },
     "2017" : {
         "njet0" : 4,
@@ -52,30 +56,41 @@ poly_fit_ranges = {
 global_fit_xmax = 200
 
 
-# years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-# years = ["2016preVFP",]
-years = ["2017"]
-nbins = [50, 100]
-# nbins = [100]
-jet_multiplicities = [0,1,2]
-# njet = 0
+
+# Argument parsing
+parser = argparse.ArgumentParser()
+parser.add_argument("--run_label", type=str, help="Run label", required=True)
+parser.add_argument("--years", type=str, nargs="+", help="Year", required=True)
+parser.add_argument("--njet", type=int, nargs="+", default=[0, 1, 2], help="Number of jets")
+parser.add_argument("--input_path", type=str, help="Input path", required=True)
+parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+parser.add_argument("--outAppend", type=str, default="", help="Append to output file name")
+parser.add_argument("--nbins", type=int, default=501, help="Number of bins")
+args = parser.parse_args()
+
+# Set logging level
+logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
+
+years = args.years
+nbins = [args.nbins]
+jet_multiplicities = args.njet
+
 save_dict = {} # to match the config setup, it's
 
 test_val = 110
 
-run_label = "WithPurdueZptWgt_DYWithoutLHECut_16Feb_AllYear" # shar1172
-outputDirectory = f"./plots_WS_{run_label}"
+run_label = args.run_label
+
+inDirectory = f"./plots_WS_{args.run_label}{args.outAppend}"
+save_path = f"{inDirectory}/GOF_{args.run_label}{args.outAppend}"
+os.makedirs(save_path, exist_ok=True)
 
 for year in years:
 
     out_dict_by_year = {}
 
     for njet in jet_multiplicities:
-    # for njet in [2]:
-        file = ROOT.TFile(f"{outputDirectory}/{year}_njet{njet}.root", "READ")
-        save_path = "./plots_goodnessOfFit"
-        if not os.path.exists(save_path):   # Create the directory if it doesn't exist
-            os.makedirs(save_path)
+        file = ROOT.TFile(f"{inDirectory}/{year}_njet{njet}.root", "READ")
         workspace = file.Get("zpt_Workspace")
         # target_nbins = 50
         # for target_nbins in [25, 50, 100, 250]:
@@ -94,28 +109,23 @@ for year in years:
             orig_nbins = hist_data.GetNbinsX()
             rebin_coeff = int(orig_nbins/target_nbins)
             print(f"rebin_coeff: {rebin_coeff}")
-            hist_data = hist_data.Rebin(rebin_coeff, "rebinned hist_data")
-            hist_dy = hist_dy.Rebin(rebin_coeff, "rebinned hist_dy")
+            # hist_data = hist_data.Rebin(rebin_coeff, "rebinned hist_data")
+            # hist_dy = hist_dy.Rebin(rebin_coeff, "rebinned hist_dy")
 
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
 
             # Fit with the lower-order polynomial
             polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(order + 1)])
-            polynomial_func = ROOT.TF1(f"poly{order}", polynomial_expr, -5, 5)
             # Define the TF1 function with the generated expression
-            fit_func = polynomial_func
+            fit_func = ROOT.TF1(f"poly{order}", polynomial_expr, -5, 5)
             _ = hist_SF.Fit(fit_func, "L S", xmin=fit_xmin, xmax=fit_xmax)
             _ = hist_SF.Fit(fit_func, "L S", xmin=fit_xmin, xmax=fit_xmax)
             fit_results = hist_SF.Fit(fit_func, "L S", xmin=fit_xmin, xmax=fit_xmax)
 
-
-
             # fit straight line
-            horizontal_line = ROOT.TF1("horizontal_line", "[0]", 0, 10)
+            horizontal_line = ROOT.TF1("horizontal_line", "[0]", fit_xmax, global_fit_xmax)
             fit_results = hist_SF.Fit(horizontal_line, "S R+", xmin=fit_xmax, xmax=global_fit_xmax)
-
-            # good setup
 
             chi2 = fit_func.GetChisquare()
             ndf = fit_func.GetNDF()
@@ -133,10 +143,8 @@ for year in years:
             hist_SF.Draw()
             fit_func.SetLineColor(ROOT.kRed)  # Change color for each fit
             fit_func.Draw("SAME")  # Draw the fit function on the same canvas
-            # horizontal_line.SetLineColor(ROOT.kGreen)  # Change color for each fit
+            horizontal_line.SetLineColor(ROOT.kGreen)  # Change color for each fit
             horizontal_line.Draw("SAME")  # Draw the fit function on the same canvas
-            # polynomial_func2.Draw("SAME")  # Draw the fit function on the same canvas
-
 
             # Add a legend
             legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)  # Legend coordinates (x1, y1, x2, y2)
@@ -183,7 +191,7 @@ for year in years:
 
             # Save the canvas
             canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit.png")
-            # canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit.pdf")
+            canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit.pdf")
 
             # ---------------------------------------------------
             # save the fit coeffs
@@ -219,9 +227,8 @@ for year in years:
 
             out_dict_by_year[f"njet_{njet}"] = out_dict_by_nbin
 
-
     save_dict[year] = out_dict_by_year
-    yaml_path = "./zpt_rewgt_params.yaml"
+    yaml_path = f"{save_path}/zpt_rewgt_params.yaml"
     if os.path.isfile(yaml_path): # if yaml exists, append to existing config (values with same keys will be overwirtten
         config = OmegaConf.load(yaml_path)
         config = OmegaConf.merge(config, save_dict)
