@@ -2,6 +2,7 @@ import numpy as np
 from scipy.special import erfinv, erf
 from random import random
 import awkward as ak
+import correctionlib.schemav2 as cs
 
 """
 This file is taken from https://gitlab.cern.ch/cms-muonPOG/muonscarekit/-/blob/master/scripts/MuonScaRe.py?ref_type=heads
@@ -19,10 +20,10 @@ class CrystallBall:
         self.pi = 3.14159
         self.sqrtPiOver2 = np.sqrt(self.pi/2.0)
         self.sqrt2 = np.sqrt(2.0)
-        self.m = ak.Array(m)
-        self.s = ak.Array(s)
-        self.a = ak.Array(a)
-        self.n = ak.Array(n)
+        self.m = m
+        self.s = s
+        self.a = a
+        self.n = n
         self.fa = abs(self.a)
         self.ex = np.exp(-self.fa * self.fa/2)
         self.A  = (self.n/self.fa)**self.n * self.ex
@@ -46,7 +47,6 @@ class CrystallBall:
 
 
     def cdf(self, x):
-        x = ak.Array(x)
         d = (x - self.m)/self.s
         result = ak.full_like(d, 1.0)
         
@@ -82,7 +82,6 @@ class CrystallBall:
 
 
     def invcdf(self, u):
-        u = ak.Array(u)
         result = ak.zeros_like(u)
 
         c1a = (u < self.cdfMa) & (self.NC/u > 0)
@@ -115,13 +114,38 @@ class CrystallBall:
         return result
 
 
-def get_rndm(eta, nL, cset, nested=False):
+def generateRandomVals(eta, nL, extra_rndm_seed):
+    resrng = cs.Correction(
+        name="resrng",
+        description="Deterministic smearing value generator",
+        version=1,
+        inputs=[
+            cs.Variable(name="seed1", type="real", description="seed1"),
+            cs.Variable(name="seed2", type="real", description="seed2"),
+            cs.Variable(name="seed3", type="real", description="seed3"),
+        ],
+        output=cs.Variable(name="rng", type="real"),
+        data=cs.HashPRNG(
+            nodetype="hashprng",
+            inputs=["seed1", "seed2", "seed3"],
+            distribution="stdflat",
+        )
+    )
+    rand_vals = resrng.to_evaluator().evaluate(
+        eta,
+        nL,
+        extra_rndm_seed,
+    )
+    # print(f"rand_vals: {rand_vals.compute()}")
+    return rand_vals
+
+def get_rndm(eta, nL, cset, extra_rndm_seed, nested=False):
     # obtain parameters from correctionlib
     # if nested:
     #     eta_f, nL_f, nmuons = ak.flatten(eta), ak.flatten(nL), ak.num(nL)
     # else:
     #     eta_f, nL_f, nmuons = eta, nL, np.ones_like(eta)
-    eta_f, nL_f, nmuons = eta, nL, np.ones_like(eta)
+    eta_f, nL_f, nmuons = eta, nL, ak.ones_like(eta)
     
     mean_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 0)
     sigma_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 1)
@@ -130,7 +154,9 @@ def get_rndm(eta, nL, cset, nested=False):
 
     # get random number following the CB
     # print(nmuons)
-    rndm_f = [random() for i in nmuons for j in range(int(i))]
+    # rndm_f = [random() for i in nmuons for j in range(int(i))]
+    rndm_f = generateRandomVals(eta, nL, extra_rndm_seed)
+    # print(f"nmuons: {ak.num(nL, axis=1).compute()}")
 
     cb_f = CrystallBall(mean_f, sigma_f, alpha_f, n_f)
 
@@ -252,8 +278,9 @@ def pt_resol(pt, eta, nL, cset, nested=False):
 
     This function should only be applied to reco muons in MC!
     """
-    # rndm = get_rndm(eta, nL, cset, nested)
-    rndm = ak.ones_like(pt)
+    extra_rndm_seed = pt
+    rndm = get_rndm(eta, nL, cset, extra_rndm_seed, nested)
+    # rndm = ak.ones_like(pt)
     std = get_std(pt, eta, nL, cset, nested)
     k = get_k(eta, "nom", cset, nested)
 
