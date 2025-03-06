@@ -7,6 +7,8 @@ import awkward as ak
 This file is taken from https://gitlab.cern.ch/cms-muonPOG/muonscarekit/-/blob/master/scripts/MuonScaRe.py?ref_type=heads
 
 Full credits go to KIT and the authors of the script
+
+This script has been altered to match dask-awkward workflow
 """
 
 
@@ -115,11 +117,12 @@ class CrystallBall:
 
 def get_rndm(eta, nL, cset, nested=False):
     # obtain parameters from correctionlib
-    if nested:
-        eta_f, nL_f, nmuons = ak.flatten(eta), ak.flatten(nL), ak.num(nL)
-    else:
-        eta_f, nL_f, nmuons = eta, nL, np.ones_like(eta)
-
+    # if nested:
+    #     eta_f, nL_f, nmuons = ak.flatten(eta), ak.flatten(nL), ak.num(nL)
+    # else:
+    #     eta_f, nL_f, nmuons = eta, nL, np.ones_like(eta)
+    eta_f, nL_f, nmuons = eta, nL, np.ones_like(eta)
+    
     mean_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 0)
     sigma_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 1)
     n_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 2)
@@ -133,19 +136,21 @@ def get_rndm(eta, nL, cset, nested=False):
 
     result_f = cb_f.invcdf(rndm_f)
 
-    if nested:
-        result = ak.unflatten(result_f, nmuons)
-    else:
-        result = result_f
+    # if nested:
+    #     result = ak.unflatten(result_f, nmuons)
+    # else:
+    #     result = result_f
+    result = result_f
 
     return result
 
 
 def get_std(pt, eta, nL, cset, nested=False):
-    if nested:
-        eta_f, nL_f, pt_f, nmuons = ak.flatten(eta), ak.flatten(nL), ak.flatten(pt), ak.num(nL)
-    else:
-        eta_f, nL_f, pt_f, nmuons = eta, nL, pt, 1
+    # if nested:
+    #     eta_f, nL_f, pt_f, nmuons = ak.flatten(eta), ak.flatten(nL), ak.flatten(pt), ak.num(nL)
+    # else:
+    #     eta_f, nL_f, pt_f, nmuons = eta, nL, pt, 1
+    eta_f, nL_f, pt_f, nmuons = eta, nL, pt, 1
 
     # obtain parameters from correctionlib    
     param0_f = cset.get("poly_params").evaluate(abs(eta_f), nL_f, 0)
@@ -154,21 +159,23 @@ def get_std(pt, eta, nL, cset, nested=False):
 
     # calculate value and return max(0, val)
     sigma_f = param0_f + param1_f * pt_f + param2_f * pt_f*pt_f
-    sigma_corrected_f = np.where(sigma_f < 0, 0, sigma_f)
+    sigma_corrected_f = ak.where(sigma_f < 0, 0, sigma_f)
 
-    if nested:
-        result = ak.unflatten(sigma_corrected_f, nmuons)
-    else:
-        result = sigma_corrected_f
+    # if nested:
+    #     result = ak.unflatten(sigma_corrected_f, nmuons)
+    # else:
+    #     result = sigma_corrected_f
+    result = sigma_corrected_f
 
     return result
 
 
 def get_k(eta, var, cset, nested=False):
-    if nested:
-        eta_f, nmuons = ak.flatten(eta), ak.num(eta)
-    else:
-        eta_f = eta
+    # if nested:
+    #     eta_f, nmuons = ak.flatten(eta), ak.num(eta)
+    # else:
+    #     eta_f = eta
+    eta_f = eta
 
     # obtain parameters from correctionlib
     k_data_f = cset.get("k_data").evaluate(abs(eta_f), var)
@@ -176,14 +183,18 @@ def get_k(eta, var, cset, nested=False):
 
     # calculate residual smearing factor 
     # return 0 if smearing in MC already larger than in data
-    k_f = np.zeros_like(k_data_f)
+    k_f = ak.zeros_like(k_data_f)
     condition = k_mc_f<k_data_f
-    k_f[condition] = (k_data_f[condition]**2 - k_mc_f[condition]**2)**.5
+    # k_f[condition] = (k_data_f[condition]**2 - k_mc_f[condition]**2)**.5
+    k_f_condition = (k_data_f**2 - k_mc_f**2)**.5
+    k_f = ak.where(condition, k_f_condition, k_f)
+    
 
-    if nested:
-        result = ak.unflatten(k_f, nmuons)
-    else:
-        result = k_f
+    # if nested:
+    #     result = ak.unflatten(k_f, nmuons)
+    # else:
+    #     result = k_f
+    result = k_f
 
     return result
 
@@ -206,14 +217,15 @@ def filter_boundaries(pt_corr, pt, nested):
             f"There are {n_pt_outside} events with muon pt outside of [26,200] GeV. "
             "Setting those entries to their initial value."
         )
-        pt_corr = np.where(pt>200, pt, pt_corr)
-        pt_corr = np.where(pt<26, pt, pt_corr)
+        pt_corr = ak.where(pt>200, pt, pt_corr)
+        pt_corr = ak.where(pt<26, pt, pt_corr)
 
     # Check for NaN entries in pt_corr
     nan_entries = np.isnan(pt_corr)
 
     if nested:
         n_nan = ak.sum(ak.any(nan_entries, axis=-1))
+        n_nan += ak.sum(ak.is_none(pt_corr, axis=-1)) # Nan and None are considered different in awkward
     else:
         n_nan = np.sum(nan_entries)
 
@@ -223,7 +235,8 @@ def filter_boundaries(pt_corr, pt, nested):
             "This might be due to the number of tracker layers hitting boundaries. "
             "Setting those entries to their initial value."
         )
-        pt_corr = np.where(np.isnan(pt_corr), pt, pt_corr)
+        pt_corr = ak.where(np.isnan(pt_corr), pt, pt_corr)
+        pt_corr = ak.where(ak.is_none(pt_corr), pt, pt_corr)
 
     return pt_corr
 
@@ -239,7 +252,8 @@ def pt_resol(pt, eta, nL, cset, nested=False):
 
     This function should only be applied to reco muons in MC!
     """
-    rndm = get_rndm(eta, nL, cset, nested)
+    # rndm = get_rndm(eta, nL, cset, nested)
+    rndm = ak.ones_like(pt)
     std = get_std(pt, eta, nL, cset, nested)
     k = get_k(eta, "nom", cset, nested)
 
@@ -263,12 +277,14 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
     This function should only be applied to reco muons in MC!
     """
     
-    if nested:
-        eta_f, nmuons = ak.flatten(eta), ak.num(eta)
-        pt_wresol_f, pt_woresol_f = ak.flatten(pt_wresol), ak.flatten(pt_woresol)
-    else:
-        eta_f, nmuons = eta, 1
-        pt_wresol_f, pt_woresol_f = pt_wresol, pt_woresol
+    # if nested:
+    #     eta_f, nmuons = ak.flatten(eta), ak.num(eta)
+    #     pt_wresol_f, pt_woresol_f = ak.flatten(pt_wresol), ak.flatten(pt_woresol)
+    # else:
+    #     eta_f, nmuons = eta, 1
+    #     pt_wresol_f, pt_woresol_f = pt_wresol, pt_woresol
+    eta_f, nmuons = eta, 1
+    pt_wresol_f, pt_woresol_f = pt_wresol, pt_woresol
 
     k_unc_f = cset.get("k_mc").evaluate(abs(eta_f), "stat")
     k_f = cset.get("k_mc").evaluate(abs(eta_f), "nom")
@@ -295,10 +311,11 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
     else:
         print("ERROR: updn must be 'up' or 'dn'")
 
-    if nested:
-        pt_var = ak.unflatten(pt_var_f, nmuons)
-    else:
-        pt_var = pt_var_f
+    # if nested:
+    #     pt_var = ak.unflatten(pt_var_f, nmuons)
+    # else:
+    #     pt_var = pt_var_f
+    pt_var = pt_var_f
 
     return pt_var
 
@@ -322,18 +339,20 @@ def pt_scale(is_data, pt, eta, phi, charge, cset, nested=False):
     else:
         dtmc = "mc"
 
-    if nested:
-        eta_f, phi_f, nmuons = ak.flatten(eta), ak.flatten(phi), ak.num(eta)
-    else:
-        eta_f, phi_f, nmuons = eta, phi, 1
+    # if nested:
+    #     eta_f, phi_f, nmuons = ak.flatten(eta), ak.flatten(phi), ak.num(eta)
+    # else:
+    #     eta_f, phi_f, nmuons = eta, phi, 1
+    eta_f, phi_f, nmuons = eta, phi, 1
     
     a_f = cset.get("a_"+dtmc).evaluate(eta_f, phi_f, "nom")
     m_f = cset.get("m_"+dtmc).evaluate(eta_f, phi_f, "nom")
 
-    if nested:
-        a, m = ak.unflatten(a_f, nmuons), ak.unflatten(m_f, nmuons)
-    else: 
-        a, m = a_f, m_f
+    # if nested:
+    #     a, m = ak.unflatten(a_f, nmuons), ak.unflatten(m_f, nmuons)
+    # else: 
+    #     a, m = a_f, m_f
+    a, m = a_f, m_f
 
     pt_corr = 1. / (m/pt + charge * a)
 
@@ -365,8 +384,8 @@ def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False):
     stat_m_f = cset.get("m_mc").evaluate(eta_f, phi_f, "stat")
     stat_rho_f = cset.get("m_mc").evaluate(eta_f, phi_f, "rho_stat")
 
-    if nested:
-        stat_a, stat_m, stat_rho = ak.unflatten(stat_a_f, nmuons), ak.unflatten(stat_m_f, nmuons), ak.unflatten(stat_rho_f, nmuons)
+    # if nested:
+    #     stat_a, stat_m, stat_rho = ak.unflatten(stat_a_f, nmuons), ak.unflatten(stat_m_f, nmuons), ak.unflatten(stat_rho_f, nmuons)
 
     unc = pt*pt * (stat_m*stat_m / (pt*pt) + stat_a*stat_a + 2*charge*stat_rho*stat_m/pt*stat_a)**.5
 
