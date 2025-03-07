@@ -257,26 +257,26 @@ event_flags: # MET/Noise filters source: https://twiki.cern.ch/twiki/bin/view/CM
   - goodVertices
   - BadChargedCandidateFilter
   2022preEE:
-  - BadPFMuonFilter
-  - EcalDeadCellTriggerPrimitiveFilter
-  - globalSuperTightHalo2016Filter
   - goodVertices
+  - globalSuperTightHalo2016Filter
+  - EcalDeadCellTriggerPrimitiveFilter
+  - BadPFMuonFilter
   - BadPFMuonDzFilter
   - hfNoisyHitsFilter
   - eeBadScFilter
   2022postEE:
-  - BadPFMuonFilter
-  - EcalDeadCellTriggerPrimitiveFilter
-  - globalSuperTightHalo2016Filter
   - goodVertices
+  - globalSuperTightHalo2016Filter
+  - EcalDeadCellTriggerPrimitiveFilter
+  - BadPFMuonFilter
   - BadPFMuonDzFilter
   - hfNoisyHitsFilter
   - eeBadScFilter
   '2023':
-  - BadPFMuonFilter
-  - EcalDeadCellTriggerPrimitiveFilter
-  - globalSuperTightHalo2016Filter
   - goodVertices
+  - globalSuperTightHalo2016Filter
+  - EcalDeadCellTriggerPrimitiveFilter
+  - BadPFMuonFilter
   - BadPFMuonDzFilter
   - hfNoisyHitsFilter
   - eeBadScFilter
