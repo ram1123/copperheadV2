@@ -10,8 +10,8 @@ from modules.utils import logger
 # dictionary of all orders of polynomial from f-test
 f_orders = { # to recalculate these, re-run f-test on do_f_test.py
     "2018" : {
-        "njet0" : 8,
-        "njet1" : 7,
+        "njet0" : 6,
+        "njet1" : 6,
         "njet2" : 6,
     },
     "2017" : {
@@ -33,9 +33,9 @@ f_orders = { # to recalculate these, re-run f-test on do_f_test.py
 
 poly_fit_ranges = {
     "2018" : {
-        "njet0" : [0, 85],
-        "njet1" : [0, 50],
-        "njet2" : [0, 50],
+        "njet0" : [0, 25],
+        "njet1" : [0, 25],
+        "njet2" : [0, 25],
     },
     "2017" : {
         "njet0" : [0, 70],
@@ -65,7 +65,7 @@ parser.add_argument("--njet", type=int, nargs="+", default=[0, 1, 2], help="Numb
 parser.add_argument("--input_path", type=str, help="Input path", required=True)
 parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("--outAppend", type=str, default="", help="Append to output file name")
-parser.add_argument("--nbins", type=int, default=501, help="Number of bins")
+parser.add_argument("--nbins", type=str, default="501", help="Number of bins")
 args = parser.parse_args()
 
 # Set logging level
@@ -90,7 +90,8 @@ for year in years:
     out_dict_by_year = {}
 
     for njet in jet_multiplicities:
-        file = ROOT.TFile(f"{inDirectory}/{year}_njet{njet}.root", "READ")
+        # file = ROOT.TFile(f"{inDirectory}/{year}_njet{njet}.root", "READ")
+        file = ROOT.TFile(f"{inDirectory}/{year}_njet{njet}_nbins{args.nbins}.root", "READ")
         workspace = file.Get("zpt_Workspace")
         # target_nbins = 50
         # for target_nbins in [25, 50, 100, 250]:
@@ -107,8 +108,8 @@ for year in years:
             hist_data = workspace.obj("hist_data").Clone("hist_data_clone")
             hist_dy = workspace.obj("hist_dy").Clone("hist_dy_clone")
             orig_nbins = hist_data.GetNbinsX()
-            rebin_coeff = int(orig_nbins/target_nbins)
-            print(f"rebin_coeff: {rebin_coeff}")
+            # rebin_coeff = int(orig_nbins/target_nbins)
+            # print(f"rebin_coeff: {rebin_coeff}")
             # hist_data = hist_data.Rebin(rebin_coeff, "rebinned hist_data")
             # hist_dy = hist_dy.Rebin(rebin_coeff, "rebinned hist_dy")
 
@@ -129,7 +130,7 @@ for year in years:
 
             chi2 = fit_func.GetChisquare()
             ndf = fit_func.GetNDF()
-            chi2_dof = chi2/ndf
+            chi2_dof = chi2/ndf if ndf > 0 else 0
             p_value = ROOT.TMath.Prob(chi2, ndf)
 
 

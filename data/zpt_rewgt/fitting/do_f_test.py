@@ -9,9 +9,9 @@ from modules.utils import logger
 # define cut ranges to do polynomial fits. pt ranges beyond that point we fit with a constant
 poly_fit_ranges = {
     "2018" : {
-        "njet0" : [0, 85],
-        "njet1" : [0, 50],
-        "njet2" : [0, 50],
+        "njet0" : [0, 25],
+        "njet1" : [0, 25],
+        "njet2" : [0, 25],
     },
     "2017" : {
         "njet0" : [0, 70],
@@ -38,7 +38,7 @@ parser.add_argument("--njet", type=int, nargs="+", default=[0, 1, 2], help="Numb
 parser.add_argument("--input_path", type=str, help="Input path", required=True)
 parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("--outAppend", type=str, default="", help="Append to output file name")
-parser.add_argument("--nbins", type=int, default=501, help="Number of bins")
+parser.add_argument("--nbins", type=str, default="501", help="Number of bins")
 args = parser.parse_args()
 
 # Set logging level
@@ -127,7 +127,8 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, outTextFile, outTe
 for njet in args.njet:
     outTextFile = open(f"{inDirectory}/fTest_results_{year}_njet{njet}_UpdatedCode.txt", "w")
     outTextFile_keys = open(f"{inDirectory}/fTest_results_{year}_njet{njet}_keys.txt", "w")
-    input_file = f"{inDirectory}/{year}_njet{njet}.root"
+    # input_file = f"{inDirectory}/{year}_njet{njet}.root"
+    input_file = f"{inDirectory}/{year}_njet{njet}_nbins{args.nbins}.root"
 
     if not os.path.exists(input_file):
         logger.error(f"File {input_file} not found!")
@@ -145,10 +146,10 @@ for njet in args.njet:
         hist_data = workspace.obj("hist_data").Clone("hist_data_clone")
         hist_dy = workspace.obj("hist_dy").Clone("hist_dy_clone")
         orig_nbins = hist_data.GetNbinsX()
-        rebin_coeff = int(orig_nbins/target_nbins)
+        # rebin_coeff = int(orig_nbins/target_nbins)
 
         # Rebin histograms
-        logger.debug(f"rebin_coeff: {rebin_coeff}")
+        # logger.debug(f"rebin_coeff: {rebin_coeff}")
         # hist_data_rebinned = hist_data.Rebin(rebin_coeff, f"hist_data_rebinned_{target_nbins}")
         # hist_dy_rebinned = hist_dy.Rebin(rebin_coeff, f"hist_dy_rebinned_{target_nbins}")
         # hist_data = hist_data.Rebin(rebin_coeff, "rebinned hist_data")
