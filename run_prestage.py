@@ -23,6 +23,73 @@ import sys
 
 import logging
 from modules.utils import logger
+from collections.abc import Sequence
+
+
+# def getRootFileNames(single_das_query: str, allowlist_sites: list) -> list:
+#     """
+#     Helper function that returns a list of root files in xrootd paths that meets 
+#     the single_das_query requirements
+#     """
+#     rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
+#     outlist, outtree = rucio_utils.query_dataset(
+#         single_das_query,
+#         client=rucio_client,
+#         tree=True,
+#         scope="cms",
+#     )
+#     outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
+#         outlist[0],
+#         allowlist_sites=allowlist_sites,
+#         mode="full",
+#         client=rucio_client,
+#         # partial_allowed=True
+#     )
+#     fnames = [file[0] for file in outfiles if file != []]
+#     return fnames
+
+
+def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
+    print(f"single_dataset_name {single_dataset_name}")
+    if single_dataset_name.startswith("/eos"):
+        fnames = glob.glob(f"{single_dataset_name}/*.root")
+        logger.debug(f"fnames: {fnames}")
+        fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading
+    else:
+        das_query = single_dataset_name
+        logger.debug(f"das query: {das_query}")
+        print(f"allowlist_sites: {allowlist_sites}")
+
+        allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL"]
+        rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
+        
+        outlist, outtree = rucio_utils.query_dataset(
+            das_query,
+            client=rucio_client,
+            tree=True,
+            scope="cms",
+        )
+        outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
+            outlist[0],
+            allowlist_sites=allowlist_sites,
+            mode="full",
+            client=rucio_client,
+            # partial_allowed=True
+        )
+        fnames = [file[0] for file in outfiles if file != []]
+        # if type(das_query) == list:
+        #     fnames = []
+        #     for single_das_query in das_query:
+        #         fnames += getRootFileNames(single_das_query, allowlist_sites)
+        # else: # single string instance
+        #     single_das_query = das_query
+        #     fnames = getRootFileNames(single_das_query, allowlist_sites)
+        # raise ValueError
+        
+        
+        return fnames
+    
+
 
 def get_Xcache_filelist(fnames: list):
     new_fnames = []
@@ -50,6 +117,7 @@ def find_keys_in_yaml(yaml_data, keys_to_find):
 
     recursive_search(yaml_data)
     return found_values
+
 
 
 if __name__ == "__main__":
@@ -279,33 +347,64 @@ if __name__ == "__main__":
             logger.debug(f"Sample Name: {sample_name}")
             logger.debug(f"dataset[sample_name]: {dataset[sample_name]}")
             logger.debug(f"is data?: {is_data}")
-
-            if dataset[sample_name].startswith("/eos"):
-                fnames = glob.glob(f"{dataset[sample_name]}/*.root")
-                logger.debug(f"fnames: {fnames}")
-                fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading
+            dataset_name = dataset[sample_name]
+            allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_US_UCSD"]
+            # allowlist_sites = None
+            
+            # print(f"type(dataset_name): {type(dataset_name)}")
+            is_some_list_type = isinstance(dataset_name, Sequence) and not isinstance(dataset_name, str)
+            logger.debug(f"is_some_list_type: {is_some_list_type}")
+            if is_some_list_type:
+                fnames = []
+                for single_dataset_name in dataset_name:
+                    fnames += getDatasetRootFiles(single_dataset_name, allowlist_sites)
+                # print(f"fnames: {fnames}")
+                # raise ValueError
             else:
-                das_query = dataset[sample_name]
-                logger.debug(f"das query: {das_query}")
+                single_dataset_name = dataset_name
+                fnames = getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
-                allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL"]
-                rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
-                outlist, outtree = rucio_utils.query_dataset(
-                    das_query,
-                    client=rucio_client,
-                    tree=True,
-                    scope="cms",
-                )
-                outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
-                    outlist[0],
-                    allowlist_sites=allowlist_sites,
-                    mode="full",
-                    client=rucio_client,
-                    # partial_allowed=True
-                )
-                fnames = [file[0] for file in outfiles if file != []]
-                if args.xcache:
-                    fnames = get_Xcache_filelist(fnames)
+            # convert to xcachce paths if requested
+            if args.xcache:
+                fnames = get_Xcache_filelist(fnames)
+            
+            # if dataset[sample_name].startswith("/eos"):
+            #     fnames = glob.glob(f"{dataset[sample_name]}/*.root")
+            #     logger.debug(f"fnames: {fnames}")
+            #     fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading
+            # else:
+            #     das_query = dataset[sample_name]
+            #     # logger.debug(f"das query: {das_query}")
+            #     print(f"das query: {das_query}")
+
+            #     allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL"]
+            #     # rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
+                
+            #     # outlist, outtree = rucio_utils.query_dataset(
+            #     #     das_query,
+            #     #     client=rucio_client,
+            #     #     tree=True,
+            #     #     scope="cms",
+            #     # )
+            #     # outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
+            #     #     outlist[0],
+            #     #     allowlist_sites=allowlist_sites,
+            #     #     mode="full",
+            #     #     client=rucio_client,
+            #     #     # partial_allowed=True
+            #     # )
+            #     # fnames = [file[0] for file in outfiles if file != []]
+            #     if type(das_query) == list:
+            #         fnames = []
+            #         for single_das_query in das_query:
+            #             fnames += getRootFileNames(single_das_query, allowlist_sites)
+            #     else: # single string instance
+            #         single_das_query = das_query
+            #         fnames = getRootFileNames(single_das_query, allowlist_sites)
+            #     raise ValueError
+            #     # convert to xcachce paths if requested
+            #     if args.xcache:
+            #         fnames = get_Xcache_filelist(fnames)
 
             logger.debug(f"file names: {fnames}")
             logger.debug(f"sample_name: {sample_name}")
