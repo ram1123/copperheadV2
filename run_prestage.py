@@ -76,16 +76,7 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
             client=rucio_client,
             # partial_allowed=True
         )
-        fnames = [file[0] for file in outfiles if file != []]
-        # if type(das_query) == list:
-        #     fnames = []
-        #     for single_das_query in das_query:
-        #         fnames += getRootFileNames(single_das_query, allowlist_sites)
-        # else: # single string instance
-        #     single_das_query = das_query
-        #     fnames = getRootFileNames(single_das_query, allowlist_sites)
-        # raise ValueError
-        
+        fnames = [file[0] for file in outfiles if file != []]       
         
         return fnames
     
@@ -367,44 +358,6 @@ if __name__ == "__main__":
             # convert to xcachce paths if requested
             if args.xcache:
                 fnames = get_Xcache_filelist(fnames)
-            
-            # if dataset[sample_name].startswith("/eos"):
-            #     fnames = glob.glob(f"{dataset[sample_name]}/*.root")
-            #     logger.debug(f"fnames: {fnames}")
-            #     fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading
-            # else:
-            #     das_query = dataset[sample_name]
-            #     # logger.debug(f"das query: {das_query}")
-            #     print(f"das query: {das_query}")
-
-            #     allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL"]
-            #     # rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
-                
-            #     # outlist, outtree = rucio_utils.query_dataset(
-            #     #     das_query,
-            #     #     client=rucio_client,
-            #     #     tree=True,
-            #     #     scope="cms",
-            #     # )
-            #     # outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
-            #     #     outlist[0],
-            #     #     allowlist_sites=allowlist_sites,
-            #     #     mode="full",
-            #     #     client=rucio_client,
-            #     #     # partial_allowed=True
-            #     # )
-            #     # fnames = [file[0] for file in outfiles if file != []]
-            #     if type(das_query) == list:
-            #         fnames = []
-            #         for single_das_query in das_query:
-            #             fnames += getRootFileNames(single_das_query, allowlist_sites)
-            #     else: # single string instance
-            #         single_das_query = das_query
-            #         fnames = getRootFileNames(single_das_query, allowlist_sites)
-            #     raise ValueError
-            #     # convert to xcachce paths if requested
-            #     if args.xcache:
-            #         fnames = get_Xcache_filelist(fnames)
 
             logger.debug(f"file names: {fnames}")
             logger.debug(f"sample_name: {sample_name}")
