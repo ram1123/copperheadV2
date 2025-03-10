@@ -118,8 +118,14 @@ cross_sections:
   dyTo2L_M-10To50:
       2022preEE: -99.00
   dyTo2L_M-50_0j:
-      2022preEE: 6296.00 # temp
+      2022preEE: 6296.00 # FIXME BAD
   dyTo2L_M-50_1j:
-      2022preEE: 3656.00 # temp
+      2022preEE: 3656.00 # FIXME BAD
   dyTo2L_M-50_2j:
-      2022preEE: 1668.00 # temp
+      2022preEE: 1668.00 # FIXME BAD
+  dyTo2L_M-50_incl:
+      2022preEE: 6244.8 # FIXME
+      2022postEE: 6244.8 # FIXME
+  tt_inclusive:
+      2022preEE: 921.0 # FIXME
+      2022postEE: 921.0 # FIXME

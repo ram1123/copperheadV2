@@ -244,5 +244,5 @@ jmar_sf_file:
   2016_RERECO: dummy
   '2017_RERECO': dummy
   '2018_RERECO': dummy
-  2022preEE: dummy
-  2022postEE: dummy
+  2022preEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2022_Summer22/jmar.json.gz # FIXME
+  2022postEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2022_Summer22EE/jmar.json.gz # FIXME

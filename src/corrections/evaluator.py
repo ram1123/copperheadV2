@@ -1618,6 +1618,7 @@ def get_jetpuid_weights(year, jets, config):
     #     return jetpuid_weight
     # else:
     fname = config["jmar_sf_file"]
+    print(f"fname: {fname}")
     puid_evaluator = correctionlib.CorrectionSet.from_file(fname)
     wp_converter = {
         "loose" : "L",
