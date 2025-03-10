@@ -404,8 +404,9 @@ def getJetVetoFilter(cset, jets):
     loose_selection = (
         (jets.pt > 15)
         & isJetIdTight(jets.jetId)
-        & (jets.neEmEF < 0.9)
-        & (jets.chEmEF < 0.9)
+        # & (jets.neEmEF < 0.9)
+        # & (jets.chEmEF < 0.9)
+        & ( (jets.chEmEF + jets.neEmEF) < 0.9 )
         & getJetVetoMuonIso(jets)
     )
     # print(f"loose_selection: {loose_selection[:20].compute()}")
