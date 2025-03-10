@@ -8,7 +8,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor, apply_roccorRun3
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, getJetVetoFilter
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
 import json
@@ -101,42 +101,42 @@ def getZptWgts(dimuon_pt, njets, nbins, year):
     zpt_wgt = ak.where(cutOff_mask, zpt_wgt, ak.ones_like(dimuon_pt))
     return zpt_wgt
 
+# We shouldn't merge weights anymore
+# def merge_zpt_wgt(yun_wgt, valerie_wgt, njets, year):
+#     """
+#     helper function that merges yun_wgt and valerie_wgt defined by jet multiplicity
+#     """
+#     val_filter_dict_run2 = {
+#         "2018": {0: False, 1: False, 2: True},
+#         "2017": {0: True, 1: False, 2: True},
+#         "2016postVFP": False,
+#         "2016preVFP": False,
+#     }
+#     val_filter_dict = val_filter_dict_run2[year]
+#     # print(f"val_filter_dict: {val_filter_dict}")
+#     if val_filter_dict == False:
+#         return yun_wgt
+#     else: # divide by njet multiplicity
+#         val_filter = ak.zeros_like(valerie_wgt, dtype="bool")
+#         for njet_multiplicity_target, use_flag in val_filter_dict.items():
+#             # print(f"njet_multiplicity_target: {njet_multiplicity_target}")
+#             # print(f"{year} njet {njet_multiplicity_target} use_flag: {use_flag}")
+#             if use_flag == False: # skip
+#                 print("skipping!")
+#                 continue
+#             # If true, generate a boolean 1-D array
+#             if njet_multiplicity_target != 2:
+#                 use_valerie_zpt =  njets == njet_multiplicity_target
+#             else:
+#                 use_valerie_zpt =  njets >= njet_multiplicity_target
+#             val_filter = val_filter | use_valerie_zpt
 
-def merge_zpt_wgt(yun_wgt, valerie_wgt, njets, year):
-    """
-    helper function that merges yun_wgt and valerie_wgt defined by jet multiplicity
-    """
-    val_filter_dict_run2 = {
-        "2018": {0: False, 1: False, 2: True},
-        "2017": {0: True, 1: False, 2: True},
-        "2016postVFP": False,
-        "2016preVFP": False,
-    }
-    val_filter_dict = val_filter_dict_run2[year]
-    # print(f"val_filter_dict: {val_filter_dict}")
-    if val_filter_dict == False:
-        return yun_wgt
-    else: # divide by njet multiplicity
-        val_filter = ak.zeros_like(valerie_wgt, dtype="bool")
-        for njet_multiplicity_target, use_flag in val_filter_dict.items():
-            # print(f"njet_multiplicity_target: {njet_multiplicity_target}")
-            # print(f"{year} njet {njet_multiplicity_target} use_flag: {use_flag}")
-            if use_flag == False: # skip
-                print("skipping!")
-                continue
-            # If true, generate a boolean 1-D array
-            if njet_multiplicity_target != 2:
-                use_valerie_zpt =  njets == njet_multiplicity_target
-            else:
-                use_valerie_zpt =  njets >= njet_multiplicity_target
-            val_filter = val_filter | use_valerie_zpt
-
-            # print(f"{year} njet {njet_multiplicity_target} use_valerie_zpt: {use_valerie_zpt[:20].compute()}")
-            # print(f"{year} njet {njet_multiplicity_target} njets: {njets[:20].compute()}")
-        # print(f"{year}  val_filter: {val_filter[:20].compute()}")
-        # raise ValueError
-        final_filter = ak.where(val_filter, valerie_wgt, yun_wgt)
-        return final_filter
+#             # print(f"{year} njet {njet_multiplicity_target} use_valerie_zpt: {use_valerie_zpt[:20].compute()}")
+#             # print(f"{year} njet {njet_multiplicity_target} njets: {njets[:20].compute()}")
+#         # print(f"{year}  val_filter: {val_filter[:20].compute()}")
+#         # raise ValueError
+#         final_filter = ak.where(val_filter, valerie_wgt, yun_wgt)
+#         return final_filter
 
 def getRapidity(obj):
     px = obj.pt * np.cos(obj.phi)
@@ -348,6 +348,8 @@ class EventProcessor(processor.ProcessorABC):
             "do_beamConstraint": True, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
+            "do_zpt_wgt": False, # True
+            "do_ebe_dimuon_mass_calib": False, # True
         }
         self.config.update(dict_update)
         logger.debug(f"self.config: {self.config}")
@@ -778,6 +780,17 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"electron veto test: {ak.all(electron_veto_test == electron_veto).compute()}")
         # print(f"electron veto is none: {ak.any(ak.is_none(electron_veto_test)).compute()}")
 
+        # ----------------------------------------------------------------
+        # Apply Event level Jet veto for Run3
+        # ----------------------------------------------------------------
+        
+        jetVetoMap_path = self.config["jet_veto"]
+        print(f"jetVetoMap_path: {jetVetoMap_path}")
+        if jetVetoMap_path is None:
+            veto_filter = lumi_mask = ak.ones_like(event_filter, dtype="bool")
+        else:
+            cset = correctionlib.CorrectionSet.from_file(jetVetoMap_path)
+            veto_filter = getJetVetoFilter(cset, events.Jet)
 
         event_filter = (
                 event_filter
@@ -787,6 +800,7 @@ class EventProcessor(processor.ProcessorABC):
                 & (mm_charge == -1)
                 & electron_veto
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
+                & veto_filter
 
         )
         # print(f"event_filter sum: {ak.sum(event_filter).compute()}")
@@ -1352,7 +1366,7 @@ class EventProcessor(processor.ProcessorABC):
 
         # do zpt weight at the very end
         dataset = events.metadata["dataset"]
-        do_zpt = ('dy' in dataset) and is_mc
+        do_zpt = ('dy' in dataset) and is_mc and self.config["do_zpt_wgt"]
         # do_zpt = False # temporary overwrite to obtain for zpt re-wgt
         if do_zpt:
             print("doing zpt!")
@@ -1489,8 +1503,11 @@ class EventProcessor(processor.ProcessorABC):
                 abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
             )
 
-        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
-        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
+        if self.config["do_ebe_dimuon_mass_calib"]:
+            return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
+        else:
+            print("Not applying EBE dimuon mass calibration!")
+            return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
 
     def prepare_jets(self, events, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
         # Initialize missing fields (needed for JEC)

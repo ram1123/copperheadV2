@@ -3,6 +3,7 @@ from coffea.jetmet_tools import CorrectedJetsFactory, JECStack
 from coffea.lookup_tools import extractor
 import numpy as np
 import awkward as ak
+import dask_awkward as dak
 import os
 
 
@@ -342,3 +343,82 @@ def fill_softjets(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
         f"htsoft{cutoff}" : saj_HT
     }
     return out_dict
+
+def isJetIdTight(jetId):
+    """
+    helper function that determins whether jet is tight. Specifically for Run3 jetveto.
+    Run2 samples shouldn't use jetveto
+
+    source: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV
+    """
+    return jetId >= 2
+
+def getJetVetoMuonIso(jets):
+    """
+    """
+    delta_r = jets.deltaR(jets.matched_muons) # matched muons are PF muons with dR < 0.4. None if not found
+    jet_dR_cut = ak.any(ak.fill_none(delta_r >= 0.2, False), axis=2)
+    return jet_dR_cut
+
+
+
+def clip(arr, min_val, max_val):
+    """
+    dask awkard compatible clip function
+    """
+    arr = ak.where((arr < min_val), min_val, arr)
+    arr = ak.where((arr > max_val), max_val, arr)
+    return arr
+
+def getJetVetoFilter(cset, jets):
+    """
+    Source: https://cms-jerc.web.cern.ch/Recommendations/#2024
+    -> "The safest procedure would be to veto events if ANY jet with a loose selection lies in the veto regions"
+
+    
+    All possible jet veto map types are: jetvetomap, jetvetomap_hot, jetvetomap_cold, jetvetomap_hotandcold, jetvetomap_all
+    The recommended map type is jetvetomap.
+    """
+    print(f"jets.pt: {jets.pt[:20].compute()}")
+    # obtain the jetvetomap from cset
+    keys = [str(key) for key in cset.keys()]
+    assert len(keys) == 1 # if more, than print error
+    
+    evaluator_name = keys[0]
+    # print(f"evaluator_name : {evaluator_name}")
+    csset_evaluator = cset.get(evaluator_name)
+    # evaluate order is maptype, 
+    map_type = "jetvetomap"
+    phis = jets.phi
+    phis = clip(phis, -3.1415, 3.1415)
+
+    
+    etas = jets.eta
+    etas = clip(etas, -5.19, -5.19)
+    
+    veto_out = csset_evaluator.evaluate(map_type, etas, phis) # Non-zero value for (eta, phi) indicates that the region is vetoed
+    veto_out = veto_out > 0.0 # convert to bool arr
+
+
+    # obtain loose selection
+    loose_selection = (
+        (jets.pt > 15)
+        & isJetIdTight(jets.jetId)
+        & (jets.neEmEF < 0.9)
+        & (jets.chEmEF < 0.9)
+        & getJetVetoMuonIso(jets)
+    )
+    # print(f"loose_selection: {loose_selection[:20].compute()}")
+
+    # veto events with jets that pass loose selection and veto_map
+    final_cut = veto_out & loose_selection
+    # print(f"final_cut: {final_cut.compute()}")
+    # print(f"final_cut: {final_cut[:20, :].compute()}")
+    final_cut = ak.any(final_cut, axis=1) # reduce to event level array
+    # print(f"final_cut: {final_cut[:20].compute()}")
+    # raise ValueError
+    return final_cut
+
+
+
+
