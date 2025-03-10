@@ -58,6 +58,16 @@ btag_id:
   '2018_RERECO': btagDeepB
   2022preEE: btagPNetB
   2022postEE: btagPNetB
+apply_jetpuid:
+  2016preVFP: true
+  2016postVFP: true
+  '2017': true
+  '2018': true
+  2016_RERECO: true
+  '2017_RERECO': true
+  '2018_RERECO': true
+  2022preEE: false # we don't use CHS jets
+  2022postEE: false # we don't use CHS jets
 btag_loose_wp: # for DeepCSV, DeepJet is different
   2016preVFP: 0.2027
   2016postVFP: 0.1918
@@ -88,3 +98,13 @@ softjet_dr2:
   '2018_RERECO': 0.16
   2022preEE: 0.16
   2022postEE: 0.16
+jet_veto:
+  2016preVFP: null
+  2016postVFP: null
+  '2017': null
+  '2018': null
+  2016_RERECO: null
+  '2017_RERECO': null
+  '2018_RERECO': null
+  2022preEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2022_Summer22/jetvetomaps.json.gz
+  2022postEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2022_Summer22EE/jetvetomaps.json.gz
