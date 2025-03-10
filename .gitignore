@@ -11,3 +11,7 @@ prestage_output/
 *.png
 *.txt
 *.ps
+.github/
+.vscode/
+Untitled*
+plots*/
