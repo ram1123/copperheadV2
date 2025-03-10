@@ -340,7 +340,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
-            "do_beamConstraint": True, # if True, override do_geofit
+            "do_beamConstraint": False, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
         }

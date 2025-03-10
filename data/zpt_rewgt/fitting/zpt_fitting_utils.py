@@ -2,7 +2,6 @@ import os
 import ROOT
 from scipy.stats import f
 import logging
-from omegaconf import OmegaConf
 
 from modules.utils import logger
 

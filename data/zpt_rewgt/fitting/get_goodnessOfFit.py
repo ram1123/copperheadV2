@@ -128,6 +128,12 @@ for year in years:
             horizontal_line = ROOT.TF1("horizontal_line", "[0]", fit_xmax, global_fit_xmax)
             fit_results = hist_SF.Fit(horizontal_line, "S R+", xmin=fit_xmax, xmax=global_fit_xmax)
 
+            # Fit with the higher-order polynomial, of order 4
+            # polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(3 + 1)])
+            # Define the TF1 function with the generated expression
+            # horizontal_line = ROOT.TF1(f"poly{4}", polynomial_expr, fit_xmax, global_fit_xmax)
+            # fit_results = hist_SF.Fit(horizontal_line, "L S+", xmin=fit_xmax, xmax=global_fit_xmax)
+
             chi2 = fit_func.GetChisquare()
             ndf = fit_func.GetNDF()
             chi2_dof = chi2/ndf if ndf > 0 else 0
@@ -177,6 +183,7 @@ for year in years:
                     fit_value = fit_func.Eval(x_value)
                 else:
                     fit_value = horizontal_line.Eval(x_value)
+                    # pass
                 if error > 0:  # Avoid division by zero
                     pull = (data - fit_value) / error
                     pull_hist.SetBinContent(i, pull)

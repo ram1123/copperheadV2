@@ -122,8 +122,8 @@ def main():
     """Main processing function."""
     # Define years and corresponding input/output files for each year
     years_and_input_files = {
-        '2018v1': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_3Feb.txt',
-        '2018': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_3Feb_AllJobs.txt',
+        '2018': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_06March_AllJobs.txt',
+        '2018v2': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_NanoAODv12_06March_Data_Run2018A.txt',
         '2017': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_3Feb_AllJobs.txt',
         '2016APV': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_8Feb_2016APV.txt',
         '2016': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_8Feb_2016.txt',
@@ -132,6 +132,7 @@ def main():
     years_and_output_dirs = {
         '2018v1': '/eos/purdue/store/user/rasharma/customNanoAOD/UL2018/',
         '2018': '/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/',
+        '2018v2': '/eos/purdue/store/user/rasharma/CustomNanoAODv12_v2/UL2018/',
         '2017': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/',
         '2016APV': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/',
         '2016': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/',
@@ -139,10 +140,10 @@ def main():
 
     # List of years to process
     # years = ['2018v1', '2018', '2017', '2016APV', '2016']
-    years = ['2018', '2017', '2016APV', '2016']
+    years = ['2018', '2017', '2016APV', '2016', '2018v2']
     # years = ['2017', '2016APV', '2016']
     # years = ['2018']
-    additional_string = "03March"
+    additional_string = "06March"
 
     # Process files for each year
     for year in years:

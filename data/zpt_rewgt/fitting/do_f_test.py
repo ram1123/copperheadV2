@@ -129,6 +129,7 @@ for njet in args.njet:
     outTextFile_keys = open(f"{inDirectory}/fTest_results_{year}_njet{njet}_keys.txt", "w")
     # input_file = f"{inDirectory}/{year}_njet{njet}.root"
     input_file = f"{inDirectory}/{year}_njet{njet}_nbins{args.nbins}.root"
+    logger.info(f"Processing {input_file}")
 
     if not os.path.exists(input_file):
         logger.error(f"File {input_file} not found!")

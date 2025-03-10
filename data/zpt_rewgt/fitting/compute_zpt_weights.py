@@ -17,7 +17,7 @@ parser.add_argument("--njet", type=int, nargs="+", default=[0, 1, 2], help="Numb
 parser.add_argument("--input_path", type=str, required=True, help="Input path")
 parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("--outAppend", type=str, default="", help="Append to output file name")
-parser.add_argument("--nbins", type=int, default=501, help="Number of bins")
+parser.add_argument("--nbins", type=str, default="501", help="Number of bins")
 args = parser.parse_args()
 
 # Set logging level
@@ -33,7 +33,7 @@ optimized_order = {}
 for year in args.years:
     save_dict = {} # To store the final results of fitting
     for njet in args.njet:
-        input_file = f"{inDirectory}/{year}_njet{njet}.root"
+        input_file = f"{inDirectory}/{year}_njet{njet}_nbins{args.nbins}.root"
         if not os.path.exists(input_file):
             logger.error(f"File {input_file} not found!")
             exit(1)
