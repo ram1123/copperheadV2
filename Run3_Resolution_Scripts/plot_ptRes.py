@@ -281,7 +281,7 @@ def fit_plot_ggh(events_bs_on, events_bs_off, save_filename, save_plot=True, sel
         events_bs_off = events_bs_off[selection_bs_off]
 
     mass_name = "mh_ggh"
-    nbins = 100
+    nbins = 80
     range_min = 0.0
     range_max = 0.1
     if region in ["EB", "EE", "EO"]:
@@ -289,7 +289,7 @@ def fit_plot_ggh(events_bs_on, events_bs_off, save_filename, save_plot=True, sel
         nbins = 50
     elif region == "BE":
         range_max = 0.03
-        nbins = 75
+        nbins = 70
     else:
         range_max = 0.05
 
@@ -304,6 +304,10 @@ def fit_plot_ggh(events_bs_on, events_bs_off, save_filename, save_plot=True, sel
     hist_bs_off = rt.TH1D("hist_bs_off", f"Region: {region}", nbins, range_min, range_max)
     for mass, weight in zip(dimuon_mass, wgt):
         hist_bs_off.Fill(mass, weight)
+
+    # Normalize histograms
+    hist_bs_on.Scale(1.0 / hist_bs_on.Integral())
+    hist_bs_off.Scale(1.0 / hist_bs_off.Integral())
 
     canvas = rt.TCanvas("Canvas", "Canvas", 800, 800)
     canvas.cd()
@@ -323,7 +327,7 @@ def fit_plot_ggh(events_bs_on, events_bs_off, save_filename, save_plot=True, sel
     hist_bs_on.GetXaxis().SetTitleSize(0.04)
     hist_bs_on.GetYaxis().SetTitleSize(0.04)
     # draw histogram with error bars
-    hist_bs_on.Draw("E")
+    # hist_bs_on.Draw("E")
 
 
     hist_bs_off.SetLineColor(rt.kBlue)
@@ -331,8 +335,17 @@ def fit_plot_ggh(events_bs_on, events_bs_off, save_filename, save_plot=True, sel
     hist_bs_off.SetMarkerStyle(20)
     hist_bs_off.SetMarkerSize(0.5)
     hist_bs_off.SetLineWidth(2)
-    hist_bs_off.Draw("E SAME")
+    # hist_bs_off.Draw("E SAME")
 
+    # Use TRatioPlot to plot the ratio
+    rp = rt.TRatioPlot(hist_bs_on, hist_bs_off)
+    rp.Draw()
+    rp.GetLowerRefYaxis().SetTitle("Ratio")
+    rp.GetLowerRefYaxis().SetRangeUser(0.0, 5.0)
+    rp.GetLowerRefGraph().SetMinimum(0.0)
+    rp.GetLowerRefGraph().SetMaximum(5.0)
+
+    rp.GetUpperPad().cd()
     legend.AddEntry(hist_bs_on, "BSC fit", "L")
     legend.AddEntry("", f"BSC mean: {round(hist_bs_on.GetMean(), 3)}", "")
     legend.AddEntry("", f"BSC sigma: {round(hist_bs_on.GetStdDev(), 3)}", "")
