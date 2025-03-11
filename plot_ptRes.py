@@ -341,115 +341,196 @@ def fitPlot_ggh(events_bsOn, events_bsOff, save_filename, save_plot=True, select
         events_bsOff = events_bsOff[selection_bsOff]
 
     mass_name = "mh_ggh"
-    mass = rt.RooRealVar(mass_name, mass_name, 120, 115, 135) # signal region
-    # nbins = 100
-    nbins = 80
-    mass.setBins(nbins)
-    dimuon_mass = ak.to_numpy(events_bsOn.dimuon_mass)
+    nbins = 100
+    range_min = 0.0
+    range_max = 0.1
+    # range_max = 0.1 if (selection == "EB" or selection == "EE" or selection == "EO") else 0.05
+    if (region == "EB" or region == "EE" or region == "EO"):
+        range_max = 0.1
+        nbins = 50
+    elif (region == "BE"):
+        range_max = 0.03
+        nbins = 75
+    else:
+        range_max = 0.05
+
+    # mass = rt.RooRealVar(mass_name, mass_name, 100, range_min, range_max) # signal region
+    # nbins = 80
+    # mass.setBins(nbins)
+    dimuon_mass = ak.to_numpy(events_bsOn.mu1_ptErr/events_bsOn.mu1_pt)
     wgt = ak.to_numpy(events_bsOn.wgt_nominal)
-    hist_bsOn = generateRooHist(mass, dimuon_mass, wgt, name=f"BSC fit")
-    hist_bsOn = normalizeRooHist(mass, hist_bsOn)
+    # hist_bsOn = generateRooHist(mass, dimuon_mass, wgt, name=f"BSC fit")
+    # hist_bsOn = normalizeRooHist(mass, hist_bsOn)
+    hist_bsOn = ROOT.TH1D("hist_bsOn", f"Region: {region}", nbins, range_min, range_max)
+    for i in range(len(dimuon_mass)):
+        hist_bsOn.Fill(dimuon_mass[i], wgt[i])
     print(f"fitPlot_ggh hist_bsOn: {hist_bsOn}")
 
-    dimuon_mass = ak.to_numpy(events_bsOff.dimuon_mass)
+    dimuon_mass = ak.to_numpy(events_bsOff.mu1_ptErr/events_bsOff.mu1_pt)
     wgt = ak.to_numpy(events_bsOff.wgt_nominal)
-    hist_bsOff = generateRooHist(mass, dimuon_mass, wgt, name=f"geofit")
-    hist_bsOff = normalizeRooHist(mass, hist_bsOff)
+    # hist_bsOff = generateRooHist(mass, dimuon_mass, wgt, name=f"geofit")
+    # hist_bsOff = normalizeRooHist(mass, hist_bsOff)
+    hist_bsOff = ROOT.TH1D("hist_bsOff", f"Region: {region}", nbins, range_min, range_max)
+    for i in range(len(dimuon_mass)):
+        hist_bsOff.Fill(dimuon_mass[i], wgt[i])
     print(f"fitPlot_ggh hist_bsOff: {hist_bsOff}")
 
-    # --------------------------------------------------
-    # Fitting
-    # --------------------------------------------------
-
-    MH_bsOn = rt.RooRealVar("MH" , "MH", 125, 110, 150)
-    sigma_bsOn = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
-    alpha1_bsOn = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
-    n1_bsOn = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
-    alpha2_bsOn = rt.RooRealVar("alpha2" , "alpha2", 1.3132, 0.01, 65)
-    n2_bsOn = rt.RooRealVar("n2" , "n2", 9.97411, 0.01, 100)
-    name = f"BSC fit"
-    model_bsOn = rt.RooDoubleCBFast(name,name,mass, MH_bsOn, sigma_bsOn, alpha1_bsOn, n1_bsOn, alpha2_bsOn, n2_bsOn)
-
-    device = "cpu"
-    _ = model_bsOn.fitTo(hist_bsOn,  EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = model_bsOn.fitTo(hist_bsOn,  EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result.Print()
-
-    MH_bsOff = rt.RooRealVar("MH" , "MH", 125, 110, 150)
-    sigma_bsOff = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
-    alpha1_bsOff = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
-    n1_bsOff = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
-    alpha2_bsOff = rt.RooRealVar("alpha2" , "alpha2", 1.3132, 0.01, 65)
-    n2_bsOff = rt.RooRealVar("n2" , "n2", 9.97411, 0.01, 100)
-    name = f"BSC fit"
-    model_bsOff = rt.RooDoubleCBFast(name,name,mass, MH_bsOff, sigma_bsOff, alpha1_bsOff, n1_bsOff, alpha2_bsOff, n2_bsOff)
-
-    device = "cpu"
-    _ = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
-    fit_result.Print()
-
-    # ------------------------------------
-    # Plotting
-    # ------------------------------------
     name = "Canvas"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     legend = rt.TLegend(0.6,0.60,0.9,0.9)
 
+    # remove stat box
+    rt.gStyle.SetOptStat(0000)
 
-    frame = mass.frame()
-    hist_bsOn.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
-    model_bsOn.plotOn(frame, Name=name, LineColor=rt.kGreen)
-    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "ggH Powheg with BSC fit", "L")
-    sigma_val = round(sigma_bsOn.getVal(), 3)
-    sigma_err = round(sigma_bsOn.getError(), 3)
-    mean_val = round(MH_bsOn.getVal(), 3)
-    mean_err = round(MH_bsOn.getError(), 3)
-    legend.AddEntry("", f"BSC mean: {mean_val} +- {mean_err}", "")
-    legend.AddEntry("", f"BSC sigma: {sigma_val} +- {sigma_err}", "")
+    # frame = mass.frame()
 
-    hist_bsOff.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
-    model_bsOff.plotOn(frame, Name=name, LineColor=rt.kBlue)
-    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "ggH Powheg with geofit", "L")
-    sigma_val = round(sigma_bsOff.getVal(), 3)
-    sigma_err = round(sigma_bsOff.getError(), 3)
-    mean_val = round(MH_bsOff.getVal(), 3)
-    mean_err = round(MH_bsOff.getError(), 3)
+    # plot two normalized histograms
+    # hist_bsOn.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+    # update line and dot color both
+    # hist_bsOn.plotOn(frame, Name=name, LineColor=rt.kGreen, MarkerColor=rt.kGreen)
+    # legend.AddEntry(frame.getObject(int(frame.numItems())-1), "BSC fit", "L")
 
-    legend.AddEntry("", f"geofit mean: {mean_val} +- {mean_err}", "")
-    legend.AddEntry("", f"geofit sigma: {sigma_val} +- {sigma_err}", "")
+    hist_bsOn.SetLineColor(rt.kGreen)
+    hist_bsOn.SetMarkerColor(rt.kGreen)
+    hist_bsOn.SetMarkerStyle(20)
+    hist_bsOn.SetMarkerSize(0.5)
+    hist_bsOn.SetLineWidth(2)
+    hist_bsOn.GetYaxis().SetTitle("A.U.")
+    hist_bsOn.GetXaxis().SetTitle("#Delta p_{T}/p_{T}")
+    hist_bsOn.GetXaxis().SetTitleOffset(1.2)
+    hist_bsOn.GetYaxis().SetTitleOffset(1.2)
+    hist_bsOn.GetXaxis().SetTitleSize(0.04)
+    hist_bsOn.GetYaxis().SetTitleSize(0.04)
 
-    # append results in a csv file, with format: category, sigma BSOn +/- error, sigma BSOFF +/- error, % diff
-    with open("fit_results.csv", "a") as f:
-        region = "Inclusive" if region == "" else region
-        f.write(f"{region},{round(sigma_bsOn.getVal(),3)},{round(sigma_bsOn.getError(),3)},{round(sigma_bsOff.getVal(),3)},{round(sigma_bsOff.getError(),3)},{round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)}\n")
+    hist_bsOn.Draw()
 
-    # get a latex style table
-    with open("fit_results.txt", "a") as f:
-        region = "Inclusive" if region == "" else region
-        f.write(f"{region} & {round(sigma_bsOn.getVal(),3)} \\pm {round(sigma_bsOn.getError(),3)} & {round(sigma_bsOff.getVal(),3)} \\pm {round(sigma_bsOff.getError(),3)} & {round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)} \\\\ \n")
+    hist_bsOff.SetLineColor(rt.kBlue)
+    hist_bsOff.SetMarkerColor(rt.kBlue)
+    hist_bsOff.SetMarkerStyle(20)
+    hist_bsOff.SetMarkerSize(0.5)
+    hist_bsOff.SetLineWidth(2)
+    hist_bsOff.Draw("SAME")
 
+    legend.AddEntry(hist_bsOn, "BSC fit", "L")
 
+    # add standard deviation on plot
+    sigma_bsOn = round(hist_bsOn.GetStdDev(),3)
+    mean_bsOn = round(hist_bsOn.GetMean(),3)
+    legend.AddEntry("", f"BSC mean: {mean_bsOn}", "")
+    legend.AddEntry("", f"BSC sigma: {sigma_bsOn}", "")
 
-    frame.SetYTitle(f"A.U.")
-    frame.SetXTitle(f"Dimuon Mass (GeV)")
-    frame.SetTitle(f"")
+    # hist_bsOff.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+    # hist_bsOff.plotOn(frame, Name=name, LineColor=rt.kBlue, MarkerColor=rt.kBlue)
+    # legend.AddEntry(frame.getObject(int(frame.numItems())-1), "geofit", "L")
 
-    frame.Draw()
+    # add standard deviation on plot
+    legend.AddEntry(hist_bsOff, "geofit", "L")
+    sigma_bsOff = round(hist_bsOff.GetStdDev(),3)
+    mean_bsOff = round(hist_bsOff.GetMean(),3)
+    legend.AddEntry("", f"geofit mean: {mean_bsOff}", "")
+    legend.AddEntry("", f"geofit sigma: {sigma_bsOff}", "")
+
+    # frame.SetYTitle(f"A.U.")
+    # frame.SetXTitle("#Delta p_{T}/p_{T}")
+    # frame.SetTitle(f"")
+    # frame.Draw()
     legend.Draw()
     canvas.Update()
     canvas.Draw()
     canvas.SaveAs(save_filename)
 
+
+    # --------------------------------------------------
+    # Fitting
+    # --------------------------------------------------
+
+    # MH_bsOn = rt.RooRealVar("MH" , "MH", 125, 110, 150)
+    # sigma_bsOn = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
+    # alpha1_bsOn = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
+    # n1_bsOn = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
+    # alpha2_bsOn = rt.RooRealVar("alpha2" , "alpha2", 1.3132, 0.01, 65)
+    # n2_bsOn = rt.RooRealVar("n2" , "n2", 9.97411, 0.01, 100)
+    # name = f"BSC fit"
+    # model_bsOn = rt.RooDoubleCBFast(name,name,mass, MH_bsOn, sigma_bsOn, alpha1_bsOn, n1_bsOn, alpha2_bsOn, n2_bsOn)
+
+    # device = "cpu"
+    # _ = model_bsOn.fitTo(hist_bsOn,  EvalBackend=device, Save=True, SumW2Error=True)
+    # fit_result = model_bsOn.fitTo(hist_bsOn,  EvalBackend=device, Save=True, SumW2Error=True)
+    # fit_result.Print()
+
+    # MH_bsOff = rt.RooRealVar("MH" , "MH", 125, 110, 150)
+    # sigma_bsOff = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
+    # alpha1_bsOff = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
+    # n1_bsOff = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
+    # alpha2_bsOff = rt.RooRealVar("alpha2" , "alpha2", 1.3132, 0.01, 65)
+    # n2_bsOff = rt.RooRealVar("n2" , "n2", 9.97411, 0.01, 100)
+    # name = f"BSC fit"
+    # model_bsOff = rt.RooDoubleCBFast(name,name,mass, MH_bsOff, sigma_bsOff, alpha1_bsOff, n1_bsOff, alpha2_bsOff, n2_bsOff)
+
+    # device = "cpu"
+    # _ = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
+    # fit_result = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
+    # fit_result.Print()
+
+    # ------------------------------------
+    # Plotting
+    # ------------------------------------
+
+
+    # # hist_bsOn.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+    # # model_bsOn.plotOn(frame, Name=name, LineColor=rt.kGreen)
+    # # legend.AddEntry(frame.getObject(int(frame.numItems())-1), "ggH Powheg with BSC fit", "L")
+    # # sigma_val = round(sigma_bsOn.getVal(), 3)
+    # # sigma_err = round(sigma_bsOn.getError(), 3)
+    # # mean_val = round(MH_bsOn.getVal(), 3)
+    # # mean_err = round(MH_bsOn.getError(), 3)
+    # # legend.AddEntry("", f"BSC mean: {mean_val} +- {mean_err}", "")
+    # # legend.AddEntry("", f"BSC sigma: {sigma_val} +- {sigma_err}", "")
+
+    # # hist_bsOff.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+    # # model_bsOff.plotOn(frame, Name=name, LineColor=rt.kBlue)
+    # # legend.AddEntry(frame.getObject(int(frame.numItems())-1), "ggH Powheg with geofit", "L")
+    # # sigma_val = round(sigma_bsOff.getVal(), 3)
+    # # sigma_err = round(sigma_bsOff.getError(), 3)
+    # # mean_val = round(MH_bsOff.getVal(), 3)
+    # # mean_err = round(MH_bsOff.getError(), 3)
+
+    # # legend.AddEntry("", f"geofit mean: {mean_val} +- {mean_err}", "")
+    # # legend.AddEntry("", f"geofit sigma: {sigma_val} +- {sigma_err}", "")
+
+    # # # append results in a csv file, with format: category, sigma BSOn +/- error, sigma BSOFF +/- error, % diff
+    # # with open("fit_results.csv", "a") as f:
+    # #     region = "Inclusive" if region == "" else region
+    # #     f.write(f"{region},{round(sigma_bsOn.getVal(),3)},{round(sigma_bsOn.getError(),3)},{round(sigma_bsOff.getVal(),3)},{round(sigma_bsOff.getError(),3)},{round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)}\n")
+
+    # # # get a latex style table
+    # # with open("fit_results.txt", "a") as f:
+    # #     region = "Inclusive" if region == "" else region
+    # #     f.write(f"{region} & {round(sigma_bsOn.getVal(),3)} \\pm {round(sigma_bsOn.getError(),3)} & {round(sigma_bsOff.getVal(),3)} \\pm {round(sigma_bsOff.getError(),3)} & {round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)} \\\\ \n")
+
+
+
+    # frame.SetYTitle(f"A.U.")
+    # frame.SetXTitle(f"Dimuon Mass (GeV)")
+    # frame.SetTitle(f"")
+
+    # frame.Draw()
+    # legend.Draw()
+    # canvas.Update()
+    # canvas.Draw()
+    # canvas.SaveAs(save_filename)
+
 if __name__ == "__main__":
     client =  Client(n_workers=15,  threads_per_worker=2, processes=True, memory_limit='8 GiB')
     V1_fields_2compute = [
         "wgt_nominal",
-        "nBtagLoose_nominal",
-        "nBtagMedium_nominal",
+        # "nBtagLoose_nominal",
+        # "nBtagMedium_nominal",
         "mu1_pt",
+        "mu1_ptErr",
         "mu2_pt",
+        "mu2_ptErr",
         "mu1_eta",
         "mu2_eta",
         "mu1_phi",
@@ -458,14 +539,14 @@ if __name__ == "__main__":
         "dimuon_eta",
         "dimuon_phi",
         "dimuon_mass",
-        "jet1_phi_nominal",
-        "jet1_pt_nominal",
-        "jet2_pt_nominal",
-        "jet2_phi_nominal",
-        "jet1_eta_nominal",
-        "jet2_eta_nominal",
-        "jj_mass_nominal",
-        "jj_dEta_nominal",
+        # "jet1_phi_nominal",
+        # "jet1_pt_nominal",
+        # "jet2_pt_nominal",
+        # "jet2_phi_nominal",
+        # "jet1_eta_nominal",
+        # "jet2_eta_nominal",
+        # "jj_mass_nominal",
+        # "jj_dEta_nominal",
         # "region",
         "event",
     ]
@@ -482,9 +563,9 @@ if __name__ == "__main__":
     # events_data = filterRegion(events_data, region="z-peak")
     events_BSon = filterRegion(events_data, region="signal")
     # events_data = applyGGH_cutV1(events_data)
-    nbins =100
-    df_fit = pd.DataFrame({})
-    mass_arr = ak.to_numpy(events_data.dimuon_mass)
+    # nbins =100
+    # df_fit = pd.DataFrame({})
+    # mass_arr = ak.to_numpy(events_data.dimuon_mass)
     # generateBWxDCB_plot(mass_arr, 0, nbins, df_fit)
 
     # same with BSC off
@@ -508,7 +589,7 @@ if __name__ == "__main__":
     # generateBWxDCB_plot(mass_arr, 1, nbins, df_fit)
 
 
-    fitPlot_ggh(events_BSon, events_BSoff, "BSC_geofit_comparison_2022PreEE_all.pdf", save_plot=True)
+    fitPlot_ggh(events_BSon, events_BSoff, "BSC_geofit_comparison_2022PreEE_dpT_all.pdf", save_plot=True, region="Inclusive")
 
     # plot for BB, BE and EE
     # for region in ["BB", "BE", "EE"]:
@@ -517,4 +598,4 @@ if __name__ == "__main__":
     for region in ["BB", "BO", "OB", "OO", "BE", "EB", "EO", "OE", "EE"]:
         events_BSon_region = filterRegion_UsingRapidity(events_BSon, region)
         events_BSoff_region = filterRegion_UsingRapidity(events_BSoff, region)
-        fitPlot_ggh(events_BSon_region, events_BSoff_region, f"BSC_geofit_comparison_2022PreEE_{region}.pdf", save_plot=True, region=region)
+        fitPlot_ggh(events_BSon_region, events_BSoff_region, f"BSC_geofit_comparison_2022PreEE_dpT_{region}.pdf", save_plot=True, region=region)
