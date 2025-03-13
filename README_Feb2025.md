@@ -26,6 +26,14 @@ bash stage1_loop.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "calib"
 
 - To adjust the fitting one can change the parameters in the script `src/lib/ebeMassResCalibration/ebeMassResPlotter.py`
 
+### Update
+
+- New code: `src/lib/ebeMassResCalibration/getCalibrationFactor_Improved.py`
+   - Just need to update the path of the input files and it should work.
+   - Once we get the json file, copy it to the path `data/res_calib/` and update the path and name of this json file in the config file: `configs/parameters/correction_filelist.yaml`
+   - Then re-run stage-1 to get the updated mass calibration. **REMEMBER TO SWITCH ON THE BSC OPTION**.
+- For validation use the jupyter notebook: `src/lib/ebeMassResCalibration/closure_test.ipynb`
+
 ## Z-pT reweighting
 
 ```bash

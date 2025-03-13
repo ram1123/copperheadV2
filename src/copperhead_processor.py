@@ -62,7 +62,7 @@ def getZptWgts(dimuon_pt, njets, nbins, year):
 
     # temporaray overwrite of zpt wgt year -------------
     if "2022" in year:
-        year = "2018" 
+        year = "2018"
     #-------------------------------------------------
     # print(f"zpt_wgt: {zpt_wgt}")
 
@@ -345,7 +345,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
-            "do_beamConstraint": True, # if True, override do_geofit
+            "do_beamConstraint": False, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
             "do_zpt_wgt": False, # True
@@ -740,7 +740,7 @@ class EventProcessor(processor.ProcessorABC):
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
         # print(f"electron_id: {electron_id}")
         print(f"electron_id in events.Electron.fields: {electron_id in events.Electron.fields}")
-        
+
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
         ecal_gap = (1.444 < abs(events.Electron.eta)) & (abs(events.Electron.eta) <1.566)
         electron_selection = (
@@ -783,8 +783,9 @@ class EventProcessor(processor.ProcessorABC):
         # ----------------------------------------------------------------
         # Apply Event level Jet veto for Run3
         # ----------------------------------------------------------------
-        
-        jetVetoMap_path = self.config["jet_veto"]
+
+        # jetVetoMap_path = self.config["jet_veto"]
+        jetVetoMap_path = None # FIXME: If its there then we don't get any entries in the output
         print(f"jetVetoMap_path: {jetVetoMap_path}")
         if jetVetoMap_path is None:
             veto_filter = lumi_mask = ak.ones_like(event_filter, dtype="bool")
@@ -1341,7 +1342,7 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
 
         # deprecated feature ---------------------------------
-        # # fill in the regions 
+        # # fill in the regions
         # mass = dimuon.mass
         # z_peak = ((mass > 76) & (mass < 106))
         # h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
@@ -2016,7 +2017,7 @@ class EventProcessor(processor.ProcessorABC):
         # Separate from ttH and VH phase space
         btag_id = self.config["btag_id"]
         print(f"btag_id: {btag_id}")
-        
+
         btagLoose_filter = (jets[btag_id] > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
         btagMedium_filter = (jets[btag_id] > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
 

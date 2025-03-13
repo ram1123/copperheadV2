@@ -1,18 +1,26 @@
 import ROOT as rt
 import awkward as ak
+import numpy as np
 
 # define function to return nbins, xmin, xmax, xtitle for a given variable
 def get_hist_params(var):
-    if "mu1_pt" in var:      return 50, 0, 250, "p_{T} [GeV]"
-    elif "mu2_pt" in var:   return 50, 0, 100, "p_{T} [GeV]"
-    elif "dimuon_pt" in var: return 50, 0, 150, "p_{T} [GeV]"
-    elif "dimuon_mass" in var: return 50, 70, 110, "m_{#mu#mu} [GeV]" # z-peak
-    # elif "dimuon_mass" in var: return 50, 100, 160, "m_{#mu#mu} [GeV]" # signal
-    elif "pt" in var:           return 50, 0, 300, "p_{T} [GeV]"
-    elif "eta" in var:          return 50, -3, 3, "#eta"
-    elif "phi" in var:          return 25, -3.15, 3.15, "#phi"
-    elif "mass" in var:       return 50, 100, 150, "m_{#mu#mu} [GeV]"
-    else:                           return 50, 0, 300, var
+    if "mu1_Ratio_pTErr_pt" == var: return 50, 0, 0.035, "p_{T} Error / p_{T}", 0.0, 2.0
+    elif "mu2_Ratio_pTErr_pt" == var: return 50, 0, 0.035, "p_{T} Error / p_{T}", 0.0, 2.0
+    elif "dimuon_ebe_mass_res_rel" == var: return 50, 0, 0.3, "m_{#mu#mu} Resolution", 0.0, 2.0
+    elif "mu1_ptErr" == var: return 50, 0, 2.0, "p_{T} Error [GeV]", 0.0, 2.0
+    elif "mu2_ptErr" == var: return 50, 0, 2.0, "p_{T} Error [GeV]", 0.0, 2.0
+    elif "mu1_pt" == var:      return 50, 0, 180, "p_{T} [GeV]", 0.8, 1.2
+    elif "mu2_pt" == var:   return 50, 0, 100, "p_{T} [GeV]", 0.8, 1.2
+    elif "dimuon_pt" == var: return 50, 0, 150, "p_{T} [GeV]", 0.8, 1.2
+    elif "dimuon_eta" == var: return 50, -4.7, 4.7, "#eta_{#mu#mu}", 0.8, 1.2
+    elif "dimuon_mass" == var: return 50, 70, 110, "m_{#mu#mu} [GeV]", 0.8, 1.2 # z-peak
+    # elif "dimuon_mass" == var: return 50, 100, 160, "m_{#mu#mu} [GeV]", 0.8, 1.2 # signal
+    elif "dimuon_rapidity" == var: return 50, -2.4, 2.4, "#eta_{#mu#mu}", 0.8, 1.2
+    elif "pt" in var:           return 50, 0, 300, "p_{T} [GeV]", 0.8, 1.2
+    elif "eta" in var:          return 50, -2.4, 2.4, "#eta", 0.8, 1.2
+    elif "phi" in var:          return 25, -3.15, 3.15, "#phi", 0.8, 1.2
+    elif "mass" in var:       return 50, 100, 150, "m_{#mu#mu} [GeV]", 0.8, 1.2
+    else:                           return 50, 0, 300, var, 0.0, 2.0
 
 def plot_muon_dimuon_kinematics(events, save_prefix="kinematics"):
     # Individual muon kinematics
@@ -157,19 +165,62 @@ def plot_muon_dimuon_kinematics(events, save_prefix="kinematics"):
     ]
     draw_and_save(histograms_phi, "phi", f"{save_prefix}_phi.pdf")
 
+def compute_dimuon_rapidity(events):
+    mass_mu = 0.10566  # GeV (muon mass) PDG value
+
+    mu1_pt = events.mu1_pt
+    mu1_eta = events.mu1_eta
+    mu1_phi = events.mu1_phi
+    # Formula from PDG: page 779
+    # mT = sqrt(m^2 + pT^2)
+    # E = mT * cosh(eta)
+    # p_z = mT * sinh(eta)
+    mu1_mT = np.sqrt(mass_mu**2 + mu1_pt**2)
+    mu1_energy = mu1_mT * np.cosh(mu1_eta)
+    mu1_pz = mu1_mT * np.sinh(mu1_eta)
+
+    mu2_pt = events.mu2_pt
+    mu2_eta = events.mu2_eta
+    mu2_phi = events.mu2_phi
+    mu2_mT = np.sqrt(mass_mu**2 + mu2_pt**2)
+    mu2_energy = mu2_mT * np.cosh(mu2_eta)
+    mu2_pz = mu2_mT * np.sinh(mu2_eta)
+
+    dimuon_energy = mu1_energy + mu2_energy
+    dimuon_pz = mu1_pz + mu2_pz
+
+    dimuon_rapidity = 0.5 * np.log((dimuon_energy + dimuon_pz) / (dimuon_energy - dimuon_pz))
+
+    return dimuon_rapidity
+
 # Function to compare kinematics between two sets of events
 def compare_kinematics(events_bs_on, events_bs_off, variable, xlabel_new, save_filename):
     rt.gStyle.SetOptStat(0000)
-    data_on = ak.to_numpy(events_bs_on[variable])
-    data_off = ak.to_numpy(events_bs_off[variable])
+
+    # For bug checking: START: -----------------------------------
+    # If variable is dimuon_eta, then use the mu1 and mu2 info to calculate dimuon_eta
+    if variable == "dimuon_etaaaa":
+        # To get di-muon eta use function: compute_dimuon_rapidity
+        data_on = compute_dimuon_rapidity(events_bs_on)
+        data_off = compute_dimuon_rapidity(events_bs_off)
+    else:
+        data_on = ak.to_numpy(events_bs_on[variable])
+        data_off = ak.to_numpy(events_bs_off[variable])
+    # For bug checking: END: -----------------------------------
+
+
+    # data_on = ak.to_numpy(events_bs_on[variable])
+    # data_off = ak.to_numpy(events_bs_off[variable])
 
     # get_hist_params
-    bins, range_min, range_max, xlabel = get_hist_params(variable)
+    bins, range_min, range_max, xlabel, ratio_range_min, ratio_range_max = get_hist_params(variable)
+    print(f"variable: {variable}, bins: {bins}, range_min: {range_min}, range_max: {range_max}, xlabel: {xlabel}")
     if xlabel_new:
         xlabel = xlabel_new
+    print(f"bins: {bins}, range_min: {range_min}, range_max: {range_max}, xlabel: {xlabel}")
 
-    hist_on = rt.TH1D("hist_on", f"{variable} BSC On", bins, range_min, range_max)
-    hist_off = rt.TH1D("hist_off", f"{variable} BSC Off", bins, range_min, range_max)
+    hist_on = rt.TH1D("hist_on", f"{variable} BSC", bins, range_min, range_max)
+    hist_off = rt.TH1D("hist_off", f"{variable} GeoFit", bins, range_min, range_max)
 
     for val in data_on:
         hist_on.Fill(val)
@@ -188,7 +239,7 @@ def compare_kinematics(events_bs_on, events_bs_off, variable, xlabel_new, save_f
     c = rt.TCanvas("c", "c", 800, 600)
     hist_on.SetTitle(xlabel)
     hist_on.GetXaxis().SetTitle(xlabel)
-    hist_on.GetYaxis().SetTitle("Events")
+    hist_on.GetYaxis().SetTitle("A.U.")
     # hist_on.Draw("")
     # hist_off.Draw("SAME")
 
@@ -198,18 +249,78 @@ def compare_kinematics(events_bs_on, events_bs_off, variable, xlabel_new, save_f
     rp.Draw()
 
     rp.GetLowerRefYaxis().SetTitle("Ratio")
-    rp.GetLowerRefYaxis().SetRangeUser(0.8, 1.2)
-    rp.GetLowerRefGraph().SetMinimum(0.8)
-    rp.GetLowerRefGraph().SetMaximum(1.2)
+    rp.GetLowerRefYaxis().SetRangeUser(ratio_range_min, ratio_range_max)
+    rp.GetLowerRefGraph().SetMinimum(ratio_range_min)
+    rp.GetLowerRefGraph().SetMaximum(ratio_range_max)
 
     rp.GetUpperPad().cd()
     legend = rt.TLegend(0.6, 0.7, 0.9, 0.9)
-    legend.AddEntry(hist_on, "BSC On", "L")
-    legend.AddEntry(hist_off, "BSC Off", "L")
+    legend.AddEntry(hist_on, "BSC", "L")
+    legend.AddEntry(hist_off, "GeoFit", "L")
     legend.Draw()
 
     c.SaveAs(f"{save_filename}_{variable}.pdf")
 
+    # Save the log version of the plot
+    rp.GetUpperPad().SetLogy()
+    # reset the y-axis range for upper pad
+    hist_on.SetMaximum(max(hist_on.GetMaximum(), hist_off.GetMaximum())*100)
+
+    c.SaveAs(f"log_plots/{save_filename}_{variable}_log.pdf")
+
     hist_on.Delete()
     hist_off.Delete()
     c.Close()
+
+# compare_kinematics_2D(events_bs_on, events_bs_off, "mu1_pt", "mu1_ptErr", "Leading Muon p_{T} [GeV]", "Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
+def compare_kinematics_2D(events_bs_on, events_bs_off, variable1, variable2, xlabel_new1, xlabel_new2, save_filename):
+    rt.gStyle.SetOptStat(0000)
+
+    data_on_x = ak.to_numpy(events_bs_on[variable1])
+    data_off_x = ak.to_numpy(events_bs_off[variable1])
+
+    data_on_y = ak.to_numpy(events_bs_on[variable2])
+    data_off_y = ak.to_numpy(events_bs_off[variable2])
+
+    # get_hist_params
+    bins_x, range_min_x, range_max_x, xlabel1, ratio_range_min_x, ratio_range_max_x = get_hist_params(variable1)
+    bins_y, range_min_y, range_max_y, xlabel2, ratio_range_min_y, ratio_range_max_y = get_hist_params(variable2)
+    print(f"variable1: {variable1}, bins: {bins_x}, range_min: {range_min_x}, range_max: {range_max_x}, xlabel: {xlabel1}")
+    print(f"variable2: {variable2}, bins: {bins_y}, range_min: {range_min_y}, range_max: {range_max_y}, xlabel: {xlabel2}")
+    if xlabel_new1:
+        xlabel1 = xlabel_new1
+    if xlabel_new2:
+        xlabel2 = xlabel_new2
+    print(f"bins: {bins_x}, range_min: {range_min_x}, range_max: {range_max_x}, xlabel: {xlabel1}")
+    print(f"bins: {bins_y}, range_min: {range_min_y}, range_max: {range_max_y}, xlabel: {xlabel2}")
+
+    hist_on = rt.TH2D("hist_on", f"{variable1} vs {variable2} BSC", bins_x, range_min_x, range_max_x, bins_y, range_min_y, range_max_y)
+    hist_off = rt.TH2D("hist_off", f"{variable1} vs {variable2} GeoFit", bins_x, range_min_x, range_max_x, bins_y, range_min_y, range_max_y)
+
+    for i in range(len(data_on_x)):
+        hist_on.Fill(data_on_x[i], data_on_y[i])
+    for i in range(len(data_off_x)):
+        hist_off.Fill(data_off_x[i], data_off_y[i])
+
+    # Normalize histograms to unity
+    # hist_on.Scale(1.0/hist_on.Integral())
+    # hist_off.Scale(1.0/hist_off.Integral())
+
+    # hist_on.SetLineColor(rt.kGreen)
+    # hist_off.SetLineColor(rt.kBlue)
+
+    # hist_on.SetMaximum(max(hist_on.GetMaximum(), hist_off.GetMaximum())*1.1)
+
+    c = rt.TCanvas("c", "c", 800, 600)
+    hist_on.SetTitle(f"{xlabel1} vs {xlabel2}")
+    hist_on.GetXaxis().SetTitle(xlabel1)
+    hist_on.GetYaxis().SetTitle(xlabel2)
+    hist_on.Draw("COLZ")
+    c.SaveAs(f"{save_filename}_{variable1}_vs_{variable2}_BSC.pdf")
+
+    c.Clear()
+    hist_off.SetTitle(f"{xlabel1} vs {xlabel2}")
+    hist_off.GetXaxis().SetTitle(xlabel1)
+    hist_off.GetYaxis().SetTitle(xlabel2)
+    hist_off.Draw("COLZ")
+    c.SaveAs(f"{save_filename}_{variable1}_vs_{variable2}_GeoFit.pdf")

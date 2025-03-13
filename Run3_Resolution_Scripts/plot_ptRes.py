@@ -37,6 +37,34 @@ def filter_region(events, region="h-peak"):
         region_filter = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
     return events[region_filter]
 
+def filter_region_using_rapidity_leadMuon(events, region):
+    # Function to filter events based on leading and subleading muon rapidity
+    # Eta bins:
+    #   B: |eta| <= 0.9
+    #   O: 0.9 < |eta| <= 1.8
+    #   E: 1.8 < |eta| <= 2.4
+
+    eta_bins = {
+        "B": (abs(events.mu1_eta) <= 0.9),
+        "O": (abs(events.mu1_eta) > 0.9) & (abs(events.mu1_eta) <= 1.8),
+        "E": (abs(events.mu1_eta) > 1.8) & (abs(events.mu1_eta) <= 2.4)
+    }
+    return events[eta_bins[region]]
+
+def filter_region_using_rapidity_SubleadMuon(events, region):
+    # Function to filter events based on leading and subleading muon rapidity
+    # Eta bins:
+    #   B: |eta| <= 0.9
+    #   O: 0.9 < |eta| <= 1.8
+    #   E: 1.8 < |eta| <= 2.4
+
+    eta_bins = {
+        "B": (abs(events.mu2_eta) <= 0.9),
+        "O": (abs(events.mu2_eta) > 0.9) & (abs(events.mu2_eta) <= 1.8),
+        "E": (abs(events.mu2_eta) > 1.8) & (abs(events.mu2_eta) <= 2.4)
+    }
+    return events[eta_bins[region]]
+
 def filter_region_using_rapidity(events, region):
     # Function to filter events based on leading and subleading muon rapidity
     # Eta bins:
@@ -45,15 +73,15 @@ def filter_region_using_rapidity(events, region):
     #   E: 1.8 < |eta| <= 2.4
 
     eta_bins = {
-        "BB": (events.mu1_eta <= 0.9) & (events.mu2_eta <= 0.9),
-        "BO": (events.mu1_eta <= 0.9) & (events.mu2_eta > 0.9) & (events.mu2_eta <= 1.8),
-        "OB": (events.mu1_eta > 0.9) & (events.mu1_eta <= 1.8) & (events.mu2_eta <= 0.9),
-        "OO": (events.mu1_eta > 0.9) & (events.mu1_eta <= 1.8) & (events.mu2_eta > 0.9) & (events.mu2_eta <= 1.8),
-        "BE": (events.mu1_eta <= 0.9) & (events.mu2_eta > 1.8) & (events.mu2_eta <= 2.4),
-        "EB": (events.mu1_eta > 1.8) & (events.mu1_eta <= 2.4) & (events.mu2_eta <= 0.9),
-        "EO": (events.mu1_eta > 1.8) & (events.mu1_eta <= 2.4) & (events.mu2_eta > 0.9) & (events.mu2_eta <= 1.8),
-        "OE": (events.mu1_eta > 0.9) & (events.mu1_eta <= 1.8) & (events.mu2_eta > 1.8) & (events.mu2_eta <= 2.4),
-        "EE": (events.mu1_eta > 1.8) & (events.mu1_eta <= 2.4) & (events.mu2_eta > 1.8) & (events.mu2_eta <= 2.4)
+        "BB": (abs(events.mu1_eta) <= 0.9) & (abs(events.mu2_eta) <= 0.9),
+        "BO": (abs(events.mu1_eta) <= 0.9) & (abs(events.mu2_eta) > 0.9) & (abs(events.mu2_eta) <= 1.8),
+        "OB": (abs(events.mu1_eta) > 0.9) & (abs(events.mu1_eta) <= 1.8) & (abs(events.mu2_eta) <= 0.9),
+        "OO": (abs(events.mu1_eta) > 0.9) & (abs(events.mu1_eta) <= 1.8) & (abs(events.mu2_eta) > 0.9) & (abs(events.mu2_eta) <= 1.8),
+        "BE": (abs(events.mu1_eta) <= 0.9) & (abs(events.mu2_eta) > 1.8) & (abs(events.mu2_eta) <= 2.4),
+        "EB": (abs(events.mu1_eta) > 1.8) & (abs(events.mu1_eta) <= 2.4) & (abs(events.mu2_eta) <= 0.9),
+        "EO": (abs(events.mu1_eta) > 1.8) & (abs(events.mu1_eta) <= 2.4) & (abs(events.mu2_eta) > 0.9) & (abs(events.mu2_eta) <= 1.8),
+        "OE": (abs(events.mu1_eta) > 0.9) & (abs(events.mu1_eta) <= 1.8) & (abs(events.mu2_eta) > 1.8) & (abs(events.mu2_eta) <= 2.4),
+        "EE": (abs(events.mu1_eta) > 1.8) & (abs(events.mu1_eta) <= 2.4) & (abs(events.mu2_eta) > 1.8) & (abs(events.mu2_eta) <= 2.4)
     }
     return events[eta_bins[region]]
 
@@ -280,7 +308,6 @@ def fit_plot_ggh(events_bs_on, events_bs_off, save_filename, save_plot=True, sel
         events_bs_on = events_bs_on[selection_bs_on]
         events_bs_off = events_bs_off[selection_bs_off]
 
-    mass_name = "mh_ggh"
     nbins = 80
     range_min = 0.0
     range_max = 0.1
@@ -293,13 +320,15 @@ def fit_plot_ggh(events_bs_on, events_bs_off, save_filename, save_plot=True, sel
     else:
         range_max = 0.05
 
-    dimuon_mass = ak.to_numpy(events_bs_on.mu1_ptErr / events_bs_on.mu1_pt)
+    dimuon_mass = ak.to_numpy(events_bs_on.mu2_ptErr / events_bs_on.mu2_pt)
+    # dimuon_mass = ak.to_numpy(events_bs_on.dimuon_mass)
     wgt = ak.to_numpy(events_bs_on.wgt_nominal)
     hist_bs_on = rt.TH1D("hist_bs_on", f"Region: {region}", nbins, range_min, range_max)
     for mass, weight in zip(dimuon_mass, wgt):
         hist_bs_on.Fill(mass, weight)
 
-    dimuon_mass = ak.to_numpy(events_bs_off.mu1_ptErr / events_bs_off.mu1_pt)
+    dimuon_mass = ak.to_numpy(events_bs_off.mu2_ptErr / events_bs_off.mu2_pt)
+    # dimuon_mass = ak.to_numpy(events_bs_off.dimuon_mass)
     wgt = ak.to_numpy(events_bs_off.wgt_nominal)
     hist_bs_off = rt.TH1D("hist_bs_off", f"Region: {region}", nbins, range_min, range_max)
     for mass, weight in zip(dimuon_mass, wgt):
@@ -356,6 +385,91 @@ def fit_plot_ggh(events_bs_on, events_bs_off, save_filename, save_plot=True, sel
 
     canvas.Update()
     canvas.SaveAs(save_filename)
+
+def plot_hist_var(dimuon_mass_bs_on, wgt_bs_on, dimuon_mass_bs_off, wgt_bs_off, xlabel, title, nbins, range_min, range_max, save_filename, control_region="", region = "", save_plot=True):
+
+    # print entries in each region
+    print(f"Entries in {control_region} region: {len(dimuon_mass_bs_on)}")
+    print(f"Entries in {control_region} region: {len(dimuon_mass_bs_off)}")
+
+    # if region in ["EB", "EE", "EO"]:
+    #     range_max = 0.1
+    #     nbins = 50
+    # elif region == "BE":
+    #     range_max = 0.03
+    #     nbins = 70
+    # else:
+    #     range_max = 0.05
+
+    hist_bs_on = rt.TH1D("hist_bs_on", f"Region: {region}", nbins, range_min, range_max)
+    for mass, weight in zip(dimuon_mass_bs_on, wgt_bs_on):
+        hist_bs_on.Fill(mass, weight)
+
+    hist_bs_off = rt.TH1D("hist_bs_off", f"Region: {region}", nbins, range_min, range_max)
+    for mass, weight in zip(dimuon_mass_bs_off, wgt_bs_off):
+        hist_bs_off.Fill(mass, weight)
+
+    # Normalize histograms
+    hist_bs_on.Scale(1.0 / hist_bs_on.Integral())
+    hist_bs_off.Scale(1.0 / hist_bs_off.Integral())
+
+    canvas = rt.TCanvas("Canvas", "Canvas", 800, 800)
+    canvas.cd()
+    legend = rt.TLegend(0.6, 0.60, 0.9, 0.9)
+
+    rt.gStyle.SetOptStat(0000)
+
+    hist_bs_on.SetLineColor(rt.kGreen)
+    hist_bs_on.SetMarkerColor(rt.kGreen)
+    hist_bs_on.SetMarkerStyle(20)
+    hist_bs_on.SetMarkerSize(0.5)
+    hist_bs_on.SetLineWidth(2)
+    hist_bs_on.GetYaxis().SetTitle("A.U.")
+    hist_bs_on.GetXaxis().SetTitle(xlabel)
+    hist_bs_on.GetXaxis().SetTitleOffset(1.2)
+    hist_bs_on.GetYaxis().SetTitleOffset(1.2)
+    hist_bs_on.GetXaxis().SetTitleSize(0.04)
+    hist_bs_on.GetYaxis().SetTitleSize(0.04)
+    # draw histogram with error bars
+    # hist_bs_on.Draw("E")
+
+
+    hist_bs_off.SetLineColor(rt.kBlue)
+    hist_bs_off.SetMarkerColor(rt.kBlue)
+    hist_bs_off.SetMarkerStyle(20)
+    hist_bs_off.SetMarkerSize(0.5)
+    hist_bs_off.SetLineWidth(2)
+    # hist_bs_off.Draw("E SAME")
+
+    # Use TRatioPlot to plot the ratio
+    rp = rt.TRatioPlot(hist_bs_on, hist_bs_off)
+    rp.Draw()
+    rp.GetLowerRefYaxis().SetTitle("Ratio")
+    if control_region == "z-peak":
+        rp.GetLowerRefYaxis().SetRangeUser(0.8, 1.2)
+        rp.GetLowerRefGraph().SetMinimum(0.8)
+        rp.GetLowerRefGraph().SetMaximum(1.2)
+    else:
+        rp.GetLowerRefYaxis().SetRangeUser(0.0, 5.0)
+        rp.GetLowerRefGraph().SetMinimum(0.0)
+        rp.GetLowerRefGraph().SetMaximum(5.0)
+
+    rp.GetUpperPad().cd()
+    legend.AddEntry(hist_bs_on, "BSC fit", "L")
+    legend.AddEntry("", f"BSC mean: {round(hist_bs_on.GetMean(), 3)}", "")
+    legend.AddEntry("", f"BSC sigma: {round(hist_bs_on.GetStdDev(), 3)}", "")
+    legend.AddEntry(hist_bs_off, "geofit", "L")
+    legend.AddEntry("", f"geofit mean: {round(hist_bs_off.GetMean(), 3)}", "")
+    legend.AddEntry("", f"geofit sigma: {round(hist_bs_off.GetStdDev(), 3)}", "")
+    legend.Draw()
+
+    canvas.Update()
+    canvas.SaveAs(save_filename)
+
+    # cleare  memory
+    hist_bs_on.Delete()
+    hist_bs_off.Delete()
+    canvas.Close()
 
 if __name__ == "__main__":
     client = Client(n_workers=15, threads_per_worker=2, processes=True, memory_limit='8 GiB')

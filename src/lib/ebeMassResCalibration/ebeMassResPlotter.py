@@ -11,11 +11,16 @@ if __name__ == "__main__":
     client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
     total_time_start = time.time()
     common_load_path = "/work/users/yun79/stage1_output/Run2StorageTest/2018/f1_0"
-    # data_load_path = common_load_path+"/data*/*/*.parquet"
-    data_load_path = common_load_path+"/data_A/*/*.parquet"
+    data_load_path = common_load_path+"/data*/*/*.parquet"
+
+    # common_load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0"
+    # data_load_path = common_load_path+"/data_C/*/*.parquet"
     # data_load_path = common_load_path+"/data_D/*/*.parquet"
 
     data_events = dak.from_parquet(data_load_path)
+
+    # print entries
+    print(data_events)
 
     # we're only interested in ZCR
     region_filter = ak.fill_none(data_events["z_peak"], value=False)

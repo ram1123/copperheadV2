@@ -11,6 +11,19 @@ import json
 # surpress RooFit printout
 rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
 
+def filter_region(events, region="h-peak"):
+    dimuon_mass = events.dimuon_mass
+    if region == "h-peak":
+        region_filter = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
+    elif region == "h-sidebands":
+        region_filter = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
+    elif region == "signal":
+        region_filter = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
+    elif region == "z-peak" or region == "z_peak":
+        region_filter = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
+    return events[region_filter]
+
+
 # Define the calibration categories ---
 def get_calib_categories(events):
     """
@@ -98,7 +111,7 @@ def get_calib_categories(events):
 
     return categories
 
-def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="CalibrationLog.txt"):
+def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="CalibrationLog.txt", out_string=""):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -219,13 +232,13 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
     # save plot
-    canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
+    canvas.SaveAs(f"calibration_fitCat{cat_idx}{out_string}.pdf")
     del canvas
     # # consider script to wait a second for stability?
     # time.sleep(1)
     return df_fit
 
-def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="CalibrationLog.txt"):
+def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="CalibrationLog.txt", out_string=""):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -412,16 +425,18 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibrat
     print(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
 
     # save cat_idx and sigma value to a pandas dataframe
-    # df_fit = df_fit.append({"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}, ignore_index=True)
-    new_row = pd.DataFrame([{"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}])
-    df_fit = pd.concat([df_fit, new_row], ignore_index=True)
+    if not df_fit.empty:
+        new_row = pd.DataFrame([{"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}])
+        df_fit = pd.concat([df_fit, new_row], ignore_index=True)
+    else:
+        df_fit = pd.DataFrame([{"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}])
 
 
     # Save the cat_idx and sigma value to a log file
     with open(logfile, "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
-    canvas.SaveAs(f"calibration_fitCat{cat_idx}.pdf")
+    canvas.SaveAs(f"calibration_fitCat{cat_idx}{out_string}.pdf")
     del canvas
     # consider script to wait a second for stability?
     time.sleep(1)
@@ -531,7 +546,7 @@ def save_calibration_json(df_merged, json_filename="calibration_factors.json"):
     print(f"Calibration JSON saved to {json_filename}")
 
 
-def closure_test_from_df(df, additional_string, output_plot="closure_test.png"):
+def closure_test_from_df(df, additional_string, output_plot="closure_test.pdf"):
     """
     Given a DataFrame with columns:
          cat_name, fit_val, fit_err, median_val, calibration_factor,
@@ -574,14 +589,14 @@ def closure_test_from_df(df, additional_string, output_plot="closure_test.png"):
     plt.ylabel("Fitted Resolution (GeV)")
     plt.title("Closure Test: Fitted vs. Predicted Resolution")
     plt.legend()
-    output_plot = output_plot.replace(".png", f"_{additional_string}.png")
+    output_plot = output_plot.replace(".pdf", f"_{additional_string}.pdf")
     plt.savefig(output_plot)
     plt.close()
 
     print(f"Closure test plot saved as {output_plot}")
     return df
 
-def closure_test_from_calibrated_df(df_fit, df_calibrated, additional_string, output_plot="closure_test.png"):
+def closure_test_from_calibrated_df(df_fit, df_calibrated, additional_string, output_plot="closure_test.pdf"):
     df_merged = pd.merge(df_fit, df_calibrated, on="cat_name", how="inner")
     df = df_merged
     required_cols = {"cat_name", "fit_val", "fit_err", "median_val"}
@@ -606,16 +621,17 @@ def closure_test_from_calibrated_df(df_fit, df_calibrated, additional_string, ou
 
 
 
-    
-    plt.xlabel("Predicted $\sigma_{\\mu\\mu}$ [GeV]") # plt.xlabel("Median Predicted Resolution (GeV)")
-    plt.ylabel("Measured $\sigma_{\\mu\\mu}$ [GeV]") #plt.ylabel("Fitted Resolution (GeV)")
+
+    plt.xlabel("Predicted $\\sigma_{\\mu\\mu}$ [GeV]") # plt.xlabel("Median Predicted Resolution (GeV)")
+    plt.ylabel("Measured $\\sigma_{\\mu\\mu}$ [GeV]") #plt.ylabel("Fitted Resolution (GeV)")
     plt.title("Closure Test: Measured vs. Predicted Resolution [2018 C]")
     plt.legend()
-    output_plot = output_plot.replace(".png", f"_{additional_string}.png")
+    output_plot = output_plot.replace(".pdf", f"_{additional_string}.pdf")
     plt.savefig(output_plot)
+    # save image to png
+    plt.savefig(output_plot.replace(".pdf", ".png"))
     plt.close()
 
     print(f"Closure test plot saved as {output_plot}")
-    # return df_merged    
+    # return df_merged
 
-    

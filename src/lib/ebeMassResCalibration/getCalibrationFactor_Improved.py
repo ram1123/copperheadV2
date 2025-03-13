@@ -15,6 +15,7 @@ from basic_class_for_calibration import generateBWxDCB_plot
 from basic_class_for_calibration import generateVoigtian_plot
 from basic_class_for_calibration import closure_test_from_df
 from basic_class_for_calibration import save_calibration_json
+from basic_class_for_calibration import filter_region
 
 import logging
 from modules.utils import logger
@@ -22,7 +23,7 @@ from modules.utils import logger
 ##############################
 # Step 1: Mass Fitting in ZCR
 ##############################
-def step1_mass_fitting_zcr(parquet_path):
+def step1_mass_fitting_zcr(parquet_path, out_string = ""):
     logger.info("=== Step 1: Mass fitting in ZCR ===")
     tstart = time.time()
 
@@ -33,8 +34,10 @@ def step1_mass_fitting_zcr(parquet_path):
     data_events = dak.from_parquet(parquet_path)
 
     # Apply a ZCR filter: here we assume that the field "z_peak" is defined.
-    region_filter = ak.fill_none(data_events["z_peak"], value=False)
-    data_events = data_events[region_filter]
+    # region_filter = ak.fill_none(data_events["z_peak"], value=False)
+    # data_events = data_events[region_filter]
+    data_events = filter_region(data_events, "z_peak")
+
 
     # Only select the fields needed for calibration (muon1 and muon2 eta, pt, and dimuon mass)
     fields_of_interest = ["mu1_pt", "mu1_eta", "mu2_eta", "dimuon_mass"]
@@ -63,9 +66,9 @@ def step1_mass_fitting_zcr(parquet_path):
         # For example, use BWxDCB fit for the first 12 categories, Voigtian fit for the rest.
         if counter < 12:
             # Your function should return a dict like {"cat_name": cat_name, "fit_val": <value>}
-            df_fit = generateBWxDCB_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit)
+            df_fit = generateBWxDCB_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog{out_string}.txt")
         else:
-            df_fit = generateVoigtian_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit)
+            df_fit = generateVoigtian_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog{out_string}.txt")
         # fit_results.append(fit_info)
         logger.debug("------"*20)
         logger.debug(df_fit)
@@ -85,7 +88,7 @@ def step1_mass_fitting_zcr(parquet_path):
 ##############################
 # Step 2: Mass Resolution using dask.dataframe
 ##############################
-def step2_mass_resolution(parquet_path):
+def step2_mass_resolution(parquet_path, out_string = ""):
     logger.info("=== Step 2: Mass resolution calculation ===")
     tstart = time.time()
 
@@ -130,7 +133,7 @@ def step2_mass_resolution(parquet_path):
         plt.axvline(median_val, color='red', linestyle='dashed', linewidth=2,
                     label=f"Median: {median_val:.4f} GeV")
         plt.legend()
-        plt.savefig(f'mass_resolution_{cat_name}.png')
+        plt.savefig(f'mass_resolution_{cat_name}{out_string}.png')
         plt.close()
         logger.info(f"Saved histogram for category {cat_name} (median = {median_val:.4f} GeV)")
 
@@ -174,19 +177,26 @@ def step4_save_csv(df_merged, out_csv="calibration_factors.csv"):
 def main():
     total_time_start = time.time()
 
-    out_String = "2018_C"
-    INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_*/*/part*.parquet"
+    # out_String = "_2018C"
+    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_*/*/part*.parquet"
     # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_C/*/part*.parquet"
 
+    out_String = "_2022preEE"
+    INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+    # out_String = "_2022preEE_C"
+    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_C/*/*.parquet"
+    # out_String = "_2022preEE_D"
+    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_D/*/*.parquet"
+
     # Step 1: Mass Fitting in ZCR
-    df_fit = step1_mass_fitting_zcr(INPUT_DATASET)
+    df_fit = step1_mass_fitting_zcr(INPUT_DATASET, out_String)
     logger.debug(df_fit)
     # write to a csv file
-    df_fit.to_csv("fit_results.csv", index=False)
+    df_fit.to_csv(f"fit_results{out_String}.csv", index=False)
 
     # Step 2: Mass Resolution Calculation
-    df_res = step2_mass_resolution(INPUT_DATASET)
-    df_res.to_csv("resolution_results.csv", index=False)
+    df_res = step2_mass_resolution(INPUT_DATASET, out_String)
+    df_res.to_csv(f"resolution_results{out_String}.csv", index=False)
 
     # debug: logger.debug the two DataFrames
     logger.debug("="*40)
@@ -205,7 +215,7 @@ def main():
     # Step 5: Save the calibration factors to a JSON file.
     save_calibration_json(df_merged, "calibration_factors_"+out_String+".json")
 
-    # 
+    #
 
     # Step 5: Closure test
     closure_test_from_df(df_merged, out_String)

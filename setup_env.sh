@@ -10,3 +10,4 @@ export WORKDIR=$PWD
 export XRD_REQUESTTIMEOUT=2400
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 export PYTHONPATH="/depot/cms/users/$USER/copperheadV2:$PYTHONPATH"
+conda activate /depot/cms/kernels/root632 # FIXME: Temp fix, as coffea latest not working starting from early march 2025
