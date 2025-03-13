@@ -114,7 +114,11 @@ class CrystallBall:
         return result
 
 
-def generateRandomVals(eta, nL, extra_rndm_seed):
+def generateRandomVals(eta, nL, events):
+    """
+    params:
+    events -> to extract other muon kinematics extra random seeding (more entropy)
+    """
     resrng = cs.Correction(
         name="resrng",
         description="Deterministic smearing value generator",
@@ -123,23 +127,36 @@ def generateRandomVals(eta, nL, extra_rndm_seed):
             cs.Variable(name="seed1", type="real", description="seed1"),
             cs.Variable(name="seed2", type="real", description="seed2"),
             cs.Variable(name="seed3", type="real", description="seed3"),
+            cs.Variable(name="seed4", type="real", description="seed4"),
+            cs.Variable(name="seed5", type="real", description="seed5"),
+            cs.Variable(name="seed6", type="real", description="seed6"),
+            cs.Variable(name="seed7", type="real", description="seed7"),
         ],
         output=cs.Variable(name="rng", type="real"),
         data=cs.HashPRNG(
             nodetype="hashprng",
-            inputs=["seed1", "seed2", "seed3"],
+            inputs=["seed1", "seed2", "seed3", "seed4", "seed5", "seed6", "seed7"],
             distribution="stdflat",
         )
     )
+    muons = events.Muon # should be same shape as eta and nL
     rand_vals = resrng.to_evaluator().evaluate(
         eta,
         nL,
-        extra_rndm_seed,
+        muons.phi,
+        muons.pt,
+        muons.charge,
+        muons.dxy,
+        muons.dz,
     )
     # print(f"rand_vals: {rand_vals.compute()}")
     return rand_vals
 
-def get_rndm(eta, nL, cset, extra_rndm_seed, nested=False):
+def get_rndm(eta, nL, cset, events, nested=False):
+    """
+    params:
+    events -> to extract other muon kinematics extra random seeding (more entropy)
+    """
     # obtain parameters from correctionlib
     # if nested:
     #     eta_f, nL_f, nmuons = ak.flatten(eta), ak.flatten(nL), ak.num(nL)
@@ -155,7 +172,7 @@ def get_rndm(eta, nL, cset, extra_rndm_seed, nested=False):
     # get random number following the CB
     # print(nmuons)
     # rndm_f = [random() for i in nmuons for j in range(int(i))]
-    rndm_f = generateRandomVals(eta, nL, extra_rndm_seed)
+    rndm_f = generateRandomVals(eta, nL, events)
     # print(f"nmuons: {ak.num(nL, axis=1).compute()}")
 
     cb_f = CrystallBall(mean_f, sigma_f, alpha_f, n_f)
@@ -267,7 +284,7 @@ def filter_boundaries(pt_corr, pt, nested):
     return pt_corr
 
 
-def pt_resol(pt, eta, nL, cset, nested=False):
+def pt_resol(pt, eta, nL, cset, events, nested=False):
     """"
     Function for the calculation of the resolution correction
     Input: 
@@ -275,11 +292,12 @@ def pt_resol(pt, eta, nL, cset, nested=False):
     eta - muon pseudorapidity
     nL - muon number of tracker layers
     cset - correctionlib object
+    events - nanoenvets for more muon variables to increase entropy for RND value generation
 
     This function should only be applied to reco muons in MC!
     """
     extra_rndm_seed = pt
-    rndm = get_rndm(eta, nL, cset, extra_rndm_seed, nested)
+    rndm = get_rndm(eta, nL, cset, events, nested)
     # rndm = ak.ones_like(pt)
     std = get_std(pt, eta, nL, cset, nested)
     k = get_k(eta, "nom", cset, nested)

@@ -127,6 +127,7 @@ def apply_roccorRun3(events, roccor_file_path: str, is_mc:bool, test_mode=False)
             events.Muon.eta, 
             events.Muon.nTrackerLayers, 
             cset, 
+            events, # for more muon variables
             nested=True
         )
         
