@@ -22,6 +22,87 @@ import pandas as pd
 #     full_simple_bkg = ROOT.RooProdPdf("full_simple_bkg", "full_simple_bkg", ROOT.RooArgList(corePdf, SMF))
 #     return 
 
+
+def get_simple_plot(x_var, plot_data, plot_model, fig_name: str, component_names=[]):
+    frame = x_var.frame()
+    plot_data.plotOn(frame, Name=plot_data.GetName())
+    plot_model.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kGreen), Name=plot_model.GetName())
+    
+    # get residual 
+    # resid_hist = frame.residHist(plot_data.GetName(), final_model.GetName()) 
+    resid_hist = frame.pullHist(plot_data.GetName(), plot_model.GetName()) 
+
+    component_colors = [ROOT.kRed, ROOT.kBlue]
+    for component_ix in range(len(component_names)):
+        component_name = component_names[component_ix]
+        color = component_colors[component_ix]
+        plot_model.plotOn(frame, ROOT.RooFit.Components(component_name), ROOT.RooFit.LineColor(color), ROOT.RooFit.LineStyle(ROOT.kDashed))
+    # final_model.plotOn(frame, ROOT.RooFit.Components("bkg_pdf"), ROOT.RooFit.LineColor(ROOT.kRed), ROOT.RooFit.LineStyle(ROOT.kDashed))
+    # final_model.plotOn(frame, ROOT.RooFit.Components(sig_pdf.GetName()), ROOT.RooFit.LineColor(ROOT.kBlue), ROOT.RooFit.LineStyle(ROOT.kDashed))
+
+    # get gof
+    plot_model.paramOn(frame);
+    num_floating_params = plot_model.getParameters(ROOT.RooArgSet(x_var)).getSize() 
+    chi2_explicit = frame.chiSquare(plot_model.GetName(), plot_data.GetName(), num_floating_params)  
+    print(f"chi2_explicit: {chi2_explicit}")
+    
+    
+    # Draw the plot
+    canvas = ROOT.TCanvas("canvas", "Simple Fit", 800, 600)
+    pad1 = ROOT.TPad("pad1", "Main Plot", 0, 0.3, 1, 1)  # Top pad
+    pad2 = ROOT.TPad("pad2", "Residuals", 0, 0, 1, 0.3)   # Bottom pad
+    legend = rt.TLegend(0.35,0.65,0.6,0.9)
+    legend.AddEntry("", f"chi2 dof: {chi2_explicit:.3f}", "")
+     
+    
+    # Adjust margins
+    pad1.SetBottomMargin(0.02)
+    pad2.SetTopMargin(0.02)
+    pad2.SetBottomMargin(0.3)
+
+    
+    # Create the horizontal line at y=0 for pull plot
+    xmin = 110
+    xmax = 150
+    line = ROOT.TLine(xmin, 0, xmax, 0)
+    line.SetLineStyle(2)  # 2 = Dashed
+    line.SetLineColor(ROOT.kBlue)  # Optional: Change color
+    line.SetLineWidth(2)  # Optional: Set width
+
+    
+    # Draw pads
+    pad1.Draw()
+    pad2.Draw()
+    
+    # Plot in respective pads
+    pad1.cd()
+    frame.Draw()
+    legend.Draw() 
+    
+    pad2.cd()
+
+    # Create a residual frame
+    resid_frame = x_var.frame()
+    resid_frame.addPlotable(resid_hist, "P") 
+    
+    
+    # Set labels
+    # frame.SetTitle("Fit and Components")
+    # resid_frame.SetTitle("Residuals")
+    # resid_frame.GetYaxis().SetTitle("Pulls")
+    # resid_frame.GetYaxis().SetRangeUser(-5, 5)  # Set reasonable range for residuals
+
+    
+    resid_frame.Draw()
+    line.Draw()
+
+
+    # frame.Draw()
+    canvas.Draw()
+    canvas.SaveAs(fig_name)
+    
+    
+
 def do_simpleFit_test(mass, fit_data, sig_pdf, sig_norm: float, corePdf, SMF, save_path):
     """
     This is a helper function doing a simple fit without using combine
@@ -50,8 +131,8 @@ def do_simpleFit_test(mass, fit_data, sig_pdf, sig_norm: float, corePdf, SMF, sa
     
     device="cpu"
     fit_range="full"
-    _ = bkg_pdf.fitTo(fit_data, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
-    _ = bkg_pdf.fitTo(fit_data, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
+    fit_result = bkg_pdf.fitTo(fit_data, rt.RooFit.Range(fit_range), ROOT.RooFit.Extended(True), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
+    # _ = bkg_pdf.fitTo(fit_data, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
     # _ = final_model.fitTo(fit_data, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
     fit_result = final_model.fitTo(
         fit_data, rt.RooFit.Range(fit_range), 
@@ -65,7 +146,6 @@ def do_simpleFit_test(mass, fit_data, sig_pdf, sig_norm: float, corePdf, SMF, sa
         # ROOT.RooFit.Minos(True),
         ROOT.RooFit.Extended(True),
         EvalBackend=device, PrintLevel=0 ,SumW2Error=True, Save=True,
-        # Minos=True,
     )
     fit_result.Print()
     # print(f"expected signal norm: {sig_norm}")
@@ -73,64 +153,83 @@ def do_simpleFit_test(mass, fit_data, sig_pdf, sig_norm: float, corePdf, SMF, sa
     # print(f"fit signal norm: {fit_sig_norm}")
 
     # Plot the PDFs
-    frame = mass.frame()
-    fit_data.plotOn(frame)
-    # sig_pdf.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kRed), ROOT.RooFit.LineStyle(ROOT.kDashed))
-    # bkg_pdf.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kBlue), ROOT.RooFit.LineStyle(ROOT.kDashed))
-    final_model.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kGreen))
-    resid_hist = frame.residHist() # get residual 
+    fig_name = f"{save_path}/simple_fitting.pdf"
+    get_simple_plot(mass, fit_data, final_model, fig_name, component_names=[bkg_pdf.GetName(), sig_pdf.GetName()])
+    # frame = mass.frame()
+    # fit_data.plotOn(frame, Name=fit_data.GetName())
+    # # sig_pdf.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kRed), ROOT.RooFit.LineStyle(ROOT.kDashed))
+    # # bkg_pdf.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kBlue), ROOT.RooFit.LineStyle(ROOT.kDashed))
+    # final_model.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kGreen), Name=final_model.GetName())
     
-    final_model.plotOn(frame, ROOT.RooFit.Components("bkg_pdf"), ROOT.RooFit.LineColor(ROOT.kRed), ROOT.RooFit.LineStyle(ROOT.kDashed))
-    final_model.plotOn(frame, ROOT.RooFit.Components(sig_pdf.GetName()), ROOT.RooFit.LineColor(ROOT.kBlue), ROOT.RooFit.LineStyle(ROOT.kDashed))
+    # # get residual 
+    # # resid_hist = frame.residHist(fit_data.GetName(), final_model.GetName()) 
+    # resid_hist = frame.pullHist(fit_data.GetName(), final_model.GetName()) 
 
-    final_model.paramOn(frame);
-    num_floating_params = final_model.getParameters(ROOT.RooArgSet(mass)).getSize() #final_model.floatParsFinal().getSize()
-    chi2_explicit = frame.chiSquare(final_model.GetName(), fit_data.GetName(), num_floating_params)  
+    
+    # final_model.plotOn(frame, ROOT.RooFit.Components("bkg_pdf"), ROOT.RooFit.LineColor(ROOT.kRed), ROOT.RooFit.LineStyle(ROOT.kDashed))
+    # final_model.plotOn(frame, ROOT.RooFit.Components(sig_pdf.GetName()), ROOT.RooFit.LineColor(ROOT.kBlue), ROOT.RooFit.LineStyle(ROOT.kDashed))
+
+    # # get gof
+    # final_model.paramOn(frame);
+    # num_floating_params = final_model.getParameters(ROOT.RooArgSet(mass)).getSize() 
+    # chi2_explicit = frame.chiSquare(final_model.GetName(), fit_data.GetName(), num_floating_params)  
+    # print(f"chi2_explicit: {chi2_explicit}")
     
     
-    # Draw the plot
-    canvas = ROOT.TCanvas("canvas", "Simple Fit", 800, 600)
-    pad1 = ROOT.TPad("pad1", "Main Plot", 0, 0.3, 1, 1)  # Top pad
-    pad2 = ROOT.TPad("pad2", "Residuals", 0, 0, 1, 0.3)   # Bottom pad
-    legend = rt.TLegend(0.65,0.55,0.9,0.7)
-    legend.AddEntry("", f"chi2 dof: {chi2_explicit:.3f}", "")
+    # # Draw the plot
+    # canvas = ROOT.TCanvas("canvas", "Simple Fit", 800, 600)
+    # pad1 = ROOT.TPad("pad1", "Main Plot", 0, 0.3, 1, 1)  # Top pad
+    # pad2 = ROOT.TPad("pad2", "Residuals", 0, 0, 1, 0.3)   # Bottom pad
+    # legend = rt.TLegend(0.35,0.65,0.6,0.9)
+    # legend.AddEntry("", f"chi2 dof: {chi2_explicit:.3f}", "")
      
     
-    # Adjust margins
-    pad1.SetBottomMargin(0.02)
-    pad2.SetTopMargin(0.02)
-    pad2.SetBottomMargin(0.3)
+    # # Adjust margins
+    # pad1.SetBottomMargin(0.02)
+    # pad2.SetTopMargin(0.02)
+    # pad2.SetBottomMargin(0.3)
 
     
-    # Draw pads
-    pad1.Draw()
-    pad2.Draw()
-    
-    # Plot in respective pads
-    pad1.cd()
-    frame.Draw()
-    legend.Draw() 
-    
-    pad2.cd()
-
-    # Create a residual frame
-    # resid_hist = frame.residHist(fit_data.GetName(), final_model.GetName())  # Compute pull (residual normalized by uncertainty)
-    resid_frame = mass.frame()
-    resid_frame.addPlotable(resid_hist, "P") 
-    
-    # Set labels
-    # frame.SetTitle("Fit and Components")
-    # resid_frame.SetTitle("Residuals")
-    # resid_frame.GetYaxis().SetTitle("Pulls")
-    # resid_frame.GetYaxis().SetRangeUser(-5, 5)  # Set reasonable range for residuals
+    # # Create the horizontal line at y=0 for pull plot
+    # xmin = 110
+    # xmax = 150
+    # line = ROOT.TLine(xmin, 0, xmax, 0)
+    # line.SetLineStyle(2)  # 2 = Dashed
+    # line.SetLineColor(ROOT.kBlue)  # Optional: Change color
+    # line.SetLineWidth(2)  # Optional: Set width
 
     
-    resid_frame.Draw()
-
-
+    # # Draw pads
+    # pad1.Draw()
+    # pad2.Draw()
+    
+    # # Plot in respective pads
+    # pad1.cd()
     # frame.Draw()
-    canvas.Draw()
-    canvas.SaveAs(f"{save_path}/simple_fitting.pdf")
+    # legend.Draw() 
+    
+    # pad2.cd()
+
+    # # Create a residual frame
+    # # resid_hist = frame.residHist(fit_data.GetName(), final_model.GetName())  # Compute pull (residual normalized by uncertainty)
+    # resid_frame = mass.frame()
+    # resid_frame.addPlotable(resid_hist, "P") 
+    
+    
+    # # Set labels
+    # # frame.SetTitle("Fit and Components")
+    # # resid_frame.SetTitle("Residuals")
+    # # resid_frame.GetYaxis().SetTitle("Pulls")
+    # # resid_frame.GetYaxis().SetRangeUser(-5, 5)  # Set reasonable range for residuals
+
+    
+    # resid_frame.Draw()
+    # line.Draw()
+
+
+    # # frame.Draw()
+    # canvas.Draw()
+    # canvas.SaveAs(f"{save_path}/simple_fitting.pdf")
 
 
 def get_sigHist(mass, hist_name):
@@ -503,7 +602,7 @@ if __name__ == "__main__":
     # Create observables
     mass_name = "mh_ggh"
     mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
-    nbins = 800
+    nbins = 100 #800 FIXME
     mass.setBins(nbins)
     mass.setRange("hiSB", 135, 150 )
     mass.setRange("loSB", 110, 115 )
