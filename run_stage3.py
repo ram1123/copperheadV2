@@ -15,6 +15,124 @@ import os
 import copy
 import pandas as pd
 
+# def get_simpleBkg_pdf(mass, corePdf, SMF):
+#     """
+#     returns a simple full bkg function my multiplying a corepdf with SMF pdf function
+#     """
+#     full_simple_bkg = ROOT.RooProdPdf("full_simple_bkg", "full_simple_bkg", ROOT.RooArgList(corePdf, SMF))
+#     return 
+
+def do_simpleFit_test(mass, fit_data, sig_pdf, sig_norm: float, corePdf, SMF, save_path):
+    """
+    This is a helper function doing a simple fit without using combine
+    """
+    # mass.setBins(200)
+    # r_hat =  rt.RooRealVar("r_hat","Signal Strength",0.0005, 0.0, 1.0)
+    # r_hat =  rt.RooRealVar("r_hat","Signal Strength",0.0, 0.0, 5)
+    # r_hat.setConstant(True)
+    # bkg_pdf = ROOT.RooProdPdf("full_simple_bkg", "full_simple_bkg", ROOT.RooArgList(corePdf, SMF))
+    # bkg_pdf = corePdf
+    name = f"bwzr_cat_ggh_coef1"
+    a_coeff = rt.RooRealVar(name,name, -0.0623102,-10,10)
+    name = f"bwzr_cat_ggh_coef2"
+    b_coeff = rt.RooRealVar(name,name, +0.000168432,-10,10)
+    name = f"bwzr_cat_ggh_coef3"
+    c_coeff = rt.RooRealVar(name,name, 2.14877, 0.0, 5.0)
+
+    name = "bkg_pdf"
+    bkg_pdf = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
+
+
+    # make sig + bkg model
+    norm_s = rt.RooRealVar("norm_s","N_{s}",10,100);
+    norm_b = rt.RooRealVar("norm_b","N_{b}",0,100000);
+    final_model = ROOT.RooAddPdf("final_model", "final_model", ROOT.RooArgList(sig_pdf, bkg_pdf), ROOT.RooArgList(norm_s, norm_b)) 
+    
+    device="cpu"
+    fit_range="full"
+    _ = bkg_pdf.fitTo(fit_data, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
+    _ = bkg_pdf.fitTo(fit_data, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
+    # _ = final_model.fitTo(fit_data, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
+    fit_result = final_model.fitTo(
+        fit_data, rt.RooFit.Range(fit_range), 
+        # ROOT.RooFit.Minimizer("Minuit2", "migrad"),
+        # # # ROOT.RooFit.Extended(True),
+        # # ROOT.RooFit.Hesse(True),
+        # # ROOT.RooFit.Minos(True),
+        # ROOT.RooFit.Save(True),
+        # ROOT.RooFit.Minimizer("Minuit2", "migrad"),
+        # ROOT.RooFit.Hesse(True),
+        # ROOT.RooFit.Minos(True),
+        ROOT.RooFit.Extended(True),
+        EvalBackend=device, PrintLevel=0 ,SumW2Error=True, Save=True,
+        # Minos=True,
+    )
+    fit_result.Print()
+    # print(f"expected signal norm: {sig_norm}")
+    # fit_sig_norm = r_hat.getVal()*fit_data.sumEntries()
+    # print(f"fit signal norm: {fit_sig_norm}")
+
+    # Plot the PDFs
+    frame = mass.frame()
+    fit_data.plotOn(frame)
+    # sig_pdf.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kRed), ROOT.RooFit.LineStyle(ROOT.kDashed))
+    # bkg_pdf.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kBlue), ROOT.RooFit.LineStyle(ROOT.kDashed))
+    final_model.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kGreen))
+    resid_hist = frame.residHist() # get residual 
+    
+    final_model.plotOn(frame, ROOT.RooFit.Components("bkg_pdf"), ROOT.RooFit.LineColor(ROOT.kRed), ROOT.RooFit.LineStyle(ROOT.kDashed))
+    final_model.plotOn(frame, ROOT.RooFit.Components(sig_pdf.GetName()), ROOT.RooFit.LineColor(ROOT.kBlue), ROOT.RooFit.LineStyle(ROOT.kDashed))
+
+    final_model.paramOn(frame);
+    num_floating_params = final_model.getParameters(ROOT.RooArgSet(mass)).getSize() #final_model.floatParsFinal().getSize()
+    chi2_explicit = frame.chiSquare(final_model.GetName(), fit_data.GetName(), num_floating_params)  
+    
+    
+    # Draw the plot
+    canvas = ROOT.TCanvas("canvas", "Simple Fit", 800, 600)
+    pad1 = ROOT.TPad("pad1", "Main Plot", 0, 0.3, 1, 1)  # Top pad
+    pad2 = ROOT.TPad("pad2", "Residuals", 0, 0, 1, 0.3)   # Bottom pad
+    legend = rt.TLegend(0.65,0.55,0.9,0.7)
+    legend.AddEntry("", f"chi2 dof: {chi2_explicit:.3f}", "")
+     
+    
+    # Adjust margins
+    pad1.SetBottomMargin(0.02)
+    pad2.SetTopMargin(0.02)
+    pad2.SetBottomMargin(0.3)
+
+    
+    # Draw pads
+    pad1.Draw()
+    pad2.Draw()
+    
+    # Plot in respective pads
+    pad1.cd()
+    frame.Draw()
+    legend.Draw() 
+    
+    pad2.cd()
+
+    # Create a residual frame
+    # resid_hist = frame.residHist(fit_data.GetName(), final_model.GetName())  # Compute pull (residual normalized by uncertainty)
+    resid_frame = mass.frame()
+    resid_frame.addPlotable(resid_hist, "P") 
+    
+    # Set labels
+    # frame.SetTitle("Fit and Components")
+    # resid_frame.SetTitle("Residuals")
+    # resid_frame.GetYaxis().SetTitle("Pulls")
+    # resid_frame.GetYaxis().SetRangeUser(-5, 5)  # Set reasonable range for residuals
+
+    
+    resid_frame.Draw()
+
+
+    # frame.Draw()
+    canvas.Draw()
+    canvas.SaveAs(f"{save_path}/simple_fitting.pdf")
+
+
 def get_sigHist(mass, hist_name):
     """
     Extract extract hist name saved in ucsd_workspace and extract their signal datahist for
@@ -1988,7 +2106,14 @@ if __name__ == "__main__":
     alpha2_subCat4.setConstant(True)
     n2_subCat4.setConstant(True)
 
-    
+    # Dimuon mass resolution test start -----------------------------------------
+    # sigma_subCat0.setVal(sigma_subCat0.getVal()* (1-0.2)) # 20% improvement in dimuon mass resolution
+    # sigma_subCat1.setVal(sigma_subCat1.getVal()* (1-0.2)) # 20% improvement in dimuon mass resolution
+    # sigma_subCat2.setVal(sigma_subCat2.getVal()* (1-0.2)) # 20% improvement in dimuon mass resolution
+    # sigma_subCat3.setVal(sigma_subCat3.getVal()* (1-0.2)) # 20% improvement in dimuon mass resolution
+    # sigma_subCat4.setVal(sigma_subCat4.getVal()* (1-0.2)) # 20% improvement in dimuon mass resolution
+    # Dimuon mass resolution test end -----------------------------------------
+
 
     # ---------------------------------------------------
     # Obtain signal MC events for VBF
@@ -3382,6 +3507,8 @@ if __name__ == "__main__":
     roo_histData_subCat0.SetName("data_cat0_ggh");
     corePdf_subCat0.SetName("bkg_cat0_ggh_pdf");
     bkg_subCat0_norm.SetName(corePdf_subCat0.GetName()+"_norm"); 
+    # print(f"bkg_subCat0_norm.GetName(): {bkg_subCat0_norm.GetName()}")
+    # print(f"bkg_subCat0_norm.getVal(): {bkg_subCat0_norm.getVal()}")
     # make norm for data
     nevents = roo_histData_subCat0.sumEntries()
     roo_histData_subCat0_norm = rt.RooRealVar(roo_histData_subCat0.GetName()+"_norm","Background normalization value",nevents,0,3*nevents)
@@ -3577,6 +3704,11 @@ if __name__ == "__main__":
     roo_histData_subCat4.SetName("data_cat4_ggh");
     corePdf_subCat4.SetName("bkg_cat4_ggh_pdf");
     bkg_subCat4_norm.SetName(corePdf_subCat4.GetName()+"_norm");
+    # bkg_subCat4_norm.SetName(corePdf_subCat4.GetName()+"__norm");
+    # print(f"bkg_subCat4_norm.GetName(): {bkg_subCat4_norm.GetName()}")
+    # print(f"bkg_subCat4_norm.getVal(): {bkg_subCat4_norm.getVal()}")
+    # bkg_subCat4_norm.setVal(2*bkg_subCat4_norm.getVal())
+    # raise ValueError
     # make norm for data
     nevents = roo_histData_subCat4.sumEntries()
     roo_histData_subCat4_norm = rt.RooRealVar(roo_histData_subCat4.GetName()+"_norm","Background normalization value",nevents,0,3*nevents)
@@ -3617,7 +3749,36 @@ if __name__ == "__main__":
 
     # wout.Print();
     wout.Write();
-    
+
+
+    # ---------------------------------------------------
+    # Simple fitting here
+    # ---------------------------------------------------
+
+    # freeze rate params
+    CMS_hmm_sigma_cat1_ggh.setConstant(True)
+    CMS_hmm_peak_cat1_ggh.setConstant(True)
+    CMS_hmm_sigma_cat2_ggh.setConstant(True)
+    CMS_hmm_peak_cat2_ggh.setConstant(True)
+    CMS_hmm_sigma_cat3_ggh.setConstant(True)
+    CMS_hmm_peak_cat3_ggh.setConstant(True)
+    CMS_hmm_sigma_cat4_ggh.setConstant(True)
+    CMS_hmm_peak_cat4_ggh.setConstant(True)
+
+    # freeze signal params
+    # sigma_subCat4.setConstant(False)
+    # MH_subCat4.setConstant(False) 
+    # alpha1_subCat4.setConstant(False)
+    # n1_subCat4.setConstant(False)
+    # alpha2_subCat4.setConstant(False)
+    # n2_subCat4.setConstant(False)
+
+    # do_simpleFit_test(mass, data_subCat2_BWZRedux, signal_subCat2, sig_norm_subCat2.getVal(), model_subCat2_BWZRedux, subCat2_SMF, plot_save_path)
+    # do_simpleFit_test(mass, data_subCat3_BWZRedux, signal_subCat3, sig_norm_subCat3.getVal(), model_subCat3_BWZRedux, subCat3_SMF, plot_save_path)
+    do_simpleFit_test(mass, data_subCat4_BWZRedux, signal_subCat4, sig_norm_subCat4.getVal(), model_subCat4_BWZRedux, subCat4_SMF, plot_save_path)
+    raise ValueError
+
+
     # ---------------------------------------------------
     # Group plotting start here
     # ---------------------------------------------------
