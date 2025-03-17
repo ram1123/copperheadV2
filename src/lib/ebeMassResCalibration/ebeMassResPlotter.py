@@ -5,17 +5,19 @@ import time
 from basic_class_for_calibration import get_calib_categories
 from basic_class_for_calibration import generateBWxDCB_plot
 from basic_class_for_calibration import generateVoigtian_plot
-
+from basic_class_for_calibration import filter_region
 
 if __name__ == "__main__":
     client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
     total_time_start = time.time()
-    common_load_path = "/work/users/yun79/stage1_output/Run2StorageTest/2018/f1_0"
-    data_load_path = common_load_path+"/data*/*/*.parquet"
+    # common_load_path = "/work/users/yun79/stage1_output/Run2StorageTest/2018/f1_0"
+    # data_load_path = common_load_path+"/data*/*/*.parquet"
 
     # common_load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0"
     # data_load_path = common_load_path+"/data_C/*/*.parquet"
     # data_load_path = common_load_path+"/data_D/*/*.parquet"
+
+    data_load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_GeoFit//stage1_output/2018/f1_0/data_C/*/*.parquet"
 
     data_events = dak.from_parquet(data_load_path)
 
@@ -23,8 +25,9 @@ if __name__ == "__main__":
     print(data_events)
 
     # we're only interested in ZCR
-    region_filter = ak.fill_none(data_events["z_peak"], value=False)
-    data_events = data_events[region_filter]
+    # region_filter = ak.fill_none(data_events["z_peak"], value=False)
+    # data_events = data_events[region_filter]
+    data_events = filter_region(data_events, "z_peak")
 
     # only select specific fields to load to save run time
     fields_of_interest = ["mu1_pt", "mu1_eta", "mu2_eta","dimuon_mass"] # mu1,mu2 are needed to separate categories

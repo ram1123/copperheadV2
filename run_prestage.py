@@ -20,34 +20,10 @@ import glob
 # warnings.filterwarnings("error", module="coffea.*")
 from omegaconf import OmegaConf
 import sys
+from collections.abc import Sequence
 
 import logging
 from modules.utils import logger
-from collections.abc import Sequence
-
-
-# def getRootFileNames(single_das_query: str, allowlist_sites: list) -> list:
-#     """
-#     Helper function that returns a list of root files in xrootd paths that meets 
-#     the single_das_query requirements
-#     """
-#     rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
-#     outlist, outtree = rucio_utils.query_dataset(
-#         single_das_query,
-#         client=rucio_client,
-#         tree=True,
-#         scope="cms",
-#     )
-#     outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
-#         outlist[0],
-#         allowlist_sites=allowlist_sites,
-#         mode="full",
-#         client=rucio_client,
-#         # partial_allowed=True
-#     )
-#     fnames = [file[0] for file in outfiles if file != []]
-#     return fnames
-
 
 def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
     print(f"single_dataset_name {single_dataset_name}")
@@ -62,7 +38,7 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
 
         allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL"]
         rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
-        
+
         outlist, outtree = rucio_utils.query_dataset(
             das_query,
             client=rucio_client,
@@ -76,11 +52,9 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
             client=rucio_client,
             # partial_allowed=True
         )
-        fnames = [file[0] for file in outfiles if file != []]       
-        
-        return fnames
-    
+        fnames = [file[0] for file in outfiles if file != []]
 
+        return fnames
 
 def get_Xcache_filelist(fnames: list):
     new_fnames = []
@@ -108,7 +82,6 @@ def find_keys_in_yaml(yaml_data, keys_to_find):
 
     recursive_search(yaml_data)
     return found_values
-
 
 
 if __name__ == "__main__":
@@ -338,10 +311,11 @@ if __name__ == "__main__":
             logger.debug(f"Sample Name: {sample_name}")
             logger.debug(f"dataset[sample_name]: {dataset[sample_name]}")
             logger.debug(f"is data?: {is_data}")
+
             dataset_name = dataset[sample_name]
             allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_US_UCSD"]
             # allowlist_sites = None
-            
+
             # print(f"type(dataset_name): {type(dataset_name)}")
             is_some_list_type = isinstance(dataset_name, Sequence) and not isinstance(dataset_name, str)
             logger.debug(f"is_some_list_type: {is_some_list_type}")
@@ -356,8 +330,8 @@ if __name__ == "__main__":
                 fnames = getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
             # convert to xcachce paths if requested
-            if args.xcache:
-                fnames = get_Xcache_filelist(fnames)
+                if args.xcache:
+                    fnames = get_Xcache_filelist(fnames)
 
             logger.debug(f"file names: {fnames}")
             logger.debug(f"sample_name: {sample_name}")
