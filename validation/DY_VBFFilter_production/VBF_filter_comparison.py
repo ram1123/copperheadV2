@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 plt.style.use(hep.style.CMS)
 import numpy as np
 from dask_gateway import Gateway
-
+import os
 
 
 
@@ -22,6 +22,7 @@ def applyQuickSelection(events):
     """
     apply dijet mass and dijet dR cut (vbf production category without the inverse btage cut applied)
     """
+    return events
     # apply njet and nmuons cut first
     # start_len = ak.num(events.Muon.pt, axis=0).compute()
 
@@ -154,7 +155,62 @@ def getHist(value, binning):
     hist_err = np.sqrt(hist_w2) /  hist_orig * hist
     return hist, hist_err  
 
+def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
+    fields2plot = zip_fromScratch.fields
+    for field in fields2plot:
+        if field not in plot_bins.keys():
+            continue
+        binning = np.linspace(*plot_bins[field]["binning_linspace"])
+        
+        fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+        
+        hist_fromScratch, hist_fromScratch_err = getHist(zip_fromScratch[field], binning)
+        hist_rereco, hist_rereco_err = getHist(zip_rereco[field], binning)        
+            
+        hep.histplot(hist_fromScratch, bins=binning, 
+                 histtype='errorbar', 
+                label="UL private production", 
+                 xerr=True, 
+                 yerr=(hist_fromScratch_err),
+                color = "blue",
+                ax=ax_main
+        )
+        hep.histplot(hist_rereco, bins=binning, 
+                 histtype='errorbar', 
+                label="RERECO central production", 
+                 xerr=True, 
+                 yerr=(hist_rereco_err),
+                color = "red",
+                ax=ax_main
+        )
+        
+        ax_main.set_ylabel("A. U.")
 
+        # make ration plot of UL private / RERECO
+        ratio_hist = np.zeros_like(hist_fromScratch)
+        inf_filter = hist_rereco>0
+        ratio_hist[inf_filter] = hist_fromScratch[inf_filter]/  hist_rereco[inf_filter]
+        
+        rel_unc_ratio = np.sqrt((hist_fromScratch_err/hist_fromScratch)**2 + (hist_rereco_err/hist_rereco)**2)
+        ratio_err = rel_unc_ratio*ratio_hist
+        
+        hep.histplot(ratio_hist, 
+                     bins=binning, histtype='errorbar', yerr=ratio_err, 
+                     color='black', label='Ratio', ax=ax_ratio)
+        
+        ax_ratio.axhline(1, color='gray', linestyle='--')
+        ax_main.set_xlabel( plot_bins[field].get("xlabel"))
+        ax_ratio.set_ylabel('Private UL / Rereco')
+        ax_ratio.set_ylim(0.5,1.5) 
+        # plt.title(f"{field} distribution of privately produced samples")
+        plt.title(f"2018")
+        # plt.legend(loc="upper right")
+        plt.legend()
+        # plt.show()
+        save_full_path = f"{save_path}/TwoWayPrivateProd_{field}.pdf"
+        plt.savefig(save_full_path)
+        plt.clf()
+    
 def plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path="./plots"):
     fields2plot = zip_fromScratch.fields
     for field in fields2plot:
@@ -202,7 +258,6 @@ def plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path="./pl
         plt.legend()
         # plt.show()
         save_full_path = f"{save_path}/ThreeWayPrivateProd_{field}.pdf"
-        # save_full_path = f"./quick_plots/PrivateProd_{field}.png"
         plt.savefig(save_full_path)
         plt.clf()
 
@@ -215,7 +270,8 @@ if __name__ == "__main__":
     # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
     # client = gateway.connect(cluster_info.name).get_client()
 
-    test_len = 14000
+    test_len = 4000
+    # test_len = 14000
     # test_len = 40000
 
 
@@ -256,9 +312,10 @@ if __name__ == "__main__":
         plot_bins = json.load(file)
 
     save_path = "./plots/jjMassCut"
-    
+    os.makedirs(save_path, exist_ok=True) 
     plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path=save_path)
-    # plotTwoWay()
+    plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
+    
     # fields2plot = zip_fromScratch.fields
     # for field in fields2plot:
     #     if field not in plot_bins.keys():
