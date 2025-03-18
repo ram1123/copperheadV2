@@ -12,9 +12,9 @@ import itertools
 import glob
 import ROOT as rt
 import ROOT
+import sys
 
 plt.style.use(hep.style.CMS)
-
 
 def applyVBF_cutV1(events):
     btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
@@ -296,19 +296,19 @@ def generateRooHist(x, dimuon_mass, wgts, name=""):
     nbins = x.getBins()
     TH = rt.TH1D("TH", "TH", nbins, x.getMin(), x.getMax())
     TH.FillN(len(dimuon_mass), dimuon_mass, wgts) # fill the histograms with mass and weights
-    roohist = rt.RooDataHist(name, name, rt.RooArgSet(x), TH)
-
     DEBUG = True
     if DEBUG:
         print(f"dimuon_mass: {dimuon_mass}")
         print(f"wgts: {wgts}")
         print(f"nbins: {nbins}")
         print(f"TH.Integral(): {TH.Integral()}")
-
         # plot the TH histogram
         c = rt.TCanvas("c","c",800,800)
         TH.Draw()
         c.SaveAs("TH.pdf")
+
+    roohist = rt.RooDataHist(name, name, rt.RooArgSet(x), TH)
+
 
 
     return roohist
@@ -421,7 +421,7 @@ def fitPlot_ggh(events_bsOn, events_bsOff, save_filename, save_plot=True, contro
 
 
     frame = mass.frame()
-    hist_bsOn.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+    hist_bsOn.plotOn(frame, rt.RooFit.MarkerColor(rt.kGreen), rt.RooFit.LineColor(rt.kGreen), Invisible=False )
     model_bsOn.plotOn(frame, Name=name, LineColor=rt.kGreen)
     legend.AddEntry(frame.getObject(int(frame.numItems())-1), "ggH Powheg with BSC fit", "L")
     sigma_val = round(sigma_bsOn.getVal(), 3)
@@ -431,7 +431,7 @@ def fitPlot_ggh(events_bsOn, events_bsOff, save_filename, save_plot=True, contro
     legend.AddEntry("", f"BSC mean: {mean_val} +- {mean_err}", "")
     legend.AddEntry("", f"BSC sigma: {sigma_val} +- {sigma_err}", "")
 
-    hist_bsOff.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+    hist_bsOff.plotOn(frame, rt.RooFit.MarkerColor(rt.kBlue), rt.RooFit.LineColor(rt.kBlue), Invisible=False )
     model_bsOff.plotOn(frame, Name=name, LineColor=rt.kBlue)
     legend.AddEntry(frame.getObject(int(frame.numItems())-1), "ggH Powheg with geofit", "L")
     sigma_val = round(sigma_bsOff.getVal(), 3)
@@ -536,13 +536,15 @@ if __name__ == "__main__":
     print(f"events_BSon: {len(events_BSon)}")
     print(f"events_BSoff: {len(events_BSoff)}")
 
+    # sys.exit()
+
     fitPlot_ggh(events_BSon, events_BSoff, "BSC_geofit_comparison_2022PreEE_all.pdf", save_plot=True, control_region=control_region)
 
     # plot for BB, BE and EE
     # for region in ["BB", "BE", "EE"]:
         # fitPlot_ggh(events_BSon, events_BSoff, f"BSC_geofit_comparison_2022PreEE_{region}.pdf", save_plot=True, control_region=control_region, selection=region)
 
-    # for region in ["BB", "BO", "OB", "OO", "BE", "EB", "EO", "OE", "EE"]:
-    #     events_BSon_region = filterRegion_UsingRapidity(events_BSon, region)
-    #     events_BSoff_region = filterRegion_UsingRapidity(events_BSoff, region)
-    #     fitPlot_ggh(events_BSon_region, events_BSoff_region, f"BSC_geofit_comparison_2022PreEE_{region}.pdf", save_plot=True,  control_region=control_region, region=region)
+    for region in ["BB", "BO", "OB", "OO", "BE", "EB", "EO", "OE", "EE"]:
+        events_BSon_region = filterRegion_UsingRapidity(events_BSon, region)
+        events_BSoff_region = filterRegion_UsingRapidity(events_BSoff, region)
+        fitPlot_ggh(events_BSon_region, events_BSoff_region, f"BSC_geofit_comparison_2022PreEE_{region}.pdf", save_plot=True,  control_region=control_region, region=region)

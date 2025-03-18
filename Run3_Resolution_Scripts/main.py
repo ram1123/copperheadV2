@@ -59,8 +59,8 @@ def read_files(control_region):
 if __name__ == "__main__":
     client = Client(n_workers=15, threads_per_worker=2, processes=True, memory_limit='8 GiB')
 
-    # control_region = "signal"
-    control_region = "z-peak"
+    control_region = "signal"
+    # control_region = "z-peak"
     events_bs_on, events_bs_off = read_files(control_region)
 
     # Add variable: ptErr/pT for both leading and sub-leading muons
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     print(f"Number of events in bs_off: {len(events_bs_off)}")
 
     getBasicVariables = True
-    getBasicVariables_2D = False
+    getBasicVariables_2D = True
     getHigherOrderVariables = False
     ggH_Filter = False
     vbf_Filter = False # error range
@@ -107,48 +107,50 @@ if __name__ == "__main__":
             events_bs_off_region = filter_region_using_rapidity_leadMuon(events_bs_off, region)
             compare_kinematics_2D(events_bs_on_region, events_bs_off_region, "mu1_pt", "mu1_Ratio_pTErr_pt", "Leading Muon p_{T} [GeV]", "Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison_2DPlots"+"_"+control_region+"_"+region)
             compare_kinematics_2D(events_bs_on_region, events_bs_off_region, "mu1_eta", "mu1_Ratio_pTErr_pt", "Leading Muon #eta", "Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison_2DPlots"+"_"+control_region+"_"+region)
+            compare_kinematics_2D(events_bs_on_region, events_bs_off_region, "mu1_phi", "mu1_Ratio_pTErr_pt", "Leading Muon #phi", "Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison_2DPlots"+"_"+control_region+"_"+region)
 
+            events_bs_on_region = filter_region_using_rapidity_SubleadMuon(events_bs_on, region)
+            events_bs_off_region = filter_region_using_rapidity_SubleadMuon(events_bs_off, region)
             compare_kinematics_2D(events_bs_on_region, events_bs_off_region, "mu2_pt", "mu2_Ratio_pTErr_pt", "Sub-Leading Muon p_{T} [GeV]", "Sub-Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison_2DPlots"+"_"+control_region+"_"+region)
             compare_kinematics_2D(events_bs_on_region, events_bs_off_region, "mu2_eta", "mu2_Ratio_pTErr_pt", "Sub-Leading Muon #eta", "Sub-Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison_2DPlots"+"_"+control_region+"_"+region)
-
-            compare_kinematics_2D(events_bs_on_region, events_bs_off_region, "mu1_phi", "mu1_Ratio_pTErr_pt", "Leading Muon #phi", "Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison_2DPlots"+"_"+control_region+"_"+region)
             compare_kinematics_2D(events_bs_on_region, events_bs_off_region, "mu2_phi", "mu2_Ratio_pTErr_pt", "Sub-Leading Muon #phi", "Sub-Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison_2DPlots"+"_"+control_region+"_"+region)
 
     if getBasicVariables:
-        # compare_kinematics(events_bs_on, events_bs_off, "mu1_pt", "Leading Muon p_{T} [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "mu1_ptErr", "Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "mu1_eta", "Leading Muon #eta ", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "mu1_phi", "Leading Muon #phi", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "mu1_Ratio_pTErr_pt", "Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu1_pt", "Leading Muon p_{T} [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu1_ptErr", "Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu1_eta", "Leading Muon #eta ", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu1_phi", "Leading Muon #phi", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu1_Ratio_pTErr_pt", "Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison"+"_"+control_region)
 
-        # compare_kinematics(events_bs_on, events_bs_off, "mu2_pt", "Sub-Leading Muon p_{T} [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "mu2_ptErr", "Sub-Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "mu2_eta", "Sub-Leading Muon #eta ", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "mu2_phi", "Sub-Leading Muon #phi", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "mu2_Ratio_pTErr_pt", "Sub-Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu2_pt", "Sub-Leading Muon p_{T} [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu2_ptErr", "Sub-Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu2_eta", "Sub-Leading Muon #eta ", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu2_phi", "Sub-Leading Muon #phi", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "mu2_Ratio_pTErr_pt", "Sub-Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison"+"_"+control_region)
 
-        # compare_kinematics(events_bs_on, events_bs_off, "dimuon_pt", " p_{T} (#mu #mu) [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "dimuon_eta", " #eta (#mu #mu) ", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "dimuon_phi", " #phi (#mu #mu)", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "dimuon_mass", "  Invariant Mass (#mu #mu) [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "dimuon_rapidity", " Rapidity (#mu #mu) ", save_filename="kinematics_comparison"+"_"+control_region)
-        # compare_kinematics(events_bs_on, events_bs_off, "dimuon_ebe_mass_res_rel", " Relative Mass Resolution (#mu #mu) ", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "dimuon_pt", " p_{T} (#mu #mu) [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "dimuon_eta", " #eta (#mu #mu) ", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "dimuon_phi", " #phi (#mu #mu)", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "dimuon_mass", "  Invariant Mass (#mu #mu) [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "dimuon_rapidity", " Rapidity (#mu #mu) ", save_filename="kinematics_comparison"+"_"+control_region)
+        compare_kinematics(events_bs_on, events_bs_off, "dimuon_ebe_mass_res_rel", " Relative Mass Resolution (#mu #mu) ", save_filename="kinematics_comparison"+"_"+control_region)
 
-        # for region in ["B", "O", "E"]:
-        #     events_bs_on_region = filter_region_using_rapidity_leadMuon(events_bs_on, region)
-        #     events_bs_off_region = filter_region_using_rapidity_leadMuon(events_bs_off, region)
-        #     compare_kinematics(events_bs_on_region, events_bs_off_region, "mu1_ptErr", "Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
-        #     compare_kinematics(events_bs_on_region, events_bs_off_region, "mu1_Ratio_pTErr_pt", "Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
+        for region in ["B", "O", "E"]:
+            events_bs_on_region = filter_region_using_rapidity_leadMuon(events_bs_on, region)
+            events_bs_off_region = filter_region_using_rapidity_leadMuon(events_bs_off, region)
+            compare_kinematics(events_bs_on_region, events_bs_off_region, "mu1_ptErr", "Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
+            compare_kinematics(events_bs_on_region, events_bs_off_region, "mu1_Ratio_pTErr_pt", "Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
 
-        #     events_bs_on_region = filter_region_using_rapidity_SubleadMuon(events_bs_on, region)
-        #     events_bs_off_region = filter_region_using_rapidity_SubleadMuon(events_bs_off, region)
-        #     compare_kinematics(events_bs_on_region, events_bs_off_region, "mu2_ptErr", "Sub-Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
-        #     compare_kinematics(events_bs_on_region, events_bs_off_region, "mu2_Ratio_pTErr_pt", "Sub-Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
+            events_bs_on_region = filter_region_using_rapidity_SubleadMuon(events_bs_on, region)
+            events_bs_off_region = filter_region_using_rapidity_SubleadMuon(events_bs_off, region)
+            compare_kinematics(events_bs_on_region, events_bs_off_region, "mu2_ptErr", "Sub-Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
+            compare_kinematics(events_bs_on_region, events_bs_off_region, "mu2_Ratio_pTErr_pt", "Sub-Leading Muon #delta p_{T}/p_{T}", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
 
         for region in ["BB", "BO", "OB", "OO", "BE", "EB", "EO", "OE", "EE"]:
             events_bs_on_region = filter_region_using_rapidity(events_bs_on, region)
             events_bs_off_region = filter_region_using_rapidity(events_bs_off, region)
             compare_kinematics(events_bs_on_region, events_bs_off_region, "dimuon_ebe_mass_res_rel", " Relative Mass Resolution (#mu #mu) ", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
+            compare_kinematics(events_bs_on_region, events_bs_off_region, "dimuon_mass", " Invariant Mass (#mu #mu) [GeV]", save_filename="kinematics_comparison"+"_"+control_region+"_"+region)
 
     if ggH_Filter:
         # apply apply_ggh_cut(events)

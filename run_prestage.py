@@ -58,6 +58,7 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
 
 def get_Xcache_filelist(fnames: list):
     new_fnames = []
+    logger.debug(f"fnames: {fnames}")
     for fname in fnames:
         root_file = re.findall(r"/store.*", fname)[0]
         x_cache_fname = "root://cms-xcache.rcac.purdue.edu/" + root_file

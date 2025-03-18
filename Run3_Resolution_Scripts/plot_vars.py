@@ -6,15 +6,15 @@ import numpy as np
 def get_hist_params(var):
     if "mu1_Ratio_pTErr_pt" == var: return 50, 0, 0.035, "p_{T} Error / p_{T}", 0.0, 2.0
     elif "mu2_Ratio_pTErr_pt" == var: return 50, 0, 0.035, "p_{T} Error / p_{T}", 0.0, 2.0
-    elif "dimuon_ebe_mass_res_rel" == var: return 50, 0, 0.3, "m_{#mu#mu} Resolution", 0.0, 2.0
+    elif "dimuon_ebe_mass_res_rel" == var: return 25, 0, 0.2, "m_{#mu#mu} Resolution", 0.0, 2.0
     elif "mu1_ptErr" == var: return 50, 0, 2.0, "p_{T} Error [GeV]", 0.0, 2.0
     elif "mu2_ptErr" == var: return 50, 0, 2.0, "p_{T} Error [GeV]", 0.0, 2.0
     elif "mu1_pt" == var:      return 50, 0, 180, "p_{T} [GeV]", 0.8, 1.2
     elif "mu2_pt" == var:   return 50, 0, 100, "p_{T} [GeV]", 0.8, 1.2
     elif "dimuon_pt" == var: return 50, 0, 150, "p_{T} [GeV]", 0.8, 1.2
     elif "dimuon_eta" == var: return 50, -4.7, 4.7, "#eta_{#mu#mu}", 0.8, 1.2
-    elif "dimuon_mass" == var: return 50, 70, 110, "m_{#mu#mu} [GeV]", 0.8, 1.2 # z-peak
-    # elif "dimuon_mass" == var: return 50, 100, 160, "m_{#mu#mu} [GeV]", 0.8, 1.2 # signal
+    # elif "dimuon_mass" == var: return 50, 70, 110, "m_{#mu#mu} [GeV]", 0.8, 1.2 # z-peak
+    elif "dimuon_mass" == var: return 50, 100, 160, "m_{#mu#mu} [GeV]", 0.8, 1.2 # signal
     elif "dimuon_rapidity" == var: return 50, -2.4, 2.4, "#eta_{#mu#mu}", 0.8, 1.2
     elif "pt" in var:           return 50, 0, 300, "p_{T} [GeV]", 0.8, 1.2
     elif "eta" in var:          return 50, -2.4, 2.4, "#eta", 0.8, 1.2

@@ -3,17 +3,18 @@ import pandas as pd
 import uproot
 import dask
 from dask_gateway import Gateway
-from dask.distributed import Client, progress
+from dask.distributed import Client, progress, as_completed
 import sys
 import ROOT
 import logging
 import time
 
+# ROOT Error Handling: Suppress non-critical warnings
 ROOT.gErrorIgnoreLevel = ROOT.kError  # Only show errors, not warnings
 
+# Set up logging for better tracking and debugging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger()
-
 
 def get_num_events(file_path, tree_name="Events", max_attempts=10, sleep_interval=5.0):
     """
@@ -55,107 +56,35 @@ def get_num_events(file_path, tree_name="Events", max_attempts=10, sleep_interva
     return 0
 
 
-# Function to check if a ROOT file is corrupt using uproot
-def is_root_file_corrupt_uproot(file_path, tree_name="Events"):
-    """Check if a ROOT file is corrupt using uproot and if it has entries in the TTree."""
+def get_num_entries_in_nanoAOD(file_path):
+    """
+    Get the number of entries in the NanoAOD file.
+    This function assumes that the file contains an 'Events' tree.
+
+    Parameters:
+        file_path (str): Path to the NanoAOD ROOT file.
+
+    Returns:
+        int: Number of entries in the NanoAOD file.
+    """
     try:
-        with uproot.open(file_path) as f:
-            if tree_name in f:
-                tree = f[tree_name]
-                num_entries = tree.num_entries
-                return num_entries == 0  # True if file is empty (invalid), False if valid
+        file = ROOT.TFile.Open(file_path, "READ")
+        if file and file.IsOpen():
+            tree = file.Get("Events")
+            if tree:
+                num_entries = tree.GetEntries()
+                file.Close()
+                return num_entries
             else:
-                logger.warning(f"Tree '{tree_name}' not found in {file_path}")
-                return True  # Tree is missing
-    except Exception as e:
-        logger.error(f"Error with uproot: {e}")
-        return True  # File is corrupted or inaccessible
-
-# Function to check if a ROOT file is corrupt using ROOT library
-def is_root_file_corrupt_ROOT_ReturnEntry(file_path):
-    """Check if ROOT file can be opened, is not in a zombie state, and contains a valid 'Events' tree."""
-    print(f"Checking file: {file_path}")
-    try:
-        file = ROOT.TFile.Open(file_path, "READ")
-        if not file or not file.IsOpen():
+                logger.warning(f"Tree 'Events' not found in {file_path}.")
+                file.Close()
+                return 0
+        else:
             logger.warning(f"ROOT file '{file_path}' failed to open.")
-            return True, 0  # ROOT file failed to open
-
-        if file.IsZombie():
-            logger.warning(f"ROOT file '{file_path}' is in a zombie state.")
-            file.Close()
-            return True, 0  # ROOT file is in a zombie state
-
-        # Check if the 'Events' tree exists and has valid entries
-        tree = file.Get("Events")
-        if not tree:
-            logger.warning(f"Tree 'Events' not found in {file_path}.")
-            file.Close()
-            return True, 0  # Tree 'Events' not found
-
-        # Get the number of entries in the tree
-        num_entries = tree.GetEntries()
-
-        # Check if the tree has entries
-        if num_entries == 0:
-            logger.warning(f"Tree 'Events' in '{file_path}' has 0 entries.")
-            file.Close()
-            return True, 0  # ROOT file is empty
-
-        # Close the file properly if all checks pass
-        file.Close()
-        return False, num_entries  # ROOT file is valid
-
+            return 0
     except Exception as e:
         logger.error(f"Error opening ROOT file '{file_path}': {e}")
-
-    # Ensure the file is closed
-    if 'file' in locals() and file.IsOpen():
-        file.Close()
-
-    return True, 0  # File is corrupted or inaccessible
-
-
-# Function to check if a ROOT file is corrupt using ROOT library
-def is_root_file_corrupt_ROOT(file_path):
-    """Check if ROOT file can be opened, is not in a zombie state, and contains a valid 'Events' tree."""
-    print(f"Checking file: {file_path}")
-    try:
-        file = ROOT.TFile.Open(file_path, "READ")
-        if not file or not file.IsOpen():
-            logger.warning(f"ROOT file '{file_path}' failed to open.")
-            return True  # ROOT file failed to open
-
-        if file.IsZombie():
-            logger.warning(f"ROOT file '{file_path}' is in a zombie state.")
-            file.Close()
-            return True  # ROOT file is in a zombie state
-
-        # Check if the 'Events' tree exists and has valid entries
-        tree = file.Get("Events")
-        if not tree:
-            logger.warning(f"Tree 'Events' not found in {file_path}.")
-            file.Close()
-            return True  # Tree 'Events' not found
-
-        # Check if the tree has entries
-        if tree.GetEntries() == 0:
-            logger.warning(f"Tree 'Events' in '{file_path}' has 0 entries.")
-            file.Close()
-            return True  # ROOT file is empty
-
-        # Close the file properly if all checks pass
-        file.Close()
-        return False  # ROOT file is valid
-
-    except Exception as e:
-        logger.error(f"Error opening ROOT file '{file_path}': {e}")
-
-    # Ensure the file is closed
-    if 'file' in locals() and file.IsOpen():
-        file.Close()
-
-    return True  # File is corrupted or inaccessible
+        return 0
 
 
 # Function to process missing & corrupt files using Dask for parallelization
@@ -169,42 +98,45 @@ def check_missing_files(input_file, output_dir, year, additional_string):
     df['expected_output_file'] = df['outputDirectory'] + "/" + df['outputNanoAODFile']
 
     # Set up Dask client (with improved resource management)
-    # client = Client(n_workers=4, threads_per_worker=2, memory_limit='4GB')  # Customize resources based on your setup
-
     gateway = Gateway(
         "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
         proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
     )
-    cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+    cluster_info = gateway.list_clusters()[0]  # Get the first cluster by default. There should be only one cluster
     client = gateway.connect(cluster_info.name).get_client()
-    # logger.info(f"Dask client: {client}")
+    logger.info(f"Dask client: {client}")
 
     # Add "root://xcache.cms.rcac.purdue.edu/" to the inputMiniAOD files
     df['inputMiniAOD'] = df['inputMiniAOD'].apply(lambda x: "root://xcache.cms.rcac.purdue.edu/" + x)
 
-    # Fetch the number of events from the input MiniAOD files
-    # df['nEvents'] = df['inputMiniAOD'].apply(lambda x: get_num_events(x))
-    # use Dask delayed to parallelize the process
-    tasks = [dask.delayed(get_num_events)(file) for file in df['inputMiniAOD']]
-    results = dask.compute(*tasks)
-    df['nEvents_from_inputMiniAOD'] = results
+    # Scatter the files across workers before computation to avoid slow graph building
+    input_files = df['inputMiniAOD'].tolist()
+    output_files = df['expected_output_file'].tolist()
 
-    # Create Dask delayed tasks for ROOT file corruption check
-    # tasks = [dask.delayed(is_root_file_corrupt_ROOT)(file) for file in df['expected_output_file']]
+    # Scatter input files and output files to Dask workers to reduce overhead
+    scattered_input_files = client.scatter(input_files)
+    scattered_output_files = client.scatter(output_files)
+
+    # Create Dask delayed tasks for both fetching events from MiniAOD and entries from NanoAOD
+    tasks = [
+        dask.delayed(get_num_events)(file) for file in scattered_input_files
+    ] + [
+        dask.delayed(get_num_entries_in_nanoAOD)(file) for file in scattered_output_files
+    ]
+
     # Compute the results in parallel using Dask
-    # results = dask.compute(*tasks)
-    # Store corruption status in DataFrame
-    # df['file_corrupt'] = results
-
-    # use function is_root_file_corrupt_ROOT_ReturnEntry to get the number of entries in the ROOT file
-    tasks = [dask.delayed(is_root_file_corrupt_ROOT_ReturnEntry)(file) for file in df['expected_output_file']]
     results = dask.compute(*tasks)
-    # Store corruption status in DataFrame
-    df['file_corrupt'] = [result[0] for result in results]
-    df['nEntries_in_nanoAOD'] = [result[1] for result in results]
 
-    # Filter out missing or corrupt files
-    missing_files_df = df[df['file_corrupt'] == True]
+    # Split results into the number of events (from MiniAOD) and entries (from NanoAOD)
+    num_events_results_mini = results[:len(df['inputMiniAOD'])]
+    num_events_results_nano = results[len(df['inputMiniAOD']):]
+
+    # Store the results in the DataFrame
+    df['nEvents_from_inputMiniAOD'] = num_events_results_mini
+    df['nEvents_from_nanoAOD'] = num_events_results_nano
+
+    # Filter out missing or corrupt files (where nEvents_from_nanoAOD is 0)
+    missing_files_df = df[df['nEvents_from_nanoAOD'] == 0]  # If NanoAOD has 0 events, consider it corrupt
     missing_files_df = missing_files_df[['configFile', 'inputMiniAOD', 'outputDirectory', 'nEvents', 'CondorLogPath']]
 
     # Dynamically generate the output filename based on year and additional string
@@ -217,27 +149,18 @@ def check_missing_files(input_file, output_dir, year, additional_string):
     df.to_csv(f'full_df_{year}_{additional_string}.csv', index=False)
 
     # Save another dataframe where nEntries_in_nanoAOD and nEvents_from_inputMiniAOD are not equal
-    df_not_equal = df[df['nEntries_in_nanoAOD'] != df['nEvents_from_inputMiniAOD']]
+    df_not_equal = df[df['nEvents_from_nanoAOD'] != df['nEvents_from_inputMiniAOD']]
     df_not_equal.to_csv(f'full_df_DifferentNEvents_{year}_{additional_string}.csv', sep=' ', header=False, index=False)
 
     df_not_equal = df_not_equal[['configFile', 'inputMiniAOD', 'outputDirectory', 'nEvents', 'CondorLogPath']]
     df_not_equal.to_csv(f'skim_df_DifferentNEvents_{year}_{additional_string}.csv', sep=' ', header=False, index=False)
 
-    # NOTE: Compare the file `missing_or_corrupt_files_2018.txt` with the file `skim_df_DifferentNEvents_2018.txt`
-    # to see if there are any additional files in the `skim_df_DifferentNEvents_2018.txt` file that are not in the
-    # `missing_or_corrupt_files_2018.txt` file
-
-
-    # Print results
-    # logger.info(f"Missing or corrupt files: {len(missing_files_df)}")
-    # logger.info(f"The list of missing or corrupt files is saved to '{output_filename}'")
-
     logger.info(f"{output_filename}: Missing or corrupt files: {len(missing_files_df)}")
+
 
 # Main function to process all years
 def main():
     """Main processing function."""
-    # Define years and corresponding input/output files for each year
     years_and_input_files = {
         '2018Re': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_NanoAODv12_06March_Data_Run2018A.txt',
         '2018': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_06March_AllJobs.txt',
@@ -254,19 +177,14 @@ def main():
         '2016': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/',
     }
 
-    # List of years to process
-    # years = ['2018v1', '2018', '2017', '2016APV', '2016']
-    # years = ['2018', '2017', '2016APV', '2016']
     years = ['2018', '2017', '2016APV', '2016']
-    # years = ['2018Re']
     additional_string = "17March"
 
-    # Process files for each year
     for year in years:
         input_file = years_and_input_files[year]
         output_dir = years_and_output_dirs[year]
         check_missing_files(input_file, output_dir, year, additional_string)
 
-# Run the main function
+
 if __name__ == "__main__":
     main()

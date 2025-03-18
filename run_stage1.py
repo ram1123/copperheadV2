@@ -99,8 +99,11 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     skim_zip = ak.zip(skim_dict, depth_limit=1)
 
     # skim_zip = ak.to_dataframe(skim_zip)
-    skim_zip.persist().to_parquet(save_path)
+    # skim_zip.persist().to_parquet(save_path)
     # return skim_zip
+
+    df = ak.to_dataframe(skim_zip)
+    df.to_parquet(save_path)
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -165,7 +168,7 @@ if __name__ == "__main__":
 
     # logger.setLevel(args.log_level)
     logger.setLevel(args.log_level)
-    
+
     test_mode = args.test_mode
     logger.debug(f"Test mode: {test_mode}")
     # sys.exit()

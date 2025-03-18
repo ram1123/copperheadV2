@@ -7,7 +7,7 @@ usage() {
     echo "Options:"
     echo "  -h            Show this help message"
     echo "  -c <file>    Dataset YAML file (default: configs/datasets/dataset.yaml)"
-    echo "  -m <mode>    Mode: 0 (prestage), 1 (stage1), all (both), zpt_val (validation), cali (mass calibration) (default: 0)"
+    echo "  -m <mode>    Mode: 0 (prestage), 1 (stage1), all (both), zpt_val (validation), calib (mass calibration) (default: 0)"
     echo "  -v <version> NanoAOD version (default: 9)"
     echo "  -y <year>    Year (default: (\"2018\" \"2017\" \"2016postVFP\" \"2016preVFP\"))"
     echo "  -l <label>   Label (default: Default_nanoAODv9)"
@@ -43,6 +43,13 @@ while getopts $options option; do
     esac
 done
 
+# function to print and execute the command
+function run_command() {
+    echo "Executing: $1"
+    echo "Executing: $1" >> $log_file
+    eval $1
+}
+
 # if year is not set then take the default value of years
 if [[ -z "$year" ]]; then
     years=("2018" "2017" "2016postVFP" "2016preVFP")
@@ -57,6 +64,8 @@ data_l_dict["2016preVFP"]="B C D E F"
 data_l_dict["2016postVFP"]="F G H"
 data_l_dict["2017"]="B C D E F"
 data_l_dict["2018"]="A B C D"
+data_l_dict["2022preEE"]="C D"
+data_l_dict["2022postEE"]="E F G"
 
 bkg_l="DY Top VV"
 sig_l="Higgs"
@@ -65,16 +74,19 @@ sig_l="Higgs"
 if [[ "$debug" == "1" ]]; then
     echo "Debug mode is on. Running only for 2018."
     # years=("2016postVFP" "2016preVFP")
-    years=("2018")
+    # years=("2022preEE")
     # Also update the associated data list.
-    # data_l_dict["2018"]="A B C D"
+    # data_l_dict["2018"]="C"
     # data_l_dict["2017"]="B C D E F"
+    # data_l_dict["2017"]="B C D E F"
+    data_l_dict["2022preEE"]="C D"
     bkg_l=""
     sig_l=""
 fi
 
 chunksize=300000
 save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
+
 
 # Check if any log_*.txt file exists then move it to log_old folder
 if [ -f log_*.txt ]; then
@@ -103,9 +115,11 @@ for year in "${years[@]}"; do
     echo "Background: $bkg_l" >> $log_file
     echo "Signal: $sig_l" >> $log_file
 
-    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --use_gateway "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway "
+    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache "
+    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  "
     command2="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
+
     command3="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
     command4="python src/lib/ebeMassResCalibration/calibration_factor.py --path $save_path"
 
@@ -148,13 +162,43 @@ for year in "${years[@]}"; do
         echo "Executing: $command1"  # Print the command for debugging
         echo "command1: $command1" >> $log_file
         eval $command1
+    elif [[ "$mode" == "zpt_fit" ]]; then
+        echo "Running fitting step..."
+
+        # Loop over the number of bins
+        # for nbins in 200; do
+        # for nbins in 25 50 100 200 500; do
+        nbins="CustomBins"
+        command2a="python data/zpt_rewgt/fitting/do_fitting.py --run_label $label --year $year --input_path $save_path --debug --outAppend _March17"
+        command2b="python data/zpt_rewgt/fitting/do_f_test.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _March17"
+        command2c="python data/zpt_rewgt/fitting/get_goodnessOfFit.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _March17"
+
+        # command2b_New="python data/zpt_rewgt/fitting/get_ZpT_Weights.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _bin$nbins"
+
+        echo "Executing: $command2a"
+        echo "command2a: $command2a" >> $log_file
+        # eval $command2a
+
+        echo "Executing: $command2b"
+        echo "command2b: $command2b" >> $log_file
+        # eval $command2b
+
+        echo "Executing: $command2b_New"
+        echo "command2b_New: $command2b_New" >> $log_file
+        # eval $command2b_New
+
+        echo "Executing: $command2c"
+        echo "command2c: $command2c" >> $log_file
+        eval $command2c
+        # done
+
     elif [[ "$mode" == "zpt_val" ]]; then
         echo "Running validation step..."
         echo "Executing: $command2"  # Print the command for debugging
         echo "command2: $command2" >> $log_file
         eval $command2
     # Run the mass calibration fitting step
-    elif [[ "$mode" == "cali" ]]; then
+    elif [[ "$mode" == "calib" ]]; then
         echo "Running mass calibration"
         echo "Executing: $command3"  # Print the command for debugging
         echo "command: $command3" >> $log_file
