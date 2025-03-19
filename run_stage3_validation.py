@@ -14,6 +14,7 @@ import argparse
 import os
 import copy
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # def get_simpleBkg_pdf(mass, corePdf, SMF):
 #     """
@@ -25,17 +26,63 @@ import pandas as pd
 
 def getPostfitUncertaintyPlot(x_var, plot_data, plot_model, fitresult, fig_name: str, fit_range="full"):
     frame = x_var.frame()
+    plot_range = "full"
     plot_data.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
-    plot_model.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kGreen), VisualizeError=(fitresult, 1), FillColor="kOrange")
+    plot_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range(plot_range), ROOT.RooFit.LineColor(ROOT.kGreen), VisualizeError=(fitresult, 1), FillColor="kOrange")
     canvas = ROOT.TCanvas("canvas", "Simple Fit", 800, 600)
     frame.Draw()          
     canvas.Draw()
     canvas.SaveAs(fig_name)
+    # Extract error band width
+    graph = frame.getObject(int(frame.numItems()) - 1)  # Get the last plotted object (error band)
+    print(f"graph.GetName(): {graph.GetName()}")
+    n_points = graph.GetN()
+    
+    x_vals = []
+    error_shifts = []
+
+    # for i in range(n_points ):  # The first half contains upper, second half contains lower, but reverse order (it's a curve)
+    #     x_val = graph.GetX()[i]
+    #     y_val = graph.GetY()[i]
+    #     print(f"x_val: {x_val}")
+    #     print(f"y_val: {y_val}")
+
+    # raise ValueError
+    
+    for i in range(n_points // 2):  # The first half contains upper, second half contains lower, but reverse order (it's a curve)
+        x_val = graph.GetX()[i]
+        y_upper = graph.GetY()[i]  # Upper error band
+        # y_lower = graph.GetY()[i + n_points // 2]  # Lower error band
+        y_lower = graph.GetY()[-i]  # Lower error band
+        error_width = (y_upper - y_lower) / 2  # Compute half-width symmetrically
+        central_val = (y_upper + y_lower) / 2
+        
+        # error_shifts.append(error_width)
+        # Compute relative error
+        if central_val != 0:  # Avoid division by zero
+            rel_error = error_width / central_val
+        else:
+            rel_error = 0
+        
+        x_vals.append(x_val)
+        error_shifts.append(rel_error)
+
+    print(f"error_shifts: {error_shifts}")
+    
+    # Plot the symmetricimport matplotlib.pyplot as plt error band width around zero
+    plt.plot(x_vals, error_shifts, label="Positive Half Error Width", color="red")
+    plt.plot(x_vals, [-ew for ew in error_shifts], label="Negative Half Error Width", color="blue")
+    plt.axhline(0, color="black", linestyle="--", linewidth=1)  # Zero line
+    plt.xlabel("x")
+    plt.ylabel("Symmetric Error Band Width")
+    plt.legend()
+    plt.savefig(fig_name)
 
 def get_simple_plot(x_var, plot_data, plot_model, fig_name: str, component_names=[], fit_range="full"):
     frame = x_var.frame()
+    plot_range = "full"
     plot_data.plotOn(frame, Name=plot_data.GetName())
-    plot_model.plotOn(frame, ROOT.RooFit.LineColor(ROOT.kGreen), Name=plot_model.GetName())
+    plot_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range(plot_range), ROOT.RooFit.LineColor(ROOT.kGreen), Name=plot_model.GetName())
       
     # get residual 
     # resid_hist = frame.residHist(plot_data.GetName(), final_model.GetName()) 
@@ -148,7 +195,8 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
     final_model = ROOT.RooAddPdf("final_model", "final_model", ROOT.RooArgList(sig_pdf, bkg_pdf), ROOT.RooArgList(norm_s, norm_b)) 
     
     device="cpu"
-    fit_range="full"
+    fit_range="hiSB,loSB"
+    
 
     # bkg only fit
     fit_result = bkg_pdf.fitTo(fit_data, rt.RooFit.Range(fit_range), ROOT.RooFit.Extended(True), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
@@ -156,7 +204,7 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
     fig_name = f"{save_path}/step1_bkgOnlyFit.pdf"
     get_simple_plot(mass, fit_data, bkg_pdf, fig_name)
     fig_name = f"{save_path}/step1_shapeUncertainty.pdf"
-    getPostfitUncertaintyPlot(mass, fit_data, bkg_pdf, fit_result, fig_name)
+    getPostfitUncertaintyPlot(mass, fit_data, bkg_pdf, fit_result, fig_name, fit_range=fit_range)
     raise ValueError
 
     # a_coeff.setConstant(True) 
@@ -164,6 +212,7 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
     # c_coeff.setConstant(True) 
 
     # sign only fit
+    fit_range="full"
     fit_result = sig_pdf.fitTo(roo_histData_subCat4_signal, rt.RooFit.Range(fit_range), ROOT.RooFit.Extended(True), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
     fit_result.Print()
     fig_name = f"{save_path}/step2_sigOnlyFit.pdf"
