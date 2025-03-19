@@ -13,32 +13,34 @@ plt.style.use(hep.style.CMS)
 import numpy as np
 from dask_gateway import Gateway
 import os
-
+import argparse
 
 
 
 
 def applyQuickSelection(events):
     """
-    apply dijet mass and dijet dR cut (vbf production category without the inverse btage cut applied)
+    apply dijet mass and dimuon mass cut
     """
-    return events
     # apply njet and nmuons cut first
     # start_len = ak.num(events.Muon.pt, axis=0).compute()
 
     njets = ak.num(events.Jet, axis=1)
-    # nmuons = ak.num(events.Muon, axis=1)
-    selection = (njets >= 2) # & (nmuons >= 2)
+    nmuons = ak.num(events.Muon, axis=1)
+    selection = (njets >= 2) & (nmuons >= 2)
     events = events[selection]
     # now all events have at least two jets, apply dijet dR and dijet mass cut
     jet1 = events.Jet[:,0]
     jet2 = events.Jet[:,1]
     dijet_dR = jet1.deltaR(jet2)
     dijet = jet1+jet2
+    mu1 = events.Muon[:,0]
+    mu2 = events.Muon[:,1]
+    dimuon = mu1 + mu2
     selection = (
-        # (dijet_dR > 2.5) 
-        # & (dijet.mass > 400)
         (dijet.mass > 350)
+        & (dimuon.mass > 110)
+        & (dimuon.mass < 150)
     )
 
     
@@ -47,6 +49,11 @@ def applyQuickSelection(events):
     # print(f" {end_len} events out of {start_len} events passed the selection")
 
     return events
+
+    # muon
+    # pt > 20
+    # abs(eta) < 20
+    # medium ID
     
 def getZip(events) -> ak.zip:
     """
@@ -162,14 +169,15 @@ def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
             continue
         binning = np.linspace(*plot_bins[field]["binning_linspace"])
         
-        fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+        fig, (ax_main, ax_ratio) = plt.subplots(2, 1, figsize=(10, 13), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+        # fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [5, 1]}, sharex=True)
         
         hist_fromScratch, hist_fromScratch_err = getHist(zip_fromScratch[field], binning)
         hist_rereco, hist_rereco_err = getHist(zip_rereco[field], binning)        
             
         hep.histplot(hist_fromScratch, bins=binning, 
                  histtype='errorbar', 
-                label="UL private production", 
+                label="UL private", 
                  xerr=True, 
                  yerr=(hist_fromScratch_err),
                 color = "blue",
@@ -177,7 +185,7 @@ def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
         )
         hep.histplot(hist_rereco, bins=binning, 
                  histtype='errorbar', 
-                label="RERECO central production", 
+                label="RERECO central", 
                  xerr=True, 
                  yerr=(hist_rereco_err),
                 color = "red",
@@ -185,8 +193,12 @@ def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
         )
         
         ax_main.set_ylabel("A. U.")
+        ax_main.legend()
+        ax_main.set_title(f"2018")
 
         # make ration plot of UL private / RERECO
+        hist_fromScratch = ak.to_numpy(hist_fromScratch)
+        hist_rereco = ak.to_numpy(hist_rereco)
         ratio_hist = np.zeros_like(hist_fromScratch)
         inf_filter = hist_rereco>0
         ratio_hist[inf_filter] = hist_fromScratch[inf_filter]/  hist_rereco[inf_filter]
@@ -196,16 +208,15 @@ def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
         
         hep.histplot(ratio_hist, 
                      bins=binning, histtype='errorbar', yerr=ratio_err, 
-                     color='black', label='Ratio', ax=ax_ratio)
+                     color='black', label= 'Ratio', ax=ax_ratio)
         
         ax_ratio.axhline(1, color='gray', linestyle='--')
-        ax_main.set_xlabel( plot_bins[field].get("xlabel"))
-        ax_ratio.set_ylabel('Private UL / Rereco')
+        ax_ratio.set_xlabel( plot_bins[field].get("xlabel"))
+        ax_ratio.set_ylabel('UL / Rereco')
         ax_ratio.set_ylim(0.5,1.5) 
-        # plt.title(f"{field} distribution of privately produced samples")
-        plt.title(f"2018")
-        # plt.legend(loc="upper right")
-        plt.legend()
+        plt.tight_layout()
+        
+        
         # plt.show()
         save_full_path = f"{save_path}/TwoWayPrivateProd_{field}.pdf"
         plt.savefig(save_full_path)
@@ -262,6 +273,17 @@ def plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path="./pl
         plt.clf()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+    "-sel",
+    "--selection",
+    dest="selection",
+    default=None,
+    action="store",
+    help="save path to store stage1 output files",
+    )
+
+    
     client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
     # gateway = Gateway(
     #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
@@ -311,7 +333,7 @@ if __name__ == "__main__":
     with open("plot_settings.json", "r") as file:
         plot_bins = json.load(file)
 
-    save_path = "./plots/jjMassCut"
+    save_path = "./plots"
     os.makedirs(save_path, exist_ok=True) 
     plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path=save_path)
     plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
