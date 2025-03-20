@@ -13,6 +13,50 @@ sys.path.insert(0, parent_dir)
 # Now you can import your module
 from src.lib.histogram.plotting import plotDataMC_compare
 
+
+
+def fillSampleValues(events, sample_dict, sample: str):
+    print(f"sample_dict b4 : {sample_dict}")
+    sample_name = sample.lower()
+    if sample_name in sample_dict.keys():
+        sample_info = sample_dict[sample_name]
+        fields2load = sample_info.keys() # dimuon_mass, wgt_nominal
+        
+        # compute in parallel fields to load
+        computed_zip = ak.zip({
+            field : events[field] for field in fields2load
+        }).compute()
+        
+        # add the computed fields to sample_dict 
+        for field in fields2load:
+            sample_dict[sample_name][field].append(computed_zip[field])
+    else:
+        print(f"sample {sample_name} not present in sample_dict!")
+
+    print(f"sample_dict after : {sample_dict}")
+    return sample_dict
+        
+    # if sample.lower() == "data":
+    #     full_load_path = load_path+f"*data.parquet" 
+    # elif sample.lower() == "ggh":
+    #     full_load_path = load_path+f"*sigMC_ggh.parquet" 
+    # elif sample.lower() == "vbf":
+    #     full_load_path = load_path+f"*sigMC_vbf.parquet" 
+    # elif sample.lower() == "dy":
+    #     full_load_path = load_path+f"*bkgMC_dy.parquet" 
+    # elif sample.lower() == "ewk":
+    #     full_load_path = load_path+f"*bkgMC_ewk.parquet" 
+    # elif sample.lower() == "tt":
+    #     full_load_path = load_path+f"*bkgMC_tt.parquet" 
+    # elif sample.lower() == "st":
+    #     full_load_path = load_path+f"*bkgMC_st.parquet" 
+    # elif sample.lower() == "ww":
+    #     full_load_path = load_path+f"*bkgMC_ww.parquet" 
+    # elif sample.lower() == "wz":
+    #     full_load_path = load_path+f"*bkgMC_wz.parquet" 
+    # elif sample.lower() == "zz":
+    #     full_load_path = load_path+f"*bkgMC_zz.parquet" 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -50,36 +94,61 @@ if __name__ == "__main__":
     # print(events.fields)
     print(f"load_path : {load_path}")
     print(f"args.samples: {args.samples}")
-    for sample in args.samples:
-        if sample.lower() == "data":
-            full_load_path = load_path+f"*data.parquet" 
-            # full_load_path = glob.glob(full_load_path)
-        elif sample.lower() == "ggh":
-            full_load_path = load_path+f"*sigMC_ggh.parquet" 
-        # elif sample.lower() == "ggh_amcps":
-            # full_load_path = load_path+f"/ggh_amcPS/*/*.parquet"
-        elif sample.lower() == "vbf":
-            full_load_path = load_path+f"*sigMC_vbf.parquet" 
-        elif sample.lower() == "dy":
-            full_load_path = load_path+f"*bkgMC_dy.parquet" 
-        elif sample.lower() == "ewk":
-            full_load_path = load_path+f"*bkgMC_ewk.parquet" 
-        elif sample.lower() == "tt":
-            full_load_path = load_path+f"*bkgMC_tt.parquet" 
-        elif sample.lower() == "st":
-            full_load_path = load_path+f"*bkgMC_st.parquet" 
-        elif sample.lower() == "ww":
-            full_load_path = load_path+f"*bkgMC_ww.parquet" 
-        elif sample.lower() == "wz":
-            full_load_path = load_path+f"*bkgMC_wz.parquet" 
-        elif sample.lower() == "zz":
-            full_load_path = load_path+f"*bkgMC_zz.parquet" 
-        else:
-            print(f"unsupported sample!")
-            raise ValueError
-        print(f"full_load_path: {full_load_path}")
-        events = dak.from_parquet(full_load_path)
-        print(f"events field from {sample}:", events.fields)
+
+    possible_samples = ["data", "ggh", "vbf", "dy", "ewk", "tt", "st", "ww", "wz", "zz",]
+    
+    
+    sub_cats = [0]
+    for sub_cat in sub_cats:
+        # initialize empty dictionaries that will contain the values
+        sample_dict = {
+            sample_name: {
+                "dimuon_mass": [],
+                "wgt_nominal" : [],
+            } for sample_name in possible_samples
+        }
+        # data_dict = {}
+        # bkg_MC_dict = {}
+        for sample in args.samples:
+            if sample.lower() == "data":
+                full_load_path = load_path+f"*data.parquet" 
+                # full_load_path = glob.glob(full_load_path)
+            elif sample.lower() == "ggh":
+                full_load_path = load_path+f"*sigMC_ggh.parquet" 
+            # elif sample.lower() == "ggh_amcps":
+                # full_load_path = load_path+f"/ggh_amcPS/*/*.parquet"
+            elif sample.lower() == "vbf":
+                full_load_path = load_path+f"*sigMC_vbf.parquet" 
+            elif sample.lower() == "dy":
+                full_load_path = load_path+f"*bkgMC_dy.parquet" 
+            elif sample.lower() == "ewk":
+                full_load_path = load_path+f"*bkgMC_ewk.parquet" 
+            elif sample.lower() == "tt":
+                full_load_path = load_path+f"*bkgMC_tt.parquet" 
+            elif sample.lower() == "st":
+                full_load_path = load_path+f"*bkgMC_st.parquet" 
+            elif sample.lower() == "ww":
+                full_load_path = load_path+f"*bkgMC_ww.parquet" 
+            elif sample.lower() == "wz":
+                full_load_path = load_path+f"*bkgMC_wz.parquet" 
+            elif sample.lower() == "zz":
+                full_load_path = load_path+f"*bkgMC_zz.parquet" 
+            else:
+                print(f"unsupported sample!")
+                raise ValueError
+            print(f"full_load_path: {full_load_path}")
+
+            # -----------------------------------------------
+            # Load events and filter to subcat
+            # -----------------------------------------------
+            
+            events = dak.from_parquet(full_load_path)
+            events = events[events.subCategory_idx == sub_cat] # filter subcat
+            print(f"events field from {sample}:", events.fields)
+            sample_dict = fillSampleValues(events, sample_dict, sample)
+            
+            
+            
     # # define data dict
     # data_dict = {
     #     "values" :np.concatenate(group_data_vals, axis=0),
