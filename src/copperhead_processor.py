@@ -333,8 +333,7 @@ class EventProcessor(processor.ProcessorABC):
 
         self.test_mode = test_mode
         dict_update = {
-            # "hlt" :["IsoMu24"],
-            "do_trigger_match" : True, # False
+            "do_trigger_match" : True, # True
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
@@ -703,7 +702,7 @@ class EventProcessor(processor.ProcessorABC):
         # do the separate mu1 leading pt cut that copperheadV1 does instead of trigger matching
         if do_seperate_mu1_leading_pt_cut:
             muons_padded = ak.pad_none(muons, 2)
-            sorted_args = ak.argsort(muons_padded.pt, ascending=False)
+            sorted_args = ak.argsort(muons_padded.pt_raw, ascending=False) # since we're applying cut onver raw pt, we sort by raw pt. Sorting by reco pt gives us fewer events 
             muons_sorted = (muons_padded[sorted_args])
             mu1 = muons_sorted[:,0]
             pass_leading_pt = ak.fill_none((mu1.pt_raw > self.config["muon_leading_pt"]), value=False)
@@ -757,18 +756,45 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"electron veto test: {ak.all(electron_veto_test == electron_veto).compute()}")
         # print(f"electron veto is none: {ak.any(ak.is_none(electron_veto_test)).compute()}")
 
-        
+        event_filter = ak.ones_like(events.event, dtype="bool") # FIXME TOREMOVE
+
+        good_vertex_cut = (events.PV.npvsGood > 0) # number of good primary vertex cut
         event_filter = (
                 event_filter
                 & lumi_mask
-                & (evnt_qual_flg_selection > 0)
-                & (nmuons == 2)
-                & (mm_charge == -1)
-                & electron_veto 
-                & (events.PV.npvsGood > 0) # number of good primary vertex cut
+                # & (evnt_qual_flg_selection > 0)
+                # & (nmuons == 2)
+                # & (mm_charge == -1)
+                # & electron_veto 
+                &  good_vertex_cut
 
         )
-        # print(f"event_filter sum: {ak.sum(event_filter).compute()}")
+        # --------------------------------------------------------------------
+        # print(f"lumi_mask sum: {ak.sum(lumi_mask).compute()}")
+        # print(f"good_vertex_cut sum: {ak.sum(good_vertex_cut).compute()}")
+        # print(f"event_filter after good vetex filters sum: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & (evnt_qual_flg_selection > 0)
+        # print(f"event_filter after good MET filters sum: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & HLT_filter
+        # print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & trigger_match
+        print(f"event_filter sum after Trigger match: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & (nmuons == 2)
+        # print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & (electron_veto)
+        print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
+        # raise ValueError
+        # --------------------------------------------------------------------
+
+        # apply muons and electrons cut:
+        # event_filter = (
+        #         event_filter
+        #         & (nmuons == 2)
+        #         & (mm_charge == -1)
+        #         & electron_veto 
+        # )
+        # print(f"event_filter after nmuons and electrons : {ak.sum(event_filter).compute()}")
+        
         # event_selection = ak.to_dataframe(event_filter.compute())
         # print(f"output.event_selection: {event_selection}")
         # event_selection.to_csv("event_selection_V2.csv")
@@ -851,6 +877,9 @@ class EventProcessor(processor.ProcessorABC):
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
+        electron_veto = electron_veto[event_filter==True]
+        HLT_filter = HLT_filter[event_filter==True]
+        trigger_match = trigger_match[event_filter==True]
         # event_match = event_match[event_filter==True]
         # applied_fsr = ak.to_packed(applied_fsr[event_filter==True]) # not sure the purpose of this line
 
@@ -861,10 +890,9 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
-        # pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
         
-            
+        event_filter = event_filter[event_filter==True]
         
        
         
@@ -988,7 +1016,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = True # True       
+        do_jec = False # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1297,6 +1325,24 @@ class EventProcessor(processor.ProcessorABC):
             out_dict.update(jet_loop_dict) 
         # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
+        # --------------------------------------------------------
+        # print(f"event_filter sum b4 btag cut: {ak.sum(event_filter).compute()}")
+        nBtagLoose = jet_loop_dict[f"nBtagLoose_nominal"]
+        nBtagMedium = jet_loop_dict[f"nBtagMedium_nominal"]
+        event_filter = event_filter & (nBtagLoose <=1)
+        print(f"event_filter sum after loose btag cut: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & (nBtagMedium <=0)
+        print(f"event_filter sum after medium btag cut: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & HLT_filter
+        # print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & trigger_match
+        # print(f"event_filter sum after Trigger match: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & (nmuons == 2)
+        # print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & (electron_veto)
+        # print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
+        raise ValueError
+        # --------------------------------------------------------
         # print(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
         
