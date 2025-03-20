@@ -11,4 +11,4 @@ stage2_load_path="/depot/cms/users/yun79/hmm/copperheadV1clean/$label/stage1_out
 category="20Mar2025_ggh"
 
 
-python validation_plot.py -label $label -cat $category
+python validation_plot.py -label $label -cat $category --samples $sample_l

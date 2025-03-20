@@ -1332,8 +1332,8 @@ class EventProcessor(processor.ProcessorABC):
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
             # once kind of screws with the dak awkward array
             # valerie
-            zpt_weight_valerie =\
-                     self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
+            # zpt_weight_valerie =\
+                     # self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
             # out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
             # # dmitry's old zpt
@@ -1347,7 +1347,7 @@ class EventProcessor(processor.ProcessorABC):
             # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
             # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
             zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
-            out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
+            # out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
 
             
 
@@ -1364,9 +1364,11 @@ class EventProcessor(processor.ProcessorABC):
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
             # zpt_weight = zpt_weight_valerie
-            zpt_weight = merge_zpt_wgt(zpt_weight_mine_nbins100, zpt_weight_valerie, njets, year)
+            # zpt_weight = merge_zpt_wgt(zpt_weight_mine_nbins100, zpt_weight_valerie, njets, year)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
             # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
+
+            zpt_weight = zpt_weight_mine_nbins100
             weights.add("zpt_wgt", 
                     weight=zpt_weight,
             )
