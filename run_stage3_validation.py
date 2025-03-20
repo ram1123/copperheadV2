@@ -24,9 +24,8 @@ import matplotlib.pyplot as plt
 #     return 
 
 
-def getPostfitUncertaintyPlot(x_var, plot_data, plot_model, fitresult, fig_name: str, fit_range="full"):
+def getPostfitUncertaintyPlot(x_var, plot_data, plot_model, fitresult, fig_name: str, fit_range="full", plot_range= "full"):
     frame = x_var.frame()
-    plot_range = "full"
     plot_data.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
     plot_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range(plot_range), ROOT.RooFit.LineColor(ROOT.kGreen), VisualizeError=(fitresult, 1), FillColor="kOrange")
     canvas = ROOT.TCanvas("canvas", "Simple Fit", 800, 600)
@@ -78,9 +77,8 @@ def getPostfitUncertaintyPlot(x_var, plot_data, plot_model, fitresult, fig_name:
     plt.legend()
     plt.savefig(fig_name)
 
-def get_simple_plot(x_var, plot_data, plot_model, fig_name: str, component_names=[], fit_range="full"):
+def get_simple_plot(x_var, plot_data, plot_model, fig_name: str, component_names=[], fit_range="full", plot_range="full"):
     frame = x_var.frame()
-    plot_range = "full"
     plot_data.plotOn(frame, Name=plot_data.GetName())
     plot_model.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range(plot_range), ROOT.RooFit.LineColor(ROOT.kGreen), Name=plot_model.GetName())
       
@@ -170,27 +168,34 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
     name = f"bwzr_cat_ggh_coef2"
     b_coeff = rt.RooRealVar(name,name, +0.000168432,-10,10)
     name = f"bwzr_cat_ggh_coef3"
-    c_coeff = rt.RooRealVar(name,name, 2.14877, 0.0, 5.0)
+    c_coeff = rt.RooRealVar(name,name, 0, -10,10)
 
     name = "bkg_pdf"
     bkg_pdf = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
 
     # make signal model 
-    sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 1.2825090, .1, 4.0)
-    alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 1.47936, 0.01, 65)
+    sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 1.0, .1, 4.0)
+    alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 1.0, 0.01, 65)
     n1_subCat4 = rt.RooRealVar("n1_subCat4" , "n1_subCat4", 2.24104, 0.01, 100)
-    alpha2_subCat4 = rt.RooRealVar("alpha2_subCat4" , "alpha2_subCat4", 1.67898, 0.01, 65)
+    alpha2_subCat4 = rt.RooRealVar("alpha2_subCat4" , "alpha2_subCat4", 2, 0.01, 65)
     n2_subCat4 = rt.RooRealVar("n2_subCat4" , "n2_subCat4", 8.8719, 0.01, 100)
     MH_subCat4 = rt.RooRealVar("MH" , "MH", 124.90092468261719, 120,130) # matching AN
-    # 
+    # MH_subCat4 = rt.RooRealVar("MH" , "MH", 125, 120,130) # matching AN/
+    # MH_subCat4.setConstant(True)
     name = "sig_pdf"
     sig_pdf = rt.RooDoubleCBFast(name,name,mass, MH_subCat4, sigma_subCat4, alpha1_subCat4, n1_subCat4, alpha2_subCat4, n2_subCat4)
 
     
+    # sigma_subCat4.setError(0.001)
+    # alpha1_subCat4.setError(0.001)
+    # n1_subCat4.setError(0.001)
+    # alpha2_subCat4.setError(0.001)
+    # n2_subCat4.setError(0.001)
+    # MH_subCat4.setError(0.001)
 
     # make sig + bkg model
     # norm_s = rt.RooRealVar("norm_s","N_{s}",33, 10,100);
-    norm_s = rt.RooRealVar("norm_s","N_{s}",10, 5,200);
+    norm_s = rt.RooRealVar("norm_s","N_{s}",0, 0,200);
     norm_b = rt.RooRealVar("norm_b","N_{b}",15000, 0,100000);
     final_model = ROOT.RooAddPdf("final_model", "final_model", ROOT.RooArgList(sig_pdf, bkg_pdf), ROOT.RooArgList(norm_s, norm_b)) 
     
@@ -199,50 +204,92 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
     
 
     # bkg only fit
-    fit_result = bkg_pdf.fitTo(fit_data, rt.RooFit.Range(fit_range), ROOT.RooFit.Extended(True), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
+    fit_result = bkg_pdf.fitTo(
+        fit_data, 
+        rt.RooFit.Range(fit_range), 
+        ROOT.RooFit.Strategy(2),  # 0: Fast, 1: Default, 2: Thorough
+        ROOT.RooFit.MaxCalls(999999999),  # Increase max function calls if needed
+        EvalBackend=device, PrintLevel=3 ,Save=True, SumW2Error=True)
     fit_result.Print()
+    
+    # raise ValueError
     fig_name = f"{save_path}/step1_bkgOnlyFit.pdf"
     get_simple_plot(mass, fit_data, bkg_pdf, fig_name)
     fig_name = f"{save_path}/step1_shapeUncertainty.pdf"
     getPostfitUncertaintyPlot(mass, fit_data, bkg_pdf, fit_result, fig_name, fit_range=fit_range)
-    raise ValueError
+    # raise ValueError
 
+    # freeze bkg as well
     # a_coeff.setConstant(True) 
     # b_coeff.setConstant(True) 
     # c_coeff.setConstant(True) 
 
     # sign only fit
-    fit_range="full"
-    fit_result = sig_pdf.fitTo(roo_histData_subCat4_signal, rt.RooFit.Range(fit_range), ROOT.RooFit.Extended(True), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
+    # fit_range="full"
+    fit_range="h_peak"
+    fit_result = sig_pdf.fitTo(roo_histData_subCat4_signal, rt.RooFit.Range(fit_range), 
+                                ROOT.RooFit.Strategy(2),  # 0: Fast, 1: Default, 2: Thorough
+                                ROOT.RooFit.MaxCalls(999999999),  # Increase max function calls if needed
+                                ROOT.RooFit.Hesse(True), 
+                                ROOT.RooFit.Minos(True),
+                                # ROOT.RooFit.Extended(True), 
+                                EvalBackend=device, PrintLevel=0 ,Save=True, 
+                                SumW2Error=False
+                              )
     fit_result.Print()
     fig_name = f"{save_path}/step2_sigOnlyFit.pdf"
-    get_simple_plot(mass, roo_histData_subCat4_signal, sig_pdf, fig_name)
-
-    # freeze bparams
+    get_simple_plot(mass, roo_histData_subCat4_signal, sig_pdf, fig_name, plot_range="full")
+    raise ValueError
+    
+    # freeze sig params
+    # sigma_subCat4.setVal(sigma_subCat4.getVal()*0.9)
+    # sigma_subCat4.setVal(0.3)
     sigma_subCat4.setConstant(True) 
     alpha1_subCat4.setConstant(True) 
     n1_subCat4.setConstant(True) 
     alpha2_subCat4.setConstant(True) 
     n2_subCat4.setConstant(True) 
     MH_subCat4.setConstant(True) 
-    
-    # _ = bkg_pdf.fitTo(fit_data, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
-    # _ = final_model.fitTo(fit_data, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True, SumW2Error=True)
+
+    # fit_range="hiSB,loSB"
+    # fit_result = final_model.fitTo(
+    #     fit_data, rt.RooFit.Range(fit_range), 
+    #     # # ROOT.RooFit.Hesse(True),
+    #     # # ROOT.RooFit.Minos(True),
+    #     # ROOT.RooFit.Save(True),
+    #     ROOT.RooFit.Minimizer("Minuit2", "migrad"),
+    #     # ROOT.RooFit.Minimizer("Fumili", "migrad"),
+    #     # ROOT.RooFit.Minimizer("GSLMultiMin", "bfgs2"),
+    #     ROOT.RooFit.Hesse(True),
+    #     # ROOT.RooFit.Minos(True),
+    #     ROOT.RooFit.Strategy(2),  # 0: Fast, 1: Default, 2: Thorough
+    #     ROOT.RooFit.MaxCalls(999999999),  # Increase max function calls if needed
+    #     ROOT.RooFit.Extended(True),
+    #     ROOT.RooFit.SumW2Error(False),
+    #     EvalBackend=device, PrintLevel=3,
+    #     # SumW2Error=True, 
+    #     Save=True,
+    # )
+    fit_range="full"
     fit_result = final_model.fitTo(
         fit_data, rt.RooFit.Range(fit_range), 
-        # ROOT.RooFit.Minimizer("Minuit2", "migrad"),
-        # # # ROOT.RooFit.Extended(True),
         # # ROOT.RooFit.Hesse(True),
         # # ROOT.RooFit.Minos(True),
         # ROOT.RooFit.Save(True),
-        # ROOT.RooFit.Minimizer("Minuit2", "migrad"),
-        # ROOT.RooFit.Hesse(True),
+        ROOT.RooFit.Minimizer("Minuit2", "migrad"),
+        ROOT.RooFit.Hesse(True),
         # ROOT.RooFit.Minos(True),
-        ROOT.RooFit.Strategy(2),
+        ROOT.RooFit.Strategy(2),  # 0: Fast, 1: Default, 2: Thorough
+        ROOT.RooFit.MaxCalls(999999999),  # Increase max function calls if needed
         ROOT.RooFit.Extended(True),
-        EvalBackend=device, PrintLevel=0 ,SumW2Error=True, Save=True,
+        ROOT.RooFit.SumW2Error(False),
+        EvalBackend=device, PrintLevel=3,
+        # SumW2Error=True, 
+        Save=True,
     )
     fit_result.Print()
+    # raise ValueError
+    
     # print(f"expected signal norm: {sig_norm}")
     # fit_sig_norm = r_hat.getVal()*fit_data.sumEntries()
     # print(f"fit signal norm: {fit_sig_norm}")
@@ -253,7 +300,7 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
     # ------------------------------------------------------------
     fig_name = f"{save_path}/step4_postFitBkg.pdf"
     get_simple_plot(mass, fit_data, bkg_pdf, fig_name)
-
+    raise ValueError
     print(f"expected sig yield: {sig_data.sumEntries()}")
 
 def get_sigHist(mass, hist_name):
@@ -626,7 +673,7 @@ if __name__ == "__main__":
     # Create observables
     mass_name = "mh_ggh"
     mass = rt.RooRealVar(mass_name, mass_name, 120, 110, 150)
-    nbins = 100 #800 FIXME
+    nbins = 800 #800 FIXME
     mass.setBins(nbins)
     mass.setRange("hiSB", 135, 150 )
     mass.setRange("loSB", 110, 115 )
@@ -1194,12 +1241,12 @@ if __name__ == "__main__":
 
 
     # fit core functions separately
-    _ = coreBWZRedux_SubCat0.fitTo(data_allSubCat_BWZ, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
-    fitResult = coreBWZRedux_SubCat0.fitTo(data_allSubCat_BWZ, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
-    fitResult.Print()
-    _ = coreSumExp_SubCat0.fitTo(data_allSubCat_sumExp, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
-    fitResult = coreSumExp_SubCat0.fitTo(data_allSubCat_sumExp, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
-    fitResult.Print()
+    # _ = coreBWZRedux_SubCat0.fitTo(data_allSubCat_BWZ, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    # fitResult = coreBWZRedux_SubCat0.fitTo(data_allSubCat_BWZ, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    # fitResult.Print()
+    # _ = coreSumExp_SubCat0.fitTo(data_allSubCat_sumExp, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    # fitResult = coreSumExp_SubCat0.fitTo(data_allSubCat_sumExp, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    # fitResult.Print()
     
     # freeze core pdf params
     # BWZ redux
@@ -1213,9 +1260,9 @@ if __name__ == "__main__":
     f_coeff.setConstant(True)
 
     # fit FEWZxBern separately
-    _ = coreFEWZxBern_SubCat0.fitTo(data_allSubCat_FEWZxBern, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
-    fitResult = coreFEWZxBern_SubCat0.fitTo(data_allSubCat_FEWZxBern, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
-    fitResult.Print()
+    # _ = coreFEWZxBern_SubCat0.fitTo(data_allSubCat_FEWZxBern, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    # fitResult = coreFEWZxBern_SubCat0.fitTo(data_allSubCat_FEWZxBern, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,)
+    # fitResult.Print()
 
     # FEWZxBern
     c1.setConstant(True)
@@ -1300,11 +1347,11 @@ if __name__ == "__main__":
      
     start = time.time()
 
-    _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0,SumW2Error=True)
-    fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,SumW2Error=True)
-    end = time.time()
+    # _ = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device,  PrintLevel=0 ,Save=True, Strategy=0,SumW2Error=True)
+    # fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,SumW2Error=True)
+    # end = time.time()
     
-    fitResult.Print()
+    # fitResult.Print()
     # raise ValueError
     
     # # subcat4 specific fit
@@ -1406,7 +1453,7 @@ if __name__ == "__main__":
     c2.setConstant(False)
     c3.setConstant(False)
     
-    print(f"runtime: {end-start} seconds")
+    # print(f"runtime: {end-start} seconds")
 
     
     # ---------------------------------------------------
