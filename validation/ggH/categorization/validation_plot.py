@@ -3,6 +3,10 @@ import dask_awkward as dak
 import argparse
 import sys
 import os
+import numpy as np
+import json
+from collections import OrderedDict
+
 
 # Get the parent directory
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -15,11 +19,14 @@ from src.lib.histogram.plotting import plotDataMC_compare
 
 
 
-def fillSampleValues(events, sample_dict, sample: str):
+def fillSampleValues(events, sample_dict, sample_groups, sample: str):
     print(f"sample_dict b4 : {sample_dict}")
     sample_name = sample.lower()
-    if sample_name in sample_dict.keys():
-        sample_info = sample_dict[sample_name]
+    # find which sample group sample_name belongs to
+    sample_group = next((key for key, values in sample_groups.items() if sample_name in values), None)
+    print(f"sample_group: {sample_group}")
+    if sample_group in sample_dict.keys():
+        sample_info = sample_dict[sample_group]
         fields2load = sample_info.keys() # dimuon_mass, wgt_nominal
         
         # compute in parallel fields to load
@@ -29,9 +36,11 @@ def fillSampleValues(events, sample_dict, sample: str):
         
         # add the computed fields to sample_dict 
         for field in fields2load:
-            sample_dict[sample_name][field].append(computed_zip[field])
+            sample_dict[sample_group][field].append(
+                ak.to_numpy(computed_zip[field])
+            )
     else:
-        print(f"sample {sample_name} not present in sample_dict!")
+        print(f"sample {sample_group} not present in sample_dict!")
 
     print(f"sample_dict after : {sample_dict}")
     return sample_dict
@@ -76,6 +85,14 @@ if __name__ == "__main__":
     help="string value production category we're working on",
     )
     parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default="plots",
+    action="store",
+    help="string value production category we're working on",
+    )
+    parser.add_argument(
     "-samp",
     "--samples",
     dest="samples",
@@ -96,16 +113,26 @@ if __name__ == "__main__":
     print(f"args.samples: {args.samples}")
 
     possible_samples = ["data", "ggh", "vbf", "dy", "ewk", "tt", "st", "ww", "wz", "zz",]
+    sample_groups = {
+        "data": ["data"],
+        "ggh": ["ggh"],
+        "vbf": ["vbf"],
+        "dy": ["dy"],
+        "top": ["tt", "st"],
+        "ewk": ["ewk"],
+        "diboson": ["ww", "wz", "zz"]
+    }
     
     
-    sub_cats = [0]
+    # sub_cats = [0]
+    sub_cats = range(5)
     for sub_cat in sub_cats:
         # initialize empty dictionaries that will contain the values
         sample_dict = {
             sample_name: {
                 "dimuon_mass": [],
                 "wgt_nominal" : [],
-            } for sample_name in possible_samples
+            } for sample_name in sample_groups.keys()
         }
         # data_dict = {}
         # bkg_MC_dict = {}
@@ -145,109 +172,114 @@ if __name__ == "__main__":
             events = dak.from_parquet(full_load_path)
             events = events[events.subCategory_idx == sub_cat] # filter subcat
             print(f"events field from {sample}:", events.fields)
-            sample_dict = fillSampleValues(events, sample_dict, sample)
+            sample_dict = fillSampleValues(events, sample_dict, sample_groups, sample)
+            print(f"sample_dict: {sample_dict}")
             
-            
-            
-    # # define data dict
-    # data_dict = {
-    #     "values" :np.concatenate(group_data_vals, axis=0),
-    #     "weights":np.concatenate(group_data_weights, axis=0)
-    # }
+
+        # ----------------------------------
+        # begin plotting
+        # ----------------------------------
     
-    # # define Bkg MC dict
-    # bkg_MC_dict = OrderedDict()
-    # # start from lowest yield to highest yield
-    # if len(group_other_vals) > 0:
-    #     bkg_MC_dict["other"] = {
-    #         "values" :np.concatenate(group_other_vals, axis=0),
-    #         "weights":np.concatenate(group_other_weights, axis=0)
-    #     }
-    # if len(group_VV_vals) > 0:
-    #     bkg_MC_dict["VV"] = {
-    #         "values" :np.concatenate(group_VV_vals, axis=0),
-    #         "weights":np.concatenate(group_VV_weights, axis=0)
-    #     }
-    # if len(group_Ewk_vals) > 0:
-    #     bkg_MC_dict["Ewk"] = {
-    #         "values" :np.concatenate(group_Ewk_vals, axis=0),
-    #         "weights":np.concatenate(group_Ewk_weights, axis=0)
-    #     }
-    # if len(group_Top_vals) > 0:
-    #     bkg_MC_dict["Top"] = {
-    #         "values" :np.concatenate(group_Top_vals, axis=0),
-    #         "weights":np.concatenate(group_Top_weights, axis=0)
-    #     }
-    # if len(group_DY_vals) > 0:
-    #     bkg_MC_dict["DY"] = {
-    #         "values" :np.concatenate(group_DY_vals, axis=0),
-    #         "weights":np.concatenate(group_DY_weights, axis=0)
-    #     }
-
+        # define data dict
+        data_dict = {
+            "values" :np.concatenate(sample_dict["data"]["dimuon_mass"], axis=0),
+            "weights":np.concatenate(sample_dict["data"]["wgt_nominal"], axis=0)
+        }
+        
+        # define Bkg MC dict
+        bkg_MC_dict = OrderedDict()
+        # start from lowest yield to highest yield
+        if len(sample_dict["diboson"]["wgt_nominal"]) > 0:
+            group_name = "diboson"
+            bkg_MC_dict["VV"] = {
+                "values" :np.concatenate(sample_dict[group_name]["dimuon_mass"], axis=0),
+                "weights":np.concatenate(sample_dict[group_name]["wgt_nominal"], axis=0)
+            }
+        if len(sample_dict["ewk"]["wgt_nominal"]) > 0:
+            group_name = "ewk"
+            bkg_MC_dict["Ewk"] = {
+                "values" :np.concatenate(sample_dict[group_name]["dimuon_mass"], axis=0),
+                "weights":np.concatenate(sample_dict[group_name]["wgt_nominal"], axis=0)
+            }
+        if len(sample_dict["top"]["wgt_nominal"]) > 0:
+            group_name = "top"
+            bkg_MC_dict["Top"] = {
+                "values" :np.concatenate(sample_dict[group_name]["dimuon_mass"], axis=0),
+                "weights":np.concatenate(sample_dict[group_name]["wgt_nominal"], axis=0)
+            }
+        if len(sample_dict["dy"]["wgt_nominal"]) > 0:
+            group_name = "dy"
+            bkg_MC_dict["DY"] = {
+                "values" :np.concatenate(sample_dict[group_name]["dimuon_mass"], axis=0),
+                "weights":np.concatenate(sample_dict[group_name]["wgt_nominal"], axis=0)
+            }
     
-    # # bkg_MC_dict = {
-    # #     "Top" :{
-    # #         "values" :np.concatenate(group_Top_vals, axis=0),
-    # #         "weights":np.concatenate(group_Top_weights, axis=0)
-    # #     },
-    # #     "DY" :{
-    # #         "values" :np.concatenate(group_DY_vals, axis=0),
-    # #         "weights":np.concatenate(group_DY_weights, axis=0)
-    # #     },     
-    # # }
-
-    # # define Sig MC dict
+        
     
-    # # sig_MC_dict = {
-    # #     "ggH" :{
-    # #         "values" :np.concatenate(group_ggH_vals, axis=0),
-    # #         "weights":np.concatenate(group_ggH_weights, axis=0)
-    # #     },  
-    # #     "VBF" :{
-    # #         "values" :np.concatenate(group_VBF_vals, axis=0),
-    # #         "weights":np.concatenate(group_VBF_weights, axis=0)
-    # #     },  
-    # # }
-    # sig_MC_dict = OrderedDict()
-    # if len(group_ggH_vals) > 0:
-    #     sig_MC_dict["ggH"] = {
-    #         "values" :np.concatenate(group_ggH_vals, axis=0),
-    #         "weights":np.concatenate(group_ggH_weights, axis=0)
-    #     }
-    # if len(group_VBF_vals) > 0:
-    #     sig_MC_dict["VBF"] = {
-    #         "values" :np.concatenate(group_VBF_vals, axis=0),
-    #         "weights":np.concatenate(group_VBF_weights, axis=0)
-    #     }
+        # define Sig MC dict
+        sig_MC_dict = OrderedDict()
+        # start from lowest yield to highest yield
+        if len(sample_dict["vbf"]["wgt_nominal"]) > 0:
+            group_name = "vbf"
+            sig_MC_dict["VBF"] = {
+                "values" :np.concatenate(sample_dict[group_name]["dimuon_mass"], axis=0),
+                "weights":np.concatenate(sample_dict[group_name]["wgt_nominal"], axis=0)
+            }
+        if len(sample_dict["ggh"]["wgt_nominal"]) > 0:
+            group_name = "ggh"
+            sig_MC_dict["ggH"] = {
+                "values" :np.concatenate(sample_dict[group_name]["dimuon_mass"], axis=0),
+                "weights":np.concatenate(sample_dict[group_name]["wgt_nominal"], axis=0)
+            }
+        # if len(group_ggH_vals) > 0:
+        #     sig_MC_dict["ggH"] = {
+        #         "values" :np.concatenate(group_ggH_vals, axis=0),
+        #         "weights":np.concatenate(group_ggH_weights, axis=0)
+        #     }
+        # if len(group_VBF_vals) > 0:
+        #     sig_MC_dict["VBF"] = {
+        #         "values" :np.concatenate(group_VBF_vals, axis=0),
+        #         "weights":np.concatenate(group_VBF_weights, axis=0)
+        #     }
+        
+        print(f"sig_MC_dict: {sig_MC_dict}")
     
-
-
-    # # -------------------------------------------------------
-    # # All data are prepped, now plot Data/MC histogram
-    # # -------------------------------------------------------
-    # # if args.vbf_cat_mode:
-    # #     production_cat = "vbf"
-    # # else:
-    # #     production_cat = "ggh"
-    # # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{production_cat}"
-    # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{args.category}/{args.label}"
-
+        # -------------------------------------------------------
+        # All data are prepped, now plot Data/MC histogram
+        # -------------------------------------------------------
+        # if args.vbf_cat_mode:
+        #     production_cat = "vbf"
+        # else:
+        #     production_cat = "ggh"
+        # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{production_cat}"
+        # full_save_path = args.save_path+f"/Reg_{args.region}/Cat_{args.category}/{args.label}"
+        full_save_path = f"{args.save_path}/{args.label}_x_{args.category}"
     
-    # if not os.path.exists(full_save_path):
-    #     os.makedirs(full_save_path)
-    # full_save_fname = f"{full_save_path}/{var}.pdf"
-
-   
-    # plotDataMC_compare(
-    #     binning, 
-    #     data_dict, 
-    #     bkg_MC_dict, 
-    #     full_save_fname,
-    #     sig_MC_dict=sig_MC_dict,
-    #     title = "", 
-    #     x_title = plot_settings[plot_var].get("xlabel"), 
-    #     y_title = plot_settings[plot_var].get("ylabel"),
-    #     lumi = args.lumi,
-    #     status = status,
-    #     log_scale = do_logscale,
-    # )
+        
+        if not os.path.exists(full_save_path):
+            os.makedirs(full_save_path)
+        full_save_fname = f"{full_save_path}/dimuon_mass_cat{sub_cat}.pdf"
+    
+    
+        plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+        with open(plot_setting_fname, "r") as file:
+            plot_settings = json.load(file)
+        
+        plot_var = "dimuon_mass"
+        binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        status = "Private"
+        do_logscale = True
+        plotDataMC_compare(
+            binning, 
+            data_dict, 
+            bkg_MC_dict, 
+            full_save_fname,
+            sig_MC_dict=sig_MC_dict,
+            title = "", 
+            x_title = plot_settings[plot_var].get("xlabel"), 
+            y_title = plot_settings[plot_var].get("ylabel"),
+            # lumi = args.lumi,
+            lumi = "137",
+            status = status,
+            log_scale = do_logscale,
+        )
