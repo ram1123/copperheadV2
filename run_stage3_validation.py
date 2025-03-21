@@ -158,10 +158,12 @@ def get_simple_plot(x_var, plot_data, plot_model, fig_name: str, component_names
     
     
 
-def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
+def do_simpleFit_test(mass, fit_data, sig_data_ggh, sig_data_vbf, corePdf, SMF, save_path):
     """
     This is a helper function doing a simple fit without using combine
     """
+    
+    
     # define bkg pdf
     name = f"bwzr_cat_ggh_coef1"
     a_coeff = rt.RooRealVar(name,name, -0.0623102,-10,10)
@@ -174,17 +176,38 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
     bkg_pdf = rt.RooModZPdf(name, name, mass, a_coeff, b_coeff, c_coeff) 
 
     # make signal model 
-    sigma_subCat4 = rt.RooRealVar("sigma_subCat4" , "sigma_subCat4", 1.0, .1, 4.0)
-    alpha1_subCat4 = rt.RooRealVar("alpha1_subCat4" , "alpha1_subCat4", 1.0, 0.01, 65)
-    n1_subCat4 = rt.RooRealVar("n1_subCat4" , "n1_subCat4", 2.24104, 0.01, 100)
-    alpha2_subCat4 = rt.RooRealVar("alpha2_subCat4" , "alpha2_subCat4", 2, 0.01, 65)
-    n2_subCat4 = rt.RooRealVar("n2_subCat4" , "n2_subCat4", 8.8719, 0.01, 100)
-    MH_subCat4 = rt.RooRealVar("MH" , "MH", 124.90092468261719, 120,130) # matching AN
-    # MH_subCat4 = rt.RooRealVar("MH" , "MH", 125, 120,130) # matching AN/
-    # MH_subCat4.setConstant(True)
-    name = "sig_pdf"
-    sig_pdf = rt.RooDoubleCBFast(name,name,mass, MH_subCat4, sigma_subCat4, alpha1_subCat4, n1_subCat4, alpha2_subCat4, n2_subCat4)
+    # ggH
+    sigma_subCat4_ggh = rt.RooRealVar("sigma_subCat4_ggh" , "sigma_subCat4_ggh", 1.2, .1, 4.0)
+    alpha1_subCat4_ggh = rt.RooRealVar("alpha1_subCat4_ggh" , "alpha1_subCat4_ggh", 1.0, 0.01, 65)
+    n1_subCat4_ggh = rt.RooRealVar("n1_subCat4_ggh" , "n1_subCat4_ggh", 2.24104, 0.01, 100)
+    alpha2_subCat4_ggh = rt.RooRealVar("alpha2_subCat4_ggh" , "alpha2_subCat4_ggh", 2, 0.01, 65)
+    n2_subCat4_ggh = rt.RooRealVar("n2_subCat4_ggh" , "n2_subCat4_ggh", 4, 0.01, 100)
+    MH_subCat4_ggh = rt.RooRealVar("MH" , "MH", 124.90092468261719, 120,130) # matching AN
+    # MH_subCat4_ggh = rt.RooRealVar("MH" , "MH", 125, 120,130) # matching AN/
+    # MH_subCat4_ggh.setConstant(True)
+    name = "sig_pdf_ggh"
+    sig_pdf_ggh = rt.RooDoubleCBFast(name,name,mass, MH_subCat4_ggh, sigma_subCat4_ggh, alpha1_subCat4_ggh, n1_subCat4_ggh, alpha2_subCat4_ggh, n2_subCat4_ggh)
 
+    # VBF
+    sigma_subCat4_vbf = rt.RooRealVar("sigma_subCat4_vbf" , "sigma_subCat4_vbf", 1.2, .1, 4.0)
+    alpha1_subCat4_vbf = rt.RooRealVar("alpha1_subCat4_vbf" , "alpha1_subCat4_vbf", 1.0, 0.01, 65)
+    n1_subCat4_vbf = rt.RooRealVar("n1_subCat4_vbf" , "n1_subCat4_vbf", 2.24104, 0.01, 100)
+    alpha2_subCat4_vbf = rt.RooRealVar("alpha2_subCat4_vbf" , "alpha2_subCat4_vbf", 2, 0.01, 65)
+    n2_subCat4_vbf = rt.RooRealVar("n2_subCat4_vbf" , "n2_subCat4_vbf", 4, 0.01, 100)
+    MH_subCat4_vbf = rt.RooRealVar("MH" , "MH", 124.90092468261719, 120,130) # matching AN
+    # MH_subCat4_vbf = rt.RooRealVar("MH" , "MH", 125, 120,130) # matching AN/
+    # MH_subCat4_vbf.setConstant(True)
+    name = "sig_pdf_vbf"
+    sig_pdf_vbf = rt.RooDoubleCBFast(name,name,mass, MH_subCat4_vbf, sigma_subCat4_vbf, alpha1_subCat4_vbf, n1_subCat4_vbf, alpha2_subCat4_vbf, n2_subCat4_vbf)
+
+    # full signal model
+    total_sig_yield = sig_data_ggh.sumEntries() + sig_data_vbf.sumEntries()
+    ggh_frac = sig_data_ggh.sumEntries() / total_sig_yield
+    print(f"ggh_frac: {ggh_frac}")
+    # raise ValueError
+    ggh_frac = rt.RooRealVar("ggh_frac" , "ggh_frac", ggh_frac, 0.0, 1.0)
+    ggh_frac.setConstant(True)
+    sig_pdf = ROOT.RooAddPdf("sig_pdf", "sig_pdf", ROOT.RooArgList(sig_pdf_ggh, sig_pdf_vbf), ROOT.RooArgList(ggh_frac)) 
     
     # sigma_subCat4.setError(0.001)
     # alpha1_subCat4.setError(0.001)
@@ -224,10 +247,14 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
     # b_coeff.setConstant(True) 
     # c_coeff.setConstant(True) 
 
-    # sign only fit
+    # -----------------------------------------------
+    # signal only fit
+    # -----------------------------------------------
+
+    # ggH
     # fit_range="full"
     fit_range="h_peak"
-    fit_result = sig_pdf.fitTo(roo_histData_subCat4_signal, rt.RooFit.Range(fit_range), 
+    fit_result = sig_pdf_ggh.fitTo(sig_data_ggh, rt.RooFit.Range(fit_range), 
                                 ROOT.RooFit.Strategy(2),  # 0: Fast, 1: Default, 2: Thorough
                                 ROOT.RooFit.MaxCalls(999999999),  # Increase max function calls if needed
                                 ROOT.RooFit.Hesse(True), 
@@ -237,19 +264,47 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
                                 SumW2Error=False
                               )
     fit_result.Print()
-    fig_name = f"{save_path}/step2_sigOnlyFit.pdf"
-    get_simple_plot(mass, roo_histData_subCat4_signal, sig_pdf, fig_name, plot_range="full")
+    fig_name = f"{save_path}/step2_sigOnlyFit_ggh.pdf"
+    get_simple_plot(mass, sig_data_ggh, sig_pdf_ggh, fig_name, plot_range="full")
+
+
+    # vbf
+    # fit_range="full"
+    fit_range="h_peak"
+    fit_result = sig_pdf_vbf.fitTo(sig_data_vbf, rt.RooFit.Range(fit_range), 
+                                ROOT.RooFit.Strategy(2),  # 0: Fast, 1: Default, 2: Thorough
+                                ROOT.RooFit.MaxCalls(999999999),  # Increase max function calls if needed
+                                ROOT.RooFit.Hesse(True), 
+                                ROOT.RooFit.Minos(True),
+                                # ROOT.RooFit.Extended(True), 
+                                EvalBackend=device, PrintLevel=0 ,Save=True, 
+                                SumW2Error=False
+                              )
+    fit_result.Print()
+    fig_name = f"{save_path}/step2_sigOnlyFit_vbf.pdf"
+    get_simple_plot(mass, sig_data_vbf, sig_pdf_vbf, fig_name, plot_range="full")
+    
     raise ValueError
     
     # freeze sig params
     # sigma_subCat4.setVal(sigma_subCat4.getVal()*0.9)
     # sigma_subCat4.setVal(0.3)
-    sigma_subCat4.setConstant(True) 
-    alpha1_subCat4.setConstant(True) 
-    n1_subCat4.setConstant(True) 
-    alpha2_subCat4.setConstant(True) 
-    n2_subCat4.setConstant(True) 
-    MH_subCat4.setConstant(True) 
+    # ggh
+    sigma_subCat4_ggh.setConstant(True) 
+    alpha1_subCat4_ggh.setConstant(True) 
+    n1_subCat4_ggh.setConstant(True) 
+    alpha2_subCat4_ggh.setConstant(True) 
+    n2_subCat4_ggh.setConstant(True) 
+    MH_subCat4_ggh.setConstant(True) 
+    # vbf
+    sigma_subCat4_vbf.setConstant(True) 
+    alpha1_subCat4_vbf.setConstant(True) 
+    n1_subCat4_vbf.setConstant(True) 
+    alpha2_subCat4_vbf.setConstant(True) 
+    n2_subCat4_vbf.setConstant(True) 
+    MH_subCat4_vbf.setConstant(True) 
+
+    
 
     # fit_range="hiSB,loSB"
     # fit_result = final_model.fitTo(
@@ -301,7 +356,7 @@ def do_simpleFit_test(mass, fit_data, sig_data, corePdf, SMF, save_path):
     fig_name = f"{save_path}/step4_postFitBkg.pdf"
     get_simple_plot(mass, fit_data, bkg_pdf, fig_name)
     raise ValueError
-    print(f"expected sig yield: {sig_data.sumEntries()}")
+    print(f"expected sig yield: {total_sig_yield.sumEntries()}")
 
 def get_sigHist(mass, hist_name):
     """
@@ -3946,7 +4001,7 @@ if __name__ == "__main__":
 
     
     # do_simpleFit_test(mass, roo_histData_subCat4_unbinned, signal_subCat4, sig_norm_subCat4.getVal(), model_subCat4_BWZRedux, subCat4_SMF, plot_save_path)
-    do_simpleFit_test(mass, data_subCat4_BWZRedux, roo_histData_subCat4_signal, model_subCat4_BWZRedux, subCat4_SMF, plot_save_path)
+    do_simpleFit_test(mass, data_subCat4_BWZRedux, roo_histData_subCat4_signal, roo_histData_subCat4_vbf_signal, model_subCat4_BWZRedux, subCat4_SMF, plot_save_path)
     raise ValueError
 
 
