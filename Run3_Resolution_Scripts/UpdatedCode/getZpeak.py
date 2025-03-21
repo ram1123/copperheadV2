@@ -9,6 +9,8 @@ if __name__ == "__main__":
     input_paths_labels_1 = { # Compare with data 2022preEE
         "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_*/*/*.parquet",
         "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/data_*/*/*.parquet",
+        # "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_C/0/part.189.parquet",
+        # "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/data_C/0/part.189.parquet",
     }
 
     input_paths_labels_2 = { # Compare with data 2022preEE
@@ -49,7 +51,8 @@ if __name__ == "__main__":
     comparer = DistributionCompare(year, input_paths_labels, fields_to_load, control_region, directoryTag, varlist_file)
     comparer.load_data()
 
-    comparer.fit_dimuonInvariantMass()
+    # comparer.fit_dimuonInvariantMass()
+    comparer.fit_dimuonInvariantMass_DCBXBW()
 
     double_Muon_regions = ['BB', 'BO', 'BE', 'OB', 'OO', 'OE', 'EB', 'EO', 'EE']
     for region in double_Muon_regions:
@@ -59,4 +62,4 @@ if __name__ == "__main__":
         for label, events in comparer.events.items():
             filtered_events[label] = comparer.filter_eta(events, region)
 
-        comparer.fit_dimuonInvariantMass(events_dict=filtered_events, suffix=region)
+        comparer.fit_dimuonInvariantMass_DCBXBW(events_dict=filtered_events, suffix=region)

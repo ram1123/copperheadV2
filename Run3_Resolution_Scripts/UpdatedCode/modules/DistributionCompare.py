@@ -299,31 +299,38 @@ class DistributionCompare:
         print(f"events_bsOff: {events_bsOff}")
         print("==================================================")
 
+        # ------------------------------------
+        # Plotting
+        # ------------------------------------
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        legend = rt.TLegend(0.6,0.60,0.9,0.9)
+
+        # --------------------------------------------------------------------------------------------
+        # ----                 Get First Histogram and Normalize it                 ----------------------
+        # --------------------------------------------------------------------------------------------
         mass_name = "mh_ggh"
         if self.control_region == "z-peak" or self.control_region == "z_peak":
             mass = rt.RooRealVar(mass_name, mass_name, 90, 70, 110) # Z-peak
         elif self.control_region == "signal":
             mass = rt.RooRealVar(mass_name, mass_name, 120, 115, 135) # signal region
-        nbins = 80
+
+        frame = mass.frame()
+        mass_fit_range = self.mass_fit_range[self.control_region]
+
+        nbins = 200
         mass.setBins(nbins)
+
         dimuon_mass = ak.to_numpy(events_bsOn.dimuon_mass)
         wgt = ak.to_numpy(events_bsOn.wgt_nominal)
         hist_bsOn = self.generateRooHist(mass, dimuon_mass, wgt, name=events_bsOn_label)
         hist_bsOn = self.normalizeRooHist(mass, hist_bsOn)
         print(f"fitPlot_ggh hist_bsOn: {hist_bsOn}")
 
-        dimuon_mass = ak.to_numpy(events_bsOff.dimuon_mass)
-        wgt = ak.to_numpy(events_bsOff.wgt_nominal)
-        hist_bsOff = self.generateRooHist(mass, dimuon_mass, wgt, name=events_bsOff_label)
-        hist_bsOff = self.normalizeRooHist(mass, hist_bsOff)
-        print(f"fitPlot_ggh hist_bsOff: {hist_bsOff}")
-
         # --------------------------------------------------
         # Fitting
         # --------------------------------------------------
-
-        mass_fit_range = self.mass_fit_range[self.control_region]
-
         MH_bsOn = rt.RooRealVar("MH" , "MH", mass_fit_range[0], mass_fit_range[1], mass_fit_range[2])
         sigma_bsOn = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
         alpha1_bsOn = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
@@ -338,60 +345,95 @@ class DistributionCompare:
         fit_result = model_bsOn.fitTo(hist_bsOn,  EvalBackend=device, Save=True, SumW2Error=True)
         fit_result.Print()
 
-        MH_bsOff = rt.RooRealVar("MH" , "MH", mass_fit_range[0], mass_fit_range[1], mass_fit_range[2])
-        sigma_bsOff = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
-        alpha1_bsOff = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
-        n1_bsOff = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
-        alpha2_bsOff = rt.RooRealVar("alpha2" , "alpha2", 1.3132, 0.01, 65)
-        n2_bsOff = rt.RooRealVar("n2" , "n2", 9.97411, 0.01, 100)
-        name = f"BSC fit"
-        model_bsOff = rt.RooDoubleCBFast(name,name,mass, MH_bsOff, sigma_bsOff, alpha1_bsOff, n1_bsOff, alpha2_bsOff, n2_bsOff)
-
-        device = "cpu"
-        _ = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
-        fit_result = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
-        fit_result.Print()
-
-        # ------------------------------------
-        # Plotting
-        # ------------------------------------
-        name = "Canvas"
-        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
-        canvas.cd()
-        legend = rt.TLegend(0.6,0.60,0.9,0.9)
-
-
-        frame = mass.frame()
-        hist_bsOn.plotOn(frame, rt.RooFit.MarkerColor(rt.kGreen), rt.RooFit.LineColor(rt.kGreen), Invisible=False )
-        model_bsOn.plotOn(frame, Name=name, LineColor=rt.kGreen)
+        # hist_bsOn.plotOn(frame, rt.RooFit.MarkerColor(rt.kGreen), rt.RooFit.LineColor(rt.kGreen), Invisible=False )
+        hist_bsOn.plotOn(frame, rt.RooFit.Name("hist_bsOn"), rt.RooFit.MarkerColor(rt.kGreen), rt.RooFit.LineColor(rt.kGreen), Invisible=False)
+        model_plot_name = "model_bsOn"
+        model_bsOn.plotOn(frame, rt.RooFit.Name(model_plot_name), LineColor=rt.kGreen)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1), events_bsOn_label, "L")
         sigma_val = round(sigma_bsOn.getVal(), 3)
         sigma_err = round(sigma_bsOn.getError(), 3)
         mean_val = round(MH_bsOn.getVal(), 3)
         mean_err = round(MH_bsOn.getError(), 3)
-        legend.AddEntry("", f"   mean: {mean_val} +- {mean_err}", "")
-        legend.AddEntry("", f"   sigma: {sigma_val} +- {sigma_err}", "")
 
-        hist_bsOff.plotOn(frame, rt.RooFit.MarkerColor(rt.kBlue), rt.RooFit.LineColor(rt.kBlue), Invisible=False )
-        model_bsOff.plotOn(frame, Name=name, LineColor=rt.kBlue)
-        legend.AddEntry(frame.getObject(int(frame.numItems())-1), events_bsOff_label, "L")
-        sigma_val = round(sigma_bsOff.getVal(), 3)
-        sigma_err = round(sigma_bsOff.getError(), 3)
-        mean_val = round(MH_bsOff.getVal(), 3)
-        mean_err = round(MH_bsOff.getError(), 3)
+        chi2_o_ndf_on = model_bsOn.createChi2(hist_bsOn, rt.RooFit.Extended(True), rt.RooFit.DataError(rt.RooAbsData.SumW2))
+        chiSquare_dof_on = round(chi2_o_ndf_on.getVal(), 3)
 
         legend.AddEntry("", f"   mean: {mean_val} +- {mean_err}", "")
         legend.AddEntry("", f"   sigma: {sigma_val} +- {sigma_err}", "")
+        legend.AddEntry("", f"   chi2/dof: {chiSquare_dof_on}", "")
+
+
+
+        chi2_o_ndf_On_fromFrame = frame.chiSquare()
+        chiSquare_dof_on = round(chi2_o_ndf_On_fromFrame, 3)
+        print(f"\n\n====> chiSquare_dof_on: {chiSquare_dof_on}")
+        n_free_params = fit_result.floatParsFinal().getSize()
+        print(f"\n\n====> n_free_params: {n_free_params}")
+        # chi2 = frame.chiSquare(model_bsOn, hist_bsOn.getName(), n_free_params)
+        # print(f"\n\n====> chi2: {chi2}")
+        # print(f"\n\n====> chiSquare_dof_on: {chi2/n_free_params}")
+        # Extract chi2 / ndf
+        chi2_ndf = frame.chiSquare(model_plot_name, "hist_bsOn", n_free_params)
+        # chi2_ndf = frame.chiSquare("model_bsOn", "hist_bsOn", n_free_params)
+        print(f"Chi2/NDF = {chi2_ndf:.3f}")
+        print("==================================================")
+        ndf = model_bsOn.getParameters(rt.RooArgSet(mass)).getSize()
+        print(f"ndf: {ndf}")
+        new_chi2 = frame.chiSquare(model_plot_name, "hist_bsOn", ndf)
+        print(f"new_chi2: {new_chi2}")
+
+        # --------------------------------------------------
+
+
+        # # --------------------------------------------------------------------------------------------
+        # # ----                 Get Second Histogram and Normalize it                 -------------------
+        # # --------------------------------------------------------------------------------------------
+        # dimuon_mass = ak.to_numpy(events_bsOff.dimuon_mass)
+        # wgt = ak.to_numpy(events_bsOff.wgt_nominal)
+        # hist_bsOff = self.generateRooHist(mass, dimuon_mass, wgt, name=events_bsOff_label)
+        # hist_bsOff = self.normalizeRooHist(mass, hist_bsOff)
+        # print(f"fitPlot_ggh hist_bsOff: {hist_bsOff}")
+
+
+
+        # MH_bsOff = rt.RooRealVar("MH" , "MH", mass_fit_range[0], mass_fit_range[1], mass_fit_range[2])
+        # sigma_bsOff = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
+        # alpha1_bsOff = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
+        # n1_bsOff = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
+        # alpha2_bsOff = rt.RooRealVar("alpha2" , "alpha2", 1.3132, 0.01, 65)
+        # n2_bsOff = rt.RooRealVar("n2" , "n2", 9.97411, 0.01, 100)
+        # name = f"BSC fit"
+        # model_bsOff = rt.RooDoubleCBFast(name,name,mass, MH_bsOff, sigma_bsOff, alpha1_bsOff, n1_bsOff, alpha2_bsOff, n2_bsOff)
+
+        # device = "cpu"
+        # _ = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
+        # fit_result = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
+        # fit_result.Print()
+
+
+        # hist_bsOff.plotOn(frame, rt.RooFit.MarkerColor(rt.kBlue), rt.RooFit.LineColor(rt.kBlue), Invisible=False )
+        # model_bsOff.plotOn(frame, Name=name, LineColor=rt.kBlue)
+        # legend.AddEntry(frame.getObject(int(frame.numItems())-1), events_bsOff_label, "L")
+        # sigma_val = round(sigma_bsOff.getVal(), 3)
+        # sigma_err = round(sigma_bsOff.getError(), 3)
+        # mean_val = round(MH_bsOff.getVal(), 3)
+        # mean_err = round(MH_bsOff.getError(), 3)
+        # chi2_o_ndf_off = model_bsOff.createChi2(hist_bsOff)
+        # chiSquare_dof_off = round(chi2_o_ndf_off.getVal(), 3)
+
+        # legend.AddEntry("", f"   mean: {mean_val} +- {mean_err}", "")
+        # legend.AddEntry("", f"   sigma: {sigma_val} +- {sigma_err}", "")
+        # legend.AddEntry("", f"   chi2/dof: {chiSquare_dof_off}", "")
 
         # append results in a csv file, with format: category, sigma BSOn +/- error, sigma BSOFF +/- error, % diff
-        with open(f"fit_results_{self.control_region}.csv", "a") as f:
-            suffix = "Inclusive" if suffix == None else suffix
-            f.write(f"{suffix},{round(sigma_bsOn.getVal(),3)},{round(sigma_bsOn.getError(),3)},{round(sigma_bsOff.getVal(),3)},{round(sigma_bsOff.getError(),3)},{round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)}\n")
+        # with open(f"fit_results_{self.control_region}.csv", "a") as f:
+        #     suffix = "Inclusive" if suffix == None else suffix
+        #     f.write(f"{suffix},{round(sigma_bsOn.getVal(),3)},{round(sigma_bsOn.getError(),3)},{round(sigma_bsOff.getVal(),3)},{round(sigma_bsOff.getError(),3)},{round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)}\n")
 
-        # get a latex style table
-        with open(f"fit_results_{self.control_region}.txt", "a") as f:
-            suffix = "Inclusive" if suffix == None else suffix
-            f.write(f"{suffix} & {round(sigma_bsOn.getVal(),3)} $\\pm$ {round(sigma_bsOn.getError(),3)} & {round(sigma_bsOff.getVal(),3)} $\\pm$ {round(sigma_bsOff.getError(),3)} & {round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)} \\\\ \n")
+        # # get a latex style table
+        # with open(f"fit_results_{self.control_region}.txt", "a") as f:
+        #     suffix = "Inclusive" if suffix == None else suffix
+        #     f.write(f"{suffix} & {round(sigma_bsOn.getVal(),3)} $\\pm$ {round(sigma_bsOn.getError(),3)} & {round(sigma_bsOff.getVal(),3)} $\\pm$ {round(sigma_bsOff.getError(),3)} & {round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)} \\\\ \n")
 
 
 
@@ -407,3 +449,143 @@ class DistributionCompare:
         if not os.path.exists(os.path.dirname(save_filename)):
             os.makedirs(os.path.dirname(save_filename))
         canvas.SaveAs(save_filename)
+
+    def fit_dimuonInvariantMass_DCBXBW(self, events_dict=None, outdir="plots", suffix=None):
+        """
+        Generate a histogram from dimuon mass and weight, fit with DCB × BW (Double Crystal Ball × Breit-Wigner),
+        and return fit parameters: sigma and chi2/dof.
+        """
+        if events_dict is None:
+            events_dict = self.events
+
+        counter = 0
+        for label, events in events_dict.items():
+            if counter == 0:
+                events_bsOn = events
+                events_bsOn_label = label
+            if counter == 1:
+                events_bsOff = events
+                events_bsOff_label = label
+            counter += 1
+
+        print("==================================================")
+        print(f"events_bsOn: {events_bsOn}")
+        print(f"events_bsOff: {events_bsOff}")
+        print("==================================================")
+
+        # -----------------------------
+        #  Setup Canvas & Legend
+        # -----------------------------
+        canvas = rt.TCanvas(f"Canvas_{self.control_region}", f"Canvas_{self.control_region}", 800, 800)
+        canvas.cd()
+        legend = rt.TLegend(0.6, 0.60, 0.9, 0.9)
+
+        # -----------------------------
+        #  Define Mass Variable
+        # -----------------------------
+        mass_name = "mh_ggh"
+        if self.control_region in ["z-peak", "z_peak"]:
+            mass = rt.RooRealVar(mass_name, mass_name, 91.2, 70, 110)  # Z-peak
+        elif self.control_region == "signal":
+            mass = rt.RooRealVar(mass_name, mass_name, 125, 115, 135)  # Higgs peak
+
+        frame = mass.frame()
+        mass_fit_range = self.mass_fit_range[self.control_region]
+        nbins = 250
+        mass.setBins(nbins)
+
+        # -----------------------------
+        #  Create Histogram from Data
+        # -----------------------------
+        dimuon_mass = ak.to_numpy(events_bsOn.dimuon_mass)
+        wgt = ak.to_numpy(events_bsOn.wgt_nominal)
+        hist_bsOn = self.generateRooHist(mass, dimuon_mass, wgt, name=events_bsOn_label)
+        hist_bsOn = self.normalizeRooHist(mass, hist_bsOn)
+
+        print(f"fitPlot_ggh hist_bsOn: {hist_bsOn}")
+
+        # -----------------------------
+        #  Define Breit-Wigner Model
+        # -----------------------------
+        mean = rt.RooRealVar("mean", "mean", 91.1880, 91, 92)  # Z mass: 91.1880 GeV from PDG
+        width = rt.RooRealVar("width", "width", 2.4955, 1.0, 3.0)  # Natural Z width 2.4955 GeV from PDG
+        bw = rt.RooBreitWigner("bw", "Breit-Wigner", mass, mean, width)
+        width.setConstant(True)  # Fix the width parameter
+        mean.setConstant(True)  # Fix the mean parameter
+
+        # -----------------------------
+        #  Define DCB Model
+        # -----------------------------
+        # MH_bsOn = rt.RooRealVar("MH", "MH", 91.2, 85, 95)
+        mean_bsOn = rt.RooRealVar("mean_bsOn", "mean_bsOn", 0, -10, 10)  # mean is mean relative to BW
+        sigma_bsOn = rt.RooRealVar("sigma", "sigma", 2.0, 0.1, 4.0)  # Gaussian resolution
+        alpha1_bsOn = rt.RooRealVar("alpha1", "alpha1", 1.5, 0.01, 65.0)
+        n1_bsOn = rt.RooRealVar("n1", "n1", 10.0, 0.01, 185.0)
+        alpha2_bsOn = rt.RooRealVar("alpha2", "alpha2", 1.5, 0.01, 65.0)
+        n2_bsOn = rt.RooRealVar("n2", "n2", 25.0, 0.01, 385.0)
+
+        model_DCB = rt.RooCrystalBall("DCB", "DCB Fit", mass, mean_bsOn, sigma_bsOn, alpha1_bsOn, n1_bsOn, alpha2_bsOn, n2_bsOn)
+
+        # -----------------------------
+        #  Convolution (BW × DCB)
+        # -----------------------------
+        model = rt.RooFFTConvPdf("DCB_BW", "DCB × BW Fit", mass, bw, model_DCB)
+        mass.setBins(10000, "cache")  # FFT Convolution bins for accuracy
+
+        # -----------------------------
+        #  Perform Fit
+        # -----------------------------
+        rt.EnableImplicitMT()
+        _ = model.fitTo(hist_bsOn, EvalBackend="cpu", Save=True, SumW2Error=True)
+        _ = model.fitTo(hist_bsOn, EvalBackend="cpu", Save=True, SumW2Error=True)
+        fit_result = model.fitTo(hist_bsOn, EvalBackend="cpu", Save=True, SumW2Error=True)
+        fit_result.Print()
+
+        # -----------------------------
+        #  Plot Fit
+        # -----------------------------
+        hist_bsOn.plotOn(frame, rt.RooFit.Name("hist_bsOn"), rt.RooFit.MarkerColor(rt.kGreen), rt.RooFit.LineColor(rt.kGreen), Invisible=False)
+        model.plotOn(frame, rt.RooFit.Name("model_bsOn"), rt.RooFit.LineColor(rt.kBlue))
+
+        # -----------------------------
+        #  Compute Fit Metrics
+        # -----------------------------
+        sigma_val = round(sigma_bsOn.getVal(), 3)
+        sigma_err = round(sigma_bsOn.getError(), 3)
+        mean_val = round(mean_bsOn.getVal(), 3)
+        mean_err = round(mean_bsOn.getError(), 3)
+
+        chi2_o_ndf_on = model.createChi2(hist_bsOn, rt.RooFit.Extended(True), rt.RooFit.DataError(rt.RooAbsData.SumW2))
+        chiSquare_dof_on = round(chi2_o_ndf_on.getVal(), 3)
+
+        legend.AddEntry(frame.getObject(int(frame.numItems()) - 1), "Fit Model (DCB x BW)", "L")
+        legend.AddEntry("", f"   mean: {mean_val} #pm {mean_err}", "")
+        legend.AddEntry("", f"   sigma: {sigma_val} #pm {sigma_err}", "")
+
+        new_nfree_params = fit_result.floatParsFinal().getSize()
+        print(f"\n\n====> n_free_params: {new_nfree_params}")
+        chi2_ndf = frame.chiSquare("model_bsOn", "hist_bsOn", new_nfree_params)
+        print(f"Chi2 = {chi2_ndf:.3f}")
+        print(f"Chi2/NDF = {chi2_ndf/new_nfree_params:.3f}")
+        print("==================================================")
+
+        # legend.AddEntry("", f"   chi2/dof: {chiSquare_dof_on}", "")
+        legend.AddEntry("", f" #chi^{{2}} : {round(chi2_ndf,3)}", "")
+        legend.AddEntry("", f" #chi^{{2}} / ndf: {round(chi2_ndf/new_nfree_params,3)}", "")
+
+        # -----------------------------
+        #  Save Results
+        # -----------------------------
+        frame.SetYTitle(f"A.U.")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        frame.SetTitle(f"")
+
+        frame.Draw()
+        legend.Draw()
+        canvas.Update()
+        canvas.Draw()
+
+        save_filename = f"{outdir}/{self.year}/{self.directoryTag}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.pdf"
+        os.makedirs(os.path.dirname(save_filename), exist_ok=True)
+        canvas.SaveAs(save_filename)
+        canvas.SaveAs(save_filename.replace(".pdf", ".png"))
