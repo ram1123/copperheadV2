@@ -4,6 +4,7 @@ import yaml
 import ROOT as rt
 import array
 import os
+import numpy as np
 
 class DistributionCompare:
     def __init__(self, year, input_paths_labels, fields, control_region=None, directoryTag="test", varlist_file="varlist.yaml"):
@@ -15,6 +16,13 @@ class DistributionCompare:
         self.events = {}
         with open(varlist_file, 'r') as f:
             self.varlist = yaml.safe_load(f)
+
+        self.mass_fit_range = { # add mean with range to be used in RooFit
+            "h-peak": (125, 115, 135),
+            "h-sidebands": (125, 110, 150),
+            "signal": (125, 110, 150),
+            "z-peak": (90, 70, 110)
+        }
 
     def filter_region(self, events, region="h-peak"):
         dimuon_mass = events.dimuon_mass
@@ -233,3 +241,169 @@ class DistributionCompare:
             label_modified = label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")
             filename = f"{outdir}/{filename_prefix}_{var1}_vs_{var2}_{suffix}_{label_modified}.pdf"
             canvas.SaveAs(filename)
+
+    def generateRooHist(self, x, dimuon_mass, wgts, name=""):
+        print("generateRooHist version 2")
+        dimuon_mass = np.asarray(ak.to_numpy(dimuon_mass)).astype(np.float64) # explicit float64 format is required
+        wgts = np.asarray(ak.to_numpy(wgts)).astype(np.float64) # explicit float64 format is required
+        nbins = x.getBins()
+        TH = rt.TH1D("TH", "TH", nbins, x.getMin(), x.getMax())
+        TH.FillN(len(dimuon_mass), dimuon_mass, wgts) # fill the histograms with mass and weights
+        DEBUG = True
+        if DEBUG:
+            print(f"dimuon_mass: {dimuon_mass}")
+            print(f"wgts: {wgts}")
+            print(f"nbins: {nbins}")
+            print(f"TH.Integral(): {TH.Integral()}")
+            # plot the TH histogram
+            c = rt.TCanvas("c","c",800,800)
+            TH.Draw()
+            c.SaveAs("TH.pdf")
+
+        roohist = rt.RooDataHist(name, name, rt.RooArgSet(x), TH)
+        return roohist
+
+    def normalizeRooHist(self, x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
+        """
+        Takes rootHistogram and returns a new copy with histogram values normalized to sum to one
+        """
+        x_name = x.GetName()
+        THist = rooHist.createHistogram(x_name).Clone("clone") # clone it just in case
+        THist.Scale(1/THist.Integral())
+        print(f"THist.Integral(): {THist.Integral()}")
+        normalizedHist_name = rooHist.GetName() + "_normalized"
+        roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist)
+        return roo_hist_normalized
+
+    def fit_dimuonInvariantMass(self, events_dict=None, outdir = "plots", suffix=None):
+        """
+        generate histogram from dimuon mass and wgt, fit DCB
+        aftwards, plot the histogram and return the fit params
+        as fit DCB sigma and chi2_dof
+        """
+        if events_dict is None:
+            events_dict = self.events
+
+        counter = 0
+        for label, events in events_dict.items():
+            if counter == 0:
+                events_bsOn = events
+                events_bsOn_label = label
+            if counter == 1:
+                events_bsOff = events
+                events_bsOff_label = label
+            counter += 1
+
+        print("==================================================")
+        print(f"events_bsOn: {events_bsOn}")
+        print(f"events_bsOff: {events_bsOff}")
+        print("==================================================")
+
+        mass_name = "mh_ggh"
+        if self.control_region == "z-peak" or self.control_region == "z_peak":
+            mass = rt.RooRealVar(mass_name, mass_name, 90, 70, 110) # Z-peak
+        elif self.control_region == "signal":
+            mass = rt.RooRealVar(mass_name, mass_name, 120, 115, 135) # signal region
+        nbins = 80
+        mass.setBins(nbins)
+        dimuon_mass = ak.to_numpy(events_bsOn.dimuon_mass)
+        wgt = ak.to_numpy(events_bsOn.wgt_nominal)
+        hist_bsOn = self.generateRooHist(mass, dimuon_mass, wgt, name=events_bsOn_label)
+        hist_bsOn = self.normalizeRooHist(mass, hist_bsOn)
+        print(f"fitPlot_ggh hist_bsOn: {hist_bsOn}")
+
+        dimuon_mass = ak.to_numpy(events_bsOff.dimuon_mass)
+        wgt = ak.to_numpy(events_bsOff.wgt_nominal)
+        hist_bsOff = self.generateRooHist(mass, dimuon_mass, wgt, name=events_bsOff_label)
+        hist_bsOff = self.normalizeRooHist(mass, hist_bsOff)
+        print(f"fitPlot_ggh hist_bsOff: {hist_bsOff}")
+
+        # --------------------------------------------------
+        # Fitting
+        # --------------------------------------------------
+
+        mass_fit_range = self.mass_fit_range[self.control_region]
+
+        MH_bsOn = rt.RooRealVar("MH" , "MH", mass_fit_range[0], mass_fit_range[1], mass_fit_range[2])
+        sigma_bsOn = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
+        alpha1_bsOn = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
+        n1_bsOn = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
+        alpha2_bsOn = rt.RooRealVar("alpha2" , "alpha2", 1.3132, 0.01, 65)
+        n2_bsOn = rt.RooRealVar("n2" , "n2", 9.97411, 0.01, 100)
+        name = f"BSC fit"
+        model_bsOn = rt.RooDoubleCBFast(name,name,mass, MH_bsOn, sigma_bsOn, alpha1_bsOn, n1_bsOn, alpha2_bsOn, n2_bsOn)
+
+        device = "cpu"
+        _ = model_bsOn.fitTo(hist_bsOn,  EvalBackend=device, Save=True, SumW2Error=True)
+        fit_result = model_bsOn.fitTo(hist_bsOn,  EvalBackend=device, Save=True, SumW2Error=True)
+        fit_result.Print()
+
+        MH_bsOff = rt.RooRealVar("MH" , "MH", mass_fit_range[0], mass_fit_range[1], mass_fit_range[2])
+        sigma_bsOff = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
+        alpha1_bsOff = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
+        n1_bsOff = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
+        alpha2_bsOff = rt.RooRealVar("alpha2" , "alpha2", 1.3132, 0.01, 65)
+        n2_bsOff = rt.RooRealVar("n2" , "n2", 9.97411, 0.01, 100)
+        name = f"BSC fit"
+        model_bsOff = rt.RooDoubleCBFast(name,name,mass, MH_bsOff, sigma_bsOff, alpha1_bsOff, n1_bsOff, alpha2_bsOff, n2_bsOff)
+
+        device = "cpu"
+        _ = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
+        fit_result = model_bsOff.fitTo(hist_bsOff,  EvalBackend=device, Save=True, SumW2Error=True)
+        fit_result.Print()
+
+        # ------------------------------------
+        # Plotting
+        # ------------------------------------
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        legend = rt.TLegend(0.6,0.60,0.9,0.9)
+
+
+        frame = mass.frame()
+        hist_bsOn.plotOn(frame, rt.RooFit.MarkerColor(rt.kGreen), rt.RooFit.LineColor(rt.kGreen), Invisible=False )
+        model_bsOn.plotOn(frame, Name=name, LineColor=rt.kGreen)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), events_bsOn_label, "L")
+        sigma_val = round(sigma_bsOn.getVal(), 3)
+        sigma_err = round(sigma_bsOn.getError(), 3)
+        mean_val = round(MH_bsOn.getVal(), 3)
+        mean_err = round(MH_bsOn.getError(), 3)
+        legend.AddEntry("", f"   mean: {mean_val} +- {mean_err}", "")
+        legend.AddEntry("", f"   sigma: {sigma_val} +- {sigma_err}", "")
+
+        hist_bsOff.plotOn(frame, rt.RooFit.MarkerColor(rt.kBlue), rt.RooFit.LineColor(rt.kBlue), Invisible=False )
+        model_bsOff.plotOn(frame, Name=name, LineColor=rt.kBlue)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), events_bsOff_label, "L")
+        sigma_val = round(sigma_bsOff.getVal(), 3)
+        sigma_err = round(sigma_bsOff.getError(), 3)
+        mean_val = round(MH_bsOff.getVal(), 3)
+        mean_err = round(MH_bsOff.getError(), 3)
+
+        legend.AddEntry("", f"   mean: {mean_val} +- {mean_err}", "")
+        legend.AddEntry("", f"   sigma: {sigma_val} +- {sigma_err}", "")
+
+        # append results in a csv file, with format: category, sigma BSOn +/- error, sigma BSOFF +/- error, % diff
+        with open(f"fit_results_{self.control_region}.csv", "a") as f:
+            suffix = "Inclusive" if suffix == None else suffix
+            f.write(f"{suffix},{round(sigma_bsOn.getVal(),3)},{round(sigma_bsOn.getError(),3)},{round(sigma_bsOff.getVal(),3)},{round(sigma_bsOff.getError(),3)},{round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)}\n")
+
+        # get a latex style table
+        with open(f"fit_results_{self.control_region}.txt", "a") as f:
+            suffix = "Inclusive" if suffix == None else suffix
+            f.write(f"{suffix} & {round(sigma_bsOn.getVal(),3)} $\\pm$ {round(sigma_bsOn.getError(),3)} & {round(sigma_bsOff.getVal(),3)} $\\pm$ {round(sigma_bsOff.getError(),3)} & {round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)} \\\\ \n")
+
+
+
+        frame.SetYTitle(f"A.U.")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        frame.SetTitle(f"")
+
+        frame.Draw()
+        legend.Draw()
+        canvas.Update()
+        canvas.Draw()
+        save_filename = f"{outdir}/{self.year}/{self.directoryTag}/fitPlot_{self.control_region}_{suffix}.pdf"
+        if not os.path.exists(os.path.dirname(save_filename)):
+            os.makedirs(os.path.dirname(save_filename))
+        canvas.SaveAs(save_filename)
