@@ -10,3 +10,4 @@ voms_proxy.txt
 *.png
 log*.txt
 *.txt
+*.csv

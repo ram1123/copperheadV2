@@ -28,6 +28,50 @@ class DistributionCompare:
             region_filter = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
         return events[region_filter]
 
+    # Function to filter events based on leading and subleading muon rapidity
+    # Eta bins:
+    #   B: |eta| <= 0.9
+    #   O: 0.9 < |eta| <= 1.8
+    #   E: 1.8 < |eta| <= 2.4
+    def filter_eta1(self, events, region="B"):
+        if region == "B":
+            region_filter = (abs(events.mu1_eta) <= 0.9)
+        elif region == "O":
+            region_filter = (abs(events.mu1_eta) > 0.9) & (abs(events.mu1_eta) <= 1.8)
+        elif region == "E":
+            region_filter = (abs(events.mu1_eta) > 1.8) & (abs(events.mu1_eta) <= 2.4)
+
+        return events[region_filter]
+    def filter_eta2(self, events, region="B"):
+        if region == "B":
+            region_filter = (abs(events.mu2_eta) <= 0.9)
+        elif region == "O":
+            region_filter = (abs(events.mu2_eta) > 0.9) & (abs(events.mu2_eta) <= 1.8)
+        elif region == "E":
+            region_filter = (abs(events.mu2_eta) > 1.8) & (abs(events.mu2_eta) <= 2.4)
+        return events[region_filter]
+
+    def filter_eta(self, events, region="BB"):
+        if region == "BB":
+            region_filter = (abs(events.mu1_eta) <= 0.9) & (abs(events.mu2_eta) <= 0.9)
+        elif region == "BO":
+            region_filter = (abs(events.mu1_eta) <= 0.9) & (abs(events.mu2_eta) > 0.9) & (abs(events.mu2_eta) <= 1.8)
+        elif region == "BE":
+            region_filter = (abs(events.mu1_eta) <= 0.9) & (abs(events.mu2_eta) > 1.8) & (abs(events.mu2_eta) <= 2.4)
+        elif region == "OB":
+            region_filter = (abs(events.mu1_eta) > 0.9) & (abs(events.mu1_eta) <= 1.8) & (abs(events.mu2_eta) <= 0.9)
+        elif region == "OO":
+            region_filter = (abs(events.mu1_eta) > 0.9) & (abs(events.mu1_eta) <= 1.8) & (abs(events.mu2_eta) > 0.9) & (abs(events.mu2_eta) <= 1.8)
+        elif region == "OE":
+            region_filter = (abs(events.mu1_eta) > 0.9) & (abs(events.mu1_eta) <= 1.8) & (abs(events.mu2_eta) > 1.8) & (abs(events.mu2_eta) <= 2.4)
+        elif region == "EB":
+            region_filter = (abs(events.mu1_eta) > 1.8) & (abs(events.mu1_eta) <= 2.4) & (abs(events.mu2_eta) <= 0.9)
+        elif region == "EO":
+            region_filter = (abs(events.mu1_eta) > 1.8) & (abs(events.mu1_eta) <= 2.4) & (abs(events.mu2_eta) > 0.9) & (abs(events.mu2_eta) <= 1.8)
+        elif region == "EE":
+            region_filter = (abs(events.mu1_eta) > 1.8) & (abs(events.mu1_eta) <= 2.4) & (abs(events.mu2_eta) > 1.8) & (abs(events.mu2_eta) <= 2.4)
+        return events[region_filter]
+
     def load_data(self):
         def load(path):
             events_data = dak.from_parquet(path)
@@ -59,7 +103,7 @@ class DistributionCompare:
         params = self.varlist.get(var, self.varlist["default"])
         return params
 
-    def compare(self, var, xlabel=None, filename="comparison.pdf"):
+    def compare(self, var, xlabel=None, filename="comparison.pdf", events_dict=None):
         rt.gStyle.SetOptStat(0)
         bins, xmin, xmax, xtitle, ratio_range_min, ratio_range_max = self.get_hist_params(var)
         xlabel = xlabel or xtitle
@@ -72,11 +116,16 @@ class DistributionCompare:
         colors = [rt.kBlue, rt.kRed, rt.kGreen+2, rt.kBlack]
         legend = rt.TLegend(0.7, 0.7, 0.9, 0.9)
 
-        for idx, (label, data) in enumerate(self.events.items()):
+        if events_dict is None:
+            events_dict = self.events
+        for idx, (label, data) in enumerate(events_dict.items()):
             values = ak.to_numpy(data[var])
             hist = rt.TH1D(label, xlabel, bins, xmin, xmax)
             for v in values:
                 hist.Fill(v)
+            # Add overflow bin to the last bin
+            if ("eta" not in var) and ("phi" not in var):
+                hist.SetBinContent(bins, hist.GetBinContent(bins) + hist.GetBinContent(bins + 1))
             hist.Scale(1.0 / hist.Integral())
             hist.SetLineColor(colors[idx % len(colors)])
             hist.SetLineWidth(2)
@@ -107,21 +156,34 @@ class DistributionCompare:
 
         canvas.SaveAs(filename)
 
+        # Save the log version of the plot
+        ratio_plot.GetUpperPad().SetLogy()
+        # reset the y-axis range for upper pad
+        histograms[0].SetMaximum(max(histograms[0].GetMaximum(), histograms[1].GetMaximum())*100)
+
+        canvas.SaveAs(filename.replace(".pdf", "_log.pdf"))
+
         # clear memory
         for hist in histograms:
             hist.Delete()
         canvas.Clear()
 
-    def compare_all(self, variables, outdir="plots"):
+    # def compare_all(self, variables, events = self.events, region = "inclusive" outdir="plots"):
+    def compare_all(self, variables, outdir="plots", events_dict=None, suffix=None):
         outdir = f"{outdir}/{self.year}/{self.directoryTag}"
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
-        for var in variables:
-            filename = f"{outdir}/{var}_{self.control_region}.pdf"
-            self.compare(var, filename=filename)
+        if suffix:
+            suffix = f"{self.control_region}_{suffix}"
+        else:
+            suffix = self.control_region
 
-    def compare_2D(self, var1, var2, xlabel=None, ylabel=None, filename_prefix="comparison_2D", outdir="plots_2D"):
+        for var in variables:
+            filename = f"{outdir}/{var}_{suffix}.pdf"
+            self.compare(var, filename=filename, events_dict=events_dict)
+
+    def compare_2D(self, var1, var2, xlabel=None, ylabel=None, filename_prefix="comparison_2D", outdir="plots_2D", events_dict=None, suffix=None):
         rt.gStyle.SetOptStat(0)
 
         # Set color palette
@@ -141,7 +203,19 @@ class DistributionCompare:
         xlabel = xlabel or xtitle
         ylabel = ylabel or ytitle
 
-        for label, data in self.events.items():
+        outdir = f"{outdir}/{self.year}/{self.directoryTag}"
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+
+        if events_dict is None:
+            events_dict = self.events
+
+        if suffix:
+            suffix = f"{self.control_region}_{suffix}"
+        else:
+            suffix = self.control_region
+
+        for label, data in events_dict.items():
             canvas = rt.TCanvas(f"canvas_{label}", f"canvas_{label}", 800, 600)
             hist = rt.TH2D(label, f"{xlabel} vs {ylabel} - {label}", bins_x, xmin, xmax, bins_y, ymin, ymax)
 
@@ -155,9 +229,7 @@ class DistributionCompare:
             hist.GetYaxis().SetTitle(ylabel)
             hist.Draw("COLZ")
 
-            outdir = f"{outdir}/{self.year}/{self.directoryTag}"
-            if not os.path.exists(outdir):
-                os.makedirs(outdir)
-
-            filename = f"{outdir}/{filename_prefix}_{var1}_vs_{var2}_{self.control_region}_{label}.pdf"
+            # remove space or special charcters from the label
+            label_modified = label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")
+            filename = f"{outdir}/{filename_prefix}_{var1}_vs_{var2}_{suffix}_{label_modified}.pdf"
             canvas.SaveAs(filename)
