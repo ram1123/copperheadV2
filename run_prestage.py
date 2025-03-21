@@ -24,6 +24,9 @@ import sys
 import logging
 from modules.utils import logger
 from collections.abc import Sequence
+import numba
+import numpy as np
+import concurrent.futures
 
 
 # def getRootFileNames(single_das_query: str, allowlist_sites: list) -> list:
@@ -77,9 +80,57 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
             # partial_allowed=True
         )
         fnames = [file[0] for file in outfiles if file != []]       
-        
-        return fnames
+
     
+    return fnames
+
+def getBadFile(fname):
+    try:
+        up_file = uproot.open(fname) 
+        # up_file["Events"]["Muon_pt"].array() # check that you could read branches
+        if "Muon_pt" in up_file["Events"].keys():
+            return "" # good file
+        else:
+            return fname # bad file
+    except Exception as e:
+        # return f"An error occurred with file {fname}: {e}"
+        return fname # bad fileclient
+
+# def getBadFileParallelize(filelist, max_workers=60)
+#     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+#         # Submit each file check to the executor
+#         results = list(executor.map(getBadFile, filelist))
+    
+#     bad_file_l = []
+#     for result in results:
+#         if result != "":
+#             # print(result)
+#             bad_file_l.append(result)
+    
+#     return bad_file_l
+
+def getBadFileParallelizeDask(filelist):
+    """
+    We assume that the dask client has already been initialized
+    """
+    lazy_results = []
+    for fname in filelist:
+        lazy_result = dask.delayed(getBadFile)(fname)
+        lazy_results.append(lazy_result)
+    results = dask.compute(*lazy_results)
+
+    bad_file_l = []
+    for result in results:
+        if result != "":
+            # print(result)
+            bad_file_l.append(result)
+    return bad_file_l
+
+
+def removeBadFiles(filelist):
+    bad_filelist = getBadFileParallelizeDask(filelist)
+    clean_filelist = list(set(filelist) - set(bad_filelist))
+    return clean_filelist
 
 
 def get_Xcache_filelist(fnames: list):
@@ -255,7 +306,7 @@ if __name__ == "__main__":
             logger.debug("Gateway Client created")
         else: # use local cluster
             cluster = LocalCluster(processes=True)
-            cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
+            cluster.adapt(minimum=8, maximum=70) #min: 8 max: 32
             client = Client(cluster)
             # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
             logger.info("Local scale Client created")
@@ -355,14 +406,17 @@ if __name__ == "__main__":
                 single_dataset_name = dataset_name
                 fnames = getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
+            # quick check to see if root files are corrupt
+            fnames = removeBadFiles(fnames)
+            
             # convert to xcachce paths if requested
             if args.xcache:
                 fnames = get_Xcache_filelist(fnames)
 
-            logger.debug(f"file names: {fnames}")
+            # logger.debug(f"file names: {fnames}")
             logger.debug(f"sample_name: {sample_name}")
             logger.debug(f"len(fnames): {len(fnames)}")
-            logger.debug(f"file names: {fnames}")
+            # logger.debug(f"file names: {fnames}")
 
 
             """
