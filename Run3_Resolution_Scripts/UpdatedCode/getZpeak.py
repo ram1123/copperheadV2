@@ -29,8 +29,9 @@ if __name__ == "__main__":
     }
 
     year = "2022preEE"  # or "2018"
+    # control_region = "signal"  # z-peak or "signal"
     control_region = "z-peak"  # z-peak or "signal"
-    directoryTag = f"March21_{control_region}_massResolution"
+    directoryTag = f"March21_{control_region}_massResolution_Unbinned"
     input_paths_labels = input_paths_labels_1
 
     fields_to_load = [
@@ -52,7 +53,10 @@ if __name__ == "__main__":
     comparer.load_data()
 
     # comparer.fit_dimuonInvariantMass()
-    comparer.fit_dimuonInvariantMass_DCBXBW()
+    # comparer.fit_dimuonInvariantMass_DCBXBW()
+    # comparer.fit_dimuonInvariantMass_DCBXBW_OLD()
+
+    comparer.fit_dimuonInvariantMass_DCBXBW_Unbinned()
 
     double_Muon_regions = ['BB', 'BO', 'BE', 'OB', 'OO', 'OE', 'EB', 'EO', 'EE']
     for region in double_Muon_regions:
@@ -62,4 +66,5 @@ if __name__ == "__main__":
         for label, events in comparer.events.items():
             filtered_events[label] = comparer.filter_eta(events, region)
 
-        comparer.fit_dimuonInvariantMass_DCBXBW(events_dict=filtered_events, suffix=region)
+        # comparer.fit_dimuonInvariantMass_DCBXBW(events_dict=filtered_events, suffix=region)
+        comparer.fit_dimuonInvariantMass_DCBXBW_Unbinned(events_dict=filtered_events, suffix=region)

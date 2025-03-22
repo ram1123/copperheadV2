@@ -7,7 +7,7 @@ if __name__ == "__main__":
     varlist_file = "varlist.yaml"
 
     year = "2022preEE"  # or "2018"
-    control_region = "z-peak"  # or "signal"
+    control_region = "signal"  #z-peak or "signal"
     directoryTag = "March21_Data_DiMuon_RapidityBins"
 
     input_paths_labels_1 = { # Compare with data 2022preEE
@@ -30,7 +30,7 @@ if __name__ == "__main__":
         "GeoFit (2018)": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
     }
 
-    input_paths_labels = input_paths_labels_2
+    input_paths_labels = input_paths_labels_1
 
     fields_to_load = [
         "wgt_nominal",
@@ -57,36 +57,36 @@ if __name__ == "__main__":
 
     # variables_to_plot = ["mu1_pt"]
     variables_to_plot = LeadingMuon_Variables + SubleadingMuon_Variables + Dimuon_Variables
-    # comparer.compare_all(variables_to_plot)
+    comparer.compare_all(variables_to_plot)
 
-    # # Get 2D histograms for all combinations of leading  muon variables
-    # for i, var1 in enumerate(LeadingMuon_Variables):
-    #     for var2 in LeadingMuon_Variables[i+1:]:
-    #         comparer.compare_2D(var1, var2)
+    # Get 2D histograms for all combinations of leading  muon variables
+    for i, var1 in enumerate(LeadingMuon_Variables):
+        for var2 in LeadingMuon_Variables[i+1:]:
+            comparer.compare_2D(var1, var2)
 
-    # # Get 2D histograms for all combinations of subleading  muon variables
-    # for i, var1 in enumerate(SubleadingMuon_Variables):
-    #     for var2 in SubleadingMuon_Variables[i+1:]:
-    #         comparer.compare_2D(var1, var2)
+    # Get 2D histograms for all combinations of subleading  muon variables
+    for i, var1 in enumerate(SubleadingMuon_Variables):
+        for var2 in SubleadingMuon_Variables[i+1:]:
+            comparer.compare_2D(var1, var2)
 
-    # # Get 2D histograms for all combinations of leading and subleading muon variables
-    # for var1 in LeadingMuon_Variables:
-    #     for var2 in SubleadingMuon_Variables:
-    #         comparer.compare_2D(var1, var2)
+    # Get 2D histograms for all combinations of leading and subleading muon variables
+    for var1 in LeadingMuon_Variables:
+        for var2 in SubleadingMuon_Variables:
+            comparer.compare_2D(var1, var2)
 
-    # # Get 2D histograms for all combinations of leading and dimuon variables
-    # for var1 in LeadingMuon_Variables:
-    #     for var2 in Dimuon_Variables:
-    #         comparer.compare_2D(var1, var2)
-    # # Get 2D histograms for all combinations of subleading and dimuon variables
-    # for var1 in SubleadingMuon_Variables:
-    #     for var2 in Dimuon_Variables:
-    #         comparer.compare_2D(var1, var2)
+    # Get 2D histograms for all combinations of leading and dimuon variables
+    for var1 in LeadingMuon_Variables:
+        for var2 in Dimuon_Variables:
+            comparer.compare_2D(var1, var2)
+    # Get 2D histograms for all combinations of subleading and dimuon variables
+    for var1 in SubleadingMuon_Variables:
+        for var2 in Dimuon_Variables:
+            comparer.compare_2D(var1, var2)
 
-    # # Get 2D histograms for all combinations of dimuon variables
-    # for i, var1 in enumerate(Dimuon_Variables):
-    #     for var2 in Dimuon_Variables[i+1:]:
-    #         comparer.compare_2D(var1, var2)
+    # Get 2D histograms for all combinations of dimuon variables
+    for i, var1 in enumerate(Dimuon_Variables):
+        for var2 in Dimuon_Variables[i+1:]:
+            comparer.compare_2D(var1, var2)
 
 
     # Plots in different regions
