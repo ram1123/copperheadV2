@@ -113,15 +113,15 @@ def check_missing_files(input_file, output_dir, year, additional_string):
     input_files = df['inputMiniAOD'].tolist()
     output_files = df['expected_output_file'].tolist()
 
-    # Scatter input files and output files to Dask workers to reduce overhead
-    scattered_input_files = client.scatter(input_files)
-    scattered_output_files = client.scatter(output_files)
+    # # Scatter input files and output files to Dask workers to reduce overhead
+    # scattered_input_files = client.scatter(input_files)
+    # scattered_output_files = client.scatter(output_files)
 
     # Create Dask delayed tasks for both fetching events from MiniAOD and entries from NanoAOD
     tasks = [
-        dask.delayed(get_num_events)(file) for file in scattered_input_files
+        dask.delayed(get_num_events)(file) for file in input_files
     ] + [
-        dask.delayed(get_num_entries_in_nanoAOD)(file) for file in scattered_output_files
+        dask.delayed(get_num_entries_in_nanoAOD)(file) for file in output_files
     ]
 
     # Compute the results in parallel using Dask
@@ -163,10 +163,14 @@ def main():
     """Main processing function."""
     years_and_input_files = {
         '2018Re': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_NanoAODv12_06March_Data_Run2018A.txt',
-        '2018': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_06March_AllJobs.txt',
+        # '2018': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_06March_AllJobs.txt',
+        '2018': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2018_06March_AllJobs_grepDATA.txt',
         '2017': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_3Feb_AllJobs.txt',
         '2016APV': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_8Feb_2016APV.txt',
         '2016': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_8Feb_2016.txt',
+        'TestGautschi': 'skim_df_DifferentNEvents_2018_14March_Gautschi.csv',
+        'TestHammer': 'skim_df_DifferentNEvents_2018_14March_hammer.csv',
+        'TestLxplus': 'skim_df_DifferentNEvents_2018_14March_Lxplus.csv',
     }
 
     years_and_output_dirs = {
@@ -175,10 +179,14 @@ def main():
         '2017': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/',
         '2016APV': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/',
         '2016': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/',
+        'TestGautschi': '/eos/purdue/store/user/rasharma/Test_Gautschi/UL2018/',
+        'TestHammer': '/eos/purdue/store/user/rasharma/Test_Hammer/UL2018/',
+        'TestLxplus': '/eos/purdue/store/user/rasharma/Test_Lxplus/UL2018/',
     }
 
-    years = ['2018', '2017', '2016APV', '2016']
-    additional_string = "17March"
+    # years = ['2018', '2017', '2016APV', '2016']
+    years = ['TestGautschi', 'TestHammer', 'TestLxplus']
+    additional_string = "20March"
 
     for year in years:
         input_file = years_and_input_files[year]

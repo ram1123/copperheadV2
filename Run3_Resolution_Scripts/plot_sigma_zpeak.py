@@ -128,7 +128,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibrat
     Also, given that we care about the resolution, not the actual parameter values alpha and n, we can
     put whatevere restrictions we want.
     """
-    mean = rt.RooRealVar("mean" , "mean", 125, 110,135) # mean is mean relative to BW
+    mean = rt.RooRealVar("mean" , "mean", 91, 110,135) # mean is mean relative to BW
     # mean = rt.RooRealVar("mean" , "mean", 100, 95,110) # test
     sigma = rt.RooRealVar("sigma" , "sigma", 2, .1, 4.0)
     alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
@@ -360,7 +360,7 @@ def fitPlot_ggh(events_bsOn, events_bsOff, save_filename, save_plot=True, contro
     print("==================================================")
 
     mass_name = "mh_ggh"
-    if control_region == "z-peak":
+    if control_region == "z-peak" or control_region == "z_peak":
         mass = rt.RooRealVar(mass_name, mass_name, 90, 70, 110) # Z-peak
     elif control_region == "signal":
         mass = rt.RooRealVar(mass_name, mass_name, 120, 115, 135) # signal region
@@ -375,7 +375,7 @@ def fitPlot_ggh(events_bsOn, events_bsOff, save_filename, save_plot=True, contro
 
     dimuon_mass = ak.to_numpy(events_bsOff.dimuon_mass)
     wgt = ak.to_numpy(events_bsOff.wgt_nominal)
-    hist_bsOff = generateRooHist(mass, dimuon_mass, wgt, name=f"No BSC")
+    hist_bsOff = generateRooHist(mass, dimuon_mass, wgt, name=f"geofit")
     hist_bsOff = normalizeRooHist(mass, hist_bsOff)
     print(f"fitPlot_ggh hist_bsOff: {hist_bsOff}")
 
@@ -383,7 +383,7 @@ def fitPlot_ggh(events_bsOn, events_bsOff, save_filename, save_plot=True, contro
     # Fitting
     # --------------------------------------------------
 
-    MH_bsOn = rt.RooRealVar("MH" , "MH", 125, 110, 150)
+    MH_bsOn = rt.RooRealVar("MH" , "MH", 91, 70, 110)
     sigma_bsOn = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
     alpha1_bsOn = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
     n1_bsOn = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
@@ -397,7 +397,7 @@ def fitPlot_ggh(events_bsOn, events_bsOff, save_filename, save_plot=True, contro
     fit_result = model_bsOn.fitTo(hist_bsOn,  EvalBackend=device, Save=True, SumW2Error=True)
     fit_result.Print()
 
-    MH_bsOff = rt.RooRealVar("MH" , "MH", 125, 110, 150)
+    MH_bsOff = rt.RooRealVar("MH" , "MH", 91, 70, 110)
     sigma_bsOff = rt.RooRealVar("sigma" , "sigma", 1.8228, .1, 4.0)
     alpha1_bsOff = rt.RooRealVar("alpha1" , "alpha1", 1.12842, 0.01, 65)
     n1_bsOff = rt.RooRealVar("n1" , "n1", 4.019960, 0.01, 100)
@@ -433,14 +433,14 @@ def fitPlot_ggh(events_bsOn, events_bsOff, save_filename, save_plot=True, contro
 
     hist_bsOff.plotOn(frame, rt.RooFit.MarkerColor(rt.kBlue), rt.RooFit.LineColor(rt.kBlue), Invisible=False )
     model_bsOff.plotOn(frame, Name=name, LineColor=rt.kBlue)
-    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "ggH Powheg with No BSC", "L")
+    legend.AddEntry(frame.getObject(int(frame.numItems())-1), "ggH Powheg with geofit", "L")
     sigma_val = round(sigma_bsOff.getVal(), 3)
     sigma_err = round(sigma_bsOff.getError(), 3)
     mean_val = round(MH_bsOff.getVal(), 3)
     mean_err = round(MH_bsOff.getError(), 3)
 
-    legend.AddEntry("", f"No BSC mean: {mean_val} +- {mean_err}", "")
-    legend.AddEntry("", f"No BSC sigma: {sigma_val} +- {sigma_err}", "")
+    legend.AddEntry("", f"geofit mean: {mean_val} +- {mean_err}", "")
+    legend.AddEntry("", f"geofit sigma: {sigma_val} +- {sigma_err}", "")
 
     # append results in a csv file, with format: category, sigma BSOn +/- error, sigma BSOFF +/- error, % diff
     with open("fit_results.csv", "a") as f:
@@ -448,9 +448,9 @@ def fitPlot_ggh(events_bsOn, events_bsOff, save_filename, save_plot=True, contro
         f.write(f"{region},{round(sigma_bsOn.getVal(),3)},{round(sigma_bsOn.getError(),3)},{round(sigma_bsOff.getVal(),3)},{round(sigma_bsOff.getError(),3)},{round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)}\n")
 
     # get a latex style table
-    with open("fit_results.tex", "a") as f:
+    with open("fit_results.txt", "a") as f:
         region = "Inclusive" if region == "" else region
-        f.write(f"{region} & {round(sigma_bsOn.getVal(),3)} \\pm {round(sigma_bsOn.getError(),3)} & {round(sigma_bsOff.getVal(),3)} \\pm {round(sigma_bsOff.getError(),3)} & {round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),0)} \\\\ \n")
+        f.write(f"{region} & {round(sigma_bsOn.getVal(),3)} \\pm {round(sigma_bsOn.getError(),3)} & {round(sigma_bsOff.getVal(),3)} \\pm {round(sigma_bsOff.getError(),3)} & {round(100*(abs(sigma_bsOff.getVal()-sigma_bsOn.getVal()))/sigma_bsOff.getVal(),3)} \\\\ \n")
 
 
 
@@ -494,14 +494,15 @@ if __name__ == "__main__":
 
     # load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSon//stage1_output/2018/f1_0/data_A/0/*.parquet"
     # load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSon//stage1_output/2018/f1_0/ggh_powhegPS/0/*.parquet"
-    load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn/stage1_output/2022preEE/f1_0/ggh_powhegPS/0/*.parquet"
+    # load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn/stage1_output/2022preEE/f1_0/ggh_powhegPS/0/*.parquet"
     # load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+    load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
 
     # print(f"file: {file}")
     # events_data = dak.from_parquet(f"{file}/*/*.parquet")
     events_data = dak.from_parquet(f"{load_path}")
-    # control_region = "z-peak" # z-peak or signal
-    control_region = "signal" # z-peak or signal
+    control_region = "z-peak" # z-peak or signal
+    # control_region = "signal" # z-peak or signal
 
     events_data = ak.zip({field: events_data[field] for field in V1_fields_2compute}).compute()
     events_BSon = filterRegion(events_data, region=control_region)
@@ -520,7 +521,7 @@ if __name__ == "__main__":
     # load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSoff//stage1_output/2018/f1_0/ggh_powhegPS/0/*.parquet"
     # load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/ggh_powhegPS/0/*.parquet"
     # load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
-    load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/ggh_powhegPS/0/*.parquet"
+    load_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
     events_data = dak.from_parquet(f"{load_path}")
 
     events_data = ak.zip({field: events_data[field] for field in V1_fields_2compute}).compute()
@@ -539,13 +540,13 @@ if __name__ == "__main__":
 
     # sys.exit()
 
-    fitPlot_ggh(events_BSon, events_BSoff, "BSC_OnOff_comparison_2022PreEE_h-peak_all.pdf", save_plot=True, control_region=control_region)
+    fitPlot_ggh(events_BSon, events_BSoff, f"BSC_geofit_comparison_2022PreEE_{control_region}_all.pdf", save_plot=True, control_region=control_region)
 
     # plot for BB, BE and EE
     # for region in ["BB", "BE", "EE"]:
-        # fitPlot_ggh(events_BSon, events_BSoff, f"BSC_OnOff_comparison_2022PreEE_{region}.pdf", save_plot=True, control_region=control_region, selection=region)
+        # fitPlot_ggh(events_BSon, events_BSoff, f"BSC_geofit_comparison_2022PreEE_{region}.pdf", save_plot=True, control_region=control_region, selection=region)
 
     for region in ["BB", "BO", "OB", "OO", "BE", "EB", "EO", "OE", "EE"]:
         events_BSon_region = filterRegion_UsingRapidity(events_BSon, region)
         events_BSoff_region = filterRegion_UsingRapidity(events_BSoff, region)
-        fitPlot_ggh(events_BSon_region, events_BSoff_region, f"BSC_OnOff_comparison_2022PreEE_h-peak_{region}.pdf", save_plot=True,  control_region=control_region, region=region)
+        fitPlot_ggh(events_BSon_region, events_BSoff_region, f"BSC_geofit_comparison_2022PreEE_{control_region}_{region}.pdf", save_plot=True,  control_region=control_region, region=region)

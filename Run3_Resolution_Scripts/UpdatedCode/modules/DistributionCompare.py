@@ -733,10 +733,6 @@ class DistributionCompare:
 
         Note: Uses RooDataSet (not RooDataHist) for unbinned maximum likelihood fit.
         """
-        import ROOT as rt
-        import awkward as ak
-        import os
-
         if events_dict is None:
             events_dict = self.events
 
@@ -749,16 +745,21 @@ class DistributionCompare:
         # Mass observable
         if self.control_region in ["z-peak", "z_peak"]:
             mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 91.2, 70, 110)
+            mean_bw_value = 91.1880
+            width_bw_value = 2.4955
         elif self.control_region == "signal":
-            mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 125.0, 115, 135)
+            mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 125.2, 115, 135)
+            mean_bw_value = 125.2
+            width_bw_value = 0.0037
         else:
             raise ValueError(f"Unknown control region: {self.control_region}")
 
         frame = mass.frame()
 
         # BW parameters (fixed)
-        mean_bw = rt.RooRealVar("mean_bw", "mean_bw", 91.188)
-        width_bw = rt.RooRealVar("width_bw", "width_bw", 2.4955)
+
+        mean_bw = rt.RooRealVar("mean_bw", "mean_bw", mean_bw_value, mean_bw_value - width_bw_value, mean_bw_value + width_bw_value)
+        width_bw = rt.RooRealVar("width_bw", "width_bw", width_bw_value, width_bw_value - width_bw_value*0.25, width_bw_value + width_bw_value*0.25)
         mean_bw.setConstant(True)
         width_bw.setConstant(True)
         bw = rt.RooBreitWigner("bw", "Breit-Wigner", mass, mean_bw, width_bw)

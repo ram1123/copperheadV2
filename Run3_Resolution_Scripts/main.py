@@ -44,7 +44,8 @@ def read_files(control_region):
     elif str(year) == "2022preEE":
         # load_path_bs_on = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
         load_path_bs_on = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
-        load_path_bs_off = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+        # load_path_bs_off = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+        load_path_bs_off = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
 
     events_data = dak.from_parquet(load_path_bs_on)
     events_data = ak.zip({field: events_data[field] for field in fields_to_compute}).compute()
@@ -59,8 +60,8 @@ def read_files(control_region):
 if __name__ == "__main__":
     client = Client(n_workers=15, threads_per_worker=2, processes=True, memory_limit='8 GiB')
 
-    control_region = "signal"
-    # control_region = "z-peak"
+    # control_region = "signal"
+    control_region = "z-peak"
     events_bs_on, events_bs_off = read_files(control_region)
 
     # Add variable: ptErr/pT for both leading and sub-leading muons
@@ -69,12 +70,14 @@ if __name__ == "__main__":
     events_bs_on = ak.with_field(events_bs_on, events_bs_on.mu2_ptErr/events_bs_on.mu2_pt, "mu2_Ratio_pTErr_pt")
     events_bs_off = ak.with_field(events_bs_off, events_bs_off.mu2_ptErr/events_bs_off.mu2_pt, "mu2_Ratio_pTErr_pt")
 
+# DistributionComparer
     # print entries in each dataset
     print(f"Number of events in bs_on: {len(events_bs_on)}")
     print(f"Number of events in bs_off: {len(events_bs_off)}")
 
-    getBasicVariables = True
-    getBasicVariables_2D = True
+    getBasicVariables = False
+    getBasicVariables_pTDipInvestigate = True
+    getBasicVariables_2D = False
     getHigherOrderVariables = False
     ggH_Filter = False
     vbf_Filter = False # error range
@@ -82,6 +85,32 @@ if __name__ == "__main__":
     # get log_plots dir if it doesn't exist
     if not os.path.exists("log_plots"):
         os.makedirs("log_plots")
+
+    if getBasicVariables_pTDipInvestigate:
+        compare_kinematics(events_bs_on, events_bs_off, "mu2_pt", "Sub-Leading Muon p_{T} [GeV]", save_filename="kinematics_comparison"+"_"+control_region)
+        # get 2D plots for sub-leading muon pT and eta
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu2_pt", "mu2_eta", "Sub-Leading Muon p_{T} [GeV]", "Sub-Leading Muon #eta", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu2_pt", "mu2_phi", "Sub-Leading Muon p_{T} [GeV]", "Sub-Leading Muon #phi", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu2_eta", "mu2_phi", "Sub-Leading Muon #eta", "Sub-Leading Muon #phi", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)
+
+        # get 2D plots for leading muon pT and eta
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu1_pt", "mu1_eta", "Leading Muon p_{T} [GeV]", "Leading Muon #eta", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu1_pt", "mu1_phi", "Leading Muon p_{T} [GeV]", "Leading Muon #phi", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu1_eta", "mu1_phi", "Leading Muon #eta", "Leading Muon #phi", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)
+
+        # get 2D plots for leading muon and sub-leading muon pT, eta and phi
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu1_pt", "mu2_pt", "Leading Muon p_{T} [GeV]", "Sub-Leading Muon p_{T} [GeV]", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu1_eta", "mu2_eta", "Leading Muon #eta", "Sub-Leading Muon #eta", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu1_phi", "mu2_phi", "Leading Muon #phi", "Sub-Leading Muon #phi", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)
+
+        # add sub-leading muon pT cut 40-50 GeV
+        events_bs_on = events_bs_on[(events_bs_on.mu2_pt > 40) & (events_bs_on.mu2_pt < 55)]
+        events_bs_off = events_bs_off[(events_bs_off.mu2_pt > 40) & (events_bs_off.mu2_pt < 55)]
+        # get 2D plots for sub-leading muon pT and eta
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu2_pt", "mu2_eta", "Sub-Leading Muon p_{T} [GeV]", "Sub-Leading Muon #eta", save_filename="kinematics_comparison_2DPlots"+"_"+control_region+"_subleadMuPtCut40-50")
+        compare_kinematics_2D(events_bs_on, events_bs_off, "mu2_pt", "mu2_phi", "Sub-Leading Muon p_{T} [GeV]", "Sub-Leading Muon #phi", save_filename="kinematics_comparison_2DPlots"+"_"+control_region+"_subleadMuPtCut40-50")
+
+        pass
 
     if getBasicVariables_2D:
         compare_kinematics_2D(events_bs_on, events_bs_off, "mu1_pt", "mu1_ptErr", "Leading Muon p_{T} [GeV]", "Leading Muon p_{T} Error [GeV]", save_filename="kinematics_comparison_2DPlots"+"_"+control_region)

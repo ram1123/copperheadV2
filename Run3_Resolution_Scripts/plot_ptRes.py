@@ -65,6 +65,11 @@ def filter_region_using_rapidity_SubleadMuon(events, region):
     }
     return events[eta_bins[region]]
 
+def filter_subleading_muon_pt(events, pt_low, pt_high):
+    # Function to filter events based on subleading muon pt
+    pt_filter = (events.mu2_pt > pt_low) & (events.mu2_pt < pt_high)
+    return events[pt_filter]
+
 def filter_region_using_rapidity(events, region):
     # Function to filter events based on leading and subleading muon rapidity
     # Eta bins:
