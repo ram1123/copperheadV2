@@ -1,0 +1,48 @@
+year: 2022preEE
+control_region: signal
+directoryTag: March21_Data_DiMuon_RapidityBins
+
+input_paths_labels:
+  BSC ON: "/depot/cms/.../Run3_nanoAODv12_BSOn/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+  BSC OFF: "/depot/cms/.../Run2_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+
+fields_to_load:
+  - wgt_nominal
+  - mu1_pt
+  - mu1_eta
+  - mu1_phi
+  - mu2_pt
+  - mu2_eta
+  - mu2_phi
+  - mu1_ptErr
+  - mu2_ptErr
+  - dimuon_pt
+  - dimuon_eta
+  - dimuon_phi
+  - dimuon_mass
+  - dimuon_ebe_mass_res_rel
+
+variables:
+  leading_muon:
+    - mu1_pt
+    - mu1_ptErr
+    - ratio_pTErr_pt_mu1
+    - mu1_eta
+    - mu1_phi
+  subleading_muon:
+    - mu2_pt
+    - mu2_ptErr
+    - ratio_pTErr_pt_mu2
+    - mu2_eta
+    - mu2_phi
+  dimuon:
+    - dimuon_pt
+    - dimuon_eta
+    - dimuon_phi
+    - dimuon_mass
+    - dimuon_ebe_mass_res_rel
+
+regions:
+  single_muon: ["B", "O", "E"]
+  double_muon: ["BB", "BO", "BE", "OB", "OO", "OE", "EB", "EO", "EE"]
+
