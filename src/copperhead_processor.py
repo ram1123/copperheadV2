@@ -890,7 +890,8 @@ class EventProcessor(processor.ProcessorABC):
         dimuon = mu1+mu2
 
         
-        dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode, doing_BS_correction=doing_BS_correction)
+        uncalibrated_dimuon_ebe_mass_res, calibration = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode, doing_BS_correction=doing_BS_correction)
+        dimuon_ebe_mass_res = uncalibrated_dimuon_ebe_mass_res * calibration
         dimuon_ebe_mass_res_rel = dimuon_ebe_mass_res/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
         dimuon_cos_theta_eta, dimuon_phi_eta = etaFrame_variables(mu1,mu2)
@@ -1235,6 +1236,7 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_dR" : dimuon_dR,
             "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
             "dimuon_ebe_mass_res_rel" : dimuon_ebe_mass_res_rel,
+            "uncalibrated_dimuon_ebe_mass_res" : uncalibrated_dimuon_ebe_mass_res,
             "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
             "dimuon_phi_cs" : dimuon_phi_cs,
             "dimuon_cos_theta_eta" : dimuon_cos_theta_eta,
@@ -1461,7 +1463,8 @@ class EventProcessor(processor.ProcessorABC):
                 abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
             )
     
-        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
+        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
+        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5), calibration
         # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
     
     def prepare_jets(self, events, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
@@ -1673,14 +1676,15 @@ class EventProcessor(processor.ProcessorABC):
         jets = ak.to_packed(jets[jet_selection]) 
 
         # apply jetpuid if not have done already
-        if not is_2017 and is_mc:
-            jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
+        # FIXME
+        # if not is_2017 and is_mc:
+        #     jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
         
-        if is_mc:
-            # now we add jetpuid_wgt
-            weights.add("jetpuid_wgt", 
-                    weight=jetpuid_weight,
-            )
+        # if is_mc:
+        #     # now we add jetpuid_wgt
+        #     weights.add("jetpuid_wgt", 
+        #             weight=jetpuid_weight,
+        #     )
 
         
         
