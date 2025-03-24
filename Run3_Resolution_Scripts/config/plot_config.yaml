@@ -1,10 +1,10 @@
 year: 2022preEE
-control_region: signal
-directoryTag: March21_Data_DiMuon_RapidityBins
+control_region: z-peak
+directoryTag: March24
 
 input_paths_labels:
-  BSC ON: "/depot/cms/.../Run3_nanoAODv12_BSOn/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
-  BSC OFF: "/depot/cms/.../Run2_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+  "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+  "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
 
 fields_to_load:
   - wgt_nominal
@@ -42,7 +42,49 @@ variables:
     - dimuon_mass
     - dimuon_ebe_mass_res_rel
 
-regions:
-  single_muon: ["B", "O", "E"]
-  double_muon: ["BB", "BO", "BE", "OB", "OO", "OE", "EB", "EO", "EE"]
+plot_types:
+  plot_1D: false
+  plot_2D: true
+  fit_z_peak: true
+  fit_signal: true
 
+regions_plot:
+  leading_muon:
+    enable: true
+    regions: ["B", "O", "E"]
+    variables:
+      - mu1_pt
+      - mu1_ptErr
+      - mu1_eta
+      - ratio_pTErr_pt_mu1
+
+  subleading_muon:
+    enable: true
+    regions: ["B", "O", "E"]
+    variables:
+      - mu2_pt
+      - mu2_ptErr
+      - mu2_eta
+      - ratio_pTErr_pt_mu2
+
+  double_muon:
+    enable: false
+    regions: ["BB", "BO", "BE", "OB", "OO", "OE", "EB", "EO", "EE"]
+    variables:
+      - dimuon_pt
+      - dimuon_mass
+      - dimuon_ebe_mass_res_rel
+    plot_2D:
+      - [dimuon_mass, dimuon_ebe_mass_res_rel]
+      - [dimuon_mass, dimuon_phi]
+      - [dimuon_mass, dimuon_eta]
+      - [dimuon_pt, dimuon_eta]
+      - [dimuon_pt, dimuon_mass]
+      - [dimuon_pt, dimuon_phi]
+      - [dimuon_pt, dimuon_ebe_mass_res_rel]
+      - [dimuon_eta, dimuon_ebe_mass_res_rel]
+      - [dimuon_phi, dimuon_ebe_mass_res_rel]
+
+fit_categories:
+  - z-peak
+  - regions

@@ -177,8 +177,8 @@ class DistributionCompare:
         canvas.Clear()
 
     # def compare_all(self, variables, events = self.events, region = "inclusive" outdir="plots"):
-    def compare_all(self, variables, outdir="plots", events_dict=None, suffix=None):
-        outdir = f"{outdir}/{self.year}/{self.directoryTag}"
+    def compare_all(self, variables, outdir="plots/1D", events_dict=None, suffix=None):
+        outdir = f"{outdir}/{self.year}/{self.directoryTag}/{self.control_region}"
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
@@ -191,7 +191,7 @@ class DistributionCompare:
             filename = f"{outdir}/{var}_{suffix}.pdf"
             self.compare(var, filename=filename, events_dict=events_dict)
 
-    def compare_2D(self, var1, var2, xlabel=None, ylabel=None, filename_prefix="comparison_2D", outdir="plots_2D", events_dict=None, suffix=None):
+    def compare_2D(self, var1, var2, xlabel=None, ylabel=None, filename_prefix="comparison_2D", outdir="plots/2D", events_dict=None, suffix=None):
         rt.gStyle.SetOptStat(0)
 
         # Set color palette
@@ -211,7 +211,7 @@ class DistributionCompare:
         xlabel = xlabel or xtitle
         ylabel = ylabel or ytitle
 
-        outdir = f"{outdir}/{self.year}/{self.directoryTag}"
+        outdir = f"{outdir}/{self.year}/{self.directoryTag}/{self.control_region}"
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
@@ -275,7 +275,7 @@ class DistributionCompare:
         roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist)
         return roo_hist_normalized
 
-    def fit_dimuonInvariantMass(self, events_dict=None, outdir = "plots", suffix=None):
+    def fit_dimuonInvariantMass(self, events_dict=None, outdir = "plots/mass_resolution_defaultfunc", suffix=None):
         """
         generate histogram from dimuon mass and wgt, fit DCB
         aftwards, plot the histogram and return the fit params
@@ -450,7 +450,7 @@ class DistributionCompare:
             os.makedirs(os.path.dirname(save_filename))
         canvas.SaveAs(save_filename)
 
-    def fit_dimuonInvariantMass_DCBXBW(self, events_dict=None, outdir="plots", suffix=None):
+    def fit_dimuonInvariantMass_DCBXBW(self, events_dict=None, outdir="plots/mass_resolution_defaultfunc2", suffix=None):
         """
         Generate a histogram from dimuon mass and weight, fit with DCB × BW (Double Crystal Ball × Breit-Wigner),
         and return fit parameters: sigma and chi2/dof.
@@ -507,7 +507,7 @@ class DistributionCompare:
         # -----------------------------
         #  Convolution (BW × DCB)
         # -----------------------------
-        model = rt.RooFFTConvPdf("DCB_BW", "DCB × BW Fit", mass, bw, model_DCB)
+        model = rt.RooFFTConvPdf("DCB_BW", "DCB x BW Fit", mass, bw, model_DCB)
         mass.setBins(10000, "cache")  # FFT Convolution bins for accuracy
 
         colors = [rt.kBlue, rt.kRed, rt.kGreen+2, rt.kMagenta, rt.kCyan, rt.kOrange, rt.kViolet]
@@ -535,8 +535,8 @@ class DistributionCompare:
 
             # Plot
             color = colors[idx % len(colors)]  # Assign different color to each dataset
-            hist.plotOn(frame, rt.RooFit.Name(f"hist_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}"), rt.RooFit.MarkerColor(color), rt.RooFit.LineColor(color))
-            model.plotOn(frame, rt.RooFit.Name(f"model_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}"), rt.RooFit.LineColor(color))
+            hist.plotOn(frame, rt.RooFit.Name(f'hist_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}'), rt.RooFit.MarkerColor(color), rt.RooFit.LineColor(color))
+            model.plotOn(frame, rt.RooFit.Name(f'model_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}'), rt.RooFit.LineColor(color))
 
             # Compute Fit Metrics
             sigma_val = round(sigma_bsOn.getVal(), 3)
@@ -553,16 +553,16 @@ class DistributionCompare:
             chiSquare_dof = round(chi2_o_ndf.getVal(), 3)
 
             new_nfree_params = fit_result.floatParsFinal().getSize()
-            chi2 = frame.chiSquare(f"model_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}", f"hist_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}", new_nfree_params)
+            chi2 = frame.chiSquare(f'model_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', f'hist_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', new_nfree_params)
 
             # Add Legend Entries
-            legend.AddEntry(frame.getObject(int(frame.numItems()) - 1), f"{label} (Fit)", "L")
+            legend.AddEntry(frame.getObject(int(frame.numItems()) - 1), f"{label} (DCB x BW)", "L")
             # legend.AddEntry("", f"   mean: {mean_val} #pm {mean_err}", "")
             legend.AddEntry("", f"   sigma: {sigma_val} #pm {sigma_err}", "")
             legend.AddEntry("", f" #chi^2 : {round(chi2, 3)}", "")
             legend.AddEntry("", f" #chi^2 / ndf: {round(chi2/new_nfree_params,3)}", "")
 
-            print(f"\n🔹 {label} → Chi²: {chi2:.3f} | Free Params: {new_nfree_params}")
+            print(f"\n{label} -> Chi²: {chi2:.3f} | Free Params: {new_nfree_params}")
             print(f"   Chi²/NDF: {chi2/new_nfree_params:.3f}")
             # break
 
@@ -586,7 +586,7 @@ class DistributionCompare:
         # return fit_results
 
 
-    def fit_dimuonInvariantMass_DCBXBW_OLD(self, events_dict=None, outdir="plots", suffix=None):
+    def fit_dimuonInvariantMass_DCBXBW_OLD(self, events_dict=None, outdir="plots/mass_resolution_defaultfunc_old", suffix=None):
         """
         Generate a histogram from dimuon mass and weight, fit with DCB × BW (Double Crystal Ball × Breit-Wigner),
         and return fit parameters: sigma and chi2/dof.
@@ -665,7 +665,7 @@ class DistributionCompare:
         # -----------------------------
         #  Convolution (BW × DCB)
         # -----------------------------
-        model = rt.RooFFTConvPdf("DCB_BW", "DCB × BW Fit", mass, bw, model_DCB)
+        model = rt.RooFFTConvPdf("DCB_BW", "DCB x BW Fit", mass, bw, model_DCB)
         mass.setBins(10000, "cache")  # FFT Convolution bins for accuracy
 
         # -----------------------------
@@ -726,9 +726,9 @@ class DistributionCompare:
         canvas.SaveAs(save_filename)
         canvas.SaveAs(save_filename.replace(".pdf", ".png"))
 
-    def fit_dimuonInvariantMass_DCBXBW_Unbinned(self, events_dict=None, outdir="plots", suffix=None):
+    def fit_dimuonInvariantMass_DCBXBW_Unbinned(self, events_dict=None, outdir="plots/mass_resolution_unbinned", suffix=None):
         """
-        Perform an unbinned fit to the dimuon mass using a DCB × BW model.
+        Perform an unbinned fit to the dimuon mass using a DCB x BW model.
         Returns fit result and plots.
 
         Note: Uses RooDataSet (not RooDataHist) for unbinned maximum likelihood fit.
@@ -821,6 +821,100 @@ class DistributionCompare:
 
         frame.SetXTitle("Dimuon Mass (GeV)")
         frame.SetYTitle("Events")
+        frame.SetTitle(f"")
+        frame.Draw()
+        legend.Draw()
+        canvas.Update()
+        canvas.Draw()
+
+        save_path = f"{outdir}/{self.year}/{self.directoryTag}/fitPlot_Unbinned_{self.control_region}_{suffix}.pdf"
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        canvas.SaveAs(save_path)
+        canvas.SaveAs(save_path.replace(".pdf", ".png"))
+
+    def fit_dimuonInvariantMass_DCB_Unbinned(self, events_dict=None, outdir="plots/mass_resolution_unbinned", suffix=None):
+        """
+        Perform an unbinned fit to the dimuon mass using a DCB × BW model.
+        Returns fit result and plots.
+
+        Note: Uses RooDataSet (not RooDataHist) for unbinned maximum likelihood fit.
+        """
+        if events_dict is None:
+            events_dict = self.events
+
+        # Setup plotting
+        canvas = rt.TCanvas("canvas", "canvas", 800, 800)
+        legend = rt.TLegend(0.6, 0.6, 0.9, 0.9)
+
+        colors = [rt.kBlue, rt.kRed, rt.kGreen+2, rt.kMagenta, rt.kCyan, rt.kOrange, rt.kViolet]
+
+        # Mass observable
+        if self.control_region in ["z-peak", "z_peak"]:
+            sys.exit("DCB Unbinned fit not implemented for Z-peak")
+        elif self.control_region == "signal":
+            mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 125.2, 115, 135)
+            mean_bw_value = 125.2
+            width_bw_value = 0.0037
+        else:
+            raise ValueError(f"Unknown control region: {self.control_region}")
+
+        frame = mass.frame()
+
+        # DCB parameters (floating)
+        mean_dcb = rt.RooRealVar("mean_dcb", "mean_dcb", 125.2, 115, 135)
+        sigma = rt.RooRealVar("sigma", "sigma", 2.0, 0.5, 5.0)
+        alpha1 = rt.RooRealVar("alpha1", "alpha1", 1.5, 0.1, 10.0)
+        n1 = rt.RooRealVar("n1", "n1", 10.0, 1.0, 100.0)
+        alpha2 = rt.RooRealVar("alpha2", "alpha2", 1.5, 0.1, 10.0)
+        n2 = rt.RooRealVar("n2", "n2", 10.0, 1.0, 100.0)
+
+        model = rt.RooCrystalBall("DCB", "DCB", mass, mean_dcb, sigma, alpha1, n1, alpha2, n2)
+
+
+        # Choose one dataset for now (unbinned fit only works per-dataset)
+        for idx, (label, events) in enumerate(events_dict.items()):
+            print(f"Performing unbinned fit on: {label}")
+
+            # Extract mass and weight as numpy arrays
+            dimuon_mass = ak.to_numpy(events.dimuon_mass)
+            weights = ak.to_numpy(events.wgt_nominal)
+
+            # Create RooDataSet (unbinned)
+            data = rt.RooDataSet(label, label, rt.RooArgSet(mass), rt.RooFit.WeightVar("wgt"))
+            wgt_var = rt.RooRealVar("wgt", "wgt", 1.0)
+
+            for mval, w in zip(dimuon_mass, weights):
+                mass.setVal(mval)
+                wgt_var.setVal(w)
+                data.add(rt.RooArgSet(mass), w)
+
+            # Fit
+            fit_result = model.fitTo(data, EvalBackend="cpu", Save=True, SumW2Error=True)
+            fit_result.Print()
+
+            # Plot
+            color = colors[idx % len(colors)]  # Assign different color to each dataset
+            data.plotOn(frame, rt.RooFit.Name("data"), rt.RooFit.MarkerColor(color))
+            model.plotOn(frame, rt.RooFit.Name("DCB"), rt.RooFit.LineColor(color))
+
+            # Summary
+            sigma_val = round(sigma.getVal(), 3)
+            sigma_err = round(sigma.getError(), 3)
+            mean_val = round(mean_dcb.getVal(), 3)
+            mean_err = round(mean_dcb.getError(), 3)
+
+            n_params = fit_result.floatParsFinal().getSize()
+            chi2 = frame.chiSquare("DCB", "data", n_params)
+            legend.AddEntry(frame.getObject(int(frame.numItems()) - 1), f"{label} (DCB)", "L")
+            # legend.AddEntry("", f"mean: {mean_val} #pm {mean_err}", "")
+            legend.AddEntry("", f"sigma: {sigma_val} #pm {sigma_err}", "")
+            legend.AddEntry("", f"#chi^{2}/NDF: {round(chi2/n_params, 3)}", "")
+
+            # break  # only one fit for now
+
+        frame.SetXTitle("Dimuon Mass (GeV)")
+        frame.SetYTitle("Events")
+        frame.SetTitle(f"")
         frame.Draw()
         legend.Draw()
         canvas.Update()
