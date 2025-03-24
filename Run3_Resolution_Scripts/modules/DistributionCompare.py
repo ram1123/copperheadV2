@@ -379,8 +379,8 @@ class DistributionCompare:
         print("==================================================")
         ndf = model_bsOn.getParameters(rt.RooArgSet(mass)).getSize()
         print(f"ndf: {ndf}")
-        new_chi2 = frame.chiSquare(model_plot_name, "hist_bsOn", ndf)
-        print(f"new_chi2: {new_chi2}")
+        new_chi2_ndf = frame.chiSquare(model_plot_name, "hist_bsOn", ndf)
+        print(f"new_chi2_ndf: {new_chi2_ndf}")
 
         # --------------------------------------------------
 
@@ -469,6 +469,8 @@ class DistributionCompare:
         canvas.cd()
         legend = rt.TLegend(0.6, 0.60, 0.9, 0.9)
 
+        # Save fit
+
         # -----------------------------
         #  Define Mass Variable
         # -----------------------------
@@ -553,17 +555,17 @@ class DistributionCompare:
             chiSquare_dof = round(chi2_o_ndf.getVal(), 3)
 
             new_nfree_params = fit_result.floatParsFinal().getSize()
-            chi2 = frame.chiSquare(f'model_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', f'hist_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', new_nfree_params)
+            chi2_ndf = frame.chiSquare(f'model_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', f'hist_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', new_nfree_params)
 
             # Add Legend Entries
             legend.AddEntry(frame.getObject(int(frame.numItems()) - 1), f"{label} (DCB x BW)", "L")
             # legend.AddEntry("", f"   mean: {mean_val} #pm {mean_err}", "")
             legend.AddEntry("", f"   sigma: {sigma_val} #pm {sigma_err}", "")
-            legend.AddEntry("", f" #chi^2 : {round(chi2, 3)}", "")
-            legend.AddEntry("", f" #chi^2 / ndf: {round(chi2/new_nfree_params,3)}", "")
+            # legend.AddEntry("", f" #chi^2 : {round(chi2_ndf, 3)}", "")
+            legend.AddEntry("", f" #chi^2 / ndf: {round(chi2_ndf,3)}", "")
 
-            print(f"\n{label} -> Chi²: {chi2:.3f} | Free Params: {new_nfree_params}")
-            print(f"   Chi²/NDF: {chi2/new_nfree_params:.3f}")
+            print(f"\n{label} -> Chi²: {chi2_ndf:.3f} | Free Params: {new_nfree_params}")
+            print(f"   Chi²/NDF: {chi2_ndf/new_nfree_params:.3f}")
             # break
 
         # -----------------------------
@@ -811,11 +813,12 @@ class DistributionCompare:
             mean_err = round(mean_dcb.getError(), 3)
 
             n_params = fit_result.floatParsFinal().getSize()
-            chi2 = frame.chiSquare("DCB_BW", "data", n_params)
+            chi2_ndf = frame.chiSquare("DCB_BW", "data", n_params)
             legend.AddEntry(frame.getObject(int(frame.numItems()) - 1), f"{label} (DCB x BW)", "L")
             # legend.AddEntry("", f"mean: {mean_val} #pm {mean_err}", "")
             legend.AddEntry("", f"sigma: {sigma_val} #pm {sigma_err}", "")
-            legend.AddEntry("", f"#chi^{2}/NDF: {round(chi2/n_params, 3)}", "")
+            # legend.AddEntry("", f"#chi^{2}/NDF: {round(chi2_ndf/n_params, 3)}", "")
+            legend.AddEntry("", f"#chi^{2}/NDF: {round(chi2_ndf, 3)}", "")
 
             # break  # only one fit for now
 
@@ -904,11 +907,11 @@ class DistributionCompare:
             mean_err = round(mean_dcb.getError(), 3)
 
             n_params = fit_result.floatParsFinal().getSize()
-            chi2 = frame.chiSquare("DCB", "data", n_params)
+            chi2_ndf = frame.chiSquare("DCB", "data", n_params)
             legend.AddEntry(frame.getObject(int(frame.numItems()) - 1), f"{label} (DCB)", "L")
             # legend.AddEntry("", f"mean: {mean_val} #pm {mean_err}", "")
             legend.AddEntry("", f"sigma: {sigma_val} #pm {sigma_err}", "")
-            legend.AddEntry("", f"#chi^{2}/NDF: {round(chi2/n_params, 3)}", "")
+            legend.AddEntry("", f"#chi^{2}/NDF: {round(chi2_ndf, 3)}", "")
 
             # break  # only one fit for now
 

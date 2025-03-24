@@ -29,15 +29,24 @@ if config["plot_types"]["plot_2D"]:
             comparer.compare_2D(var1, var2)
 
 if config["plot_types"]["fit_z_peak"] and control_region in ["z-peak", "z_peak"]:
-    comparer.fit_dimuonInvariantMass_DCBXBW(suffix="Inclusive")
-    comparer.fit_dimuonInvariantMass_DCBXBW_Unbinned(suffix="Inclusive")
+    # comparer.fit_dimuonInvariantMass_DCBXBW(suffix="Inclusive")
+    # comparer.fit_dimuonInvariantMass_DCBXBW_Unbinned(suffix="Inclusive")
+    # print(config["fit_categories"]["z-peak"])
+    if config["fit_categories"]["z-peak"]["binned"]:
+        comparer.fit_dimuonInvariantMass_DCBXBW(suffix="Inclusive")
+    if config["fit_categories"]["z-peak"]["unbinned"]:
+        comparer.fit_dimuonInvariantMass_DCBXBW_Unbinned(suffix="Inclusive")
 
     # Plot in double-muon regions (eta1 ⊗ eta2)
     for region in ["BB", "BO", "BE", "OB", "OO", "OE", "EB", "EO", "EE"]:
         print(f"Double-muon region: {region}")
         filtered = {label: comparer.filter_eta(events, region) for label, events in comparer.events.items()}
-        comparer.fit_dimuonInvariantMass_DCBXBW(events_dict=filtered, suffix=region)
-        comparer.fit_dimuonInvariantMass_DCBXBW_Unbinned(events_dict=filtered, suffix=region)
+        # comparer.fit_dimuonInvariantMass_DCBXBW(events_dict=filtered, suffix=region)
+        # comparer.fit_dimuonInvariantMass_DCBXBW_Unbinned(events_dict=filtered, suffix=region)
+        if config["fit_categories"]["z-peak"]["binned"]:
+            comparer.fit_dimuonInvariantMass_DCBXBW(suffix="Inclusive")
+        if config["fit_categories"]["z-peak"]["unbinned"]:
+            comparer.fit_dimuonInvariantMass_DCBXBW_Unbinned(suffix="Inclusive")
 
 
 if config["plot_types"]["fit_signal"] and control_region == "signal":
@@ -53,7 +62,7 @@ if config["plot_types"]["fit_signal"] and control_region == "signal":
 
 # ----
 for var in config.get("plot_1D", []):
-    comparer.compare(var)
+    comparer.compare_all(var)
 
 for var_pair in config.get("plot_2D", []):
     comparer.compare_2D(var_pair[0], var_pair[1])
