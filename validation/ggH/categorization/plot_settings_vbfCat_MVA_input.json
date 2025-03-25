@@ -7,6 +7,14 @@
         "xlabel": "$m_{\\mu\\mu}$ [GeV]",
         "color": "royalblue"
     },
+    "BDT_score": {
+        "variable": "BDT_score",
+        "binning_linspace": [0, 1, 51],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "BDT Score",
+        "color": "royalblue"
+    },
     "dimuon_pt": {
         "variable": "dimuon_pt",
         "binning_linspace": [0, 300, 31],

@@ -5,10 +5,29 @@ set -e
 # sample_l="data dy ewk tt st ww wz zz" 
 sample_l="data ggh vbf dy ewk tt st ww wz zz" 
 
-label="V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix"
+# label="V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix"
+label="UpdatedDY_100_200_CrossSection_24Feb_jetpuidOff"
+
+
 stage2_load_path="/depot/cms/users/yun79/hmm/copperheadV1clean/$label/stage1_output"
 
-category="20Mar2025_ggh"
+# category="20Mar2025_ggh"
+
+model_name="V2_UL_Mar24_2025_DyTtStVvEwkGghVbf_scale_pos_weight"
+category="${model_name}_ggh"
+
+# year="2018"
+# python validation_plot.py -label $label -cat $category --samples $sample_l -y $year
+
+year="2017"
+python validation_plot.py -label $label -cat $category --samples $sample_l -y $year
+
+# year="2016postVFP"
+# python validation_plot.py -label $label -cat $category --samples $sample_l -y $year
+
+# year="2016preVFP"
+# python validation_plot.py -label $label -cat $category --samples $sample_l -y $year
 
 
-python validation_plot.py -label $label -cat $category --samples $sample_l
+# year="all"
+# python validation_plot.py -label $label -cat $category --samples $sample_l -y $year
