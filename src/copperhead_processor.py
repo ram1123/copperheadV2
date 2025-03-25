@@ -482,7 +482,9 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"lumi_mask sum: {ak.sum(lumi_mask).compute()}")
         # print(f"event_filter after good vetex filters sum: {ak.sum(event_filter).compute()}")
         event_filter = event_filter & (evnt_qual_flg_selection > 0)
-        print(f"event_filter after good MET filters sum: {ak.sum(event_filter).compute()}")
+        # print(f"event_filter after good MET filters sum: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & HLT_filter
+        print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
        
             
         
@@ -542,20 +544,20 @@ class EventProcessor(processor.ProcessorABC):
         muon_selection = ak.ones_like(events.Muon.pt, dtype="bool")
         # -----
         muon_selection = muon_selection & (events.Muon.pt_raw >= self.config["muon_pt_cut"]) 
-        nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon raw pt cut: {ak.sum(nmuon_1_filter).compute()}")
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon raw pt cut: {ak.sum(nmuon_2_filter).compute()}")
         # -----
         muon_selection = muon_selection & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"]) 
-        nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon raw eta cut: {ak.sum(nmuon_1_filter).compute()}")
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon raw eta cut: {ak.sum(nmuon_2_filter).compute()}")
         # -----
         muon_selection = muon_selection & events.Muon[self.config["muon_id"]] 
-        nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon medium ID cut: {ak.sum(nmuon_1_filter).compute()}")
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon medium ID cut: {ak.sum(nmuon_2_filter).compute()}")
         # -----
         muon_selection = muon_selection & (events.Muon.isGlobal | events.Muon.isTracker)  
-        nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon isGlobal or isTracker cut: {ak.sum(nmuon_1_filter).compute()}")
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon isGlobal or isTracker cut: {ak.sum(nmuon_2_filter).compute()}")
         
         # # --------------------------------------------------------
         # # # Apply Rochester correction
@@ -580,8 +582,8 @@ class EventProcessor(processor.ProcessorABC):
         
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]) 
-        nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon RelIso cut after FSR recovery : {ak.sum(nmuon_1_filter).compute()}")
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon RelIso cut after FSR recovery : {ak.sum(nmuon_2_filter).compute()}")
 
         
         
@@ -672,17 +674,16 @@ class EventProcessor(processor.ProcessorABC):
         # Find opposite-sign muons
         mm_charge = ak.prod(muons.charge, axis=1) # techinally not a product of two leading pT muon charge, but (nmuons==2) cut ensures that there's only two muons
         
-        event_filter = event_filter & HLT_filter
-        print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
+        
         event_filter = event_filter & trigger_match
         print(f"event_filter sum after trigger match: {ak.sum(event_filter).compute()}")
 
         
 
         event_filter = event_filter & (nmuons == 2)
-        print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
+        # print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
         event_filter = event_filter & (mm_charge == -1)
-        print(f"event_filter sum after opposite charge cut: {ak.sum(event_filter).compute()}")
+        # print(f"event_filter sum after opposite charge cut: {ak.sum(event_filter).compute()}")
 # --------------------------------------------------------        
 
         # apply FSR correction, since trigger match is calculated
@@ -739,7 +740,6 @@ class EventProcessor(processor.ProcessorABC):
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
         print(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
-        ecal_gap = (1.444 < abs(events.Electron.eta)) & (abs(events.Electron.eta) <1.566)
         # electron_selection = (
         #     (events.Electron.pt > self.config["electron_pt_cut"])
         #     & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
@@ -752,25 +752,28 @@ class EventProcessor(processor.ProcessorABC):
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
 
+        event_filter = event_filter[event_filter==True]
+
         # apply electrons selection
         electrons = events.Electron
         electron_selection = ak.ones_like(electrons.pt, dtype="bool")
+        ecal_gap = (1.444 < abs(events.Electron.eta)) & (abs(events.Electron.eta) <1.566)
         # -----
         electron_selection = electron_selection & (electrons.pt > self.config["electron_pt_cut"])
         nelectron_1_filter = ak.any(electron_selection, axis=1)
-        print(f"nelectron_1_filter sum after electron pt cut: {ak.sum(nelectron_1_filter).compute()}")
+        # print(f"nelectron_1_filter sum after electron pt cut: {ak.sum(nelectron_1_filter).compute()}")
         # -----
         electron_selection = electron_selection & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
         nelectron_1_filter = ak.any(electron_selection, axis=1)
-        print(f"nelectron_1_filter sum after electron eta cut: {ak.sum(nelectron_1_filter).compute()}")
+        # print(f"nelectron_1_filter sum after electron eta cut: {ak.sum(nelectron_1_filter).compute()}")
         # -----
         electron_selection = electron_selection & events.Electron[electron_id]
         nelectron_1_filter = ak.any(electron_selection, axis=1)
-        print(f"nelectron_1_filter sum after electron ID cut: {ak.sum(nelectron_1_filter).compute()}")
+        # print(f"nelectron_1_filter sum after electron ID cut: {ak.sum(nelectron_1_filter).compute()}")
         # -----
         electron_selection = electron_selection & (~ecal_gap)
         nelectron_1_filter = ak.any(electron_selection, axis=1)
-        print(f"nelectron_1_filter sum after electron ecal rejection cut: {ak.sum(nelectron_1_filter).compute()}")
+        # print(f"nelectron_1_filter sum after electron ecal rejection cut: {ak.sum(nelectron_1_filter).compute()}")
         
         
         
@@ -808,7 +811,7 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"event_filter sum after Trigger match: {ak.sum(event_filter).compute()}")
         
         event_filter = event_filter & (electron_veto)
-        print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
+        # print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
         # raise ValueError
         # --------------------------------------------------------------------
 
@@ -1359,6 +1362,7 @@ class EventProcessor(processor.ProcessorABC):
         event_filter = event_filter & (nBtagLoose <=1)
         print(f"event_filter sum after loose btag cut: {ak.sum(event_filter).compute()}")
         event_filter = event_filter & (nBtagMedium <=0)
+        print(f"event_filter sum after medium btag cut: {ak.sum(event_filter).compute()}")
         # print(f"event_filter sum after medium btag cut: {ak.sum(event_filter).compute()}")
         # event_filter = event_filter & HLT_filter
         # print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
@@ -1729,36 +1733,36 @@ class EventProcessor(processor.ProcessorABC):
             jets["qgl"] = jets.btagPNetQvG # this is for saving btagPNetQvG as "qgl" for stage1 outputs
         # original jet_selection-----------------------------------------------
         
-        print(f"event_filter jet loop sanity check: {ak.sum(event_filter).compute()}")
+        # print(f"event_filter jet loop sanity check: {ak.sum(event_filter).compute()}")
         jet_selection = ak.ones_like(jets.pt, dtype="bool")
         # -----
         jet_selection = jet_selection & pass_jet_id
         njet_1_filter = ak.any(jet_selection, axis=1)
-        print(f"njet_1_filter sum after jet ID pass: {ak.sum(njet_1_filter).compute()}")
+        # print(f"njet_1_filter sum after jet ID pass: {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & pass_jet_puid
         njet_1_filter = ak.any(jet_selection, axis=1)
-        print(f"njet_1_filter sum after jet PUID pass: {ak.sum(njet_1_filter).compute()}")
+        # print(f"njet_1_filter sum after jet PUID pass: {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & (jets.pt > self.config["jet_pt_cut"])
         njet_1_filter = ak.any(jet_selection, axis=1)
-        print(f"njet_1_filter sum after jet pt cut: {ak.sum(njet_1_filter).compute()}")
+        # print(f"njet_1_filter sum after jet pt cut: {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & (abs(jets.eta) < self.config["jet_eta_cut"])
         njet_1_filter = ak.any(jet_selection, axis=1)
-        print(f"njet_1_filter sum after jet eta cut {ak.sum(njet_1_filter).compute()}")
+        # print(f"njet_1_filter sum after jet eta cut {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & qgl_cut
         njet_1_filter = ak.any(jet_selection, axis=1)
-        print(f"njet_1_filter sum after jet qgl cut {ak.sum(njet_1_filter).compute()}")
+        # print(f"njet_1_filter sum after jet qgl cut {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & clean
         njet_1_filter = ak.any(jet_selection, axis=1)
-        print(f"njet_1_filter sum after clean Jet cut: {ak.sum(njet_1_filter).compute()}")
+        # print(f"njet_1_filter sum after clean Jet cut: {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & HEMVeto
         njet_1_filter = ak.any(jet_selection, axis=1)
-        print(f"njet_1_filter sum after HEM Veto cut: {ak.sum(njet_1_filter).compute()}")
+        # print(f"njet_1_filter sum after HEM Veto cut: {ak.sum(njet_1_filter).compute()}")
         
         # jet_selection = (
         #     pass_jet_id
