@@ -30,6 +30,10 @@ def filterRegion(events, region="h-peak"):
     return events
 
 def zipAndCompute(events, fields2load):
+    zpt_wgt_name = "separate_wgt_zpt_wgt"
+    if zpt_wgt_name in events.fields:
+        events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # turn off Zpt
+    
     return_zip = ak.zip({
         field : events[field] for field in fields2load
     })
@@ -87,7 +91,8 @@ if __name__ == "__main__":
     # run_label = "V2_Jan09_ForZptReWgt"
     run_label = args.label
     if args.year == "all":
-        years =  ["2018", "2017","2016postVFP","2016preVFP"]
+        # years =  ["2018", "2017","2016postVFP","2016preVFP"]
+        years =  ["2017","2016postVFP","2016preVFP"]
     else:
         years = [args.year]
 

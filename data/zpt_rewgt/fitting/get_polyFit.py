@@ -2,13 +2,13 @@ import ROOT
 from scipy.stats import f
 from omegaconf import OmegaConf
 import os
-import argparse.ArgumentParser
+import argparse
 
 # dictionary of all orders of polynomial from f-test
 f_orders = { # to recalculate these, re-run f-test on do_f_test.py
     "2018" : {
         "njet0" : 5,
-        "njet1" : 4,
+        "njet1" : 4, #4
         "njet2" : 4,
     },
     "2017" : {
@@ -31,7 +31,7 @@ f_orders = { # to recalculate these, re-run f-test on do_f_test.py
 poly_fit_ranges = {
     "2018" : {
         "njet0" : [0, 85],
-        "njet1" : [0, 110],
+        "njet1" : [0, 50], #50
         "njet2" : [0, 50],
     },
     "2017" : {
@@ -76,6 +76,7 @@ if __name__ == "__main__":
     )
     # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
     # years = ["2018",]
+    args = parser.parse_args()
     run_label = args.label
     if args.year == "all":
         # years =  ["2018", "2017","2016postVFP","2016preVFP"]
@@ -136,7 +137,7 @@ if __name__ == "__main__":
     
     
                 # fit straight line
-                horizontal_line = ROOT.TF1("horizontal_line", "[0]", 0, 10) 
+                horizontal_line = ROOT.TF1("horizontal_line", "[0]", fit_xmax, global_fit_xmax) 
                 fit_results = hist_SF.Fit(horizontal_line, "S R+", xmin=fit_xmax, xmax=global_fit_xmax)
                 
                 # good setup
@@ -251,4 +252,4 @@ if __name__ == "__main__":
             config = OmegaConf.merge(config, save_dict)
         else:
             config = OmegaConf.create(save_dict)
-        # OmegaConf.save(config=config, f=yaml_path)
+        OmegaConf.save(config=config, f=yaml_path)
