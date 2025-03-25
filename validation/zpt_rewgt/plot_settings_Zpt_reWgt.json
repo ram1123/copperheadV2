@@ -7,6 +7,14 @@
         "xlabel": "$m_{\\mu\\mu}$ [GeV]",
         "color": "royalblue"
     },
+    "dimuon_mass_zpeak": {
+        "variable": "dimuon_mass",
+        "binning_linspace": [70, 110, 31],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$m_{\\mu\\mu}$ [GeV]",
+        "color": "royalblue"
+    },
     "dimuon_pt": {
         "variable": "dimuon_pt",
         "binning_linspace": [0, 200, 61],
@@ -241,6 +249,14 @@
         "xlabel": "$p_{T}(mu1)$ [GeV]",
         "color": "royalblue"
     },
+    "mu1_pt_over_mass": {
+        "variable": "mu1_pt_over_mass",
+        "binning_linspace": [0, 2, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$p_{T}(\\mu_{1})/M_{\\mu\\mu}$ [GeV]",
+        "color": "royalblue"
+    },
     "mu1_eta": {
         "variable": "mu1_eta",
         "binning_linspace": [-2.4, 2.4, 31],
@@ -263,6 +279,14 @@
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(mu2)$ [GeV]",
+        "color": "royalblue"
+    },
+    "mu2_pt_over_mass": {
+        "variable": "mu2_pt_over_mass",
+        "binning_linspace": [0, 2, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$p_{T}(\\mu_{2})/M_{\\mu\\mu}$ [GeV]",
         "color": "royalblue"
     },
     "mu2_eta": {

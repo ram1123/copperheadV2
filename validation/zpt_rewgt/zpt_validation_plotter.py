@@ -14,6 +14,7 @@ import glob
 import mplhep as hep
 import matplotlib.pyplot as plt
 import matplotlib
+import copy
 
 # Add the parent directory to the system path
 main_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")) # in order to import plotDataMC_compare
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     "-save",
     "--save_path",
     dest="save_path",
-    default="./test_plots/",
+    default="./plots/",
     action="store",
     help="save path",
     )
@@ -289,10 +290,14 @@ if __name__ == "__main__":
             variables2plot.append(f"htsoft5_nominal")
             
         elif ("mu" in particle) :
-            for kinematic in kinematic_vars:
-                # plot both leading and subleading muons/jets
-                variables2plot.append(f"{particle}1_{kinematic}")
-                variables2plot.append(f"{particle}2_{kinematic}")
+            # for kinematic in kinematic_vars:
+            #     # plot both leading and subleading muons/jets
+            #     variables2plot.append(f"{particle}1_{kinematic}")
+            #     variables2plot.append(f"{particle}2_{kinematic}")
+            variables2plot.append(f"{particle}1_pt")
+            variables2plot.append(f"{particle}2_pt")
+            variables2plot.append(f"{particle}1_pt_over_mass")
+            variables2plot.append(f"{particle}2_pt_over_mass")
         elif ("jet" in particle):
             variables2plot.append(f"njets_nominal")
             for kinematic in kinematic_vars:
@@ -304,6 +309,10 @@ if __name__ == "__main__":
        
         else:
             print(f"Unsupported variable: {particle} is given!")
+
+    variables2plot_orig = copy.deepcopy(variables2plot)
+    if "dimuon_mass" in variables2plot:
+        variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
     print(f"variables2plot: {variables2plot}")
     
     plot_setting_fname = args.plot_setting
@@ -353,7 +362,7 @@ if __name__ == "__main__":
         # select only needed variables to load to save run time
         # ------------------------------------------------------
         
-        fields2load = variables2plot + [
+        fields2load = variables2plot_orig + [
             "wgt_nominal",
             # "fraction", 
             # "h_sidebands", 
@@ -379,10 +388,7 @@ if __name__ == "__main__":
                 
         is_data = "data" in process.lower()
         if (not is_data) and ("dy" in process.lower()): # DY MC sample
-            fields2load.append("zpt_weight_valerie")
-            fields2load.append("zpt_weight_dmitry")
-            fields2load.append("zpt_weight_mine_nbins50")
-            fields2load.append("zpt_weight_mine_nbins100")
+            fields2load.append("separate_wgt_zpt_wgt")
             # if not zpt_on:
             #     if "separate_wgt_zpt_wgt" in events.fields:
             #         fields2load.append("separate_wgt_zpt_wgt")
@@ -551,7 +557,12 @@ if __name__ == "__main__":
             events = events[category_selection]
             fraction_weight = ak.ones_like(events.wgt_nominal) # TBF, all fractions should be same
             print(f"var: {var}")
-            values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
+            # values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
+            if ("_zpeak" in var):
+                var_reduced = var.replace("_zpeak","")
+                values = ak.to_numpy(ak.fill_none(events[var_reduced], value=-999.0))
+            else:
+                values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
             # print(f"weights.shape: {weights[weights>0].shape}")
             
             # temporary overwrite start -------------------------
