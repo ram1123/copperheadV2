@@ -10,6 +10,7 @@ from omegaconf import OmegaConf
 import copy
 from array import array
 from ROOT import RooFit
+import argparse
 
 def filterRegion(events, region="h-peak"):
     dimuon_mass = events.dimuon_mass
@@ -27,26 +28,74 @@ def filterRegion(events, region="h-peak"):
     # events = events[region&mu1ptOfInterest]
     events = events[region]
     return events
+
+def zipAndCompute(events, fields2load):
+    return_zip = ak.zip({
+        field : events[field] for field in fields2load
+    })
+    return return_zip.compute() # compute and return
+
 if __name__ == "__main__":
     """
     This file is meant to define the Zpt histogram binning for zpt fitting
     """
-    # from dask_gateway import Gateway
-    # gateway = Gateway(
-    #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-    #     proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-    # )
-    # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-    # client = gateway.connect(cluster_info.name).get_client()
-    # print("Gateway Client created")
-    cluster = LocalCluster(processes=True)
-    cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
-    client = Client(cluster)
-    print("Local scale Client created")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+    "-l",
+    "--label",
+    dest="label",
+    default=None,
+    action="store",
+    help="save path to store stage1 output files",
+    )
+    parser.add_argument(
+    "-y",
+    "--year",
+    dest="year",
+    default="all",
+    action="store",
+    help="string value of year we are calculating",
+    )
+    parser.add_argument(
+    "-save",
+    "--plot_path",
+    dest="plot_path",
+    default="plots",
+    action="store",
+    help="save path to store plots, not SF root files. That's saved locally",
+    )
 
-    run_label = "V2_Jan09_ForZptReWgt"
-    # year = "2018"
-    for year in ["2017","2016postVFP","2016preVFP"]:
+    
+    # cluster = LocalCluster(processes=True, memory_limit='64GB')
+    # cluster.adapt(minimum=8, maximum=64) #min: 8 max: 32
+    # client = Client(cluster)
+    # print("Local scale Client created")
+
+
+    from dask_gateway import Gateway
+    gateway = Gateway(
+        "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+        proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+    )
+    cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+    client = gateway.connect(cluster_info.name).get_client()
+    print(f"client: {client}")
+    print("Gateway Client created")
+    
+    args = parser.parse_args()
+    
+    # run_label = "V2_Jan09_ForZptReWgt"
+    run_label = args.label
+    if args.year == "all":
+        years =  ["2018", "2017","2016postVFP","2016preVFP"]
+    else:
+        years = [args.year]
+
+
+    plot_path = f"{args.plot_path}/{run_label}"
+    os.makedirs(plot_path, exist_ok=True)
+    print(f"years: {years}")
+    for year in years:
         
     
         base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0" # define the save path of stage1 outputs
@@ -54,19 +103,17 @@ if __name__ == "__main__":
         
         # load the data and dy samples
         data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
-        dy_events = dak.from_parquet(f"{base_path}/dy_M-50/*/*.parquet")
+        # dy_events = dak.from_parquet(f"{base_path}/dy_M-50/*/*.parquet")
+        dy_events = dak.from_parquet(f"{base_path}/dy*/*/*.parquet") # need to include dy_M-50 and dy_M100to200
         
         # apply z-peak region filter and nothing else
         data_events = filterRegion(data_events, region="z-peak")
         dy_events = filterRegion(dy_events, region="z-peak")
-    
+        print(f"dy_events: {dy_events}")
+        # print(f"dy_events.dimuon_mass.compute(): {dy_events.dimuon_mass.compute()}")
         
         njet_field = "njets_nominal"
         for njet in [0,1,2]:
-        # for njet in [2]:
-            # njet = 0
-            
-            
             if njet != 2:
                 data_events_loop = data_events[data_events[njet_field] ==njet]
                 dy_events_loop = dy_events[dy_events[njet_field] ==njet]
@@ -76,15 +123,16 @@ if __name__ == "__main__":
     
     
             fields2load = ["wgt_nominal", "dimuon_pt"]
-            data_dict = {field: ak.to_numpy(data_events_loop[field].compute()) for field in fields2load}
-            dy_dict = {field: ak.to_numpy(dy_events_loop[field].compute()) for field in fields2load}
+            # data_dict = {field: ak.to_numpy(data_events_loop[field].compute()) for field in fields2load}
+            # dy_dict = {field: ak.to_numpy(dy_events_loop[field].compute()) for field in fields2load}
+            data_dict = zipAndCompute(data_events_loop, fields2load)
+            data_dict = {field: ak.to_numpy(data_dict[field]) for field in data_dict.fields}
+            dy_dict = zipAndCompute(dy_events_loop, fields2load)
+            dy_dict = {field: ak.to_numpy(dy_dict[field]) for field in dy_dict.fields}
     
             # print(f"data_dict: {data_dict}")
             # print(f"dy_dict: {dy_dict}")
     
-            # binning_path = f"../binning/{year}_njet{njet}.yml"
-            # # Load the YAML file
-            # config = OmegaConf.load(binning_path)
             
             # binning = config["rewgt_binning"]
             # # Convert the list of bin edges to a C-style array
@@ -130,7 +178,10 @@ if __name__ == "__main__":
             output_file = ROOT.TFile(f"{year}_njet{njet}.root", "RECREATE")
             workspace.Write()  # Write the workspace to the file
             output_file.Close()
-
+            # save a copy with the plots for backup
+            copy_file = ROOT.TFile(f"{plot_path}/{year}_njet{njet}.root", "RECREATE")
+            workspace.Write()  # Write the workspace to the file
+            copy_file.Close()
     
     
             # # Sanity check: Loop through the bins and calculate the relative error
@@ -189,11 +240,11 @@ if __name__ == "__main__":
             
             
             # Save the canvas as an image
-            canvas.SaveAs(f"dataDy_{year}_njet{njet}.png")
+            canvas.SaveAs(f"{plot_path}/dataDy_{year}_njet{njet}.png")
 
             canvas.SetLogy(1)
             canvas.Update()
-            canvas.SaveAs(f"dataDy_{year}_njet{njet}_logScale.png")
+            canvas.SaveAs(f"{plot_path}/dataDy_{year}_njet{njet}_logScale.png")
             canvas.SetLogy(0)
             canvas.Update()
             # ---------------------------------------------------------
@@ -203,7 +254,7 @@ if __name__ == "__main__":
             hist_SF.Draw()
             
             # Save the canvas as an image
-            canvas.SaveAs(f"SF_{year}_njet{njet}.png")
+            canvas.SaveAs(f"{plot_path}/SF_{year}_njet{njet}.png")
     
     
             # # convert to RooHist and do polynomial fit
