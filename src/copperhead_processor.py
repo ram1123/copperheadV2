@@ -530,7 +530,14 @@ class EventProcessor(processor.ProcessorABC):
         # passing quality cuts and at least one good PV
         # --------------------------------------------------------#
 
-        
+        # # --------------------------------------------------------
+        # # # Apply Rochester correction
+        if self.config["do_roccor"]:
+            print("doing rochester!")
+            # print(f"df.Muon.pt b4 roccor: {events.Muon.pt.compute()}")
+            apply_roccor(events, self.config["roccor_file"], is_mc)
+            events["Muon", "pt"] = events.Muon.pt_roch
+            # print(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
 
         
 
@@ -543,7 +550,7 @@ class EventProcessor(processor.ProcessorABC):
         muons = events.Muon
         muon_selection = ak.ones_like(events.Muon.pt, dtype="bool")
         # -----
-        muon_selection = muon_selection & (events.Muon.pt_raw >= self.config["muon_pt_cut"]) 
+        muon_selection = muon_selection & (events.Muon.pt_roch >= self.config["muon_pt_cut"]) 
         nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
         # print(f"nmuon_2_filter sum after muon raw pt cut: {ak.sum(nmuon_2_filter).compute()}")
         # -----
@@ -555,18 +562,12 @@ class EventProcessor(processor.ProcessorABC):
         nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
         # print(f"nmuon_2_filter sum after muon medium ID cut: {ak.sum(nmuon_2_filter).compute()}")
         # -----
-        muon_selection = muon_selection & (events.Muon.isGlobal | events.Muon.isTracker)  
+        # muon_selection = muon_selection & (events.Muon.isGlobal | events.Muon.isTracker)  
+        muon_selection = muon_selection & (events.Muon.isGlobal)
         nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
         # print(f"nmuon_2_filter sum after muon isGlobal or isTracker cut: {ak.sum(nmuon_2_filter).compute()}")
         
-        # # --------------------------------------------------------
-        # # # Apply Rochester correction
-        if self.config["do_roccor"]:
-            print("doing rochester!")
-            # print(f"df.Muon.pt b4 roccor: {events.Muon.pt.compute()}")
-            apply_roccor(events, self.config["roccor_file"], is_mc)
-            events["Muon", "pt"] = events.Muon.pt_roch
-            # print(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
+        
 
 
 
@@ -581,7 +582,7 @@ class EventProcessor(processor.ProcessorABC):
 
         
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
-        muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]) 
+        muon_selection = muon_selection & (events.Muon.pfRelIso04_all <= self.config["muon_iso_cut"]) 
         nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
         # print(f"nmuon_2_filter sum after muon RelIso cut after FSR recovery : {ak.sum(nmuon_2_filter).compute()}")
 
@@ -630,13 +631,13 @@ class EventProcessor(processor.ProcessorABC):
             trigger_cands_filter_any = ak.any(trigger_cands_filter, axis=1) & event_filter
             # print(f"trigger match muon id cut: {ak.sum(trigger_cands_filter_any).compute()}")
             # ----------------------------------
-            trigger_cands_filter = trigger_cands_filter & pass_filterbit_total
-            trigger_cands_filter_any = ak.any(trigger_cands_filter, axis=1) & event_filter
-            # print(f"trigger match pass filterbit: {ak.sum(trigger_cands_filter_any).compute()}")
-            # ----------------------------------
-            trigger_cands_filter = trigger_cands_filter & pass_pt
-            trigger_cands_filter_any = ak.any(trigger_cands_filter, axis=1) & event_filter
-            # print(f"trigObj pt cut >= 24: {ak.sum(trigger_cands_filter_any).compute()}")
+            # trigger_cands_filter = trigger_cands_filter & pass_filterbit_total
+            # trigger_cands_filter_any = ak.any(trigger_cands_filter, axis=1) & event_filter
+            # # print(f"trigger match pass filterbit: {ak.sum(trigger_cands_filter_any).compute()}")
+            # # ----------------------------------
+            # trigger_cands_filter = trigger_cands_filter & pass_pt
+            # trigger_cands_filter_any = ak.any(trigger_cands_filter, axis=1) & event_filter
+            # # print(f"trigObj pt cut >= 24: {ak.sum(trigger_cands_filter_any).compute()}")
             
 
             # 
@@ -660,7 +661,7 @@ class EventProcessor(processor.ProcessorABC):
             
             mu1_dr_match = ak.sum(mu1_dr_match, axis=1) > 0
             mu1_dr_match = ak.fill_none(mu1_dr_match, value=False) # None is coming from the muon pad none, not trigger_cands, so this is ok
-            mu1_leading_pt_match = mu1.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
+            mu1_leading_pt_match = mu1.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon on pt Rochester
             mu1_leading_pt_match = ak.fill_none(mu1_leading_pt_match, value=False)
             mu1_trigger_match = mu1_dr_match & mu1_leading_pt_match
 
@@ -674,26 +675,34 @@ class EventProcessor(processor.ProcessorABC):
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
 
             # ----------------------------------
-            print(f"ak.any(ak.is_none(mu1_dr_match)) : {ak.any(ak.is_none(mu1_dr_match)).compute()}")
-            print(f"ak.any(ak.is_none(mu2_dr_match)) : {ak.any(ak.is_none(mu2_dr_match)).compute()}")
+            # print(f"ak.any(ak.is_none(mu1_dr_match)) : {ak.any(ak.is_none(mu1_dr_match)).compute()}")
+            # print(f"ak.any(ak.is_none(mu2_dr_match)) : {ak.any(ak.is_none(mu2_dr_match)).compute()}")
             
             # ----------------------------------
             mu1_dr_match_filter = mu1_dr_match & event_filter
-            # print(f"trigObj mu1 dr match : {ak.sum(mu1_dr_match_filter).compute()}")
+            print(f"trigObj mu1 dr match : {ak.sum(mu1_dr_match_filter).compute()}")
             # ----------------------------------
             mu2_dr_match_filter = mu2_dr_match & event_filter
-            # print(f"trigObj mu2 dr match : {ak.sum(mu2_dr_match_filter).compute()}")
+            print(f"trigObj mu2 dr match : {ak.sum(mu2_dr_match_filter).compute()}")
             # ----------------------------------
             mu12_dr_match_filter = (mu1_dr_match | mu2_dr_match) & event_filter
             print(f"trigObj mu1 or mu2 dr match : {ak.sum(mu12_dr_match_filter).compute()}")
 
-            raise ValueError
+
+            # ----------------------------------
+            mu1_dr_match_pt_cut_filter = mu1_trigger_match & event_filter
+            # print(f"trigObj mu1 dr match leading pt cut: {ak.sum(mu1_dr_match_pt_cut_filter).compute()}")
+            # ----------------------------------
+            mu2_dr_match_pt_cut_filter = mu2_trigger_match & event_filter
+            # print(f"trigObj mu2 dr match leading pt cut: {ak.sum(mu2_dr_match_pt_cut_filter).compute()}")
             
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
 
 
             # ----------------------------------
             trigger_match_filter = trigger_match & event_filter
+            # print(f"trigObj mu1 or mu2 dr match leading pt cut: {ak.sum(trigger_match_filter).compute()}")
+            
             
             
             
@@ -725,9 +734,9 @@ class EventProcessor(processor.ProcessorABC):
         
 
         event_filter = event_filter & (nmuons == 2)
-        # print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
+        print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
         event_filter = event_filter & (mm_charge == -1)
-        # print(f"event_filter sum after opposite charge cut: {ak.sum(event_filter).compute()}")
+        print(f"event_filter sum after opposite charge cut: {ak.sum(event_filter).compute()}")
 # --------------------------------------------------------        
 
         # apply FSR correction, since trigger match is calculated
@@ -855,8 +864,8 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"event_filter sum after Trigger match: {ak.sum(event_filter).compute()}")
         
         event_filter = event_filter & (electron_veto)
-        # print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
-        # raise ValueError
+        print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
+        raise ValueError
         # --------------------------------------------------------------------
 
         # apply muons and electrons cut:
