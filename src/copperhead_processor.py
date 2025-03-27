@@ -1542,19 +1542,19 @@ class EventProcessor(processor.ProcessorABC):
 
 
         # --------------------------------------
-        matched_mu_pass = ( # apply the same muon selection condition from before
-            (matched_mu_pt > self.config["muon_pt_cut"])
-            & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
-            & (matched_mu_iso < self.config["muon_iso_cut"])
-            & matched_mu_id
-            & (jets.matched_muons.isGlobal | jets.matched_muons.isTracker) # Table 3.5 AN-19-124
-        )
-        # print(f"matched_mu_pass: {matched_mu_pass.compute()}")
-        # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
-        matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
-        clean = ~(ak.fill_none(matched_mu_pass, value=False))
-        # # print(f"clean: {clean.compute()}")
-        # # print(f"jets: {jets.compute()}")
+        # matched_mu_pass = ( # apply the same muon selection condition from before
+        #     (matched_mu_pt > self.config["muon_pt_cut"])
+        #     & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
+        #     & (matched_mu_iso < self.config["muon_iso_cut"])
+        #     & matched_mu_id
+        #     & (jets.matched_muons.isGlobal | jets.matched_muons.isTracker) # Table 3.5 AN-19-124
+        # )
+        # # print(f"matched_mu_pass: {matched_mu_pass.compute()}")
+        # # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
+        # matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
+        # clean = ~(ak.fill_none(matched_mu_pass, value=False))
+        # # # print(f"clean: {clean.compute()}")
+        # # # print(f"jets: {jets.compute()}")
         # --------------------------------------
 
 
@@ -1664,7 +1664,7 @@ class EventProcessor(processor.ProcessorABC):
         HEMVeto = ak.ones_like(clean, dtype="bool") # 1D array saying True
         if year == "2018":
             HEMVeto_filter = (
-                (jets.pt >= 15.0)
+                (jets.pt >= 20.0)
                 & (jets.eta >= -3.0)
                 & (jets.eta <= -1.3)
                 & (jets.phi >= -1.57)
