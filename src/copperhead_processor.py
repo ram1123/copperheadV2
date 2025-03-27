@@ -50,9 +50,8 @@ TODO!: add the correct btag working points for rereco samples that you will be w
 #     # print(f"passGoodPV_cut is any none: {ak.any(ak.is_none(out_filter)).compute()}")
 #     return out_filter
 
-def getZptWgts(dimuon_pt, njets, nbins, year, config_path):
-    # config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
-    # config_path = config["new_zpt_wgt"]
+def getZptWgts(dimuon_pt, njets, nbins, year):
+    config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
     wgt_config = OmegaConf.load(config_path)
     max_order = 5 #9
     zpt_wgt = ak.ones_like(dimuon_pt)
@@ -334,8 +333,7 @@ class EventProcessor(processor.ProcessorABC):
 
         self.test_mode = test_mode
         dict_update = {
-            # "hlt" :["IsoMu24"],
-            "do_trigger_match" : True, # False
+            "do_trigger_match" : True, # True
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
@@ -442,9 +440,9 @@ class EventProcessor(processor.ProcessorABC):
         
     
 
-            
-            
+        event_filter = ak.ones_like(events.event, dtype="bool") # FIXME TOREMOVE
 
+        
 
             
         # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
@@ -453,14 +451,6 @@ class EventProcessor(processor.ProcessorABC):
             print(f"HLT_str: {HLT_str}")
             # HLT_filter = HLT_filter | events.HLT[HLT_str]
             HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
-        event_filter = event_filter & HLT_filter
-
-        # ------------------------------------------------------------#
-        # Skimming end, filter out events and prepare for pre-selection
-        # Edit: NVM; doing it this stage breaks fsr recovery
-        # ------------------------------------------------------------#
-        # events = events[event_filter]
-        # event_filter = ak.ones_like(events.HLT.IsoMu24)
         
         if is_mc:
             lumi_mask = ak.ones_like(event_filter, dtype="bool")
@@ -471,6 +461,33 @@ class EventProcessor(processor.ProcessorABC):
             lumi_info = LumiMask(self.config["lumimask"])
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
 
+
+        
+        good_vertex_cut = (events.PV.npvsGood > 0) # number of good primary vertex cut
+        # Apply event quality flags MET filter
+        evnt_qual_flg_selection = ak.ones_like(event_filter, dtype="bool")
+        for evt_qual_flg in self.config["event_flags"]:
+            evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
+        event_filter = (
+                event_filter
+                & lumi_mask
+                # & (evnt_qual_flg_selection > 0)
+                # & (nmuons == 2)
+                # & (mm_charge == -1)
+                # & electron_veto 
+                &  good_vertex_cut
+
+        )
+        # --------------------------------------------------------------------
+        # print(f"lumi_mask sum: {ak.sum(lumi_mask).compute()}")
+        # print(f"event_filter after good vetex filters sum: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & (evnt_qual_flg_selection > 0)
+        # print(f"event_filter after good MET filters sum: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & HLT_filter
+        # print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
+       
+            
+        
 
         do_pu_wgt = True # True
         if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
@@ -513,12 +530,6 @@ class EventProcessor(processor.ProcessorABC):
         # passing quality cuts and at least one good PV
         # --------------------------------------------------------#
 
-        # Apply event quality flags MET filter
-        evnt_qual_flg_selection = ak.ones_like(event_filter, dtype="bool")
-        for evt_qual_flg in self.config["event_flags"]:
-            evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
-
-
         # # --------------------------------------------------------
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
@@ -528,15 +539,36 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "pt"] = events.Muon.pt_roch
             # print(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
 
+        
 
-        muon_selection = (
-            (events.Muon.pt_roch >= self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
-            & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"])
-            & events.Muon[self.config["muon_id"]]
-            & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
-        )
+        # muon_selection = (
+        #     (events.Muon.pt_raw >= self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
+        #     & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"])
+        #     & events.Muon[self.config["muon_id"]]
+        #     & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
+        # )
+        muons = events.Muon
+        muon_selection = ak.ones_like(events.Muon.pt, dtype="bool")
+        # -----
+        muon_selection = muon_selection & (events.Muon.pt_roch >= self.config["muon_pt_cut"]) 
+        # muon_selection = muon_selection & (events.Muon.pt_raw >= self.config["muon_pt_cut"]) 
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon raw pt cut: {ak.sum(nmuon_2_filter).compute()}")
+        # -----
+        muon_selection = muon_selection & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"]) 
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon raw eta cut: {ak.sum(nmuon_2_filter).compute()}")
+        # -----
+        muon_selection = muon_selection & events.Muon[self.config["muon_id"]] 
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon medium ID cut: {ak.sum(nmuon_2_filter).compute()}")
+        # -----
+        muon_selection = muon_selection & (events.Muon.isGlobal | events.Muon.isTracker)  
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon isGlobal or isTracker cut: {ak.sum(nmuon_2_filter).compute()}")
         
         
+
 
 
         # calculate FSR recovery, but don't apply it until trigger matching is done
@@ -550,8 +582,11 @@ class EventProcessor(processor.ProcessorABC):
 
         
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
-        muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]) 
-        # print(f"muon_selectiont: {ak.to_dataframe(muon_selection.compute())}")
+        muon_selection = muon_selection & (events.Muon.pfRelIso04_all <= self.config["muon_iso_cut"]) 
+        nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
+        # print(f"nmuon_2_filter sum after muon RelIso cut after FSR recovery : {ak.sum(nmuon_2_filter).compute()}")
+
+        
         
         # -------------------------------------------------------- 
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
@@ -575,37 +610,60 @@ class EventProcessor(processor.ProcessorABC):
             
             
             pass_id = abs(events.TrigObj.id) == mu_id
-            # pass_pt = events.TrigObj.pt >= pt_threshold
-            # # start TrigObject matching
-            # pass_filterbit_total = ak.zeros_like(events.TrigObj.filterBits, dtype="bool")
-            # # grab muon candidates passing any one of the used HLTs
-            # for HLT_str in self.config["hlt"]:
-            #     if "IsoTkMu".lower() in HLT_str.lower():
-            #         trig_filterbit = 8 # isoTkMu; source https://cms-talk.web.cern.ch/t/understanding-trigobj-filterbits-in-nanoaodv9/21646/2
-            #     else:
-            #         trig_filterbit = 2 # isoMu; source https://cms-talk.web.cern.ch/t/understanding-trigobj-filterbits-in-nanoaodv9/21646/2
-            #     pass_filterbit = (events.TrigObj.filterBits & trig_filterbit) > 0
-            #     pass_filterbit_total = pass_filterbit_total | pass_filterbit
+            pass_pt = events.TrigObj.pt >= pt_threshold
+            # start TrigObject matching
+            pass_filterbit_total = ak.zeros_like(events.TrigObj.filterBits, dtype="bool")
+            # grab muon candidates passing any one of the used HLTs
+            for HLT_str in self.config["hlt"]:
+                if "IsoTkMu".lower() in HLT_str.lower():
+                    trig_filterbit = 8 # isoTkMu; source https://cms-talk.web.cern.ch/t/understanding-trigobj-filterbits-in-nanoaodv9/21646/2
+                else:
+                    trig_filterbit = 2 # isoMu; source https://cms-talk.web.cern.ch/t/understanding-trigobj-filterbits-in-nanoaodv9/21646/2
+                pass_filterbit = (events.TrigObj.filterBits & trig_filterbit) > 0
+                pass_filterbit_total = pass_filterbit_total | pass_filterbit
 
             # trigger_cands_filter = pass_pt & pass_id & pass_filterbit_total
-            trigger_cands_filter = pass_id
-            trigger_cands = events.TrigObj[trigger_cands_filter]
+            trigger_cands_filter = ak.ones_like(events.TrigObj.id, dtype="bool")
+            trigger_cands_filter_any = ak.any(trigger_cands_filter, axis=1) & event_filter
+            # print(f"trigger_cands_filter_any with event filter : {ak.sum(trigger_cands_filter_any).compute()}")
+            # ----------------------------------
+            trigger_cands_filter = trigger_cands_filter & pass_id
+            trigger_cands_filter_any = ak.any(trigger_cands_filter, axis=1) & event_filter
+            # print(f"trigger match muon id cut: {ak.sum(trigger_cands_filter_any).compute()}")
+            # ----------------------------------
+            # trigger_cands_filter = trigger_cands_filter & pass_filterbit_total
+            # trigger_cands_filter_any = ak.any(trigger_cands_filter, axis=1) & event_filter
+            # # print(f"trigger match pass filterbit: {ak.sum(trigger_cands_filter_any).compute()}")
+            # # ----------------------------------
+            # trigger_cands_filter = trigger_cands_filter & pass_pt
+            # trigger_cands_filter_any = ak.any(trigger_cands_filter, axis=1) & event_filter
+            # # print(f"trigObj pt cut >= 24: {ak.sum(trigger_cands_filter_any).compute()}")
             
 
-            dr_threshold = self.config["muon_trigmatch_dr"]
+            # 
+
+
+            
+            trigger_cands = events.TrigObj[trigger_cands_filter]
+            trigger_cands_filter = trigger_cands_filter[trigger_cands_filter]
+            
+
+            # dr_threshold = self.config["muon_trigmatch_dr"]
+            dr_threshold = 0.4
             print(f"dr_threshold: {dr_threshold}")
                                                
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
             padded_muons = ak.pad_none(events.Muon[muon_selection], 2) # pad in case we have only one muon or zero in an event
             sorted_args = ak.argsort(padded_muons.pt, ascending=False)
-            muons_sorted = (padded_muons[sorted_args])
+            # muons_sorted = (padded_muons[sorted_args])
+            muons_sorted = padded_muons
             mu1 = muons_sorted[:,0]
 
             mu1_dr_match = mu1.delta_r(trigger_cands) <= dr_threshold
             
             mu1_dr_match = ak.sum(mu1_dr_match, axis=1) > 0
             mu1_dr_match = ak.fill_none(mu1_dr_match, value=False) # None is coming from the muon pad none, not trigger_cands, so this is ok
-            mu1_leading_pt_match = mu1.pt_roch >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
+            mu1_leading_pt_match = mu1.pt_roch >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon on pt Rochester
             mu1_leading_pt_match = ak.fill_none(mu1_leading_pt_match, value=False)
             mu1_trigger_match = mu1_dr_match & mu1_leading_pt_match
 
@@ -617,49 +675,70 @@ class EventProcessor(processor.ProcessorABC):
             mu2_leading_pt_match = mu2.pt_roch >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu2_leading_pt_match = ak.fill_none(mu2_leading_pt_match, value=False)
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
+
+            # ----------------------------------
+            # print(f"ak.any(ak.is_none(mu1_dr_match)) : {ak.any(ak.is_none(mu1_dr_match)).compute()}")
+            # print(f"ak.any(ak.is_none(mu2_dr_match)) : {ak.any(ak.is_none(mu2_dr_match)).compute()}")
+            
+            # ----------------------------------
+            mu1_dr_match_filter = mu1_dr_match & event_filter
+            # print(f"trigObj mu1 dr match : {ak.sum(mu1_dr_match_filter).compute()}")
+            # ----------------------------------
+            mu2_dr_match_filter = mu2_dr_match & event_filter
+            # print(f"trigObj mu2 dr match : {ak.sum(mu2_dr_match_filter).compute()}")
+            # ----------------------------------
+            mu12_dr_match_filter = (mu1_dr_match | mu2_dr_match) & event_filter
+            # print(f"trigObj mu1 or mu2 dr match : {ak.sum(mu12_dr_match_filter).compute()}")
+
+
+            # ----------------------------------
+            mu1_dr_match_pt_cut_filter = mu1_trigger_match & event_filter
+            # print(f"trigObj mu1 dr match leading pt cut: {ak.sum(mu1_dr_match_pt_cut_filter).compute()}")
+            # ----------------------------------
+            mu2_dr_match_pt_cut_filter = mu2_trigger_match & event_filter
+            # print(f"trigObj mu2 dr match leading pt cut: {ak.sum(mu2_dr_match_pt_cut_filter).compute()}")
             
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
-            event_filter = event_filter & trigger_match
 
+
+            # ----------------------------------
+            trigger_match_filter = trigger_match & event_filter
+            # print(f"trigObj mu1 or mu2 dr match leading pt cut: {ak.sum(trigger_match_filter).compute()}")
+            
+            
+            
+            
+            
             # print(f"trigger_match sum with dr threshold {dr_threshold}: {ak.sum(trigger_match).compute()}")
             
         
-            # # check which events HLT and trigger match don't align, and print five events
-            # test_nevents = 5
-            # HLT_disagreement = (trigger_match != HLT_filter) & (~HLT_filter)
-
-            # print(f"HLT_disagreement len: {ak.num(HLT_disagreement, axis=0).compute()}")
-            # print(f"HLT_disagreement sum: {ak.sum(HLT_disagreement).compute()}")
-            
-            # print(f"{HLT_str} decision: {events.HLT[HLT_str][HLT_disagreement][: test_nevents].compute()}")
-            # print(f"trigger_match: {trigger_match[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"event number: {events.event[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"event run: {events.run[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject matched with mu1: {mu1_trigger_match[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject matched with mu2: {mu2_trigger_match[HLT_disagreement][: test_nevents].compute()}")
-
-            # print(f"TrigObject candidate id: {trigger_cands.id[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject candidate pt: {trigger_cands.pt[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject candidate eta: {trigger_cands.eta[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject candidate phi: {trigger_cands.phi[HLT_disagreement][: test_nevents].compute()}")
-            # # print(f"mu1.delta_r(trigger_cands): {mu1.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
-            # # print(f"mu2.delta_r(trigger_cands): {mu2.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu1 pt: {mu1.pt[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu1 eta: {mu1.eta[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu1 phi: {mu1.phi[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu2 pt: {mu2.pt[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu2 eta: {mu2.eta[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu2 phi: {mu2.phi[HLT_disagreement][: test_nevents].compute()}")
-
-            # raise ValueError
-            
-            
+                
             
         
         else:
             do_seperate_mu1_leading_pt_cut = True
             print("NO trigger match! Doing leading mu pass instead!")
-            
+
+
+        # --------------------------------------------------------------------
+
+        # count muons that pass the muon selection
+        muons = events.Muon[muon_selection]
+        nmuons = ak.num(muons, axis=1)
+        
+        # Find opposite-sign muons
+        mm_charge = ak.prod(muons.charge, axis=1) # techinally not a product of two leading pT muon charge, but (nmuons==2) cut ensures that there's only two muons
+        
+        
+        event_filter = event_filter & trigger_match
+        # print(f"event_filter sum after trigger match: {ak.sum(event_filter).compute()}")
+
+        
+
+        event_filter = event_filter & (nmuons == 2)
+        # print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & (mm_charge == -1)
+        # print(f"event_filter sum after opposite charge cut: {ak.sum(event_filter).compute()}")
 # --------------------------------------------------------        
 
         # apply FSR correction, since trigger match is calculated
@@ -700,8 +779,7 @@ class EventProcessor(processor.ProcessorABC):
                 print(f"doing neither beam constraint nor geofit!")
 
 
-        muons = events.Muon[muon_selection]
-        # muons = ak.to_packed(events.Muon[muon_selection])
+        
 
         # do the separate mu1 leading pt cut that copperheadV1 does instead of trigger matching
         if do_seperate_mu1_leading_pt_cut:
@@ -710,25 +788,49 @@ class EventProcessor(processor.ProcessorABC):
             muons_sorted = (muons_padded[sorted_args])
             mu1 = muons_sorted[:,0]
             pass_leading_pt = ak.fill_none((mu1.pt_raw > self.config["muon_leading_pt"]), value=False)
-            event_filter = event_filter & pass_leading_pt
+            # event_filter = event_filter & pass_leading_pt
         
-        # count muons that pass the muon selection
-        nmuons = ak.num(muons, axis=1)
-        # print(f"nmuons: {nmuons.compute()}")
         
-        # Find opposite-sign muons
-        mm_charge = ak.prod(muons.charge, axis=1) # techinally not a product of two leading pT muon charge, but (nmuons==2) cut ensures that there's only two muons
         
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
         print(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
-        ecal_gap = (1.444 <= abs(events.Electron.eta)) & (abs(events.Electron.eta) <= 1.566)
-        electron_selection = (
-            (events.Electron.pt > self.config["electron_pt_cut"])
-            & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
-            & events.Electron[electron_id]
-            & ~ecal_gap # reject electrons in ecal gap region, as specified in table 3.5 of AN-19-124
-        )
+        # electron_selection = (
+        #     (events.Electron.pt > self.config["electron_pt_cut"])
+        #     & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
+        #     & events.Electron[electron_id]
+        #     & (~ecal_gap) # reject electrons in ecal gap region, as specified in table 3.5 of AN-19-124
+        # )
+
+        # apply event filter before further selection
+        events = events[event_filter==True]
+        muons = muons[event_filter==True]
+        nmuons = ak.to_packed(nmuons[event_filter==True])
+
+        event_filter = event_filter[event_filter==True]
+
+        # apply electrons selection
+        electrons = events.Electron
+        electron_selection = ak.ones_like(electrons.pt, dtype="bool")
+        ecal_gap = (1.444 < abs(events.Electron.eta)) & (abs(events.Electron.eta) <1.566)
+        # -----
+        electron_selection = electron_selection & (electrons.pt > self.config["electron_pt_cut"])
+        nelectron_1_filter = ak.any(electron_selection, axis=1)
+        # print(f"nelectron_1_filter sum after electron pt cut: {ak.sum(nelectron_1_filter).compute()}")
+        # -----
+        electron_selection = electron_selection & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
+        nelectron_1_filter = ak.any(electron_selection, axis=1)
+        # print(f"nelectron_1_filter sum after electron eta cut: {ak.sum(nelectron_1_filter).compute()}")
+        # -----
+        electron_selection = electron_selection & events.Electron[electron_id]
+        nelectron_1_filter = ak.any(electron_selection, axis=1)
+        # print(f"nelectron_1_filter sum after electron ID cut: {ak.sum(nelectron_1_filter).compute()}")
+        # -----
+        electron_selection = electron_selection & (~ecal_gap)
+        nelectron_1_filter = ak.any(electron_selection, axis=1)
+        # print(f"nelectron_1_filter sum after electron ecal rejection cut: {ak.sum(nelectron_1_filter).compute()}")
+        
+        
         
         # some temporary testing code start -----------------------------------------
         # if doing_ebeMassCalib:
@@ -744,23 +846,39 @@ class EventProcessor(processor.ProcessorABC):
         nelectrons = ak.num(selected_electrons, axis=1)
         electron_veto = (nelectrons == 0) 
 
-        event_filter = (
-                event_filter
-                & lumi_mask
-                & (evnt_qual_flg_selection > 0)
-                # & (nmuons == 2)
-                # & (mm_charge == -1)
-                # & electron_veto 
-                & (events.PV.npvsGood > 0) # number of good primary vertex cut
+        # # check cases where either: nelectrons + nmuons > 4
+        # edge_cases = nelectrons + nmuons
+        # # print(f"edge_cases: {edge_cases[:20].compute()}")
+        # print(f"edge_cases > 4 sum: {ak.sum(edge_cases> 4).compute()}")
+        # raise ValueError
 
-        )
-        event_filter = event_filter & (nmuons == 2)
-        print(f"event_filter sum after nmuons: {ak.sum(event_filter).compute()}")
-        event_filter = event_filter & (mm_charge == -1)
-        print(f"event_filter sum after opposite charge cut: {ak.sum(event_filter).compute()}")
-        event_filter = event_filter & electron_veto
-        print(f"event_filter sum after electron_veto: {ak.sum(event_filter).compute()}")
-        raise ValueError
+        # # check Ecal Gap:
+        # ecal_gap = (1.444 < abs(selected_electrons.eta)) & (abs(selected_electrons.eta) <1.566)
+        # ecal_gap = ak.sum(ecal_gap, axis=1) > 0
+        # print(f"ecal gap sum: {ak.sum(ecal_gap).compute()}")
+        # print(f"total nevens: {ak.num(event_filter, axis=0).compute()}")
+        
+        # electron_veto_test = ak.sum(electron_selection, axis=1) == 0 # temporary test
+        # print(f"electron veto test: {ak.all(electron_veto_test == electron_veto).compute()}")
+        # print(f"electron veto is none: {ak.any(ak.is_none(electron_veto_test)).compute()}")
+
+        
+        # print(f"event_filter sum after Trigger match: {ak.sum(event_filter).compute()}")
+        
+        event_filter = event_filter & (electron_veto)
+        # print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
+        # raise ValueError
+        # --------------------------------------------------------------------
+
+        # apply muons and electrons cut:
+        # event_filter = (
+        #         event_filter
+        #         & (nmuons == 2)
+        #         & (mm_charge == -1)
+        #         & electron_veto 
+        # )
+        # print(f"event_filter after nmuons and electrons : {ak.sum(event_filter).compute()}")
+        
         # event_selection = ak.to_dataframe(event_filter.compute())
         # print(f"output.event_selection: {event_selection}")
         # event_selection.to_csv("event_selection_V2.csv")
@@ -843,6 +961,9 @@ class EventProcessor(processor.ProcessorABC):
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
+        # electron_veto = electron_veto[event_filter==True]
+        # HLT_filter = HLT_filter[event_filter==True]
+        # trigger_match = trigger_match[event_filter==True]
         # event_match = event_match[event_filter==True]
         # applied_fsr = ak.to_packed(applied_fsr[event_filter==True]) # not sure the purpose of this line
 
@@ -853,10 +974,9 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
-        # pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
         
-            
+        event_filter = event_filter[event_filter==True]
         
        
         
@@ -882,8 +1002,7 @@ class EventProcessor(processor.ProcessorABC):
         dimuon = mu1+mu2
 
         
-        uncalibrated_dimuon_ebe_mass_res, calibration = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode, doing_BS_correction=doing_BS_correction)
-        dimuon_ebe_mass_res = uncalibrated_dimuon_ebe_mass_res * calibration
+        dimuon_ebe_mass_res = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode, doing_BS_correction=doing_BS_correction)
         dimuon_ebe_mass_res_rel = dimuon_ebe_mass_res/dimuon.mass
         dimuon_cos_theta_cs, dimuon_phi_cs = cs_variables(mu1,mu2)
         dimuon_cos_theta_eta, dimuon_phi_eta = etaFrame_variables(mu1,mu2)
@@ -981,7 +1100,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = True # True       
+        do_jec = False # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1228,7 +1347,6 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_dR" : dimuon_dR,
             "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
             "dimuon_ebe_mass_res_rel" : dimuon_ebe_mass_res_rel,
-            "uncalibrated_dimuon_ebe_mass_res" : uncalibrated_dimuon_ebe_mass_res,
             "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
             "dimuon_phi_cs" : dimuon_phi_cs,
             "dimuon_cos_theta_eta" : dimuon_cos_theta_eta,
@@ -1285,12 +1403,32 @@ class EventProcessor(processor.ProcessorABC):
                 do_jec = do_jec,
                 do_jecunc = do_jecunc,
                 do_jerunc = do_jerunc,
+                # event_filter=event_filter,
                 # event_match=event_match # debugging
             )
                     
             out_dict.update(jet_loop_dict) 
         # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
+        # --------------------------------------------------------
+        # print(f"event_filter sum b4 btag cut: {ak.sum(event_filter).compute()}")
+        nBtagLoose = jet_loop_dict[f"nBtagLoose_nominal"]
+        nBtagMedium = jet_loop_dict[f"nBtagMedium_nominal"]
+        event_filter = event_filter & (nBtagLoose <=1)
+        # print(f"event_filter sum after loose btag cut: {ak.sum(event_filter).compute()}")
+        event_filter = event_filter & (nBtagMedium <=0)
+        # print(f"event_filter sum after medium btag cut: {ak.sum(event_filter).compute()}")
+        # print(f"event_filter sum after medium btag cut: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & HLT_filter
+        # print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & trigger_match
+        # print(f"event_filter sum after Trigger match: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & (nmuons == 2)
+        # print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & (electron_veto)
+        # print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
+        # raise ValueError
+        # --------------------------------------------------------
         # print(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
         
@@ -1326,8 +1464,8 @@ class EventProcessor(processor.ProcessorABC):
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
             # once kind of screws with the dak awkward array
             # valerie
-            # zpt_weight_valerie =\
-                     # self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
+            zpt_weight_valerie =\
+                     self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
             # out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
             # # dmitry's old zpt
@@ -1340,8 +1478,8 @@ class EventProcessor(processor.ProcessorABC):
 
             # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
             # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
-            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
-            # out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
+            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year)
+            out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
 
             
 
@@ -1358,11 +1496,9 @@ class EventProcessor(processor.ProcessorABC):
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
 
             # zpt_weight = zpt_weight_valerie
-            # zpt_weight = merge_zpt_wgt(zpt_weight_mine_nbins100, zpt_weight_valerie, njets, year)
+            zpt_weight = merge_zpt_wgt(zpt_weight_mine_nbins100, zpt_weight_valerie, njets, year)
             # zpt_weight = ak.where((dimuon.pt<=200), zpt_weight, ones)
             # # out_dict["wgt_nominal_zpt_wgt"] =  zpt_weight
-
-            zpt_weight = zpt_weight_mine_nbins100
             weights.add("zpt_wgt", 
                     weight=zpt_weight,
             )
@@ -1429,7 +1565,7 @@ class EventProcessor(processor.ProcessorABC):
             yearUL=year.replace("_RERECO","")
         else:
             yearUL = year 
-        if doing_BS_correction: # apply resolution calibration from BeamSpot constraint correction
+        if doing_BS_correction and (not "2016" in year): # apply resolution calibration from BeamSpot constraint correction
             # TODO: add 2016pre and 2016post versions too
             print("Doing BS constraint correction mass calibration!")
             
@@ -1455,8 +1591,7 @@ class EventProcessor(processor.ProcessorABC):
                 abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
             )
     
-        # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
-        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5), calibration
+        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) * calibration
         # return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5) # turning calibration off for calibration factor recalculation
     
     def prepare_jets(self, events, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
@@ -1520,7 +1655,8 @@ class EventProcessor(processor.ProcessorABC):
         do_jec = False, 
         do_jecunc = False,
         do_jerunc = False,
-        event_match = None
+        event_match = None,
+        event_filter = None,
     ):
         is_mc = events.metadata["is_mc"]
         dataset = events.metadata["dataset"]
@@ -1531,29 +1667,59 @@ class EventProcessor(processor.ProcessorABC):
         # Find jets that have selected muons within dR<0.4 from them -> line 465 of AN-19-124
 
         # matched_mu_pt = jets.matched_muons.pt_fsr if "pt_fsr" in jets.matched_muons.fields else jets.matched_muons.pt
-        matched_mu_pt = jets.matched_muons.pt_raw # afaik, matched muons are muons that are within dr < 0.4 to jets
-        matched_mu_eta = jets.matched_muons.eta_raw
-        matched_mu_iso = jets.matched_muons.pfRelIso04_all
-        matched_mu_id = jets.matched_muons[self.config["muon_id"]]
+        # matched_mu_pt = jets.matched_muons.pt_raw # afaik, matched muons are muons that are within dr < 0.4 to jets
+        # matched_mu_eta = jets.matched_muons.eta_raw
+        # matched_mu_iso = jets.matched_muons.pfRelIso04_all
+        # matched_mu_id = jets.matched_muons[self.config["muon_id"]]
         # print(f'self.config["muon_id": {self.config["muon_id"]}')
         # print(f"matched_mu_id: {matched_mu_id.compute()}")
         # print(f"jets.matched_muons: {jets.matched_muons.compute()}")
         # AN-19-124 line 465: "Jets are also cleaned w.r.t. the selected muon candidates by requiring a geometrical separation of ∆R ( j, µ ) > 0.4"
-        matched_mu_pass = ( # apply the same muon selection condition from before
-            (matched_mu_pt > self.config["muon_pt_cut"])
-            & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
-            & (matched_mu_iso < self.config["muon_iso_cut"])
-            & matched_mu_id
-            & (jets.matched_muons.isGlobal | jets.matched_muons.isTracker) # Table 3.5 AN-19-124
+        # matched_mu_pass = ( # apply the same muon selection condition from before
+        #     (matched_mu_pt > self.config["muon_pt_cut"])
+        #     & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
+        #     & (matched_mu_iso < self.config["muon_iso_cut"])
+        #     & matched_mu_id
+        #     & (jets.matched_muons.isGlobal | jets.matched_muons.isTracker) # Table 3.5 AN-19-124
+        # )
+
+        # # matched_mu_pass = ak.fill_none(, value=False)
+        # # print(f"matched_mu_pass: {matched_mu_pass.compute()}")
+        # # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
+        # if self.test_mode:
+        #     print(f"jet loop matched_mu_pass b4 : {matched_mu_pass}")
+        # matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
+        # clean = ~(ak.fill_none(matched_mu_pass, value=False))
+
+        # mu1_jet_dR = mu1.delta_r(jets)
+        _, _, mu1_jet_dR = delta_r_V1(
+            mu1.eta,
+            jets.eta,
+            mu1.phi,
+            jets.phi,
         )
-        # print(f"matched_mu_pass: {matched_mu_pass.compute()}")
-        # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
-        if self.test_mode:
-            print(f"jet loop matched_mu_pass b4 : {matched_mu_pass}")
-        matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
-        clean = ~(ak.fill_none(matched_mu_pass, value=False))
-        # print(f"clean: {clean.compute()}")
-        # print(f"jets: {jets.compute()}")
+        matched_mu1_jet = mu1_jet_dR > 0.4
+        matched_mu1_jet = ak.fill_none(matched_mu1_jet, value=False)
+
+        # mu2_jet_dR = mu2.delta_r(jets)
+        _, _, mu2_jet_dR = delta_r_V1(
+            mu2.eta,
+            jets.eta,
+            mu2.phi,
+            jets.phi,
+        )
+        matched_mu2_jet = mu2_jet_dR > 0.4
+        matched_mu2_jet = ak.fill_none(matched_mu2_jet, value=False)
+        matched_mu_pass = matched_mu1_jet | matched_mu2_jet
+        # clean = ~(ak.fill_none(matched_mu_pass, value=False))
+        clean = ~matched_mu_pass
+        clean = ak.fill_none(clean, value=True)
+
+        # jets = ak.to_packed(jets[clean]) 
+        # jets = jets[clean]
+        # print(f"jets.pt sum:{ak.sum(jets.pt).compute()}")
+        # raise ValueError
+        
 
         # # Select particular JEC variation
         # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
@@ -1634,7 +1800,7 @@ class EventProcessor(processor.ProcessorABC):
         HEMVeto = ak.ones_like(clean, dtype="bool") # 1D array saying True
         if year == "2018":
             HEMVeto_filter = (
-                (jets.pt >= 15.0)
+                (jets.pt >= 15.0) # 20
                 & (jets.eta >= -3.0)
                 & (jets.eta <= -1.3)
                 & (jets.phi >= -1.57)
@@ -1642,7 +1808,6 @@ class EventProcessor(processor.ProcessorABC):
             )
             false_arr = ak.ones_like(HEMVeto) < 0
             HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
-            # print(f"HEMVeto : {HEMVeto.compute()}")
 
         # get QGL cut
         if NanoAODv == 9 : 
@@ -1651,32 +1816,68 @@ class EventProcessor(processor.ProcessorABC):
             qgl_cut = (jets.btagPNetQvG >= -2) # TODO: find out if -2 is the actual threshold for run3
             jets["qgl"] = jets.btagPNetQvG # this is for saving btagPNetQvG as "qgl" for stage1 outputs
         # original jet_selection-----------------------------------------------
-        jet_selection = (
-            pass_jet_id
-            & pass_jet_puid
-            & qgl_cut
-            & clean
-            & (jets.pt >= self.config["jet_pt_cut"])
-            & (abs(jets.eta) <= self.config["jet_eta_cut"])
-            & HEMVeto
-        )
+        
+        # print(f"event_filter jet loop sanity check: {ak.sum(event_filter).compute()}")
+        jet_selection = ak.ones_like(jets.pt, dtype="bool")
+        # -----
+        jet_selection = jet_selection & pass_jet_id
+        njet_1_filter = ak.any(jet_selection, axis=1)
+        # print(f"njet_1_filter sum after jet ID pass: {ak.sum(njet_1_filter).compute()}")
+        # -----
+        jet_selection = jet_selection & pass_jet_puid
+        njet_1_filter = ak.any(jet_selection, axis=1)
+        # print(f"njet_1_filter sum after jet PUID pass: {ak.sum(njet_1_filter).compute()}")
+        # -----
+        jet_selection = jet_selection & (jets.pt >= self.config["jet_pt_cut"])
+        njet_1_filter = ak.any(jet_selection, axis=1)
+        # print(f"njet_1_filter sum after jet pt cut: {ak.sum(njet_1_filter).compute()}")
+        # -----
+        jet_selection = jet_selection & (abs(jets.eta) <= self.config["jet_eta_cut"])
+        njet_1_filter = ak.any(jet_selection, axis=1)
+        # print(f"njet_1_filter sum after jet eta cut {ak.sum(njet_1_filter).compute()}")
+        # -----
+        jet_selection = jet_selection & qgl_cut
+        njet_1_filter = ak.any(jet_selection, axis=1)
+        # print(f"njet_1_filter sum after jet qgl cut {ak.sum(njet_1_filter).compute()}")
+        # -----
+        jet_selection = jet_selection & clean
+        njet_1_filter = ak.any(jet_selection, axis=1)
+        # print(f"njet_1_filter sum after clean Jet cut: {ak.sum(njet_1_filter).compute()}")
+        # -----
+        jet_selection = jet_selection & HEMVeto
+        njet_1_filter = ak.any(jet_selection, axis=1)
+        # print(f"njet_1_filter sum after HEM Veto cut: {ak.sum(njet_1_filter).compute()}")
+
+        # print(f"jet_selection: {jet_selection[:10].compute()}")
+        # print(f"jets: {jets.pt[:10].compute()}")
+        
+        # jet_selection = (
+        #     pass_jet_id
+        #     & pass_jet_puid
+        #     & qgl_cut
+        #     & clean
+        #     & (jets.pt > self.config["jet_pt_cut"])
+        #     & (abs(jets.eta) < self.config["jet_eta_cut"])
+        #     & HEMVeto
+        # )
         # original jet_selection end ----------------------------------------------
 
 
-        # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
+        jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
+        # print(f"jets.pt sum:{ak.sum(jets.pt).compute()}")
+        # raise ValueError
 
-        jets = ak.to_packed(jets[jet_selection]) 
+        # jets = ak.to_packed(jets[jet_selection]) 
 
         # apply jetpuid if not have done already
-        # FIXME
-        # if not is_2017 and is_mc:
-        #     jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
+        if not is_2017 and is_mc:
+            jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
         
-        # if is_mc:
-        #     # now we add jetpuid_wgt
-        #     weights.add("jetpuid_wgt", 
-        #             weight=jetpuid_weight,
-        #     )
+        if is_mc:
+            # now we add jetpuid_wgt
+            weights.add("jetpuid_wgt", 
+                    weight=jetpuid_weight,
+            )
 
         
         
@@ -1975,12 +2176,13 @@ class EventProcessor(processor.ProcessorABC):
             btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
             
         
-        nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
+        # nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
+        nBtagLoose = ak.num(jets[btagLoose_filter], axis=1)
         nBtagLoose = ak.fill_none(nBtagLoose, value=0)
             
         
-        
-        nBtagMedium = ak.num(ak.to_packed(jets[btagMedium_filter]), axis=1)
+        # nBtagMedium = ak.num(ak.to_packed(jets[btagMedium_filter]), axis=1)
+        nBtagMedium = ak.num(jets[btagMedium_filter], axis=1)
         nBtagMedium = ak.fill_none(nBtagMedium, value=0)
 
         # #quick sanity check
