@@ -564,7 +564,6 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"nmuon_2_filter sum after muon medium ID cut: {ak.sum(nmuon_2_filter).compute()}")
         # -----
         muon_selection = muon_selection & (events.Muon.isGlobal | events.Muon.isTracker)  
-        # muon_selection = muon_selection & (events.Muon.isGlobal)
         nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
         # print(f"nmuon_2_filter sum after muon isGlobal or isTracker cut: {ak.sum(nmuon_2_filter).compute()}")
         
@@ -650,7 +649,7 @@ class EventProcessor(processor.ProcessorABC):
             
 
             # dr_threshold = self.config["muon_trigmatch_dr"]
-            dr_threshold = 0.1
+            dr_threshold = 0.4
             print(f"dr_threshold: {dr_threshold}")
                                                
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
@@ -683,13 +682,13 @@ class EventProcessor(processor.ProcessorABC):
             
             # ----------------------------------
             mu1_dr_match_filter = mu1_dr_match & event_filter
-            print(f"trigObj mu1 dr match : {ak.sum(mu1_dr_match_filter).compute()}")
+            # print(f"trigObj mu1 dr match : {ak.sum(mu1_dr_match_filter).compute()}")
             # ----------------------------------
             mu2_dr_match_filter = mu2_dr_match & event_filter
-            print(f"trigObj mu2 dr match : {ak.sum(mu2_dr_match_filter).compute()}")
+            # print(f"trigObj mu2 dr match : {ak.sum(mu2_dr_match_filter).compute()}")
             # ----------------------------------
             mu12_dr_match_filter = (mu1_dr_match | mu2_dr_match) & event_filter
-            print(f"trigObj mu1 or mu2 dr match : {ak.sum(mu12_dr_match_filter).compute()}")
+            # print(f"trigObj mu1 or mu2 dr match : {ak.sum(mu12_dr_match_filter).compute()}")
 
 
             # ----------------------------------
@@ -732,14 +731,14 @@ class EventProcessor(processor.ProcessorABC):
         
         
         event_filter = event_filter & trigger_match
-        print(f"event_filter sum after trigger match: {ak.sum(event_filter).compute()}")
+        # print(f"event_filter sum after trigger match: {ak.sum(event_filter).compute()}")
 
         
 
         event_filter = event_filter & (nmuons == 2)
-        print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
+        # print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
         event_filter = event_filter & (mm_charge == -1)
-        print(f"event_filter sum after opposite charge cut: {ak.sum(event_filter).compute()}")
+        # print(f"event_filter sum after opposite charge cut: {ak.sum(event_filter).compute()}")
 # --------------------------------------------------------        
 
         # apply FSR correction, since trigger match is calculated
@@ -867,8 +866,8 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"event_filter sum after Trigger match: {ak.sum(event_filter).compute()}")
         
         event_filter = event_filter & (electron_veto)
-        print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
-        raise ValueError
+        # print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
+        # raise ValueError
         # --------------------------------------------------------------------
 
         # apply muons and electrons cut:
@@ -1798,19 +1797,19 @@ class EventProcessor(processor.ProcessorABC):
         # -----
         jet_selection = jet_selection & pass_jet_puid
         njet_1_filter = ak.any(jet_selection, axis=1)
-        # print(f"njet_1_filter sum after jet PUID pass: {ak.sum(njet_1_filter).compute()}")
+        print(f"njet_1_filter sum after jet PUID pass: {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & (jets.pt >= self.config["jet_pt_cut"])
         njet_1_filter = ak.any(jet_selection, axis=1)
-        # print(f"njet_1_filter sum after jet pt cut: {ak.sum(njet_1_filter).compute()}")
+        print(f"njet_1_filter sum after jet pt cut: {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & (abs(jets.eta) <= self.config["jet_eta_cut"])
         njet_1_filter = ak.any(jet_selection, axis=1)
-        # print(f"njet_1_filter sum after jet eta cut {ak.sum(njet_1_filter).compute()}")
+        print(f"njet_1_filter sum after jet eta cut {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & qgl_cut
         njet_1_filter = ak.any(jet_selection, axis=1)
-        # print(f"njet_1_filter sum after jet qgl cut {ak.sum(njet_1_filter).compute()}")
+        print(f"njet_1_filter sum after jet qgl cut {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & clean
         njet_1_filter = ak.any(jet_selection, axis=1)
