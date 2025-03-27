@@ -1,6 +1,7 @@
 cross_sections:
   test: 6200.0
   dy_M-50: 6077.22 # precision: NNLO source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
+  dy_M-50_MiNNLO: 1976
   dy_M-50_nocut: 6450.0
   # dy_M-100To200: 247.9 # precision: NLO source: GenAnalyzer tool at https://github.com/green-cabbage/genproductions
   dy_M-100To200: 233.8592627 # precision: NNLO
