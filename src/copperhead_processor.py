@@ -551,6 +551,7 @@ class EventProcessor(processor.ProcessorABC):
         muon_selection = ak.ones_like(events.Muon.pt, dtype="bool")
         # -----
         muon_selection = muon_selection & (events.Muon.pt_roch >= self.config["muon_pt_cut"]) 
+        # muon_selection = muon_selection & (events.Muon.pt_raw >= self.config["muon_pt_cut"]) 
         nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
         # print(f"nmuon_2_filter sum after muon raw pt cut: {ak.sum(nmuon_2_filter).compute()}")
         # -----
@@ -562,8 +563,8 @@ class EventProcessor(processor.ProcessorABC):
         nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
         # print(f"nmuon_2_filter sum after muon medium ID cut: {ak.sum(nmuon_2_filter).compute()}")
         # -----
-        # muon_selection = muon_selection & (events.Muon.isGlobal | events.Muon.isTracker)  
-        muon_selection = muon_selection & (events.Muon.isGlobal)
+        muon_selection = muon_selection & (events.Muon.isGlobal | events.Muon.isTracker)  
+        # muon_selection = muon_selection & (events.Muon.isGlobal)
         nmuon_2_filter = ak.sum(muon_selection, axis=1) >= 2
         # print(f"nmuon_2_filter sum after muon isGlobal or isTracker cut: {ak.sum(nmuon_2_filter).compute()}")
         
@@ -648,20 +649,22 @@ class EventProcessor(processor.ProcessorABC):
             trigger_cands_filter = trigger_cands_filter[trigger_cands_filter]
             
 
-            dr_threshold = self.config["muon_trigmatch_dr"]
+            # dr_threshold = self.config["muon_trigmatch_dr"]
+            dr_threshold = 0.1
             print(f"dr_threshold: {dr_threshold}")
                                                
             #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
             padded_muons = ak.pad_none(events.Muon[muon_selection], 2) # pad in case we have only one muon or zero in an event
             sorted_args = ak.argsort(padded_muons.pt, ascending=False)
-            muons_sorted = (padded_muons[sorted_args])
+            # muons_sorted = (padded_muons[sorted_args])
+            muons_sorted = padded_muons
             mu1 = muons_sorted[:,0]
 
             mu1_dr_match = mu1.delta_r(trigger_cands) <= dr_threshold
             
             mu1_dr_match = ak.sum(mu1_dr_match, axis=1) > 0
             mu1_dr_match = ak.fill_none(mu1_dr_match, value=False) # None is coming from the muon pad none, not trigger_cands, so this is ok
-            mu1_leading_pt_match = mu1.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon on pt Rochester
+            mu1_leading_pt_match = mu1.pt_roch >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon on pt Rochester
             mu1_leading_pt_match = ak.fill_none(mu1_leading_pt_match, value=False)
             mu1_trigger_match = mu1_dr_match & mu1_leading_pt_match
 
@@ -670,7 +673,7 @@ class EventProcessor(processor.ProcessorABC):
             
             mu2_dr_match = ak.sum(mu2_dr_match, axis=1) > 0
             mu2_dr_match = ak.fill_none(mu2_dr_match, value=False) # None is coming from the muon pad none, not trigger_cands, so this is ok
-            mu2_leading_pt_match = mu2.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
+            mu2_leading_pt_match = mu2.pt_roch >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu2_leading_pt_match = ak.fill_none(mu2_leading_pt_match, value=False)
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
 
@@ -1780,9 +1783,9 @@ class EventProcessor(processor.ProcessorABC):
 
         # get QGL cut
         if NanoAODv == 9 : 
-            qgl_cut = (jets.qgl > -2)
+            qgl_cut = (jets.qgl >= -2)
         else: # NanoAODv12 
-            qgl_cut = (jets.btagPNetQvG > -2) # TODO: find out if -2 is the actual threshold for run3
+            qgl_cut = (jets.btagPNetQvG >= -2) # TODO: find out if -2 is the actual threshold for run3
             jets["qgl"] = jets.btagPNetQvG # this is for saving btagPNetQvG as "qgl" for stage1 outputs
         # original jet_selection-----------------------------------------------
         
@@ -1797,11 +1800,11 @@ class EventProcessor(processor.ProcessorABC):
         njet_1_filter = ak.any(jet_selection, axis=1)
         # print(f"njet_1_filter sum after jet PUID pass: {ak.sum(njet_1_filter).compute()}")
         # -----
-        jet_selection = jet_selection & (jets.pt > self.config["jet_pt_cut"])
+        jet_selection = jet_selection & (jets.pt >= self.config["jet_pt_cut"])
         njet_1_filter = ak.any(jet_selection, axis=1)
         # print(f"njet_1_filter sum after jet pt cut: {ak.sum(njet_1_filter).compute()}")
         # -----
-        jet_selection = jet_selection & (abs(jets.eta) < self.config["jet_eta_cut"])
+        jet_selection = jet_selection & (abs(jets.eta) <= self.config["jet_eta_cut"])
         njet_1_filter = ak.any(jet_selection, axis=1)
         # print(f"njet_1_filter sum after jet eta cut {ak.sum(njet_1_filter).compute()}")
         # -----
