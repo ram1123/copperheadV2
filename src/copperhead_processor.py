@@ -216,10 +216,6 @@ def testJetVector(jets):
 # Dmitry's implementation of delta_r
 def delta_r_V1(eta1, eta2, phi1, phi2):
     deta = abs(eta1 - eta2)
-    # print(f"eta1: {eta1[:10].compute()}")
-    # print(f"eta2: {eta2[:10].compute()}")
-    # print(f"deta: {deta[:10].compute()}")
-    # raise ValueError
     dphi = abs(np.mod(phi1 - phi2 + np.pi, 2 * np.pi) - np.pi)
     dr = np.sqrt(deta**2 + dphi**2)
     return deta, dphi, dr
@@ -1557,8 +1553,8 @@ class EventProcessor(processor.ProcessorABC):
         # # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
         # matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
         # clean = ~(ak.fill_none(matched_mu_pass, value=False))
-        # # print(f"clean: {clean.compute()}")
-        # # print(f"jets: {jets.compute()}")
+        # # # print(f"clean: {clean.compute()}")
+        # # # print(f"jets: {jets.compute()}")
         # --------------------------------------
 
 
@@ -1692,7 +1688,7 @@ class EventProcessor(processor.ProcessorABC):
             & clean
             & (jets.pt >= self.config["jet_pt_cut"])
             & (abs(jets.eta) <= self.config["jet_eta_cut"])
-            # & HEMVeto
+            & HEMVeto
         )
         # original jet_selection end ----------------------------------------------
 
