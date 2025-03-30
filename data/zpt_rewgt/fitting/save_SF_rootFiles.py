@@ -74,6 +74,8 @@ if __name__ == "__main__":
     # cluster.adapt(minimum=8, maximum=64) #min: 8 max: 32
     # client = Client(cluster)
     # print("Local scale Client created")
+    # client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+    # print("Local scale Client created")
 
 
     from dask_gateway import Gateway

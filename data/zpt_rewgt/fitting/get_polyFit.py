@@ -8,7 +8,7 @@ import argparse
 f_orders = { # to recalculate these, re-run f-test on do_f_test.py
     "2018" : {
         "njet0" : 5,
-        "njet1" : 4, #4
+        "njet1" : 5, #4
         "njet2" : 4,
     },
     "2017" : {
@@ -30,9 +30,9 @@ f_orders = { # to recalculate these, re-run f-test on do_f_test.py
 
 poly_fit_ranges = {
     "2018" : {
-        "njet0" : [0, 85],
-        "njet1" : [0, 50], #50
-        "njet2" : [0, 50],
+        "njet0" : [0, 95],
+        "njet1" : [0, 90], #50
+        "njet2" : [0, 90],
     },
     "2017" : {
         "njet0" : [0, 70],
@@ -85,8 +85,7 @@ if __name__ == "__main__":
         years = [args.year]
     # nbins = [50, 100]
     nbins = [100]
-    # jet_multiplicities = [0,1,2]
-    jet_multiplicities = [1,2]
+    jet_multiplicities = [0,1,2]
     
     save_dict = {} # to match the config setup, it's 
     
@@ -246,7 +245,9 @@ if __name__ == "__main__":
     
         
         save_dict[year] = out_dict_by_year
-        yaml_path = "./zpt_rewgt_params.yaml"
+        # yaml_path = "./zpt_rewgt_params.yaml"
+        # yaml_path = "./zpt_rewgt_params_amcnlo.yaml"
+        yaml_path = "./zpt_rewgt_params_minnlo.yaml"
         if os.path.isfile(yaml_path): # if yaml exists, append to existing config (values with same keys will be overwirtten
             config = OmegaConf.load(yaml_path)
             config = OmegaConf.merge(config, save_dict)
