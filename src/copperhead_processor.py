@@ -1664,7 +1664,7 @@ class EventProcessor(processor.ProcessorABC):
         HEMVeto = ak.ones_like(clean, dtype="bool") # 1D array saying True
         if year == "2018":
             HEMVeto_filter = (
-                (jets.pt >= 20.0)
+                (jets.pt >= 15.0)
                 & (jets.eta >= -3.0)
                 & (jets.eta <= -1.3)
                 & (jets.phi >= -1.57)
@@ -1699,15 +1699,14 @@ class EventProcessor(processor.ProcessorABC):
         jets = ak.to_packed(jets) 
 
         # apply jetpuid if not have done already
-        # FIXME
-        # if not is_2017 and is_mc:
-        #     jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
+        if not is_2017 and is_mc:
+            jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
         
-        # if is_mc:
-        #     # now we add jetpuid_wgt
-        #     weights.add("jetpuid_wgt", 
-        #             weight=jetpuid_weight,
-        #     )
+        if is_mc:
+            # now we add jetpuid_wgt
+            weights.add("jetpuid_wgt", 
+                    weight=jetpuid_weight,
+            )
 
         
         
