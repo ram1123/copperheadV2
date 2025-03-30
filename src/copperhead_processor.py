@@ -53,6 +53,7 @@ TODO!: add the correct btag working points for rereco samples that you will be w
 def getZptWgts(dimuon_pt, njets, nbins, year, config_path):
     # config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
     # config_path = config["new_zpt_wgt"]
+    print(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
     max_order = 5 #9
     zpt_wgt = ak.ones_like(dimuon_pt)
@@ -411,7 +412,7 @@ class EventProcessor(processor.ProcessorABC):
         is_mc = events.metadata['is_mc']
         print(f"NanoAODv: {NanoAODv}")
         # LHE cut original start -----------------------------------------------------------------------------
-        if dataset == 'dy_M-50': # if dy_M-50, apply LHE cut
+        if 'dy_M-50' in dataset: # if dy_M-50, apply LHE cut
             print("doing dy_M-50 LHE cut!")
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
@@ -1039,7 +1040,10 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         weights = Weights(None, storeIndividual=True) # none for dask awkward
         if is_mc:
-            weights.add("genWeight", weight=events.genWeight)
+            if "MiNNLO" in dataset: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
+                weights.add("genWeight", weight=np.sign(events.genWeight)) # just extract the sign, not the magnitude
+            else:
+                weights.add("genWeight", weight=events.genWeight)
             # original initial weight start ----------------
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights) # temporary commenting out
 
