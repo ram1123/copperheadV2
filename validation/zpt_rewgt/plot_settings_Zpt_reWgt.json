@@ -1,15 +1,7 @@
 {
     "dimuon_mass": {
         "variable": "dimuon_mass",
-        "binning_linspace": [110, 150, 31],
-        "density": false,
-        "ylabel": "Events / 1 GeV",
-        "xlabel": "$m_{\\mu\\mu}$ [GeV]",
-        "color": "royalblue"
-    },
-    "dimuon_mass_zpeak": {
-        "variable": "dimuon_mass",
-        "binning_linspace": [70, 110, 31],
+        "binning_linspace": [110, 150, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$m_{\\mu\\mu}$ [GeV]",
@@ -17,18 +9,34 @@
     },
     "dimuon_pt": {
         "variable": "dimuon_pt",
-        "binning_linspace": [0, 200, 61],
+        "binning_linspace": [0, 300, 31],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$p_T(\\mu\\mu)$ [GeV]",
         "color": "royalblue"
     },
+    "dimuon_pt_log": {
+        "variable": "dimuon_pt_log",
+        "binning_linspace": [0, 200, 51],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "log($p_T(\\mu\\mu)$) [GeV]",
+        "color": "royalblue"
+    },
     "dimuon_eta": {
         "variable": "dimuon_eta",
-        "binning_linspace": [-2.4, 2.4, 31],
+        "binning_linspace": [-5, 5, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\eta(\\mu\\mu)$ [GeV]",
+        "color": "royalblue"
+    },
+    "dimuon_rap": {
+        "variable": "dimuon_rap",
+        "binning_linspace": [-2.5, 2.5, 31],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$y(\\mu\\mu)$ [GeV]",
         "color": "royalblue"
     },
     "dimuon_rapidity": {
@@ -39,44 +47,60 @@
         "xlabel": "$y(\\mu\\mu)$ [GeV]",
         "color": "royalblue"
     },
+    "dimuon_phi": {
+        "variable": "dimuon_phi",
+        "binning_linspace": [-3.2, 3.2, 51],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "\\phi_{\\mu\\mu}$",
+        "color": "royalblue"
+    },
     "dimuon_cos_theta_cs": {
         "variable": "dimuon_cos_theta_cs",
-        "binning_linspace": [-1, 1, 31],
-        "density": false,
+        "binning_linspace": [-1, 1, 51],
+        "logscale": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$cos(\\theta_{CS})$",
         "color": "royalblue"
     },
     "dimuon_phi_cs": {
         "variable": "dimuon_phi_cs",
-        "binning_linspace": [-3.15, 3.15, 31],
-        "density": false,
+        "binning_linspace": [-3.14159, 3.14159, 51],
+        "logscale": false,
         "ylabel": "Events / 1 GeV",
-        "xlabel": "\\phi_{CS}$",
+        "xlabel": "$\\phi_{CS}$",
         "color": "royalblue"
     },
     "dimuon_cos_theta_eta": {
         "variable": "dimuon_cos_theta_eta",
-        "binning_linspace": [-1, 1, 31],
+        "binning_linspace": [-1, 1, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
-        "xlabel": "$cos(\\theta_{CS})$",
+        "xlabel": "$cos(\\theta_{\\eta})$",
         "color": "royalblue"
     },
     "dimuon_phi_eta": {
         "variable": "dimuon_phi_eta",
-        "binning_linspace": [0, 3.15, 31],
+        "binning_linspace": [0, 6.5, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
-        "xlabel": "\\phi_{CS}$",
+        "xlabel": "$\\phi_{\\eta}$",
         "color": "royalblue"
     },
     "dimuon_ebe_mass_res": {
         "variable": "dimuon_ebe_mass_res",
-        "binning_linspace": [0, 20, 31],
+        "binning_linspace": [0, 4, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\sigma_{m_{\\mu\\mu}}$",
+        "color": "royalblue"
+    },
+    "dimuon_ebe_mass_res_rel": {
+        "variable": "dimuon_ebe_mass_res_rel",
+        "binning_linspace": [0, 0.04, 61],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$\\sigma_{m_{\\mu\\mu}}/m_{\\mu\\mu}$",
         "color": "royalblue"
     },
     "rpt": {
@@ -85,14 +109,6 @@
         "density": false,
         "ylabel": "Events",
         "xlabel": "$R_{p_T}$",
-        "color": "royalblue"
-    },
-    "pt_centrality": {
-        "variable": "pt_centrality",
-        "binning_linspace": [0, 20, 31],
-        "density": false,
-        "ylabel": "Events",
-        "xlabel": "$p_T centrality$",
         "color": "royalblue"
     },
     "ll_zstar_log": {
@@ -105,7 +121,7 @@
     },
     "mmj_min_dEta": {
         "variable": "mmj_min_dEta",
-        "binning_linspace": [0, 8, 31],
+        "binning_linspace": [0, 8, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$min \\Delta\\eta_{\\mu\\mu,j}$",
@@ -113,7 +129,7 @@
     },
     "mmj_min_dPhi": {
         "variable": "mmj_min_dPhi",
-        "binning_linspace": [0, 3.15, 31],
+        "binning_linspace": [0, 3.3, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$min \\Delta\\phi_{\\mu\\mu,j}$",
@@ -121,7 +137,7 @@
     },
     "njets": {
         "variable": "njets",
-        "binning_linspace": [0.001, 8.001, 9],
+        "binning_linspace": [-0.001, 9.999, 11],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "N Jets",
@@ -129,7 +145,7 @@
     },
     "gjj_mass": {
         "variable": "gjj_mass",
-        "binning_linspace": [0, 2500, 31],
+        "binning_linspace": [0, 600, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$gen m_{jj}$ [GeV]",
@@ -138,6 +154,14 @@
     "jj_mass": {
         "variable": "jj_mass",
         "binning_linspace": [400, 2500, 22],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$m_{jj}$ [GeV]",
+        "color": "royalblue"
+    },
+    "jj_mass_range2": {
+        "variable": "jj_mass_range2",
+        "binning_linspace": [0, 2500, 41],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$m_{jj}$ [GeV]",
@@ -153,7 +177,7 @@
     },
     "jj_pt": {
         "variable": "jj_pt",
-        "binning_linspace": [25, 250, 31],
+        "binning_linspace": [0, 150, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(jj)$ [GeV]",
@@ -161,7 +185,7 @@
     },
     "jj_dEta": {
         "variable": "jj_dEta",
-        "binning_linspace": [0, 9, 31],
+        "binning_linspace": [0, 10, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\Delta\\eta_{jj}$",
@@ -169,7 +193,7 @@
     },
     "jj_dPhi": {
         "variable": "jj_dPhi",
-        "binning_linspace": [0, 3.15, 31],
+        "binning_linspace": [0, 3.5, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\Delta\\phi_{jj}$",
@@ -177,7 +201,7 @@
     },
     "jet1_pt": {
         "variable": "jet1_pt",
-        "binning_linspace": [0, 300, 31],
+        "binning_linspace": [0, 250, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(jet1)$ [GeV]",
@@ -193,7 +217,7 @@
     },
     "jet1_phi": {
         "variable": "jet1_phi",
-        "binning_linspace": [-3.15, 3.15, 31],
+        "binning_linspace": [-3.2, 3.2, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi (jet1)$",
@@ -210,7 +234,7 @@
     },
     "jet2_pt": {
         "variable": "jet2_pt",
-        "binning_linspace": [0, 300, 31],
+        "binning_linspace": [0, 250, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(jet2)$ [GeV]",
@@ -226,7 +250,7 @@
     },
     "jet2_phi": {
         "variable": "jet2_phi",
-        "binning_linspace": [-3.15, 3.15, 31],
+        "binning_linspace": [-3.2, 3.2, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi (jet2)$",
@@ -243,7 +267,7 @@
     },
     "mu1_pt": {
         "variable": "mu1_pt",
-        "binning_linspace": [0, 300, 31],
+        "binning_linspace": [20, 200, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(mu1)$ [GeV]",
@@ -259,7 +283,7 @@
     },
     "mu1_eta": {
         "variable": "mu1_eta",
-        "binning_linspace": [-2.4, 2.4, 31],
+        "binning_linspace": [-2.5, 2.5, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta (mu1)$",
@@ -267,7 +291,7 @@
     },
     "mu1_phi": {
         "variable": "mu1_phi",
-        "binning_linspace": [-3.15, 3.15, 31],
+        "binning_linspace": [-3.2, 3.2, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi (mu1)$",
@@ -275,7 +299,7 @@
     },
     "mu2_pt": {
         "variable": "mu2_pt",
-        "binning_linspace": [0, 300, 31],
+        "binning_linspace": [20, 120, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(mu2)$ [GeV]",
@@ -291,7 +315,7 @@
     },
     "mu2_eta": {
         "variable": "mu2_eta",
-        "binning_linspace": [-2.4, 2.4, 31],
+        "binning_linspace": [-2.5, 2.5, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta (mu2)$",
@@ -299,19 +323,11 @@
     },
     "mu2_phi": {
         "variable": "mu2_phi",
-        "binning_linspace": [-3.15, 3.15, 31],
+        "binning_linspace": [-3.2, 3.2, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi (mu2)$",
         "color": "royalblue"
-    },
-    "deta": {
-        "variable": "deta",
-        "binning_linspace": [-5, 5, 100],
-        "density": false,
-        "ylabel": "Events / 1 GeV",
-        "xlabel": "Delta Eta",
-        "color": "pink"
     },
     "dR": {
         "variable": "dR",
@@ -320,7 +336,77 @@
         "ylabel": "Events / 1 GeV",
         "xlabel": "Delta R",
         "color": "pink"
+    },
+    "nBtagLoose": {
+        "variable": "nBtagLoose",
+        "binning_linspace": [-0.001, 9.999, 11],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "nBtagLoose",
+        "color": "royalblue"
+    },
+    "nBtagMedium": {
+        "variable": "nBtagMedium",
+        "binning_linspace": [-0.001, 9.999, 11],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "nBtagLoose",
+        "color": "royalblue"
+    },
+    "nsoftjets2": {
+        "variable": "nsoftjets2",
+        "binning_linspace": [0, 25, 26],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "nsoftjets2",
+        "color": "royalblue"
+    },
+    "nsoftjets5": {
+        "variable": "nsoftjets5",
+        "binning_linspace": [0, 25, 26],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "nsoftjets5",
+        "color": "royalblue"
+    },
+    "htsoft2": {
+        "variable": "htsoft2",
+        "binning_linspace": [0, 60, 26],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "htsoft2",
+        "color": "royalblue"
+    },
+    "htsoft5": {
+        "variable": "htsoft5",
+        "binning_linspace": [0, 60, 26],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "htsoft5",
+        "color": "royalblue"
+    },
+    "zeppenfeld": {
+        "variable": "zeppenfeld",
+        "binning_linspace": [-5, 5, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "zeppenfeld",
+        "color": "royalblue"
+    },
+    "pt_centrality": {
+        "variable": "pt_centrality",
+        "binning_linspace": [0, 20, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "pT centrality",
+        "color": "royalblue"
+    },
+    "pt_centrality_scalar": {
+        "variable": "pt_centrality",
+        "binning_linspace": [0, 20, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "pT centrality",
+        "color": "royalblue"
     }
-
-
 }

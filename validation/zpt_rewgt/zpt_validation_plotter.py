@@ -31,11 +31,13 @@ group_DY_processes = [
     "dy_M-50",
     "dy_M-100To200",
     "dy_m105_160_amc",
+    "dy_M-100To200_MiNNLO",
+    "dy_M-50_MiNNLO"
 ]
 # group_DY_processes = ["dy_M-100To200","dy_VBF_filter_customJMEoff"]
 # group_DY_processes = [] # just VBf filter
 
-group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop"]
+group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"]
 group_Ewk_processes = ["ewk_lljj_mll50_mjj120"]
 group_VV_processes = ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"]# diboson
 # group_ggH_processes = ["ggh_amcPS"]
@@ -222,12 +224,16 @@ if __name__ == "__main__":
                 available_processes.append("dy_M-50")
                 available_processes.append("dy_M-100To200")
                 available_processes.append("dy_m105_160_amc")
+                available_processes.append("dy_M-100To200_MiNNLO")
+                available_processes.append("dy_M-50_MiNNLO")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
                 available_processes.append("ttjets_sl")
             elif bkg_sample.upper() == "ST": # enforce upper case to prevent confusion
                 available_processes.append("st_tw_top")
                 available_processes.append("st_tw_antitop")
+                available_processes.append("st_t_top")
+                available_processes.append("st_t_antitop")
             elif bkg_sample.upper() == "VV": # enforce upper case to prevent confusion
                 available_processes.append("ww_2l2nu")
                 available_processes.append("wz_3lnu")
@@ -236,6 +242,11 @@ if __name__ == "__main__":
                 available_processes.append("zz")
             elif bkg_sample.upper() == "EWK": # enforce upper case to prevent confusion
                 available_processes.append("ewk_lljj_mll50_mjj120")
+            elif bkg_sample.upper() == "OTHER": # enforce upper case to prevent confusion
+                available_processes.append("www")
+                available_processes.append("wwz")
+                available_processes.append("wzz")
+                available_processes.append("zzz")
             else:
                 print(f"unknown background {bkg_sample} was given!")
         
@@ -276,13 +287,12 @@ if __name__ == "__main__":
             # variables2plot.append(f"dimuon_ebe_mass_res")
             # variables2plot.append(f"{particle}_rapidity")
         elif "dijet" in particle:
-            # variables2plot.append(f"gjj_mass")
-            # variables2plot.append(f"jj_mass_nominal")
-            # variables2plot.append(f"jj_pt_nominal")
-            # variables2plot.append(f"jj_dEta_nominal")
-            # variables2plot.append(f"jj_dPhi_nominal")
-            # variables2plot.append(f"zeppenfeld_nominal")
-            # variables2plot.append(f"rpt_nominal")
+            variables2plot.append(f"jj_mass_nominal")
+            variables2plot.append(f"jj_pt_nominal")
+            variables2plot.append(f"jj_dEta_nominal")
+            variables2plot.append(f"jj_dPhi_nominal")
+            variables2plot.append(f"zeppenfeld_nominal")
+            variables2plot.append(f"rpt_nominal")
             variables2plot.append(f"pt_centrality_nominal")
             variables2plot.append(f"nsoftjets2_nominal")
             variables2plot.append(f"htsoft2_nominal")
@@ -312,7 +322,7 @@ if __name__ == "__main__":
 
     variables2plot_orig = copy.deepcopy(variables2plot)
     if "dimuon_mass" in variables2plot:
-        variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
+        variables2plot = ["dimuon_mass_zpeak"] + variables2plot# add another range to plot
     print(f"variables2plot: {variables2plot}")
     
     plot_setting_fname = args.plot_setting
