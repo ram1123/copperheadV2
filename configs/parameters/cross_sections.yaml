@@ -44,19 +44,19 @@ cross_sections:
     '2018': 0.0789
   ewk_m50: 3.998
   st_top: 136.02
-  st_t_top: 3.4
-  st_t_antitop: 80.95
-  st_tw_top: 32.45 # UL
-  st_tw_antitop: 32.45 # UL
+  st_tw_top: 32.45 # UL #FIXME
+  st_tw_antitop: 32.45 # UL #FIXME
   # st_tw_top: 35.85 # rereco
   # st_tw_antitop: 35.85 # rereco
+  st_t_top: 136.02 #FIXME source: AN-19-124 table 2.8
+  st_t_antitop: 80.95 #FIXME source: AN-19-124 table 2.8
   ttjets_dl: 86.65 # UL
   ttjets_sl: 358.57 # UL
   ww_2l2nu: 11.09 # UL
   wz_3lnu: 5.22 # UL
   wz_2l2q: 6.45 # UL
   wz_1l1nu2q: 9.12 # UL
-  zz: 12.17 # UL
+  zz: 12.17 # UL #FIXME
   # ww_2l2nu: 12.178 # rereco
   # wz_3lnu: 4.102 # rereco
   # wz_2l2q: 5.606 # rereco
@@ -64,10 +64,10 @@ cross_sections:
   # zz: 0.5664 # rereco
   ttw: 0.2001
   ttz: 0.2529
-  www: 0.2086
-  wwz: 0.1651
-  wzz: 0.05565
-  zzz: 0.01398
+  www: 0.2086 # source: AN-19-124 table 2.8
+  wwz: 0.1651 # source: AN-19-124 table 2.8
+  wzz: 0.05565 # source: AN-19-124 table 2.8
+  zzz: 0.01398 # source: AN-19-124 table 2.8
   # ggh_powheg: 0.01057
   ggh_powhegPS: 0.01057
   ggh_amcPS: 0.01057

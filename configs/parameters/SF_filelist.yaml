@@ -207,16 +207,22 @@ zpt_weights_file:
   '2017': data/zpt_weights.histo.json # Dmitry's zpt
   # '2018': data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
   '2018': data/zpt_weights.histo.json # Dmitry's zpt
+  2016_RERECO: data/zpt_weights.histo.json # FIXME
+  '2017_RERECO': data/zpt_weights.histo.json # FIXME
+  '2018_RERECO': data/zpt_weights.histo.json # FIXME
 zpt_weights_file_valerie:
   2016preVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
   2016postVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
   '2017': data/reweight_zpt_2018_nJetBinned_new.histo.root
   '2018': data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
+  2016_RERECO: data/zpt_weights.histo.json # FIXME
+  '2017_RERECO': data/zpt_weights.histo.json # FIXME
+  '2018_RERECO': data/zpt_weights.histo.json # FIXME
 new_zpt_weights_file:
-  2016preVFP: data/zpt_rewgt/fitting/zpt_rewgt_params.yaml # New zpt rewgt March 252025
-  2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params.yaml # New zpt rewgt March 25 2025
-  '2017': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml # New zpt rewgt March 25 2025
-  '2018': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml # New zpt rewgt March 25 2025
+  2016preVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
+  2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
+  '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
+  '2018': data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
   2016_RERECO: data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   '2017_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   '2018_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
@@ -236,11 +242,11 @@ jmar_sf_file:
   2016preVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jmar.json.gz
   2016postVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016postVFP_UL/jmar.json.gz
   '2017': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2017_UL/jmar.json.gz # while this is listed, we use jetpuid_sf_file for 2017 (old method)
-  '2018': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jmar.json.gz
+  # '2018': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jmar.json.gz
   # 2016preVFP: data/POG/JME/2016preVFP_UL/jmar.json.gz
   # 2016postVFP: data/POG/JME/2016postVFP_UL/jmar.json.gz
   # '2017': data/POG/JME/2017_UL/jmar.json.gz # while this is listed, we use jetpuid_sf_file for 2017 (old method)
-  # '2018': data/POG/JME/2018_UL/jmar.json.gz
+  '2018': data/POG/JME/2018_UL/jmar.json.gz
   2016_RERECO: dummy
   '2017_RERECO': dummy
   '2018_RERECO': dummy
