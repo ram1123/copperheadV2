@@ -19,6 +19,7 @@ import glob
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")
 from omegaconf import OmegaConf
+import numpy as np
 
 
 def get_Xcache_filelist(fnames: list):
@@ -134,7 +135,8 @@ if __name__ == "__main__":
     os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
     if args.fraction is None: # do the normal prestage setup
         # allowlist_sites=["T2_US_Nebraska"] # take data only from purdue for now
-        allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL"]
+        allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_CH_CERN", "T2_US_Vanderbilt", "T2_US_Florida", "T2_IT_Pisa", "T2_DE_RWTH"]
+        
         # allowlist_sites=["T2_UK_London_IC", "T2_FI_HIP", "T1_DE_KIT_Disk","T2_US_Nebraska","T2_US_Wisconsin","T1_US_FNAL_Disk", "T2_US_Florida", "T2_US_FNAL",  "T2_CH_CERN", "T2_US_MIT" ]
         # allowlist_sites=["T1_DE_KIT_Disk"]
         total_events = 0
@@ -181,7 +183,10 @@ if __name__ == "__main__":
             for bkg_sample in bkg_samples:
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                     # new_sample_list.append("dy_M-50")
-                    new_sample_list.append("dy_M-100To200")
+                    # new_sample_list.append("dy_M-100To200")
+                    new_sample_list.append("dy_M-100To200_MiNNLO")
+                    new_sample_list.append("dy_M-50_MiNNLO")
+                    # new_sample_list.append("dy_M-50_MiNNLO_V2")
                     # new_sample_list.append("dy_VBF_filter")
                     # new_sample_list.append("dy_m105_160_vbf_amc")
                     # new_sample_list.append("dy_VBF_filter_customJMEoff")
@@ -204,6 +209,8 @@ if __name__ == "__main__":
                 elif bkg_sample.upper() == "ST": # enforce upper case to prevent confusion
                     new_sample_list.append("st_tw_top")
                     new_sample_list.append("st_tw_antitop")
+                    new_sample_list.append("st_t_antitop")
+                    new_sample_list.append("st_t_top")
                 elif bkg_sample.upper() == "VV": # enforce upper case to prevent confusion
                     new_sample_list.append("ww_2l2nu")
                     new_sample_list.append("wz_3lnu")
@@ -214,6 +221,11 @@ if __name__ == "__main__":
                     new_sample_list.append("ewk_lljj_mll50_mjj120")
                     # new_sample_list.append("ewk_lljj_mll105_160_ptj0")
                     # new_sample_list.append("ewk_lljj_mll105_160_py_dipole")
+                elif bkg_sample.upper() == "OTHER": 
+                    new_sample_list.append("www")
+                    new_sample_list.append("wwz")
+                    new_sample_list.append("wzz")
+                    new_sample_list.append("zzz")
                 else:
                     print(f"unknown background {bkg_sample} was given!")
             
@@ -244,6 +256,7 @@ if __name__ == "__main__":
         print(f"year: {year}")
         print(f"type(year): {type(year)}")
         print(f"args.run2_rereco: {args.run2_rereco}")
+        fnames = []
         for sample_name in tqdm.tqdm(dataset.keys()):
             is_data =  ("data" in sample_name)
 
@@ -260,6 +273,7 @@ if __name__ == "__main__":
                 """
                 load directly from local files
                 """
+                print('year == "2018_RERECO"', year == "2018_RERECO")
                 if year == "2018_RERECO":
                     # test start -----------------------------------------------------------
                     load_path = "/eos/purdue/store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM"
@@ -272,6 +286,10 @@ if __name__ == "__main__":
                     # test start -----------------------------------------------------------
                     load_path = "/eos/purdue/store/mc/RunIISummer16NanoAODv6/DYJetsToLL_M-105To160_VBFFilter_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8//NANOAODSIM"
                     fnames = glob.glob(f"{load_path}/*/*/*.root")
+                elif year == "2018":
+                    # test start -----------------------------------------------------------
+                    load_path = "/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus"
+                    fnames = glob.glob(f"{load_path}/*.root")
                 else:
                     print("no valid year is Given!")
                     raise ValueError
@@ -309,21 +327,7 @@ if __name__ == "__main__":
                     load_path = "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/"
                     fnames = glob.glob(f"{load_path}/*/*/*.root")
 
-                    bad_files = [ # this is obtained from quick_tests/quick_bad_fil_collector.ipynb
-                        "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1634.root",
-"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1635.root",
-"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1636.root",
-"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1637.root",
-"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1638.root",
-"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1639.root",
-"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1640.root",
-"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1641.root",
-"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1642.root",
-"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1643.root",
-                    ]
-                    fnames = set(fnames)
-                    bad_files = set(bad_files)
-                    fnames = list(fnames.difference(bad_files)) # remove bad files from fnames and turn it back to a list
+                    blist
                 elif sample_name == "ggh_amcPS": # actually amcPS
                     load_path = "/eos/purdue/store/group/local/hmm/FSRmyNanoProdMc2017_NANOV8a/GluGluHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnloFXFX_pythia8/"
                     fnames = glob.glob(f"{load_path}/*/*/*/*.root")
@@ -332,7 +336,7 @@ if __name__ == "__main__":
                     fnames = glob.glob(f"{load_path}/*/*/*/*.root")
 
 
-
+            
             # elif year == "2018_RERECO":
             #     print(f"sample_name: {sample_name}")
             #     if sample_name == "data_A":
@@ -502,6 +506,40 @@ if __name__ == "__main__":
                 #     print(f"fnames load_path: {load_path}")
                 #     fnames = glob.glob(f"{load_path}")
 
+            # remove bad files
+            bad_files = [ # this is obtained from quick_tests/quick_bad_fil_collector.ipynb
+                "/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1634.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1635.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1636.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1637.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1638.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1639.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1640.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1641.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1642.root",
+"/eos/purdue/store/group/local/hmm/nanoAODv6_private/FSRmyNanoProdData2017_NANOV4/SingleMuon/RunIISummer16MiniAODv3_FSRmyNanoProdData2017_NANOV4_un2017F-31Mar2018-v1/191007_095748/0001/myNanoProdData2017_NANO_1643.root",
+                '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5006.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5154.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5340.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5359.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5360.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5530.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5635.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5910.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5927.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_5966.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_6217.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_6459.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_6629.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_6655.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_6772.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_6912.root',
+ '/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus/out_6933.root',
+            ]
+            fnames = set(fnames)
+            bad_files = set(bad_files)
+            fnames = list(fnames.difference(bad_files)) # remove bad files from fnames and turn it back to a 
+            
             # This is the default method
             das_query = dataset[sample_name]
             if "dummy" not in das_query:
@@ -533,7 +571,7 @@ if __name__ == "__main__":
             print(f"sample_name: {sample_name}")
             print(f"das_query: {das_query}")
             print(f"len(fnames): {len(fnames)}")
-            print(f"fnames: {fnames}")
+            # print(f"fnames: {fnames}")
             
             # fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading 
             # print(f"fnames: {fnames[:5]}")
@@ -560,25 +598,45 @@ if __name__ == "__main__":
                 preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                 total_events += preprocess_metadata["data_entries"] 
             else: # if MC
-                file_input = {fname : {"object_path": "Runs"} for fname in fnames}
-                print(f"file_input: {file_input}")
-                # print(f"file_input: {file_input}")
-                # print(len(file_input.keys()))
-                runs = NanoEventsFactory.from_root(
-                        file_input,
-                        metadata={},
-                        schemaclass=BaseSchema,
-                        uproot_options={"timeout":4*2400},
-                ).events()               
-                # print(f"runs.fields: {runs.fields}")
-                # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
-                if "genEventSumw" in runs.fields:
-                    preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                else: # nanoAODv6 
-                    preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                
+                if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
+                    file_input = {fname : {"object_path": "Events"} for fname in fnames}
+                    events = NanoEventsFactory.from_root(
+                            file_input,
+                            metadata={},
+                            schemaclass=BaseSchema,
+                            uproot_options={"timeout":4*2400},
+                    ).events() 
+                    gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
+                    preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
+                    preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
+                else:
+                    file_input = {fname : {"object_path": "Runs"} for fname in fnames}
+                    print(f"file_input: {file_input}")
+                    # print(f"file_input: {file_input}")
+                    # print(len(file_input.keys()))
+                    runs = NanoEventsFactory.from_root(
+                            file_input,
+                            metadata={},
+                            schemaclass=BaseSchema,
+                            uproot_options={"timeout":4*2400},
+                    ).events()    
+    
+                    
+                    # print(f"runs.fields: {runs.fields}")
+                    # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
+                    if "genEventSumw" in runs.fields:
+                        # sumGenwgts = ak.sum(runs.genEventSumw).compute()
+                        # sumGenwgts_v2 = ak.sum(events.genWeight).compute()
+                        # gen_wgt_max = ak.max(events.genWeight).compute()
+                        # big_gen_wgt = events.genWeight > 3000
+                        # print(f"big_gen_wgt num: {ak.sum(big_gen_wgt).compute()}")
+                        # print(f"gen_wgt_max: {gen_wgt_max}")
+                        # print(f"nevents: {nevents}")
+                        preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                        preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                    else: # nanoAODv6 
+                        preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                        preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                     
                 total_events += preprocess_metadata["nGenEvts"] 
 
