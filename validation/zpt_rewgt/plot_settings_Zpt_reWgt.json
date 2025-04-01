@@ -7,9 +7,17 @@
         "xlabel": "$m_{\\mu\\mu}$ [GeV]",
         "color": "royalblue"
     },
+    "dimuon_mass_zpeak": {
+        "variable": "dimuon_mass",
+        "binning_linspace": [70, 110, 51],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$m_{\\mu\\mu}$ [GeV]",
+        "color": "royalblue"
+    },
     "dimuon_pt": {
         "variable": "dimuon_pt",
-        "binning_linspace": [0, 300, 31],
+        "binning_linspace": [0, 200, 61],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$p_T(\\mu\\mu)$ [GeV]",

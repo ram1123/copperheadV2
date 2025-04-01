@@ -272,20 +272,21 @@ if __name__ == "__main__":
         if "dimuon" in particle:
             variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
-            # variables2plot.append(f"{particle}_eta")
-            # variables2plot.append(f"{particle}_phi")
-            # variables2plot.append(f"{particle}_cos_theta_cs")
-            # variables2plot.append(f"{particle}_phi_cs")
-            # variables2plot.append(f"mmj_min_dPhi_nominal")
-            # variables2plot.append(f"mmj_min_dEta_nominal")
-            # variables2plot.append(f"rpt_nominal")
-            # variables2plot.append(f"ll_zstar_log_nominal")
+            variables2plot.append(f"{particle}_eta")
+            variables2plot.append(f"{particle}_phi")
+            variables2plot.append(f"{particle}_cos_theta_cs")
+            variables2plot.append(f"{particle}_phi_cs")
+            variables2plot.append(f"mmj_min_dPhi_nominal")
+            variables2plot.append(f"mmj_min_dEta_nominal")
+            variables2plot.append(f"rpt_nominal")
+            variables2plot.append(f"ll_zstar_log_nominal")
+            variables2plot.append(f"{particle}_rapidity")
             
             # --------------------------------------------------
             # variables2plot.append(f"rpt")
             # variables2plot.append(f"ll_zstar_log")
             # variables2plot.append(f"dimuon_ebe_mass_res")
-            # variables2plot.append(f"{particle}_rapidity")
+            # 
         elif "dijet" in particle:
             variables2plot.append(f"jj_mass_nominal")
             variables2plot.append(f"jj_pt_nominal")
@@ -300,12 +301,12 @@ if __name__ == "__main__":
             variables2plot.append(f"htsoft5_nominal")
             
         elif ("mu" in particle) :
-            # for kinematic in kinematic_vars:
-            #     # plot both leading and subleading muons/jets
-            #     variables2plot.append(f"{particle}1_{kinematic}")
-            #     variables2plot.append(f"{particle}2_{kinematic}")
-            variables2plot.append(f"{particle}1_pt")
-            variables2plot.append(f"{particle}2_pt")
+            for kinematic in kinematic_vars:
+                # plot both leading and subleading muons/jets
+                variables2plot.append(f"{particle}1_{kinematic}")
+                variables2plot.append(f"{particle}2_{kinematic}")
+            # variables2plot.append(f"{particle}1_pt")
+            # variables2plot.append(f"{particle}2_pt")
             variables2plot.append(f"{particle}1_pt_over_mass")
             variables2plot.append(f"{particle}2_pt_over_mass")
         elif ("jet" in particle):
