@@ -182,10 +182,15 @@ def plotDataMC_compare(
 
         
         ax_ratio.axhline(1, color='gray', linestyle='--')
+        ax_ratio.axhline(1.2, color='gray', linestyle='--')
+        ax_ratio.axhline(0.8, color='gray', linestyle='--')
+        ax_ratio.axhline(1.4, color='gray', linestyle='--')
+        ax_ratio.axhline(0.6, color='gray', linestyle='--')
         ax_ratio.set_xlabel(x_title)
         ax_ratio.set_ylabel('Data / MC')
         ax_ratio.set_xlim(binning[0], binning[-1])
         ax_ratio.set_ylim(0.5,1.5) 
+        ax_ratio.set_yticks([0.6, 0.8, 1.0, 1.2, 1.4]) # explicitly ask for 1.4 and 0.6
     else:
         ax_main.set_xlabel(x_title)
 
