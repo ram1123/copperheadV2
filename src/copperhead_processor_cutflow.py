@@ -524,24 +524,25 @@ class EventProcessor(processor.ProcessorABC):
         #     & events.Muon[self.config["muon_id"]]
         #     & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         # )
+        
         muons = events.Muon
         muon_selection = ak.ones_like(events.Muon.pt, dtype="bool")
-        # -----
+        # # -----
         muon_selection = muon_selection & (events.Muon.pt_raw >= self.config["muon_pt_cut"]) 
-        nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon raw pt cut: {ak.sum(nmuon_1_filter).compute()}")
-        # -----
+        # nmuon_1_filter = ak.any(muon_selection, axis=1)
+        # print(f"nmuon_1_filter sum after muon raw pt cut: {ak.sum(nmuon_1_filter).compute()}")
+        # # -----
         muon_selection = muon_selection & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"]) 
-        nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon raw eta cut: {ak.sum(nmuon_1_filter).compute()}")
-        # -----
+        # nmuon_1_filter = ak.any(muon_selection, axis=1)
+        # print(f"nmuon_1_filter sum after muon raw eta cut: {ak.sum(nmuon_1_filter).compute()}")
+        # # -----
         muon_selection = muon_selection & events.Muon[self.config["muon_id"]] 
-        nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon medium ID cut: {ak.sum(nmuon_1_filter).compute()}")
-        # -----
+        # nmuon_1_filter = ak.any(muon_selection, axis=1)
+        # print(f"nmuon_1_filter sum after muon medium ID cut: {ak.sum(nmuon_1_filter).compute()}")
+        # # -----
         muon_selection = muon_selection & (events.Muon.isGlobal | events.Muon.isTracker)  
-        nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon isGlobal or isTracker cut: {ak.sum(nmuon_1_filter).compute()}")
+        # nmuon_1_filter = ak.any(muon_selection, axis=1)
+        # print(f"nmuon_1_filter sum after muon isGlobal or isTracker cut: {ak.sum(nmuon_1_filter).compute()}")
         
         # # --------------------------------------------------------
         # # # Apply Rochester correction
@@ -567,7 +568,7 @@ class EventProcessor(processor.ProcessorABC):
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]) 
         nmuon_1_filter = ak.any(muon_selection, axis=1)
-        print(f"nmuon_1_filter sum after muon RelIso cut after FSR recovery : {ak.sum(nmuon_1_filter).compute()}")
+        # print(f"nmuon_1_filter sum after muon RelIso cut after FSR recovery : {ak.sum(nmuon_1_filter).compute()}")
         
         # -------------------------------------------------------- 
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
@@ -794,17 +795,38 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"event_filter after good vetex filters sum: {ak.sum(event_filter).compute()}")
         event_filter = event_filter & (evnt_qual_flg_selection > 0)
         # print(f"event_filter after good MET filters sum: {ak.sum(event_filter).compute()}")
-        event_filter = event_filter & HLT_filter
-        # print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
-        event_filter = event_filter & trigger_match
-        # print(f"event_filter sum after Trigger match: {ak.sum(event_filter).compute()}")
-        event_filter = event_filter & (nmuons == 2)
-        print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
-        event_filter = event_filter & (electron_veto)
-        print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & HLT_filter
+        # # print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & trigger_match
+        # # print(f"event_filter sum after Trigger match: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & (nmuons == 2)
+        # print(f"event_filter sum after nmuons cut: {ak.sum(event_filter).compute()}")
+        # event_filter = event_filter & (electron_veto)
+        # print(f"event_filter sum after electron veto: {ak.sum(event_filter).compute()}")
         # raise ValueError
         # --------------------------------------------------------------------
 
+        # # apply HEM Veto, written in "HEM effect in 2018" appendix K of the main long AN
+        # HEMVeto = ak.ones_like(event_filter, dtype="bool") # 1D array saying True
+        # jets = events.Jet
+        # if year == "2018":
+        #     print("doing HEMVETO !")
+        #     HEMVeto_filter = (
+        #         (jets.eta > -3.0)
+        #         & (jets.eta < -1.3)
+        #         & (jets.phi > -1.57)
+        #         & (jets.phi < -0.87)
+        #         & (jets.pt > 15.0)
+        #     )
+        #     # "JME recommends to veto events if ANY jet with a loose selection lies in the region affected by the HEM issue." https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/2
+        #     HEMVeto_filter = ak.any(HEMVeto_filter, axis=1)
+        #     HEMVeto = ~HEMVeto_filter
+        #     event_filter = event_filter & HEMVeto
+            # print(f"event_filter sum after HEM veto: {ak.sum(event_filter).compute()}")
+            # print(f"HEMVeto : {HEMVeto.compute()}")
+
+        
+        
         # apply muons and electrons cut:
         # event_filter = (
         #         event_filter
@@ -1352,7 +1374,7 @@ class EventProcessor(processor.ProcessorABC):
         event_filter = event_filter & (nBtagLoose <=1)
         print(f"event_filter sum after loose btag cut: {ak.sum(event_filter).compute()}")
         event_filter = event_filter & (nBtagMedium <=0)
-        # print(f"event_filter sum after medium btag cut: {ak.sum(event_filter).compute()}")
+        print(f"event_filter sum after medium btag cut: {ak.sum(event_filter).compute()}")
         # event_filter = event_filter & HLT_filter
         # print(f"event_filter sum after HLT: {ak.sum(event_filter).compute()}")
         # event_filter = event_filter & trigger_match
@@ -1601,29 +1623,57 @@ class EventProcessor(processor.ProcessorABC):
         # Find jets that have selected muons within dR<0.4 from them -> line 465 of AN-19-124
 
         # matched_mu_pt = jets.matched_muons.pt_fsr if "pt_fsr" in jets.matched_muons.fields else jets.matched_muons.pt
-        matched_mu_pt = jets.matched_muons.pt_raw # afaik, matched muons are muons that are within dr < 0.4 to jets
-        matched_mu_eta = jets.matched_muons.eta_raw
-        matched_mu_iso = jets.matched_muons.pfRelIso04_all
-        matched_mu_id = jets.matched_muons[self.config["muon_id"]]
-        # print(f'self.config["muon_id": {self.config["muon_id"]}')
-        # print(f"matched_mu_id: {matched_mu_id.compute()}")
-        # print(f"jets.matched_muons: {jets.matched_muons.compute()}")
-        # AN-19-124 line 465: "Jets are also cleaned w.r.t. the selected muon candidates by requiring a geometrical separation of ∆R ( j, µ ) > 0.4"
-        matched_mu_pass = ( # apply the same muon selection condition from before
-            (matched_mu_pt > self.config["muon_pt_cut"])
-            & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
-            & (matched_mu_iso < self.config["muon_iso_cut"])
-            & matched_mu_id
-            & (jets.matched_muons.isGlobal | jets.matched_muons.isTracker) # Table 3.5 AN-19-124
+        # matched_mu_pt = jets.matched_muons.pt_raw # afaik, matched muons are muons that are within dr < 0.4 to jets
+        # matched_mu_eta = jets.matched_muons.eta_raw
+        # matched_mu_iso = jets.matched_muons.pfRelIso04_all
+        # matched_mu_id = jets.matched_muons[self.config["muon_id"]]
+        # # print(f'self.config["muon_id": {self.config["muon_id"]}')
+        # # print(f"matched_mu_id: {matched_mu_id.compute()}")
+        # # print(f"jets.matched_muons: {jets.matched_muons.compute()}")
+        # # AN-19-124 line 465: "Jets are also cleaned w.r.t. the selected muon candidates by requiring a geometrical separation of ∆R ( j, µ ) > 0.4"
+        # matched_mu_pass = ( # apply the same muon selection condition from before
+        #     (matched_mu_pt > self.config["muon_pt_cut"])
+        #     & (abs(matched_mu_eta) < self.config["muon_eta_cut"])
+        #     & (matched_mu_iso < self.config["muon_iso_cut"])
+        #     & matched_mu_id
+        #     & (jets.matched_muons.isGlobal | jets.matched_muons.isTracker) # Table 3.5 AN-19-124
+        # )
+        # # print(f"matched_mu_pass: {matched_mu_pass.compute()}")
+        # # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
+        # if self.test_mode:
+        #     print(f"jet loop matched_mu_pass b4 : {matched_mu_pass}")
+        # matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
+        # clean = ~(ak.fill_none(matched_mu_pass, value=False))
+        # # print(f"clean: {clean.compute()}")
+        # # print(f"jets: {jets.compute()}")
+
+        # ----------------------------------------------------------------
+         # apply clean jet selection
+        # mu1_jet_dR = jets.delta_r(mu1[:, np.newaxis])
+        _, _, mu1_jet_dR = delta_r_V1(
+            mu1[:, np.newaxis].eta_raw,
+            jets.eta,
+            mu1[:, np.newaxis].phi_raw,
+            jets.phi,
         )
-        # print(f"matched_mu_pass: {matched_mu_pass.compute()}")
-        # print(f"ak.sum(matched_mu_pass, axis=2): {ak.sum(matched_mu_pass, axis=2).compute()}")
-        if self.test_mode:
-            print(f"jet loop matched_mu_pass b4 : {matched_mu_pass}")
-        matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0 # there's at least one matched mu that passes the muon selection
-        clean = ~(ak.fill_none(matched_mu_pass, value=False))
-        # print(f"clean: {clean.compute()}")
-        # print(f"jets: {jets.compute()}")
+        matched_mu1_jet = mu1_jet_dR <= 0.4
+        matched_mu1_jet = ak.fill_none(matched_mu1_jet, value=False)
+
+        # mu2_jet_dR = jets.delta_r(mu2[:, np.newaxis])
+        _, _, mu2_jet_dR = delta_r_V1(
+            mu2[:, np.newaxis].eta_raw,
+            jets.eta,
+            mu2[:, np.newaxis].phi_raw,
+            jets.phi,
+        )
+        matched_mu2_jet = mu2_jet_dR <= 0.4
+        matched_mu2_jet = ak.fill_none(matched_mu2_jet, value=False)
+        
+        matched_mu_pass = matched_mu1_jet | matched_mu2_jet
+        # matched_mu_pass = ak.sum(matched_mu_pass, axis=2) > 0
+        # clean = ~(ak.fill_none(matched_mu_pass, value=False))
+        clean = ~matched_mu_pass
+        clean = ak.fill_none(clean, value=True)
 
         # # Select particular JEC variation
         # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
@@ -1700,19 +1750,7 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
-        # apply HEM Veto, written in "HEM effect in 2018" appendix K of the main long AN
-        HEMVeto = ak.ones_like(clean, dtype="bool") # 1D array saying True
-        if year == "2018":
-            HEMVeto_filter = (
-                (jets.pt >= 20.0)
-                & (jets.eta >= -3.0)
-                & (jets.eta <= -1.3)
-                & (jets.phi >= -1.57)
-                & (jets.phi <= -0.87)
-            )
-            false_arr = ak.ones_like(HEMVeto) < 0
-            HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
-            # print(f"HEMVeto : {HEMVeto.compute()}")
+        
 
         # get QGL cut
         if NanoAODv == 9 : 
@@ -1733,13 +1771,13 @@ class EventProcessor(processor.ProcessorABC):
         njet_1_filter = ak.any(jet_selection, axis=1)
         # print(f"njet_1_filter sum after jet PUID pass: {ak.sum(njet_1_filter).compute()}")
         # -----
-        jet_selection = jet_selection & (jets.pt > self.config["jet_pt_cut"])
+        jet_selection = jet_selection & (jets.pt >= self.config["jet_pt_cut"])
         njet_1_filter = ak.any(jet_selection, axis=1)
-        print(f"njet_1_filter sum after jet pt cut: {ak.sum(njet_1_filter).compute()}")
+        # print(f"njet_1_filter sum after jet pt cut: {ak.sum(njet_1_filter).compute()}")
         # -----
-        jet_selection = jet_selection & (abs(jets.eta) < self.config["jet_eta_cut"])
+        jet_selection = jet_selection & (abs(jets.eta) <= self.config["jet_eta_cut"])
         njet_1_filter = ak.any(jet_selection, axis=1)
-        print(f"njet_1_filter sum after jet eta cut {ak.sum(njet_1_filter).compute()}")
+        # print(f"njet_1_filter sum after jet eta cut {ak.sum(njet_1_filter).compute()}")
         # -----
         jet_selection = jet_selection & qgl_cut
         njet_1_filter = ak.any(jet_selection, axis=1)
@@ -1749,10 +1787,6 @@ class EventProcessor(processor.ProcessorABC):
         njet_1_filter = ak.any(jet_selection, axis=1)
         # print(f"njet_1_filter sum after clean Jet cut: {ak.sum(njet_1_filter).compute()}")
         # -----
-        jet_selection = jet_selection & HEMVeto
-        njet_1_filter = ak.any(jet_selection, axis=1)
-        # print(f"njet_1_filter sum after HEM Veto cut: {ak.sum(njet_1_filter).compute()}")
-        
         # jet_selection = (
         #     pass_jet_id
         #     & pass_jet_puid
@@ -2072,8 +2106,8 @@ class EventProcessor(processor.ProcessorABC):
             # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
             # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            btagLoose_filter = (jets.btagDeepB >= self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+            btagMedium_filter = (jets.btagDeepB >= self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
             
         
         nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
