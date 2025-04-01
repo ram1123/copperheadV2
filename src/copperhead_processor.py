@@ -332,6 +332,7 @@ class EventProcessor(processor.ProcessorABC):
         pre-made json file
         """
         self.config = config
+        # self.config["year"] = self.config["year"].replace("_V12","") # remove V12 flag
 
         self.test_mode = test_mode
         dict_update = {
@@ -521,13 +522,35 @@ class EventProcessor(processor.ProcessorABC):
 
 
         # # --------------------------------------------------------
+        # apply Beam constraint b4 Rochester. We need Rochester b4 trigger matching
+        # # --------------------------------------------------------
+        
+        doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
+        if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
+            print(f"doing beam constraint!")
+            doing_BS_correction = True
+            """
+            TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
+            """
+            # print(f"events.Muon.fields: {events.Muon.fields}")
+            BSConstraint_mask = (
+                (events.Muon.bsConstrainedChi2 <30)
+            )
+            BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
+            # comment off (~applied_fsr) cut for now 
+            # BSConstraint_mask = BSConstraint_mask & (~applied_fsr) # apply BSContraint on non FSR muons
+            events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
+            events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
+            
+        
+        # # --------------------------------------------------------
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
             print("doing rochester!")
             # print(f"df.Muon.pt b4 roccor: {events.Muon.pt.compute()}")
             apply_roccor(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
-            # print(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
+            
 
 
         muon_selection = (
@@ -537,8 +560,6 @@ class EventProcessor(processor.ProcessorABC):
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
         
-        
-
 
         # calculate FSR recovery, but don't apply it until trigger matching is done
         # but apply muon iso overwrite, so base muon selection could be done
@@ -548,7 +569,7 @@ class EventProcessor(processor.ProcessorABC):
             # applied_fsr = fsr_recovery(events)
             applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
-
+            
         
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]) 
@@ -675,24 +696,8 @@ class EventProcessor(processor.ProcessorABC):
        
         #-----------------------------------------------------------------
         
-        # apply Beam constraint or geofit or nothing if neither
-        doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
-        if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
-            print(f"doing beam constraint!")
-            doing_BS_correction = True
-            """
-            TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
-            """
-            # print(f"events.Muon.fields: {events.Muon.fields}")
-            BSConstraint_mask = (
-                (events.Muon.bsConstrainedChi2 <30)
-            )
-            BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
-            # comment off (~applied_fsr) cut for now 
-            # BSConstraint_mask = BSConstraint_mask & (~applied_fsr) # apply BSContraint on non FSR muons
-            events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
-            events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
-        else:
+        
+        if not doing_BS_correction: # apply geofit
             if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
                 print(f"doing geofit!")
                 gf_filter, gf_pt_corr = apply_geofit(events, self.config["year"], ~applied_fsr)
@@ -1295,6 +1300,8 @@ class EventProcessor(processor.ProcessorABC):
             out_dict.update(jet_loop_dict) 
         # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
+        
+
         # print(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
         
@@ -1386,7 +1393,7 @@ class EventProcessor(processor.ProcessorABC):
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         # print(f"weight variations: {weights.variations}")
         wgt_nominal = weights.weight()
-
+        
         # add in weights
         
         weight_dict = {"wgt_nominal" : wgt_nominal}
@@ -1425,6 +1432,7 @@ class EventProcessor(processor.ProcessorABC):
         if test_mode:
             print(f"muons mass_resolution dpt1: {dpt1}")
         year = self.config["year"]
+        
         if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
             yearUL = "2016"
         elif ("22" in year) or ("23" in year):# temporary solution until I can generate my own dimuon mass resolution
@@ -1692,7 +1700,7 @@ class EventProcessor(processor.ProcessorABC):
             & clean
             & (jets.pt >= self.config["jet_pt_cut"])
             & (abs(jets.eta) <= self.config["jet_eta_cut"])
-            & HEMVeto
+            # & HEMVeto # TODO: apply HEM veto as an eventwise cut
         )
         # original jet_selection end ----------------------------------------------
 
@@ -1766,6 +1774,7 @@ class EventProcessor(processor.ProcessorABC):
         # dimuon = muons[:,0] + muons[:,1]
         mmj1_dEta = abs(dimuon.eta - jet1.eta)
         mmj2_dEta = abs(dimuon.eta - jet2.eta)
+
         
         min_dEta_filter  = ak.fill_none((mmj1_dEta < mmj2_dEta), value=True)
         mmj_min_dEta = ak.where(
