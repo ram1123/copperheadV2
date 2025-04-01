@@ -341,7 +341,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_roccor" : True,# True
             "do_fsr" : True, # True
             "do_geofit" : True, # True
-            "do_beamConstraint": False, # if True, override do_geofit
+            "do_beamConstraint": True, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
         }
@@ -380,8 +380,6 @@ class EventProcessor(processor.ProcessorABC):
             label = f"res_calib_{mode}_{yearUL}"
             file_path = self.config["res_calib_path"][mode]
             calib_str = f"{label} {label} {file_path}"
-            print(f"file_path: {file_path}")
-            print(f"calib_str: {calib_str}")
             extractor_instance.add_weight_sets([calib_str])
 
         # PU ID weights
@@ -1446,7 +1444,9 @@ class EventProcessor(processor.ProcessorABC):
             print("Doing BS constraint correction mass calibration!")
             
             # Load the correction set
-            correction_set = correctionlib.CorrectionSet.from_file(self.config["BS_res_calib_path"])
+            # print(self.config["BS_res_calib_path"])
+            json_path = self.config["BS_res_calib_path"]["MC"] if is_mc else self.config["BS_res_calib_path"]["Data"]
+            correction_set = correctionlib.CorrectionSet.from_file(json_path)
             
             
             # Access the specific correction by name
