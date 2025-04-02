@@ -744,8 +744,7 @@ class EventProcessor(processor.ProcessorABC):
         #     electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0) 
         # some temporary testing code end -----------------------------------------
 
-        selected_electrons = events.Electron[electron_selection]
-        nelectrons = ak.num(selected_electrons, axis=1)
+        nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0) 
 
         event_filter = (
@@ -1894,7 +1893,7 @@ class EventProcessor(processor.ProcessorABC):
 
         sj_dict = {}
         cutouts = [2,5]
-        nmuons = ak.num(events.Muon, axis=1)
+        nmuons = ak.num(events.Muon, axis=1) # FIXME (I think it should be selected muons)
         # PLEASE NOTE: SoftJET variables are all from Nominal variation despite variation names
         for cutout in cutouts:
             sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout) # obtain nominal softjet values
@@ -2008,25 +2007,21 @@ class EventProcessor(processor.ProcessorABC):
         # Separate from ttH and VH phase space
 
         if "RERECO" in year:
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5) 
+            btagLoose_filter = (jets.btagDeepB >= self.config["btag_loose_wp"]) & (abs(jets.eta) <= 2.5) # original value
+            btagMedium_filter = (jets.btagDeepB >= self.config["btag_medium_wp"]) & (abs(jets.eta) <= 2.5) 
         else: # UL
             # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
             # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            btagLoose_filter = (jets.btagDeepB >= self.config["btag_loose_wp"]) & (abs(jets.eta) <= 2.5)
+            btagMedium_filter = (jets.btagDeepB >= self.config["btag_medium_wp"]) & (abs(jets.eta) <= 2.5)
             
         
-        nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
-        # nBtagLoose = ak.num(jets[btagLoose_filter], axis=1)
-        nBtagLoose = ak.fill_none(nBtagLoose, value=0)
-            
-        
-        
-        nBtagMedium = ak.num(ak.to_packed(jets[btagMedium_filter]), axis=1)
-        # nBtagMedium = ak.num(jets[btagMedium_filter], axis=1)
-        nBtagMedium = ak.fill_none(nBtagMedium, value=0)
+        btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
+        btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)
+
+        nBtagLoose = ak.sum(btagLoose_filter, axis=1)
+        nBtagMedium = ak.sum(btagMedium_filter, axis=1)
 
         # #quick sanity check
         # print(f"nBtagLoose : {nBtagLoose[:20].compute()}")
