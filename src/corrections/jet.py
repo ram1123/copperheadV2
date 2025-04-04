@@ -225,7 +225,11 @@ def jet_id(jets, config):
             pass_jet_id = jets.jetId >= 1 # NOTE: for Run2 UL, loose is not specified in https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format 
         elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
             pass_jet_id = jets.jetId >= 2
-            
+
+    # print(f"pass_jet_id: {pass_jet_id[:10].compute()}")
+    # test_pass_jet_id = jets.jetId >= 2
+    # print(f"test_pass_jet_id: {test_pass_jet_id[:10].compute()}")
+    # raise ValueError
     return pass_jet_id
 
 
@@ -241,16 +245,17 @@ def jet_puid(jets, config):
     # only apply jet puid to jets with pt < 50, else, pass
     # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
     if ("2016" in year) and ("RERECO" not in year): #Only 2016 UL samples are different
+        print("2016 UL exception!")
         jet_puid_wps = {
-            "loose": (puId >= 1) | (jets.pt > 50),
-            "medium": (puId >= 3) | (jets.pt > 50),
-            "tight": (puId >= 7) | (jets.pt > 50),
+            "loose": (puId >= 1) | (jets.pt >= 50),
+            "medium": (puId >= 3) | (jets.pt >= 50),
+            "tight": (puId >= 7) | (jets.pt >= 50),
         }
     else: # 2017 and 2018
         jet_puid_wps = {
-            "loose": (puId >= 4) | (jets.pt > 50),
-            "medium": (puId >= 6) | (jets.pt > 50),
-            "tight": (puId >= 7) | (jets.pt > 50),
+            "loose": (puId >= 4) | (jets.pt >= 50),
+            "medium": (puId >= 6) | (jets.pt >= 50),
+            "tight": (puId >= 7) | (jets.pt >= 50),
         }
     pass_jet_puid = ak.ones_like(jets.jetId, dtype=bool)
     
@@ -264,6 +269,10 @@ def jet_puid(jets, config):
         )
     else:
         pass_jet_puid = jet_puid_wps[jet_puid_opt]
+        # print("else case!")
+        # print(f"pass_jet_puid: {pass_jet_puid[:10].compute()}")
+        # print(f"jet_puid_wps['loose']: {jet_puid_wps['loose'][:10].compute()}")
+        # raise ValueError
     return pass_jet_puid
 
 
@@ -342,3 +351,58 @@ def fill_softjets(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
         f"htsoft{cutoff}" : saj_HT
     }
     return out_dict
+
+def applyHemVetoData(jets, run, config):
+    """
+    Apply HEM veto for 2018 UL as recommended on https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/5
+    """
+    # jet puid selection
+    jet_puid_wps = {
+            "loose": (puId >= 4) | (jets.pt >= 50),
+            "medium": (puId >= 6) | (jets.pt >= 50),
+            "tight": (puId >= 7) | (jets.pt >= 50),
+    }
+    jet_puid2use = config["jet_puid"]
+    pass_jet_puid = jet_puid_wps[jet_puid_opt]# the recommendation doesn't specify, so use PU Id that we apply
+
+
+
+    # jets that don’t overlap with PF muon (dR < 0.2)
+    jet_muon_iso_cut = (jets.muonIdx1 == -1) && (jets.muonIdx2 == -1) # Source: https://cms-talk.web.cern.ch/t/jetvetomaps-usage-for-2018ul/61981/2
+    jet_em_frac_cut  = (jets.chEmEF + jets.neEmEF) < 0.9 # EM fraction cut
+    pass_jet_tightID = (jets.jetId >= 2) & jet_em_frac_cut & jet_muon_iso_cut
+    
+    pass_jet_tightLepVetoID = jets.jetId ==6 # Source: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13TeVUL
+    
+    pass_jet_id_total = pass_jet_tightLepVetoID | pass_jet_tightID # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/2
+    
+    
+
+    loose_jet_selection =( # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/2
+        jets.pt > 15
+        & pass_jet_id_total
+        & pass_jet_puid
+    )
+    hemveto_region = ( # "in jets with -3.2<eta<-1.3 and -1.57<phi< -0.87 " Source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetMET#Run2_recommendations
+        jets.eta > -3.2
+        & jets.eta < -1.3
+        & jets.phi > -1.57
+        & jets.phi < -0.87
+    )
+    
+    hemveto_run_filter = (run >= 319077) # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8
+
+    # combine all the conditions
+    hemveto = loose_jet_selection & hemveto_region & hemveto_run_filter 
+    hemveto = ak.any(hemveto, axis=1)
+    # we reject events if we find hemveto jets, so reverse the bool arr
+    hemveto = ~hemveto
+    return hemveto
+    
+
+def applyHemVetoMC():
+    """
+    Randomly reject a given fraction of events using for MC to match HEM Vetoed jets in 2018 UL as reccommended in https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8 (though we reject her "eventNum % 15 == 0" method of random rejection and just use random number generation)
+    
+    """
+    

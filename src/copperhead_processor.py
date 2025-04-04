@@ -8,7 +8,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVetoData
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
 import json
@@ -125,10 +125,6 @@ def merge_zpt_wgt(yun_wgt, valerie_wgt, njets, year):
                 use_valerie_zpt =  njets >= njet_multiplicity_target
             val_filter = val_filter | use_valerie_zpt
 
-            # print(f"{year} njet {njet_multiplicity_target} use_valerie_zpt: {use_valerie_zpt[:20].compute()}")
-            # print(f"{year} njet {njet_multiplicity_target} njets: {njets[:20].compute()}")
-        # print(f"{year}  val_filter: {val_filter[:20].compute()}")
-        # raise ValueError
         final_filter = ak.where(val_filter, valerie_wgt, yun_wgt)
         return final_filter
 
@@ -639,40 +635,8 @@ class EventProcessor(processor.ProcessorABC):
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
             
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
-            event_filter = event_filter & trigger_match
+            event_filter = event_filter & trigger_match 
 
-            # print(f"trigger_match sum with dr threshold {dr_threshold}: {ak.sum(trigger_match).compute()}")
-            
-        
-            # # check which events HLT and trigger match don't align, and print five events
-            # test_nevents = 5
-            # HLT_disagreement = (trigger_match != HLT_filter) & (~HLT_filter)
-
-            # print(f"HLT_disagreement len: {ak.num(HLT_disagreement, axis=0).compute()}")
-            # print(f"HLT_disagreement sum: {ak.sum(HLT_disagreement).compute()}")
-            
-            # print(f"{HLT_str} decision: {events.HLT[HLT_str][HLT_disagreement][: test_nevents].compute()}")
-            # print(f"trigger_match: {trigger_match[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"event number: {events.event[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"event run: {events.run[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject matched with mu1: {mu1_trigger_match[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject matched with mu2: {mu2_trigger_match[HLT_disagreement][: test_nevents].compute()}")
-
-            # print(f"TrigObject candidate id: {trigger_cands.id[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject candidate pt: {trigger_cands.pt[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject candidate eta: {trigger_cands.eta[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject candidate phi: {trigger_cands.phi[HLT_disagreement][: test_nevents].compute()}")
-            # # print(f"mu1.delta_r(trigger_cands): {mu1.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
-            # # print(f"mu2.delta_r(trigger_cands): {mu2.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu1 pt: {mu1.pt[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu1 eta: {mu1.eta[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu1 phi: {mu1.phi[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu2 pt: {mu2.pt[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu2 eta: {mu2.eta[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu2 phi: {mu2.phi[HLT_disagreement][: test_nevents].compute()}")
-
-            # raise ValueError
-            
             
             
         
