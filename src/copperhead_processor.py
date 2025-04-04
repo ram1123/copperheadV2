@@ -711,6 +711,12 @@ class EventProcessor(processor.ProcessorABC):
         nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0) 
 
+        # if self.config["do_HemVeto"]:
+        #     HemVeto_filter = applyHemVetoData(evenbts.Jet, events.run, self.config)
+        # else:
+        #     HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
+            
+        
         event_filter = (
                 event_filter
                 & lumi_mask
@@ -719,6 +725,7 @@ class EventProcessor(processor.ProcessorABC):
                 # & (mm_charge == -1)
                 # & electron_veto 
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
+                # & HemVeto_filter
 
         )
         event_filter = event_filter & (nmuons == 2)
@@ -1231,13 +1238,16 @@ class EventProcessor(processor.ProcessorABC):
                 "gjj_dR" : gjj_dR,
             }
             out_dict.update(mc_dict)
-        # test_zip = ak.zip({
-        #     "mu1_iso" : mu1.pfRelIso04_all,
-        #     "mu2_iso" : mu2.pfRelIso04_all,
-        # })
-        # print(f"test_zip.compute 1: {test_zip.to_parquet(save_path)}")
-        # print(f"out_dict.persist 1: {ak.zip(out_dict).persist().to_parquet(save_path)}")
-        # print(f"out_dict.compute 1: {ak.zip(out_dict).to_parquet(save_path)}")
+
+        # hemveto study start ------------------------------------------
+        print(f'self.config["do_HemVeto"]: {self.config["do_HemVeto"]}')
+        if self.config["do_HemVeto"]:
+            HemVeto_filter = applyHemVetoData(events.Jet, events.run, self.config)
+        else:
+            HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
+        out_dict["HemVeto_filter"] = HemVeto_filter
+        # hemveto study end ------------------------------------------
+        
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#

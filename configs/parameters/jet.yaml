@@ -78,3 +78,13 @@ softjet_dr2:
   '2018_RERECO': 0.16
   2022preEE: 0.16
   2022postEE: 0.16
+do_HemVeto:
+  2016preVFP: false
+  2016postVFP: false
+  '2017': false
+  '2018': true
+  2016_RERECO: false
+  '2017_RERECO': false
+  '2018_RERECO': false
+  2022preEE: false
+  2022postEE: false
