@@ -64,12 +64,13 @@ from src.lib.histogram.plotting import plotDataMC_compare
 def getHemVetoDataRatio(compute_dict):
     """
     compute_dict: stage1 output of data A,B,C,D of 2018UL
+    returns: a float point of the portion of the data that has been vetoed if any jets were within the HEM region
     """
-    HemVeto_filter = compute_dict["HemVeto_filter"]
+    HemVeto_filter = compute_dict["HemVeto_filter"] # here, True means no Veto
     is_HemRegion = compute_dict["is_HemRegion"]
     is_HemRegionAndHemVeto = is_HemRegion & HemVeto_filter
     veto_ratio = ak.sum(is_HemRegionAndHemVeto) / ak.sum(is_HemRegion)
-    return veto_ratio
+    return (1-veto_ratio)
     
 
 if __name__ == "__main__":
