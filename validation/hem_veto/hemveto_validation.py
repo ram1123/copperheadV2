@@ -25,7 +25,7 @@ main_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")) # i
 sys.path.append(main_dir)
 from src.lib.histogram.plotting import plotDataMC_compare
 
-def plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=False):
+def plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=False, is_mc=False):
     # Define your bin ranges
     eta_range = (-2.4, 2.4)
     phi_range = (-np.pi, np.pi)
@@ -55,6 +55,10 @@ def plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=False):
     plt.title('2D Histogram Heatmap')
     # plt.show()
     # validation plots could be compared with that from https://cms-pub-talk.web.cern.ch/t/jme-object-review-of-b2g-24-010/30422/3
+    # if hem_veto_on:
+    #     plt.savefig(f"{save_fname}_hemVetoOn.png")
+    # else:
+    #     plt.savefig(f"{save_fname}_hemVetoOff.png")
     if hem_veto_on:
         plt.savefig(f"{save_fname}_hemVetoOn.png")
     else:
@@ -213,23 +217,44 @@ if __name__ == "__main__":
         "jet2_phi_nominal",
     ]
     label = "HemVetoStudy_04Apr2025"
+    # label = "test_test"
     year="2018"
     load_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
 
-    data2load = ['data_C', 'data_D']
-    # data2load = ['data_C', 'data_B']
-    events_l = []
+    # data2load = ['data_C', 'data_D']
+    data2load = ['data_C',]
+    
+    filelist = []
     for data_name in data2load:
-        events = dak.from_parquet(f"{load_path}/{data_name}/*/*.parquet")
-        events_l.append(events)
+        files = glob.glob(f"{load_path}/{data_name}/*/*.parquet")
+        filelist += files
         
-    events = ak.concatenate(events_l)
+    events = dak.from_parquet(filelist)
     compute_dict = {
         field: ak.fill_none(events[field], value=-999) for field in fields2load
     }
     compute_dict = dask.compute(compute_dict)[0]
 
-    save_fname = "validation_data"
+    # save_fname = "validation_data"
+    # plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=True)
+    # plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=False)
+    # print("Plot Success!")
+
+
+    data2load = ['dy_M-100To200',]
+    
+    filelist = []
+    for data_name in data2load:
+        files = glob.glob(f"{load_path}/{data_name}/*/*.parquet")
+        filelist += files
+        
+    events = dak.from_parquet(filelist)
+    compute_dict = {
+        field: ak.fill_none(events[field], value=-999) for field in fields2load
+    }
+    compute_dict = dask.compute(compute_dict)[0]
+
+    save_fname = "validation_dy"
     plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=True)
     plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=False)
     print("Plot Success!")
