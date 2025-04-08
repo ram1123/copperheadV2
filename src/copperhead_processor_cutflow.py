@@ -8,7 +8,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, get_jec_scale
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
 import json
@@ -1035,8 +1035,32 @@ class EventProcessor(processor.ProcessorABC):
             self.config["jec_parameters"], 
             year
         )   
+        # quick jetID plot ----------------------------------------------------
+        jetId = jets.jetId
+        # jetId_filter = (jetId != 2) & (jetId != 6) 
+        # print(f"jetId_filter sum: {ak.sum(jetId_filter).compute()}")
+        import matplotlib.pyplot as plt
+        jet_id_flat = ak.to_numpy(ak.flatten(jetId).compute())
+        plt.figure(figsize=(8, 6))
+        plt.hist(jet_id_flat, bins=range(0, 10), histtype="step", linewidth=2)
+        plt.xlabel("2018UL data C Jet jetId")
+        plt.ylabel("Entries")
+        plt.title("Distribution of Jet jetId")
+        plt.grid(True)
+        plt.savefig("jetId_dist.pdf")
+        # quick jetID plot ----------------------------------------------------
+
+        # Plotting
+        plt.figure(figsize=(8, 6))
+        plt.hist(jet_id_flat, bins=range(0, 10), histtype="step", linewidth=2)
+        plt.xlabel("Jet jetId")
+        plt.ylabel("Entries")
+        plt.title("Distribution of Jet jetId")
+        plt.grid(True)
+        plt.show()
         
-        do_jec = False # True       
+        
+        do_jec = True # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1058,12 +1082,13 @@ class EventProcessor(processor.ProcessorABC):
                 print("JEC factory not recognized!")
                 raise ValueError
         if do_jec:
-            print("do old jec!")
-            # testJetVector(jets)
-            # print(f"jets pt b4 jec: {jets.pt.compute()}")
-            jets = factory.build(jets)
-            # print(f"jets pt after jec: {jets.pt.compute()}")
-            # testJetVector(jets)
+            # print("do old jec!")
+            # # testJetVector(jets)
+            # # print(f"jets pt b4 jec: {jets.pt.compute()}")
+            # jets = factory.build(jets)
+            # # print(f"jets pt after jec: {jets.pt.compute()}")
+            # # testJetVector(jets)
+            get_jec_scale(jets, self.config, is_mc, dataset)
 
         else:
             jets["mass_jec"] = jets.mass
@@ -1468,17 +1493,19 @@ class EventProcessor(processor.ProcessorABC):
 
 
         # -----------------------------------
-        # mm_filter = (mm_charge < 0)
-        # event_filter = event_filter & mm_filter
-        # ggH_filter = ggH_filter & mm_filter
+        mm_filter = (mm_charge < 0)
+        event_filter = event_filter & mm_filter
+        ggH_filter = ggH_filter & mm_filter
         # print(f"event_filter sum after mm charge cut: {ak.sum(event_filter).compute()}")
         # ------------------------------------
         
+        ggh_signal_yield = ak.sum(ggH_filter).compute()
         
-        print(f"ggH_filter sum after signal region cut: {ak.sum(ggH_filter).compute()}")
+        
+        # print(f"ggH_filter sum after signal region cut: {ak.sum(ggH_filter).compute()}")
         # cutflow_table = ak.zip(cutflow_table).compute()
-        # print(f"cutflow_table: {cutflow_table}")
-        raise ValueError
+        print(f"ggh_signal_yield: {ggh_signal_yield}")
+        return ggh_signal_yield
         
         out_dict.update(region_dict) 
 
