@@ -30,7 +30,7 @@ import logging
 logger = logging.getLogger("distributed.utils_perf")
 logger.setLevel(logging.ERROR)
 import warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning) 
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
@@ -41,7 +41,7 @@ from src.lib.get_parameters import getParametersForYr
 def trim_memory() -> int:
      libc = ctypes.CDLL("libc.so.6")
      return libc.malloc_trim(0)
-    
+
 # # test code limiting memory leak -----------------------------------
 # import gc
 # client.run(gc.collect)  # collect garbage on all workers
@@ -79,7 +79,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         },
     ).events()
 
-    
+
     # save input events for CI testing start ---------------------------------------------
     # dir = f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}'
     # if not os.path.exists(dir):
@@ -106,6 +106,19 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # save input events for CI testing end ---------------------------------------------
     # print(f"n of partitions: {events.Muon.pt}")
     out_collections = processor.process(events)
+
+    # Save the cutflow
+    if hasattr(processor, "cutflow"):
+        fraction = round(dataset_dict["metadata"]["fraction"], 3)
+        fraction_str = str(fraction).replace('.', '_')
+        cutflow_save_path = f"{save_path}/f{fraction_str}"
+        if not os.path.exists(cutflow_save_path):
+            os.makedirs(cutflow_save_path)
+        cutflow_save_path = f"{save_path}/f{fraction_str}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
+
+        processor.cutflow.to_npz(cutflow_save_path).compute()
+        print(f"Cutflow saved to {cutflow_save_path}")
+
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
     # print(f"out_collections keys: {out_collections.keys()}")
@@ -120,7 +133,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #     if "wgt" in field:
     #         print(field)
 
-    
+
     # ------------------------------------------
     # skim_dict =  {
     #         'mu1_pt': (out_collections["mu1_pt"]),
@@ -155,7 +168,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #         'jj_eta_nominal': (out_collections["jj_eta"]),
     #         'jj_phi_nominal': (out_collections["jj_phi"]),
     #         # weights -----------------------------------------
-    #         'wgt_nominal': (out_collections["wgt_nominal_total"]),    
+    #         'wgt_nominal': (out_collections["wgt_nominal_total"]),
     #         # #dimuon variables-----------------------
     #         'dimuon_mass': (out_collections["dimuon_mass"]),
     #         'dimuon_ebe_mass_res': (out_collections["dimuon_ebe_mass_res"]),
@@ -184,7 +197,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #         'mmjj_pt_nominal': (out_collections["mmjj_pt"]),
     #         'mmjj_eta_nominal': (out_collections["mmjj_eta"]),
     #         'mmjj_phi_nominal': (out_collections["mmjj_phi"]),
-            
+
 
     #         # 'jet1_pt_raw': (out_collections["jet1_pt_raw"]),
     #         # 'jet1_mass_raw': (out_collections["jet1_mass_raw"]),
@@ -198,9 +211,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #         # 'jet2_area': (out_collections["jet2_area"]),
     #         # 'jet2_pt_jec': (out_collections["jet2_pt_jec"]),
     #         # 'jet2_mass_jec': (out_collections["jet2_mass_jec"]),
-        
+
     #         # fraction -------------------------------------
-    #         "fraction" : dataset_fraction*(ak.ones_like(out_collections["njets"])), 
+    #         "fraction" : dataset_fraction*(ak.ones_like(out_collections["njets"])),
     #         # Btagging WPs ------------------------------------
     #         "nBtagLoose_nominal" : (out_collections["nBtagLoose"]),
     #         "nBtagMedium_nominal" : (out_collections["nBtagMedium"]),
@@ -216,9 +229,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #         "event" : (out_collections["event"]),
     #         "rpt_nominal" : (out_collections["rpt"]),
     #         "pt_centrality_nominal" : (out_collections["pt_centrality"]),
-        
 
-        
+
+
     #         # "mu1_pt_roch" : (out_collections["mu1_pt_roch"]),
     #         # "mu1_pt_raw" : (out_collections["mu1_pt_raw"]),
     #         # "mu2_pt_raw" : (out_collections["mu2_pt_raw"]),
@@ -232,15 +245,15 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #         # temporary test end ------------------------------------
     # }
 
-    
+
     # # add in weights
     # weight_dict = {}
     # for key, value in out_collections.items():
     #     if "wgt_nominal" in key:
     #         # print(f"wgt name: {key}")
     #         weight_dict[key] = value
-    # skim_dict.update(weight_dict)   
-    
+    # skim_dict.update(weight_dict)
+
     # # add in nsoftjets and htsoft variables
     # softj_vars = {}
     # for key, value in out_collections.items():
@@ -270,7 +283,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #         "gjj_dEta":  (out_collections["gjj_dEta"]),
     #         "gjj_dPhi":  (out_collections["gjj_dPhi"]),
     #         "gjj_dR":  (out_collections["gjj_dR"]),
-            
+
     #     }
     #     skim_dict.update(mc_dict)
     # gen jet variables end ------------------------------
@@ -289,7 +302,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     #     os.remove(file)
     # if not os.path.exists(save_path):
     #     os.makedirs(save_path)
-    
+
     #----------------------------------
     skim_zip = ak.zip(skim_dict, depth_limit=1)
     # print(f"skim_zip: {skim_zip}")
@@ -297,7 +310,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # raise ValueError
     return skim_zip
     # return "Success!"
-    # 
+    #
     # zip = dask.compute(skim_dict)
     # print(f"stage1 zip compute: {zip.compute()}")
     # zip.to_parquet(save_path, compute=True)
@@ -336,7 +349,7 @@ if __name__ == "__main__":
     parser.add_argument(
     "--use_gateway",
     dest="use_gateway",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, uses dask gateway client instead of local",
     )
@@ -359,12 +372,12 @@ if __name__ == "__main__":
         print("wrong NanoAOD version is given!")
         raise ValueError
     time_step = time.time()
-    
+
     warnings.filterwarnings('ignore')
     """
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
-    
+
 
     config = getParametersForYr("./configs/parameters/" , args.year)
     # print(f"stage1 config: {config}")
@@ -384,13 +397,13 @@ if __name__ == "__main__":
             print("Gateway Client created")
         # # #-----------------------------------------------------------
         else:
-            # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB') 
-            # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='6 GiB') 
-            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+            # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB')
+            # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='6 GiB')
+            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             print("Local scale Client created")
         #-------------------------------------------------------------------------------------
         #-----------------------------------------------------------
-        # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
+        # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='8 GiB')
         #---------------------------------------------------------
         # print("cluster scale up")
         # sample_path = "./prestage_output/processor_samples.json"
@@ -410,8 +423,8 @@ if __name__ == "__main__":
             # for dataset, sample in samples.items():
                 sample_step = time.time()
                 # max_file_len = 15
-                max_file_len = 130
-                # max_file_len = 70
+                # max_file_len = 130
+                max_file_len = 70
                 # max_file_len = 100
                 # max_file_len = 200
                 # max_file_len = 8000
@@ -442,12 +455,12 @@ if __name__ == "__main__":
                     if not os.path.exists(save_path):
                         os.makedirs(save_path)
                     to_persist.persist().to_parquet(save_path)
-                    
+
                     var_elapsed = round(time.time() - var_step, 3)
                     print(f"Finished file_idx {idx} in {var_elapsed} s.")
                 sample_elapsed = round(time.time() - sample_step, 3)
                 print(f"Finished sample {dataset} in {sample_elapsed} s.")
-                
+
     else:
         # dataset_loop(coffea_processor, xrootd_path+fname, test=test_mode)
 
@@ -459,7 +472,7 @@ if __name__ == "__main__":
         with performance_report(filename="dask-report.html"):
             # for dataset, sample in samples.items():
             for dataset, sample in tqdm.tqdm(samples.items()):
-                
+
                 # testing
                 # if ("dy_M-100To200" not in dataset) and ("data_A" not in dataset):
                 # if ("dy_M-100To200" not in dataset) :
@@ -467,11 +480,11 @@ if __name__ == "__main__":
                 #     continue
                 # print(f"dataset: {dataset}")
                 dataset_loop(coffea_processor, sample, test=test_mode)
-        
-    
 
-    
 
-    
+
+
+
+
     elapsed = round(time.time() - time_step, 3)
     print(f"Finished everything in {elapsed} s.")
