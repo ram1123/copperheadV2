@@ -29,7 +29,7 @@ def get_Xcache_filelist(fnames: list):
         x_cache_fname = "root://cms-xcache.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
     return new_fnames
-    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -89,21 +89,21 @@ if __name__ == "__main__":
     parser.add_argument(
     "--use_gateway",
     dest="use_gateway",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, uses dask gateway client instead of local",
     )
     parser.add_argument(
     "--xcache",
     dest="xcache",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, uses xcache root file paths",
     )
     parser.add_argument(
     "--skipBadFiles",
     dest="skipBadFiles",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, uses skips bad files when calling preprocessing",
     )
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     parser.add_argument( # temp flag to test the 2 percent data discrepancy in ggH cat between mine and official workspace
     "--run2_rereco",
     dest="run2_rereco",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, uses skips bad files when calling preprocessing",
     )
@@ -136,7 +136,7 @@ if __name__ == "__main__":
     if args.fraction is None: # do the normal prestage setup
         # allowlist_sites=["T2_US_Nebraska"] # take data only from purdue for now
         allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_CH_CERN", "T2_US_Vanderbilt", "T2_US_Florida", "T2_IT_Pisa", "T2_DE_RWTH"]
-        
+
         # allowlist_sites=["T2_UK_London_IC", "T2_FI_HIP", "T1_DE_KIT_Disk","T2_US_Nebraska","T2_US_Wisconsin","T1_US_FNAL_Disk", "T2_US_Florida", "T2_US_FNAL",  "T2_CH_CERN", "T2_US_MIT" ]
         # allowlist_sites=["T1_DE_KIT_Disk"]
         total_events = 0
@@ -155,7 +155,7 @@ if __name__ == "__main__":
             print("Local scale Client created")
         big_sample_info = {}
         year = args.year
-        
+
         # load dataset sample paths from yaml files
         filelist = glob.glob("./configs/datasets" + "/*.yaml")
         dataset_confs = [OmegaConf.load(f) for f in filelist]
@@ -165,7 +165,7 @@ if __name__ == "__main__":
         else: # normal
             dataset = datasets[year]
         new_sample_list = []
-       
+
         # take data
         data_l =  [sample_name for sample_name in dataset.keys() if "data" in sample_name]
         data_samples = args.data_samples
@@ -196,13 +196,13 @@ if __name__ == "__main__":
                     # new_sample_list.append("dy_VBF_filter_Amandeep10_6_32")
                     # new_sample_list.append("dy_VBF_filter_Amandeep_fromGenSim")
                     # new_sample_list.append("dy_VBF_filter_fromGridpack")
-                    
+
                     # Run3 specific datasets:
                     # new_sample_list.append("dy_M-50To120")
                     # new_sample_list.append("dy_M-120To200")
-                
 
-                
+
+
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                     new_sample_list.append("ttjets_dl")
                     new_sample_list.append("ttjets_sl")
@@ -221,14 +221,14 @@ if __name__ == "__main__":
                     new_sample_list.append("ewk_lljj_mll50_mjj120")
                     # new_sample_list.append("ewk_lljj_mll105_160_ptj0")
                     # new_sample_list.append("ewk_lljj_mll105_160_py_dipole")
-                elif bkg_sample.upper() == "OTHER": 
+                elif bkg_sample.upper() == "OTHER":
                     new_sample_list.append("www")
                     new_sample_list.append("wwz")
                     new_sample_list.append("wzz")
                     new_sample_list.append("zzz")
                 else:
                     print(f"unknown background {bkg_sample} was given!")
-            
+
         # take sig
         sig_samples = args.sig_samples
         if len(sig_samples) >0:
@@ -240,12 +240,12 @@ if __name__ == "__main__":
                     new_sample_list.append("vbf_powheg_dipole")
                 else:
                     print(f"unknown signal {sig_sample} was given!")
-        
+
         dataset_dict = {}
         for sample_name in new_sample_list:
             try:
                 dataset_dict[sample_name] = dataset[sample_name]
-                
+
             except Exception as e:
                 # print(f"Sample {sample_name} doesn't exist. Skipping")
                 print(f"Sample {sample_name} gives error {e}. Skipping")
@@ -336,7 +336,7 @@ if __name__ == "__main__":
                     fnames = glob.glob(f"{load_path}/*/*/*/*.root")
 
 
-            
+
             # elif year == "2018_RERECO":
             #     print(f"sample_name: {sample_name}")
             #     if sample_name == "data_A":
@@ -361,10 +361,10 @@ if __name__ == "__main__":
             #     elif sample_name == "ggh_amcPS": # actually amcPS
             #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10b/GluGluHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnloFXFX_pythia8/"
             #         fnames = glob.glob(f"{load_path}/*/*/*/*.root")
-            #     elif sample_name == "ggh_powheg": 
+            #     elif sample_name == "ggh_powheg":
             #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10b/GluGluHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/"
             #         fnames = glob.glob(f"{load_path}/*/*/*/*.root")
-            #     elif sample_name == "vbf_powheg": 
+            #     elif sample_name == "vbf_powheg":
             #         load_path = "/eos/purdue/store/group/local/hmm/FSRnano18MC_NANOV10b/VBFHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/" # technically vbf_powhegPS
             #         fnames = glob.glob(f"{load_path}/*/*/*/*.root")
 
@@ -398,9 +398,9 @@ if __name__ == "__main__":
                 elif sample_name == "vbf_powheg":
                     load_path = "/eos/purdue/store/group/local/hmm/FSRNANO2016MCV8a_06May2020/VBF_HToMuMu_M125_13TeV_powheg_pythia8/"
                     fnames = glob.glob(f"{load_path}/*/*/*/*.root")
-            
+
             # override the the data path if doing rereco data test
-            
+
             # elif args.run2_rereco:
             #     if year == "2018":
             #         if sample_name == "data_A":
@@ -456,8 +456,8 @@ if __name__ == "__main__":
             #     else:
             #         print("unknown sample case!")
             #         raise ValueError
-                
-                
+
+
             # comment out the NanoAODv >= 12 condition bc it was for a test, but this code could still be useful, so I am keep it for now
                 # elif (args.NanoAODv >= 12) and is_data :
                 #     """
@@ -538,12 +538,12 @@ if __name__ == "__main__":
             ]
             fnames = set(fnames)
             bad_files = set(bad_files)
-            fnames = list(fnames.difference(bad_files)) # remove bad files from fnames and turn it back to a 
-            
+            fnames = list(fnames.difference(bad_files)) # remove bad files from fnames and turn it back to a
+
             # This is the default method
             das_query = dataset[sample_name]
             if "dummy" not in das_query:
-                
+
                 rucio_client = rucio_utils.get_rucio_client()
                 outlist, outtree = rucio_utils.query_dataset(
                     das_query,
@@ -559,26 +559,26 @@ if __name__ == "__main__":
                     # partial_allowed=True
                 )
                 fnames = [file[0] for file in outfiles if file != []]
-                
+
                 # fnames = [fname.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
-                
-                
+
+
                 # random.shuffle(fnames)
                 if args.xcache:
                     fnames = get_Xcache_filelist(fnames)
                 # print(f"fnames: {fnames}")
-            
+
             print(f"sample_name: {sample_name}")
             print(f"das_query: {das_query}")
             print(f"len(fnames): {len(fnames)}")
             # print(f"fnames: {fnames}")
-            
-            # fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading 
+
+            # fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading
             # print(f"fnames: {fnames[:5]}")
 
-            
+
             """
-            run through each file and collect total number of 
+            run through each file and collect total number of
             """
             preprocess_metadata = {
                 "sumGenWgts" : None,
@@ -596,7 +596,7 @@ if __name__ == "__main__":
                 # print(f"file_input: {file_input}")
                 # print(f"events.fields: {events.fields}")
                 preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                total_events += preprocess_metadata["data_entries"] 
+                total_events += preprocess_metadata["data_entries"]
             else: # if MC
                 if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
                     file_input = {fname : {"object_path": "Events"} for fname in fnames}
@@ -605,7 +605,7 @@ if __name__ == "__main__":
                             metadata={},
                             schemaclass=BaseSchema,
                             uproot_options={"timeout":4*2400},
-                    ).events() 
+                    ).events()
                     gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
                     preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
                     preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
@@ -619,9 +619,9 @@ if __name__ == "__main__":
                             metadata={},
                             schemaclass=BaseSchema,
                             uproot_options={"timeout":4*2400},
-                    ).events()    
-    
-                    
+                    ).events()
+
+
                     # print(f"runs.fields: {runs.fields}")
                     # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
                     if "genEventSumw" in runs.fields:
@@ -634,19 +634,19 @@ if __name__ == "__main__":
                         # print(f"nevents: {nevents}")
                         preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                         preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    else: # nanoAODv6 
+                    else: # nanoAODv6
                         preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                         preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    
-                total_events += preprocess_metadata["nGenEvts"] 
 
-    
-            
+                total_events += preprocess_metadata["nGenEvts"]
+
+
+
             # test start -------------------------------
             if sample_name == "dy_VBF_filter":
                 """
                 Starting from coffea 2024.4.1, this if statement is technically as obsolite preprocess
-                can now handle thousands of root files no problem, but this "manual" is at least three 
+                can now handle thousands of root files no problem, but this "manual" is at least three
                 times faster than preprocess, so keeping this if statement for now
                 """
                 runs = NanoEventsFactory.from_root(
@@ -654,9 +654,9 @@ if __name__ == "__main__":
                         metadata={},
                         schemaclass=BaseSchema,
                         uproot_options={"timeout":2400},
-                ).events()  
+                ).events()
                 genEventCount = runs.genEventCount.compute()
-                
+
                 assert len(fnames) == len(genEventCount)
                 file_dict = {}
                 for idx in range(len(fnames)):
@@ -666,7 +666,7 @@ if __name__ == "__main__":
                     file_dict[file] = {
                         "object_path": "Events",
                         "steps" : [[step_start,step_end]],
-                        "num_entries" : step_end, 
+                        "num_entries" : step_end,
                     }
                 final_output = {
                     sample_name :{"files" :file_dict}
@@ -709,7 +709,7 @@ if __name__ == "__main__":
                 pre_stage_data[sample_name]['metadata']["is_mc"] = True
             pre_stage_data[sample_name]['metadata']["dataset"] = sample_name
             big_sample_info.update(pre_stage_data)
-        
+
         #save the sample info
         directory = "./prestage_output"
         filename = directory+"/processor_samples.json"
@@ -720,11 +720,11 @@ if __name__ == "__main__":
                 json.dump(big_sample_info, file)
         with open(dupli_fname, "w") as file:
                 json.dump(big_sample_info, file)
-    
+
         elapsed = round(time.time() - time_step, 3)
         print(f"Finished everything in {elapsed} s.")
         print(f"Total Events in files {total_events}.")
-        
+
     else: # take the pre existing samples.json and prune off files we don't need
         fraction = float(args.fraction)
         directory = "./prestage_output"
@@ -749,7 +749,7 @@ if __name__ == "__main__":
                 new_samples[sample_name]['metadata']['fraction'] = new_N_evnts/old_N_evnts
                 print(f"new_samples[sample_name]['metadata']['fraction']: {new_samples[sample_name]['metadata']['fraction']}")
                 # new_samples[sample_name]['metadata']["original_fraction"] = fraction
-                
+
                 # loop through the files to correct the steps
                 event_counter = 0 # keeps track of events of multiple root files
                 stop_flag = False
@@ -778,11 +778,11 @@ if __name__ == "__main__":
                         event_counter += file_dict["steps"][end_idx][1]
 
         #save the sample info
-        
+
         filename = directory+"/fraction_processor_samples.json"
         with open(filename, "w") as file:
                 json.dump(new_samples, file)
-    
+
         elapsed = round(time.time() - time_step, 3)
         print(f"Finished everything in {elapsed} s.")
 
