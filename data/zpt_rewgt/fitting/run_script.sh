@@ -27,13 +27,5 @@ label="March25_NanoAODv9_WithUpdatedZptWgt"
 # do F test
 nbin="500"
 njet=0
-# python do_f_test.py --run_label ${label} --year ${year} --nbins "custom" --njet 0
-# python do_f_test.py --run_label ${label} --year ${year} --nbins "50" --njet 0
-# python do_f_test.py --run_label ${label} --year ${year} --nbins "100" --njet 0
-# python do_f_test.py --run_label ${label} --year ${year} --nbins "250" --njet 0
 python do_f_test.py --run_label ${label} --year ${year} --nbins ${nbin} --njet ${njet}
-# python do_f_test.py --run_label ${label} --year ${year} --nbins "100" --njet ${njet}
-# python do_f_test.py --run_label ${label} --year ${year} --nbins "50" --njet 2
-# python do_f_test.py --run_label ${label} --year ${year} --nbins "100" --njet 2
-
 python get_polyFit.py -l ${label} -y ${year} --nbins ${nbin} --njet ${njet}
