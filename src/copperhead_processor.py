@@ -8,7 +8,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVetoData
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, get_jec_scale
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
 import json
@@ -392,8 +392,9 @@ class EventProcessor(processor.ProcessorABC):
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
-    
-
+        # hemto_filter = events.run >= 319077# REMOVEME
+        # print(f"hemto_filter sum: {ak.sum(hemto_filter).compute()}")
+        # raise ValueError
 
         """
         Apply LHE cuts for DY sample stitching
@@ -711,10 +712,10 @@ class EventProcessor(processor.ProcessorABC):
         nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0) 
 
-        # if self.config["do_HemVeto"]:
-        #     HemVeto_filter = applyHemVetoData(evenbts.Jet, events.run, self.config)
-        # else:
-        #     HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
+        if self.config["do_HemVeto"]:
+            HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
+        else:
+            HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
             
         
         event_filter = (
@@ -725,7 +726,7 @@ class EventProcessor(processor.ProcessorABC):
                 # & (mm_charge == -1)
                 # & electron_veto 
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
-                # & HemVeto_filter
+                & HemVeto_filter
 
         )
         event_filter = event_filter & (nmuons == 2)
@@ -977,10 +978,13 @@ class EventProcessor(processor.ProcessorABC):
                     print("JEC factory not recognized!")
                     raise ValueError
                 
-            print("do old jec!")
+            # print("do old jec!")
+            jets = get_jec_scale(jets, self.config, is_mc, dataset)
+            sorted_args = ak.argsort(jets.pt, ascending=False)
+            jets = (jets[sorted_args])
             # testJetVector(jets)
             # print(f"jets pt b4 jec: {jets.pt.compute()}")
-            jets = factory.build(jets)
+            # jets = factory.build(jets)
             # print(f"jets pt after jec: {jets.pt.compute()}")
             # testJetVector(jets)
 
@@ -1240,12 +1244,13 @@ class EventProcessor(processor.ProcessorABC):
             out_dict.update(mc_dict)
 
         # hemveto study start ------------------------------------------
-        print(f'self.config["do_HemVeto"]: {self.config["do_HemVeto"]}')
-        if self.config["do_HemVeto"]:
-            HemVeto_filter = applyHemVetoData(events.Jet, events.run, self.config)
-        else:
-            HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
-        out_dict["HemVeto_filter"] = HemVeto_filter
+        # print(f'self.config["do_HemVeto"]: {self.config["do_HemVeto"]}')
+        # if self.config["do_HemVeto"]:
+        #     HemVeto_filter, is_HemRegion = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
+        # else:
+        #     HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
+        # out_dict["HemVeto_filter"] = HemVeto_filter
+        # out_dict["is_HemRegion"] = is_HemRegion
         # hemveto study end ------------------------------------------
         
         # ------------------------------------------------------------#
@@ -1645,20 +1650,6 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
-        # apply HEM Veto, written in "HEM effect in 2018" appendix K of the main long AN
-        HEMVeto = ak.ones_like(clean, dtype="bool") # 1D array saying True
-        if year == "2018":
-            HEMVeto_filter = (
-                (jets.pt >= 15.0)
-                & (jets.eta >= -3.0)
-                & (jets.eta <= -1.3)
-                & (jets.phi >= -1.57)
-                & (jets.phi <= -0.87)
-            )
-            false_arr = ak.ones_like(HEMVeto) < 0
-            HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
-            # print(f"HEMVeto : {HEMVeto.compute()}")
-
         # get QGL cut
         if NanoAODv == 9 : 
             qgl_cut = (jets.qgl >= -2)
@@ -1673,7 +1664,6 @@ class EventProcessor(processor.ProcessorABC):
             & clean
             & (jets.pt >= self.config["jet_pt_cut"])
             & (abs(jets.eta) <= self.config["jet_eta_cut"])
-            # & HEMVeto # TODO: apply HEM veto as an eventwise cut
         )
         # original jet_selection end ----------------------------------------------
 
