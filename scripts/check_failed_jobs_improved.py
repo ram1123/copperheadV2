@@ -1,22 +1,16 @@
 import os
 import pandas as pd
 import uproot
-import sys
 import ROOT
 import logging
-import time
 import argparse
-from dask import delayed, compute
-from dask.distributed import Client
-import dask.dataframe as dd
-import hepconvert
-import uuid
-from tqdm import tqdm
-from dask.diagnostics import ProgressBar
 import subprocess
-import dask.dataframe as dd
 from multiprocessing import Pool
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
+import json
+import time
+import random
 
 # ROOT Error Handling: Suppress non-critical warnings
 ROOT.gErrorIgnoreLevel = ROOT.kError  # Only show errors, not warnings
@@ -27,86 +21,9 @@ logger = logging.getLogger()
 
 # Argument parsing for making Dask optional
 parser = argparse.ArgumentParser(description="Process ROOT files with or without Dask.")
-parser.add_argument('--use-dask', action='store_true', help="Use Dask for parallel processing")
-parser.add_argument('--use-gateway', action='store_true', help="Use Dask Gateway for cluster mode")
 parser.add_argument('--use-multiprocessing', action='store_true', help="Use multiprocessing for parallel processing")
-# add option to run miniAOD files too: option name --use-miniAOD
-parser.add_argument('--use-miniAOD', action='store_true', help="Use MiniAOD files for processing")
-
+parser.add_argument('--use-miniAOD', action='store_true', help="Use miniAOD files for entry count")
 args = parser.parse_args()
-
-
-def check_failed_jobs(input_file, output_dir, year, additional_string):
-    # Step-1: Check if input file exists
-    if not os.path.exists(input_file):
-        logger.error(f"Input file {input_file} does not exist.")
-        return
-
-    # Step-2: Convert the input file to a DataFrame
-    try:
-        df = pd.read_csv(input_file, sep=' ', header=None, names=['configFile', 'inputMiniAOD', 'outputDirectory', 'nEvents', 'CondorLogPath'])
-        logger.info(f"Successfully read input file {input_file}.")
-    except Exception as e:
-        logger.error(f"Error reading input file {input_file}: {e}")
-        return
-
-    print(df.head())
-
-    # Step-3: Check if the output nanoAOD file exists
-    # Generate the expected output file names: mini.root -> mini_NanoAOD.root
-    # Repalce the redirector "root://eos.cms.rcac.purdue.edu/" with "/eos/purdue" to search files locally (for speed)
-    df['outputNanoAODFile'] = df['inputMiniAOD'].apply(lambda x: x.split('/')[-1].replace(".root", "_NanoAOD.root"))
-    df['expected_output_file'] = df['outputDirectory'] + "/" + df['outputNanoAODFile']
-    df['expected_output_file'] = df['expected_output_file'].str.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue")
-
-    # Step-4: Check if the output nanoAOD file "expected_output_file" exists
-    if args.use_dask:
-        ddf = dd.from_pandas(df, npartitions=8)
-        ddf['output_file_exists'] = ddf['expected_output_file'].map(os.path.exists, meta=('output_file_exists', 'bool'))
-        df = ddf.compute()
-    else:
-        df['output_file_exists'] = df['expected_output_file'].apply(lambda x: os.path.exists(x))
-
-    print(df.head())
-
-    # Step-5: Check the entries in the output nanoAOD file
-    df['nEntries_FromNanoAOD'] = 0
-    if args.use_multiprocessing:
-        with Pool() as pool:
-            # df['nEntries_FromNanoAOD'] = list(tqdm(pool.imap(get_entries, df['expected_output_file']), total=len(df), desc="Processing files"))
-            # check entries only if output file exists
-            df['nEntries_FromNanoAOD'] = list(tqdm(pool.imap(get_entries, df.loc[df['output_file_exists'], 'expected_output_file']), total=len(df), desc="Processing files"))
-    else:
-        df['nEntries_FromNanoAOD'] = df.apply(lambda row: get_entries(row['expected_output_file']) if row['output_file_exists'] else 0, axis=1)
-
-    print(df.head())
-    # Save the DataFrame to a CSV file
-    output_csv = f"UL{year}_{additional_string}_all_jobs.csv"
-    df.to_csv(output_csv, index=False)
-    logger.info(f"Output saved to {output_csv}")
-
-    if 'inputMiniAOD' in df.columns and args.use_miniAOD:
-        # Process the files in parallel and get the number of entries
-        file_paths = df['inputMiniAOD'].tolist()
-        num_entries_list = process_files_in_parallel(file_paths, max_workers=1) # FIXME: If max_workers > 1 then the number of entries are placed in wrong order
-
-        # Add the new column to the DataFrame
-        df['numEntriesDAS'] = num_entries_list
-
-        # Save the updated DataFrame to a new CSV file
-        df.to_csv(output_csv.replace(".csv","_WithDASEntry.csv"), index=False)
-        print(f"Updated DataFrame saved to '{output_csv.replace(".csv","_WithDASEntry.csv")}'")
-
-        df_mismatched = df[df['numEntriesDAS'] != df['nEvents_from_nanoAOD']]
-        if not df_mismatched.empty:
-            output_csv = output_csv.replace(".csv","_mismatch.csv")
-            df_mismatched.to_csv(f"{output_csv}", index=False)
-            print(f"Mismatched entries saved to '{outfile}_skim.csv', having entries {len(df_mismatched)}")
-        else:
-            print("No mismatched entries found.")
-    else:
-        print("The column 'inputMiniAOD' is not found in the CSV file.")
-
 
 
 def get_entries(file_path):
@@ -119,6 +36,100 @@ def get_entries(file_path):
     except Exception as e:
         logger.error(f"Error reading file {file_path}: {e}")
         return 0
+
+    # Step-3: Check if the output nanoAOD file "expected_output_file" exists
+def check_output_file_exists(df, running_location="purdue"):
+    # Step-3: Check if the output nanoAOD file "expected_output_file" exists
+    # Generate the expectedoutput file names: mini.root -> mini_NanoAOD.root
+    df['outputNanoAODFile'] = df['inputMiniAOD'].apply(lambda x: x.split('/')[-1].replace(".root", "_NanoAOD.root"))
+    df['expected_output_file'] = df['outputDirectory'] + "/" + df['outputNanoAODFile']
+    if running_location == "purdue":
+        # Replace the EOS path with the local path
+        df['expected_output_file'] = df['expected_output_file'].str.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue")
+        df['output_file_exists'] = df['expected_output_file'].apply(lambda x: os.path.exists(x))
+    else:
+        # Use the gfal-ls command to check for file existence
+        pass
+    return df
+
+def check_entries_from_nanoAOD_files(df):
+    # Step-4: Check the entries in the output nanoAOD file
+    logger.info("==> Computing number of entries in the output files...")
+    df['nEntries_FromNanoAOD'] = 0
+
+    # Check entries only if output file exists
+    existing_files = df.loc[df['output_file_exists'], 'expected_output_file'].tolist()
+
+    if args.use_multiprocessing:
+        with Pool() as pool:
+            # Use tqdm to show progress
+            entries = list(tqdm(pool.imap(get_entries, existing_files), total=len(existing_files), desc="Processing files"))
+            # Ensure the length of the result matches the number of rows in the DataFrame
+            df.loc[df['output_file_exists'], 'nEntries_FromNanoAOD'] = entries
+    else:
+        # Use a regular approach if not using multiprocessing
+        df['nEntries_FromNanoAOD'] = df.apply(lambda row: get_entries(row['expected_output_file']) if row['output_file_exists'] else 0, axis=1)
+
+    return df
+
+
+def check_entries_from_miniAOD_files(df, output_csv="output.csv"):
+    if 'inputMiniAOD' in df.columns and args.use_miniAOD:
+        # Process the files in parallel and get the number of entries from DAS
+        file_paths = df['inputMiniAOD'].tolist()
+
+        # Get number of entries from DAS
+        num_entries_list = process_files_in_parallel(file_paths, max_workers=126)  # Use 126 workers or adjust as needed
+
+        # Add the new column to the DataFrame
+        df['numEntriesDAS'] = num_entries_list
+
+        # Save the updated DataFrame to a new CSV file
+        df.to_csv(output_csv.replace(".csv", "_WithDASEntry.csv"), index=False)
+        logger.info(f"Updated DataFrame saved to '{output_csv.replace('.csv','_WithDASEntry.csv')}'")
+
+        # Now, check for mismatches
+        df_mismatched = df[df['numEntriesDAS'] != df['nEntries_FromNanoAOD']]
+        if not df_mismatched.empty:
+            mismatch_csv = output_csv.replace(".csv", "_mismatch.csv")
+            df_mismatched.to_csv(f"{mismatch_csv}", index=False)
+            logger.info(f"Mismatched entries saved to '{mismatch_csv}', having entries {len(df_mismatched)}")
+        else:
+            logger.info("No mismatched entries found.")
+    else:
+        logger.info("The column 'inputMiniAOD' is not found in the CSV file.")
+
+
+def process_files_in_parallel(file_paths, max_workers=8):
+    """
+    Process a list of file paths in parallel to retrieve the number of entries.
+
+    Parameters:
+        file_paths (list): List of file paths to process.
+        max_workers (int): Maximum number of threads to use.
+
+    Returns:
+        list: List of number of entries corresponding to each file path, in the same order as input.
+    """
+    num_entries_list = [None] * len(file_paths)  # Preallocate a list to store results in order
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit tasks to the executor with their index
+        future_to_index = {
+            executor.submit(get_num_entries_from_das, file_path): idx
+            for idx, file_path in enumerate(file_paths)
+        }
+
+        # Use tqdm to display progress
+        for future in tqdm(as_completed(future_to_index), total=len(file_paths), desc="Processing files"):
+            idx = future_to_index[future]
+            try:
+                num_entries = future.result()
+                num_entries_list[idx] = num_entries  # Store result at the correct index
+            except Exception as e:
+                print(f"Error processing file {file_paths[idx]}: {e}")
+                num_entries_list[idx] = 0  # Default to 0 on error
+
+    return num_entries_list
 
 def run_command(command):
     try:
@@ -140,8 +151,11 @@ def get_num_entries_from_das(file_path):
         int: Number of entries in the MiniAOD file, or 0 if an error occurs.
     """
     try:
+        # sleep randomly between 0 to 10 seconds
+        time.sleep(random.uniform(0, 10))
         # Construct the dasgoclient command
         command = f'dasgoclient --query="file={file_path}" --json'
+        # print(f"Running command: {command}")
         result = run_command(command)
 
         # Parse the JSON result
@@ -164,33 +178,39 @@ def get_num_entries_from_das(file_path):
         print(f"Error retrieving number of entries from DAS for '{file_path}': {e}")
         return 0
 
-def process_files_in_parallel(file_paths, max_workers=8):
-    """
-    Process a list of file paths in parallel to retrieve the number of entries.
 
-    Parameters:
-        file_paths (list): List of file paths to process.
-        max_workers (int): Maximum number of threads to use.
+def check_failed_jobs(input_file, output_dir, year, additional_string):
+    # Step-1: Check if input file exists
+    if not os.path.exists(input_file):
+        logger.error(f"Input file {input_file} does not exist.")
+        return
 
-    Returns:
-        list: List of number of entries corresponding to each file path.
-    """
-    num_entries_list = []
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit tasks to the executor
-        future_to_file = {executor.submit(get_num_entries_from_das, file_path): file_path for file_path in file_paths}
+    # Step-2: Convert the input file to a DataFrame
+    try:
+        df = pd.read_csv(input_file, sep=' ', header=None, names=['configFile', 'inputMiniAOD', 'outputDirectory', 'nEvents', 'CondorLogPath'])
+        logger.info(f"Successfully read input file {input_file}.")
+    except Exception as e:
+        logger.error(f"Error reading input file {input_file}: {e}")
+        return
 
-        # Use tqdm to display progress
-        for future in tqdm(as_completed(future_to_file), total=len(file_paths), desc="Processing files"):
-            file_path = future_to_file[future]
-            try:
-                num_entries = future.result()
-                num_entries_list.append(num_entries)
-            except Exception as e:
-                print(f"Error processing file {file_path}: {e}")
-                num_entries_list.append(0)
+    print(df.head())
 
-    return num_entries_list
+    # Step-3: Check if the output nanoAOD file "expected_output_file" exists
+    df = check_output_file_exists(df, running_location="purdue")
+
+    # Step-4: Check the entries in the output nanoAOD file
+    df = check_entries_from_nanoAOD_files(df)
+
+    # Save the DataFrame to a CSV file
+    output_csv = f"UL{year}_{additional_string}_all_jobs.csv"
+    df.to_csv(output_csv, index=False)
+    logger.info(f"Output saved to {output_csv}")
+
+    # Step-5: Check the entries in the input miniAOD file
+    #              Two options:
+    #              1. Use the dasgoclient command with option --json to fetch the number of events
+    #              2. Use uproot to get the number of entries in the input file
+    df = check_entries_from_miniAOD_files(df, output_csv)
 
 
 def main():
@@ -219,8 +239,9 @@ def main():
 
     # years = ['2017', '2016APV', '2016', '2018']
     # years = ['2018GT36_debug']
-    years = ['2018MC','2018GT36']
-    additional_string = "7April_ImprovedScript"
+    # years = ['2018MC','2018GT36']
+    years = ['2018GT36']
+    additional_string = "8April_ImprovedScript"
     # additional_string = "2018GT36_debug"
 
     for year in years:
