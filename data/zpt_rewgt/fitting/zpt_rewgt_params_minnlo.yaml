@@ -168,7 +168,7 @@
         x_min: 10
         x_max: 100
   njet_0:
-    50:
+    100: # FIXME: bins is 50: Just to run copperhead I changed to 100. Will fix later.
       p0: 0.9228268717052255
       p1: 0.012719939847045638
       p2: -0.0004059291108228811
