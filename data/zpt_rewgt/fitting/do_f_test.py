@@ -6,6 +6,8 @@ import logging
 import yaml
 from collections import defaultdict
 from modules.utils import logger
+from omegaconf import OmegaConf
+
 
 # define cut ranges to do polynomial fits. pt ranges beyond that point we fit with a constant
 poly_fit_ranges = {
@@ -20,9 +22,9 @@ poly_fit_ranges = {
         "njet2" : [0, 65],
     },
     "2016postVFP" : {
-        "njet0" : [0, 70],
-        "njet1" : [0, 100],
-        "njet2" : [0, 100],
+        "njet0" : [0, 50],
+        "njet1" : [0, 80],
+        "njet2" : [0, 30],
     },
     "2016preVFP" : {
         "njet0" : [0, 70],
@@ -164,6 +166,14 @@ for njet in args.njet:
         file.Close()
 
 # Save config to YAML
-with open(f"{save_path}/zpt_fit_config.yaml", "w") as f:
-    yaml.dump(dict(save_fit_config), f)
+yaml_path = f"{save_path}/zpt_fit_config.yaml"
+
+# Load existing config if it exists
+if os.path.isfile(yaml_path):
+    config = OmegaConf.load(yaml_path)
+    config = OmegaConf.merge(config, dict(save_fit_config))
+else:
+    config = OmegaConf.create(dict(save_fit_config))
+OmegaConf.save(config=config, f=yaml_path)
+
 logger.info("Saved optimized fit config to zpt_fit_config.yaml")

@@ -56,10 +56,19 @@ for year in years:
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
 
+            # polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(order + 1)])
+            # polynomial_expr of order 2
+            polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(3 + 1)])
+            # Define the TF1 function with the generated expression
+            fit_func0 = ROOT.TF1(f"poly{2}", polynomial_expr, 0, fit_xmin)
+            _ = hist_SF.Fit(fit_func0, "L S", xmin=0, xmax=fit_xmin)
+            _ = hist_SF.Fit(fit_func0, "L S", xmin=0, xmax=fit_xmin)
+            fit_results = hist_SF.Fit(fit_func0, "L S", xmin=0, xmax=fit_xmin)
+
             # Fit with the lower-order polynomial
             polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(order + 1)])
             # Define the TF1 function with the generated expression
-            fit_func = ROOT.TF1(f"poly{order}", polynomial_expr, 0, fit_xmax)
+            fit_func = ROOT.TF1(f"poly{order}", polynomial_expr, fit_xmin, fit_xmax)
             _ = hist_SF.Fit(fit_func, "L S", xmin=fit_xmin, xmax=fit_xmax)
             _ = hist_SF.Fit(fit_func, "L S", xmin=fit_xmin, xmax=fit_xmax)
             fit_results = hist_SF.Fit(fit_func, "L S", xmin=fit_xmin, xmax=fit_xmax)
@@ -71,7 +80,7 @@ for year in years:
             # Calculate chi2 and p-value
             chi2 = fit_func.GetChisquare()
             ndf = fit_func.GetNDF()
-            chi2_dof = chi2 / ndf
+            chi2_dof = chi2 / ndf if ndf > 0 else 0
             p_value = ROOT.TMath.Prob(chi2, ndf)
 
             # Plotting
@@ -80,9 +89,14 @@ for year in years:
             canvas.cd(1)
             hist_SF.SetTitle(f"{order} order poly, njet {njet}, {target_nbins} bins SF")
             hist_SF.SetLineColor(ROOT.kBlue)
-            hist_SF.SetMinimum(0.25)
-            hist_SF.SetMaximum(4)
+            if njet == 0: minimum, maximum = 0.9, 2.5
+            if njet == 1: minimum, maximum = 0.9, 1.5
+            if njet == 2: minimum, maximum = 0.9, 1.2
+            hist_SF.SetMinimum(minimum)
+            hist_SF.SetMaximum(maximum)
             hist_SF.Draw()
+            fit_func0.SetLineColor(ROOT.kRed)
+            fit_func0.Draw("SAME")
             fit_func.SetLineColor(ROOT.kRed)
             fit_func.Draw("SAME")
             horizontal_line.SetLineColor(ROOT.kGreen)
@@ -130,15 +144,20 @@ for year in years:
             # ---------------------------------------------------
 
             max_order = 5
+            param_dict = {f"fp{i}": 0.0 for i in range(max_order + 1)}
+            param_dict.update({f"fp{i}_err": 0.0 for i in range(max_order + 1)})
             param_dict = {f"p{i}": 0.0 for i in range(max_order + 1)}
             param_dict.update({f"p{i}_err": 0.0 for i in range(max_order + 1)})
+            for i in range(fit_func0.GetNpar()):
+                param_dict[f"fp{i}"] = fit_func0.GetParameter(i)
+                param_dict[f"fp{i}_err"] = fit_func0.GetParError(i)
             for i in range(fit_func.GetNpar()):
                 param_dict[f"p{i}"] = fit_func.GetParameter(i)
                 param_dict[f"p{i}_err"] = fit_func.GetParError(i)
             param_dict["horizontal_c0"] = horizontal_line.GetParameter(0)
             param_dict["polynomial_range"] = {"x_min": fit_xmin, "x_max": fit_xmax}
 
-            out_dict_by_nbin[target_nbins] = param_dict
+            out_dict_by_nbin[int(target_nbins)] = param_dict
         out_dict_by_year[f"njet_{njet}"] = out_dict_by_nbin
 
     save_dict[year] = out_dict_by_year

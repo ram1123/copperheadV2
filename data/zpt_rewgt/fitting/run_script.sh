@@ -25,7 +25,7 @@ label="March25_NanoAODv9_WithUpdatedZptWgt"
 # python save_SF_rootFiles.py -l ${label} -y ${year}
 
 # do F test
-nbin="500"
+nbin="50"
 njet=0
-python do_f_test.py --run_label ${label} --year ${year} --nbins ${nbin} --njet ${njet}
+# python do_f_test.py --run_label ${label} --year ${year} --nbins ${nbin} --njet ${njet}
 python get_polyFit.py -l ${label} -y ${year} --nbins ${nbin} --njet ${njet}
