@@ -153,7 +153,7 @@ def plotDataMC_compare(
         inf_filter = bkg_mc_sum>0
         ratio_hist[inf_filter] = data_hist[inf_filter]/  bkg_mc_sum[inf_filter]
         # add relative uncertainty of data and bkg_mc by adding by quadrature
-        rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2)
+        rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2) # FIXME: division by zero error
         ratio_err = rel_unc_ratio*ratio_hist
         # print(f"plotDataMC_compare ratio_err: {ratio_err}")
 

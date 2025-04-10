@@ -1,5 +1,5 @@
 """
-python fetch_hists_for_zpt_weights.py --input_path /depot/cms/users/yun79/hmm/copperheadV1clean/DYMiNNLO_30Mar2025 --run_label DYMiNNLO_30Mar2025 --year 2017 --outAppend "acoplanarity"
+python fetch_hists_for_zpt_weights.py --input_path /depot/cms/users/yun79/hmm/copperheadV1clean/DYMiNNLO_30Mar2025 --run_label DYMiNNLO_30Mar2025 --year 2017 --outAppend "dimuon_pt_updatedBins"
 python fetch_hists_for_zpt_weights.py --input_path /depot/cms/users/yun79/hmm/copperheadV1clean/DYMiNNLO_30Mar2025 --run_label DYMiNNLO_30Mar2025 --year 2017 --outAppend "acoplanarity_custombin"
 """
 import ROOT
@@ -44,22 +44,20 @@ muon_pT_categories = {
     "mu1_40_50_mu2_40_50": ((40, 50), (40, 50)),
     "mu1_gt50_mu2_40_50": ((50, None), (40, 50)),
     "mu1_gt50_mu2_gt50": ((50, None), (50, None)),
-    "mu1_gt20_mu2_gt20": ((20, None), (20, None)), # For sanity check
-    "mu1_gt0_mu2_gt0": ((0, None), (0, None)), # For sanity check
 }
 
 # custom bins for muon_pT_categories
 custom_bins = {
-    "mu1_20_30_mu2_20_30": [100, 0, 1],
-    "mu1_30_40_mu2_20_30": [100, 0, 1],
-    "mu1_40_50_mu2_20_30": [100, 0, 1],
-    "mu1_gt50_mu2_20_30": [100, 0, 1],
-    "mu1_30_40_mu2_30_40": [100, 0, 1],
-    "mu1_40_50_mu2_30_40": [100, 0, 1],
-    "mu1_gt50_mu2_30_40": [100, 0, 1],
-    "mu1_40_50_mu2_40_50": [100, 0, 1],
-    "mu1_gt50_mu2_40_50": [100, 0, 1],
-    "mu1_gt50_mu2_gt50": [100, 0, 1],
+    "mu1_20_30_mu2_20_30": [100, 0, 60],
+    "mu1_30_40_mu2_20_30": [100, 0, 70],
+    "mu1_40_50_mu2_20_30": [100, 0, 80],
+    "mu1_gt50_mu2_20_30": [100, 0, 200],
+    "mu1_30_40_mu2_30_40": [100, 0, 80],
+    "mu1_40_50_mu2_30_40": [100, 0, 90],
+    "mu1_gt50_mu2_30_40": [100, 0, 200],
+    "mu1_40_50_mu2_40_50": [100, 0, 100],
+    "mu1_gt50_mu2_40_50": [100, 0, 200],
+    "mu1_gt50_mu2_gt50": [100, 0, 200],
 }
 
 def zipAndCompute(events, fields2load):
@@ -70,8 +68,6 @@ def zipAndCompute(events, fields2load):
     return_zip = ak.zip({
         field : events[field] for field in fields2load
     })
-    # add new field Acoplanarity = 1 - dPhi/pi
-    # return_zip["acoplanarity"] = 1 - (return_zip["dimuon_dPhi"] / np.pi)
     return return_zip.compute() # compute and return
 
 
@@ -103,18 +99,14 @@ if __name__ == "__main__":
                 data_events_filtered = data_events[data_events[njet_field] >= njet]
                 dy_events_filtered = dy_events[dy_events[njet_field] >= njet]
 
-            fields2load = ["wgt_nominal", "dimuon_pt", "mu1_pt", "mu2_pt", "dimuon_dPhi"]
+            fields2load = ["wgt_nominal", "dimuon_pt", "mu1_pt", "mu2_pt"]
 
             try:
                 data_dict = zipAndCompute(data_events_filtered, fields2load)
                 data_dict = {field: ak.to_numpy(data_dict[field]) for field in fields2load}
-                # add new field Acoplanarity = 1 - dPhi/pi
-                data_dict["acoplanarity"] = 1 - (data_dict["dimuon_dPhi"] / np.pi)
 
                 dy_dict = zipAndCompute(dy_events_filtered, fields2load)
                 dy_dict = {field: ak.to_numpy(dy_dict[field]) for field in fields2load}
-                # add new field Acoplanarity = 1 - dPhi/pi
-                dy_dict["acoplanarity"] = 1 - (dy_dict["dimuon_dPhi"] / np.pi)
             except Exception as e:
                 logger.error(f"Error extracting arrays for {year} njet{njet}: {e}")
                 exit()
@@ -130,63 +122,14 @@ if __name__ == "__main__":
                     data_mask &= (data_dict["mu2_pt"] < mu2_max)
                     dy_mask &= (dy_dict["mu2_pt"] < mu2_max)
 
-                data_dimuon_pt = data_dict["acoplanarity"][data_mask]
-                dy_dimuon_pt = dy_dict["acoplanarity"][dy_mask]
+                data_dimuon_pt = data_dict["dimuon_pt"][data_mask]
+                dy_dimuon_pt = dy_dict["dimuon_pt"][dy_mask]
                 data_weights = data_dict["wgt_nominal"][data_mask]
                 dy_weights = dy_dict["wgt_nominal"][dy_mask]
 
-                # hist_data = ROOT.TH1F(f"hist_data_{cat_label}", "Data", 50, 0, 200)
-                # hist_dy = ROOT.TH1F(f"hist_dy_{cat_label}", "DY", 50, 0, 200)
-
-                # nbins, minx, maxx = custom_bins[cat_label]
-                nbins, minx, maxx = 100, 0, 1
-                if njet == 2:
-                    nbins, minx, maxx = 50, 0, 1
-                if njet == 1:
-                    nbins, minx, maxx = 100, 0, 1
-                    if cat_label == "mu1_20_30_mu2_20_30" or cat_label == "mu1_40_50_mu2_40_50":
-                        nbins, minx, maxx = 50, 0, 1
-                print("=======  binpart =======")
-                print(f"cat_label: {cat_label}, njet: {njet}, nbins: {nbins}, minx: {minx}, maxx: {maxx}")
-                print("==============")
+                nbins, minx, maxx = custom_bins[cat_label]
                 hist_data = ROOT.TH1F(f"hist_data_{cat_label}", "Data", nbins, minx, maxx)
                 hist_dy = ROOT.TH1F(f"hist_dy_{cat_label}", "DY", nbins, minx, maxx)
-
-                if njet == 0:
-                    # custombins from 0 to 0.4 40 bins then from 0.4 to 1.0 10 bins
-                    if (cat_label == "mu1_20_30_mu2_20_30" or
-                        cat_label == "mu1_30_40_mu2_30_40" or
-                        cat_label == "mu1_gt50_mu2_20_30" or
-                        cat_label == "mu1_gt50_mu2_30_40" or
-                        cat_label == "mu1_gt50_mu2_40_50"
-                        ):
-                        binpart1 = np.linspace(0, 0.4, 40)
-                        binpart2 = np.linspace(0.4, 1.0, 15)
-                    if (
-                        cat_label == "mu1_30_40_mu2_20_30" or
-                        cat_label == "mu1_40_50_mu2_20_30"
-                        ):
-                        binpart1 = np.linspace(0, 0.5, 50)
-                        binpart2 = np.linspace(0.5, 1.0, 10)
-                    if cat_label == "mu1_40_50_mu2_30_40":
-                        binpart1 = np.linspace(0, 0.5, 50)
-                        binpart2 = np.linspace(0.5, 1.0, 10)
-                    if cat_label == "mu1_40_50_mu2_40_50":
-                        binpart1 = np.linspace(0, 0.35, 35)
-                        binpart2 = np.linspace(0.35, 1.0, 13)
-                    if cat_label == "mu1_gt50_mu2_gt50":
-                        binpart1 = np.linspace(0, 0.3, 30)
-                        binpart2 = np.linspace(0.3, 1.0, 14)
-                    binpart = np.concatenate((binpart1, binpart2))
-                    nbins = len(binpart) - 1
-                    print("=======  binpart =======")
-                    print(f"custombin for cat: {cat_label}, {nbins} bins")
-                    print(f"binpart1: {binpart1}")
-                    print(f"binpart2: {binpart2}")
-                    print(f"binpart: {binpart}")
-                    print("==============")
-                    hist_data = ROOT.TH1F(f"hist_data_{cat_label}", "Data", nbins, binpart)
-                    hist_dy = ROOT.TH1F(f"hist_dy_{cat_label}", "DY", nbins, binpart)
 
 
                 for val, weight in zip(data_dimuon_pt, data_weights):
@@ -197,7 +140,7 @@ if __name__ == "__main__":
                 canvas = ROOT.TCanvas("canvas", "Ratio Plot", 800, 600)
                 hist_data.SetLineColor(ROOT.kBlack)
                 hist_dy.SetLineColor(ROOT.kRed)
-                hist_data.GetXaxis().SetTitle("Acoplanarity")
+                hist_data.GetXaxis().SetTitle("p_{T}(#mu#mu) [GeV]")
                 hist_data.GetYaxis().SetTitle("Events")
                 hist_data.SetTitle(f"Data vs DY: {cat_label}")
 
@@ -213,12 +156,12 @@ if __name__ == "__main__":
                 legend.AddEntry(hist_data, "Data", "l")
                 legend.AddEntry(hist_dy, "DY", "l")
                 legend.Draw()
-                canvas.SaveAs(f"{outputDirectory}/acoplanarity_{year}_njet{njet}_{cat_label}_ratio.png")
+                canvas.SaveAs(f"{outputDirectory}/diMuonPt_{year}_njet{njet}_{cat_label}_ratio.pdf")
 
                 hist_SF = hist_data.Clone(f"hist_SF_{cat_label}")
                 hist_SF.Divide(hist_dy)
 
-                output_file = ROOT.TFile(f"{outputDirectory}/acoplanarity_{year}_njet{njet}_{cat_label}.root", "RECREATE")
+                output_file = ROOT.TFile(f"{outputDirectory}/diMuonPt_{year}_njet{njet}_{cat_label}.root", "RECREATE")
                 hist_data.Write()
                 hist_dy.Write()
                 hist_SF.Write()
@@ -226,4 +169,8 @@ if __name__ == "__main__":
 
                 logger.info(f"Completed {year} njet{njet} category {cat_label}")
                 canvas.Clear()
+                # clear histograms
+                # hist_data.Delete()
+                # hist_dy.Delete()
+                # hist_SF.Delete()
     logger.info("All done!")

@@ -133,6 +133,7 @@ for year in years:
                 if error > 0:
                     pull = (data - fit_value) / error
                     pull_hist.SetBinContent(i, pull)
+                # print(f"bin {i}: data = {data}, fit_value = {fit_value}, error = {error}, pull = {pull}")
 
             pull_hist.SetMarkerStyle(20)
             pull_hist.SetTitle("Pull Distribution;X-axis;Pull")
