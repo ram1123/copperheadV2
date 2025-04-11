@@ -20,16 +20,31 @@ import glob
 # warnings.filterwarnings("error", module="coffea.*")
 from omegaconf import OmegaConf
 import numpy as np
+import uuid
 
+        
 
 def getBadFile(fname):
     try:
         up_file = uproot.open(fname) 
+        tmp_path = f"/tmp/{uuid.uuid4().hex}.parquet"
         if "Muon_pt" in up_file["Events"].keys():            
             # apply parquet tests for lzma error
-            ak.to_parquet(up_file["Events"]['Muon_pt'].array(),"/depot/cms/users/yun79/tmp/1.parquet")
-            ak.to_parquet(up_file["Events"]['Muon_eta'].array(),"/depot/cms/users/yun79/tmp/1.parquet")
-            ak.to_parquet(up_file["Events"]['Muon_phi'].array(),"/depot/cms/users/yun79/tmp/1.parquet")
+            ak.to_parquet(up_file["Events"]['Muon_pt'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Muon_eta'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Muon_phi'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Muon_mass'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Jet_pt'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Jet_eta'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Jet_phi'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Jet_mass'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Electron_pt'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Electron_eta'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Electron_phi'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Electron_mass'].array(),tmp_path)
+
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
             return "" # if no problem, return empty string
         else:
             return fname # bad file
@@ -261,7 +276,7 @@ if __name__ == "__main__":
 
                 
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
-                    # new_sample_list.append("ttjets_dl")
+                    new_sample_list.append("ttjets_dl")
                     new_sample_list.append("ttjets_sl")
                 elif bkg_sample.upper() == "ST": # enforce upper case to prevent confusion
                     new_sample_list.append("st_tw_top")
