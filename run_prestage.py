@@ -27,14 +27,15 @@ def getBadFile(fname):
         up_file = uproot.open(fname) 
         if "Muon_pt" in up_file["Events"].keys():            
             # apply parquet tests for lzma error
-            ak.to_parquet(up_file["Events"]['Muon_pt'].array(),"/dev/null/1.parquet")
-            ak.to_parquet(up_file["Events"]['Muon_eta'].array(),"/dev/null/1.parquet")
-            ak.to_parquet(up_file["Events"]['Muon_phi'].array(),"/dev/null/1.parquet")
+            ak.to_parquet(up_file["Events"]['Muon_pt'].array(),"/depot/cms/users/yun79/tmp/1.parquet")
+            ak.to_parquet(up_file["Events"]['Muon_eta'].array(),"/depot/cms/users/yun79/tmp/1.parquet")
+            ak.to_parquet(up_file["Events"]['Muon_phi'].array(),"/depot/cms/users/yun79/tmp/1.parquet")
             return "" # if no problem, return empty string
         else:
             return fname # bad file
     except Exception as e:
         # return f"An error occurred with file {fname}: {e}"
+        # print(f"An error occurred with file {fname}: {e}")
         return fname # bad fileclient
 
 # def getBadFileParallelize(filelist, max_workers=60)
@@ -260,7 +261,7 @@ if __name__ == "__main__":
 
                 
                 elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
-                    new_sample_list.append("ttjets_dl")
+                    # new_sample_list.append("ttjets_dl")
                     new_sample_list.append("ttjets_sl")
                 elif bkg_sample.upper() == "ST": # enforce upper case to prevent confusion
                     new_sample_list.append("st_tw_top")
