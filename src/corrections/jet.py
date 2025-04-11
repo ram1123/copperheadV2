@@ -453,8 +453,11 @@ def getJecDataTag(run, jec_data_tags):
 
 def do_jec_scale(jets, config, is_mc, dataset):
     jec_parameters = config["jec_parameters"]
-    # print(jec_parameters)
-    # jerc_load_path =
+
+    jerc_load_path = jec_parameters["jerc_load_path"]
+    cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
+
+    
     if is_mc:
         jec_tag = jec_parameters["jec_tags"]
     else: # data
@@ -469,8 +472,6 @@ def do_jec_scale(jets, config, is_mc, dataset):
         print("ERROR! JEC tag not found!")
         raise ValueError
         
-    jerc_load_path = jec_parameters["jerc_load_path"]
-    cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
     
     # algo = "AK4PFchs"
     algo = jec_parameters["jet_algorithm"]
@@ -481,12 +482,13 @@ def do_jec_scale(jets, config, is_mc, dataset):
     sf = cset.compound[key]
 
     sf_input_names = [inp.name for inp in sf.inputs]
-    print(sf_input_names)
+    print(f"JEC input: {sf_input_names}")
+    
     
     inputs = (
         jets.area, # == JetA
         jets.eta, # == JetEta
-        jets.pt_raw, # == JetEta
+        jets.pt_raw, # == JetPt
         jets.PU_rho, # == Rho
     )
     # inputs = get_corr_inputs(example_value_dict, sf)
@@ -500,27 +502,27 @@ def do_jec_scale(jets, config, is_mc, dataset):
     jets["mass_jec"] = jet_mass_jec
     return jets
     
-def do_jer_smear(jets, config, syst):
+def do_jer_smear(jets, config, syst, event_id):
     """
     we assume that jec has been applied (we need pt_jec and pt_raw)
     
     params:
     syst: nom, up and down
     """
-    
-    fname="../data/POG/JME/2016postVFP_UL/jet_jerc.json.gz"
-    # fname="../data/POG/JME/2018_UL/jet_jerc.json.gz"
-    cset = correctionlib.CorrectionSet.from_file(fname)
-    
-    fname_jersmear = os.path.join("../data/POG/JME/jer_smear.json.gz")
-    cset_jersmear = correctionlib.CorrectionSet.from_file(fname_jersmear)
+    jec_parameters = config["jec_parameters"]
+    jerc_load_path = jec_parameters["jerc_load_path"]
+    cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
     
     
-    jer_tag = "Summer20UL16_JRV3_MC"
+    jersmear_load_path = jec_parameters["jersmear_load_path"]
+    cset_jersmear = correctionlib.CorrectionSet.from_file(jersmear_load_path)
+    
+    
+    # jer_tag = "Summer20UL16_JRV3_MC"
+    jer_tag = jec_parameters["jer_tags"]
     algo = "AK4PFchs"
-    syst="nom"
-    # First, jet JER SF
     
+    # First, jet JER SF
     key = "{}_{}_{}".format(jer_tag, "ScaleFactor", algo)
     sf = cset[key]
     sf_input_names = [inp.name for inp in sf.inputs]
@@ -529,10 +531,10 @@ def do_jer_smear(jets, config, syst):
     # Second, get JER resolution
     inputs = (
         jets.eta, # == JetEta
-        syst, # == Rho
+        syst, # == systematic
     )
     jer_sf = sf.evaluate(*inputs)
-    print("JER SF : {}".format(jer_sf.compute()))
+    # print("JER SF : {}".format(jer_sf.compute()))
     
     
     key = "{}_{}_{}".format(jer_tag, "PtResolution", algo)
@@ -541,18 +543,14 @@ def do_jer_smear(jets, config, syst):
     sf_input_names = [inp.name for inp in sf.inputs]
     print(f"JER resolution input: {sf_input_names}")
     
-    inputs = (
+    inputs = ( # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L107C73-L107C75
         jets.eta, # == JetEta
-        jets.pt_raw, # == JetEta
+        jets.pt_raw, # == systematic 
         jets.PU_rho, # == Rho
     )
     # inputs = get_corr_inputs(example_value_dict, sf)
     jer_res = sf.evaluate(*inputs)
-    print("JER Res : {}".format(jer_res.compute()))
-    # jet_pt_jec = values
-    
-    jets["pt_jec"] = jets.pt # FIXME
-    
+    # print("JER Res : {}".format(jer_res.compute()))        
     
     key_jersmear = "JERSmear"
     sf_jersmear = cset_jersmear[key_jersmear]
@@ -560,20 +558,25 @@ def do_jer_smear(jets, config, syst):
     print(f"JER smear input: {sf_input_names}")
     
     pt_gen = ak.fill_none(jets.matched_gen.pt, value=0.0)
-    # pt_gen = jets.matched_gen.pt,
-    # pt_gen = jets.pt
+    pt_jec = jets.pt_jec
+    pt_gen_filter  = abs(pt_jec - pt_gen) < (3*pt_jec*jer_res) # Source https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L108C1-L108C66
+    false_cond_val = -1*ak.ones_like(jets.pt_jec)
+    pt_gen = ak.where(pt_gen_filter, pt_gen, false_cond_val)
     inputs = (
-        jets.pt_jec, # == JetPt
+        pt_jec, # == JetPt
         jets.eta, # == JetEta
         pt_gen, # == GenPt
-        jets.eta, # == Rho
-        events.event, # == EventID
+        jets.PU_rho, # == Rho
+        event_id, # == EventID
         jer_res, # == JER
         jer_sf, # == JERSF
     
     )
     jer_smearing = sf_jersmear.evaluate(*inputs)
-    print("JER smearing : {}".format(jer_smearing.compute()))
+    # print("JER smearing : {}".format(jer_smearing[:20].compute()))
+    # print(f"jets.pt b4 JER smear: {jets.pt[:20].compute()}")
+    jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
+    # print(f"jets.pt after JER smear: {jets.pt[:20].compute()}")
     return jets
 
     
