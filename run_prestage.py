@@ -22,12 +22,65 @@ from omegaconf import OmegaConf
 import numpy as np
 
 
+def getBadFile(fname):
+    try:
+        up_file = uproot.open(fname) 
+        if "Muon_pt" in up_file["Events"].keys():            
+            # apply parquet tests for lzma error
+            ak.to_parquet(up_file["Events"]['Muon_pt'].array(),"/dev/null/1.parquet")
+            ak.to_parquet(up_file["Events"]['Muon_eta'].array(),"/dev/null/1.parquet")
+            ak.to_parquet(up_file["Events"]['Muon_phi'].array(),"/dev/null/1.parquet")
+            return "" # if no problem, return empty string
+        else:
+            return fname # bad file
+    except Exception as e:
+        # return f"An error occurred with file {fname}: {e}"
+        return fname # bad fileclient
+
+# def getBadFileParallelize(filelist, max_workers=60)
+#     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+#         # Submit each file check to the executor
+#         results = list(executor.map(getBadFile, filelist))
+    
+#     bad_file_l = []
+#     for result in results:
+#         if result != "":
+#             # print(result)
+#             bad_file_l.append(result)
+    
+#     return bad_file_l
+
+def getBadFileParallelizeDask(filelist):
+    """
+    We assume that the dask client has already been initialized
+    """
+    lazy_results = []
+    for fname in filelist:
+        lazy_result = dask.delayed(getBadFile)(fname)
+        lazy_results.append(lazy_result)
+    results = dask.compute(*lazy_results)
+
+    bad_file_l = []
+    for result in results:
+        if result != "":
+            # print(result)
+            bad_file_l.append(result)
+    print(f"bad_file_l: {bad_file_l}")
+    return bad_file_l
+
+
+def removeBadFiles(filelist):
+    bad_filelist = getBadFileParallelizeDask(filelist)
+    clean_filelist = list(set(filelist) - set(bad_filelist))
+    return clean_filelist
+
 def get_Xcache_filelist(fnames: list):
     new_fnames = []
     for fname in fnames:
         root_file = re.findall(r"/store.*", fname)[0]
         x_cache_fname = "root://cms-xcache.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
+    print(f"new_fnames: {new_fnames}")
     return new_fnames
     
 if __name__ == "__main__":
@@ -156,6 +209,7 @@ if __name__ == "__main__":
         big_sample_info = {}
         year = args.year
         
+        
         # load dataset sample paths from yaml files
         filelist = glob.glob("./configs/datasets" + "/*.yaml")
         dataset_confs = [OmegaConf.load(f) for f in filelist]
@@ -165,6 +219,9 @@ if __name__ == "__main__":
         else: # normal
             dataset = datasets[year]
         new_sample_list = []
+
+        # done loading dataset, replace V12 flag if we have it
+        year = year.replace("_V12","")
        
         # take data
         data_l =  [sample_name for sample_name in dataset.keys() if "data" in sample_name]
@@ -186,7 +243,6 @@ if __name__ == "__main__":
                     # new_sample_list.append("dy_M-100To200")
                     new_sample_list.append("dy_M-100To200_MiNNLO")
                     new_sample_list.append("dy_M-50_MiNNLO")
-                    # new_sample_list.append("dy_M-50_MiNNLO_V2")
                     # new_sample_list.append("dy_VBF_filter")
                     # new_sample_list.append("dy_m105_160_vbf_amc")
                     # new_sample_list.append("dy_VBF_filter_customJMEoff")
@@ -540,9 +596,13 @@ if __name__ == "__main__":
             bad_files = set(bad_files)
             fnames = list(fnames.difference(bad_files)) # remove bad files from fnames and turn it back to a 
             
-            # This is the default method
+            
             das_query = dataset[sample_name]
-            if "dummy" not in das_query:
+
+            if "/eos/purdue/store/" in das_query:
+                fnames = glob.glob(f"{das_query}/*.root")
+            # This is the default method
+            elif "dummy" not in das_query:
                 
                 rucio_client = rucio_utils.get_rucio_client()
                 outlist, outtree = rucio_utils.query_dataset(
@@ -562,15 +622,20 @@ if __name__ == "__main__":
                 
                 # fnames = [fname.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
                 
-                
-                # random.shuffle(fnames)
-                if args.xcache:
-                    fnames = get_Xcache_filelist(fnames)
-                # print(f"fnames: {fnames}")
+            # quick check to see if root files are corrupt
+            print("removing bad files!")
+            print(f"len(fnames) b4 bad files: {len(fnames)}")
+            fnames = removeBadFiles(fnames)
+            print(f"len(fnames) after bad files: {len(fnames)}")
+            
+            # convert to xcachce paths if requested
+            if args.xcache:
+                fnames = get_Xcache_filelist(fnames)
+            # print(f"fnames: {fnames}")
             
             print(f"sample_name: {sample_name}")
-            print(f"das_query: {das_query}")
-            print(f"len(fnames): {len(fnames)}")
+            # print(f"das_query: {das_query}")
+            
             # print(f"fnames: {fnames}")
             
             # fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading 
@@ -611,9 +676,7 @@ if __name__ == "__main__":
                     preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
                 else:
                     file_input = {fname : {"object_path": "Runs"} for fname in fnames}
-                    print(f"file_input: {file_input}")
                     # print(f"file_input: {file_input}")
-                    # print(len(file_input.keys()))
                     runs = NanoEventsFactory.from_root(
                             file_input,
                             metadata={},
