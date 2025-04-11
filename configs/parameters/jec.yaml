@@ -9,6 +9,26 @@ jec_parameters:
     '2018': AK4PFchs
     2022preEE: AK4PFPuppi
     2022postEE: AK4PFPuppi
+  jerc_load_path:
+    2016_RERECO: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jet_jerc.json.gz
+    '2017_RERECO': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2017_UL/jet_jerc.json.gz
+    '2018_RERECO': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jet_jerc.json.gz
+    2016preVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jet_jerc.json.gz
+    2016postVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016postVFP_UL/jet_jerc.json.gz
+    '2017': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2017_UL/jet_jerc.json.gz
+    '2018': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jet_jerc.json.gz
+    2022preEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2022_Summer22/jet_jerc.json.gz
+    2022postEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2022_Summer22EE/jet_jerc.json.gz
+  jersmear_load_path:
+    2016_RERECO: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+    '2017_RERECO': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+    '2018_RERECO': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+    2016preVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+    2016postVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+    '2017': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+    '2018': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+    2022preEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+    2022postEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
   jec_unc_to_consider:
     2016preVFP:
     - Absolute
@@ -47,6 +67,42 @@ jec_parameters:
     - RelativeSample_2017
     - FlavorQCD
     '2018':
+    - Absolute
+    - Absolute_2018
+    - BBEC1
+    - BBEC1_2018
+    - EC2
+    - EC2_2018
+    - HF
+    - HF_2018
+    - RelativeBal
+    - RelativeSample_2018
+    - FlavorQCD
+    2016_RERECO:
+    - Absolute
+    - Absolute_2016
+    - BBEC1
+    - BBEC1_2016
+    - EC2
+    - EC2_2016
+    - HF
+    - HF_2016
+    - RelativeBal
+    - RelativeSample_2016
+    - FlavorQCD
+    '2017_RERECO':
+    - Absolute
+    - Absolute_2017
+    - BBEC1
+    - BBEC1_2017
+    - EC2
+    - EC2_2017
+    - HF
+    - HF_2017
+    - RelativeBal
+    - RelativeSample_2017
+    - FlavorQCD
+    '2018_RERECO':
     - Absolute
     - Absolute_2018
     - BBEC1
