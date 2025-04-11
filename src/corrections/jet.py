@@ -4,7 +4,8 @@ from coffea.lookup_tools import extractor
 import numpy as np
 import awkward as ak
 import os
-
+import correctionlib.schemav2 as cs
+import correctionlib
 
 # def jec_names_and_sources_yaml(jec_pars, year):
 #     localdir = os.path.dirname(os.path.abspath("__file__"))
@@ -234,7 +235,7 @@ def jet_id(jets, config):
 
 
 def jet_puid(jets, config):
-    jet_puid_opt = config["jet_puid"]
+    jet_puid2use = config["jet_puid"]
     year = config["year"]
     if year=="2017_RERECO":
         print("using puId 17!")
@@ -262,13 +263,13 @@ def jet_puid(jets, config):
     if "2017" in year: # for misreco due ot ECAL endcap noise
         eta_window = (abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0)
         # pass_jet_puid = (eta_window & jet_puid_wps["tight"]) | ( # tight puid in the noisy eta window, else loose
-        #     (~eta_window) & jet_puid_wps[jet_puid_opt]
+        #     (~eta_window) & jet_puid_wps[jet_puid2use]
         # )
         pass_jet_puid = (eta_window & (puId >= 7)) | (
                 (~eta_window) & jet_puid_wps["loose"]
         )
     else:
-        pass_jet_puid = jet_puid_wps[jet_puid_opt]
+        pass_jet_puid = jet_puid_wps[jet_puid2use]
         # print("else case!")
         # print(f"pass_jet_puid: {pass_jet_puid[:10].compute()}")
         # print(f"jet_puid_wps['loose']: {jet_puid_wps['loose'][:10].compute()}")
@@ -352,10 +353,48 @@ def fill_softjets(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
     }
     return out_dict
 
-def applyHemVetoData(jets, run, config):
+    
+
+def getHemVetoRunFilter(run, event_num, config, is_mc):
+    """
+    For data:
+    return the conditions for applying HemVeto. For data, this is just 
+    end of data B run + full data C,D (run >= 319077).
+    For MC: 
+    Randomly reject a given fraction of events using for MC to match HEM Vetoed jets in 2018 UL as reccommended in https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8 (though we reject her "eventNum % 15 == 0" method of random rejection and just use random number generation)
+    """
+    if is_mc:
+        prob = config["HemVeto_ratio"] # ratio of HemVeto applicable run / total nevents for 2018UL
+        print(f"HEMveto prob: {prob}")
+        # intialize random number generator
+        resrng = cs.Correction(
+            name="resrng",
+            description="Deterministic smearing value generator",
+            version=1,
+            inputs=[
+                cs.Variable(name="event", type="real", description="Event number"),
+            ],
+            output=cs.Variable(name="rng", type="real"),
+            data=cs.HashPRNG(
+                    nodetype="hashprng",
+                    inputs=["event"],
+                    distribution="stdflat",
+            )
+        )
+        # get random number from 0 to 1
+        rand = resrng.to_evaluator().evaluate(event_num)
+        # print(f"rand: {rand[:20].compute()}")
+        # print(f"(rand < prob): {(rand < prob)[:20].compute()}")
+        # raise ValueError
+        return (rand < prob) # for prob amount of times, this is true
+    else: #For data, just a simple run >= 319077 cut. Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8
+        return (run >= 319077)  
+
+def applyHemVeto(jets, run, event_num, config, is_mc: bool):
     """
     Apply HEM veto for 2018 UL as recommended on https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/5
     """
+    puId = jets.puId
     # jet puid selection
     jet_puid_wps = {
             "loose": (puId >= 4) | (jets.pt >= 50),
@@ -363,12 +402,12 @@ def applyHemVetoData(jets, run, config):
             "tight": (puId >= 7) | (jets.pt >= 50),
     }
     jet_puid2use = config["jet_puid"]
-    pass_jet_puid = jet_puid_wps[jet_puid_opt]# the recommendation doesn't specify, so use PU Id that we apply
+    pass_jet_puid = jet_puid_wps[jet_puid2use]# the recommendation doesn't specify, so use PU Id that we apply
 
 
 
     # jets that don’t overlap with PF muon (dR < 0.2)
-    jet_muon_iso_cut = (jets.muonIdx1 == -1) && (jets.muonIdx2 == -1) # Source: https://cms-talk.web.cern.ch/t/jetvetomaps-usage-for-2018ul/61981/2
+    jet_muon_iso_cut = (jets.muonIdx1 == -1) & (jets.muonIdx2 == -1) # Source: https://cms-talk.web.cern.ch/t/jetvetomaps-usage-for-2018ul/61981/2
     jet_em_frac_cut  = (jets.chEmEF + jets.neEmEF) < 0.9 # EM fraction cut
     pass_jet_tightID = (jets.jetId >= 2) & jet_em_frac_cut & jet_muon_iso_cut
     
@@ -384,25 +423,157 @@ def applyHemVetoData(jets, run, config):
         & pass_jet_puid
     )
     hemveto_region = ( # "in jets with -3.2<eta<-1.3 and -1.57<phi< -0.87 " Source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetMET#Run2_recommendations
-        jets.eta > -3.2
-        & jets.eta < -1.3
-        & jets.phi > -1.57
-        & jets.phi < -0.87
+        (jets.eta > -3.2)
+        & (jets.eta < -1.3)
+        & (jets.phi > -1.57)
+        & (jets.phi < -0.87)
     )
     
-    hemveto_run_filter = (run >= 319077) # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8
+    # hemveto_run_filter = (run >= 319077) 
+    hemveto_run_filter = getHemVetoRunFilter(run, event_num, config, is_mc)
 
     # combine all the conditions
-    hemveto = loose_jet_selection & hemveto_region & hemveto_run_filter 
-    hemveto = ak.any(hemveto, axis=1)
+    hemveto = loose_jet_selection & hemveto_region 
+    hemveto = ak.any(hemveto, axis=1) & hemveto_run_filter 
     # we reject events if we find hemveto jets, so reverse the bool arr
     hemveto = ~hemveto
-    return hemveto
+    is_HemRegion = ak.any(hemveto_region, axis=1) # eventwise arr if any jet is in the hem region
+    return hemveto, is_HemRegion
     
 
-def applyHemVetoMC():
-    """
-    Randomly reject a given fraction of events using for MC to match HEM Vetoed jets in 2018 UL as reccommended in https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8 (though we reject her "eventNum % 15 == 0" method of random rejection and just use random number generation)
+def getJecDataTag(run, jec_data_tags):
+    print(f"run: {run}")
+    print(f"jec_data_tags: {jec_data_tags}")
+    for jec_tag, jec_run in jec_data_tags.items():
+        jec_run = jec_run[0] # jec_run is a list of length one
+        if run == jec_run:
+            return jec_tag
+
+    return None # return none if nothing matches
+
+def do_jec_scale(jets, config, is_mc, dataset):
+    jec_parameters = config["jec_parameters"]
+    # print(jec_parameters)
+    # jerc_load_path =
+    if is_mc:
+        jec_tag = jec_parameters["jec_tags"]
+    else: # data
+        jec_tag = None
+        for run in jec_parameters["runs"]:
+            print(f"run: {run}")
+            print(f"dataset: {dataset}")
+            if run in dataset:
+                jec_tag = getJecDataTag(run, jec_parameters["jec_data_tags"])
+    print(f"jec_tag: {jec_tag}")
+    if jec_tag is None: 
+        print("ERROR! JEC tag not found!")
+        raise ValueError
+        
+    jerc_load_path = jec_parameters["jerc_load_path"]
+    cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
     
+    # algo = "AK4PFchs"
+    algo = jec_parameters["jet_algorithm"]
+    lvl_compound = "L1L2L3Res"
+    
+    key = "{}_{}_{}".format(jec_tag, lvl_compound, algo)
+    print(f"jec key: {key}")
+    sf = cset.compound[key]
+
+    sf_input_names = [inp.name for inp in sf.inputs]
+    print(sf_input_names)
+    
+    inputs = (
+        jets.area, # == JetA
+        jets.eta, # == JetEta
+        jets.pt_raw, # == JetEta
+        jets.PU_rho, # == Rho
+    )
+    # inputs = get_corr_inputs(example_value_dict, sf)
+    new_jec_scale = sf.evaluate(*inputs)
+    # print("JSON result AK4: {}".format(new_jec_scale[:20].compute()))
+    jet_pt_jec = new_jec_scale*jets.pt_raw
+    jet_mass_jec = new_jec_scale*jets.mass_raw
+    jets["pt"] = jet_pt_jec
+    jets["mass"] = jet_mass_jec
+    jets["pt_jec"] = jet_pt_jec
+    jets["mass_jec"] = jet_mass_jec
+    return jets
+    
+def do_jer_smear(jets, config, syst):
     """
+    we assume that jec has been applied (we need pt_jec and pt_raw)
+    
+    params:
+    syst: nom, up and down
+    """
+    
+    fname="../data/POG/JME/2016postVFP_UL/jet_jerc.json.gz"
+    # fname="../data/POG/JME/2018_UL/jet_jerc.json.gz"
+    cset = correctionlib.CorrectionSet.from_file(fname)
+    
+    fname_jersmear = os.path.join("../data/POG/JME/jer_smear.json.gz")
+    cset_jersmear = correctionlib.CorrectionSet.from_file(fname_jersmear)
+    
+    
+    jer_tag = "Summer20UL16_JRV3_MC"
+    algo = "AK4PFchs"
+    syst="nom"
+    # First, jet JER SF
+    
+    key = "{}_{}_{}".format(jer_tag, "ScaleFactor", algo)
+    sf = cset[key]
+    sf_input_names = [inp.name for inp in sf.inputs]
+    print(f"JER SF input: {sf_input_names}")
+    
+    # Second, get JER resolution
+    inputs = (
+        jets.eta, # == JetEta
+        syst, # == Rho
+    )
+    jer_sf = sf.evaluate(*inputs)
+    print("JER SF : {}".format(jer_sf.compute()))
+    
+    
+    key = "{}_{}_{}".format(jer_tag, "PtResolution", algo)
+    sf = cset[key]
+    
+    sf_input_names = [inp.name for inp in sf.inputs]
+    print(f"JER resolution input: {sf_input_names}")
+    
+    inputs = (
+        jets.eta, # == JetEta
+        jets.pt_raw, # == JetEta
+        jets.PU_rho, # == Rho
+    )
+    # inputs = get_corr_inputs(example_value_dict, sf)
+    jer_res = sf.evaluate(*inputs)
+    print("JER Res : {}".format(jer_res.compute()))
+    # jet_pt_jec = values
+    
+    jets["pt_jec"] = jets.pt # FIXME
+    
+    
+    key_jersmear = "JERSmear"
+    sf_jersmear = cset_jersmear[key_jersmear]
+    sf_input_names = [inp.name for inp in sf_jersmear.inputs]
+    print(f"JER smear input: {sf_input_names}")
+    
+    pt_gen = ak.fill_none(jets.matched_gen.pt, value=0.0)
+    # pt_gen = jets.matched_gen.pt,
+    # pt_gen = jets.pt
+    inputs = (
+        jets.pt_jec, # == JetPt
+        jets.eta, # == JetEta
+        pt_gen, # == GenPt
+        jets.eta, # == Rho
+        events.event, # == EventID
+        jer_res, # == JER
+        jer_sf, # == JERSF
+    
+    )
+    jer_smearing = sf_jersmear.evaluate(*inputs)
+    print("JER smearing : {}".format(jer_smearing.compute()))
+    return jets
+
     
