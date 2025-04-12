@@ -18,12 +18,12 @@ f_orders = { # to recalculate these, re-run f-test on do_f_test.py
     },
     "2016postVFP" : {
         "njet0" : 5,
-        "njet1" : 4,
+        "njet1" : 5,
         "njet2" : 4,
     },
     "2016preVFP" : {
-        "njet0" : 4,
-        "njet1" : 4,
+        "njet0" : 5,
+        "njet1" : 5,
         "njet2" : 4,
     },
 }
@@ -31,7 +31,7 @@ f_orders = { # to recalculate these, re-run f-test on do_f_test.py
 poly_fit_ranges = {
     "2018" : {
         "njet0" : [0, 95],
-        "njet1" : [0, 90], #50
+        "njet1" : [0, 90], 
         "njet2" : [0, 90],
     },
     "2017" : {
@@ -41,13 +41,13 @@ poly_fit_ranges = {
     },
     "2016postVFP" : {
         "njet0" : [0, 70],
-        "njet1" : [0, 45],
-        "njet2" : [0, 50],
+        "njet1" : [0, 80],
+        "njet2" : [0, 20],
     },
     "2016preVFP" : {
         "njet0" : [0, 70],
-        "njet1" : [0, 55],
-        "njet2" : [0, 55],
+        "njet1" : [0, 65],
+        "njet2" : [0, 80],
     },
 }
 global_fit_xmax = 200
@@ -73,6 +73,14 @@ if __name__ == "__main__":
     default="all",
     action="store",
     help="string value of year we are calculating",
+    )
+    parser.add_argument(
+    "-save",
+    "--save_config",
+    dest="save_config",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, saves the config to the yaml file for copperheadV2",
     )
     # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
     # years = ["2018",]
@@ -242,15 +250,16 @@ if __name__ == "__main__":
                 out_dict_by_nbin[target_nbins] = param_dict
     
                 out_dict_by_year[f"njet_{njet}"] = out_dict_by_nbin
-    
-        
-        save_dict[year] = out_dict_by_year
-        # yaml_path = "./zpt_rewgt_params.yaml"
-        # yaml_path = "./zpt_rewgt_params_amcnlo.yaml"
-        yaml_path = "./zpt_rewgt_params_minnlo.yaml"
-        if os.path.isfile(yaml_path): # if yaml exists, append to existing config (values with same keys will be overwirtten
-            config = OmegaConf.load(yaml_path)
-            config = OmegaConf.merge(config, save_dict)
-        else:
-            config = OmegaConf.create(save_dict)
-        OmegaConf.save(config=config, f=yaml_path)
+
+        print(f"args.save_config: {args.save_config}")
+        if args.save_config:
+            save_dict[year] = out_dict_by_year
+            # yaml_path = "./zpt_rewgt_params.yaml"
+            # yaml_path = "./zpt_rewgt_params_amcnlo.yaml"
+            yaml_path = "./zpt_rewgt_params_minnlo.yaml"
+            if os.path.isfile(yaml_path): # if yaml exists, append to existing config (values with same keys will be overwirtten
+                config = OmegaConf.load(yaml_path)
+                config = OmegaConf.merge(config, save_dict)
+            else:
+                config = OmegaConf.create(save_dict)
+            OmegaConf.save(config=config, f=yaml_path)
