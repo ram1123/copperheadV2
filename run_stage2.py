@@ -151,87 +151,14 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str) -> ak.Recor
     # events["jj_dPhi"] = getDeltaPhi(events.jet1_phi, events.jet2_phi)
     
 
-    train_feat_dict = {
-        "BDTperyear_2018" : [
-            'dimuon_cos_theta_cs', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_eta', 'dimuon_phi', 'dimuon_phi_cs', 'dimuon_pt', 
-            'dimuon_pt_log', 'jet1_eta', 'jet1_phi', 'jet1_pt', 'jet1_qgl', 'jet2_eta', 'jet2_phi', 
-            'jet2_pt', 'jet2_qgl', 'jj_dEta', 'jj_dPhi', 'jj_eta', 'jj_mass', 'jj_mass_log', 
-            'jj_phi', 'jj_pt', 'll_zstar_log', 'mmj1_dEta', 'mmj1_dPhi', 
-            'mmj_min_dEta', 'mmj_min_dPhi', 'mmjj_eta', 'mmjj_mass', 'mmjj_phi', 'mmjj_pt', 'mu1_eta', 'mu1_iso', 
-            'mu1_phi', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_iso', 'mu2_phi', 'mu2_pt_over_mass', 'zeppenfeld'
-        ],
-        "phifixedBDT_2018" : [
-                'dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld' #, 'njets'
-        ], # AN 19-124 -> this is what I use
-         "WgtOff" : [
-                'dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'
-         ],
-        "WgtOff_includeQGL" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
-        "WgtON_includeQGL" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
-        "WgtON_includeQGL_AN_BDT" :['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_eta', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets', "jet1_qgl", "jet2_qgl"],
-       "WgtON_original_AN_BDT" : ['dimuon_cos_theta_cs', 'dimuon_phi_cs', 'dimuon_pt', 'dimuon_rapidity','jet1_eta', 'jet1_pt', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'] ,
-        "WgtON_original_AN_BDT_DyOnly" : ['dimuon_cos_theta_cs', 'dimuon_phi_cs', 'dimuon_pt', 'dimuon_rapidity','jet1_eta', 'jet1_pt', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'] ,
-        "WgtON_original_AN_BDT_DyOnly_noDimuRap" : ['dimuon_cos_theta_cs', 'dimuon_phi_cs', 'dimuon_pt','jet1_eta', 'jet1_pt', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'] ,
-        "WgtON_original_AN_BDT_Sept27" : [
-            'dimuon_pt', 
-            'dimuon_rapidity',
-            'dimuon_cos_theta_cs', 
-            'dimuon_phi_cs', 
-            'mu1_pt_over_mass', 
-            'mu1_eta', 
-            'mu2_pt_over_mass', 
-            'mu2_eta', 
-            'jet1_eta', 
-            'jet1_pt', 
-            'jet2_pt', 
-            'mmj1_dEta', 
-            'mmj1_dPhi',  
-            'jj_dEta', 
-            'jj_dPhi', 
-            'jj_mass', 
-            'zeppenfeld', 
-            'mmj_min_dEta', 
-            'mmj_min_dPhi', 
-            'njets'
-        ],
-        "WgtON_original_AN_BDT_noDimuRap_Sept27" : [
-            'dimuon_pt', 
-            'dimuon_cos_theta_cs', 
-            'dimuon_phi_cs', 
-            'mu1_pt_over_mass', 
-            'mu1_eta', 
-            'mu2_pt_over_mass', 
-            'mu2_eta', 
-            'jet1_eta', 
-            'jet1_pt', 
-            'jet2_pt', 
-            'mmj1_dEta', 
-            'mmj1_dPhi',  
-            'jj_dEta', 
-            'jj_dPhi', 
-            'jj_mass', 
-            'zeppenfeld', 
-            'mmj_min_dEta', 
-            'mmj_min_dPhi', 
-            'njets'
-        ],
-        "phifixedBDT" : ['dimuon_cos_theta_cs', 'dimuon_eta', 'dimuon_phi_cs', 'dimuon_pt', 'jet1_eta', 'jet1_pt', 'jet2_pt', 'jj_dEta', 'jj_dPhi', 'jj_mass', 'mmj1_dEta', 'mmj1_dPhi',  'mmj_min_dEta', 'mmj_min_dPhi', 'mu1_eta', 'mu1_pt_over_mass', 'mu2_eta', 'mu2_pt_over_mass', 'zeppenfeld', 'njets'],
-    }
-    
-    # model_name = "WgtON_original_AN_BDT_Sept27"
-    # model_name = "WgtON_original_AN_BDT_noDimuRap_Sept27"
-    # model_name = "phifixedBDT"
 
-    # training_features = train_feat_dict[model_name]
-    # print(f"len(training_features): {len(training_features)}")
-
-    # temporary addition since I don't have 2016postVFP trained yet
-    if year == "2016postVFP":
-        year_param = "2016preVFP"
+    # merged 2016preVFP and 2016postVFP for BDT training
+    if "2016" in year:
+        year_param = "2016"
     else:
         year_param = year
+
         
-    # f"/work/users/yun79/Run2_MVA_trainer/output/bdt_V2_UL_Jan18_2025_2017/training_features.json"
     model_path = f"/work/users/yun79/Run2_MVA_trainer/output/bdt_{model_name}_{year_param}"
     training_feat_path = f"{model_path}/training_features.json"
     print(f"trainig_feat_path: {training_feat_path}")
@@ -248,7 +175,7 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str) -> ak.Recor
     # ----------------------------------
    
     # load fields to load
-    fields2load = ["nBtagLoose", "nBtagMedium", "dimuon_mass", "wgt_nominal", "mmj2_dEta", "mmj2_dPhi", "event"]
+    fields2load = ["nBtagLoose", "nBtagMedium", "dimuon_mass", "wgt_nominal", "mmj2_dEta", "mmj2_dPhi", "event", "jj_mass_nominal", "jj_dEta_nominal", "jet1_pt_nominal"]
     fields2load = prepare_features(events, fields2load) # add variation to the name
     fields2load = list(set(fields2load + training_features)) # remove redundant fields
 
@@ -262,16 +189,18 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str) -> ak.Recor
     # original end -------------------------------
 
     # filter events for ggH category
-    dimuon_mass = events.dimuon_mass
-    region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0) # signal region
+    # dimuon_mass = events.dimuon_mass
+    # region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0) # signal region
     category_str = "ggh"
     cut_names = getCategoryCutNames(category_str)
     gghCat_selection = (
         categoryWrapperLoop(cut_names, events)
-        & region
+        # & region
     )
     
     events = events[gghCat_selection]
+    # print(f"events num: {ak.num(events, axis=0)}")
+    # raise ValueError
 
     # make sure to replace nans with zeros,  unless it's delta phis, in which case it's -1, as specified in line 1117 of the AN
     for field in events.fields:
@@ -285,8 +214,8 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str) -> ak.Recor
         year_param = "2016preVFP"
     elif "RERECO" in year: # ie 2017_RERECO
         year_param = year.replace("_RERECO", "")
-    elif year == "2016postVFP": # temporary condition bc I couldn't train 2016postVFP yet
-        year_param = "2016preVFP"
+    elif "2016" in year: # we merge 2016preVFP and 2016postVFP into one 2016 for BDT training
+        year_param = "2016"
     else:
         year_param = year
     parameters = {
@@ -587,7 +516,8 @@ if __name__ == "__main__":
         elif sample.lower() == "vbf":
             full_load_path = load_path+f"/vbf_powheg_dipole/*/*.parquet"
         elif sample.lower() == "dy":
-            full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
+            # full_load_path = load_path+f"/dy_M-100To200/*/*.parquet"
+            full_load_path = load_path+f"/dy_*/*/*.parquet"
         elif sample.lower() == "ewk":
             full_load_path = load_path+f"/ewk_lljj_mll50_mjj120/*/*.parquet"
         elif sample.lower() == "tt":
@@ -612,10 +542,6 @@ if __name__ == "__main__":
         # else:
         #     bkg_MC_filelist.append(full_load_path)
         
-        # print(f"bkg_MC_filelist: {bkg_MC_filelist}")
-        # print(f"sig_MC_filelist: {sig_MC_filelist}")
-        # print(f"data_filelist: {data_filelist}")
-        # print(f"full_load_path: {full_load_path}")
         events = dak.from_parquet(full_load_path)
         
         # making so taht copperheadV1 results work start -------------------------------------------
@@ -705,6 +631,11 @@ if __name__ == "__main__":
             pass
         ak.to_parquet(processed_events, save_filename)
 
+        
+        # This is ineligant, but also save the bdt edges that was presumably used
+        BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
+        edges = OmegaConf.load(BDTedges_load_path)
+        OmegaConf.save(config=edges, f=f'{save_path}/BDT_edges.yaml')
     
     end_time = time.time()
     print(f"stage2 done in {end_time-start_time} seconds")
