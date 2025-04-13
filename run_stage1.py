@@ -196,7 +196,7 @@ if __name__ == "__main__":
 
 
     config = getParametersForYr("./configs/parameters/" , args.year)
-    logger.info(f"stage1 config: {config}")
+    logger.debug(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode)
 
     if not test_mode: # full scale implementation
@@ -233,46 +233,30 @@ if __name__ == "__main__":
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
         start_save_path = args.save_path + f"/stage1_output/{args.year}"
         logger.debug(f"start_save_path: {start_save_path}")
-        # with performance_report(filename="dask-report.html"):
-        # for dataset, sample in samples.items():
-        # dask.config.set(scheduler='single-threaded')
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
-            # for dataset, sample in samples.items():
                 sample_step = time.time()
-                # max_file_len = 15
-                # max_file_len = 130
-                # max_file_len = 70
-                # max_file_len = 100
-                # max_file_len = 200
-                # max_file_len = 8000
-                # max_file_len = 25
-                # max_file_len = 900
-                # max_file_len = 10
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
-                # print(f"smaller_files: {smaller_files}")
-                print(f"max_file_len: {args.max_file_len}")
-                print(f"len(smaller_files): {len(smaller_files)}")
-                # for idx in range(len(smaller_files)):
-                # for idx in tqdm.tqdm(range(2, len(smaller_files)), leave=False):
+                logger.debug(f"max_file_len: {args.max_file_len}")
+                logger.debug(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    # print("restarting workers!")
-                    # client.restart(wait_for_workers = False)
+                    # if idx < 50 or idx > 51: continue # for testing purposes
+                    logger.info(f"Processing {dataset} file index {idx}")
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
-                    # print(f"var_step: {var_step}")
                     to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
-                    print(f"save_path: {save_path}")
+                    logger.debug(f"save_path: {save_path}")
                     # remove previously existing files and make path if doesn't exist
                     filelist = glob.glob(f"{save_path}/*.parquet")
-                    print(f"len(filelist): {len(filelist)}")
+                    logger.debug(f"len(filelist): {len(filelist)}")
                     for file in filelist:
                         os.remove(file)
                     if not os.path.exists(save_path):
                         os.makedirs(save_path)
                     to_persist.persist().to_parquet(save_path)
+                    # to_persist.to_parquet(save_path)
 
                     var_elapsed = round(time.time() - var_step, 3)
                     print(f"Finished file_idx {idx} in {var_elapsed} s.")
