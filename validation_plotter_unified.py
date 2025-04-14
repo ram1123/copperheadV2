@@ -401,6 +401,7 @@ if __name__ == "__main__":
             # "vbf_cut",
             "nBtagLoose_nominal", 
             "nBtagMedium_nominal", 
+            "njets_nominal", 
             "dimuon_mass",
             "zeppenfeld_nominal", 
             "jj_mass_nominal", 
@@ -535,7 +536,10 @@ if __name__ == "__main__":
                     print("ERROR: acceptable region!")
                     raise ValueError
                 # region = events.z_peak
-                btag_cut = btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
+                # btag_cut = btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
+                btagLoose_filter = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False)
+                btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
+                btag_cut = btagLoose_filter | btagMedium_filter
                 vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35) 
                 vbf_cut = ak.fill_none(vbf_cut, value=False)
                 # if args.vbf_cat_mode:
@@ -1062,7 +1066,10 @@ if __name__ == "__main__":
                     raise ValueError
 
                 # do category cut
-                btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
+                # btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
+                btagLoose_filter = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False)
+                btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
+                btag_cut = btagLoose_filter | btagMedium_filter
                 # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
                 vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35) 
                 vbf_cut = ak.fill_none(vbf_cut, value=False)
