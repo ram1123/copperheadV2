@@ -8,7 +8,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, get_jec_scale
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
 import json
@@ -438,7 +438,7 @@ class EventProcessor(processor.ProcessorABC):
         
         
     
-
+        
             
             
 
@@ -493,7 +493,7 @@ class EventProcessor(processor.ProcessorABC):
                             is_rereco = ("RERECO" in year),
                     )
 
-                
+        
         # # Save raw variables before computing any corrections
         # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
         # attempt at fixing fsr issue start -------------------------------------------------------------------
@@ -503,6 +503,13 @@ class EventProcessor(processor.ProcessorABC):
         events["Muon", "pfRelIso04_all_raw"] = ak.ones_like(events.Muon.pfRelIso04_all) * events.Muon.pfRelIso04_all
         # attempt at fixing fsr issue end ---------------------------------------------------------------
 
+        # --------------------------------------------------------
+        # # events.Jet.to_parquet("quick_tests/quick_save/") # TOREMOVE
+        # # ak.ones_like(events.Muon.pt).to_parquet("quick_tests/quick_save/") # TOREMOVE
+        # events.Muon.pt.to_parquet("quick_tests/quick_save/") # TOREMOVE
+        # raise ValueError
+        # --------------------------------------------------------
+        
         # --------------------------------------------------------#
         # Select muons that pass pT, eta, isolation cuts, 
         # muon ID and quality flags
@@ -555,7 +562,8 @@ class EventProcessor(processor.ProcessorABC):
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
         
-
+        
+        
         # calculate FSR recovery, but don't apply it until trigger matching is done
         # but apply muon iso overwrite, so base muon selection could be done
         do_fsr = self.config["do_fsr"]
@@ -717,7 +725,6 @@ class EventProcessor(processor.ProcessorABC):
         else:
             HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
             
-        
         event_filter = (
                 event_filter
                 & lumi_mask
@@ -789,7 +796,6 @@ class EventProcessor(processor.ProcessorABC):
 
         # event_filter = event_filter & pass_leading_pt
         # test end -----------------------------------------------------------------------
-
         
         
         # calculate sum of gen weight b4 skimming off bad events
@@ -813,6 +819,7 @@ class EventProcessor(processor.ProcessorABC):
         # pass_leading_pt = pass_leading_pt[event_filter==True]
         # # original end -----------------------------------------------
 
+        
 
         # to_packed testing -----------------------------------------------
         events = events[event_filter==True]
@@ -978,13 +985,21 @@ class EventProcessor(processor.ProcessorABC):
                     print("JEC factory not recognized!")
                     raise ValueError
                 
-            # print("do old jec!")
-            jets = get_jec_scale(jets, self.config, is_mc, dataset)
+            # -------------------------------------
+            jets = do_jec_scale(jets, self.config, is_mc, dataset)
+            if is_mc: # JER smearing
+                jets = do_jer_smear(jets, self.config, "nom", events.event)
             sorted_args = ak.argsort(jets.pt, ascending=False)
             jets = (jets[sorted_args])
+            # -------------------------------------
+            
+            
             # testJetVector(jets)
             # print(f"jets pt b4 jec: {jets.pt.compute()}")
+            # -------------------------------------
+            # print("do old jec!")
             # jets = factory.build(jets)
+            # -------------------------------------
             # print(f"jets pt after jec: {jets.pt.compute()}")
             # testJetVector(jets)
 
@@ -1722,6 +1737,8 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"event match jet2 pt: {ak.to_numpy(jet2.pt[event_match].compute())}")
 
         dijet = jet1+jet2
+
+        
         # print(f"type jet1: {type(jet1.compute())}")
         # print(f"type jet1_Lvec: {type(jet1_Lvec.compute())}")
         # dijet = jet1_Lvec+jet2_Lvec
