@@ -399,7 +399,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
-            "do_geofit" : True, # True
+            "do_geofit" : True, # True # FIXME: Make it false for always
             "do_beamConstraint": False, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
@@ -523,7 +523,7 @@ class EventProcessor(processor.ProcessorABC):
         # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
         HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
         for HLT_str in self.config["hlt"]:
-            logger.info(f"HLT_str: {HLT_str}")
+            logger.debug(f"HLT_str: {HLT_str}")
             # HLT_filter = HLT_filter | events.HLT[HLT_str]
             HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
         self.selection.add("HLT_filter", HLT_filter)
@@ -542,7 +542,7 @@ class EventProcessor(processor.ProcessorABC):
 
 
         else:
-            logger.info(f'self.config["lumimask"]: {self.config["lumimask"]}')
+            logger.debug(f'self.config["lumimask"]: {self.config["lumimask"]}')
             lumi_info = LumiMask(self.config["lumimask"])
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
             self.selection.add("lumi_mask", lumi_mask)
@@ -1613,7 +1613,7 @@ class EventProcessor(processor.ProcessorABC):
 
     def prepare_jets(self, events, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
         # Initialize missing fields (needed for JEC)
-        logger.info(f"prepare jets NanoAODv: {NanoAODv}")
+        logger.debug(f"prepare jets NanoAODv: {NanoAODv}")
         events["Jet", "pt_raw"] = (1 - events.Jet.rawFactor) * events.Jet.pt
         events["Jet", "mass_raw"] = (1 - events.Jet.rawFactor) * events.Jet.mass
         if NanoAODv >= 12:
@@ -1791,7 +1791,7 @@ class EventProcessor(processor.ProcessorABC):
 
         pass_jet_id = jet_id(jets, self.config)
 
-        logger.info(f"jet loop NanoAODv: {NanoAODv}")
+        logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         is_2017 = "2017" in year
         if NanoAODv == 9 :
             pass_jet_puid = jet_puid(jets, self.config)
