@@ -64,14 +64,14 @@ years:
             vbf_powheg_dipole: /VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM
     "2018":
         Data:
-            data_A: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018A
-            data_B: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018B
-            data_C: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018C
-            data_D: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018D
-            # data_A: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018A
-            # data_B: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018B
-            # data_C: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018C
-            # data_D: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018D
+            # data_A: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018A
+            # data_B: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018B
+            # data_C: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018C
+            # data_D: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018D
+            data_A: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018A
+            data_B: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018B
+            data_C: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018C
+            data_D: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018D
 
         DY:
             # dy_M-10To50: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/

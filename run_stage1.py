@@ -241,13 +241,14 @@ if __name__ == "__main__":
                 logger.debug(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     # if idx < 50 or idx > 51: continue # for testing purposes
+                    # if idx < 3: continue
                     logger.info(f"Processing {dataset} file index {idx}")
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
                     to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
-                    logger.debug(f"save_path: {save_path}")
+                    logger.info(f"save_path: {save_path}")
                     # remove previously existing files and make path if doesn't exist
                     filelist = glob.glob(f"{save_path}/*.parquet")
                     logger.debug(f"len(filelist): {len(filelist)}")
