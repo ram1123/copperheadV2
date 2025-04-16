@@ -121,7 +121,7 @@ if __name__ == "__main__":
     "-save",
     "--save_path",
     dest="save_path",
-    default="./plots_UsingAcoplanarityWgt_CustomBins/",
+    default="./plots_nanoAODv12_NewWgt/",
     action="store",
     help="save path",
     )
@@ -281,10 +281,12 @@ if __name__ == "__main__":
             # variables2plot.append(f"{particle}_phi")
             # variables2plot.append(f"{particle}_cos_theta_cs")
             # variables2plot.append(f"{particle}_phi_cs")
-            variables2plot.append(f"mmj_min_dPhi_nominal")
-            variables2plot.append(f"mmj_min_dEta_nominal")
-            variables2plot.append(f"rpt_nominal")
-            variables2plot.append(f"ll_zstar_log_nominal")
+            if int(args.jet_multiplicity) >= 1 or int(args.jet_multiplicity) == -1:
+                variables2plot.append(f"mmj_min_dPhi_nominal")
+                variables2plot.append(f"mmj_min_dEta_nominal")
+            if int(args.jet_multiplicity) > 1 or int(args.jet_multiplicity) == -1:
+                variables2plot.append(f"rpt_nominal")
+                variables2plot.append(f"ll_zstar_log_nominal")
             # variables2plot.append(f"{particle}_rapidity")
 
             # --------------------------------------------------
@@ -293,17 +295,18 @@ if __name__ == "__main__":
             # variables2plot.append(f"dimuon_ebe_mass_res")
             #
         elif "dijet" in particle:
-            variables2plot.append(f"jj_mass_nominal")
-            variables2plot.append(f"jj_pt_nominal")
-            variables2plot.append(f"jj_dEta_nominal")
-            variables2plot.append(f"jj_dPhi_nominal")
-            variables2plot.append(f"zeppenfeld_nominal")
-            variables2plot.append(f"rpt_nominal")
-            variables2plot.append(f"pt_centrality_nominal")
-            variables2plot.append(f"nsoftjets2_nominal")
-            variables2plot.append(f"htsoft2_nominal")
-            variables2plot.append(f"nsoftjets5_nominal")
-            variables2plot.append(f"htsoft5_nominal")
+            if int(args.jet_multiplicity) > 1 or int(args.jet_multiplicity) == -1:
+                variables2plot.append(f"jj_mass_nominal")
+                variables2plot.append(f"jj_pt_nominal")
+                variables2plot.append(f"jj_dEta_nominal")
+                variables2plot.append(f"jj_dPhi_nominal")
+                variables2plot.append(f"zeppenfeld_nominal")
+                variables2plot.append(f"rpt_nominal")
+                variables2plot.append(f"pt_centrality_nominal")
+                variables2plot.append(f"nsoftjets2_nominal")
+                variables2plot.append(f"htsoft2_nominal")
+                variables2plot.append(f"nsoftjets5_nominal")
+                variables2plot.append(f"htsoft5_nominal")
 
         elif ("mu" in particle) :
             for kinematic in kinematic_vars:
@@ -316,10 +319,13 @@ if __name__ == "__main__":
             # variables2plot.append(f"{particle}2_pt_over_mass")
         elif ("jet" in particle):
             variables2plot.append(f"njets_nominal")
+            # if int(args.jet_multiplicity) > 1 or int(args.jet_multiplicity) == -1:
             for kinematic in kinematic_vars:
                 # plot both leading and subleading muons/jets
-                variables2plot.append(f"{particle}1_{kinematic}_nominal")
-                variables2plot.append(f"{particle}2_{kinematic}_nominal")
+                if int(args.jet_multiplicity) >= 1 or int(args.jet_multiplicity) == -1:
+                    variables2plot.append(f"{particle}1_{kinematic}_nominal")
+                if int(args.jet_multiplicity) > 1 or int(args.jet_multiplicity) == -1:
+                    variables2plot.append(f"{particle}2_{kinematic}_nominal")
             # variables2plot.append(f"jet1_qgl_nominal")
             # variables2plot.append(f"jet2_qgl_nominal")
 
@@ -351,7 +357,7 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             logger.info("Gateway Client created")
     else:
-        client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB')
+        client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='4 GiB')
         logger.info("Local scale Client created")
     # record time
     time_step = time.time()
@@ -752,10 +758,19 @@ if __name__ == "__main__":
         # else:
         #     full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity_name}/ZptReWgt_Off"
         full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity_name}/{args.zpt_wgt_name}"
+        logger.info(f"full_save_path: {full_save_path}")
 
         if not os.path.exists(full_save_path):
             os.makedirs(full_save_path)
 
+        # if data_dict and bkg_MC_dict are empty, skip plotting
+        if len(data_dict["values"]) == 0:
+            logger.warning(f"data_dict is empty, skipping {var}")
+            continue
+        if len(bkg_MC_dict) == 0:
+            logger.warning(f"bkg_MC_dict is empty, skipping {var}")
+            continue
+
         full_save_fname = f"{full_save_path}/{var}.pdf"
         plotDataMC_compare(
             binning,
@@ -770,25 +785,6 @@ if __name__ == "__main__":
             status = status,
             log_scale = do_logscale,
         )
-        full_save_fname = f"{full_save_path}/{var}.pdf"
-        plotDataMC_compare(
-            binning,
-            data_dict,
-            bkg_MC_dict,
-            full_save_fname,
-            sig_MC_dict=sig_MC_dict,
-            title = "",
-            x_title = plot_settings[plot_var].get("xlabel"),
-            y_title = plot_settings[plot_var].get("ylabel"),
-            lumi = args.lumi,
-            status = status,
-            log_scale = do_logscale,
-        )
-
-
-
-
-
 
         var_elapsed = round(time.time() - var_step, 3)
         logger.info(f"Finished processing {var} in {var_elapsed} s.")
