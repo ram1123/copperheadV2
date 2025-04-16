@@ -11,7 +11,8 @@ import os
 import sys
 from pathlib import Path
 
-inFile = Path("files_to_delete.txt")
+# inFile = Path("files_to_delete.txt")
+inFile = Path("files_to_delete_UL2017.txt")
 outPath = Path("/depot/cms/hmm/shar1172/LZMAErrorFiles/")
 
 # open the file and read the lines

@@ -3,6 +3,7 @@ from rich.logging import RichHandler
 from rich.console import Console
 from typing import Optional
 import os
+import sys
 
 LOGGER_NAME = "CopperHead"
 

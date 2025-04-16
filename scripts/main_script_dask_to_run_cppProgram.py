@@ -33,12 +33,16 @@ cluster_info = gateway.list_clusters()[0]  # assumes at least one cluster exists
 client = gateway.connect(cluster_info.name).get_client()
 print(f"Connected to Dask Gateway Cluster: {client}")
 
+# "/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/"
+# "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/"
+# "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/"
+# "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/"
 input_files = glob.glob(
-    "/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/"
+    "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/"
     "*/*.root"
 )
 
-log_file = "UL2018_LZMA_errors_cpp.txt"
+log_file = "UL2016_LZMA_errors_cpp_NEW.txt"
 
 @dask.delayed
 def process_file(remote_file):
@@ -55,6 +59,8 @@ def process_file(remote_file):
         output = result.stdout + result.stderr
         if "lzma" in output.lower():
             return (remote_file, False, "LZMA error detected")
+        elif "ERRORERROR:" in output:
+            return (remote_file, False, "ERRORERROR detected")
         return (remote_file, True, output.strip())
 
     except subprocess.CalledProcessError as e:
@@ -75,7 +81,7 @@ for future in as_completed(futures):
     else:
         print(f"Failure processing {remote_file}: {message}")
         with open(log_file, "a") as log:
-            log.write(f"{remote_file}\n")
+            log.write(f"{remote_file},{message}\n")
         fail_count += 1
 
 print(f"\nSummary:\nSuccessfully processed files: {success_count}\nFailed files: {fail_count}\nTotal files: {success_count + fail_count}")

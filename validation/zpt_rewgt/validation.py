@@ -4,6 +4,7 @@ Introduction:
 Commands:
 python validation/zpt_rewgt/validation.py -y 2017 --label "March25_NanoAODv9_WithUpdatedZptWgt" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/March25_NanoAODv9_WithUpdatedZptWgt
 python validation/zpt_rewgt/validation.py -y 2016preVFP --label "March25_NanoAODv9_WithUpdatedZptWgt" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/March25_NanoAODv9_WithUpdatedZptWgt
+python validation/zpt_rewgt/validation.py -y 2018 --label "April09_NanoV12" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April09_NanoV12 --use_gateway
 
 """
 
@@ -179,7 +180,8 @@ def main():
     logger.info(f"background: {bkg_l}")
     logger.info(f"signal: {sig_l}")
 
-    njets = [-1, 0, 1, 2]
+    # njets = [-1, 0, 1, 2]
+    njets = [0, 1, 2]
     categories = ["vbf", "ggh", "nocat"]
     # categories = ["vbf", "ggh"]
     # categories = ["nocat"]

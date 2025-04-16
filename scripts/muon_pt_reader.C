@@ -8,20 +8,20 @@
 //   the events for which there is LZMA compression issue, it prints the error message
 //   so, my another python script that runs this script looks into the log and mark
 //   the files as corrupted if there is "lzma" in the print out from this script.
-//
+
 void muon_pt_reader(const char *filename = "input.root")
 {
     TFile *f = TFile::Open(filename);
     if (!f || f->IsZombie())
     {
-        std::cerr << "Cannot open file: " << filename << std::endl;
+        std::cerr << "ERRORERROR: Cannot open file: " << filename << std::endl;
         return;
     }
 
     TTree *tree = (TTree *)f->Get("Events");
     if (!tree)
     {
-        std::cerr << "TTree 'Events' not found in " << filename << std::endl;
+        std::cerr << "ERRORERROR: TTree 'Events' not found in " << filename << std::endl;
         return;
     }
 
@@ -33,6 +33,11 @@ void muon_pt_reader(const char *filename = "input.root")
     tree->SetBranchAddress("Muon_pt", Muon_pt);
 
     Long64_t nentries = tree->GetEntries();
+    if (nentries <= 0)
+    {
+        std::cerr << "ERRORERROR: No entries in the TTree." << std::endl;
+        return;
+    }
     for (Long64_t i = 0; i < nentries; ++i)
     {
         tree->GetEntry(i);

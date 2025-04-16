@@ -17,8 +17,8 @@ stat_err_opts = {
 ratio_err_opts = {"step": "post", "facecolor": (0, 0, 0, 0.3), "linewidth": 0}
 
 def getHistAndErrs(
-    binning: np.array, 
-    values: np.array, 
+    binning: np.array,
+    values: np.array,
     weights: np.array
     ) -> Tuple[np.array, np.array] :
     np_hist, _ = np.histogram(values, bins=binning, weights = weights)
@@ -28,13 +28,13 @@ def getHistAndErrs(
 
 
 def plotDataMC_compare(
-    binning: np.array, 
-    data: Dict[str, np.array], 
-    bkg_MC_dict: Dict[str, Dict[str, np.array]], 
+    binning: np.array,
+    data: Dict[str, np.array],
+    bkg_MC_dict: Dict[str, Dict[str, np.array]],
     save_full_path: str,
     sig_MC_dict = {},
-    title="default title", 
-    x_title="Mass (GeV)", 
+    title="default title",
+    x_title="Mass (GeV)",
     y_title="Events",
     plot_ratio=True,
     log_scale=True,
@@ -43,9 +43,9 @@ def plotDataMC_compare(
     CenterOfMass = 13,
     ):
     """
-    Takes in 
+    Takes in
     Params:
-    binning : np array of bin edges compatible to np.histogram 
+    binning : np array of bin edges compatible to np.histogram
     data: Dictionary with "values" and "weights" as keys and relevant np array for values
     bkg_MC_dict: Ordered dictionary with the bkg_MC sample names as keys and its respective dictionary to histogram as values
         the keys are ordered such that bkg_MC sample with the least yield iterate first
@@ -67,18 +67,18 @@ def plotDataMC_compare(
     weights = data["weights"]
     data_hist, data_hist_err = getHistAndErrs(binning, values, weights)
     hep.histplot(
-        data_hist, 
-        xerr=True, 
+        data_hist,
+        xerr=True,
         yerr=data_hist_err,
-        bins=binning, 
-        stack=False, 
-        histtype='errorbar', 
-        color='black', 
-        label='Data', 
+        bins=binning,
+        stack=False,
+        histtype='errorbar',
+        color='black',
+        label='Data',
         ax=ax_main,
     )
-    
-    
+
+
     # -----------------------------------------
     # plot bkg_MC
     # -----------------------------------------
@@ -96,11 +96,11 @@ def plotDataMC_compare(
         bkg_MC_histW2_l.append(np_hist_w2)
     # plot bkg_MC in one go
     hep.histplot(
-        bkg_MC_hist_l, 
-        bins=binning, 
-        stack=True, 
-        histtype='fill', 
-        label=bkg_mc_sample_names, 
+        bkg_MC_hist_l,
+        bins=binning,
+        stack=True,
+        histtype='fill',
+        label=bkg_mc_sample_names,
         sort='label_r',
         ax=ax_main,
     )
@@ -114,8 +114,8 @@ def plotDataMC_compare(
             ax_main.set_ylim(0.1,  599.48425032)
         elif x_title == "$R_{p_T}$":
             ax_main.set_ylim(0.35938137,  774.26368268)
-            
-    
+
+
 
     # -----------------------------------------
     # plot signal MC
@@ -127,20 +127,20 @@ def plotDataMC_compare(
             sig_MC_hist, _ = getHistAndErrs(binning, values, weights)
             # print(f"{sig_mc_sample} hist: {sig_MC_hist}")
             hep.histplot(
-                sig_MC_hist, 
-                bins=binning, 
-                histtype='step', 
-                label=sig_mc_sample, 
+                sig_MC_hist,
+                bins=binning,
+                histtype='step',
+                label=sig_mc_sample,
                 # color =  "black",
                 ax=ax_main,
             )
 
-    
+
     # -----------------------------------------
     # Data/MC ratio
     # -----------------------------------------
     data_hist = ak.to_numpy(data_hist)
-    if plot_ratio: 
+    if plot_ratio:
         # compute Data/MC ratio
         # get bkg_MC errors
         bkg_mc_w2_sum = np.sum(np.asarray(bkg_MC_histW2_l), axis=0)
@@ -153,16 +153,26 @@ def plotDataMC_compare(
         inf_filter = bkg_mc_sum>0
         ratio_hist[inf_filter] = data_hist[inf_filter]/  bkg_mc_sum[inf_filter]
         # add relative uncertainty of data and bkg_mc by adding by quadrature
-        rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2) # FIXME: division by zero error
-        ratio_err = rel_unc_ratio*ratio_hist
+        # Protect against division by zero by adding a small epsilon to denominators
+        epsilon = 1e-10
+        bkg_mc_sum_safe = bkg_mc_sum + epsilon
+        data_hist_safe = data_hist + epsilon
+
+        # Calculate relative uncertainty ratio
+        term1 = (bkg_mc_err / bkg_mc_sum_safe) ** 2
+        term2 = (data_hist_err / data_hist_safe) ** 2
+        rel_unc_ratio = np.sqrt(term1 + term2)
+
+        # Compute ratio error
+        ratio_err = rel_unc_ratio * ratio_hist
         # print(f"plotDataMC_compare ratio_err: {ratio_err}")
 
-        
-        hep.histplot(ratio_hist, 
-                     bins=binning, histtype='errorbar', yerr=ratio_err, 
+
+        hep.histplot(ratio_hist,
+                     bins=binning, histtype='errorbar', yerr=ratio_err,
                      color='black', label='Ratio', ax=ax_ratio)
-        
-        # compute MC uncertainty 
+
+        # compute MC uncertainty
         # source: https://github.com/kondratyevd/hmumu-coffea/blob/master/python/plotter.py#L228
         # den = bkg_mc_sum[inf_filter]
         den = bkg_mc_sum
@@ -180,7 +190,7 @@ def plotDataMC_compare(
                 **ratio_err_opts,
             )
 
-        
+
         ax_ratio.axhline(1, color='gray', linestyle='--')
         ax_ratio.axhline(1.2, color='gray', linestyle='--')
         ax_ratio.axhline(0.8, color='gray', linestyle='--')
@@ -189,13 +199,13 @@ def plotDataMC_compare(
         ax_ratio.set_xlabel(x_title)
         ax_ratio.set_ylabel('Data / MC')
         ax_ratio.set_xlim(binning[0], binning[-1])
-        ax_ratio.set_ylim(0.5,1.5) 
+        ax_ratio.set_ylim(0.5,1.5)
         ax_ratio.set_yticks([0.6, 0.8, 1.0, 1.2, 1.4]) # explicitly ask for 1.4 and 0.6
     else:
         ax_main.set_xlabel(x_title)
 
 
-    
+
 
     # -----------------------------------------
     # Legend, title, etc +  save figure
