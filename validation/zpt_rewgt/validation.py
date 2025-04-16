@@ -180,11 +180,8 @@ def main():
     logger.info(f"background: {bkg_l}")
     logger.info(f"signal: {sig_l}")
 
-    # njets = [-1, 0, 1, 2]
-    njets = [0, 1, 2]
+    njets = [-1, 0, 1, 2]
     categories = ["vbf", "ggh", "nocat"]
-    # categories = ["vbf", "ggh"]
-    # categories = ["nocat"]
     WithZpT = ["yes_zpt", "no_zpt"]
 
     if args.debug:

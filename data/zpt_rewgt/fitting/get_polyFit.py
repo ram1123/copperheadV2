@@ -24,11 +24,11 @@ else:
 save_dict = {}
 global_fit_xmax = 200
 
-def make_combined_function(order0, order):
+def make_combined_function(order0, order, fit_xmin, fit_xmax):
     def func(x, par):
-        if x[0] < 10:
+        if x[0] < fit_xmin:
             return sum(par[i] * x[0]**i for i in range(order0 + 1))
-        elif x[0] < 90:
+        elif x[0] < fit_xmax:
             return sum(par[i + order0 + 1] * x[0]**i for i in range(order + 1))
         else:
             return par[order0 + order + 2]
@@ -76,26 +76,26 @@ for year in years:
             polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(order0 + 1)])
             # Define the TF1 function with the generated expression
             fit_func0 = ROOT.TF1(f"poly{order0}", polynomial_expr, fit_xmin0, fit_xmax0)
-            _ = hist_SF.Fit(fit_func0, "L S", xmin=fit_xmin0, xmax=fit_xmax0)
-            _ = hist_SF.Fit(fit_func0, "L S", xmin=fit_xmin0, xmax=fit_xmax0)
+            _ = hist_SF.Fit(fit_func0, "L S Q", xmin=fit_xmin0, xmax=fit_xmax0)
+            _ = hist_SF.Fit(fit_func0, "L S Q", xmin=fit_xmin0, xmax=fit_xmax0)
             fit_results = hist_SF.Fit(fit_func0, "L S R", xmin=fit_xmin0, xmax=fit_xmax0)
 
             # Fit with the lower-order polynomial
             polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(order + 1)])
             # Define the TF1 function with the generated expression
             fit_func1 = ROOT.TF1(f"poly{order}", polynomial_expr, fit_xmin, fit_xmax)
-            _ = hist_SF.Fit(fit_func1, "L S", xmin=fit_xmin, xmax=fit_xmax)
-            _ = hist_SF.Fit(fit_func1, "L S", xmin=fit_xmin, xmax=fit_xmax)
-            fit_results = hist_SF.Fit(fit_func1, "L S R+", xmin=fit_xmin, xmax=fit_xmax)
+            _ = hist_SF.Fit(fit_func1, "L I S Q", xmin=fit_xmin, xmax=fit_xmax)
+            _ = hist_SF.Fit(fit_func1, "L I S Q", xmin=fit_xmin, xmax=fit_xmax)
+            fit_results = hist_SF.Fit(fit_func1, "L I S R+", xmin=fit_xmin, xmax=fit_xmax)
 
             # Fit straight line beyond fit_xmax
             horizontal_line = ROOT.TF1("horizontal_line", "[0]", fit_xmax, global_fit_xmax)
-            fit_results = hist_SF.Fit(horizontal_line, "S R+", xmin=fit_xmax, xmax=global_fit_xmax)
+            fit_results = hist_SF.Fit(horizontal_line, "L I S R+", xmin=fit_xmax, xmax=global_fit_xmax)
 
             # Reference: https://root-forum.cern.ch/t/smooth-fit-the-graph-with-three-separated-fit-function/7556/10?u=ramkrishna
             total_npar = (order0 + 1) + (order + 1) + 1  # low + mid + high
-            combined_func = make_combined_function(order0, order)
-            total_fit_func = ROOT.TF1("total_fit_func", combined_func, fit_xmin0, global_fit_xmax, total_npar)
+            combined_func = make_combined_function(order0, order, fit_xmin, fit_xmax)
+            total_fit_func = ROOT.TF1("total_fit_func", combined_func, 0, global_fit_xmax, total_npar)
             total_fit_func.SetLineColor(ROOT.kBlack)
 
             print(f"fit_func0 parameters: {[fit_func0.GetParameter(i) for i in range(fit_func0.GetNpar())]}")
@@ -113,12 +113,13 @@ for year in years:
 
             # Perform the fit
             print("Fitting total_fit_func")
-            _ = hist_SF.Fit(total_fit_func, "", xmin=fit_xmin0, xmax=global_fit_xmax)
-            fit_results = hist_SF.Fit(total_fit_func, "S R+", xmin=fit_xmin0, xmax=global_fit_xmax)
+            _ = hist_SF.Fit(total_fit_func, "L I S R Q", xmin=fit_xmin0, xmax=global_fit_xmax)
+            _ = hist_SF.Fit(total_fit_func, "L I S R Q", xmin=fit_xmin0, xmax=global_fit_xmax)
+            fit_results = hist_SF.Fit(total_fit_func, "L S R", xmin=0, xmax=global_fit_xmax)
 
             # Calculate chi2 and p-value
-            chi2 = fit_func0.GetChisquare()
-            ndf = fit_func0.GetNDF()
+            chi2 = fit_func1.GetChisquare()
+            ndf = fit_func1.GetNDF()
             chi2_dof = chi2 / ndf if ndf > 0 else 0
             p_value = ROOT.TMath.Prob(chi2, ndf)
 

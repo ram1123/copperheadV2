@@ -12,9 +12,9 @@ from omegaconf import OmegaConf
 # define cut ranges to do polynomial fits. pt ranges beyond that point we fit with a constant
 poly_fit_ranges = {
     "2018" : {
-        "njet0" : [0, 85],
-        "njet1" : [0, 50],
-        "njet2" : [0, 50],
+        "njet0" : [10, 115],
+        "njet1" : [10, 100],
+        "njet2" : [10, 100],
     },
     "2017" : {
         "njet0" : [0, 75],
