@@ -1,0 +1,21 @@
+# target_yields: # UCSD target yields
+# - 0.30457106
+# - 0.35325641
+# - 0.14842342
+# - 0.13939539
+# - 0.05435372
+target_yields:  # V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix_X_V2_UL_Jan18_2025_Feb15_newBinEdges
+- 0.23
+- 0.36
+- 0.26
+- 0.11
+- 0.04
+# target_yields: # V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix_X_V2_UL_Jan18_2025_Feb16_testBinEdges
+# - 0.23
+# - 0.36
+# - 0.41
+# target_yields:  
+# - 0.23
+# - 0.36
+# - 0.26
+# - 0.15

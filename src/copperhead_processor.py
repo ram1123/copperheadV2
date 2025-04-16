@@ -9,7 +9,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
 import json
@@ -185,9 +185,9 @@ def merge_zpt_wgt(yun_wgt, valerie_wgt, njets, year):
                 use_valerie_zpt =  njets >= njet_multiplicity_target
             val_filter = val_filter | use_valerie_zpt
 
-            # logger.info(f"{year} njet {njet_multiplicity_target} use_valerie_zpt: {use_valerie_zpt[:20].compute()}")
-            # logger.info(f"{year} njet {njet_multiplicity_target} njets: {njets[:20].compute()}")
-        # logger.info(f"{year}  val_filter: {val_filter[:20].compute()}")
+            # print(f"{year} njet {njet_multiplicity_target} use_valerie_zpt: {use_valerie_zpt[:20].compute()}")
+            # print(f"{year} njet {njet_multiplicity_target} njets: {njets[:20].compute()}")
+        # print(f"{year}  val_filter: {val_filter[:20].compute()}")
         # raise ValueError
         final_filter = ak.where(val_filter, valerie_wgt, yun_wgt)
         return final_filter
@@ -392,6 +392,7 @@ class EventProcessor(processor.ProcessorABC):
         pre-made json file
         """
         self.config = config
+        # self.config["year"] = self.config["year"].replace("_V12","") # remove V12 flag
 
         self.test_mode = test_mode
         dict_update = {
@@ -399,7 +400,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
-            "do_geofit" : True, # True # FIXME: Make it false for always
+            "do_geofit" : True, # True
             "do_beamConstraint": False, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
@@ -439,8 +440,8 @@ class EventProcessor(processor.ProcessorABC):
             label = f"res_calib_{mode}_{yearUL}"
             file_path = self.config["res_calib_path"][mode]
             calib_str = f"{label} {label} {file_path}"
-            logger.debug(f"file_path: {file_path}")
-            logger.debug(f"calib_str: {calib_str}")
+            print(f"file_path: {file_path}")
+            print(f"calib_str: {calib_str}")
             extractor_instance.add_weight_sets([calib_str])
 
         # PU ID weights
@@ -520,6 +521,13 @@ class EventProcessor(processor.ProcessorABC):
         # LHE cut original end -----------------------------------------------------------------------------
 
 
+
+
+
+
+
+
+
         # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
         HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
         for HLT_str in self.config["hlt"]:
@@ -582,6 +590,13 @@ class EventProcessor(processor.ProcessorABC):
         events["Muon", "pfRelIso04_all_raw"] = ak.ones_like(events.Muon.pfRelIso04_all) * events.Muon.pfRelIso04_all
         # attempt at fixing fsr issue end ---------------------------------------------------------------
 
+        # --------------------------------------------------------
+        # # events.Jet.to_parquet("quick_tests/quick_save/") # TOREMOVE
+        # # ak.ones_like(events.Muon.pt).to_parquet("quick_tests/quick_save/") # TOREMOVE
+        # events.Muon.pt.to_parquet("quick_tests/quick_save/") # TOREMOVE
+        # raise ValueError
+        # --------------------------------------------------------
+
         # --------------------------------------------------------#
         # Select muons that pass pT, eta, isolation cuts,
         # muon ID and quality flags
@@ -596,13 +611,35 @@ class EventProcessor(processor.ProcessorABC):
 
 
         # # --------------------------------------------------------
+        # apply Beam constraint b4 Rochester. We need Rochester b4 trigger matching
+        # # --------------------------------------------------------
+
+        doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
+        if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
+            print(f"doing beam constraint!")
+            doing_BS_correction = True
+            """
+            TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
+            """
+            # print(f"events.Muon.fields: {events.Muon.fields}")
+            BSConstraint_mask = (
+                (events.Muon.bsConstrainedChi2 <30)
+            )
+            BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
+            # comment off (~applied_fsr) cut for now
+            # BSConstraint_mask = BSConstraint_mask & (~applied_fsr) # apply BSContraint on non FSR muons
+            events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
+            events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
+
+
+        # # --------------------------------------------------------
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
             logger.info("doing rochester!")
             # logger.info(f"df.Muon.pt b4 roccor: {events.Muon.pt.compute()}")
             apply_roccor(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
-            # logger.info(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
+            # print(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
 
 
         muon_selection = (
@@ -611,11 +648,6 @@ class EventProcessor(processor.ProcessorABC):
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
-        self.selection.add("muon_pT_roch", ak.any(events.Muon.pt_roch >= self.config["muon_pt_cut"], axis=1))
-        self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
-        self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
-        self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
-        self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
 
 
 
@@ -703,35 +735,35 @@ class EventProcessor(processor.ProcessorABC):
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
             event_filter = event_filter & trigger_match
 
-            # logger.debug(f"trigger_match sum with dr threshold {dr_threshold}: {ak.sum(trigger_match).compute()}")
+            # print(f"trigger_match sum with dr threshold {dr_threshold}: {ak.sum(trigger_match).compute()}")
 
 
-            # # check which events HLT and trigger match don't align, and logger.info five events
+            # # check which events HLT and trigger match don't align, and print five events
             # test_nevents = 5
             # HLT_disagreement = (trigger_match != HLT_filter) & (~HLT_filter)
 
-            # logger.debug(f"HLT_disagreement len: {ak.num(HLT_disagreement, axis=0).compute()}")
-            # logger.debug(f"HLT_disagreement sum: {ak.sum(HLT_disagreement).compute()}")
+            # print(f"HLT_disagreement len: {ak.num(HLT_disagreement, axis=0).compute()}")
+            # print(f"HLT_disagreement sum: {ak.sum(HLT_disagreement).compute()}")
 
-            # logger.debug(f"{HLT_str} decision: {events.HLT[HLT_str][HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"trigger_match: {trigger_match[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"event number: {events.event[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"event run: {events.run[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"TrigObject matched with mu1: {mu1_trigger_match[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"TrigObject matched with mu2: {mu2_trigger_match[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"{HLT_str} decision: {events.HLT[HLT_str][HLT_disagreement][: test_nevents].compute()}")
+            # print(f"trigger_match: {trigger_match[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"event number: {events.event[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"event run: {events.run[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject matched with mu1: {mu1_trigger_match[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject matched with mu2: {mu2_trigger_match[HLT_disagreement][: test_nevents].compute()}")
 
-            # logger.debug(f"TrigObject candidate id: {trigger_cands.id[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"TrigObject candidate pt: {trigger_cands.pt[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"TrigObject candidate eta: {trigger_cands.eta[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"TrigObject candidate phi: {trigger_cands.phi[HLT_disagreement][: test_nevents].compute()}")
-            # # logger.debug(f"mu1.delta_r(trigger_cands): {mu1.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
-            # # logger.debug(f"mu2.delta_r(trigger_cands): {mu2.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"mu1 pt: {mu1.pt[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"mu1 eta: {mu1.eta[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"mu1 phi: {mu1.phi[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"mu2 pt: {mu2.pt[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"mu2 eta: {mu2.eta[HLT_disagreement][: test_nevents].compute()}")
-            # logger.debug(f"mu2 phi: {mu2.phi[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject candidate id: {trigger_cands.id[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject candidate pt: {trigger_cands.pt[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject candidate eta: {trigger_cands.eta[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"TrigObject candidate phi: {trigger_cands.phi[HLT_disagreement][: test_nevents].compute()}")
+            # # print(f"mu1.delta_r(trigger_cands): {mu1.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
+            # # print(f"mu2.delta_r(trigger_cands): {mu2.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu1 pt: {mu1.pt[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu1 eta: {mu1.eta[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu1 phi: {mu1.phi[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu2 pt: {mu2.pt[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu2 eta: {mu2.eta[HLT_disagreement][: test_nevents].compute()}")
+            # print(f"mu2 phi: {mu2.phi[HLT_disagreement][: test_nevents].compute()}")
 
             # raise ValueError
 
@@ -759,12 +791,12 @@ class EventProcessor(processor.ProcessorABC):
         # apply Beam constraint or geofit or nothing if neither
         doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
         if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
-            logger.info(f"doing beam constraint!")
+            print(f"doing beam constraint!")
             doing_BS_correction = True
             """
             TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
             """
-            # logger.info(f"events.Muon.fields: {events.Muon.fields}")
+            # print(f"events.Muon.fields: {events.Muon.fields}")
             BSConstraint_mask = (
                 (events.Muon.bsConstrainedChi2 <30)
             )
@@ -830,7 +862,6 @@ class EventProcessor(processor.ProcessorABC):
         selected_electrons = events.Electron[electron_selection]
         nelectrons = ak.num(selected_electrons, axis=1)
         electron_veto = (nelectrons == 0)
-        self.selection.add("electron_veto", electron_veto)
 
         event_filter = (
                 event_filter
@@ -840,6 +871,7 @@ class EventProcessor(processor.ProcessorABC):
                 # & (mm_charge == -1)
                 # & electron_veto
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
+                & HemVeto_filter
 
         )
         self.selection.add("event_filter", event_filter == True)
@@ -929,6 +961,7 @@ class EventProcessor(processor.ProcessorABC):
         #         pu_wgts[variation] = pu_wgts[variation][event_filter==True]
         # pass_leading_pt = pass_leading_pt[event_filter==True]
         # # original end -----------------------------------------------
+
 
 
         # to_packed testing -----------------------------------------------
@@ -1096,11 +1129,11 @@ class EventProcessor(processor.ProcessorABC):
                     logger.debug("JEC factory not recognized!")
                     raise ValueError
 
-            logger.warning("do old jec!")
+            print("do old jec!")
             # testJetVector(jets)
-            # logger.info(f"jets pt b4 jec: {jets.pt.compute()}")
+            # print(f"jets pt b4 jec: {jets.pt.compute()}")
             jets = factory.build(jets)
-            # logger.info(f"jets pt after jec: {jets.pt.compute()}")
+            # print(f"jets pt after jec: {jets.pt.compute()}")
             # testJetVector(jets)
 
         else:
@@ -1367,9 +1400,9 @@ class EventProcessor(processor.ProcessorABC):
         #     "mu1_iso" : mu1.pfRelIso04_all,
         #     "mu2_iso" : mu2.pfRelIso04_all,
         # })
-        # logger.info(f"test_zip.compute 1: {test_zip.to_parquet(save_path)}")
-        # logger.info(f"out_dict.persist 1: {ak.zip(out_dict).persist().to_parquet(save_path)}")
-        # logger.info(f"out_dict.compute 1: {ak.zip(out_dict).to_parquet(save_path)}")
+        # print(f"test_zip.compute 1: {test_zip.to_parquet(save_path)}")
+        # print(f"out_dict.persist 1: {ak.zip(out_dict).persist().to_parquet(save_path)}")
+        # print(f"out_dict.compute 1: {ak.zip(out_dict).to_parquet(save_path)}")
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#
@@ -1391,7 +1424,7 @@ class EventProcessor(processor.ProcessorABC):
             )
 
             out_dict.update(jet_loop_dict)
-        # logger.info(f"out_dict.keys() after jet loop: {out_dict.keys()}")
+        # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
         # logger.info(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # logger.info(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
@@ -1573,6 +1606,7 @@ class EventProcessor(processor.ProcessorABC):
         if test_mode:
             logger.info(f"muons mass_resolution dpt1: {dpt1}")
         year = self.config["year"]
+
         if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
             yearUL = "2016"
         elif ("22" in year) or ("23" in year):# temporary solution until I can generate my own dimuon mass resolution
@@ -1824,7 +1858,7 @@ class EventProcessor(processor.ProcessorABC):
             )
             false_arr = ak.ones_like(HEMVeto) < 0
             HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
-            # logger.info(f"HEMVeto : {HEMVeto.compute()}")
+            # print(f"HEMVeto : {HEMVeto.compute()}")
 
         # get QGL cut
         if NanoAODv == 9 :
@@ -1840,7 +1874,6 @@ class EventProcessor(processor.ProcessorABC):
             & clean
             & (jets.pt >= self.config["jet_pt_cut"])
             & (abs(jets.eta) <= self.config["jet_eta_cut"])
-            & HEMVeto
         )
         # original jet_selection end ----------------------------------------------
 
@@ -1899,8 +1932,8 @@ class EventProcessor(processor.ProcessorABC):
         # logger.info(f"event match jet2 pt: {ak.to_numpy(jet2.pt[event_match].compute())}")
 
         dijet = jet1+jet2
-        # logger.info(f"type jet1: {type(jet1.compute())}")
-        # logger.info(f"type jet1_Lvec: {type(jet1_Lvec.compute())}")
+        # print(f"type jet1: {type(jet1.compute())}")
+        # print(f"type jet1_Lvec: {type(jet1_Lvec.compute())}")
         # dijet = jet1_Lvec+jet2_Lvec
 
 
@@ -2033,7 +2066,7 @@ class EventProcessor(processor.ProcessorABC):
 
         sj_dict = {}
         cutouts = [2,5]
-        nmuons = ak.num(events.Muon, axis=1)
+        nmuons = ak.num(events.Muon, axis=1) # FIXME (I think it should be selected muons)
         # PLEASE NOTE: SoftJET variables are all from Nominal variation despite variation names
         for cutout in cutouts:
             sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout) # obtain nominal softjet values

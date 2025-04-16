@@ -68,29 +68,30 @@ if __name__ == "__main__":
     action="store",
     help="save path to store plots, not SF root files. That's saved locally",
     )
-
-
-    # cluster = LocalCluster(processes=True, memory_limit='64GB')
-    # cluster.adapt(minimum=8, maximum=64) #min: 8 max: 32
-    # client = Client(cluster)
-    # print("Local scale Client created")
-    # client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
-    # print("Local scale Client created")
-
-
-    # from dask_gateway import Gateway
-    # gateway = Gateway(
-    #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-    #     proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-    # )
-    # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-    # client = gateway.connect(cluster_info.name).get_client()
-    # print(f"client: {client}")
-    # print("Gateway Client created")
-
+    parser.add_argument(
+    "--use_gateway",
+    dest="use_gateway",
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="If true, uses dask gateway client instead of local",
+    )
     args = parser.parse_args()
 
-    # run_label = "V2_Jan09_ForZptReWgt"
+    # intialize dask client
+    if args.use_gateway:
+        from dask_gateway import Gateway
+        gateway = Gateway(
+            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+        )
+        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+        client = gateway.connect(cluster_info.name).get_client()
+        print("Gateway Client created")
+    else: # use local cluster
+        client = Client(n_workers=63,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
+        print("Local scale Client created")
+
+    # specify stage1 output label
     run_label = args.label
     if args.year == "all":
         # years =  ["2018", "2017","2016postVFP","2016preVFP"]

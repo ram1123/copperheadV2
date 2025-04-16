@@ -1,5 +1,6 @@
 from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
 from src.copperhead_processor import EventProcessor
+# from src.copperhead_processor_cutflow import EventProcessor
 # NanoAODSchema.warn_missing_crossrefs = False
 import awkward as ak
 import matplotlib.pyplot as plt
@@ -285,11 +286,6 @@ if __name__ == "__main__":
                 #     continue
                 # print(f"dataset: {dataset}")
                 dataset_loop(coffea_processor, sample, test=test_mode)
-
-
-
-
-
 
     elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished everything in {elapsed} s.")

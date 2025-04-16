@@ -20,6 +20,7 @@ import glob
 # warnings.filterwarnings("error", module="coffea.*")
 from omegaconf import OmegaConf
 import numpy as np
+import uuid
 
 import sys
 from collections.abc import Sequence
@@ -66,6 +67,7 @@ def get_Xcache_filelist(fnames: list):
         root_file = re.findall(r"/store.*", fname)[0]
         x_cache_fname = "root://cms-xcache.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
+    print(f"new_fnames: {new_fnames}")
     return new_fnames
 
 def find_keys_in_yaml(yaml_data, keys_to_find):
@@ -224,7 +226,6 @@ if __name__ == "__main__":
             client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
             logger.info("Local scale Client created")
         big_sample_info = {}
-
         # load dataset sample paths from yaml files
         datasets = OmegaConf.load(args.dataset_yaml_file)
         if args.run2_rereco: # temp condition for RERECO data case
@@ -363,7 +364,6 @@ if __name__ == "__main__":
                     file_input = {fname : {"object_path": "Runs"} for fname in fnames}
                     logger.debug(f"file_input: {file_input}")
                     # print(f"file_input: {file_input}")
-                    # print(len(file_input.keys()))
                     runs = NanoEventsFactory.from_root(
                             file_input,
                             metadata={},

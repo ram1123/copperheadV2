@@ -11,7 +11,10 @@ class CustomInvBtagCut:
     def __init__(self):
         pass
     def filterCategory(events): # apparently self is not needed
-        btag_cut = ak.fill_none(events.nBtagLoose_nominal >= 2, value=False) | ak.fill_none(events.nBtagMedium_nominal >= 1, value=False)
+        # btag_cut = ak.fill_none(events.nBtagLoose_nominal >= 2, value=False) | ak.fill_none(events.nBtagMedium_nominal >= 1, value=False)
+        btagLoose_filter = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False)
+        btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
+        btag_cut = btagLoose_filter | btagMedium_filter
         return ~btag_cut
 
 class CustomVbfCut: # specified in line 827 of AN-19-124

@@ -1,1 +1,99 @@
-{"schema_version":2,"corrections":[{"name":"BS_ebe_mass_res_calibration","description":"Dimuon Mass resolution calibration with BeamSpot Constraint correction applied","version":1,"inputs":[{"name":"leading_mu_pt","type":"real","description":"Transverse momentum of the leading muon (GeV)"},{"name":"leading_mu_abseta","type":"real","description":"Absolute pseudorapidity of the leading muon"},{"name":"subleading_mu_abseta","type":"real","description":"Absolute pseudorapidity of the subleading muon"}],"output":{"name":"correction_factor","type":"real"},"data":{"nodetype":"multibinning","inputs":["leading_mu_pt","leading_mu_abseta","subleading_mu_abseta"],"edges":[[30.0,45.0,52.0,62.0,200.0],[0.0,0.9,1.8,2.4],[0.0,0.9,1.8,2.4]],"content":[1.22,1.273,1.181,1.22,1.273,1.181,1.22,1.273,1.181,1.216,1.175,1.158,1.231,1.16,1.094,1.095,1.061,1.023,1.246,1.207,1.099,1.234,1.203,1.151,1.17,1.119,1.108,1.214,1.197,1.159,1.152,1.233,1.179,1.182,1.089,1.068],"flow":"clamp"}}]}
+{
+    "schema_version": 2,
+    "corrections": [
+        {
+            "name": "BS_ebe_mass_res_calibration",
+            "description": "Dimuon Mass resolution calibration with BeamSpot Constraint correction applied",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "leading_mu_pt",
+                    "type": "real",
+                    "description": "Transverse momentum of the leading muon (GeV)"
+                },
+                {
+                    "name": "leading_mu_abseta",
+                    "type": "real",
+                    "description": "Absolute pseudorapidity of the leading muon"
+                },
+                {
+                    "name": "subleading_mu_abseta",
+                    "type": "real",
+                    "description": "Absolute pseudorapidity of the subleading muon"
+                }
+            ],
+            "output": {
+                "name": "correction_factor",
+                "type": "real"
+            },
+            "data": {
+                "nodetype": "multibinning",
+                "inputs": [
+                    "leading_mu_pt",
+                    "leading_mu_abseta",
+                    "subleading_mu_abseta"
+                ],
+                "edges": [
+                    [
+                        30.0,
+                        45.0,
+                        52.0,
+                        62.0,
+                        200.0
+                    ],
+                    [
+                        0.0,
+                        0.9,
+                        1.8,
+                        2.4
+                    ],
+                    [
+                        0.0,
+                        0.9,
+                        1.8,
+                        2.4
+                    ]
+                ],
+                "content": [
+                    1.1528039476324108,
+                    1.1701038682587994,
+                    1.1287681212371572,
+                    1.1528039476324108,
+                    1.1701038682587994,
+                    1.1287681212371572,
+                    1.1528039476324108,
+                    1.1701038682587994,
+                    1.1287681212371572,
+                    1.1328214600678193,
+                    1.110980651386012,
+                    1.0459475054894334,
+                    1.1105684444942123,
+                    1.0108044935832736,
+                    1.07115848334329,
+                    1.1117649487288015,
+                    1.143334272795222,
+                    0.935626037853805,
+                    1.2558458983216945,
+                    1.2716122770129354,
+                    1.1956656951984377,
+                    1.240078888770749,
+                    1.244208367758451,
+                    1.1732182614908593,
+                    1.088586541685731,
+                    1.1751446962237735,
+                    1.2949959699317926,
+                    1.2476291635899004,
+                    1.2026296656103976,
+                    1.0390733002375667,
+                    1.2243124817489386,
+                    1.2315812832618784,
+                    1.1284331081493675,
+                    1.0802814268749157,
+                    1.1749115524329354,
+                    1.1001094882000282
+                ],
+                "flow": "clamp"
+            }
+        }
+    ]
+}
