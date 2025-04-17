@@ -399,8 +399,8 @@ class EventProcessor(processor.ProcessorABC):
             "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
-            "do_geofit" : True, # True # FIXME: Make it false for always
-            "do_beamConstraint": False, # if True, override do_geofit
+            "do_geofit" : False, # True # FIXME: Make it false for always
+            "do_beamConstraint": True, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
         }

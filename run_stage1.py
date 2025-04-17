@@ -253,9 +253,8 @@ if __name__ == "__main__":
                     else:
                         # remove previously existing files and make path if doesn't exist
                         filelist = glob.glob(f"{save_path}/*.parquet")
-                        logger.debug(f"len(filelist): {len(filelist)}")
+                        logger.debug(f"Going to delete files: len(filelist): {len(filelist)}")
                         for file in filelist:
-                            logger.debug(f"Going to delete file: {file}")
                             os.remove(file)
                     logger.debug("Directory created or cleaned")
                     to_persist.persist().to_parquet(save_path)
