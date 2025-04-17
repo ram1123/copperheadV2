@@ -101,7 +101,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         cutflow_save_path = f"{save_path}/f{fraction_str}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
 
         processor.cutflow.to_npz(cutflow_save_path).compute()
-        print(f"Cutflow saved to {cutflow_save_path}")
+        logger.info(f"Cutflow saved to {cutflow_save_path}")
 
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
@@ -210,30 +210,27 @@ if __name__ == "__main__":
             )
             cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
-            print(f"client: {client}")
-            print("Gateway Client created")
+            logger.debug(f"client: {client}")
+            logger.info("Gateway Client created")
         # # #-----------------------------------------------------------
         else:
             # client = Client(n_workers=1,  threads_per_worker=1, processes=True, memory_limit='15 GiB')
             # client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='6 GiB')
             client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
-            print("Local scale Client created")
+            logger.info("Local scale Client created")
         #-------------------------------------------------------------------------------------
-        #-----------------------------------------------------------
-        # client = Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='8 GiB')
-        #---------------------------------------------------------
-        # print("cluster scale up")
-        # sample_path = "./prestage_output/processor_samples.json"
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
         logger.debug(f"Sample path: {sample_path}")
         with open(sample_path) as file:
             samples = json.loads(file.read())
+
         logger.debug(f'samples: {samples}')
         # add in NanoAODv info into samples metadata for coffea processor
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
         start_save_path = args.save_path + f"/stage1_output/{args.year}"
-        logger.debug(f"start_save_path: {start_save_path}")
+        logger.info(f"start_save_path: {start_save_path}")
+
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
                 sample_step = time.time()
@@ -250,42 +247,43 @@ if __name__ == "__main__":
                     to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
                     logger.info(f"save_path: {save_path}")
-                    # remove previously existing files and make path if doesn't exist
-                    filelist = glob.glob(f"{save_path}/*.parquet")
-                    logger.debug(f"len(filelist): {len(filelist)}")
-                    for file in filelist:
-                        os.remove(file)
                     if not os.path.exists(save_path):
+                        logger.debug(f"Path: {save_path} is going to be created")
                         os.makedirs(save_path)
+                    else:
+                        # remove previously existing files and make path if doesn't exist
+                        filelist = glob.glob(f"{save_path}/*.parquet")
+                        logger.debug(f"len(filelist): {len(filelist)}")
+                        for file in filelist:
+                            logger.debug(f"Going to delete file: {file}")
+                            os.remove(file)
+                    logger.debug("Directory created or cleaned")
                     to_persist.persist().to_parquet(save_path)
                     # to_persist.to_parquet(save_path)
 
                     var_elapsed = round(time.time() - var_step, 3)
-                    print(f"Finished file_idx {idx} in {var_elapsed} s.")
+                    logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
                 sample_elapsed = round(time.time() - sample_step, 3)
-                print(f"Finished sample {dataset} in {sample_elapsed} s.")
+                logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
 
     else:
-        # dataset_loop(coffea_processor, xrootd_path+fname, test=test_mode)
+        client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+        logger.info("Local scale Client created")
 
         sample_path = "./prestage_output/fraction_processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(sample_path) as file:
             samples = json.loads(file.read())
-        # print(f"samples.keys(): {samples.keys()}")
+        logger.debug(f'samples: {samples}')
+
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
 
+        start_save_path = args.save_path + f"/stage1_output_test/{args.year}"
+        logger.info(f"start_save_path: {start_save_path}")
         with performance_report(filename="dask-report.html"):
-            # for dataset, sample in samples.items():
             for dataset, sample in tqdm.tqdm(samples.items()):
-
-                # testing
-                # if ("dy_M-100To200" not in dataset) and ("data_A" not in dataset):
-                # if ("dy_M-100To200" not in dataset) :
-                # if ("ggh_powheg" not in dataset) and ("vbf_powheg" not in dataset):
-                #     continue
-                # print(f"dataset: {dataset}")
-                dataset_loop(coffea_processor, sample, test=test_mode)
+                logger.debug(f"dataset: {dataset}")
+                dataset_loop(coffea_processor, sample, test=test_mode, save_path=start_save_path)
 
     elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished everything in {elapsed} s.")

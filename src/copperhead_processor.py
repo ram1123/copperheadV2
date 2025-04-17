@@ -55,12 +55,12 @@ TODO!: add the correct btag working points for rereco samples that you will be w
 def getZptWgts(dimuon_pt, njets, nbins, year, config_path):
     # config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
     # config_path = config["new_zpt_wgt"]
-    print(f"zpt config file: {config_path}")
+    logger.info(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
     max_order = 5 #9
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
-    # print(f"zpt_wgt: {zpt_wgt}")
+    # logger.info(f"zpt_wgt: {zpt_wgt}")
 
     for jet_multiplicity in jet_multiplicies:
 
@@ -70,11 +70,11 @@ def getZptWgts(dimuon_pt, njets, nbins, year, config_path):
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(max_order+1): # p goes from 0 to max_order
             coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"p{order}"]
-            # print(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
+            # logger.info(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
             polynomial_term = coeff*dimuon_pt**order
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
-            # print(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
-            # print(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
+            # logger.info(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
+            # logger.info(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
         poly_fit_cutoff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["x_max"]
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
 
@@ -82,16 +82,16 @@ def getZptWgts(dimuon_pt, njets, nbins, year, config_path):
         coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"horizontal_c0"]
         zpt_wgt_by_jet_horizontal = ak.ones_like(dimuon_pt) * coeff
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff < dimuon_pt), zpt_wgt_by_jet_horizontal, zpt_wgt_by_jet)
-        # print(f"zpt_wgt_by_jet testing: {ak.all(zpt_wgt_by_jet != -1).compute()}")
+        # logger.info(f"zpt_wgt_by_jet testing: {ak.all(zpt_wgt_by_jet != -1).compute()}")
         # raise ValueError
 
         if jet_multiplicity != 2:
             njet_mask = njets == jet_multiplicity
         else:
             njet_mask = njets >= 2 # njet 2 is inclusive
-        # print(f"njet{jet_multiplicity} order  zpt_wgt_by_jet: {zpt_wgt_by_jet}")
+        # logger.info(f"njet{jet_multiplicity} order  zpt_wgt_by_jet: {zpt_wgt_by_jet}")
         zpt_wgt = ak.where(njet_mask, zpt_wgt_by_jet, zpt_wgt) # if matching jet multiplicity, apply the values
-        # print(f"zpt_wgt after njet {jet_multiplicity}: {zpt_wgt}")
+        # logger.info(f"zpt_wgt after njet {jet_multiplicity}: {zpt_wgt}")
 
     cutOff_mask = dimuon_pt < 200 # ignore wgts from dimuon pT > 200
     zpt_wgt = ak.where(cutOff_mask, zpt_wgt, ak.ones_like(dimuon_pt))
@@ -116,11 +116,11 @@ def getZptWgts_2016postVFP(dimuon_pt, njets, nbins, year, config_path):
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(2+1): # FIXME: Hardcoded polynomial order
             coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"fp{order}"]
-            # print(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
+            # logger.info(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
             polynomial_term = coeff*dimuon_pt**order
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
-            # print(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
-            # print(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
+            # logger.info(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
+            # logger.info(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
         poly_fit_cutoff_min = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["x_min"]
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_min >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
 
@@ -185,9 +185,9 @@ def merge_zpt_wgt(yun_wgt, valerie_wgt, njets, year):
                 use_valerie_zpt =  njets >= njet_multiplicity_target
             val_filter = val_filter | use_valerie_zpt
 
-            # print(f"{year} njet {njet_multiplicity_target} use_valerie_zpt: {use_valerie_zpt[:20].compute()}")
-            # print(f"{year} njet {njet_multiplicity_target} njets: {njets[:20].compute()}")
-        # print(f"{year}  val_filter: {val_filter[:20].compute()}")
+            # logger.info(f"{year} njet {njet_multiplicity_target} use_valerie_zpt: {use_valerie_zpt[:20].compute()}")
+            # logger.info(f"{year} njet {njet_multiplicity_target} njets: {njets[:20].compute()}")
+        # logger.info(f"{year}  val_filter: {val_filter[:20].compute()}")
         # raise ValueError
         final_filter = ak.where(val_filter, valerie_wgt, yun_wgt)
         return final_filter
@@ -392,7 +392,6 @@ class EventProcessor(processor.ProcessorABC):
         pre-made json file
         """
         self.config = config
-        # self.config["year"] = self.config["year"].replace("_V12","") # remove V12 flag
 
         self.test_mode = test_mode
         dict_update = {
@@ -400,7 +399,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
-            "do_geofit" : True, # True
+            "do_geofit" : True, # True # FIXME: Make it false for always
             "do_beamConstraint": False, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
@@ -440,8 +439,8 @@ class EventProcessor(processor.ProcessorABC):
             label = f"res_calib_{mode}_{yearUL}"
             file_path = self.config["res_calib_path"][mode]
             calib_str = f"{label} {label} {file_path}"
-            print(f"file_path: {file_path}")
-            print(f"calib_str: {calib_str}")
+            logger.debug(f"file_path: {file_path}")
+            logger.debug(f"calib_str: {calib_str}")
             extractor_instance.add_weight_sets([calib_str])
 
         # PU ID weights
@@ -521,13 +520,6 @@ class EventProcessor(processor.ProcessorABC):
         # LHE cut original end -----------------------------------------------------------------------------
 
 
-
-
-
-
-
-
-
         # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
         HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
         for HLT_str in self.config["hlt"]:
@@ -590,13 +582,6 @@ class EventProcessor(processor.ProcessorABC):
         events["Muon", "pfRelIso04_all_raw"] = ak.ones_like(events.Muon.pfRelIso04_all) * events.Muon.pfRelIso04_all
         # attempt at fixing fsr issue end ---------------------------------------------------------------
 
-        # --------------------------------------------------------
-        # # events.Jet.to_parquet("quick_tests/quick_save/") # TOREMOVE
-        # # ak.ones_like(events.Muon.pt).to_parquet("quick_tests/quick_save/") # TOREMOVE
-        # events.Muon.pt.to_parquet("quick_tests/quick_save/") # TOREMOVE
-        # raise ValueError
-        # --------------------------------------------------------
-
         # --------------------------------------------------------#
         # Select muons that pass pT, eta, isolation cuts,
         # muon ID and quality flags
@@ -609,6 +594,8 @@ class EventProcessor(processor.ProcessorABC):
         for evt_qual_flg in self.config["event_flags"]:
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
 
+        self.selection.add("event_quality_flags", evnt_qual_flg_selection)
+
 
         # # --------------------------------------------------------
         # apply Beam constraint b4 Rochester. We need Rochester b4 trigger matching
@@ -616,12 +603,12 @@ class EventProcessor(processor.ProcessorABC):
 
         doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
         if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
-            print(f"doing beam constraint!")
+            logger.info(f"doing beam constraint!")
             doing_BS_correction = True
             """
             TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
             """
-            # print(f"events.Muon.fields: {events.Muon.fields}")
+            # logger.info(f"events.Muon.fields: {events.Muon.fields}")
             BSConstraint_mask = (
                 (events.Muon.bsConstrainedChi2 <30)
             )
@@ -639,7 +626,7 @@ class EventProcessor(processor.ProcessorABC):
             # logger.info(f"df.Muon.pt b4 roccor: {events.Muon.pt.compute()}")
             apply_roccor(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
-            # print(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
+            # logger.info(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
 
 
         muon_selection = (
@@ -648,8 +635,11 @@ class EventProcessor(processor.ProcessorABC):
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
-
-
+        self.selection.add("muon_pT_roch", ak.any(events.Muon.pt_roch >= self.config["muon_pt_cut"], axis=1))
+        self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
+        self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
+        self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
+        self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
 
 
         # calculate FSR recovery, but don't apply it until trigger matching is done
@@ -734,42 +724,6 @@ class EventProcessor(processor.ProcessorABC):
 
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
             event_filter = event_filter & trigger_match
-
-            # print(f"trigger_match sum with dr threshold {dr_threshold}: {ak.sum(trigger_match).compute()}")
-
-
-            # # check which events HLT and trigger match don't align, and print five events
-            # test_nevents = 5
-            # HLT_disagreement = (trigger_match != HLT_filter) & (~HLT_filter)
-
-            # print(f"HLT_disagreement len: {ak.num(HLT_disagreement, axis=0).compute()}")
-            # print(f"HLT_disagreement sum: {ak.sum(HLT_disagreement).compute()}")
-
-            # print(f"{HLT_str} decision: {events.HLT[HLT_str][HLT_disagreement][: test_nevents].compute()}")
-            # print(f"trigger_match: {trigger_match[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"event number: {events.event[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"event run: {events.run[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject matched with mu1: {mu1_trigger_match[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject matched with mu2: {mu2_trigger_match[HLT_disagreement][: test_nevents].compute()}")
-
-            # print(f"TrigObject candidate id: {trigger_cands.id[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject candidate pt: {trigger_cands.pt[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject candidate eta: {trigger_cands.eta[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"TrigObject candidate phi: {trigger_cands.phi[HLT_disagreement][: test_nevents].compute()}")
-            # # print(f"mu1.delta_r(trigger_cands): {mu1.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
-            # # print(f"mu2.delta_r(trigger_cands): {mu2.delta_r(trigger_cands)[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu1 pt: {mu1.pt[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu1 eta: {mu1.eta[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu1 phi: {mu1.phi[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu2 pt: {mu2.pt[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu2 eta: {mu2.eta[HLT_disagreement][: test_nevents].compute()}")
-            # print(f"mu2 phi: {mu2.phi[HLT_disagreement][: test_nevents].compute()}")
-
-            # raise ValueError
-
-
-
-
         else:
             do_seperate_mu1_leading_pt_cut = True
             logger.warning("NO trigger match! Doing leading mu pass instead!")
@@ -788,24 +742,8 @@ class EventProcessor(processor.ProcessorABC):
 
         #-----------------------------------------------------------------
 
-        # apply Beam constraint or geofit or nothing if neither
-        doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
-        if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
-            print(f"doing beam constraint!")
-            doing_BS_correction = True
-            """
-            TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
-            """
-            # print(f"events.Muon.fields: {events.Muon.fields}")
-            BSConstraint_mask = (
-                (events.Muon.bsConstrainedChi2 <30)
-            )
-            BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
-            # comment off (~applied_fsr) cut for now
-            # BSConstraint_mask = BSConstraint_mask & (~applied_fsr) # apply BSContraint on non FSR muons
-            events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
-            events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
-        else:
+
+        if not doing_BS_correction: # apply geofit
             if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
                 logger.info(f"doing geofit!")
                 gf_filter, gf_pt_corr = apply_geofit(events, self.config["year"], ~applied_fsr)
@@ -859,10 +797,17 @@ class EventProcessor(processor.ProcessorABC):
         #     electron_veto = (ak.num(events.Electron[electron_selection], axis=1) == 0)
         # some temporary testing code end -----------------------------------------
 
-        selected_electrons = events.Electron[electron_selection]
-        nelectrons = ak.num(selected_electrons, axis=1)
+        nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0)
+        self.selection.add("electron_veto", electron_veto)
 
+        # self.config["do_HemVeto"] = False
+        if self.config["do_HemVeto"]:
+            HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
+        else:
+            HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
+
+        self.selection.add("HemVeto", HemVeto_filter == True)
         event_filter = (
                 event_filter
                 & lumi_mask
@@ -874,7 +819,6 @@ class EventProcessor(processor.ProcessorABC):
                 & HemVeto_filter
 
         )
-        self.selection.add("event_filter", event_filter == True)
         event_filter = event_filter & (nmuons == 2)
         self.selection.add("nmuons", nmuons==2)
         # logger.debug(f"event_filter sum after nmuons: {ak.sum(event_filter).compute()}")
@@ -940,7 +884,6 @@ class EventProcessor(processor.ProcessorABC):
         # test end -----------------------------------------------------------------------
 
 
-
         # calculate sum of gen weight b4 skimming off bad events
         if is_mc:
             # if True:
@@ -961,7 +904,6 @@ class EventProcessor(processor.ProcessorABC):
         #         pu_wgts[variation] = pu_wgts[variation][event_filter==True]
         # pass_leading_pt = pass_leading_pt[event_filter==True]
         # # original end -----------------------------------------------
-
 
 
         # to_packed testing -----------------------------------------------
@@ -1129,11 +1071,22 @@ class EventProcessor(processor.ProcessorABC):
                     logger.debug("JEC factory not recognized!")
                     raise ValueError
 
-            print("do old jec!")
+            # -------------------------------------
+            jets = do_jec_scale(jets, self.config, is_mc, dataset)
+            if is_mc: # JER smearing
+                jets = do_jer_smear(jets, self.config, "nom", events.event)
+            sorted_args = ak.argsort(jets.pt, ascending=False)
+            jets = (jets[sorted_args])
+            # -------------------------------------
+
+
             # testJetVector(jets)
-            # print(f"jets pt b4 jec: {jets.pt.compute()}")
-            jets = factory.build(jets)
-            # print(f"jets pt after jec: {jets.pt.compute()}")
+            # logger.info(f"jets pt b4 jec: {jets.pt.compute()}")
+            # -------------------------------------
+            # logger.info("do old jec!")
+            # jets = factory.build(jets)
+            # -------------------------------------
+            # logger.info(f"jets pt after jec: {jets.pt.compute()}")
             # testJetVector(jets)
 
         else:
@@ -1400,9 +1353,9 @@ class EventProcessor(processor.ProcessorABC):
         #     "mu1_iso" : mu1.pfRelIso04_all,
         #     "mu2_iso" : mu2.pfRelIso04_all,
         # })
-        # print(f"test_zip.compute 1: {test_zip.to_parquet(save_path)}")
-        # print(f"out_dict.persist 1: {ak.zip(out_dict).persist().to_parquet(save_path)}")
-        # print(f"out_dict.compute 1: {ak.zip(out_dict).to_parquet(save_path)}")
+        # logger.info(f"test_zip.compute 1: {test_zip.to_parquet(save_path)}")
+        # logger.info(f"out_dict.persist 1: {ak.zip(out_dict).persist().to_parquet(save_path)}")
+        # logger.info(f"out_dict.compute 1: {ak.zip(out_dict).to_parquet(save_path)}")
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#
@@ -1424,7 +1377,7 @@ class EventProcessor(processor.ProcessorABC):
             )
 
             out_dict.update(jet_loop_dict)
-        # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
+        # logger.info(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
         # logger.info(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # logger.info(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
@@ -1478,17 +1431,17 @@ class EventProcessor(processor.ProcessorABC):
 
             # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
             # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
-            print("======================= old zpt weights are commented out =======================")
+            logger.info("======================= old zpt weights are commented out =======================")
             if year == "2016postVFP" or year=="2018": #FIXME: This is temporary, we need to sync the zpt strategy and update it.
                 zpt_weight_mine_nbins100 = getZptWgts_2016postVFP(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
             else:
                 zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
-            # print(f"zpt_weight_mine_nbins100: {type(zpt_weight_mine_nbins100)}")
-            # print(f"zpt_weight_mine_nbins100: {(zpt_weight_mine_nbins100)}")
-            # print(f"zpt_weight_mine_nbins100: {zpt_weight_mine_nbins100.compute()}")
+            # logger.info(f"zpt_weight_mine_nbins100: {type(zpt_weight_mine_nbins100)}")
+            # logger.info(f"zpt_weight_mine_nbins100: {(zpt_weight_mine_nbins100)}")
+            # logger.info(f"zpt_weight_mine_nbins100: {zpt_weight_mine_nbins100.compute()}")
             # out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
 
-            # print("========================= new zpt weights start =========================")
+            # logger.info("========================= new zpt weights start =========================")
             # sf_dict = load_sf_dict("/depot/cms/users/shar1172/copperheadV2_CheckSetup/data/zpt_rewgt/fitting_mu1mu2pt/sf_data_flat.json")
             # logger.info(f"sf_dict: {sf_dict}")
             # zpt_weight_mine_nbins100 = getZptWgts_new(mu1.pt, mu2.pt, acoplanarity, njets, sf_dict)
@@ -1578,10 +1531,14 @@ class EventProcessor(processor.ProcessorABC):
         logger.info(f"selection: {self.selection}")
 
         # wgtcutflow = selection.cutflow("noMuon", "twoElectron", "leadPt20", weights=weights, weightsmodifier=None)
-        self.cutflow = self.selection.cutflow('TotalEntries', 'HLT_filter', 'lumi_mask', 'muon_pT_roch', 'muon_eta', 'muon_id',
-                                                    'muon_isGlobal_or_Tracker', 'muon_selection', 'muon_iso', 'nmuons',
-                                                    'mm_charge', 'electron_veto', 'event_filter')
-                                                    # 'mm_charge', 'electron_veto', 'event_filter', weights=weights, weightsmodifier=None) # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
+        # Ensure all selections exist before calling cutflow
+        # Add protection for the cutflow if the selection is not in the cutflow
+
+        required_selections = ['TotalEntries', 'HLT_filter', 'lumi_mask', 'event_quality_flags',
+                               'muon_pT_roch', 'muon_eta', 'muon_id', 'muon_isGlobal_or_Tracker', 'muon_selection', 'muon_iso', 'nmuons',
+                                'mm_charge', 'electron_veto', 'HemVeto']
+                                # , weights=weights, weightsmodifier=None) # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
+        self.cutflow = self.selection.cutflow(*required_selections)
         logger.info(f"cutflow: {self.cutflow}")
 
         logger.info(f"self.cutflow.logger.info(): {self.cutflow.print()}")
@@ -1606,7 +1563,6 @@ class EventProcessor(processor.ProcessorABC):
         if test_mode:
             logger.info(f"muons mass_resolution dpt1: {dpt1}")
         year = self.config["year"]
-
         if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
             yearUL = "2016"
         elif ("22" in year) or ("23" in year):# temporary solution until I can generate my own dimuon mass resolution
@@ -1620,7 +1576,8 @@ class EventProcessor(processor.ProcessorABC):
             logger.info("Doing BS constraint correction mass calibration!")
 
             # Load the correction set
-            correction_set = correctionlib.CorrectionSet.from_file(self.config["BS_res_calib_path"])
+            json_path = self.config["BS_res_calib_path"]["MC"] if is_mc else self.config["BS_res_calib_path"]["Data"]
+            correction_set = correctionlib.CorrectionSet.from_file(json_path)
 
 
             # Access the specific correction by name
@@ -1846,20 +1803,6 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
-        # apply HEM Veto, written in "HEM effect in 2018" appendix K of the main long AN
-        HEMVeto = ak.ones_like(clean, dtype="bool") # 1D array saying True
-        if year == "2018":
-            HEMVeto_filter = (
-                (jets.pt >= 15.0)
-                & (jets.eta >= -3.0)
-                & (jets.eta <= -1.3)
-                & (jets.phi >= -1.57)
-                & (jets.phi <= -0.87)
-            )
-            false_arr = ak.ones_like(HEMVeto) < 0
-            HEMVeto = ak.where(HEMVeto_filter, false_arr, HEMVeto)
-            # print(f"HEMVeto : {HEMVeto.compute()}")
-
         # get QGL cut
         if NanoAODv == 9 :
             qgl_cut = (jets.qgl >= -2)
@@ -1932,8 +1875,8 @@ class EventProcessor(processor.ProcessorABC):
         # logger.info(f"event match jet2 pt: {ak.to_numpy(jet2.pt[event_match].compute())}")
 
         dijet = jet1+jet2
-        # print(f"type jet1: {type(jet1.compute())}")
-        # print(f"type jet1_Lvec: {type(jet1_Lvec.compute())}")
+        # logger.info(f"type jet1: {type(jet1.compute())}")
+        # logger.info(f"type jet1_Lvec: {type(jet1_Lvec.compute())}")
         # dijet = jet1_Lvec+jet2_Lvec
 
 
@@ -2180,25 +2123,21 @@ class EventProcessor(processor.ProcessorABC):
         # Separate from ttH and VH phase space
 
         if "RERECO" in year:
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            btagLoose_filter = (jets.btagDeepB >= self.config["btag_loose_wp"]) & (abs(jets.eta) <= 2.5) # original value
+            btagMedium_filter = (jets.btagDeepB >= self.config["btag_medium_wp"]) & (abs(jets.eta) <= 2.5)
         else: # UL
             # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
             # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            btagLoose_filter = (jets.btagDeepB >= self.config["btag_loose_wp"]) & (abs(jets.eta) <= 2.5)
+            btagMedium_filter = (jets.btagDeepB >= self.config["btag_medium_wp"]) & (abs(jets.eta) <= 2.5)
 
 
-        nBtagLoose = ak.num(ak.to_packed(jets[btagLoose_filter]), axis=1)
-        # nBtagLoose = ak.num(jets[btagLoose_filter], axis=1)
-        nBtagLoose = ak.fill_none(nBtagLoose, value=0)
+        btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
+        btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)
 
-
-
-        nBtagMedium = ak.num(ak.to_packed(jets[btagMedium_filter]), axis=1)
-        # nBtagMedium = ak.num(jets[btagMedium_filter], axis=1)
-        nBtagMedium = ak.fill_none(nBtagMedium, value=0)
+        nBtagLoose = ak.sum(btagLoose_filter, axis=1)
+        nBtagMedium = ak.sum(btagMedium_filter, axis=1)
 
         # #quick sanity check
         # logger.info(f"nBtagLoose : {nBtagLoose[:20].compute()}")
