@@ -88,3 +88,13 @@ do_HemVeto:
   '2018_RERECO': false
   2022preEE: false
   2022postEE: false
+HemVeto_ratio: # ratio of HemVeto applicable run / total nevents for 2018UL
+  2016preVFP: 0.0
+  2016postVFP: 0.0
+  '2017': 0.0
+  '2018': 0.633396491
+  2016_RERECO: 0.0
+  '2017_RERECO': 0.0
+  '2018_RERECO': 0.0
+  2022preEE: 0.0
+  2022postEE: 0.0
