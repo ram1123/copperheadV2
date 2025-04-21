@@ -444,10 +444,11 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
 def getJecDataTag(run, jec_data_tags):
     print(f"run: {run}")
     print(f"jec_data_tags: {jec_data_tags}")
-    for jec_tag, jec_run in jec_data_tags.items():
-        jec_run = jec_run[0] # jec_run is a list of length one
-        if run == jec_run:
-            return jec_tag
+    for jec_tag, jec_run_l in jec_data_tags.items():
+        for jec_run in jec_run_l:
+            if run == jec_run:
+                print(f"found match in jec_run {jec_run}!")
+                return jec_tag
 
     return None # return none if nothing matches
 

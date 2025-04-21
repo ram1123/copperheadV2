@@ -613,7 +613,8 @@ class EventProcessor(processor.ProcessorABC):
             #     pass_filterbit_total = pass_filterbit_total | pass_filterbit
 
             # trigger_cands_filter = pass_pt & pass_id & pass_filterbit_total
-            trigger_cands_filter = pass_id
+            pass_filterbit = (events.TrigObj.filterBits & 8) > 0
+            trigger_cands_filter = pass_id & pass_filterbit
             trigger_cands = events.TrigObj[trigger_cands_filter]
             
 
@@ -720,6 +721,7 @@ class EventProcessor(processor.ProcessorABC):
         nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0) 
 
+        self.config["do_HemVeto"] = False # FIXME
         if self.config["do_HemVeto"]:
             HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
         else:
