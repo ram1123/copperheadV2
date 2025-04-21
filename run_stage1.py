@@ -69,7 +69,7 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
 
-def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None):
+def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None, isCutflow=False):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
         save_path = f"/depot/cms/users/{username}/results/stage1/test/" # default
@@ -92,7 +92,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     out_collections = processor.process(events)
 
     # Save the cutflow
-    if hasattr(processor, "cutflow"):
+    if hasattr(processor, "cutflow") and isCutflow:
         fraction = round(dataset_dict["metadata"]["fraction"], 3)
         fraction_str = str(fraction).replace('.', '_')
         cutflow_save_path = f"{save_path}/f{fraction_str}"
@@ -162,6 +162,7 @@ if __name__ == "__main__":
         "-maxfile",
         "--max_file_len",
         dest="max_file_len",
+        type=int,
         default = 500,
         help = "How many maximum files to process simultaneously.",
     )
@@ -175,6 +176,12 @@ if __name__ == "__main__":
         "--test_mode",
         action="store_true",
         help="If need to run over fractional dataset samples for test run"
+    )
+    # add parser to turn on the cut-flow
+    parser.add_argument(
+        "--isCutflow",
+        action="store_true",
+        help="Get the cutflow",
     )
     args = parser.parse_args()
 
@@ -198,7 +205,7 @@ if __name__ == "__main__":
 
     config = getParametersForYr("./configs/parameters/" , args.year)
     logger.debug(f"stage1 config: {config}")
-    coffea_processor = EventProcessor(config, test_mode=test_mode)
+    coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
     if not test_mode: # full scale implementation
         # # original ---------------------------------------------------------
@@ -239,7 +246,7 @@ if __name__ == "__main__":
                 logger.debug(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     # if idx < 50 or idx > 51: continue # for testing purposes
-                    # if idx < 3: continue
+                    # if idx < 7: continue
                     logger.info(f"Processing {dataset} file index {idx}")
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]

@@ -386,12 +386,13 @@ def getPhiCS(
 
 class EventProcessor(processor.ProcessorABC):
     # def __init__(self, config_path: str,**kwargs):
-    def __init__(self, config: dict, test_mode=False, **kwargs):
+    def __init__(self, config: dict, test_mode=False, isCutflow=False, **kwargs):
         """
         TODO: replace all of these with self.config dict variable which is taken from a
         pre-made json file
         """
         self.config = config
+        self.isCutflow = isCutflow
 
         self.test_mode = test_mode
         dict_update = {
@@ -1286,7 +1287,9 @@ class EventProcessor(processor.ProcessorABC):
             "MET_phi" : events.PuppiMET.phi,
             "MET_sumEt" : events.PuppiMET.sumEt,
             "mu1_pt" : mu1.pt,
+            "mu1_ptErr" : mu1.ptErr,
             "mu2_pt" : mu2.pt,
+            "mu2_ptErr" : mu2.ptErr,
             "mu1_pt_over_mass" : mu1.pt / dimuon.mass,
             "mu2_pt_over_mass" : mu2.pt / dimuon.mass,
             "mu1_eta" : mu1.eta,
@@ -1438,8 +1441,6 @@ class EventProcessor(processor.ProcessorABC):
                 zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
             # logger.info(f"zpt_weight_mine_nbins100: {type(zpt_weight_mine_nbins100)}")
             # logger.info(f"zpt_weight_mine_nbins100: {(zpt_weight_mine_nbins100)}")
-            # logger.info(f"zpt_weight_mine_nbins100: {zpt_weight_mine_nbins100.compute()}")
-            # out_dict["zpt_weight_mine_nbins100"] = zpt_weight_mine_nbins100
 
             # logger.info("========================= new zpt weights start =========================")
             # sf_dict = load_sf_dict("/depot/cms/users/shar1172/copperheadV2_CheckSetup/data/zpt_rewgt/fitting_mu1mu2pt/sf_data_flat.json")
@@ -1534,16 +1535,16 @@ class EventProcessor(processor.ProcessorABC):
         # Ensure all selections exist before calling cutflow
         # Add protection for the cutflow if the selection is not in the cutflow
 
-        required_selections = ['TotalEntries', 'HLT_filter', 'lumi_mask', 'event_quality_flags',
+        if self.isCutflow:
+            required_selections = ['TotalEntries', 'HLT_filter', 'lumi_mask', 'event_quality_flags',
                                'muon_pT_roch', 'muon_eta', 'muon_id', 'muon_isGlobal_or_Tracker', 'muon_selection', 'muon_iso', 'nmuons',
                                 'mm_charge', 'electron_veto', 'HemVeto']
                                 # , weights=weights, weightsmodifier=None) # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
-        self.cutflow = self.selection.cutflow(*required_selections)
-        logger.info(f"cutflow: {self.cutflow}")
-
-        logger.info(f"self.cutflow.logger.info(): {self.cutflow.print()}")
-        # logger.info(f"self.cutflow.logger.info(): {self.cutflow.logger.info(weighted=False)}") # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
-        logger.info(f"self.cutflow.result(): {self.cutflow.result()}")
+            self.cutflow = self.selection.cutflow(*required_selections)
+            # logger.info(f"cutflow: {self.cutflow}")
+            # logger.info(f"self.cutflow.logger.info(): {self.cutflow.print()}")
+            # logger.info(f"self.cutflow.logger.info(): {self.cutflow.logger.info(weighted=False)}") # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
+            # logger.info(f"self.cutflow.result(): {self.cutflow.result()}")
 
         return out_dict
 
@@ -1784,7 +1785,7 @@ class EventProcessor(processor.ProcessorABC):
 
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         is_2017 = "2017" in year
-        if NanoAODv == 9 :
+        if NanoAODv == 9  or NanoAODv == 12:
             pass_jet_puid = jet_puid(jets, self.config)
             # Jet PUID scale factors, which also takes pt < 50 into account within the function
             if is_mc:

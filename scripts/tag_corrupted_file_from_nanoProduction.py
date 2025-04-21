@@ -14,7 +14,7 @@ import argparse
 from dask import delayed, compute
 from dask.distributed import Client
 import dask.dataframe as dd
-import hepconvert
+# import hepconvert
 import uuid
 
 # ROOT Error Handling: Suppress non-critical warnings
@@ -47,7 +47,7 @@ def create_dask_client():
         print(f"client: {client}")
         print("Gateway Client created")
     else:
-        client = Client(n_workers=11, threads_per_worker=1, processes=True, memory_limit='10 GiB')
+        client = Client(n_workers=64, threads_per_worker=1, processes=True, memory_limit='10 GiB')
         print("Local scale Client created")
     return client
 
@@ -194,19 +194,34 @@ def check_missing_files(input_file, output_dir, year, additional_string, client)
     df['expected_output_file'] = df['outputDirectory'] + "/" + df['outputNanoAODFile']
 
     # Step-4: Compute the results
-    print("Goint to compute the results")
-    # Step-4(a): Use Dask to compute the number of entries in the MiniAOD files
-    task1 = [delayed(get_num_entries_in_nanoAOD_uproot)(file, ifMiniAOD=True) for file in df['inputMiniAOD']]
-    results_mini = compute(*task1)
-    # Step-4(a)(a): Store the results in the DataFrame
-    df['nEvents_from_inputMiniAOD'] = results_mini
-
     # Step-4(b): Use Dask to compute the number of entries in the NanoAOD files
+    print("Goint to compute the results: Fetch nanoAOD entries ")
     task2 = [delayed(get_num_entries_in_nanoAOD_uproot)(file) for file in df['expected_output_file']]
     results_nano = compute(*task2)
     # Step-4(b)(a): Store the results in the DataFrame
     df['nEvents_from_nanoAOD'] = results_nano
 
+    # Get CSV files
+    csv_file = f"AllFiles_JustWithNanoInfo_{year}_{additional_string}.csv"
+    df.to_csv(csv_file, index=False)
+    print(f"CSV file created: {csv_file}, with {len(df)} entries.")
+
+    df_nanoZERO = df[df['nEvents_from_nanoAOD'] == 0]
+    df_nanoZERO.to_csv(f"NanoAOD_0Entries_{year}_{additional_string}.csv", index=False)
+    print(f"CSV file created: NanoAOD_0Entries_{year}_{additional_string}.csv, with {len(df_nanoZERO)} entries.")
+
+    df_nanoZERO = df_nanoZERO[['configFile', 'inputMiniAOD', 'outputDirectory', 'nEvents', 'CondorLogPath']]
+    df_nanoZERO.to_csv(f"NanoAOD_0Entries_{year}_{additional_string}_configFile.txt", sep=' ', header=False, index=False)
+
+
+
+    """
+    # Step-4(a): Use Dask to compute the number of entries in the MiniAOD files
+    print("Goint to compute the results: Fetch miniAOD entries ")
+    task1 = [delayed(get_num_entries_in_nanoAOD_uproot)(file, ifMiniAOD=True) for file in df['inputMiniAOD']]
+    results_mini = compute(*task1)
+    # Step-4(a)(a): Store the results in the DataFrame
+    df['nEvents_from_inputMiniAOD'] = results_mini
 
     # Get CSV files
     csv_file = f"AllFiles_{year}_{additional_string}.csv"
@@ -230,6 +245,7 @@ def check_missing_files(input_file, output_dir, year, additional_string, client)
 
     df_mismatch = df_mismatch[['configFile', 'inputMiniAOD', 'outputDirectory', 'nEvents', 'CondorLogPath']]
     df_mismatch.to_csv(f"Mismatch_MiniNano_nNano0_nMini0_{year}_{additional_string}_configFile.txt", sep=' ', header=False, index=False)
+    """
 
 def main():
     """Main processing function."""
@@ -248,7 +264,7 @@ def main():
         '2018GT36': '/eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/',
         '2018GT36_debug': '/eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/',
         '2018Re': '/eos/purdue/store/user/rasharma/CustomNanoAODv12_v2/UL2018/',
-        '2018': '/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/',
+        # '2018': '/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/',
         '2018MC': '/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/',
         '2017': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/',
         '2016APV': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/',
@@ -257,16 +273,17 @@ def main():
 
     # years = ['2018']
     # year = ['2018Re', '2018', '2017', '2016APV', '2016']
-    years = ['2017', '2016APV', '2016', '2018']
+    # years = ['2017', '2016APV', '2016', '2018']
+    years = ['2017', '2016APV', '2016', '2018MC', '2018GT36']
     # years = ['2018GT36_debug']
     # years = ['2018GT36']
     # years = ['2018MC']
-    years = ['2017']
+    # years = ['2017']
     # additional_string = "4April_GlobalRedirector"
     # additional_string = "4April_Xcache"
     # additional_string = "4April_local_retries"
     # additional_string = "4April_debug"
-    additional_string = "15April"
+    additional_string = "18April"
     # additional_string = "4April_AllYears"
 
     client = create_dask_client()  # Initialize Dask client
