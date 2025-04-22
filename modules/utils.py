@@ -6,6 +6,7 @@ import os
 import sys
 
 LOGGER_NAME = "CopperHead"
+NO_GIT_INFO_AVAILABLE = "No git info available"
 
 class bcolors:
     HEADER = '\033[95m'
@@ -23,7 +24,7 @@ class ColorLogFormatter(logging.Formatter):
      Reference: https://stackoverflow.com/a/70796089/2302094
      """
 
-     # FORMAT = "%(prefix)s%(msg)s%(suffix)s"
+     # FORMAT = "%(prefix)s%(msg)s"
     #  FORMAT = "\n[%(levelname)s] - [%(filename)s:#%(lineno)d] - %(prefix)s%(levelname)s - %(message)s %(suffix)s\n"
      FORMAT = "\n{}[%(levelname)5s] - [%(filename)s:#%(lineno)d] - [%(funcName)s; %(module)s]{} - %(prefix)s%(message)s %(suffix)s\n".format(
          bcolors.HEADER, bcolors.ENDC
@@ -58,7 +59,7 @@ formatter = logging.Formatter("%(message)s")
 stream_handler = RichHandler(show_time=False, rich_tracebacks=True,tracebacks_word_wrap=False)
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.WARNING)
 
 def ifPathExists(load_path):
     if not os.path.exists(load_path):
@@ -67,4 +68,32 @@ def ifPathExists(load_path):
     else:
         logger.info(f"Path exists: {load_path}")
 
+def get_git_info():
+    """Get the current git commit hash, branch name, and the difference between the current version of the code and the last commit.
+    Returns:
+        tuple: A tuple containing the commit hash, branch name, and the difference.
+    """
+    try:
+        import subprocess
+        commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        branch_name = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True).strip()
+        diff = subprocess.check_output(["git", "diff"], text=True).strip()
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Subprocess error while getting git info: {e}")
+        commit_hash, branch_name, diff = None, None, None
+    except Exception as e:
+        logger.error(f"Unexpected error while getting git info: {e}")
+        commit_hash, branch_name, diff = None, None, None
 
+    return commit_hash, branch_name, diff
+
+def get_git_info_str():
+    """Get the current git commit hash, branch name, and the difference as a string.
+    Returns:
+        str: A string containing the commit hash, branch name, and the difference.
+    """
+    commit_hash, branch_name, diff = get_git_info()
+    if commit_hash is None or branch_name is None:
+        return NO_GIT_INFO_AVAILABLE
+    else:
+        return f"Commit: {commit_hash}, Branch: {branch_name}, Diff: {diff}"

@@ -234,7 +234,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
     # save plot
-    canvas.SaveAs(f"calibration_fitCat{cat_idx}{out_string}.pdf")
+    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}{out_string}.pdf")
     del canvas
     # # consider script to wait a second for stability?
     # time.sleep(1)
@@ -438,7 +438,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     with open(logfile, "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
-    canvas.SaveAs(f"calibration_fitCat{cat_idx}{out_string}.pdf")
+    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}{out_string}.pdf")
     del canvas
     # consider script to wait a second for stability?
     time.sleep(1)
@@ -548,7 +548,7 @@ def save_calibration_json(df_merged, json_filename="calibration_factors.json"):
     print(f"Calibration JSON saved to {json_filename}")
 
 
-def closure_test_from_df(df, additional_string, output_plot="closure_test.pdf"):
+def closure_test_from_df(df, additional_string, output_plot=f"closure_test.pdf"):
     """
     Given a DataFrame with columns:
          cat_name, fit_val, fit_err, median_val, calibration_factor,

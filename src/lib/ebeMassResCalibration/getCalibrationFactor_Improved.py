@@ -92,6 +92,9 @@ def step2_mass_resolution(parquet_path, out_string = ""):
     logger.info("=== Step 2: Mass resolution calculation ===")
     tstart = time.time()
 
+    # create directory named out_string if it does not exist
+    os.makedirs(f"plots/{out_string}", exist_ok=True)
+
     # Load the same common input parquet files.
     df = dd.read_parquet(parquet_path)
 
@@ -136,7 +139,7 @@ def step2_mass_resolution(parquet_path, out_string = ""):
         plt.axvline(median_val, color='red', linestyle='dashed', linewidth=2,
                     label=f"Median: {median_val:.4f} GeV")
         plt.legend()
-        plt.savefig(f'mass_resolution_{cat_name}{out_string}.png')
+        plt.savefig(f'{out_string}/mass_resolution_{cat_name}{out_string}.png')
         plt.close()
         logger.info(f"Saved histogram for category {cat_name} (median = {median_val:.4f} GeV)")
 
@@ -203,6 +206,9 @@ def main():
     # OUTPUT_DIR = OUTPUT_DIR.format(year=year)
     # if not os.path.exists(os.path.join(OUTPUT_DIR, out_String)):
         # os.makedirs(os.path.join(OUTPUT_DIR))
+
+    # create directory named out_string if it does not exist
+    os.makedirs(f"plots/{out_string}", exist_ok=True)
 
     # Step 1: Mass Fitting in ZCR
     df_fit = step1_mass_fitting_zcr(INPUT_DATASET, out_String)

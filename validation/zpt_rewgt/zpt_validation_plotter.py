@@ -122,6 +122,7 @@ if __name__ == "__main__":
     "--save_path",
     dest="save_path",
     default="./plots_nanoAODv12_NewWgt/",
+    type=str,
     action="store",
     help="save path",
     )
@@ -226,9 +227,9 @@ if __name__ == "__main__":
     if len(bkg_samples) >0:
         for bkg_sample in bkg_samples:
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
-                available_processes.append("dy_M-50")
-                available_processes.append("dy_M-100To200")
-                available_processes.append("dy_m105_160_amc")
+                # available_processes.append("dy_M-50")
+                # available_processes.append("dy_M-100To200")
+                # available_processes.append("dy_m105_160_amc")
                 available_processes.append("dy_M-100To200_MiNNLO")
                 available_processes.append("dy_M-50_MiNNLO")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
@@ -243,7 +244,7 @@ if __name__ == "__main__":
                 available_processes.append("ww_2l2nu")
                 available_processes.append("wz_3lnu")
                 available_processes.append("wz_2l2q")
-                # available_processes.append("wz_1l1nu2q")
+                available_processes.append("wz_1l1nu2q")
                 available_processes.append("zz")
             elif bkg_sample.upper() == "EWK": # enforce upper case to prevent confusion
                 available_processes.append("ewk_lljj_mll50_mjj120")
@@ -267,9 +268,12 @@ if __name__ == "__main__":
             else:
                 logger.warning(f"unknown signal {sig_sample} was given!")
     # gather variables to plot:
-    kinematic_vars = ['pt', 'eta', 'phi']
-    # kinematic_vars = ['pt']
+    # kinematic_vars = ['pt', 'eta', 'phi']
+    kinematic_vars = ['eta']
     variables2plot = []
+    variables2plot.append("MET_pt")
+    variables2plot.append("PV_npvs")
+    variables2plot.append("PV_npvsGood")
     if len(args.variables) == 0:
         logger.error("no variables to plot!")
         raise ValueError
@@ -277,16 +281,16 @@ if __name__ == "__main__":
         if "dimuon" in particle:
             variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
-            variables2plot.append(f"{particle}_eta")
+            # variables2plot.append(f"{particle}_eta")
             # variables2plot.append(f"{particle}_phi")
             # variables2plot.append(f"{particle}_cos_theta_cs")
             # variables2plot.append(f"{particle}_phi_cs")
-            if int(args.jet_multiplicity) >= 1 or int(args.jet_multiplicity) == -1:
-                variables2plot.append(f"mmj_min_dPhi_nominal")
-                variables2plot.append(f"mmj_min_dEta_nominal")
-            if int(args.jet_multiplicity) > 1 or int(args.jet_multiplicity) == -1:
-                variables2plot.append(f"rpt_nominal")
-                variables2plot.append(f"ll_zstar_log_nominal")
+            # if int(args.jet_multiplicity) >= 1 or int(args.jet_multiplicity) == -1:
+            #     variables2plot.append(f"mmj_min_dPhi_nominal")
+            #     variables2plot.append(f"mmj_min_dEta_nominal")
+            # if int(args.jet_multiplicity) > 1 or int(args.jet_multiplicity) == -1:
+            #     variables2plot.append(f"rpt_nominal")
+            #     variables2plot.append(f"ll_zstar_log_nominal")
             # variables2plot.append(f"{particle}_rapidity")
 
             # --------------------------------------------------
@@ -412,8 +416,8 @@ if __name__ == "__main__":
         if (not is_data) and ("dy" in process.lower()): # DY MC sample
             fields2load.append("separate_wgt_zpt_wgt")
             # if not zpt_on:
-            #     if "separate_wgt_zpt_wgt" in events.fields:
-            #         fields2load.append("separate_wgt_zpt_wgt")
+            #      if "separate_wgt_zpt_wgt" in events.fields:
+            #          fields2load.append("separate_wgt_zpt_wgt")
 
 
         # filter out redundant fields by using the set object
@@ -492,9 +496,9 @@ if __name__ == "__main__":
 
                 zpt_wgt_name = args.zpt_wgt_name
                 if zpt_wgt_name == "no_zpt":
-                    if "separate_wgt_zpt_wgt" in events.fields:
-                        logger.warning("removing Zpt rewgt!")
-                        weights = weights/events["separate_wgt_zpt_wgt"]
+                   if "separate_wgt_zpt_wgt" in events.fields:
+                       logger.warning("removing Zpt rewgt!")
+                       weights = weights/events["separate_wgt_zpt_wgt"]
 
                 # logger.info(f"weights {process} b4 numpy: {weights}")
                 weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
@@ -758,7 +762,7 @@ if __name__ == "__main__":
         # else:
         #     full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity_name}/ZptReWgt_Off"
         full_save_path = args.save_path+f"/{args.year}/Reg_{args.region}/Cat_{args.category}/{args.label}/Njet_{jet_multiplicity_name}/{args.zpt_wgt_name}"
-        logger.info(f"full_save_path: {full_save_path}")
+        logger.warning(f"full_save_path: {full_save_path}")
 
         if not os.path.exists(full_save_path):
             os.makedirs(full_save_path)
@@ -783,8 +787,23 @@ if __name__ == "__main__":
             y_title = plot_settings[plot_var].get("ylabel"),
             lumi = args.lumi,
             status = status,
-            log_scale = do_logscale,
+            log_scale = False,
         )
+        if do_logscale:
+            full_save_fname = f"{full_save_path}/{var}_log.pdf"
+            plotDataMC_compare(
+                binning,
+                data_dict,
+                bkg_MC_dict,
+                full_save_fname,
+                sig_MC_dict=sig_MC_dict,
+                title = "",
+                x_title = plot_settings[plot_var].get("xlabel"),
+                y_title = plot_settings[plot_var].get("ylabel"),
+                lumi = args.lumi,
+                status = status,
+                log_scale = True,
+            )
 
         var_elapsed = round(time.time() - var_step, 3)
         logger.info(f"Finished processing {var} in {var_elapsed} s.")

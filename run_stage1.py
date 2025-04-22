@@ -30,6 +30,7 @@ from rich import print
 # dask.config.set({'logging.distributed': 'error'})
 import logging
 from modules.utils import logger
+from modules.utils import get_git_info
 
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -237,6 +238,17 @@ if __name__ == "__main__":
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
         start_save_path = args.save_path + f"/stage1_output/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
+
+        # Get git information; for the log. Also, it will help with debugging, if needed.
+        git_commit_hash, branch_name, diff = get_git_info()
+        # save this information in a file in the `start_save_path` directory
+        git_info_path = os.path.join(start_save_path, "git_info.txt")
+        with open(git_info_path, "w") as f:
+            f.write(f"Git commit hash: {git_commit_hash}\n")
+            f.write(f"Branch name: {branch_name}\n")
+            f.write(f"Diff:\n{diff}\n")
+        logger.info(f"git_info_path: {git_info_path}")
+
 
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):

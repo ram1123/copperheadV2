@@ -4,8 +4,35 @@ Introduction:
 Commands:
 python validation/zpt_rewgt/validation.py -y 2017 --label "March25_NanoAODv9_WithUpdatedZptWgt" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/March25_NanoAODv9_WithUpdatedZptWgt
 python validation/zpt_rewgt/validation.py -y 2016preVFP --label "March25_NanoAODv9_WithUpdatedZptWgt" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/March25_NanoAODv9_WithUpdatedZptWgt
-python validation/zpt_rewgt/validation.py -y 2018 --label "April09_NanoV12" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April09_NanoV12 --use_gateway
+python validation/zpt_rewgt/validation.py -y 2018 --label "April19_NanoV12" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12 --use_gateway
+python validation/zpt_rewgt/validation.py -y 2018 --label "April19_NanoV12" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12 --debug -reg "z-peak"
+python validation/zpt_rewgt/validation.py -y 2017 --label "April19_NanoV12" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12 --debug -reg "z-peak"
+python validation/zpt_rewgt/validation.py -y 2016postVFP --label "April19_NanoV12" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12 --debug -reg "z-peak"
+python validation/zpt_rewgt/validation.py -y 2016preVFP --label "April19_NanoV12" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12 --debug -reg "z-peak"
 
+python validation/zpt_rewgt/validation.py -y 2017 --label "April19_NanoV12_aMCDY" --save_path "plots_nanoAODv12_NewWgt" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12 --debug -reg "z-peak"
+
+# JER OFF
+python validation/zpt_rewgt/validation.py -y 2018 --save_path "./plots_nanoAODv12_NewWgt_JEROff" --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12_JEROff --debug -reg "z-peak"
+python validation/zpt_rewgt/validation.py -y 2018 --save_path "./plots_nanoAODv12_NewWgt_JEROff" --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12_JEROff --debug -reg "signal"
+python validation/zpt_rewgt/validation.py -y 2017 --save_path "./plots_nanoAODv12_NewWgt_JEROff" --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12_JEROff --debug -reg "z-peak"
+python validation/zpt_rewgt/validation.py -y 2017 --save_path "./plots_nanoAODv12_NewWgt_JEROff" --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12_JEROff --debug -reg "signal"
+python validation/zpt_rewgt/validation.py -y 2016postVFP --save_path "./plots_nanoAODv12_NewWgt_JEROff" --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12_JEROff --debug -reg "z-peak"
+
+# April19_NanoV12
+python validation/zpt_rewgt/validation.py -y 2018  --save_path "plots_nanoAODv12_NewWgt"  --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12 --debug -reg "z-peak"
+
+# April19_NanoV12_JECOff
+python validation/zpt_rewgt/validation.py -y 2018  --save_path "plots_nanoAODv12_NewWgt_JECOff"  --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12_JECOff --debug -reg "z-peak"
+
+# April19_NanoV12_JEROff
+python validation/zpt_rewgt/validation.py -y 2018 --save_path "./plots_nanoAODv12_NewWgt_JEROff" --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12_JEROff --debug -reg "z-peak"
+
+# April19_NanoV12_JECOff_TightPUID
+python validation/zpt_rewgt/validation.py -y 2018 --save_path "./plots_nanoAODv12_NewWgt_JECOffPUTightID" --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12_JECOff_TightPUID --debug -reg "z-peak"
+
+# April19_NanoV12_JEROff_TightPUID
+python validation/zpt_rewgt/validation.py -y 2018 --save_path "./plots_nanoAODv12_NewWgt_JEROffPUTightID" --label "April19_NanoV12_MiNNLODY" --in /depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12_JEROff_TightPUID --debug -reg "z-peak"
 """
 
 import os
@@ -33,6 +60,15 @@ def create_parser():
         help="path of input directory containing Data, Bkg and signal"
     )
 
+    parser.add_argument(
+        "-save",
+        "--save_path",
+        dest="save_path",
+        default="./plots_nanoAODv12_NewWgt/",
+        type=str,
+        action="store",
+        help="save path",
+    )
     parser.add_argument(
         "--in",
         dest="InFilePath",
@@ -117,6 +153,14 @@ def create_parser():
         action=argparse.BooleanOptionalAction,
         help="If true, enables debug mode"
     )
+    parser.add_argument(
+        "-reg", "--region",
+        type=str,
+        dest="region",
+        default="signal",
+        choices=["signal", "z-peak"],
+        help="region: signal, z-peak"
+    )
 
     return parser
 
@@ -132,8 +176,8 @@ def main():
     year = args.year
 
     # vars2plot = ['dimuon', 'mu', 'jet', 'dijet']
-    vars2plot = ['dimuon', 'mu', 'jet']
-    # vars2plot = ['dimuon']
+    # vars2plot = ['dimuon', 'mu', 'jet']
+    vars2plot = ['dimuon', 'jet']
     # vars2plot = ['mu', 'jet', 'dijet']
 
     lumi_dict = {
@@ -146,8 +190,7 @@ def main():
     lumi = lumi_dict[year]
 
     status = "Private_Work"
-    # region = "z-peak"
-    region = "signal"
+    region = args.region
     load_path = os.path.join(args.InFilePath, f"stage1_output/{year}/f1_0/")
     ifPathExists(load_path)
 
@@ -187,8 +230,10 @@ def main():
     if args.debug:
         logger.warning("Running in DEBUG mode")
         njets = [-1]
+        # categories = ["vbf"]
         categories = ["nocat"]
-        WithZpT = ["yes_zpt"]
+        # WithZpT = ["yes_zpt"]
+        WithZpT = ["no_zpt", "yes_zpt"]
 
     logger.debug(f"nJets: {njets}")
     logger.debug(f"categories: {categories}")
@@ -200,7 +245,7 @@ def main():
             if cat == "vbf" and njet < 2:
                 continue
             for zpt_name in WithZpT:
-                command = f"python validation/zpt_rewgt/zpt_validation_plotter.py -y {year} --load_path {load_path}  -var {vars2plot} --data {data_l} --background {bkg_l} --signal {sig_l} --lumi {lumi} --status {status} -cat {cat} -reg {region} --label {label} --plot_setting {plot_setting} --jet_multiplicity {njet} --zpt_wgt_name {zpt_name}"
+                command = f"python validation/zpt_rewgt/zpt_validation_plotter.py -y {year} --load_path {load_path}  -var {vars2plot} --data {data_l} --background {bkg_l} --signal {sig_l} --lumi {lumi} --status {status} -cat {cat} -reg {region} --label {label} --plot_setting {plot_setting} --jet_multiplicity {njet} --zpt_wgt_name {zpt_name} --save_path {args.save_path} "
                 if args.use_gateway:
                     command += " --use_gateway"
                 logger.info(command)
