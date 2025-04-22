@@ -199,21 +199,33 @@ def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
         # make ration plot of UL private / RERECO
         hist_fromScratch = ak.to_numpy(hist_fromScratch)
         hist_rereco = ak.to_numpy(hist_rereco)
-        ratio_hist = np.zeros_like(hist_fromScratch)
-        inf_filter = hist_rereco>0
-        ratio_hist[inf_filter] = hist_fromScratch[inf_filter]/  hist_rereco[inf_filter]
+        # ratio_hist = np.zeros_like(hist_fromScratch)
+        # inf_filter = hist_rereco>0
+        # ratio_hist[inf_filter] = hist_fromScratch[inf_filter]/  hist_rereco[inf_filter]
         
-        rel_unc_ratio = np.sqrt((hist_fromScratch_err/hist_fromScratch)**2 + (hist_rereco_err/hist_rereco)**2)
-        ratio_err = rel_unc_ratio*ratio_hist
+        # rel_unc_ratio = np.sqrt((hist_fromScratch_err/hist_fromScratch)**2 + (hist_rereco_err/hist_rereco)**2)
+        # ratio_err = rel_unc_ratio*ratio_hist
         
-        hep.histplot(ratio_hist, 
+        # hep.histplot(ratio_hist, 
+        #              bins=binning, histtype='errorbar', yerr=ratio_err, 
+        #              color='black', label= 'Ratio', ax=ax_ratio)
+        
+        # ax_ratio.axhline(1, color='gray', linestyle='--')
+        # ax_ratio.set_xlabel( plot_bins[field].get("xlabel"))
+        # ax_ratio.set_ylabel('UL / Rereco')
+        # ax_ratio.set_ylim(0.5,1.5) 
+        diff_hist = hist_fromScratch - hist_rereco
+        rel_unc_diff = np.sqrt((hist_fromScratch_err/hist_fromScratch)**2 + (hist_rereco_err/hist_rereco)**2)
+        ratio_err = np.abs(rel_unc_diff*diff_hist)
+        
+        hep.histplot(diff_hist, 
                      bins=binning, histtype='errorbar', yerr=ratio_err, 
-                     color='black', label= 'Ratio', ax=ax_ratio)
+                     color='black', label= 'Difference', ax=ax_ratio)
         
         ax_ratio.axhline(1, color='gray', linestyle='--')
         ax_ratio.set_xlabel( plot_bins[field].get("xlabel"))
-        ax_ratio.set_ylabel('UL / Rereco')
-        ax_ratio.set_ylim(0.5,1.5) 
+        ax_ratio.set_ylabel('UL - Rereco')
+        ax_ratio.set_ylim(-0.01, 0.01) 
         plt.tight_layout()
         
         
@@ -284,15 +296,17 @@ if __name__ == "__main__":
     )
 
     
-    client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
-    # gateway = Gateway(
-    #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-    #     proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-    # )
-    # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-    # client = gateway.connect(cluster_info.name).get_client()
+    # client =  Client(n_workers=80,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
+    gateway = Gateway(
+        "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+        proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+    )
+    cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+    client = gateway.connect(cluster_info.name).get_client()
 
+    do_quick_test = True # for quick test
     test_len = 4000
+    
     # test_len = 14000
     # test_len = 40000
 
@@ -302,8 +316,12 @@ if __name__ == "__main__":
         files,
         schemaclass=NanoAODSchema,
     ).events()
+    if do_quick_test:
+        events_fromScratch = events_fromScratch[:test_len]
     events_fromScratch = applyQuickSelection(events_fromScratch)
-    # events_fromScratch = events_fromScratch[:test_len]
+    
+    # print(f"events_fromScratch nevents: {ak.num(events_fromScratch, axis=0).compute()}")
+    # raise ValueError
     zip_fromScratch = getZip(events_fromScratch)
     
 
@@ -315,8 +333,10 @@ if __name__ == "__main__":
         rereco_full_files,
         schemaclass=NanoAODSchema,
     ).events()
+    if do_quick_test:
+        events_rereco = events_rereco[:test_len]
     events_rereco = applyQuickSelection(events_rereco)
-    # events_rereco = events_rereco[:test_len]
+    
     zip_rereco = getZip(events_rereco)
 
     ul_central_files = json.load(open("UL_central_DY100To200.json", "r"))
@@ -324,8 +344,10 @@ if __name__ == "__main__":
         ul_central_files,
         schemaclass=NanoAODSchema,
     ).events()
+    if do_quick_test:
+        events_ul = events_ul[:test_len]
     events_ul = applyQuickSelection(events_ul)
-    # events_ul = events_ul[:test_len]
+    
     zip_ul = getZip(events_ul)
 
 
