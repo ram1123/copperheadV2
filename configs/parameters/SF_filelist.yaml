@@ -38,7 +38,7 @@ pu_file_data:
   '2018_RERECO': data/pileup/puData2018_withVar.root
   2022preEE: dummy_only_pu_file_mc_is_needed
   2022postEE: dummy_only_pu_file_mc_is_needed
-pu_file_mc:
+pu_file_mc: # source https://github.com/cms-sw/cmssw/blob/CMSSW_10_6_X/SimGeneral/MixingModule/python/mix_2018_25ns_UltraLegacy_PoissonOOTPU_cfi.py
   2016preVFP: data/pileup/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
   2016postVFP: data/pileup/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
   '2017': data/pileup/mix_2017_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
@@ -223,6 +223,10 @@ new_zpt_weights_file:
   2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
   '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
   '2018': data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
+  # 2016preVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_amcnlo.yaml # New zpt rewgt March 30 2025
+  # 2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_amcnlo.yaml # New zpt rewgt March 30 2025
+  # '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_amcnlo.yaml # New zpt rewgt March 30 2025
+  # '2018': data/zpt_rewgt/fitting/zpt_rewgt_params_amcnlo.yaml # New zpt rewgt March 30 2025
   2016_RERECO: data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   '2017_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   '2018_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
