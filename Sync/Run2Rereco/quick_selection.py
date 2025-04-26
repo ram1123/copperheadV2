@@ -12,6 +12,17 @@ def filter_df(df, lumi, run):
     lumi_filter = df["lumi"] == lumi
     run_filter = df["run"] == run
     return df[lumi_filter & run_filter]
+
+
+def renameColumns(df):
+    df.columns = [col.replace('m1', 'mu1_') for col in df.columns]
+    df.columns = [col.replace('m2', 'mu2_') for col in df.columns]
+    df.columns = [col.replace('j1', 'jet1_') for col in df.columns]
+    df.columns = [col.replace('j2', 'jet2_') for col in df.columns]
+    df.columns = [col.replace('_nominal', '') for col in df.columns]
+    return df
+
+
 if __name__ == "__main__":
 
     client =  Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
@@ -65,28 +76,51 @@ if __name__ == "__main__":
     Adish_df = filter_df(Adish_df, lumi_target, run_target)
     my_df = my_df.reset_index(drop=True)
     Adish_df = Adish_df.reset_index(drop=True)
-    print(f'my_df["mu1_pt"]: {my_df["mu1_pt"]}')
-    print(f'Adish_df["m1pt"]: {Adish_df["m1pt"]}')
-    diff = my_df["mu1_pt"] - Adish_df["m1pt"]
+    # rename Adish columns to match my name scheme
     
-    print(f'diff: {diff}')
+    my_df = renameColumns(my_df)
+    Adish_df = renameColumns(Adish_df)
+    print(f'Adish_df: {Adish_df.columns}')
+    print(f'my_df: {my_df.columns}')
     
-    plt.hist(diff, bins=50, histtype='step', label='Data')
-    # Add labels and title
-    plt.xlabel('Value')
-    plt.ylabel('Entries')
-    plt.title('mu1_pt')
-    plt.legend()
-    plt.savefig(f"test.png")
-    
-
-    # relative diff
-    plt.clf()
-    diff = diff/my_df["mu1_pt"] *100 # multiply 100 to get percentage
-    plt.hist(diff, bins=50, histtype='step', label='Data')
-    plt.xlabel('percentage diff %')
-    plt.ylabel('Entries')
-    plt.title('mu1_pt')
-    plt.legend()
-    plt.savefig(f"test_relative.png")
+    fields2plot = [
+        "pt",
+        "eta",
+        "phi"
+    ]
+    particles = [
+        "mu1",
+        "mu2",
+        "jet1",
+        "jet2",
+        
+    ]
+    plot_path = "plots"
+    for field in fields2plot:
+        for particle in particles:
+            var_name = f"{particle}_{field}"
+            print(f'my_df: {my_df[var_name]}')
+            print(f'Adish_df: {Adish_df[var_name]}')
+            diff = my_df[var_name] - Adish_df[var_name]
+            
+            print(f'diff: {diff}')
+            plt.clf()
+            plt.hist(diff, bins=50, histtype='step', label='Data')
+            # Add labels and title
+            plt.xlabel('Value')
+            plt.ylabel('Entries')
+            plt.title(var_name)
+            plt.legend()
+            plt.savefig(f"{plot_path}/diff_{var_name}.png")
+            
+        
+            # relative diff
+            plt.clf()
+            diff = diff/my_df[var_name] *100 # multiply 100 to get percentage
+            plt.hist(diff, bins=50, histtype='step', label='Data')
+            plt.xlabel('percentage diff %')
+            plt.ylabel('Entries')
+            plt.title(var_name)
+            plt.legend()
+            plt.savefig(f"{plot_path}/diff_{var_name}_relative.png")
     
