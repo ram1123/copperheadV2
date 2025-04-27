@@ -22,6 +22,7 @@ from coffea.nanoevents.methods import vector
 import sys
 from src.corrections.custom_jec import ApplyJetCorrections
 from omegaconf import OmegaConf
+from coffea.analysis_tools import PackedSelection
 
 
 
@@ -387,8 +388,13 @@ class EventProcessor(processor.ProcessorABC):
 
         self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]# this exists in Dmitry's code 
 
+        # Initialize PackedSelection
+        self.selection = {} 
+        self.cutflow = {}
+    
     def process(self, events: coffea_nanoevent):
         year = self.config["year"]
+        self.selection = PackedSelection()
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
@@ -438,7 +444,7 @@ class EventProcessor(processor.ProcessorABC):
         
         
     
-        
+        self.selection.add("TotalEntries", event_filter)
             
             
 
@@ -614,7 +620,8 @@ class EventProcessor(processor.ProcessorABC):
 
             # trigger_cands_filter = pass_pt & pass_id & pass_filterbit_total
             pass_filterbit = (events.TrigObj.filterBits & 8) > 0
-            trigger_cands_filter = pass_id & pass_filterbit
+            # trigger_cands_filter = pass_id & pass_filterbit
+            trigger_cands_filter = pass_id
             trigger_cands = events.TrigObj[trigger_cands_filter]
             
 
@@ -721,7 +728,7 @@ class EventProcessor(processor.ProcessorABC):
         nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0) 
 
-        self.config["do_HemVeto"] = False # FIXME
+        # self.config["do_HemVeto"] = False # FIXME
         if self.config["do_HemVeto"]:
             HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
         else:
@@ -733,11 +740,60 @@ class EventProcessor(processor.ProcessorABC):
                 & (evnt_qual_flg_selection > 0)
                 # & (nmuons == 2)
                 # & (mm_charge == -1)
-                # & electron_veto 
+                # &  
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
-                & HemVeto_filter
+                # & HemVeto_filter
 
         )
+        
+        step1_cutflow = (
+            lumi_mask
+            & (evnt_qual_flg_selection > 0)
+            & (events.PV.npvsGood > 0)
+        )
+        self.selection.add("LumiMaskMetFilterPv", step1_cutflow)
+        self.selection.add("HLT_filter", HLT_filter) 
+        self.selection.add("muon_base_selection", (nmuons == 2)&(mm_charge == -1)) 
+        self.selection.add("muon_trig_match", trigger_match) 
+        self.selection.add("electron_veto", electron_veto) 
+
+        # require_test = self.selection.all("LumiMaskMetFilterPv")
+        # require_test = require_test.compute()
+        # step1_cutflow = step1_cutflow.compute()
+        # print(f"require_test: {require_test}")
+        # print(f"step1_cutflow: {step1_cutflow}")
+        
+        # print(f"require_test sum: {ak.sum(require_test)}")
+        # print(f"step1_cutflow sum: {ak.sum(step1_cutflow)}")
+
+        # require_test = self.selection.all("HLT_filter")
+        # require_test = require_test.compute()
+        # HLT_filter = HLT_filter.compute()
+        # print(f"require_test: {require_test}")
+        # print(f"HLT_filter: {HLT_filter}")
+        
+        # print(f"require_test sum: {ak.sum(require_test)}")
+        # print(f"HLT_filter sum: {ak.sum(HLT_filter)}")
+
+        # require_test = self.selection.all("electron_veto")
+        # require_test = require_test.compute()
+        # electron_veto = electron_veto.compute()
+        # print(f"require_test: {require_test}")
+        # print(f"electron_veto: {electron_veto}")
+        
+        # print(f"require_test sum: {ak.sum(require_test)}")
+        # print(f"electron_veto sum: {ak.sum(electron_veto)}")
+
+        # require_test = self.selection.all("muon_trig_match")
+        # require_test = require_test.compute()
+        # muon_trig_match = muon_trig_match.compute()
+        # print(f"require_test: {require_test}")
+        # print(f"muon_trig_match: {muon_trig_match}")
+        
+        # print(f"require_test sum: {ak.sum(require_test)}")
+        # print(f"muon_trig_match sum: {ak.sum(muon_trig_match)}")
+        # raise ValueError
+        
         event_filter = event_filter & (nmuons == 2)
         # print(f"event_filter sum after nmuons: {ak.sum(event_filter).compute()}")
         event_filter = event_filter & (mm_charge == -1)
@@ -823,10 +879,11 @@ class EventProcessor(processor.ProcessorABC):
 
         
 
-        # to_packed testing -----------------------------------------------
-        events = events[event_filter==True]
-        muons = muons[event_filter==True]
-        nmuons = ak.to_packed(nmuons[event_filter==True])
+        # FIXME uncomment later-----------------------------------------------
+        # events = events[event_filter==True]
+        # muons = muons[event_filter==True]
+        # nmuons = ak.to_packed(nmuons[event_filter==True])
+        # ---------------------------------------------------------
         # event_match = event_match[event_filter==True]
         # applied_fsr = ak.to_packed(applied_fsr[event_filter==True]) # not sure the purpose of this line
 
@@ -965,7 +1022,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = True # True       
+        do_jec = False # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1294,6 +1351,25 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
         
+        self.selection.add("Jet_selection_njetsLeq2", out_dict["njets_nominal"] <= 2)
+        self.selection.add("HemVeto_filter", HemVeto_filter) 
+
+        btagLoose_filter = ak.fill_none((out_dict["nBtagLoose_nominal"] >= 2), value=False)
+        btagMedium_filter = ak.fill_none((out_dict["nBtagMedium_nominal"] >= 1), value=False) & ak.fill_none((out_dict["njets_nominal"] >= 2), value=False)
+        btag_cut = btagLoose_filter | btagMedium_filter  
+        self.selection.add("anti_ttH_btag_cut", ~btag_cut) 
+
+
+
+        vbf_cut = (out_dict["jj_mass_nominal"] > 400) & (out_dict["jj_dEta_nominal"] > 2.5) & (out_dict["jet1_pt_nominal"] > 35) 
+        vbf_cut = ak.fill_none(vbf_cut, value=False)
+        self.selection.add("ggH_cut", ~vbf_cut) 
+
+        
+        # self.cutflow = self.selection.cutflow(*self.selection.names)
+        # print(f"cutflow: {self.cutflow}")
+
+        # print(f"self.cutflow.print(): {self.cutflow.print()}")
 
         # print(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
@@ -1311,6 +1387,7 @@ class EventProcessor(processor.ProcessorABC):
             
         out_dict.update(region_dict) 
 
+        self.selection.add("signal_fit_region", ((mass > 110) & (mass < 150)))
         
        
         # b4 we do any filtering, we obtain the sum of gen weights for normalization

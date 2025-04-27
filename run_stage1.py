@@ -65,6 +65,17 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
 
+
+def savePackedSelection(selection, save_path):
+    print(f"selection: {selection}")
+    selections = {
+        name: selection.all(name) for name in selection.names
+    }
+    selections = ak.zip(selections)
+    selections.persist().to_parquet(save_path)
+    
+
+
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None):
     if save_path is None:
         save_path = "/depot/cms/users/yun79/results/stage1/test/" # default
@@ -81,43 +92,40 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     ).events()
 
     
-    # save input events for CI testing start ---------------------------------------------
-    # dir = f'./test/stage1_inputs/{dataset_dict["metadata"]["dataset"]}'
-    # if not os.path.exists(dir):
-    #     os.makedirs(dir)
-    # # save dataset_dict as input
-    # input_dataset = OmegaConf.create(dataset_dict)
-    # filename = dir + '/dataset_dict.yaml'
-    # try:
-    #     os.remove(filename)
-    # except OSError:
-    #     pass
-    # with open(filename, "w") as file:
-    #     OmegaConf.save(config=input_dataset, f=file.name)
-    # # now save output to compare as target
-    # filename = f'./test/stage1_outputs/{dataset_dict["metadata"]["dataset"]}'
-    # try:
-    #     os.remove(filename)
-    # except OSError:
-    #     pass
-    # out_collections = processor.process(events)
-    # zip = ak.zip(out_collections, depth_limit=1)
-    # zip.to_parquet(filename)
-    # raise ValueError
-    # save input events for CI testing end ---------------------------------------------
-    # print(f"n of partitions: {events.Muon.pt}")
     out_collections = processor.process(events)
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
+    # Save the cutflow
+    if hasattr(processor, "cutflow"):
+        fraction = round(dataset_dict["metadata"]["fraction"], 3)
+        fraction_str = str(fraction).replace('.', '_')
+        cutflow_save_path = f"{save_path}/f{fraction_str}"
+        if not os.path.exists(cutflow_save_path):
+            os.makedirs(cutflow_save_path)
+        cutflow_save_path = f"{save_path}/f{fraction_str}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
+        
+        if os.path.isfile(cutflow_save_path):
+            os.remove(cutflow_save_path)
+        # print(f"Cutflow saving to {cutflow_save_path}")
+        # processor.cutflow.to_npz(cutflow_save_path).compute()
+        # print(f"Cutflow saved to {cutflow_save_path}")
+        packed_selection_save_path = f"{save_path}/f{fraction_str}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}/"
+        
+        print(f"selection saving to {packed_selection_save_path}")
+        
+        filelist = glob.glob(f"{packed_selection_save_path}/*.parquet")
+        for file in filelist:
+            os.remove(file)
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        savePackedSelection(processor.selection, packed_selection_save_path)
+        print(f"selection saved to {packed_selection_save_path}")
     # print(f"out_collections keys: {out_collections.keys()}")
 
     skim_dict = out_collections
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
     
     skim_zip = ak.zip(skim_dict, depth_limit=1)
-    # print(f"skim_zip: {skim_zip}")
-    # skim_zip.persist().to_parquet(save_path)
-    # raise ValueError
     return skim_zip
 
 
@@ -224,8 +232,8 @@ if __name__ == "__main__":
             # for dataset, sample in samples.items():
                 print(f"root file length: {len(sample['files'])}")
                 sample_step = time.time()
-                # max_file_len = 130
-                max_file_len = 10000 # 1000
+                # max_file_len = 5 #70
+                max_file_len = 1100 # 1000
                 # max_file_len = 1
                 smaller_files = list(divide_chunks(sample["files"], max_file_len))
                 # print(f"smaller_files: {smaller_files}")
@@ -251,7 +259,8 @@ if __name__ == "__main__":
                         os.remove(file)
                     if not os.path.exists(save_path):
                         os.makedirs(save_path)
-                    to_persist.persist().to_parquet(save_path)
+                        
+                    # to_persist.persist().to_parquet(save_path) # FIXME
                     
                     var_elapsed = round(time.time() - var_step, 3)
                     print(f"Finished file_idx {idx} in {var_elapsed} s.")
