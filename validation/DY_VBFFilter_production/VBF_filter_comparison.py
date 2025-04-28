@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
 from distributed import LocalCluster, Client, progress
 
-
-
 import json
 import mplhep as hep
 import matplotlib.pyplot as plt
@@ -16,6 +14,22 @@ import os
 import argparse
 
 
+def applyMuonBaseSelection(events):
+    muons = events.Muon
+    mm_charge = ak.prod(muons.charge, axis=1)
+    muon_selection = (
+        muons.mediumId
+        & (muons.pt > 20 )
+        & (abs(muons.eta) < 2.4)
+        & (muons.pfRelIso04_all < 0.25)
+        & (muons.isGlobal | muons.isTracker)
+        & (events.HLT.IsoMu24)
+        & (mm_charge < 0)
+    )
+    nmuons = ak.sum(muon_selection, axis=1)
+    # print(f"nmuons len: {ak.num(nmuons, axis=0).compute()}")
+    
+    return events[nmuons==2]
 
 
 def applyQuickSelection(events):
@@ -25,24 +39,32 @@ def applyQuickSelection(events):
     # apply njet and nmuons cut first
     # start_len = ak.num(events.Muon.pt, axis=0).compute()
 
+    events = applyMuonBaseSelection(events)
+    muons = events.Muon
     njets = ak.num(events.Jet, axis=1)
-    nmuons = ak.num(events.Muon, axis=1)
-    selection = (njets >= 2) & (nmuons >= 2)
-    events = events[selection]
+    nmuons = ak.num(muons, axis=1)
+    # selection = (njets >= 2) #& (nmuons >= 2)
+    
+    # events = events[selection]
     # now all events have at least two jets, apply dijet dR and dijet mass cut
-    jet1 = events.Jet[:,0]
-    jet2 = events.Jet[:,1]
+    padded_jets = ak.pad_none(events.Jet, target=2)
+    jet1 = padded_jets[:,0]
+    jet2 = padded_jets[:,1]
     dijet_dR = jet1.deltaR(jet2)
     dijet = jet1+jet2
-    mu1 = events.Muon[:,0]
-    mu2 = events.Muon[:,1]
+    padded_muons = ak.pad_none(events.Muon, target=2)
+    mu1 = padded_muons[:,0]
+    mu2 = padded_muons[:,1]
     dimuon = mu1 + mu2
     selection = (
         (dijet.mass > 350)
         & (dimuon.mass > 110)
         & (dimuon.mass < 150)
+        & (njets >= 2)
+        & (nmuons >= 2)
     )
-
+    # print(f"selection len: {ak.num(selection, axis=0).compute()}")
+    
     
     events = events[selection]
     # end_len = ak.num(events.Muon.pt, axis=0).compute()
@@ -50,10 +72,6 @@ def applyQuickSelection(events):
 
     return events
 
-    # muon
-    # pt > 20
-    # abs(eta) < 20
-    # medium ID
     
 def getZip(events) -> ak.zip:
     """
@@ -152,14 +170,15 @@ def getZip(events) -> ak.zip:
 def getHist(value, binning):
     weights = ak.ones_like(value) # None values are propagated as None here, which is useful, bc we can just override those events with zero weights
     weights = ak.fill_none(weights, value=0)
-    weights = weights / ak.sum(weights)
     # print(f"number of nones: {ak.sum(ak.is_none(value))}")
     hist, edges = np.histogram(value, bins=binning, weights=weights)
     hist_w2, edges = np.histogram(value, bins=binning, weights=weights*weights)
     # normalize hist and hist_w2
     hist_orig = hist
+    hist_err = np.sqrt(hist_w2)
+    # normalize
     hist = hist / np.sum(hist) 
-    hist_err = np.sqrt(hist_w2) /  hist_orig * hist
+    hist_err = hist_err /  hist_orig * hist
     return hist, hist_err  
 
 def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
@@ -168,13 +187,15 @@ def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
         if field not in plot_bins.keys():
             continue
         binning = np.linspace(*plot_bins[field]["binning_linspace"])
+        print(f"{field} binning len: {len(binning)}")
         
         fig, (ax_main, ax_ratio) = plt.subplots(2, 1, figsize=(10, 13), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
         # fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [5, 1]}, sharex=True)
         
         hist_fromScratch, hist_fromScratch_err = getHist(zip_fromScratch[field], binning)
         hist_rereco, hist_rereco_err = getHist(zip_rereco[field], binning)        
-            
+        print(f"{field} rel hist_fromScratch_err: {hist_fromScratch_err/hist_fromScratch}")
+        
         hep.histplot(hist_fromScratch, bins=binning, 
                  histtype='errorbar', 
                 label="UL private", 
@@ -296,22 +317,27 @@ if __name__ == "__main__":
     )
 
     
-    # client =  Client(n_workers=80,  threads_per_worker=1, processes=True, memory_limit='8 GiB') 
-    gateway = Gateway(
-        "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-        proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-    )
-    cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-    client = gateway.connect(cluster_info.name).get_client()
+    client =  Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
+    # gateway = Gateway(
+    #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+    #     proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+    # )
+    # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+    # client = gateway.connect(cluster_info.name).get_client()
 
     do_quick_test = True # for quick test
-    test_len = 4000
+    # test_len = 4000
     
     # test_len = 14000
-    # test_len = 40000
+    # test_len = 400000
+    # test_len = 4000000
+    test_len = 5000000
+    # test_len = 8000000
+    # test_len = 2*8000000
 
 
-    files = json.load(open("new_UL_production.json", "r"))
+    # files = json.load(open("new_UL_production.json", "r"))
+    files = json.load(open("dy_m50_v9.json", "r"))
     events_fromScratch = NanoEventsFactory.from_root(
         files,
         schemaclass=NanoAODSchema,
@@ -320,24 +346,40 @@ if __name__ == "__main__":
         events_fromScratch = events_fromScratch[:test_len]
     events_fromScratch = applyQuickSelection(events_fromScratch)
     
-    # print(f"events_fromScratch nevents: {ak.num(events_fromScratch, axis=0).compute()}")
-    # raise ValueError
     zip_fromScratch = getZip(events_fromScratch)
     
 
 
     
-    rereco_full_files = json.load(open("rereco_central.json", "r"))
+    # rereco_full_files = json.load(open("rereco_central.json", "r"))
+    rereco_full_files = json.load(open("dy_m50_v6.json", "r"))
     events_rereco = NanoEventsFactory.from_root(
-        # rereco_input_dict['dy_m105_160_vbf_amc']['files'],
         rereco_full_files,
         schemaclass=NanoAODSchema,
     ).events()
     if do_quick_test:
         events_rereco = events_rereco[:test_len]
+
     events_rereco = applyQuickSelection(events_rereco)
-    
+    # print(f"events_rereco nevents: {ak.num(events_rereco, axis=0).compute()}")
+
     zip_rereco = getZip(events_rereco)
+    
+    
+    # raise ValueError
+
+
+
+    # plot two way
+
+    with open("plot_settings.json", "r") as file:
+        plot_bins = json.load(file)
+
+    save_path = "./plots"
+    os.makedirs(save_path, exist_ok=True) 
+    plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
+
+    # now plot three way
 
     ul_central_files = json.load(open("UL_central_DY100To200.json", "r"))
     events_ul = NanoEventsFactory.from_root(
@@ -352,13 +394,8 @@ if __name__ == "__main__":
 
 
     
-    with open("plot_settings.json", "r") as file:
-        plot_bins = json.load(file)
-
-    save_path = "./plots"
-    os.makedirs(save_path, exist_ok=True) 
+    
     plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path=save_path)
-    plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
     
     # fields2plot = zip_fromScratch.fields
     # for field in fields2plot:
