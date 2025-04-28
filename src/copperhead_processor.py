@@ -562,8 +562,8 @@ class EventProcessor(processor.ProcessorABC):
 
 
         muon_selection = (
-            (events.Muon.pt_roch >= self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
-            & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"])
+            (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
+            & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
@@ -707,7 +707,8 @@ class EventProcessor(processor.ProcessorABC):
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
         print(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
-        ecal_gap = (1.444 <= abs(events.Electron.eta)) & (abs(events.Electron.eta) <= 1.566)
+        ecal_gap = (1.44 < abs(events.Electron.eta)) & (1.57 > abs(events.Electron.eta)) # Source: line 460 of https://cms.cern.ch/iCMS/analysisadmin/cadilines?id=1973&ancode=EGM-17-001&tp=an&line=EGM-17-001
+        
         electron_selection = (
             (events.Electron.pt > self.config["electron_pt_cut"])
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
@@ -1756,8 +1757,8 @@ class EventProcessor(processor.ProcessorABC):
             & pass_jet_puid
             & qgl_cut
             & clean
-            & (jets.pt >= self.config["jet_pt_cut"])
-            & (abs(jets.eta) <= self.config["jet_eta_cut"])
+            & (jets.pt > self.config["jet_pt_cut"])
+            & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
         # original jet_selection end ----------------------------------------------
 
@@ -2067,14 +2068,14 @@ class EventProcessor(processor.ProcessorABC):
         # Separate from ttH and VH phase space
 
         if "RERECO" in year:
-            btagLoose_filter = (jets.btagDeepB >= self.config["btag_loose_wp"]) & (abs(jets.eta) <= 2.5) # original value
-            btagMedium_filter = (jets.btagDeepB >= self.config["btag_medium_wp"]) & (abs(jets.eta) <= 2.5) 
+            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
+            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5) 
         else: # UL
             # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
             # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            btagLoose_filter = (jets.btagDeepB >= self.config["btag_loose_wp"]) & (abs(jets.eta) <= 2.5)
-            btagMedium_filter = (jets.btagDeepB >= self.config["btag_medium_wp"]) & (abs(jets.eta) <= 2.5)
+            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
             
         
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
