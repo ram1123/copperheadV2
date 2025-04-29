@@ -3,13 +3,23 @@ Collection of basic functions  for the mass resolution calibration
 """
 import numpy as np
 import ROOT as rt
+import ROOT
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
 import json
+import os
+import sys
+
+import logging
+from modules.utils import logger
 
 # surpress RooFit printout
 rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
+
+ROOT.gSystem.Load("PDFs/RooCMSShape_cc.so")
+
+from ROOT import RooCMSShape
 
 def filter_region(events, region="h-peak"):
     dimuon_mass = events.dimuon_mass
@@ -20,7 +30,7 @@ def filter_region(events, region="h-peak"):
     elif region == "signal":
         region_filter = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
     elif region == "z-peak" or region == "z_peak":
-        region_filter = (dimuon_mass >= 76) & (dimuon_mass <= 106.0)
+        region_filter = (dimuon_mass >= 75) & (dimuon_mass <= 105.0)
         # region_filter = (dimuon_mass >= 80) & (dimuon_mass <= 100.0)
         # region_filter = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
     return events[region_filter]
@@ -178,7 +188,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     rt.EnableImplicitMT()
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
-    print(f"fitting elapsed time: {time.time() - time_step}")
+    logger.info(f"fitting elapsed time: {time.time() - time_step}")
     time.sleep(1) # rest a second for stability
     #do plotting
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
@@ -192,10 +202,10 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
 
     #calculate chi2 and add to plot
     n_free_params = fit_result.floatParsFinal().getSize()
-    print(f"n_free_params: {n_free_params}")
+    logger.info(f"n_free_params: {n_free_params}")
     chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
     chi2 = float('%.3g' % chi2) # get upt to 3 sig fig
-    print(f"chi2: {chi2}")
+    logger.info(f"chi2: {chi2}")
     latex = rt.TLatex()
     latex.SetNDC()
     latex.SetTextAlign(11)
@@ -221,7 +231,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     # canvas.Modified()
     canvas.Update()
     # canvas.Draw()
-    print(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
+    logger.info(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
 
     # save to df_fit
     # df_fit.loc[cat_idx] = [sigma.getVal(), sigma.getError()]
@@ -230,11 +240,11 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     df_fit = pd.concat([df_fit, new_row], ignore_index=True)
 
     # Save the cat_idx and sigma value to a log file
-    with open(logfile, "a") as f:
+    with open(f"plots/{out_string}/{logfile}", "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
     # save plot
-    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}{out_string}.pdf")
+    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}.pdf")
     del canvas
     # # consider script to wait a second for stability?
     # time.sleep(1)
@@ -248,7 +258,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     """
     # if you want TCanvas to not crash, separate fitting and drawing
     canvas = rt.TCanvas(str(cat_idx),str(cat_idx),800, 800) # giving a specific name for each canvas prevents segfault?
-    # canvas.cd()
     upper_pad = rt.TPad("upper_pad", "upper_pad", 0, 0.25, 1, 1)
     lower_pad = rt.TPad("lower_pad", "lower_pad", 0, 0, 1, 0.35)
     upper_pad.SetBottomMargin(0.14)
@@ -269,8 +278,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     # BWxDCB --------------------------------------------------------------------------
     bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
     bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
-    # bwmZ.setConstant(True)
-    bwWidth.setConstant(True)
+    # bwmZ.setConstant(True) # Stated in HIG-19-006
+    bwWidth.setConstant(True) # Stated in HIG-19-006
 
 
     model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
@@ -321,12 +330,22 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     # model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
     #--------------------------------------------------
 
-    # Reverse Landau Background test--------------------------------------------------------------------------
-    mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", -80,  -150, -70) # 80
-    mass_neg = rt.RooFormulaVar("mass_neg", "-@0", [mass])
-    sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 0.5, 8.5)
-    model2 = rt.RooLandau("bkg", "bkg", mass_neg, mean_landau, sigma_landau) # generate Landau bkg
-    #-----------------------------------------------------
+    # # # Reverse Landau Background test--------------------------------------------------------------------------
+    # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", -80,  -150, -70) # 80
+    # mass_neg = rt.RooFormulaVar("mass_neg", "-@0", [mass])
+    # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 0.5, 8.5)
+    # model2 = rt.RooLandau("bkg", "bkg", mass_neg, mean_landau, sigma_landau) # generate Landau bkg
+    # # #-----------------------------------------------------
+
+
+    # Add RooCMSShape Background --------------------------------------------------------------------------
+    exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 40.0, 20.0, 160.0)
+    exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.05, 0.0, 2.0)
+    exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.02, 0.0, 0.1)
+    exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
+
+    model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
+
 
     # Exp x Erf Background --------------------------------------------------------------------------
     # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want
@@ -373,7 +392,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     rt.EnableImplicitMT()
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
-    print(f"fitting elapsed time: {time.time() - time_step}")
+    logger.info(f"fitting elapsed time: {time.time() - time_step}")
     time.sleep(1) # rest a second for stability
     #do plotting
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
@@ -387,10 +406,10 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
 
     #calculate chi2 and add to plot
     n_free_params = fit_result.floatParsFinal().getSize()
-    print(f"n_free_params: {n_free_params}")
+    logger.info(f"n_free_params: {n_free_params}")
     chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
     chi2 = float('%.3g' % chi2) # get upt to 3 sig fig
-    print(f"chi2: {chi2}")
+    logger.info(f"chi2: {chi2}")
     latex = rt.TLatex()
     latex.SetNDC()
     latex.SetTextAlign(11)
@@ -418,13 +437,13 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     # canvas.Draw()
 
 
-    print(f"mean_landau: {mean_landau.getVal()}")
-    print(f"sigma_landau: {sigma_landau.getVal()}")
-    print(f"n1: {n1.getVal()}")
-    print(f"n2: {n2.getVal()}")
-    print(f"alpha1: {alpha1.getVal()}")
-    print(f"alpha2: {alpha2.getVal()}")
-    print(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
+    # logger.info(f"mean_landau: {mean_landau.getVal()}")
+    # logger.info(f"sigma_landau: {sigma_landau.getVal()}")
+    logger.info(f"n1: {n1.getVal()}")
+    logger.info(f"n2: {n2.getVal()}")
+    logger.info(f"alpha1: {alpha1.getVal()}")
+    logger.info(f"alpha2: {alpha2.getVal()}")
+    logger.info(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
 
     # save cat_idx and sigma value to a pandas dataframe
     if not df_fit.empty:
@@ -435,14 +454,218 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
 
 
     # Save the cat_idx and sigma value to a log file
-    with open(logfile, "a") as f:
+    with open(f"plots/{out_string}/{logfile}", "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
-    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}{out_string}.pdf")
+    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}.pdf")
     del canvas
     # consider script to wait a second for stability?
     time.sleep(1)
     return df_fit
+
+def generateBWxDCB_plot_bkgErfxExp(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="CalibrationLog.txt", out_string=""):
+    """
+    params
+    mass_arr: numpy arrary of dimuon mass value to do calibration fit on
+    cat_idx: int index of specific calibration category the mass_arr is from
+    """
+    # if you want TCanvas to not crash, separate fitting and drawing
+    canvas = rt.TCanvas(str(cat_idx),str(cat_idx),800, 800) # giving a specific name for each canvas prevents segfault?
+    upper_pad = rt.TPad("upper_pad", "upper_pad", 0, 0.25, 1, 1)
+    lower_pad = rt.TPad("lower_pad", "lower_pad", 0, 0, 1, 0.35)
+    upper_pad.SetBottomMargin(0.14)
+    lower_pad.SetTopMargin(0.00001)
+    lower_pad.SetBottomMargin(0.25)
+    upper_pad.Draw()
+    lower_pad.Draw()
+    upper_pad.cd()
+    # workspace = rt.RooWorkspace("w", "w")
+    mass_name = "dimuon_mass"
+    # mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
+    mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,80,100)
+    mass.setBins(nbins)
+    roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
+    # workspace.Import(mass)
+    frame = mass.frame(Title=f"ZCR Dimuon Mass BWxDCB calibration fit for category {cat_idx}")
+
+    # BWxDCB --------------------------------------------------------------------------
+    bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
+    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
+    # bwmZ.setConstant(True) # Stated in HIG-19-006
+    bwWidth.setConstant(True) # Stated in HIG-19-006
+
+
+    model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
+
+    """
+    Note from Jan: sometimes freeze n values in DCB to be frozen (ie 1, but could be other values)
+    This is because alpha and n are highly correlated, so roofit can be really confused.
+    Also, given that we care about the resolution, not the actual parameter values alpha and n, we can
+    put whatevere restrictions we want.
+    """
+    mean = rt.RooRealVar("mean" , "mean", 0, -10,10) # mean is mean relative to BW
+    # mean = rt.RooRealVar("mean" , "mean", 100, 95,110) # test
+    sigma = rt.RooRealVar("sigma" , "sigma", 2, .1, 4.0)
+    alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
+    n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 185)
+    alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
+    n2 = rt.RooRealVar("n2" , "n2", 25, 0.01, 385)
+    # n2 = rt.RooRealVar("n2" , "n2", 114, 0.01, 385) #test 114
+    # n1.setConstant(True)
+    # n2.setConstant(True)
+    model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
+
+    # merge BW with DCB via convolution
+    model1 = rt.RooFFTConvPdf("signal", "signal", mass, model1_1, model1_2) # BWxDCB
+
+
+    mass.setBins(10000,"cache") # This nbins has nothing to do with actual nbins of mass. cache bins is representation of the variable only used in FFT
+    mass.setMin("cache",50.5)
+    mass.setMax("cache",130.5)
+
+    # # Exp Background --------------------------------------------------------------------------
+    # coeff = rt.RooRealVar("coeff", "coeff", 0.01, 0.00000001, 1)
+    # shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
+    # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
+    # model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
+    #--------------------------------------------------
+
+    # Landau Background --------------------------------------------------------------------------
+    mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 90, 70, 200)
+    sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 0.5, 8.5)
+    model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg
+    #-----------------------------------------------------
+
+    # neg Exp Background --------------------------------------------------------------------------
+    # coeff = rt.RooRealVar("coeff", "coeff", -0.01, -1,  -0.00000001)
+    # shift = rt.RooRealVar("shift", "Offset", 70, 40, 105)
+    # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
+    # model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
+    #--------------------------------------------------
+
+    # # Reverse Landau Background test--------------------------------------------------------------------------
+    # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", -80,  -150, -70) # 80
+    # mass_neg = rt.RooFormulaVar("mass_neg", "-@0", [mass])
+    # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 0.5, 8.5)
+    # model2 = rt.RooLandau("bkg", "bkg", mass_neg, mean_landau, sigma_landau) # generate Landau bkg
+    # #-----------------------------------------------------
+
+    # Exp x Erf Background --------------------------------------------------------------------------
+    # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want
+    # # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", -0.1, -1, -0.00000001) # negative coeff to get the peak shape we want
+    # shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
+    # shifted_mass = rt.RooFormulaVar("shifted_mass", "(@0 - @1)", rt.RooArgList(mass, shift))
+    # model2_1 = rt.RooExponential("Exponential", "Exponential", shifted_mass,exp_coeff)
+
+    # erf_center = rt.RooRealVar("erf_center" , "erf_center", 91.2, 75, 155)
+    # erf_in = rt.RooFormulaVar("erf_in", "(@0 - @1)", rt.RooArgList(mass, erf_center))
+    # model2_2a = rt.RooFit.bindFunction("erf", rt.TMath.Erf, erf_in) # turn TMath function to Roofit funciton
+    # model2_2 = rt.RooWrapperPdf("erf","erf", model2_2a) # turn bound function to pdf
+    # model2 = rt.RooProdPdf("bkg", "bkg", [model2_1, model2_2]) # generate Expxerf bkg
+
+    #-----------------------------------------------------
+
+    # # Exp x Erf Background V2--------------------------------------------------------------------------
+    # # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want
+    # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", -0.1, -1, -0.00000001) # negative coeff to get the peak shape we want
+    # shift = rt.RooRealVar("shift", "Offset", 100, 90, 150)
+    # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
+    # model2_1 = rt.RooExponential("Exponential", "Exponential", shifted_mass,exp_coeff)
+    # erfc_center = rt.RooRealVar("erfc_center" , "erfc_center", 100, 90, 150)
+    # erfc_in = rt.RooFormulaVar("erfc_in", "(@0 - @1)", rt.RooArgList(mass, erfc_center))
+    # # both bindPdf and RooGenericPdf work, but one may have better cuda integration over other, so leaving both options
+    # # model2_2 = rt.RooFit.bindPdf("erfc", rt.TMath.Erfc, erfc_in)
+    # model2_2 = rt.RooGenericPdf("erfc", "TMath::Erf(@0)+1", erfc_in)
+    # model2 = rt.RooProdPdf("bkg", "bkg", rt.RooArgList(model2_1, model2_2))
+    #-----------------------------------------------------
+
+
+
+    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0.000001, 0.99999999)
+    final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
+    # final_model = model1_2
+
+
+
+    time_step = time.time()
+
+    #fitting directly to unbinned dataset is slow, so first make a histogram
+    roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
+    # do fitting
+    rt.EnableImplicitMT()
+    _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    logger.info(f"fitting elapsed time: {time.time() - time_step}")
+    time.sleep(1) # rest a second for stability
+    #do plotting
+    roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
+    # roo_hist.plotOn(frame, Name="data_hist") # name is explicitly defined so chiSquare can find it
+    final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
+    final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
+    final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
+    model1.paramOn(frame, Parameters=[sigma], Layout=[0.55,0.94, 0.8])
+    frame.GetYaxis().SetTitle("Events")
+    frame.Draw()
+
+    #calculate chi2 and add to plot
+    n_free_params = fit_result.floatParsFinal().getSize()
+    logger.info(f"n_free_params: {n_free_params}")
+    chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
+    chi2 = float('%.3g' % chi2) # get upt to 3 sig fig
+    logger.info(f"chi2: {chi2}")
+    latex = rt.TLatex()
+    latex.SetNDC()
+    latex.SetTextAlign(11)
+    latex.SetTextFont(42)
+    latex.SetTextSize(0.04)
+    latex.DrawLatex(0.7,0.8,f"#chi^2 = {chi2}")
+    # canvas.Update()
+
+    # obtain pull plot
+    hpull = frame.pullHist("data_hist", "final_model")
+    lower_pad.cd()
+    frame2 = mass.frame(Title=" ")
+    frame2.addPlotable(hpull, "P")
+    frame2.GetYaxis().SetTitle("(Data-Fit)/ #sigma")
+    frame2.GetYaxis().SetRangeUser(-5, 8)
+    frame2.GetYaxis().SetTitleOffset(0.3)
+    frame2.GetYaxis().SetTitleSize(0.08)
+    frame2.GetYaxis().SetLabelSize(0.08)
+    frame2.GetXaxis().SetLabelSize(0.08)
+    frame2.GetXaxis().SetTitle("m_{#mu#mu} (GeV)")
+    frame2.Draw()
+
+    # canvas.Modified()
+    canvas.Update()
+    # canvas.Draw()
+
+
+    # logger.info(f"mean_landau: {mean_landau.getVal()}")
+    # logger.info(f"sigma_landau: {sigma_landau.getVal()}")
+    logger.info(f"n1: {n1.getVal()}")
+    logger.info(f"n2: {n2.getVal()}")
+    logger.info(f"alpha1: {alpha1.getVal()}")
+    logger.info(f"alpha2: {alpha2.getVal()}")
+    logger.info(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
+
+    # save cat_idx and sigma value to a pandas dataframe
+    if not df_fit.empty:
+        new_row = pd.DataFrame([{"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}])
+        df_fit = pd.concat([df_fit, new_row], ignore_index=True)
+    else:
+        df_fit = pd.DataFrame([{"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}])
+
+
+    # Save the cat_idx and sigma value to a log file
+    with open(f"plots/{out_string}/{logfile}", "a") as f:
+        f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
+
+    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}.pdf")
+    del canvas
+    # consider script to wait a second for stability?
+    time.sleep(1)
+    return df_fit
+
 
 def save_calibration_json(df_merged, json_filename="calibration_factors.json"):
     """
@@ -545,10 +768,10 @@ def save_calibration_json(df_merged, json_filename="calibration_factors.json"):
 
     with open(json_filename, "w") as f:
         json.dump(json_dict, f, indent=4)
-    print(f"Calibration JSON saved to {json_filename}")
+    logger.info(f"Calibration JSON saved to {json_filename}")
 
 
-def closure_test_from_df(df, additional_string, output_plot=f"closure_test.pdf"):
+def closure_test_from_df(df, additional_string, output_plot=f"closure_test_beforeCalibration.pdf"):
     """
     Given a DataFrame with columns:
          cat_name, fit_val, fit_err, median_val, calibration_factor,
@@ -591,17 +814,21 @@ def closure_test_from_df(df, additional_string, output_plot=f"closure_test.pdf")
     plt.ylabel("Measured $\\sigma_{\\mu\\mu}$ [GeV]")
     plt.title("Closure Test: Measured vs. Predicted Resolution")
     plt.legend()
-    output_plot = output_plot.replace(".pdf", f"_{additional_string}.pdf")
+    output_plot_dir = f"plots/{additional_string}/"
+    os.makedirs(output_plot_dir, exist_ok=True)
+    output_plot = os.path.join(output_plot_dir, output_plot)
     plt.savefig(output_plot)
     plt.close()
 
-    print(f"Closure test plot saved as {output_plot}")
+    logger.info(f"Closure test plot saved as {output_plot}")
     return df
 
 def closure_test_from_calibrated_df(df_fit, df_calibrated, additional_string, output_plot="closure_test.pdf"):
     df_merged = pd.merge(df_fit, df_calibrated, on="cat_name", how="inner")
     df = df_merged
+    logger.info(df)
     required_cols = {"cat_name", "fit_val", "fit_err", "median_val"}
+
     if not required_cols.issubset(df.columns):
         raise ValueError(f"Input DataFrame must contain columns: {required_cols}")
 
@@ -626,14 +853,15 @@ def closure_test_from_calibrated_df(df_fit, df_calibrated, additional_string, ou
 
     plt.xlabel("Predicted $\\sigma_{\\mu\\mu}$ [GeV]") # plt.xlabel("Median Predicted Resolution (GeV)")
     plt.ylabel("Measured $\\sigma_{\\mu\\mu}$ [GeV]") #plt.ylabel("Fitted Resolution (GeV)")
-    plt.title("Closure Test: Measured vs. Predicted Resolution [2018 C]")
+    plt.title("Closure Test: Measured vs. Predicted Resolution")
     plt.legend()
     output_plot = output_plot.replace(".pdf", f"_{additional_string}.pdf")
+    # output_plot = f"plots/{additional_string}/" + output_plot
     plt.savefig(output_plot)
     # save image to png
     plt.savefig(output_plot.replace(".pdf", ".png"))
     plt.close()
 
-    print(f"Closure test plot saved as {output_plot}")
+    logger.info(f"Closure test plot saved as {output_plot}")
     # return df_merged
 

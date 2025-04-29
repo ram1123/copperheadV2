@@ -1051,7 +1051,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )
 
-        do_jec = True # True
+        do_jec = True # True # FIXME: Hardcoded
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing
@@ -1284,6 +1284,8 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"dnn_year: {dnn_year}")
         out_dict = {
             "event" : events.event,
+            "PV_npvs" : events.PV.npvs,
+            "PV_npvsGood" : events.PV.npvsGood,
             "MET_pt" : events.PuppiMET.pt,
             "MET_phi" : events.PuppiMET.phi,
             "MET_sumEt" : events.PuppiMET.sumEt,

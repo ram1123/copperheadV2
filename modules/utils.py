@@ -59,7 +59,7 @@ formatter = logging.Formatter("%(message)s")
 stream_handler = RichHandler(show_time=False, rich_tracebacks=True,tracebacks_word_wrap=False)
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.DEBUG)
 
 def ifPathExists(load_path):
     if not os.path.exists(load_path):

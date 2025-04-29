@@ -238,6 +238,8 @@ if __name__ == "__main__":
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
         start_save_path = args.save_path + f"/stage1_output/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
+        # make the directory if it doesn't exist
+        os.makedirs(start_save_path, exist_ok=True)
 
         # Get git information; for the log. Also, it will help with debugging, if needed.
         git_commit_hash, branch_name, diff = get_git_info()
@@ -298,10 +300,24 @@ if __name__ == "__main__":
 
         start_save_path = args.save_path + f"/stage1_output_test/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
+        os.makedirs(start_save_path, exist_ok=True)
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
                 logger.debug(f"dataset: {dataset}")
-                dataset_loop(coffea_processor, sample, test=test_mode, save_path=start_save_path)
+                to_persist = dataset_loop(coffea_processor, sample, test=test_mode, save_path=start_save_path)
 
+                save_path = getSavePath(start_save_path, sample, 0)
+                logger.info(f"save_path: {save_path}")
+                if not os.path.exists(save_path):
+                    logger.debug(f"Path: {save_path} is going to be created")
+                    os.makedirs(save_path)
+                else:
+                    # remove previously existing files and make path if doesn't exist
+                    filelist = glob.glob(f"{save_path}/*.parquet")
+                    logger.debug(f"Going to delete files: len(filelist): {len(filelist)}")
+                    for file in filelist:
+                        os.remove(file)
+                logger.debug("Directory created or cleaned")
+                to_persist.persist().to_parquet(save_path)
     elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished everything in {elapsed} s.")

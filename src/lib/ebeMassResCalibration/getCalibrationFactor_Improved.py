@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import time
 import numpy as np
 import pandas as pd
@@ -13,6 +14,7 @@ from distributed import Client
 from basic_class_for_calibration import get_calib_categories
 from basic_class_for_calibration import generateBWxDCB_plot
 from basic_class_for_calibration import generateVoigtian_plot
+from basic_class_for_calibration import generateBWxDCB_plot_bkgErfxExp
 from basic_class_for_calibration import closure_test_from_df
 from basic_class_for_calibration import save_calibration_json
 from basic_class_for_calibration import filter_region
@@ -28,7 +30,7 @@ def step1_mass_fitting_zcr(parquet_path, out_string = ""):
     tstart = time.time()
 
     # Start a Dask distributed client.
-    client = Client(n_workers=4, threads_per_worker=1, processes=True, memory_limit='8 GiB')
+    client = Client(n_workers=16, threads_per_worker=1, processes=True, memory_limit='8 GiB')
 
     # Load the data with dask_awkward.
     data_events = dak.from_parquet(parquet_path)
@@ -51,7 +53,7 @@ def step1_mass_fitting_zcr(parquet_path, out_string = ""):
     logger.debug(f"Total number of categories (Step 1): {len(data_categories)}")
 
     nbins = 100
-    fit_results = []
+    # fit_results = []
     counter = 0
 
     # define a data frame to store the results
@@ -61,20 +63,25 @@ def step1_mass_fitting_zcr(parquet_path, out_string = ""):
     for cat_name, mask in data_categories.items():
         cat_dimuon_mass = ak.to_numpy(data_events["dimuon_mass"][mask])
         if cat_dimuon_mass.size == 0:
-            print(f"Category {cat_name} has no events, skipping.")
+            logger.info(f"Category {cat_name} has no events, skipping.")
             continue
         # For example, use BWxDCB fit for the first 12 categories, Voigtian fit for the rest.
-        if counter < 12:
-            # Your function should return a dict like {"cat_name": cat_name, "fit_val": <value>}
-            df_fit = generateBWxDCB_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog{out_string}.txt")
-        else:
-            df_fit = generateVoigtian_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog{out_string}.txt")
+        df_fit = generateBWxDCB_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog.txt")
+        # if counter < 12:
+        #     # Your function should return a dict like {"cat_name": cat_name, "fit_val": <value>}
+        #     df_fit = generateBWxDCB_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog.txt")
+        # else:
+        #     # df_fit = generateBWxDCB_plot_bkgErfxExp(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog.txt")
+        #     df_fit = generateVoigtian_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog.txt") # >= 12
         # fit_results.append(fit_info)
         logger.debug("------"*20)
         logger.debug(df_fit)
         logger.debug("------"*20)
         # time.sleep(2) # sleep for 2 second for debug
         counter += 1
+        # if counter > 0:
+            # logger.warning("Exiting loop after 3 iterations for debugging.")
+            # break
 
     client.close()
     logger.debug("Step 1 completed in {:.2f} seconds.".format(time.time() - tstart))
@@ -139,7 +146,7 @@ def step2_mass_resolution(parquet_path, out_string = ""):
         plt.axvline(median_val, color='red', linestyle='dashed', linewidth=2,
                     label=f"Median: {median_val:.4f} GeV")
         plt.legend()
-        plt.savefig(f'{out_string}/mass_resolution_{cat_name}{out_string}.png')
+        plt.savefig(f'plots/{out_string}/mass_resolution_{cat_name}.pdf')
         plt.close()
         logger.info(f"Saved histogram for category {cat_name} (median = {median_val:.4f} GeV)")
 
@@ -191,9 +198,12 @@ def main():
     year = "2018"
     # out_String = "_2018C_12March"
     # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_GeoFit//stage1_output/2018/f1_0/data_C/*/*.parquet"
-    out_String = "2018_DY_19April"
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/data_*/*/*.parquet"
-    INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/dy_*/*/*.parquet"
+    out_String = "2018C_HIG_19_006_SignalOnlyDSCB_BkgLaundau_FloatmZ"
+    out_String = "2018C_LastMeeting_ChangeRevLandauToLandau"
+    out_String = "2018C_SigOnlyDSCB_bkgRevLandau"
+    out_String = "2018C_SigOnlyDSCB_bkgRooCMSShape"
+    INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/data_C/*/*.parquet"
+    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/dy_*/*/*.parquet"
     # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2017/f1_0/data_*/*/*.parquet"
 
     # out_String = "_2022preEE"
@@ -208,17 +218,17 @@ def main():
         # os.makedirs(os.path.join(OUTPUT_DIR))
 
     # create directory named out_string if it does not exist
-    os.makedirs(f"plots/{out_string}", exist_ok=True)
+    os.makedirs(f"plots/{out_String}", exist_ok=True)
 
     # Step 1: Mass Fitting in ZCR
     df_fit = step1_mass_fitting_zcr(INPUT_DATASET, out_String)
     logger.debug(df_fit)
     # write to a csv file
-    df_fit.to_csv(f"fit_results{out_String}.csv", index=False)
+    df_fit.to_csv(f"plots/{out_String}/fit_results{out_String}.csv", index=False)
 
     # Step 2: Mass Resolution Calculation
     df_res = step2_mass_resolution(INPUT_DATASET, out_String)
-    df_res.to_csv(f"resolution_results{out_String}.csv", index=False)
+    df_res.to_csv(f"plots/{out_String}/resolution_results{out_String}.csv", index=False)
 
     # debug: logger.debug the two DataFrames
     logger.debug("="*40)
@@ -232,15 +242,26 @@ def main():
     df_merged = step3_compute_calibration(df_fit, df_res)
 
     # Step 4: Save the final merged DataFrame to a CSV file.
-    step4_save_csv(df_merged, "calibration_factors_"+out_String+".csv")
+    step4_save_csv(df_merged, f"plots/{out_String}/calibration_factors.csv")
+
+    # Save the df_merged DataFrame as a table format for latex: Only field "cat_name", "fit_val", "median_val", "calibration_factor"
+    df_merged.to_latex(f"plots/{out_String}/calibration_factors_WithFitError.tex", index=False)
+    df_merged_tex = df_merged[["cat_name", "fit_val", "median_val", "calibration_factor"]]
+    df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors.tex", index=False)
+    # rounding
+    df_merged_tex = df_merged_tex.round(4)
+    df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors_rounded.tex", index=False)
+    # precision
+    df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors_precision.tex", index=False, float_format="%.3f")
+
 
     # Step 5: Save the calibration factors to a JSON file.
-    save_calibration_json(df_merged, "calibration_factors_"+out_String+".json")
+    save_calibration_json(df_merged, f"plots/{out_String}/calibration_factors.json")
 
     #
 
     # Step 5: Closure test
-    closure_test_from_df(df_merged, out_String+"_BeforeCalib") # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
+    closure_test_from_df(df_merged, out_String) # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
 
     logger.info("All steps completed!")
     logger.info(f"Total time elapsed: {time.time() - total_time_start:.2f} s")

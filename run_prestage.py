@@ -36,6 +36,9 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
         fnames = glob.glob(f"{single_dataset_name}/*.root")
         logger.debug(f"fnames: {fnames}")
         fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading
+    if single_dataset_name.startswith("/depot"):
+        fnames = glob.glob(f"{single_dataset_name}/*.root")
+        logger.debug(f"fnames: {fnames}")
     else:
         das_query = single_dataset_name
         logger.debug(f"das query: {das_query}")

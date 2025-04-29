@@ -18,12 +18,12 @@ usage() {
 }
 
 # Set default values
-datasetYAML="configs/datasets/dataset.yaml"
-NanoAODv="9"
+datasetYAML="configs/datasets/dataset_nanoAODv12.yaml"
+NanoAODv="12"
 years=("2018" "2017" "2016postVFP" "2016preVFP")
 label="Default_nanoAODv9"
 debug="0"
-mode="0"
+mode="all"
 skipBadFiles="0"
 
 options=":hc:m:v:y:l:df"
@@ -81,9 +81,9 @@ sig_l=""
 if [[ "$debug" == "1" ]]; then
     echo "Debug mode is on. Running only for 2018."
     # years=("2016postVFP" "2016preVFP")
-    # years=("2022preEE")
+    years=("2018")
     # Also update the associated data list.
-   # data_l_dict["2018"]="C"
+    data_l_dict["2018"]="C"
     data_l_dict["2017"]="B C D E F"
     data_l_dict["2016preVFP"]="B C D E F"
     data_l_dict["2016postVFP"]="F G H"
@@ -127,7 +127,7 @@ for year in "${years[@]}"; do
 
     # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache "
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  --use_gateway  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 750 "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500 "
     command2="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
 
     command3="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
