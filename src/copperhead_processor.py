@@ -740,9 +740,7 @@ class EventProcessor(processor.ProcessorABC):
                 & (evnt_qual_flg_selection > 0)
                 # & (nmuons == 2)
                 # & (mm_charge == -1)
-                # &  
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
-                # & HemVeto_filter
 
         )
         
@@ -761,7 +759,7 @@ class EventProcessor(processor.ProcessorABC):
         # require_test = require_test.compute()
         # step1_cutflow = step1_cutflow.compute()
         # print(f"require_test: {require_test}")
-        # print(f"step1_cutflow: {step1_cutflow}")
+        # print(f"step1_cutflow: {step1_cutflow[:50].compute()}")
         
         # print(f"require_test sum: {ak.sum(require_test)}")
         # print(f"step1_cutflow sum: {ak.sum(step1_cutflow)}")
@@ -1022,7 +1020,7 @@ class EventProcessor(processor.ProcessorABC):
             year
         )   
         
-        do_jec = False # True       
+        do_jec = True # True       
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         #testing 
@@ -1030,7 +1028,6 @@ class EventProcessor(processor.ProcessorABC):
         do_jerunc = False
         # cache = events.caches[0]
         factory = None
-        useclib = False
         if do_jec: # old method
             if is_mc:
                 factory = self.jec_factories_mc["jec"]
@@ -1293,7 +1290,10 @@ class EventProcessor(processor.ProcessorABC):
             "mu1_pt_fsr" : mu1.pt_fsr,
             "mu2_pt_fsr" : mu2.pt_fsr,
             # "pass_leading_pt" : pass_leading_pt,
-            "year" : ak.ones_like(nmuons) * dnn_year
+            "year" : ak.ones_like(nmuons) * dnn_year,
+            "run": events.run,
+            "event": events.event,
+            "luminosityBlock": events.luminosityBlock,
         }
         if is_mc:
             mc_dict = {
@@ -1365,11 +1365,6 @@ class EventProcessor(processor.ProcessorABC):
         vbf_cut = ak.fill_none(vbf_cut, value=False)
         self.selection.add("ggH_cut", ~vbf_cut) 
 
-        
-        # self.cutflow = self.selection.cutflow(*self.selection.names)
-        # print(f"cutflow: {self.cutflow}")
-
-        # print(f"self.cutflow.print(): {self.cutflow.print()}")
 
         # print(f"out_dict.persist 2: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # print(f"out_dict.compute 2: {ak.zip(out_dict).to_parquet(save_path)}")
@@ -1447,7 +1442,8 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("zpt_wgt", 
                     weight=zpt_weight,
             )
-
+            print(f"zpt_weight: {zpt_weight[:50].compute()}")
+            
         
 
         # apply vbf filter phase cut if DY test start ---------------------------------
@@ -1463,6 +1459,7 @@ class EventProcessor(processor.ProcessorABC):
         print(f"weight statistics: {weights.weightStatistics.keys()}")
         # print(f"weight variations: {weights.variations}")
         wgt_nominal = weights.weight()
+        print(f"wgt_nominal: {wgt_nominal[:50].compute()}")
         
         # add in weights
         
@@ -1480,6 +1477,8 @@ class EventProcessor(processor.ProcessorABC):
             wgt_name = "separate_wgt_" + weight_type
             # print(f"wgt_name: {wgt_name}")
             weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
+            print(wgt_name)
+            print(f"{wgt_name}: {weight_dict[wgt_name][:50].compute()}")
         # temporarily shut off partial weights end -----------------------------------------
         
         # print(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
