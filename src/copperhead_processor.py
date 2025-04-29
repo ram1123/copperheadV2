@@ -620,8 +620,7 @@ class EventProcessor(processor.ProcessorABC):
 
             # trigger_cands_filter = pass_pt & pass_id & pass_filterbit_total
             pass_filterbit = (events.TrigObj.filterBits & 8) > 0
-            # trigger_cands_filter = pass_id & pass_filterbit
-            trigger_cands_filter = pass_id
+            trigger_cands_filter = pass_id & pass_filterbit
             trigger_cands = events.TrigObj[trigger_cands_filter]
             
 
