@@ -12,6 +12,9 @@ import numpy as np
 from dask_gateway import Gateway
 import os
 import argparse
+import sys
+np.set_printoptions(threshold=sys.maxsize)
+
 
 
 def applyMuonBaseSelection(events):
@@ -43,9 +46,7 @@ def applyQuickSelection(events):
     muons = events.Muon
     njets = ak.num(events.Jet, axis=1)
     nmuons = ak.num(muons, axis=1)
-    # selection = (njets >= 2) #& (nmuons >= 2)
     
-    # events = events[selection]
     # now all events have at least two jets, apply dijet dR and dijet mass cut
     padded_jets = ak.pad_none(events.Jet, target=2)
     jet1 = padded_jets[:,0]
@@ -57,11 +58,11 @@ def applyQuickSelection(events):
     mu2 = padded_muons[:,1]
     dimuon = mu1 + mu2
     selection = (
-        (dijet.mass > 350)
-        & (dimuon.mass > 110)
-        & (dimuon.mass < 150)
-        & (njets >= 2)
-        & (nmuons >= 2)
+        (nmuons >= 2)
+        # (njets >= 2)
+        # & (dijet.mass > 350)
+        # & (dimuon.mass > 110)
+        # & (dimuon.mass < 150)
     )
     # print(f"selection len: {ak.num(selection, axis=0).compute()}")
     
@@ -167,7 +168,7 @@ def getZip(events) -> ak.zip:
     return_dict = ak.zip(return_dict).compute()
     return return_dict
     
-def getHist(value, binning):
+def getHist(value, binning, normalize=True):
     weights = ak.ones_like(value) # None values are propagated as None here, which is useful, bc we can just override those events with zero weights
     weights = ak.fill_none(weights, value=0)
     # print(f"number of nones: {ak.sum(ak.is_none(value))}")
@@ -176,9 +177,13 @@ def getHist(value, binning):
     # normalize hist and hist_w2
     hist_orig = hist
     hist_err = np.sqrt(hist_w2)
-    # normalize
-    hist = hist / np.sum(hist) 
-    hist_err = hist_err /  hist_orig * hist
+    if normalize:
+        hist = hist / np.sum(hist) 
+        hist_err = hist_err /  hist_orig * hist
+
+    # convert to numpy arrays so that we can print the full arr
+    hist = ak.to_numpy(hist)
+    hist_err = ak.to_numpy(hist_err)
     return hist, hist_err  
 
 def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
@@ -199,6 +204,81 @@ def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
         hep.histplot(hist_fromScratch, bins=binning, 
                  histtype='errorbar', 
                 label="UL private", 
+                 xerr=True, 
+                 yerr=(hist_fromScratch_err),
+                color = "blue",
+                ax=ax_main
+        )
+        hep.histplot(hist_rereco, bins=binning, 
+                 histtype='errorbar', 
+                label="RERECO central", 
+                 xerr=True, 
+                 yerr=(hist_rereco_err),
+                color = "red",
+                ax=ax_main
+        )
+        
+        ax_main.set_ylabel("A. U.")
+        ax_main.legend()
+        ax_main.set_title(f"2018")
+
+        # make ration plot of UL private / RERECO
+        hist_fromScratch = ak.to_numpy(hist_fromScratch)
+        hist_rereco = ak.to_numpy(hist_rereco)
+        # ratio_hist = np.zeros_like(hist_fromScratch)
+        # inf_filter = hist_rereco>0
+        # ratio_hist[inf_filter] = hist_fromScratch[inf_filter]/  hist_rereco[inf_filter]
+        
+        # rel_unc_ratio = np.sqrt((hist_fromScratch_err/hist_fromScratch)**2 + (hist_rereco_err/hist_rereco)**2)
+        # ratio_err = rel_unc_ratio*ratio_hist
+        
+        # hep.histplot(ratio_hist, 
+        #              bins=binning, histtype='errorbar', yerr=ratio_err, 
+        #              color='black', label= 'Ratio', ax=ax_ratio)
+        
+        # ax_ratio.axhline(1, color='gray', linestyle='--')
+        # ax_ratio.set_xlabel( plot_bins[field].get("xlabel"))
+        # ax_ratio.set_ylabel('UL / Rereco')
+        # ax_ratio.set_ylim(0.5,1.5) 
+        diff_hist = hist_fromScratch - hist_rereco
+        rel_unc_diff = np.sqrt((hist_fromScratch_err/hist_fromScratch)**2 + (hist_rereco_err/hist_rereco)**2)
+        ratio_err = np.abs(rel_unc_diff*diff_hist)
+        
+        hep.histplot(diff_hist, 
+                     bins=binning, histtype='errorbar', yerr=ratio_err, 
+                     color='black', label= 'Difference', ax=ax_ratio)
+        
+        ax_ratio.axhline(1, color='gray', linestyle='--')
+        ax_ratio.set_xlabel( plot_bins[field].get("xlabel"))
+        ax_ratio.set_ylabel('UL - Rereco')
+        ax_ratio.set_ylim(-0.01, 0.01) 
+        plt.tight_layout()
+        
+        
+        # plt.show()
+        save_full_path = f"{save_path}/TwoWayPrivateProd_{field}.pdf"
+        plt.savefig(save_full_path)
+        plt.clf()
+
+
+def plotTwoWayCentral(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
+    fields2plot = zip_fromScratch.fields
+    for field in fields2plot:
+        if field not in plot_bins.keys():
+            continue
+        binning = np.linspace(*plot_bins[field]["binning_linspace"])
+        print(f"{field} binning len: {len(binning)}")
+        
+        fig, (ax_main, ax_ratio) = plt.subplots(2, 1, figsize=(10, 13), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+        # fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [5, 1]}, sharex=True)
+        
+        hist_fromScratch, hist_fromScratch_err = getHist(zip_fromScratch[field], binning)
+        hist_rereco, hist_rereco_err = getHist(zip_rereco[field], binning)        
+        print(f"{field} rel hist_fromScratch_err: {hist_fromScratch_err/hist_fromScratch}")
+        
+        hep.histplot(hist_fromScratch, bins=binning, 
+                 histtype='errorbar', 
+                label="UL central", 
                  xerr=True, 
                  yerr=(hist_fromScratch_err),
                 color = "blue",
@@ -305,6 +385,68 @@ def plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path="./pl
         plt.savefig(save_full_path)
         plt.clf()
 
+
+def plotIndividual(ak_zip, plot_bins, save_fname, save_path="./plots"):
+    fields2plot = ["mu1_eta", "mu2_eta"]
+    for field in fields2plot:
+        if field not in plot_bins.keys():
+            continue
+        binning = np.linspace(*plot_bins[field]["binning_linspace"])
+        
+        fig, ax_main = plt.subplots()
+        
+        hist, hist_err = getHist(ak_zip[field], binning, normalize=False)
+        
+            
+        hep.histplot(hist, bins=binning, 
+                 histtype='step', 
+                label="", 
+                 xerr=True, 
+                 yerr=(hist_err),
+                color = "black",
+                ax=ax_main,
+                # flow="sum"
+        )
+        
+        # hep.histplot(hist, bins=binning, 
+        #          histtype='band', 
+        #         label="", 
+        #          xerr=True, 
+        #          yerr=(hist_err),
+        #         color = "blue",
+        #         ax=ax_main
+        # )
+        
+        ax_main.set_xlabel( plot_bins[field].get("xlabel"))
+        # ax_main.set_ylabel("A. U.")
+        ax_main.set_ylabel("Events")
+        # plt.title(f"{field} distribution of privately produced samples")
+        plt.title(f"2018")
+        # plt.legend(loc="upper right")
+        plt.legend()
+        # plt.show()
+        save_full_path = f"{save_path}/{save_fname}_{field}.pdf"
+        plt.savefig(save_full_path)
+        plt.clf()
+
+
+def print_t_statistic(zip_fromScratch, zip_rereco, plot_bins):
+    fields2plot = ["mu1_eta", "mu2_eta"]
+    for field in fields2plot:
+        if field not in plot_bins.keys():
+            continue
+        binning = np.linspace(*plot_bins[field]["binning_linspace"])
+        print(f"{field} binning len: {len(binning)}")
+        
+        hist_fromScratch, hist_fromScratch_err = getHist(zip_fromScratch[field], binning)
+        hist_rereco, hist_rereco_err = getHist(zip_rereco[field], binning)    
+
+        print(f"UL private production hist: \n {hist_fromScratch}")
+        print(f"UL private production hist err: \n {hist_fromScratch_err}")
+        print(f"Rereco central production hist: \n {hist_rereco}")
+        print(f"T-statistic: \n {(hist_fromScratch-hist_rereco)/hist_fromScratch_err}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -317,7 +459,7 @@ if __name__ == "__main__":
     )
 
     
-    client =  Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
+    client =  Client(n_workers=40,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
     # gateway = Gateway(
     #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
     #     proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
@@ -329,15 +471,15 @@ if __name__ == "__main__":
     # test_len = 4000
     
     # test_len = 14000
-    # test_len = 400000
+    test_len = 400000
     # test_len = 4000000
-    test_len = 5000000
+    # test_len = 5000000
     # test_len = 8000000
-    # test_len = 2*8000000
+    # test_len = 10*8000000
 
-
-    # files = json.load(open("new_UL_production.json", "r"))
-    files = json.load(open("dy_m50_v9.json", "r"))
+    
+    files = json.load(open("new_UL_production.json", "r"))
+    # files = json.load(open("dy_m50_v9.json", "r"))
     events_fromScratch = NanoEventsFactory.from_root(
         files,
         schemaclass=NanoAODSchema,
@@ -351,8 +493,8 @@ if __name__ == "__main__":
 
 
     
-    # rereco_full_files = json.load(open("rereco_central.json", "r"))
-    rereco_full_files = json.load(open("dy_m50_v6.json", "r"))
+    rereco_full_files = json.load(open("rereco_central.json", "r"))
+    # rereco_full_files = json.load(open("dy_m50_v6.json", "r"))
     events_rereco = NanoEventsFactory.from_root(
         rereco_full_files,
         schemaclass=NanoAODSchema,
@@ -364,38 +506,56 @@ if __name__ == "__main__":
     # print(f"events_rereco nevents: {ak.num(events_rereco, axis=0).compute()}")
 
     zip_rereco = getZip(events_rereco)
+
+
     
     
-    # raise ValueError
-
-
-
-    # plot two way
-
     with open("plot_settings.json", "r") as file:
         plot_bins = json.load(file)
 
     save_path = "./plots"
-    os.makedirs(save_path, exist_ok=True) 
-    plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
+    os.makedirs(save_path, exist_ok=True)
 
-    # now plot three way
-
-    ul_central_files = json.load(open("UL_central_DY100To200.json", "r"))
-    events_ul = NanoEventsFactory.from_root(
-        ul_central_files,
-        schemaclass=NanoAODSchema,
-    ).events()
-    if do_quick_test:
-        events_ul = events_ul[:test_len]
-    events_ul = applyQuickSelection(events_ul)
+    # --------------------------------------------------------------
     
-    zip_ul = getZip(events_ul)
+    # # plot two way
+
+    # # plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
+    # plotTwoWayCentral(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
+    # --------------------------------------------------------------
+    
+    # do individual plots
+    save_fname = "UL_private_prod"
+    plotIndividual(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
+    save_fname = "Rereco_private_prod"
+    plotIndividual(zip_rereco, plot_bins, save_fname, save_path=save_path)
+
+    # Now obtain the T statistic
+    print_t_statistic(zip_fromScratch, zip_rereco, plot_bins)   
+
+
+    raise ValueError
+    
+    
+    # # now plot three way
+
+    # ul_central_files = json.load(open("UL_central_DY100To200.json", "r"))
+    # events_ul = NanoEventsFactory.from_root(
+    #     ul_central_files,
+    #     schemaclass=NanoAODSchema,
+    # ).events()
+    # if do_quick_test:
+    #     events_ul = events_ul[:test_len]
+    # events_ul = applyQuickSelection(events_ul)
+    
+    # zip_ul = getZip(events_ul)
 
 
     
     
-    plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path=save_path)
+    # plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path=save_path)
+    # ----------------------------------------------
+
     
     # fields2plot = zip_fromScratch.fields
     # for field in fields2plot:
