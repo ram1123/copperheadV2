@@ -1544,8 +1544,8 @@ class EventProcessor(processor.ProcessorABC):
                                 'mm_charge', 'electron_veto', 'HemVeto']
                                 # , weights=weights, weightsmodifier=None) # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
             self.cutflow = self.selection.cutflow(*required_selections)
-            # logger.info(f"cutflow: {self.cutflow}")
-            # logger.info(f"self.cutflow.logger.info(): {self.cutflow.print()}")
+            logger.info(f"cutflow: {self.cutflow}")
+            logger.info(f"self.cutflow.logger.info(): {self.cutflow.print()}")
             # logger.info(f"self.cutflow.logger.info(): {self.cutflow.logger.info(weighted=False)}") # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
             # logger.info(f"self.cutflow.result(): {self.cutflow.result()}")
 

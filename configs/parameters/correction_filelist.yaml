@@ -40,13 +40,13 @@ res_calib_path:
 BS_res_calib_path:
   2016preVFP:
     MC: data/res_calib/res_calib_BS_correction_2017UL.json
-    Data: data/res_calib/res_calib_BS_correction_2017UL.json
+    Data: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12.json
   2016postVFP:
     MC: data/res_calib/res_calib_BS_correction_2017UL.json
-    Data: data/res_calib/res_calib_BS_correction_2017UL.json
+    Data: data/res_calib/res_calib_BS_correction_2016postVFP_nanoAODv12.json
   '2017':
     MC: data/res_calib/res_calib_BS_correction_2017UL.json
-    Data: data/res_calib/res_calib_BS_correction_2017UL.json
+    Data: data/res_calib/res_calib_BS_correction_2017_nanoAODv12.json
   '2018':
     MC: data/res_calib/res_calib_BS_correction_2018UL.json
     Data: data/res_calib/res_calib_BS_correction_2018_nanoAODv12.json

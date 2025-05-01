@@ -1,3 +1,10 @@
+# 29 April 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l April19_NanoV12_UpdatedMassCalibv2 -y 2018 -m all)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l April19_NanoV12 -y 2016preVFP -m all)
+```
+
 # 23 April 2025
 
 ```bash

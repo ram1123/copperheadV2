@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import time
 import numpy as np
 import pandas as pd
@@ -16,6 +17,8 @@ from basic_class_for_calibration import generateBWxDCB_plot
 from basic_class_for_calibration import generateVoigtian_plot
 from basic_class_for_calibration import generateBWxDCB_plot_bkgErfxExp
 from basic_class_for_calibration import closure_test_from_df
+from basic_class_for_calibration import closure_test_from_df_BothBeforeAndAfter
+from basic_class_for_calibration import closure_test_from_df_BothBeforeAndAfter_OnSameCanvas
 from basic_class_for_calibration import save_calibration_json
 from basic_class_for_calibration import filter_region
 
@@ -79,8 +82,8 @@ def step1_mass_fitting_zcr(parquet_path, out_string = ""):
         logger.debug("------"*20)
         # time.sleep(2) # sleep for 2 second for debug
         counter += 1
-        # if counter > 0:
-            # logger.warning("Exiting loop after 3 iterations for debugging.")
+        # if counter > 3:
+            # logger.warning("Exiting loop after 4 iterations for debugging.")
             # break
 
     client.close()
@@ -104,6 +107,11 @@ def step2_mass_resolution(parquet_path, out_string = ""):
 
     # Load the same common input parquet files.
     df = dd.read_parquet(parquet_path)
+
+    # Only select the fields needed for calibration (muon1 and muon2 eta, pt, and dimuon mass)
+    fields_of_interest = ["mu1_pt", "mu1_ptErr", "mu2_pt", "mu2_ptErr", "mu1_eta", "mu2_eta", "dimuon_mass"]
+    df = df[fields_of_interest]
+
 
     # apply a ZCR filter: 80-100 GeV, without using the filter_region function
     df = df[(df['dimuon_mass'] > 76) & (df['dimuon_mass'] < 106)]
@@ -190,81 +198,70 @@ def step4_save_csv(df_merged, out_csv="calibration_factors.csv"):
 def main():
     total_time_start = time.time()
 
-    # OUTPUT_DIR = "calibration_outputs/{year}"
-    # out_String = "_2018C" # OLD
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_*/*/part*.parquet"
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_C/*/part*.parquet"
+    years = ["2018", "2017", "2016postVFP", "2016preVFP"]
+    for year in years:
+        logger.info(f"Processing year: {year}")
+        # out_String = "2018C_HIG_19_006_SignalOnlyDSCB_BkgLaundau_FloatmZ"
+        # out_String = "2018C_LastMeeting_ChangeRevLandauToLandau"
+        # out_String = f"{year}_SigOnlyDSCB_bkgRevLandau"
+        # out_String = "2018_SigOnlyDSCB_bkgRooCMSShape"
+        out_String = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_DY"
+        # INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_*/*/*.parquet"
+        # INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_F/*/*.parquet"
+        # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/data_C/*/*.parquet"
+        INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/dy_*MiNNLO/*/*.parquet"
 
-    year = "2018"
-    # out_String = "_2018C_12March"
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_GeoFit//stage1_output/2018/f1_0/data_C/*/*.parquet"
-    out_String = "2018C_HIG_19_006_SignalOnlyDSCB_BkgLaundau_FloatmZ"
-    out_String = "2018C_LastMeeting_ChangeRevLandauToLandau"
-    out_String = "2018C_SigOnlyDSCB_bkgRevLandau"
-    out_String = "2018C_SigOnlyDSCB_bkgRooCMSShape"
-    INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/data_C/*/*.parquet"
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/dy_*/*/*.parquet"
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2017/f1_0/data_*/*/*.parquet"
+        # create directory named out_string if it does not exist
+        os.makedirs(f"plots/{out_String}", exist_ok=True)
 
-    # out_String = "_2022preEE"
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
-    # out_String = "_2022preEE_C"
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_C/*/*.parquet"
-    # out_String = "_2022preEE_D"
-    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_D/*/*.parquet"
+        # Step 1: Mass Fitting in ZCR
+        df_fit = step1_mass_fitting_zcr(INPUT_DATASET, out_String)
+        logger.debug(df_fit)
+        # sys.exit(0)
+        # write to a csv file
+        df_fit.to_csv(f"plots/{out_String}/fit_results{out_String}.csv", index=False)
 
-    # OUTPUT_DIR = OUTPUT_DIR.format(year=year)
-    # if not os.path.exists(os.path.join(OUTPUT_DIR, out_String)):
-        # os.makedirs(os.path.join(OUTPUT_DIR))
+        # Step 2: Mass Resolution Calculation
+        df_res = step2_mass_resolution(INPUT_DATASET, out_String)
+        df_res.to_csv(f"plots/{out_String}/resolution_results{out_String}.csv", index=False)
 
-    # create directory named out_string if it does not exist
-    os.makedirs(f"plots/{out_String}", exist_ok=True)
+        # debug: logger.debug the two DataFrames
+        logger.debug("="*40)
+        logger.debug("Sample fit results:")
+        logger.debug(df_fit)
+        logger.debug("Sample resolution results:")
+        logger.debug(df_res)
+        logger.debug("="*40)
 
-    # Step 1: Mass Fitting in ZCR
-    df_fit = step1_mass_fitting_zcr(INPUT_DATASET, out_String)
-    logger.debug(df_fit)
-    # write to a csv file
-    df_fit.to_csv(f"plots/{out_String}/fit_results{out_String}.csv", index=False)
+        # Step 3: Compute the calibration factor (ratio)
+        df_merged = step3_compute_calibration(df_fit, df_res)
 
-    # Step 2: Mass Resolution Calculation
-    df_res = step2_mass_resolution(INPUT_DATASET, out_String)
-    df_res.to_csv(f"plots/{out_String}/resolution_results{out_String}.csv", index=False)
+        # Step 4: Save the final merged DataFrame to a CSV file.
+        step4_save_csv(df_merged, f"plots/{out_String}/calibration_factors.csv")
 
-    # debug: logger.debug the two DataFrames
-    logger.debug("="*40)
-    logger.debug("Sample fit results:")
-    logger.debug(df_fit)
-    logger.debug("Sample resolution results:")
-    logger.debug(df_res)
-    logger.debug("="*40)
-
-    # Step 3: Compute the calibration factor (ratio)
-    df_merged = step3_compute_calibration(df_fit, df_res)
-
-    # Step 4: Save the final merged DataFrame to a CSV file.
-    step4_save_csv(df_merged, f"plots/{out_String}/calibration_factors.csv")
-
-    # Save the df_merged DataFrame as a table format for latex: Only field "cat_name", "fit_val", "median_val", "calibration_factor"
-    df_merged.to_latex(f"plots/{out_String}/calibration_factors_WithFitError.tex", index=False)
-    df_merged_tex = df_merged[["cat_name", "fit_val", "median_val", "calibration_factor"]]
-    df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors.tex", index=False)
-    # rounding
-    df_merged_tex = df_merged_tex.round(4)
-    df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors_rounded.tex", index=False)
-    # precision
-    df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors_precision.tex", index=False, float_format="%.3f")
+        # Save the df_merged DataFrame as a table format for latex: Only field "cat_name", "fit_val", "median_val", "calibration_factor"
+        df_merged.to_latex(f"plots/{out_String}/calibration_factors_WithFitError.tex", index=False)
+        df_merged_tex = df_merged[["cat_name", "fit_val", "median_val", "calibration_factor"]]
+        df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors.tex", index=False)
+        # rounding
+        df_merged_tex = df_merged_tex.round(4)
+        df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors_rounded.tex", index=False)
+        # precision
+        df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors_precision.tex", index=False, float_format="%.3f")
+        df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors_precision.tex", index=False, float_format="%.3f", longtable=True)
 
 
-    # Step 5: Save the calibration factors to a JSON file.
-    save_calibration_json(df_merged, f"plots/{out_String}/calibration_factors.json")
+        # Step 5: Save the calibration factors to a JSON file.
+        save_calibration_json(df_merged, f"plots/{out_String}/calibration_factors.json")
 
-    #
+        #
 
-    # Step 5: Closure test
-    closure_test_from_df(df_merged, out_String) # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
-
-    logger.info("All steps completed!")
-    logger.info(f"Total time elapsed: {time.time() - total_time_start:.2f} s")
+        # Step 5: Closure test
+        # closure_test_from_df(df_merged, out_String) # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
+        closure_test_from_df_BothBeforeAndAfter(df_merged, out_String) # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
+        closure_test_from_df_BothBeforeAndAfter_OnSameCanvas(df_merged, out_String) # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
+        logger.info("All steps completed!")
+        logger.info(f"Total time elapsed: {time.time() - total_time_start:.2f} s")
 
 if __name__ == "__main__":
     main()

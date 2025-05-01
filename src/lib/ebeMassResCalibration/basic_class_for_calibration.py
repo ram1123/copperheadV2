@@ -3,7 +3,6 @@ Collection of basic functions  for the mass resolution calibration
 """
 import numpy as np
 import ROOT as rt
-import ROOT
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -17,8 +16,8 @@ from modules.utils import logger
 # surpress RooFit printout
 rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
 
+import ROOT
 ROOT.gSystem.Load("PDFs/RooCMSShape_cc.so")
-
 from ROOT import RooCMSShape
 
 def filter_region(events, region="h-peak"):
@@ -254,7 +253,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
-    cat_idx: int index of specific calibration category the mass_arr is from
+    cat_idx: str name of specific calibration category the mass_arr is from
     """
     # if you want TCanvas to not crash, separate fitting and drawing
     canvas = rt.TCanvas(str(cat_idx),str(cat_idx),800, 800) # giving a specific name for each canvas prevents segfault?
@@ -280,6 +279,12 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
     # bwmZ.setConstant(True) # Stated in HIG-19-006
     bwWidth.setConstant(True) # Stated in HIG-19-006
+    if cat_idx == "30-45_BB_OB_EB" or cat_idx == "30-45_BO_OO_EO" or cat_idx == "30-45_BE_OE_EE":
+        """
+        FIXME: Added this condition for 2018 data, because the fit was not converging
+        """
+        bwWidth.setConstant(False)
+        bwmZ.setConstant(False)
 
 
     model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
@@ -330,6 +335,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     # model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
     #--------------------------------------------------
 
+    ## NEW VERSION
     # # # Reverse Landau Background test--------------------------------------------------------------------------
     # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", -80,  -150, -70) # 80
     # mass_neg = rt.RooFormulaVar("mass_neg", "-@0", [mass])
@@ -339,10 +345,12 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
 
 
     # Add RooCMSShape Background --------------------------------------------------------------------------
-    exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 40.0, 20.0, 160.0)
-    exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.05, 0.0, 2.0)
-    exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.02, 0.0, 0.1)
+    exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 101.0, 20.0, 160.0)
+    exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.15, 0.0, 2.0)
+    exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 1.0)
     exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
+    if cat_idx == "30-45_BB_OB_EB" or cat_idx == "30-45_BO_OO_EO" or cat_idx == "30-45_BE_OE_EE":
+        exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 5.0)
 
     model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
 
@@ -391,7 +399,10 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     # do fitting
     rt.EnableImplicitMT()
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu", Minos=True, Strategy=2)
+    fit_result.Print()
     logger.info(f"fitting elapsed time: {time.time() - time_step}")
     time.sleep(1) # rest a second for stability
     #do plotting
@@ -821,6 +832,126 @@ def closure_test_from_df(df, additional_string, output_plot=f"closure_test_befor
     plt.close()
 
     logger.info(f"Closure test plot saved as {output_plot}")
+    return df
+
+def closure_test_from_df_BothBeforeAndAfter_OnSameCanvas(df, additional_string, output_plot="closure_test_combined.pdf"):
+    """
+    Generate a single closure test plot comparing:
+      - fit_val vs median_val (unscaled prediction)
+      - fit_val vs median_val * calibration_factor (scaled prediction)
+
+    A y = x reference line and ±10% bands are also drawn.
+
+    Parameters:
+      df              : DataFrame with required columns.
+      additional_string : Used for output directory naming.
+      output_plot     : PDF filename.
+    """
+    required_cols = {"cat_name", "fit_val", "fit_err", "median_val", "calibration_factor"}
+    if not required_cols.issubset(df.columns):
+        raise ValueError(f"Missing required columns: {required_cols}")
+
+    df["scaled_pred"] = df["median_val"] * df["calibration_factor"]
+
+    x_min = min(df["median_val"].min(), df["scaled_pred"].min())
+    x_max = max(df["median_val"].max(), df["scaled_pred"].max())
+    x_vals = np.linspace(0.8 * x_min, 1.2 * x_max, 100)
+
+    plt.figure(figsize=(8, 6))
+
+    # Before calibration
+    plt.errorbar(df["median_val"], df["fit_val"], yerr=df["fit_err"],
+                 fmt='o', label="Before Calibration", color='C0')
+
+    # After calibration
+    plt.errorbar(df["scaled_pred"], df["fit_val"], yerr=df["fit_err"],
+                 fmt='s', label="After Calibration", color='C1')
+
+    # Reference lines
+    plt.plot(x_vals, x_vals, "k--", label="y = x")
+    plt.plot(x_vals, 1.1 * x_vals, "g--", label="±10% band")
+    plt.plot(x_vals, 0.9 * x_vals, "g--")
+
+    plt.xlabel("Predicted $\\sigma_{\\mu\\mu}$ [GeV]")
+    plt.ylabel("Measured $\\sigma_{\\mu\\mu}$ [GeV]")
+    plt.title("Closure Test: Before and After Calibration")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    output_plot_dir = f"plots/{additional_string}/"
+    os.makedirs(output_plot_dir, exist_ok=True)
+    full_path = os.path.join(output_plot_dir, output_plot)
+    plt.savefig(full_path)
+    plt.close()
+    logger.info(f"Combined closure test plot saved as {full_path}")
+
+    return df
+
+def closure_test_from_df_BothBeforeAndAfter(df, additional_string, output_prefix="closure_test"):
+    """
+    Creates two closure test plots:
+    1. fit_val vs. median_val
+    2. fit_val vs. median_val × calibration_factor
+
+    Parameters:
+      df              : Pandas DataFrame with required columns.
+      additional_string: Used to name the output directory.
+      output_prefix   : Common prefix for the output PDF names.
+    """
+
+    required_cols = {"cat_name", "fit_val", "fit_err", "median_val", "calibration_factor"}
+    if not required_cols.issubset(df.columns):
+        raise ValueError(f"Input DataFrame must contain columns: {required_cols}")
+
+    # Derived column for scaled prediction
+    df["scaled_pred"] = df["median_val"] * df["calibration_factor"]
+
+    # Prepare directory
+    output_dir = f"plots/{additional_string}/"
+    os.makedirs(output_dir, exist_ok=True)
+
+    def plot_closure(x, y, yerr, xlabel, ylabel, title, filename):
+        plt.figure(figsize=(8, 6))
+        plt.errorbar(x, y, yerr=yerr, fmt='o', label="Categories")
+
+        x_vals = np.linspace(min(x)*0.8, max(x)*1.2, 100)
+        plt.plot(x_vals, x_vals, "r--", label="y = x")
+        plt.plot(x_vals, 1.1*x_vals, "g--", label="y = 1.1x")
+        plt.plot(x_vals, 0.9*x_vals, "g--", label="y = 0.9x")
+
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, filename))
+        plt.close()
+        logger.info(f"Plot saved: {filename}")
+
+    # Plot 1: fit_val vs. median_val
+    plot_closure(
+        x=df["median_val"],
+        y=df["fit_val"],
+        yerr=df["fit_err"],
+        xlabel="Predicted $\\sigma_{\\mu\\mu}$ [GeV]",
+        ylabel="Measured $\\sigma_{\\mu\\mu}$ [GeV]",
+        title="Closure Test (Before Calibration)",
+        filename=f"{output_prefix}_beforeCalibration.pdf"
+    )
+
+    # Plot 2: fit_val vs. median_val × calibration_factor
+    plot_closure(
+        x=df["scaled_pred"],
+        y=df["fit_val"],
+        yerr=df["fit_err"],
+        xlabel="Calibrated Prediction $\\sigma_{\\mu\\mu}$ [GeV]",
+        ylabel="Measured $\\sigma_{\\mu\\mu}$ [GeV]",
+        title="Closure Test (After Calibration)",
+        filename=f"{output_prefix}_afterCalibration.pdf"
+    )
+
     return df
 
 def closure_test_from_calibrated_df(df_fit, df_calibrated, additional_string, output_plot="closure_test.pdf"):
