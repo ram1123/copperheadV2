@@ -13,8 +13,10 @@ from dask_gateway import Gateway
 import os
 import argparse
 import sys
+import ROOT
+from array import array
 np.set_printoptions(threshold=sys.maxsize)
-
+import dask
 
 
 def applyMuonBaseSelection(events):
@@ -42,7 +44,7 @@ def applyQuickSelection(events):
     # apply njet and nmuons cut first
     # start_len = ak.num(events.Muon.pt, axis=0).compute()
 
-    events = applyMuonBaseSelection(events)
+    # events = applyMuonBaseSelection(events)
     muons = events.Muon
     njets = ak.num(events.Jet, axis=1)
     nmuons = ak.num(muons, axis=1)
@@ -57,15 +59,16 @@ def applyQuickSelection(events):
     mu1 = padded_muons[:,0]
     mu2 = padded_muons[:,1]
     dimuon = mu1 + mu2
-    selection = (
-        (nmuons >= 2)
-        # (njets >= 2)
-        # & (dijet.mass > 350)
-        # & (dimuon.mass > 110)
-        # & (dimuon.mass < 150)
-    )
+    # selection = (
+    #     (nmuons >= 2)
+    #     # (njets >= 2)
+    #     # & (dijet.mass > 350)
+    #     # & (dimuon.mass > 110)
+    #     # & (dimuon.mass < 150)
+    # )
     # print(f"selection len: {ak.num(selection, axis=0).compute()}")
     
+    selection = ak.ones_like(nmuons, dtype="bool")
     
     events = events[selection]
     # end_len = ak.num(events.Muon.pt, axis=0).compute()
@@ -92,7 +95,14 @@ def getZip(events) -> ak.zip:
     mu1 = muons[:,0]
     mu2 = muons[:,1]
     dimuon = mu1 + mu2
-    # dimuon = dimuon[~ak.is_none(dimuon.pt)]
+    
+    gen_idx = events.Muon.genPartIdx
+    muons_gen = ak.pad_none(events.GenPart[gen_idx], target=2, clip=True)
+    # print(f"muons_gen: {muons_gen.compute()}")
+    
+    mu1_gen = muons_gen[:,0]
+    mu2_gen = muons_gen[:,1]
+    
     jj_dEta = abs(jet1.eta - jet2.eta)
     jj_dPhi = abs(jet1.delta_phi(jet2))
     mmj1_dEta = abs(dimuon.eta - jet1.eta)
@@ -116,6 +126,24 @@ def getZip(events) -> ak.zip:
     muons = ak.flatten(muons)
     jets = ak.flatten(jets)
     # mmjj = mmjj[~ak.is_none(mmjj.pt)]
+    # print(f"mu1.matched_gen.pt: {mu1.matched_gen.pt.compute()}")
+    # print(f"mu1_gen.pt: {mu1_gen.pt.compute()}")
+    # print(f"mu2_gen.pt: {mu2_gen.pt.compute()}")
+    # print(f"mu1_gen.eta: {mu1_gen.eta.compute()}")
+    # print(f"mu2_gen.eta: {mu2_gen.eta.compute()}")
+    # print(f"events.Muon.matched_gen: {events.Muon.matched_gen.compute()}")
+
+    LHE_part = events.LHEPart
+    # selection LHE muons
+    LHE_selection = (
+        (abs(LHE_part.pdgId) ==13)
+        # & (LHE_part.status==1) # nanoV6 doesn't have status
+    )
+    LHE_muon = ak.pad_none(LHE_part[LHE_selection], target=2, clip=True)
+    mu1_lhe = LHE_muon[:,0]
+    mu2_lhe = LHE_muon[:,1]
+
+    
     return_dict = {
         "mu1_pt" : mu1.pt,
         "mu2_pt" : mu2.pt,
@@ -123,8 +151,20 @@ def getZip(events) -> ak.zip:
         "mu2_eta" : mu2.eta,
         "mu1_phi" : mu1.phi,
         "mu2_phi" : mu2.phi,
-        "mu1_iso" : mu1.pfRelIso04_all,
-        "mu2_iso" : mu2.pfRelIso04_all,
+        "mu1_pt_gen" : mu1_gen.pt,
+        "mu2_pt_gen" : mu2_gen.pt,
+        "mu1_eta_gen" : mu1_gen.eta,
+        "mu2_eta_gen" : mu2_gen.eta,
+        "mu1_phi_gen" : mu1_gen.phi,
+        "mu2_phi_gen" : mu2_gen.phi,
+        "mu1_pt_lhe" : mu1_lhe.pt,
+        "mu2_pt_lhe" : mu2_lhe.pt,
+        "mu1_eta_lhe" : mu1_lhe.eta,
+        "mu2_eta_lhe" : mu2_lhe.eta,
+        "mu1_phi_lhe" : mu1_lhe.phi,
+        "mu2_phi_lhe" : mu2_lhe.phi,
+        # "mu1_iso" : mu1.pfRelIso04_all,
+        # "mu2_iso" : mu2.pfRelIso04_all,
         # "mu_pt" : events.Muon.pt,
         # "mu_eta" : events.Muon.eta,
         # "mu_phi" : events.Muon.phi,
@@ -145,12 +185,12 @@ def getZip(events) -> ak.zip:
         # "jet_eta" : events.Jet.eta,
         # "jet_phi" : events.Jet.phi,
         # "jet_mass" : events.Jet.mass,
-        "jj_mass" : dijet.mass,
-        "jj_pt" : dijet.pt,
-        "jj_eta" : dijet.eta,
-        "jj_phi" : dijet.phi,
-        "jj_dEta" : jj_dEta,
-        "jj_dPhi":  jj_dPhi,
+        # "jj_mass" : dijet.mass,
+        # "jj_pt" : dijet.pt,
+        # "jj_eta" : dijet.eta,
+        # "jj_phi" : dijet.phi,
+        # "jj_dEta" : jj_dEta,
+        # "jj_dPhi":  jj_dPhi,
         # "mmj1_dEta" : mmj1_dEta,
         # "mmj1_dPhi" : mmj1_dPhi,
         # "mmj1_dR" : mmj1_dR,
@@ -166,6 +206,7 @@ def getZip(events) -> ak.zip:
     }
     # comput zip and return
     return_dict = ak.zip(return_dict).compute()
+    print(f"return_dict: {return_dict}")
     return return_dict
     
 def getHist(value, binning, normalize=True):
@@ -387,11 +428,18 @@ def plotThreeWay(zip_fromScratch, zip_rereco, zip_ul, plot_bins, save_path="./pl
 
 
 def plotIndividual(ak_zip, plot_bins, save_fname, save_path="./plots"):
-    fields2plot = ["mu1_eta", "mu2_eta"]
+    # fields2plot = ["mu1_eta", "mu2_eta"]
+    # fields2plot = ["mu1_eta", "mu2_eta", "mu1_eta_gen", "mu2_eta_gen"]
+    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
+    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
+    fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe"]
+    
     for field in fields2plot:
-        if field not in plot_bins.keys():
+        field4plot_setting = field.replace("_gen","")
+        if field4plot_setting not in plot_bins.keys():
+            print(f"skipping {field4plot_setting}!")
             continue
-        binning = np.linspace(*plot_bins[field]["binning_linspace"])
+        binning = np.linspace(*plot_bins[field4plot_setting]["binning_linspace"])
         
         fig, ax_main = plt.subplots()
         
@@ -417,7 +465,7 @@ def plotIndividual(ak_zip, plot_bins, save_fname, save_path="./plots"):
         #         ax=ax_main
         # )
         
-        ax_main.set_xlabel( plot_bins[field].get("xlabel"))
+        ax_main.set_xlabel( plot_bins[field4plot_setting].get("xlabel"))
         # ax_main.set_ylabel("A. U.")
         ax_main.set_ylabel("Events")
         # plt.title(f"{field} distribution of privately produced samples")
@@ -430,22 +478,116 @@ def plotIndividual(ak_zip, plot_bins, save_fname, save_path="./plots"):
         plt.clf()
 
 
-def print_t_statistic(zip_fromScratch, zip_rereco, plot_bins):
+def plotIndividualROOT(ak_zip, plot_bins, save_fname, save_path="./plots"):
+    # fields2plot = ["mu1_eta", "mu2_eta"]
+    # fields2plot = ["mu1_eta", "mu2_eta", "mu1_eta_gen", "mu2_eta_gen"]
+    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
+    fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe"]
+    
+    for field in fields2plot:
+        # Create a histogram: name, title, number of bins, xlow, xhigh
+        hist = ROOT.TH1F("myHist", f"2018;{field};Entries", 30, -2, 2)
+
+        values = ak.to_numpy(ak_zip[field])
+        weights = np.ones_like(values)
+        values = array('d', values) # make the array double
+        weights = array('d', weights) # make the array double
+        
+        print(len(values))
+        hist.FillN(len(values), values, weights)
+        
+        # Create a canvas
+        canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+        
+        # Draw the histogram
+        hist.Draw('E')
+        
+        # Save the canvas as a PNG
+        save_full_path = f"{save_path}/{save_fname}_{field}_ROOT.pdf"
+        canvas.SaveAs(save_full_path)
+
+
+
+def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
+    fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe"]
+    
+    for field in fields2plot:
+        # Create a histogram: name, title, number of bins, xlow, xhigh
+        hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018;{field};Entries", 30, -2, 2)
+
+        values = ak.to_numpy(zip_fromScratch[field])
+        weights = np.ones_like(values)
+        values = array('d', values) # make the array double
+        weights = array('d', weights) # make the array double
+        
+        print(len(values))
+        hist_fromScratch.FillN(len(values), values, weights)
+
+        hist_rereco = ROOT.TH1F("hist_rereco", f"2018;{field};Entries", 30, -2, 2)
+        values = ak.to_numpy(zip_rereco[field])
+        weights = np.ones_like(values)
+        values = array('d', values) # make the array double
+        weights = array('d', weights) # make the array double
+        
+        print(len(values))
+        hist_rereco.FillN(len(values), values, weights)
+        
+        # Create a canvas
+        canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+
+        # Style histograms
+        hist_fromScratch.SetLineColor(ROOT.kRed)
+        hist_rereco.SetLineColor(ROOT.kBlue)
+        
+        hist_fromScratch.SetMarkerStyle(20)  # Add markers
+        hist_rereco.SetMarkerStyle(21)
+
+        hist_fromScratch.SetMarkerColor(ROOT.kRed)
+        hist_rereco.SetMarkerColor(ROOT.kBlue)
+        
+        # Draw the histogram
+        
+        hist_fromScratch.Draw('E')
+        hist_rereco.Draw('E SAME')
+
+
+        # Create a legend
+        legend = ROOT.TLegend(0.6, 0.7, 0.88, 0.88)  # (x1,y1,x2,y2) in NDC coordinates
+        
+        # Add entries
+        legend.AddEntry(hist_fromScratch, "Private UL", "l")  # "l" means line
+        legend.AddEntry(hist_rereco, "Central Rereco", "l")
+        legend.Draw()
+        
+        # Save the canvas as a PNG
+        save_full_path = f"{save_path}/plotTwoWay_{field}_ROOT.pdf"
+        canvas.Update()
+        canvas.SaveAs(save_full_path)
+
+def print_t_statistic(zip_fromScratch, zip_rereco, plot_bins, normalize=True):
     fields2plot = ["mu1_eta", "mu2_eta"]
     for field in fields2plot:
         if field not in plot_bins.keys():
             continue
         binning = np.linspace(*plot_bins[field]["binning_linspace"])
-        print(f"{field} binning len: {len(binning)}")
+        # print(f"{field} binning len: {len(binning)}")
+        print(f"printing {field}")
         
-        hist_fromScratch, hist_fromScratch_err = getHist(zip_fromScratch[field], binning)
-        hist_rereco, hist_rereco_err = getHist(zip_rereco[field], binning)    
+        hist_fromScratch, hist_fromScratch_err = getHist(zip_fromScratch[field], binning, normalize=normalize)
+        hist_rereco, hist_rereco_err = getHist(zip_rereco[field], binning, normalize=normalize)    
 
-        print(f"UL private production hist: \n {hist_fromScratch}")
-        print(f"UL private production hist err: \n {hist_fromScratch_err}")
-        print(f"Rereco central production hist: \n {hist_rereco}")
-        print(f"T-statistic: \n {(hist_fromScratch-hist_rereco)/hist_fromScratch_err}")
-
+        if normalize:
+            print(f"Normalized UL private production hist: \n {hist_fromScratch}")
+            print(f"Normalized UL private production hist err: \n {hist_fromScratch_err}")
+            print(f"Normalized Rereco central production hist: \n {hist_rereco}")
+            print(f"Normalized UL hist - Rereco hist: \n {(hist_fromScratch-hist_rereco)}")
+            print(f"T-statistic: \n {(hist_fromScratch-hist_rereco)/hist_fromScratch_err}")
+        else:
+            print(f"UL private production hist: \n {hist_fromScratch}")
+            print(f"UL private production hist err: \n {hist_fromScratch_err}")
+            print(f"Rereco central production hist: \n {hist_rereco}")
+            print(f"UL hist - Rereco hist: \n {(hist_fromScratch-hist_rereco)}")
+            print(f"T-statistic: \n {(hist_fromScratch-hist_rereco)/hist_fromScratch_err}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -458,8 +600,10 @@ if __name__ == "__main__":
     help="save path to store stage1 output files",
     )
 
+    # ---------------------------------------------------------------
     
-    client =  Client(n_workers=40,  threads_per_worker=1, processes=True, memory_limit='3 GiB') 
+    client =  Client(n_workers=40,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+    # ---------------------------------------------------------------
     # gateway = Gateway(
     #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
     #     proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
@@ -467,12 +611,15 @@ if __name__ == "__main__":
     # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
     # client = gateway.connect(cluster_info.name).get_client()
 
+    # ---------------------------------------------------------------
+    print(f"client: {client}")
+    
     do_quick_test = True # for quick test
     # test_len = 4000
     
     # test_len = 14000
-    test_len = 400000
-    # test_len = 4000000
+    # test_len = 400000
+    test_len = 4000000
     # test_len = 5000000
     # test_len = 8000000
     # test_len = 10*8000000
@@ -487,9 +634,11 @@ if __name__ == "__main__":
     if do_quick_test:
         events_fromScratch = events_fromScratch[:test_len]
     events_fromScratch = applyQuickSelection(events_fromScratch)
-    
+
+    print("starting UL zip!")
     zip_fromScratch = getZip(events_fromScratch)
     
+    print("done UL zip!")
 
 
     
@@ -502,11 +651,14 @@ if __name__ == "__main__":
     if do_quick_test:
         events_rereco = events_rereco[:test_len]
 
+    # events_rereco = events_rereco[:test_len] # for some reason, rereco seems to get stuck when I read the full in
     events_rereco = applyQuickSelection(events_rereco)
     # print(f"events_rereco nevents: {ak.num(events_rereco, axis=0).compute()}")
 
+    print("starting rereco zip!")
     zip_rereco = getZip(events_rereco)
-
+    print("done rereco zip!")
+    
 
     
     
@@ -518,21 +670,25 @@ if __name__ == "__main__":
 
     # --------------------------------------------------------------
     
-    # # plot two way
+    # plot two way
 
-    # # plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
+    plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
+    
+    # plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
     # plotTwoWayCentral(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
     # --------------------------------------------------------------
     
     # do individual plots
     save_fname = "UL_private_prod"
-    plotIndividual(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
+    # plotIndividual(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
+    plotIndividualROOT(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
     save_fname = "Rereco_private_prod"
-    plotIndividual(zip_rereco, plot_bins, save_fname, save_path=save_path)
-
+    # plotIndividual(zip_rereco, plot_bins, save_fname, save_path=save_path)
+    plotIndividualROOT(zip_rereco, plot_bins, save_fname, save_path=save_path)
     # Now obtain the T statistic
-    print_t_statistic(zip_fromScratch, zip_rereco, plot_bins)   
+    # print_t_statistic(zip_fromScratch, zip_rereco, plot_bins)   
 
+    
 
     raise ValueError
     
