@@ -14,6 +14,7 @@ import os
 import argparse
 import sys
 import ROOT
+ROOT.gStyle.SetOptStat(0) # remove stats box
 from array import array
 np.set_printoptions(threshold=sys.maxsize)
 import dask
@@ -138,10 +139,31 @@ def getZip(events) -> ak.zip:
     LHE_selection = (
         (abs(LHE_part.pdgId) ==13)
         # & (LHE_part.status==1) # nanoV6 doesn't have status
+        
     )
-    LHE_muon = ak.pad_none(LHE_part[LHE_selection], target=2, clip=True)
+    # print(f"len(LHE_part): {ak.num(LHE_part, axis=0).compute()}")
+    # print(f"len(LHE_selection): {ak.num(LHE_selection, axis=0).compute()}")
+    # print(f"len(LHE_selection): {LHE_selection.compute()}")
+    
+    # print(f"LHE_part.pdgId: {LHE_part.pdgId.compute()}")
+
+    LHE_muon = LHE_part[LHE_selection]
+    two_LHE_muons = (ak.num(LHE_muon, axis=1) == 2) & (ak.prod(LHE_muon.pdgId,axis=1) < 0 )
+    LHE_muon = ak.pad_none(LHE_muon[two_LHE_muons], target=2, clip=True)
     mu1_lhe = LHE_muon[:,0]
     mu2_lhe = LHE_muon[:,1]
+
+    has_negCharge = LHE_muon.pdgId > 0 # positive muon id is negative muon
+    mu_neg_lhe = LHE_muon[has_negCharge][:,0]
+    mu_pos_lhe = LHE_muon[~has_negCharge][:,0]
+    # print(f"mu_neg_lhe.pdgId: {mu_neg_lhe.pdgId.compute()}")
+    # print(f"mu_pos_lhe.pdgId: {mu_pos_lhe.pdgId.compute()}")
+    # print(f"LHE_muon.pdgId: {LHE_muon.pdgId.compute()}")
+    # print(f"has_negCharge: {has_negCharge.compute()}")
+    
+    # print(f"ak.num(mu_neg_lhe, axis=1): {ak.num(mu_neg_lhe, axis=1).compute()}")
+    # print(f"ak.num(mu_pos_lhe, axis=1): {ak.num(mu_pos_lhe, axis=1).compute()}")
+    
 
     
     return_dict = {
@@ -163,6 +185,8 @@ def getZip(events) -> ak.zip:
         "mu2_eta_lhe" : mu2_lhe.eta,
         "mu1_phi_lhe" : mu1_lhe.phi,
         "mu2_phi_lhe" : mu2_lhe.phi,
+        "mu_neg_lhe_eta" : mu_neg_lhe.eta,
+        "mu_pos_lhe_eta" : mu_pos_lhe.eta,
         # "mu1_iso" : mu1.pfRelIso04_all,
         # "mu2_iso" : mu2.pfRelIso04_all,
         # "mu_pt" : events.Muon.pt,
@@ -486,7 +510,7 @@ def plotIndividualROOT(ak_zip, plot_bins, save_fname, save_path="./plots"):
     
     for field in fields2plot:
         # Create a histogram: name, title, number of bins, xlow, xhigh
-        hist = ROOT.TH1F("myHist", f"2018;{field};Entries", 30, -2, 2)
+        hist = ROOT.TH1F("MC hist", f"2018;{field};Entries", 30, -2, 2)
 
         values = ak.to_numpy(ak_zip[field])
         weights = np.ones_like(values)
@@ -506,10 +530,37 @@ def plotIndividualROOT(ak_zip, plot_bins, save_fname, save_path="./plots"):
         save_full_path = f"{save_path}/{save_fname}_{field}_ROOT.pdf"
         canvas.SaveAs(save_full_path)
 
+def print_t_statisticROOT(hist_fromScratch, hist_rereco, field):
+    h_diff = hist_fromScratch.Clone("h_diff") 
+    
+    # debug -------------------------------
+    # for i in range(1, h_diff.GetNbinsX() + 1):
+    #     bin_center = h_diff.GetBinCenter(i)
+    #     content = h_diff.GetBinContent(i)
+    #     error = h_diff.GetBinError(i)
+    #     print(f"{field} Bin {i}: center={bin_center:.2f}, content={content:.2f}, error={error:.2f}, ")
+    # print("-------------------------------------------------")
+    # for i in range(1, hist_rereco.GetNbinsX() + 1):
+    #     bin_center = hist_rereco.GetBinCenter(i)
+    #     content = hist_rereco.GetBinContent(i)
+    #     error = hist_rereco.GetBinError(i)
+    #     print(f"{field} Bin {i}: center={bin_center:.2f}, content={content:.2f}, error={error:.2f}, ")
+    # print("-------------------------------------------------")
+    # debug -------------------------------
+
+    h_diff.Add(hist_rereco, -1)        
+    
+
+    for i in range(1, h_diff.GetNbinsX() + 1):
+        bin_center = h_diff.GetBinCenter(i)
+        diff = h_diff.GetBinContent(i)
+        error = hist_fromScratch.GetBinError(i) # we want abs err from the estimator, which is UL private production
+        t_val = diff/error
+        print(f"{field} Bin {i}: center={bin_center:.2f}, diff={diff:.2f}, error={error:.2f}, t value={t_val:.2f}")
 
 
 def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
-    fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe"]
+    fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe", "mu_neg_lhe_eta", "mu_pos_lhe_eta"]
     
     for field in fields2plot:
         # Create a histogram: name, title, number of bins, xlow, xhigh
@@ -539,8 +590,8 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
         hist_fromScratch.SetLineColor(ROOT.kRed)
         hist_rereco.SetLineColor(ROOT.kBlue)
         
-        hist_fromScratch.SetMarkerStyle(20)  # Add markers
-        hist_rereco.SetMarkerStyle(21)
+        # hist_fromScratch.SetMarkerStyle(20)  # Add markers
+        # hist_rereco.SetMarkerStyle(21)
 
         hist_fromScratch.SetMarkerColor(ROOT.kRed)
         hist_rereco.SetMarkerColor(ROOT.kBlue)
@@ -552,24 +603,44 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
 
 
         # Create a legend
-        legend = ROOT.TLegend(0.6, 0.7, 0.88, 0.88)  # (x1,y1,x2,y2) in NDC coordinates
+        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
         
         # Add entries
-        legend.AddEntry(hist_fromScratch, "Private UL", "l")  # "l" means line
-        legend.AddEntry(hist_rereco, "Central Rereco", "l")
+        legend.AddEntry(hist_fromScratch, f"Private UL (Entries: {hist_fromScratch.GetEntries():.2e})", "l")  # "l" means line
+        legend.AddEntry(hist_rereco, f"Central Rereco (Entries: {hist_rereco.GetEntries():.2e})", "l")
         legend.Draw()
+
+
+        # Grab the stats box
+        stats = hist_fromScratch.GetListOfFunctions().FindObject("stats")
+        # Move the stats box
+        if stats:
+            # stats.SetX1NDC(0.7)  # New x1 position (e.g., 70% to the right)
+            # stats.SetX2NDC(0.9)  # New x2 position
+            stats.SetY1NDC(0.9)  # New y1 position
+            stats.SetY2NDC(0.99)  # New y2 position
+        
+        # Redraw
+        canvas.Modified()
+        canvas.Update()
         
         # Save the canvas as a PNG
         save_full_path = f"{save_path}/plotTwoWay_{field}_ROOT.pdf"
         canvas.Update()
         canvas.SaveAs(save_full_path)
 
+        
+
+        # print t statistic
+        print_t_statisticROOT(hist_fromScratch, hist_rereco, field)
+
 def print_t_statistic(zip_fromScratch, zip_rereco, plot_bins, normalize=True):
-    fields2plot = ["mu1_eta", "mu2_eta"]
+    # fields2plot = ["mu1_eta", "mu2_eta"]
+    fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe", "mu_neg_lhe_eta", "mu_pos_lhe_eta"]
+    
     for field in fields2plot:
-        if field not in plot_bins.keys():
-            continue
-        binning = np.linspace(*plot_bins[field]["binning_linspace"])
+        # binning = np.linspace(*plot_bins[field4plot_setting]["binning_linspace"])
+        binning = np.linspace(-2, 2, 31)
         # print(f"{field} binning len: {len(binning)}")
         print(f"printing {field}")
         
@@ -589,6 +660,9 @@ def print_t_statistic(zip_fromScratch, zip_rereco, plot_bins, normalize=True):
             print(f"UL hist - Rereco hist: \n {(hist_fromScratch-hist_rereco)}")
             print(f"T-statistic: \n {(hist_fromScratch-hist_rereco)/hist_fromScratch_err}")
 
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -599,7 +673,7 @@ if __name__ == "__main__":
     action="store",
     help="save path to store stage1 output files",
     )
-
+    print("programe start")
     # ---------------------------------------------------------------
     
     client =  Client(n_workers=40,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
@@ -619,9 +693,8 @@ if __name__ == "__main__":
     
     # test_len = 14000
     # test_len = 400000
-    test_len = 4000000
-    # test_len = 5000000
-    # test_len = 8000000
+    # test_len = 4000000
+    test_len = 2*8000000
     # test_len = 10*8000000
 
     
