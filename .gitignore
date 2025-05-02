@@ -15,3 +15,6 @@ voms_proxy.txt
 log*.txt
 *.txt
 *.csv
+*.tex
+*.pcm
+*.d

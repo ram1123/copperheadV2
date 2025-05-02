@@ -249,12 +249,15 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     # time.sleep(1)
     return df_fit
 
-def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="CalibrationLog.txt", out_string=""):
+def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="CalibrationLog.txt", out_string=""):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
     cat_idx: str name of specific calibration category the mass_arr is from
     """
+    if df_fit is None:
+        df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
+
     # if you want TCanvas to not crash, separate fitting and drawing
     canvas = rt.TCanvas(str(cat_idx),str(cat_idx),800, 800) # giving a specific name for each canvas prevents segfault?
     upper_pad = rt.TPad("upper_pad", "upper_pad", 0, 0.25, 1, 1)
@@ -271,6 +274,9 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
     mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,80,100)
     mass.setBins(nbins)
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
+    if roo_dataset.numEntries() == 0:
+        logger.error(f"No entries in RooDataSet for category {cat_idx}. Skipping.")
+        return df_fit
     # workspace.Import(mass)
     frame = mass.frame(Title=f"ZCR Dimuon Mass BWxDCB calibration fit for category {cat_idx}")
 
@@ -396,6 +402,10 @@ def generateBWxDCB_plot(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="Cal
 
     #fitting directly to unbinned dataset is slow, so first make a histogram
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
+    if roo_hist.numEntries() == 0:
+            logger.error(f"No entries in RooDataHist for category {cat_idx}. Skipping.")
+            return df_fit
+
     # do fitting
     rt.EnableImplicitMT()
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
@@ -799,7 +809,8 @@ def closure_test_from_df(df, additional_string, output_plot=f"closure_test_befor
       The input DataFrame (unchanged).
     """
     # Check that the necessary columns exist
-    required_cols = {"cat_name", "fit_val", "fit_err", "median_val", "calibration_factor"}
+    # required_cols = {"cat_name", "fit_val", "fit_err", "median_val", "calibration_factor"}
+    required_cols = { "fit_val", "fit_err", "median_val"}
     if not required_cols.issubset(df.columns):
         raise ValueError(f"Input DataFrame must contain columns: {required_cols}")
 
@@ -888,71 +899,68 @@ def closure_test_from_df_BothBeforeAndAfter_OnSameCanvas(df, additional_string, 
 
     return df
 
-def closure_test_from_df_BothBeforeAndAfter(df, additional_string, output_prefix="closure_test"):
+
+def plot_closure_comparison_calibrated_uncalibrated(df, additional_string, output_plot="closure_test_combined_UpdatedClosure.pdf", pdfFile_ExtraText=""):
     """
-    Creates two closure test plots:
-    1. fit_val vs. median_val
-    2. fit_val vs. median_val × calibration_factor
+    Generate a closure test plot comparing:
+      - fit_val vs median_val (after calibration), if available
+      - fit_val vs median_val_NonCal (before calibration)
+
+    A y = x reference line and ±10% bands are also drawn.
 
     Parameters:
-      df              : Pandas DataFrame with required columns.
-      additional_string: Used to name the output directory.
-      output_prefix   : Common prefix for the output PDF names.
+      df                 : DataFrame with required columns.
+      additional_string  : Used for output directory naming.
+      output_plot        : PDF filename.
+      pdfFile_ExtraText  : Extra string to append to output PDF filename.
     """
-
-    required_cols = {"cat_name", "fit_val", "fit_err", "median_val", "calibration_factor"}
+    required_cols = {"cat_name", "fit_val", "fit_err", "median_val_NonCal"}
     if not required_cols.issubset(df.columns):
-        raise ValueError(f"Input DataFrame must contain columns: {required_cols}")
+        raise ValueError(f"Missing required columns: {required_cols}")
 
-    # Derived column for scaled prediction
-    df["scaled_pred"] = df["median_val"] * df["calibration_factor"]
+    has_median_val = "median_val" in df.columns
 
-    # Prepare directory
-    output_dir = f"plots/{additional_string}/"
-    os.makedirs(output_dir, exist_ok=True)
+    # Determine x-axis limits
+    x_min = df["median_val_NonCal"].min()
+    x_max = df["median_val_NonCal"].max()
+    if has_median_val:
+        x_min = min(x_min, df["median_val"].min())
+        x_max = max(x_max, df["median_val"].max())
 
-    def plot_closure(x, y, yerr, xlabel, ylabel, title, filename):
-        plt.figure(figsize=(8, 6))
-        plt.errorbar(x, y, yerr=yerr, fmt='o', label="Categories")
+    x_vals = np.linspace(0.8 * x_min, 1.2 * x_max, 100)
 
-        x_vals = np.linspace(min(x)*0.8, max(x)*1.2, 100)
-        plt.plot(x_vals, x_vals, "r--", label="y = x")
-        plt.plot(x_vals, 1.1*x_vals, "g--", label="y = 1.1x")
-        plt.plot(x_vals, 0.9*x_vals, "g--", label="y = 0.9x")
+    plt.figure(figsize=(8, 6))
 
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.title(title)
-        plt.legend()
-        plt.grid(True)
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, filename))
-        plt.close()
-        logger.info(f"Plot saved: {filename}")
+    # After calibration (only if available)
+    if has_median_val:
+        plt.errorbar(df["median_val"], df["fit_val"], yerr=df["fit_err"],
+                     fmt='o', label="After Calibration", color='C0')
 
-    # Plot 1: fit_val vs. median_val
-    plot_closure(
-        x=df["median_val"],
-        y=df["fit_val"],
-        yerr=df["fit_err"],
-        xlabel="Predicted $\\sigma_{\\mu\\mu}$ [GeV]",
-        ylabel="Measured $\\sigma_{\\mu\\mu}$ [GeV]",
-        title="Closure Test (Before Calibration)",
-        filename=f"{output_prefix}_beforeCalibration.pdf"
-    )
+    # Before calibration
+    plt.errorbar(df["median_val_NonCal"], df["fit_val"], yerr=df["fit_err"],
+                 fmt='s', label="Before Calibration", color='C1')
 
-    # Plot 2: fit_val vs. median_val × calibration_factor
-    plot_closure(
-        x=df["scaled_pred"],
-        y=df["fit_val"],
-        yerr=df["fit_err"],
-        xlabel="Calibrated Prediction $\\sigma_{\\mu\\mu}$ [GeV]",
-        ylabel="Measured $\\sigma_{\\mu\\mu}$ [GeV]",
-        title="Closure Test (After Calibration)",
-        filename=f"{output_prefix}_afterCalibration.pdf"
-    )
+    # Reference lines
+    plt.plot(x_vals, x_vals, "k--", label="y = x")
+    plt.plot(x_vals, 1.1 * x_vals, "g--", label="±10% band")
+    plt.plot(x_vals, 0.9 * x_vals, "g--")
 
-    return df
+    plt.xlabel("Predicted $\\sigma_{\\mu\\mu}$ [GeV]")
+    plt.ylabel("Measured $\\sigma_{\\mu\\mu}$ [GeV]")
+    plt.title("Closure Test: Before and After Calibration")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    output_plot_dir = f"plots/{additional_string}/"
+    os.makedirs(output_plot_dir, exist_ok=True)
+    full_path = os.path.join(output_plot_dir, output_plot)
+    if pdfFile_ExtraText:
+        full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
+    plt.savefig(full_path)
+    plt.close()
+    logger.info(f"Combined closure test plot saved as {full_path}")
+
 
 def closure_test_from_calibrated_df(df_fit, df_calibrated, additional_string, output_plot="closure_test.pdf"):
     df_merged = pd.merge(df_fit, df_calibrated, on="cat_name", how="inner")
