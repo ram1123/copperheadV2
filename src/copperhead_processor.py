@@ -1690,7 +1690,8 @@ class EventProcessor(processor.ProcessorABC):
         jetHorn_region = abs(jets.eta) > 2.5
         jetHorn_pt_cut = (jets.pt > 30)
         jetHorn_puid_cut = (jets.puId >= 7) | (jets.pt >= 50) # tight pu Id
-        jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
+        # jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
+        jetHorn_cut = jetHorn_pt_cut
         jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
         
         # add additonal pT cut for the forward regions  ----------------------------------------------
@@ -1823,7 +1824,7 @@ class EventProcessor(processor.ProcessorABC):
             f"jet1_phi_{variation}" : jet1.phi,
             f"jet1_qgl_{variation}" : jet1.qgl,
             f"jet1_jetId_{variation}" : jet1.jetId,
-            # f"jet1_puId_{variation}" : jet1.puId,
+            f"jet1_puId_{variation}" : jet1.puId,
             f"jet2_pt_{variation}" : jet2.pt,
             f"jet2_eta_{variation}" : jet2.eta,
             f"jet1_mass_{variation}" : jet1.mass,
@@ -1845,7 +1846,7 @@ class EventProcessor(processor.ProcessorABC):
             f"jet2_phi_{variation}" : jet2.phi,
             f"jet2_qgl_{variation}" : jet2.qgl,
             f"jet2_jetId_{variation}" : jet2.jetId,
-            # f"jet2_puId_{variation}" : jet2.puId,
+            f"jet2_puId_{variation}" : jet2.puId,
             f"jj_mass_{variation}" : dijet.mass,
             # f"jj_mass_{variation}" : p4_sum_mass(jet1,jet2),
             f'jj_mass_log_{variation}': np.log(dijet.mass),
