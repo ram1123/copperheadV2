@@ -1245,7 +1245,7 @@ class EventProcessor(processor.ProcessorABC):
             "run": events.run,
             "event": events.event,
             "luminosityBlock": events.luminosityBlock,
-            "fraction": events.metadata["fraction"],
+            "fraction": ak.ones_like(events.event) * events.metadata["fraction"],
         }
         if is_mc:
             mc_dict = {
@@ -1686,10 +1686,10 @@ class EventProcessor(processor.ProcessorABC):
 
         jet_pt_cut = (jets.pt > self.config["jet_pt_cut"])
         # add additonal pT cut for the forward regions to reduce jet horn  ----------------------------------------------
-        # source: https://nam04.safelinks.protection.outlook.com/?url=https%3A%2F%2Findico.cern.ch%2Fevent%2F1434807%2Fcontributions%2F6040633%2Fattachments%2F2893077%2F5071932%2FJERC%2520meeting%252009_07.pdf&data=05%7C02%7Cyun79%40purdue.edu%7C3d76cc7f47974533372708dd896f875a%7C4130bd397c53419cb1e58758d6d63f21%7C0%7C0%7C638817834635140303%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=fh11i5iJCGo0EQKYBdw0Df8oaesOX2hCnJ%2FU78o37%2BU%3D&reserved=0
-        jetHorn_region = abs(jets.eta) > 2.5
-        jetHorn_cut = (jets.pt > 50)
-        jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
+        # # source: https://nam04.safelinks.protection.outlook.com/?url=https%3A%2F%2Findico.cern.ch%2Fevent%2F1434807%2Fcontributions%2F6040633%2Fattachments%2F2893077%2F5071932%2FJERC%2520meeting%252009_07.pdf&data=05%7C02%7Cyun79%40purdue.edu%7C3d76cc7f47974533372708dd896f875a%7C4130bd397c53419cb1e58758d6d63f21%7C0%7C0%7C638817834635140303%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=fh11i5iJCGo0EQKYBdw0Df8oaesOX2hCnJ%2FU78o37%2BU%3D&reserved=0
+        # jetHorn_region = abs(jets.eta) > 2.5
+        # jetHorn_cut = (jets.pt > 50)
+        # jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
         
         # add additonal pT cut for the forward regions  ----------------------------------------------
         
