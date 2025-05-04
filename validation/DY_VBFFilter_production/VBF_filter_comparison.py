@@ -525,9 +525,17 @@ def plotIndividualROOT(ak_zip, plot_bins, save_fname, save_path="./plots"):
         
         # Draw the histogram
         hist.Draw('E')
+
+        # Create a legend
+        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        
+        # Add entries
+        legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+        legend.Draw()
         
         # Save the canvas as a PNG
         save_full_path = f"{save_path}/{save_fname}_{field}_ROOT.pdf"
+        canvas.Update()
         canvas.SaveAs(save_full_path)
 
 def print_t_statisticROOT(hist_fromScratch, hist_rereco, field):
@@ -610,19 +618,6 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
         legend.AddEntry(hist_rereco, f"Central Rereco (Entries: {hist_rereco.GetEntries():.2e})", "l")
         legend.Draw()
 
-
-        # Grab the stats box
-        stats = hist_fromScratch.GetListOfFunctions().FindObject("stats")
-        # Move the stats box
-        if stats:
-            # stats.SetX1NDC(0.7)  # New x1 position (e.g., 70% to the right)
-            # stats.SetX2NDC(0.9)  # New x2 position
-            stats.SetY1NDC(0.9)  # New y1 position
-            stats.SetY2NDC(0.99)  # New y2 position
-        
-        # Redraw
-        canvas.Modified()
-        canvas.Update()
         
         # Save the canvas as a PNG
         save_full_path = f"{save_path}/plotTwoWay_{field}_ROOT.pdf"
@@ -676,7 +671,7 @@ if __name__ == "__main__":
     print("programe start")
     # ---------------------------------------------------------------
     
-    client =  Client(n_workers=40,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+    client =  Client(n_workers=50,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
     # ---------------------------------------------------------------
     # gateway = Gateway(
     #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
@@ -693,8 +688,8 @@ if __name__ == "__main__":
     
     # test_len = 14000
     # test_len = 400000
-    # test_len = 4000000
-    test_len = 2*8000000
+    test_len = 4000000
+    # test_len = 2*8000000
     # test_len = 10*8000000
 
     
@@ -759,7 +754,7 @@ if __name__ == "__main__":
     # plotIndividual(zip_rereco, plot_bins, save_fname, save_path=save_path)
     plotIndividualROOT(zip_rereco, plot_bins, save_fname, save_path=save_path)
     # Now obtain the T statistic
-    # print_t_statistic(zip_fromScratch, zip_rereco, plot_bins)   
+    print_t_statistic(zip_fromScratch, zip_rereco, plot_bins)   
 
     
 
