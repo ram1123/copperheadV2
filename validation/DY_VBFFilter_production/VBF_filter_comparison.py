@@ -77,7 +77,19 @@ def applyQuickSelection(events):
 
     return events
 
-    
+
+def getParentID(particle, GenPart):
+    has_no_parent = particle.genPartIdxMother == -1
+    self_id = particle.pdgId
+    parent = GenPart[particle.genPartIdxMother] 
+    parent_id = parent.pdgId
+    # print(f"has_no_parent: {has_no_parent.compute()}")
+    # print(f"self_id: {self_id.compute()}")
+    # print(f"GenPart.genPartIdxMother: {GenPart.genPartIdxMother.compute()}")
+    # print(f"parent_id: {parent_id.compute()}")
+    ParentID = ak.where(has_no_parent, self_id, parent_id)
+    return ParentID
+
 def getZip(events) -> ak.zip:
     """
     from events return dictionary of dimuon, muon, dijet, jet values
@@ -90,16 +102,12 @@ def getZip(events) -> ak.zip:
     dijet = jet1 + jet2
     # dijet = dijet[~ak.is_none(dijet.pt)]
     muons = ak.pad_none(events.Muon, target=2)
-    # muons = muons.compute()
-    # mu1 = events.Muon[:,0]
-    # mu2 = events.Muon[:,1]
     mu1 = muons[:,0]
     mu2 = muons[:,1]
     dimuon = mu1 + mu2
     
     gen_idx = events.Muon.genPartIdx
     muons_gen = ak.pad_none(events.GenPart[gen_idx], target=2, clip=True)
-    # print(f"muons_gen: {muons_gen.compute()}")
     
     mu1_gen = muons_gen[:,0]
     mu2_gen = muons_gen[:,1]
@@ -156,55 +164,73 @@ def getZip(events) -> ak.zip:
     has_negCharge = LHE_muon.pdgId > 0 # positive muon id is negative muon
     mu_neg_lhe = LHE_muon[has_negCharge][:,0]
     mu_pos_lhe = LHE_muon[~has_negCharge][:,0]
-    # print(f"mu_neg_lhe.pdgId: {mu_neg_lhe.pdgId.compute()}")
-    # print(f"mu_pos_lhe.pdgId: {mu_pos_lhe.pdgId.compute()}")
-    # print(f"LHE_muon.pdgId: {LHE_muon.pdgId.compute()}")
-    # print(f"has_negCharge: {has_negCharge.compute()}")
+
+    genPart = events.GenPart
+    gen_selection = (
+        (abs(genPart.pdgId) ==13)
+    )
+    gen_muon = genPart[gen_selection]
+    parent_id = getParentID(gen_muon, genPart)
+    # print(f"gen_muon.pdgId: {gen_muon.pdgId.compute()}")
+    parent_Zboson = abs(parent_id) == 23
+    # print(f"parent_id: {parent_id.compute()}")
     
-    # print(f"ak.num(mu_neg_lhe, axis=1): {ak.num(mu_neg_lhe, axis=1).compute()}")
-    # print(f"ak.num(mu_pos_lhe, axis=1): {ak.num(mu_pos_lhe, axis=1).compute()}")
+    gen_muon = gen_muon[parent_Zboson]
+    n_gen_muons = ak.num(gen_muon, axis=1)
+    more_than_two = n_gen_muons > 2
+    # print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
+    two_gen_muons = (n_gen_muons == 2) & (ak.prod(gen_muon.pdgId,axis=1) < 0 )
+    gen_muon = ak.pad_none(gen_muon[two_gen_muons], target=2, clip=True)
+    
+    # gen_muon = ak.pad_none(gen_muon, target=2, clip=True)
+    mu1_gen = gen_muon[:,0]
+    mu2_gen = gen_muon[:,1]
     
 
     
     return_dict = {
-        "mu1_pt" : mu1.pt,
-        "mu2_pt" : mu2.pt,
-        "mu1_eta" : mu1.eta,
-        "mu2_eta" : mu2.eta,
-        "mu1_phi" : mu1.phi,
-        "mu2_phi" : mu2.phi,
+        # "mu1_pt" : mu1.pt,
+        # "mu2_pt" : mu2.pt,
+        # "mu1_eta" : mu1.eta,
+        # "mu2_eta" : mu2.eta,
+        # "mu1_phi" : mu1.phi,
+        # "mu2_phi" : mu2.phi,
+        # "mu1_pt_gen" : mu1_gen.pt,
+        # "mu2_pt_gen" : mu2_gen.pt,
+        # "mu1_eta_gen" : mu1_gen.eta,
+        # "mu2_eta_gen" : mu2_gen.eta,
+        # "mu1_phi_gen" : mu1_gen.phi,
+        # "mu2_phi_gen" : mu2_gen.phi,
         "mu1_pt_gen" : mu1_gen.pt,
         "mu2_pt_gen" : mu2_gen.pt,
         "mu1_eta_gen" : mu1_gen.eta,
         "mu2_eta_gen" : mu2_gen.eta,
-        "mu1_phi_gen" : mu1_gen.phi,
-        "mu2_phi_gen" : mu2_gen.phi,
-        "mu1_pt_lhe" : mu1_lhe.pt,
-        "mu2_pt_lhe" : mu2_lhe.pt,
-        "mu1_eta_lhe" : mu1_lhe.eta,
-        "mu2_eta_lhe" : mu2_lhe.eta,
-        "mu1_phi_lhe" : mu1_lhe.phi,
-        "mu2_phi_lhe" : mu2_lhe.phi,
-        "mu_neg_lhe_eta" : mu_neg_lhe.eta,
-        "mu_pos_lhe_eta" : mu_pos_lhe.eta,
+        # "mu1_pt_lhe" : mu1_lhe.pt,
+        # "mu2_pt_lhe" : mu2_lhe.pt,
+        # "mu1_eta_lhe" : mu1_lhe.eta,
+        # "mu2_eta_lhe" : mu2_lhe.eta,
+        # "mu1_phi_lhe" : mu1_lhe.phi,
+        # "mu2_phi_lhe" : mu2_lhe.phi,
+        # "mu_neg_lhe_eta" : mu_neg_lhe.eta,
+        # "mu_pos_lhe_eta" : mu_pos_lhe.eta,
         # "mu1_iso" : mu1.pfRelIso04_all,
         # "mu2_iso" : mu2.pfRelIso04_all,
         # "mu_pt" : events.Muon.pt,
         # "mu_eta" : events.Muon.eta,
         # "mu_phi" : events.Muon.phi,
         # "mu_iso" : events.Muon.pfRelIso04_all,
-        "dimuon_mass" : dimuon.mass,
-        "dimuon_pt" : dimuon.pt,
-        "dimuon_eta" : dimuon.eta,
-        "dimuon_rapidity" : dimuon.rapidity,
-        "dimuon_phi" : dimuon.phi,
-        "jet1_pt" : jet1.pt,
-        "jet1_eta" : jet1.eta,
-        "jet1_phi" : jet1.phi,
-        "jet2_pt" : jet2.pt,
-        "jet2_eta" : jet2.eta,
-        "jet1_mass" : jet1.mass,
-        "jet2_mass" : jet2.mass,
+        # "dimuon_mass" : dimuon.mass,
+        # "dimuon_pt" : dimuon.pt,
+        # "dimuon_eta" : dimuon.eta,
+        # "dimuon_rapidity" : dimuon.rapidity,
+        # "dimuon_phi" : dimuon.phi,
+        # "jet1_pt" : jet1.pt,
+        # "jet1_eta" : jet1.eta,
+        # "jet1_phi" : jet1.phi,
+        # "jet2_pt" : jet2.pt,
+        # "jet2_eta" : jet2.eta,
+        # "jet1_mass" : jet1.mass,
+        # "jet2_mass" : jet2.mass,
         # "jet_pt" : events.Jet.pt,
         # "jet_eta" : events.Jet.eta,
         # "jet_phi" : events.Jet.phi,
@@ -505,8 +531,8 @@ def plotIndividual(ak_zip, plot_bins, save_fname, save_path="./plots"):
 def plotIndividualROOT(ak_zip, plot_bins, save_fname, save_path="./plots"):
     # fields2plot = ["mu1_eta", "mu2_eta"]
     # fields2plot = ["mu1_eta", "mu2_eta", "mu1_eta_gen", "mu2_eta_gen"]
-    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
-    fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe"]
+    fields2plot = ["mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
+    # fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe"]
     
     for field in fields2plot:
         # Create a histogram: name, title, number of bins, xlow, xhigh
@@ -557,18 +583,24 @@ def print_t_statisticROOT(hist_fromScratch, hist_rereco, field):
     # debug -------------------------------
 
     h_diff.Add(hist_rereco, -1)        
-    
-
     for i in range(1, h_diff.GetNbinsX() + 1):
         bin_center = h_diff.GetBinCenter(i)
         diff = h_diff.GetBinContent(i)
-        error = hist_fromScratch.GetBinError(i) # we want abs err from the estimator, which is UL private production
-        t_val = diff/error
-        print(f"{field} Bin {i}: center={bin_center:.2f}, diff={diff:.2f}, error={error:.2f}, t value={t_val:.2f}")
+        err_ul = hist_fromScratch.GetBinError(i) 
+        err_rereco = hist_rereco.GetBinError(i) 
+        err_total = (err_ul**2 + err_rereco**2)**(1/2)
+        if err_total != 0:
+            t_val = diff/err_total
+        else:
+            t_val = -999.0
+        print(f"{field} Bin {i}: center={bin_center:.2f}, diff={diff:.2f}, error={err_total:.2f}, t value={t_val:.2f}")
 
 
-def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
-    fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe", "mu_neg_lhe_eta", "mu_pos_lhe_eta"]
+def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", centralVsCentral=False):
+    # fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe", "mu_neg_lhe_eta", "mu_pos_lhe_eta"]
+    fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
+    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
+    
     
     for field in fields2plot:
         # Create a histogram: name, title, number of bins, xlow, xhigh
@@ -611,8 +643,11 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
 
 
         # Create a legend
-        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
-        
+        if centralVsCentral:
+            legend = ROOT.TLegend(0.35, 0.1, 0.65, 0.23)  # (x1,y1,x2,y2) in NDC coordinates
+        else:
+            legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
         # Add entries
         legend.AddEntry(hist_fromScratch, f"Private UL (Entries: {hist_fromScratch.GetEntries():.2e})", "l")  # "l" means line
         legend.AddEntry(hist_rereco, f"Central Rereco (Entries: {hist_rereco.GetEntries():.2e})", "l")
@@ -668,6 +703,13 @@ if __name__ == "__main__":
     action="store",
     help="save path to store stage1 output files",
     )
+    parser.add_argument(
+    "--centralVsCentral",
+    dest="centralVsCentral",
+    default=False, 
+    action=argparse.BooleanOptionalAction,
+    help="If true, compare centrally produced UL nanoV9 with centrally produced Rereco nanoV6 samples (dy M50)",
+    )
     print("programe start")
     # ---------------------------------------------------------------
     
@@ -682,6 +724,7 @@ if __name__ == "__main__":
 
     # ---------------------------------------------------------------
     print(f"client: {client}")
+    args = parser.parse_args()
     
     do_quick_test = True # for quick test
     # test_len = 4000
@@ -689,12 +732,16 @@ if __name__ == "__main__":
     # test_len = 14000
     # test_len = 400000
     test_len = 4000000
+    # test_len = 8000000
     # test_len = 2*8000000
     # test_len = 10*8000000
 
-    
-    files = json.load(open("new_UL_production.json", "r"))
-    # files = json.load(open("dy_m50_v9.json", "r"))
+    centralVsCentral = args.centralVsCentral
+
+    if centralVsCentral:
+        files = json.load(open("dy_m50_v9.json", "r"))
+    else:    
+        files = json.load(open("new_UL_production.json", "r"))
     events_fromScratch = NanoEventsFactory.from_root(
         files,
         schemaclass=NanoAODSchema,
@@ -709,9 +756,10 @@ if __name__ == "__main__":
     print("done UL zip!")
 
 
-    
-    rereco_full_files = json.load(open("rereco_central.json", "r"))
-    # rereco_full_files = json.load(open("dy_m50_v6.json", "r"))
+    if centralVsCentral:
+        rereco_full_files = json.load(open("dy_m50_v6.json", "r"))
+    else:
+        rereco_full_files = json.load(open("rereco_central.json", "r"))
     events_rereco = NanoEventsFactory.from_root(
         rereco_full_files,
         schemaclass=NanoAODSchema,
@@ -740,7 +788,7 @@ if __name__ == "__main__":
     
     # plot two way
 
-    plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
+    plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path, centralVsCentral=centralVsCentral)
     
     # plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
     # plotTwoWayCentral(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
@@ -752,9 +800,7 @@ if __name__ == "__main__":
     plotIndividualROOT(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
     save_fname = "Rereco_private_prod"
     # plotIndividual(zip_rereco, plot_bins, save_fname, save_path=save_path)
-    plotIndividualROOT(zip_rereco, plot_bins, save_fname, save_path=save_path)
-    # Now obtain the T statistic
-    print_t_statistic(zip_fromScratch, zip_rereco, plot_bins)   
+    plotIndividualROOT(zip_rereco, plot_bins, save_fname, save_path=save_path) # printing T statistic is included in this funcition
 
     
 
