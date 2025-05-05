@@ -168,11 +168,12 @@ def getZip(events) -> ak.zip:
     genPart = events.GenPart
     gen_selection = (
         (abs(genPart.pdgId) ==13)
+        & (genPart.status ==23) # must be an outgoing particle. Source: https://pythia.org/latest-manual/ParticleProperties.html
     )
     gen_muon = genPart[gen_selection]
     parent_id = getParentID(gen_muon, genPart)
     # print(f"gen_muon.pdgId: {gen_muon.pdgId.compute()}")
-    parent_Zboson = abs(parent_id) == 23
+    parent_Zboson = abs(parent_id) == 23 # parent must be from Z boson. Source: https://pdg.lbl.gov/2007/reviews/montecarlorpp.pdf
     # print(f"parent_id: {parent_id.compute()}")
     
     gen_muon = gen_muon[parent_Zboson]
@@ -181,6 +182,10 @@ def getZip(events) -> ak.zip:
     # print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
     two_gen_muons = (n_gen_muons == 2) & (ak.prod(gen_muon.pdgId,axis=1) < 0 )
     gen_muon = ak.pad_none(gen_muon[two_gen_muons], target=2, clip=True)
+    # print(f"gen_muon.pt b4 sort: {gen_muon.pt.compute()}")
+    sorted_args = ak.argsort(gen_muon.pt, ascending=False)
+    gen_muon = (gen_muon[sorted_args])
+    # print(f"gen_muon.pt after sort: {gen_muon.pt.compute()}")
     
     # gen_muon = ak.pad_none(gen_muon, target=2, clip=True)
     mu1_gen = gen_muon[:,0]
