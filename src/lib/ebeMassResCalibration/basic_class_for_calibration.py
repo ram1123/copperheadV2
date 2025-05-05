@@ -73,6 +73,17 @@ def get_calib_categories(events):
     cat_30_45_1 = mask_30_45 & (BB | OB | EB)
     cat_30_45_2 = mask_30_45 & (BO | OO | EO)
     cat_30_45_3 = mask_30_45 & (BE | OE | EE)
+    cats_30_45 = {
+        "30-45_BB": mask_30_45 & BB,
+        "30-45_BO": mask_30_45 & BO,
+        "30-45_BE": mask_30_45 & BE,
+        "30-45_OB": mask_30_45 & OB,
+        "30-45_OO": mask_30_45 & OO,
+        "30-45_OE": mask_30_45 & OE,
+        "30-45_EB": mask_30_45 & EB,
+        "30-45_EO": mask_30_45 & EO,
+        "30-45_EE": mask_30_45 & EE,
+    }
 
     # For the remaining bins, each eta combination is its own category.
     cats_45_52 = {
@@ -111,11 +122,12 @@ def get_calib_categories(events):
         "62-200_EE": mask_62_200 & EE,
     }
 
-    categories = {
-        "30-45_BB_OB_EB": cat_30_45_1,
-        "30-45_BO_OO_EO": cat_30_45_2,
-        "30-45_BE_OE_EE": cat_30_45_3
-    }
+    # categories = {
+    #     "30-45_BB_OB_EB": cat_30_45_1,
+    #     "30-45_BO_OO_EO": cat_30_45_2,
+    #     "30-45_BE_OE_EE": cat_30_45_3
+    # }
+    categories = cats_30_45
     categories.update(cats_45_52)
     categories.update(cats_52_62)
     categories.update(cats_62_200)
@@ -249,7 +261,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     # time.sleep(1)
     return df_fit
 
-def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="CalibrationLog.txt", out_string=""):
+def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="CalibrationLog.txt", out_string="", ifbinned=True):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -400,18 +412,36 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
 
     time_step = time.time()
 
-    #fitting directly to unbinned dataset is slow, so first make a histogram
-    roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
-    if roo_hist.numEntries() == 0:
-            logger.error(f"No entries in RooDataHist for category {cat_idx}. Skipping.")
-            return df_fit
+    if ifbinned:
+        #fitting directly to unbinned dataset is slow, so first make a histogram
+        roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
+        if roo_hist.numEntries() == 0:
+                logger.error(f"No entries in RooDataHist for category {cat_idx}. Skipping.")
+                return df_fit
+    else:
+        roo_hist = roo_dataset
+
 
     # do fitting
     rt.EnableImplicitMT()
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
-    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu", Minos=True, Strategy=2)
+
+    # Fix all parameters of the signal model but the mean and  sigma of the DSCB
+    # for param in rt.RooArgList(model1.getParameters(roo_hist)):
+    #     # if param.GetName() != "sigma" and param.GetName() != "mean" and param.GetName() != "sigfrac":
+    #     FixPars = ["bwz_Width", "bwz_mZ", "alpha1", "n1", "alpha2", "n2"]
+    #     # if param.GetName() != "sigma" and param.GetName() != "mean" and param.GetName() != "bwz_Width" and param.GetName() != "bwz_mZ":
+    #     if param.GetName() in FixPars:
+    #         param.setConstant(True)
+    #     else:
+    #         logger.warning(f"Parameter '{param.GetName()}' is not fixed and will be optimized during the fit.")
+
+
+    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+
     fit_result.Print()
     logger.info(f"fitting elapsed time: {time.time() - time_step}")
     time.sleep(1) # rest a second for stability
@@ -445,13 +475,34 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     frame2 = mass.frame(Title=" ")
     frame2.addPlotable(hpull, "P")
     frame2.GetYaxis().SetTitle("(Data-Fit)/ #sigma")
-    frame2.GetYaxis().SetRangeUser(-5, 8)
+    frame2.GetYaxis().SetRangeUser(-5, 5)
     frame2.GetYaxis().SetTitleOffset(0.3)
     frame2.GetYaxis().SetTitleSize(0.08)
     frame2.GetYaxis().SetLabelSize(0.08)
     frame2.GetXaxis().SetLabelSize(0.08)
     frame2.GetXaxis().SetTitle("m_{#mu#mu} (GeV)")
     frame2.Draw()
+    # add referecne line at 0
+    line = rt.TLine(75, 0, 105, 0)
+    line.SetNDC()
+    line.SetLineColor(rt.kBlack)
+    line.SetLineWidth(2)
+    line.SetLineStyle(2)
+    line.Draw("same")
+    # add reference line at +/-2
+    line2 = rt.TLine(75, 2, 105, 2)
+    line.SetNDC()
+    line2.SetLineColor(rt.kBlack)
+    line2.SetLineWidth(2)
+    line2.SetLineStyle(2)
+    line2.Draw("same")
+    line3 = rt.TLine(75, -2, 105, -2)
+    line.SetNDC()
+    line3.SetLineColor(rt.kBlack)
+    line3.SetLineWidth(2)
+    line3.SetLineStyle(2)
+    line3.Draw("same")
+
 
     # canvas.Modified()
     canvas.Update()

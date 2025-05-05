@@ -19,18 +19,36 @@ from basic_class_for_calibration import generateBWxDCB_plot
 from basic_class_for_calibration import generateVoigtian_plot
 from basic_class_for_calibration import generateBWxDCB_plot_bkgErfxExp
 from basic_class_for_calibration import closure_test_from_df
-from basic_class_for_calibration import closure_test_from_df_BothBeforeAndAfter
 from basic_class_for_calibration import closure_test_from_df_BothBeforeAndAfter_OnSameCanvas
+from basic_class_for_calibration import plot_closure_comparison_calibrated_uncalibrated
 from basic_class_for_calibration import save_calibration_json
 from basic_class_for_calibration import filter_region
 
 import logging
 from modules.utils import logger
 
+##################################
+#  Plot DiMuon Mass resolution
+##################################
+def plot_dimuon_mass_resolution(cat_data, cat_name, median_val, out_string, pdfFile_ExtraText):
+    plt.figure()
+    plt.hist(cat_data['dimuon_ebe_mass_res_NonCalc'], bins=100, range=(0.5, 3.0), color='C1', alpha=0.7)
+    plt.xlabel('Dimuon mass resolution (GeV)')
+    plt.ylabel('Events')
+    plt.title(f"Category {cat_name}\nMedian NonCal = {median_val:.4f} GeV")
+    plt.axvline(median_val, color='green', linestyle='dashed', linewidth=2,
+                label=f"Median NonCal: {median_val:.4f} GeV")
+    plt.legend()
+    plt.savefig(f'plots/{out_string}/mass_resolution_{cat_name}_NonCalibrated_{pdfFile_ExtraText}.pdf')
+    plt.close()
+    logger.info(f"Saved histogram for category {cat_name} (median NonCal = {median_val:.4f} GeV)")
+
+
+
 ##############################
 # Step 1: Mass Fitting in ZCR
 ##############################
-def step1_mass_fitting_zcr(parquet_path, out_string = ""):
+def step1_mass_fitting_zcr(parquet_path, out_string = "", fix_fitting_one_cat = None):
     logger.info("=== Step 1: Mass fitting in ZCR ===")
     tstart = time.time()
 
@@ -66,6 +84,9 @@ def step1_mass_fitting_zcr(parquet_path, out_string = ""):
 
     # Loop over each calibration category and perform mass fitting.
     for cat_name, mask in data_categories.items():
+        if fix_fitting_one_cat is not None and cat_name != fix_fitting_one_cat:
+            logger.info(f"Skipping category {cat_name} for debugging.")
+            continue
         cat_dimuon_mass = ak.to_numpy(data_events["dimuon_mass"][mask])
         if cat_dimuon_mass.size == 0:
             logger.info(f"Category {cat_name} has no events, skipping.")
@@ -100,7 +121,7 @@ def step1_mass_fitting_zcr(parquet_path, out_string = ""):
 ##############################
 # Step 2: Mass Resolution using dask.dataframe
 ##############################
-def step2_mass_resolution(parquet_path, out_string = "", CalibrationFactorJSONFile = None):
+def step2_mass_resolution(parquet_path, out_string = "", CalibrationFactorJSONFile = None, pdfFile_ExtraText = ""):
     logger.info("=== Step 2: Mass resolution calculation ===")
     tstart = time.time()
 
@@ -142,154 +163,66 @@ def step2_mass_resolution(parquet_path, out_string = "", CalibrationFactorJSONFi
         dpt1 = (df['mu1_ptErr'] / df['mu1_pt']) * (df['dimuon_mass'] / 2),
         dpt2 = (df['mu2_ptErr'] / df['mu2_pt']) * (df['dimuon_mass'] / 2)
     )
+
     # Compute the absolute mass resolution.
+    if CalibrationFactorJSONFile is not None:
+        df = df.assign(
+            dimuon_ebe_mass_res_calc = (np.sqrt(df['dpt1']**2 + df['dpt2']**2) * df['calibration'])
+        )
     df = df.assign(
-        dimuon_ebe_mass_res_calc = (np.sqrt(df['dpt1']**2 + df['dpt2']**2) * df['calibration'])
+        dimuon_ebe_mass_res_NonCalc = (np.sqrt(df['dpt1']**2 + df['dpt2']**2))
     )
 
     # Bring the result into a Pandas DataFrame.
     result = df.compute()
     logger.debug("Sample mass resolution data:")
-    logger.debug(result[['dimuon_ebe_mass_res_calc']].head())
-
     if CalibrationFactorJSONFile is not None:
-        # Split the events into 11 categories based on the dimuon mass resolution
-        # bins = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 2.0, 5.0]
-        # labels = [
-            # "0.6-0.7", "0.7-0.8", "0.8-0.9", "0.9-1.0", "1.0-1.1",
-            # "1.1-1.2", "1.2-1.3", "1.3-1.4", "1.4-1.5", "1.5-2.0", "2.0-5.0"
-        # ]
-        # bins = [0, 0.6, 1.0, 2.0, 5.0, np.inf]
-        # labels = [
-        #     "0.0-0.6", "0.6-1.0", "1.0-2.0", "2.0-5.0", "5.0-1000.0"
-        # ]
-        # bins = [0.0, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 2.0, 2.5, 3.5, np.inf]
-        # labels = [
-        #     "0.0-0.6", "0.6-0.7", "0.7-0.8", "0.8-0.9", "0.9-1.0", "1.0-1.1",
-        #     "1.1-1.2", "1.2-1.3", "1.3-1.4", "1.4-1.5", "1.5-1.7",
-        #     "1.7-2.0", "2.0-2.5", "2.5-3.5", "3.5-1000.0"
-        # ]
-        bins = [0.0, 1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10, 1.11, 1.12, 1.13, 1.14, 1.15, 1.16, 1.17, 1.18, 1.19, 1.20, 100.0]
-        labels = [
-            "0.0-1.0", "1.0-1.01", "1.01-1.02", "1.02-1.03", "1.03-1.04", "1.04-1.05",
-            "1.05-1.06", "1.06-1.07", "1.07-1.08", "1.08-1.09", "1.09-1.10",
-            "1.10-1.11", "1.11-1.12", "1.12-1.13", "1.13-1.14", "1.14-1.15",
-            "1.15-1.16", "1.16-1.17", "1.17-1.18", "1.18-1.19", "1.19-1.20",
-            "1.20-100.0"
-        ]
-        # Use map_partitions to apply pd.cut and convert the result to strings
-        def categorize_mass_res(df_partition):
-            df_partition["mass_res_category"] = pd.cut(
-                df_partition["dimuon_ebe_mass_res_calc"], bins=bins, labels=labels, include_lowest=True
-            ).astype(str)  # Convert Categorical to string
-            return df_partition
-
-        df = df.map_partitions(categorize_mass_res)
-        logger.info("Events have been categorized into mass resolution bins.")
-
-        # Compute the DataFrame to bring it into memory
-        result = df.compute()
-
-        # Iterate over the unique categories in the "mass_res_category" column
-        res_results = []
-        for cat_name in result["mass_res_category"].unique():
-            # if cat_name is nan or empty, skip
-            if pd.isna(cat_name) or cat_name == "":
-                logger.warning("Category name is NaN or empty, skipping.")
-                continue
-            mask = result["mass_res_category"] == cat_name
-            cat_data = result[mask]
-            if cat_data.empty:
-                logger.warning(f"Category {cat_name} has no events, skipping.")
-                continue
-            median_val = cat_data['dimuon_ebe_mass_res_calc'].median()
-            res_results.append({"cat_name": cat_name, "median_val": median_val})
-            # Optionally, plot a histogram (uncomment if desired):
-            plt.figure()
-            # range based on the category
-            logger.debug(f"category name: {cat_name}")
-            range_min, range_max = float(cat_name.split('-')[0]), float(cat_name.split('-')[1])
-            logger.debug(f"Range for category {cat_name}: {range_min} - {range_max}")
-            plt.hist(cat_data['dimuon_ebe_mass_res_calc'], bins=100, range=(range_min, range_max), color='C0', alpha=0.7)
-            plt.xlabel('Dimuon mass resolution (GeV)')
-            plt.ylabel('Events')
-            plt.title(f"Category {cat_name}\nMedian = {median_val:.4f} GeV")
-            plt.axvline(median_val, color='red', linestyle='dashed', linewidth=2,
-                        label=f"Median: {median_val:.4f} GeV")
-            plt.legend()
-            plt.savefig(f'plots/{out_string}/mass_resolution_{cat_name}_calibrated.pdf')
-            plt.close()
-            logger.info(f"Saved histogram for category {cat_name} (median = {median_val:.4f} GeV)")
-
-        df_res = pd.DataFrame(res_results)
-        # For the same categories, perform the fit and get the sigma value.
-        # This is a simple example, you can modify it to fit your needs.
-        df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
-        # Loop over each calibration category and perform mass fitting.
-        for cat_name in result["mass_res_category"].unique():
-            # if cat_name is nan or empty, skip
-            if pd.isna(cat_name) or cat_name == "":
-                logger.warning("Category name is NaN or empty, skipping.")
-                continue
-            mask = result["mass_res_category"] == cat_name
-            # cat_dimuon_mass = ak.to_numpy(result.loc[mask, "dimuon_ebe_mass_res_calc"])
-            cat_dimuon_mass = ak.to_numpy(result.loc[mask, "dimuon_mass"])
-            if cat_dimuon_mass.size == 0:
-                logger.info(f"Category {cat_name} has no events, skipping.")
-                continue
-            nbins = 100
-            logger.debug(f"Fitting category {cat_name} with {cat_dimuon_mass.size} events.")
-            logger.debug("------"*20)
-            logger.debug(cat_dimuon_mass)
-            logger.debug("------"*20)
-            df_fit = generateBWxDCB_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog.txt")
-            logger.debug("------"*20)
-            logger.debug(df_fit)
-            logger.debug("------"*20)
-
-        # Now from res_results and df_fit, we can compute the calibration factor.
-        # Merge the two DataFrames on "cat_name"
-        df_merged = pd.merge(df_fit, df_res, on="cat_name", how="inner")
-        logger.debug(df_merged)
-        logger.debug("Merged DataFrame:")
-
-        closure_test_from_df(df_merged, out_string, output_plot = "closure_test_afterCalibration_HIG19006Method.pdf") # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
-        logger.info("custom closure test completed!")
-        sys.exit(0)
-
-
-
+        logger.debug(result[['dimuon_ebe_mass_res_NonCalc', 'dimuon_ebe_mass_res_calc']].head())
+    else:
+        logger.debug(result[['dimuon_ebe_mass_res_NonCalc']].head())
 
     # Build calibration categories on the same result.
     calib_cats = get_calib_categories(result)
 
+    df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
     res_results = []
+    res_results_NonCal = []
     for cat_name, mask in calib_cats.items():
         cat_data = result[mask]
         if cat_data.empty:
             logger.warning(f"Category {cat_name} has no events, skipping.")
             continue
-        median_val = cat_data['dimuon_ebe_mass_res_calc'].median()
-        res_results.append({"cat_name": cat_name, "median_val": median_val})
-        # Optionally, plot a histogram (uncomment if desired):
-        plt.figure()
-        plt.hist(cat_data['dimuon_ebe_mass_res_calc'], bins=100, range=(0, 5.0), color='C0', alpha=0.7)
-        plt.xlabel('Dimuon mass resolution (GeV)')
-        plt.ylabel('Events')
-        plt.title(f"Category {cat_name}\nMedian = {median_val:.4f} GeV")
-        plt.axvline(median_val, color='red', linestyle='dashed', linewidth=2,
-                    label=f"Median: {median_val:.4f} GeV")
-        plt.legend()
-        if CalibrationFactorJSONFile is not None:
-            plt.savefig(f'plots/{out_string}/mass_resolution_{cat_name}_calibrated.pdf')
-        else:
-            plt.savefig(f'plots/{out_string}/mass_resolution_{cat_name}.pdf')
-        plt.close()
-        logger.info(f"Saved histogram for category {cat_name} (median = {median_val:.4f} GeV)")
+        median_val_NonCal = cat_data['dimuon_ebe_mass_res_NonCalc'].median()
+        res_results_NonCal.append({"cat_name": cat_name, "median_val_NonCal": median_val_NonCal})
+        # save the histogram for the non-calibrated mass resolution
+        plot_dimuon_mass_resolution(cat_data, cat_name, median_val_NonCal, out_string, pdfFile_ExtraText)
 
-    logger.info("Step 2 completed in {:.2f} seconds.".format(time.time() - tstart))
-    df_res = pd.DataFrame(res_results)
-    return df_res
+        if CalibrationFactorJSONFile is not None:
+            median_val = cat_data['dimuon_ebe_mass_res_calc'].median()
+            res_results.append({"cat_name": cat_name, "median_val": median_val})
+            # save the histogram for the calibrated mass resolution
+            plot_dimuon_mass_resolution(cat_data, cat_name, median_val, out_string, pdfFile_ExtraText)
+
+            # fit it
+            cat_dimuon_mass = ak.to_numpy(result["dimuon_mass"][mask])
+            nbins = 100
+            df_fit = generateBWxDCB_plot(cat_dimuon_mass, cat_name, nbins=nbins, df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog_{pdfFile_ExtraText}.txt")
+            logger.debug("------"*20)
+            logger.debug(df_fit)
+            logger.debug("------"*20)
+
+            df_merged = pd.merge(df_fit, pd.DataFrame(res_results), on="cat_name", how="inner")
+            logger.debug("Merged DataFrame:")
+            logger.debug(df_merged)
+            logger.debug("---"*20)
+
+    if CalibrationFactorJSONFile is not None:
+        df_merged = pd.merge(df_merged, pd.DataFrame(res_results_NonCal), on="cat_name", how="inner")
+    else:
+        df_merged = pd.DataFrame(res_results_NonCal)
+
+    logger.info("custom closure test completed!")
+    return df_merged
 
 ##############################
 # Step 3: Compute Calibration Factor
@@ -302,10 +235,10 @@ def step3_compute_calibration(df_fit, df_res):
     logger.debug(df_merged)
     logger.debug("---"*20)
     # For example, calibration_factor = fit_val / median_val
-    if "fit_val" in df_merged.columns and "median_val" in df_merged.columns:
-        df_merged["calibration_factor"] = df_merged["fit_val"] / df_merged["median_val"]
+    if "fit_val" in df_merged.columns and "median_val_NonCal" in df_merged.columns:
+        df_merged["calibration_factor"] = df_merged["fit_val"] / df_merged["median_val_NonCal"]
     else:
-        logger.warning("Warning: 'fit_val' and/or 'median_val' columns are missing in the merged DataFrame.")
+        logger.warning("Warning: 'fit_val' and/or 'median_val_NonCal' columns are missing in the merged DataFrame.")
         df_merged["calibration_factor"] = np.nan
 
     logger.debug("Computed calibration factors:")
@@ -331,17 +264,25 @@ def main():
     ComputeCalibrationFactors = False
     years = ["2018", "2017", "2016postVFP", "2016preVFP"]
     years = ["2018"]
-    for year in years:
+    # years = ["A", "B", "C", "D"]
+    for text in years:
+        year = "2018"
         logger.info(f"Processing year: {year}")
         # out_String = "2018C_HIG_19_006_SignalOnlyDSCB_BkgLaundau_FloatmZ"
         # out_String = "2018C_LastMeeting_ChangeRevLandauToLandau"
         # out_String = f"{year}_SigOnlyDSCB_bkgRevLandau"
         # out_String = "2018_SigOnlyDSCB_bkgRooCMSShape"
-        out_String = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck"
+        # out_String = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_May04"
+        out_String = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_May04_Fit3iter"
+        out_String = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_May04_Fit3iter_SplitlowPtBins"
+        # out_String = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_May04_Fit3iter_Minos2"
+        # out_String = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_May04_Unbinned"
         # out_String = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_DY"
-        # INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_*/*/*.parquet"
+
+        INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_*/*/*.parquet"
         # INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_F/*/*.parquet"
-        INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_C/*/*.parquet"
+        # INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_C/*/*.parquet"
+        # INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_{text}/*/*.parquet"
         # INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/dy_*MiNNLO/*/*.parquet"
 
         # create directory named out_string if it does not exist
@@ -349,13 +290,26 @@ def main():
 
         df_fit = None
         df_res = None
-        CalibrationJSONFile = f"plots/{out_String}/res_calib_BS_correction_{year}_nanoAODv12.json"
+        CalibrationJSONFile = f"res_calib_BS_correction_{year}_nanoAODv12.json"
+        # CalibrationJSONFile = "plots/2018C_SigOnlyDSCB_bkgRooCMSShape_CrossCheck/calibration_factors.json"
+        # CalibrationJSONFile = "/depot/cms/private/users/shar1172/copperheadV2_MergeFW/data/res_calib/res_calib_BS_correction_2018_nanoAODv12.json"
+        # pdffile_extra_text = text+"_SFfromFull2018"
+        pdffile_extra_text = ""
         if ComputeCalibrationFactors:
+            fix_fitting_one_cat = None
             # Step 1: Mass Fitting in ZCR
-            df_fit = step1_mass_fitting_zcr(INPUT_DATASET, out_String)
+            df_fit = step1_mass_fitting_zcr(INPUT_DATASET, out_String,fix_fitting_one_cat=fix_fitting_one_cat)
             logger.debug(df_fit)
             # sys.exit(0)
             # write to a csv file
+            if fix_fitting_one_cat is not None:
+                # update the f"plots/{out_String}/fit_results{out_String}.csv" with the new cat_name available in df_fit
+                # then save it to the same file
+                df_fit = pd.read_csv(f"plots/{out_String}/fit_results{out_String}.csv")
+                df_fit = pd.concat([df_fit, df_fit[df_fit["cat_name"] == fix_fitting_one_cat]])
+                df_fit = df_fit.drop_duplicates(subset=["cat_name"], keep="last")
+                df_fit = df_fit.reset_index(drop=True)
+
             df_fit.to_csv(f"plots/{out_String}/fit_results{out_String}.csv", index=False)
 
             # Step 2: Mass Resolution Calculation
@@ -376,9 +330,9 @@ def main():
             # Step 4: Save the final merged DataFrame to a CSV file.
             step4_save_csv(df_merged, f"plots/{out_String}/calibration_factors.csv")
 
-            # Save the df_merged DataFrame as a table format for latex: Only field "cat_name", "fit_val", "median_val", "calibration_factor"
+            # Save the df_merged DataFrame as a table format for latex: Only field "cat_name", "fit_val", "median_val_NonCal", "calibration_factor"
             df_merged.to_latex(f"plots/{out_String}/calibration_factors_WithFitError.tex", index=False)
-            df_merged_tex = df_merged[["cat_name", "fit_val", "median_val", "calibration_factor"]]
+            df_merged_tex = df_merged[["cat_name", "fit_val", "median_val_NonCal", "calibration_factor"]]
             df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors.tex", index=False)
             # rounding
             df_merged_tex = df_merged_tex.round(4)
@@ -387,29 +341,16 @@ def main():
             df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors_precision.tex", index=False, float_format="%.3f")
             df_merged_tex.to_latex(f"plots/{out_String}/calibration_factors_precision.tex", index=False, float_format="%.3f", longtable=True)
 
-
             # Step 5: Save the calibration factors to a JSON file.
             save_calibration_json(df_merged, f"plots/{out_String}/{CalibrationJSONFile}")
 
         else:
             # Rerun the step2_mass_resolution with the calibration factor
-            df_res_calibrated = step2_mass_resolution(INPUT_DATASET, out_String, CalibrationFactorJSONFile = CalibrationJSONFile)
-            df_res_calibrated.to_csv(f"plots/{out_String}/resolution_results{out_String}_calibrated.csv", index=False)
+            CalibrationJSONFile = f"plots/{out_String}/{CalibrationJSONFile}"
+            df_res_calibrated = step2_mass_resolution(INPUT_DATASET, out_String, CalibrationFactorJSONFile = CalibrationJSONFile, pdfFile_ExtraText = pdffile_extra_text)
+            df_res_calibrated.to_csv(f"plots/{out_String}/calibration_results{out_String}_calibrated.csv", index=False)
 
-            # read the fit_results from the CSV file
-            df_fit = pd.read_csv(f"plots/{out_String}/fit_results{out_String}.csv")
-
-            # Step 3: Compute the calibration factor (ratio)
-            df_merged = step3_compute_calibration(df_fit, df_res_calibrated)
-            # Step 4: Save the final merged DataFrame to a CSV file.
-            step4_save_csv(df_merged, f"plots/{out_String}/calibration_factors_calibrated.csv")
-
-
-
-        # Step 5: Closure test
-        closure_test_from_df(df_merged, out_String) # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
-        # closure_test_from_df_BothBeforeAndAfter(df_merged, out_String) # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
-        # closure_test_from_df_BothBeforeAndAfter_OnSameCanvas(df_merged, out_String) # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
+            plot_closure_comparison_calibrated_uncalibrated(df_res_calibrated, out_String, pdfFile_ExtraText = pdffile_extra_text) # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
         logger.info("All steps completed!")
         logger.info(f"Total time elapsed: {time.time() - total_time_start:.2f} s")
 
