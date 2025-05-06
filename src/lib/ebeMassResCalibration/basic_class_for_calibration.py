@@ -122,12 +122,12 @@ def get_calib_categories(events):
         "62-200_EE": mask_62_200 & EE,
     }
 
-    # categories = {
-    #     "30-45_BB_OB_EB": cat_30_45_1,
-    #     "30-45_BO_OO_EO": cat_30_45_2,
-    #     "30-45_BE_OE_EE": cat_30_45_3
-    # }
-    categories = cats_30_45
+    categories = {
+        "30-45_BB_OB_EB": cat_30_45_1,
+        "30-45_BO_OO_EO": cat_30_45_2,
+        "30-45_BE_OE_EE": cat_30_45_3
+    }
+    # categories = cats_30_45
     categories.update(cats_45_52)
     categories.update(cats_52_62)
     categories.update(cats_62_200)
@@ -297,12 +297,19 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
     # bwmZ.setConstant(True) # Stated in HIG-19-006
     bwWidth.setConstant(True) # Stated in HIG-19-006
-    if cat_idx == "30-45_BB_OB_EB" or cat_idx == "30-45_BO_OO_EO" or cat_idx == "30-45_BE_OE_EE":
+    if (cat_idx == "30-45_BB_OB_EB" or cat_idx == "30-45_BO_OO_EO" or cat_idx == "30-45_BE_OE_EE"
+        or cat_idx == "30-45_BB"
+        or cat_idx == "30-45_BO"
+        # or cat_idx == "30-45_EE"
+        ):
         """
         FIXME: Added this condition for 2018 data, because the fit was not converging
         """
         bwWidth.setConstant(False)
         bwmZ.setConstant(False)
+    if (cat_idx == "30-45_EE"):
+        bwmZ.setConstant(True)
+        bwWidth.setConstant(True)
 
 
     model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
@@ -323,6 +330,9 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # n2 = rt.RooRealVar("n2" , "n2", 114, 0.01, 385) #test 114
     n1.setConstant(True)
     n2.setConstant(True)
+    if cat_idx == "30-45_EE":
+        n1.setConstant(False)
+        n2.setConstant(False)
     model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
 
     # merge BW with DCB via convolution
@@ -367,7 +377,11 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.15, 0.0, 2.0)
     exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 1.0)
     exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
-    if cat_idx == "30-45_BB_OB_EB" or cat_idx == "30-45_BO_OO_EO" or cat_idx == "30-45_BE_OE_EE":
+    if (cat_idx == "30-45_BB_OB_EB" or cat_idx == "30-45_BO_OO_EO" or cat_idx == "30-45_BE_OE_EE" 
+        or cat_idx == "30-45_BB"
+        or cat_idx == "30-45_BO"
+        or cat_idx == "30-45_EE"
+        ):
         exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 5.0)
 
     model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
@@ -427,8 +441,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
-    # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu", Minos=True, Strategy=2)
-
     # Fix all parameters of the signal model but the mean and  sigma of the DSCB
     # for param in rt.RooArgList(model1.getParameters(roo_hist)):
     #     # if param.GetName() != "sigma" and param.GetName() != "mean" and param.GetName() != "sigfrac":
@@ -440,9 +452,24 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     #         logger.warning(f"Parameter '{param.GetName()}' is not fixed and will be optimized during the fit.")
 
 
-    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu", Minos=True, Extended=True, NumCPU=25, Strategy=2)
 
     fit_result.Print()
+
+
+    # # Save model and variables into RooWorkspace
+    # w = rt.RooWorkspace("w", "workspace")
+    # getattr(w, 'import')(mass, rt.RooFit.RecycleConflictNodes())
+    # getattr(w, 'import')(final_model, rt.RooFit.RecycleConflictNodes())
+    # getattr(w, 'import')(fit_result, rt.RooFit.RecycleConflictNodes())
+
+    # # Save to file
+    # model_dir = f"plots/{out_string}/final_models"
+    # os.makedirs(model_dir, exist_ok=True)
+    # ws_output_path = f"{model_dir}/workspace_cat{cat_idx}.root"
+    # w.writeToFile(ws_output_path)
+    # logger.info(f"Workspace saved to {ws_output_path}")
+
     logger.info(f"fitting elapsed time: {time.time() - time_step}")
     time.sleep(1) # rest a second for stability
     #do plotting
