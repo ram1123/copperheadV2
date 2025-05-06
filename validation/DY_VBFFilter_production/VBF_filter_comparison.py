@@ -166,20 +166,25 @@ def getZip(events) -> ak.zip:
     mu_pos_lhe = LHE_muon[~has_negCharge][:,0]
 
     genPart = events.GenPart
-    gen_selection = (
-        (abs(genPart.pdgId) ==13)
-        & (genPart.status ==23) # must be an outgoing particle. Source: https://pythia.org/latest-manual/ParticleProperties.html
-    )
+    # gen_selection = (
+    #      (genPart.status ==1) # must be a stable. Source: https://github.com/cms-sw/cmssw/blob/b3c939c01124861dffae4f08177fbc598538c569/PhysicsTools/JetMCAlgos/src/Pythia8PartonSelector.cc#L20
+    #     # (abs(genPart.pdgId) ==13)
+    #     # & (genPart.status ==23) # must be an outgoing particle. Source: https://pythia.org/latest-manual/ParticleProperties.html
+    # )
+    gen_selection = (abs(genPart.pdgId) ==13)
     gen_muon = genPart[gen_selection]
     parent_id = getParentID(gen_muon, genPart)
-    # print(f"gen_muon.pdgId: {gen_muon.pdgId.compute()}")
-    parent_Zboson = abs(parent_id) == 23 # parent must be from Z boson. Source: https://pdg.lbl.gov/2007/reviews/montecarlorpp.pdf
+    # # print(f"gen_muon.pdgId: {gen_muon.pdgId.compute()}")
+    # parent_Zboson = abs(parent_id) == 23 # parent must be from Z boson. Source: https://pdg.lbl.gov/2007/reviews/montecarlorpp.pdf
+    # gen_muon = gen_muon[parent_Zboson]
     # print(f"parent_id: {parent_id.compute()}")
-    
-    gen_muon = gen_muon[parent_Zboson]
+    from_hard_process = (gen_muon.statusFlags & 2**8) > 0
+    is_stable_process = (gen_muon.status ==1)
+    dy_muon_filter = from_hard_process & is_stable_process & (gen_muon.pt > 20)
+    gen_muon = gen_muon[dy_muon_filter]
     n_gen_muons = ak.num(gen_muon, axis=1)
     more_than_two = n_gen_muons > 2
-    # print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
+    print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
     two_gen_muons = (n_gen_muons == 2) & (ak.prod(gen_muon.pdgId,axis=1) < 0 )
     gen_muon = ak.pad_none(gen_muon[two_gen_muons], target=2, clip=True)
     # print(f"gen_muon.pt b4 sort: {gen_muon.pt.compute()}")
@@ -603,13 +608,19 @@ def print_t_statisticROOT(hist_fromScratch, hist_rereco, field):
 
 def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", centralVsCentral=False):
     # fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe", "mu_neg_lhe_eta", "mu_pos_lhe_eta"]
-    fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
-    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
+    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
+    fields2plot = ["mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
     
     
     for field in fields2plot:
         # Create a histogram: name, title, number of bins, xlow, xhigh
-        hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018;{field};Entries", 30, -2, 2)
+        if "eta" in field:
+            xlow, xhigh = -2, 2
+        elif "pt" in field:
+            xlow, xhigh = 0, 250
+            
+        
+        hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018;{field};Entries", 30, xlow, xhigh)
 
         values = ak.to_numpy(zip_fromScratch[field])
         weights = np.ones_like(values)
@@ -619,7 +630,7 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         print(len(values))
         hist_fromScratch.FillN(len(values), values, weights)
 
-        hist_rereco = ROOT.TH1F("hist_rereco", f"2018;{field};Entries", 30, -2, 2)
+        hist_rereco = ROOT.TH1F("hist_rereco", f"2018;{field};Entries", 30, xlow, xhigh)
         values = ak.to_numpy(zip_rereco[field])
         weights = np.ones_like(values)
         values = array('d', values) # make the array double
@@ -736,10 +747,9 @@ if __name__ == "__main__":
     
     # test_len = 14000
     # test_len = 400000
-    test_len = 4000000
-    # test_len = 8000000
+    # test_len = 4000000
+    test_len = 8000000
     # test_len = 2*8000000
-    # test_len = 10*8000000
 
     centralVsCentral = args.centralVsCentral
 
