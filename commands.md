@@ -1,3 +1,11 @@
+# 06 May 2025
+
+```bash
+time(python getCalibrationFactor_Improved.py --isMC  --years "2016preVFP")
+time(python getCalibrationFactor_Improved.py --isMC --validate --years "2016preVFP")
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l April19_NanoV12_UpdatedMassCalib -y 2018 -m all)
+```
+
 # 29 April 2025
 
 ```bash

@@ -261,7 +261,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     # time.sleep(1)
     return df_fit
 
-def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="CalibrationLog.txt", out_string="", ifbinned=True):
+def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="CalibrationLog.txt", out_string="", ifbinned=True, pdfFile_ExtraText=""):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -452,7 +452,8 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     #         logger.warning(f"Parameter '{param.GetName()}' is not fixed and will be optimized during the fit.")
 
 
-    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu", Minos=True, Extended=True, NumCPU=25, Strategy=2)
+    # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu", Minos=True, Extended=True, NumCPU=25, Strategy=2)
+    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
 
     fit_result.Print()
 
@@ -556,7 +557,10 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     with open(f"plots/{out_string}/{logfile}", "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
-    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}.pdf")
+    full_path = f"plots/{out_string}/calibration_fitCat{cat_idx}.pdf"
+    if pdfFile_ExtraText:
+        full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
+    canvas.SaveAs(full_path)
     del canvas
     # consider script to wait a second for stability?
     time.sleep(1)

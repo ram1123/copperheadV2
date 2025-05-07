@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import argparse
+
 import dask
 dask.config.set(scheduler="threads")  # or "single-threaded", "processes"
 
@@ -99,7 +101,16 @@ def step2_mass_resolution(parquet_path, out_string="", CalibrationFactorJSONFile
     create_directory(f"plots/{out_string}")
     df = dd.read_parquet(parquet_path)[CONFIG["fields_with_errors"]]
 
+
     if CalibrationFactorJSONFile:
+        # For validation choose randomly 50% of the data
+        # Create a pseudo-random mask using entry index
+        logger.debug(f"Entries before truncate: {len(df)}")
+
+        df = df.map_partitions(lambda part: part[np.random.rand(len(part)) < 0.5])
+
+        logger.debug(f"Entries after truncate: {len(df)}")
+
         correction_set = correctionlib.CorrectionSet.from_file(CalibrationFactorJSONFile)
         correction = correction_set["BS_ebe_mass_res_calibration"]
         df = df.map_partitions(lambda part: part.assign(
@@ -153,7 +164,7 @@ def step2_mass_resolution(parquet_path, out_string="", CalibrationFactorJSONFile
 
             # fit it
             mass = ak.to_numpy(result["dimuon_mass"][mask])
-            df_fit = generateBWxDCB_plot(mass, cat_name, nbins=CONFIG["nbins"], df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog_{pdfFile_ExtraText}.txt")
+            df_fit = generateBWxDCB_plot(mass, cat_name, nbins=CONFIG["nbins"], df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog_{pdfFile_ExtraText}.txt", pdfFile_ExtraText=pdfFile_ExtraText)
             logger.debug("------"*20)
             logger.debug(df_fit)
             logger.debug("------"*20)
@@ -169,18 +180,25 @@ def step3_compute_calibration(df_fit, df_res):
 
 
 def main():
-    isMC = False
-    ComputeCalibrationFactors = True
-    fix_fitting_one_cat = None
-    # fix_fitting_one_cat = "30-45_EE"
+    parser = argparse.ArgumentParser(description="Mass resolution calibration workflow")
+    parser.add_argument("--isMC", action="store_true", help="Run on MC samples (default: False)")
+    parser.add_argument("--validate", action="store_true", help="Run validation instead of computing calibration (default: False)")
+    parser.add_argument("--fixCat", type=str, default=None, help="Fit only one category")
+    parser.add_argument("--years", nargs="+", default=["2018", "2017", "2016postVFP", "2016preVFP"], help="List of years to process")
 
-    years = ["2018", "2017", "2016postVFP", "2016preVFP"]
+    args = parser.parse_args()
+
+    isMC = args.isMC
+    ComputeCalibrationFactors = not args.validate
+    fix_fitting_one_cat = args.fixCat
+    years = args.years
+
     for year in years:
         logger.info(f"Processing year: {year}")
         # out_string = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_May04_Fit3iter_SplitlowPtBins"
         out_string = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_DY"
         if isMC:
-            INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/dy*MinNNLO/*/*.parquet"
+            INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/dy*MiNNLO/*/*.parquet"
         else:
             INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_*/*/*.parquet"
         CalibrationJSONFile = f"res_calib_BS_correction_{year}_nanoAODv12.json"
