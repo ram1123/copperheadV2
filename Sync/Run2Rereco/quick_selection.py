@@ -109,7 +109,7 @@ if __name__ == "__main__":
             # Add labels and title
             plt.xlabel('Value')
             plt.ylabel('Entries')
-            plt.title(var_name)
+            plt.title(var_name+" diff")
             plt.legend()
             plt.savefig(f"{plot_path}/diff_{var_name}.png")
             
@@ -120,7 +120,7 @@ if __name__ == "__main__":
             plt.hist(diff, bins=50, histtype='step', label='Data')
             plt.xlabel('percentage diff %')
             plt.ylabel('Entries')
-            plt.title(var_name)
+            plt.title(var_name+" diff")
             plt.legend()
             plt.savefig(f"{plot_path}/diff_{var_name}_relative.png")
     

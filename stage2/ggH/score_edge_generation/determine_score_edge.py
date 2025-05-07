@@ -147,7 +147,12 @@ if __name__ == "__main__":
     action="store",
     help="path were stage2 output is saved",
     )
-
+    parser.add_argument(
+    '--years',
+    nargs='+',
+    default=["2016preVFP", "2016postVFP", "2017", "2018"],
+    help='List of years to process (default: 2018 2017)'
+    )
     start_time = time.time()
     """
     pseudocode:
@@ -184,8 +189,11 @@ if __name__ == "__main__":
     # target_sig_effs = np.array([0.5,1.0])
     final_sig_effs = [1.0]
 
+    years = sysargs.years
+    print(f"years: {years}")
     
-    for iter_idx in range(1, 8):
+    # for iter_idx in range(1, 8):
+    for iter_idx in range(1, 7):
         AMS_df = pd.DataFrame({})
         for sig_eff in sig_effs2iterate:
             target_sig_effs = final_sig_effs + [sig_eff]
@@ -193,8 +201,6 @@ if __name__ == "__main__":
         
             
             print(f"target_sig_effs: {target_sig_effs}")
-            # years = ["2018"]
-            years = ["2016preVFP", "2016postVFP", "2017", "2018"]
         
             BDT_score_edge_dict = obtain_BDT_edges(target_sig_effs, years, load_path)
             print(f"BDT_score_edge_dict: {BDT_score_edge_dict}")

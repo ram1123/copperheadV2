@@ -32,8 +32,8 @@ year = "2016preVFP"
 # year = "2016postVFP"
 # year = "2018"
 # njet = 0
-# for njet in [0,1,2]:
-for njet in [2]:
+for njet in [0,1,2]:
+# for njet in [2]:
     file = ROOT.TFile(f"{year}_njet{njet}.root", "READ")
     save_path = "./plots"
     workspace = file.Get("zpt_Workspace")

@@ -41,6 +41,6 @@ if __name__ == "__main__":
         
         plt.xlabel("Signal Efficiency")
         plt.ylabel("Approximate Median Significance")
-        plt.savefig(f"iter{load_path}_significances.png")
+        plt.savefig(f"iter{iter_idx}_significances.png")
         plt.clf()
 

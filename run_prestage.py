@@ -13,7 +13,6 @@ import copy
 import tqdm
 import uproot
 import random
-# random.seed(9002301)
 import re
 import glob
 # import warnings
@@ -28,7 +27,7 @@ def getBadFile(fname):
     try:
         up_file = uproot.open(fname) 
         tmp_path = f"/tmp/{uuid.uuid4().hex}.parquet"
-        if "Muon_pt" in up_file["Events"].keys():            
+        if "Muon_pt" in up_file["Events"].keys():   
             # apply parquet tests for lzma error
             ak.to_parquet(up_file["Events"]['Muon_pt'].array(),tmp_path)
             ak.to_parquet(up_file["Events"]['Muon_eta'].array(),tmp_path)
@@ -205,6 +204,7 @@ if __name__ == "__main__":
     if args.fraction is None: # do the normal prestage setup
         # allowlist_sites=["T2_US_Nebraska"] # take data only from purdue for now
         allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_CH_CERN", "T2_US_Vanderbilt", "T2_US_Florida", "T2_IT_Pisa", "T2_DE_RWTH"]
+        # allowlist_sites=["T2_US_Purdue"]
         
         # allowlist_sites=["T2_UK_London_IC", "T2_FI_HIP", "T1_DE_KIT_Disk","T2_US_Nebraska","T2_US_Wisconsin","T1_US_FNAL_Disk", "T2_US_Florida", "T2_US_FNAL",  "T2_CH_CERN", "T2_US_MIT" ]
         # allowlist_sites=["T1_DE_KIT_Disk"]
@@ -257,8 +257,8 @@ if __name__ == "__main__":
                 if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
                     # new_sample_list.append("dy_M-50")
                     # new_sample_list.append("dy_M-100To200")
-                    new_sample_list.append("dy_M-100To200_MiNNLO")
                     new_sample_list.append("dy_M-50_MiNNLO")
+                    new_sample_list.append("dy_M-100To200_MiNNLO")
                     # new_sample_list.append("dy_VBF_filter")
                     # new_sample_list.append("dy_m105_160_vbf_amc")
                     # new_sample_list.append("dy_VBF_filter_customJMEoff")
@@ -330,6 +330,9 @@ if __name__ == "__main__":
         print(f"args.run2_rereco: {args.run2_rereco}")
         fnames = []
         for sample_name in tqdm.tqdm(dataset.keys()):
+            print(f"sample_name: {sample_name}")
+            
+            
             is_data =  ("data" in sample_name)
 
             # This is temporary overwrite of samples that are private (not supported by rucio yet), thus the das_query is "dummy" in dataset yml files
@@ -340,12 +343,17 @@ if __name__ == "__main__":
                 # test start -----------------------------------------------------------
                 load_path = "/eos/purdue/store/user/vscheure/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/UL18_Nano/240514_124107/"
                 fnames = glob.glob(f"{load_path}/*/*.root")
-
+            elif sample_name == "dy_M-50":
+                """
+                load directly from local files
+                """
+                if year == "2018_RERECO":
+                    load_path = "/eos/purdue/store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/NANOAODSIM"
+                    fnames = glob.glob(f"{load_path}/*/*/*.root")
             elif sample_name == "dy_m105_160_vbf_amc":
                 """
                 load directly from local files
                 """
-                print('year == "2018_RERECO"', year == "2018_RERECO")
                 if year == "2018_RERECO":
                     # test start -----------------------------------------------------------
                     load_path = "/eos/purdue/store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM"
@@ -360,7 +368,7 @@ if __name__ == "__main__":
                     fnames = glob.glob(f"{load_path}/*/*/*.root")
                 elif year == "2018":
                     # test start -----------------------------------------------------------
-                    load_path = "/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus"
+                    load_path = "/eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_*"
                     fnames = glob.glob(f"{load_path}/*.root")
                 else:
                     print("no valid year is Given!")
@@ -637,12 +645,13 @@ if __name__ == "__main__":
                 fnames = [file[0] for file in outfiles if file != []]
                 
                 # fnames = [fname.replace("root://eos.cms.rcac.purdue.edu/", "/eos/purdue") for fname in fnames] # replace xrootd prefix bc it's causing file not found error
-                
-            # quick check to see if root files are corrupt
-            print("removing bad files!")
-            print(f"len(fnames) b4 bad files: {len(fnames)}")
-            fnames = removeBadFiles(fnames)
-            print(f"len(fnames) after bad files: {len(fnames)}")
+
+            if args.skipBadFiles:
+                # quick check to see if root files are corrupt
+                print("removing bad files!")
+                print(f"len(fnames) b4 bad files: {len(fnames)}")
+                fnames = removeBadFiles(fnames)
+                print(f"len(fnames) after bad files: {len(fnames)}")
             
             # convert to xcachce paths if requested
             if args.xcache:
@@ -652,9 +661,9 @@ if __name__ == "__main__":
             print(f"sample_name: {sample_name}")
             # print(f"das_query: {das_query}")
             
-            # print(f"fnames: {fnames}")
+            print(f"fnames: {fnames}")
             
-            # fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading 
+            fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading 
             # print(f"fnames: {fnames[:5]}")
 
             

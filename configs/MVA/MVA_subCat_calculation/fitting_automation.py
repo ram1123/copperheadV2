@@ -43,6 +43,7 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, rooH
         rt.kRed,
         rt.kOrange,
         rt.kViolet,
+        rt.kGray,
     ]
     for core_type, coreFunction_list in model_dict_by_coreFunction.items():
         name = "Canvas"
@@ -57,7 +58,7 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, rooH
         for ix in range(len(coreFunction_list)):
         # for ix in [0,4]:
             # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
-            color = color_list[ix]
+            color = color_list[ix%len(color_list)]
             hist = rooHist_list[ix]
             normalized_hist = normalizeRooHist(mass, hist)
             normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
@@ -91,6 +92,7 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list
         rt.kRed,
         rt.kOrange,
         rt.kViolet,
+        rt.kGray,
     ]
     for model_type, model_list in model_dict_by_sample.items():
         name = "Canvas"
@@ -111,7 +113,7 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list
             normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True  )
             model = model_list[ix]
             name = model.GetName()
-            color = color_list[ix]
+            color = color_list[ix%len(color_list)]
             model.plotOn(frame, Name=name, LineColor=color)
             legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
         frame.Draw()
@@ -532,19 +534,34 @@ if __name__ == "__main__":
     load_paths = {}
     BDT_thresholds = {}
     # sig_eff = 0.45
-    sig_effs = list(np.arange(0.99, 0.0, step=-0.01))
-    # sig_effs = list(np.arange(0.55, 0.45, step=-0.01))
-    sig_effs = [round(sig_eff,2) for sig_eff in sig_effs] # idk why but converting list from numpy breaks a little
+    # sig_effs = list(np.arange(0.99, 0.0, step=-0.01))
+    # # sig_effs = list(np.arange(0.55, 0.45, step=-0.01))
+    # sig_effs = [round(sig_eff,2) for sig_eff in sig_effs] # idk why but converting list from numpy breaks a little
+
+    # manual restriction of the search sig_effs
+    # sig_effs = [0.28,0.29, 0.3, 0.31, 0.32, 0.63,0.64,0.65,0.66,0.67, 0.78,0.79,0.8,0.81,0.82,0.93,0.94,0.95,0.96,0.97]
+    sig_effs = [0.81,0.82, 0.83,0.93,0.94,0.95,0.96,0.97]
     
     # sig_effs = list(np.arange(0.99, 0.0, step=-0.1)) # temp value
     # sig_effs = list(np.arange(0.99, 0.0, step=-0.05)) 
+    
+    # original start -----------------------------------------
+    # sig_eff_bin_edges = [] # this will be added with sig_eff values that gives max exp significance for each iteration
+    # original end -----------------------------------------
+
+    # temp start in the middle start -----------------------------------------
+    # sig_eff_bin_edges = [0.5, 0.15, 0.83, 0.02] 
+    # sig_eff_bin_edges =  [0.5, 0.15, 0.83, 0.02, 0.28]
+    # for sig_eff_bin_edge in sig_eff_bin_edges:
+    #     sig_effs.remove(sig_eff_bin_edge) 
+    sig_eff_bin_edges = [0.64, 0.28]
+    # temp start in the middle end -----------------------------------------
     print(f"sig_effs: {sig_effs}")
-    sig_eff_bin_edges = [] # this will be added with sig_eff values that gives max exp significance for each iteration
-    # sig_effs.remove(0.48) # temp manual removal
-    # sig_eff_bin_edges.append(0.48) # temp manual addition
-    max_iters = 10
+    
+    max_iters = 5 # 10
     current_max_signifiance = 0 # this value will be compared to see if we want to end the iteration prematurely
-    for iter_idx in range(max_iters):
+    # for iter_idx in range(max_iters):
+    for iter_idx in range(2, max_iters):
         print(f"starting iteration {iter_idx}!")
         exp_signficances = {}
         for sig_eff in sig_effs:

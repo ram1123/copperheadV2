@@ -252,7 +252,7 @@ def plotCorefuncComparisonByCombined_n_SubCat(mass:rt.RooRealVar, data_dict_by_s
         canvas.cd()
         frame = mass.frame()
         frame.SetXTitle(f"Dimuon Mass (GeV)")
-        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        legend = rt.TLegend(0.8,0.7,0.9,0.9)
         legend.AddEntry("", f"Category: {subCat_idx}", "")
         
         name = f"UCSD {subCat_idx} data"

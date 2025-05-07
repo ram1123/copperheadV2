@@ -179,7 +179,7 @@ class NumpyDataset(Dataset):
         return self.input_arr[idx], self.label_arr[idx]
 
 
-def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False):
+def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False, normalize=True):
     """
     TODO: add weights
     """
@@ -198,11 +198,11 @@ def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False):
         wgt_total_signal = wgt_total[label_total==1]  
         wgt_total_background = wgt_total[label_total==0]   
         # Histogram for signal, normalized to one
-        hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, weights=wgt_total_signal)
+        hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, weights=wgt_total_signal, density=normalize)
         # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
         
         # Histogram for background, normalized to one
-        hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, weights=wgt_total_background)
+        hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, weights=wgt_total_background, density=normalize)
         # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
         hep.histplot(
             hist_signal, 
@@ -218,35 +218,113 @@ def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False):
             label=f"Bkg - {stage}", 
             ax=ax_main,
         )
-    # Plotting
-    
-    # plt.plot(bin_centers_signal, hist_signal, label='Signal', drawstyle='steps-mid')
-    # plt.plot(bin_centers_background, hist_background, label='Background', drawstyle='steps-mid')
-    # hists = [hist_signal, hist_background]
-    # labels = ["signal", "Background"]
-    # hist_dict = {
-    #     "Signal": hist_signal,
-    #     "Background" : hist_background,
-    # }
-    # for label, hist in hist_dict.items():
-    #     hep.histplot(
-    #         hist, 
-    #         bins=bins, 
-    #         histtype='step', 
-    #         label=label, 
-    #         ax=ax_main,
-    #     )
+
+    x_label_addendum = "normalized" if normalize else ""
     if transformPrediction:
-        plt.xlabel('arctanh Score')
+        plt.xlabel(f'arctanh Score {x_label_addendum}')
     else:
-        plt.xlabel('DNN Score')
+        plt.xlabel(f'DNN Score {x_label_addendum}')
     plt.ylabel('Events')
-    plt.title('DNN Score Distributions Sig vs Bkg')
+    # plt.title('normalized DNN Score Distributions Sig vs Bkg')
     plt.legend()
-    
+    status = "Private Work 2018"
+    CenterOfMass = "13"
+    # hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
+    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, ax=ax_main)
     plt.savefig(plt_save_path)
     plt.clf()
+
+
+def customROC_curve_AN(label, pred, weight):
+    """
+    generates signal and background efficiency consistent with the AN,
+    as described by Fig 4.6 of Dmitry's PhD thesis
+    """
+    # we assume sigmoid output with labels 0 = background, 1 = signal
+    thresholds = np.linspace(start=0,stop=1, num=500) 
+    effBkg_total = -99*np.ones_like(thresholds) # effBkg = false positive rate
+    effSig_total = -99*np.ones_like(thresholds) # effSig = true positive rate
+    for ix in range(len(thresholds)):
+        threshold = thresholds[ix]
+        # get FP and TP
+        positive_filter = (pred > threshold)
+        falsePositive_filter = positive_filter & (label == 0)
+        FP = np.sum(weight[falsePositive_filter])#  FP = false positive
+        truePositive_filter = positive_filter & (label == 1)
+        TP = np.sum(weight[truePositive_filter])#  TP = true positive
+        
+
+        # get TN and FN
+        negative_filter = (pred <= threshold) # just picked negative to be <=
+        trueNegative_filter = negative_filter & (label == 0)
+        TN = np.sum(weight[trueNegative_filter])#  TN = true negative
+        falseNegative_filter = negative_filter & (label == 1)
+        FN = np.sum(weight[falseNegative_filter])#  FN = false negative
+
+        
+
+
+        # effBkg = TN / (TN + FP) # Dmitry PhD thesis definition
+        # effSig = FN / (FN + TP) # Dmitry PhD thesis definition
+        effBkg = FP / (TN + FP) # AN-19-124 ggH Cat definition
+        effSig = TP / (FN + TP) # AN-19-124 ggH Cat definition
+        effBkg_total[ix] = effBkg
+        effSig_total[ix] = effSig
+
+        # print(f"ix: {ix}") 
+        # print(f"threshold: {threshold}")
+        # print(f"effBkg: {effBkg}")
+        # print(f"effSig: {effSig}")
+        
+        
+        # sanity check
+        assert ((np.sum(positive_filter) + np.sum(negative_filter)) == len(pred))
+        total_yield = FP + TP + FN + TN
+        assert(np.isclose(total_yield, np.sum(weight)))
+        # print(f"total_yield: {total_yield}")
+        # print(f"np.sum(weight): {np.sum(weight)}")
     
+
+    effBkg_total[np.isnan(effBkg_total)] = 1
+    effSig_total[np.isnan(effSig_total)] = 1
+
+    return (effBkg_total, effSig_total, thresholds)
+
+
+def plotROC(score_dict, plt_save_path):
+    """
+    TODO: add weights
+    """
+    fig, ax_main = plt.subplots()
+    status = "Private Work 2018"
+    CenterOfMass = "13"
+    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, ax=ax_main)
+    plt.yscale('log')
+    plt.ylim((0.001, 1e3))
+    for stage, output_dict in score_dict.items():
+        pred_total = output_dict["prediction"]
+        label_total = output_dict["label"]
+        wgt_total = output_dict["weight"]
+        eff_bkg, eff_sig, thresholds = customROC_curve_AN(label_total, pred_total, wgt_total)
+        plt.plot(eff_sig, eff_bkg, label=f"{stage}")
+
+    plt.vlines(np.linspace(0,1,11), 0, 1, linestyle="dashed", color="grey")
+    plt.hlines(np.logspace(-4,0,5), 0, 1, linestyle="dashed", color="grey")
+    # plt.hlines(eff_bkg, 0, eff_sig, linestyle="dashed")
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0001, 1.0])
+    plt.xlabel('$\\epsilon_{sig}$')
+    plt.ylabel('$\\epsilon_{bkg}$')
+    plt.yscale("log")
+    plt.ylim([0.0001, 1.0])
+    
+    plt.legend(loc="lower right")
+    # plt.title(f'ROC curve for ggH BDT {year}')
+    plt.savefig(plt_save_path)
+    plt.clf()
+
+
+
 def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
     """
     helper function running through the evaluation
@@ -284,6 +362,8 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
     }
     model.train() # turn back to train mode  
     return return_dict
+
+
 
 
 def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=101, save_path=""):
@@ -453,6 +533,11 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             # # bins = np.linspace(0, 1, 30)  # Adjust bin edges as needed
             # # bins = np.linspace(0, 2.8, 30)  # Adjust bin edges as needed
 
+
+            # plot ROC curve 
+            plt_save_path = f"{fold_save_path}/epoch{epoch}_ROC.png"
+            plotROC(score_dict, plt_save_path)
+
             bins = np.linspace(0, 1, 30) 
             plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_combined_dist_bySigBkg.png"
             # plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
@@ -597,7 +682,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
                 )
 
             ax_main.set_xlabel('arctanh Score')
-            ax_main.set_ylabel("Yield")
+            ax_main.set_ylabel("Events")
 
             sig_hist_total = np.sum(sig_hist_l)
             bkg_hist_total = np.sum(bkg_hist_l)

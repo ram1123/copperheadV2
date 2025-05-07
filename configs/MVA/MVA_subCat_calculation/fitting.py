@@ -15,6 +15,110 @@ import pandas as pd
 import subprocess
 import re
 
+def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
+    """
+    Takes rootHistogram and returns a new copy with histogram values normalized to sum to one
+    """
+    x_name = x.GetName()
+    THist = rooHist.createHistogram(x_name).Clone("clone") # clone it just in case
+    THist.Scale(1/THist.Integral())
+    print(f"THist.Integral(): {THist.Integral()}")
+    normalizedHist_name = rooHist.GetName() + "_normalized"
+    roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist) 
+    return roo_hist_normalized
+    
+def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, rooHist_list, save_path: str):
+    """
+    takes the dictionary of all Bkg RooAbsPdf models grouped by same corefunctions, and plot them
+    in the frame() of mass and saves the plots on a given directory path
+    """
+    # make the save_path directory if it doesn't exist
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        
+    color_list = [
+        rt.kGreen,
+        rt.kBlue,
+        rt.kRed,
+        rt.kOrange,
+        rt.kViolet,
+    ]
+    for core_type, coreFunction_list in model_dict_by_coreFunction.items():
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        frame = mass.frame()
+        frame.SetTitle(f"Normalized Shape Plot of {core_type} PDFs")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        
+        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+        for ix in range(len(coreFunction_list)):
+        # for ix in [0,4]:
+            # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+            color = color_list[ix]
+            hist = rooHist_list[ix]
+            normalized_hist = normalizeRooHist(mass, hist)
+            normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True )
+            # normalized_hist.plotOn(frame, LineColor=color,MarkerColor=color)
+            model = coreFunction_list[ix]
+            name = model.GetName()
+            print(f"index {ix} with name: {name}")
+            # model.Print("v")
+            model.plotOn(frame, Name=name, LineColor=color)
+            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+        frame.SetMaximum(0.0042)
+        frame.Draw()
+        legend.Draw()       
+        canvas.SetTicks(2, 2)
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"{save_path}/BkgShapePlot_{core_type}.pdf")
+
+def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list: List, save_path: str):
+    """
+    takes the dictionary of all Signal RooAbsPdf models grouped by same sample, and plot them
+    in the frame() of mass and saves the plots on a given directory path
+    """
+    # make the save_path directory if it doesn't exist
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        
+    color_list = [
+        rt.kGreen,
+        rt.kBlue,
+        rt.kRed,
+        rt.kOrange,
+        rt.kViolet,
+    ]
+    for model_type, model_list in model_dict_by_sample.items():
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+        frame = mass.frame()
+        frame.SetMaximum(0.017)
+        frame.SetMinimum(-0.002)
+        frame.SetTitle(f"Normalized Shape Plot of {model_type} PDFs")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        legend = rt.TLegend(0.65,0.55,0.9,0.7)
+        # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
+        
+        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
+        for ix in range(len(model_list)):
+            sig_hist = sigHist_list[ix]
+            normalized_hist = normalizeRooHist(mass, sig_hist)
+            normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True  )
+            model = model_list[ix]
+            name = model.GetName()
+            color = color_list[ix]
+            model.plotOn(frame, Name=name, LineColor=color)
+            legend.AddEntry(frame.getObject(int(frame.numItems())-1),name, "L")
+        frame.Draw()
+        legend.Draw()        
+        canvas.Update()
+        canvas.Draw()
+        canvas.SaveAs(f"{save_path}/ShapePlot_{model_type}.pdf")
+
 # def applyGGH_cut(events):
 #     btag_cut =ak.fill_none((events.nBtagLoose >= 2), value=False) | ak.fill_none((events.nBtagMedium >= 1), value=False)
 #     # vbf_cut = ak.fill_none(events.vbf_cut, value=False
@@ -69,7 +173,7 @@ def calculateSubCat(processed_events, score_edges):
     processed_events["subCategory_idx"] = subCat_idx
     return processed_events
 
-def separateNfit(load_paths: Dict, score_edge_dict: Dict):
+def separateNfit(load_paths: Dict, score_edge_dict: Dict, plot_save_path:str):
     """
     keys of both load_paths and score_edge_dict refer to the era values (ie 2016preVFP, 2016postVFP, 2017 and 2018)
     and keys on load_paths and score_edge_dict are intended to be identical
@@ -383,7 +487,7 @@ def separateNfit(load_paths: Dict, score_edge_dict: Dict):
     # -------------------------------------------------------------------------
     # do Plotting
     # -------------------------------------------------------------------------
-    plot_save_path = f"./quick_plots/"
+    # plot_save_path = f"./quick_plots/"
     if not os.path.exists(plot_save_path):
         os.makedirs(plot_save_path)
         
@@ -480,6 +584,36 @@ def separateNfit(load_paths: Dict, score_edge_dict: Dict):
     canvas.Draw()
     canvas.SaveAs(f"{plot_save_path}/sigMC_plot_subCat1.pdf")
 
+    # -------------------------------------------------------------------------
+    # do Bkg plotting loop divided into core-function
+    # -------------------------------------------------------------------------
+    
+    model_dict_by_coreFunction = {
+        "BWZRedux" : [
+            BWZRedux_SubCat0, 
+            BWZRedux_SubCat1,
+        ],
+    }
+    bkgHist_list = [ # for normalization histogram reference
+        data_subCat0_BWZRedux,
+        data_subCat1_BWZRedux,
+    ]
+    plotBkgByCoreFunc(mass, model_dict_by_coreFunction, bkgHist_list, plot_save_path)
+    # -------------------------------------------------------------------------
+    # do signal plotting for all sub-Cats in one plot
+    # -------------------------------------------------------------------------
+    sig_dict_by_sample = {
+        "signal" : [
+            signal_subCat0, 
+            signal_subCat1,
+        ]
+    }
+    sigHist_list = [ # for signal function normalization
+        data_subCat0_signal,
+        data_subCat1_signal,
+    ]
+    plotSigBySample(mass, sig_dict_by_sample, sigHist_list, plot_save_path)
+    
     # ---------------------------------------------------
     # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
@@ -576,8 +710,11 @@ if __name__ == "__main__":
             threshold = BDT_df["BDT_threshold"][bool_filter].values
             print(f"{year} threshold: {threshold}")
             BDT_thresholds[year] = [0, threshold, 1.0]
-            
-        separateNfit(load_paths, BDT_thresholds)
+
+        sig_eff_str = str(round(sig_eff,2)).replace(".", "_")
+        plot_save_path = f"quick_plots/iter0/{sig_eff_str}"
+        print(f"separateNfit plot_save_path: {plot_save_path}")
+        separateNfit(load_paths, BDT_thresholds, plot_save_path)
         
         # combine the datacards
         with open("datacard_comb_sig_all_ggh_test.txt", "w") as text_file:

@@ -67,9 +67,12 @@ def getHemVetoDataRatio(compute_dict):
     returns: a float point of the portion of the data that has been vetoed if any jets were within the HEM region
     """
     HemVeto_filter = compute_dict["HemVeto_filter"] # here, True means no Veto
-    is_HemRegion = compute_dict["is_HemRegion"]
-    is_HemRegionAndHemVeto = is_HemRegion & HemVeto_filter
-    veto_ratio = ak.sum(is_HemRegionAndHemVeto) / ak.sum(is_HemRegion)
+    nevents = ak.ones_like(HemVeto_filter, dtype="bool")
+    nevents = ak.sum(nevents)
+    # is_HemRegion = compute_dict["is_HemRegion"]
+    # is_HemRegionAndHemVeto = is_HemRegion & HemVeto_filter
+    # veto_ratio = ak.sum(is_HemRegionAndHemVeto) / ak.sum(is_HemRegion)
+    veto_ratio = ak.sum(HemVeto_filter) / nevents
     return (1-veto_ratio)
     
 
@@ -223,7 +226,7 @@ if __name__ == "__main__":
         # "jet2_eta_nominal",
         # "jet1_phi_nominal",
         # "jet2_phi_nominal",
-        "is_HemRegion",
+        # "is_HemRegion",
     ]
     label = "HemVetoStudy_04Apr2025"
     year="2018"

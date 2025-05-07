@@ -520,8 +520,8 @@ def applyStrat2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
     return ak.where(keep_jerSmear, jer_smearing, no_smearing)
 
 def applyStrat1n2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
-    jer_smearing1 = applyStrat1(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
-    jer_smearing2 = applyStrat2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
+    jer_smearing1 = applyStrat1(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta)
+    jer_smearing2 = applyStrat2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta)
     apply_stat2 = abs(jet_eta) < 3
     return ak.where(apply_stat2, jer_smearing2, jer_smearing1)
     

@@ -117,7 +117,10 @@ if __name__ == "__main__":
 
     run_label = "V2_Jan09_ForZptReWgt"
     # run_label = args.label
-    year = "2018"
+    # year = "2018"
+    # year = "2017"
+    # year = "2016postVFP"
+    year = "2016preVFP"
     base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0" # define the save path of stage1 outputs
     
     
@@ -130,8 +133,8 @@ if __name__ == "__main__":
     dy_events = filterRegion(dy_events, region="z-peak")
     
     njet_field = "njets_nominal"
-    # for njet in [0,1,2]:
-    for njet in [1,2]:
+    for njet in [0,1,2]:
+    # for njet in [0]:
         if njet != 2:
             data_events_loop = data_events[data_events[njet_field] ==njet]
             dy_events_loop = dy_events[dy_events[njet_field] ==njet]
@@ -235,7 +238,7 @@ if __name__ == "__main__":
         # # Create the directory if it doesn't exist
         # os.makedirs(save_path, exist_ok=True)
         
-        binning_path = f"2018_njet{njet}.yml"
+        binning_path = f"{year}_njet{njet}.yml"
         data = {"rewgt_binning": current_bins.tolist()}
         # Save the data to a YAML file
         OmegaConf.save(config=data, f=binning_path)

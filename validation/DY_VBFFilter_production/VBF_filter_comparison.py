@@ -184,7 +184,7 @@ def getZip(events) -> ak.zip:
     gen_muon = gen_muon[dy_muon_filter]
     n_gen_muons = ak.num(gen_muon, axis=1)
     more_than_two = n_gen_muons > 2
-    print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
+    # print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
     two_gen_muons = (n_gen_muons == 2) & (ak.prod(gen_muon.pdgId,axis=1) < 0 )
     gen_muon = ak.pad_none(gen_muon[two_gen_muons], target=2, clip=True)
     # print(f"gen_muon.pt b4 sort: {gen_muon.pt.compute()}")
@@ -545,8 +545,12 @@ def plotIndividualROOT(ak_zip, plot_bins, save_fname, save_path="./plots"):
     # fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe"]
     
     for field in fields2plot:
+        if "eta" in field:
+            xlow, xhigh = -2, 2
+        elif "pt" in field:
+            xlow, xhigh = 0, 250
         # Create a histogram: name, title, number of bins, xlow, xhigh
-        hist = ROOT.TH1F("MC hist", f"2018;{field};Entries", 30, -2, 2)
+        hist = ROOT.TH1F("MC hist", f"2018;{field};Entries", 30, xlow, xhigh)
 
         values = ak.to_numpy(ak_zip[field])
         weights = np.ones_like(values)
@@ -618,9 +622,10 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
             xlow, xhigh = -2, 2
         elif "pt" in field:
             xlow, xhigh = 0, 250
-            
+        # nbins = 30
+        nbins = 60
         
-        hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018;{field};Entries", 30, xlow, xhigh)
+        hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018;{field};Entries", nbins, xlow, xhigh)
 
         values = ak.to_numpy(zip_fromScratch[field])
         weights = np.ones_like(values)
@@ -630,7 +635,7 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         print(len(values))
         hist_fromScratch.FillN(len(values), values, weights)
 
-        hist_rereco = ROOT.TH1F("hist_rereco", f"2018;{field};Entries", 30, xlow, xhigh)
+        hist_rereco = ROOT.TH1F("hist_rereco", f"2018;{field};Entries", nbins, xlow, xhigh)
         values = ak.to_numpy(zip_rereco[field])
         weights = np.ones_like(values)
         values = array('d', values) # make the array double

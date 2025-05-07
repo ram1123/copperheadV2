@@ -994,8 +994,8 @@ class EventProcessor(processor.ProcessorABC):
                 
             # -------------------------------------
             jets = do_jec_scale(jets, self.config, is_mc, dataset)
-            # if is_mc: # JER smearing
-            #     jets = do_jer_smear(jets, self.config, "nom", events.event)
+            if is_mc: # JER smearing
+                jets = do_jer_smear(jets, self.config, "nom", events.event)
             sorted_args = ak.argsort(jets.pt, ascending=False)
             jets = (jets[sorted_args])
             # -------------------------------------

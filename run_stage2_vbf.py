@@ -1,5 +1,3 @@
-
-
 from hist import Hist
 import dask
 import awkward as ak
@@ -32,6 +30,20 @@ import glob
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import os
+import itertools
+
+def get_variation(wgt_variation, sys_variation):
+    if "nominal" in wgt_variation:
+        if "nominal" in sys_variation:
+            return "nominal"
+        else:
+            return sys_variation
+    else:
+        if "nominal" in sys_variation:
+            return wgt_variation
+        else:
+            return None
+
 
 def fillEventNans(events, category="vbf"):
     """
@@ -342,13 +354,13 @@ if __name__ == "__main__":
             
         events_stage1 = dak.from_parquet(sample_l)
 
-        # reparitition events if npartitions are too little to decrease memory usage (ie histograming vbf requires > 10 GB per worker otherwise)
-        min_partition_size = 50
-        print(f"events_stage1.npartitions b4 repartition: {events_stage1.npartitions}")
-        if events_stage1.npartitions < min_partition_size :
-            events_stage1 = events_stage1.repartition(npartitions=min_partition_size)
-            print(f"events_stage1.npartitions after repartition: {events_stage1.npartitions}")
-        # raise ValueError
+        # reparitition events if npartitions are too little to decrease memory usage (ie histograming vbf requires > 10 GB per worker otherwise) ----------------------
+        # min_partition_size = 50
+        # print(f"events_stage1.npartitions b4 repartition: {events_stage1.npartitions}")
+        # if events_stage1.npartitions < min_partition_size :
+        #     events_stage1 = events_stage1.repartition(npartitions=min_partition_size)
+        #     print(f"events_stage1.npartitions after repartition: {events_stage1.npartitions}")
+        # ----------------------
         
         # Preprocessing
         # stage1_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_C/0"
@@ -363,11 +375,26 @@ if __name__ == "__main__":
         with open(f'{model_trained_path}/training_features.pkl', 'rb') as f:
             training_features = pickle.load(f)
         print(f"training_features: {training_features}")
+        print(f"len training_features: {len(training_features)}")
         
         # ------------------------------------------
         # Initialize sample histograme to save later
         # ------------------------------------------
-        variations = ["nominal"] # full list of possible variations to loop over
+        # variations = ["nominal"] # full list of possible variations to loop over
+        wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w)]
+        wgt_variations = wgt_variations[:3] # for testing
+        print(f"wgt_variations: {wgt_variations}")
+        syst_variations = []
+        syst_variations = ["nominal"] 
+        # syst_variations = ['nominal', 'Absolute_up', 'Absolute_down', f'Absolute_{year}_up',
+        variations = []
+        for w in wgt_variations:
+            for v in syst_variations:
+                variation = get_variation(w, v)
+                if variation:
+                    variations.append(variation)
+        print(f"variations: {variations}")
+
         regions = ["h-peak", "h-sidebands"] # full list of possible regions to loop over
         channels = ["vbf"] # full list of possible channels to loop over
         score_hist = (
@@ -375,17 +402,35 @@ if __name__ == "__main__":
                 .StrCat(channels, name="channel")
                 .StrCat(["value", "sumw2"], name="val_sumw2")
         )
-        bins = np.linspace(0, 1, num=50)
-        score_hist = score_hist.Var(bins, name="dnn_score")
         # add axis for systematic variation
         score_hist = score_hist.StrCat(variations, name="variation")
+        # add score category
+        bins = np.linspace(0, 1, num=13) # TODO: update this
+        score_name = f"score_{args.model_label}"
+        score_hist = score_hist.Var(bins, name=score_name)
+        
         
         score_hist = score_hist.Double()
 
+        # loop over configurations and fill the histogram
+        loop_args = {
+            "region": regions,
+            "wgt_variation": wgt_variations,
+            "syst_variation": syst_variations,
+            "channel": channels,
+        }
+        loop_args = [
+            dict(zip(loop_args.keys(), values))
+            for values in itertools.product(*loop_args.values())
+        ]
+        # print(f"loop_args: {loop_args}")
         
-        for variation in variations:
-            print(f"working on {variation}")
-            
+        
+        # for variation in variations:
+        #     print(f"working on {variation}")
+        for loop_arg in loop_args:
+            print(f"loop_arg: {loop_arg}")
+            # raise ValueError
         
             # features2load = ["event","wgt_nominal", "nBtagLoose", "jj_dEta", "jj_mass"]
             # features2load = prepare_features(events, features2load) # add variations where applicable
@@ -394,8 +439,17 @@ if __name__ == "__main__":
             # features2load = list(set(features2load + training_features))
             # print(f"final features2load: {features2load}")
             # raise ValueError
-            region = "h-peak"
-            category = "vbf"
+            # region = "h-peak"
+            # category = "vbf"
+            region = loop_arg["region"]
+            category = loop_arg["channel"]
+            syst_variation = loop_arg["syst_variation"]
+            wgt_variation = loop_arg["wgt_variation"]
+            variation = get_variation(wgt_variation, syst_variation)
+            if not variation:
+                print(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
+                continue
+            
             events = applyCatAndFeatFilter(events_stage1, region=region, category=category)
             events = fillEventNans(events, category=category) # for vbf category, this may be unncessary
 
@@ -510,10 +564,12 @@ if __name__ == "__main__":
                 "region" : "h-peak",
                 "channel" : "vbf",
                 "variation" : variation,
-                "dnn_score" : dnn_score
+                score_name : dnn_score
                 
             }
-            weight = events.wgt_nominal
+            # weight = events.wgt_nominal
+            weight = events[wgt_variation]
+                
             # print(f"weight len: {ak.num(weight, axis=0).compute()}")
             # print(f"ak.flatten(dnn_score) len: {ak.num(dnn_score, axis=0).compute()}")
             
@@ -540,7 +596,7 @@ if __name__ == "__main__":
         # ---------------------------------------------------
         # Save Hist 
         # ---------------------------------------------------
-        hist_save_path = f"{base_path}/stage2_histograms/score_{args.model_label}/"
+        hist_save_path = f"{base_path}/stage2_histograms/score_{args.model_label}/{args.year}/"
 
         if not os.path.exists(hist_save_path):
             os.makedirs(hist_save_path)
@@ -564,7 +620,7 @@ if __name__ == "__main__":
         }
         
         fig, ax = plt.subplots()
-        score_hist[project_dict].project("dnn_score").plot1d(ax=ax)
+        score_hist[project_dict].project(score_name).plot1d(ax=ax)
         # ax.set_xscale("log")
         ax.legend(title="DNN score")
         plt.savefig(f"{sample_type}_test.png")
