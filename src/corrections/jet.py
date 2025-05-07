@@ -519,6 +519,13 @@ def applyStrat2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
     no_smearing = ak.ones_like(jer_smearing)
     return ak.where(keep_jerSmear, jer_smearing, no_smearing)
 
+def applyStrat1n2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
+    jer_smearing1 = applyStrat1(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
+    jer_smearing2 = applyStrat2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
+    apply_stat2 = abs(jet_eta) < 3
+    return ak.where(apply_stat2, jer_smearing2, jer_smearing1)
+    
+
 def do_jer_smear(jets, config, syst, event_id):
     """
     we assume that jec has been applied (we need pt_jec and pt_raw)
@@ -592,7 +599,9 @@ def do_jer_smear(jets, config, syst, event_id):
     )
     jer_smearing = sf_jersmear.evaluate(*inputs)
     # jer_smearing = applyStrat1(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
-    jer_smearing = applyStrat2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
+    # jer_smearing = applyStrat2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
+    jer_smearing = applyStrat1n2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
+
     # print("JER smearing : {}".format(jer_smearing[:20].compute()))
     # print(f"jets.pt b4 JER smear: {jets.pt[:20].compute()}")
     jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
