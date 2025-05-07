@@ -208,7 +208,7 @@ if __name__ == "__main__":
         with open(sample_path) as file:
             samples = json.loads(file.read())
 
-        logger.debug(f'samples: {samples}')
+        # logger.debug(f'samples: {samples}')
         # add in NanoAODv info into samples metadata for coffea processor
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv

@@ -379,7 +379,7 @@ def getJetVetoFilter(cset, jets):
     All possible jet veto map types are: jetvetomap, jetvetomap_hot, jetvetomap_cold, jetvetomap_hotandcold, jetvetomap_all
     The recommended map type is jetvetomap.
     """
-    print(f"jets.pt: {jets.pt[:20].compute()}")
+    # print(f"jets.pt: {jets.pt[:20].compute()}")
     # obtain the jetvetomap from cset
     keys = [str(key) for key in cset.keys()]
     assert len(keys) == 1 # if more, than print error

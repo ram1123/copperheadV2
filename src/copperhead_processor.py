@@ -1487,8 +1487,6 @@ class EventProcessor(processor.ProcessorABC):
 
             # Access the specific correction by name
             correction = correction_set["BS_ebe_mass_res_calibration"]
-            print(f"correction_set: {correction_set}")
-            print(f"correction: {correction}")
 
             calibration = correction.evaluate(mu1.pt, abs(mu1.eta), abs(mu2.eta))
         else:
@@ -1718,16 +1716,16 @@ class EventProcessor(processor.ProcessorABC):
         jets = ak.to_packed(jets[jet_selection])
         print(f'self.config["apply_jetpuid"]: {self.config["apply_jetpuid"]}')
 
-        # apply jetpuid if not have done already
-        if not is_2017 and is_mc:
-            if self.config["apply_jetpuid"]:
-                jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
+        # # apply jetpuid if not have done already
+        # if not is_2017 and is_mc:
+        #     if self.config["apply_jetpuid"]:
+        #         jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
 
-        if is_mc and self.config["apply_jetpuid"]:
-            # now we add jetpuid_wgt
-            weights.add("jetpuid_wgt",
-                    weight=jetpuid_weight,
-            )
+        # if is_mc and self.config["apply_jetpuid"]:
+        #     # now we add jetpuid_wgt
+        #     weights.add("jetpuid_wgt",
+        #             weight=jetpuid_weight,
+        #     )
 
 
 

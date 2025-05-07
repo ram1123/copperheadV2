@@ -2,6 +2,21 @@
 bash stage1_loop.sh  -c configs/datasets/dataset.yaml -v 12 -l Run3_nanoAODv12_TEST -m 0 
 bash stage1_loop.sh  -c configs/datasets/dataset.yaml -v 12 -l Run3_nanoAODv12_TEST -m 0 -d
 
+bash stage1_loop.sh  -c configs/datasets/dataset.yaml -v 12 -l Run3_nanoAODv12_TEST_Run3Rochester -m 1 -d
+
+bash stage1_loop.sh  -c configs/datasets/dataset.yaml -v 12 -l Run3_nanoAODv12_JetVetoOn_Mar8 -m 0 -d
+
+
+bash stage1_loop.sh  -c configs/datasets/dataset.yaml -v 12 -l Run3_nanoAODv12_JetVetoOn_Mar8 -m 0 -d
+
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l VBFFilter_DY_validation_2025Mar14 -m 1 -d
+
+
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l DY_validation_2025Mar14 -m 1 -d
+
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l test -m 0 -d
+
+
 ```
 
 # 03 March 2025
