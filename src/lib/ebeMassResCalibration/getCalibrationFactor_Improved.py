@@ -12,7 +12,6 @@ import dask
 dask.config.set(scheduler="threads")  # or "single-threaded", "processes"
 
 from dask import delayed
-import dask_awkward as dak
 import dask.dataframe as dd
 import awkward as ak
 from distributed import Client
@@ -60,22 +59,10 @@ def plot_histogram(data, bins, range, xlabel, ylabel, title, output_path, median
     plt.close()
     logger.info(f"Saved plot to {output_path}")
 
-def step1_mass_fitting_zcr(parquet_path, out_string="", fix_fitting_one_cat=None):
+def step1_mass_fitting_zcr(data_events, out_string="", fix_fitting_one_cat=None):
     logger.info("=== Step 1: Mass fitting in ZCR ===")
     tstart = time.time()
 
-    if True:
-        client = Client(
-            n_workers=CONFIG["n_workers"],
-            threads_per_worker=CONFIG["threads_per_worker"],
-            memory_limit=CONFIG["memory_limit"],
-        )
-        logger.debug("Client started.")
-
-    data_events = dak.from_parquet(parquet_path)
-    data_events = filter_region(data_events, "z_peak")
-    data_events = data_events[CONFIG["fields_of_interest"]]
-    data_events = ak.zip({field: data_events[field] for field in data_events.fields}).compute()
     data_categories = get_calib_categories(data_events)
 
     df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
@@ -89,25 +76,23 @@ def step1_mass_fitting_zcr(parquet_path, out_string="", fix_fitting_one_cat=None
             continue
         df_fit = generateBWxDCB_plot(mass, cat_name, nbins=CONFIG["nbins"], df_fit=df_fit, out_string=out_string, logfile="CalibrationLog.txt")
 
-    if True:
-        client.close()
     logger.info("Step 1 completed in {:.2f} s".format(time.time() - tstart))
     return df_fit
 
-def step2_mass_resolution(parquet_path, out_string="", CalibrationFactorJSONFile=None, pdfFile_ExtraText=""):
+def step2_mass_resolution(df, out_string="", CalibrationFactorJSONFile=None, pdfFile_ExtraText="", UseFullSampleForCalibration=False):
     logger.info("=== Step 2: Mass resolution calculation ===")
     tstart = time.time()
 
     create_directory(f"plots/{out_string}")
-    df = dd.read_parquet(parquet_path)[CONFIG["fields_with_errors"]]
-
 
     if CalibrationFactorJSONFile:
         # For validation choose randomly 50% of the data
         # Create a pseudo-random mask using entry index
         logger.debug(f"Entries before truncate: {len(df)}")
-
-        df = df.map_partitions(lambda part: part[np.random.rand(len(part)) < 0.5])
+        if UseFullSampleForCalibration:
+            # When we use full sample for calibration, then we just need to get
+            # the randomly 50% of the data for the closure test
+            df = df.map_partitions(lambda part: part[np.random.rand(len(part)) < 0.5])
 
         logger.debug(f"Entries after truncate: {len(df)}")
 
@@ -123,7 +108,6 @@ def step2_mass_resolution(parquet_path, out_string="", CalibrationFactorJSONFile
     else:
         df = df.assign(calibration=1.0)
 
-    df = df[(df["dimuon_mass"] > CONFIG["zcr_filter_range"][0]) & (df["dimuon_mass"] < CONFIG["zcr_filter_range"][1])]
     df = df.assign(
         muon_E = df["dimuon_mass"] / 2,
         dpt1 = (df["mu1_ptErr"] / df["mu1_pt"]) * (df["dimuon_mass"] / 2),
@@ -188,25 +172,49 @@ def main():
 
     args = parser.parse_args()
 
+    years = args.years
     isMC = args.isMC
     ComputeCalibrationFactors = not args.validate
     fix_fitting_one_cat = args.fixCat
-    years = args.years
+    isMCString = "MC" if isMC else "Data"
+    UseFullSampleForCalibration = True
 
     for year in years:
         logger.info(f"Processing year: {year}")
-        # out_string = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_May04_Fit3iter_SplitlowPtBins"
-        out_string = f"{year}_SigOnlyDSCB_bkgRooCMSShape_CrossCheck_DY"
+        if UseFullSampleForCalibration:
+            out_string = f"{year}_{isMCString}_CalibrateWithFullSample"
+        else:
+            out_string = f"{year}_{isMCString}_Train75_Val25"
+        create_directory(f"plots/{out_string}")
+        CalibrationJSONFile = f"res_calib_BS_correction_{year}_nanoAODv12.json"
+
         if isMC:
             INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/dy*MiNNLO/*/*.parquet"
         else:
             INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_*/*/*.parquet"
-        CalibrationJSONFile = f"res_calib_BS_correction_{year}_nanoAODv12.json"
 
-        create_directory(f"plots/{out_string}")
+        ddf = dd.read_parquet(INPUT_DATASET)[CONFIG["fields_with_errors"]]
+        ddf = ddf[(ddf["dimuon_mass"] > CONFIG["zcr_filter_range"][0]) & (ddf["dimuon_mass"] < CONFIG["zcr_filter_range"][1])]
+        if UseFullSampleForCalibration:
+            # Use all events
+            df_computed = ddf[CONFIG["fields_of_interest"]].compute()
+            data_events = ak.Array(df_computed.to_dict(orient="list"))
+            ######### Use all events: END
+        else:
+            # Use only 75% of the events for calibration and 25% for validation
+            ddf_full = ddf.reset_index(drop=True)
+
+            # Get total size and define split index
+            total_len = len(ddf_full)
+            split_idx = int(total_len * 0.75)
+
+            df_computed = ddf_full.compute()
+            df_train = df_computed.iloc[:split_idx]
+            df_valid = df_computed.iloc[split_idx:]
+            data_events = ak.Array(df_train[CONFIG["fields_of_interest"]].to_dict(orient="list"))
 
         if ComputeCalibrationFactors:
-            df_fit = step1_mass_fitting_zcr(INPUT_DATASET, out_string, fix_fitting_one_cat=fix_fitting_one_cat)
+            df_fit = step1_mass_fitting_zcr(data_events, out_string, fix_fitting_one_cat=fix_fitting_one_cat)
             if fix_fitting_one_cat:
                 # save last csv file, as backup
                 os.system(f"cp plots/{out_string}/resolution_results.csv plots/{out_string}/resolution_results_backup.csv")
@@ -222,15 +230,16 @@ def main():
             else:
                 save_dataframe_to_csv(df_fit, f"plots/{out_string}/fit_results.csv", "fit results")
 
-                df_res = step2_mass_resolution(INPUT_DATASET, out_string)
+                if not UseFullSampleForCalibration: ddf = dd.from_pandas(df_train)
+                df_res = step2_mass_resolution(ddf, out_string, UseFullSampleForCalibration=UseFullSampleForCalibration)
                 save_dataframe_to_csv(df_res, f"plots/{out_string}/resolution_results.csv", "resolution results")
 
             df_merged = step3_compute_calibration(df_fit, df_res)
             save_dataframe_to_csv(df_merged, f"plots/{out_string}/calibration_factors{fix_fitting_one_cat}.csv")
 
             # Save LaTeX tables
-            for fmt, rounding in [(f"calibration_factors{fix_fitting_one_cat}.tex", None), 
-                                  (f"calibration_factors_rounded{fix_fitting_one_cat}.tex", 4), 
+            for fmt, rounding in [(f"calibration_factors{fix_fitting_one_cat}.tex", None),
+                                  (f"calibration_factors_rounded{fix_fitting_one_cat}.tex", 4),
                                   (f"calibration_factors_precision{fix_fitting_one_cat}.tex", 3)]:
                 df_tmp = df_merged[["cat_name", "fit_val", "fit_err", "median_val_NonCal", "calibration_factor"]]
                 if rounding:
@@ -240,8 +249,10 @@ def main():
             save_calibration_json(df_merged, f"plots/{out_string}/{CalibrationJSONFile}")
 
         else:
-            df_res_calibrated = step2_mass_resolution(INPUT_DATASET, out_string,
-                                                      CalibrationFactorJSONFile=f"plots/{out_string}/{CalibrationJSONFile}")
+            if not UseFullSampleForCalibration: ddf = dd.from_pandas(df_valid)
+            df_res_calibrated = step2_mass_resolution(ddf, out_string,
+                                                      CalibrationFactorJSONFile=f"plots/{out_string}/{CalibrationJSONFile}",
+                                                      UseFullSampleForCalibration=UseFullSampleForCalibration)
             df_res_calibrated.to_csv(f"plots/{out_string}/calibration_results_calibrated.csv", index=False)
             plot_closure_comparison_calibrated_uncalibrated(df_res_calibrated, out_string)
 
