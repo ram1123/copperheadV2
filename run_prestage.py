@@ -13,7 +13,6 @@ import copy
 import tqdm
 import uproot
 import random
-# random.seed(9002301)
 import re
 import glob
 # import warnings
@@ -28,6 +27,66 @@ from collections.abc import Sequence
 import logging
 from modules.utils import logger
 from rich import print
+
+def getBadFile(fname):
+    try:
+        up_file = uproot.open(fname)
+        tmp_path = f"/tmp/{uuid.uuid4().hex}.parquet"
+        if "Muon_pt" in up_file["Events"].keys():
+            # apply parquet tests for lzma error
+            ak.to_parquet(up_file["Events"]['Muon_pt'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Muon_eta'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Muon_phi'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Muon_mass'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Jet_pt'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Jet_eta'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Jet_phi'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Jet_mass'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Electron_pt'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Electron_eta'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Electron_phi'].array(),tmp_path)
+            ak.to_parquet(up_file["Events"]['Electron_mass'].array(),tmp_path)
+
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            return "" # if no problem, return empty string
+        else:
+            return fname # bad file
+    except Exception as e:
+        # return f"An error occurred with file {fname}: {e}"
+        # print(f"An error occurred with file {fname}: {e}")
+        return fname # bad fileclient
+
+# def getBadFileParallelize(filelist, max_workers=60)
+#     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+#         # Submit each file check to the executor
+#         results = list(executor.map(getBadFile, filelist))
+
+#     bad_file_l = []
+#     for result in results:
+#         if result != "":
+#             # print(result)
+#             bad_file_l.append(result)
+
+#     return bad_file_l
+
+def getBadFileParallelizeDask(filelist):
+    """
+    We assume that the dask client has already been initialized
+    """
+    lazy_results = []
+    for fname in filelist:
+        lazy_result = dask.delayed(getBadFile)(fname)
+        lazy_results.append(lazy_result)
+    results = dask.compute(*lazy_results)
+
+    bad_file_l = []
+    for result in results:
+        if result != "":
+            # print(result)
+            bad_file_l.append(result)
+    print(f"bad_file_l: {bad_file_l}")
+    return bad_file_l
 
 
 def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:

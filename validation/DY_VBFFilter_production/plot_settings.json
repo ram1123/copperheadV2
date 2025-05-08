@@ -153,7 +153,7 @@
     },
     "jj_mass": {
         "variable": "jj_mass",
-        "binning_linspace": [400, 2500, 22],
+        "binning_linspace": [0, 500, 41],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$m_{jj}$ [GeV]",
@@ -217,7 +217,7 @@
     },
     "jet1_phi": {
         "variable": "jet1_phi",
-        "binning_linspace": [-3.2, 3.2, 51],
+        "binning_linspace": [-3.2, 3.2, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi (jet1)$",
@@ -250,7 +250,7 @@
     },
     "jet2_phi": {
         "variable": "jet2_phi",
-        "binning_linspace": [-3.2, 3.2, 51],
+        "binning_linspace": [-3.2, 3.2, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi (jet2)$",
@@ -283,7 +283,7 @@
     },
     "mu1_eta": {
         "variable": "mu1_eta",
-        "binning_linspace": [-2.5, 2.5, 51],
+        "binning_linspace": [-2, 2, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta (mu1)$",
@@ -291,7 +291,7 @@
     },
     "mu1_phi": {
         "variable": "mu1_phi",
-        "binning_linspace": [-3.2, 3.2, 51],
+        "binning_linspace": [-3.2, 3.2, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi (mu1)$",
@@ -307,7 +307,7 @@
     },
     "mu2_pt_over_mass": {
         "variable": "mu2_pt_over_mass",
-        "binning_linspace": [0, 2, 51],
+        "binning_linspace": [0, 2, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(\\mu_{2})/M_{\\mu\\mu}$ [GeV]",
@@ -315,7 +315,7 @@
     },
     "mu2_eta": {
         "variable": "mu2_eta",
-        "binning_linspace": [-2.5, 2.5, 51],
+        "binning_linspace": [-2, 2, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta (mu2)$",
@@ -323,7 +323,7 @@
     },
     "mu2_phi": {
         "variable": "mu2_phi",
-        "binning_linspace": [-3.2, 3.2, 51],
+        "binning_linspace": [-3.2, 3.2, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi (mu2)$",

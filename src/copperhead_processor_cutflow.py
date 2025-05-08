@@ -2131,7 +2131,7 @@ class EventProcessor(processor.ProcessorABC):
         nBtagMedium = ak.sum(btagMedium_filter, axis=1)
 
         # qucick test REMOVEME -------------------------------------------
-        njets = jets(jets, axis=1)
+        njets = ak.num(jets, axis=1)
         test_filter = (njets==1) & (nBtagMedium > 0)
         print(f"test_filter sum: {ak.sum(test_filter).compute()}")
         # qucick test REMOVEME -------------------------------------------

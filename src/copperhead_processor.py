@@ -23,6 +23,7 @@ from coffea.nanoevents.methods import vector
 import sys
 from src.corrections.custom_jec import ApplyJetCorrections
 from omegaconf import OmegaConf
+from coffea.analysis_tools import PackedSelection
 
 import logging
 from modules.utils import logger
@@ -400,7 +401,11 @@ class EventProcessor(processor.ProcessorABC):
             "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
+<<<<<<< HEAD
             "do_geofit" : False, # True # FIXME: Make it false for always
+=======
+            "do_geofit" : True, # True # FIXME: Make it false for always
+>>>>>>> ac9d900aee5ab62fae8a6912068d7311b9be6f0f
             "do_beamConstraint": True, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
@@ -452,16 +457,25 @@ class EventProcessor(processor.ProcessorABC):
         self.evaluator = extractor_instance.make_evaluator()
 
         self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]# this exists in Dmitry's code
+<<<<<<< HEAD
 
         # Initialize PackedSelection
         self.selection = PackedSelection()
         self.cutflow = {}
 
+=======
+>>>>>>> ac9d900aee5ab62fae8a6912068d7311b9be6f0f
+
+        # Initialize PackedSelection
+        self.selection = {}
+        self.cutflow = {}
 
     def process(self, events: coffea_nanoevent):
         # ReInitialize PackedSelection: So, that we don't get error of mis-match
         self.selection = PackedSelection()
         year = self.config["year"]
+        # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
+        self.selection = PackedSelection()
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
@@ -593,6 +607,7 @@ class EventProcessor(processor.ProcessorABC):
         # Apply event quality flags MET filter
         evnt_qual_flg_selection = ak.ones_like(event_filter, dtype="bool")
         for evt_qual_flg in self.config["event_flags"]:
+            logger.info(f"evt_qual_flg: {evt_qual_flg}")
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
 
         self.selection.add("event_quality_flags", evnt_qual_flg_selection)
@@ -631,8 +646,8 @@ class EventProcessor(processor.ProcessorABC):
 
 
         muon_selection = (
-            (events.Muon.pt_roch >= self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
-            & (abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"])
+            (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
+            & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
@@ -755,6 +770,8 @@ class EventProcessor(processor.ProcessorABC):
 
 
         muons = events.Muon[muon_selection]
+        logger.debug(f"muons pT: {muons.pt[:100].compute()}")
+
         # muons = ak.to_packed(events.Muon[muon_selection])
 
         # do the separate mu1 leading pt cut that copperheadV1 does instead of trigger matching
@@ -776,7 +793,7 @@ class EventProcessor(processor.ProcessorABC):
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
         logger.debug(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
-        ecal_gap = (1.444 <= abs(events.Electron.eta)) & (abs(events.Electron.eta) <= 1.566)
+        ecal_gap = (1.44 < abs(events.Electron.eta)) & (1.57 > abs(events.Electron.eta)) # Source: line 460 of https://cms.cern.ch/iCMS/analysisadmin/cadilines?id=1973&ancode=EGM-17-001&tp=an&line=EGM-17-001
         electron_selection = (
             (events.Electron.pt > self.config["electron_pt_cut"])
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
@@ -802,8 +819,6 @@ class EventProcessor(processor.ProcessorABC):
         nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0)
         self.selection.add("electron_veto", electron_veto)
-
-        # self.config["do_HemVeto"] = False # FIXME
         if self.config["do_HemVeto"]:
             HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
         else:
@@ -823,17 +838,10 @@ class EventProcessor(processor.ProcessorABC):
         )
         event_filter = event_filter & (nmuons == 2)
         self.selection.add("nmuons", nmuons==2)
-        # logger.debug(f"event_filter sum after nmuons: {ak.sum(event_filter).compute()}")
+
         event_filter = event_filter & (mm_charge == -1)
         self.selection.add("mm_charge", mm_charge==-1)
-        # logger.debug(f"event_filter sum after opposite charge cut: {ak.sum(event_filter).compute()}")
         event_filter = event_filter & electron_veto
-
-        # logger.debug(f"event_filter sum after electron_veto: {ak.sum(event_filter).compute()}")
-        # raise ValueError
-        # event_selection = ak.to_dataframe(event_filter.compute())
-        # logger.debug(f"output.event_selection: {event_selection}")
-        # event_selection.to_csv("event_selection_V2.csv")
 
 
 
@@ -1332,7 +1340,11 @@ class EventProcessor(processor.ProcessorABC):
             "mu1_pt_fsr" : mu1.pt_fsr,
             "mu2_pt_fsr" : mu2.pt_fsr,
             # "pass_leading_pt" : pass_leading_pt,
-            "year" : ak.ones_like(nmuons) * dnn_year
+            "year" : ak.ones_like(nmuons) * dnn_year,
+            "run": events.run,
+            "event": events.event,
+            "luminosityBlock": events.luminosityBlock,
+            "fraction": ak.ones_like(events.event) * events.metadata["fraction"],
         }
         if is_mc:
             mc_dict = {
@@ -1813,16 +1825,29 @@ class EventProcessor(processor.ProcessorABC):
         else: # NanoAODv12
             qgl_cut = (jets.btagPNetQvG >= -2) # TODO: find out if -2 is the actual threshold for run3
             jets["qgl"] = jets.btagPNetQvG # this is for saving btagPNetQvG as "qgl" for stage1 outputs
-        # original jet_selection-----------------------------------------------
+
+
+        jet_pt_cut = (jets.pt > self.config["jet_pt_cut"])
+        # add additonal pT cut for the forward regions to reduce jet horn  ----------------------------------------------
+        # source: https://nam04.safelinks.protection.outlook.com/?url=https%3A%2F%2Findico.cern.ch%2Fevent%2F1434807%2Fcontributions%2F6040633%2Fattachments%2F2893077%2F5071932%2FJERC%2520meeting%252009_07.pdf&data=05%7C02%7Cyun79%40purdue.edu%7C3d76cc7f47974533372708dd896f875a%7C4130bd397c53419cb1e58758d6d63f21%7C0%7C0%7C638817834635140303%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=fh11i5iJCGo0EQKYBdw0Df8oaesOX2hCnJ%2FU78o37%2BU%3D&reserved=0
+        jetHorn_region = abs(jets.eta) > 2.5
+        jetHorn_pt_cut = (jets.pt > 30)
+        jetHorn_puid_cut = (jets.puId >= 7) | (jets.pt >= 50) # tight pu Id
+        # jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
+        jetHorn_cut = jetHorn_pt_cut
+        jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
+
+        # add additonal pT cut for the forward regions  ----------------------------------------------
+
+
         jet_selection = (
             pass_jet_id
             & pass_jet_puid
             & qgl_cut
             & clean
-            & (jets.pt >= self.config["jet_pt_cut"])
-            & (abs(jets.eta) <= self.config["jet_eta_cut"])
+            & jet_pt_cut
+            & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
-        # original jet_selection end ----------------------------------------------
 
 
         # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
@@ -1939,7 +1964,7 @@ class EventProcessor(processor.ProcessorABC):
             f"jet1_phi_{variation}" : jet1.phi,
             f"jet1_qgl_{variation}" : jet1.qgl,
             f"jet1_jetId_{variation}" : jet1.jetId,
-            # f"jet1_puId_{variation}" : jet1.puId,
+            f"jet1_puId_{variation}" : jet1.puId,
             f"jet2_pt_{variation}" : jet2.pt,
             f"jet2_eta_{variation}" : jet2.eta,
             f"jet1_mass_{variation}" : jet1.mass,
@@ -1961,7 +1986,7 @@ class EventProcessor(processor.ProcessorABC):
             f"jet2_phi_{variation}" : jet2.phi,
             f"jet2_qgl_{variation}" : jet2.qgl,
             f"jet2_jetId_{variation}" : jet2.jetId,
-            # f"jet2_puId_{variation}" : jet2.puId,
+            f"jet2_puId_{variation}" : jet2.puId,
             f"jj_mass_{variation}" : dijet.mass,
             # f"jj_mass_{variation}" : p4_sum_mass(jet1,jet2),
             f'jj_mass_log_{variation}': np.log(dijet.mass),
@@ -2127,15 +2152,14 @@ class EventProcessor(processor.ProcessorABC):
         # Separate from ttH and VH phase space
 
         if "RERECO" in year:
-            btagLoose_filter = (jets.btagDeepB >= self.config["btag_loose_wp"]) & (abs(jets.eta) <= 2.5) # original value
-            btagMedium_filter = (jets.btagDeepB >= self.config["btag_medium_wp"]) & (abs(jets.eta) <= 2.5)
+            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
+            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
         else: # UL
             # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
             # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            btagLoose_filter = (jets.btagDeepB >= self.config["btag_loose_wp"]) & (abs(jets.eta) <= 2.5)
-            btagMedium_filter = (jets.btagDeepB >= self.config["btag_medium_wp"]) & (abs(jets.eta) <= 2.5)
-
+            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
 
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)

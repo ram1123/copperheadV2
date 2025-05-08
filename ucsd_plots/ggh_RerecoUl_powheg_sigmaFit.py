@@ -238,12 +238,13 @@ def plotRerecoPowhegVsAmc(amc_events, powheg_events):
     
 
     kinematics = [
-        "mu1_eta",
-        "mu2_eta",
-        "mu1_pt",
-        "mu2_pt",
-        "dimuon_pt",
-        "dimuon_eta",
+        # "mu1_eta",
+        # "mu2_eta",
+        # "mu1_pt",
+        # "mu2_pt",
+        # "dimuon_pt",
+        # "dimuon_eta",
+        "dimuon_mass",
     ]
     # import binning and xtitle from json
 
@@ -304,7 +305,7 @@ def plotRerecoPowhegVsAmc(amc_events, powheg_events):
         legend = rt.TLegend(0.75,0.70,0.9,0.8)
         
         hist_amc.plotOn(frame, ROOT.RooFit.DrawOption("E"), Name=hist_amc.GetName(), LineColor=rt.kGreen)
-        legend.AddEntry(frame.getObject(int(frame.numItems())-1), "MD@NLO", "L")
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), "AMC@NLO", "L")
         hist_powheg.plotOn(frame, ROOT.RooFit.DrawOption("E"), Name=hist_powheg.GetName(), LineColor=rt.kBlue)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1), "Powheg", "L")
     
@@ -326,7 +327,123 @@ def plotRerecoPowhegVsAmc(amc_events, powheg_events):
         ratio_hist.SetTitle("")
 
         ratio_hist.SetXTitle(X_title)
-        ratio_hist.GetYaxis().SetTitle("Powheg / MD@NLO")
+        ratio_hist.GetYaxis().SetTitle("Powheg / AMC@NLO")
+        # ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)  # Set y-axis range
+        ratio_hist.GetYaxis().SetRangeUser(0.8, 1.2)  # Set y-axis range
+        ratio_hist.GetYaxis().SetTitleSize(0.05)
+        ratio_hist.GetYaxis().SetLabelSize(0.08)
+        ratio_hist.GetXaxis().SetTitleSize(0.1)
+        ratio_hist.GetXaxis().SetLabelSize(0.08)
+
+
+        ratio_hist.Draw("EP")
+
+
+        # Draw a horizontal line at y=1
+        line = ROOT.TLine(ratio_hist.GetXaxis().GetXmin(), 1, ratio_hist.GetXaxis().GetXmax(), 1)
+        line.SetLineColor(ROOT.kBlack)
+        line.SetLineStyle(2)
+        line.Draw()
+        
+
+        canvas.SaveAs(f"RerecMcModelComparison_{kine_var}.pdf")
+
+
+
+def plotRerecoPowhegVsAmc_dimuon_mass(amc_events, powheg_events):
+    """
+    plot side by side muon eta variables to see if there's a discrepancy
+    between two different mc modeling samples
+    """
+    
+
+    kinematics = [
+        "dimuon_mass",
+    ]
+    # import binning and xtitle from json
+
+    
+    
+    
+    for kine_var in kinematics:
+
+        plot_setting_fname = "../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+        with open(plot_setting_fname, "r") as file:
+            plot_settings = json.load(file)
+        plot_settings = plot_settings[kine_var]
+        xmin, xmax, n_edges = plot_settings["binning_linspace"]
+        
+        x_var_name = "mu_x_var"
+        # x_var = rt.RooRealVar(x_var_name, x_var_name, 0, -2.5, 2.5) # signal region
+        x_var = rt.RooRealVar(x_var_name, x_var_name, 0, xmin, xmax) # signal region
+        nbins = n_edges -1
+        x_var.setBins(nbins)
+        
+        # variable = amc_events[kine_var]
+        # wgts = amc_events.wgt_nominal
+
+        hist_amc = generateRooHist(x_var, amc_events[kine_var], amc_events.wgt_nominal, name=f"amc mu1 x_var")
+        hist_amc = normalizeRooHist(x_var, hist_amc)
+        
+        hist_powheg = generateRooHist(x_var, powheg_events[kine_var], powheg_events.wgt_nominal, name=f"powheg mu1 x_var")
+        hist_powheg = normalizeRooHist(x_var, hist_powheg)
+
+        # fitting
+
+        
+        # ------------------------------------
+        # Plotting
+        # ------------------------------------
+        name = "Canvas"
+        canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
+        canvas.cd()
+
+        # Define upper and lower pads
+        pad1 = ROOT.TPad("pad1", "Distribution", 0, 0.3, 1, 1.0)
+        pad2 = ROOT.TPad("pad2", "Ratio", 0, 0.0, 1, 0.3)
+        
+        # Adjust margins
+        pad1.SetBottomMargin(0)  # Upper plot does not need bottom margin
+        pad2.SetTopMargin(0)     # Lower plot does not need top margin
+        pad2.SetBottomMargin(0.3)
+        
+        pad1.Draw() # value plot
+        pad2.Draw() # ratio plot
+    
+        pad1.cd()
+        
+        frame = x_var.frame()
+        frame.SetTitle(f"Normalized Rereco AMC vs Powheg")
+        # frame.SetXTitle(f"Leading Mu x_var")
+        X_title = plot_settings["xlabel"].replace("$","")
+        # frame.SetXTitle(X_title)
+        frame.SetYTitle(f"Normalized Yield")
+        legend = rt.TLegend(0.75,0.70,0.9,0.8)
+        
+        hist_amc.plotOn(frame, ROOT.RooFit.DrawOption("E"), Name=hist_amc.GetName(), LineColor=rt.kGreen)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), "AMC@NLO", "L")
+        hist_powheg.plotOn(frame, ROOT.RooFit.DrawOption("E"), Name=hist_powheg.GetName(), LineColor=rt.kBlue)
+        legend.AddEntry(frame.getObject(int(frame.numItems())-1), "Powheg", "L")
+    
+        frame.Draw()
+        legend.Draw()        
+        canvas.Update()
+        canvas.Draw()
+
+        # Draw the lower plot (Ratio)
+        pad2.cd()
+        th_powheg = hist_powheg.createHistogram(x_var_name)
+        th_amc = hist_amc.createHistogram(x_var_name)
+        th_powheg.Print()
+        ratio_hist = th_powheg.Clone("ratio") # powheg/amc
+        ratio_hist.Divide(th_amc)
+
+        ratio_hist.SetStats(0)
+        ratio_hist.SetMarkerStyle(20)
+        ratio_hist.SetTitle("")
+
+        ratio_hist.SetXTitle(X_title)
+        ratio_hist.GetYaxis().SetTitle("Powheg / AMC@NLO")
         ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)  # Set y-axis range
         ratio_hist.GetYaxis().SetTitleSize(0.05)
         ratio_hist.GetYaxis().SetLabelSize(0.08)

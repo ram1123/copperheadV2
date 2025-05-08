@@ -4,7 +4,19 @@ import numpy as np
 import argparse
 from omegaconf import OmegaConf
 
+def filterRegion(events, region="h-peak"):
+    dimuon_mass = events.dimuon_mass
+    if region =="h-peak":
+        region = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
+    elif region =="h-sidebands":
+        region = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
+    elif region =="signal":
+        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
+    elif region =="z-peak":
+        region = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
 
+    events = events[region]
+    return events
 
 
 if __name__ == "__main__":
@@ -34,14 +46,23 @@ if __name__ == "__main__":
     full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sigMC_ggh.parquet" # ignore VBF signal sample
     # full_load_path = f"{sysargs.load_path}/ggh/{sysargs.year}/processed_events_sig*.parquet"
     events = dak.from_parquet(full_load_path)
+    events = filterRegion(events, region="signal")
+    
     
     signal_score = ak.to_numpy(events.BDT_score.compute())
     signal_wgt = ak.to_numpy(events.wgt_nominal.compute())
     signal_wgt = signal_wgt /np.sum(signal_wgt) # normalize wgt
     # target_yields = [0.3, 0.35, 0.15, 0.15, 0.05]
     # target_yields = [0.3, 0.35, 0.15625089, 0.13934911, 0.0544]
-    target_yields = [0.30457106, 0.35325641, 0.14842342, 0.13939539, 0.05435372]
-    # target_yields = [0.3, 0.33, 0.15, 0.15, 0.07]
+    # target_yields = [0.30457106, 0.35325641, 0.14842342, 0.13939539, 0.05435372]
+    # target_yields = [0.43, 0.28, 0.14, 0.1 , 0.05]
+    # target_yields = [0.23, 0.36, 0.26, 0.11, 0.04] # V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix_X_V2_UL_Jan18_2025_Feb15_newBinEdges
+    # target_yields = [0.23, 0.36, 0.41]
+    yaml_path = "stage2/ggH/target_yields.yaml"
+    target_yields = OmegaConf.load(yaml_path)["target_yields"]
+    print(f"target_yields: {target_yields}")
+
+    
     print(sum(target_yields))
     target_yields_cum_sum = np.cumsum(np.array(target_yields))
     # sort data

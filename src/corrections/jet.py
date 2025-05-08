@@ -506,6 +506,29 @@ def do_jec_scale(jets, config, is_mc, dataset):
     jets["mass_jec"] = jet_mass_jec
     return jets
 
+
+def applyStrat1(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
+    is_tightPuId = (jet_puId >= 7)
+    keep_jerSmear = (is_tightPuId & (jet_pt <= 50)) | (jet_pt > 50)
+    keep_jerSmear = keep_jerSmear | apply_scaling # if scaling, don't change anything
+    no_smearing = ak.ones_like(jer_smearing)
+    return ak.where(keep_jerSmear, jer_smearing, no_smearing)
+
+
+
+def applyStrat2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
+    remove_jerSmear = (abs(jet_eta) > 2.5) & (jet_pt <= 50)
+    keep_jerSmear = (~remove_jerSmear) | apply_scaling # if scaling, don't change anything
+    no_smearing = ak.ones_like(jer_smearing)
+    return ak.where(keep_jerSmear, jer_smearing, no_smearing)
+
+def applyStrat1n2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
+    jer_smearing1 = applyStrat1(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta)
+    jer_smearing2 = applyStrat2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta)
+    apply_stat2 = abs(jet_eta) < 3
+    return ak.where(apply_stat2, jer_smearing2, jer_smearing1)
+
+
 def do_jer_smear(jets, config, syst, event_id):
     """
     we assume that jec has been applied (we need pt_jec and pt_raw)
@@ -561,24 +584,31 @@ def do_jer_smear(jets, config, syst, event_id):
     sf_input_names = [inp.name for inp in sf_jersmear.inputs]
     logger.debug(f"JER smear input: {sf_input_names}")
 
-    pt_gen = ak.fill_none(jets.matched_gen.pt, value=0.0)
+    pt_gen = ak.fill_none(jets.matched_gen.pt, value=-1.0) # if no match, fill with -1.0. Source https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/jercExample.py?ref_type=heads#L45
     pt_jec = jets.pt_jec
     pt_gen_filter  = abs(pt_jec - pt_gen) < (3*pt_jec*jer_res) # Source https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L108C1-L108C66
     false_cond_val = -1*ak.ones_like(jets.pt_jec)
     pt_gen = ak.where(pt_gen_filter, pt_gen, false_cond_val)
+    apply_scaling = pt_gen != -1.0
     inputs = (
         pt_jec, # == JetPt
         jets.eta, # == JetEta
         pt_gen, # == GenPt
         jets.PU_rho, # == Rho
         event_id, # == EventID
-        jer_res, # == JER
+        jer_res, # == JERs
         jer_sf, # == JERSF
 
     )
     jer_smearing = sf_jersmear.evaluate(*inputs)
     # logger.debug("JER smearing : {}".format(jer_smearing[:20].compute()))
     # logger.debug(f"jets.pt b4 JER smear: {jets.pt[:20].compute()}")
+    # jer_smearing = applyStrat1(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
+    # jer_smearing = applyStrat2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
+    jer_smearing = applyStrat1n2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
+
+    # print("JER smearing : {}".format(jer_smearing[:20].compute()))
+    # print(f"jets.pt b4 JER smear: {jets.pt[:20].compute()}")
     jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
     # logger.debug(f"jets.pt after JER smear: {jets.pt[:20].compute()}")
     return jets

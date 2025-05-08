@@ -1,3 +1,7 @@
+
+
+bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv9.yaml -v 9 -l test_test -y 2018 -m 1 -d 1
+
 # 06 May 2025
 
 ```bash

@@ -17,7 +17,19 @@ sys.path.insert(0, parent_dir)
 # Now you can import your module
 from src.lib.histogram.plotting import plotDataMC_compare
 
+def filterRegion(events, region="h-peak"):
+    dimuon_mass = events.dimuon_mass
+    if region =="h-peak":
+        region = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
+    elif region =="h-sidebands":
+        region = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
+    elif region =="signal":
+        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
+    elif region =="z-peak":
+        region = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
 
+    events = events[region]
+    return events
 
 def fillSampleValues(events, sample_dict, sample_groups, sample: str):
     sample_name = sample.lower()
@@ -108,6 +120,14 @@ if __name__ == "__main__":
     action="store",
     help="label",
     )
+    parser.add_argument(
+    "-reg",
+    "--region",
+    dest="region",
+    default="signal",
+    action="store",
+    help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
+    )
     args = parser.parse_args()
     if len(args.samples) == 0:
         print("samples list is zero!")
@@ -121,6 +141,15 @@ if __name__ == "__main__":
     # print(events.fields)
     print(f"load_path : {load_path}")
     print(f"args.samples: {args.samples}")
+
+    lumi_dict = {
+        "2018" : 59.97,
+        "2017" : 41.5,
+        "2016postVFP": 19.5,
+        "2016preVFP": 16.8,
+        "all" : 137,
+    }
+    lumi_val = lumi_dict[year]
 
     possible_samples = ["data", "ggh", "vbf", "dy", "ewk", "tt", "st", "ww", "wz", "zz",]
     sample_groups = {
@@ -184,6 +213,7 @@ if __name__ == "__main__":
                 # -----------------------------------------------
                 
                 events = dak.from_parquet(full_load_path)
+                events = filterRegion(events, region=args.region)
                 if sub_cat != "all":
                     events = events[events.subCategory_idx == sub_cat] # filter subcat
                 print(f"events field from {sample}:", events.fields)
@@ -268,7 +298,7 @@ if __name__ == "__main__":
             #     production_cat = "ggh"
             # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{production_cat}"
             # full_save_path = args.save_path+f"/Reg_{args.region}/Cat_{args.category}/{args.label}"
-            full_save_path = f"{args.save_path}/{args.label}_x_{args.category}/{args.year}"
+            full_save_path = f"{args.save_path}/{args.label}_x_{args.category}/{args.year}_{args.region}"
         
             
             if not os.path.exists(full_save_path):
@@ -285,6 +315,7 @@ if __name__ == "__main__":
             
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
             status = "Private"
+            
             do_logscale = True
             plotDataMC_compare(
                 binning, 
@@ -296,7 +327,7 @@ if __name__ == "__main__":
                 x_title = plot_settings[plot_var].get("xlabel"), 
                 y_title = plot_settings[plot_var].get("ylabel"),
                 # lumi = args.lumi,
-                lumi = "137",
+                lumi = lumi_val,
                 status = status,
                 log_scale = do_logscale,
             )
