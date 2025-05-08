@@ -74,22 +74,3 @@ NanoAODv=9
 # NanoAODv=12
 python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway
 
-# data_l="A B C D E F G H"
-# # # bkg_l="DY TT ST VV EWK OTHER"
-# # # sig_l="ggH VBF"
-
-# year="2017"
-# # python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l # --skipBadFiles
-# NanoAODv=9
-# python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --use_gateway
-
-
-# year="2016postVFP"
-# python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l 
-# NanoAODv=9
-# python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --use_gateway
-
-# year="2016preVFP"
-# python run_prestage.py --chunksize $chunksize -y $year --data $data_l --background $bkg_l --signal $sig_l
-# NanoAODv=9
-# python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway

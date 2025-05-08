@@ -416,5 +416,29 @@
         "ylabel": "Events",
         "xlabel": "pT centrality",
         "color": "royalblue"
+    },
+    "MET_pt": {
+        "variable": "MET_pt",
+        "binning_linspace": [0, 200, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$MET$ [GeV]",
+        "color": "royalblue"
+    },
+    "PV_npvs": {
+        "variable": "PV_npvs",
+        "binning_linspace": [0, 50, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$PV_{npvs}$",
+        "color": "royalblue"
+    },
+    "PV_npvsGood": {
+        "variable": "PV_npvsGood",
+        "binning_linspace": [0, 50, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$PV_{npvsGood}$",
+        "color": "royalblue"
     }
 }

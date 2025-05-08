@@ -46,8 +46,8 @@ pu_file_mc: # source https://github.com/cms-sw/cmssw/blob/CMSSW_10_6_X/SimGenera
   2016_RERECO: data/pileup/pileup_profile_Summer16.root
   '2017_RERECO': data/pileup/mcPileup2017.root
   '2018_RERECO': data/pileup/mcPileup2018.root
-  2022preEE: data/pileup/2022_Summer22/puWeights.json.gz 
-  2022postEE: data/pileup/2022_Summer22EE/puWeights.json.gz 
+  2022preEE: data/pileup/2022_Summer22/puWeights.json.gz
+  2022postEE: data/pileup/2022_Summer22EE/puWeights.json.gz
 muSFFileList:
   2016preVFP:
   - id:
@@ -232,7 +232,7 @@ new_zpt_weights_file:
   '2018_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   2022preEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
   2022postEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
-jetpuid_sf_file: # old method as of Dec 16 2024, 
+jetpuid_sf_file: # old method as of Dec 16 2024,
   2016preVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   2016postVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   '2017': data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
@@ -246,11 +246,11 @@ jmar_sf_file:
   2016preVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jmar.json.gz
   2016postVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016postVFP_UL/jmar.json.gz
   '2017': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2017_UL/jmar.json.gz # while this is listed, we use jetpuid_sf_file for 2017 (old method)
-  # '2018': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jmar.json.gz
+  '2018': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jmar.json.gz
   # 2016preVFP: data/POG/JME/2016preVFP_UL/jmar.json.gz
   # 2016postVFP: data/POG/JME/2016postVFP_UL/jmar.json.gz
   # '2017': data/POG/JME/2017_UL/jmar.json.gz # while this is listed, we use jetpuid_sf_file for 2017 (old method)
-  '2018': data/POG/JME/2018_UL/jmar.json.gz
+  # '2018': data/POG/JME/2018_UL/jmar.json.gz
   2016_RERECO: dummy
   '2017_RERECO': dummy
   '2018_RERECO': dummy

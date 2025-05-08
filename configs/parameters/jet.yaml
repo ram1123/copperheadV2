@@ -55,7 +55,7 @@ btag_loose_wp: # for DeepCSV, DeepJet is different
   '2018': 0.1208 # central sources for UL https://btv-wiki.docs.cern.ch/ScaleFactors/UL2018/#ak4-b-tagging
   2016_RERECO: 0.2217  #central sources for RERECO https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
   '2017_RERECO': 0.1522
-  '2018_RERECO': 0.1241 
+  '2018_RERECO': 0.1241
   2022preEE: 0.12
   2022postEE: 0.12
 btag_medium_wp: # for DeepCSV, DeepJet is different

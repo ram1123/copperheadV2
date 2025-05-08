@@ -7,9 +7,12 @@ import os
 import correctionlib.schemav2 as cs
 import correctionlib
 
+import logging
+from modules.utils import logger
+
 # def jec_names_and_sources_yaml(jec_pars, year):
 #     localdir = os.path.dirname(os.path.abspath("__file__"))
-#     print(f"localdir: {localdir}")
+#     logger.debug(f"localdir: {localdir}")
 #     OmegaConf.register_new_resolver("default_params_dir", lambda: localdir+"/data", replace=True)
 #     jec_dict = OmegaConf.load(localdir+'/parameters/jets_calibration.yaml')
 #     jec_fnames = jec_dict['default_jets_calibration']["factory_configuration"]["AK4PFchs"]["JES_JER_Syst"][year]
@@ -36,7 +39,7 @@ import correctionlib
 #     return names
 
 def jec_names_and_sources(jec_pars):
-    # print(f"jec_pars: {jec_pars}")
+    # logger.debug(f"jec_pars: {jec_pars}")
     jet_alg = jec_pars["jet_algorithm"]
     names = {}
     # suffix = {
@@ -63,7 +66,7 @@ def jec_names_and_sources(jec_pars):
         "jer_names": [f"_PtResolution_{jet_alg}"],
         "jersf_names": [f"_SF_{jet_alg}"],
     }
-    # print(f"JEC suffix: {suffix}")
+    # logger.debug(f"JEC suffix: {suffix}")
 
     for key, suff in suffix.items():
         if "data" in key:
@@ -124,13 +127,13 @@ def get_name_map(stack):
     name_map["ptRaw"] = "pt_raw"
     name_map["massRaw"] = "mass_raw"
     name_map["Rho"] = "PU_rho" # IMPORTANT: do NOT override "rho" in jets. rho is used for something else, thus we NEED to use PU_rho
-    # print(f"name_map: {name_map}")
+    # logger.debug(f"name_map: {name_map}")
     return name_map
 
 def get_jec_factories(jec_parameters: dict, year):
     # jec_pars = {k: v[year] for k, v in jec_parameters.items()}
     # jec_pars = {k: v for k, v in jec_parameters.items()}
-    
+
     jec_pars = jec_parameters
 
 
@@ -161,7 +164,7 @@ def get_jec_factories(jec_parameters: dict, year):
 
     jec_input_options = {}
     jet_variations = ["jec", "junc", "jer"]
-    
+
     for variation in jet_variations:
         # jec_input_options[variation] = {
         #     name: jet_evaluator[name] for name in stacks[f"{variation}_stack"]
@@ -174,9 +177,9 @@ def get_jec_factories(jec_parameters: dict, year):
         # }
         jec_input_options[variation] ={}
         for name in stacks[f"{variation}_stack"]:
-            jec_input_options[variation][name] =jet_evaluator[name] 
-        
-    # print(f"jec_factories jec_input_options: \n {jec_input_options}")
+            jec_input_options[variation][name] =jet_evaluator[name]
+
+    # logger.debug(f"jec_factories jec_input_options: \n {jec_input_options}")
     for src in names["junc_sources"]:
         for key in jet_evaluator.keys():
             if src in key:
@@ -185,10 +188,10 @@ def get_jec_factories(jec_parameters: dict, year):
     # Create separate factories for JEC, JER, JEC variations
     for variation in jet_variations:
 
-        
+
         stack = JECStack(jec_input_options[variation])
-        # print(f"jec_factories JECStack: {stack}")
-        # print(f"jec_factories get_name_map(stack): {get_name_map(stack)}")
+        # logger.debug(f"jec_factories JECStack: {stack}")
+        # logger.debug(f"jec_factories get_name_map(stack): {get_name_map(stack)}")
         jec_factories[variation] = CorrectedJetsFactory(get_name_map(stack), stack)
 
     # Create a separate factory for each data run
@@ -211,9 +214,9 @@ def get_jec_factories(jec_parameters: dict, year):
     return jec_factories, jec_factories_data
 
 
-    
+
 def jet_id(jets, config):
-    # print(f"jets parameters: {parameters}")
+    # logger.debug(f"jets parameters: {parameters}")
     pass_jet_id = ak.ones_like(jets.jetId, dtype=bool)
     year = config["year"]
     if ("2016" in year) and ("RERECO" in year):  # 2016RERECO
@@ -221,15 +224,15 @@ def jet_id(jets, config):
             pass_jet_id = jets.jetId >= 1
         elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
             pass_jet_id = jets.jetId >= 3
-    else: # 2017RERECO, 2018RERECO, all UL and Run3 
+    else: # 2017RERECO, 2018RERECO, all UL and Run3
         if "loose" in config["jet_id"]:
-            pass_jet_id = jets.jetId >= 1 # NOTE: for Run2 UL, loose is not specified in https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format 
+            pass_jet_id = jets.jetId >= 1 # NOTE: for Run2 UL, loose is not specified in https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format
         elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
             pass_jet_id = jets.jetId >= 2
 
-    # print(f"pass_jet_id: {pass_jet_id[:10].compute()}")
+    # logger.debug(f"pass_jet_id: {pass_jet_id[:10].compute()}")
     # test_pass_jet_id = jets.jetId >= 2
-    # print(f"test_pass_jet_id: {test_pass_jet_id[:10].compute()}")
+    # logger.debug(f"test_pass_jet_id: {test_pass_jet_id[:10].compute()}")
     # raise ValueError
     return pass_jet_id
 
@@ -238,15 +241,15 @@ def jet_puid(jets, config):
     jet_puid2use = config["jet_puid"]
     year = config["year"]
     if year=="2017_RERECO":
-        print("using puId 17!")
-        puId = jets.puId17 
+        logger.debug("using puId 17!")
+        puId = jets.puId17
     else:
         puId = jets.puId
     # jet puid for standard wps are different for 2016 vs 2017,2018 as shown in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL#Working_Points
     # only apply jet puid to jets with pt < 50, else, pass
     # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
     if ("2016" in year) and ("RERECO" not in year): #Only 2016 UL samples are different
-        print("2016 UL exception!")
+        logger.debug("2016 UL exception!")
         jet_puid_wps = {
             "loose": (puId >= 1) | (jets.pt >= 50),
             "medium": (puId >= 3) | (jets.pt >= 50),
@@ -259,7 +262,7 @@ def jet_puid(jets, config):
             "tight": (puId >= 7) | (jets.pt >= 50),
         }
     pass_jet_puid = ak.ones_like(jets.jetId, dtype=bool)
-    
+
     if "2017" in year: # for misreco due ot ECAL endcap noise
         eta_window = (abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0)
         # pass_jet_puid = (eta_window & jet_puid_wps["tight"]) | ( # tight puid in the noisy eta window, else loose
@@ -270,38 +273,38 @@ def jet_puid(jets, config):
         )
     else:
         pass_jet_puid = jet_puid_wps[jet_puid2use]
-        # print("else case!")
-        # print(f"pass_jet_puid: {pass_jet_puid[:10].compute()}")
-        # print(f"jet_puid_wps['loose']: {jet_puid_wps['loose'][:10].compute()}")
+        # logger.debug("else case!")
+        # logger.debug(f"pass_jet_puid: {pass_jet_puid[:10].compute()}")
+        # logger.debug(f"jet_puid_wps['loose']: {jet_puid_wps['loose'][:10].compute()}")
         # raise ValueError
     return pass_jet_puid
 
 
 def fill_softjets(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
     if test_mode:
-        print(f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}")
-        print(f"jets cutoff: {cutoff}")
+        logger.debug(f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}")
+        logger.debug(f"jets cutoff: {cutoff}")
     events["SoftActivityJet","mass"] = 0
     saj = events.SoftActivityJet
     saj_Njets = events[f"SoftActivityJetNjets{cutoff}"]
     saj_HT = events[f"SoftActivityJetHT{cutoff}"]
-    
+
 
     njets = ak.num(jets, axis=1)
     padded_jets = ak.pad_none(jets, 2)
     jet1 = padded_jets[:,0]
     jet2 = padded_jets[:,1]
-    
+
     # nmuons = ak.num(muons, axis=1)
     # mu1 = muons[:,0]
     # mu2 = muons[:,1]
     if test_mode:
-        print(f"jets njets: {njets}")
-        print(f"jets saj.pt: {saj.pt}")
-        print(f"jets jet1.pt: {jet1.pt}")
-        print(f"jets jet2.pt: {jet2.pt}")
-        print(f"jets mu1.pt: {mu1.pt}")
-        print(f"jets mu2.pt: {mu2.pt}")
+        logger.debug(f"jets njets: {njets}")
+        logger.debug(f"jets saj.pt: {saj.pt}")
+        logger.debug(f"jets jet1.pt: {jet1.pt}")
+        logger.debug(f"jets jet2.pt: {jet2.pt}")
+        logger.debug(f"jets mu1.pt: {mu1.pt}")
+        logger.debug(f"jets mu2.pt: {mu2.pt}")
 
     # line 2966 of AN-19-124: "The two identified muons and the charged PF candidates associated to the two leading jets in the event are not included in the soft-jet definition"
     dR_m1 = saj.delta_r(mu1)
@@ -313,59 +316,59 @@ def fill_softjets(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
     dR_j1_filter = ak.fill_none((dR_j1 < 0.4), value=False, axis=None)
     dR_j2_filter = ak.fill_none((dR_j2 < 0.4), value=False, axis=None)
     if test_mode:
-        print(f"jets dR_m1_filter: {dR_m1_filter}")
-        print(f"jets dR_m2_filter: {dR_m2_filter}")
-        print(f"jets dR_j1_filter: {dR_j1_filter}")
-        print(f"jets dR_j2_filter: {dR_j2_filter}")
+        logger.debug(f"jets dR_m1_filter: {dR_m1_filter}")
+        logger.debug(f"jets dR_m2_filter: {dR_m2_filter}")
+        logger.debug(f"jets dR_j1_filter: {dR_j1_filter}")
+        logger.debug(f"jets dR_j2_filter: {dR_j2_filter}")
     saj_to_remove = dR_m1_filter | dR_m2_filter | dR_j1_filter | dR_j2_filter
     saj_to_remove = ak.fill_none(saj_to_remove, value=False)
-    
-    
+
+
     footprint = saj[(saj_to_remove) & (saj.pt > cutoff)]
     footprint_sumPt = ak.sum(footprint.pt, axis=1)
     if test_mode:
-        print(f"jets saj_to_remove: {saj_to_remove}")
-        print(f"jets footprint_sumPt: {ak.to_numpy(footprint_sumPt)}")
+        logger.debug(f"jets saj_to_remove: {saj_to_remove}")
+        logger.debug(f"jets footprint_sumPt: {ak.to_numpy(footprint_sumPt)}")
     ht_corrected = saj_HT - footprint_sumPt
     footprint_njets = ak.num(footprint, axis=1)
     corrected_njets = saj_Njets - footprint_njets
-    
-    if test_mode:
-        print(f"jets footprint_njets: {ak.to_numpy(footprint_njets)}")
-        print(f"jets corrected_njets: {ak.to_numpy(corrected_njets)}")
-        print(f"jets saj_Njets: {saj_Njets}")
 
-    evnts_to_correct = (nmuons==2) |(njets > 0) 
     if test_mode:
-        print(f"jets evnts_to_correct: {evnts_to_correct}")
-        print(f"jets footprint_njets b4: {ak.to_numpy(saj_Njets)}")
-        print(f"jets corrected_njets b4: {ak.to_numpy(saj_HT)}")
-    
+        logger.debug(f"jets footprint_njets: {ak.to_numpy(footprint_njets)}")
+        logger.debug(f"jets corrected_njets: {ak.to_numpy(corrected_njets)}")
+        logger.debug(f"jets saj_Njets: {saj_Njets}")
+
+    evnts_to_correct = (nmuons==2) |(njets > 0)
+    if test_mode:
+        logger.debug(f"jets evnts_to_correct: {evnts_to_correct}")
+        logger.debug(f"jets footprint_njets b4: {ak.to_numpy(saj_Njets)}")
+        logger.debug(f"jets corrected_njets b4: {ak.to_numpy(saj_HT)}")
+
     saj_Njets = ak.where(evnts_to_correct,corrected_njets,saj_Njets)
     saj_HT = ak.where(evnts_to_correct,ht_corrected,saj_HT)
 
     if test_mode:
-        print(f"jets footprint_njets after: {ak.to_numpy(saj_Njets)}")
-        print(f"jets corrected_njets after: {ak.to_numpy(saj_HT)}")
+        logger.debug(f"jets footprint_njets after: {ak.to_numpy(saj_Njets)}")
+        logger.debug(f"jets corrected_njets after: {ak.to_numpy(saj_HT)}")
     out_dict = {
         f"nsoftjets{cutoff}" : saj_Njets,
         f"htsoft{cutoff}" : saj_HT
     }
     return out_dict
 
-    
+
 
 def getHemVetoRunFilter(run, event_num, config, is_mc):
     """
     For data:
-    return the conditions for applying HemVeto. For data, this is just 
+    return the conditions for applying HemVeto. For data, this is just
     end of data B run + full data C,D (run >= 319077).
-    For MC: 
+    For MC:
     Randomly reject a given fraction of events using for MC to match HEM Vetoed jets in 2018 UL as reccommended in https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8 (though we reject her "eventNum % 15 == 0" method of random rejection and just use random number generation)
     """
     if is_mc:
         prob = config["HemVeto_ratio"] # ratio of HemVeto applicable run / total nevents for 2018UL
-        print(f"HEMveto prob: {prob}")
+        logger.debug(f"HEMveto prob: {prob}")
         # intialize random number generator
         resrng = cs.Correction(
             name="resrng",
@@ -383,12 +386,12 @@ def getHemVetoRunFilter(run, event_num, config, is_mc):
         )
         # get random number from 0 to 1
         rand = resrng.to_evaluator().evaluate(event_num)
-        # print(f"rand: {rand[:20].compute()}")
-        # print(f"(rand < prob): {(rand < prob)[:20].compute()}")
+        # logger.debug(f"rand: {rand[:20].compute()}")
+        # logger.debug(f"(rand < prob): {(rand < prob)[:20].compute()}")
         # raise ValueError
         return (rand < prob) # for prob amount of times, this is true
     else: #For data, just a simple run >= 319077 cut. Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8
-        return (run >= 319077)  
+        return (run >= 319077)
 
 def applyHemVeto(jets, run, event_num, config, is_mc: bool):
     """
@@ -410,12 +413,12 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
     jet_muon_iso_cut = (jets.muonIdx1 == -1) & (jets.muonIdx2 == -1) # Source: https://cms-talk.web.cern.ch/t/jetvetomaps-usage-for-2018ul/61981/2
     jet_em_frac_cut  = (jets.chEmEF + jets.neEmEF) < 0.9 # EM fraction cut
     pass_jet_tightID = (jets.jetId >= 2) & jet_em_frac_cut & jet_muon_iso_cut
-    
+
     pass_jet_tightLepVetoID = jets.jetId ==6 # Source: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13TeVUL
-    
+
     pass_jet_id_total = pass_jet_tightLepVetoID | pass_jet_tightID # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/2
-    
-    
+
+
 
     loose_jet_selection =( # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/2
         jets.pt > 15
@@ -428,26 +431,26 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
         & (jets.phi > -1.57)
         & (jets.phi < -0.87)
     )
-    
-    # hemveto_run_filter = (run >= 319077) 
+
+    # hemveto_run_filter = (run >= 319077)
     hemveto_run_filter = getHemVetoRunFilter(run, event_num, config, is_mc)
 
     # combine all the conditions
-    hemveto = loose_jet_selection & hemveto_region 
-    hemveto = ak.any(hemveto, axis=1) & hemveto_run_filter 
+    hemveto = loose_jet_selection & hemveto_region
+    hemveto = ak.any(hemveto, axis=1) & hemveto_run_filter
     # we reject events if we find hemveto jets, so reverse the bool arr
     hemveto = ~hemveto
     is_HemRegion = ak.any(hemveto_region, axis=1) # eventwise arr if any jet is in the hem region
     return hemveto, is_HemRegion
-    
+
 
 def getJecDataTag(run, jec_data_tags):
-    print(f"run: {run}")
-    print(f"jec_data_tags: {jec_data_tags}")
+    logger.debug(f"run: {run}")
+    logger.debug(f"jec_data_tags: {jec_data_tags}")
     for jec_tag, jec_run_l in jec_data_tags.items():
         for jec_run in jec_run_l:
             if run == jec_run:
-                print(f"found match in jec_run {jec_run}!")
+                logger.debug(f"found match in jec_run {jec_run}!")
                 return jec_tag
 
     return None # return none if nothing matches
@@ -458,34 +461,34 @@ def do_jec_scale(jets, config, is_mc, dataset):
     jerc_load_path = jec_parameters["jerc_load_path"]
     cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
 
-    
+
     if is_mc:
         jec_tag = jec_parameters["jec_tags"]
     else: # data
         jec_tag = None
         for run in jec_parameters["runs"]:
-            print(f"run: {run}")
-            print(f"dataset: {dataset}")
+            logger.debug(f"run: {run}")
+            logger.debug(f"dataset: {dataset}")
             if run in dataset:
                 jec_tag = getJecDataTag(run, jec_parameters["jec_data_tags"])
-    print(f"jec_tag: {jec_tag}")
-    if jec_tag is None: 
-        print("ERROR! JEC tag not found!")
+    logger.debug(f"jec_tag: {jec_tag}")
+    if jec_tag is None:
+        logger.debug("ERROR! JEC tag not found!")
         raise ValueError
-        
-    
+
+
     # algo = "AK4PFchs"
     algo = jec_parameters["jet_algorithm"]
     lvl_compound = "L1L2L3Res"
-    
+
     key = "{}_{}_{}".format(jec_tag, lvl_compound, algo)
-    print(f"jec key: {key}")
+    logger.debug(f"jec key: {key}")
     sf = cset.compound[key]
 
     sf_input_names = [inp.name for inp in sf.inputs]
-    print(f"JEC input: {sf_input_names}")
-    
-    
+    logger.debug(f"JEC input: {sf_input_names}")
+
+
     inputs = (
         jets.area, # == JetA
         jets.eta, # == JetEta
@@ -494,7 +497,7 @@ def do_jec_scale(jets, config, is_mc, dataset):
     )
     # inputs = get_corr_inputs(example_value_dict, sf)
     new_jec_scale = sf.evaluate(*inputs)
-    # print("JSON result AK4: {}".format(new_jec_scale[:20].compute()))
+    # logger.debug("JSON result AK4: {}".format(new_jec_scale[:20].compute()))
     jet_pt_jec = new_jec_scale*jets.pt_raw
     jet_mass_jec = new_jec_scale*jets.mass_raw
     jets["pt"] = jet_pt_jec
@@ -529,53 +532,53 @@ def applyStrat1n2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
 def do_jer_smear(jets, config, syst, event_id):
     """
     we assume that jec has been applied (we need pt_jec and pt_raw)
-    
+
     params:
     syst: nom, up and down
     """
     jec_parameters = config["jec_parameters"]
     jerc_load_path = jec_parameters["jerc_load_path"]
     cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
-    
-    
+
+
     jersmear_load_path = jec_parameters["jersmear_load_path"]
     cset_jersmear = correctionlib.CorrectionSet.from_file(jersmear_load_path)
-    
-    
+
+
     # jer_tag = "Summer20UL16_JRV3_MC"
     jer_tag = jec_parameters["jer_tags"]
     algo = "AK4PFchs"
-    
+
     # First, jet JER SF
     key = "{}_{}_{}".format(jer_tag, "ScaleFactor", algo)
     sf = cset[key]
     sf_input_names = [inp.name for inp in sf.inputs]
-    print(f"JER SF input: {sf_input_names}")
-    
+    logger.debug(f"JER SF input: {sf_input_names}")
+
     # Second, get JER resolution
     inputs = (
         jets.eta, # == JetEta
         syst, # == systematic
     )
     jer_sf = sf.evaluate(*inputs)
-    # print("JER SF : {}".format(jer_sf.compute()))
-    
-    
+    # logger.debug("JER SF : {}".format(jer_sf.compute()))
+
+
     key = "{}_{}_{}".format(jer_tag, "PtResolution", algo)
     sf = cset[key]
-    
+
     sf_input_names = [inp.name for inp in sf.inputs]
-    print(f"JER resolution input: {sf_input_names}")
-    
+    logger.debug(f"JER resolution input: {sf_input_names}")
+
     inputs = ( # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L107C73-L107C75
         jets.eta, # == JetEta
-        jets.pt_raw, # == systematic 
+        jets.pt_raw, # == systematic
         jets.PU_rho, # == Rho
     )
     # inputs = get_corr_inputs(example_value_dict, sf)
     jer_res = sf.evaluate(*inputs)
-    # print("JER Res : {}".format(jer_res.compute()))        
-    
+    # logger.debug("JER Res : {}".format(jer_res.compute()))
+
     key_jersmear = "JERSmear"
     sf_jersmear = cset_jersmear[key_jersmear]
     sf_input_names = [inp.name for inp in sf_jersmear.inputs]
@@ -595,7 +598,7 @@ def do_jer_smear(jets, config, syst, event_id):
         event_id, # == EventID
         jer_res, # == JERs
         jer_sf, # == JERSF
-    
+
     )
     jer_smearing = sf_jersmear.evaluate(*inputs)
     # jer_smearing = applyStrat1(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
@@ -605,7 +608,6 @@ def do_jer_smear(jets, config, syst, event_id):
     # print("JER smearing : {}".format(jer_smearing[:20].compute()))
     # print(f"jets.pt b4 JER smear: {jets.pt[:20].compute()}")
     jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
-    # print(f"jets.pt after JER smear: {jets.pt[:20].compute()}")
+    # logger.debug(f"jets.pt after JER smear: {jets.pt[:20].compute()}")
     return jets
 
-    
