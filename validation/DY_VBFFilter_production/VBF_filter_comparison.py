@@ -166,33 +166,23 @@ def getZip(events) -> ak.zip:
     mu_pos_lhe = LHE_muon[~has_negCharge][:,0]
 
     genPart = events.GenPart
-    # gen_selection = (
-    #      (genPart.status ==1) # must be a stable. Source: https://github.com/cms-sw/cmssw/blob/b3c939c01124861dffae4f08177fbc598538c569/PhysicsTools/JetMCAlgos/src/Pythia8PartonSelector.cc#L20
-    #     # (abs(genPart.pdgId) ==13)
-    #     # & (genPart.status ==23) # must be an outgoing particle. Source: https://pythia.org/latest-manual/ParticleProperties.html
-    # )
+
+    # start gen muon filter
     gen_selection = (abs(genPart.pdgId) ==13)
     gen_muon = genPart[gen_selection]
-    parent_id = getParentID(gen_muon, genPart)
-    # # print(f"gen_muon.pdgId: {gen_muon.pdgId.compute()}")
-    # parent_Zboson = abs(parent_id) == 23 # parent must be from Z boson. Source: https://pdg.lbl.gov/2007/reviews/montecarlorpp.pdf
-    # gen_muon = gen_muon[parent_Zboson]
-    # print(f"parent_id: {parent_id.compute()}")
     from_hard_process = (gen_muon.statusFlags & 2**8) > 0
     is_stable_process = (gen_muon.status ==1)
     dy_muon_filter = from_hard_process & is_stable_process & (gen_muon.pt > 20)
     gen_muon = gen_muon[dy_muon_filter]
+
+    
     n_gen_muons = ak.num(gen_muon, axis=1)
-    more_than_two = n_gen_muons > 2
-    # print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
     two_gen_muons = (n_gen_muons == 2) & (ak.prod(gen_muon.pdgId,axis=1) < 0 )
     gen_muon = ak.pad_none(gen_muon[two_gen_muons], target=2, clip=True)
-    # print(f"gen_muon.pt b4 sort: {gen_muon.pt.compute()}")
     sorted_args = ak.argsort(gen_muon.pt, ascending=False)
     gen_muon = (gen_muon[sorted_args])
-    # print(f"gen_muon.pt after sort: {gen_muon.pt.compute()}")
-    
-    # gen_muon = ak.pad_none(gen_muon, target=2, clip=True)
+
+    # define mu1 and mu2
     mu1_gen = gen_muon[:,0]
     mu2_gen = gen_muon[:,1]
     
