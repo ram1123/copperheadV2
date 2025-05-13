@@ -90,6 +90,245 @@ def getParentID(particle, GenPart):
     ParentID = ak.where(has_no_parent, self_id, parent_id)
     return ParentID
 
+def isSameGenParticle(matched_gen_particle, gen_particle):
+    pt_isSame = matched_gen_particle.pt == gen_particle.pt
+    eta_isSame = matched_gen_particle.eta == gen_particle.eta
+    phi_isSame = matched_gen_particle.phi == gen_particle.phi
+    is_sameParticle = pt_isSame & eta_isSame & phi_isSame
+    return is_sameParticle
+
+
+def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    from_hard_process = (genPart.statusFlags & 2**8) > 0
+    is_stable_process = (genPart.status ==1)
+    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    eta = ak.flatten(dy_gen_muons.eta).compute()
+    # pt = ak.flatten(dy_gen_muons.pt).compute()
+    print(f"eta: {eta}")
+    
+
+    values = ak.to_numpy(eta)
+    weights = np.ones_like(values)
+    values = array('d', values) # make the array double
+    weights = array('d', weights) # make the array double
+    
+    print(len(values))
+    for nbins in nbins_l:
+        # extract and plot eta
+        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)"
+        hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+        hist.FillN(len(values), values, weights)
+        # Create a canvas
+        canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+        
+        # Draw the histogram
+        hist.Draw('E')
+    
+        # Create a legend
+        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        
+        # Add entries
+        legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+        legend.Draw()
+        
+        # Save the canvas as a PNG
+        save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}.pdf"
+        canvas.Update()
+        canvas.SaveAs(save_full_path)
+
+
+def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    from_hard_process = (genPart.statusFlags & 2**8) > 0
+    is_stable_process = (genPart.status ==1)
+    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    eta = ak.flatten(dy_gen_muons.eta).compute()
+    pt = ak.flatten(dy_gen_muons.pt).compute()
+    print(f"eta: {eta}")
+    pt_edges = [0, 20, 40, 60, 200]
+    for pt_idx in range(len(pt_edges)-1):
+        pt_low = pt_edges[pt_idx]
+        pt_high = pt_edges[pt_idx+1]
+        pt_cut = (pt_low <= pt)  &  (pt <= pt_high)
+        filtered_eta = eta[pt_cut]
+        values = ak.to_numpy(filtered_eta)
+        weights = np.ones_like(values)
+        values = array('d', values) # make the array double
+        weights = array('d', weights) # make the array double
+        
+        print(len(values))
+        for nbins in nbins_l:
+            # extract and plot eta
+            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)&&{pt_low}<=GenPart_pt<={pt_high}"
+            hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+            hist.FillN(len(values), values, weights)
+            # Create a canvas
+            canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+            
+            # Draw the histogram
+            hist.Draw('E')
+        
+            # Create a legend
+            legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
+            # Add entries
+            legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+            legend.Draw()
+            
+            # Save the canvas as a PNG
+            save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_{pt_low}Pt{pt_high}.pdf"
+            canvas.Update()
+            canvas.SaveAs(save_full_path)
+
+def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    from_hard_process = (genPart.statusFlags & 2**8) > 0
+    is_stable_process = (genPart.status ==1)
+    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    eta = (dy_gen_muons.eta).compute()
+    nmuon = ak.num(events.Muon, axis=1).compute()
+    print(f"eta: {eta}")
+    nmuon_edges = [0, 1, 2, 3]
+    for nmuon_target in nmuon_edges:
+        if nmuon_target > 2:
+            nmuon_cut = nmuon >= nmuon_target
+        else:
+            nmuon_cut = nmuon == nmuon_target
+        filtered_eta = ak.flatten(eta[nmuon_cut])
+        values = ak.to_numpy(filtered_eta)
+        weights = np.ones_like(values)
+        values = array('d', values) # make the array double
+        weights = array('d', weights) # make the array double
+        
+        print(len(values))
+        for nbins in nbins_l:
+            # extract and plot eta
+            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)&&nMuon=={nmuon_target}"
+            hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+            hist.FillN(len(values), values, weights)
+            # Create a canvas
+            canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+            
+            # Draw the histogram
+            hist.Draw('E')
+        
+            # Create a legend
+            legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
+            # Add entries
+            legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+            legend.Draw()
+            
+            # Save the canvas as a PNG
+            save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_nMuon{nmuon_target}.pdf"
+            canvas.Update()
+            canvas.SaveAs(save_full_path)
+
+
+# def quickPlotByPt_computed(values_dict, nbins_l, xlow, xhigh, save_path, save_fname):
+#     """
+#     simple plotter that plots directly with minimal selection
+#     """
+#     eta = values_dict["eta"]
+#     pt = ak.flatten(dy_gen_muons.pt).compute()
+#     print(f"eta: {eta}")
+#     pt_edges = [0, 20, 40, 60, 200]
+#     for pt_idx in range(len(pt_edges)-1):
+#         pt_low = pt_edges[pt_idx]
+#         pt_high = pt_edges[pt_idx+1]
+#         pt_cut = (pt_low <= pt)  &  (pt <= pt_high)
+#         filtered_eta = eta[pt_cut]
+#         values = ak.to_numpy(filtered_eta)
+#         weights = np.ones_like(values)
+#         values = array('d', values) # make the array double
+#         weights = array('d', weights) # make the array double
+        
+#         print(len(values))
+#         for nbins in nbins_l:
+#             # extract and plot eta
+#             title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)&&{pt_low}<=GenPart_pt<={pt_high}"
+#             hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+#             hist.FillN(len(values), values, weights)
+#             # Create a canvas
+#             canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+            
+#             # Draw the histogram
+#             hist.Draw('E')
+        
+#             # Create a legend
+#             legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
+#             # Add entries
+#             legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+#             legend.Draw()
+            
+#             # Save the canvas as a PNG
+#             save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_{pt_low}Pt{pt_high}.pdf"
+#             canvas.Update()
+#             canvas.SaveAs(save_full_path)
+
+# def quickPlotByNMuon_computed(events, nbins_l, xlow, xhigh, save_path, save_fname):
+#     """
+#     simple plotter that plots directly with minimal selection
+#     """
+#     genPart = events.GenPart
+#     from_hard_process = (genPart.statusFlags & 2**8) > 0
+#     is_stable_process = (genPart.status ==1)
+#     dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+#     dy_gen_muons  = genPart[dy_muon_filter]
+#     eta = (dy_gen_muons.eta).compute()
+#     nmuon = ak.num(events.Muon, axis=1).compute()
+#     print(f"eta: {eta}")
+#     nmuon_edges = [0, 1, 2, 3]
+#     for nmuon_target in nmuon_edges:
+#         if nmuon_target > 2:
+#             nmuon_cut = nmuon >= nmuon_target
+#         else:
+#             nmuon_cut = nmuon == nmuon_target
+#         filtered_eta = ak.flatten(eta[nmuon_cut])
+#         values = ak.to_numpy(filtered_eta)
+#         weights = np.ones_like(values)
+#         values = array('d', values) # make the array double
+#         weights = array('d', weights) # make the array double
+        
+#         print(len(values))
+#         for nbins in nbins_l:
+#             # extract and plot eta
+#             title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)&&nMuon=={nmuon_target}"
+#             hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+#             hist.FillN(len(values), values, weights)
+#             # Create a canvas
+#             canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+            
+#             # Draw the histogram
+#             hist.Draw('E')
+        
+#             # Create a legend
+#             legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
+#             # Add entries
+#             legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+#             legend.Draw()
+            
+#             # Save the canvas as a PNG
+#             save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_nMuon{nmuon_target}.pdf"
+#             canvas.Update()
+#             canvas.SaveAs(save_full_path)
+
+
 def getZip(events) -> ak.zip:
     """
     from events return dictionary of dimuon, muon, dijet, jet values
@@ -166,35 +405,77 @@ def getZip(events) -> ak.zip:
     mu_pos_lhe = LHE_muon[~has_negCharge][:,0]
 
     genPart = events.GenPart
-
-    # start gen muon filter
+    # gen_selection = (
+    #      (genPart.status ==1) # must be a stable. Source: https://github.com/cms-sw/cmssw/blob/b3c939c01124861dffae4f08177fbc598538c569/PhysicsTools/JetMCAlgos/src/Pythia8PartonSelector.cc#L20
+    #     # (abs(genPart.pdgId) ==13)
+    #     # & (genPart.status ==23) # must be an outgoing particle. Source: https://pythia.org/latest-manual/ParticleProperties.html
+    # )
     gen_selection = (abs(genPart.pdgId) ==13)
     gen_muon = genPart[gen_selection]
+    parent_id = getParentID(gen_muon, genPart)
+    # # print(f"gen_muon.pdgId: {gen_muon.pdgId.compute()}")
+    # parent_Zboson = abs(parent_id) == 23 # parent must be from Z boson. Source: https://pdg.lbl.gov/2007/reviews/montecarlorpp.pdf
+    # gen_muon = gen_muon[parent_Zboson]
+    # print(f"parent_id: {parent_id.compute()}")
     from_hard_process = (gen_muon.statusFlags & 2**8) > 0
     is_stable_process = (gen_muon.status ==1)
     dy_muon_filter = from_hard_process & is_stable_process & (gen_muon.pt > 20)
     gen_muon = gen_muon[dy_muon_filter]
-
-    
     n_gen_muons = ak.num(gen_muon, axis=1)
+    more_than_two = n_gen_muons > 2
+    # print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
     two_gen_muons = (n_gen_muons == 2) & (ak.prod(gen_muon.pdgId,axis=1) < 0 )
     gen_muon = ak.pad_none(gen_muon[two_gen_muons], target=2, clip=True)
+    # print(f"gen_muon.pt b4 sort: {gen_muon.pt.compute()}")
     sorted_args = ak.argsort(gen_muon.pt, ascending=False)
     gen_muon = (gen_muon[sorted_args])
-
-    # define mu1 and mu2
+    # print(f"gen_muon.pt after sort: {gen_muon.pt.compute()}")
+    
+    # gen_muon = ak.pad_none(gen_muon, target=2, clip=True)
     mu1_gen = gen_muon[:,0]
     mu2_gen = gen_muon[:,1]
-    
 
+
+    muons = events.Muon[two_gen_muons]
+    muons = muons[muons.genPartIdx != -1] # remove muons with no gen match
+    genPart = genPart[two_gen_muons]
+    matched_gen_muons = genPart[muons.genPartIdx]
+    # matched_gen_muons = muons.matched_gen
+    # print(f"muons.genPartIdx: {muons.genPartIdx.compute()}")
+    # # print(f"muons.matched_gen_muons.pt: {matched_gen_muons.pt.compute()}")
+    # print(f"muons.genPartIdx: {ak.num(muons.genPartIdx, axis=1).compute()}")
+    # print(f"muons.matched_gen_muons: {ak.num(matched_gen_muons, axis=1).compute()}")
+    # raise ValueError
+    
+    
+    mu1_gen_match = isSameGenParticle(matched_gen_muons, mu1_gen)
+    mu1 = muons[mu1_gen_match]
+    mu1 = ak.pad_none(mu1, target=1)
+
+    mu2_gen_match = isSameGenParticle(matched_gen_muons, mu2_gen)
+    mu2 = muons[mu2_gen_match]
+    mu2 = ak.pad_none(mu2, target=1)
+    
+    # print(f"mu1: {mu1.pt.compute()}")
+    # print(f"mu2: {mu2.pt.compute()}")
+    
+    # print(f"more_thanTwo_muons: {ak.sum(more_thanTwo_muons).compute()}")
+    
+    # print(f"nmuons: {nmuons.compute()}")
+    # print(f"gen_match: {gen_match.compute()}")
+    # print(f"mu1.pt: {mu1.pt.compute()}")
+    # print(f"mu1_gen.pt: {mu1_gen.pt.compute()}")
+    # print(f"mu2.pt: {mu2.pt.compute()}")
+    # print(f"mu2_gen.pt: {mu2_gen.pt.compute()}")
+    # print(f"non two reco muons: {ak.sum(~two_reco_muons).compute()}")
     
     return_dict = {
-        # "mu1_pt" : mu1.pt,
-        # "mu2_pt" : mu2.pt,
-        # "mu1_eta" : mu1.eta,
-        # "mu2_eta" : mu2.eta,
-        # "mu1_phi" : mu1.phi,
-        # "mu2_phi" : mu2.phi,
+        "mu1_pt" : mu1.pt,
+        "mu2_pt" : mu2.pt,
+        "mu1_eta" : mu1.eta,
+        "mu2_eta" : mu2.eta,
+        "mu1_phi" : mu1.phi,
+        "mu2_phi" : mu2.phi,
         # "mu1_pt_gen" : mu1_gen.pt,
         # "mu2_pt_gen" : mu2_gen.pt,
         # "mu1_eta_gen" : mu1_gen.eta,
@@ -600,10 +881,12 @@ def print_t_statisticROOT(hist_fromScratch, hist_rereco, field):
         print(f"{field} Bin {i}: center={bin_center:.2f}, diff={diff:.2f}, error={err_total:.2f}, t value={t_val:.2f}")
 
 
-def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", centralVsCentral=False):
+def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", centralVsCentral=False, nbins=30):
     # fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe", "mu_neg_lhe_eta", "mu_pos_lhe_eta"]
     # fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
-    fields2plot = ["mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
+    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
+    # fields2plot = ["mu1_eta", "mu2_eta", "mu1_eta_gen", "mu2_eta_gen"]
+    fields2plot = ["mu1_eta", "mu2_eta", "mu1_pt", "mu2_pt", "mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
     
     
     for field in fields2plot:
@@ -612,9 +895,7 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
             xlow, xhigh = -2, 2
         elif "pt" in field:
             xlow, xhigh = 0, 250
-        # nbins = 30
-        nbins = 60
-        
+
         hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018;{field};Entries", nbins, xlow, xhigh)
 
         values = ak.to_numpy(zip_fromScratch[field])
@@ -636,7 +917,17 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         
         # Create a canvas
         canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+        pad1 = ROOT.TPad("pad1", "Top pad", 0, 0.3, 1, 1.0)
+        pad2 = ROOT.TPad("pad2", "Bottom pad", 0, 0.05, 1, 0.3)
+        
+        pad1.SetBottomMargin(0.02)
+        pad2.SetTopMargin(0.02)
+        pad2.SetBottomMargin(0.3)
+        
+        pad1.Draw()
+        pad2.Draw()
 
+        pad1.cd()
         # Style histograms
         hist_fromScratch.SetLineColor(ROOT.kRed)
         hist_rereco.SetLineColor(ROOT.kBlue)
@@ -664,6 +955,19 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         legend.AddEntry(hist_rereco, f"Central Rereco (Entries: {hist_rereco.GetEntries():.2e})", "l")
         legend.Draw()
 
+
+        # Residual
+
+        pad2.cd()
+        residual = hist_fromScratch.Clone("residual")
+        residual.Add(hist_rereco, -1)
+        residual.SetLineColor(ROOT.kBlack)
+        residual.SetMarkerColor(ROOT.kBlack)
+        residual.Draw("E")
+        residual.SetTitle(f";{field};Residual")
+        # Similarly for the residual plot
+        residual.GetXaxis().SetTitleSize(0.12)  # Bigger because bottom pad is small
+        residual.GetXaxis().SetLabelSize(0.10)
         
         # Save the canvas as a PNG
         save_full_path = f"{save_path}/plotTwoWay_{field}_ROOT.pdf"
@@ -724,7 +1028,7 @@ if __name__ == "__main__":
     print("programe start")
     # ---------------------------------------------------------------
     
-    client =  Client(n_workers=50,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+    client =  Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
     # ---------------------------------------------------------------
     # gateway = Gateway(
     #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
@@ -740,12 +1044,83 @@ if __name__ == "__main__":
     do_quick_test = True # for quick test
     # test_len = 4000
     
-    # test_len = 14000
+    test_len = 14000
     # test_len = 400000
     # test_len = 4000000
-    test_len = 8000000
+    # test_len = 8000000
     # test_len = 2*8000000
+    # test_len = 3*8000000
+    # nbins=30
+    # nbins=60
+    nbins=100
 
+
+
+    # # -----------------------------------------------
+    # centralVsCentral = args.centralVsCentral
+
+    # if centralVsCentral:
+    #     files = json.load(open("dy_m50_v9.json", "r"))
+    # else:    
+    #     files = json.load(open("new_UL_production.json", "r"))
+    # events_fromScratch = NanoEventsFactory.from_root(
+    #     files,
+    #     schemaclass=NanoAODSchema,
+    # ).events()
+    # if do_quick_test:
+    #     events_fromScratch = events_fromScratch[:test_len]
+    # events_fromScratch = applyQuickSelection(events_fromScratch)
+
+    # xlow = -2
+    # xhigh = 2
+    # save_path = "./plots"
+    # save_fname = "gen_eta"
+    # # nbins_l = [20, 60, 100, 200]
+    # nbins_l = [200]
+    # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # raise ValueError
+    # # -----------------------------------------------
+
+    # -----------------------------------------------
+    xlow = -2
+    xhigh = 2
+    save_path = "./plots"
+    save_fname = "gen_eta_signal"
+    nbins_l = [20, 60, 100, 200]
+    
+    files = json.load(open("dy_m50_v9.json", "r"))
+    events_fromScratch = NanoEventsFactory.from_root(
+        files,
+        schemaclass=NanoAODSchema,
+    ).events()
+    if do_quick_test:
+        events_fromScratch = events_fromScratch[:test_len]
+    events_fromScratch = applyQuickSelection(events_fromScratch)
+    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+
+
+    nbins_l = [200]
+    events_fromScratch = NanoEventsFactory.from_root(
+        files,
+        schemaclass=NanoAODSchema,
+    ).events()
+    if do_quick_test:
+        events_fromScratch = events_fromScratch[:test_len]
+    events_fromScratch = applyQuickSelection(events_fromScratch)
+    quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    events_fromScratch = NanoEventsFactory.from_root(
+        files,
+        schemaclass=NanoAODSchema,
+    ).events()
+    if do_quick_test:
+        events_fromScratch = events_fromScratch[:test_len]
+    events_fromScratch = applyQuickSelection(events_fromScratch)
+    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    raise ValueError
+    # -----------------------------------------------
+    
     centralVsCentral = args.centralVsCentral
 
     if centralVsCentral:
@@ -798,19 +1173,20 @@ if __name__ == "__main__":
     
     # plot two way
 
-    plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path, centralVsCentral=centralVsCentral)
+    plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path, centralVsCentral=centralVsCentral, nbins=nbins)
     
     # plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
     # plotTwoWayCentral(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
     # --------------------------------------------------------------
     
-    # do individual plots
-    save_fname = "UL_private_prod"
-    # plotIndividual(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
-    plotIndividualROOT(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
-    save_fname = "Rereco_private_prod"
-    # plotIndividual(zip_rereco, plot_bins, save_fname, save_path=save_path)
-    plotIndividualROOT(zip_rereco, plot_bins, save_fname, save_path=save_path) # printing T statistic is included in this funcition
+    # do individual plots -------------------------------------------
+    # save_fname = "UL_private_prod"
+    # # plotIndividual(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
+    # plotIndividualROOT(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
+    # save_fname = "Rereco_private_prod"
+    # # plotIndividual(zip_rereco, plot_bins, save_fname, save_path=save_path)
+    # plotIndividualROOT(zip_rereco, plot_bins, save_fname, save_path=save_path) # printing T statistic is included in this funcition
+    # --------------------------------------------------------------
 
     
 
