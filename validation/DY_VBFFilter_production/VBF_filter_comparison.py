@@ -18,7 +18,7 @@ ROOT.gStyle.SetOptStat(0) # remove stats box
 from array import array
 np.set_printoptions(threshold=sys.maxsize)
 import dask
-
+import time
 
 def applyMuonBaseSelection(events):
     muons = events.Muon
@@ -107,13 +107,30 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname):
     is_stable_process = (genPart.status ==1)
     dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
     dy_gen_muons  = genPart[dy_muon_filter]
-    eta = ak.flatten(dy_gen_muons.eta).compute()
+    # print(events.genWeight.compute())
+    genWeight = events.genWeight.compute()
+    # Broadcast
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight, dy_gen_muons.eta)
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight.compute(), genPart.eta.compute())
+    # print(gen_wgt)
+    time.sleep(2)
+    eta = dy_gen_muons.eta.compute()
     # pt = ak.flatten(dy_gen_muons.pt).compute()
-    print(f"eta: {eta}")
+    gen_wgt, _ = ak.broadcast_arrays(genWeight, eta)
+    # flatten values and wgts
+    eta = ak.flatten(eta)
+    gen_wgt = ak.flatten(gen_wgt)
+    
     
 
     values = ak.to_numpy(eta)
-    weights = np.ones_like(values)
+    # weights = np.ones_like(values)
+    weights = ak.to_numpy(gen_wgt)
+    weights = np.sign(weights) # for simplicity just take their signs
+
+    # print(f"values: {values}")
+    # print(f"weights: {weights}")
+    
     values = array('d', values) # make the array double
     weights = array('d', weights) # make the array double
     
@@ -141,6 +158,148 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname):
         canvas.Update()
         canvas.SaveAs(save_full_path)
 
+        # print histogram values
+        for i in range(1, hist.GetNbinsX() + 1):
+                bin_center = hist.GetBinCenter(i)
+                yield_val = hist.GetBinContent(i)
+                err = hist.GetBinError(i) 
+                print(f"gen Eta {nbins} bins. Bin {i}: center={bin_center:.2f}, yield={yield_val:.2f}, error={err:.2f}")
+
+
+
+def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    from_hard_process = (genPart.statusFlags & 2**8) > 0
+    is_stable_process = (genPart.status ==1)
+    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    # print(events.genWeight.compute())
+    # genWeight = events.genWeight.compute()
+    # Broadcast
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight, dy_gen_muons.eta)
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight.compute(), genPart.eta.compute())
+    # print(gen_wgt)
+    
+    eta = dy_gen_muons.eta.compute()
+    eta = ak.pad_none(eta, target=2)
+    mu1_eta = eta[:,0]
+    mu2_eta = eta[:,1]
+    mu2_inside_tracker = abs(mu2_eta) < 2.4
+    mu2_inside_tracker = ak.fill_none(mu2_inside_tracker, value=False)
+    # mu2_inside_tracker= ak.ones_like(mu2_inside_tracker, dtype="bool")
+    mu1_eta = mu1_eta[mu2_inside_tracker]
+    # eta = ak.flatten(mu1_eta)
+    eta = mu1_eta
+    
+    values = ak.to_numpy(eta)
+    weights = np.ones_like(values)
+
+    # print(f"values: {values}")
+    # print(f"weights: {weights}")
+    
+    values = array('d', values) # make the array double
+    weights = array('d', weights) # make the array double
+    
+    print(len(values))
+    for nbins in nbins_l:
+        # extract and plot eta
+        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)"
+        hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+        hist.FillN(len(values), values, weights)
+        # Create a canvas
+        canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+        
+        # Draw the histogram
+        hist.Draw('E')
+    
+        # Create a legend
+        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        
+        # Add entries
+        legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+        legend.Draw()
+        
+        # Save the canvas as a PNG
+        save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}.pdf"
+        canvas.Update()
+        canvas.SaveAs(save_full_path)
+
+        # print histogram values
+        for i in range(1, hist.GetNbinsX() + 1):
+                bin_center = hist.GetBinCenter(i)
+                yield_val = hist.GetBinContent(i)
+                err = hist.GetBinError(i) 
+                print(f"gen Eta {nbins} bins. Bin {i}: center={bin_center:.2f}, yield={yield_val:.2f}, error={err:.2f}")
+
+
+def quickPlotOutsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    from_hard_process = (genPart.statusFlags & 2**8) > 0
+    is_stable_process = (genPart.status ==1)
+    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    # print(events.genWeight.compute())
+    # genWeight = events.genWeight.compute()
+    # Broadcast
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight, dy_gen_muons.eta)
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight.compute(), genPart.eta.compute())
+    # print(gen_wgt)
+    
+    eta = dy_gen_muons.eta.compute()
+    eta = ak.pad_none(eta, target=2)
+    mu1_eta = eta[:,0]
+    mu2_eta = eta[:,1]
+    mu2_inside_tracker = abs(mu2_eta) >= 2.4
+    mu2_inside_tracker = ak.fill_none(mu2_inside_tracker, value=False)
+    mu1_eta = mu1_eta[mu2_inside_tracker]
+    # eta = ak.flatten(mu1_eta)
+    eta = mu1_eta
+    
+    values = ak.to_numpy(eta)
+    weights = np.ones_like(values)
+
+    # print(f"values: {values}")
+    # print(f"weights: {weights}")
+    
+    values = array('d', values) # make the array double
+    weights = array('d', weights) # make the array double
+    
+    print(len(values))
+    for nbins in nbins_l:
+        # extract and plot eta
+        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)"
+        hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+        hist.FillN(len(values), values, weights)
+        # Create a canvas
+        canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+        
+        # Draw the histogram
+        hist.Draw('E')
+    
+        # Create a legend
+        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        
+        # Add entries
+        legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+        legend.Draw()
+        
+        # Save the canvas as a PNG
+        save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}.pdf"
+        canvas.Update()
+        canvas.SaveAs(save_full_path)
+
+        # print histogram values
+        for i in range(1, hist.GetNbinsX() + 1):
+                bin_center = hist.GetBinCenter(i)
+                yield_val = hist.GetBinContent(i)
+                err = hist.GetBinError(i) 
+                print(f"gen Eta {nbins} bins. Bin {i}: center={bin_center:.2f}, yield={yield_val:.2f}, error={err:.2f}")
 
 def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
     """
@@ -455,7 +614,12 @@ def getZip(events) -> ak.zip:
     mu2_gen_match = isSameGenParticle(matched_gen_muons, mu2_gen)
     mu2 = muons[mu2_gen_match]
     mu2 = ak.pad_none(mu2, target=1)
-    
+
+
+    noGenmatchMuons = events.Muon[two_gen_muons]
+    noGenmatchMuons = ak.pad_none(noGenmatchMuons, target=2)
+    noGenmatchMu1 = noGenmatchMuons[:,0]
+    noGenmatchMu2 = noGenmatchMuons[:,1]
     # print(f"mu1: {mu1.pt.compute()}")
     # print(f"mu2: {mu2.pt.compute()}")
     
@@ -486,6 +650,12 @@ def getZip(events) -> ak.zip:
         "mu2_pt_gen" : mu2_gen.pt,
         "mu1_eta_gen" : mu1_gen.eta,
         "mu2_eta_gen" : mu2_gen.eta,
+        "noGenmatchMu1_pt" : noGenmatchMu1.pt,
+        "noGenmatchMu2_pt" : noGenmatchMu2.pt,
+        "noGenmatchMu1_eta" : noGenmatchMu1.eta,
+        "noGenmatchMu2_eta" : noGenmatchMu2.eta,
+        "noGenmatchMu1_phi" : noGenmatchMu1.phi,
+        "noGenmatchMu2_phi" : noGenmatchMu2.phi,
         # "mu1_pt_lhe" : mu1_lhe.pt,
         # "mu2_pt_lhe" : mu2_lhe.pt,
         # "mu1_eta_lhe" : mu1_lhe.eta,
@@ -625,8 +795,6 @@ def plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots"):
         ax_ratio.set_ylabel('UL - Rereco')
         ax_ratio.set_ylim(-0.01, 0.01) 
         plt.tight_layout()
-        
-        
         # plt.show()
         save_full_path = f"{save_path}/TwoWayPrivateProd_{field}.pdf"
         plt.savefig(save_full_path)
@@ -823,7 +991,8 @@ def plotIndividualROOT(ak_zip, plot_bins, save_fname, save_path="./plots"):
         # Create a histogram: name, title, number of bins, xlow, xhigh
         hist = ROOT.TH1F("MC hist", f"2018;{field};Entries", 30, xlow, xhigh)
 
-        values = ak.to_numpy(ak_zip[field])
+        values = ak_zip[field]
+        values = ak.to_numpy(values[~ak.is_none(values)])
         weights = np.ones_like(values)
         values = array('d', values) # make the array double
         weights = array('d', weights) # make the array double
@@ -886,7 +1055,7 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
     # fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
     # fields2plot = ["mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
     # fields2plot = ["mu1_eta", "mu2_eta", "mu1_eta_gen", "mu2_eta_gen"]
-    fields2plot = ["mu1_eta", "mu2_eta", "mu1_pt", "mu2_pt", "mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
+    fields2plot = ["noGenmatchMu1_eta", "noGenmatchMu2_eta", "mu1_eta", "mu2_eta", "mu1_pt", "mu2_pt", "mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
     
     
     for field in fields2plot:
@@ -898,21 +1067,26 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
 
         hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018;{field};Entries", nbins, xlow, xhigh)
 
-        values = ak.to_numpy(zip_fromScratch[field])
+        values = zip_fromScratch[field]
+        print(f"{field} from scratch ak.is_none(values) sum: {ak.sum(ak.is_none(values))}")
+        
+        values = ak.to_numpy(values[~ak.is_none(values)])
         weights = np.ones_like(values)
         values = array('d', values) # make the array double
         weights = array('d', weights) # make the array double
         
-        print(len(values))
+        print(f"from scratch {field} len : {len(values)}")
         hist_fromScratch.FillN(len(values), values, weights)
 
         hist_rereco = ROOT.TH1F("hist_rereco", f"2018;{field};Entries", nbins, xlow, xhigh)
-        values = ak.to_numpy(zip_rereco[field])
+        values = zip_rereco[field]
+        print(f"{field} rereco ak.is_none(values) sum: {ak.sum(ak.is_none(values))}")
+        values = ak.to_numpy(values[~ak.is_none(values)])
         weights = np.ones_like(values)
         values = array('d', values) # make the array double
         weights = array('d', weights) # make the array double
         
-        print(len(values))
+        print(f"rereco {field} len : {len(values)}")
         hist_rereco.FillN(len(values), values, weights)
         
         # Create a canvas
@@ -1044,15 +1218,16 @@ if __name__ == "__main__":
     do_quick_test = True # for quick test
     # test_len = 4000
     
-    test_len = 14000
+    # test_len = 14000
     # test_len = 400000
-    # test_len = 4000000
+    test_len = 4000000
     # test_len = 8000000
     # test_len = 2*8000000
     # test_len = 3*8000000
     # nbins=30
     # nbins=60
     nbins=100
+    # nbins=2048
 
 
 
@@ -1084,11 +1259,17 @@ if __name__ == "__main__":
     # # -----------------------------------------------
 
     # -----------------------------------------------
-    xlow = -2
-    xhigh = 2
+    xlow = -3
+    xhigh = 3
+    # xlow = 1.5-0.0390625
+    # xhigh = 1.5+0.0390625
     save_path = "./plots"
-    save_fname = "gen_eta_signal"
-    nbins_l = [20, 60, 100, 200]
+    save_fname = "gen_phi_central_dy"
+    # nbins_l = [20, 60, 100, 200]
+    # nbins_l = [20, 60, 100, 200]
+    # nbins_l = [20, 25, 40, 80]
+    # nbins_l = [60, 100, 200]
+    nbins_l = [400]
     
     files = json.load(open("dy_m50_v9.json", "r"))
     events_fromScratch = NanoEventsFactory.from_root(
@@ -1099,25 +1280,43 @@ if __name__ == "__main__":
         events_fromScratch = events_fromScratch[:test_len]
     events_fromScratch = applyQuickSelection(events_fromScratch)
     quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # --------------------------------------------------------------
 
 
-    nbins_l = [200]
-    events_fromScratch = NanoEventsFactory.from_root(
-        files,
-        schemaclass=NanoAODSchema,
-    ).events()
-    if do_quick_test:
-        events_fromScratch = events_fromScratch[:test_len]
-    events_fromScratch = applyQuickSelection(events_fromScratch)
-    quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    events_fromScratch = NanoEventsFactory.from_root(
-        files,
-        schemaclass=NanoAODSchema,
-    ).events()
-    if do_quick_test:
-        events_fromScratch = events_fromScratch[:test_len]
-    events_fromScratch = applyQuickSelection(events_fromScratch)
-    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # nbins_l = [60]
+    
+    # files = json.load(open("new_UL_production.json", "r"))
+    # events_fromScratch = NanoEventsFactory.from_root(
+    #     files,
+    #     schemaclass=NanoAODSchema,
+    # ).events()
+    # if do_quick_test:
+    #     events_fromScratch = events_fromScratch[:test_len]
+    # events_fromScratch = applyQuickSelection(events_fromScratch)
+    # save_fname = "gen_mu1_eta_mu2InsideTracker_dy_vbfFilter_ROOT_nbins60"
+    # # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+
+    # save_fname = "gen_mu1_eta_mu2OutsideTracker_dy_vbfFilter_ROOT_nbins60"
+    # quickPlotOutsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # --------------------------------------------------------------
+
+    # nbins_l = [200]
+    # events_fromScratch = NanoEventsFactory.from_root(
+    #     files,
+    #     schemaclass=NanoAODSchema,
+    # ).events()
+    # if do_quick_test:
+    #     events_fromScratch = events_fromScratch[:test_len]
+    # events_fromScratch = applyQuickSelection(events_fromScratch)
+    # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # events_fromScratch = NanoEventsFactory.from_root(
+    #     files,
+    #     schemaclass=NanoAODSchema,
+    # ).events()
+    # if do_quick_test:
+    #     events_fromScratch = events_fromScratch[:test_len]
+    # events_fromScratch = applyQuickSelection(events_fromScratch)
+    # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     raise ValueError
     # -----------------------------------------------
     
