@@ -98,7 +98,7 @@ def isSameGenParticle(matched_gen_particle, gen_particle):
     return is_sameParticle
 
 
-def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname):
+def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta"):
     """
     simple plotter that plots directly with minimal selection
     """
@@ -148,6 +148,143 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname):
     
         # Create a legend
         legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        
+        # Add entries
+        legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+        legend.Draw()
+        
+        # Save the canvas as a PNG
+        save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}.pdf"
+        canvas.Update()
+        canvas.SaveAs(save_full_path)
+
+        # print histogram values
+        for i in range(1, hist.GetNbinsX() + 1):
+                bin_center = hist.GetBinCenter(i)
+                yield_val = hist.GetBinContent(i)
+                err = hist.GetBinError(i) 
+                print(f"gen Eta {nbins} bins. Bin {i}: center={bin_center:.2f}, yield={yield_val:.2f}, error={err:.2f}")
+
+def quickPlotPhi(events, nbins_l, xlow, xhigh, save_path, save_fname):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    # from_hard_process = (genPart.statusFlags & 2**8) > 0
+    is_stable_process = (genPart.status ==1)
+    dy_muon_filter = is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    # print(events.genWeight.compute())
+    genWeight = events.genWeight.compute()
+    # Broadcast
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight, dy_gen_muons.eta)
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight.compute(), genPart.eta.compute())
+    # print(gen_wgt)
+    time.sleep(2)
+    eta = dy_gen_muons.phi.compute()
+    # pt = ak.flatten(dy_gen_muons.pt).compute()
+    gen_wgt, _ = ak.broadcast_arrays(genWeight, eta)
+    # flatten values and wgts
+    eta = ak.flatten(eta)
+    gen_wgt = ak.flatten(gen_wgt)
+    
+    
+
+    values = ak.to_numpy(eta)
+    # weights = np.ones_like(values)
+    weights = ak.to_numpy(gen_wgt)
+    weights = np.sign(weights) # for simplicity just take their signs
+
+    # print(f"values: {values}")
+    # print(f"weights: {weights}")
+    
+    values = array('d', values) # make the array double
+    weights = array('d', weights) # make the array double
+    
+    print(len(values))
+    for nbins in nbins_l:
+        # extract and plot eta
+        title =f"GenPart_phi (abs(GenPart_pdgId)==13&&GenPart_status==1"
+        hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+        hist.FillN(len(values), values, weights)
+        # Create a canvas
+        canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+        
+        # Draw the histogram
+        hist.Draw('HIST')
+    
+        # Create a legend
+        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  
+        
+        # Add entries
+        legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+        legend.Draw()
+        
+        # Save the canvas as a PNG
+        save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}.pdf"
+        canvas.Update()
+        canvas.SaveAs(save_full_path)
+
+        # print histogram values
+        for i in range(1, hist.GetNbinsX() + 1):
+                bin_center = hist.GetBinCenter(i)
+                yield_val = hist.GetBinContent(i)
+                err = hist.GetBinError(i) 
+                print(f"gen Eta {nbins} bins. Bin {i}: center={bin_center:.2f}, yield={yield_val:.2f}, error={err:.2f}")
+
+
+def quickPlotPhiPtCut(events, nbins_l, xlow, xhigh, save_path, save_fname):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    # from_hard_process = (genPart.statusFlags & 2**8) > 0
+    is_stable_process = (genPart.status ==1)
+    dy_muon_filter =  is_stable_process & (abs(genPart.pdgId) ==13)
+    pt_cut = (genPart.pt > 32) & (genPart.pt < 64)
+    dy_muon_filter = dy_muon_filter & pt_cut
+    dy_gen_muons  = genPart[dy_muon_filter]
+    # print(events.genWeight.compute())
+    genWeight = events.genWeight.compute()
+    # Broadcast
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight, dy_gen_muons.eta)
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight.compute(), genPart.eta.compute())
+    # print(gen_wgt)
+    time.sleep(2)
+    eta = dy_gen_muons.phi.compute()
+    # pt = ak.flatten(dy_gen_muons.pt).compute()
+    gen_wgt, _ = ak.broadcast_arrays(genWeight, eta)
+    # flatten values and wgts
+    eta = ak.flatten(eta)
+    gen_wgt = ak.flatten(gen_wgt)
+    
+    
+
+    values = ak.to_numpy(eta)
+    # weights = np.ones_like(values)
+    weights = ak.to_numpy(gen_wgt)
+    weights = np.sign(weights) # for simplicity just take their signs
+
+    # print(f"values: {values}")
+    # print(f"weights: {weights}")
+    
+    values = array('d', values) # make the array double
+    weights = array('d', weights) # make the array double
+    
+    print(len(values))
+    for nbins in nbins_l:
+        # extract and plot eta
+        title =f"GenPart_phi (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>32&&GenPart_pt<64"
+        hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+        hist.FillN(len(values), values, weights)
+        # Create a canvas
+        canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+        
+        # Draw the histogram
+        hist.Draw('HIST')
+    
+        # Create a legend
+        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  
         
         # Add entries
         legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -1220,7 +1357,8 @@ if __name__ == "__main__":
     
     # test_len = 14000
     # test_len = 400000
-    test_len = 4000000
+    test_len = 800000
+    # test_len = 4000000
     # test_len = 8000000
     # test_len = 2*8000000
     # test_len = 3*8000000
@@ -1230,8 +1368,10 @@ if __name__ == "__main__":
     # nbins=2048
 
 
+    # -----------------------------------------------
+    # Quick Plot Eta values
+    # -----------------------------------------------
 
-    # # -----------------------------------------------
     # centralVsCentral = args.centralVsCentral
 
     # if centralVsCentral:
@@ -1259,6 +1399,9 @@ if __name__ == "__main__":
     # # -----------------------------------------------
 
     # -----------------------------------------------
+    # Quick Plot Phi values
+    # -----------------------------------------------
+    
     xlow = -3
     xhigh = 3
     # xlow = 1.5-0.0390625
@@ -1269,19 +1412,33 @@ if __name__ == "__main__":
     # nbins_l = [20, 60, 100, 200]
     # nbins_l = [20, 25, 40, 80]
     # nbins_l = [60, 100, 200]
-    nbins_l = [400]
+    nbins_l = [200]
     
     files = json.load(open("dy_m50_v9.json", "r"))
+    test_len = 400000
     events_fromScratch = NanoEventsFactory.from_root(
         files,
         schemaclass=NanoAODSchema,
     ).events()
-    if do_quick_test:
-        events_fromScratch = events_fromScratch[:test_len]
-    events_fromScratch = applyQuickSelection(events_fromScratch)
-    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    # --------------------------------------------------------------
+    events_fromScratch = events_fromScratch[:test_len]
+    # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    save_fname = "gen_phi_central_dy"
+    quickPlotPhi(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
 
+    test_len = 800000
+    events_fromScratch = NanoEventsFactory.from_root(
+        files,
+        schemaclass=NanoAODSchema,
+    ).events()
+    events_fromScratch = events_fromScratch[:test_len]
+    save_fname = "gen_phi_central_ptCut_dy"
+    quickPlotPhiPtCut(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    raise ValueError
+    
+
+    # -----------------------------------------------
+    # Quick Plot Mu1 Eta values when Mu2 is inside/ outside Tracker
+    # -----------------------------------------------
 
     # nbins_l = [60]
     
@@ -1300,26 +1457,10 @@ if __name__ == "__main__":
     # quickPlotOutsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # --------------------------------------------------------------
 
-    # nbins_l = [200]
-    # events_fromScratch = NanoEventsFactory.from_root(
-    #     files,
-    #     schemaclass=NanoAODSchema,
-    # ).events()
-    # if do_quick_test:
-    #     events_fromScratch = events_fromScratch[:test_len]
-    # events_fromScratch = applyQuickSelection(events_fromScratch)
-    # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    # events_fromScratch = NanoEventsFactory.from_root(
-    #     files,
-    #     schemaclass=NanoAODSchema,
-    # ).events()
-    # if do_quick_test:
-    #     events_fromScratch = events_fromScratch[:test_len]
-    # events_fromScratch = applyQuickSelection(events_fromScratch)
-    # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    raise ValueError
     # -----------------------------------------------
-    
+    # Plot Two-way DY VBF-filter MC private UL vs central Rereco
+    # -----------------------------------------------
+     
     centralVsCentral = args.centralVsCentral
 
     if centralVsCentral:
@@ -1368,9 +1509,6 @@ if __name__ == "__main__":
     save_path = "./plots"
     os.makedirs(save_path, exist_ok=True)
 
-    # --------------------------------------------------------------
-    
-    # plot two way
 
     plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path, centralVsCentral=centralVsCentral, nbins=nbins)
     
@@ -1391,8 +1529,11 @@ if __name__ == "__main__":
 
     raise ValueError
     
+
+    # -----------------------------------------------
+    # Plot Three-way DY VBF-filter MC private UL vs central Rereco
+    # -----------------------------------------------
     
-    # # now plot three way
 
     # ul_central_files = json.load(open("UL_central_DY100To200.json", "r"))
     # events_ul = NanoEventsFactory.from_root(
