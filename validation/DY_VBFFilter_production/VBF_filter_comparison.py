@@ -143,13 +143,15 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta"):
     print(len(values))
     for nbins in nbins_l:
         # extract and plot eta
-        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)"
+        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)"
         hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
         hist.FillN(len(values), values, weights)
         # Create a canvas
         canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
         
         # Draw the histogram
+        max_val = hist.GetMaximum()
+        hist.SetMaximum(1.2*max_val)
         hist.Draw('E')
     
         # Create a legend
@@ -208,13 +210,15 @@ def quickPlotPhi(events, nbins_l, xlow, xhigh, save_path, save_fname):
     print(len(values))
     for nbins in nbins_l:
         # extract and plot eta
-        title =f"GenPart_phi (abs(GenPart_pdgId)==13&&GenPart_status==1"
+        title =f"GenPart_phi (abs(GenPart_pdgId)==13&&GenPart_status==1GenPart_pt>20"
         hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
         hist.FillN(len(values), values, weights)
         # Create a canvas
         canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
         
         # Draw the histogram
+        max_val = hist.GetMaximum()
+        hist.SetMaximum(1.2*max_val)
         hist.Draw('HIST')
     
         # Create a legend
@@ -283,6 +287,8 @@ def quickPlotPhiPtCut(events, nbins_l, xlow, xhigh, save_path, save_fname):
         canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
         
         # Draw the histogram
+        max_val = hist.GetMaximum()
+        hist.SetMaximum(1.2*max_val)
         hist.Draw('HIST')
     
         # Create a legend
@@ -343,7 +349,7 @@ def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname):
     print(len(values))
     for nbins in nbins_l:
         # extract and plot eta
-        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)"
+        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)"
         hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
         hist.FillN(len(values), values, weights)
         # Create a canvas
@@ -408,7 +414,7 @@ def quickPlotOutsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname)
     print(len(values))
     for nbins in nbins_l:
         # extract and plot eta
-        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)"
+        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&&GenPart_pt>20)"
         hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
         hist.FillN(len(values), values, weights)
         # Create a canvas
@@ -460,13 +466,15 @@ def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
         print(len(values))
         for nbins in nbins_l:
             # extract and plot eta
-            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)&&{pt_low}<=GenPart_pt<={pt_high}"
+            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20&&{pt_low}<=GenPart_pt<={pt_high}"
             hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
             hist.FillN(len(values), values, weights)
             # Create a canvas
             canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
             
             # Draw the histogram
+            max_val = hist.GetMaximum()
+            hist.SetMaximum(1.2*max_val)
             hist.Draw('E')
         
             # Create a legend
@@ -490,9 +498,10 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
     dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
     eta = (dy_gen_muons.eta).compute()
-    nmuon = ak.num(events.Muon, axis=1).compute()
+    nmuon = ak.num(eta, axis=1)# this is number of gen muons
     print(f"eta: {eta}")
-    nmuon_edges = [0, 1, 2, 3]
+    # nmuon_edges = [0, 1, 2, 3]
+    nmuon_edges = [2]
     for nmuon_target in nmuon_edges:
         if nmuon_target > 2:
             nmuon_cut = nmuon >= nmuon_target
@@ -507,13 +516,15 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
         print(len(values))
         for nbins in nbins_l:
             # extract and plot eta
-            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)&&nMuon=={nmuon_target}"
+            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&nMuon=={nmuon_target}"
             hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
             hist.FillN(len(values), values, weights)
             # Create a canvas
             canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
             
             # Draw the histogram
+            max_val = hist.GetMaximum()
+            hist.SetMaximum(1.2*max_val)
             hist.Draw('E')
         
             # Create a legend
@@ -550,7 +561,7 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
 #         print(len(values))
 #         for nbins in nbins_l:
 #             # extract and plot eta
-#             title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)&&{pt_low}<=GenPart_pt<={pt_high}"
+#             title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&{pt_low}<=GenPart_pt<={pt_high}"
 #             hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
 #             hist.FillN(len(values), values, weights)
 #             # Create a canvas
@@ -598,7 +609,7 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
 #         print(len(values))
 #         for nbins in nbins_l:
 #             # extract and plot eta
-#             title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)&&nMuon=={nmuon_target}"
+#             title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&nMuon=={nmuon_target}"
 #             hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
 #             hist.FillN(len(values), values, weights)
 #             # Create a canvas
@@ -1366,7 +1377,7 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
             xlow, xhigh = -0.5, 4.5
             current_nbins = 5 # override nbins
 
-        title =f"{field} (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)"
+        title =f"{field} (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)"
         hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018 {title};nbins: {current_nbins};Entries", current_nbins, xlow, xhigh)
 
         values = zip_fromScratch[field]
@@ -1415,7 +1426,6 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         hist_rereco.SetMarkerColor(ROOT.kBlue)
         
         # Draw the histogram
-        
         hist_fromScratch.Draw('E')
         hist_rereco.Draw('E SAME')
 
@@ -1508,7 +1518,7 @@ if __name__ == "__main__":
     print("programe start")
     # ---------------------------------------------------------------
     
-    client =  Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
+    client =  Client(n_workers=63,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
     # ---------------------------------------------------------------
     # gateway = Gateway(
     #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
@@ -1523,47 +1533,73 @@ if __name__ == "__main__":
     
     do_quick_test = True # for quick test
     
-    # test_len = 14000
-    test_len = 400000
+    test_len = 14000
+    # test_len = 400000
     # test_len = 800000
     # test_len = 4000000
     # test_len = 8000000
     # test_len = 2*8000000
     # test_len = 3*8000000
-    # nbins=30
-    # nbins=60
-    nbins=100
-    # nbins=2048
+    
 
 
     # -----------------------------------------------
     # Quick Plot Eta values
     # -----------------------------------------------
 
-    # centralVsCentral = args.centralVsCentral
+    files = json.load(open("new_UL_production.json", "r"))
+    events_fromScratch = NanoEventsFactory.from_root(
+        files,
+        schemaclass=NanoAODSchema,
+    ).events()
+    if do_quick_test:
+        events_fromScratch = events_fromScratch[:test_len]
+    events_fromScratch = applyQuickSelection(events_fromScratch)
 
-    # if centralVsCentral:
-    #     files = json.load(open("dy_m50_v9.json", "r"))
-    # else:    
-    #     files = json.load(open("new_UL_production.json", "r"))
-    # events_fromScratch = NanoEventsFactory.from_root(
-    #     files,
-    #     schemaclass=NanoAODSchema,
-    # ).events()
-    # if do_quick_test:
-    #     events_fromScratch = events_fromScratch[:test_len]
-    # events_fromScratch = applyQuickSelection(events_fromScratch)
-
-    # xlow = -2
-    # xhigh = 2
-    # save_path = "./plots"
-    # save_fname = "gen_eta"
-    # # nbins_l = [20, 60, 100, 200]
-    # nbins_l = [200]
-    # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    xlow = -2
+    xhigh = 2
+    save_path = "./plots"
+    save_fname = "gen_eta_privateUL_vbfFilter_DY"
+    # nbins_l = [60, 70, 80, 90, 100]
+    # nbins_l = list(range(55,60))
+    # nbins_l = list(range(101,121))
+    # print(nbins_l)
+    nbins_l = [60]
+    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    
     # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # raise ValueError
+
+
+    # -----------------------------------------------
+    # Quick Plot Eta values for inclusive DY
+    # -----------------------------------------------
+
+    files = json.load(open("dy_m50_v9.json", "r"))
+    events_fromScratch = NanoEventsFactory.from_root(
+        files,
+        schemaclass=NanoAODSchema,
+    ).events()
+    if do_quick_test:
+        events_fromScratch = events_fromScratch[:test_len]
+    events_fromScratch = applyQuickSelection(events_fromScratch)
+
+    xlow = -2
+    xhigh = 2
+    save_path = "./plots"
+    save_fname = "gen_eta_centralUL_inclusive_DY"
+    # nbins_l = [60, 70, 80, 90, 100]
+    # nbins_l = list(range(55,60))
+    # nbins_l = list(range(101,121))
+    # print(nbins_l)
+    nbins_l = [60]
+    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    
+    # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    raise ValueError
+    
     # # -----------------------------------------------
 
     # -----------------------------------------------
