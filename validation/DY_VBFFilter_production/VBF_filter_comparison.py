@@ -20,6 +20,14 @@ np.set_printoptions(threshold=sys.maxsize)
 import dask
 import time
 
+def applyGenMuonCuts(genPart):
+    # from_hard_process = (genPart.statusFlags & 2**8) > 0
+    from_hard_process = genPart.pt > 20
+    is_stable_process = (genPart.status ==1)
+    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    return dy_muon_filter
+
+
 def applyMuonBaseSelection(events):
     muons = events.Muon
     mm_charge = ak.prod(muons.charge, axis=1)
@@ -103,9 +111,7 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta"):
     simple plotter that plots directly with minimal selection
     """
     genPart = events.GenPart
-    from_hard_process = (genPart.statusFlags & 2**8) > 0
-    is_stable_process = (genPart.status ==1)
-    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
     # print(events.genWeight.compute())
     genWeight = events.genWeight.compute()
@@ -170,9 +176,7 @@ def quickPlotPhi(events, nbins_l, xlow, xhigh, save_path, save_fname):
     simple plotter that plots directly with minimal selection
     """
     genPart = events.GenPart
-    # from_hard_process = (genPart.statusFlags & 2**8) > 0
-    is_stable_process = (genPart.status ==1)
-    dy_muon_filter = is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
     # print(events.genWeight.compute())
     genWeight = events.genWeight.compute()
@@ -238,9 +242,7 @@ def quickPlotPhiPtCut(events, nbins_l, xlow, xhigh, save_path, save_fname):
     simple plotter that plots directly with minimal selection
     """
     genPart = events.GenPart
-    # from_hard_process = (genPart.statusFlags & 2**8) > 0
-    is_stable_process = (genPart.status ==1)
-    dy_muon_filter =  is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_muon_filter = applyGenMuonCuts(genPart) # Note: pt cut of 20 is applied
     pt_cut = (genPart.pt > 32) & (genPart.pt < 64)
     dy_muon_filter = dy_muon_filter & pt_cut
     dy_gen_muons  = genPart[dy_muon_filter]
@@ -309,9 +311,7 @@ def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname):
     simple plotter that plots directly with minimal selection
     """
     genPart = events.GenPart
-    from_hard_process = (genPart.statusFlags & 2**8) > 0
-    is_stable_process = (genPart.status ==1)
-    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
     # print(events.genWeight.compute())
     # genWeight = events.genWeight.compute()
@@ -377,9 +377,7 @@ def quickPlotOutsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname)
     simple plotter that plots directly with minimal selection
     """
     genPart = events.GenPart
-    from_hard_process = (genPart.statusFlags & 2**8) > 0
-    is_stable_process = (genPart.status ==1)
-    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
     # print(events.genWeight.compute())
     # genWeight = events.genWeight.compute()
@@ -443,9 +441,7 @@ def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
     simple plotter that plots directly with minimal selection
     """
     genPart = events.GenPart
-    from_hard_process = (genPart.statusFlags & 2**8) > 0
-    is_stable_process = (genPart.status ==1)
-    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
     eta = ak.flatten(dy_gen_muons.eta).compute()
     pt = ak.flatten(dy_gen_muons.pt).compute()
@@ -485,14 +481,13 @@ def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
             canvas.Update()
             canvas.SaveAs(save_full_path)
 
+
 def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
     """
     simple plotter that plots directly with minimal selection
     """
     genPart = events.GenPart
-    from_hard_process = (genPart.statusFlags & 2**8) > 0
-    is_stable_process = (genPart.status ==1)
-    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
     eta = (dy_gen_muons.eta).compute()
     nmuon = ak.num(events.Muon, axis=1).compute()
@@ -625,58 +620,251 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
 #             canvas.SaveAs(save_full_path)
 
 
+# def getZip(events) -> ak.zip:
+#     """
+#     from events return dictionary of dimuon, muon, dijet, jet values
+#     we assume all events have at least two jet and two muons
+#     """
+#     jets = ak.pad_none(events.Jet, target=2)
+#     # jets = jets.compute()
+#     jet1 = jets[:,0]
+#     jet2 = jets[:,1]
+#     dijet = jet1 + jet2
+#     # dijet = dijet[~ak.is_none(dijet.pt)]
+#     muons = ak.pad_none(events.Muon, target=2)
+#     mu1 = muons[:,0]
+#     mu2 = muons[:,1]
+#     dimuon = mu1 + mu2
+    
+#     gen_idx = events.Muon.genPartIdx
+#     muons_gen = ak.pad_none(events.GenPart[gen_idx], target=2, clip=True)
+    
+#     mu1_gen = muons_gen[:,0]
+#     mu2_gen = muons_gen[:,1]
+    
+#     jj_dEta = abs(jet1.eta - jet2.eta)
+#     jj_dPhi = abs(jet1.delta_phi(jet2))
+#     mmj1_dEta = abs(dimuon.eta - jet1.eta)
+#     mmj2_dEta = abs(dimuon.eta - jet2.eta)
+#     mmj_min_dEta = ak.where(
+#         (mmj1_dEta < mmj2_dEta),
+#         mmj1_dEta,
+#         mmj2_dEta,
+#     )
+#     mmj1_dPhi = abs(dimuon.delta_phi(jet1))
+#     mmj2_dPhi = abs(dimuon.delta_phi(jet2))
+#     mmj1_dR = dimuon.delta_r(jet1)
+#     mmj2_dR = dimuon.delta_r(jet2)
+#     mmj_min_dPhi = ak.where(
+#         (mmj1_dPhi < mmj2_dPhi),
+#         mmj1_dPhi,
+#         mmj2_dPhi,
+#     )
+#     mmjj = dimuon + dijet
+#     # flatten variables for muons and jets to convert to 1 dim arrays
+#     muons = ak.flatten(muons)
+#     jets = ak.flatten(jets)
+#     # mmjj = mmjj[~ak.is_none(mmjj.pt)]
+#     # print(f"mu1.matched_gen.pt: {mu1.matched_gen.pt.compute()}")
+#     # print(f"mu1_gen.pt: {mu1_gen.pt.compute()}")
+#     # print(f"mu2_gen.pt: {mu2_gen.pt.compute()}")
+#     # print(f"mu1_gen.eta: {mu1_gen.eta.compute()}")
+#     # print(f"mu2_gen.eta: {mu2_gen.eta.compute()}")
+#     # print(f"events.Muon.matched_gen: {events.Muon.matched_gen.compute()}")
+
+#     LHE_part = events.LHEPart
+#     # selection LHE muons
+#     LHE_selection = (
+#         (abs(LHE_part.pdgId) ==13)
+#         # & (LHE_part.status==1) # nanoV6 doesn't have status
+        
+#     )
+#     # print(f"len(LHE_part): {ak.num(LHE_part, axis=0).compute()}")
+#     # print(f"len(LHE_selection): {ak.num(LHE_selection, axis=0).compute()}")
+#     # print(f"len(LHE_selection): {LHE_selection.compute()}")
+    
+#     # print(f"LHE_part.pdgId: {LHE_part.pdgId.compute()}")
+
+#     LHE_muon = LHE_part[LHE_selection]
+#     two_LHE_muons = (ak.num(LHE_muon, axis=1) == 2) & (ak.prod(LHE_muon.pdgId,axis=1) < 0 )
+#     LHE_muon = ak.pad_none(LHE_muon[two_LHE_muons], target=2, clip=True)
+#     mu1_lhe = LHE_muon[:,0]
+#     mu2_lhe = LHE_muon[:,1]
+
+#     has_negCharge = LHE_muon.pdgId > 0 # positive muon id is negative muon
+#     mu_neg_lhe = LHE_muon[has_negCharge][:,0]
+#     mu_pos_lhe = LHE_muon[~has_negCharge][:,0]
+
+#     genPart = events.GenPart
+#     # gen_selection = (
+#     #      (genPart.status ==1) # must be a stable. Source: https://github.com/cms-sw/cmssw/blob/b3c939c01124861dffae4f08177fbc598538c569/PhysicsTools/JetMCAlgos/src/Pythia8PartonSelector.cc#L20
+#     #     # (abs(genPart.pdgId) ==13)
+#     #     # & (genPart.status ==23) # must be an outgoing particle. Source: https://pythia.org/latest-manual/ParticleProperties.html
+#     # )
+#     gen_selection = (abs(genPart.pdgId) ==13)
+#     gen_muon = genPart[gen_selection]
+#     parent_id = getParentID(gen_muon, genPart)
+#     # # print(f"gen_muon.pdgId: {gen_muon.pdgId.compute()}")
+#     # parent_Zboson = abs(parent_id) == 23 # parent must be from Z boson. Source: https://pdg.lbl.gov/2007/reviews/montecarlorpp.pdf
+#     # gen_muon = gen_muon[parent_Zboson]
+#     # print(f"parent_id: {parent_id.compute()}")
+#     from_hard_process = (gen_muon.statusFlags & 2**8) > 0
+#     is_stable_process = (gen_muon.status ==1)
+#     dy_muon_filter = from_hard_process & is_stable_process & (gen_muon.pt > 20)
+#     gen_muon = gen_muon[dy_muon_filter]
+#     n_gen_muons = ak.num(gen_muon, axis=1)
+#     more_than_two = n_gen_muons > 2
+#     # print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
+#     two_gen_muons = (n_gen_muons == 2) & (ak.prod(gen_muon.pdgId,axis=1) < 0 )
+
+#     # get v9 events.nMuon equivalent (this branch doesn't exist in v6)
+#     reco_muons = events.Muon
+#     good_reco_muons = (
+#         (reco_muons.pt > 15)
+#         # & (abs(reco_muons.eta) < 1.0)
+#         # & (abs(reco_muons.eta) < 2.4)
+#     )
+#     n_reco_muons = ak.sum(good_reco_muons, axis=1) 
+    
+#     good_reco_muon_wMediumId = good_reco_muons & reco_muons.mediumId
+#     n_reco_muons_wMediumId = ak.sum(good_reco_muon_wMediumId, axis=1) 
+    
+#     # calculated overal gen muon filter
+#     gen_muon_filter =(
+#         two_gen_muons
+#         # & (n_reco_muons == 2)
+#         & ak.any(abs(gen_muon.eta) >1, axis=1)
+#     )
+    
+#     gen_muon = ak.pad_none(gen_muon[gen_muon_filter], target=2, clip=True)
+#     # print(f"gen_muon.pt b4 sort: {gen_muon.pt.compute()}")
+#     sorted_args = ak.argsort(gen_muon.pt, ascending=False)
+#     gen_muon = (gen_muon[sorted_args])
+#     # print(f"gen_muon.pt after sort: {gen_muon.pt.compute()}")
+    
+#     # gen_muon = ak.pad_none(gen_muon, target=2, clip=True)
+#     mu1_gen = gen_muon[:,0]
+#     mu2_gen = gen_muon[:,1]
+
+
+#     muons = events.Muon[gen_muon_filter]
+#     muons = muons[muons.genPartIdx != -1] # remove muons with no gen match
+#     genPart = genPart[gen_muon_filter]
+#     matched_gen_muons = genPart[muons.genPartIdx]
+#     # matched_gen_muons = muons.matched_gen
+#     # print(f"muons.genPartIdx: {muons.genPartIdx.compute()}")
+#     # # print(f"muons.matched_gen_muons.pt: {matched_gen_muons.pt.compute()}")
+#     # print(f"muons.genPartIdx: {ak.num(muons.genPartIdx, axis=1).compute()}")
+#     # print(f"muons.matched_gen_muons: {ak.num(matched_gen_muons, axis=1).compute()}")
+#     # raise ValueError
+    
+    
+#     mu1_gen_match = isSameGenParticle(matched_gen_muons, mu1_gen)
+#     mu1 = muons[mu1_gen_match]
+#     mu1 = ak.pad_none(mu1, target=1)[:,0]
+    
+
+#     mu2_gen_match = isSameGenParticle(matched_gen_muons, mu2_gen)
+#     mu2 = muons[mu2_gen_match]
+#     mu2 = ak.pad_none(mu2, target=1)[:,0]
+    
+
+#     noGenmatchMuons = events.Muon[gen_muon_filter]
+#     noGenmatchMuons = ak.pad_none(noGenmatchMuons, target=2)
+#     noGenmatchMu1 = noGenmatchMuons[:,0]
+#     noGenmatchMu2 = noGenmatchMuons[:,1]
+#     n_reco_muons = n_reco_muons[gen_muon_filter]
+#     n_reco_muons_wMediumId = n_reco_muons_wMediumId[gen_muon_filter]
+    
+   
+#     return_dict = {
+#         "mu1_pt" : mu1.pt,
+#         "mu2_pt" : mu2.pt,
+#         "mu1_eta" : mu1.eta,
+#         "mu2_eta" : mu2.eta,
+#         "mu1_phi" : mu1.phi,
+#         "mu2_phi" : mu2.phi,
+#         # "mu1_pt_gen" : mu1_gen.pt,
+#         # "mu2_pt_gen" : mu2_gen.pt,
+#         # "mu1_eta_gen" : mu1_gen.eta,
+#         # "mu2_eta_gen" : mu2_gen.eta,
+#         # "mu1_phi_gen" : mu1_gen.phi,
+#         # "mu2_phi_gen" : mu2_gen.phi,
+#         "mu1_pt_gen" : mu1_gen.pt,
+#         "mu2_pt_gen" : mu2_gen.pt,
+#         "mu1_eta_gen" : mu1_gen.eta,
+#         "mu2_eta_gen" : mu2_gen.eta,
+#         "mu1_phi_gen" : mu1_gen.phi,
+#         "mu2_phi_gen" : mu2_gen.phi,
+#         "noGenmatchMu1_pt" : noGenmatchMu1.pt,
+#         "noGenmatchMu2_pt" : noGenmatchMu2.pt,
+#         "noGenmatchMu1_eta" : noGenmatchMu1.eta,
+#         "noGenmatchMu2_eta" : noGenmatchMu2.eta,
+#         "noGenmatchMu1_phi" : noGenmatchMu1.phi,
+#         "noGenmatchMu2_phi" : noGenmatchMu2.phi,
+#         "n_reco_muons" : n_reco_muons,
+#         "n_reco_muons_wMediumId" : n_reco_muons_wMediumId,
+#         # "mu1_pt_lhe" : mu1_lhe.pt,
+#         # "mu2_pt_lhe" : mu2_lhe.pt,
+#         # "mu1_eta_lhe" : mu1_lhe.eta,
+#         # "mu2_eta_lhe" : mu2_lhe.eta,
+#         # "mu1_phi_lhe" : mu1_lhe.phi,
+#         # "mu2_phi_lhe" : mu2_lhe.phi,
+#         # "mu_neg_lhe_eta" : mu_neg_lhe.eta,
+#         # "mu_pos_lhe_eta" : mu_pos_lhe.eta,
+#         # "mu1_iso" : mu1.pfRelIso04_all,
+#         # "mu2_iso" : mu2.pfRelIso04_all,
+#         # "mu_pt" : events.Muon.pt,
+#         # "mu_eta" : events.Muon.eta,
+#         # "mu_phi" : events.Muon.phi,
+#         # "mu_iso" : events.Muon.pfRelIso04_all,
+#         # "dimuon_mass" : dimuon.mass,
+#         # "dimuon_pt" : dimuon.pt,
+#         # "dimuon_eta" : dimuon.eta,
+#         # "dimuon_rapidity" : dimuon.rapidity,
+#         # "dimuon_phi" : dimuon.phi,
+#         # "jet1_pt" : jet1.pt,
+#         # "jet1_eta" : jet1.eta,
+#         # "jet1_phi" : jet1.phi,
+#         # "jet2_pt" : jet2.pt,
+#         # "jet2_eta" : jet2.eta,
+#         # "jet1_mass" : jet1.mass,
+#         # "jet2_mass" : jet2.mass,
+#         # "jet_pt" : events.Jet.pt,
+#         # "jet_eta" : events.Jet.eta,
+#         # "jet_phi" : events.Jet.phi,
+#         # "jet_mass" : events.Jet.mass,
+#         # "jj_mass" : dijet.mass,
+#         # "jj_pt" : dijet.pt,
+#         # "jj_eta" : dijet.eta,
+#         # "jj_phi" : dijet.phi,
+#         # "jj_dEta" : jj_dEta,
+#         # "jj_dPhi":  jj_dPhi,
+#         # "mmj1_dEta" : mmj1_dEta,
+#         # "mmj1_dPhi" : mmj1_dPhi,
+#         # "mmj1_dR" : mmj1_dR,
+#         # "mmj2_dEta" : mmj2_dEta,
+#         # "mmj2_dPhi" : mmj2_dPhi,
+#         # "mmj2_dR" : mmj2_dR,
+#         # "mmj_min_dEta" : mmj_min_dEta,
+#         # "mmj_min_dPhi" : mmj_min_dPhi,
+#         # "mmjj_pt" : mmjj.pt,
+#         # "mmjj_eta" : mmjj.eta,
+#         # "mmjj_phi" : mmjj.phi,
+#         # "mmjj_mass" : mmjj.mass,
+#     }
+#     # comput zip and return
+#     return_dict = ak.zip(return_dict).compute()
+#     print(f"return_dict: {return_dict}")
+#     return return_dict
+
+
+
 def getZip(events) -> ak.zip:
     """
     from events return dictionary of dimuon, muon, dijet, jet values
     we assume all events have at least two jet and two muons
     """
-    jets = ak.pad_none(events.Jet, target=2)
-    # jets = jets.compute()
-    jet1 = jets[:,0]
-    jet2 = jets[:,1]
-    dijet = jet1 + jet2
-    # dijet = dijet[~ak.is_none(dijet.pt)]
-    muons = ak.pad_none(events.Muon, target=2)
-    mu1 = muons[:,0]
-    mu2 = muons[:,1]
-    dimuon = mu1 + mu2
-    
-    gen_idx = events.Muon.genPartIdx
-    muons_gen = ak.pad_none(events.GenPart[gen_idx], target=2, clip=True)
-    
-    mu1_gen = muons_gen[:,0]
-    mu2_gen = muons_gen[:,1]
-    
-    jj_dEta = abs(jet1.eta - jet2.eta)
-    jj_dPhi = abs(jet1.delta_phi(jet2))
-    mmj1_dEta = abs(dimuon.eta - jet1.eta)
-    mmj2_dEta = abs(dimuon.eta - jet2.eta)
-    mmj_min_dEta = ak.where(
-        (mmj1_dEta < mmj2_dEta),
-        mmj1_dEta,
-        mmj2_dEta,
-    )
-    mmj1_dPhi = abs(dimuon.delta_phi(jet1))
-    mmj2_dPhi = abs(dimuon.delta_phi(jet2))
-    mmj1_dR = dimuon.delta_r(jet1)
-    mmj2_dR = dimuon.delta_r(jet2)
-    mmj_min_dPhi = ak.where(
-        (mmj1_dPhi < mmj2_dPhi),
-        mmj1_dPhi,
-        mmj2_dPhi,
-    )
-    mmjj = dimuon + dijet
-    # flatten variables for muons and jets to convert to 1 dim arrays
-    muons = ak.flatten(muons)
-    jets = ak.flatten(jets)
-    # mmjj = mmjj[~ak.is_none(mmjj.pt)]
-    # print(f"mu1.matched_gen.pt: {mu1.matched_gen.pt.compute()}")
-    # print(f"mu1_gen.pt: {mu1_gen.pt.compute()}")
-    # print(f"mu2_gen.pt: {mu2_gen.pt.compute()}")
-    # print(f"mu1_gen.eta: {mu1_gen.eta.compute()}")
-    # print(f"mu2_gen.eta: {mu2_gen.eta.compute()}")
-    # print(f"events.Muon.matched_gen: {events.Muon.matched_gen.compute()}")
-
     LHE_part = events.LHEPart
     # selection LHE muons
     LHE_selection = (
@@ -708,20 +896,42 @@ def getZip(events) -> ak.zip:
     # )
     gen_selection = (abs(genPart.pdgId) ==13)
     gen_muon = genPart[gen_selection]
-    parent_id = getParentID(gen_muon, genPart)
-    # # print(f"gen_muon.pdgId: {gen_muon.pdgId.compute()}")
-    # parent_Zboson = abs(parent_id) == 23 # parent must be from Z boson. Source: https://pdg.lbl.gov/2007/reviews/montecarlorpp.pdf
-    # gen_muon = gen_muon[parent_Zboson]
-    # print(f"parent_id: {parent_id.compute()}")
-    from_hard_process = (gen_muon.statusFlags & 2**8) > 0
-    is_stable_process = (gen_muon.status ==1)
-    dy_muon_filter = from_hard_process & is_stable_process & (gen_muon.pt > 20)
+    # from_hard_process = (gen_muon.statusFlags & 2**8) > 0
+    # is_stable_process = (gen_muon.status ==1)
+    # dy_muon_filter = from_hard_process & is_stable_process & (gen_muon.pt > 20)
+    dy_muon_filter = applyGenMuonCuts(gen_muon)
+    
     gen_muon = gen_muon[dy_muon_filter]
     n_gen_muons = ak.num(gen_muon, axis=1)
     more_than_two = n_gen_muons > 2
     # print(f"more_than_two sum: {ak.sum(more_than_two).compute()}")
     two_gen_muons = (n_gen_muons == 2) & (ak.prod(gen_muon.pdgId,axis=1) < 0 )
-    gen_muon = ak.pad_none(gen_muon[two_gen_muons], target=2, clip=True)
+
+    # get v9 events.nMuon equivalent (this branch doesn't exist in v6)
+    reco_muons = events.Muon
+    good_reco_muons = (
+        (reco_muons.pt > 15)
+        # & (abs(reco_muons.eta) < 2.4)
+    )
+    n_reco_muons = ak.sum(good_reco_muons, axis=1) 
+    
+    good_reco_muon_wMediumId = good_reco_muons & reco_muons.mediumId
+    n_reco_muons_wMediumId = ak.sum(good_reco_muon_wMediumId, axis=1) 
+    
+    # calculated overal gen muon filter
+    gen_muon_filter =(
+        two_gen_muons
+        & (n_reco_muons_wMediumId == 2)
+        # & ak.any(abs(gen_muon.eta) >1, axis=1)
+    )
+
+    reco_muon_filter = (
+        gen_muon_filter
+        & (n_reco_muons_wMediumId == 2)
+    )
+    
+    
+    gen_muon = ak.pad_none(gen_muon[gen_muon_filter], target=2, clip=True)
     # print(f"gen_muon.pt b4 sort: {gen_muon.pt.compute()}")
     sorted_args = ak.argsort(gen_muon.pt, ascending=False)
     gen_muon = (gen_muon[sorted_args])
@@ -732,9 +942,9 @@ def getZip(events) -> ak.zip:
     mu2_gen = gen_muon[:,1]
 
 
-    muons = events.Muon[two_gen_muons]
+    muons = events.Muon[reco_muon_filter]
     muons = muons[muons.genPartIdx != -1] # remove muons with no gen match
-    genPart = genPart[two_gen_muons]
+    genPart = genPart[reco_muon_filter]
     matched_gen_muons = genPart[muons.genPartIdx]
     # matched_gen_muons = muons.matched_gen
     # print(f"muons.genPartIdx: {muons.genPartIdx.compute()}")
@@ -746,30 +956,22 @@ def getZip(events) -> ak.zip:
     
     mu1_gen_match = isSameGenParticle(matched_gen_muons, mu1_gen)
     mu1 = muons[mu1_gen_match]
-    mu1 = ak.pad_none(mu1, target=1)
+    mu1 = ak.pad_none(mu1, target=1)[:,0]
+    
 
     mu2_gen_match = isSameGenParticle(matched_gen_muons, mu2_gen)
     mu2 = muons[mu2_gen_match]
-    mu2 = ak.pad_none(mu2, target=1)
+    mu2 = ak.pad_none(mu2, target=1)[:,0]
+    
 
-
-    noGenmatchMuons = events.Muon[two_gen_muons]
+    noGenmatchMuons = events.Muon[reco_muon_filter]
     noGenmatchMuons = ak.pad_none(noGenmatchMuons, target=2)
     noGenmatchMu1 = noGenmatchMuons[:,0]
     noGenmatchMu2 = noGenmatchMuons[:,1]
-    # print(f"mu1: {mu1.pt.compute()}")
-    # print(f"mu2: {mu2.pt.compute()}")
+    n_reco_muons = n_reco_muons[reco_muon_filter]
+    n_reco_muons_wMediumId = n_reco_muons_wMediumId[reco_muon_filter]
     
-    # print(f"more_thanTwo_muons: {ak.sum(more_thanTwo_muons).compute()}")
-    
-    # print(f"nmuons: {nmuons.compute()}")
-    # print(f"gen_match: {gen_match.compute()}")
-    # print(f"mu1.pt: {mu1.pt.compute()}")
-    # print(f"mu1_gen.pt: {mu1_gen.pt.compute()}")
-    # print(f"mu2.pt: {mu2.pt.compute()}")
-    # print(f"mu2_gen.pt: {mu2_gen.pt.compute()}")
-    # print(f"non two reco muons: {ak.sum(~two_reco_muons).compute()}")
-    
+   
     return_dict = {
         "mu1_pt" : mu1.pt,
         "mu2_pt" : mu2.pt,
@@ -777,76 +979,27 @@ def getZip(events) -> ak.zip:
         "mu2_eta" : mu2.eta,
         "mu1_phi" : mu1.phi,
         "mu2_phi" : mu2.phi,
-        # "mu1_pt_gen" : mu1_gen.pt,
-        # "mu2_pt_gen" : mu2_gen.pt,
-        # "mu1_eta_gen" : mu1_gen.eta,
-        # "mu2_eta_gen" : mu2_gen.eta,
-        # "mu1_phi_gen" : mu1_gen.phi,
-        # "mu2_phi_gen" : mu2_gen.phi,
         "mu1_pt_gen" : mu1_gen.pt,
         "mu2_pt_gen" : mu2_gen.pt,
         "mu1_eta_gen" : mu1_gen.eta,
         "mu2_eta_gen" : mu2_gen.eta,
+        "mu1_phi_gen" : mu1_gen.phi,
+        "mu2_phi_gen" : mu2_gen.phi,
         "noGenmatchMu1_pt" : noGenmatchMu1.pt,
         "noGenmatchMu2_pt" : noGenmatchMu2.pt,
         "noGenmatchMu1_eta" : noGenmatchMu1.eta,
         "noGenmatchMu2_eta" : noGenmatchMu2.eta,
         "noGenmatchMu1_phi" : noGenmatchMu1.phi,
         "noGenmatchMu2_phi" : noGenmatchMu2.phi,
-        # "mu1_pt_lhe" : mu1_lhe.pt,
-        # "mu2_pt_lhe" : mu2_lhe.pt,
-        # "mu1_eta_lhe" : mu1_lhe.eta,
-        # "mu2_eta_lhe" : mu2_lhe.eta,
-        # "mu1_phi_lhe" : mu1_lhe.phi,
-        # "mu2_phi_lhe" : mu2_lhe.phi,
-        # "mu_neg_lhe_eta" : mu_neg_lhe.eta,
-        # "mu_pos_lhe_eta" : mu_pos_lhe.eta,
-        # "mu1_iso" : mu1.pfRelIso04_all,
-        # "mu2_iso" : mu2.pfRelIso04_all,
-        # "mu_pt" : events.Muon.pt,
-        # "mu_eta" : events.Muon.eta,
-        # "mu_phi" : events.Muon.phi,
-        # "mu_iso" : events.Muon.pfRelIso04_all,
-        # "dimuon_mass" : dimuon.mass,
-        # "dimuon_pt" : dimuon.pt,
-        # "dimuon_eta" : dimuon.eta,
-        # "dimuon_rapidity" : dimuon.rapidity,
-        # "dimuon_phi" : dimuon.phi,
-        # "jet1_pt" : jet1.pt,
-        # "jet1_eta" : jet1.eta,
-        # "jet1_phi" : jet1.phi,
-        # "jet2_pt" : jet2.pt,
-        # "jet2_eta" : jet2.eta,
-        # "jet1_mass" : jet1.mass,
-        # "jet2_mass" : jet2.mass,
-        # "jet_pt" : events.Jet.pt,
-        # "jet_eta" : events.Jet.eta,
-        # "jet_phi" : events.Jet.phi,
-        # "jet_mass" : events.Jet.mass,
-        # "jj_mass" : dijet.mass,
-        # "jj_pt" : dijet.pt,
-        # "jj_eta" : dijet.eta,
-        # "jj_phi" : dijet.phi,
-        # "jj_dEta" : jj_dEta,
-        # "jj_dPhi":  jj_dPhi,
-        # "mmj1_dEta" : mmj1_dEta,
-        # "mmj1_dPhi" : mmj1_dPhi,
-        # "mmj1_dR" : mmj1_dR,
-        # "mmj2_dEta" : mmj2_dEta,
-        # "mmj2_dPhi" : mmj2_dPhi,
-        # "mmj2_dR" : mmj2_dR,
-        # "mmj_min_dEta" : mmj_min_dEta,
-        # "mmj_min_dPhi" : mmj_min_dPhi,
-        # "mmjj_pt" : mmjj.pt,
-        # "mmjj_eta" : mmjj.eta,
-        # "mmjj_phi" : mmjj.phi,
-        # "mmjj_mass" : mmjj.mass,
+        "n_reco_muons" : n_reco_muons,
+        "n_reco_muons_wMediumId" : n_reco_muons_wMediumId,
     }
     # comput zip and return
     return_dict = ak.zip(return_dict).compute()
+    # return_dict, _ = dask.compute(return_dict)
     print(f"return_dict: {return_dict}")
     return return_dict
-    
+
 def getHist(value, binning, normalize=True):
     weights = ak.ones_like(value) # None values are propagated as None here, which is useful, bc we can just override those events with zero weights
     weights = ak.fill_none(weights, value=0)
@@ -1192,17 +1345,29 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
     # fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
     # fields2plot = ["mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
     # fields2plot = ["mu1_eta", "mu2_eta", "mu1_eta_gen", "mu2_eta_gen"]
-    fields2plot = ["noGenmatchMu1_eta", "noGenmatchMu2_eta", "mu1_eta", "mu2_eta", "mu1_pt", "mu2_pt", "mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
-    
+    # fields2plot = ["noGenmatchMu1_eta", "noGenmatchMu2_eta", "mu1_eta", "mu2_eta", "mu1_pt", "mu2_pt", "mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
+    fields2plot = ["noGenmatchMu1_eta", "noGenmatchMu2_eta", "mu1_eta", "mu2_eta",   "mu1_eta_gen", "mu2_eta_gen","n_reco_muons", "n_reco_muons_wMediumId"]
+    other_kinematics = ["mu1_pt", "mu2_pt", "mu1_pt_gen", "mu2_pt_gen","mu1_phi", "mu2_phi", "mu1_phi_gen", "mu2_phi_gen", "noGenmatchMu1_pt", "noGenmatchMu2_pt", "noGenmatchMu1_phi", "noGenmatchMu2_phi",]
+    fields2plot = fields2plot + other_kinematics
     
     for field in fields2plot:
         # Create a histogram: name, title, number of bins, xlow, xhigh
         if "eta" in field:
             xlow, xhigh = -2, 2
+            # xlow, xhigh = -4, 4
+            current_nbins = nbins
         elif "pt" in field:
             xlow, xhigh = 0, 250
+            current_nbins = nbins
+        elif "phi" in field:
+            xlow, xhigh = -3, 3
+            current_nbins = nbins
+        elif "n_reco_muons" in field:
+            xlow, xhigh = -0.5, 4.5
+            current_nbins = 5 # override nbins
 
-        hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018;{field};Entries", nbins, xlow, xhigh)
+        title =f"{field} (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_statusFlags&2**8>0)"
+        hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018 {title};nbins: {current_nbins};Entries", current_nbins, xlow, xhigh)
 
         values = zip_fromScratch[field]
         print(f"{field} from scratch ak.is_none(values) sum: {ak.sum(ak.is_none(values))}")
@@ -1215,7 +1380,7 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         print(f"from scratch {field} len : {len(values)}")
         hist_fromScratch.FillN(len(values), values, weights)
 
-        hist_rereco = ROOT.TH1F("hist_rereco", f"2018;{field};Entries", nbins, xlow, xhigh)
+        hist_rereco = ROOT.TH1F("hist_rereco", f"2018;{field};Entries", current_nbins, xlow, xhigh)
         values = zip_rereco[field]
         print(f"{field} rereco ak.is_none(values) sum: {ak.sum(ak.is_none(values))}")
         values = ak.to_numpy(values[~ak.is_none(values)])
@@ -1256,16 +1421,17 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
 
 
         # Create a legend
-        if centralVsCentral:
-            legend = ROOT.TLegend(0.35, 0.1, 0.65, 0.23)  # (x1,y1,x2,y2) in NDC coordinates
-        else:
+        if "gen" in field:
             legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            # legend = ROOT.TLegend(0.35, 0.1, 0.65, 0.23)  # (x1,y1,x2,y2) in NDC coordinates
+        else:
+            legend = ROOT.TLegend(0.65, 0.8, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
             
         # Add entries
         legend.AddEntry(hist_fromScratch, f"Private UL (Entries: {hist_fromScratch.GetEntries():.2e})", "l")  # "l" means line
         legend.AddEntry(hist_rereco, f"Central Rereco (Entries: {hist_rereco.GetEntries():.2e})", "l")
         legend.Draw()
-
+        pad1.SetTicks(2, 2)
 
         # Residual
 
@@ -1279,9 +1445,12 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         # Similarly for the residual plot
         residual.GetXaxis().SetTitleSize(0.12)  # Bigger because bottom pad is small
         residual.GetXaxis().SetLabelSize(0.10)
+
+        pad2.SetTicks(2, 2)
         
         # Save the canvas as a PNG
         save_full_path = f"{save_path}/plotTwoWay_{field}_ROOT.pdf"
+        # canvas.
         canvas.Update()
         canvas.SaveAs(save_full_path)
 
@@ -1353,11 +1522,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     do_quick_test = True # for quick test
-    # test_len = 4000
     
     # test_len = 14000
-    # test_len = 400000
-    test_len = 800000
+    test_len = 400000
+    # test_len = 800000
     # test_len = 4000000
     # test_len = 8000000
     # test_len = 2*8000000
@@ -1402,38 +1570,38 @@ if __name__ == "__main__":
     # Quick Plot Phi values
     # -----------------------------------------------
     
-    xlow = -3
-    xhigh = 3
-    # xlow = 1.5-0.0390625
-    # xhigh = 1.5+0.0390625
-    save_path = "./plots"
-    save_fname = "gen_phi_central_dy"
-    # nbins_l = [20, 60, 100, 200]
-    # nbins_l = [20, 60, 100, 200]
-    # nbins_l = [20, 25, 40, 80]
-    # nbins_l = [60, 100, 200]
-    nbins_l = [200]
+    # xlow = -3
+    # xhigh = 3
+    # # xlow = 1.5-0.0390625
+    # # xhigh = 1.5+0.0390625
+    # save_path = "./plots"
+    # save_fname = "gen_phi_central_dy"
+    # # nbins_l = [20, 60, 100, 200]
+    # # nbins_l = [20, 60, 100, 200]
+    # # nbins_l = [20, 25, 40, 80]
+    # # nbins_l = [60, 100, 200]
+    # nbins_l = [200]
     
-    files = json.load(open("dy_m50_v9.json", "r"))
-    test_len = 400000
-    events_fromScratch = NanoEventsFactory.from_root(
-        files,
-        schemaclass=NanoAODSchema,
-    ).events()
-    events_fromScratch = events_fromScratch[:test_len]
-    # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    save_fname = "gen_phi_central_dy"
-    quickPlotPhi(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # files = json.load(open("dy_m50_v9.json", "r"))
+    # test_len = 400000
+    # events_fromScratch = NanoEventsFactory.from_root(
+    #     files,
+    #     schemaclass=NanoAODSchema,
+    # ).events()
+    # events_fromScratch = events_fromScratch[:test_len]
+    # # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # save_fname = "gen_phi_central_dy"
+    # quickPlotPhi(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
 
-    test_len = 800000
-    events_fromScratch = NanoEventsFactory.from_root(
-        files,
-        schemaclass=NanoAODSchema,
-    ).events()
-    events_fromScratch = events_fromScratch[:test_len]
-    save_fname = "gen_phi_central_ptCut_dy"
-    quickPlotPhiPtCut(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    raise ValueError
+    # test_len = 800000
+    # events_fromScratch = NanoEventsFactory.from_root(
+    #     files,
+    #     schemaclass=NanoAODSchema,
+    # ).events()
+    # events_fromScratch = events_fromScratch[:test_len]
+    # save_fname = "gen_phi_central_ptCut_dy"
+    # quickPlotPhiPtCut(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # raise ValueError
     
 
     # -----------------------------------------------
@@ -1460,7 +1628,11 @@ if __name__ == "__main__":
     # -----------------------------------------------
     # Plot Two-way DY VBF-filter MC private UL vs central Rereco
     # -----------------------------------------------
-     
+    nbins=60
+    # test_len = 14000
+    test_len = 400000
+    # test_len = 800000
+    # test_len = 4000000
     centralVsCentral = args.centralVsCentral
 
     if centralVsCentral:
@@ -1512,16 +1684,11 @@ if __name__ == "__main__":
 
     plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path, centralVsCentral=centralVsCentral, nbins=nbins)
     
-    # plotTwoWay(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
-    # plotTwoWayCentral(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path)
-    # --------------------------------------------------------------
     
     # do individual plots -------------------------------------------
     # save_fname = "UL_private_prod"
-    # # plotIndividual(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
     # plotIndividualROOT(zip_fromScratch, plot_bins, save_fname, save_path=save_path)
     # save_fname = "Rereco_private_prod"
-    # # plotIndividual(zip_rereco, plot_bins, save_fname, save_path=save_path)
     # plotIndividualROOT(zip_rereco, plot_bins, save_fname, save_path=save_path) # printing T statistic is included in this funcition
     # --------------------------------------------------------------
 
