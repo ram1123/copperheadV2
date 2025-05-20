@@ -106,7 +106,7 @@ def isSameGenParticle(matched_gen_particle, gen_particle):
     return is_sameParticle
 
 
-def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta"):
+def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta", y_range=None):
     """
     simple plotter that plots directly with minimal selection
     """
@@ -127,12 +127,13 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta"):
     eta = ak.flatten(eta)
     gen_wgt = ak.flatten(gen_wgt)
     
+    print(f"quickPlot filtered_eta len: {len(eta)}")
     
 
     values = ak.to_numpy(eta)
-    # weights = np.ones_like(values)
-    weights = ak.to_numpy(gen_wgt)
-    weights = np.sign(weights) # for simplicity just take their signs
+    weights = np.ones_like(values)
+    # weights = ak.to_numpy(gen_wgt)
+    # weights = np.sign(weights) # for simplicity just take their signs
 
     # print(f"values: {values}")
     # print(f"weights: {weights}")
@@ -149,13 +150,18 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta"):
         # Create a canvas
         canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
         
+        # set Y range
+        if y_range is None:
+            max_val = hist.GetMaximum()
+            hist.SetMaximum(1.1*max_val)
+        else:
+            ylow, yhigh = y_range
+            hist.GetYaxis().SetRangeUser(ylow, yhigh)
         # Draw the histogram
-        max_val = hist.GetMaximum()
-        hist.SetMaximum(1.2*max_val)
         hist.Draw('E')
     
         # Create a legend
-        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
         
         # Add entries
         legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -163,6 +169,7 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta"):
         
         # Save the canvas as a PNG
         save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}.pdf"
+        canvas.SetTicks(2, 2)
         canvas.Update()
         canvas.SaveAs(save_full_path)
 
@@ -172,6 +179,66 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta"):
                 yield_val = hist.GetBinContent(i)
                 err = hist.GetBinError(i) 
                 print(f"gen Eta {nbins} bins. Bin {i}: center={bin_center:.2f}, yield={yield_val:.2f}, error={err:.2f}")
+
+
+
+def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname, y_range=None):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    dy_muon_filter = applyGenMuonCuts(genPart)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    eta = (dy_gen_muons.eta).compute()
+    nmuon = ak.num(eta, axis=1)# this is number of gen muons
+    # print(f"eta: {eta}")
+    # nmuon_edges = [0, 1, 2, 3]
+    nmuon_edges = [2]
+    for nmuon_target in nmuon_edges:
+        if nmuon_target > 2:
+            nmuon_cut = nmuon >= nmuon_target
+        else:
+            nmuon_cut = nmuon == nmuon_target
+        filtered_eta = ak.flatten(eta[nmuon_cut])
+        print(f"quickPlotByNMuon filtered_eta len: {len(filtered_eta)}")
+        values = ak.to_numpy(filtered_eta)
+        weights = np.ones_like(values)
+        values = array('d', values) # make the array double
+        weights = array('d', weights) # make the array double
+        
+        print(len(values))
+        for nbins in nbins_l:
+            # extract and plot eta
+            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&nMuon=={nmuon_target}"
+            hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+            hist.FillN(len(values), values, weights)
+            # Create a canvas
+            canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+
+             # set Y range
+            if y_range is None:
+                max_val = hist.GetMaximum()
+                hist.SetMaximum(1.1*max_val)
+            else:
+                ylow, yhigh = y_range
+                hist.GetYaxis().SetRangeUser(ylow, yhigh)
+
+            # Draw the histogram
+            hist.Draw('E')
+        
+            # Create a legend
+            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
+            # Add entries
+            legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+            legend.Draw()
+            
+            # Save the canvas as a PNG
+            save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_nMuon{nmuon_target}.pdf"
+            canvas.SetTicks(2, 2)
+            canvas.Update()
+            canvas.SaveAs(save_full_path)
+
 
 def quickPlotPhi(events, nbins_l, xlow, xhigh, save_path, save_fname):
     """
@@ -218,7 +285,7 @@ def quickPlotPhi(events, nbins_l, xlow, xhigh, save_path, save_fname):
         
         # Draw the histogram
         max_val = hist.GetMaximum()
-        hist.SetMaximum(1.2*max_val)
+        hist.SetMaximum(1.1*max_val)
         hist.Draw('HIST')
     
         # Create a legend
@@ -288,7 +355,7 @@ def quickPlotPhiPtCut(events, nbins_l, xlow, xhigh, save_path, save_fname):
         
         # Draw the histogram
         max_val = hist.GetMaximum()
-        hist.SetMaximum(1.2*max_val)
+        hist.SetMaximum(1.1*max_val)
         hist.Draw('HIST')
     
         # Create a legend
@@ -312,20 +379,16 @@ def quickPlotPhiPtCut(events, nbins_l, xlow, xhigh, save_path, save_fname):
 
 
 
-def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname):
+def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=True):
     """
     simple plotter that plots directly with minimal selection
     """
     genPart = events.GenPart
     dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
-    # print(events.genWeight.compute())
-    # genWeight = events.genWeight.compute()
-    # Broadcast
-    # gen_wgt, _ = ak.broadcast_arrays(genWeight, dy_gen_muons.eta)
-    # gen_wgt, _ = ak.broadcast_arrays(genWeight.compute(), genPart.eta.compute())
-    # print(gen_wgt)
-    
+    nmuons =  ak.num(dy_gen_muons, axis=1)
+    dy_gen_muons = dy_gen_muons[nmuons==2]
+
     eta = dy_gen_muons.eta.compute()
     eta = ak.pad_none(eta, target=2)
     mu1_eta = eta[:,0]
@@ -333,8 +396,8 @@ def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname):
     mu2_inside_tracker = abs(mu2_eta) < 2.4
     mu2_inside_tracker = ak.fill_none(mu2_inside_tracker, value=False)
     # mu2_inside_tracker= ak.ones_like(mu2_inside_tracker, dtype="bool")
-    mu1_eta = mu1_eta[mu2_inside_tracker]
-    # eta = ak.flatten(mu1_eta)
+    if insideTracker: # force events' mu2 eta to be inside tracker region
+        mu1_eta = mu1_eta[mu2_inside_tracker]
     eta = mu1_eta
     
     values = ak.to_numpy(eta)
@@ -349,13 +412,15 @@ def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname):
     print(len(values))
     for nbins in nbins_l:
         # extract and plot eta
-        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)"
+        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20&&nMuon==2)"
         hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
         hist.FillN(len(values), values, weights)
         # Create a canvas
         canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
         
         # Draw the histogram
+        max_val = hist.GetMaximum()
+        hist.SetMaximum(1.1*max_val)
         hist.Draw('E')
     
         # Create a legend
@@ -367,6 +432,7 @@ def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname):
         
         # Save the canvas as a PNG
         save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}.pdf"
+        canvas.SetTicks(2,2)
         canvas.Update()
         canvas.SaveAs(save_full_path)
 
@@ -385,12 +451,8 @@ def quickPlotOutsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname)
     genPart = events.GenPart
     dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
-    # print(events.genWeight.compute())
-    # genWeight = events.genWeight.compute()
-    # Broadcast
-    # gen_wgt, _ = ak.broadcast_arrays(genWeight, dy_gen_muons.eta)
-    # gen_wgt, _ = ak.broadcast_arrays(genWeight.compute(), genPart.eta.compute())
-    # print(gen_wgt)
+    nmuons =  ak.num(dy_gen_muons, axis=1)
+    dy_gen_muons = dy_gen_muons[nmuons==2]
     
     eta = dy_gen_muons.eta.compute()
     eta = ak.pad_none(eta, target=2)
@@ -414,7 +476,7 @@ def quickPlotOutsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname)
     print(len(values))
     for nbins in nbins_l:
         # extract and plot eta
-        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&&GenPart_pt>20)"
+        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&&GenPart_pt>20&&nMuon==2)"
         hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
         hist.FillN(len(values), values, weights)
         # Create a canvas
@@ -432,6 +494,7 @@ def quickPlotOutsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname)
         
         # Save the canvas as a PNG
         save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}.pdf"
+        canvas.SetTicks(2,2)
         canvas.Update()
         canvas.SaveAs(save_full_path)
 
@@ -449,10 +512,13 @@ def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
     genPart = events.GenPart
     dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
+    nmuons =  ak.num(dy_gen_muons, axis=1)
+    dy_gen_muons = dy_gen_muons[nmuons==2]
     eta = ak.flatten(dy_gen_muons.eta).compute()
+    time.sleep(2)
     pt = ak.flatten(dy_gen_muons.pt).compute()
     print(f"eta: {eta}")
-    pt_edges = [0, 20, 40, 60, 200]
+    pt_edges = [20, 50, 70, 200]
     for pt_idx in range(len(pt_edges)-1):
         pt_low = pt_edges[pt_idx]
         pt_high = pt_edges[pt_idx+1]
@@ -466,7 +532,7 @@ def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
         print(len(values))
         for nbins in nbins_l:
             # extract and plot eta
-            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20&&{pt_low}<=GenPart_pt<={pt_high}"
+            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&nMuon==2&&{pt_low}<=GenPart_pt<={pt_high}"
             hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
             hist.FillN(len(values), values, weights)
             # Create a canvas
@@ -474,7 +540,7 @@ def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
             
             # Draw the histogram
             max_val = hist.GetMaximum()
-            hist.SetMaximum(1.2*max_val)
+            hist.SetMaximum(1.1*max_val)
             hist.Draw('E')
         
             # Create a legend
@@ -486,28 +552,65 @@ def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
             
             # Save the canvas as a PNG
             save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_{pt_low}Pt{pt_high}.pdf"
+            canvas.SetTicks(2, 2)
             canvas.Update()
             canvas.SaveAs(save_full_path)
 
 
-def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
+def filterRegion(dimuon_mass, region="h-peak"):
+    """
+    helper function applying dimuon mass cut
+    """
+    if region =="h-peak":
+        region = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
+    elif region =="h-sidebands":
+        region = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
+    elif region =="signal":
+        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
+    elif region =="z-peak":
+        region = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
+    elif region =="combined":
+        region = (dimuon_mass >= 70) & (dimuon_mass <= 150.0)
+
+    region_cut = region
+    return region_cut
+
+def quickPlotByDimuMass(events, nbins_l, xlow, xhigh, save_path, save_fname):
     """
     simple plotter that plots directly with minimal selection
     """
     genPart = events.GenPart
     dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
-    eta = (dy_gen_muons.eta).compute()
-    nmuon = ak.num(eta, axis=1)# this is number of gen muons
-    print(f"eta: {eta}")
-    # nmuon_edges = [0, 1, 2, 3]
-    nmuon_edges = [2]
-    for nmuon_target in nmuon_edges:
-        if nmuon_target > 2:
-            nmuon_cut = nmuon >= nmuon_target
+    nmuons =  ak.num(dy_gen_muons, axis=1)
+    dy_gen_muons = dy_gen_muons[nmuons==2]
+    dy_gen_muons = ak.pad_none(dy_gen_muons, target=2)
+    mu1 = dy_gen_muons[:,0]
+    mu2 = dy_gen_muons[:,1]
+    dimuon = mu1+mu2
+    dimuon_mass = dimuon.mass.compute()
+    time.sleep(2)
+    mu1_eta = mu1.eta.compute()
+    time.sleep(2)
+    mu2_eta = mu2.eta.compute()
+
+    print(f"dimuon_mass any none: {ak.any(ak.is_none(dimuon_mass))}")
+    print(f"mu1_eta any none: {ak.any(ak.is_none(mu1_eta))}")
+    print(f"mu2_eta any none: {ak.any(ak.is_none(mu2_eta))}")
+    # print(f"eta: {eta}")
+    dimu_mass_bins = ["inclusive", "z-peak", "signal"]
+    for mass_region in dimu_mass_bins:
+        if mass_region != "inclusive":
+            mass_cut = filterRegion(dimuon_mass, region=mass_region)
+            # print(f"mass_cut: {len(mass_cut)}")
+            # print(f"mu1_eta: {len(mu1_eta)}")
+            # print(f"mu2_eta: {len(mu2_eta)}")
+            mu1_eta_filtered = mu1_eta[mass_cut]
+            mu2_eta_filtered = mu2_eta[mass_cut]
         else:
-            nmuon_cut = nmuon == nmuon_target
-        filtered_eta = ak.flatten(eta[nmuon_cut])
+            mu1_eta_filtered = mu1_eta
+            mu2_eta_filtered = mu2_eta
+        filtered_eta = ak.concatenate([mu1_eta_filtered,mu2_eta_filtered])
         values = ak.to_numpy(filtered_eta)
         weights = np.ones_like(values)
         values = array('d', values) # make the array double
@@ -516,7 +619,7 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
         print(len(values))
         for nbins in nbins_l:
             # extract and plot eta
-            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&nMuon=={nmuon_target}"
+            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&nMuon==2&&GenPart_pt>20&& dimuon mass {mass_region}"
             hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
             hist.FillN(len(values), values, weights)
             # Create a canvas
@@ -524,7 +627,7 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
             
             # Draw the histogram
             max_val = hist.GetMaximum()
-            hist.SetMaximum(1.2*max_val)
+            hist.SetMaximum(1.1*max_val)
             hist.Draw('E')
         
             # Create a legend
@@ -535,9 +638,79 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname):
             legend.Draw()
             
             # Save the canvas as a PNG
-            save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_nMuon{nmuon_target}.pdf"
+            save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_dimuMass_{mass_region}.pdf"
+            canvas.SetTicks(2, 2)
             canvas.Update()
             canvas.SaveAs(save_full_path)
+
+
+def quickPlotByDimuRecoil(events, nbins_l, xlow, xhigh, save_path, save_fname):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    dy_muon_filter = applyGenMuonCuts(genPart)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    nmuons =  ak.num(dy_gen_muons, axis=1)
+    dy_gen_muons = dy_gen_muons[nmuons==2]
+    dy_gen_muons = ak.pad_none(dy_gen_muons, target=2)
+    mu1 = dy_gen_muons[:,0]
+    mu2 = dy_gen_muons[:,1]
+    dimuon = mu1+mu2
+    dimuon_recoil = dimuon.p.compute()
+    time.sleep(2)
+    mu1_eta = mu1.eta.compute()
+    time.sleep(2)
+    mu2_eta = mu2.eta.compute()
+
+    print(f"dimuon_recoil any none: {ak.any(ak.is_none(dimuon_recoil))}")
+    print(f"mu1_eta any none: {ak.any(ak.is_none(mu1_eta))}")
+    print(f"mu2_eta any none: {ak.any(ak.is_none(mu2_eta))}")
+    # print(f"eta: {eta}")
+    recoil_edges = [0, 50, 200, np.inf]
+    for recoil_idx in range(len(recoil_edges)-1):
+        recoil_low = recoil_edges[recoil_idx]
+        recoil_high = recoil_edges[recoil_idx+1]
+        recoil_cut = (dimuon_recoil > recoil_low) & (dimuon_recoil < recoil_high)
+        # print(f"recoil_cut: {len(recoil_cut)}")
+        # print(f"mu1_eta: {len(mu1_eta)}")
+        # print(f"mu2_eta: {len(mu2_eta)}")
+        mu1_eta_filtered = mu1_eta[recoil_cut]
+        mu2_eta_filtered = mu2_eta[recoil_cut]
+
+        filtered_eta = ak.concatenate([mu1_eta_filtered,mu2_eta_filtered])
+        values = ak.to_numpy(filtered_eta)
+        weights = np.ones_like(values)
+        values = array('d', values) # make the array double
+        weights = array('d', weights) # make the array double
+        
+        print(len(values))
+        for nbins in nbins_l:
+            # extract and plot eta
+            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&nMuon==2&&GenPart_pt>20&& {recoil_low} < dimuon recoil < {recoil_high}"
+            hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+            hist.FillN(len(values), values, weights)
+            # Create a canvas
+            canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+            
+            # Draw the histogram
+            max_val = hist.GetMaximum()
+            hist.SetMaximum(1.1*max_val)
+            hist.Draw('E')
+        
+            # Create a legend
+            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
+            # Add entries
+            legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+            legend.Draw()
+            
+            # Save the canvas as a PNG
+            save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_{recoil_low}DimuRecoil{recoil_high}.pdf"
+            canvas.SetTicks(2, 2)
+            canvas.Update()
+            canvas.SaveAs(save_full_path)
+
 
 
 # def quickPlotByPt_computed(values_dict, nbins_l, xlow, xhigh, save_path, save_fname):
@@ -1533,8 +1706,8 @@ if __name__ == "__main__":
     
     do_quick_test = True # for quick test
     
-    test_len = 14000
-    # test_len = 400000
+    # test_len = 14000
+    test_len = 400000
     # test_len = 800000
     # test_len = 4000000
     # test_len = 8000000
@@ -1565,12 +1738,26 @@ if __name__ == "__main__":
     # nbins_l = list(range(101,121))
     # print(nbins_l)
     nbins_l = [60]
-    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # specifically have user set ranges with input event target: test_len==4mil
+    ylow = 5500
+    yhigh = 8000
+    y_range=(ylow, yhigh)
+    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+    # raise ValueError
     
     # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    # raise ValueError
+    # time.sleep(2)
+    
+    # save_fname = "gen_mu1_eta_mu2InsideTracker_privateUL_vbfFilter_DY"
+    # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # save_fname = "gen_mu1_eta_privateUL_vbfFilter_DY"
+    # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False)
 
+    save_fname = "gen_eta_privateUL_vbfFilter_DY"
+    # quickPlotByDimuMass(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # quickPlotByDimuRecoil(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # raise ValueError
 
     # -----------------------------------------------
     # Quick Plot Eta values for inclusive DY
@@ -1594,10 +1781,23 @@ if __name__ == "__main__":
     # nbins_l = list(range(101,121))
     # print(nbins_l)
     nbins_l = [60]
-    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # specifically have user set ranges with input event target: test_len==4mil
+    ylow = 5500
+    yhigh = 8000
+    y_range=(ylow, yhigh)
+    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
     
     # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # time.sleep(2)
+    # save_fname = "gen_mu1_eta_mu2InsideTracker_centralUL_inclusive_DY"
+    # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # save_fname = "gen_mu1_eta_centralUL_inclusive_DY"
+    # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False)
+
+    save_fname = "gen_eta_centralUL_inclusive_DY"
+    # quickPlotByDimuMass(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # quickPlotByDimuRecoil(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     raise ValueError
     
     # # -----------------------------------------------
