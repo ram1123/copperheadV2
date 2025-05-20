@@ -153,7 +153,7 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta", 
         # set Y range
         if y_range is None:
             max_val = hist.GetMaximum()
-            hist.SetMaximum(1.1*max_val)
+            hist.SetMaximum(1.05*max_val)
         else:
             ylow, yhigh = y_range
             hist.GetYaxis().SetRangeUser(ylow, yhigh)
@@ -218,7 +218,7 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname, y_rang
              # set Y range
             if y_range is None:
                 max_val = hist.GetMaximum()
-                hist.SetMaximum(1.1*max_val)
+                hist.SetMaximum(1.05*max_val)
             else:
                 ylow, yhigh = y_range
                 hist.GetYaxis().SetRangeUser(ylow, yhigh)
@@ -285,7 +285,7 @@ def quickPlotPhi(events, nbins_l, xlow, xhigh, save_path, save_fname):
         
         # Draw the histogram
         max_val = hist.GetMaximum()
-        hist.SetMaximum(1.1*max_val)
+        hist.SetMaximum(1.05*max_val)
         hist.Draw('HIST')
     
         # Create a legend
@@ -355,7 +355,7 @@ def quickPlotPhiPtCut(events, nbins_l, xlow, xhigh, save_path, save_fname):
         
         # Draw the histogram
         max_val = hist.GetMaximum()
-        hist.SetMaximum(1.1*max_val)
+        hist.SetMaximum(1.05*max_val)
         hist.Draw('HIST')
     
         # Create a legend
@@ -379,7 +379,7 @@ def quickPlotPhiPtCut(events, nbins_l, xlow, xhigh, save_path, save_fname):
 
 
 
-def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=True):
+def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=True, mu1_plot=True):
     """
     simple plotter that plots directly with minimal selection
     """
@@ -393,18 +393,21 @@ def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname, 
     eta = ak.pad_none(eta, target=2)
     mu1_eta = eta[:,0]
     mu2_eta = eta[:,1]
-    mu2_inside_tracker = abs(mu2_eta) < 2.4
-    mu2_inside_tracker = ak.fill_none(mu2_inside_tracker, value=False)
-    # mu2_inside_tracker= ak.ones_like(mu2_inside_tracker, dtype="bool")
-    if insideTracker: # force events' mu2 eta to be inside tracker region
-        mu1_eta = mu1_eta[mu2_inside_tracker]
-    eta = mu1_eta
-    
+    if mu1_plot:
+        mu2_inside_tracker = abs(mu2_eta) < 2.4
+        mu2_inside_tracker = ak.fill_none(mu2_inside_tracker, value=False)
+        # mu2_inside_tracker= ak.ones_like(mu2_inside_tracker, dtype="bool")
+        if insideTracker: # force events' mu2 eta to be inside tracker region
+            mu1_eta = mu1_eta[mu2_inside_tracker]
+        eta = mu1_eta
+    else:
+        mu1_inside_tracker = abs(mu1_eta) < 2.4
+        mu1_inside_tracker = ak.fill_none(mu1_inside_tracker, value=False)
+        if insideTracker: # force events' mu2 eta to be inside tracker region
+            mu2_eta = mu2_eta[mu1_inside_tracker]
+        eta = mu2_eta
     values = ak.to_numpy(eta)
     weights = np.ones_like(values)
-
-    # print(f"values: {values}")
-    # print(f"weights: {weights}")
     
     values = array('d', values) # make the array double
     weights = array('d', weights) # make the array double
@@ -419,12 +422,16 @@ def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname, 
         canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
         
         # Draw the histogram
+        max_bin = hist.GetMaximumBin()
         max_val = hist.GetMaximum()
-        hist.SetMaximum(1.1*max_val)
+        hist.SetMaximum(1.05*max_val)
         hist.Draw('E')
+        # print(f"max_bin: {max_bin}")
+        # print(f"max_val: {max_val}")
+        
     
         # Create a legend
-        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
         
         # Add entries
         legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -540,7 +547,7 @@ def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
             
             # Draw the histogram
             max_val = hist.GetMaximum()
-            hist.SetMaximum(1.1*max_val)
+            hist.SetMaximum(1.05*max_val)
             hist.Draw('E')
         
             # Create a legend
@@ -627,7 +634,7 @@ def quickPlotByDimuMass(events, nbins_l, xlow, xhigh, save_path, save_fname):
             
             # Draw the histogram
             max_val = hist.GetMaximum()
-            hist.SetMaximum(1.1*max_val)
+            hist.SetMaximum(1.05*max_val)
             hist.Draw('E')
         
             # Create a legend
@@ -695,7 +702,7 @@ def quickPlotByDimuRecoil(events, nbins_l, xlow, xhigh, save_path, save_fname):
             
             # Draw the histogram
             max_val = hist.GetMaximum()
-            hist.SetMaximum(1.1*max_val)
+            hist.SetMaximum(1.05*max_val)
             hist.Draw('E')
         
             # Create a legend
@@ -1707,9 +1714,9 @@ if __name__ == "__main__":
     do_quick_test = True # for quick test
     
     # test_len = 14000
-    test_len = 400000
+    # test_len = 400000
     # test_len = 800000
-    # test_len = 4000000
+    test_len = 4000000
     # test_len = 8000000
     # test_len = 2*8000000
     # test_len = 3*8000000
@@ -1733,26 +1740,26 @@ if __name__ == "__main__":
     xhigh = 2
     save_path = "./plots"
     save_fname = "gen_eta_privateUL_vbfFilter_DY"
-    # nbins_l = [60, 70, 80, 90, 100]
-    # nbins_l = list(range(55,60))
-    # nbins_l = list(range(101,121))
     # print(nbins_l)
     nbins_l = [60]
-    # specifically have user set ranges with input event target: test_len==4mil
-    ylow = 5500
-    yhigh = 8000
-    y_range=(ylow, yhigh)
-    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
-    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
-    # raise ValueError
+    # # specifically have user set ranges with input event target: test_len==4mil
+    # ylow = 56000
+    # yhigh = 75000
+    # y_range=(ylow, yhigh)
+    # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+    # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
     
     # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # time.sleep(2)
-    
     # save_fname = "gen_mu1_eta_mu2InsideTracker_privateUL_vbfFilter_DY"
     # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # save_fname = "gen_mu1_eta_privateUL_vbfFilter_DY"
     # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False)
+    save_fname = "gen_mu2_eta_mu1InsideTracker_privateUL_vbfFilter_DY"
+    quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, mu1_plot=False)
+    save_fname = "gen_mu2_eta_privateUL_vbfFilter_DY"
+    quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False, mu1_plot=False)
+    
 
     save_fname = "gen_eta_privateUL_vbfFilter_DY"
     # quickPlotByDimuMass(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
@@ -1776,17 +1783,14 @@ if __name__ == "__main__":
     xhigh = 2
     save_path = "./plots"
     save_fname = "gen_eta_centralUL_inclusive_DY"
-    # nbins_l = [60, 70, 80, 90, 100]
-    # nbins_l = list(range(55,60))
-    # nbins_l = list(range(101,121))
     # print(nbins_l)
     nbins_l = [60]
     # specifically have user set ranges with input event target: test_len==4mil
-    ylow = 5500
-    yhigh = 8000
-    y_range=(ylow, yhigh)
-    quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
-    quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+    # ylow = 14000
+    # yhigh = 26000
+    # y_range=(ylow, yhigh)
+    # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+    # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
     
     # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # time.sleep(2)
@@ -1794,6 +1798,10 @@ if __name__ == "__main__":
     # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # save_fname = "gen_mu1_eta_centralUL_inclusive_DY"
     # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False)
+    save_fname = "gen_mu2_eta_mu1InsideTracker_centralUL_inclusive_DY"
+    quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, mu1_plot=False)
+    save_fname = "gen_mu2_eta_centralUL_inclusive_DY"
+    quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False, mu1_plot=False)
 
     save_fname = "gen_eta_centralUL_inclusive_DY"
     # quickPlotByDimuMass(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
