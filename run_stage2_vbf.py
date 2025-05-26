@@ -386,7 +386,7 @@ if __name__ == "__main__":
             wgt_variations = ["wgt_nominal"] 
         else:
             wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w)]
-            wgt_variations = wgt_variations[:3] # for testing
+            # wgt_variations = wgt_variations[:3] # for testing
         print(f"wgt_variations: {wgt_variations}")
         syst_variations = []
         syst_variations = ["nominal"] 
@@ -433,10 +433,10 @@ if __name__ == "__main__":
         score_hist_l = []
         # for variation in variations:
         #     print(f"working on {variation}")
+        iteration_counter = 0
+        compute_every_N = 2
         for loop_arg in loop_args:
             score_hist = copy.deepcopy(score_hist_empty)
-            print(f"loop_arg: {loop_arg}")
-            # raise ValueError
         
             # features2load = ["event","wgt_nominal", "nBtagLoose", "jj_dEta", "jj_mass"]
             # features2load = prepare_features(events, features2load) # add variations where applicable
@@ -588,13 +588,18 @@ if __name__ == "__main__":
             to_fill_sumw2["val_sumw2"] = "sumw2"
             score_hist.fill(**to_fill_sumw2, weight=weight * weight)
             print(f"score_hist is filled for {sample_type}, {variation} variation!")
-            score_hist_l.append(score_hist.compute())
+            score_hist_l.append(score_hist)
 
 
         # ---------------------------------------------------
         # done with variation loop, compute hist
         # ---------------------------------------------------
         # score_hist = score_hist.compute()
+        print(f"loop_args len: {len(loop_args)}")
+        print(f"score_hist_l len: {len(score_hist_l)}")
+        # score_hist_l = [hist.compute() for hist in score_hist_l]
+        score_hist_l = dask.compute(score_hist_l)[0]
+        print(f"score_hist_l len after compute: {len(score_hist_l)}")
         score_hist = reduce(lambda a, b: a + b, score_hist_l)
         print(f"score_hist.view(): {score_hist.view()}")
         print("compute done!")
