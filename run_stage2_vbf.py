@@ -31,6 +31,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import os
 import itertools
+from functools import reduce
+import copy
 
 def get_variation(wgt_variation, sys_variation):
     if "nominal" in wgt_variation:
@@ -206,8 +208,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     bkg_sample_dict = {
         "DY" : [ 
             "dy_M-100To200",
-            "dy_m105_160_vbf_amc", 
-            "dy_M-50", 
+            # "dy_m105_160_vbf_amc", 
+            # "dy_M-50", 
         ],
         "TT" : [
             "ttjets_dl",
@@ -380,9 +382,11 @@ if __name__ == "__main__":
         # ------------------------------------------
         # Initialize sample histograme to save later
         # ------------------------------------------
-        # variations = ["nominal"] # full list of possible variations to loop over
-        wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w)]
-        wgt_variations = wgt_variations[:3] # for testing
+        if "data" in sample_type:
+            wgt_variations = ["wgt_nominal"] 
+        else:
+            wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w)]
+            wgt_variations = wgt_variations[:3] # for testing
         print(f"wgt_variations: {wgt_variations}")
         syst_variations = []
         syst_variations = ["nominal"] 
@@ -410,7 +414,8 @@ if __name__ == "__main__":
         score_hist = score_hist.Var(bins, name=score_name)
         
         
-        score_hist = score_hist.Double()
+        # score_hist = score_hist.Double()
+        score_hist_empty = score_hist.Double()
 
         # loop over configurations and fill the histogram
         loop_args = {
@@ -423,12 +428,13 @@ if __name__ == "__main__":
             dict(zip(loop_args.keys(), values))
             for values in itertools.product(*loop_args.values())
         ]
-        # print(f"loop_args: {loop_args}")
+        print(f"loop_args: {loop_args}")
         
-        
+        score_hist_l = []
         # for variation in variations:
         #     print(f"working on {variation}")
         for loop_arg in loop_args:
+            score_hist = copy.deepcopy(score_hist_empty)
             print(f"loop_arg: {loop_arg}")
             # raise ValueError
         
@@ -577,20 +583,21 @@ if __name__ == "__main__":
             to_fill_value["val_sumw2"] = "value"
             # to_fill_value["variation"] = variation
             score_hist.fill(**to_fill_value, weight=weight)
-            # score_hist.fill(**to_fill_value)
     
             to_fill_sumw2 = to_fill.copy()
             to_fill_sumw2["val_sumw2"] = "sumw2"
-            # to_fill_sumw2["variation"] = variation
             score_hist.fill(**to_fill_sumw2, weight=weight * weight)
             print(f"score_hist is filled for {sample_type}, {variation} variation!")
+            score_hist_l.append(score_hist.compute())
 
 
         # ---------------------------------------------------
         # done with variation loop, compute hist
         # ---------------------------------------------------
-        score_hist = score_hist.compute()
-        
+        # score_hist = score_hist.compute()
+        score_hist = reduce(lambda a, b: a + b, score_hist_l)
+        print(f"score_hist.view(): {score_hist.view()}")
+        print("compute done!")
         
 
         # ---------------------------------------------------
