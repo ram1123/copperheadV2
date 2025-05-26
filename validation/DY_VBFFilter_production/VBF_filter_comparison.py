@@ -20,12 +20,6 @@ np.set_printoptions(threshold=sys.maxsize)
 import dask
 import time
 
-def applyGenMuonCuts(genPart):
-    # from_hard_process = (genPart.statusFlags & 2**8) > 0
-    from_hard_process = genPart.pt > 20
-    is_stable_process = (genPart.status ==1)
-    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
-    return dy_muon_filter
 
 
 def applyMuonBaseSelection(events):
@@ -106,6 +100,118 @@ def isSameGenParticle(matched_gen_particle, gen_particle):
     return is_sameParticle
 
 
+
+def applyGenMuonCuts(genPart):
+    # from_hard_process = (genPart.statusFlags & 2**8) > 0
+    from_hard_process = genPart.pt > 20
+    is_stable_process = (genPart.status ==1)
+    dy_muon_filter = from_hard_process & is_stable_process & (abs(genPart.pdgId) ==13)
+    # dy_muon_filter = dy_muon_filter & ((genPart.eta)< 1.92) & ((genPart.eta) > 1.9) # debug
+    return dy_muon_filter
+
+def quickPlot_nUnique(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta", y_range=None):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    dy_muon_filter = applyGenMuonCuts(genPart)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    # print(events.genWeight.compute())
+    # genWeight = events.genWeight.compute()
+    
+    time.sleep(2)
+    eta = dy_gen_muons.eta.compute()
+    print(f"eta len: {ak.num(eta, axis=0)}")
+    
+    # flatten values and wgts
+    eta = ak.flatten(eta)
+    # gen_wgt = ak.flatten(gen_wgt)
+    
+    # print(f"quickPlot filtered_eta len: {len(eta)}")
+    
+
+    eta = ak.values_astype(eta, np.float64)
+    
+    values = ak.to_numpy(eta)
+    eps = -0.00001 # small value you add to match positive 8-bit precision values binnings consistent with negative 8-bit precision values as noted on "binning" chapter of https://www.overleaf.com/project/68236d81c64f022b475f8ea5
+    values = np.where(values>np.abs(eps), values+eps, values)
+    values = np.unique(values)
+    weights = np.ones_like(values)
+    #----------------------------------
+    # for nbins in nbins_l:
+    #     binning = np.linspace(-2,2,nbins+1)
+    #     hist, _ = np.histogram(values, bins=binning)
+    #     plt.figure(figsize=(8, 5))
+    #     print(f"nbins {nbins} edges: {binning}")
+    #     print(f"nbins {nbins} hist: {hist}")
+    #     # plt.stairs(hist, binning, label="genMuon eta", linewidth=1.5)
+    #     hep.histplot((hist, binning), yerr=np.sqrt(hist), label="genMuon eta", linewidth=1.5)
+        
+        
+    #     plt.xlabel("Value")
+    #     plt.ylabel("Counts")
+    #     plt.title("Stepwise Histogram")
+    #     plt.legend()
+    #     plt.grid(True)
+    #     plt.tight_layout()
+    #     plt.savefig(f"plots/debug_bins{nbins}.pdf")
+    # return
+    #---------------------------
+    # print(f"values: {np.sort(values)}")
+    # raise ValueError
+    
+    
+    # 
+    # weights = ak.to_numpy(gen_wgt)
+    # weights = np.sign(weights) # for simplicity just take their signs
+
+    # print(f"values: {values}")
+    # print(f"weights: {weights}")
+    
+    values = array('d', values) # make the array double
+    weights = array('d', weights) # make the array double
+    
+    print(len(values))
+    for nbins in nbins_l:
+        # extract and plot eta
+        title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)"
+        hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+        hist.FillN(len(values), values, weights)
+        # Create a canvas
+        canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+        
+        # set Y range
+        if y_range is None:
+            max_val = hist.GetMaximum()
+            hist.SetMaximum(1.05*max_val)
+        else:
+            ylow, yhigh = y_range
+            hist.GetYaxis().SetRangeUser(ylow, yhigh)
+        # Draw the histogram
+        hist.Draw('E')
+    
+        # Create a legend
+        legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        
+        # Add entries
+        legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+        legend.Draw()
+        
+        # Save the canvas as a PNG
+        save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_unique.pdf"
+        canvas.SetTicks(2, 2)
+        canvas.Update()
+        canvas.SaveAs(save_full_path)
+
+        # print histogram values
+        for i in range(1, hist.GetNbinsX() + 1):
+                bin_center = hist.GetBinCenter(i)
+                yield_val = hist.GetBinContent(i)
+                err = hist.GetBinError(i) 
+                print(f"gen Eta {nbins} bins. Bin {i}: center={bin_center:.2f}, yield={yield_val:.2f}, error={err:.2f}")
+
+
+
 def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta", y_range=None):
     """
     simple plotter that plots directly with minimal selection
@@ -114,24 +220,69 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta", 
     dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
     # print(events.genWeight.compute())
-    genWeight = events.genWeight.compute()
-    # Broadcast
-    # gen_wgt, _ = ak.broadcast_arrays(genWeight, dy_gen_muons.eta)
-    # gen_wgt, _ = ak.broadcast_arrays(genWeight.compute(), genPart.eta.compute())
-    # print(gen_wgt)
+    # genWeight = events.genWeight.compute()
+    event_num = events.event.compute()
+    
     time.sleep(2)
     eta = dy_gen_muons.eta.compute()
-    # pt = ak.flatten(dy_gen_muons.pt).compute()
-    gen_wgt, _ = ak.broadcast_arrays(genWeight, eta)
+    print(f"eta len: {ak.num(eta, axis=0)}")
+    print(f"event_num len: {ak.num(event_num, axis=0)}")
+    
+    # gen_wgt, _ = ak.broadcast_arrays(genWeight, eta)
+    event_num, _ = ak.broadcast_arrays(event_num, eta)
     # flatten values and wgts
     eta = ak.flatten(eta)
-    gen_wgt = ak.flatten(gen_wgt)
+    # gen_wgt = ak.flatten(gen_wgt)
+    event_num = ak.flatten(event_num)
     
-    print(f"quickPlot filtered_eta len: {len(eta)}")
+    # print(f"quickPlot filtered_eta len: {len(eta)}")
     
 
+    eta = ak.values_astype(eta, np.float64)
+    # debugging -------------------------
+    # # debug_eta = 1.89453125
+    # debug_eta = 1.89843750
+    # matching_events = ak.to_numpy(event_num[eta==debug_eta])
+    # print(f"matching_events: {matching_events}")
+    # raise ValueError
+    # debugging -------------------------
+    
     values = ak.to_numpy(eta)
+    values = values.astype(np.float64)
+    # print(f"eta values: {np.sort(values)}")
+    eps = -0.00001 # small value you add to match positive 8-bit precision values binnings consistent with negative 8-bit precision values as noted on "binning" chapter of https://www.overleaf.com/project/68236d81c64f022b475f8ea5
+    values = np.where(values>np.abs(eps), values+eps, values)
     weights = np.ones_like(values)
+    #----------------------------------
+    # for nbins in nbins_l:
+    #     binning = np.linspace(xlow,xhigh,nbins+1)
+    #     hist, _ = np.histogram(values, bins=binning,weights=weights)
+    #     plt.figure(figsize=(8, 5))
+    #     # print(f"nbins {nbins} edges: {binning}")
+    #     # print(f"nbins {nbins} hist: {hist}")
+    #     for hist_ix in range(len(hist)):
+    #         bin_low = binning[hist_ix]
+    #         bin_high = binning[hist_ix+1]
+    #         print(f"bin edges {bin_low}, {bin_high} value: {hist[hist_ix]}")
+            
+    #     # plt.stairs(hist, binning, label="genMuon eta", linewidth=1.5)
+    #     hep.histplot((hist, binning), yerr=np.sqrt(hist), label="genMuon eta", linewidth=1.5)
+        
+        
+    #     plt.xlabel("Value")
+    #     plt.ylabel("Counts")
+    #     plt.title("Stepwise Histogram")
+    #     plt.legend()
+    #     plt.grid(True)
+    #     plt.tight_layout()
+    #     plt.savefig(f"plots/debug_bins{nbins}.pdf")
+    # return
+    #---------------------------
+    # print(f"values: {np.sort(values)}")
+    # raise ValueError
+    
+    
+    # 
     # weights = ak.to_numpy(gen_wgt)
     # weights = np.sign(weights) # for simplicity just take their signs
 
@@ -176,13 +327,16 @@ def quickPlot(events, nbins_l, xlow, xhigh, save_path, save_fname, field="eta", 
         # print histogram values
         for i in range(1, hist.GetNbinsX() + 1):
                 bin_center = hist.GetBinCenter(i)
+                bin_low = hist.GetBinLowEdge(i)
+                bin_high = hist.GetBinLowEdge(i+1)
                 yield_val = hist.GetBinContent(i)
                 err = hist.GetBinError(i) 
-                print(f"gen Eta {nbins} bins. Bin {i}: center={bin_center:.2f}, yield={yield_val:.2f}, error={err:.2f}")
+                # print(f"gen Eta {nbins} bins. Bin {i}: center={bin_center:.2f}, yield={yield_val:.2f}, error={err:.2f}")
+                print(f"gen Eta {nbins} bins: bin_low={bin_low:.5f}, bin_high={bin_high:.5f} yield={yield_val:.2f}, error={err:.2f}")
 
 
 
-def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname, y_range=None):
+def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname, y_range=None, exclude=False):
     """
     simple plotter that plots directly with minimal selection
     """
@@ -199,6 +353,8 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname, y_rang
             nmuon_cut = nmuon >= nmuon_target
         else:
             nmuon_cut = nmuon == nmuon_target
+        if exclude: # exclude the nmuon target from selection
+            nmuon_cut = ~nmuon_cut
         filtered_eta = ak.flatten(eta[nmuon_cut])
         print(f"quickPlotByNMuon filtered_eta len: {len(filtered_eta)}")
         values = ak.to_numpy(filtered_eta)
@@ -209,7 +365,10 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname, y_rang
         print(len(values))
         for nbins in nbins_l:
             # extract and plot eta
-            title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&nMuon=={nmuon_target}"
+            if exclude:
+                title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&nMuon!={nmuon_target}"
+            else:
+                title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&nMuon=={nmuon_target}"
             hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
             hist.FillN(len(values), values, weights)
             # Create a canvas
@@ -234,7 +393,11 @@ def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname, y_rang
             legend.Draw()
             
             # Save the canvas as a PNG
-            save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_nMuon{nmuon_target}.pdf"
+            if exclude:
+                save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_nMuon{nmuon_target}Exclude.pdf"
+            else:
+                save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_nMuon{nmuon_target}.pdf"
+                
             canvas.SetTicks(2, 2)
             canvas.Update()
             canvas.SaveAs(save_full_path)
@@ -289,7 +452,11 @@ def quickPlotPhi(events, nbins_l, xlow, xhigh, save_path, save_fname):
         hist.Draw('HIST')
     
         # Create a legend
-        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  
+        max_bin = hist.GetMaximumBin()
+        if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+            legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        else:
+            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
         
         # Add entries
         legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -359,7 +526,11 @@ def quickPlotPhiPtCut(events, nbins_l, xlow, xhigh, save_path, save_fname):
         hist.Draw('HIST')
     
         # Create a legend
-        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  
+        max_bin = hist.GetMaximumBin()
+        if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+            legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        else:
+            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
         
         # Add entries
         legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -422,16 +593,20 @@ def quickPlotInsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname, 
         canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
         
         # Draw the histogram
-        max_bin = hist.GetMaximumBin()
-        max_val = hist.GetMaximum()
-        hist.SetMaximum(1.05*max_val)
+        # max_bin = hist.GetMaximumBin()
+        # max_val = hist.GetMaximum()
+        # hist.SetMaximum(1.05*max_val)
         hist.Draw('E')
         # print(f"max_bin: {max_bin}")
         # print(f"max_val: {max_val}")
         
     
         # Create a legend
-        legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        max_bin = hist.GetMaximumBin()
+        if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+            legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        else:
+            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
         
         # Add entries
         legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -493,7 +668,11 @@ def quickPlotOutsideTracker(events, nbins_l, xlow, xhigh, save_path, save_fname)
         hist.Draw('E')
     
         # Create a legend
-        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        max_bin = hist.GetMaximumBin()
+        if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+            legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        else:
+            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
         
         # Add entries
         legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -551,7 +730,12 @@ def quickPlotByPt(events, nbins_l, xlow, xhigh, save_path, save_fname):
             hist.Draw('E')
         
             # Create a legend
-            legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            max_bin = hist.GetMaximumBin()
+            if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+                legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            else:
+                legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        
             
             # Add entries
             legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -578,6 +762,8 @@ def filterRegion(dimuon_mass, region="h-peak"):
         region = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
     elif region =="combined":
         region = (dimuon_mass >= 70) & (dimuon_mass <= 150.0)
+    elif region =="virtual_photon": # region that's dominated by QED and not mixed up by Higgs
+        region = dimuon_mass < 70
 
     region_cut = region
     return region_cut
@@ -605,7 +791,8 @@ def quickPlotByDimuMass(events, nbins_l, xlow, xhigh, save_path, save_fname):
     print(f"mu1_eta any none: {ak.any(ak.is_none(mu1_eta))}")
     print(f"mu2_eta any none: {ak.any(ak.is_none(mu2_eta))}")
     # print(f"eta: {eta}")
-    dimu_mass_bins = ["inclusive", "z-peak", "signal"]
+    # dimu_mass_bins = ["inclusive", "z-peak", "signal", "virtual_photon"]
+    dimu_mass_bins = ["virtual_photon"]
     for mass_region in dimu_mass_bins:
         if mass_region != "inclusive":
             mass_cut = filterRegion(dimuon_mass, region=mass_region)
@@ -638,7 +825,12 @@ def quickPlotByDimuMass(events, nbins_l, xlow, xhigh, save_path, save_fname):
             hist.Draw('E')
         
             # Create a legend
-            legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            max_bin = hist.GetMaximumBin()
+            if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+                legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            else:
+                legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
             
             # Add entries
             legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -665,6 +857,7 @@ def quickPlotByDimuRecoil(events, nbins_l, xlow, xhigh, save_path, save_fname):
     mu2 = dy_gen_muons[:,1]
     dimuon = mu1+mu2
     dimuon_recoil = dimuon.p.compute()
+    # dimuon_recoil = dimuon.pt.compute()
     time.sleep(2)
     mu1_eta = mu1.eta.compute()
     time.sleep(2)
@@ -674,7 +867,8 @@ def quickPlotByDimuRecoil(events, nbins_l, xlow, xhigh, save_path, save_fname):
     print(f"mu1_eta any none: {ak.any(ak.is_none(mu1_eta))}")
     print(f"mu2_eta any none: {ak.any(ak.is_none(mu2_eta))}")
     # print(f"eta: {eta}")
-    recoil_edges = [0, 50, 200, np.inf]
+    # recoil_edges = [0, 50, 200, np.inf]
+    recoil_edges = [0, 20]
     for recoil_idx in range(len(recoil_edges)-1):
         recoil_low = recoil_edges[recoil_idx]
         recoil_high = recoil_edges[recoil_idx+1]
@@ -706,7 +900,12 @@ def quickPlotByDimuRecoil(events, nbins_l, xlow, xhigh, save_path, save_fname):
             hist.Draw('E')
         
             # Create a legend
-            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            max_bin = hist.GetMaximumBin()
+            if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+                legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            else:
+                legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
             
             # Add entries
             legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -751,7 +950,11 @@ def quickPlotByDimuRecoil(events, nbins_l, xlow, xhigh, save_path, save_fname):
 #             hist.Draw('E')
         
 #             # Create a legend
-#             legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            # max_bin = hist.GetMaximumBin()
+            # if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+            #     legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            # else:
+            #     legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
             
 #             # Add entries
 #             legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -1488,7 +1691,11 @@ def plotIndividualROOT(ak_zip, plot_bins, save_fname, save_path="./plots"):
         hist.Draw('E')
 
         # Create a legend
-        legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        max_bin = hist.GetMaximumBin()
+        if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+            legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        else:
+            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
         
         # Add entries
         legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
@@ -1532,14 +1739,10 @@ def print_t_statisticROOT(hist_fromScratch, hist_rereco, field):
 
 
 def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", centralVsCentral=False, nbins=30):
-    # fields2plot = ["mu1_eta_lhe", "mu2_eta_lhe", "mu_neg_lhe_eta", "mu_pos_lhe_eta"]
-    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen"]
-    # fields2plot = ["mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
-    # fields2plot = ["mu1_eta", "mu2_eta", "mu1_eta_gen", "mu2_eta_gen"]
-    # fields2plot = ["noGenmatchMu1_eta", "noGenmatchMu2_eta", "mu1_eta", "mu2_eta", "mu1_pt", "mu2_pt", "mu1_eta_gen", "mu2_eta_gen", "mu1_pt_gen", "mu2_pt_gen"]
     fields2plot = ["noGenmatchMu1_eta", "noGenmatchMu2_eta", "mu1_eta", "mu2_eta",   "mu1_eta_gen", "mu2_eta_gen","n_reco_muons", "n_reco_muons_wMediumId"]
     other_kinematics = ["mu1_pt", "mu2_pt", "mu1_pt_gen", "mu2_pt_gen","mu1_phi", "mu2_phi", "mu1_phi_gen", "mu2_phi_gen", "noGenmatchMu1_pt", "noGenmatchMu2_pt", "noGenmatchMu1_phi", "noGenmatchMu2_phi",]
     fields2plot = fields2plot + other_kinematics
+    eps = -0.00001 # small value you add to match positive 8-bit precision values binnings consistent with negative 8-bit precision values as noted on "binning" chapter of https://www.overleaf.com/project/68236d81c64f022b475f8ea5
     
     for field in fields2plot:
         # Create a histogram: name, title, number of bins, xlow, xhigh
@@ -1558,12 +1761,12 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
             current_nbins = 5 # override nbins
 
         title =f"{field} (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)"
-        hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018 {title};nbins: {current_nbins};Entries", current_nbins, xlow, xhigh)
-
-        values = zip_fromScratch[field]
-        print(f"{field} from scratch ak.is_none(values) sum: {ak.sum(ak.is_none(values))}")
         
+        hist_fromScratch = ROOT.TH1F("hist_fromScratch", f"2018 {title};nbins: {current_nbins};Entries", current_nbins, xlow, xhigh)
+        values = zip_fromScratch[field]
         values = ak.to_numpy(values[~ak.is_none(values)])
+        values = np.where(values>np.abs(eps), values+eps, values)
+        values = values[(values>xlow)&(values<xhigh)]
         weights = np.ones_like(values)
         values = array('d', values) # make the array double
         weights = array('d', weights) # make the array double
@@ -1573,8 +1776,9 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
 
         hist_rereco = ROOT.TH1F("hist_rereco", f"2018;{field};Entries", current_nbins, xlow, xhigh)
         values = zip_rereco[field]
-        print(f"{field} rereco ak.is_none(values) sum: {ak.sum(ak.is_none(values))}")
         values = ak.to_numpy(values[~ak.is_none(values)])
+        values = np.where(values>np.abs(eps), values+eps, values)
+        values = values[(values>xlow)&(values<xhigh)]
         weights = np.ones_like(values)
         values = array('d', values) # make the array double
         weights = array('d', weights) # make the array double
@@ -1610,12 +1814,19 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         hist_rereco.Draw('E SAME')
 
 
+        # # Create a legend
+        # if "gen" in field:
+        #     legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+        #     # legend = ROOT.TLegend(0.35, 0.1, 0.65, 0.23)  # (x1,y1,x2,y2) in NDC coordinates
+        # else:
+        #     legend = ROOT.TLegend(0.65, 0.8, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+
         # Create a legend
-        if "gen" in field:
-            legend = ROOT.TLegend(0.35, 0.8, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
-            # legend = ROOT.TLegend(0.35, 0.1, 0.65, 0.23)  # (x1,y1,x2,y2) in NDC coordinates
+        max_bin = hist_fromScratch.GetMaximumBin()
+        if max_bin > int(nbins * 0.25) and max_bin < int(nbins * 0.75): # if max bin is in center, put legend somewhere else
+            legend = ROOT.TLegend(0.65, 0.85, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
         else:
-            legend = ROOT.TLegend(0.65, 0.8, 0.95, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
             
         # Add entries
         legend.AddEntry(hist_fromScratch, f"Private UL (Entries: {hist_fromScratch.GetEntries():.2e})", "l")  # "l" means line
@@ -1631,7 +1842,7 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         residual.SetLineColor(ROOT.kBlack)
         residual.SetMarkerColor(ROOT.kBlack)
         residual.Draw("E")
-        residual.SetTitle(f";{field};Residual")
+        residual.SetTitle(f";{field}, nbins:{nbins};Residual")
         # Similarly for the residual plot
         residual.GetXaxis().SetTitleSize(0.12)  # Bigger because bottom pad is small
         residual.GetXaxis().SetLabelSize(0.10)
@@ -1639,7 +1850,7 @@ def plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path="./plots", 
         pad2.SetTicks(2, 2)
         
         # Save the canvas as a PNG
-        save_full_path = f"{save_path}/plotTwoWay_{field}_ROOT.pdf"
+        save_full_path = f"{save_path}/plotTwoWay_{field}_ROOT_nbins{nbins}.pdf"
         # canvas.
         canvas.Update()
         canvas.SaveAs(save_full_path)
@@ -1714,15 +1925,36 @@ if __name__ == "__main__":
     do_quick_test = True # for quick test
     
     # test_len = 14000
-    # test_len = 400000
+    test_len = 400000
     # test_len = 800000
-    test_len = 4000000
+    # test_len = 4000000
     # test_len = 8000000
-    # test_len = 2*8000000
-    # test_len = 3*8000000
     
 
+    # -----------------------------------------------
+    # debug
+    # -----------------------------------------------
+    # test_len = 203980
+    # files = json.load(open("debug.json", "r"))
+    # events_fromScratch = NanoEventsFactory.from_root(
+    #     files,
+    #     schemaclass=NanoAODSchema,
+    # ).events()
+    # if do_quick_test:
+    #     events_fromScratch = events_fromScratch[:test_len]
+    # events_fromScratch = applyQuickSelection(events_fromScratch)
 
+    # xlow = -2
+    # xhigh = 2
+    # save_path = "./plots"
+    # save_fname = "debug"
+    # # print(nbins_l)
+    # # nbins_l = [60]
+    # # nbins_l = [59, 60, 61]
+    # nbins_l = [257,256,255,129,128,127,65,64]
+    # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    
+    # raise ValueError
     # -----------------------------------------------
     # Quick Plot Eta values
     # -----------------------------------------------
@@ -1741,13 +1973,26 @@ if __name__ == "__main__":
     save_path = "./plots"
     save_fname = "gen_eta_privateUL_vbfFilter_DY"
     # print(nbins_l)
-    nbins_l = [60]
+    # nbins_l = [60]
+    # nbins_l = [129,128,127,100,65,64,63,61,60, 33,32,31]
+    # nbins_l = [128]
+    # nbins_l = [256, 128]
+    nbins_l = [256,129, 128,127,101, 100, 99, 65,64,63,61,60, 33,32,31]
     # # specifically have user set ranges with input event target: test_len==4mil
     # ylow = 56000
     # yhigh = 75000
     # y_range=(ylow, yhigh)
     # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+    # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # quickPlot_nUnique(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=(0,60))
+    # raise ValueError
+    
     # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+
+
+    # # plot nmuonsNot2
+    # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, exclude=True)
+    
     
     # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # time.sleep(2)
@@ -1755,13 +2000,13 @@ if __name__ == "__main__":
     # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # save_fname = "gen_mu1_eta_privateUL_vbfFilter_DY"
     # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False)
-    save_fname = "gen_mu2_eta_mu1InsideTracker_privateUL_vbfFilter_DY"
-    quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, mu1_plot=False)
-    save_fname = "gen_mu2_eta_privateUL_vbfFilter_DY"
-    quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False, mu1_plot=False)
+    # save_fname = "gen_mu2_eta_mu1InsideTracker_privateUL_vbfFilter_DY"
+    # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, mu1_plot=False)
+    # save_fname = "gen_mu2_eta_privateUL_vbfFilter_DY"
+    # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False, mu1_plot=False)
     
 
-    save_fname = "gen_eta_privateUL_vbfFilter_DY"
+    # save_fname = "gen_eta_privateUL_vbfFilter_DY"
     # quickPlotByDimuMass(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # quickPlotByDimuRecoil(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # raise ValueError
@@ -1784,13 +2029,23 @@ if __name__ == "__main__":
     save_path = "./plots"
     save_fname = "gen_eta_centralUL_inclusive_DY"
     # print(nbins_l)
-    nbins_l = [60]
-    # specifically have user set ranges with input event target: test_len==4mil
+    # nbins_l = [60]
+    # nbins_l = [129,128,127,100,65,64,63,61,60, 33,32,31]
+    nbins_l = [256,129, 128,127,101, 100, 99, 65,64,63,61,60, 33,32,31]
+    
+    # # specifically have user set ranges with input event target: test_len==4mil
     # ylow = 14000
     # yhigh = 26000
     # y_range=(ylow, yhigh)
     # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+    # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
+    # quickPlot_nUnique(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname,y_range=(0,60))
+    
     # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
+
+    # # plot nmuonsNot2
+    # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, exclude=True)
+    
     
     # quickPlotByPt(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # time.sleep(2)
@@ -1798,15 +2053,16 @@ if __name__ == "__main__":
     # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # save_fname = "gen_mu1_eta_centralUL_inclusive_DY"
     # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False)
-    save_fname = "gen_mu2_eta_mu1InsideTracker_centralUL_inclusive_DY"
-    quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, mu1_plot=False)
-    save_fname = "gen_mu2_eta_centralUL_inclusive_DY"
-    quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False, mu1_plot=False)
+    # save_fname = "gen_mu2_eta_mu1InsideTracker_centralUL_inclusive_DY"
+    # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, mu1_plot=False)
+    # save_fname = "gen_mu2_eta_centralUL_inclusive_DY"
+    # quickPlotInsideTracker(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, insideTracker=False, mu1_plot=False)
 
-    save_fname = "gen_eta_centralUL_inclusive_DY"
+    # save_fname = "gen_eta_centralUL_inclusive_DY"
     # quickPlotByDimuMass(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # quickPlotByDimuRecoil(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
-    raise ValueError
+    
+    # raise ValueError
     
     # # -----------------------------------------------
 
@@ -1872,11 +2128,11 @@ if __name__ == "__main__":
     # -----------------------------------------------
     # Plot Two-way DY VBF-filter MC private UL vs central Rereco
     # -----------------------------------------------
-    nbins=60
     # test_len = 14000
-    test_len = 400000
+    # test_len = 400000
     # test_len = 800000
     # test_len = 4000000
+    test_len = 8000000
     centralVsCentral = args.centralVsCentral
 
     if centralVsCentral:
@@ -1925,8 +2181,9 @@ if __name__ == "__main__":
     save_path = "./plots"
     os.makedirs(save_path, exist_ok=True)
 
-
-    plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path, centralVsCentral=centralVsCentral, nbins=nbins)
+    nbins_l = [60, 64, 128, 256]
+    for nbins in nbins_l:
+        plotTwoWayROOT(zip_fromScratch, zip_rereco, plot_bins, save_path=save_path, centralVsCentral=centralVsCentral, nbins=nbins)
     
     
     # do individual plots -------------------------------------------
