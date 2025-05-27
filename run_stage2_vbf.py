@@ -261,12 +261,20 @@ parser.add_argument(
     help="string value of year we are calculating",
 )
 parser.add_argument(
-    "-ml",
+    "-m_l",
     "--model_label",
     dest="model_label",
     default="test",
     action="store",
     help="Unique run label (to create output path)",
+)
+parser.add_argument(
+    "-m_p",
+    "--model_path",
+    dest="model_path",
+    default="test",
+    action="store",
+    help="path where model label is saved on",
 )
 parser.add_argument(
     "-rl",
@@ -334,17 +342,15 @@ if __name__ == "__main__":
         client = Client(cluster)
         print("Local scale Client created")
 
-    base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.run_label}"
+    # base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.run_label}"
+    base_path = args.run_label
 
-    
-        
 
     bkg_samples = args.bkg_samples
     sig_samples = args.sig_samples
     data_samples = args.data_samples
     print(f"data_samples: {data_samples}")
 
-    # stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0/data_C/0"
     stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0"
     # full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
     full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
@@ -372,7 +378,8 @@ if __name__ == "__main__":
         # events = dak.from_parquet(f"part000.parquet")
         
         # model_trained_path = f"MVA_training/VBF/dnn/trained_models/{args.model_label}"
-        model_trained_path = f"/work/users/yun79/valerie/fork/copperheadV2/MVA_training/VBF/dnn/trained_models/{args.model_label}"
+        # model_trained_path = f"/work/users/yun79/valerie/fork/copperheadV2/MVA_training/VBF/dnn/trained_models/{args.model_label}"
+        model_trained_path = f"{args.model_path}/{args.model_label}"
         
         with open(f'{model_trained_path}/training_features.pkl', 'rb') as f:
             training_features = pickle.load(f)
