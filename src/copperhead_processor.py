@@ -756,7 +756,7 @@ class EventProcessor(processor.ProcessorABC):
 
 
         muons = events.Muon[muon_selection]
-        logger.debug(f"muons pT: {muons.pt[:100].compute()}")
+        # logger.debug(f"muons pT: {muons.pt[:100].compute()}")
         
         # muons = ak.to_packed(events.Muon[muon_selection])
 
@@ -1421,26 +1421,16 @@ class EventProcessor(processor.ProcessorABC):
             # we explicitly don't directly add zpt weights to the weights variables
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
             # once kind of screws with the dak awkward array
-            # valerie
-            # zpt_weight_valerie =\
-                     # self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
-            # out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
-            # # dmitry's old zpt
-            # zpt_weight_dmitry =\
-            #         self.evaluator[self.zpt_path](dimuon.pt)
-            # out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
-
-            # # logger.info(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
-            # # logger.info(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
-
-            # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
-            # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
-            logger.info("======================= old zpt weights are commented out =======================")
-            if year == "2016postVFP" or year=="2018": #FIXME: This is temporary, we need to sync the zpt strategy and update it.
-                zpt_weight_mine_nbins100 = getZptWgts_2016postVFP(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
-            else:
-                zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+            logger.info("======================= old zpt method =======================")
+            
+            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+            
+            # logger.info("======================= old zpt weights are commented out =======================")
+            # if year == "2016postVFP" or year=="2018": #FIXME: This is temporary, we need to sync the zpt strategy and update it.
+            #     zpt_weight_mine_nbins100 = getZptWgts_2016postVFP(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+            # else:
+            #     zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
             # logger.info(f"zpt_weight_mine_nbins100: {type(zpt_weight_mine_nbins100)}")
             # logger.info(f"zpt_weight_mine_nbins100: {(zpt_weight_mine_nbins100)}")
 
@@ -1519,12 +1509,13 @@ class EventProcessor(processor.ProcessorABC):
             weight_dict[variation_name] = wgt_variation
 
 
-        # temporarily shut off partial weights start -----------------------------------------
         for weight_type in list(weights.weightStatistics.keys()):
             wgt_name = "separate_wgt_" + weight_type
             # logger.info(f"wgt_name: {wgt_name}")
             weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
-        # temporarily shut off partial weights end -----------------------------------------
+        #     logger.info(f"wgt {wgt_name} sum: {ak.sum(weight_dict[wgt_name]).compute()}")
+        # logger.info(f"wgt_nominal sum: {ak.sum(wgt_nominal).compute()}")
+        # raise ValueError
 
         # logger.info(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # logger.info(f"out_dict.compute 5: {ak.zip(out_dict).to_parquet(save_path)}")
@@ -1816,12 +1807,11 @@ class EventProcessor(processor.ProcessorABC):
 
         jet_pt_cut = (jets.pt > self.config["jet_pt_cut"])
         # add additonal pT cut for the forward regions to reduce jet horn  ----------------------------------------------
-        # source: https://nam04.safelinks.protection.outlook.com/?url=https%3A%2F%2Findico.cern.ch%2Fevent%2F1434807%2Fcontributions%2F6040633%2Fattachments%2F2893077%2F5071932%2FJERC%2520meeting%252009_07.pdf&data=05%7C02%7Cyun79%40purdue.edu%7C3d76cc7f47974533372708dd896f875a%7C4130bd397c53419cb1e58758d6d63f21%7C0%7C0%7C638817834635140303%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=fh11i5iJCGo0EQKYBdw0Df8oaesOX2hCnJ%2FU78o37%2BU%3D&reserved=0
+        # # source: https://nam04.safelinks.protection.outlook.com/?url=https%3A%2F%2Findico.cern.ch%2Fevent%2F1434807%2Fcontributions%2F6040633%2Fattachments%2F2893077%2F5071932%2FJERC%2520meeting%252009_07.pdf&data=05%7C02%7Cyun79%40purdue.edu%7C3d76cc7f47974533372708dd896f875a%7C4130bd397c53419cb1e58758d6d63f21%7C0%7C0%7C638817834635140303%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=fh11i5iJCGo0EQKYBdw0Df8oaesOX2hCnJ%2FU78o37%2BU%3D&reserved=0
         jetHorn_region = abs(jets.eta) > 2.5
-        jetHorn_pt_cut = (jets.pt > 30)
+        jetHorn_pt_cut = (jets.pt > self.config["jet_pt_cut"]) # pt cut on jethorn doesn't change
         jetHorn_puid_cut = (jets.puId >= 7) | (jets.pt >= 50) # tight pu Id
-        # jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
-        jetHorn_cut = jetHorn_pt_cut
+        jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut 
         jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
         
         # add additonal pT cut for the forward regions  ----------------------------------------------
