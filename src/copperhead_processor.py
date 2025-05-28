@@ -6,7 +6,7 @@ import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
 import correctionlib
-from src.corrections.rochester import apply_roccor
+from src.corrections.rochester import apply_roccor, apply_roccorRun3
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
 from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear
@@ -624,9 +624,13 @@ class EventProcessor(processor.ProcessorABC):
         # # --------------------------------------------------------
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
-            logger.info("doing rochester!")
-            # logger.info(f"df.Muon.pt b4 roccor: {events.Muon.pt.compute()}")
-            apply_roccor(events, self.config["roccor_file"], is_mc)
+            # TODO make more elegant distinction between Run2 and Run3 
+            if "16" in year or "17" in year or "18" in year:# Run2 roccor
+                logger.info("doing Run2 rochester!")
+                apply_roccor(events, self.config["roccor_file"], is_mc)
+            else:
+                logger.info("doing Run3 rochester!")
+                apply_roccorRun3(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
             # logger.info(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
 
