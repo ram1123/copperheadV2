@@ -33,6 +33,7 @@ import os
 import itertools
 from functools import reduce
 import copy
+from dask.dot import dot_graph
 
 def get_variation(wgt_variation, sys_variation):
     if "nominal" in wgt_variation:
@@ -168,7 +169,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     
     return_filelist_dict["data"] = data_filelist # keep data as one sample list for speedup
 
-    # sample_dict["data"] = data_filelist
+    sample_dict["data"] = data_filelist
 
     # ------------------------------------
     # work on sig MC
@@ -337,7 +338,7 @@ if __name__ == "__main__":
     # # #-----------------------------------------------------------
     else:
         from distributed import LocalCluster, Client
-        cluster = LocalCluster(processes=True)
+        cluster = LocalCluster(processes=True, memory_limit="10GB")
         cluster.adapt(minimum=8, maximum=63) #min: 8 max: 32
         client = Client(cluster)
         print("Local scale Client created")
@@ -361,6 +362,8 @@ if __name__ == "__main__":
             continue
             
         events_stage1 = dak.from_parquet(sample_l)
+        target_chunksize = 150_000
+        events_stage1 = events_stage1.repartition(rows_per_partition=target_chunksize)
 
         # reparitition events if npartitions are too little to decrease memory usage (ie histograming vbf requires > 10 GB per worker otherwise) ----------------------
         # min_partition_size = 50
@@ -393,8 +396,8 @@ if __name__ == "__main__":
             wgt_variations = ["wgt_nominal"] 
         else:
             wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w)]
-            # wgt_variations = wgt_variations[:3] # for testing
-            wgt_variations = ["wgt_nominal"]  # FIXME
+            # wgt_variations = wgt_variations[:10] # FIXME
+            # wgt_variations = ["wgt_nominal"]  # FIXME
             
         print(f"wgt_variations: {wgt_variations}")
         syst_variations = []
@@ -441,7 +444,6 @@ if __name__ == "__main__":
         
         score_hist_l = []
         iteration_counter = 0
-        compute_every_N = 2
         for loop_arg in loop_args:
             score_hist = copy.deepcopy(score_hist_empty)
         
@@ -483,7 +485,8 @@ if __name__ == "__main__":
                     input_arr_fold = ak.where(eval_filter, events[feat], input_arr_fold)
                     input_arr_dict[feat] = input_arr_fold
         
-                
+
+            print(f"len(training_features): {len(training_features)}")
             # # debug:
             # for feat in training_features:
             #     input_arr_total = input_arr_dict[feat] 
@@ -504,19 +507,26 @@ if __name__ == "__main__":
                 axis=1
             )
             dnn_score = nan_val*ak.ones_like(events.event)
+            # graph =dnn_score[:5].__dask_graph__()
+            # print(f"graph: {graph}")
+            # dot_graph(graph, filename="hist.svg") # FIXME
             for fold in range(nfolds): 
                 eval_folds = [(fold+f)%nfolds for f in [3]]
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
                 model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
+                print(f"model_load_path: {model_load_path}")
                 dnnWrap = DNNWrapper(model_load_path)
                 dnn_score_fold = dnnWrap(input_arr)
                 # print(f"{fold} fold dnn_score_fold b4 flatten: {dnn_score_fold.compute()}")
                 dnn_score_fold = ak.flatten(dnn_score_fold, axis=1) # DNN outpout is 2 dimensional
                 
+                
                 dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
                 # print(f"{fold} fold dnn_score_fold after flatten: {dnn_score_fold.compute()}")
                 # print(f"{fold} fold dnn_score: {dnn_score.compute()}")
-                
+
+            # dnn_score.visualize(filename='hist.svg',optimize_graph=True) # FIXME
+            # raise ValueError
             # print(f"dnn_score b4 after: {dnn_score.compute()}")
             # # debug:
             # any_nan = ak.any(dnn_score ==nan_val)
@@ -529,7 +539,7 @@ if __name__ == "__main__":
             # ---------------------------------------------------
         
                 
-            # dnn_score[:5].visualize(filename='hist.svg') # FIXME
+            
             
             to_fill = {
                 "region" : "h-peak",
