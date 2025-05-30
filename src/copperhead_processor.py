@@ -550,8 +550,8 @@ class EventProcessor(processor.ProcessorABC):
 
 
         do_pu_wgt = True # True
-        if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
-            do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
+        # if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
+        #     do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
 
 
         if do_pu_wgt:
@@ -884,39 +884,24 @@ class EventProcessor(processor.ProcessorABC):
         # event_filter = event_filter & pass_leading_pt
         # test end -----------------------------------------------------------------------
 
-
-        # calculate sum of gen weight b4 skimming off bad events
         if is_mc:
-            # if True:
-            if self.test_mode: # for small files local testing
-                sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-                logger.debug(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
-            else:
-                sumWeights = events.metadata['sumGenWgts']
-                logger.debug(f"sumWeights: {(sumWeights)}")
-        # skim off bad events onto events and other related variables
-        # # original -----------------------------------------------
-        # events = events[event_filter==True]
-        # muons = muons[event_filter==True]
-        # nmuons = nmuons[event_filter==True]
-        # applied_fsr = applied_fsr[event_filter==True]
+            sumWeights = events.metadata['sumGenWgts']
+            logger.debug(f"sumWeights: {(sumWeights)}")
+        # calculate sum of gen weight b4 skimming off bad events
         # if is_mc:
-        #     for variation in pu_wgts.keys():
-        #         pu_wgts[variation] = pu_wgts[variation][event_filter==True]
-        # pass_leading_pt = pass_leading_pt[event_filter==True]
-        # # original end -----------------------------------------------
+        #     # if True:
+        #     if self.test_mode: # for small files local testing
+        #         sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+        #         logger.debug(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
+        #     else:
+        #         sumWeights = events.metadata['sumGenWgts']
+        #         logger.debug(f"sumWeights: {(sumWeights)}")
+        # skim off bad events onto events and other related variables
 
 
-        # to_packed testing -----------------------------------------------
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
-        # event_match = event_match[event_filter==True]
-        # applied_fsr = ak.to_packed(applied_fsr[event_filter==True]) # not sure the purpose of this line
-
-        # logger.info("testJetVector right after event filtering")
-        # testJetVector(events.Jet)
-
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
