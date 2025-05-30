@@ -28,6 +28,7 @@ import logging
 from modules.utils import logger
 from rich import print
 
+
 def getBadFile(fname):
     try:
         up_file = uproot.open(fname)
@@ -61,13 +62,13 @@ def getBadFile(fname):
 #     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
 #         # Submit each file check to the executor
 #         results = list(executor.map(getBadFile, filelist))
-
+    
 #     bad_file_l = []
 #     for result in results:
 #         if result != "":
 #             # print(result)
 #             bad_file_l.append(result)
-
+    
 #     return bad_file_l
 
 def getBadFileParallelizeDask(filelist):
@@ -273,6 +274,8 @@ if __name__ == "__main__":
     logger.info(f"year: {year}")
 
     if args.fraction is None: # do the normal prestage setup
+        allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_CH_CERN", "T2_US_Vanderbilt", "T2_US_Florida", "T2_IT_Pisa", "T2_DE_RWTH"]
+        
         total_events = 0
         # get dask client
         if args.use_gateway:
@@ -285,7 +288,7 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug("Gateway Client created")
         else: # use local cluster
-            client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
+            client = Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
             logger.info("Local scale Client created")
         big_sample_info = {}
         # load dataset sample paths from yaml files
@@ -359,6 +362,7 @@ if __name__ == "__main__":
         fnames = ""
 
         for sample_name in tqdm.tqdm(dataset.keys()):
+            print(f"sample_name: {sample_name}")
             is_data =  ("data" in sample_name)
             logger.debug(f"Sample Name: {sample_name}")
             logger.debug(f"dataset[sample_name]: {dataset[sample_name]}")
@@ -591,4 +595,3 @@ if __name__ == "__main__":
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")
-
