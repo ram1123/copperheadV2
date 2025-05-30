@@ -524,6 +524,75 @@ def quickPlot_CoM(events, nbins_l, xlow, xhigh, save_path, save_fname, y_range=N
         canvas.Update()
         canvas.SaveAs(save_full_path)
 
+def quickPlotByHardProcess(events, nbins_l, xlow, xhigh, save_path, save_fname, y_range=None):
+    """
+    simple plotter that plots directly with minimal selection
+    """
+    genPart = events.GenPart
+    dy_muon_filter = applyGenMuonCuts(genPart)
+    dy_gen_muons  = genPart[dy_muon_filter]
+    eta = (dy_gen_muons.eta).compute()
+    from_hardProcess = 
+    nmuon = ak.num(eta, axis=1)# this is number of gen muons
+    # print(f"eta: {eta}")
+    # nmuon_edges = [0, 1, 2, 3]
+    nmuon_edges = [2]
+    for nmuon_target in nmuon_edges:
+        if nmuon_target > 2:
+            nmuon_cut = nmuon >= nmuon_target
+        else:
+            nmuon_cut = nmuon == nmuon_target
+        if exclude: # exclude the nmuon target from selection
+            nmuon_cut = ~nmuon_cut
+        filtered_eta = ak.flatten(eta[nmuon_cut])
+        print(f"quickPlotByNMuon filtered_eta len: {len(filtered_eta)}")
+        values = ak.to_numpy(filtered_eta)
+        values = applyEps(values)
+        weights = np.ones_like(values)
+        values = array('d', values) # make the array double
+        weights = array('d', weights) # make the array double
+        
+        print(len(values))
+        for nbins in nbins_l:
+            # extract and plot eta
+            if exclude:
+                title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&nMuon!={nmuon_target}"
+            else:
+                title =f"GenPart_eta (abs(GenPart_pdgId)==13&&GenPart_status==1&&GenPart_pt>20)&&nMuon=={nmuon_target}"
+            hist = ROOT.TH1F("hist", f"2018 {title};nbins: {nbins};Entries", nbins, xlow, xhigh)
+            hist.FillN(len(values), values, weights)
+            # Create a canvas
+            canvas = ROOT.TCanvas("canvas", "Canvas for Plotting", 800, 600)
+
+             # set Y range
+            if y_range is None:
+                max_val = hist.GetMaximum()
+                hist.SetMaximum(1.05*max_val)
+            else:
+                ylow, yhigh = y_range
+                hist.GetYaxis().SetRangeUser(ylow, yhigh)
+
+            # Draw the histogram
+            hist.Draw('E')
+        
+            # Create a legend
+            legend = ROOT.TLegend(0.35, 0.85, 0.65, 0.93)  # (x1,y1,x2,y2) in NDC coordinates
+            
+            # Add entries
+            legend.AddEntry(hist, f"Entries: {hist.GetEntries():.2e}", "l")  # "l" means line
+            legend.Draw()
+            
+            # Save the canvas as a PNG
+            if exclude:
+                save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_nMuon{nmuon_target}Exclude.pdf"
+            else:
+                save_full_path = f"{save_path}/{save_fname}_ROOT_nbins{nbins}_nMuon{nmuon_target}.pdf"
+                
+            canvas.SetTicks(2, 2)
+            canvas.Update()
+            canvas.SaveAs(save_full_path)
+
+
 def quickPlotByNMuon(events, nbins_l, xlow, xhigh, save_path, save_fname, y_range=None, exclude=False):
     """
     simple plotter that plots directly with minimal selection
@@ -2018,8 +2087,10 @@ if __name__ == "__main__":
         events_fromScratch = events_fromScratch[:test_len]
     events_fromScratch = applyQuickSelection(events_fromScratch)
 
-    xlow = -2
-    xhigh = 2
+    # xlow = -2
+    # xhigh = 2
+    xlow = -2.4
+    xhigh = 2.4
     save_path = "./plots"
     # print(nbins_l)
     # nbins_l = [60]
@@ -2108,8 +2179,11 @@ if __name__ == "__main__":
         events_fromScratch = events_fromScratch[:test_len]
     events_fromScratch = applyQuickSelection(events_fromScratch)
 
-    xlow = -2
-    xhigh = 2
+    # xlow = -2
+    # xhigh = 2
+    xlow = -2.4
+    xhigh = 2.4
+    
     save_path = "./plots"
     save_fname = "gen_eta_centralUL_inclusive_DY"
     # print(nbins_l)
@@ -2128,7 +2202,7 @@ if __name__ == "__main__":
     # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
     # quickPlot(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname)
     # quickPlot_nUnique(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname,y_range=(0,60))
-    
+    quickPlotByHardProcess(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, y_range=y_range)
 
     # # plot nmuonsNot2
     # quickPlotByNMuon(events_fromScratch, nbins_l, xlow, xhigh, save_path, save_fname, exclude=True)
