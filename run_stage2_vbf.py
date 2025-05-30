@@ -31,6 +31,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import os
 import itertools
+from functools import reduce
+import copy
 
 def get_variation(wgt_variation, sys_variation):
     if "nominal" in wgt_variation:
@@ -206,8 +208,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     bkg_sample_dict = {
         "DY" : [ 
             "dy_M-100To200",
-            "dy_m105_160_vbf_amc", 
-            "dy_M-50", 
+            # "dy_m105_160_vbf_amc", 
+            # "dy_M-50", 
         ],
         "TT" : [
             "ttjets_dl",
@@ -259,12 +261,20 @@ parser.add_argument(
     help="string value of year we are calculating",
 )
 parser.add_argument(
-    "-ml",
+    "-m_l",
     "--model_label",
     dest="model_label",
     default="test",
     action="store",
     help="Unique run label (to create output path)",
+)
+parser.add_argument(
+    "-m_p",
+    "--model_path",
+    dest="model_path",
+    default="test",
+    action="store",
+    help="path where model label is saved on",
 )
 parser.add_argument(
     "-rl",
@@ -328,21 +338,19 @@ if __name__ == "__main__":
     else:
         from distributed import LocalCluster, Client
         cluster = LocalCluster(processes=True)
-        cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
+        cluster.adapt(minimum=8, maximum=63) #min: 8 max: 32
         client = Client(cluster)
         print("Local scale Client created")
 
-    base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.run_label}"
+    # base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.run_label}"
+    base_path = args.run_label
 
-    
-        
 
     bkg_samples = args.bkg_samples
     sig_samples = args.sig_samples
     data_samples = args.data_samples
     print(f"data_samples: {data_samples}")
 
-    # stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0/data_C/0"
     stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0"
     # full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
     full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
@@ -370,7 +378,8 @@ if __name__ == "__main__":
         # events = dak.from_parquet(f"part000.parquet")
         
         # model_trained_path = f"MVA_training/VBF/dnn/trained_models/{args.model_label}"
-        model_trained_path = f"/work/users/yun79/valerie/fork/copperheadV2/MVA_training/VBF/dnn/trained_models/{args.model_label}"
+        # model_trained_path = f"/work/users/yun79/valerie/fork/copperheadV2/MVA_training/VBF/dnn/trained_models/{args.model_label}"
+        model_trained_path = f"{args.model_path}/{args.model_label}"
         
         with open(f'{model_trained_path}/training_features.pkl', 'rb') as f:
             training_features = pickle.load(f)
@@ -380,12 +389,16 @@ if __name__ == "__main__":
         # ------------------------------------------
         # Initialize sample histograme to save later
         # ------------------------------------------
-        # variations = ["nominal"] # full list of possible variations to loop over
-        wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w)]
-        wgt_variations = wgt_variations[:3] # for testing
+        if "data" in sample_type:
+            wgt_variations = ["wgt_nominal"] 
+        else:
+            wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w)]
+            # wgt_variations = wgt_variations[:3] # for testing
+            wgt_variations = ["wgt_nominal"]  # FIXME
+            
         print(f"wgt_variations: {wgt_variations}")
         syst_variations = []
-        syst_variations = ["nominal"] 
+        syst_variations = ["nominal"] # FIXME
         # syst_variations = ['nominal', 'Absolute_up', 'Absolute_down', f'Absolute_{year}_up',
         variations = []
         for w in wgt_variations:
@@ -410,7 +423,8 @@ if __name__ == "__main__":
         score_hist = score_hist.Var(bins, name=score_name)
         
         
-        score_hist = score_hist.Double()
+        # score_hist = score_hist.Double()
+        score_hist_empty = score_hist.Double()
 
         # loop over configurations and fill the histogram
         loop_args = {
@@ -423,24 +437,14 @@ if __name__ == "__main__":
             dict(zip(loop_args.keys(), values))
             for values in itertools.product(*loop_args.values())
         ]
-        # print(f"loop_args: {loop_args}")
+        print(f"loop_args: {loop_args}")
         
-        
-        # for variation in variations:
-        #     print(f"working on {variation}")
+        score_hist_l = []
+        iteration_counter = 0
+        compute_every_N = 2
         for loop_arg in loop_args:
-            print(f"loop_arg: {loop_arg}")
-            # raise ValueError
+            score_hist = copy.deepcopy(score_hist_empty)
         
-            # features2load = ["event","wgt_nominal", "nBtagLoose", "jj_dEta", "jj_mass"]
-            # features2load = prepare_features(events, features2load) # add variations where applicable
-            # print(f"new features2load: {features2load}")
-        
-            # features2load = list(set(features2load + training_features))
-            # print(f"final features2load: {features2load}")
-            # raise ValueError
-            # region = "h-peak"
-            # category = "vbf"
             region = loop_arg["region"]
             category = loop_arg["channel"]
             syst_variation = loop_arg["syst_variation"]
@@ -459,29 +463,7 @@ if __name__ == "__main__":
             
             
             
-            
             nfolds = 4 #4 
-        
-            # dnn_score_l = []
-        
-            # events = dak.from_parquet(f"part000.parquet")
-            # # events = events[:3]
-    
-            # # print(events.event.compute())
-            # input_arr = ak.concatenate( # Fold 5 event-level variables into a singular array
-            #     [
-            #         events.dimuon_mass[:, np.newaxis],
-            #         events.mu2_pt[:, np.newaxis],
-            #         events.mu1_pt[:, np.newaxis],
-            #     ],
-            #     axis=1,
-            # )
-            # print(input_arr.compute())
-            # dwrap = DNNWrapper("test_model.pt")
-            # dnn_score = dwrap(input_arr)
-            # print(dnn_score) # This is the lazy evaluated dask array! Use this directly for histogram filling
-            # print(dnn_score.compute()) # Eagerly evaluated result
-            # print("Success!")
         
             nan_val = -999.0
             
@@ -491,26 +473,16 @@ if __name__ == "__main__":
                 
                 eval_folds = [(fold+f)%nfolds for f in [3]]
                 print(f" eval_folds: {eval_folds}")
-                # 
-                # eval_filter = ak.zeros_like(events.event, dtype="bool")
-                # # print(f" eval_filter b4: {eval_filter.compute()}")
-                # for eval_fold in eval_folds:
-                #     eval_filter = eval_filter | ((events.event % nfolds) == eval_fold)
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
         
         
-                
-                # print(f" eval_filter after: {eval_filter.compute()}")
-                # print(f" events.event: {events.event.compute()}")
-                # print(f" events.event% nfolds: {events.event.compute()% nfolds}")
-                
+
                 
                 for feat in training_features:
                     input_arr_fold = input_arr_dict[feat] 
                     input_arr_fold = ak.where(eval_filter, events[feat], input_arr_fold)
                     input_arr_dict[feat] = input_arr_fold
         
-                # print(f" input_arr_dict after: {input_arr_dict}")
                 
             # # debug:
             # for feat in training_features:
@@ -532,7 +504,6 @@ if __name__ == "__main__":
                 axis=1
             )
             dnn_score = nan_val*ak.ones_like(events.event)
-            # print(f"dnn_score b4: {dnn_score.compute()}")
             for fold in range(nfolds): 
                 eval_folds = [(fold+f)%nfolds for f in [3]]
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
@@ -558,7 +529,7 @@ if __name__ == "__main__":
             # ---------------------------------------------------
         
                 
-        
+            # dnn_score[:5].visualize(filename='hist.svg') # FIXME
             
             to_fill = {
                 "region" : "h-peak",
@@ -577,20 +548,30 @@ if __name__ == "__main__":
             to_fill_value["val_sumw2"] = "value"
             # to_fill_value["variation"] = variation
             score_hist.fill(**to_fill_value, weight=weight)
-            # score_hist.fill(**to_fill_value)
     
             to_fill_sumw2 = to_fill.copy()
             to_fill_sumw2["val_sumw2"] = "sumw2"
-            # to_fill_sumw2["variation"] = variation
             score_hist.fill(**to_fill_sumw2, weight=weight * weight)
+            
             print(f"score_hist is filled for {sample_type}, {variation} variation!")
+            score_hist_l.append(score_hist)
 
 
         # ---------------------------------------------------
         # done with variation loop, compute hist
         # ---------------------------------------------------
-        score_hist = score_hist.compute()
-        
+        # score_hist = score_hist.compute()
+        print(f"loop_args len: {len(loop_args)}")
+        print(f"score_hist_l len: {len(score_hist_l)}")
+        # score_hist_l = [hist.compute() for hist in score_hist_l]
+        # score_hist_l[0].visualize(filename='hist.svg') # FIXME
+        # score_hist_l[0].visualize(filename='hist_optimized.svg', optimize_graph=True) # FIXME
+        # raise ValueError
+        score_hist_l = dask.compute(score_hist_l)[0]
+        print(f"score_hist_l len after compute: {len(score_hist_l)}")
+        score_hist = reduce(lambda a, b: a + b, score_hist_l)
+        # print(f"score_hist.view(): {score_hist.view()}")
+        print("compute done!")
         
 
         # ---------------------------------------------------
@@ -607,23 +588,23 @@ if __name__ == "__main__":
             print(f"{sample_type} histogram on {hist_save_path}!")
 
         
-        # ---------------------------------------------------
-        # Plot Hist for debugging
-        # ---------------------------------------------------
+        # # ---------------------------------------------------
+        # # Plot Hist for debugging
+        # # ---------------------------------------------------
         
         
-        project_dict = {
-            "region" : "h-peak",
-            "channel" : "vbf",
-            "val_sumw2" : "value",
-            "variation" : "nominal",
-        }
+        # project_dict = {
+        #     "region" : "h-peak",
+        #     "channel" : "vbf",
+        #     "val_sumw2" : "value",
+        #     "variation" : "nominal",
+        # }
         
-        fig, ax = plt.subplots()
-        score_hist[project_dict].project(score_name).plot1d(ax=ax)
-        # ax.set_xscale("log")
-        ax.legend(title="DNN score")
-        plt.savefig(f"{sample_type}_test.png")
+        # fig, ax = plt.subplots()
+        # score_hist[project_dict].project(score_name).plot1d(ax=ax)
+        # # ax.set_xscale("log")
+        # ax.legend(title="DNN score")
+        # plt.savefig(f"{sample_type}_test.png")
     print("Success!")
     end_time = time.time()
     execution_time = end_time - start_time

@@ -6,7 +6,7 @@ import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
 import correctionlib
-from src.corrections.rochester import apply_roccor
+from src.corrections.rochester import apply_roccor, apply_roccorRun3
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
 from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear
@@ -401,11 +401,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
-<<<<<<< HEAD
             "do_geofit" : False, # True # FIXME: Make it false for always
-=======
-            "do_geofit" : True, # True # FIXME: Make it false for always
->>>>>>> ac9d900aee5ab62fae8a6912068d7311b9be6f0f
             "do_beamConstraint": True, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
@@ -457,14 +453,7 @@ class EventProcessor(processor.ProcessorABC):
         self.evaluator = extractor_instance.make_evaluator()
 
         self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]# this exists in Dmitry's code
-<<<<<<< HEAD
 
-        # Initialize PackedSelection
-        self.selection = PackedSelection()
-        self.cutflow = {}
-
-=======
->>>>>>> ac9d900aee5ab62fae8a6912068d7311b9be6f0f
 
         # Initialize PackedSelection
         self.selection = {}
@@ -564,8 +553,8 @@ class EventProcessor(processor.ProcessorABC):
 
 
         do_pu_wgt = True # True
-        if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
-            do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
+        # if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
+        #     do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
 
 
         if do_pu_wgt:
@@ -638,9 +627,13 @@ class EventProcessor(processor.ProcessorABC):
         # # --------------------------------------------------------
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
-            logger.info("doing rochester!")
-            # logger.info(f"df.Muon.pt b4 roccor: {events.Muon.pt.compute()}")
-            apply_roccor(events, self.config["roccor_file"], is_mc)
+            # TODO make more elegant distinction between Run2 and Run3 
+            if "16" in year or "17" in year or "18" in year:# Run2 roccor
+                logger.info("doing Run2 rochester!")
+                apply_roccor(events, self.config["roccor_file"], is_mc)
+            else:
+                logger.info("doing Run3 rochester!")
+                apply_roccorRun3(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
             # logger.info(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
 
@@ -770,7 +763,6 @@ class EventProcessor(processor.ProcessorABC):
 
 
         muons = events.Muon[muon_selection]
-        logger.debug(f"muons pT: {muons.pt[:100].compute()}")
 
         # muons = ak.to_packed(events.Muon[muon_selection])
 
@@ -893,39 +885,24 @@ class EventProcessor(processor.ProcessorABC):
         # event_filter = event_filter & pass_leading_pt
         # test end -----------------------------------------------------------------------
 
-
-        # calculate sum of gen weight b4 skimming off bad events
         if is_mc:
-            # if True:
-            if self.test_mode: # for small files local testing
-                sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-                logger.debug(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
-            else:
-                sumWeights = events.metadata['sumGenWgts']
-                logger.debug(f"sumWeights: {(sumWeights)}")
-        # skim off bad events onto events and other related variables
-        # # original -----------------------------------------------
-        # events = events[event_filter==True]
-        # muons = muons[event_filter==True]
-        # nmuons = nmuons[event_filter==True]
-        # applied_fsr = applied_fsr[event_filter==True]
+            sumWeights = events.metadata['sumGenWgts']
+            logger.debug(f"sumWeights: {(sumWeights)}")
+        # calculate sum of gen weight b4 skimming off bad events
         # if is_mc:
-        #     for variation in pu_wgts.keys():
-        #         pu_wgts[variation] = pu_wgts[variation][event_filter==True]
-        # pass_leading_pt = pass_leading_pt[event_filter==True]
-        # # original end -----------------------------------------------
+        #     # if True:
+        #     if self.test_mode: # for small files local testing
+        #         sumWeights = ak.sum(events.genWeight, axis=0) # for testing
+        #         logger.debug(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
+        #     else:
+        #         sumWeights = events.metadata['sumGenWgts']
+        #         logger.debug(f"sumWeights: {(sumWeights)}")
+        # skim off bad events onto events and other related variables
 
 
-        # to_packed testing -----------------------------------------------
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
-        # event_match = event_match[event_filter==True]
-        # applied_fsr = ak.to_packed(applied_fsr[event_filter==True]) # not sure the purpose of this line
-
-        # logger.info("testJetVector right after event filtering")
-        # testJetVector(events.Jet)
-
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
@@ -1434,26 +1411,16 @@ class EventProcessor(processor.ProcessorABC):
             # we explicitly don't directly add zpt weights to the weights variables
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
             # once kind of screws with the dak awkward array
-            # valerie
-            # zpt_weight_valerie =\
-                     # self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
-            # out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
-            # # dmitry's old zpt
-            # zpt_weight_dmitry =\
-            #         self.evaluator[self.zpt_path](dimuon.pt)
-            # out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
-
-            # # logger.info(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
-            # # logger.info(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
-
-            # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
-            # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
-            logger.info("======================= old zpt weights are commented out =======================")
-            if year == "2016postVFP" or year=="2018": #FIXME: This is temporary, we need to sync the zpt strategy and update it.
-                zpt_weight_mine_nbins100 = getZptWgts_2016postVFP(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
-            else:
-                zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+            logger.info("======================= old zpt method =======================")
+            
+            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+            
+            # logger.info("======================= old zpt weights are commented out =======================")
+            # if year == "2016postVFP" or year=="2018": #FIXME: This is temporary, we need to sync the zpt strategy and update it.
+            #     zpt_weight_mine_nbins100 = getZptWgts_2016postVFP(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+            # else:
+            #     zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
             # logger.info(f"zpt_weight_mine_nbins100: {type(zpt_weight_mine_nbins100)}")
             # logger.info(f"zpt_weight_mine_nbins100: {(zpt_weight_mine_nbins100)}")
 
@@ -1532,12 +1499,13 @@ class EventProcessor(processor.ProcessorABC):
             weight_dict[variation_name] = wgt_variation
 
 
-        # temporarily shut off partial weights start -----------------------------------------
         for weight_type in list(weights.weightStatistics.keys()):
             wgt_name = "separate_wgt_" + weight_type
             # logger.info(f"wgt_name: {wgt_name}")
             weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
-        # temporarily shut off partial weights end -----------------------------------------
+        #     logger.info(f"wgt {wgt_name} sum: {ak.sum(weight_dict[wgt_name]).compute()}")
+        # logger.info(f"wgt_nominal sum: {ak.sum(wgt_nominal).compute()}")
+        # raise ValueError
 
         # logger.info(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # logger.info(f"out_dict.compute 5: {ak.zip(out_dict).to_parquet(save_path)}")
@@ -1829,12 +1797,11 @@ class EventProcessor(processor.ProcessorABC):
 
         jet_pt_cut = (jets.pt > self.config["jet_pt_cut"])
         # add additonal pT cut for the forward regions to reduce jet horn  ----------------------------------------------
-        # source: https://nam04.safelinks.protection.outlook.com/?url=https%3A%2F%2Findico.cern.ch%2Fevent%2F1434807%2Fcontributions%2F6040633%2Fattachments%2F2893077%2F5071932%2FJERC%2520meeting%252009_07.pdf&data=05%7C02%7Cyun79%40purdue.edu%7C3d76cc7f47974533372708dd896f875a%7C4130bd397c53419cb1e58758d6d63f21%7C0%7C0%7C638817834635140303%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=fh11i5iJCGo0EQKYBdw0Df8oaesOX2hCnJ%2FU78o37%2BU%3D&reserved=0
+        # # source: https://nam04.safelinks.protection.outlook.com/?url=https%3A%2F%2Findico.cern.ch%2Fevent%2F1434807%2Fcontributions%2F6040633%2Fattachments%2F2893077%2F5071932%2FJERC%2520meeting%252009_07.pdf&data=05%7C02%7Cyun79%40purdue.edu%7C3d76cc7f47974533372708dd896f875a%7C4130bd397c53419cb1e58758d6d63f21%7C0%7C0%7C638817834635140303%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=fh11i5iJCGo0EQKYBdw0Df8oaesOX2hCnJ%2FU78o37%2BU%3D&reserved=0
         jetHorn_region = abs(jets.eta) > 2.5
-        jetHorn_pt_cut = (jets.pt > 30)
+        jetHorn_pt_cut = (jets.pt > self.config["jet_pt_cut"]) # pt cut on jethorn doesn't change
         jetHorn_puid_cut = (jets.puId >= 7) | (jets.pt >= 50) # tight pu Id
-        # jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
-        jetHorn_cut = jetHorn_pt_cut
+        jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut 
         jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
 
         # add additonal pT cut for the forward regions  ----------------------------------------------
