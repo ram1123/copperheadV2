@@ -28,12 +28,11 @@ import logging
 from modules.utils import logger
 from rich import print
 
-
 def getBadFile(fname):
     try:
-        up_file = uproot.open(fname) 
+        up_file = uproot.open(fname)
         tmp_path = f"/tmp/{uuid.uuid4().hex}.parquet"
-        if "Muon_pt" in up_file["Events"].keys():   
+        if "Muon_pt" in up_file["Events"].keys():
             # apply parquet tests for lzma error
             ak.to_parquet(up_file["Events"]['Muon_pt'].array(),tmp_path)
             ak.to_parquet(up_file["Events"]['Muon_eta'].array(),tmp_path)
@@ -62,13 +61,13 @@ def getBadFile(fname):
 #     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
 #         # Submit each file check to the executor
 #         results = list(executor.map(getBadFile, filelist))
-    
+
 #     bad_file_l = []
 #     for result in results:
 #         if result != "":
 #             # print(result)
 #             bad_file_l.append(result)
-    
+
 #     return bad_file_l
 
 def getBadFileParallelizeDask(filelist):
@@ -274,8 +273,6 @@ if __name__ == "__main__":
     logger.info(f"year: {year}")
 
     if args.fraction is None: # do the normal prestage setup
-        allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_CH_CERN", "T2_US_Vanderbilt", "T2_US_Florida", "T2_IT_Pisa", "T2_DE_RWTH"]
-        
         total_events = 0
         # get dask client
         if args.use_gateway:
@@ -362,9 +359,6 @@ if __name__ == "__main__":
         fnames = ""
 
         for sample_name in tqdm.tqdm(dataset.keys()):
-            print(f"sample_name: {sample_name}")
-            
-            
             is_data =  ("data" in sample_name)
             logger.debug(f"Sample Name: {sample_name}")
             logger.debug(f"dataset[sample_name]: {dataset[sample_name]}")

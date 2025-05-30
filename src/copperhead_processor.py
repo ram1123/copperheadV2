@@ -401,7 +401,7 @@ class EventProcessor(processor.ProcessorABC):
             "do_trigger_match" : True, # False
             "do_roccor" : True,# True
             "do_fsr" : True, # True
-            "do_geofit" : True, # True # FIXME: Make it false for always
+            "do_geofit" : False, # True # FIXME: Make it false for always
             "do_beamConstraint": True, # if True, override do_geofit
             "do_nnlops" : True,
             "do_pdf" : True,
@@ -454,11 +454,14 @@ class EventProcessor(processor.ProcessorABC):
 
         self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]# this exists in Dmitry's code
 
+
         # Initialize PackedSelection
-        self.selection = {} 
+        self.selection = {}
         self.cutflow = {}
-    
+
     def process(self, events: coffea_nanoevent):
+        # ReInitialize PackedSelection: So, that we don't get error of mis-match
+        self.selection = PackedSelection()
         year = self.config["year"]
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
         self.selection = PackedSelection()
@@ -760,8 +763,7 @@ class EventProcessor(processor.ProcessorABC):
 
 
         muons = events.Muon[muon_selection]
-        # logger.debug(f"muons pT: {muons.pt[:100].compute()}")
-        
+
         # muons = ak.to_packed(events.Muon[muon_selection])
 
         # do the separate mu1 leading pt cut that copperheadV1 does instead of trigger matching
@@ -809,8 +811,6 @@ class EventProcessor(processor.ProcessorABC):
         nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0)
         self.selection.add("electron_veto", electron_veto)
-
-
         if self.config["do_HemVeto"]:
             HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
         else:
@@ -830,6 +830,7 @@ class EventProcessor(processor.ProcessorABC):
         )
         event_filter = event_filter & (nmuons == 2)
         self.selection.add("nmuons", nmuons==2)
+
         event_filter = event_filter & (mm_charge == -1)
         self.selection.add("mm_charge", mm_charge==-1)
         event_filter = event_filter & electron_veto
@@ -1802,10 +1803,10 @@ class EventProcessor(processor.ProcessorABC):
         jetHorn_puid_cut = (jets.puId >= 7) | (jets.pt >= 50) # tight pu Id
         jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut 
         jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
-        
+
         # add additonal pT cut for the forward regions  ----------------------------------------------
-        
-        
+
+
         jet_selection = (
             pass_jet_id
             & pass_jet_puid
@@ -2119,16 +2120,13 @@ class EventProcessor(processor.ProcessorABC):
 
         if "RERECO" in year:
             btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5) 
+            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
         else: # UL
             # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
             # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
             btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            
-        
-
 
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)

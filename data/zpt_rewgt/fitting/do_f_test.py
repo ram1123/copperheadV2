@@ -33,7 +33,6 @@ poly_fit_ranges = {
     },
 }
 
-
 # Argument parsing
 parser = argparse.ArgumentParser()
 parser.add_argument("--run_label", type=str, help="Run label", required=True)
