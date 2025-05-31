@@ -18,3 +18,8 @@ log*.txt
 *.tex
 *.pcm
 *.d
+test/
+*.h5
+*.keras
+test*.sh
+test*.py

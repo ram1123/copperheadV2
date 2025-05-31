@@ -88,6 +88,10 @@ def getBadFileParallelizeDask(filelist):
     print(f"bad_file_l: {bad_file_l}")
     return bad_file_l
 
+def removeBadFiles(filelist):
+    bad_filelist = getBadFileParallelizeDask(filelist)
+    clean_filtlist = list(set(filelist) - set(bad_filelist)) # remove bad files from the filelist
+    return clean_filtlist
 
 def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
     print(f"single_dataset_name {single_dataset_name}")
@@ -379,6 +383,12 @@ if __name__ == "__main__":
             else:
                 single_dataset_name = dataset_name
                 fnames = getDatasetRootFiles(single_dataset_name, allowlist_sites)
+
+            if args.skipBadFiles: # if we want to skip bad files
+                logger.info("Skipping bad files")
+                logger.info(f"Number of files before removing bad files: {len(fnames)}")
+                fnames = removeBadFiles(fnames)
+                logger.info(f"Number of files after removing bad files: {len(fnames)}")
 
             # convert to xcachce paths if requested
                 if args.xcache:

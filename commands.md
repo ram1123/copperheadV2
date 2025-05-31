@@ -1,6 +1,45 @@
+# 28 May 2025
 
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l May28_NanoV12 -y 2018 -m 0)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l May28_NanoV12 -y 2018 -m 2)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l May28_NanoV12 -y 2018 -m zpt_val)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l May28_NanoV12 -y 2018 -m zpt_fit0)
+```
 
+# 27 May 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l April19_NanoV12 -y 2018 -m 2)
+```
+
+# 26 May 2025
+
+```bash
+python run_stage2_vbf.py -y 2018 -rl "April19_NanoV12"
+python validation_plotter_unified.py -y 2018 --load "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/" -var "dimuon"
+python validation_plotter_unified.py -y 2018 --load "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/"   -cat "vbf" -reg "h_sidebands"
+python validation_plotter_unified.py -y 2018 --load "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/"   -cat "vbf" -reg "z_peak"
+python validation_plotter_unified.py -y 2018 --load "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/"   -cat "ggh" -reg "z_peak"
+python validation_plotter_unified.py -y 2018 --load "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/"   -cat "ggh" -reg "h_sidebands"
+python validation_plotter_unified.py -y 2018 --load "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/"   -cat "nocat" -reg "h_sidebands"
+python validation_plotter_unified.py -y 2018 --load "/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/2018/f1_0/"   -cat "nocat" -reg "z_peak"
+```
+
+# 21 May 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l April19_NanoV12 -y 2016postVFP -m zpt_fit2 -n 2)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l April19_NanoV12 -y 2018 -m 0)
+```
+
+# 09 May 2025
+
+```bash
 bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv9.yaml -v 9 -l test_test -y 2018 -m 1 -d 1
+<!-- time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l test -y 2018 -m 0) -->
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l April19_NanoV12 -y 2018 -m zpt_fit0)
+```
 
 # 06 May 2025
 

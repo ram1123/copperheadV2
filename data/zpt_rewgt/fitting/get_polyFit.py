@@ -5,6 +5,8 @@ import os
 import argparse
 import yaml
 
+ROOT.gROOT.SetBatch(True)
+ROOT.gStyle.SetOptStat(0)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--label", dest="label", default=None, action="store", help="save path to store stage1 output files")
@@ -26,12 +28,16 @@ global_fit_xmax = 200
 
 def make_combined_function(order0, order, fit_xmin, fit_xmax):
     def func(x, par):
+        f0_xmin = sum(par[i] * fit_xmin**i for i in range(order0 + 1))
+        f1_xmin = sum(par[i + order0 + 1] * fit_xmin**i for i in range(order + 1))
+        f1_xmax = sum(par[i + order0 + 1] * fit_xmax**i for i in range(order + 1))
+
         if x[0] < fit_xmin:
             return sum(par[i] * x[0]**i for i in range(order0 + 1))
         elif x[0] < fit_xmax:
-            return sum(par[i + order0 + 1] * x[0]**i for i in range(order + 1))
+            return sum(par[i + order0 + 1] * x[0]**i for i in range(order + 1))  + (f0_xmin - f1_xmin)
         else:
-            return par[order0 + order + 2]
+            return par[order0 + order + 2] + (f0_xmin - f1_xmin) + (f1_xmax - par[order0 + order + 2])
     return func
 
 for year in years:
@@ -113,9 +119,10 @@ for year in years:
 
             # Perform the fit
             print("Fitting total_fit_func")
-            _ = hist_SF.Fit(total_fit_func, "L I S R Q", xmin=fit_xmin0, xmax=global_fit_xmax)
-            _ = hist_SF.Fit(total_fit_func, "L I S R Q", xmin=fit_xmin0, xmax=global_fit_xmax)
-            fit_results = hist_SF.Fit(total_fit_func, "L S R", xmin=0, xmax=global_fit_xmax)
+            _ = hist_SF.Fit(total_fit_func, "I S", xmin=fit_xmin0, xmax=global_fit_xmax)
+            _ = hist_SF.Fit(total_fit_func, "I S", xmin=fit_xmin0, xmax=global_fit_xmax)
+            # _ = hist_SF.Fit(total_fit_func, "L I S E F", xmin=fit_xmin0, xmax=global_fit_xmax)
+            fit_results = hist_SF.Fit(total_fit_func, "L I S", xmin=0, xmax=global_fit_xmax)
 
             # Calculate chi2 and p-value
             chi2 = fit_func1.GetChisquare()
@@ -130,13 +137,25 @@ for year in years:
             hist_SF.SetTitle(f"{order} order poly, njet {njet}, {target_nbins} bins SF")
             hist_SF.SetLineColor(ROOT.kBlue)
             if year == "2018":
-                if njet == 0: minimum, maximum = 0.5, 2.5
-                if njet == 1: minimum, maximum = 0.9, 1.5
-                if njet == 2: minimum, maximum = 0.8, 1.2
+                if njet == 0: minimum, maximum = 0.5, 3.5
+                if njet == 1: minimum, maximum = 0.85, 1.3
+                if njet == 2: minimum, maximum = 0.75, 1.10
+            elif year == "2017":
+                if njet == 0: minimum, maximum = 0.1, 0.8
+                if njet == 1: minimum, maximum = 0.3, 0.45
+                if njet == 2: minimum, maximum = 0.3, 0.5
+            elif year == "2016preVFP":
+                if njet == 0: minimum, maximum = 0.5, 4.5
+                if njet == 1: minimum, maximum = 0.3, 1.0
+                if njet == 2: minimum, maximum = 0.6, 1.6
+            elif year == "2016postVFP":
+                if njet == 0: minimum, maximum = 0.3, 2.5
+                if njet == 1: minimum, maximum = 0.3, 1.0
+                if njet == 2: minimum, maximum = 0.3, 0.8
             else:
-                if njet == 0: minimum, maximum = 0.9, 2.5
-                if njet == 1: minimum, maximum = 0.9, 1.5
-                if njet == 2: minimum, maximum = 0.9, 1.2
+                if njet == 0: minimum, maximum = 0.1, 2.5
+                if njet == 1: minimum, maximum = 0.1, 2.5
+                if njet == 2: minimum, maximum = 0.1, 2.2
             hist_SF.SetMinimum(minimum)
             hist_SF.SetMaximum(maximum)
             hist_SF.Draw()
@@ -151,7 +170,12 @@ for year in years:
 
 
             # Add a legend
-            legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            if year == "2018":
+                if njet == 0: legend = ROOT.TLegend(0.0, 0.5, 0.4, 0.7)
+                if njet == 1: legend = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+                if njet == 2: legend = ROOT.TLegend(0.7, 0.2, 0.9, 0.4)
+            else:
+                legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
             legend.AddEntry(hist_SF, "hist_SF", "l")
             # legend.AddEntry(fit_func1, "poly fit", "l")
             # legend.AddEntry(horizontal_line, "horizontal line fit", "l")
@@ -171,6 +195,8 @@ for year in years:
             ROOT.gPad.SetPad(0, 0, 1, 0.4)
             ROOT.gPad.SetGrid()
             pull_hist = ROOT.TH1D("pull_hist", "Pull Distribution", hist_SF.GetNbinsX(), hist_SF.GetXaxis().GetXmin(), hist_SF.GetXaxis().GetXmax())
+            print("Number of bins in pull histogram: %d", hist_SF.GetNbinsX())
+            print("Number of bins in pull histogram: %d", pull_hist.GetNbinsX())
             for i in range(1, hist_SF.GetNbinsX() + 1):
                 data = hist_SF.GetBinContent(i)
                 error = hist_SF.GetBinError(i)
@@ -188,6 +214,8 @@ for year in years:
             pull_hist.SetTitle("Pull Distribution;X-axis;Pull")
             pull_hist.Draw("P")
             canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit_tot.pdf")
+            canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit_tot.png")
+            canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit_tot.root")
 
             # ---------------------------------------------------
             # save the fit coeffs
