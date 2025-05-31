@@ -19,8 +19,8 @@ jet_eta_cut:
   2022preEE: 4.7
   2022postEE: 4.7
 jet_id:
-  2016preVFP: loose
-  2016postVFP: loose
+  2016preVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
+  2016postVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
   '2017': tight
   '2018': tight
   2016_RERECO: loose
@@ -55,7 +55,7 @@ btag_loose_wp: # for DeepCSV, DeepJet is different
   '2018': 0.1208 # central sources for UL https://btv-wiki.docs.cern.ch/ScaleFactors/UL2018/#ak4-b-tagging
   2016_RERECO: 0.2217  #central sources for RERECO https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
   '2017_RERECO': 0.1522
-  '2018_RERECO': 0.1241 
+  '2018_RERECO': 0.1241
   2022preEE: 0.12
   2022postEE: 0.12
 btag_medium_wp: # for DeepCSV, DeepJet is different
@@ -78,3 +78,23 @@ softjet_dr2:
   '2018_RERECO': 0.16
   2022preEE: 0.16
   2022postEE: 0.16
+do_HemVeto:
+  2016preVFP: false
+  2016postVFP: false
+  '2017': false
+  '2018': true
+  2016_RERECO: false
+  '2017_RERECO': false
+  '2018_RERECO': false
+  2022preEE: false
+  2022postEE: false
+HemVeto_ratio: # ratio of HemVeto applicable run / total nevents for 2018UL
+  2016preVFP: 0.0
+  2016postVFP: 0.0
+  '2017': 0.0
+  '2018': 0.633396491
+  2016_RERECO: 0.0
+  '2017_RERECO': 0.0
+  '2018_RERECO': 0.0
+  2022preEE: 0.0
+  2022postEE: 0.0

@@ -1,6 +1,6 @@
 #!/bin/bash
 category="vbf"
-label="Dec30_vbfCat_HingeLoss"
+label="Jan07_test"
 
-python dnn_preprocessor.py --label $label  -cat $category
+# python dnn_preprocessor.py --label $label  -cat $category
 python dnn_train.py --label $label 

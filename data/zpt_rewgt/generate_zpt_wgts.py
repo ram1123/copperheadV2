@@ -107,11 +107,6 @@ if __name__ == "__main__":
                163.33333333, 186.66666667, 200.        
         ])
     
-    dimuon_pt_dict = {
-        # "0njet" : {
-        #     "dimuon_pt": [],
-        # },
-    }
     # compute the events to local memory
     njet_field = "njets_nominal"
     value_field = "dimuon_pt"
@@ -139,8 +134,8 @@ if __name__ == "__main__":
         SF_hists.append(SF_hist)
 
         # debugging print
-        # print(f"njet {njet} data_hist: {ak.to_numpy(data_hist)}")
-        # print(f"njet {njet} dy_hist: {ak.to_numpy(dy_hist)}")
+        print(f"njet {njet} data_hist: {ak.to_numpy(data_hist)}")
+        print(f"njet {njet} dy_hist: {ak.to_numpy(dy_hist)}")
         print(f"njet {njet} SF_hist: {ak.to_numpy(SF_hist)}")
         # print(f"njet {njet} data_hist: {ak.to_numpy(data_hist)}")
         # print(f"njet {njet} dy_hist: {ak.to_numpy(dy_hist)}")

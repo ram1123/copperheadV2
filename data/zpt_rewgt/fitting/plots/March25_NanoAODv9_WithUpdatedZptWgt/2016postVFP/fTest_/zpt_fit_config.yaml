@@ -1,0 +1,16 @@
+2016postVFP:
+  njet0:
+    order: 4
+    fit_range:
+    - 10
+    - 100
+  njet1:
+    order: 4
+    fit_range:
+    - 10
+    - 100
+  njet2:
+    order: 4
+    fit_range:
+    - 10
+    - 100

@@ -7,10 +7,10 @@ hlt:
   - IsoTkMu24
   '2017':
   - IsoMu27
-  - IsoMu24
+  # - IsoMu24
   '2018':
   - IsoMu24
-  - IsoMu27
+  # - IsoMu27
   2016_RERECO:
   - IsoMu24
   - IsoTkMu24

@@ -1302,7 +1302,8 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
     I don't think jets need to be sorted after JEC for this to work, however
     """
     # btag = pd.DataFrame(index=bjet_sel_mask.index)
-    btag_jet_selection = abs(jets.eta) < 2.4 # AN says 2.5 on line 624
+    # btag_jet_selection = abs(jets.eta) < 2.4 # AN says 2.5 on line 624
+    btag_jet_selection = abs(jets.eta) < 2.5 # AN says 2.5 on line 624
     jets = ak.to_packed(jets[btag_jet_selection])
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
     
@@ -1608,16 +1609,9 @@ def get_jetpuid_weights(year, jets, config):
     # no need to re-weight jets with pt>= 50
     jets = jets[jets.pt < 50]
 
-    # if "2017" in year: # we apply the old method, which takes into account the leakage areas (which I am not certain the official code supports)
-    #     pt_name = "pt"
-    #     puId = jets.puId
-    #     jetpuid_weight = get_jetpuid_weights_old(
-    #         evaluator, year, jets, pt_name,
-    #         jet_puid_wp, pass_jet_puid
-    #     )
-    #     return jetpuid_weight
-    # else:
+    
     fname = config["jmar_sf_file"]
+    print(f"fname: {fname}")
     puid_evaluator = correctionlib.CorrectionSet.from_file(fname)
     wp_converter = {
         "loose" : "L",

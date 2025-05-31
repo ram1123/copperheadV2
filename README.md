@@ -4,7 +4,7 @@ setup:
 ```bash
 git clone https://github.com/green-cabbage/copperheadV2.git
 cd copperheadV2
-conda env create -f conda_envs/env.yml 
+conda env create -f conda_envs/env.yml
 ```
 If accessing datasets via `xRootD` will be needed:
 ```bash
@@ -20,13 +20,13 @@ For VBF-category, our temporary implementation is to activate coffea_latest env 
 
 | Task | Directory Location of Relevant Code |
 | ------------- | ------------- |
-|  Event by event dimuon mass calibration   | ./lib/ebeMassResCalibration/ |  
-|  Zpt weight calculation   | ./lib/ZptWgtCalculation/ |  
-|  ggH production channel MVA training | ./lib/MVA_training/ggH/ |  
-|  VBF production channel MVA training | ./lib/MVA_training/VBF/ |  
-|  General corrections (stage1) | ./lib/corrections/ |  
-|  Roofit fitting (stage3) | ./lib/fit_models/ |  
-|  Parameters (metadata) | ./parameters/*.yaml|  
+|  Event by event dimuon mass calibration   | ./lib/ebeMassResCalibration/ |
+|  Zpt weight calculation   | ./lib/ZptWgtCalculation/ |
+|  ggH production channel MVA training | ./lib/MVA_training/ggH/ |
+|  VBF production channel MVA training | ./lib/MVA_training/VBF/ |
+|  General corrections (stage1) | ./lib/corrections/ |
+|  Roofit fitting (stage3) | ./lib/fit_models/ |
+|  Parameters (metadata) | ./parameters/*.yaml|
 
 
 
@@ -80,7 +80,7 @@ For VBF-category, our temporary implementation is to activate coffea_latest env 
 | Muon ID SF  | 2024 |  | |
 |   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
 |   | 2022postEE | data/muon_sf/year2022postEE/ScaleFactors_Muon_Z_ID_ISO_2022_EE_schemaV2.json  | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022  |
-|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022_EE/2022_Z | 
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022_EE/2022_Z |
 |   | 2022preEE | data/muon_sf/year2022preEE/ScaleFactors_Muon_Z_ID_ISO_2022_schemaV2.json  | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022  |
 |   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022/2022_Z | |   | 2018  | data/muon_sf/year2018/MuonSF_Run2018_UL_ID.root | |
 |   | 2017 | data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root  | |
@@ -89,9 +89,9 @@ For VBF-category, our temporary implementation is to activate coffea_latest env 
 | Muon ISO SF  | 2024 |  | |
 |   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
 |   | 2022postEE | data/muon_sf/year2022postEE/ScaleFactors_Muon_Z_ID_ISO_2022_EE_schemaV2.json  | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022  |
-|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022_EE/2022_Z | 
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022_EE/2022_Z |
 |   | 2022preEE | data/muon_sf/year2022preEE/ScaleFactors_Muon_Z_ID_ISO_2022_schemaV2.json  | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022  |
-|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022/2022_Z | 
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022/2022_Z |
 |   | 2018  | data/muon_sf/year2018/MuonSF_Run2018_UL_ISO.root | |
 |   | 2017 | data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root  | |
 |   | 2016postVFP | data/muon_sf/year2016/MuonSF_Run2016_UL_ISO.root  | |
@@ -99,9 +99,9 @@ For VBF-category, our temporary implementation is to activate coffea_latest env 
 | Muon Trig SF  | 2024 |  | |
 |   | 2023 |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun3_2023 |
 |   | 2022postEE |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
-|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022_EE/2022_Z/HLT/json | 
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022_EE/2022_Z/HLT/json |
 |   | 2022preEE |   | https://twiki.cern.ch/twiki/bin/view/CMS/MuonRun32022 |
-|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022/2022_Z/HLT/json | 
+|   |   |  | https://gitlab.cern.ch/cms-muonPOG/muonefficiencies/-/tree/master/Run3/2022/2022_Z/HLT/json |
 |   | 2018  | data/muon_sf/mu2018/EfficienciesStudies_2018_trigger_EfficienciesAndSF_2018Data_BeforeMuonHLTUpdate.root | |
 |   | 2017 | data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root | |
 |   | 2016postVFP | data/muon_sf/mu2016/EfficienciesStudies_2016_trigger_EfficienciesAndSF_RunGtoH.root  | |

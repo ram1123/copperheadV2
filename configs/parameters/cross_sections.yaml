@@ -1,8 +1,12 @@
 cross_sections:
   test: 6200.0
-  dy_M-50: 6195.8
+  dy_M-50: 6077.22 # precision: NNLO source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
+  dy_M-50_MiNNLO: 1976
+  dy_M-50_MiNNLO_V2: 2002
   dy_M-50_nocut: 6450.0
-  dy_M-100To200: 247.9
+  # dy_M-100To200: 247.9 # precision: NLO source: GenAnalyzer tool at https://github.com/green-cabbage/genproductions
+  dy_M-100To200: 233.8592627 # precision: NNLO
+  dy_M-100To200_MiNNLO: 77.95
   dy_VBF_filter: 2.01  # subjet to change
   dy_VBF_filter_customJMEoff: 2.01 # subjet to change
   dy_VBF_filter_fromGenSim: 2.01 # subjet to change
@@ -40,30 +44,30 @@ cross_sections:
     '2018': 0.0789
   ewk_m50: 3.998
   st_top: 136.02
-  st_t_top: 3.4
-  st_t_antitop: 80.95
-  # st_tw_top: 32.51
-  # st_tw_antitop: 32.45
-  st_tw_top: 35.85 # rereco
-  st_tw_antitop: 35.85 # rereco
-  ttjets_dl: 86.65
-  ttjets_sl: 358.57
-  # ww_2l2nu: 11.09
-  # wz_3lnu: 5.22
-  # wz_2l2q: 6.45
-  # wz_1l1nu2q: 9.12
-  # zz: 12.17
-  ww_2l2nu: 12.178 # rereco
-  wz_3lnu: 4.102 # rereco
-  wz_2l2q: 5.606 # rereco
-  wz_1l1nu2q: 7.031227 # rereco
-  zz: 0.5664 # rereco
+  st_tw_top: 32.45 # UL #FIXME
+  st_tw_antitop: 32.45 # UL #FIXME
+  # st_tw_top: 35.85 # rereco
+  # st_tw_antitop: 35.85 # rereco
+  st_t_top: 136.02 #FIXME source: AN-19-124 table 2.8
+  st_t_antitop: 80.95 #FIXME source: AN-19-124 table 2.8
+  ttjets_dl: 86.65 # UL
+  ttjets_sl: 358.57 # UL
+  ww_2l2nu: 11.09 # UL
+  wz_3lnu: 5.22 # UL
+  wz_2l2q: 6.45 # UL
+  wz_1l1nu2q: 9.12 # UL
+  zz: 12.17 # UL #FIXME
+  # ww_2l2nu: 12.178 # rereco
+  # wz_3lnu: 4.102 # rereco
+  # wz_2l2q: 5.606 # rereco
+  # wz_1l1nu2q: 7.031227 # rereco
+  # zz: 0.5664 # rereco
   ttw: 0.2001
   ttz: 0.2529
-  www: 0.2086
-  wwz: 0.1651
-  wzz: 0.05565
-  zzz: 0.01398
+  www: 0.2086 # source: AN-19-124 table 2.8
+  wwz: 0.1651 # source: AN-19-124 table 2.8
+  wzz: 0.05565 # source: AN-19-124 table 2.8
+  zzz: 0.01398 # source: AN-19-124 table 2.8
   # ggh_powheg: 0.01057
   ggh_powhegPS: 0.01057
   ggh_amcPS: 0.01057
@@ -74,14 +78,14 @@ cross_sections:
   vbf: 0.0008210722
   vbf_sync: 0.0008210722
   # vbf_powheg: 0.0008210722
-  vbf_powheg_herwig: 0.0008210722
-  vbf_powheg_dipole: 0.0008210722
-  vbf_powhegPS: 0.0008210722
-  vbf_amc_herwig: 0.0008210722
-  vbf_amcPS_TuneCP5down: 0.0008210722
-  vbf_amcPS_TuneCP5up: 0.0008210722
-  vbf_amcPS: 0.0008210722
-  vbf_amc: 0.0008210722
+  vbf_powheg_herwig: 0.0008228
+  vbf_powheg_dipole: 0.0008228
+  vbf_powhegPS: 0.0008228
+  vbf_amc_herwig: 0.0008228
+  vbf_amcPS_TuneCP5down: 0.0008228
+  vbf_amcPS_TuneCP5up: 0.0008228
+  vbf_amcPS: 0.0008228
+  vbf_amc: 0.0008228
   ggh_powhegPS_m120: 0.012652906
   ggh_amcPS_m120: 0.012652906
   vbf_powhegPS_m120: 0.0009534505

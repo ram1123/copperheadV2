@@ -2,12 +2,12 @@
 import awkward as ak
 from typing import TypeVar, Tuple
 ak_array = TypeVar('ak_array')
-coffea_nanoevent = TypeVar('coffea_nanoevent') 
+coffea_nanoevent = TypeVar('coffea_nanoevent')
 
 
 def apply_geofit(
-    events: coffea_nanoevent, 
-    year: str, 
+    events: coffea_nanoevent,
+    year: str,
     opposite_fsr_mask: ak_array
     ):
     """
@@ -21,7 +21,7 @@ def apply_geofit(
     # print(f"apply_geofit ak.sum(opposite_fsr_mask) : {ak.sum(opposite_fsr_mask)}")
     mask = opposite_fsr_mask & (abs(d0_BS_charge) < 999999.0)
     # print(f"apply_geofit ak.sum(mask) : {ak.sum(mask)}")
-    print(f"geofit year: {year}")
+    # print(f"geofit year: {year}")
     pt = events.Muon.pt
     eta = events.Muon.eta
 
@@ -46,7 +46,7 @@ def apply_geofit(
         value = factors[year][eta_i] * d0_BS_charge * pt * pt / 10000.0
         # print(f"apply_geofit value: {value}")
         pt_corr = ak.where(cuts[eta_i], value, pt_corr) # NOTE: pt_corr == pt_roch - pt_gen
-        
-    
+
+
     events["Muon", "pt_gf"] = ak.where(mask, pt - pt_corr, pt)
     return mask, pt_corr # return these values for debugging purposes

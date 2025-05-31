@@ -22,13 +22,13 @@ res_calib_path:
   '2018':
     MC: data/res_calib/res_calib_MC_2018.root
     Data: data/res_calib/res_calib_Data_2018.root
-  2016_RERECO: 
+  2016_RERECO:
     MC: data/res_calib/res_calib_MC_2016.root
     Data: data/res_calib/res_calib_Data_2016.root
-  '2017_RERECO': 
+  '2017_RERECO':
     MC: data/res_calib/res_calib_MC_2017.root
     Data: data/res_calib/res_calib_Data_2017.root
-  '2018_RERECO': 
+  '2018_RERECO':
     MC: data/res_calib/res_calib_MC_2018.root
     Data: data/res_calib/res_calib_Data_2018.root
   2022preEE:
@@ -37,3 +37,21 @@ res_calib_path:
   2022postEE:
     MC: data/res_calib/res_calib_MC_2018.root
     Data: data/res_calib/res_calib_Data_2018.root
+BS_res_calib_path:
+  2016preVFP:
+    MC: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12_MC.json
+    Data: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12.json
+  2016postVFP:
+    MC: data/res_calib/res_calib_BS_correction_2016postVFP_nanoAODv12_MC.json
+    Data: data/res_calib/res_calib_BS_correction_2016postVFP_nanoAODv12.json
+  '2017':
+    MC: data/res_calib/res_calib_BS_correction_2017_nanoAODv12_MC.json
+    Data: data/res_calib/res_calib_BS_correction_2017_nanoAODv12.json
+  '2018':
+    MC: data/res_calib/res_calib_BS_correction_2018_nanoAODv12_MC.json
+    Data: data/res_calib/res_calib_BS_correction_2018_nanoAODv12.json
+  2016_RERECO: dummy
+  '2017_RERECO': dummy
+  '2018_RERECO': dummy
+  2022preEE: dummy
+  2022postEE: dummy
