@@ -4,7 +4,13 @@ from omegaconf import OmegaConf
 import os
 import argparse
 import yaml
+import array
+import numpy as np
 
+from bin_definitions import define_custom_binning
+
+ROOT.gROOT.SetBatch(True)
+ROOT.gStyle.SetOptStat(0)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--label", dest="label", default=None, action="store", help="save path to store stage1 output files")
@@ -26,12 +32,17 @@ global_fit_xmax = 200
 
 def make_combined_function(order0, order, fit_xmin, fit_xmax):
     def func(x, par):
-        if x[0] < fit_xmin:
+        f0_xmin = sum(par[i] * fit_xmin**i for i in range(order0 + 1))
+        f1_xmin = sum(par[i + order0 + 1] * fit_xmin**i for i in range(order + 1))
+        f1_xmax = sum(par[i + order0 + 1] * fit_xmax**i for i in range(order + 1))
+
+
+        if x[0] <= fit_xmin:
             return sum(par[i] * x[0]**i for i in range(order0 + 1))
         elif x[0] < fit_xmax:
-            return sum(par[i + order0 + 1] * x[0]**i for i in range(order + 1))
+            return sum(par[i + order0 + 1] * x[0]**i for i in range(order + 1))  + (f0_xmin - f1_xmin)
         else:
-            return par[order0 + order + 2]
+            return par[order0 + order + 2] + (f0_xmin - f1_xmin) + (f1_xmax - par[order0 + order + 2])
     return func
 
 for year in years:
@@ -62,11 +73,17 @@ for year in years:
         for target_nbins in [args.nbins]:
             hist_data = workspace.obj("hist_data").Clone("hist_data_clone")
             hist_dy = workspace.obj("hist_dy").Clone("hist_dy_clone")
-            orig_nbins = hist_data.GetNbinsX()
-            rebin_coeff = int(orig_nbins / int(target_nbins))
-            print(f"rebin_coeff: {rebin_coeff}")
-            hist_data = hist_data.Rebin(rebin_coeff, "rebinned hist_data")
-            hist_dy = hist_dy.Rebin(rebin_coeff, "rebinned hist_dy")
+
+            # Define custom bin edges: adaptive binning with finer bins near zero and coarser bins at higher pt
+            edges = define_custom_binning()
+
+            nbins_new = len(edges) - 1
+            xbins = array.array('d', edges)
+
+            print(f"Using custom binning with {nbins_new} bins: {edges}")
+
+            hist_data = hist_data.Rebin(nbins_new, f"rebinned_hist_data_{nbins_new}", xbins)
+            hist_dy   = hist_dy.Rebin(nbins_new, f"rebinned_hist_dy_{nbins_new}", xbins)
 
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
@@ -75,10 +92,10 @@ for year in years:
             # polynomial_expr of order 2
             polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(order0 + 1)])
             # Define the TF1 function with the generated expression
-            fit_func0 = ROOT.TF1(f"poly{order0}", polynomial_expr, fit_xmin0, fit_xmax0)
-            _ = hist_SF.Fit(fit_func0, "L S Q", xmin=fit_xmin0, xmax=fit_xmax0)
-            _ = hist_SF.Fit(fit_func0, "L S Q", xmin=fit_xmin0, xmax=fit_xmax0)
-            fit_results = hist_SF.Fit(fit_func0, "L S R", xmin=fit_xmin0, xmax=fit_xmax0)
+            fit_func0 = ROOT.TF1(f"poly{order0}", polynomial_expr, 0, fit_xmax0)
+            _ = hist_SF.Fit(fit_func0, "L S Q", xmin=0, xmax=fit_xmax0)
+            _ = hist_SF.Fit(fit_func0, "L S Q", xmin=0, xmax=fit_xmax0)
+            fit_results = hist_SF.Fit(fit_func0, "L S R", xmin=0, xmax=fit_xmax0)
 
             # Fit with the lower-order polynomial
             polynomial_expr = " + ".join([f"[{i}]*x**{i}" for i in range(order + 1)])
@@ -86,11 +103,11 @@ for year in years:
             fit_func1 = ROOT.TF1(f"poly{order}", polynomial_expr, fit_xmin, fit_xmax)
             _ = hist_SF.Fit(fit_func1, "L I S Q", xmin=fit_xmin, xmax=fit_xmax)
             _ = hist_SF.Fit(fit_func1, "L I S Q", xmin=fit_xmin, xmax=fit_xmax)
-            fit_results = hist_SF.Fit(fit_func1, "L I S R+", xmin=fit_xmin, xmax=fit_xmax)
+            fit_results = hist_SF.Fit(fit_func1, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
 
             # Fit straight line beyond fit_xmax
             horizontal_line = ROOT.TF1("horizontal_line", "[0]", fit_xmax, global_fit_xmax)
-            fit_results = hist_SF.Fit(horizontal_line, "L I S R+", xmin=fit_xmax, xmax=global_fit_xmax)
+            fit_results = hist_SF.Fit(horizontal_line, "L I S R", xmin=fit_xmax, xmax=global_fit_xmax)
 
             # Reference: https://root-forum.cern.ch/t/smooth-fit-the-graph-with-three-separated-fit-function/7556/10?u=ramkrishna
             total_npar = (order0 + 1) + (order + 1) + 1  # low + mid + high
@@ -113,9 +130,10 @@ for year in years:
 
             # Perform the fit
             print("Fitting total_fit_func")
-            _ = hist_SF.Fit(total_fit_func, "L I S R Q", xmin=fit_xmin0, xmax=global_fit_xmax)
-            _ = hist_SF.Fit(total_fit_func, "L I S R Q", xmin=fit_xmin0, xmax=global_fit_xmax)
-            fit_results = hist_SF.Fit(total_fit_func, "L S R", xmin=0, xmax=global_fit_xmax)
+            _ = hist_SF.Fit(total_fit_func, "I S R", xmin=0.0, xmax=global_fit_xmax)
+            _ = hist_SF.Fit(total_fit_func, "I S R", xmin=0.0, xmax=global_fit_xmax)
+            # _ = hist_SF.Fit(total_fit_func, "L I S E F", xmin=0.0, xmax=global_fit_xmax)
+            fit_results = hist_SF.Fit(total_fit_func, "L I S R", xmin=0.0, xmax=global_fit_xmax)
 
             # Calculate chi2 and p-value
             chi2 = fit_func1.GetChisquare()
@@ -130,13 +148,25 @@ for year in years:
             hist_SF.SetTitle(f"{order} order poly, njet {njet}, {target_nbins} bins SF")
             hist_SF.SetLineColor(ROOT.kBlue)
             if year == "2018":
-                if njet == 0: minimum, maximum = 0.5, 2.5
-                if njet == 1: minimum, maximum = 0.9, 1.5
-                if njet == 2: minimum, maximum = 0.8, 1.2
+                if njet == 0: minimum, maximum = 0.9, 3.5
+                if njet == 1: minimum, maximum = 0.85, 1.3
+                if njet == 2: minimum, maximum = 0.75, 1.10
+            elif year == "2017":
+                if njet == 0: minimum, maximum = 0.1, 0.8
+                if njet == 1: minimum, maximum = 0.3, 0.45
+                if njet == 2: minimum, maximum = 0.3, 0.5
+            elif year == "2016preVFP":
+                if njet == 0: minimum, maximum = 0.5, 4.5
+                if njet == 1: minimum, maximum = 0.3, 1.0
+                if njet == 2: minimum, maximum = 0.6, 1.6
+            elif year == "2016postVFP":
+                if njet == 0: minimum, maximum = 0.3, 2.5
+                if njet == 1: minimum, maximum = 0.3, 1.0
+                if njet == 2: minimum, maximum = 0.3, 0.8
             else:
-                if njet == 0: minimum, maximum = 0.9, 2.5
-                if njet == 1: minimum, maximum = 0.9, 1.5
-                if njet == 2: minimum, maximum = 0.9, 1.2
+                if njet == 0: minimum, maximum = 0.1, 2.5
+                if njet == 1: minimum, maximum = 0.1, 2.5
+                if njet == 2: minimum, maximum = 0.1, 2.2
             hist_SF.SetMinimum(minimum)
             hist_SF.SetMaximum(maximum)
             hist_SF.Draw()
@@ -151,7 +181,12 @@ for year in years:
 
 
             # Add a legend
-            legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            if year == "2018":
+                if njet == 0: legend = ROOT.TLegend(0.0, 0.5, 0.4, 0.7)
+                if njet == 1: legend = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+                if njet == 2: legend = ROOT.TLegend(0.7, 0.2, 0.9, 0.4)
+            else:
+                legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
             legend.AddEntry(hist_SF, "hist_SF", "l")
             # legend.AddEntry(fit_func1, "poly fit", "l")
             # legend.AddEntry(horizontal_line, "horizontal line fit", "l")
@@ -171,6 +206,8 @@ for year in years:
             ROOT.gPad.SetPad(0, 0, 1, 0.4)
             ROOT.gPad.SetGrid()
             pull_hist = ROOT.TH1D("pull_hist", "Pull Distribution", hist_SF.GetNbinsX(), hist_SF.GetXaxis().GetXmin(), hist_SF.GetXaxis().GetXmax())
+            print("Number of bins in pull histogram: %d", hist_SF.GetNbinsX())
+            print("Number of bins in pull histogram: %d", pull_hist.GetNbinsX())
             for i in range(1, hist_SF.GetNbinsX() + 1):
                 data = hist_SF.GetBinContent(i)
                 error = hist_SF.GetBinError(i)
@@ -188,6 +225,10 @@ for year in years:
             pull_hist.SetTitle("Pull Distribution;X-axis;Pull")
             pull_hist.Draw("P")
             canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit_tot.pdf")
+            canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit_tot.png")
+            canvas.SaveAs(f"{save_path}/{year}_njet{njet}_{target_nbins}_order{order}_goodnessOfFit_tot.root")
+
+            print(f"Using custom binning with {nbins_new} bins: {edges}")
 
             # ---------------------------------------------------
             # save the fit coeffs
@@ -211,7 +252,7 @@ for year in years:
         out_dict_by_year[f"njet_{njet}"] = out_dict_by_nbin
 
     save_dict[year] = out_dict_by_year
-    yaml_path = "./zpt_rewgt_params_minnlo.yaml"
+    yaml_path = "./zpt_rewgt_params_minnlo_may31_test.yaml"
     if os.path.isfile(yaml_path):
         config = OmegaConf.load(yaml_path)
         config = OmegaConf.merge(config, save_dict)

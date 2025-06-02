@@ -115,8 +115,8 @@ if __name__ == "__main__":
         print(f"base path dy: {base_path}/dy*/*/*.parquet")
         data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
         # dy_events = dak.from_parquet(f"{base_path}/dy_M-50/*/*.parquet")
-        # dy_events = dak.from_parquet(f"{base_path}/dy*MiNNLO/*/*.parquet") # need to include dy_M-50 and dy_M100to200
-        dy_events = dak.from_parquet(f"{base_path}/dy*/*/*.parquet") # need to include dy_M-50 and dy_M100to200
+        dy_events = dak.from_parquet(f"{base_path}/dy*MiNNLO/*/*.parquet") # need to include dy_M-50 and dy_M100to200
+        # dy_events = dak.from_parquet(f"{base_path}/dy*/*/*.parquet") # need to include dy_M-50 and dy_M100to200
 
         # apply z-peak region filter and nothing else
         data_events = filterRegion(data_events, region="z-peak")
@@ -149,7 +149,7 @@ if __name__ == "__main__":
             # binning = config["rewgt_binning"]
             # # Convert the list of bin edges to a C-style array
             # # binning_array = np.array(binning)
-            binning_array = np.linspace(0,200, 501)
+            binning_array = np.linspace(0,200, 2001) # 2000 bins from 0 to 200 GeV
 
             # Step 2: Create the histogram with variable bin widths
             hist_data = ROOT.TH1F("hist_data", "Data", len(binning_array) - 1, binning_array)

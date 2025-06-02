@@ -23,7 +23,6 @@ from coffea.nanoevents.methods import vector
 import sys
 from src.corrections.custom_jec import ApplyJetCorrections
 from omegaconf import OmegaConf
-from coffea.analysis_tools import PackedSelection
 
 import logging
 from modules.utils import logger
@@ -99,7 +98,7 @@ def getZptWgts(dimuon_pt, njets, nbins, year, config_path):
     return zpt_wgt
 
 
-def getZptWgts_2016postVFP(dimuon_pt, njets, nbins, year, config_path):
+def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
     # config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
     # config_path = config["new_zpt_wgt"]
     logger.info(f"zpt config file: {config_path}")
@@ -135,6 +134,63 @@ def getZptWgts_2016postVFP(dimuon_pt, njets, nbins, year, config_path):
             # logger.info(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
             # logger.info(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
         poly_fit_cutoff_max = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["x_max"]
+        zpt_wgt_by_jet = ak.where(((poly_fit_cutoff_min < dimuon_pt) & (poly_fit_cutoff_max >= dimuon_pt)), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
+
+        # horizontal line beyond poly_fit_cutoff_max
+        coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"horizontal_c0"]
+        zpt_wgt_by_jet_horizontal = ak.ones_like(dimuon_pt) * coeff
+        zpt_wgt_by_jet = ak.where((poly_fit_cutoff_max < dimuon_pt), zpt_wgt_by_jet_horizontal, zpt_wgt_by_jet)
+        # logger.info(f"zpt_wgt_by_jet testing: {ak.all(zpt_wgt_by_jet != -1).compute()}")
+        # raise ValueError
+
+        if jet_multiplicity != 2:
+            njet_mask = njets == jet_multiplicity
+        else:
+            njet_mask = njets >= 2 # njet 2 is inclusive
+        # logger.info(f"njet{jet_multiplicity} order  zpt_wgt_by_jet: {zpt_wgt_by_jet}")
+        zpt_wgt = ak.where(njet_mask, zpt_wgt_by_jet, zpt_wgt) # if matching jet multiplicity, apply the values
+        # logger.info(f"zpt_wgt after njet {jet_multiplicity}: {zpt_wgt}")
+
+    cutOff_mask = dimuon_pt < 200 # ignore wgts from dimuon pT > 200
+    zpt_wgt = ak.where(cutOff_mask, zpt_wgt, ak.ones_like(dimuon_pt))
+    return zpt_wgt
+
+def getZptWgts_3region_new(dimuon_pt, njets, nbins, year, config_path):
+    # config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
+    # config_path = config["new_zpt_wgt"]
+    logger.info(f"zpt config file: {config_path}")
+    wgt_config = OmegaConf.load(config_path)
+    max_order = 5 #9
+    zpt_wgt = ak.ones_like(dimuon_pt)
+    jet_multiplicies = [0,1,2]
+    # logger.info(f"zpt_wgt: {zpt_wgt}")
+
+    for jet_multiplicity in jet_multiplicies:
+
+        zpt_wgt_by_jet = ak.zeros_like(dimuon_pt)
+        # zpt_wgt_by_jet = ak.ones_like(dimuon_pt) * -1 # debugging
+        # first polynomial fit
+        zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
+        for order in range(max_order+1): # FIXME: Hardcoded polynomial order
+            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
+            # logger.info(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
+            polynomial_term = coeff*dimuon_pt**order
+            zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
+            # logger.info(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
+            # logger.info(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
+        poly_fit_cutoff_min = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
+        zpt_wgt_by_jet = ak.where((poly_fit_cutoff_min >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
+
+        # polynomial fit
+        zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
+        for order in range(max_order+1): # p goes from 0 to max_order
+            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
+            # logger.info(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
+            polynomial_term = coeff*dimuon_pt**order
+            zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
+            # logger.info(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
+            # logger.info(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
+        poly_fit_cutoff_max = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmax1"]
         zpt_wgt_by_jet = ak.where(((poly_fit_cutoff_min < dimuon_pt) & (poly_fit_cutoff_max >= dimuon_pt)), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
 
         # horizontal line beyond poly_fit_cutoff_max
@@ -454,14 +510,11 @@ class EventProcessor(processor.ProcessorABC):
 
         self.evaluator[self.zpt_path]._axes = self.evaluator[self.zpt_path]._axes[0]# this exists in Dmitry's code
 
-
         # Initialize PackedSelection
-        self.selection = {}
+        self.selection = PackedSelection()
         self.cutflow = {}
 
     def process(self, events: coffea_nanoevent):
-        # ReInitialize PackedSelection: So, that we don't get error of mis-match
-        self.selection = PackedSelection()
         year = self.config["year"]
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
         self.selection = PackedSelection()
@@ -554,7 +607,7 @@ class EventProcessor(processor.ProcessorABC):
 
         do_pu_wgt = True # True
         # if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
-        #     do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
+        # do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
 
 
         if do_pu_wgt:
@@ -627,7 +680,7 @@ class EventProcessor(processor.ProcessorABC):
         # # --------------------------------------------------------
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
-            # TODO make more elegant distinction between Run2 and Run3 
+            # TODO make more elegant distinction between Run2 and Run3
             if "16" in year or "17" in year or "18" in year:# Run2 roccor
                 logger.info("doing Run2 rochester!")
                 apply_roccor(events, self.config["roccor_file"], is_mc)
@@ -763,6 +816,7 @@ class EventProcessor(processor.ProcessorABC):
 
 
         muons = events.Muon[muon_selection]
+        logger.debug(f"muons pT: {muons.pt[:100].compute()}")
 
         # muons = ak.to_packed(events.Muon[muon_selection])
 
@@ -885,24 +939,33 @@ class EventProcessor(processor.ProcessorABC):
         # event_filter = event_filter & pass_leading_pt
         # test end -----------------------------------------------------------------------
 
-        if is_mc:
-            sumWeights = events.metadata['sumGenWgts']
-            logger.debug(f"sumWeights: {(sumWeights)}")
         # calculate sum of gen weight b4 skimming off bad events
-        # if is_mc:
-        #     # if True:
-        #     if self.test_mode: # for small files local testing
-        #         sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-        #         logger.debug(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
-        #     else:
-        #         sumWeights = events.metadata['sumGenWgts']
-        #         logger.debug(f"sumWeights: {(sumWeights)}")
+        if is_mc:
+                sumWeights = events.metadata['sumGenWgts']
+                logger.debug(f"sumWeights: {(sumWeights)}")
         # skim off bad events onto events and other related variables
+        # # original -----------------------------------------------
+        # events = events[event_filter==True]
+        # muons = muons[event_filter==True]
+        # nmuons = nmuons[event_filter==True]
+        # applied_fsr = applied_fsr[event_filter==True]
+        # if is_mc:
+        #     for variation in pu_wgts.keys():
+        #         pu_wgts[variation] = pu_wgts[variation][event_filter==True]
+        # pass_leading_pt = pass_leading_pt[event_filter==True]
+        # # original end -----------------------------------------------
 
 
+        # to_packed testing -----------------------------------------------
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
+        # event_match = event_match[event_filter==True]
+        # applied_fsr = ak.to_packed(applied_fsr[event_filter==True]) # not sure the purpose of this line
+
+        # logger.info("testJetVector right after event filtering")
+        # testJetVector(events.Jet)
+
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
@@ -1411,16 +1474,27 @@ class EventProcessor(processor.ProcessorABC):
             # we explicitly don't directly add zpt weights to the weights variables
             # due weirdness of btag weight implementation. I suspect it's due to weights being evaluated
             # once kind of screws with the dak awkward array
+            # valerie
+            # zpt_weight_valerie =\
+                     # self.evaluator[self.zpt_path_valerie](dimuon.pt, njets)
+            # out_dict["zpt_weight_valerie"] = zpt_weight_valerie
 
-            logger.info("======================= old zpt method =======================")
-            
-            zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
-            
-            # logger.info("======================= old zpt weights are commented out =======================")
-            # if year == "2016postVFP" or year=="2018": #FIXME: This is temporary, we need to sync the zpt strategy and update it.
-            #     zpt_weight_mine_nbins100 = getZptWgts_2016postVFP(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
-            # else:
-            #     zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+            # # dmitry's old zpt
+            # zpt_weight_dmitry =\
+            #         self.evaluator[self.zpt_path](dimuon.pt)
+            # out_dict["zpt_weight_dmitry"] = zpt_weight_dmitry
+
+            # # logger.info(f"zpt_weight_valerie: {zpt_weight_valerie.compute()}")
+            # # logger.info(f"zpt_weight_dmitry: {zpt_weight_dmitry.compute()}")
+
+            # zpt_weight_mine_nbins50 = getZptWgts(dimuon.pt, njets, 50, year)
+            # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
+            logger.info("=======================  apply zpt weights =======================")
+            if year == "2018":
+                zpt_weight_mine_nbins100 = getZptWgts_3region_new(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+            else:
+                zpt_weight_mine_nbins100 = getZptWgts_3region(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+            # zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
             # logger.info(f"zpt_weight_mine_nbins100: {type(zpt_weight_mine_nbins100)}")
             # logger.info(f"zpt_weight_mine_nbins100: {(zpt_weight_mine_nbins100)}")
 
@@ -1499,13 +1573,12 @@ class EventProcessor(processor.ProcessorABC):
             weight_dict[variation_name] = wgt_variation
 
 
+        # temporarily shut off partial weights start -----------------------------------------
         for weight_type in list(weights.weightStatistics.keys()):
             wgt_name = "separate_wgt_" + weight_type
             # logger.info(f"wgt_name: {wgt_name}")
             weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
-        #     logger.info(f"wgt {wgt_name} sum: {ak.sum(weight_dict[wgt_name]).compute()}")
-        # logger.info(f"wgt_nominal sum: {ak.sum(wgt_nominal).compute()}")
-        # raise ValueError
+        # temporarily shut off partial weights end -----------------------------------------
 
         # logger.info(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # logger.info(f"out_dict.compute 5: {ak.zip(out_dict).to_parquet(save_path)}")
@@ -1797,11 +1870,11 @@ class EventProcessor(processor.ProcessorABC):
 
         jet_pt_cut = (jets.pt > self.config["jet_pt_cut"])
         # add additonal pT cut for the forward regions to reduce jet horn  ----------------------------------------------
-        # # source: https://nam04.safelinks.protection.outlook.com/?url=https%3A%2F%2Findico.cern.ch%2Fevent%2F1434807%2Fcontributions%2F6040633%2Fattachments%2F2893077%2F5071932%2FJERC%2520meeting%252009_07.pdf&data=05%7C02%7Cyun79%40purdue.edu%7C3d76cc7f47974533372708dd896f875a%7C4130bd397c53419cb1e58758d6d63f21%7C0%7C0%7C638817834635140303%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=fh11i5iJCGo0EQKYBdw0Df8oaesOX2hCnJ%2FU78o37%2BU%3D&reserved=0
+        # source: https://nam04.safelinks.protection.outlook.com/?url=https%3A%2F%2Findico.cern.ch%2Fevent%2F1434807%2Fcontributions%2F6040633%2Fattachments%2F2893077%2F5071932%2FJERC%2520meeting%252009_07.pdf&data=05%7C02%7Cyun79%40purdue.edu%7C3d76cc7f47974533372708dd896f875a%7C4130bd397c53419cb1e58758d6d63f21%7C0%7C0%7C638817834635140303%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=fh11i5iJCGo0EQKYBdw0Df8oaesOX2hCnJ%2FU78o37%2BU%3D&reserved=0
         jetHorn_region = abs(jets.eta) > 2.5
         jetHorn_pt_cut = (jets.pt > self.config["jet_pt_cut"]) # pt cut on jethorn doesn't change
         jetHorn_puid_cut = (jets.puId >= 7) | (jets.pt >= 50) # tight pu Id
-        jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut 
+        jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
         jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
 
         # add additonal pT cut for the forward regions  ----------------------------------------------
@@ -1979,7 +2052,6 @@ class EventProcessor(processor.ProcessorABC):
             f"zeppenfeld_{variation}" : zeppenfeld,
             f"ll_zstar_log_{variation}" : np.log(np.abs(zeppenfeld)),
             f"njets_{variation}" : njets,
-
         }
         if is_mc:
             mc_dict = {

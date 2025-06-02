@@ -28,7 +28,6 @@ import logging
 from modules.utils import logger
 from rich import print
 
-
 def getBadFile(fname):
     try:
         up_file = uproot.open(fname)
@@ -62,13 +61,13 @@ def getBadFile(fname):
 #     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
 #         # Submit each file check to the executor
 #         results = list(executor.map(getBadFile, filelist))
-    
+
 #     bad_file_l = []
 #     for result in results:
 #         if result != "":
 #             # print(result)
 #             bad_file_l.append(result)
-    
+
 #     return bad_file_l
 
 def getBadFileParallelizeDask(filelist):
@@ -89,6 +88,10 @@ def getBadFileParallelizeDask(filelist):
     print(f"bad_file_l: {bad_file_l}")
     return bad_file_l
 
+def removeBadFiles(filelist):
+    bad_filelist = getBadFileParallelizeDask(filelist)
+    clean_filtlist = list(set(filelist) - set(bad_filelist)) # remove bad files from the filelist
+    return clean_filtlist
 
 def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
     print(f"single_dataset_name {single_dataset_name}")
@@ -274,8 +277,6 @@ if __name__ == "__main__":
     logger.info(f"year: {year}")
 
     if args.fraction is None: # do the normal prestage setup
-        allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_CH_CERN", "T2_US_Vanderbilt", "T2_US_Florida", "T2_IT_Pisa", "T2_DE_RWTH"]
-        
         total_events = 0
         # get dask client
         if args.use_gateway:
@@ -288,7 +289,7 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug("Gateway Client created")
         else: # use local cluster
-            client = Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
+            client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
             logger.info("Local scale Client created")
         big_sample_info = {}
         # load dataset sample paths from yaml files
@@ -362,7 +363,6 @@ if __name__ == "__main__":
         fnames = ""
 
         for sample_name in tqdm.tqdm(dataset.keys()):
-            print(f"sample_name: {sample_name}")
             is_data =  ("data" in sample_name)
             logger.debug(f"Sample Name: {sample_name}")
             logger.debug(f"dataset[sample_name]: {dataset[sample_name]}")
@@ -383,6 +383,12 @@ if __name__ == "__main__":
             else:
                 single_dataset_name = dataset_name
                 fnames = getDatasetRootFiles(single_dataset_name, allowlist_sites)
+
+            if args.skipBadFiles: # if we want to skip bad files
+                logger.info("Skipping bad files")
+                logger.info(f"Number of files before removing bad files: {len(fnames)}")
+                fnames = removeBadFiles(fnames)
+                logger.info(f"Number of files after removing bad files: {len(fnames)}")
 
             # convert to xcachce paths if requested
                 if args.xcache:

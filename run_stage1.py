@@ -208,7 +208,6 @@ if __name__ == "__main__":
     logger.debug(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
-    # test_mode = False
     if not test_mode: # full scale implementation
         if args.use_gateway:
             from dask_gateway import Gateway
@@ -221,7 +220,7 @@ if __name__ == "__main__":
             logger.debug(f"client: {client}")
             logger.info("Gateway Client created")
         else:
-            client = Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             logger.info("Local scale Client created")
         #-------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
@@ -257,7 +256,7 @@ if __name__ == "__main__":
                 logger.debug(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     # if idx < 50 or idx > 51: continue # for testing purposes
-                    # if idx < 2: continue
+                    # if idx < 7: continue
                     logger.info(f"Processing {dataset} file index {idx}")
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
@@ -284,19 +283,8 @@ if __name__ == "__main__":
                 logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
 
     else:
-        if args.use_gateway:
-            from dask_gateway import Gateway
-            gateway = Gateway(
-                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-            )
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-            client = gateway.connect(cluster_info.name).get_client()
-            logger.debug(f"client: {client}")
-            logger.info("Gateway Client created")
-        else:
-            client = Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
-            logger.info("Local scale Client created")
+        client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+        logger.info("Local scale Client created")
 
         sample_path = "./prestage_output/fraction_processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(sample_path) as file:

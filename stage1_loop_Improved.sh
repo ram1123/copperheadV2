@@ -25,8 +25,10 @@ label="Default_nanoAODv9"
 debug="0"
 mode="all"
 skipBadFiles="0"
+model_path="/depot/cms/users/shar1172/copperheadV2_MergeFW/MVA_training/VBF/dnn/trained_models"
+model_label="May28_NanoV12"
 
-options=":hc:m:v:y:l:df"
+options=":hc:m:v:y:l:n:b:sdf"
 while getopts $options option; do
     case "$option" in
         h) usage ;;
@@ -35,6 +37,8 @@ while getopts $options option; do
         v) NanoAODv=$OPTARG ;;
         y) year=$OPTARG ;;
         l) label=$OPTARG ;;
+        n) njet=$OPTARG ;;
+        b) bins=$OPTARG ;;
         s) skipBadFiles="1" ;;
         d) debug="1" ;;
         f) frac="1" ;;
@@ -67,15 +71,30 @@ data_l_dict["2018"]="A B C D"
 data_l_dict["2022preEE"]="C D"
 data_l_dict["2022postEE"]="E F G"
 
-# data_l_dict["2018"]=""
+data_l_dict["2018"]=""
+# data_l_dict["2022preEE"]=""
 # data_l_dict["2017"]=""
 # data_l_dict["2016postVFP"]=""
 # data_l_dict["2016preVFP"]=""
-bkg_l="DY Top VV EWK VVV"
+# bkg_l="DY Top VV EWK VVV"
 # bkg_l="Top VV EWK VVV"
+bkg_l="DY"
 # bkg_l=""
 # sig_l="Higgs"
+# sig_l="VBF"
 sig_l=""
+
+# Used by the zpt_fit mode
+if [[ -z "$njet" ]]; then
+    njet=0
+else
+    njet=$njet
+fi
+if [[ -z "$bins" ]]; then
+    nbin=100
+else
+    nbin=$bins
+fi
 
 # If debug is on, then run only for one era in each year.
 if [[ "$debug" == "1" ]]; then
@@ -126,21 +145,25 @@ for year in "${years[@]}"; do
     echo "Signal: $sig_l" >> $log_file
 
     # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache "
-    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  --use_gateway  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500 "
-    command2="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
+    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  --use_gateway  --skipBadFiles "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500  --isCutflow  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500  "
+    command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l --use_gateway "
+    # command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l  "
+    command3="python run_stage3_vbf.py --base_path $save_path -y $year  "
+    command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
 
-    command3="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
-    command4="python src/lib/ebeMassResCalibration/calibration_factor.py --path $save_path"
+    command5="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
+    command6="python src/lib/ebeMassResCalibration/calibration_factor.py --path $save_path"
 
     if [[ "$debug" == "1" ]]; then
         command0+="--log-level DEBUG " #
         command1+="--log-level DEBUG " #
-        command2+="--log-level DEBUG --debug"
+        command4+="--log-level DEBUG --debug"
     else
         command0+=" --log-level INFO"
         command1+=" --log-level INFO"
-        command2+=" --log-level INFO"
+        command4+=" --log-level INFO"
     fi
 
     if [[ "$frac" == "1" ]]; then
@@ -162,6 +185,16 @@ for year in "${years[@]}"; do
         echo "Executing: $command1"  # Print the command for debugging
         echo "command1: $command1" >> $log_file
         eval $command1
+    elif [[ "$mode" == "2" ]]; then
+        echo "Running stage2 for year $year..."
+        echo "Executing: $command2"  # Print the command for debugging
+        echo "command2: $command2" >> $log_file
+        eval $command2
+    elif [[ "$mode" == "3" ]]; then
+        echo "Running stage3 for year $year..."
+        echo "Executing: $command3"  # Print the command for debugging
+        echo "command3: $command3" >> $log_file
+        eval $command3
     elif [[ "$mode" == "all" ]]; then
         echo "Running pre-stage for year $year..."
         echo "Executing: $command0"  # Print the command for debugging
@@ -172,47 +205,41 @@ for year in "${years[@]}"; do
         echo "Executing: $command1"  # Print the command for debugging
         echo "command1: $command1" >> $log_file
         eval $command1
-    elif [[ "$mode" == "zpt_fit" ]]; then
+    elif [[ "$mode" == "zpt_fit" || "$mode" == "zpt_fit0" || "$mode" == "zpt_fit1"  || "$mode" == "zpt_fit2" || "$mode" == "zpt_fit12" ]]; then
         echo "Running fitting step..."
 
-        # Loop over the number of bins
-        # for nbins in 200; do
-        # for nbins in 25 50 100 200 500; do
-        nbins="CustomBins"
-        command2a="python data/zpt_rewgt/fitting/do_fitting.py --run_label $label --year $year --input_path $save_path --debug --outAppend _March17"
-        command2b="python data/zpt_rewgt/fitting/do_f_test.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _March17"
-        command2c="python data/zpt_rewgt/fitting/get_goodnessOfFit.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _March17"
+        command0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l ${label} -y ${year}"
+        command1="python data/zpt_rewgt/fitting/do_f_test.py --run_label ${label} --year ${year} --nbins ${nbin} --njet ${njet} --outAppend \"May31_test\" --debug"
+        # command2="python data/zpt_rewgt/fitting/get_polyFit.py -l ${label} -y ${year} --nbins ${nbin} --njet ${njet} --outAppend \"May31_test\""
+        command2="python data/zpt_rewgt/fitting/get_polyFit_v1.py -l ${label} -y ${year} --nbins ${nbin} --njet ${njet} --outAppend \"May31_test\""
 
-        # command2b_New="python data/zpt_rewgt/fitting/get_ZpT_Weights.py --run_label $label --year $year --input_path $save_path --debug --nbins $nbins --outAppend _bin$nbins"
-
-        echo "Executing: $command2a"
-        echo "command2a: $command2a" >> $log_file
-        # eval $command2a
-
-        echo "Executing: $command2b"
-        echo "command2b: $command2b" >> $log_file
-        # eval $command2b
-
-        echo "Executing: $command2b_New"
-        echo "command2b_New: $command2b_New" >> $log_file
-        # eval $command2b_New
-
-        echo "Executing: $command2c"
-        echo "command2c: $command2c" >> $log_file
-        eval $command2c
-        # done
+        if [[ "$mode" == "zpt_fit0" || "$mode" == "zpt_fit" ]]; then
+            echo "Executing: $command0"  # Print the command for debugging
+            echo "command0: $command0" >> $log_file
+            eval $command0
+        fi
+        if [[ "$mode" == "zpt_fit1" || "$mode" == "zpt_fit" || "$mode" == "zpt_fit12" ]]; then
+            echo "Executing: $command1"  # Print the command for debugging
+            echo "command1: $command1" >> $log_file
+            eval $command1
+        fi
+        if [[ "$mode" == "zpt_fit2" || "$mode" == "zpt_fit" || "$mode" == "zpt_fit12" ]]; then
+            echo "Executing: $command2"  # Print the command for debugging
+            echo "command2: $command2" >> $log_file
+            eval $command2
+        fi
 
     elif [[ "$mode" == "zpt_val" ]]; then
         echo "Running validation step..."
-        echo "Executing: $command2"  # Print the command for debugging
-        echo "command2: $command2" >> $log_file
-        eval $command2
+        echo "Executing: $command4"  # Print the command for debugging
+        echo "command4: $command4" >> $log_file
+        eval $command4
     # Run the mass calibration fitting step
     elif [[ "$mode" == "calib" ]]; then
         echo "Running mass calibration"
-        echo "Executing: $command3"  # Print the command for debugging
-        echo "command: $command3" >> $log_file
-        eval $command3
+        echo "Executing: $command5"  # Print the command for debugging
+        echo "command: $command5" >> $log_file
+        eval $command5
     else
         echo "Error: Invalid mode. Please use '0' for prestage or '1' for stage1 or 2 for making validation plots."
         exit 1

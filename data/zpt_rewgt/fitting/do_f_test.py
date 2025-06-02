@@ -1,4 +1,5 @@
 import ROOT
+import array
 from scipy.stats import f
 import os
 import argparse
@@ -7,31 +8,9 @@ import yaml
 from collections import defaultdict
 from modules.utils import logger
 from omegaconf import OmegaConf
+import numpy as np
 
-
-# define cut ranges to do polynomial fits. pt ranges beyond that point we fit with a constant
-poly_fit_ranges = {
-    "2018" : {
-        "njet0" : [10, 115],
-        "njet1" : [10, 100],
-        "njet2" : [10, 100],
-    },
-    "2017" : {
-        "njet0" : [0, 75],
-        "njet1" : [0, 100],
-        "njet2" : [0, 65],
-    },
-    "2016postVFP" : {
-        "njet0" : [9, 100],
-        "njet1" : [9, 100],
-        "njet2" : [9, 100],
-    },
-    "2016preVFP" : {
-        "njet0" : [0, 70],
-        "njet1" : [0, 55],
-        "njet2" : [0, 55],
-    },
-}
+from bin_definitions import poly_fit_ranges, define_custom_binning
 
 # Argument parsing
 parser = argparse.ArgumentParser()
@@ -175,6 +154,18 @@ for njet in args.njet:
         hist_data = workspace.obj("hist_data").Clone("hist_data_clone")
         hist_dy = workspace.obj("hist_dy").Clone("hist_dy_clone")
 
+        # Define custom bin edges: adaptive binning with finer bins near zero and coarser bins at higher pt
+        edges = define_custom_binning()
+
+        nbins_new = len(edges) - 1
+        xbins = array.array('d', edges)
+
+        print(f"Using custom binning with {nbins_new} bins: {edges}")
+
+        # Rebin to exactly these custom edges
+        hist_data = hist_data.Rebin(nbins_new, "hist_data_rebinned", xbins)
+        hist_dy   = hist_dy.  Rebin(nbins_new, "hist_dy_rebinned",   xbins)
+
 
         # Run F-test
         with open(f"{save_path}/fTest_results_{year}_njet{njet}_nbins{args.nbins}_f0_UpdatedCode.txt", "w") as outTextFile, \
@@ -186,13 +177,8 @@ for njet in args.njet:
 
         with open(f"{save_path}/fTest_results_{year}_njet{njet}_nbins{args.nbins}_f1_UpdatedCode.txt", "w") as outTextFile, \
             open(f"{save_path}/fTest_results_{year}_njet{njet}_nbins{args.nbins}_f1_keys.txt", "w") as outTextFile_keys:
-            orig_nbins = hist_data.GetNbinsX()
-            rebin_coeff = int(int(orig_nbins)/int(target_nbins))
-            # Rebin histograms
-            hist_data = hist_data.Rebin(rebin_coeff, "rebinned hist_data")
-            hist_dy = hist_dy.Rebin(rebin_coeff, "rebinned hist_dy")
 
-            # Compute Scale Factor (SF)
+            # Compute Scale Factor (SF) on rebinned histograms
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
             perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, outTextFile, outTextFile_keys, year, njet, outtext="f1")
