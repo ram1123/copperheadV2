@@ -94,7 +94,7 @@ def removeBadFiles(filelist):
     return clean_filtlist
 
 def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
-    print(f"single_dataset_name {single_dataset_name}")
+    logger.info(f"dataset name: {single_dataset_name}")
     if single_dataset_name.startswith("/eos"):
         fnames = glob.glob(f"{single_dataset_name}/*.root")
         logger.debug(f"fnames: {fnames}")
@@ -104,8 +104,6 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
         logger.debug(f"fnames: {fnames}")
     else:
         das_query = single_dataset_name
-        logger.debug(f"das query: {das_query}")
-        print(f"allowlist_sites: {allowlist_sites}")
 
         rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
 
@@ -369,7 +367,14 @@ if __name__ == "__main__":
             logger.debug(f"is data?: {is_data}")
 
             dataset_name = dataset[sample_name]
-            allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_CH_CERN", "T2_US_Vanderbilt", "T2_US_Florida", "T2_IT_Pisa", "T2_DE_RWTH"]
+            allowlist_sites = ["T2_DE_DESY", "T2_AT_Vienna", "T2_DE_RWTH", "T2_IT_Legnaro",
+                                "T2_US_Caltech", "T2_UL_Florida", "T2_US_MIT", "T2_US_Purdue", "T2_US_Wisconsin", "T2_US_Nebraska", "T2_US_Vanderbilt",
+                                "T2_BE_UCL", "T2_BR_SPRACE", "T2_EE_Estonia",
+                                "T2_ES_CIEMAT", "T2_ES_IFCA", "T2_FR_IPHC", "T2_PL_Swierk",
+                                "T2_FR_GRIF", "T2_IN_TIFR", "T2_RU_JINR", "T2_BE_IIHE", "T2_CH_CSCS",
+                                ]
+
+            logger.debug(f"allowlist_sites: {allowlist_sites}")
 
             # print(f"type(dataset_name): {type(dataset_name)}")
             is_some_list_type = isinstance(dataset_name, Sequence) and not isinstance(dataset_name, str)
@@ -601,3 +606,4 @@ if __name__ == "__main__":
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")
+

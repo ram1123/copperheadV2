@@ -7,18 +7,21 @@ import os
 from src.lib.histogram.ROOT_utils import setTDRStyle, CMS_lumi, reweightROOTH_data, reweightROOTH_mc #reweightROOTH
 from src.lib.histogram.plotting import plotDataMC_compare
 from distributed import Client
-import time    
+import time
 import tqdm
 import cmsstyle as CMS
 from collections import OrderedDict
 import glob
 import copy
 
+import logging
+from modules.utils import logger
+
 def get_scalar_ptCentrality(events):
     pt_centrality_scalar = events.dimuon_pt - abs(events.jet1_pt_nominal + events.jet2_pt_nominal)/2
     pt_centrality_scalar = pt_centrality_scalar / abs(events.jet1_pt_nominal - events.jet2_pt_nominal)
     return pt_centrality_scalar
-    
+
 
 # real process arrangement
 group_data_processes = ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"]
@@ -26,27 +29,25 @@ group_data_processes = ["data_A", "data_B", "data_C", "data_D", "data_E",  "data
 # group_DY_processes = ["dy_M-100To200"]
 # group_DY_processes = ["dy_M-100To200","dy_VBF_filter"]
 group_DY_processes = [
-    "dy_M-50",
-    "dy_M-100To200",
-    "dy_m105_160_amc",
-    "dy_m105_160_vbf_amc",
-    "dy_VBF_filter_customJMEoff",
-    "dy_VBF_filter_fromGridpack",
-    "dyTo2L_M-50_0j",
-    "dyTo2L_M-50_1j",
-    "dyTo2L_M-50_2j",
-    "dyTo2L_M-50_incl",
+    # "dy_M-50",
+    # "dy_M-100To200",
     "dy_M-100To200_MiNNLO",
-    "dy_M-50_MiNNLO"
+    "dy_M-50_MiNNLO",
+    # "dy_VBF_filter"
 ]
 
 
 # group_DY_processes = ["dy_M-100To200","dy_VBF_filter_customJMEoff"]
 # group_DY_processes = [] # just VBf filter
 
-group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "tt_inclusive", "st_t_top", "st_t_antitop"]
+group_Top_processes = ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "tt_inclusive", "st_t_top", "st_t_antitop",
+                                        # "st_s_lep", "tZq_ll", "TTWjets_LNu", "TTWJets_QQ", "TTZ_LLnunu", "TTTW", "TTTJ", "TTWW"
+                                        ]
 group_Ewk_processes = ["ewk_lljj_mll50_mjj120"]
-group_VV_processes = ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"]# diboson
+group_VV_processes = ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"
+                    #   "GluGluContin_ZZ2e2mu", "GluGluContin_ZZ2e2tau", "GluGluContin_ZZ2mu2tau",
+                    #   "GluGluContin_ZZ2mu2nu", "GluGluContin_ZZ4mu", "GluGluContin_ZZ4tau",
+                      ]# diboson
 # group_ggH_processes = ["ggh_amcPS"]
 group_ggH_processes = ["ggh_powhegPS"]
 group_VBF_processes = ["vbf_powheg_dipole"]
@@ -65,7 +66,7 @@ if __name__ == "__main__":
     "-data",
     "--data",
     dest="data_samples",
-    default=[],
+    default=["A", "B", "C", "D"],
     nargs="*",
     type=str,
     action="store",
@@ -75,7 +76,7 @@ if __name__ == "__main__":
     "-bkg",
     "--background",
     dest="bkg_samples",
-    default=[],
+    default=["DY", "TT", "ST", "EWK", "VV", "OTHER"],
     nargs="*",
     type=str,
     action="store",
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     "-sig",
     "--signal",
     dest="sig_samples",
-    default=[],
+    default=["VBF"],
     nargs="*",
     type=str,
     action="store",
@@ -95,7 +96,9 @@ if __name__ == "__main__":
     "-var",
     "--variables",
     dest="variables",
-    default=[],
+    # default=["dimuon", "mu"],
+    # default=["dijet", "jet"],
+    default=["dimuon", "dijet", "jet", "mu"],
     nargs="*",
     type=str,
     action="store",
@@ -143,21 +146,21 @@ if __name__ == "__main__":
     parser.add_argument(
     "--no_ratio",
     dest="no_ratio",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="doesn't plot Data/MC ratio",
     )
     parser.add_argument(
     "--ROOT_style",
     dest="ROOT_style",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, uses pyROOT functionality instead of mplhep",
     )
     parser.add_argument(
     "--linear_scale",
     dest="linear_scale",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, provide plots in linear scale",
     )
@@ -165,21 +168,21 @@ if __name__ == "__main__":
     "-reg",
     "--region",
     dest="region",
-    default="signal",
+    default="h_sidebands",
     action="store",
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
     )
     parser.add_argument(
     "--use_gateway",
     dest="use_gateway",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, uses dask gateway client instead of local",
     )
     # parser.add_argument(
     # "--vbf",
     # dest="vbf_cat_mode",
-    # default=False, 
+    # default=False,
     # action=argparse.BooleanOptionalAction,
     # help="If true, apply vbf cut for vbf category, else, ggH category cut",
     # )
@@ -194,13 +197,40 @@ if __name__ == "__main__":
     parser.add_argument(
     "--vbf_filter_study",
     dest="do_vbf_filter_study",
-    default=False, 
+    default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, apply vbf filter cut for dy samples",
     )
+    parser.add_argument(
+    "--remove_zpt_weights",
+    dest="remove_zpt_weights",
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="If true, remove z-pt weights from the events",
+    )
+    # Add njets argument: default it should be inclusive jets
+    parser.add_argument(
+    "--njets",
+    dest="njets",
+    default="inclusive",
+    action="store",
+    help="number of jets to consider (inclusive or exclusive)",
+    )
+
     #---------------------------------------------------------
     # gather arguments
     args = parser.parse_args()
+    logger.info(f"args: {args}")
+    logger.info(f"region: {args.region}")
+
+    # if args.remove_zpt_weights, then update the args.label
+    if args.remove_zpt_weights:
+        if args.label == "":
+            args.label = "no_zpt_weights"
+        else:
+            args.label += "_no_zpt_weights"
+
+
     available_processes = []
     # if doing VBF filter study, add the vbf filter sample to the DY group
     if args.do_vbf_filter_study:
@@ -208,46 +238,55 @@ if __name__ == "__main__":
         # vbf_filter_sample =  "dy_VBF_filter_customJMEoff"
         # vbf_filter_sample =  "dy_VBF_filter_fromGridpack"
         available_processes.append(vbf_filter_sample)
-    
+
     # take data
     data_samples = args.data_samples
     if len(data_samples) >0:
         for data_letter in data_samples:
             available_processes.append(f"data_{data_letter.upper()}")
-        
-        # # take data as one group to save load time 
+
+        # # take data as one group to save load time
         # available_processes.append(f"data_*")
     # take bkg
     bkg_samples = args.bkg_samples
     if len(bkg_samples) >0:
         for bkg_sample in bkg_samples:
             if bkg_sample.upper() == "DY": # enforce upper case to prevent confusion
-                available_processes.append("dy_M-50")
-                available_processes.append("dy_M-100To200")
-                # available_processes.append("dy_m105_160_amc")
-                # available_processes.append("dyTo2L_M-50_0j")
-                # available_processes.append("dyTo2L_M-50_1j")
-                # available_processes.append("dyTo2L_M-50_2j")
-                # available_processes.append("dyTo2L_M-50_incl")
-                # available_processes.append("dy_m105_160_vbf_amc")
+                # available_processes.append("dy_M-50")
+                # available_processes.append("dy_M-100To200")
                 available_processes.append("dy_M-100To200_MiNNLO")
                 available_processes.append("dy_M-50_MiNNLO")
-            
+                # available_processes.append("dy_VBF_filter")
             elif bkg_sample.upper() == "TT": # enforce upper case to prevent confusion
                 available_processes.append("ttjets_dl")
                 available_processes.append("ttjets_sl")
                 available_processes.append("tt_inclusive")
+                # available_processes.append("TTWjets_LNu")
+                # available_processes.append("TTWJets_QQ")
+                # available_processes.append("TTZ_LLnunu")
+                # available_processes.append("TTTW")
+                # available_processes.append("TTTJ")
+                # available_processes.append("TTWW")
+            elif bkg_sample.upper() == "ST": # enforce upper case to prevent confusion
                 available_processes.append("st_t_top")
                 available_processes.append("st_t_antitop")
-            elif bkg_sample.upper() == "ST": # enforce upper case to prevent confusion
                 available_processes.append("st_tw_top")
                 available_processes.append("st_tw_antitop")
+                # available_processes.append("st_s_lep")
+                # available_processes.append("tZq_ll")
             elif bkg_sample.upper() == "VV": # enforce upper case to prevent confusion
                 available_processes.append("ww_2l2nu")
                 available_processes.append("wz_3lnu")
                 available_processes.append("wz_2l2q")
-                # available_processes.append("wz_1l1nu2q")
+                available_processes.append("wz_1l1nu2q")
                 available_processes.append("zz")
+                # available_processes.append("GluGluContin_ZZ2e2mu")
+                # available_processes.append("GluGluContin_ZZ2e2tau")
+                # available_processes.append("GluGluContin_ZZ2mu2tau")
+                # available_processes.append("GluGluContin_ZZ2mu2nu")
+                # available_processes.append("GluGluContin_ZZ4mu")
+                # available_processes.append("GluGluContin_ZZ4tau")
+
             elif bkg_sample.upper() == "EWK": # enforce upper case to prevent confusion
                 # available_processes.append("ewk_lljj_mll105_160_ptj0")
                 available_processes.append("ewk_lljj_mll50_mjj120")
@@ -257,8 +296,8 @@ if __name__ == "__main__":
                 available_processes.append("wzz")
                 available_processes.append("zzz")
             else:
-                print(f"unknown background {bkg_sample} was given!")
-        
+                logger.warning(f"unknown background {bkg_sample} was given!")
+
     # take sig
     sig_samples = args.sig_samples
     if len(sig_samples) >0:
@@ -269,13 +308,13 @@ if __name__ == "__main__":
             elif sig_sample.upper() == "VBF": # enforce upper case to prevent confusion
                 available_processes.append("vbf_powheg_dipole")
             else:
-                print(f"unknown signal {sig_sample} was given!")
+                logger.warning(f"unknown signal {sig_sample} was given!")
     # gather variables to plot:
     kinematic_vars = ['pt', 'eta', 'phi']
     # kinematic_vars = ['pt']
     variables2plot = []
     if len(args.variables) == 0:
-        print("no variables to plot!")
+        logger.error("no variables to plot!")
         raise ValueError
     for particle in args.variables:
         if "dimuon" in particle:
@@ -290,18 +329,23 @@ if __name__ == "__main__":
             variables2plot.append(f"mmj_min_dPhi_nominal")
             variables2plot.append(f"mmj_min_dEta_nominal")
             variables2plot.append(f"ll_zstar_log_nominal")
-            
             variables2plot.append(f"dimuon_ebe_mass_res")
             variables2plot.append(f"dimuon_ebe_mass_res_rel")
             variables2plot.append(f"{particle}_rapidity")
+            variables2plot.append("MET_pt")
+            variables2plot.append("MET_phi")
+            variables2plot.append("MET_sumEt")
+            variables2plot.append("acoplanarity")
+            variables2plot.append("PV_npvs")
+            variables2plot.append("PV_npvsGood")
         elif "dijet" in particle:
             variables2plot.append(f"jj_dEta_nominal")
             variables2plot.append(f"jj_mass_nominal")
             variables2plot.append(f"jj_pt_nominal")
-            
+
             variables2plot.append(f"jj_dPhi_nominal")
             variables2plot.append(f"zeppenfeld_nominal")
-            
+
             variables2plot.append(f"rpt_nominal")
             variables2plot.append(f"pt_centrality_nominal")
             variables2plot.append(f"nsoftjets2_nominal")
@@ -311,7 +355,7 @@ if __name__ == "__main__":
 
             # --------------------------------------------------
             # variables2plot.append(f"gjj_mass")
-            
+
         elif ("mu" in particle) :
             for kinematic in kinematic_vars:
                 # plot both leading and subleading muons/jets
@@ -327,35 +371,33 @@ if __name__ == "__main__":
                 variables2plot.append(f"{particle}2_{kinematic}_nominal")
             variables2plot.append(f"jet1_qgl_nominal")
             variables2plot.append(f"jet2_qgl_nominal")
-       
+
         else:
-            print(f"Unsupported variable: {particle} is given!")
+            logger.warning(f"Unsupported variable: {particle} is given!")
 
 
     variables2plot_orig = copy.deepcopy(variables2plot)
     if "jj_mass_nominal" in variables2plot:
         variables2plot += ["jj_mass_nominal_range2"] # add another range to plot
-    if "dimuon_mass" in variables2plot:
-        variables2plot = ["dimuon_mass_zpeak"] + variables2plot# add another range to plot
-    print(f"variables2plot: {variables2plot}")
+    logger.info(f"variables2plot: {variables2plot}")
     # obtain plot settings from config file
 
-    
+
     if args.category == "ggh":
         plot_setting_fname = "./src/lib/histogram/plot_settings_gghCat_BDT_input.json"
     else: # in no cat case, just use vbfCat plot settings
         plot_setting_fname = "./src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
 
-    print(f"plot_setting_fname: {plot_setting_fname}")
-    
+    logger.info(f"plot_setting_fname: {plot_setting_fname}")
+
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
     status = args.status.replace("_", " ")
 
-    # print(f"plot_settings.keys(): {plot_settings.keys()}")
+    # logger.info(f"plot_settings.keys(): {plot_settings.keys()}")
     # raise ValueError
-    
-    # define client for parallelization 
+
+    # define client for parallelization
     if args.use_gateway:
             from dask_gateway import Gateway
             gateway = Gateway(
@@ -364,87 +406,88 @@ if __name__ == "__main__":
             )
             cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
-            print("Gateway Client created")
+            logger.info("Gateway Client created")
     else:
-        client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB') 
-        print("Local scale Client created")
+        client =  Client(n_workers=31,  threads_per_worker=1, processes=True, memory_limit='4 GiB')
+        logger.info("Local scale Client created")
     # record time
     time_step = time.time()
 
     # load saved parquet files. This increases memory use, but increases runtime significantly
-    print(f"available_processes: {available_processes}")
+    logger.info(f"available_processes: {available_processes}")
     loaded_events = {} # intialize dictionary containing all the arrays
     for process in tqdm.tqdm(available_processes):
-        print(f"loading process {process}..")
+        logger.info(f"loading process {process}..")
         # full_load_path = args.load_path+f"/{process}/*.parquet"
         full_load_path = args.load_path+f"/{process}/*/*.parquet"
         if len(glob.glob(full_load_path)) ==0: # check if there's files in the load path
             full_load_path = args.load_path+f"/{process}/*.parquet" # try coppperheadV1 path, if this also is empty, then skip
-        print(f"full_load_path: {full_load_path}")
+        logger.info(f"full_load_path: {full_load_path}")
         try:
             events = dak.from_parquet(full_load_path)
         except:
-            print(f"full_load_path: {full_load_path} Not available. Skipping")
+            logger.warning(f"full_load_path: {full_load_path} Not available. Skipping")
             continue
-        # print(f"events.fields: {events.fields}")
+        # logger.info(f"events.fields: {events.fields}")
 
         # ------------------------------------------------------
         # select only needed variables to load to save run time
         # ------------------------------------------------------
-        
+
         fields2load = variables2plot_orig + [
             "wgt_nominal",
-            # "fraction", 
-            # "h_sidebands", 
-            # "h_peak", 
-            # "z_peak", 
+            # "fraction",
+            # "h_sidebands",
+            # "h_peak",
+            # "z_peak",
             # "vbf_cut",
-            "nBtagLoose_nominal", 
-            "nBtagMedium_nominal", 
-            "njets_nominal", 
+            "nBtagLoose_nominal",
+            "nBtagMedium_nominal",
+            "njets_nominal",
             "dimuon_mass",
-            "zeppenfeld_nominal", 
-            "jj_mass_nominal", 
-            "jet1_pt_nominal", 
-            "jj_dEta_nominal", 
-            "dimuon_pt", 
+            "zeppenfeld_nominal",
+            "jj_mass_nominal",
+            "jet1_pt_nominal",
+            "jj_dEta_nominal",
+            "dimuon_pt",
             "jet2_pt_nominal",
             "jj_pt_nominal",
             "zeppenfeld_nominal",
         ]
-        
-            
+
+
         # # add in weights
         # for field in events.fields:
         #     if "wgt_nominal" in field:
         #         fields2load.append(field)
-                
+
         is_data = "data" in process.lower()
         if not is_data: # MC sample
             fields2load += ["gjj_mass", "gjj_dR", "gjet1_pt", "gjet2_pt"]
             # temp addition
-            # if "separate_wgt_zpt_wgt" in events.fields:
-                # fields2load.append("separate_wgt_zpt_wgt")
-            
+            if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
+                logger.debug("Append separate_wgt_zpt_wgt to fields2load!")
+                fields2load.append("separate_wgt_zpt_wgt")
+
 
         # filter out redundant fields by using the set object
         fields2load = list(set(fields2load))
 
         # # TOREMOVE
         # if "separate_wgt_qgl_wgt" in events.fields:
-        #     print("removing separate_wgt_qgl_wgt!")
+        #     logger.info("removing separate_wgt_qgl_wgt!")
         #     events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_qgl_wgt"] # remove zpt wgt
-        # if "separate_wgt_zpt_wgt" in events.fields:
-        #     print("removing separate_wgt_zpt_wgt!")
-        #     events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
-        
+        if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
+            logger.warning("removing separate_wgt_zpt_wgt!")
+            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
+
         events = events[fields2load]
         # load data to memory using compute()
         events = ak.zip({
             field : events[field] for field in events.fields
         }).compute()
         loaded_events[process] = events
-    print("finished loading parquet files!")
+    logger.info("finished loading parquet files!")
     # ROOT style or mplhep style starts here --------------------------------------
     if args.ROOT_style:
         import ROOT
@@ -454,7 +497,7 @@ if __name__ == "__main__":
         canvas = ROOT.TCanvas("canvas","",600,750);
         # canvas = CMS.cmsCanvas('', 0, 1, 0, 1, '', '', square = CMS.kSquare, extraSpace=0.01, iPos=11) #generally : iPos = 10*(alignement 1/2/3) + position (1/2/3 = l/c/r)
         canvas.cd();
-        
+
         pad = ROOT.TPad("pad","pad",0,0.,1,1);
         pad.SetFillColor(0);
         pad.SetFillStyle(0);
@@ -468,9 +511,11 @@ if __name__ == "__main__":
         for var in tqdm.tqdm(variables2plot):
             var_step = time.time()
             if var not in plot_settings.keys():
-                print(f"variable {var} not configured in plot settings!")
+                logger.error(f"variable {var} not configured in plot settings!")
                 continue
             binning = np.linspace(*plot_settings[var]["binning_linspace"])
+            if args.region == "z_peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
+                binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
             if args.linear_scale:
                 do_logscale = False
             else:
@@ -478,7 +523,7 @@ if __name__ == "__main__":
             # also check if logscale config is mentioned in plot_settings, if yes, that config takes priority
             if "logscale" in plot_settings[var].keys():
                 do_logscale = plot_settings[var]["logscale"]
-                
+
             group_data_hists = []
             group_DY_hists = []
             group_Top_hists = []
@@ -488,126 +533,147 @@ if __name__ == "__main__":
             group_ggH_hists = [] # there should only be one ggH histogram, but making a list for consistency
             group_VBF_hists = [] # there should only be one VBF histogram, but making a list for consistency
 
-            
+
             # group_other_hists = [] # histograms not belonging to any other group
             ROOT.TH1.AddDirectory(False)
             for process in available_processes:
-                print(f"process: {process}")
+                logger.info(f"process: {process}")
                 events = loaded_events[process]
-                
+
                 # collect weights
                 is_data = "data" in process.lower()
-                print(f"is_data: {is_data}")
+                logger.info(f"is_data: {is_data}")
                 if is_data:
                     weights = ak.to_numpy(ak.fill_none(events["wgt_nominal"], value=0.0))
                 else: # MC
                     weights = ak.fill_none(events["wgt_nominal"], value=0.0)
-                    # print(f"weights {process} b4 numpy: {weights}")
+                    # logger.info(f"weights {process} b4 numpy: {weights}")
                     weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
-                    weights = np.nan_to_num(weights, nan=0.0) 
+                    weights = np.nan_to_num(weights, nan=0.0)
 
-                
-                # print(f"weights {process} after numpy: {weights}")
-                # print(f"weights {process} isnan sum: {np.sum(np.isnan(weights))}")
-                
+
+                # logger.info(f"weights {process} after numpy: {weights}")
+                # logger.info(f"weights {process} isnan sum: {np.sum(np.isnan(weights))}")
+
 
                 fraction_weight = 1/events.fraction # TBF, all fractions should be same
 
                 # obtain the category selection
-                
-                # print("doing root style!")
-                # print(f"args.region: {args.region}")
+
+                # logger.info("doing root style!")
+                # logger.info(f"args.region: {args.region}")
                 mass = events.dimuon_mass
                 z_peak = ((mass > 76) & (mass < 106))
                 h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
                 h_peak = ((mass > 115.03) & (mass < 135.03))
+                logger.info(f"region: {args.region}")
                 if args.region == "signal":
                     region = h_sidebands | h_peak
                 elif args.region == "h_peak":
-                    region = h_peak 
+                    region = h_peak
                 elif args.region == "h_sidebands":
-                    print("h_sidebands region chosen!")
-                    region = h_sidebands 
+                    logger.info("h_sidebands region chosen!")
+                    region = h_sidebands
                 elif args.region == "z_peak":
-                    region = z_peak 
-                else: 
-                    print("ERROR: acceptable region!")
+                    region = z_peak
+                else:
+                    logger.error("ERROR: acceptable region!")
                     raise ValueError
                 # region = events.z_peak
                 # btag_cut = btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
                 btagLoose_filter = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False)
                 btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
                 btag_cut = btagLoose_filter | btagMedium_filter
-                vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35) 
+                vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
                 vbf_cut = ak.fill_none(vbf_cut, value=False)
+                # add cut on jet eta to avoid the jet horn region
+                # jetHornIssue_cut = ((abs(events.jet1_eta_nominal) < 3.0) & (abs(events.jet2_eta_nominal) < 3.0))
                 # if args.vbf_cat_mode:
                 if args.category == "vbf":
-                    print("vbf mode!")
+                    logger.info("vbf mode!")
                     prod_cat_cut =  vbf_cut
+                    # prod_cat_cut = prod_cat_cut & jetHornIssue_cut # apply jet eta cut to avoid the jet horn issue
                     prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-                    # apply additional cut to MC samples if vbf 
+                    # apply additional cut to MC samples if vbf
                     # VBF filter cut start -------------------------------------------------
                     if args.do_vbf_filter_study:
-                        print("applying VBF filter gen cut!")
+                        logger.info("applying VBF filter gen cut!")
                         if "dy_" in process:
                             if ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc"):
-                                print("dy_VBF_filter extra!")
+                                logger.info("dy_VBF_filter extra!")
                                 vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                                prod_cat_cut =  (prod_cat_cut  
+                                prod_cat_cut =  (prod_cat_cut
                                             & vbf_filter
                                 )
                             elif process == "dy_m105_160_amc":
-                                print("dy_M-100To200 extra!")
-                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) 
+                                logger.info("dy_M-100To200 extra!")
+                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
                                 prod_cat_cut =  (
-                                    prod_cat_cut  
-                                    & ~vbf_filter 
+                                    prod_cat_cut
+                                    & ~vbf_filter
                                 )
                             else:
-                                print(f"no extra processing for {process}")
+                                logger.info(f"no extra processing for {process}")
                                 pass
                     # VBF filter cut end -------------------------------------------------
                 # else: # we're interested in ggH category
                 elif args.category == "ggh":
-                    print("ggH mode!")
-                    prod_cat_cut =  ~vbf_cut 
+                    logger.info("ggH mode!")
+                    prod_cat_cut =  ~vbf_cut
                     prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
+
                 elif args.category == "nocat":
-                    print("nocat mode!")
+                    logger.info("nocat mode!")
                     prod_cat_cut =  ak.ones_like(vbf_cut, dtype="bool")
+
                 else:
-                    print("Error: invalid category option!")
+                    logger.error("Error: invalid category option!")
                     raise ValueError
-                # print(f"prod_cat_cut sum b4: {ak.sum(prod_cat_cut).compute()}")
-                
-               
-                # print(f"prod_cat_cut sum after: {ak.sum(prod_cat_cut).compute()}")
-                
+
+                if args.category == "nocat" or args.category == "ggh":
+                    # add njet cut for ggH category
+                    if str(args.njets) == "inclusive": # inclusive jets means no njet cut, 0, 1 and >=2 cases
+                        logger.info("inclusive jets mode!")
+                        pass
+                    elif str(args.njets) == "0":
+                        logger.info("0 jets mode!")
+                        prod_cat_cut = prod_cat_cut & (events.njets_nominal == 0)
+                    elif str(args.njets) == "1":
+                        logger.info("1 jet mode!")
+                        prod_cat_cut = prod_cat_cut & (events.njets_nominal == 1)
+                    elif str(args.njets) == "2":
+                        logger.info(">=2 jets mode!")
+                        prod_cat_cut = prod_cat_cut & (events.njets_nominal >= 2)
+                # logger.info(f"prod_cat_cut sum b4: {ak.sum(prod_cat_cut).compute()}")
+
+
+                # logger.info(f"prod_cat_cut sum after: {ak.sum(prod_cat_cut).compute()}")
+
                 # original start -----------------------------------------
                 category_selection = (
-                    prod_cat_cut  
-                    & region 
+                    prod_cat_cut
+                    & region
                 )
                 # original end -----------------------------------------
                 # test start ------------------------------------------
                 # category_selection = region
                 # test end -----------------------------------------
-                
-                # print(f"category_selection: {category_selection}")
-                # print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
-                # print(f"category_selection {process} : {category_selection}")
+
+                # logger.info(f"category_selection: {category_selection}")
+                # logger.info(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
+                # logger.info(f"category_selection {process} : {category_selection}")
                 # temp condition
-                
+
                 category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
-                # print(f"weights b4 category selection {process} : {weights}")
+                # logger.info(f"weights b4 category selection {process} : {weights}")
                 weights = weights*category_selection
-                
+
                 values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
-                
-                
-                # print(f"values[0]: {values[0]}")
+
+
+                # logger.info(f"values[0]: {values[0]}")
                 values_filter = values!=-999.0
                 values = values[values_filter]
                 weights = weights[values_filter]
@@ -617,29 +683,29 @@ if __name__ == "__main__":
                 if process in group_data_processes:
                     fraction_weight = fraction_weight[values_filter]
                     weights = weights*fraction_weight
-                # print(f"weights after category selection {process}: {weights}")    
+                # logger.info(f"weights after category selection {process}: {weights}")
 
-                
-               
-                    
+
+
+
                 np_hist, _ = np.histogram(values, bins=binning, weights = weights)
 
-                
-                
-               
-                # collect same histogram, but for weight squares for error calculation 
+
+
+
+                # collect same histogram, but for weight squares for error calculation
                 np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
 
                 # convert nans to zeros in case histograms have them
                 np_hist =   np.nan_to_num(np_hist)
                 np_hist_w2 =   np.nan_to_num(np_hist_w2)
-                # print(f"np_hist new {process} : {np_hist}")
-                # print(f"np_hist_w2 {process} : {np_hist_w2}")
+                # logger.info(f"np_hist new {process} : {np_hist}")
+                # logger.info(f"np_hist_w2 {process} : {np_hist_w2}")
                 # calculate histogram errors consistent with TH1.Sumw2() mode at
                 # https://root.cern.ch/doc/master/classTH1.html#aefa4ee94f053ec3d217f3223b01fa014
                 hist_errs = np.sqrt(np_hist_w2)
                 if process in group_data_processes:
-                    print("data activated")
+                    logger.info("data activated")
                     # var_hist_data = ROOT.TH1F( var+'_hist_data', var, len(binning)-1, min(binning), max(binning))
                     var_hist_data = ROOT.TH1F(process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_data.Sumw2()
@@ -649,7 +715,7 @@ if __name__ == "__main__":
                     group_data_hists.append(var_hist_data)
                 #-------------------------------------------------------
                 elif process in group_DY_processes:
-                    print("DY activated")
+                    logger.info("DY activated")
                     # var_hist_DY = ROOT.TH1F( var+'_hist_DY', var, len(binning)-1, min(binning), max(binning))
                     var_hist_DY = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_DY.Sumw2()
@@ -659,7 +725,7 @@ if __name__ == "__main__":
                     group_DY_hists.append(var_hist_DY)
                 #-------------------------------------------------------
                 elif process in group_Top_processes:
-                    print("top activated")
+                    logger.info("top activated")
                     # var_hist_Top = ROOT.TH1F( var+'_hist_Top', var, len(binning)-1, min(binning), max(binning))
                     var_hist_Top = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_Top.Sumw2()
@@ -669,7 +735,7 @@ if __name__ == "__main__":
                     group_Top_hists.append(var_hist_Top)
                 #-------------------------------------------------------
                 elif process in group_Ewk_processes:
-                    print("Ewk activated")
+                    logger.info("Ewk activated")
                     # var_hist_Ewk = ROOT.TH1F( var+'_hist_Ewk', var, len(binning)-1, min(binning), max(binning))
                     var_hist_Ewk = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_Ewk.Sumw2()
@@ -679,7 +745,7 @@ if __name__ == "__main__":
                     group_Ewk_hists.append(var_hist_Ewk)
                 #-------------------------------------------------------
                 elif process in group_VV_processes:
-                    print("VV activated")
+                    logger.info("VV activated")
                     # var_hist_VV = ROOT.TH1F( var+'_hist_VV', var, len(binning)-1, min(binning), max(binning))
                     var_hist_VV = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_VV.Sumw2()
@@ -689,7 +755,7 @@ if __name__ == "__main__":
                     group_VV_hists.append(var_hist_VV)
                 #-------------------------------------------------------
                 elif process in group_ggH_processes:
-                    print("ggH activated")
+                    logger.info("ggH activated")
                     # var_hist_ggH = ROOT.TH1F( var+'_hist_ggH', var, len(binning)-1, min(binning), max(binning))
                     var_hist_ggH = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_ggH.Sumw2()
@@ -699,7 +765,7 @@ if __name__ == "__main__":
                     group_ggH_hists.append(var_hist_ggH)
                 #-------------------------------------------------------
                 elif process in group_VBF_processes:
-                    print("VBF activated")
+                    logger.info("VBF activated")
                     # var_hist_VBF = ROOT.TH1F( var+'_hist_VBF', var, len(binning)-1, min(binning), max(binning))
                     var_hist_VBF = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_VBF.Sumw2()
@@ -710,9 +776,9 @@ if __name__ == "__main__":
                 #-------------------------------------------------------
                 else: # put into "other" bkg group
                     # if "dy_M-50" in process:
-                    #     # print("dy_M-50 activated")
+                    #     # logger.info("dy_M-50 activated")
                     #     continue
-                    print("other activated")
+                    logger.info(f"other activated: {process}")
                     # var_hist_other = ROOT.TH1F( var+'_hist_other', var, len(binning)-1, min(binning), max(binning))
                     var_hist_other = ROOT.TH1F( process, var, len(binning)-1, min(binning), max(binning))
                     var_hist_other.Sumw2()
@@ -728,9 +794,9 @@ if __name__ == "__main__":
             dummy_hist.GetXaxis().SetLabelSize(0);
             dummy_hist.GetYaxis().SetTitle("Events")
             dummy_hist.Draw("EP");
-            
+
             all_MC_hist_list = []
-            
+
             if len(group_DY_hists) > 0:
                 DY_hist_stacked = group_DY_hists[0]
                 if len(group_DY_hists) > 1:
@@ -743,33 +809,33 @@ if __name__ == "__main__":
             #----------------------------------------------
             if len(group_Top_hists) > 0:
                 Top_hist_stacked = group_Top_hists[0]
-                print(f"Top_hist_stacked: {Top_hist_stacked}")
+                logger.info(f"Top_hist_stacked: {Top_hist_stacked}")
                 if len(group_Top_hists) > 1:
                     for idx in range(1, len(group_Top_hists)):
                         Top_hist_stacked.Add(group_Top_hists[idx])
-                        print(f"group_Top_hists[idx]: {group_Top_hists[idx]}")
+                        logger.info(f"group_Top_hists[idx]: {group_Top_hists[idx]}")
                 Top_hist_stacked.SetLineColor(1);
                 Top_hist_stacked.SetFillColor(ROOT.kGreen+1);
                 all_MC_hist_list.append(Top_hist_stacked)
             #----------------------------------------------
             if len(group_Ewk_hists) > 0:
                 Ewk_hist_stacked = group_Ewk_hists[0]
-                print(f"Ewk_hist_stacked: {Ewk_hist_stacked}")
+                logger.info(f"Ewk_hist_stacked: {Ewk_hist_stacked}")
                 if len(group_Ewk_hists) > 1:
                     for idx in range(1, len(group_Ewk_hists)):
                         Ewk_hist_stacked.Add(group_Ewk_hists[idx])
-                        print(f"group_Ewk_hists[idx]: {group_Ewk_hists[idx]}")
+                        logger.info(f"group_Ewk_hists[idx]: {group_Ewk_hists[idx]}")
                 Ewk_hist_stacked.SetLineColor(1);
                 Ewk_hist_stacked.SetFillColor(ROOT.kMagenta+1);
                 all_MC_hist_list.append(Ewk_hist_stacked)
             #----------------------------------------------
             if len(group_VV_hists) > 0:
                 VV_hist_stacked = group_VV_hists[0]
-                print(f"VV_hist_stacked: {VV_hist_stacked}")
+                logger.info(f"VV_hist_stacked: {VV_hist_stacked}")
                 if len(group_VV_hists) > 1:
                     for idx in range(1, len(group_VV_hists)):
                         VV_hist_stacked.Add(group_VV_hists[idx])
-                        print(f"group_VV_hists[idx]: {group_VV_hists[idx]}")
+                        logger.info(f"group_VV_hists[idx]: {group_VV_hists[idx]}")
                 VV_hist_stacked.SetLineColor(1);
                 VV_hist_stacked.SetFillColor(ROOT.kAzure+1);
                 all_MC_hist_list.append(VV_hist_stacked)
@@ -786,50 +852,50 @@ if __name__ == "__main__":
 
             # separately make copy of mc hists for ratio calculation. doing it directly onto THStack is a pain
             all_MC_hist_copy = all_MC_hist_list[0].Clone("all_MC_hist_copy");# we assume that there's at least one element in all_MC_hist_list
-            all_MC_hist_copy.Sumw2() 
+            all_MC_hist_copy.Sumw2()
             for idx in range(1, len(all_MC_hist_list)):
-                all_MC_hist_copy.Add(all_MC_hist_list[idx]) 
-            
+                all_MC_hist_copy.Add(all_MC_hist_list[idx])
+
             # aggregate all MC hist by stacking them and then plot
             all_MC_hist_stacked = ROOT.THStack("all_MC_hist_stacked", "");
             if len(all_MC_hist_list) > 0:
                 all_MC_hist_list.reverse() # add smallest histgrams first, so from other -> DY
-                for MC_hist_stacked in all_MC_hist_list: 
-                    all_MC_hist_stacked.Add(MC_hist_stacked) 
+                for MC_hist_stacked in all_MC_hist_list:
+                    all_MC_hist_stacked.Add(MC_hist_stacked)
                 for idx in range(all_MC_hist_stacked.GetStack().GetEntries()):
                     all_MC_hist = all_MC_hist_stacked.GetStack().At(idx) # get the TH1F portion of THStack
                 all_MC_hist_stacked.Draw("hist same");
 
-            
-            
-            
-            
-            # stack and plot data 
+
+
+
+
+            # stack and plot data
             if len(group_data_hists) > 0:
                 data_hist_stacked = group_data_hists[0]
                 data_hist_stacked.Sumw2()
-                # print(f"data_hist_stacked: {data_hist_stacked}")
+                # logger.info(f"data_hist_stacked: {data_hist_stacked}")
                 if len(group_data_hists) > 1:
                     for idx in range(1, len(group_data_hists)):
                         data_hist_stacked.Add(group_data_hists[idx])
-                        # print(f"group_data_hists[idx]: {group_data_hists[idx]}")
-                
-            
+                        # logger.info(f"group_data_hists[idx]: {group_data_hists[idx]}")
+
+
                 # decorate the data_histogram
                 xlabel = plot_settings[var]["xlabel"].replace('$', '')
                 data_hist_stacked.GetXaxis().SetTitle(xlabel);
                 data_hist_stacked.GetXaxis().SetTitleOffset(1.10);
                 data_hist_stacked.GetYaxis().SetTitleOffset(1.15);
-            
+
                 data_hist_stacked.SetMarkerStyle(20);
                 data_hist_stacked.SetMarkerSize(1);
                 data_hist_stacked.SetMarkerColor(1);
                 data_hist_stacked.SetLineColor(1);
-                data_hist_stacked.Draw("EPsame");    
+                data_hist_stacked.Draw("EPsame");
 
 
-            
-            
+
+
             # plot signals: ggH and VBF
             if len(group_ggH_hists) > 0:
                 hist_ggH = group_ggH_hists[0]
@@ -843,7 +909,7 @@ if __name__ == "__main__":
                 hist_VBF.SetLineColor(ROOT.kRed);
                 hist_VBF.SetLineWidth(3);
                 hist_VBF.Draw("hist same");
-        
+
             # Ratio pad
             if not args.no_ratio:
                 pad2 = ROOT.TPad("pad2","pad2",0,0.,1,0.9);
@@ -856,24 +922,20 @@ if __name__ == "__main__":
                 pad2.SetRightMargin(0.06);
                 pad2.Draw();
                 pad2.cd();
-                
+
                 if (len(group_data_hists) > 0) and (len(all_MC_hist_list) > 0):
-                    print("ratio activated")
+                    logger.info("ratio activated")
                     num_hist = data_hist_stacked.Clone("num_hist");
-                    print(f"num_hist: {num_hist}")
+                    logger.info(f"num_hist: {num_hist}")
                     den_hist = all_MC_hist_copy.Clone("den_hist")
 
-
-
-
-                    
                     num_hist.Divide(den_hist); # we assume Sumw2 mode was previously activated
                     num_hist.SetStats(ROOT.kFALSE);
                     num_hist.SetLineColor(ROOT.kBlack);
                     num_hist.SetMarkerColor(ROOT.kBlack);
-                    num_hist.SetMarkerSize(0.8);                  
-                    
-                    # get MC statistical errors 
+                    num_hist.SetMarkerSize(0.8);
+
+                    # get MC statistical errors
                     # mc_ratio = all_MC_hist_stacked.Clone("mc_ratio").GetStack().Last();
                     mc_ratio = all_MC_hist_copy.Clone("mc_ratio")
                     # set all of its errors to zero to prevent double counting of same error
@@ -888,10 +950,10 @@ if __name__ == "__main__":
                     # debugging code start ------------------------------------------------
                     for idx in range(1, num_hist.GetNbinsX()+1):
                         err=num_hist.GetBinError(idx, 0)
-                        print(f"Data/MC ratio bin idx {idx} error: {err}")
+                        logger.info(f"Data/MC ratio bin idx {idx} error: {err}")
                     # debugging code end ------------------------------------------------
-                    
-                    # get ratio line 
+
+                    # get ratio line
                     ratio_line = data_hist_stacked.Clone("num_hist");
                     for idx in range(1, mc_ratio.GetNbinsX()+1):
                         ratio_line.SetBinContent(idx, 1)
@@ -905,18 +967,18 @@ if __name__ == "__main__":
                     ratio_line.GetYaxis().SetTitleSize(num_hist.GetYaxis().GetTitleSize()*0.85);
                     ratio_line.GetYaxis().SetLabelSize(num_hist.GetYaxis().GetLabelSize()*0.85);
                     ratio_line.GetYaxis().SetNdivisions(505);
-                
+
                     ratio_line.Draw("SAME");
                     mc_ratio.Draw("E2 SAME");
                     num_hist.Draw("PE1 SAME");
                     pad2.RedrawAxis("sameaxis");
-        
+
             # setup legends
             if args.no_ratio:
                 leg = ROOT.TLegend(0.40,0.70,0.96,0.9)
             else: # plot ratio
                 leg = ROOT.TLegend(0.40,0.80,0.96,1.0)
-            
+
             leg.SetFillColor(0);
             leg.SetFillStyle(0);
             leg.SetBorderSize(0);
@@ -938,10 +1000,10 @@ if __name__ == "__main__":
             if len(group_VBF_hists) > 0:
                 leg.AddEntry(hist_VBF,"VBF","L")
             leg.Draw("same");
-            
-            
+
+
             pad.RedrawAxis("sameaxis");
-                
+
             pad.cd();
             if do_logscale:
                 dummy_hist.GetYaxis().SetRangeUser(0.01, 1e9);
@@ -968,14 +1030,14 @@ if __name__ == "__main__":
             #     production_cat = "ggh"
             # full_save_path = f"{args.save_path}/{args.year}/ROOT/Reg_{args.region}/Cat_{production_cat}"
 
-            full_save_path = f"{args.save_path}/{args.year}/ROOT/Reg_{args.region}/Cat_{args.category}/{args.label}"
+            full_save_path = f"{args.save_path}/{args.year}/ROOT/Reg_{args.region}/Cat_{args.category}/njet_{args.njets}/{args.label}"
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             canvas.SaveAs(f"{full_save_path}/{var}.pdf");
-            
+
             # record time it took
             var_elapsed = round(time.time() - var_step, 3)
-            print(f"Finished processing {var} in {var_elapsed} s.")
+            logger.info(f"Finished processing {var} in {var_elapsed} s.")
     else:
         import mplhep as hep
         import matplotlib.pyplot as plt
@@ -986,20 +1048,23 @@ if __name__ == "__main__":
         # this mplhep implementation assumes non-empty data; otherwise, it will crash
         # Dictionary for histograms and binnings
 
-        
+
         for var in tqdm.tqdm(variables2plot):
             var_step = time.time()
+            logger.info(f"Processing variable: {var}")
             # for process in available_processes:
             if "_nominal" in var:
                 plot_var = var.replace("_nominal", "")
             else:
                 plot_var = var
             if plot_var not in plot_settings.keys():
-                print(f"variable {var} not configured in plot settings!")
+                logger.info(f"variable {var} not configured in plot settings!")
                 continue
             #-----------------------------------------------
             # intialize variables for filling histograms
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+            if args.region == "z_peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
+                binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
             if args.linear_scale:
                 do_logscale = False
             else:
@@ -1007,7 +1072,7 @@ if __name__ == "__main__":
             # also check if logscale config is mentioned in plot_settings, if yes, that config takes priority
             # if "logscale" in plot_settings[plot_var].keys():
             #     do_logscale = plot_settings[plot_var]["logscale"]
-            print(f"do_logscale: {do_logscale} ")
+            logger.info(f"do_logscale: {do_logscale} ")
 
             group_data_vals = []
             group_DY_vals = []
@@ -1017,7 +1082,7 @@ if __name__ == "__main__":
             group_other_vals = []  # histograms not belonging to any other mc bkg group
             group_ggH_vals = [] # there should only be one ggH histogram, but making a list for consistency
             group_VBF_vals = [] # there should only be one VBF histogram, but making a list for consistency
-            
+
             group_data_weights = []
             group_DY_weights = []
             group_Top_weights = []
@@ -1027,24 +1092,24 @@ if __name__ == "__main__":
             group_ggH_weights = []
             group_VBF_weights = []
 
-            
-            for process in available_processes:    
-                print(f"process: {process}")
+
+            for process in available_processes:
+                logger.info(f"process: {process}")
                 try:
                     events = loaded_events[process]
                 except:
-                    print(f"skipping {process}")
+                    logger.info(f"skipping {process}")
                     continue
                 is_data = "data" in process.lower()
-                print(f"is_data: {is_data}")
-                
-                #-----------------------------------------------    
+                logger.info(f"is_data: {is_data}")
+
+                #-----------------------------------------------
                 # obtain the category selection
 
-                
+
 
                 # ------------------------------------------------
-                # take the mass region and category cuts 
+                # take the mass region and category cuts
                 # ------------------------------------------------
 
                 # do mass region cut
@@ -1054,15 +1119,17 @@ if __name__ == "__main__":
                 h_peak = ((mass > 115.03) & (mass < 135.03))
                 if args.region == "signal":
                     region = h_sidebands | h_peak
-                elif args.region == "h-peak":
-                    region = h_peak 
-                elif args.region == "h-sidebands":
-                    print("h_sidebands region chosen!")
-                    region = h_sidebands 
-                elif args.region == "z-peak":
-                    region = z_peak 
-                else: 
-                    print("ERROR: acceptable region!")
+                elif (args.region == "h_peak" or args.region == "h-peak"):
+                    logger.info("h_peak region chosen!")
+                    region = h_peak
+                elif (args.region == "h_sidebands" or args.region == "h-sidebands"):
+                    logger.info("h_sidebands region chosen!")
+                    region = h_sidebands
+                elif (args.region == "z_peak" or args.region == "z-peak"):
+                    logger.info("z_peak region chosen!")
+                    region = z_peak
+                else:
+                    logger.error("ERROR: acceptable region!")
                     raise ValueError
 
                 # do category cut
@@ -1071,87 +1138,103 @@ if __name__ == "__main__":
                 btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
                 btag_cut = btagLoose_filter | btagMedium_filter
                 # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
-                vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35) 
+                vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
                 vbf_cut = ak.fill_none(vbf_cut, value=False)
                 # if args.vbf_cat_mode:
                 if args.category == "vbf":
-                    print("vbf mode!")
+                    logger.info("vbf mode!")
                     prod_cat_cut =  vbf_cut
                     prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-                    print("applying jet1 pt 35 Gev cut!")
+                    logger.info("applying jet1 pt 35 Gev cut!")
                     if args.do_vbf_filter_study:
-                        print("applying VBF filter gen cut!")
+                        logger.info("applying VBF filter gen cut!")
                         if "dy_" in process:
                             if ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc"):
-                                print("dy_VBF_filter extra!")
+                                logger.info("dy_VBF_filter extra!")
                                 vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                                prod_cat_cut =  (prod_cat_cut  
+                                prod_cat_cut =  (prod_cat_cut
                                             & vbf_filter
                                 )
                             elif process == "dy_m105_160_amc":
-                                print("dy_M-100To200 extra!")
-                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False) 
+                                logger.info("dy_M-100To200 extra!")
+                                vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
                                 prod_cat_cut =  (
-                                    prod_cat_cut  
-                                    & ~vbf_filter 
+                                    prod_cat_cut
+                                    & ~vbf_filter
                                 )
                             else:
-                                print(f"no extra processing for {process}")
+                                logger.info(f"no extra processing for {process}")
                                 pass
                 # else: # we're interested in ggH category
                 elif args.category == "ggh":
-                    print("ggH mode!")
-                    prod_cat_cut =  ~vbf_cut 
+                    logger.info("ggH mode!")
+                    prod_cat_cut =  ~vbf_cut
                     prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
+                    # prod_cat_cut = prod_cat_cut & (events.njets_nominal >= 2)
                 elif args.category == "nocat":
-                    print("nocat mode!")
+                    logger.info("nocat mode!")
                     prod_cat_cut =  ak.ones_like(vbf_cut, dtype="bool")
                 else:
-                    print("Error: invalid category option!")
+                    logger.info("Error: invalid category option!")
                     raise ValueError
-            
+
+                if args.category == "nocat" or args.category == "ggh":
+                    # add njet cut for ggH category
+                    if str(args.njets) == "inclusive": # inclusive jets means no njet cut, 0, 1 and >=2 cases
+                        logger.info("inclusive jets mode!")
+                        pass
+                    elif str(args.njets) == "0":
+                        logger.info("0 jets mode!")
+                        prod_cat_cut = prod_cat_cut & (events.njets_nominal == 0)
+                    elif str(args.njets) == "1":
+                        logger.info("1 jet mode!")
+                        prod_cat_cut = prod_cat_cut & (events.njets_nominal == 1)
+                    elif str(args.njets) == "2":
+                        logger.info(">=2 jets mode!")
+                        prod_cat_cut = prod_cat_cut & (events.njets_nominal >= 2)
+
                 category_selection = (
-                    prod_cat_cut & 
-                    region 
+                    prod_cat_cut &
+                    region
                 )
-                print(f"category_selection length: {len(category_selection)}")
-                print(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
-                # print(f"category_selection {process} : {category_selection}")
+                logger.info(f"category_selection length: {len(category_selection)}")
+                logger.info(f"category_selection {process} sum : {ak.sum(ak.values_astype(category_selection, np.int32))}")
+                # logger.info(f"category_selection {process} : {category_selection}")
 
                 # filter events fro selected category
 
-                print(f"len(events) {process} b4 selection: {len(events)}")
+                logger.info(f"n_events {process} b4 selection: {len(events)}")
                 events = events[category_selection]
-                print(f"len(events) {process} after selection: {len(events)}")
-                
+                logger.info(f"n_events {process} after selection: {len(events)}")
+
                 # category_selection = ak.to_numpy(category_selection) # this will be multiplied with weights
-                # print(f"len(weights) {process} b4 selection: {len(weights)}")
+                # logger.info(f"len(weights) {process} b4 selection: {len(weights)}")
                 # weights = weights[category_selection]
-                # print(f"len(weights) {process} after selection: {len(weights)}")
+                # logger.info(f"len(weights) {process} after selection: {len(weights)}")
 
                 # extract weights
                 if is_data:
                     weights = ak.to_numpy(ak.fill_none(events["wgt_nominal"], value=0.0))
                 else: # MC
                     weights = ak.fill_none(events["wgt_nominal"], value=0.0)
-                    
+
                     # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
                     # temporary over write
-                    # print(f"events.fields: {events.fields}")
-                    # if "separate_wgt_zpt_wgt" in events.fields:
-                    #     print("removing Zpt rewgt!")
-                    #     weights = weights/events["separate_wgt_zpt_wgt"]
+                    # logger.info(f"events.fields: {events.fields}")
+                    if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
+                        logger.info("removing Zpt rewgt!")
+                        weights = weights/events["separate_wgt_zpt_wgt"]
 
-                    
-                    # print(f"weights {process} b4 numpy: {weights}")
+
+                    # logger.info(f"weights {process} b4 numpy: {weights}")
                     weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
-                    weights = np.nan_to_num(weights, nan=0.0) 
-                    
-                
+                    weights = np.nan_to_num(weights, nan=0.0)
+
+
                 fraction_weight = ak.ones_like(events.wgt_nominal) # TBF, all fractions should be same
-                print(f"var: {var}")
+                logger.info(f"var: {var}")
                 # temp overwrite
                 if ("_range2" in var):
                     var_reduced = var.replace("_range2","")
@@ -1161,93 +1244,93 @@ if __name__ == "__main__":
                     values = ak.to_numpy(ak.fill_none(events[var_reduced], value=-999.0))
                 else:
                     values = ak.to_numpy(ak.fill_none(events[var], value=-999.0))
-                # print(f"weights.shape: {weights[weights>0].shape}")
-                print(f"weights {process} : {weights.shape}")
-                print(f"values {process} : {values.shape}")
+                # logger.info(f"weights.shape: {weights[weights>0].shape}")
+                logger.debug(f"weights {process} : {weights.shape}")
+                logger.debug(f"values {process} : {values.shape}")
                 val_filter = values > 6
-                print(f"values[val_filter]: {values[val_filter]}")
-                
+                logger.debug(f"values[val_filter]: {values[val_filter]}")
 
-                
+
+
                 # temporary overwrite start -------------------------
                 # we have bad ll_zstar_log caluclation, so we re-calculate on the spot
                 # if var == "ll_zstar_log":
-                #     print("ll_zstar_log overwrite!")
+                #     logger.info("ll_zstar_log overwrite!")
                 #     values = ak.to_numpy(np.log(np.abs(events["zeppenfeld"])))
                 # elif var == "rpt":
-                #     print("rpt overwrite!")
+                #     logger.info("rpt overwrite!")
                 #     numerator = np.abs(events["jj_pt"] + events["dimuon_pt"])
                 #     denominator = np.abs(events["jet1_pt"]) + np.abs(events["jet2_pt"]) +  np.abs(events["dimuon_pt"])
                 #     values = ak.to_numpy(numerator/denominator)
                 #     # debug
-                #     print(f"events.jj_pt is nan: {np.any(np.isnan(events.jj_pt))}")
-                #     print(f"events.dimuon_pt is nan: {np.any(np.isnan(events.dimuon_pt))}")
-                #     print(f"events.jet1_pt is nan: {np.any(np.isnan(events.jet1_pt))}")
-                #     print(f"events.jet2_pt is nan: {np.any(np.isnan(events.jet2_pt))}")
-                #     print(f"events.jj_pt is none: {np.any(ak.is_none(events.jj_pt))}")
-                #     print(f"events.dimuon_pt is none: {np.any(ak.is_none(events.dimuon_pt))}")
-                #     print(f"events.jet1_pt is none: {np.any(ak.is_none(events.jet1_pt))}")
-                #     print(f"events.jet2_pt is none: {np.any(ak.is_none(events.jet2_pt))}")
-                    
-                print(f"values is nan: {np.any(np.isnan(values))}")
-                print(f"values is none: {np.any(ak.is_none(values))}")
-                
+                #     logger.info(f"events.jj_pt is nan: {np.any(np.isnan(events.jj_pt))}")
+                #     logger.info(f"events.dimuon_pt is nan: {np.any(np.isnan(events.dimuon_pt))}")
+                #     logger.info(f"events.jet1_pt is nan: {np.any(np.isnan(events.jet1_pt))}")
+                #     logger.info(f"events.jet2_pt is nan: {np.any(np.isnan(events.jet2_pt))}")
+                #     logger.info(f"events.jj_pt is none: {np.any(ak.is_none(events.jj_pt))}")
+                #     logger.info(f"events.dimuon_pt is none: {np.any(ak.is_none(events.dimuon_pt))}")
+                #     logger.info(f"events.jet1_pt is none: {np.any(ak.is_none(events.jet1_pt))}")
+                #     logger.info(f"events.jet2_pt is none: {np.any(ak.is_none(events.jet2_pt))}")
+
+                logger.info(f"values is nan: {np.any(np.isnan(values))}")
+                logger.info(f"values is none: {np.any(ak.is_none(values))}")
+
                 # temporary overwrite end -------------------------
-                # print(f"values[0]: {values[0]}")
+                # logger.info(f"values[0]: {values[0]}")
                 values_filter = values!=-999.0
                 values = values[values_filter]
                 weights = weights[values_filter]
                 # MC samples are already normalized by their xsec*lumi, but data is not
                 if process in group_data_processes:
                     fraction_weight = fraction_weight[values_filter]
-                    # print(f"fraction_weight: {fraction_weight}")
+                    # logger.info(f"fraction_weight: {fraction_weight}")
                     weights = weights*fraction_weight
-                # print(f"weights.shape: {weights[weights>0].shape}")
-                
+                # logger.info(f"weights.shape: {weights[weights>0].shape}")
+
                 # weights = weights/ np.sum(weights) # temporary overwrite to normalize
-                # print(f"weights {process} sum: {np.sum(weights)}")
+                # logger.info(f"weights {process} sum: {np.sum(weights)}")
 
                 if process in group_data_processes:
-                    print("data activated")
+                    logger.info("data activated")
                     group_data_vals.append(values)
                     group_data_weights.append(weights)
                 #-------------------------------------------------------
                 elif process in group_DY_processes:
-                    print("DY activated")
+                    logger.info("DY activated")
                     group_DY_vals.append(values)
                     group_DY_weights.append(weights)
                 #-------------------------------------------------------
                 elif process in group_Top_processes:
-                    print("top activated")
+                    logger.info("top activated")
                     group_Top_vals.append(values)
                     group_Top_weights.append(weights)
                 #-------------------------------------------------------
                 elif process in group_Ewk_processes:
-                    print("Ewk activated")
+                    logger.info("Ewk activated")
                     group_Ewk_vals.append(values)
                     group_Ewk_weights.append(weights)
                 #-------------------------------------------------------
                 elif process in group_VV_processes:
-                    print("VV activated")
+                    logger.info("VV activated")
                     group_VV_vals.append(values)
                     group_VV_weights.append(weights)
                 #-------------------------------------------------------
                 elif process in group_ggH_processes:
-                    print("ggH activated")
+                    logger.info("ggH activated")
                     group_ggH_vals.append(values)
                     group_ggH_weights.append(weights)
                 #-------------------------------------------------------
                 elif process in group_VBF_processes:
-                    print("VBF activated")
+                    logger.info("VBF activated")
                     group_VBF_vals.append(values)
                     group_VBF_weights.append(weights)
                 #-------------------------------------------------------
                 else: # put into "other" bkg group
-                    print("other activated")
+                    logger.info("other activated")
                     group_other_vals.append(values)
                     group_other_weights.append(weights)
-            
-            
+
+
             # -------------------------------------------------------
             # Aggregate the data into Sample types b4 plotting
             # -------------------------------------------------------
@@ -1257,7 +1340,7 @@ if __name__ == "__main__":
                 "values" :np.concatenate(group_data_vals, axis=0),
                 "weights":np.concatenate(group_data_weights, axis=0)
             }
-            
+
             # define Bkg MC dict
             bkg_MC_dict = OrderedDict()
             # start from lowest yield to highest yield
@@ -1287,7 +1370,7 @@ if __name__ == "__main__":
                     "weights":np.concatenate(group_DY_weights, axis=0)
                 }
 
-            
+
             # bkg_MC_dict = {
             #     "Top" :{
             #         "values" :np.concatenate(group_Top_vals, axis=0),
@@ -1296,20 +1379,20 @@ if __name__ == "__main__":
             #     "DY" :{
             #         "values" :np.concatenate(group_DY_vals, axis=0),
             #         "weights":np.concatenate(group_DY_weights, axis=0)
-            #     },     
+            #     },
             # }
 
             # define Sig MC dict
-            
+
             # sig_MC_dict = {
             #     "ggH" :{
             #         "values" :np.concatenate(group_ggH_vals, axis=0),
             #         "weights":np.concatenate(group_ggH_weights, axis=0)
-            #     },  
+            #     },
             #     "VBF" :{
             #         "values" :np.concatenate(group_VBF_vals, axis=0),
             #         "weights":np.concatenate(group_VBF_weights, axis=0)
-            #     },  
+            #     },
             # }
             sig_MC_dict = OrderedDict()
             if len(group_ggH_vals) > 0:
@@ -1322,7 +1405,7 @@ if __name__ == "__main__":
                     "values" :np.concatenate(group_VBF_vals, axis=0),
                     "weights":np.concatenate(group_VBF_weights, axis=0)
                 }
-            
+
 
 
             # -------------------------------------------------------
@@ -1333,35 +1416,33 @@ if __name__ == "__main__":
             # else:
             #     production_cat = "ggh"
             # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{production_cat}"
-            full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{args.category}/{args.label}"
-
-            
+            full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{args.region}/Cat_{args.category}/njet_{args.njets}/{args.label}"
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             full_save_fname = f"{full_save_path}/{var}.pdf"
 
-           
+
             plotDataMC_compare(
-                binning, 
-                data_dict, 
-                bkg_MC_dict, 
+                binning,
+                data_dict,
+                bkg_MC_dict,
                 full_save_fname,
                 sig_MC_dict=sig_MC_dict,
-                title = "", 
-                x_title = plot_settings[plot_var].get("xlabel"), 
+                title = "",
+                x_title = plot_settings[plot_var].get("xlabel"),
                 y_title = plot_settings[plot_var].get("ylabel"),
                 lumi = args.lumi,
                 status = status,
                 log_scale = do_logscale,
             )
-            
 
 
-            
+
+
 
             var_elapsed = round(time.time() - var_step, 3)
-            print(f"Finished processing {var} in {var_elapsed} s.")
+            logger.info(f"Finished processing {var} in {var_elapsed} s.")
     # ROOT style or mplhep style ends here --------------------------------------
-    
+
     time_elapsed = round(time.time() - time_step, 3)
-    print(f"Finished in {time_elapsed} s.")
+    logger.info(f"Finished in {time_elapsed} s.")
