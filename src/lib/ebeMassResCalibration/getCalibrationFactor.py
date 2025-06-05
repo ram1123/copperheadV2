@@ -16,9 +16,13 @@ import dask.dataframe as dd
 import awkward as ak
 from distributed import Client
 
+from datetime import datetime
+
 import correctionlib
+
 import logging
 from modules.utils import logger
+
 from basic_class_for_calibration import (
     get_calib_categories,
     generateBWxDCB_plot,
@@ -38,6 +42,13 @@ CONFIG = {
     "fields_of_interest": ["mu1_pt", "mu1_eta", "mu2_eta", "dimuon_mass"],
     "fields_with_errors": ["mu1_pt", "mu1_ptErr", "mu2_pt", "mu2_ptErr", "mu1_eta", "mu2_eta", "dimuon_mass"],
 }
+
+def backup_file(filepath):
+    if os.path.exists(filepath):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = f"{filepath}.{timestamp}.bak"
+        os.system(f"cp {filepath} {backup_path}")
+        logger.info(f"Backed up {filepath} to {backup_path}")
 
 def create_directory(path):
     os.makedirs(path, exist_ok=True)
@@ -169,7 +180,7 @@ def main():
     parser.add_argument("--validate", action="store_true", help="Run validation instead of computing calibration (default: False)")
     parser.add_argument("--fixCat", type=str, default=None, help="Fit only one category")
     parser.add_argument("--years", nargs="+", default=["2018", "2017", "2016postVFP", "2016preVFP"], help="List of years to process")
-
+    parser.add_argument("--backup", action="store_true", help="Enable backup before overwrite")
     args = parser.parse_args()
 
     years = args.years
@@ -182,16 +193,27 @@ def main():
     for year in years:
         logger.info(f"Processing year: {year}")
         if UseFullSampleForCalibration:
-            out_string = f"{year}_{isMCString}_CalibrateWithFullSample"
+            out_string = f"EBE_{year}_{isMCString}_CalibrateWithFullSample"
         else:
-            out_string = f"{year}_{isMCString}_Train75_Val25"
+            out_string = f"EBE_{year}_{isMCString}_Train75_Val25"
         create_directory(f"plots/{out_string}")
-        CalibrationJSONFile = f"res_calib_BS_correction_{year}_nanoAODv12.json"
+        CalibrationJSONFile = f"res_calib_BS_correction_{year}_{isMCString}_nanoAODv12.json"
 
         if isMC:
-            INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/dy*MiNNLO/*/*.parquet"
+            INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/{year}/f1_0/dy*MiNNLO/*/*.parquet"
         else:
-            INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/April19_NanoV12/stage1_output/{year}/f1_0/data_*/*/*.parquet"
+            INPUT_DATASET = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/{year}/f1_0/data_*/*/*.parquet"
+
+        if args.backup:
+            backup_file(f"plots/{out_string}/fit_results.csv")
+            backup_file(f"plots/{out_string}/resolution_results.csv")
+            backup_file(f"plots/{out_string}/calibration_factors.csv")
+            backup_file(f"plots/{out_string}/calibration_factors.tex")
+            backup_file(f"plots/{out_string}/calibration_factors_rounded.tex")
+            backup_file(f"plots/{out_string}/calibration_factors_precision.tex")
+            backup_file(f"plots/{out_string}/{CalibrationJSONFile}")
+            backup_file(f"plots/{out_string}/calibration_results_calibrated.csv")
+            backup_file(f"plots/{out_string}/fit_params.json")
 
         ddf = dd.read_parquet(INPUT_DATASET)[CONFIG["fields_with_errors"]]
         ddf = ddf[(ddf["dimuon_mass"] > CONFIG["zcr_filter_range"][0]) & (ddf["dimuon_mass"] < CONFIG["zcr_filter_range"][1])]
@@ -216,15 +238,16 @@ def main():
         if ComputeCalibrationFactors:
             df_fit = step1_mass_fitting_zcr(data_events, out_string, fix_fitting_one_cat=fix_fitting_one_cat)
             if fix_fitting_one_cat:
-                # save last csv file, as backup
-                os.system(f"cp plots/{out_string}/resolution_results.csv plots/{out_string}/resolution_results_backup.csv")
-                # update the f"plots/{out_string}/fit_results{out_string}.csv" with the new cat_name available in df_fit
-                # then save it to the same file
-                df_fit = pd.read_csv(f"plots/{out_string}/fit_results{out_string}.csv")
+                df_fit = pd.read_csv(f"plots/{out_string}/fit_results.csv")
+                df_fit["orig_idx"] = df_fit.index  # Save original index
+                # append the fixed category
                 df_fit = pd.concat([df_fit, df_fit[df_fit["cat_name"] == fix_fitting_one_cat]])
+                # drop duplicates based on "cat_name", keeping the last occurrence
                 df_fit = df_fit.drop_duplicates(subset=["cat_name"], keep="last")
-                df_fit = df_fit.reset_index(drop=True)
-                save_dataframe_to_csv(df_fit, f"plots/{out_string}/fit_results_{fix_fitting_one_cat}.csv", "fit results")
+                # Sort by original index to maintain order
+                df_fit = df_fit.sort_values(by="orig_idx").drop(columns="orig_idx").reset_index(drop=True)
+
+                save_dataframe_to_csv(df_fit, f"plots/{out_string}/fit_results.csv", "fit results")
 
                 df_res = pd.read_csv(f"plots/{out_string}/resolution_results.csv")
             else:
@@ -235,15 +258,16 @@ def main():
                 save_dataframe_to_csv(df_res, f"plots/{out_string}/resolution_results.csv", "resolution results")
 
             df_merged = step3_compute_calibration(df_fit, df_res)
-            save_dataframe_to_csv(df_merged, f"plots/{out_string}/calibration_factors{fix_fitting_one_cat}.csv")
+            save_dataframe_to_csv(df_merged, f"plots/{out_string}/calibration_factors.csv")
 
             # Save LaTeX tables
-            for fmt, rounding in [(f"calibration_factors{fix_fitting_one_cat}.tex", None),
-                                  (f"calibration_factors_rounded{fix_fitting_one_cat}.tex", 4),
-                                  (f"calibration_factors_precision{fix_fitting_one_cat}.tex", 3)]:
+            for fmt, rounding in [(f"calibration_factors.tex", None),
+                                (f"calibration_factors_rounded.tex", 4),
+                                (f"calibration_factors_precision.tex", 3)]:
                 df_tmp = df_merged[["cat_name", "fit_val", "fit_err", "median_val_NonCal", "calibration_factor"]]
-                if rounding:
-                    df_tmp = df_tmp.round(rounding)
+                if rounding is not None:
+                    for col in ["fit_val", "fit_err", "median_val_NonCal", "calibration_factor"]:
+                        df_tmp[col] = df_tmp[col].map(lambda x: f"{x:.{rounding}f}")
                 df_tmp.to_latex(f"plots/{out_string}/{fmt}", index=False)
 
             save_calibration_json(df_merged, f"plots/{out_string}/{CalibrationJSONFile}")
