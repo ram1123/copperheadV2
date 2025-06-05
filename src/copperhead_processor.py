@@ -173,7 +173,7 @@ def getZptWgts_3region_new(dimuon_pt, njets, nbins, year, config_path):
         # zpt_wgt_by_jet = ak.ones_like(dimuon_pt) * -1 # debugging
         # first polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
-        for order in range(max_order+1): # FIXME: Hardcoded polynomial order
+        for order in range(max_order + 1):  # Dynamically use max_order from the configuration
             coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
             # logger.info(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
             polynomial_term = coeff*dimuon_pt**order
