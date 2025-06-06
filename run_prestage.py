@@ -26,7 +26,6 @@ from collections.abc import Sequence
 
 import logging
 from modules.utils import logger
-from rich import print
 
 def getBadFile(fname):
     try:

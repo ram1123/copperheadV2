@@ -78,20 +78,9 @@ years:
             # dy_M-100To200: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
             dy_M-50_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToMuMu_M-50_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
             dy_M-100To200_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
-            # dy_M-200To500: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_M-500To700: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_M-700To800: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_M-800To1000: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_M-1000To1500: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_M-1500To2000: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_M-2000To3000: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_VBF_filter: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_m105_160_vbf_amc: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_VBF_filter_customJMEoff: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_VBF_filter_Amandeep10_6_26: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_VBF_filter_Amandeep10_6_32: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_VBF_filter_Amandeep_fromGenSim: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
-            # dy_VBF_filter_fromGridpack: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
+            dy_VBF_filter:
+                - /eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_hammer
+                - /eos/purdue/store/user/hyeonseo/Run2UL/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_lxplus
 
         Top:
             ttjets_dl: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8

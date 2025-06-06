@@ -50,13 +50,34 @@ cross_sections:
   # st_tw_antitop: 35.85 # rereco
   st_t_top: 136.02 #FIXME source: AN-19-124 table 2.8
   st_t_antitop: 80.95 #FIXME source: AN-19-124 table 2.8
+  st_s_lep: 3.549
+  st_s_had: 7.14
+  tZq_ll: 0.07561
   ttjets_dl: 86.65 # UL
   ttjets_sl: 358.57 # UL
+  TTWjets_LNu: 0.2159
+  TTWJets_QQ: 0.4369
+  TTZ_LLnunu: 0.2439
+  TTTT: 0.008091
+  TTTW: 0.0007298
+  TTTJ: 0.0004010
+  TTWW: 0.007002
   ww_2l2nu: 11.09 # UL
   wz_3lnu: 5.22 # UL
   wz_2l2q: 6.45 # UL
   wz_1l1nu2q: 9.12 # UL
   zz: 12.17 # UL #FIXME
+  zz_2mu2nu: 0.001583
+  zz_2l2q: 3.698
+  zz_4l: 1.325
+  GluGluContin_ZZ2e2mu: 3.292
+  # GluGluContin_ZZ2e2nu: 0
+  GluGluContin_ZZ2e2tau: 3.294
+  GluGluContin_ZZ2mu2nu: 17.73
+  GluGluContin_ZZ2mu2tau: 3.294
+  GluGluContin_ZZ4e: 1.619
+  GluGluContin_ZZ4mu: 1.608
+  GluGluContin_ZZ4tau: 01.626
   # ww_2l2nu: 12.178 # rereco
   # wz_3lnu: 4.102 # rereco
   # wz_2l2q: 5.606 # rereco
