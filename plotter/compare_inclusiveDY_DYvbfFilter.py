@@ -7,9 +7,9 @@ Read all Parquet files in multiple directories for two DY samples (each containi
 distribution using ROOT, and overlay them.
 
 # check with just /0/ directory
-time python compare_dy_parquet_v2.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/0/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/0/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/0/               --nbins  55         --xmin 105         --xmax 160         --output compareDY_M50M100_55bins_0.pdf
-time python compare_dy_parquet_v2.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  55         --xmin 105         --xmax 160         --output compareDY_M50M100_55bins.pdf
-time python compare_dy_parquet_v2.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  110         --xmin 105         --xmax 160         --output compareDY_M50M100_110bins.pdf
+time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/0/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/0/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/0/               --nbins  110         --xmin 105         --xmax 160         --output compareDY_M50M100_110bins_0.pdf
+time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  55         --xmin 105         --xmax 160         --output compareDY_M50M100_55bins.pdf
+time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  110         --xmin 105         --xmax 160         --output compareDY_M50M100_110bins.pdf
 """
 
 import os
@@ -176,13 +176,16 @@ def main():
 
     # 7) Style and draw with ROOT
     c = TCanvas("c", "DY absolute cross sections", 800, 600)
-    gPad.SetLogy()  # Use log scale on y-axis; remove or comment out for linear
+    logy = False
+    if logy:
+        gPad.SetLogy()  # Use log scale on y-axis; remove or comment out for linear
+
 
 
     h1.SetLineColor(kBlue)
     h1.SetMinimum(10.0)  # Set minimum for log scale
-    h1.SetMaximum(10000.0)  # Set maximum for log scale
-    h2.SetMaximum(10000.0)  # Set maximum for log scale
+    h1.SetMaximum(2000.0)  # Set maximum for log scale
+    h2.SetMaximum(2000.0)  # Set maximum for log scale
 
     h2.SetLineColor(kRed)
     # h2.SetLineStyle(2)
@@ -198,17 +201,15 @@ def main():
 
     # Draw ratio plot
     rp = ROOT.TRatioPlot(h2,h1)
-    # rp.SetH1DrawOpt("E0")
-    # rp.SetH2DrawOpt("E0")
     rp.SetH1DrawOpt('p e0 same')
     rp.SetH2DrawOpt('p e0 same')
     rp.Draw()
-    # ratioPlot.GetLowerRefGraph().SetMinimum(0.0)
-    # ratioPlot.GetLowerRefGraph().SetMaximum(1.5)
+    # rp.GetLowerRefGraph().SetMinimum(0.0)
+    # rp.GetLowerRefGraph().SetMaximum(1.5)
     leg.Draw()
 
     # c.Update()
-    c.SaveAs(args.output)
+    c.SaveAs((args.output).replace(".pdf", "_log.pdf") if logy else args.output)
     print(f"→ Saved comparison plot to {args.output}")
 
 if __name__ == "__main__":
