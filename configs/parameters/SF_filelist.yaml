@@ -218,6 +218,8 @@ zpt_weights_file_valerie:
   2016_RERECO: data/zpt_weights.histo.json # FIXME
   '2017_RERECO': data/zpt_weights.histo.json # FIXME
   '2018_RERECO': data/zpt_weights.histo.json # FIXME
+new_zpt_weights_file_aMCatNLO:
+  '2018': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml # New zpt rewgt March 30 2025
 new_zpt_weights_file:
   2016preVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
   2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025

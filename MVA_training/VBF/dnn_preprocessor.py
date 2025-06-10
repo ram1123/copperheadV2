@@ -6,7 +6,7 @@ import pandas as pd
 import itertools
 import argparse
 
-import os 
+import os
 import copy
 import pickle
 
@@ -34,7 +34,7 @@ def fillEventNans(events):
 
 def applyCatAndFeatFilter(events, features: list, region="h-peak", category="vbf"):
     """
-    
+
     """
     # apply category filter
     dimuon_mass = events.dimuon_mass
@@ -44,10 +44,16 @@ def applyCatAndFeatFilter(events, features: list, region="h-peak", category="vbf
         region = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
     elif region =="signal":
         region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
-    
+
     if category.lower() == "vbf":
-        btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35) 
+        # btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
+        btag_loose = ak.fill_none(events.nBtagLoose_nominal, 0)
+        btag_medium = ak.fill_none(events.nBtagMedium_nominal, 0)
+        cut_loose = btag_loose >= 2
+        cut_medium = btag_medium >= 1
+        btag_cut = cut_loose | cut_medium
+        btag_cut = ak.fill_none(btag_cut, False)
+        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
         cat_cut = vbf_cut & (~btag_cut) # btag cut is for VH and ttH categories
     elif category.lower()== "ggh":
         btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
@@ -55,17 +61,24 @@ def applyCatAndFeatFilter(events, features: list, region="h-peak", category="vbf
         cat_cut = (~vbf_cut) & (~btag_cut) # btag cut is for VH and ttH categories
     else: # no category cut is applied
         cat_cut = ak.ones_like(dimuon_mass, dtype="bool")
-        
+
     cat_cut = ak.fill_none(cat_cut, value=False)
     cat_filter = (
-        cat_cut & 
-        region 
+        cat_cut &
+        region
     )
     events = events[cat_filter] # apply the category filter
     # print(f"events dimuon_mass: {events.dimuon_mass.compute()}")
     # apply the feature filter (so the ak zip only contains features we are interested)
     print(f"features: {features}")
-    events = ak.zip({field : events[field] for field in features}) 
+    events = ak.zip({field : events[field] for field in features}) # FIXME: What values are there for empty entries?
+    # filled = {}
+    # for field in features:
+    #     if "phi" in field or "theta" in field:
+    #         filled[field] = ak.fill_none(events[field], -10)
+    #     else:
+    #         filled[field] = ak.fill_none(events[field], 0)
+    # events = ak.zip(filled)
     return events
 
 
@@ -76,7 +89,7 @@ def prepare_features(events, features, variation="nominal"):
             variation_current = "nominal"
         else:
             variation_current = variation
-        
+
         if f"{trf}_{variation_current}" in events.fields:
             features_var.append(f"{trf}_{variation_current}")
         elif trf in events.fields:
@@ -103,7 +116,7 @@ def preprocess_loop(events, features2load, region="h-peak", category="vbf", labe
         print("Error: please define the label: signal or background")
         raise ValueError
     return df
-    
+
 # def scale_data(inputs, model_name: str, fold_idx: int):
 #     x_mean = np.mean(x_train[inputs].values,axis=0)
 #     x_std = np.std(x_train[inputs].values,axis=0)
@@ -150,7 +163,7 @@ def weighted_std(values, weights):
 
 # def applyMixup(x_train,label_train):
 #     chunks = np.array_split(large_array, num_chunks)
-#     # 
+#     #
 
 # def applyMixup(x_train):
 #     """
@@ -223,9 +236,9 @@ def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
     ________
     https://github.com/makeyourownmaker/mixupy
     """
-    random.seed(seed) 
+    random.seed(seed)
     np.random.seed(seed)
-    
+
     _check_data(data)
     _check_params(alpha, concat, batch_size)
 
@@ -272,7 +285,7 @@ def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
     if data_mix.isna().any().any():
         print("Error: NaN values encountered!")
         raise ValueError
-    
+
     data_new = data_mix
 
     if concat is True:
@@ -511,15 +524,15 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     ]
     # generate directory to save training_features
     save_path = f"dnn/trained_models/{run_label}"
-    if not os.path.exists(save_path): 
-        os.makedirs(save_path) 
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
 
-        
+
     # Pickle the training_features list into a file
     with open(f'{save_path}/training_features.pkl', 'wb') as f:
         pickle.dump(training_features, f)
-    
-    
+
+
     # TODO: add mixup
     # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
     sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
@@ -530,18 +543,37 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     sig_events_dict = {}
     for process in sig_processes:
         filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
-        sig_events = dak.from_parquet(filenames)
+        if not filenames:
+            print(f"No parquet files found for signal process {process}, skipping.")
+            continue
+        try:
+            sig_events = dak.from_parquet(filenames)
+        except ValueError as e:
+            print(f"Error reading parquet for signal process {process}: {e}, skipping.")
+            continue
         sig_events_dict[process] = sig_events
-    
+
     bkg_events_dict = {}
     for process in bkg_processes:
         filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
-        bkg_events = dak.from_parquet(filenames)
+        if not filenames:
+            print(f"No parquet files found for background process {process}, skipping.")
+            continue
+        try:
+            bkg_events = dak.from_parquet(filenames)
+        except ValueError as e:
+            print(f"Error reading parquet for background process {process}: {e}, skipping.")
+            continue
         bkg_events_dict[process] = bkg_events
 
-    
-    
-    training_features = prepare_features(sig_events, training_features) # add variation to features
+
+
+    # Prepare features based on a sample signal dataset
+    if not sig_events_dict:
+        raise ValueError(f"No signal events loaded; please check base_path: {base_path} and signal processes.")
+    # Use the first available signal events as template for feature names
+    sample_events = next(iter(sig_events_dict.values()))
+    training_features = prepare_features(sample_events, training_features)
     # print(f"training_features: {training_features}")
     print(f"len training_features: {len(training_features)}")
     features2load = training_features + ["event","wgt_nominal"]
@@ -570,7 +602,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             print(f"df.process: {df.process}")
             df_l.append(df)
 
-    
+
     # merge sig and bkg dfs
     df_total = pd.concat(df_l)
     print(df_total)
@@ -581,7 +613,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
 
     # divide our data into 4 folds
     nfolds = 4
-    for i in range(nfolds):       
+    for i in range(nfolds):
         train_folds = [(i+f)%nfolds for f in [0,1]]
         val_folds = [(i+f)%nfolds for f in [2]]
         eval_folds = [(i+f)%nfolds for f in [3]]
@@ -599,8 +631,8 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         df_val = df_total[val_filter]
         df_eval = df_total[eval_filter]
 
-        
-        
+
+
         # scale data, save the mean and std. This has to be done b4 mixup
         x_train = df_train[training_features].values
         print(f"x_train shape b4 mixup: {x_train.shape}")
@@ -611,7 +643,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         print(f"x_mean: {x_mean}")
         print(f"x_std: {x_std}")
         # np.save(f"output/trained_models/{model}/scalers_{fold_idx}", [x_mean, x_std])
-        
+
         np.save(f"{save_path}/scalers_{i}", [x_mean, x_std])
 
 
@@ -633,9 +665,9 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             df_mixup = df_mixup.drop("process", axis=1)
             df_train = df_train.drop("process", axis=1)
 
-            
+
             multiplier = 1
-            
+
 
             # df_mixup = mixup(df_train, batch_size = int(len(df_train)*multiplier)) # batch size is subject to change ofc
             df_mixup = mixup(df_mixup, batch_size = int(len(df_mixup)*multiplier)) # batch size is subject to change ofc
@@ -648,14 +680,14 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             else:
                 df_train = df_mixup
 
-            
+
             print(f"df_train after mixup: {df_train}")
             # once mixup is done, recalculate the x, label and wgt for train
             x_train = df_train[training_features].values
             label_train = df_train.label.values
             wgt_train = df_train.wgt_nominal.values # idk if this is needed
             print(f"x_train shape after mixup: {x_train.shape}")
-            
+
 
         # apply scaling to data, and save the data for training
         x_train = (x_train-x_mean)/x_std
@@ -680,10 +712,10 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             "evaluation" : df_eval,
         }
         for mode, data_df in data_dict.items():
-            data_df.to_parquet(f"{save_path}/data_df_{mode}_{i}")
-        
-    
-    
+            data_df.to_parquet(f"{save_path}/data_df_{mode}_{i}.parquet")
+
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "-l",
@@ -702,13 +734,16 @@ parser.add_argument(
     help="production mode category. Options: vbf or ggh",
 )
 args = parser.parse_args()
-    
-if __name__ == "__main__":  
+
+if __name__ == "__main__":
     from distributed import LocalCluster, Client
     cluster = LocalCluster(processes=True)
     cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
     client = Client(cluster)
-    
-    base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco/stage1_output/2018/f1_0/"
+
+    RUN_LABEL = "May28_NanoV12"
+    YEAR      = "2018"
+    base_path      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{RUN_LABEL}/stage1_output/{YEAR}/f1_0"
+
     preprocess(base_path, run_label=args.label, category=args.category)
     print("Success!")

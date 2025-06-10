@@ -28,6 +28,23 @@ def getHistAndErrs(
     return np_hist, np_hist_err
 
 
+def plotDataMC_compare_hda(
+    binning: np.array,
+    data: Dict[str, np.array],
+    bkg_MC_dict: Dict[str, Dict[str, np.array]],
+    save_full_path: str,
+    sig_MC_dict = {},
+    title="default title",
+    x_title="Mass (GeV)",
+    y_title="Events",
+    plot_ratio=True,
+    log_scale=True,
+    lumi = "",
+    status = "Private Work",
+    CenterOfMass = 13,
+    ):
+    raise ValueError
+
 def plotDataMC_compare(
     binning: np.array,
     data: Dict[str, np.array],
@@ -67,9 +84,9 @@ def plotDataMC_compare(
     # -----------------------------------------
     # plot data
     # -----------------------------------------
-    values = data["values"]
-    weights = data["weights"]
-    data_hist, data_hist_err = getHistAndErrs(binning, values, weights)
+    data_hist = data["hist_arr"]
+    data_hist_err = np.sqrt(data["hist_w2_arr"])
+
     hep.histplot(
         data_hist,
         xerr=True,
@@ -91,13 +108,11 @@ def plotDataMC_compare(
     bkg_MC_histW2_l = []
     bkg_mc_sample_names = []
     for bkg_mc_sample, bkg_mc_sample_arrs in bkg_MC_dict.items():
-        values = bkg_mc_sample_arrs["values"]
-        weights = bkg_mc_sample_arrs["weights"]
-        np_hist, _ = np.histogram(values, bins=binning, weights = weights)
-        np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
+        hist_arr = bkg_mc_sample_arrs["hist_arr"]
+        hist_w2_arr = bkg_mc_sample_arrs["hist_w2_arr"]
         bkg_mc_sample_names.append(bkg_mc_sample)
-        bkg_MC_hist_l.append(np_hist)
-        bkg_MC_histW2_l.append(np_hist_w2)
+        bkg_MC_hist_l.append(hist_arr)
+        bkg_MC_histW2_l.append(hist_w2_arr)
     # plot bkg_MC in one go
     color_idx = len(bkg_MC_hist_l)
     hep.histplot(
@@ -128,9 +143,7 @@ def plotDataMC_compare(
     # -----------------------------------------
     if len(sig_MC_dict.keys()) > 0:
         for sig_mc_sample,  sig_mc_sample_arrs in sig_MC_dict.items():
-            values = sig_mc_sample_arrs["values"]
-            weights = sig_mc_sample_arrs["weights"]
-            sig_MC_hist, _ = getHistAndErrs(binning, values, weights)
+            sig_MC_hist = sig_mc_sample_arrs["hist_arr"]
             hep.histplot(
                 sig_MC_hist,
                 bins=binning,

@@ -8,11 +8,9 @@ and overlay them with a ratio panel.
 
 
 Example usage:
-# check with just /0/ directory
-time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/0/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/0/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/0/               --nbins  110         --xmin 105         --xmax 160         --output compareDY_M50M100_110bins_0.pdf
-# With full statistics
 time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  55         --xmin 105         --xmax 160         --output compareDY_M50M100_55bins.pdf
-time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  110         --xmin 105         --xmax 160         --output compareDY_M50M100_110bins.pdf
+time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  40         --xmin 110         --xmax 150         --output compareDY_M50M100_40bins.pdf
+time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  80         --xmin 110         --xmax 150         --output compareDY_M50M100_80bins.pdf
 """
 
 import os

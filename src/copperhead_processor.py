@@ -659,11 +659,11 @@ class EventProcessor(processor.ProcessorABC):
             if 'dy_VBF_filter' in dataset:
                 logger.info("doing VBF filter!")
                 # Keep event if di-genjet mass >= 350 GeV
-                genjet_filter = ak.fill_none((gjj_mass > 350), value=False)
+                genjet_filter = ak.fill_none((gjj_mass <= 350), value=False)
             elif ('dy_M-100To200' in dataset or 'dy_M-50_MiNNLO' in dataset):
                 logger.info(f"doing M-100To200 filter! -- {dataset} --")
                 # Keep event if di-genjet mass <= 350 GeV
-                genjet_filter = ak.fill_none((gjj_mass <= 350), value=False)
+                genjet_filter = ak.fill_none((gjj_mass > 350), value=False)
             event_filter = event_filter & genjet_filter
 
         t3 = time.perf_counter()
@@ -1168,7 +1168,7 @@ class EventProcessor(processor.ProcessorABC):
             # logger.debug(f"gl_pair: {gl_pair.compute()}")
             # logger.debug(f"dr_gl: {dr_gl.compute().show(formatter=np.set_printoptions(threshold=sys.maxsize))}")
             # logger.debug(f"gjets b4 isolation: {gjets.compute()}")
-            isolated = ak.all((dr_gl > 0.3), axis=-1) # this also returns true if there's no leptons near the gjet
+            isolated = ak.all((dr_gl > 0.4), axis=-1) # this also returns true if there's no leptons near the gjet
             # logger.debug(f"isolated: {isolated.compute()}")
             # logger.debug(f"dr_gl[isolated]: {dr_gl[isolated].compute()}")
             # original start ----------------------------------------
@@ -1634,7 +1634,10 @@ class EventProcessor(processor.ProcessorABC):
             # out_dict["zpt_weight_mine_nbins50"] = zpt_weight_mine_nbins50
             logger.info("=======================  apply zpt weights =======================")
             if year == "2018": # FIXME
-                zpt_weight_mine_nbins100 = getZptWgts_3region_new(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+                if "MiNNLO" in dataset: # FIXME: temporary fix for MiNNLO samples
+                    zpt_weight_mine_nbins100 = getZptWgts_3region_new(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
+                else:
+                    zpt_weight_mine_nbins100 = getZptWgts_3region_new(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file_aMCatNLO"])
             else:
                 zpt_weight_mine_nbins100 = getZptWgts_3region(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
             # zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])

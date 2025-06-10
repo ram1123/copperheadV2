@@ -7,9 +7,9 @@ then
     module load anaconda/2024.06-1
 fi
 
-# conda activate /depot/cms/users/yun79/conda_envs/yun_coffea_latest
+conda activate /depot/cms/users/yun79/conda_envs/yun_coffea_latest
 # conda activate /depot/cms/kernels/root632 # FIXME: Temp fix, as coffea latest not working starting from early march 2025
-conda activate /depot/cms/kernels/coffea_latest
+# conda activate /depot/cms/kernels/coffea_latest
 # conda activate /depot/cms/kernels/python3
 # if there is no arguments only then setup proxy
 if [ "$#" -eq 0 ]; then

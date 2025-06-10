@@ -1,11 +1,10 @@
-cross_sections:
-  test: 6200.0
-  dy_M-50: 6077.22 # precision: NNLO source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
+cross_sections: # cross-section unit: pb
+  dy_M-50_aMCatNLO: 6077.22 # precision: NNLO source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
   dy_M-50_MiNNLO: 1976
   dy_M-50_MiNNLO_V2: 2002
   dy_M-50_nocut: 6450.0
   # dy_M-100To200: 247.9 # precision: NLO source: GenAnalyzer tool at https://github.com/green-cabbage/genproductions
-  dy_M-100To200: 233.8592627 # precision: NNLO
+  dy_M-100To200_aMCatNLO: 233.8592627 # precision: NNLO
   dy_M-100To200_MiNNLO: 77.95
   dy_VBF_filter: 2.01  # subjet to change
   dy_VBF_filter_customJMEoff: 2.01 # subjet to change
@@ -25,6 +24,20 @@ cross_sections:
     '2016': 1.77
     '2017': 2.04
     '2018': 2.03
+  dy_ZptWgt_MiNNLO: 2386000
+  dy_M-4to50_HT-70to100: 316.9
+  dy_M-4to50_HT-100to200: 190.0
+  dy_M-4to50_HT-200to400: 42.67
+  dy_M-4to50_HT-400to600: 4.072
+  dy_M-4to50_HT-600toInf: 1.202
+  dy_M-50_HT-70to100: 140.0
+  dy_M-50_HT-100to200: 140.2
+  dy_M-50_HT-200to400: 38.44
+  dy_M-50_HT-400to600: 5.216
+  dy_M-50_HT-600to800: 1.268
+  dy_M-50_HT-800to1200: 0.5691
+  dy_M-50_HT-1200to2500: 0.1335
+  dy_M-50_HT-2500toInf: 0.00299
   ewk_lljj_mll105_160:
     '2016': 0.0508896
     '2017': 0.0508896

@@ -1,4 +1,16 @@
+# 09 June 2025
 
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m zpt_fit)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m 2)
+```
+
+
+# OLD
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l May28_NanoV12 -y 2018 -m all) Run2_nanoAODv12_08June
+```
 
 bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv9.yaml -v 9 -l test_test -y 2018 -m 1 -d 1
 
