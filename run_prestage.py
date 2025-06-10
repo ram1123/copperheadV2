@@ -388,6 +388,10 @@ if __name__ == "__main__":
                 single_dataset_name = dataset_name
                 fnames = getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
+            if len(fnames) == 0:
+                logger.error(f"No files found for sample {sample_name}. Skipping this sample.")
+                continue
+
             if args.skipBadFiles: # if we want to skip bad files
                 logger.info("Skipping bad files")
                 logger.info(f"Number of files before removing bad files: {len(fnames)}")

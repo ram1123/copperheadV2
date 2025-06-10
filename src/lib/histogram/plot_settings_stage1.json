@@ -2,6 +2,7 @@
     "dimuon_mass": {
         "variable": "dimuon_mass",
         "binning_linspace": [110, 150, 30],
+        "binning_zpeak_linspace": [76, 106, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$m_{\\mu\\mu}$ [GeV]",
@@ -270,7 +271,53 @@
         "ylabel": "Events / 1 GeV",
         "xlabel": "Delta R",
         "color": "pink"
+    },
+    "MET_pt": {
+        "variable": "MET_pt",
+        "binning_linspace": [0, 200, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$p_{T}(MET)$ [GeV]",
+        "color": "royalblue"
+    },
+    "MET_phi": {
+        "variable": "MET_phi",
+        "binning_linspace": [-3.2, 3.2, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$\\phi(MET)$",
+        "color": "royalblue"
+    },
+    "MET_sumEt": {
+        "variable": "MET_sumEt",
+        "binning_linspace": [0, 500, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$sumEt(MET)$ [GeV]",
+        "color": "royalblue"
+    },
+    "acoplanarity": {
+        "variable": "acoplanarity",
+        "binning_linspace": [0, 1, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$\\Delta\\phi_{jj}$",
+        "color": "royalblue"
+    },
+    "PV_npvs": {
+        "variable": "PV_npvs",
+        "binning_linspace": [0, 100, 101],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Number of Primary Vertices",
+        "color": "royalblue"
+    },
+    "PV_npvsGood": {
+        "variable": "PV_npvsGood",
+        "binning_linspace": [0, 100, 101],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Number of Good Primary Vertices",
+        "color": "royalblue"
     }
-
-
 }

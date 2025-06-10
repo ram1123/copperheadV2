@@ -18,8 +18,8 @@ stat_err_opts = {
 ratio_err_opts = {"step": "post", "facecolor": (0, 0, 0, 0.3), "linewidth": 0}
 
 def getHistAndErrs(
-    binning: np.array, 
-    values: np.array, 
+    binning: np.array,
+    values: np.array,
     weights: np.array
     ) -> Tuple[np.array, np.array] :
     np_hist, _ = np.histogram(values, bins=binning, weights = weights)
@@ -29,13 +29,13 @@ def getHistAndErrs(
 
 
 def plotDataMC_compare(
-    binning: np.array, 
-    data: Dict[str, np.array], 
-    bkg_MC_dict: Dict[str, Dict[str, np.array]], 
+    binning: np.array,
+    data: Dict[str, np.array],
+    bkg_MC_dict: Dict[str, Dict[str, np.array]],
     save_full_path: str,
     sig_MC_dict = {},
-    title="default title", 
-    x_title="Mass (GeV)", 
+    title="default title",
+    x_title="Mass (GeV)",
     y_title="Events",
     plot_ratio=True,
     log_scale=True,
@@ -44,9 +44,9 @@ def plotDataMC_compare(
     CenterOfMass = 13,
     ):
     """
-    Takes in 
+    Takes in
     Params:
-    binning : np array of bin edges compatible to np.histogram 
+    binning : np array of bin edges compatible to np.histogram
     data: Dictionary with "values" and "weights" as keys and relevant np array for values
     bkg_MC_dict: Ordered dictionary with the bkg_MC sample names as keys and its respective dictionary to histogram as values
         the keys are ordered such that bkg_MC sample with the least yield iterate first
@@ -71,18 +71,18 @@ def plotDataMC_compare(
     weights = data["weights"]
     data_hist, data_hist_err = getHistAndErrs(binning, values, weights)
     hep.histplot(
-        data_hist, 
-        xerr=True, 
+        data_hist,
+        xerr=True,
         yerr=data_hist_err,
-        bins=binning, 
-        stack=False, 
-        histtype='errorbar', 
-        color='black', 
-        label='Data', 
+        bins=binning,
+        stack=False,
+        histtype='errorbar',
+        color='black',
+        label='Data',
         ax=ax_main,
     )
-    
-    
+
+
     # -----------------------------------------
     # plot bkg_MC
     # -----------------------------------------
@@ -101,11 +101,11 @@ def plotDataMC_compare(
     # plot bkg_MC in one go
     color_idx = len(bkg_MC_hist_l)
     hep.histplot(
-        bkg_MC_hist_l, 
-        bins=binning, 
-        stack=True, 
-        histtype='fill', 
-        label=bkg_mc_sample_names, 
+        bkg_MC_hist_l,
+        bins=binning,
+        stack=True,
+        histtype='fill',
+        label=bkg_mc_sample_names,
         sort='label_r',
         ax=ax_main,
         color=colors[:color_idx],
@@ -120,8 +120,8 @@ def plotDataMC_compare(
         #     ax_main.set_ylim(0.1,  599.48425032)
         # elif x_title == "$R_{p_T}$":
         #     ax_main.set_ylim(0.35938137,  774.26368268)
-            
-    
+
+
 
     # -----------------------------------------
     # plot signal MC
@@ -132,20 +132,20 @@ def plotDataMC_compare(
             weights = sig_mc_sample_arrs["weights"]
             sig_MC_hist, _ = getHistAndErrs(binning, values, weights)
             hep.histplot(
-                sig_MC_hist, 
-                bins=binning, 
-                histtype='step', 
-                label=sig_mc_sample, 
+                sig_MC_hist,
+                bins=binning,
+                histtype='step',
+                label=sig_mc_sample,
                 # color =  "black",
                 ax=ax_main,
                 color=colors[color_idx],
             )
             color_idx += 1
-    
+
     # -----------------------------------------
     # Data/MC ratio
     # -----------------------------------------
-    if plot_ratio: 
+    if plot_ratio:
         # compute Data/MC ratio
         # get bkg_MC errors
         bkg_mc_w2_sum = np.sum(np.asarray(bkg_MC_histW2_l), axis=0)
@@ -161,12 +161,12 @@ def plotDataMC_compare(
         ratio_err = rel_unc_ratio*ratio_hist
         # print(f"plotDataMC_compare ratio_err: {ratio_err}")
 
-        
-        hep.histplot(ratio_hist, 
-                     bins=binning, histtype='errorbar', yerr=ratio_err, 
+
+        hep.histplot(ratio_hist,
+                     bins=binning, histtype='errorbar', yerr=ratio_err,
                      color='black', label='Ratio', ax=ax_ratio)
-        
-        # compute MC uncertainty 
+
+        # compute MC uncertainty
         # source: https://github.com/kondratyevd/hmumu-coffea/blob/master/python/plotter.py#L228
         # den = bkg_mc_sum[inf_filter]
         den = bkg_mc_sum
@@ -185,7 +185,7 @@ def plotDataMC_compare(
                 **ratio_err_opts,
             )
 
-        
+
         ax_ratio.axhline(1, color='gray', linestyle='--')
         ax_ratio.axhline(1.2, color='gray', linestyle='--')
         ax_ratio.axhline(0.8, color='gray', linestyle='--')
@@ -194,13 +194,13 @@ def plotDataMC_compare(
         ax_ratio.set_xlabel(x_title)
         ax_ratio.set_ylabel('Data / MC')
         ax_ratio.set_xlim(binning[0], binning[-1])
-        ax_ratio.set_ylim(0.5,1.5) 
+        ax_ratio.set_ylim(0.5,1.5)
         ax_ratio.set_yticks([0.6, 0.8, 1.0, 1.2, 1.4]) # explicitly ask for 1.4 and 0.6
     else:
         ax_main.set_xlabel(x_title)
 
 
-    
+
 
     # -----------------------------------------
     # Legend, title, etc +  save figure
@@ -211,16 +211,29 @@ def plotDataMC_compare(
     # save figure, we assume that the directory exists
     hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
+    plt.close(fig)
+
+    # Save the raw event number, yield  for each MC and data to the text file along with the data/mc ratio value
+    with open(save_full_path.replace(".pdf", ".txt"), "w") as f:
+        f.write(f"Data: {np.sum(data_hist)}\n")
+        for bkg_mc_sample, bkg_mc_hist in zip(bkg_mc_sample_names, bkg_MC_hist_l):
+            f.write(f"{bkg_mc_sample}: {np.sum(bkg_mc_hist)}\n")
+        if len(sig_MC_dict.keys()) > 0:
+            for sig_mc_sample, sig_mc_hist in sig_MC_dict.items():
+                f.write(f"{sig_mc_sample}: {np.sum(sig_mc_hist)}\n")
+        if plot_ratio:
+            f.write(f"Data/MC ratio: {ratio_hist}\n")
+    print(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
 
 
 def plotDataMC_compare_normalized(
-    binning: np.array, 
-    data: Dict[str, np.array], 
-    bkg_MC_dict: Dict[str, Dict[str, np.array]], 
+    binning: np.array,
+    data: Dict[str, np.array],
+    bkg_MC_dict: Dict[str, Dict[str, np.array]],
     save_full_path: str,
     sig_MC_dict = {},
-    title="default title", 
-    x_title="Mass (GeV)", 
+    title="default title",
+    x_title="Mass (GeV)",
     y_title="Events",
     plot_ratio=True,
     log_scale=True,
@@ -229,7 +242,7 @@ def plotDataMC_compare_normalized(
     CenterOfMass = 13,
     ):
     """
-    This function divides into data, bkg and sig samples and normalizes them such that each histogram sums to one 
+    This function divides into data, bkg and sig samples and normalizes them such that each histogram sums to one
     """
     plt.style.use(hep.style.CMS)
 
@@ -249,18 +262,18 @@ def plotDataMC_compare_normalized(
     data_hist, data_hist_err = getHistAndErrs(binning, values, weights)
     data_hist = data_hist /np.sum(data_hist)
     hep.histplot(
-        data_hist, 
-        xerr=True, 
+        data_hist,
+        xerr=True,
         yerr=np.zeros_like(data_hist_err),
-        bins=binning, 
-        stack=False, 
-        histtype='errorbar', 
-        color='black', 
-        label='Data', 
+        bins=binning,
+        stack=False,
+        histtype='errorbar',
+        color='black',
+        label='Data',
         ax=ax_main,
     )
-    
-    
+
+
     # -----------------------------------------
     # plot bkg_MC
     # -----------------------------------------
@@ -281,15 +294,15 @@ def plotDataMC_compare_normalized(
         bkg_MC_histW2_l.append(np_hist_w2)
     # plot bkg_MC in one go
     # hep.histplot(
-    #     bkg_MC_hist_l, 
-    #     bins=binning, 
-    #     stack=True, 
-    #     histtype='fill', 
-    #     label=bkg_mc_sample_names, 
+    #     bkg_MC_hist_l,
+    #     bins=binning,
+    #     stack=True,
+    #     histtype='fill',
+    #     label=bkg_mc_sample_names,
     #     sort='label_r',
     #     ax=ax_main,
     # )
-    
+
     # plot bkg_MC in one go # tempoverwrite
     val_l = []
     wgt_l = []
@@ -298,17 +311,17 @@ def plotDataMC_compare_normalized(
         weights = bkg_mc_sample_arrs["weights"]
         val_l.append(values)
         wgt_l.append(weights)
-        
+
     values = np.concatenate(val_l, axis=0)
     weights = np.concatenate(wgt_l, axis=0)
     bkg_hist, _ = np.histogram(values, bins=binning, weights = weights)
     bkg_hist = bkg_hist / np.sum(bkg_hist)
     hep.histplot(
-        bkg_hist, 
-        bins=binning, 
-        stack=True, 
-        histtype='fill', 
-        label="bkg", 
+        bkg_hist,
+        bins=binning,
+        stack=True,
+        histtype='fill',
+        label="bkg",
         sort='label_r',
         ax=ax_main,
     )
@@ -322,8 +335,8 @@ def plotDataMC_compare_normalized(
         #     ax_main.set_ylim(0.1,  599.48425032)
         # elif x_title == "$R_{p_T}$":
         #     ax_main.set_ylim(0.35938137,  774.26368268)
-            
-    
+
+
 
     # # -----------------------------------------
     # # plot signal MC
@@ -334,10 +347,10 @@ def plotDataMC_compare_normalized(
     #         weights = sig_mc_sample_arrs["weights"]
     #         sig_MC_hist, _ = getHistAndErrs(binning, values, weights)
     #         hep.histplot(
-    #             sig_MC_hist, 
-    #             bins=binning, 
-    #             histtype='step', 
-    #             label=sig_mc_sample, 
+    #             sig_MC_hist,
+    #             bins=binning,
+    #             histtype='step',
+    #             label=sig_mc_sample,
     #             # color =  "black",
     #             ax=ax_main,
     #         )
@@ -354,23 +367,23 @@ def plotDataMC_compare_normalized(
         # weights = weights/np.sum(weights)
         print(f"sig values: {values}")
         print(f"sig weights sum : {np.sum(weights)}")
-        
+
         sig_MC_hist, _ = getHistAndErrs(binning, values, weights)
         sig_MC_hist = sig_MC_hist / np.sum(sig_MC_hist)
         hep.histplot(
-            sig_MC_hist, 
-            bins=binning, 
-            histtype='step', 
-            label="signal", 
+            sig_MC_hist,
+            bins=binning,
+            histtype='step',
+            label="signal",
             # color =  "black",
             ax=ax_main,
         )
     # temp overwrite
-    
+
     # -----------------------------------------
     # Data/MC ratio
     # -----------------------------------------
-    if plot_ratio: 
+    if plot_ratio:
         # compute Data/MC ratio
         # get bkg_MC errors
         bkg_mc_w2_sum = np.sum(np.asarray(bkg_MC_histW2_l), axis=0)
@@ -386,13 +399,13 @@ def plotDataMC_compare_normalized(
         ratio_err = rel_unc_ratio*ratio_hist
         # print(f"plotDataMC_compare ratio_err: {ratio_err}")
 
-        
-        hep.histplot(ratio_hist, 
+
+        hep.histplot(ratio_hist,
                      bins=binning, histtype='errorbar',
-                     yerr=np.zeros_like(ratio_err), 
+                     yerr=np.zeros_like(ratio_err),
                      color='black', label='Ratio', ax=ax_ratio)
-        
-        # compute MC uncertainty 
+
+        # compute MC uncertainty
         # source: https://github.com/kondratyevd/hmumu-coffea/blob/master/python/plotter.py#L228
         # den = bkg_mc_sum[inf_filter]
         den = bkg_mc_sum
@@ -411,7 +424,7 @@ def plotDataMC_compare_normalized(
                 **ratio_err_opts,
             )
 
-        
+
         ax_ratio.axhline(1, color='gray', linestyle='--')
         ax_ratio.axhline(1.2, color='gray', linestyle='--')
         ax_ratio.axhline(0.8, color='gray', linestyle='--')
@@ -420,21 +433,34 @@ def plotDataMC_compare_normalized(
         ax_ratio.set_xlabel(x_title)
         ax_ratio.set_ylabel('Data / MC')
         ax_ratio.set_xlim(binning[0], binning[-1])
-        ax_ratio.set_ylim(0.5,1.5) 
+        ax_ratio.set_ylim(0.5,1.5)
         ax_ratio.set_yticks([0.6, 0.8, 1.0, 1.2, 1.4]) # explicitly ask for 1.4 and 0.6
     else:
         ax_main.set_xlabel(x_title)
 
 
-    
+
 
     # -----------------------------------------
     # Legend, title, etc +  save figure
     # -----------------------------------------
     ax_main.legend(loc="best", ncol=2)
-    
+
     if title != "":
         ax_main.set_title(title)
     # save figure, we assume that the directory exists
     hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
+    plt.close(fig)
+
+    # Save the raw event number, yield  for each MC and data to the text file along with the data/mc ratio value
+    with open(save_full_path.replace(".pdf", ".txt"), "w") as f:
+        f.write(f"Data: {np.sum(data_hist)}\n")
+        for bkg_mc_sample, bkg_mc_hist in zip(bkg_mc_sample_names, bkg_MC_hist_l):
+            f.write(f"{bkg_mc_sample}: {np.sum(bkg_mc_hist)}\n")
+        if len(sig_MC_dict.keys()) > 0:
+            for sig_mc_sample, sig_mc_hist in sig_MC_dict.items():
+                f.write(f"{sig_mc_sample}: {np.sum(sig_mc_hist)}\n")
+        if plot_ratio:
+            f.write(f"Data/MC ratio: {ratio_hist}\n")
+    print(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
