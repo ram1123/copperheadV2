@@ -1,6 +1,5 @@
 from hist import Hist
 import dask
-import awkward as ak
 import hist.dask as hda
 from coffea import processor
 from coffea.nanoevents.methods import candidate
@@ -10,9 +9,6 @@ from coffea.dataset_tools import (
     preprocess,
 )
 from distributed import Client
-import dask_awkward as dak
-import numpy as np
-from coffea.nanoevents import NanoEventsFactory
 from coffea.nanoevents.schemas import PFNanoAODSchema
 import awkward as ak
 import dask_awkward as dak
@@ -129,18 +125,32 @@ class DNNWrapper(torch_wrapper):
 
 def prepare_features(events, features, variation="nominal"):
     features_var = []
-    for trf in features:
-        if "soft" in trf:
-            variation_current = "nominal"
-        else:
-            variation_current = variation
+    missing_features = []
 
-        if f"{trf}_{variation_current}" in events.fields:
-            features_var.append(f"{trf}_{variation_current}")
-        elif trf in events.fields:
-            features_var.append(trf)
+    for feat in features:
+        # Protect soft drop features (don't apply variation)
+        variation_current = "nominal" if "soft" in feat else variation
+        feat_name = None
+        if f"{feat}_{variation_current}" in events.fields:
+            feat_name = f"{feat}_{variation_current}"
+        elif f"{feat}_nominal" in events.fields:
+            feat_name = f"{feat}_nominal"
+        elif feat in events.fields:
+            feat_name = feat
+
+        if feat_name in events.fields:
+            features_var.append(feat_name)
         else:
-            logger.info(f"Variable {trf} not found in training dataframe!")
+            missing_features.append(feat_name)
+
+    if missing_features:
+        logger.warning(f"Missing features in events: {missing_features}")
+        raise ValueError(f"Critical features missing: {missing_features}")
+
+    if not features_var:
+        logger.critical("No valid features found after filtering! Exiting.")
+        raise ValueError("prepare_features: No features to use!")
+
     return features_var
 
 
@@ -206,7 +216,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     for sample in sig_sample_l:
         sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
         if len(sample_filelist) == 0:
-            logger.info(f"No {sample} files were found!")
+            logger.warning(f"No {sample} files were found!")
             continue
         return_filelist_dict[sample] = sample_filelist
 
@@ -221,8 +231,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             # "dy_M-100To200",
             # "dy_m105_160_vbf_amc",
             # "dy_M-50",
-            # "dy_M-100To200_MiNNLO",
-            # "dy_M-50_MiNNLO",
+            "dy_M-100To200_MiNNLO",
+            "dy_M-50_MiNNLO",
             "dy_VBF_filter", # VBF filter
         ],
         "TT" : [
@@ -234,6 +244,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             "st_tw_antitop",
             "st_t_antitop",
             "st_t_top",
+            "st_s_lep",
+            "tZq_ll",
         ],
         "EWK" : [
             "ewk_lljj_mll105_160_ptj0", # herwig
@@ -266,7 +278,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     for sample in bkg_sample_l:
         sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
         if len(sample_filelist) == 0:
-            logger.info(f"No {sample} files were found!")
+            logger.critical(f"No {sample} files were found!")
             continue
         return_filelist_dict[sample] = sample_filelist
     # sample_dict["background"] = bkg_filelist
@@ -345,7 +357,16 @@ parser.add_argument(
     action="store",
     help="list of sig samples represented by shorthands: ggH, VBF",
 )
+parser.add_argument(
+    "--log-level",
+    default=logging.ERROR,
+    type=lambda x: getattr(logging, x),
+    help="Configure the logging level."
+    )
 args = parser.parse_args()
+
+logger.setLevel(args.log_level)
+
 if __name__ == "__main__":
     start_time = time.time()
     if args.use_gateway:
@@ -357,7 +378,6 @@ if __name__ == "__main__":
         cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
-    # # #-----------------------------------------------------------
     else:
         from distributed import LocalCluster, Client
         client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='4 GiB')
@@ -372,67 +392,51 @@ if __name__ == "__main__":
     logger.info(f"data_samples: {data_samples}")
 
     stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0"
-    # full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
     full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
 
-    logger.info(f"full_sample_dict: {full_sample_dict}")
+    logger.debug(f"full_sample_dict: {full_sample_dict}")
     logger.info(f"full_sample_dict: {full_sample_dict.keys()}")
 
+    nfolds = 4  # Define nfolds once for all samples
     for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
-        if len(sample_l) ==0:
-            logger.info(f"No files for {sample_type} is found! Skipping!")
+        if len(sample_l) == 0:
+            logger.critical(f"No files for {sample_type} is found! Skipping!")
             continue
 
         events_stage1 = dak.from_parquet(sample_l)
         target_chunksize = 150_000
-        # events_stage1 = events_stage1.repartition(rows_per_partition=target_chunksize)
+        events_stage1 = events_stage1.repartition(rows_per_partition=target_chunksize)
 
-        # reparitition events if npartitions are too little to decrease memory usage (ie histograming vbf requires > 10 GB per worker otherwise) ----------------------
-        # min_partition_size = 50
-        # logger.info(f"events_stage1.npartitions b4 repartition: {events_stage1.npartitions}")
-        # if events_stage1.npartitions < min_partition_size :
-        #     events_stage1 = events_stage1.repartition(npartitions=min_partition_size)
-        #     logger.info(f"events_stage1.npartitions after repartition: {events_stage1.npartitions}")
-        # ----------------------
-
-        # Preprocessing
-        # stage1_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_C/0"
-
-        # stage1_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Dec22_HEMVetoOnZptOn_RerecoBtagSF_XS_Rereco_BtagWPsFixed//stage1_output/2018/f1_0/data_*/0"
-        # events = dak.from_parquet(f"{stage1_path}/*.parquet")
-        # events = dak.from_parquet(f"part000.parquet")
-
-        # model_trained_path = f"MVA_training/VBF/dnn/trained_models/{args.model_label}"
-        # model_trained_path = f"/work/users/yun79/valerie/fork/copperheadV2/MVA_training/VBF/dnn/trained_models/{args.model_label}"
         model_trained_path = f"{args.model_path}/{args.model_label}"
 
+        # Load training features once per sample_type
         with open(f'{model_trained_path}/training_features.pkl', 'rb') as f:
             training_features = pickle.load(f)
         logger.info(f"training_features: {training_features}")
         logger.info(f"len training_features: {len(training_features)}")
 
+        # Load and Cache models for each fold
+        model_cache = {}
+        for fold in range(nfolds):
+            model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
+            model_cache[fold] = DNNWrapper(model_load_path)
+            logger.info(f"Loaded model for fold {fold} from {model_load_path}")
+
         # ------------------------------------------
-        # Initialize sample histograme to save later
+        # Initialize sample histogram to save later
         # ------------------------------------------
         if "data" in sample_type:
             wgt_variations = ["wgt_nominal"]
         else:
             wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w)]
             logger.info(f"wgt_variations: {wgt_variations}")
-            # wgt_variations = wgt_variations[:11] # for testing
-            # wgt_variations = ["wgt_nominal"]  # FIXME
-            # wgt_variations = ["wgt_nominal",
-            # 'wgt_muIso_up', 'wgt_LHEFac_up', 'wgt_LHERen_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
-            # 'wgt_muIso_down', 'wgt_LHEFac_down', 'wgt_LHERen_down', 'wgt_pu_wgt_down',  'wgt_muID_down', 'wgt_muTrig_down'
-            # ]  # FIXME
             wgt_variations = ["wgt_nominal",
-            'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
-            'wgt_muIso_down', 'wgt_pu_wgt_down',  'wgt_muID_down', 'wgt_muTrig_down'
-            ]  # FIXME
+                              'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
+                              'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down'
+                              ]  # FIXME
 
         logger.info(f"wgt_variations: {wgt_variations}")
-        syst_variations = []
-        syst_variations = ["nominal"] # FIXME
+        syst_variations = ["nominal"]  # FIXME
         # syst_variations = ['nominal', 'Absolute_up', 'Absolute_down', f'Absolute_{year}_up',
         variations = []
         for w in wgt_variations:
@@ -442,41 +446,39 @@ if __name__ == "__main__":
                     variations.append(variation)
         logger.info(f"variations: {variations}")
 
-        regions = ["h-peak", "h-sidebands"] # full list of possible regions to loop over
-        # regions = ["h-sidebands"] # full list of possible regions to loop over
-        channels = ["vbf"] # full list of possible channels to loop over
+        regions = ["h-peak", "h-sidebands"]  # full list of possible regions to loop over
+        channels = ["vbf"]  # full list of possible channels to loop over
         score_hist = (
-                hda.Hist.new.StrCat(regions, name="region")
-                .StrCat(channels, name="channel")
-                .StrCat(["value", "sumw2"], name="val_sumw2")
+            hda.Hist.new.StrCat(regions, name="region")
+            .StrCat(channels, name="channel")
+            .StrCat(["value", "sumw2"], name="val_sumw2")
         )
         # add axis for systematic variation
         score_hist = score_hist.StrCat(variations, name="variation")
         # add score category
-        bins = np.linspace(0, 1, num=13) # TODO: update this
+        bins = np.linspace(0, 1, num=13)  # TODO: update this
         score_name = f"score_{args.model_label}"
         score_hist = score_hist.Var(bins, name=score_name)
 
-
-        # score_hist = score_hist.Double()
         score_hist_empty = score_hist.Double()
 
         # loop over configurations and fill the histogram
-        loop_args = {
+        loop_args_dict = {
             "region": regions,
             "wgt_variation": wgt_variations,
             "syst_variation": syst_variations,
             "channel": channels,
         }
         loop_args = [
-            dict(zip(loop_args.keys(), values))
-            for values in itertools.product(*loop_args.values())
+            dict(zip(loop_args_dict.keys(), values))
+            for values in itertools.product(*loop_args_dict.values())
         ]
         logger.info(f"loop_args: {loop_args}")
 
         score_hist_l = []
         iteration_counter = 0
         compute_every_N = 2
+
         for loop_arg in loop_args:
             score_hist = copy.deepcopy(score_hist_empty)
 
@@ -486,102 +488,61 @@ if __name__ == "__main__":
             wgt_variation = loop_arg["wgt_variation"]
             variation = get_variation(wgt_variation, syst_variation)
             if not variation:
-                logger.info(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
+                logger.warning(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
                 continue
 
             events = applyCatAndFeatFilter(events_stage1, region=region, category=category)
-            events = fillEventNans(events, category=category) # for vbf category, this may be unncessary
+            events = fillEventNans(events, category=category)  # for vbf category, this may be unnecessary
 
-            training_features = prepare_features(events, training_features, variation=variation) # add variations where applicable
-            logger.info(f"new training_features: {training_features}")
-            logger.info(f"new training_features: {len(training_features)}")
-
-
-
-            nfolds = 4 #4
+            features_to_use = prepare_features(events, training_features, variation=variation)  # add variations where applicable
+            logger.debug(f"features_to_use: {features_to_use}")
+            logger.debug(f"features_to_use: {len(features_to_use)}")
 
             nan_val = -999.0
 
-            input_arr_dict = { feat : nan_val*ak.ones_like(events.event) for feat in training_features}
+            input_arr_dict = {feat: nan_val * ak.ones_like(events.event) for feat in features_to_use}
             logger.info(f" input_arr_dict b4: {input_arr_dict}")
             for fold in range(nfolds):
-
-                eval_folds = [(fold+f)%nfolds for f in [3]]
+                eval_folds = [(fold + f) % nfolds for f in [3]]
                 logger.info(f" eval_folds: {eval_folds}")
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
 
-
-
-
-                for feat in training_features:
+                for feat in features_to_use:
                     input_arr_fold = input_arr_dict[feat]
                     input_arr_fold = ak.where(eval_filter, events[feat], input_arr_fold)
                     input_arr_dict[feat] = input_arr_fold
-
-
-            # # debug:
-            # for feat in training_features:
-            #     input_arr_total = input_arr_dict[feat]
-            #     logger.info(f"{feat} input_arr_total : {input_arr_total.compute()}")
-            #     # check if we missed any nan_values
-            #     any_nan = ak.any(input_arr_total ==nan_val)
-            #     logger.info(f"{feat} any_nan: {any_nan.compute()}")
-            #     # merge the fold values
-            #     # raise ValueError
-            #     # for feat in input_arr_dict.keys():
-            #         # input_arr_dict[feat] = ak.concatenate(input_arr_dict[feat], axis=0) # maybe compute individually for each fold?
 
             # ---------------------------------------------------
             # Now evaluate DNN score
             # ---------------------------------------------------
             input_arr = ak.concatenate(
-                [input_arr_dict[feat][:, np.newaxis] for feat in training_features], # np.newaxis is added so that we can concat on axis=1
+                [input_arr_dict[feat][:, np.newaxis] for feat in features_to_use],  # np.newaxis is added so that we can concat on axis=1
                 axis=1
             )
-            dnn_score = nan_val*ak.ones_like(events.event)
+            dnn_score = nan_val * ak.ones_like(events.event)
+
             for fold in range(nfolds):
-                eval_folds = [(fold+f)%nfolds for f in [3]]
+                eval_folds = [(fold + f) % nfolds for f in [3]]
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
-                model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
-                dnnWrap = DNNWrapper(model_load_path)
+                dnnWrap = model_cache[fold]
                 dnn_score_fold = dnnWrap(input_arr)
-                # logger.info(f"{fold} fold dnn_score_fold b4 flatten: {dnn_score_fold.compute()}")
-                dnn_score_fold = ak.flatten(dnn_score_fold, axis=1) # DNN outpout is 2 dimensional
+                dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)  # DNN output is 2 dimensional
 
                 dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
-                # logger.info(f"{fold} fold dnn_score_fold after flatten: {dnn_score_fold.compute()}")
-                # logger.info(f"{fold} fold dnn_score: {dnn_score.compute()}")
-
-            # logger.info(f"dnn_score b4 after: {dnn_score.compute()}")
-            # # debug:
-            # any_nan = ak.any(dnn_score ==nan_val)
-            # logger.info(f"dnn_score any_nan: {any_nan.compute()}")
-            # raise ValueError
-
 
             # ---------------------------------------------------
             # Now onto converting DNN score as histograms
             # ---------------------------------------------------
-
-
-            # dnn_score[:5].visualize(filename='hist.svg') # FIXME
-
             to_fill = {
-                "region" : "h-peak",
-                "channel" : "vbf",
-                "variation" : variation,
-                score_name : dnn_score
-
+                "region": region,
+                "channel": "vbf",
+                "variation": variation,
+                score_name: dnn_score
             }
-            # weight = events.wgt_nominal
             weight = events[wgt_variation]
-
-            # logger.info(f"weight len: {ak.num(weight, axis=0).compute()}")
-            # logger.info(f"ak.flatten(dnn_score) len: {ak.num(dnn_score, axis=0).compute()}")
 
             to_fill_value = to_fill.copy()
             to_fill_value["val_sumw2"] = "value"
-            # to_fill_value["variation"] = variation
             score_hist.fill(**to_fill_value, weight=weight)
 
             to_fill_sumw2 = to_fill.copy()
@@ -591,23 +552,19 @@ if __name__ == "__main__":
             logger.info(f"score_hist is filled for {sample_type}, {variation} variation!")
             score_hist_l.append(score_hist)
 
-
         # ---------------------------------------------------
         # done with variation loop, compute hist
         # ---------------------------------------------------
-        # score_hist = score_hist.compute()
         logger.info(f"loop_args len: {len(loop_args)}")
         logger.info(f"score_hist_l len: {len(score_hist_l)}")
-        # score_hist_l = [hist.compute() for hist in score_hist_l]
-        # score_hist_l[0].visualize(filename='hist.svg') # FIXME
-        # score_hist_l[0].visualize(filename='hist_optimized.svg', optimize_graph=True) # FIXME
-        # raise ValueError
         score_hist_l = dask.compute(score_hist_l)[0]
         logger.info(f"score_hist_l len after compute: {len(score_hist_l)}")
+        if not score_hist_l:
+            logger.warning(f"No histograms were filled for {sample_type}, skipping saving.")
+            continue  # skip to next sample_type
+        # Merge histograms from all loop configurations
         score_hist = reduce(lambda a, b: a + b, score_hist_l)
-        # logger.info(f"score_hist.view(): {score_hist.view()}")
         logger.info("compute done!")
-
 
         # ---------------------------------------------------
         # Save Hist
@@ -619,27 +576,8 @@ if __name__ == "__main__":
 
         with open(f"{hist_save_path}/{sample_type}_hist.pkl", "wb") as file:
             pickle.dump(score_hist, file)
-            # logger.info(f"{sample_type} histogram successfully!")
             logger.info(f"{sample_type} histogram on {hist_save_path}!")
 
-
-        # # ---------------------------------------------------
-        # # Plot Hist for debugging
-        # # ---------------------------------------------------
-
-
-        # project_dict = {
-        #     "region" : "h-peak",
-        #     "channel" : "vbf",
-        #     "val_sumw2" : "value",
-        #     "variation" : "nominal",
-        # }
-
-        # fig, ax = plt.subplots()
-        # score_hist[project_dict].project(score_name).plot1d(ax=ax)
-        # # ax.set_xscale("log")
-        # ax.legend(title="DNN score")
-        # plt.savefig(f"{sample_type}_test.png")
     logger.info("Success!")
     end_time = time.time()
     execution_time = end_time - start_time
