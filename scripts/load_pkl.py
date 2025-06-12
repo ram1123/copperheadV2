@@ -14,3 +14,10 @@ with open(file_path, 'rb') as file:
 
 # Now 'data' contains the deserialized Python object
 print(data)
+
+print("-=====")
+print(data.project("region"))
+print(data.project("channel"))
+print(data.project("val_sumw2"))
+print(data.project("variation"))
+# print(data.project("score_May28_NanoV12"))

@@ -2,6 +2,7 @@
 
 ```bash
 time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m zpt_fit)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m all)
 time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m 2)
 ```
 

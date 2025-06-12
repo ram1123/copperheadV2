@@ -9,11 +9,10 @@ Time Logging
 ------------
 
 
-
-1. Stage1
+2. Stage1
 ---------
 
-1. Stage2
+3. Stage2
 ---------
 
 .. code-block:: bash
@@ -23,13 +22,13 @@ Time Logging
     user    20m15.928s
     sys     0m8.648s
 
-1. Stage3
+4. Stage3
 ---------
 
 30 seconds
 
-1. Plotting
+5. Plotting
 -----------
 
-1. Significance
+6. Significance
 ---------------
