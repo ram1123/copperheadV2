@@ -1,6 +1,7 @@
 *.gz
 *.json
 *.yaml
+trained_models/
 fitting_mu1mu2pt/
 .ipynb_checkpoints/
 __pycache__/

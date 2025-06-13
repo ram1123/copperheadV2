@@ -773,6 +773,8 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
 
 
+        logger.debug(f"muons pT: {events.Muon.pt[:10].compute()}")
+
         # # --------------------------------------------------------
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
@@ -921,7 +923,6 @@ class EventProcessor(processor.ProcessorABC):
         # --------------------------------------------------------#
 
         muons = events.Muon[muon_selection]
-        logger.debug(f"muons pT: {muons.pt[:10].compute()}")
         t6c = time.perf_counter()
         logger.info(f"[timing] Muon selection time: {t6c - t6b:.2f} seconds")
 
