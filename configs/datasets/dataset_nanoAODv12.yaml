@@ -69,7 +69,8 @@ years:
             # data_C: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018C
             # data_D: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018D
             data_A: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018A
-            data_B: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018B
+            # data_B: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018B
+            data_B: /depot/cms/users/shar1172/copperheadV2_2l2nu/InputData
             data_C: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018C
             data_D: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018D
 
