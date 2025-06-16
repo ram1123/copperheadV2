@@ -10,6 +10,9 @@ import os
 import copy
 import pickle
 
+import logging
+from modules.utils import logger
+
 # def getParquetFiles(path):
     # return glob.glob(path)
 
@@ -68,9 +71,9 @@ def applyCatAndFeatFilter(events, features: list, region="h-peak", category="vbf
         region
     )
     events = events[cat_filter] # apply the category filter
-    # print(f"events dimuon_mass: {events.dimuon_mass.compute()}")
+    # logger.info(f"events dimuon_mass: {events.dimuon_mass.compute()}")
     # apply the feature filter (so the ak zip only contains features we are interested)
-    print(f"features: {features}")
+    logger.info(f"features: {features}")
     events = ak.zip({field : events[field] for field in features}) # FIXME: What values are there for empty entries?
     # filled = {}
     # for field in features:
@@ -95,12 +98,12 @@ def prepare_features(events, features, variation="nominal"):
         elif trf in events.fields:
             features_var.append(trf)
         else:
-            print(f"Variable {trf} not found in training dataframe!")
+            logger.info(f"Variable {trf} not found in training dataframe!")
     return features_var
 
 def preprocess_loop(events, features2load, region="h-peak", category="vbf", label=""):
     features2load = prepare_features(events, features2load) # add variation to features
-    print(f"features2load: {features2load}")
+    logger.info(f"features2load: {features2load}")
     # features2load = training_features + ["event"]
     events = applyCatAndFeatFilter(events, features2load, region=region, category=category)
     # events = applyCatAndFeatFilter(events, features2load, region=region, category="ggh")
@@ -113,7 +116,7 @@ def preprocess_loop(events, features2load, region="h-peak", category="vbf", labe
     elif label== "background":
         df["label"] = 0.0
     else:
-        print("Error: please define the label: signal or background")
+        logger.info("Error: please define the label: signal or background")
         raise ValueError
     return df
 
@@ -134,9 +137,9 @@ def weighted_std(values, weights):
     values, weights -- Numpy ndarrays with the same shape.
     """
     average = np.average(values, weights=weights, axis=0)
-    # print(f"average.shape: {average.shape}")
+    # logger.info(f"average.shape: {average.shape}")
     variance = np.average((values - average)**2, weights=weights, axis=0)
-    # print(f"variance.shape: {variance.shape}")
+    # logger.info(f"variance.shape: {variance.shape}")
     return np.sqrt(variance)
 
 # def mixup(x_train, label_train):
@@ -154,10 +157,10 @@ def weighted_std(values, weights):
 #     x=label_train
 #     y=label_train
 #     cartesian_prod_label = np.transpose([np.tile(x, len(y)), np.repeat(y, len(x))])
-#     # print(cartesian_prod)
+#     # logger.info(cartesian_prod)
 #     frac = 0.5
 #     x_train_mixup = frac*cartesian_prod[:,0] + (1-frac)*cartesian_prod[:,1]
-#     # print(x_train_mixup)
+#     # logger.info(x_train_mixup)
 #     return x_train_mixup
 
 
@@ -173,11 +176,11 @@ def weighted_std(values, weights):
 #     # Compute all combinations of these arrays
 
 #     combinations = list(itertools.product(x_train, x_train))
-#     print("combination done")
+#     logger.info("combination done")
 #     result =np.array(combinations)
 #     frac = 0.5
 #     x_train_mixup = frac*result[:,0] + (1-frac)*result[:,1]
-#         # print(x_train_mixup)
+#         # logger.info(x_train_mixup)
 #     return x_train_mixup
 
 """mixup code start. credits to https://github.com/makeyourownmaker/mixupy """
@@ -253,21 +256,21 @@ def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
         # index = random.sample(range(0, data_len), batch_size)
         index1 = random.sample(range(0, data_len), batch_size)
         index2 = random.sample(range(0, data_len), batch_size)
-        # print(f"mixup index with no replacement: {index1}")
-        # print(f"mixup index with no replacement: {index2}")
+        # logger.info(f"mixup index with no replacement: {index1}")
+        # logger.info(f"mixup index with no replacement: {index2}")
     else:
         # with replacement
         # index = np.random.randint(0, data_len, size=batch_size)
         index1 = np.random.randint(0, data_len, size=batch_size)
         index2 = np.random.randint(0, data_len, size=batch_size)
-        # print(f"mixup index with replacement: {index1}")
-        # print(f"mixup index with replacement: {index2}")
+        # logger.info(f"mixup index with replacement: {index1}")
+        # logger.info(f"mixup index with replacement: {index2}")
 
 
     # data = data.sample(frac=1)
     data_orig = data
 
-    # print(f"data_orig: {data_orig}")
+    # logger.info(f"data_orig: {data_orig}")
     # Cut data into specified size
     # data1 = resize_data(data, batch_size).reset_index(drop=True)
     data1 = data_orig.iloc[index1]
@@ -283,7 +286,7 @@ def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
     # lam = 0.5
     data_mix = lam * data1 + (1.0 - lam) * data2
     if data_mix.isna().any().any():
-        print("Error: NaN values encountered!")
+        logger.info("Error: NaN values encountered!")
         raise ValueError
 
     data_new = data_mix
@@ -291,9 +294,9 @@ def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
     if concat is True:
         data_new = pd.concat([data_orig, data_mix])
 
-    # print(f"data1: {data1.head()}")
-    # print(f"data2: {data2.head()}")
-    # print(f"data_mix: {data_mix.head()}")
+    # logger.info(f"data1: {data1.head()}")
+    # logger.info(f"data2: {data2.head()}")
+    # logger.info(f"data_mix: {data_mix.head()}")
     return data_new
 
 def cartesian(arrays, out=None):
@@ -373,7 +376,7 @@ def resize_data(data, batch_size):
 def printe(errmsg):
     """Print error message and exit"""
 
-    print(errmsg)
+    logger.info(errmsg)
     sys.exit(1)
 
 
@@ -484,59 +487,26 @@ def _check_params(alpha, concat, batch_size):
 
 
 def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_label="test"):
-    # training_features = [
-    #     "dimuon_mass",
-    #     "dimuon_pt",
-    #     "dimuon_pt_log",
-    #     "dimuon_rapidity",
-    #     "dimuon_ebe_mass_res",
-    #     "dimuon_ebe_mass_res_rel",
-    #     "dimuon_pisa_mass_res",
-    #     "dimuon_pisa_mass_res_rel",
-    #     "dimuon_cos_theta_cs",
-    #     "dimuon_phi_cs",
-        # "dimuon_cos_theta_eta",
-    #     "dimuon_phi_eta",
-    #     "jet1_pt",
-    #     "jet1_eta",
-    #     "jet1_phi",
-    #     "jet1_qgl",
-    #     "jet2_pt",
-    #     "jet2_eta",
-    #     "jet2_phi",
-    #     "jet2_qgl",
-    #     "jj_mass",
-    #     "jj_mass_log",
-    #     "jj_dEta",
-    #     "rpt",
-    #     "ll_zstar_log",
-    #     "mmj_min_dEta",
-    #     "nsoftjets2", # replace nsoftjets5 with 2 bc VBF BDT input
-        # "htsoft2",
-        # "pt_centrality",
-    #     "year",
-    # ]
     training_features = [
-        'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity', \
+        'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
          'dimuon_cos_theta_cs', 'dimuon_phi_cs',
-         'jet1_pt', 'jet1_eta', 'jet1_phi', 'jet1_qgl', 'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_qgl',\
+         'jet1_pt', 'jet1_eta', 'jet1_phi', 'jet1_qgl', 'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_qgl',
          'jj_mass', 'jj_mass_log', 'jj_dEta', 'rpt', 'll_zstar_log', 'mmj_min_dEta', 'nsoftjets5', 'htsoft2'
     ]
     # generate directory to save training_features
     save_path = f"dnn/trained_models/{run_label}"
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-
+    os.makedirs(save_path, exist_ok=True)
+    logger.debug(f"save_path: {save_path}")
 
     # Pickle the training_features list into a file
     with open(f'{save_path}/training_features.pkl', 'wb') as f:
         pickle.dump(training_features, f)
 
-
     # TODO: add mixup
     # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
-    sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
-    bkg_processes = ["dy_M-100To200", "ewk_lljj_mll105_160_ptj0","ttjets_dl","ttjets_sl"]
+    # sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
+    sig_processes = ["vbf_powheg_dipole"]
+    bkg_processes = ["dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     # sig_processes = ["ggh_powhegPS"] # testing
     # bkg_processes = ["ewk_lljj_mll105_160_ptj0"] # testing
 
@@ -544,12 +514,12 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     for process in sig_processes:
         filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
         if not filenames:
-            print(f"No parquet files found for signal process {process}, skipping.")
+            logger.info(f"No parquet files found for signal process {process}, skipping.")
             continue
         try:
             sig_events = dak.from_parquet(filenames)
         except ValueError as e:
-            print(f"Error reading parquet for signal process {process}: {e}, skipping.")
+            logger.info(f"Error reading parquet for signal process {process}: {e}, skipping.")
             continue
         sig_events_dict[process] = sig_events
 
@@ -557,12 +527,12 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     for process in bkg_processes:
         filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
         if not filenames:
-            print(f"No parquet files found for background process {process}, skipping.")
+            logger.info(f"No parquet files found for background process {process}, skipping.")
             continue
         try:
             bkg_events = dak.from_parquet(filenames)
         except ValueError as e:
-            print(f"Error reading parquet for background process {process}: {e}, skipping.")
+            logger.info(f"Error reading parquet for background process {process}: {e}, skipping.")
             continue
         bkg_events_dict[process] = bkg_events
 
@@ -574,8 +544,8 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     # Use the first available signal events as template for feature names
     sample_events = next(iter(sig_events_dict.values()))
     training_features = prepare_features(sample_events, training_features)
-    # print(f"training_features: {training_features}")
-    print(f"len training_features: {len(training_features)}")
+    # logger.info(f"training_features: {training_features}")
+    logger.info(f"len training_features: {len(training_features)}")
     features2load = training_features + ["event","wgt_nominal"]
 
     loop_dict = {
@@ -584,7 +554,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     }
     df_l = []
     for label, events_dict in loop_dict.items():
-        print(f"{label} events dict: {events_dict}")
+        logger.info(f"{label} events dict: {events_dict}")
         for process, events in events_dict.items(): # lopp through each process's events
             df = preprocess_loop(events, features2load, region=region, category=category, label=label)
             if "dy_" in process.lower():
@@ -597,19 +567,19 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
                 df["process"] = "vbf" # add in process type
             elif "ggh" in process.lower():
                 df["process"] = "ggh" # add in process type
-            # print(f"df: {df.head()}")
-            print(f"df.label: {df.label}")
-            print(f"df.process: {df.process}")
+            # logger.info(f"df: {df.head()}")
+            logger.info(f"df.label: {df.label}")
+            logger.info(f"df.process: {df.process}")
             df_l.append(df)
 
 
     # merge sig and bkg dfs
     df_total = pd.concat(df_l)
-    print(df_total)
-    print(f"df_total.isnull().values.any(): {df_total.isnull().values.any()}")
+    logger.info(df_total)
+    logger.info(f"df_total.isnull().values.any(): {df_total.isnull().values.any()}")
     # sanity check
-    print(f"signal weight sum: {np.sum(df_total.wgt_nominal[df_total.label==1])}")
-    print(f"bkg weight sum: {np.sum(df_total.wgt_nominal[df_total.label==0])}")
+    logger.info(f"signal weight sum: {np.sum(df_total.wgt_nominal[df_total.label==1])}")
+    logger.info(f"bkg weight sum: {np.sum(df_total.wgt_nominal[df_total.label==0])}")
 
     # divide our data into 4 folds
     nfolds = 4
@@ -618,10 +588,10 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         val_folds = [(i+f)%nfolds for f in [2]]
         eval_folds = [(i+f)%nfolds for f in [3]]
 
-        print(f"Classifier #{i+1} out of {nfolds}")
-        print(f"Training folds: {train_folds}")
-        print(f"Validation folds: {val_folds}")
-        print(f"Evaluation folds: {eval_folds}")
+        logger.info(f"Classifier #{i+1} out of {nfolds}")
+        logger.info(f"Training folds: {train_folds}")
+        logger.info(f"Validation folds: {val_folds}")
+        logger.info(f"Evaluation folds: {eval_folds}")
 
         train_filter = df_total.event.mod(nfolds).isin(train_folds)
         val_filter = df_total.event.mod(nfolds).isin(val_folds)
@@ -631,35 +601,33 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         df_val = df_total[val_filter]
         df_eval = df_total[eval_filter]
 
-
-
         # scale data, save the mean and std. This has to be done b4 mixup
         x_train = df_train[training_features].values
-        print(f"x_train shape b4 mixup: {x_train.shape}")
+        logger.info(f"x_train shape b4 mixup: {x_train.shape}")
         label_train = df_train.label.values
         wgt_train = df_train.wgt_nominal.values
         x_mean = np.average(x_train,axis=0, weights=wgt_train)
         x_std = weighted_std(x_train, wgt_train)
-        print(f"x_mean: {x_mean}")
-        print(f"x_std: {x_std}")
+        logger.info(f"x_mean: {x_mean}")
+        logger.info(f"x_std: {x_std}")
         # np.save(f"output/trained_models/{model}/scalers_{fold_idx}", [x_mean, x_std])
 
         np.save(f"{save_path}/scalers_{i}", [x_mean, x_std])
 
 
-        # print(f"df_train b4 mixup: {df_train}")
+        # logger.info(f"df_train b4 mixup: {df_train}")
         do_mixup = False
         if do_mixup:
             addToOriginalData = True
-            print(f"df_train b4: {df_train.process}")
+            logger.info(f"df_train b4: {df_train.process}")
             df_mixup = copy.deepcopy(df_train)
             processes2keep = ["ggh", "vbf"]
             proc_filter = np.full(len(df_mixup), False, dtype=bool)
             for process in processes2keep:
                 proc_filter = proc_filter | (df_mixup.process == process)
             df_mixup = df_mixup[proc_filter]
-            print(f"df_mixup process: {df_mixup.process}")
-            print(f"df_mixup label: {np.all(df_mixup.label==1)}")
+            logger.info(f"df_mixup process: {df_mixup.process}")
+            logger.info(f"df_mixup label: {np.all(df_mixup.label==1)}")
 
             # drop process column. can't have non-numeric value for mixup, We don't need it for training anyways
             df_mixup = df_mixup.drop("process", axis=1)
@@ -672,8 +640,8 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             # df_mixup = mixup(df_train, batch_size = int(len(df_train)*multiplier)) # batch size is subject to change ofc
             df_mixup = mixup(df_mixup, batch_size = int(len(df_mixup)*multiplier)) # batch size is subject to change ofc
 
-            # print("non zero mixup labels: ",np.sum((df_mixup.label == 1) |(df_mixup.label == 0)))
-            print(f"df_mixup label after mixup: {np.all(df_mixup.label==1)}")
+            # logger.info("non zero mixup labels: ",np.sum((df_mixup.label == 1) |(df_mixup.label == 0)))
+            logger.info(f"df_mixup label after mixup: {np.all(df_mixup.label==1)}")
 
             if addToOriginalData:
                 df_train = pd.concat([df_train, df_mixup])
@@ -681,12 +649,12 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
                 df_train = df_mixup
 
 
-            print(f"df_train after mixup: {df_train}")
+            logger.info(f"df_train after mixup: {df_train}")
             # once mixup is done, recalculate the x, label and wgt for train
             x_train = df_train[training_features].values
             label_train = df_train.label.values
             wgt_train = df_train.wgt_nominal.values # idk if this is needed
-            print(f"x_train shape after mixup: {x_train.shape}")
+            logger.info(f"x_train shape after mixup: {x_train.shape}")
 
 
         # apply scaling to data, and save the data for training
@@ -733,17 +701,32 @@ parser.add_argument(
     action="store",
     help="production mode category. Options: vbf or ggh",
 )
+parser.add_argument(
+    "-y",
+    "--year",
+    dest="year",
+    default="2018",
+    action="store",
+    help="year of the data. Options: 2016, 2017, 2018",
+)
+parser.add_argument(
+    "--log-level",
+    default=logging.DEBUG,
+    type=lambda x: getattr(logging, x),
+    help="Configure the logging level."
+    )
+
 args = parser.parse_args()
+logger.setLevel(args.log_level)
 
 if __name__ == "__main__":
-    from distributed import LocalCluster, Client
-    cluster = LocalCluster(processes=True)
-    cluster.adapt(minimum=8, maximum=31) #min: 8 max: 32
-    client = Client(cluster)
+    from distributed import Client
+    client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+    logger.info("Local scale Client created")
 
-    RUN_LABEL = "May28_NanoV12"
-    YEAR      = "2018"
+    RUN_LABEL = args.label
+    YEAR      = args.year
     base_path      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{RUN_LABEL}/stage1_output/{YEAR}/f1_0"
 
     preprocess(base_path, run_label=args.label, category=args.category)
-    print("Success!")
+    logger.info("Success!")
