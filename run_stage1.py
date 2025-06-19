@@ -220,7 +220,7 @@ if __name__ == "__main__":
             logger.debug(f"client: {client}")
             logger.info("Gateway Client created")
         else:
-            client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+            client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             logger.info("Local scale Client created")
         #-------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
@@ -250,6 +250,11 @@ if __name__ == "__main__":
 
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
+                # if dataset in ["data_C", "data_B", "data_D", "data_E", "data_F",
+
+                #                ]: # FIXME: temporary line to skip some datasets for which we already have stage1 output
+                #     logger.warning(f"Skipping dataset: {dataset}")
+                #     continue
                 sample_step = time.time()
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
                 logger.debug(f"max_file_len: {args.max_file_len}")

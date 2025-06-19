@@ -506,7 +506,8 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
     # sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
     sig_processes = ["vbf_powheg_dipole"]
-    bkg_processes = ["dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
+    # bkg_processes = ["dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
+    bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     # sig_processes = ["ggh_powhegPS"] # testing
     # bkg_processes = ["ewk_lljj_mll105_160_ptj0"] # testing
 
@@ -724,7 +725,7 @@ if __name__ == "__main__":
     client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
     logger.info("Local scale Client created")
 
-    RUN_LABEL = args.label
+    RUN_LABEL = "Run2_nanoAODv12_08June"
     YEAR      = args.year
     base_path      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{RUN_LABEL}/stage1_output/{YEAR}/f1_0"
 

@@ -23,7 +23,6 @@ import argparse
 import pickle
 import time
 import glob
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 import os
 import itertools
@@ -231,9 +230,11 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             # "dy_M-100To200",
             # "dy_m105_160_vbf_amc",
             # "dy_M-50",
-            "dy_M-100To200_MiNNLO",
-            "dy_M-50_MiNNLO",
-            "dy_VBF_filter", # VBF filter
+            # "dy_M-100To200_MiNNLO",
+            # "dy_M-50_MiNNLO",
+            "dy_M-100To200_aMCatNLO",
+            # "dy_M-50_aMCatNLO",
+            # "dy_VBF_filter", # VBF filter
         ],
         "TT" : [
             "ttjets_dl",
@@ -359,10 +360,19 @@ parser.add_argument(
 )
 parser.add_argument(
     "--log-level",
-    default=logging.ERROR,
+    default=logging.INFO,
     type=lambda x: getattr(logging, x),
     help="Configure the logging level."
     )
+parser.add_argument(
+    "-nfolds",
+    "--nfolds",
+    dest="nfolds",
+    default=4,
+    type=int,
+    action="store",
+    help="Number of folds for cross-validation (default: 4)",
+)
 args = parser.parse_args()
 
 logger.setLevel(args.log_level)
@@ -380,7 +390,7 @@ if __name__ == "__main__":
         logger.info("Gateway Client created")
     else:
         from distributed import LocalCluster, Client
-        client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='4 GiB')
+        client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
         logger.info("Local scale Client created")
 
     base_path = args.base_path
@@ -404,8 +414,12 @@ if __name__ == "__main__":
             continue
 
         events_stage1 = dak.from_parquet(sample_l)
-        target_chunksize = 150_000
-        events_stage1 = events_stage1.repartition(rows_per_partition=target_chunksize)
+        logger.info(f"Sample type: {sample_type}")
+        if "powheg" not in sample_type:
+            target_chunksize = 1_000_000
+            events_stage1 = events_stage1.repartition(rows_per_partition=target_chunksize)
+        else:
+            logger.info("No repartitioning for signal samples")
 
         model_trained_path = f"{args.model_path}/{args.model_label}"
 
@@ -428,12 +442,13 @@ if __name__ == "__main__":
         if "data" in sample_type:
             wgt_variations = ["wgt_nominal"]
         else:
-            wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w)]
+            wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w and "separate" not in w)]
             logger.info(f"wgt_variations: {wgt_variations}")
-            wgt_variations = ["wgt_nominal",
-                              'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
-                              'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down'
-                              ]  # FIXME
+            # wgt_variations = ["wgt_nominal",
+            #                   'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
+            #                   'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down'
+            #                   ]  # FIXME: For debugging purpose.
+            # wgt_variations = ["wgt_nominal"]  # FIXME: For debugging purpose.
 
         logger.info(f"wgt_variations: {wgt_variations}")
         syst_variations = ["nominal"]  # FIXME
@@ -477,8 +492,6 @@ if __name__ == "__main__":
 
         score_hist_l = []
         iteration_counter = 0
-        compute_every_N = 2
-
         for loop_arg in loop_args:
             score_hist = copy.deepcopy(score_hist_empty)
 

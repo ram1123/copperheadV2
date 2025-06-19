@@ -12,9 +12,9 @@ plt.style.use(hep.style.CMS)
 
 # Setup
 FOLD = 3
-LABEL = "May28_NanoV12"
-TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_MergeFW/MVA_training/VBF/dnn/trained_models/{LABEL}/fold{FOLD}"
-DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_MergeFW/MVA_training/VBF/dnn/trained_models/{LABEL}"
+LABEL = "Run2_nanoAODv12_08June"
+TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June_MiNNLO/fold{FOLD}"
+DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/{LABEL}"
 
 training_features = [
     'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
@@ -31,8 +31,8 @@ model.load_state_dict(torch.load(f"{TRAINED_MODEL_DIR}/best_model_weights.pt", m
 model.eval()
 
 # Load data
-df_valid = pd.read_parquet(f"{DATA_PATH}/data_df_validation_{FOLD}")
-df_eval = pd.read_parquet(f"{DATA_PATH}/data_df_evaluation_{FOLD}")
+df_valid = pd.read_parquet(f"{DATA_PATH}/data_df_validation_{FOLD}.parquet")
+df_eval = pd.read_parquet(f"{DATA_PATH}/data_df_evaluation_{FOLD}.parquet")
 
 # print feature names in the df_eval
 # print("Features in df_eval:", df_eval.columns.tolist())

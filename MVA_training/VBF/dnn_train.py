@@ -631,7 +631,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
             plt.legend()
             plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_byProcess.png")
             plt.clf()
-            plt.close(fig)  # Close the figure to free memory
+            # plt.close(fig)  # Close the figure to free memory
 
 
             # Do the logscale plot

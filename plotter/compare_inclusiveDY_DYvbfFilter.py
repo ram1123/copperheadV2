@@ -10,7 +10,10 @@ and overlay them with a ratio panel.
 Example usage:
 time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  55         --xmin 105         --xmax 160         --output compareDY_M50M100_55bins.pdf
 time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  40         --xmin 110         --xmax 150         --output compareDY_M50M100_40bins.pdf
-time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  80         --xmin 110         --xmax 150         --output compareDY_M50M100_80bins.pdf
+time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/All_DY_with_Mjj350_cut_ForComparing/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/All_DY_with_Mjj350_cut_ForComparing/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/All_DY_with_Mjj350_cut_ForComparing/dy_VBF_filter/             --nbins  40         --xmin 110         --xmax 150         --output compareDY_M50M100_40bins_12June_mjjcut.pdf
+
+
+time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/2018/f1_0/dy_M-50_aMCatNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/2018/f1_0/dy_M-100To200_aMCatNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/2018/f1_0/dy_VBF_filter_NewZWgt/             --nbins  40         --xmin 110         --xmax 150         --output compareDY_40bins_Run2_nanoAODv12_08June_amc_newzpt.pdf
 """
 
 import os
@@ -76,7 +79,8 @@ def fill_hist_from_parquets(th1, parquet_paths):
     For each partition, fill the TH1D with (mass, weight). The TH1D
     must have Sumw2() called beforehand, so ROOT accumulates Σw² for errors.
     """
-    ddf = dd.read_parquet(parquet_paths, columns=["dimuon_mass", "wgt_nominal"])
+    ddf = dd.read_parquet(parquet_paths, columns=["dimuon_mass", "wgt_nominal", "gjj_mass"])
+    ddf = ddf[ddf["gjj_mass"] > 350.0]  # Apply the Mjj > 350 GeV cut
     for part in ddf.to_delayed():
         df = part.compute()
         masses = df["dimuon_mass"].to_numpy()
