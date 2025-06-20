@@ -18,29 +18,43 @@ from modules.utils import logger
 
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
-bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
+# bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
-# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
+bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
-    "DY": ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"],
+
     # "DY_aMCatNLO": ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"],
+    "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"],
+    # "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO", "dy_VBF_filter_NewZWgt"],
     # "DY": [
     #     "dy_M-4to50_HT-70to100", "dy_M-4to50_HT-100to200", "dy_M-4to50_HT-200to400", "dy_M-4to50_HT-400to600", "dy_M-4to50_HT-600toInf",
     #     "dy_M-50_HT-70to100", "dy_M-50_HT-100to200", "dy_M-50_HT-200to400", "dy_M-50_HT-400to600", "dy_M-50_HT-600to800", "dy_M-50_HT-800to1200", "dy_M-50_HT-1200to2500", "dy_M-50_HT-2500toInf"
     # ],
-    # "DY_MiNNLO": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"],
-    # "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO", "dy_VBF_filter_NewZWgt"],
     # "DYVBF": ["dy_VBF_filter_NewZWgt"],
+
     "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
-    "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
+    # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
+
     "EWK": ["ewk_lljj_mll50_mjj120"],
+
     "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
-    "VVContinuum": ["GluGluContin_ZZ2e2mu", "GluGluContin_ZZ2mu2nu", "GluGluContin_ZZ2mu2tau", "GluGluContin_ZZ4mu", "GluGluContin_ZZ4tau"],
+    # "VVContinuum": ["GluGluContin_ZZ2e2mu", "GluGluContin_ZZ2mu2nu", "GluGluContin_ZZ2mu2tau", "GluGluContin_ZZ4mu", "GluGluContin_ZZ4tau"],
+
     "OTHER": ["www", "wwz", "wzz", "zzz"],
     "GGH": ["ggh_powhegPS"],
     "VBF": ["vbf_powheg_dipole"]
 }
+
+def make_region_mask(events, name):
+    m = events.dimuon_mass
+    masks = {
+      "z-peak":   (m>70)&(m<110),
+      "h-peak":   (m>115.03)&(m<135.03),
+      "h-sidebands": ((m>110)&(m<115.03))|((m>135.03)&(m<150)),
+      "signal":   ((m>110)&(m<115.03))|((m>135.03)&(m<150))|((m>115.03)&(m<135.03))
+    }
+    return ak.fill_none(masks[name], False)
 
 def get_scalar_ptCentrality(events):
     pt_centrality_scalar = events.dimuon_pt - abs(events.jet1_pt_nominal + events.jet2_pt_nominal)/2
@@ -87,7 +101,8 @@ if __name__ == "__main__":
     "--background",
     dest="bkg_samples",
     # default=["DY", "TOP", "EWK", "VV", "OTHER"],
-    default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"],
+    # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"],
+    default = ["OTHER", "EWK", "VV", "TOP", "DY"],
     # default=["DY", "DYVBF", "TOP", "EWK", "VV", "OTHER"],
     # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
     nargs="*",
@@ -419,6 +434,7 @@ if __name__ == "__main__":
             full_load_path = args.load_path+f"/{process}/*.parquet" # try coppperheadV1 path, if this also is empty, then skip
         logger.info(f"full_load_path: {full_load_path}")
         try:
+            # FIXME: add the filter and selection while loading the parquet file
             events = dak.from_parquet(full_load_path)
             target_chunksize = 1_000_000
             events = events.repartition(rows_per_partition=target_chunksize)
@@ -596,7 +612,7 @@ if __name__ == "__main__":
                         btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
                         btag_cut = btagLoose_filter | btagMedium_filter
                         # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
-                        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 70)
+                        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
                         vbf_cut = ak.fill_none(vbf_cut, value=False)
                         # if args.vbf_cat_mode:
                         if args.category == "vbf":
