@@ -1,3 +1,24 @@
+# 17 June 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m 2)
+
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2017 -m all)
+
+```bash
+time(python MVA_training/VBF/dnn_preprocessor.py --label "Run2_nanoAODv12_08June_MiNNLO" -cat "vbf" --year 2018)
+time(python MVA_training/VBF/dnn_train.py --label "Run2_nanoAODv12_08June_MiNNLO")
+```
+
+```
+
+# 16 June 2025
+
+```bash
+time(python MVA_training/VBF/dnn_preprocessor.py --label "Run2_nanoAODv12_08June" -cat "vbf" --year 2018)
+time(python MVA_training/VBF/dnn_train.py --label "Run2_nanoAODv12_08June")
+```
+
 # 09 June 2025
 
 ```bash
