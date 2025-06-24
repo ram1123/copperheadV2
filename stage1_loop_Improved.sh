@@ -1,250 +1,207 @@
 #!/bin/bash
-# Stop execution on any error
-set -e
+set -euo pipefail
 
 usage() {
-    echo "Usage: $0 [options]"
-    echo "Options:"
-    echo "  -h            Show this help message"
-    echo "  -c <file>    Dataset YAML file (default: configs/datasets/dataset.yaml)"
-    echo "  -m <mode>    Mode: 0 (prestage), 1 (stage1), all (both), zpt_val (validation), calib (mass calibration) (default: 0)"
-    echo "  -v <version> NanoAOD version (default: 9)"
-    echo "  -y <year>    Year (default: (\"2018\" \"2017\" \"2016postVFP\" \"2016preVFP\"))"
-    echo "  -l <label>   Label (default: Default_nanoAODv9)"
-    echo "  -s           Skip bad files (default: 0)"
-    echo "  -d           Enable debug mode (default: 0)"
-    echo "  -f           Run only 10% of the sampeles for debugging (default: 0)"
+    cat <<EOF
+Usage: $0 [options]
+
+Options:
+  -h            Show this help message
+  -c <file>     Dataset YAML file (default: configs/datasets/dataset_nanoAODv12.yaml)
+  -m <mode>     Mode: 0 (prestage), 1 (stage1), 2 (stage2), 3 (stage3), all (both), zpt_fit, zpt_val, calib (default: all)
+  -v <version>  NanoAOD version (default: 12)
+  -y <year>     Year (default: 2018 2017 2016postVFP 2016preVFP)
+  -l <label>    Label (default: Default_nanoAODv9)
+  -s            Skip bad files (default: 0)
+  -d            Enable debug mode (default: 0)
+  -f            Run only 10% of samples for debugging (default: 0)
+  -n <njet>     nJet value (optional, default: 0)
+  -b <bins>     Number of bins (optional, default: 100)
+  -o <outAppend>  String to append to output files (default: today's date)
+EOF
     exit 1
 }
 
-# Set default values
+# ---------- Default values ----------
 datasetYAML="configs/datasets/dataset_nanoAODv12.yaml"
 NanoAODv="12"
-years=("2018" "2017" "2016postVFP" "2016preVFP")
+declare -a years=("2018" "2017" "2016postVFP" "2016preVFP")
 label="Default_nanoAODv9"
 debug="0"
 mode="all"
 skipBadFiles="0"
-model_path="/depot/cms/users/shar1172/copperheadV2_MergeFW/MVA_training/VBF/dnn/trained_models"
-model_label="May28_NanoV12"
+frac="0"
+njet="0"
+nbin="100"
+model_path="/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models"
+model_label="Run2_nanoAODv12_08June"
+outAppend="$(date +%b%d_%Y)"   # Default: today's date, e.g. Jun24_2025
 
-options=":hc:m:v:y:l:n:b:sdf"
-while getopts $options option; do
+
+# ----------- Parse options -----------
+while getopts ":hc:m:v:y:l:n:b:d:o:sf" option; do
     case "$option" in
         h) usage ;;
-        c) datasetYAML=$OPTARG ;;
-        m) mode=$OPTARG ;;
-        v) NanoAODv=$OPTARG ;;
-        y) year=$OPTARG ;;
-        l) label=$OPTARG ;;
-        n) njet=$OPTARG ;;
-        b) bins=$OPTARG ;;
+        c) datasetYAML="$OPTARG" ;;
+        m) mode="$OPTARG" ;;
+        v) NanoAODv="$OPTARG" ;;
+        y) IFS=' ' read -r -a years <<< "$OPTARG" ;;
+        l) label="$OPTARG" ;;
+        n) njet="$OPTARG" ;;
+        b) nbin="$OPTARG" ;;
+        d) debug="$OPTARG" ;;
+        o) outAppend="$OPTARG" ;;
         s) skipBadFiles="1" ;;
-        d) debug="1" ;;
         f) frac="1" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
 done
 
-# function to print and execute the command
-function run_command() {
-    echo "Executing: $1"
-    echo "Executing: $1" >> $log_file
-    eval $1
-}
+# ----------- Utility functions -----------
+log_dir="log_old"
+[ -d "$log_dir" ] || mkdir -p "$log_dir"
 
-# if year is not set then take the default value of years
-if [[ -z "$year" ]]; then
-    years=("2018" "2017" "2016postVFP" "2016preVFP")
-    echo "Reading default year: 2018, 2017 and 2016"
-else
-    years=($year)
-    echo "Reading year: $years"
-fi
+# Move any previous log_*.txt to log_old/
+shopt -s nullglob
+for f in log_*.txt; do
+    mv "$f" "$log_dir/"
+done
+shopt -u nullglob
 
-declare -A data_l_dict # Associative array because of non-integer key.
-data_l_dict["2016preVFP"]="B C D E F"
-data_l_dict["2016postVFP"]="F G H"
-data_l_dict["2017"]="B C D E F"
-data_l_dict["2018"]="A B C D"
-data_l_dict["2022preEE"]="C D"
-data_l_dict["2022postEE"]="E F G"
+log_file="log_$(date +%Y%m%d_%H%M%S).txt"
+exec 3>>"$log_file"  # FD 3 for logging
 
-data_l_dict["2018"]=""
-# data_l_dict["2022preEE"]=""
-# data_l_dict["2017"]=""
-# data_l_dict["2016postVFP"]=""
-# data_l_dict["2016preVFP"]=""
-# bkg_l="DY Top VV EWK VVV"
-# bkg_l="Top VV EWK VVV"
-bkg_l="DY"
-# bkg_l=""
-# sig_l="Higgs"
+log() { echo "$@" | tee -a "$log_file"; }
+
+save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
+mkdir -p "$save_path"
+
+declare -A data_l_dict=(
+    [2016preVFP]="B C D E F"
+    [2016postVFP]="F G H"
+    [2017]="B C D E F"
+    [2018]="A B C D"
+    [2022preEE]="C D"
+    [2022postEE]="E F G"
+)
+
+# bkg_l="DY TT ST VV EWK VVV"
+bkg_l="DY Top VV EWK VVV"
+
 # sig_l="VBF"
-sig_l=""
+sig_l="Higgs"
 
-# Used by the zpt_fit mode
-if [[ -z "$njet" ]]; then
-    njet=0
-else
-    njet=$njet
-fi
-if [[ -z "$bins" ]]; then
-    nbin=100
-else
-    nbin=$bins
-fi
-
-# If debug is on, then run only for one era in each year.
-if [[ "$debug" == "1" ]]; then
-    echo "Debug mode is on. Running only for 2018."
-    # years=("2016postVFP" "2016preVFP")
-    years=("2018")
-    # Also update the associated data list.
-    data_l_dict["2018"]="C"
-    data_l_dict["2017"]="B C D E F"
-    data_l_dict["2016preVFP"]="B C D E F"
-    data_l_dict["2016postVFP"]="F G H"
-    # data_l_dict["2017"]="B C D E F"
-    # data_l_dict["2022preEE"]="C D"
-    # data_l_dict["2022preEE"]=""
-    bkg_l=""
+if [[ "$debug" -ge 1 ]]; then
+    log "Debug mode ON "
+    # years=("2017")
+    data_l_dict["2018"]=""
+    data_l_dict["2017"]=""
+    data_l_dict["2016preVFP"]=""
+    data_l_dict["2016postVFP"]=""
+    bkg_l="DY"
     sig_l=""
 fi
 
 chunksize=300000
-save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
 
-
-# Check if any log_*.txt file exists then move it to log_old folder
-if [ -f log_*.txt ]; then
-    if [ ! -d log_old ]; then
-        mkdir log_old
-    fi
-    mv log_*.txt log_old/
-fi
-
-# log file with timestamp
-log_file="log_$(date +%Y%m%d_%H%M%S).txt"
-echo "Starting program on " `date`
-echo "Starting program on " `date` > $log_file
-echo "Chunk size: $chunksize" >> $log_file
-echo "Save Path: $save_path" >> $log_file
-echo "Selected mode: $mode" >> $log_file
-echo "Selected NanoAOD version: $NanoAODv" >> $log_file
-echo "Selected years: ${years[@]}" >> $log_file
-echo "Selected years: ${years[@]}"
-
+# ----------- Main loop -----------
 for year in "${years[@]}"; do
     data_l="${data_l_dict[$year]}"
-    echo "Data: $data_l"
-    echo "year: $year" >> $log_file
-    echo "Data: $data_l" >> $log_file
-    echo "Background: $bkg_l" >> $log_file
-    echo "Signal: $sig_l" >> $log_file
+    log "Processing year: $year"
+    log "  Data: $data_l"
+    log "  Background: $bkg_l"
+    log "  Signal: $sig_l"
+    log "  NanoAODv: $NanoAODv"
+    log "  Save path: $save_path"
 
-    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache "
-    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  --use_gateway  --skipBadFiles "
+    # ---- Command templates ----
+    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  --use_gateway  "
+
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500  --isCutflow  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --use_gateway --max_file_len 2500  "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --max_file_len 2500  "
     command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l  "
-    command3="python run_stage3_vbf.py --base_path $save_path -y $year  "
-    command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
 
+    command3="python run_stage3_vbf.py --base_path $save_path -y $year  "
+
+    command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
     command5="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
     command6="python src/lib/ebeMassResCalibration/calibration_factor.py --path $save_path"
 
-    if [[ "$debug" == "1" ]]; then
-        command0+="--log-level DEBUG " #
-        command1+="--log-level DEBUG " #
-        command4+="--log-level DEBUG --debug"
+    # Logging/debug options
+    if [[ "$debug" -ge 2 ]]; then
+        command0+=" --log-level DEBUG "
+        command1+=" --log-level DEBUG "
+        command4+=" --log-level DEBUG --debug "
     else
-        command0+=" --log-level INFO"
-        command1+=" --log-level INFO"
-        command4+=" --log-level INFO"
+        command0+=" --log-level INFO "
+        command1+=" --log-level INFO "
+        command4+=" --log-level INFO "
     fi
 
     if [[ "$frac" == "1" ]]; then
         command0+=" -frac 0.1"
         command1+=" --test_mode"
     fi
+    [[ "$skipBadFiles" == "1" ]] && command0+=" --skipBadFiles"
 
-    if [[ "$skipBadFiles" == "1" ]]; then
-        command0+=" --skipBadFiles"
-    fi
-
-    if [[ "$mode" == "0" ]]; then
-        echo "Running pre-stage for year $year..."
-        echo "Executing: $command0"  # Print the command for debugging
-        echo "command0: $command0" >> $log_file
-        eval $command0
-    elif [[ "$mode" == "1" ]]; then
-        echo "Running stage1 for year $year..."
-        echo "Executing: $command1"  # Print the command for debugging
-        echo "command1: $command1" >> $log_file
-        eval $command1
-    elif [[ "$mode" == "2" ]]; then
-        echo "Running stage2 for year $year..."
-        echo "Executing: $command2"  # Print the command for debugging
-        echo "command2: $command2" >> $log_file
-        eval $command2
-    elif [[ "$mode" == "3" ]]; then
-        echo "Running stage3 for year $year..."
-        echo "Executing: $command3"  # Print the command for debugging
-        echo "command3: $command3" >> $log_file
-        eval $command3
-    elif [[ "$mode" == "all" ]]; then
-        echo "Running pre-stage for year $year..."
-        echo "Executing: $command0"  # Print the command for debugging
-        echo "command0: $command0" >> $log_file
-        eval $command0
-
-        echo "Running stage1 for year $year..."
-        echo "Executing: $command1"  # Print the command for debugging
-        echo "command1: $command1" >> $log_file
-        eval $command1
-    elif [[ "$mode" == "zpt_fit" || "$mode" == "zpt_fit0" || "$mode" == "zpt_fit1"  || "$mode" == "zpt_fit2" || "$mode" == "zpt_fit12" ]]; then
-        echo "Running fitting step..."
-
-        command0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l ${label} -y ${year}"
-        command1="python data/zpt_rewgt/fitting/do_f_test.py --run_label ${label} --year ${year} --nbins ${nbin} --njet ${njet} --outAppend \"May31_test\" --debug"
-        # command2="python data/zpt_rewgt/fitting/get_polyFit.py -l ${label} -y ${year} --nbins ${nbin} --njet ${njet} --outAppend \"May31_test\""
-        command2="python data/zpt_rewgt/fitting/get_polyFit_v1.py -l ${label} -y ${year} --nbins ${nbin} --njet ${njet} --outAppend \"May31_test\""
-
-        if [[ "$mode" == "zpt_fit0" || "$mode" == "zpt_fit" ]]; then
-            echo "Executing: $command0"  # Print the command for debugging
-            echo "command0: $command0" >> $log_file
-            eval $command0
-        fi
-        if [[ "$mode" == "zpt_fit1" || "$mode" == "zpt_fit" || "$mode" == "zpt_fit12" ]]; then
-            echo "Executing: $command1"  # Print the command for debugging
-            echo "command1: $command1" >> $log_file
-            eval $command1
-        fi
-        if [[ "$mode" == "zpt_fit2" || "$mode" == "zpt_fit" || "$mode" == "zpt_fit12" ]]; then
-            echo "Executing: $command2"  # Print the command for debugging
-            echo "command2: $command2" >> $log_file
-            eval $command2
-        fi
-
-    elif [[ "$mode" == "zpt_val" ]]; then
-        echo "Running validation step..."
-        echo "Executing: $command4"  # Print the command for debugging
-        echo "command4: $command4" >> $log_file
-        eval $command4
-    # Run the mass calibration fitting step
-    elif [[ "$mode" == "calib" ]]; then
-        echo "Running mass calibration"
-        echo "Executing: $command5"  # Print the command for debugging
-        echo "command: $command5" >> $log_file
-        eval $command5
-    else
-        echo "Error: Invalid mode. Please use '0' for prestage or '1' for stage1 or 2 for making validation plots."
-        exit 1
-    fi
+    # ---- Mode switch ----
+    case "$mode" in
+        0)
+            log "Running pre-stage for year $year..."
+            log "Command: $command0"
+            eval "$command0"
+            ;;
+        1)
+            log "Running stage1 for year $year..."
+            log "Command: $command1"
+            eval "$command1"
+            ;;
+        2)
+            log "Running stage2 for year $year..."
+            log "Command: $command2"
+            eval "$command2"
+            ;;
+        3)
+            log "Running stage3 for year $year..."
+            log "Command: $command3"
+            eval "$command3"
+            ;;
+        all)
+            log "Running pre-stage for year $year..."
+            log "Command: $command0"
+            eval "$command0"
+            log "Running stage1 for year $year..."
+            log "Command: $command1"
+            eval "$command1"
+            ;;
+        zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
+            log "Running ZpT fitting step(s)..."
+            cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year"
+            cmd1="python data/zpt_rewgt/fitting/do_f_test.py --run_label $label --year $year --nbins $nbin --njet $njet --outAppend $outAppend --debug"
+            cmd2="python data/zpt_rewgt/fitting/get_polyFit_v1.py -l $label -y $year --nbins $nbin --njet $njet --outAppend $outAppend"
+            [[ "$mode" =~ ^(zpt_fit0|zpt_fit)$ ]] && { log "Command0: $cmd0"; eval "$cmd0"; }
+            [[ "$mode" =~ ^(zpt_fit1|zpt_fit|zpt_fit12)$ ]] && { log "Command1: $cmd1"; eval "$cmd1"; }
+            [[ "$mode" =~ ^(zpt_fit2|zpt_fit|zpt_fit12)$ ]] && { log "Command2: $cmd2"; eval "$cmd2"; }
+            ;;
+        zpt_val)
+            log "Running ZpT validation..."
+            log "Command: $command4"
+            eval "$command4"
+            ;;
+        calib)
+            log "Running mass calibration..."
+            log "Command: $command5"
+            eval "$command5"
+            ;;
+        *)
+            echo "Error: Invalid mode. Use 0, 1, 2, 3, all, zpt_fit, zpt_val, or calib."
+            usage
+            ;;
+    esac
 done
-echo "Ending program on " `date`
 
-echo "Ending program on " `date` >> $log_file
+log "Program ended on $(date)"
+exec 3>&-

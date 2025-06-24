@@ -40,6 +40,13 @@ def parse_arguments():
         "--outAppend", type=str, default="",
         help="String to append to output filenames"
     )
+    parser.add_argument(
+        "-dy_sample", "--dy_sample", dest="dy_sample",
+        default="MiNNLO",
+        choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
+        action="store",
+        help="choose the type of DY samples to use for Zpt reweighting",
+    )
     return parser.parse_args()
 
 def make_combined_function(order0, order, xmin, xmax):
@@ -179,6 +186,7 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
     # Finally draw the histogram itself (with error bars)
     hist_sf.Draw("same E")
 
+    txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
     # Legend
     if year == "2018":
         if njet == 0:
@@ -187,6 +195,33 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
         else:
             leg = ROOT.TLegend(0.7, 0.3, 0.9, 0.5)
+    elif year == "2017":
+        if njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        elif njet == 1:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+    elif year == "2016postVFP":
+        if njet == 0:
+            leg = ROOT.TLegend(0.0, 0.7, 0.4, 0.9)
+        elif njet == 1:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+        else:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+    elif year == "2016preVFP":
+        if njet == 0:
+            leg = ROOT.TLegend(0.0, 0.7, 0.4, 0.9)
+        elif njet == 1:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     else:
         leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
     leg.AddEntry(hist_sf, "Data / DY MC SF", "l")
@@ -197,7 +232,6 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
     leg.Draw()
 
     # Text box with fit stats
-    txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
     txt.SetFillColor(0)
     txt.SetBorderSize(1)
     txt.AddText("Fit Results:")
@@ -246,12 +280,12 @@ def main():
     global_fit_xmax = 200.0
 
     for year in years:
-        in_dir = os.path.join(plot_base, run_label, year)
-        save_dir = os.path.join(in_dir, f"gof_{out_append}")
+        in_dir = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
+        save_dir = f"{in_dir}/gof_{out_append}"
         os.makedirs(save_dir, exist_ok=True)
 
         # Load the fit configuration YAML
-        cfg_path = os.path.join(in_dir, f"fTest_{out_append}", "zpt_fit_config.yaml")
+        cfg_path = f"{in_dir}/fTest_{out_append}/zpt_fit_config.yaml"
         with open(cfg_path, "r") as cfg_file:
             fit_config = yaml.safe_load(cfg_file)
 

@@ -215,6 +215,11 @@ if __name__ == "__main__":
                 "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
                 proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
             )
+            # gateway = Gateway()
+            logger.info("Connecting to Dask Gateway")
+            logger.info(f"gateway: {gateway}")
+            logger.info(f"gateway list clusters: {gateway.list_clusters()}")
+
             cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug(f"client: {client}")
@@ -250,9 +255,10 @@ if __name__ == "__main__":
 
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
-                # if dataset in ["data_C", "data_B", "data_D", "data_E", "data_F",
-
-                #                ]: # FIXME: temporary line to skip some datasets for which we already have stage1 output
+                # if dataset in ["ggh_amcPS", "ggh_powhegPS"]: # FIXME: temporary line to skip some datasets for which we already have stage1 output
+                #     logger.warning(f"Skipping dataset: {dataset}")
+                #     continue
+                # if "ewk_lljj_mll50_mjj120" not in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
                 sample_step = time.time()
@@ -275,10 +281,10 @@ if __name__ == "__main__":
                     else:
                         # remove previously existing files and make path if doesn't exist
                         filelist = glob.glob(f"{save_path}/*.parquet")
-                        logger.debug(f"Going to delete files: len(filelist): {len(filelist)}")
+                        logger.warning(f"Going to delete files: len(filelist): {len(filelist)}")
                         for file in filelist:
                             os.remove(file)
-                    logger.debug("Directory created or cleaned")
+                    logger.debug(f"Directory created or cleaned: {save_path}")
                     to_persist.persist().to_parquet(save_path)
                     # to_persist.to_parquet(save_path)
 

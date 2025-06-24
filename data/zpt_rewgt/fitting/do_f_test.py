@@ -21,14 +21,16 @@ parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("--outAppend", type=str, default="", help="Append to output file name")
 parser.add_argument("--nbins", type=str, default="CustomBins", help="Number of bins")
 parser.add_argument("-save", "--plot_path", dest="plot_path", default="plots", action="store", help="save path to store plots")
+parser.add_argument("--dy_sample", type=str, default="MiNNLO", choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
+                    help="DY sample to use for reweighting")
 args = parser.parse_args()
 
 logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
 
 year = args.years[0]
 run_label = args.run_label
-inPath = f"{args.plot_path}/{run_label}/{year}"
-save_path = f"{args.plot_path}/{run_label}/{year}/fTest_{args.outAppend}"
+inPath = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
+save_path = f"{inPath}/fTest_{args.outAppend}"
 os.makedirs(save_path, exist_ok=True)
 
 optimized_orders = {}
@@ -61,7 +63,7 @@ def save_histogram(hist_SF, fit_func_high, order_high, year, njet, target_nbins,
     canvas.SaveAs(f"{save_path}/fit_best_{year}_njet{njet}_{target_nbins}_order{order_high}_{outtext}.pdf")
 
 
-def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, outTextFile, outTextFile_keys, year, njet, outtext=""):
+def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outTextFile, outTextFile_keys, year, njet, outtext=""):
     optimized_orders = {}
     print(f"Performing F-test for {year} njet{njet} with {target_nbins} bins; outtext: {outtext}")
     fit_order_start = 1 if outtext == "f0" else 2
@@ -125,7 +127,10 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, outTextFile, outTe
 
                 save_fit_config[year][f"njet{njet}"][f"{outtext}"] = {
                     "order": order_high,
-                    "fit_range": [fit_xmin, fit_xmax]
+                    "fit_range": [fit_xmin, fit_xmax],
+                    "bins": target_nbins,
+                    "bin_edges": bin_array.tolist(),
+                    "polynomial_expr": polynomial_expr_high
                 }
 
                 save_histogram(hist_SF, fit_func_high, order_high, year, njet, target_nbins, outtext)
@@ -173,7 +178,7 @@ for njet in args.njet:
             # Compute Scale Factor (SF)
             hist_SF_f0 = hist_data.Clone("hist_SF_f0")
             hist_SF_f0.Divide(hist_dy)
-            perform_f_test(hist_SF_f0, 0., fit_xmin, "500", outTextFile, outTextFile_keys, year, njet, outtext="f0")
+            perform_f_test(hist_SF_f0, 0., fit_xmin, nbins_new, xbins, outTextFile, outTextFile_keys, year, njet, outtext="f0")
 
         with open(f"{save_path}/fTest_results_{year}_njet{njet}_nbins{args.nbins}_f1_UpdatedCode.txt", "w") as outTextFile, \
             open(f"{save_path}/fTest_results_{year}_njet{njet}_nbins{args.nbins}_f1_keys.txt", "w") as outTextFile_keys:
@@ -181,7 +186,7 @@ for njet in args.njet:
             # Compute Scale Factor (SF) on rebinned histograms
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
-            perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, outTextFile, outTextFile_keys, year, njet, outtext="f1")
+            perform_f_test(hist_SF, fit_xmin, fit_xmax, nbins_new, xbins, outTextFile, outTextFile_keys, year, njet, outtext="f1")
         file.Close()
 
 # Save config to YAML
