@@ -220,18 +220,14 @@ zpt_weights_file_valerie:
   '2018_RERECO': data/zpt_weights.histo.json # FIXME
 new_zpt_weights_file_aMCatNLO:
   '2018': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
-  '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml # FIXME: has 2018 weights
-  '2016preVFP': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml # FIXME: has 2018 weights
-  '2016postVFP': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml # FIXME: has 2018 weights
-new_zpt_weights_file:
-  2016preVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
-  2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
-  '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
-  '2018': data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml # New zpt rewgt March 30 2025
-  # 2016preVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_amcnlo.yaml # New zpt rewgt March 30 2025
-  # 2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_amcnlo.yaml # New zpt rewgt March 30 2025
-  # '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_amcnlo.yaml # New zpt rewgt March 30 2025
-  # '2018': data/zpt_rewgt/fitting/zpt_rewgt_params_amcnlo.yaml # New zpt rewgt March 30 2025
+  '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
+  '2016preVFP': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
+  '2016postVFP': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
+new_zpt_weights_file_MiNNLO:
+  2016preVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml
+  2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml
+  '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml
+  '2018': data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml
   2016_RERECO: data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   '2017_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   '2018_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml

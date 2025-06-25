@@ -19,11 +19,12 @@ from modules.utils import logger
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
-# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
-bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
+bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
+# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
 
+    # "DY": ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"],
     # "DY_aMCatNLO": ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"],
     "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"],
     # "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO", "dy_VBF_filter_NewZWgt"],
@@ -31,7 +32,7 @@ group_dict = {
     #     "dy_M-4to50_HT-70to100", "dy_M-4to50_HT-100to200", "dy_M-4to50_HT-200to400", "dy_M-4to50_HT-400to600", "dy_M-4to50_HT-600toInf",
     #     "dy_M-50_HT-70to100", "dy_M-50_HT-100to200", "dy_M-50_HT-200to400", "dy_M-50_HT-400to600", "dy_M-50_HT-600to800", "dy_M-50_HT-800to1200", "dy_M-50_HT-1200to2500", "dy_M-50_HT-2500toInf"
     # ],
-    # "DYVBF": ["dy_VBF_filter_NewZWgt"],
+    "DYVBF": ["dy_VBF_filter_NewZWgt"],
 
     "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
@@ -68,6 +69,22 @@ def find_group_name(process_name, group_dict_param):
             return group_name
     return "other"
 
+
+def fillHist(sample_hist, to_fill_setting, values, weights):
+    values_filter = values!=-999.0
+    values = values[values_filter]
+    weights = weights[values_filter]
+    to_fill_setting[var] = values
+    to_fill_value = to_fill_setting.copy()
+    to_fill_value["val_sumw2"] = "value"
+    sample_hist.fill(**to_fill_value, weight=weights)
+
+    to_fill_sumw2 = to_fill_setting.copy()
+    to_fill_sumw2["val_sumw2"] = "sumw2"
+    sample_hist.fill(**to_fill_sumw2, weight=weights * weights)
+    return sample_hist
+
+
 def getPlotVar(var_param: str):
     # Avoid redefining var from outer scope
     if "_nominal" in var_param:
@@ -75,6 +92,80 @@ def getPlotVar(var_param: str):
     else:
         plot_var = var_param
     return plot_var
+
+
+def applyRegionCatCuts(events, category: str, region_name: str):
+    # do mass region cut
+    mass = events.dimuon_mass
+    z_peak = ((mass > 70) & (mass < 110))
+    h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
+    h_peak = ((mass > 115.03) & (mass < 135.03))
+    if region_name == "signal":
+        region = h_sidebands | h_peak
+    elif region_name == "h-peak":
+        region = h_peak
+    elif region_name == "h-sidebands":
+        region = h_sidebands
+    elif region_name == "z-peak":
+        region = z_peak
+    else:
+        print("ERROR: acceptable region!")
+        raise ValueError
+
+    # do category cut
+    if category.lower() == "nocat":
+        # print("nocat mode!")
+        prod_cat_cut =  ak.ones_like(region, dtype="bool")
+    else: # VBF or ggH
+        btagLoose_filter = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False)
+        btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
+        btag_cut = btagLoose_filter | btagMedium_filter
+        # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
+        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
+        vbf_cut = ak.fill_none(vbf_cut, value=False)
+        if category.lower() == "vbf":
+            # print("vbf mode!")
+            prod_cat_cut =  vbf_cut
+            prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
+            if args.do_vbf_filter_study:
+                logger.debug("applying VBF filter gen cut!")
+                if ("dy_VBF_filter_NewZWgt" in process):
+                    logger.warning("Apply VBF filter gen cut > 350 for VBF DY!")
+                    vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
+                    prod_cat_cut =  (prod_cat_cut
+                                & vbf_filter
+                    )
+                elif (process == "dy_M-100To200_MiNNLO" or
+                        process == "dy_M-50_MiNNLO" or
+                        process == "dy_M-100To200_aMCatNLO" or
+                        process == "dy_M-50_aMCatNLO"):
+                    logger.warning("Apply VBF filter gen cut <= 350 for inc. DY!")
+                    vbf_filter = ak.fill_none((events.gjj_mass <= 350), value=False)
+                    prod_cat_cut =  (
+                        prod_cat_cut
+                        & vbf_filter
+                    )
+                else:
+                    logger.debug(f"no extra processing for {process}")
+                    pass
+
+        # else: # we're interested in ggH category
+        elif category.lower() == "ggh":
+            # print("ggH mode!")
+            prod_cat_cut =  ~vbf_cut
+            prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
+        else:
+            print("Error: invalid category option!")
+            raise ValueError
+
+    category_selection = (
+        prod_cat_cut &
+        region
+    )
+
+    events = events[category_selection]
+    return events
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -102,8 +193,8 @@ if __name__ == "__main__":
     dest="bkg_samples",
     # default=["DY", "TOP", "EWK", "VV", "OTHER"],
     # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"],
-    default = ["OTHER", "EWK", "VV", "TOP", "DY"],
-    # default=["DY", "DYVBF", "TOP", "EWK", "VV", "OTHER"],
+    default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
+    # default = ["OTHER", "EWK", "VV", "TOP", "DY"],
     # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
     nargs="*",
     type=str,
@@ -204,7 +295,8 @@ if __name__ == "__main__":
     "-reg",
     "--region",
     dest="regions",
-    default=[ "h-sidebands", "z-peak"],
+    default=[ "h-sidebands", "z-peak", "signal", "h-peak" ],
+    # default=["signal", "h-peak" ],
     nargs="*",
     type=str,
     action="store",
@@ -267,6 +359,11 @@ if __name__ == "__main__":
     logger.setLevel(args.log_level)
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
+
+    # if cat is vbf and njet is < 2 then skip the program
+    if args.category.lower() == "vbf" and (args.njets == "0" or args.njets == "1"):
+        logger.error("VBF category requires at least 2 jets! Exiting the program.")
+        raise ValueError("VBF category requires at least 2 jets!")
 
     # if do_vbf_filter_study or  "dy_VBF_filter_NewZWgt" in group_dict["DY"] or group_dict["DYVBF"], remove the "z-peak" region from the regions
     if (args.do_vbf_filter_study):
@@ -585,94 +682,7 @@ if __name__ == "__main__":
                     # ------------------------------------------------
                     # take the mass region and category cuts
                     # ------------------------------------------------
-                    # do mass region cut
-                    mass = events.dimuon_mass
-                    z_peak = ((mass > 70) & (mass < 110))
-                    h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
-                    h_peak = ((mass > 115.03) & (mass < 135.03))
-                    if region_name == "signal":
-                        region = h_sidebands | h_peak
-                    elif region_name == "h-peak":
-                        region = h_peak
-                    elif region_name == "h-sidebands":
-                        logger.debug("h_sidebands region chosen!")
-                        region = h_sidebands
-                    elif region_name == "z-peak":
-                        region = z_peak
-                    else:
-                        logger.error("ERROR: acceptable region!")
-                        raise ValueError
-
-                    # do category cut
-                    if args.category == "nocat":
-                        logger.debug("nocat mode!")
-                        prod_cat_cut =  ak.ones_like(region, dtype="bool")
-                    else: # VBF or ggH
-                        btagLoose_filter = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False)
-                        btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
-                        btag_cut = btagLoose_filter | btagMedium_filter
-                        # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
-                        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
-                        vbf_cut = ak.fill_none(vbf_cut, value=False)
-                        # if args.vbf_cat_mode:
-                        if args.category == "vbf":
-                            logger.debug("vbf mode!")
-                            prod_cat_cut =  vbf_cut
-                            prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-                            logger.debug("applying jet1 pt 35 Gev cut!")
-                            if args.do_vbf_filter_study:
-                                if "dy_" in process:
-                                    logger.debug("applying VBF filter gen cut!")
-                                    if ("dy_VBF_filter_NewZWgt" in process):
-                                        logger.info("Apply VBF filter gen cut > 350 for VBF DY!")
-                                        vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                                        prod_cat_cut =  (prod_cat_cut
-                                                    & vbf_filter
-                                        )
-                                    elif (process == "dy_M-100To200_MiNNLO" or
-                                          process == "dy_M-50_MiNNLO" or
-                                          process == "dy_M-100To200_aMCatNLO" or
-                                          process == "dy_M-50_aMCatNLO"):
-                                        logger.info("Apply VBF filter gen cut < 350 for inc. DY!")
-                                        vbf_filter = ak.fill_none((events.gjj_mass <= 350), value=False)
-                                        prod_cat_cut =  (
-                                            prod_cat_cut
-                                            & vbf_filter
-                                        )
-                                    else:
-                                        logger.warning(f"no extra processing for {process}")
-                                        pass
-                        # else: # we're interested in ggH category
-                        elif args.category == "ggh":
-                            logger.debug("ggH mode!")
-                            prod_cat_cut =  ~vbf_cut
-                            prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-                        else:
-                            logger.warning("Error: invalid category option!")
-                            raise ValueError
-
-                        if args.category == "nocat" or args.category == "ggh":
-                            # add njet cut for ggH category
-                            if str(args.njets) == "inclusive": # inclusive jets means no njet cut, 0, 1 and >=2 cases
-                                logger.debug("inclusive jets mode!")
-                                pass
-                            elif str(args.njets) == "0":
-                                logger.debug("0 jets mode!")
-                                prod_cat_cut = prod_cat_cut & (events.njets_nominal == 0)
-                            elif str(args.njets) == "1":
-                                logger.debug("1 jet mode!")
-                                prod_cat_cut = prod_cat_cut & (events.njets_nominal == 1)
-                            elif str(args.njets) == "2":
-                                logger.debug(">=2 jets mode!")
-                                prod_cat_cut = prod_cat_cut & (events.njets_nominal >= 2)
-
-
-                    category_selection = (
-                        prod_cat_cut &
-                        region
-                    )
-                    # filter events fro selected category
-                    events = events[category_selection]
+                    events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name)
 
                     # extract weights
                     if is_data:
@@ -680,6 +690,10 @@ if __name__ == "__main__":
                         fraction_weight = 1/events.fraction
                     else: # MC
                         weights = ak.fill_none(events["wgt_nominal"], value=0.0)
+
+                        # To stich the DY aMC@NLO and MiNNLO samples, we need to divide the weight of MiNNLO sample by Luminosity (59830.0)
+                        # if "dy_M-100To200_MiNNLO" in process or "dy_M-50_MiNNLO" in process :
+                            # weights = weights / 59830.0 # FIXME: this is hardcoded value, should be replaced with lumi value from config file
 
                         # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
                         # temporary over write
@@ -702,13 +716,9 @@ if __name__ == "__main__":
                         values = ak.fill_none(events[var_reduced], value=-999.0)
                     else:
                         values = ak.fill_none(events[var], value=-999.0)
-                    values_filter = values!=-999.0
-                    values = values[values_filter]
-                    weights = weights[values_filter]
                     # MC samples are already normalized by their xsec*lumi, but data is not
                     if process in group_dict["DATA"]: # FIXME: Why weights with data?
                         logger.debug(f"{process} is in data processes")
-                        fraction_weight = fraction_weight[values_filter]
                         weights = weights*fraction_weight
                     group_name = find_group_name(process, group_dict)
                     to_fill_setting = {
@@ -716,16 +726,8 @@ if __name__ == "__main__":
                     "channel" : args.category,
                     "variation" : "nominal",
                     "sample_group": group_name,
-                    var : values,
                     }
-                    to_fill_value = to_fill_setting.copy()
-                    to_fill_value["val_sumw2"] = "value"
-                    sample_hist.fill(**to_fill_value, weight=weights)
-
-                    to_fill_sumw2 = to_fill_setting.copy()
-                    to_fill_sumw2["val_sumw2"] = "sumw2"
-                    sample_hist.fill(**to_fill_sumw2, weight=weights * weights)
-
+                    sample_hist = fillHist(sample_hist, to_fill_setting, values, weights)
 
                 sample_hist_l.append(sample_hist)
 
