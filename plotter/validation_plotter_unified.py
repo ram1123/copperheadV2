@@ -87,7 +87,7 @@ def getPlotVar(var_param: str):
     return plot_var
 
 
-def applyRegionCatCuts(events, category: str, region_name: str):
+def applyRegionCatCuts(events, category: str, region_name: str, njets: int):
     # do mass region cut
     mass = events.dimuon_mass
     z_peak = ((mass > 70) & (mass < 110))
@@ -151,6 +151,20 @@ def applyRegionCatCuts(events, category: str, region_name: str):
         else:
             print("Error: invalid category option!")
             raise ValueError
+
+    # add njets cut
+    if njets is not None:
+        if njets == 0:
+            njets_cut = (events.njets_nominal == 0)
+        elif njets == 1:
+            njets_cut = (events.njets_nominal == 1)
+        elif njets == 2:
+            njets_cut = (events.njets_nominal >= 2)
+        else:
+            logger.error(f"ERROR: njets value {njets} is not supported! Use 0, 1 or 2.")
+            raise ValueError
+        njets_cut = ak.fill_none(njets_cut, value=False)
+        prod_cat_cut = prod_cat_cut & njets_cut
 
     category_selection = (
         prod_cat_cut &
@@ -672,7 +686,7 @@ if __name__ == "__main__":
                 # ------------------------------------------------
                 # take the mass region and category cuts
                 # ------------------------------------------------
-                events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name)
+                events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name, args.njets)
 
                 #  FOR DEBUG PURPOSES
                 # if process == "dy_M-100To200_aMCatNLO":

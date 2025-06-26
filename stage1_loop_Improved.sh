@@ -94,12 +94,12 @@ sig_l="Higgs"
 
 if [[ "$debug" -ge 1 ]]; then
     log "Debug mode ON "
-    # years=("2017")
+    years=("2016postVFP")
     data_l_dict["2018"]=""
     data_l_dict["2017"]=""
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
-    bkg_l="DY"
+    bkg_l=""
     sig_l=""
 fi
 
@@ -181,7 +181,7 @@ for year in "${years[@]}"; do
             log "Running ZpT fitting step(s)..."
             cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year"
             cmd1="python data/zpt_rewgt/fitting/do_f_test.py --run_label $label --year $year --nbins $nbin --njet $njet --outAppend $outAppend --debug"
-            cmd2="python data/zpt_rewgt/fitting/get_polyFit_v1.py -l $label -y $year --nbins $nbin --njet $njet --outAppend $outAppend"
+            cmd2="python data/zpt_rewgt/fitting/get_polyFit.py -l $label -y $year --nbins $nbin --njet $njet --outAppend $outAppend"
             [[ "$mode" =~ ^(zpt_fit0|zpt_fit)$ ]] && { log "Command0: $cmd0"; eval "$cmd0"; }
             [[ "$mode" =~ ^(zpt_fit1|zpt_fit|zpt_fit12)$ ]] && { log "Command1: $cmd1"; eval "$cmd1"; }
             [[ "$mode" =~ ^(zpt_fit2|zpt_fit|zpt_fit12)$ ]] && { log "Command2: $cmd2"; eval "$cmd2"; }
