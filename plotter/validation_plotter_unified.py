@@ -1,3 +1,4 @@
+import sys
 import awkward as ak
 import dask_awkward as dak
 import numpy as np
@@ -21,17 +22,21 @@ from modules.utils import logger
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
 bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
+
+DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
+# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
+
+DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
+
+DY_HTBinned = [
+    "dy_M-4to50_HT-70to100", "dy_M-4to50_HT-100to200", "dy_M-4to50_HT-200to400", "dy_M-4to50_HT-400to600", "dy_M-4to50_HT-600toInf",
+    "dy_M-50_HT-70to100", "dy_M-50_HT-100to200", "dy_M-50_HT-200to400", "dy_M-50_HT-400to600", "dy_M-50_HT-600to800", "dy_M-50_HT-800to1200", "dy_M-50_HT-1200to2500", "dy_M-50_HT-2500toInf"
+]
+
 group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
 
-    # "DY": ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"],
-    # "DY_aMCatNLO": ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"],
-    "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"],
-    # "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO", "dy_VBF_filter_NewZWgt"],
-    # "DY": [
-    #     "dy_M-4to50_HT-70to100", "dy_M-4to50_HT-100to200", "dy_M-4to50_HT-200to400", "dy_M-4to50_HT-400to600", "dy_M-4to50_HT-600toInf",
-    #     "dy_M-50_HT-70to100", "dy_M-50_HT-100to200", "dy_M-50_HT-200to400", "dy_M-50_HT-400to600", "dy_M-50_HT-600to800", "dy_M-50_HT-800to1200", "dy_M-50_HT-1200to2500", "dy_M-50_HT-2500toInf"
-    # ],
+    "DY": DY_aMCatNLO,
     "DYVBF": ["dy_VBF_filter_NewZWgt"],
 
     "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
@@ -47,20 +52,6 @@ group_dict = {
     "VBF": ["vbf_powheg_dipole"]
 }
 
-def make_region_mask(events, name):
-    m = events.dimuon_mass
-    masks = {
-      "z-peak":   (m>70)&(m<110),
-      "h-peak":   (m>115.03)&(m<135.03),
-      "h-sidebands": ((m>110)&(m<115.03))|((m>135.03)&(m<150)),
-      "signal":   ((m>110)&(m<115.03))|((m>135.03)&(m<150))|((m>115.03)&(m<135.03))
-    }
-    return ak.fill_none(masks[name], False)
-
-def get_scalar_ptCentrality(events):
-    pt_centrality_scalar = events.dimuon_pt - abs(events.jet1_pt_nominal + events.jet2_pt_nominal)/2
-    pt_centrality_scalar = pt_centrality_scalar / abs(events.jet1_pt_nominal - events.jet2_pt_nominal)
-    return pt_centrality_scalar
 
 def find_group_name(process_name, group_dict_param):
     # Avoid redefining group_dict from outer scope
@@ -86,7 +77,9 @@ def fillHist(sample_hist, to_fill_setting, values, weights):
 
 
 def getPlotVar(var_param: str):
-    # Avoid redefining var from outer scope
+    """
+    Helper function that removes the variations in variable name if they exist
+    """
     if "_nominal" in var_param:
         plot_var = var_param.replace("_nominal", "")
     else:
@@ -109,9 +102,10 @@ def applyRegionCatCuts(events, category: str, region_name: str):
     elif region_name == "z-peak":
         region = z_peak
     else:
-        print("ERROR: acceptable region!")
+        print(f"ERROR: acceptable region names are: z-peak, h-sidebands, h-peak, signal. Got {region_name} instead!")
         raise ValueError
 
+    prod_cat_cut =  ak.ones_like(region, dtype="bool")
     # do category cut
     if category.lower() == "nocat":
         # print("nocat mode!")
@@ -127,10 +121,10 @@ def applyRegionCatCuts(events, category: str, region_name: str):
             # print("vbf mode!")
             prod_cat_cut =  vbf_cut
             prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-            if args.do_vbf_filter_study:
-                logger.debug("applying VBF filter gen cut!")
+            if args.do_vbf_filter_study and "dy_" in process:
                 if ("dy_VBF_filter_NewZWgt" in process):
-                    logger.warning("Apply VBF filter gen cut > 350 for VBF DY!")
+                    logger.warning("applying VBF filter gen cut!")
+                    logger.warning(f"Apply VBF filter gen cut > 350 for VBF DY!: process = {process}")
                     vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
                     prod_cat_cut =  (prod_cat_cut
                                 & vbf_filter
@@ -139,17 +133,17 @@ def applyRegionCatCuts(events, category: str, region_name: str):
                         process == "dy_M-50_MiNNLO" or
                         process == "dy_M-100To200_aMCatNLO" or
                         process == "dy_M-50_aMCatNLO"):
-                    logger.warning("Apply VBF filter gen cut <= 350 for inc. DY!")
+                    logger.warning("applying VBF filter gen cut!")
+                    logger.warning(f"Apply VBF filter gen cut <= 350 for inc. DY!: process = {process}")
                     vbf_filter = ak.fill_none((events.gjj_mass <= 350), value=False)
                     prod_cat_cut =  (
                         prod_cat_cut
                         & vbf_filter
                     )
                 else:
-                    logger.debug(f"no extra processing for {process}")
+                    logger.warning(f"no extra processing for {process}")
                     pass
 
-        # else: # we're interested in ggH category
         elif category.lower() == "ggh":
             # print("ggH mode!")
             prod_cat_cut =  ~vbf_cut
@@ -278,13 +272,6 @@ if __name__ == "__main__":
     help="doesn't plot Data/MC ratio",
     )
     parser.add_argument(
-    "--ROOT_style",
-    dest="ROOT_style",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses pyROOT functionality instead of mplhep",
-    )
-    parser.add_argument(
     "--linear_scale",
     dest="linear_scale",
     default=False,
@@ -365,13 +352,20 @@ if __name__ == "__main__":
         logger.error("VBF category requires at least 2 jets! Exiting the program.")
         raise ValueError("VBF category requires at least 2 jets!")
 
-    # if do_vbf_filter_study or  "dy_VBF_filter_NewZWgt" in group_dict["DY"] or group_dict["DYVBF"], remove the "z-peak" region from the regions
     if (args.do_vbf_filter_study):
+        #  Remove the "z-peak" region from the args.regions if it exists
         if "z-peak" in args.regions:
             logger.info("Removing z-peak region from the regions!")
             args.regions.remove("z-peak")
         else:
             logger.warning("z-peak region is not in the regions, nothing to remove!")
+    else:
+        # Remove the "DYVBF" group from the group_dict if it exists
+        if "DYVBF" in group_dict:
+            logger.info("Removing DYVBF from the group_dict!")
+            del group_dict["DYVBF"]
+        else:
+            logger.warning("DYVBF is not in the group_dict, nothing to remove!")
 
     # If the args.regions is empty, exit the program
     if len(args.regions) == 0:
@@ -518,7 +512,7 @@ if __name__ == "__main__":
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
     else:
-        client = Client(n_workers=64, threads_per_worker=1, processes=True, memory_limit='4 GiB')
+        client = Client(n_workers=64, threads_per_worker=1, processes=True, memory_limit='10 GiB')
         logger.info("Local scale Client created")
     # record time
     time_step = time.time()
@@ -533,7 +527,7 @@ if __name__ == "__main__":
         try:
             # FIXME: add the filter and selection while loading the parquet file
             events = dak.from_parquet(full_load_path)
-            target_chunksize = 1_000_000
+            target_chunksize = 250_000
             events = events.repartition(rows_per_partition=target_chunksize)
         except Exception:
             logger.warning("full_load_path: %s Not available. Skipping", full_load_path)
@@ -582,247 +576,251 @@ if __name__ == "__main__":
 
         loaded_events[process] = events
     logger.info("finished loading parquet files!")
-    # ROOT style or mplhep style starts here --------------------------------------
-    if args.ROOT_style:
-        logger.info("Using ROOT style for plotting!")
-        pass
-    else:
-        logger.info("Using mplhep style for plotting!")
-        import mplhep as hep
-        import matplotlib.pyplot as plt
-        import matplotlib
-        # hep.style.use("CMS")
-        # Load CMS style including color-scheme (it's an editable dict)
-        plt.style.use(hep.style.CMS)
-        # this mplhep implementation assumes non-empty data; otherwise, it will crash
-        # Dictionary for histograms and binnings
+    # mplhep style starts here --------------------------------------
+    logger.info("Using mplhep style for plotting!")
+    import mplhep as hep
+    import matplotlib.pyplot as plt
+    import matplotlib
+    # hep.style.use("CMS")
+    # Load CMS style including color-scheme (it's an editable dict)
+    plt.style.use(hep.style.CMS)
+    # this mplhep implementation assumes non-empty data; otherwise, it will crash
+    # Dictionary for histograms and binnings
 
-        # initialize histograms
-        # FIXME: Is it mandatory to use all regions and channels name below? Or I can just replace it with args.regions and args.category?
-        regions = ["z-peak", "signal", "h-peak", "h-sidebands"] # full list of possible regions to loop over
-        channels = ["nocat", "vbf", "ggh"] # full list of possible channels to loop over
-        variations = ["nominal"]
-        sample_groups = list(group_dict.keys()) + ["other"]
-        logger.info(f"sample_groups: {sample_groups}")
-        sample_hist = (
-                hda.Hist.new.StrCat(regions, name="region")
-                .StrCat(channels, name="channel")
-                .StrCat(["value", "sumw2"], name="val_sumw2")
-                .StrCat(sample_groups, name="sample_group")
-        )
-        # add axis for systematic variation
-        sample_hist_dictByVar = {}
-        sample_hist = sample_hist.StrCat(variations, name="variation")
+    # initialize histograms
+    # FIXME: Is it mandatory to use all regions and channels name below? Or I can just replace it with args.regions and args.category?
+    regions = ["z-peak", "signal", "h-peak", "h-sidebands"] # full list of possible regions to loop over
+    channels = ["nocat", "vbf", "ggh"] # full list of possible channels to loop over
+    variations = ["nominal"]
+    sample_groups = list(group_dict.keys()) + ["other"]
+    logger.info(f"sample_groups: {sample_groups}")
+    sample_hist = (
+            hda.Hist.new.StrCat(regions, name="region")
+            .StrCat(channels, name="channel")
+            .StrCat(["value", "sumw2"], name="val_sumw2")
+            .StrCat(sample_groups, name="sample_group")
+    )
+    # add axis for systematic variation
+    sample_hist_dictByVar = {}
+    sample_hist = sample_hist.StrCat(variations, name="variation")
 
-        # Initialize histograms for each variable to be plotted.
-        logger.info("{style}Initializing histograms for each variable to be plotted.{style}".format(
-            style="\n" + "="*50 + "\n",))
+    # Initialize histograms for each variable to be plotted.
+    logger.info("{style}Initializing histograms for each variable to be plotted.{style}".format(
+        style="\n" + "="*50 + "\n",))
+    for var in tqdm.tqdm(variables2plot):
+        # for process in available_processes:
+        if "_nominal" in var:
+            plot_var = var.replace("_nominal", "")
+        else:
+            plot_var = var
+        if plot_var not in plot_settings.keys():
+            logger.warning(f"variable {var} not configured in plot settings!")
+            continue
+        binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        if args.regions == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
+            binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+        logger.debug(f"var: {var}")
+        sample_hist_dictByVar[var] = sample_hist.Var(binning, name=var).Double()
+
+    # fill the histograms
+    logger.info("{style}Filling histograms for each variable.{style}".format(
+        style="\n" + "="*50 + "\n",))
+    sample_hist_dictByVar2compute = {}
+    for var in tqdm.tqdm(variables2plot):
+        sample_hist_empty = sample_hist_dictByVar[var]
+        sample_hist_l = []
+        var_step = time.time()
+        # for process in available_processes:
+        if "_nominal" in var:
+            plot_var = var.replace("_nominal", "")
+        else:
+            plot_var = var
+        if plot_var not in plot_settings.keys():
+            logger.warning(f"variable {var} not configured in plot settings!")
+            continue
+        #-----------------------------------------------
+        # intialize variables for filling histograms
+        binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        if args.regions == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
+            binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+        if args.linear_scale:
+            do_logscale = False
+        else:
+            do_logscale = True
+        # also check if logscale config is mentioned in plot_settings, if yes, that config takes priority
+        # if "logscale" in plot_settings[plot_var].keys():
+        #     do_logscale = plot_settings[plot_var]["logscale"]
+        logger.debug(f"do_logscale: {do_logscale} ")
+
+        for process in available_processes:
+            sample_hist = copy.deepcopy(sample_hist_empty)
+            logger.debug(f"process: {process}")
+            # logger.debug(f"sample_hist: {sample_hist}")
+            logger.debug(f"regions: {args.regions}")
+            for region_name in args.regions:
+                # for each process make new hist
+                try:
+                    events = loaded_events[process]
+                except:
+                    logger.debug(f"skipping {process}")
+                    continue
+                is_data = "data" in process.lower()
+                logger.debug(f"is_data: {is_data}")
+
+                #-----------------------------------------------
+                # obtain the category selection
+                # ------------------------------------------------
+                # take the mass region and category cuts
+                # ------------------------------------------------
+                events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name)
+
+                #  FOR DEBUG PURPOSES
+                # if process == "dy_M-100To200_aMCatNLO":
+                #     wgt_nominal = events.wgt_nominal
+                #     logger.info(f"wgt_nominal = {wgt_nominal[0]}")
+                #     wgt_sum = ak.sum(wgt_nominal).compute()
+                #     logger.info(f"wgt_sum = {wgt_sum}")
+                #     raise ValueError("Terminate the program.")
+
+                # extract weights
+                if is_data:
+                    weights = (ak.fill_none(events["wgt_nominal"], value=0.0))
+                    fraction_weight = 1/events.fraction
+                else: # MC
+                    weights = ak.fill_none(events["wgt_nominal"], value=0.0)
+
+                    # To stich the DY aMC@NLO and MiNNLO samples, we need to divide the weight of MiNNLO sample by Luminosity (59830.0)
+                    # if "dy_M-100To200_MiNNLO" in process or "dy_M-50_MiNNLO" in process :
+                        # weights = weights / 59830.0 # FIXME: this is hardcoded value, should be replaced with lumi value from config file
+
+                    # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
+                    # temporary over write
+                    # logger.info(f"events.fields: {events.fields}")
+                    if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
+                        logger.info("removing Zpt rewgt!")
+                        weights = weights/events["separate_wgt_zpt_wgt"]
+
+                    # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
+                    # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
+                    # weights = np.nan_to_num(weights, nan=0.0)
+                    fraction_weight = ak.ones_like(events["wgt_nominal"])  # MC is already normalized by lumisonity, so no need for scaling by fraction
+
+                # overwrite variable names with two bin ranges
+                if ("_range2" in var):
+                    var_reduced = var.replace("_range2","")
+                    values = ak.fill_none(events[var_reduced], value=-999.0)
+                elif ("_zpeak" in var):
+                    var_reduced = var.replace("_zpeak","")
+                    values = ak.fill_none(events[var_reduced], value=-999.0)
+                else:
+                    values = ak.fill_none(events[var], value=-999.0)
+                # MC samples are already normalized by their xsec*lumi, but data is not
+                if process in group_dict["DATA"]: # FIXME: Why weights with data?
+                    logger.debug(f"{process} is in data processes")
+                    weights = weights*fraction_weight
+                group_name = find_group_name(process, group_dict)
+                to_fill_setting = {
+                "region" : region_name,
+                "channel" : args.category,
+                "variation" : "nominal",
+                "sample_group": group_name,
+                }
+                sample_hist = fillHist(sample_hist, to_fill_setting, values, weights)
+
+            sample_hist_l.append(sample_hist)
+
+        sample_hist_dictByVar2compute[var] = sample_hist_l
+
+    # logger.debug(f"sample_hist_dictByVar2compute: {sample_hist_dictByVar2compute}")
+
+    # done with looping over process and variables we now compute
+    logger.info("{style}Computing histograms.{style}".format(
+        style="\n" + "="*50 + "\n",))
+    logger.debug(f"sample_groups: {sample_groups}")
+    logger.debug(f"variables2plot: {variables2plot}")
+    sample_hist_dictByVarComputed = dask.compute(sample_hist_dictByVar2compute)[0]
+    for region_name in args.regions:
         for var in tqdm.tqdm(variables2plot):
-            # for process in available_processes:
-            if "_nominal" in var:
-                plot_var = var.replace("_nominal", "")
-            else:
-                plot_var = var
-            if plot_var not in plot_settings.keys():
-                logger.warning(f"variable {var} not configured in plot settings!")
-                continue
-            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
-            if args.regions == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
-                binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
-            logger.debug(f"var: {var}")
-            sample_hist_dictByVar[var] = sample_hist.Var(binning, name=var).Double()
-
-        # fill the histograms
-        logger.info("{style}Filling histograms for each variable.{style}".format(
-            style="\n" + "="*50 + "\n",))
-        sample_hist_dictByVar2compute = {}
-        for var in tqdm.tqdm(variables2plot):
-            sample_hist_empty = sample_hist_dictByVar[var]
-            sample_hist_l = []
-            var_step = time.time()
-            # for process in available_processes:
-            if "_nominal" in var:
-                plot_var = var.replace("_nominal", "")
-            else:
-                plot_var = var
-            if plot_var not in plot_settings.keys():
-                logger.warning(f"variable {var} not configured in plot settings!")
-                continue
-            #-----------------------------------------------
-            # intialize variables for filling histograms
-            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
-            if args.regions == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
-                binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
-            if args.linear_scale:
-                do_logscale = False
-            else:
-                do_logscale = True
-            # also check if logscale config is mentioned in plot_settings, if yes, that config takes priority
-            # if "logscale" in plot_settings[plot_var].keys():
-            #     do_logscale = plot_settings[plot_var]["logscale"]
-            logger.debug(f"do_logscale: {do_logscale} ")
-
-            for process in available_processes:
-                sample_hist = copy.deepcopy(sample_hist_empty)
-                logger.debug(f"process: {process}")
-                # logger.debug(f"sample_hist: {sample_hist}")
-                logger.debug(f"regions: {args.regions}")
-                for region_name in args.regions:
-                    # for each process make new hist
-                    try:
-                        events = loaded_events[process]
-                    except:
-                        logger.debug(f"skipping {process}")
-                        continue
-                    is_data = "data" in process.lower()
-                    logger.debug(f"is_data: {is_data}")
-
-                    #-----------------------------------------------
-                    # obtain the category selection
-                    # ------------------------------------------------
-                    # take the mass region and category cuts
-                    # ------------------------------------------------
-                    events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name)
-
-                    # extract weights
-                    if is_data:
-                        weights = (ak.fill_none(events["wgt_nominal"], value=0.0))
-                        fraction_weight = 1/events.fraction
-                    else: # MC
-                        weights = ak.fill_none(events["wgt_nominal"], value=0.0)
-
-                        # To stich the DY aMC@NLO and MiNNLO samples, we need to divide the weight of MiNNLO sample by Luminosity (59830.0)
-                        # if "dy_M-100To200_MiNNLO" in process or "dy_M-50_MiNNLO" in process :
-                            # weights = weights / 59830.0 # FIXME: this is hardcoded value, should be replaced with lumi value from config file
-
-                        # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
-                        # temporary over write
-                        # logger.info(f"events.fields: {events.fields}")
-                        if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                            logger.info("removing Zpt rewgt!")
-                            weights = weights/events["separate_wgt_zpt_wgt"]
-
-                        # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
-                        # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
-                        # weights = np.nan_to_num(weights, nan=0.0)
-                        fraction_weight = ak.ones_like(events["wgt_nominal"])  # MC is already normalized by lumisonity, so no need for scaling by fraction
-
-                    # overwrite variable names with two bin ranges
-                    if ("_range2" in var):
-                        var_reduced = var.replace("_range2","")
-                        values = ak.fill_none(events[var_reduced], value=-999.0)
-                    elif ("_zpeak" in var):
-                        var_reduced = var.replace("_zpeak","")
-                        values = ak.fill_none(events[var_reduced], value=-999.0)
-                    else:
-                        values = ak.fill_none(events[var], value=-999.0)
-                    # MC samples are already normalized by their xsec*lumi, but data is not
-                    if process in group_dict["DATA"]: # FIXME: Why weights with data?
-                        logger.debug(f"{process} is in data processes")
-                        weights = weights*fraction_weight
-                    group_name = find_group_name(process, group_dict)
-                    to_fill_setting = {
+            data_dict = {}
+            bkg_MC_dict = {}
+            sig_MC_dict = {}
+            for group_name in sample_groups:
+                sample_hist_l = sample_hist_dictByVarComputed[var]
+                sample_hist = sum(sample_hist_l)
+                to_project_setting = {
                     "region" : region_name,
                     "channel" : args.category,
                     "variation" : "nominal",
                     "sample_group": group_name,
-                    }
-                    sample_hist = fillHist(sample_hist, to_fill_setting, values, weights)
+                }
 
-                sample_hist_l.append(sample_hist)
+                to_project_setting_val = to_project_setting.copy()
+                logger.debug(f"to_project_setting_val: {to_project_setting_val}")
+                logger.debug(f"sample_hist: {sample_hist}")
+                logger.debug(f"sample_hist_l: {sample_hist_l}")
 
-            sample_hist_dictByVar2compute[var] = sample_hist_l
-
-        # logger.debug(f"sample_hist_dictByVar2compute: {sample_hist_dictByVar2compute}")
-
-        # done with looping over process and variables we now compute
-        logger.info("{style}Computing histograms.{style}".format(
-            style="\n" + "="*50 + "\n",))
-        logger.debug(f"sample_groups: {sample_groups}")
-        logger.debug(f"variables2plot: {variables2plot}")
-        sample_hist_dictByVarComputed = dask.compute(sample_hist_dictByVar2compute)[0]
-        for region_name in args.regions:
-            for var in tqdm.tqdm(variables2plot):
-                data_dict = {}
-                bkg_MC_dict = {}
-                sig_MC_dict = {}
-                for group_name in sample_groups:
-                    sample_hist_l = sample_hist_dictByVarComputed[var]
-                    sample_hist = sum(sample_hist_l)
-                    to_project_setting = {
-                        "region" : region_name,
-                        "channel" : args.category,
-                        "variation" : "nominal",
-                        "sample_group": group_name,
-                    }
-
-                    to_project_setting_val = to_project_setting.copy()
-                    logger.debug(f"to_project_setting_val: {to_project_setting_val}")
-                    logger.debug(f"sample_hist: {sample_hist}")
-                    logger.debug(f"sample_hist_l: {sample_hist_l}")
-
-                    to_project_setting_val["val_sumw2"] = "value"
-                    hist_val = sample_hist[to_project_setting_val].project(var).values()
-                    #------------------------------------------------------
-                    to_project_setting_w2 = to_project_setting.copy()
-                    to_project_setting_w2["val_sumw2"] = "sumw2"
-                    hist_w2 = sample_hist[to_project_setting_w2].project(var).values()
-                    if np.sum(hist_val)==0: # skip processes that doesn't have anything
-                        logger.warning(f"hist_val is empty for {group_name} in {var}, skipping!")
-                        continue
-                    hist_dict = {
-                        "hist_arr" : hist_val,
-                        "hist_w2_arr": hist_w2
-                    }
-
-                    logger.debug(f"group_name: {group_name}\t hist_dict: {hist_dict}")
-                    if "DATA" in group_name: # data
-                        data_dict = hist_dict
-                    elif "GGH" == group_name or "VBF" == group_name: # signal
-                        sig_MC_dict[group_name] = hist_dict
-                    else: # bkg MC
-                        bkg_MC_dict[group_name] = hist_dict
-                # order bkg_MC_dict in a specific way for plotting, smallest yielding process first:
-                logger.debug(f"bkg_MC_order: {bkg_MC_order}")
-                logger.debug(f"bkg_MC_dict: {bkg_MC_dict}")
-                bkg_MC_dict = {process: bkg_MC_dict[process] for process in bkg_MC_order if process in bkg_MC_dict}
-                logger.debug(f"data_dict: {data_dict}")
-                logger.debug(f"bkg_MC_dict: {bkg_MC_dict}")
-                if len(data_dict) ==0:
-                    logger.warning(f"empty histograms for {var} skipping!")
+                to_project_setting_val["val_sumw2"] = "value"
+                hist_val = sample_hist[to_project_setting_val].project(var).values()
+                #------------------------------------------------------
+                to_project_setting_w2 = to_project_setting.copy()
+                to_project_setting_w2["val_sumw2"] = "sumw2"
+                hist_w2 = sample_hist[to_project_setting_w2].project(var).values()
+                if np.sum(hist_val)==0: # skip processes that doesn't have anything
+                    logger.warning(f"hist_val is empty for {group_name} in {var}, skipping!")
                     continue
+                hist_dict = {
+                    "hist_arr" : hist_val,
+                    "hist_w2_arr": hist_w2
+                }
 
-                # -------------------------------------------------------
-                # All data are prepped, now plot Data/MC histogram
-                # -------------------------------------------------------
-                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
-                logger.debug(f"full_save_path: {full_save_path}")
+                logger.debug(f"group_name: {group_name}\t hist_dict: {hist_dict}")
+                if "DATA" in group_name: # data
+                    data_dict = hist_dict
+                elif "GGH" == group_name or "VBF" == group_name: # signal
+                    sig_MC_dict[group_name] = hist_dict
+                else: # bkg MC
+                    bkg_MC_dict[group_name] = hist_dict
+            # order bkg_MC_dict in a specific way for plotting, smallest yielding process first:
+            logger.debug(f"bkg_MC_order: {bkg_MC_order}")
+            logger.debug(f"bkg_MC_dict: {bkg_MC_dict}")
+            bkg_MC_dict = {process: bkg_MC_dict[process] for process in bkg_MC_order if process in bkg_MC_dict}
+            logger.debug(f"data_dict: {data_dict}")
+            logger.debug(f"bkg_MC_dict: {bkg_MC_dict}")
+            if len(data_dict) ==0:
+                logger.warning(f"empty histograms for {var} skipping!")
+                continue
+
+            # -------------------------------------------------------
+            # All data are prepped, now plot Data/MC histogram
+            # -------------------------------------------------------
+            full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
+            logger.debug(f"full_save_path: {full_save_path}")
 
 
-                if not os.path.exists(full_save_path):
-                    os.makedirs(full_save_path)
-                full_save_fname = f"{full_save_path}/{var}.pdf"
+            if not os.path.exists(full_save_path):
+                os.makedirs(full_save_path)
+            full_save_fname = f"{full_save_path}/{var}.pdf"
 
 
-                plot_var = getPlotVar(var)
-                if plot_var not in plot_settings.keys():
-                    logger.warning(f"variable {var} not configured in plot settings!")
-                    continue
-                binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
-                if args.regions == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
-                    binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
-                plotDataMC_compare(
-                    binning,
-                    data_dict,
-                    bkg_MC_dict,
-                    full_save_fname,
-                    sig_MC_dict=sig_MC_dict,
-                    title = "",
-                    x_title = plot_settings[plot_var].get("xlabel"),
-                    y_title = plot_settings[plot_var].get("ylabel"),
-                    lumi = args.lumi,
-                    status = status,
-                    log_scale = do_logscale,
-                )
+            plot_var = getPlotVar(var)
+            if plot_var not in plot_settings.keys():
+                logger.warning(f"variable {var} not configured in plot settings!")
+                continue
+            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+            if args.regions == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
+                binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+            plotDataMC_compare(
+                binning,
+                data_dict,
+                bkg_MC_dict,
+                full_save_fname,
+                sig_MC_dict=sig_MC_dict,
+                title = "",
+                x_title = plot_settings[plot_var].get("xlabel"),
+                y_title = plot_settings[plot_var].get("ylabel"),
+                lumi = args.lumi,
+                status = status,
+                log_scale = do_logscale,
+            )
     time_elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished in {time_elapsed} s.")
