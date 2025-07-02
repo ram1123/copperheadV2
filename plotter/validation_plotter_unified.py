@@ -20,7 +20,8 @@ from modules.utils import logger
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
-bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
+# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
+bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 
 DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
@@ -33,10 +34,15 @@ DY_HTBinned = [
     "dy_M-50_HT-70to100", "dy_M-50_HT-100to200", "dy_M-50_HT-200to400", "dy_M-50_HT-400to600", "dy_M-50_HT-600to800", "dy_M-50_HT-800to1200", "dy_M-50_HT-1200to2500", "dy_M-50_HT-2500toInf"
 ]
 
+DYVBF = ["dy_VBF_filter_NewZWgt"]
+
+
 group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
 
     "DY": DY_aMCatNLO,
+    # "DY_MINNLO": DY_MiNNLO ,
+    # "DY_AMCATNLO":   DY_aMCatNLO,
     "DYVBF": ["dy_VBF_filter_NewZWgt"],
 
     "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
@@ -61,7 +67,7 @@ def find_group_name(process_name, group_dict_param):
     return "other"
 
 
-def fillHist(sample_hist, to_fill_setting, values, weights):
+def fillHist(sample_hist, var, to_fill_setting, values, weights):
     values_filter = values!=-999.0
     values = values[values_filter]
     weights = weights[values_filter]
@@ -87,7 +93,7 @@ def getPlotVar(var_param: str):
     return plot_var
 
 
-def applyRegionCatCuts(events, category: str, region_name: str, njets: int):
+def applyRegionCatCuts(events, category: str, region_name: str, njets: str, process: str, do_vbf_filter_study: bool):
     # do mass region cut
     mass = events.dimuon_mass
     z_peak = ((mass > 70) & (mass < 110))
@@ -121,9 +127,8 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: int):
             # print("vbf mode!")
             prod_cat_cut =  vbf_cut
             prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-            if args.do_vbf_filter_study and "dy_" in process:
+            if do_vbf_filter_study and process.startswith("dy_"):
                 if ("dy_VBF_filter_NewZWgt" in process):
-                    logger.warning("applying VBF filter gen cut!")
                     logger.warning(f"Apply VBF filter gen cut > 350 for VBF DY!: process = {process}")
                     vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
                     prod_cat_cut =  (prod_cat_cut
@@ -133,7 +138,6 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: int):
                         process == "dy_M-50_MiNNLO" or
                         process == "dy_M-100To200_aMCatNLO" or
                         process == "dy_M-50_aMCatNLO"):
-                    logger.warning("applying VBF filter gen cut!")
                     logger.warning(f"Apply VBF filter gen cut <= 350 for inc. DY!: process = {process}")
                     vbf_filter = ak.fill_none((events.gjj_mass <= 350), value=False)
                     prod_cat_cut =  (
@@ -153,12 +157,12 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: int):
             raise ValueError
 
     # add njets cut
-    if njets is not None:
-        if njets == 0:
+    if njets != "inclusive":
+        if njets == "0":
             njets_cut = (events.njets_nominal == 0)
-        elif njets == 1:
+        elif njets == "1":
             njets_cut = (events.njets_nominal == 1)
-        elif njets == 2:
+        elif njets == "2":
             njets_cut = (events.njets_nominal >= 2)
         else:
             logger.error(f"ERROR: njets value {njets} is not supported! Use 0, 1 or 2.")
@@ -189,7 +193,8 @@ if __name__ == "__main__":
     "-data",
     "--data",
     dest="data_samples",
-    default=["A", "B", "C", "D"],
+    default=["A", "B", "C", "D", "E", "F", "G", "H"],
+    # default=["A"],
     nargs="*",
     type=str,
     action="store",
@@ -201,8 +206,10 @@ if __name__ == "__main__":
     dest="bkg_samples",
     # default=["DY", "TOP", "EWK", "VV", "OTHER"],
     # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"],
+    # default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
+    # default = ["OTHER", "EWK", "VV", "DY", "DYVBF"],
+    # default = ["OTHER", "EWK", "VV",  "TOP", "DY", "DY_MiNNLO", "DY_aMCatNLO"],
     default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
-    # default = ["OTHER", "EWK", "VV", "TOP", "DY"],
     # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
     nargs="*",
     type=str,
@@ -214,6 +221,7 @@ if __name__ == "__main__":
     "--signal",
     dest="sig_samples",
     default=["VBF","GGH"],
+    # default=[],
     nargs="*",
     type=str,
     action="store",
@@ -339,13 +347,12 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, remove z-pt weights from the events",
     )
-    # Add njets argument: default it should be inclusive jets
     parser.add_argument(
-    "--njets",
-    dest="njets",
-    default="inclusive",
-    action="store",
-    help="number of jets to consider (inclusive or exclusive)",
+        "--njets",
+        dest="njets",
+        choices=["inclusive", "0", "1", "2"],
+        default="inclusive",
+        help="jet multiplicity selection: 'inclusive' or exactly '0', '1', or '2'",
     )
     parser.add_argument(
      "--log-level",
@@ -397,8 +404,7 @@ if __name__ == "__main__":
     available_processes = []
     # if doing VBF filter study, add the vbf filter sample to the DY group
     # if args.do_vbf_filter_study:
-    #     vbf_filter_sample =  "dy_m105_160_vbf_amc"
-    #     available_processes.append(vbf_filter_sample)
+        # available_processes.append(DYVBF)
 
     logger.info("group_dict: {group_dict}".format(group_dict=group_dict))
     # take data
@@ -631,8 +637,8 @@ if __name__ == "__main__":
             logger.warning(f"variable {var} not configured in plot settings!")
             continue
         binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
-        if args.regions == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
-            binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+        # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
+            # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
         logger.debug(f"var: {var}")
         sample_hist_dictByVar[var] = sample_hist.Var(binning, name=var).Double()
 
@@ -655,8 +661,8 @@ if __name__ == "__main__":
         #-----------------------------------------------
         # intialize variables for filling histograms
         binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
-        if args.regions == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
-            binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+        # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
+            # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
         if args.linear_scale:
             do_logscale = False
         else:
@@ -686,7 +692,7 @@ if __name__ == "__main__":
                 # ------------------------------------------------
                 # take the mass region and category cuts
                 # ------------------------------------------------
-                events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name, args.njets)
+                events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name, args.njets, process, args.do_vbf_filter_study)
 
                 #  FOR DEBUG PURPOSES
                 # if process == "dy_M-100To200_aMCatNLO":
@@ -739,7 +745,7 @@ if __name__ == "__main__":
                 "variation" : "nominal",
                 "sample_group": group_name,
                 }
-                sample_hist = fillHist(sample_hist, to_fill_setting, values, weights)
+                sample_hist = fillHist(sample_hist, var, to_fill_setting, values, weights)
 
             sample_hist_l.append(sample_hist)
 
@@ -804,7 +810,63 @@ if __name__ == "__main__":
                 logger.warning(f"empty histograms for {var} skipping!")
                 continue
 
-            # -------------------------------------------------------
+            # stitch inclusive + filter DY into a single "DY" component
+            # find whichever inclusive key you used:
+            for inc_key in ("DY_AMCATNLO", "DY_MINNLO"):
+                if inc_key in bkg_MC_dict and "DYVBF" in bkg_MC_dict:
+                    inc = bkg_MC_dict.pop(inc_key)
+                    vbf = bkg_MC_dict.pop("DYVBF")
+                    # simple sum of contents and variances:
+                    merged = {
+                        "hist_arr": inc["hist_arr"]   + vbf["hist_arr"],
+                        "hist_w2_arr": inc["hist_w2_arr"] + vbf["hist_w2_arr"],
+                    }
+                    # call it plain "DY" from here on
+                    bkg_MC_dict["DY"] = merged
+                    break
+
+
+            # if sampels DY_MINNLO (D1) or DY_AMCATNLO(D2) are in the bkg_MC_dict, then merge them using formula
+            # content_combined = (Content_D1/(Sigma_D1)^2 + Content_D2/(Sigma_D2)^2) / (1/(Sigma_D1)^2 + 1/(Sigma_D2)^2)
+            if "DY_MINNLO" in bkg_MC_dict and "DY_AMCATNLO" in bkg_MC_dict:
+                logger.info("Merging DY MINNLO and AMCATNLO samples!")
+                hist_D1 = bkg_MC_dict["DY_MINNLO"]["hist_arr"]
+                hist_D2 = bkg_MC_dict["DY_AMCATNLO"]["hist_arr"]
+                hist_D1_w2 = bkg_MC_dict["DY_MINNLO"]["hist_w2_arr"]  # This is variance per bin
+                hist_D2_w2 = bkg_MC_dict["DY_AMCATNLO"]["hist_w2_arr"]
+
+                # Avoid division by zero: set variance to inf (weight 0) where either is zero
+                valid = (hist_D1_w2 > 0) & (hist_D2_w2 > 0)
+
+                combined_content = np.zeros_like(hist_D1)
+                combined_w2 = np.zeros_like(hist_D1)
+
+                # Weighted average and variance where both have entries
+                combined_content[valid] = (
+                    hist_D1[valid] / hist_D1_w2[valid] + hist_D2[valid] / hist_D2_w2[valid]
+                ) / (1.0 / hist_D1_w2[valid] + 1.0 / hist_D2_w2[valid])
+                combined_w2[valid] = 1.0 / (1.0 / hist_D1_w2[valid] + 1.0 / hist_D2_w2[valid])
+
+                # Use single sample where only one has entries
+                only1 = (hist_D1_w2 > 0) & (hist_D2_w2 == 0)
+                only2 = (hist_D2_w2 > 0) & (hist_D1_w2 == 0)
+                combined_content[only1] = hist_D1[only1]
+                combined_w2[only1] = hist_D1_w2[only1]
+                combined_content[only2] = hist_D2[only2]
+                combined_w2[only2] = hist_D2_w2[only2]
+
+                bkg_MC_dict["DY_combined"] = {
+                    "hist_arr": combined_content,
+                    "hist_w2_arr": combined_w2
+                }
+                bkg_MC_dict["DY"] = bkg_MC_dict.pop("DY_combined")
+
+                # remove old samples
+                del bkg_MC_dict["DY_MINNLO"]
+                del bkg_MC_dict["DY_AMCATNLO"]
+
+            logger.debug(f"bkg_MC_dict: {bkg_MC_dict}")
+            # ---------------------------------------------------
             # All data are prepped, now plot Data/MC histogram
             # -------------------------------------------------------
             full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
@@ -821,7 +883,7 @@ if __name__ == "__main__":
                 logger.warning(f"variable {var} not configured in plot settings!")
                 continue
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
-            if args.regions == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
+            if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
                 binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
             plotDataMC_compare(
                 binning,
