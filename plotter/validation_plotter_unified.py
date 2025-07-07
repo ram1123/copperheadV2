@@ -41,6 +41,7 @@ group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
 
     "DY": DY_aMCatNLO,
+    # "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
     "DYVBF": ["dy_VBF_filter_NewZWgt"],
@@ -112,10 +113,21 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: str, proc
         raise ValueError
 
     prod_cat_cut =  ak.ones_like(region, dtype="bool")
+
+    # FIXME: add cut to veto pileup jets: pT < 50 GeV in 2.5 < | eta(j) | 4.0
+    # pileup_jet_veto = ((events.jet1_pt_nominal < 50) & (abs(events.jet1_eta_nominal) > 2.5) & (abs(events.jet1_eta_nominal) < 4.0)) | (events.jet1_pt_nominal < 70)
+    # pileup_jet_veto = ak.fill_none(pileup_jet_veto, value=False)
+    # prod_cat_cut = prod_cat_cut & ~pileup_jet_veto
+
+    # Remove jets beyong 2.5 rapidity
+    # high_eta_jet_veto = (abs(events.jet1_eta_nominal) > 2.5) | (abs(events.jet2_eta_nominal) > 2.5)
+    # high_eta_jet_veto = ak.fill_none(high_eta_jet_veto, value=False)
+    # prod_cat_cut = prod_cat_cut & ~high_eta_jet_veto
+
     # do category cut
     if category.lower() == "nocat":
         # print("nocat mode!")
-        prod_cat_cut =  ak.ones_like(region, dtype="bool")
+        pass
     else: # VBF or ggH
         btagLoose_filter = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False)
         btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
@@ -125,12 +137,41 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: str, proc
         vbf_cut = ak.fill_none(vbf_cut, value=False)
         if category.lower() == "vbf":
             # print("vbf mode!")
-            prod_cat_cut =  vbf_cut
+            prod_cat_cut =  prod_cat_cut & vbf_cut
             prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
             if do_vbf_filter_study and process.startswith("dy_"):
+                """
+                Apply VBF filter, generator level di-jet invariant mass cut of 350 GeV
+                This is for the stiching the inclusive and VBF DY samples.
+                For inclusive DY samples, we apply the cut of < 350 GeV
+                For VBF DY samples, we apply the cut of >= 350 GeV
+                NOTE: For the inclusive DY category, we apply the cut (gjj_mass > 350 GeV)
+                and then invert it to select inclusive DY events.
+                This approach is necessary due to the behavior of NaN values when applying
+                comparison operators in awkward arrays:
+
+                - If we use (gjj_mass < 350 GeV), any event where gjj_mass is NaN will result in False,
+                so those events will be excluded from the selection.
+                Example:
+                    - Event 1: gjj_mass = 250 GeV  --> (250 < 350) = True  (selected)
+                    - Event 2: gjj_mass = NaN      --> (NaN < 350) = False (not selected)
+
+                - If we use (gjj_mass > 350 GeV), events with NaN will also result in False,
+                but if we then invert the selection (~), those NaN events will be included:
+                Example:
+                    - Event 1: gjj_mass = 250 GeV  --> (250 > 350) = False --> ~False = True  (selected)
+                    - Event 2: gjj_mass = NaN      --> (NaN > 350) = False --> ~False = True (selected)
+
+                Therefore, by using (gjj_mass > 350 GeV) and inverting the mask, we ensure that both
+                events with gjj_mass < 350 GeV and events with NaN values are included in the inclusive DY selection.
+                This guarantees that no events are lost due to NaN values in gjj_mass.
+                """
                 if ("dy_VBF_filter_NewZWgt" in process):
                     logger.warning(f"Apply VBF filter gen cut > 350 for VBF DY!: process = {process}")
                     vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
+                    logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
+                    logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
+
                     prod_cat_cut =  (prod_cat_cut
                                 & vbf_filter
                     )
@@ -138,11 +179,15 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: str, proc
                         process == "dy_M-50_MiNNLO" or
                         process == "dy_M-100To200_aMCatNLO" or
                         process == "dy_M-50_aMCatNLO"):
-                    logger.warning(f"Apply VBF filter gen cut <= 350 for inc. DY!: process = {process}")
-                    vbf_filter = ak.fill_none((events.gjj_mass <= 350), value=False)
+                    logger.warning(f"Apply inverted VBF filter gen cut > 350 for inc. DY!: process = {process}")
+
+                    vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
+                    logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
+                    logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
+
                     prod_cat_cut =  (
                         prod_cat_cut
-                        & vbf_filter
+                        & ~vbf_filter
                     )
                 else:
                     logger.warning(f"no extra processing for {process}")
@@ -150,7 +195,7 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: str, proc
 
         elif category.lower() == "ggh":
             # print("ggH mode!")
-            prod_cat_cut =  ~vbf_cut
+            prod_cat_cut =  prod_cat_cut & ~vbf_cut
             prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
         else:
             print("Error: invalid category option!")
@@ -369,9 +414,9 @@ if __name__ == "__main__":
     logger.info(f"region: {args.regions}")
 
     # if cat is vbf and njet is < 2 then skip the program
-    if args.category.lower() == "vbf" and (args.njets == "0" or args.njets == "1"):
-        logger.error("VBF category requires at least 2 jets! Exiting the program.")
-        raise ValueError("VBF category requires at least 2 jets!")
+    # if args.category.lower() == "vbf" and (args.njets == "0" or args.njets == "1"):
+    #     logger.error("VBF category requires at least 2 jets! Exiting the program.")
+    #     raise ValueError("VBF category requires at least 2 jets!")
 
     if (args.do_vbf_filter_study):
         #  Remove the "z-peak" region from the args.regions if it exists
@@ -380,13 +425,13 @@ if __name__ == "__main__":
             args.regions.remove("z-peak")
         else:
             logger.warning("z-peak region is not in the regions, nothing to remove!")
-    else:
-        # Remove the "DYVBF" group from the group_dict if it exists
-        if "DYVBF" in group_dict:
-            logger.info("Removing DYVBF from the group_dict!")
-            del group_dict["DYVBF"]
-        else:
-            logger.warning("DYVBF is not in the group_dict, nothing to remove!")
+    # else:
+    #     # Remove the "DYVBF" group from the group_dict if it exists
+    #     if "DYVBF" in group_dict:
+    #         logger.info("Removing DYVBF from the group_dict!")
+    #         del group_dict["DYVBF"]
+    #     else:
+    #         logger.warning("DYVBF is not in the group_dict, nothing to remove!")
 
     # If the args.regions is empty, exit the program
     if len(args.regions) == 0:
@@ -402,9 +447,6 @@ if __name__ == "__main__":
 
 
     available_processes = []
-    # if doing VBF filter study, add the vbf filter sample to the DY group
-    # if args.do_vbf_filter_study:
-        # available_processes.append(DYVBF)
 
     logger.info("group_dict: {group_dict}".format(group_dict=group_dict))
     # take data
@@ -547,8 +589,8 @@ if __name__ == "__main__":
         try:
             # FIXME: add the filter and selection while loading the parquet file
             events = dak.from_parquet(full_load_path)
-            target_chunksize = 250_000
-            events = events.repartition(rows_per_partition=target_chunksize)
+            # target_chunksize = 250_000
+            # events = events.repartition(rows_per_partition=target_chunksize)
         except Exception:
             logger.warning("full_load_path: %s Not available. Skipping", full_load_path)
             continue
@@ -809,22 +851,6 @@ if __name__ == "__main__":
             if len(data_dict) ==0:
                 logger.warning(f"empty histograms for {var} skipping!")
                 continue
-
-            # stitch inclusive + filter DY into a single "DY" component
-            # find whichever inclusive key you used:
-            for inc_key in ("DY_AMCATNLO", "DY_MINNLO"):
-                if inc_key in bkg_MC_dict and "DYVBF" in bkg_MC_dict:
-                    inc = bkg_MC_dict.pop(inc_key)
-                    vbf = bkg_MC_dict.pop("DYVBF")
-                    # simple sum of contents and variances:
-                    merged = {
-                        "hist_arr": inc["hist_arr"]   + vbf["hist_arr"],
-                        "hist_w2_arr": inc["hist_w2_arr"] + vbf["hist_w2_arr"],
-                    }
-                    # call it plain "DY" from here on
-                    bkg_MC_dict["DY"] = merged
-                    break
-
 
             # if sampels DY_MINNLO (D1) or DY_AMCATNLO(D2) are in the bkg_MC_dict, then merge them using formula
             # content_combined = (Content_D1/(Sigma_D1)^2 + Content_D2/(Sigma_D2)^2) / (1/(Sigma_D1)^2 + 1/(Sigma_D2)^2)
