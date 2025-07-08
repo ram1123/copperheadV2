@@ -59,6 +59,26 @@ group_dict = {
     "VBF": ["vbf_powheg_dipole"]
 }
 
+def ensure_compacted(year, sample, load_path, compacted_dir):
+    compacted_path = f"{compacted_dir}/{sample}"
+    print(f"inside ensure compacted: {compacted_path}")
+    if not os.path.exists(compacted_path):
+        print(f"Compacted path for {year}/{sample} not found. Creating compacted dataset...")
+        # Read original data
+        orig_path = f"{load_path}/{sample}"
+        print(f"Original path: {orig_path}")
+        if not os.path.exists(orig_path):
+            print(f"Original path for {year}/{sample} not found. Skipping compacted dataset creation.")
+            return
+        inFile = dak.from_parquet(orig_path)
+        # Repartition and write to compacted path
+        target_chunksize = 500_000
+        inFile = inFile.repartition(rows_per_partition=target_chunksize)
+        # save to parquet file
+        inFile.to_parquet(compacted_path)
+        print(f"Compacted dataset created at {compacted_path}")
+    else:
+        pass
 
 def find_group_name(process_name, group_dict_param):
     # Avoid redefining group_dict from outer scope
@@ -169,8 +189,8 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: str, proc
                 if ("dy_VBF_filter_NewZWgt" in process):
                     logger.warning(f"Apply VBF filter gen cut > 350 for VBF DY!: process = {process}")
                     vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                    logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
-                    logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
+                    # logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
+                    # logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
 
                     prod_cat_cut =  (prod_cat_cut
                                 & vbf_filter
@@ -182,8 +202,8 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: str, proc
                     logger.warning(f"Apply inverted VBF filter gen cut > 350 for inc. DY!: process = {process}")
 
                     vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                    logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
-                    logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
+                    # logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
+                    # logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
 
                     prod_cat_cut =  (
                         prod_cat_cut
@@ -578,6 +598,13 @@ if __name__ == "__main__":
         logger.info("Local scale Client created")
     # record time
     time_step = time.time()
+
+    # check if the compacted path exists
+    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted")
+    for process in available_processes:
+        ensure_compacted(args.year, process, args.load_path, COMPACTED_PATH)
+    args.load_path = COMPACTED_PATH
+
 
     # load saved parquet files. This increases memory use, but increases runtime significantly
     loaded_events = {} # intialize dictionary containing all the arrays
