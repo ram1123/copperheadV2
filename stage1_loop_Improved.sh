@@ -94,13 +94,13 @@ sig_l="Higgs"
 
 if [[ "$debug" -ge 1 ]]; then
     log "Debug mode ON "
-    years=("2016postVFP")
+    # years=("2016preVFP")
     data_l_dict["2018"]=""
     data_l_dict["2017"]=""
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
     bkg_l=""
-    sig_l=""
+    sig_l="Higgs"
 fi
 
 chunksize=300000
@@ -117,10 +117,14 @@ for year in "${years[@]}"; do
 
     # ---- Command templates ----
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  --use_gateway  "
+    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv    "
 
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500  --isCutflow  "
     command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --use_gateway --max_file_len 2500  "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --max_file_len 2500  "
+
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
+
     command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l  "
 
@@ -179,7 +183,8 @@ for year in "${years[@]}"; do
             ;;
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             log "Running ZpT fitting step(s)..."
-            cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year"
+            dy_sample="aMCatNLO"
+            cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year -dy_sample $dy_sample "
             cmd1="python data/zpt_rewgt/fitting/do_f_test.py --run_label $label --year $year --nbins $nbin --njet $njet --outAppend $outAppend --debug"
             cmd2="python data/zpt_rewgt/fitting/get_polyFit.py -l $label -y $year --nbins $nbin --njet $njet --outAppend $outAppend"
             [[ "$mode" =~ ^(zpt_fit0|zpt_fit)$ ]] && { log "Command0: $cmd0"; eval "$cmd0"; }
@@ -195,6 +200,11 @@ for year in "${years[@]}"; do
             log "Running mass calibration..."
             log "Command: $command5"
             eval "$command5"
+            ;;
+        compact)
+            log "Compacting parquet data for year $year..."
+            log "Command: $command_compact"
+            eval "$command_compact"
             ;;
         *)
             echo "Error: Invalid mode. Use 0, 1, 2, 3, all, zpt_fit, zpt_val, or calib."
