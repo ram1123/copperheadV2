@@ -500,6 +500,8 @@ if __name__ == "__main__":
     kinematic_vars = ['pt', 'eta', 'phi']
     if args.minimum_set:  kinematic_vars = ['pt']
     variables2plot = []
+    variables2plot.append("dnn_vbf_score")
+    variables2plot.append("atanh_dnn_vbf_score")
     if len(args.variables) == 0:
         logger.error("no variables to plot!")
         raise ValueError
@@ -600,7 +602,7 @@ if __name__ == "__main__":
     time_step = time.time()
 
     # check if the compacted path exists
-    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted")
+    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted_ch250k_WithDNNScore")
     for process in available_processes:
         ensure_compacted(args.year, process, args.load_path, COMPACTED_PATH)
     args.load_path = COMPACTED_PATH
@@ -705,7 +707,12 @@ if __name__ == "__main__":
         if plot_var not in plot_settings.keys():
             logger.warning(f"variable {var} not configured in plot settings!")
             continue
-        binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        if var == "atanh_dnn_vbf_score":
+            # custom non-uniform bin edges from validation plot
+            # binning = np.array([0.0, 0.8, 1.3, 1.8, 2.0, 2.5, 2.8, 3.0, 3.5, 5.0])
+            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        else:
+            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
             # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
         logger.debug(f"var: {var}")
@@ -729,7 +736,12 @@ if __name__ == "__main__":
             continue
         #-----------------------------------------------
         # intialize variables for filling histograms
-        binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        if var == "atanh_dnn_vbf_score":
+            # custom non-uniform bin edges from validation plot
+            # binning = np.array([0.0, 0.8, 1.3, 1.8, 2.0, 2.5, 2.8, 3.0, 3.5, 5.0])
+            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        else:
+            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
             # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
         if args.linear_scale:
@@ -794,8 +806,12 @@ if __name__ == "__main__":
                     # weights = np.nan_to_num(weights, nan=0.0)
                     fraction_weight = ak.ones_like(events["wgt_nominal"])  # MC is already normalized by lumisonity, so no need for scaling by fraction
 
+                # handle arctanh transform of dnn_vbf_score
+                if var == "atanh_dnn_vbf_score":
+                    raw = ak.fill_none(events["dnn_vbf_score"], value=-999.0)
+                    values = np.arctanh(raw)
                 # overwrite variable names with two bin ranges
-                if ("_range2" in var):
+                elif ("_range2" in var):
                     var_reduced = var.replace("_range2","")
                     values = ak.fill_none(events[var_reduced], value=-999.0)
                 elif ("_zpeak" in var):
