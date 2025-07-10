@@ -106,7 +106,6 @@ def preprocess_loop(events, features2load, region="h-peak", category="vbf", labe
     logger.info(f"features2load: {features2load}")
     # features2load = training_features + ["event"]
     events = applyCatAndFeatFilter(events, features2load, region=region, category=category)
-    # events = applyCatAndFeatFilter(events, features2load, region=region, category="ggh")
     events = fillEventNans(events)
 
     # turn to pandas df add label (signal=1, bkg=0)
@@ -486,7 +485,7 @@ def _check_params(alpha, concat, batch_size):
 
 
 
-def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_label="test"):
+def preprocess(base_path, region="signal", category="vbf", do_mixup=False, run_label="test"):
     training_features = [
         'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
          'dimuon_cos_theta_cs', 'dimuon_phi_cs',
@@ -494,7 +493,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
          'jj_mass', 'jj_mass_log', 'jj_dEta', 'rpt', 'll_zstar_log', 'mmj_min_dEta', 'nsoftjets5', 'htsoft2'
     ]
     # generate directory to save training_features
-    save_path = f"dnn/trained_models/{run_label}"
+    save_path = f"dnn/trained_models/{run_label}_{region}_{category}"
     os.makedirs(save_path, exist_ok=True)
     logger.debug(f"save_path: {save_path}")
 
@@ -507,7 +506,8 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     # sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
     sig_processes = ["vbf_powheg_dipole"]
     # bkg_processes = ["dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
-    bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
+    # bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
+    bkg_processes = ["dy_VBF_filter_NewZWgt", "dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     # sig_processes = ["ggh_powhegPS"] # testing
     # bkg_processes = ["ewk_lljj_mll105_160_ptj0"] # testing
 
@@ -684,43 +684,42 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             data_df.to_parquet(f"{save_path}/data_df_{mode}_{i}.parquet")
 
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-l",
-    "--label",
-    dest="label",
-    default="test",
-    action="store",
-    help="Unique run label (to create output path)",
-)
-parser.add_argument(
-    "-cat",
-    "--category",
-    dest="category",
-    default="vbf",
-    action="store",
-    help="production mode category. Options: vbf or ggh",
-)
-parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="year of the data. Options: 2016, 2017, 2018",
-)
-parser.add_argument(
-    "--log-level",
-    default=logging.DEBUG,
-    type=lambda x: getattr(logging, x),
-    help="Configure the logging level."
-    )
-
-args = parser.parse_args()
-logger.setLevel(args.log_level)
-
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-l",
+        "--label",
+        dest="label",
+        default="test",
+        action="store",
+        help="Unique run label (to create output path)",
+    )
+    parser.add_argument(
+        "-cat",
+        "--category",
+        dest="category",
+        default="vbf",
+        action="store",
+        help="production mode category. Options: vbf or ggh",
+    )
+    parser.add_argument(
+        "-y",
+        "--year",
+        dest="year",
+        default="2018",
+        action="store",
+        help="year of the data. Options: 2016, 2017, 2018",
+    )
+    parser.add_argument(
+        "--log-level",
+        default=logging.DEBUG,
+        type=lambda x: getattr(logging, x),
+        help="Configure the logging level."
+        )
+
+    args = parser.parse_args()
+    logger.setLevel(args.log_level)
+
     from distributed import Client
     client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
     logger.info("Local scale Client created")

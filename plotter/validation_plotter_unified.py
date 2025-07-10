@@ -809,7 +809,7 @@ if __name__ == "__main__":
                 # handle arctanh transform of dnn_vbf_score
                 if var == "atanh_dnn_vbf_score":
                     raw = ak.fill_none(events["dnn_vbf_score"], value=-999.0)
-                    values = np.arctanh(raw)
+                    values = np.arctanh((raw+1)/2.0)  # arctanh transform
                 # overwrite variable names with two bin ranges
                 elif ("_range2" in var):
                     var_reduced = var.replace("_range2","")
@@ -819,6 +819,9 @@ if __name__ == "__main__":
                     values = ak.fill_none(events[var_reduced], value=-999.0)
                 else:
                     values = ak.fill_none(events[var], value=-999.0)
+
+                #### TODO: Add overflow bins to the last bin
+
                 # MC samples are already normalized by their xsec*lumi, but data is not
                 if process in group_dict["DATA"]: # FIXME: Why weights with data?
                     logger.debug(f"{process} is in data processes")

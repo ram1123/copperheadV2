@@ -15,8 +15,7 @@ from functools import partial
 from run_stage2_vbf import DNNWrapper, prepare_features, fillEventNans, getFoldFilter
 
 
-def ensure_compacted(year, sample, load_path, compacted_dir):
-    compacted_path = os.path.join(compacted_dir, sample)
+def ensure_compacted(year, sample, load_path, compacted_path):
     logger.debug(f"Checking compacted dataset: {compacted_path}")
 
     # if dir compacted_dir exists, then delete the directory
@@ -35,7 +34,11 @@ def ensure_compacted(year, sample, load_path, compacted_dir):
         logger.debug(f"Reading data from {orig_path}")
         inFile = dak.from_parquet(orig_path)
 
-        target_chunksize = 250_000
+        if "vbf_powheg_dipole" in sample:
+            logger.warning(f"Sample {sample} is a VBF sample, so, using a smaller chunk size (100k) for repartitioning.")
+            target_chunksize = 100_000
+        else:
+            target_chunksize = 500_000
         inFile = inFile.repartition(rows_per_partition=target_chunksize)
 
         logger.info(f"Writing compacted data to {compacted_path}")
@@ -91,14 +94,19 @@ def add_dnn_score(events_partition,
         "dnn_vbf_score"
     )
 
-def new_function_toInclude_DNN_Score(year, sample, load_path, compacted_dir, model_path):
-    compacted_path = os.path.join(compacted_dir, sample)
-    compacted_path_DNN = os.path.join(f"{compacted_dir}_WithDNNScore", sample)
+def new_function_toInclude_DNN_Score(year, sample, load_path, compacted_dir, model_path, add_dnn_score_flag=False):
+    compacted_path = os.path.join(compacted_dir, sample, "0") # Added zero to match the original path structure
+    compacted_path_DNN = os.path.join(f"{compacted_dir}_WithDNNScore", sample, "0")
     logger.debug(f"Checking compacted dataset for: {compacted_path}")
 
     if not os.path.exists(compacted_path):
         logger.debug(f"Compacted dataset not found. Creating at {compacted_path}")
-        ensure_compacted(year, sample, load_path, compacted_dir)
+        ensure_compacted(year, sample, load_path, compacted_path)
+
+    # don't run if add_dnn_score is False
+    if not add_dnn_score_flag:
+        logger.info("Skipping DNN score addition as add_dnn_score is False.")
+        return
 
     # Load the compacted dataset
     logger.debug(f"Loading compacted dataset from {compacted_path}")
@@ -142,6 +150,11 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--load_path", required=True, help="Path to the original dataset")
     parser.add_argument("-c", "--compacted_dir", default="", help="Path to store the compacted dataset")
     parser.add_argument("-m", "--model_path", required=True, help="Path to the DNN model directory")
+    parser.add_argument(
+        "--add_dnn_score",
+        action="store_true",
+        help="Add DNN score to the compacted dataset"
+    )
     parser.add_argument("--use_gateway", action="store_true", help="Use Dask Gateway client")
     parser.add_argument(
      "--log-level",
@@ -171,11 +184,10 @@ if __name__ == "__main__":
 
     if not args.compacted_dir:
         logger.debug("No compacted directory provided, using default.")
-        args.compacted_dir = (args.load_path).replace("f1_0", "compacted_ch250k")
+        args.compacted_dir = (args.load_path).replace("f1_0", "compacted")
     logger.info(f"Compacted directory set to: {args.compacted_dir}")
 
     samples = os.listdir(args.load_path)
     for sample in samples:
         logger.info(f"Processing sample: {sample}")
-        # ensure_compacted(args.year, sample, args.load_path, args.compacted_dir)
-        new_function_toInclude_DNN_Score(args.year, sample, args.load_path, args.compacted_dir, args.model_path)
+        new_function_toInclude_DNN_Score(args.year, sample, args.load_path, args.compacted_dir, args.model_path, args.add_dnn_score)

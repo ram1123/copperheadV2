@@ -5,9 +5,9 @@ import pandas as pd
 # from python.variable import Variable
 # from python.io import load_stage2_output_hists, save_template, mkdir, load_stage2_output_df2hists
 
-import warnings
+# import warnings
 
-warnings.simplefilter(action="ignore", category=FutureWarning)
+# warnings.simplefilter(action="ignore", category=FutureWarning)
 # from uproot3_methods.classes.TH1 import from_numpy
 import glob
 import pickle
@@ -17,6 +17,7 @@ import os
 
 import logging
 from modules.utils import logger
+logger.setLevel(logging.INFO)
 
 class Variable(object):
     def __init__(self, name_, caption_, nbins_, xmin_, xmax_):
@@ -30,6 +31,7 @@ decorrelation_scheme = {
     "LHERen": ["DY", "EWK", "ggH", "TT+ST"],
     "LHEFac": ["DY", "EWK", "ggH", "TT+ST"],
     "pdf_2rms": ["DY", "VBF", "ggH"], # ["DY", "qqH_hmm", "ggH_hmm"],
+    # "pdf_2rms": ["DY", "qqH_hmm", "ggH_hmm"],
 }
 shape_only = [
     "wgt_LHERen_up",
@@ -56,8 +58,8 @@ def load_stage2_output_hists(argset, parameters, dataset):
     path = f"{global_path}/stage2_histograms/{var_name}/{year}/"
     paths = glob.glob(f"{path}/{dataset}*.pkl")
 
-    logger.info(f"dataset: {dataset}")
-    logger.info(f"var_name: {var_name}")
+    logger.debug(f"dataset: {dataset}")
+    logger.debug(f"var_name: {var_name}")
     logger.debug(f"path: {path}")
     logger.debug(f"paths: {paths}")
     hist_df = pd.DataFrame()
@@ -76,7 +78,7 @@ def load_stage2_output_hists(argset, parameters, dataset):
             # logger.debug(f"Loaded histogram for {dataset} in {year} with variable {var_name}")
             logger.debug(f"hist_df shape: {hist_df.shape}")
     if hist_df.shape[0] == 0:
-        logger.warning(f"No histograms found for {dataset} in {year} with variable {var_name}")
+        logger.debug(f"No histograms found for {dataset} in {year} with variable {var_name}")
         return pd.DataFrame()
 
     return hist_df
@@ -139,11 +141,11 @@ def to_templates(client, parameters, hist_df=None):
         hist_rows = []
         for dataset in datasets:
             hist_row = load_stage2_output_hists(argset_load, parameters, dataset)
-            logger.info(f"hist_row: {hist_row}")
+            logger.debug(f"hist_row: {hist_row}")
             hist_rows.append(hist_row)
 
         hist_df = pd.concat(hist_rows).reset_index(drop=True)
-        logger.info(f"hist_df: {hist_df}")
+        logger.debug(f"hist_df: {hist_df}")
         if hist_df.shape[0] == 0:
             logger.info("No templates to create!")
             return []
@@ -177,11 +179,13 @@ def to_templates(client, parameters, hist_df=None):
     combination_dicts = [
         dict(zip(argset.keys(), combination)) for combination in combinations
     ]
+    logger.info(f"Generated {len(combination_dicts)} combinations from argset")
+    logger.info(f"Combination dicts: {combination_dicts}")
 
     # loop through combinations
     yield_dfs = []
     for combo in combination_dicts:
-        logger.info(f"argset combo: {combo}")
+        logger.debug(f"argset combo: {combo}")
         yield_df = make_templates(combo, parameters)
         logger.info(f"yield_df: {yield_df}")
         if yield_df is None or yield_df.empty:
@@ -197,11 +201,11 @@ def to_templates(client, parameters, hist_df=None):
 
 def make_templates(args, parameters={}):
     logger.info("============= make_templates ============")
-    logger.info(f"args: {args}")
+    logger.debug(f"args: {args}")
     logger.info(f"parameters: {parameters}")
     year = args["year"]
-    logger.info(f"make_template year: {year}")
-    logger.info(f'args["hist_df"].year: {args["hist_df"].year}')
+    logger.debug(f"make_template year: {year}")
+    logger.debug(f'args["hist_df"].year: {args["hist_df"].year}')
 
     region = args["region"]
     channel = args["channel"]
@@ -209,7 +213,7 @@ def make_templates(args, parameters={}):
     hist_df = args["hist_df"].loc[
         (args["hist_df"].var_name == var_name) & (args["hist_df"].year == year)
     ]
-    logger.info(f"hist_df: {hist_df}")
+    logger.debug(f"hist_df: {hist_df}")
     if "2016" in year:
         year_savepath = year
         year = "2016"
@@ -424,7 +428,7 @@ def make_templates(args, parameters={}):
             logger.debug(f"datasets: {datasets}")
             logger.debug(f"slicer_value: {slicer_value}")
             logger.debug(f"slicer_nominal: {slicer_nominal}")
-            logger.info(f"hist_df: {hist_df}")
+            logger.debug(f"hist_df: {hist_df}")
             for dataset in datasets:
                 try:
                     # hist = hist_df.loc[hist_df.dataset == dataset, "hist"].values.sum()
@@ -433,7 +437,7 @@ def make_templates(args, parameters={}):
                     vals = hist_df.loc[hist_df.dataset == dataset, "hist"].values
                     logger.debug(f"vals for dataset {dataset}: {vals}")
                     if len(vals) == 0:
-                        logger.warning(f"No template found for {dataset} in {year}. Skipping!")
+                        logger.debug(f"No template found for {dataset} in {year}. Skipping!")
                         continue
                     #---------------------------------------------------------
                     # available_axes = ['region', 'channel', 'val_sumw2', 'score_vbf', 'variation'] # debugging
@@ -452,11 +456,11 @@ def make_templates(args, parameters={}):
                     # for histogram in list(vals)[:4]:
                     val_l = list(vals)
                     logger.info(f"make_templates len(val_l): {len(val_l)}")
-                    logger.info(f"make_templates val_l: {val_l}")
+                    logger.debug(f"make_templates val_l: {val_l}")
                     # bad_idxs = [4, 6, 7, 8, 10, 13, 15, 16, 17, 25, 28, 34, 41, 42, 51, 53, 55, 58, 60, 73, 78, 80, 81, 82, 83, 91, 92, 99, 101, 102, 104, 121]
                     bad_idxs = []
                     hist_sum = val_l[0]
-                    logger.warning(f"hist_sum: {hist_sum}")
+                    logger.debug(f"hist_sum: {hist_sum}")
 
                     for hist_idx in range(1, len(val_l)):
                         logger.info(f"make_templates hist_idx: {hist_idx}")
@@ -464,7 +468,7 @@ def make_templates(args, parameters={}):
                         # axes_l = [axis.label for axis in histogram.axes]
                         # logger.info(f"{hist_idx} axes_l: {axes_l}")
                         if hist_idx in bad_idxs:
-                            logger.warning(f"Skipping bad histogram index {hist_idx} for dataset {dataset}")
+                            logger.debug(f"Skipping bad histogram index {hist_idx} for dataset {dataset}")
                             continue
                         try:
                             hist_sum = hist_sum+histogram
@@ -496,12 +500,12 @@ def make_templates(args, parameters={}):
                     continue
 
                 try:
-                    logger.warning(f"hist_sum: {hist_sum}")
-                    logger.warning(f"hist: {hist}")
-                    logger.warning(f"slicer_value: {slicer_value}")
-                    logger.warning(f"var.name: {var.name}")
-                    # logger.warning(f"hist_sum.view(): {hist_sum.view()}")
-                    # logger.warning(f"hist.view(): {hist.view()}")
+                    logger.debug(f"hist_sum: {hist_sum}")
+                    logger.debug(f"hist: {hist}")
+                    logger.debug(f"slicer_value: {slicer_value}")
+                    logger.debug(f"var.name: {var.name}")
+                    # logger.debug(f"hist_sum.view(): {hist_sum.view()}")
+                    # logger.debug(f"hist.view(): {hist.view()}")
                     # slicer_value["val_sumw2"] = "sumw2"
                     the_hist = hist[slicer_value].project(var.name).values()
                 except Exception as e:
@@ -557,10 +561,10 @@ def make_templates(args, parameters={}):
 
                 # -------------------------------------
 
-                logger.warning(f"the_hist: {the_hist}")
+                logger.debug(f"the_hist: {the_hist}")
 
                 if (the_hist.sum() < 0) or (the_sumw2.sum() < 0):
-                    logger.warning(f"Negative histogram found for {group} in {year} for {region} and {channel}. Skipping!")
+                    logger.debug(f"Negative histogram found for {group} in {year} for {region} and {channel}. Skipping!")
                     continue
 
                 if len(group_hist) == 0:
@@ -573,13 +577,13 @@ def make_templates(args, parameters={}):
                 edges = hist[slicer_value].project(var.name).axes[0].edges
                 edges = np.array(edges)
                 centers = (edges[:-1] + edges[1:]) / 2.0
-            logger.warning(f"group_hist: {group_hist}")
+            logger.debug(f"group_hist: {group_hist}")
 
             if len(group_hist) == 0:
-                logger.warning(f"No histograms found for group {group} in {year} for {region} and {channel}. Skipping!")
+                logger.debug(f"No histograms found for group {group} in {year} for {region} and {channel}. Skipping!")
                 continue
             if sum(group_hist) == 0:
-                logger.warning(f"Sum of histogram for group {group} is zero in {year} for {region} and {channel}. Skipping!")
+                logger.debug(f"Sum of histogram for group {group} is zero in {year} for {region} and {channel}. Skipping!")
                 continue
 
             if group == "Data":
@@ -646,7 +650,7 @@ def make_templates(args, parameters={}):
             # th1._fSumw2 = np.array(np.append([0], group_sumw2)) # -> np.array([0, group_sumw2])
             # th1._fTsumw2 = np.array(group_sumw2).sum()
             # th1._fTsumwx2 = np.array(group_sumw2 * centers).sum() #-> this is w*(x**2) distibution
-            logger.warning(f"Creating TH1D histogram for group {group} with variation {variation_fixed}")
+            logger.debug(f"Creating TH1D histogram for group {group} with variation {variation_fixed}")
             th1 = getTH1D_from_numpy(group_hist, edges, group_sumw2, centers, name)
             templates.append(th1)
 

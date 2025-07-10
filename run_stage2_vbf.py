@@ -167,6 +167,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     sig samples: VBF, GGH
     bkg smaples: DY, TT, ST, VV, EWK
     """
+    logger.info(f"stage1_path: {stage1_path}")
     sample_dict = {}
     data_l = []
     return_filelist_dict = {}
@@ -175,7 +176,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
     data_filelist = []
     for sample in data_l:
-        data_filelist += glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        data_filelist += glob.glob(f"{stage1_path}/{sample}/*.parquet")
         # return_filelist_dict[sample] = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
 
     if len(data_filelist) != 0:
@@ -187,17 +188,17 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     # work on sig MC
     # ------------------------------------
     sig_sample_dict = {
-        # "VBF" : [
-        #     "vbf_powheg_dipole", # pythia dipole
-        #     "vbf_powheg_herwig", # herwig
-        #     "vbf_powhegPS", # pythia 8
-        # ],
-        # "GGH" : [
-        #     "ggh_powhegPS"
-        # ]
+        "VBF" : [
+            "vbf_powheg_dipole", # pythia dipole
+            # "vbf_powheg_herwig", # herwig
+            # "vbf_powhegPS", # pythia 8
+        ],
+        "GGH" : [
+            "ggh_powhegPS"
+        ],
         "HIGGS" : [
             "vbf_powheg_dipole", # pythia 8
-            # "ggh_powhegPS", # pythia 8
+            "ggh_powhegPS", # pythia 8
         ]
     }
 
@@ -213,7 +214,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
     sig_filelist = []
     for sample in sig_sample_l:
-        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*.parquet")
         if len(sample_filelist) == 0:
             logger.warning(f"No {sample} files were found!")
             continue
@@ -232,9 +233,10 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             # "dy_M-50",
             # "dy_M-100To200_MiNNLO",
             # "dy_M-50_MiNNLO",
-            "dy_M-100To200_aMCatNLO",
+            # "dy_M-100To200_aMCatNLO",
             # "dy_M-50_aMCatNLO",
             # "dy_VBF_filter", # VBF filter
+            "dy_VBF_filter_NewZWgt", # VBF filter
         ],
         "TT" : [
             "ttjets_dl",
@@ -277,7 +279,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
     bkg_filelist = []
     for sample in bkg_sample_l:
-        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*.parquet")
         if len(sample_filelist) == 0:
             logger.critical(f"No {sample} files were found!")
             continue
@@ -287,97 +289,98 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     # logger.info(f"sample_dict: {sample_dict}")
     return return_filelist_dict
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="string value of year we are calculating",
-)
-parser.add_argument(
-    "-m_l",
-    "--model_label",
-    dest="model_label",
-    default="test",
-    action="store",
-    help="Unique run label (to create output path)",
-)
-parser.add_argument(
-    "-m_p",
-    "--model_path",
-    dest="model_path",
-    default="test",
-    action="store",
-    help="path where model label is saved on",
-)
-parser.add_argument(
-    "-rl",
-    "--base_path",
-    dest="base_path",
-    default="test",
-    action="store",
-    help="base path of ntuples",
-)
-parser.add_argument(
-    "-gate",
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
-    )
-parser.add_argument(
-    "-data",
-    "--data",
-    dest="data_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of data samples represented by alphabetical letters A-H",
-)
-parser.add_argument(
-    "-bkg",
-    "--background",
-    dest="bkg_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
-)
-parser.add_argument(
-    "-sig",
-    "--signal",
-    dest="sig_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of sig samples represented by shorthands: ggH, VBF",
-)
-parser.add_argument(
-    "--log-level",
-    default=logging.INFO,
-    type=lambda x: getattr(logging, x),
-    help="Configure the logging level."
-    )
-parser.add_argument(
-    "-nfolds",
-    "--nfolds",
-    dest="nfolds",
-    default=4,
-    type=int,
-    action="store",
-    help="Number of folds for cross-validation (default: 4)",
-)
-args = parser.parse_args()
-
-logger.setLevel(args.log_level)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-y",
+        "--year",
+        dest="year",
+        default="2018",
+        action="store",
+        help="string value of year we are calculating",
+    )
+    parser.add_argument(
+        "-m_l",
+        "--model_label",
+        dest="model_label",
+        default="test",
+        action="store",
+        help="Unique run label (to create output path)",
+    )
+    parser.add_argument(
+        "-m_p",
+        "--model_path",
+        dest="model_path",
+        default="test",
+        action="store",
+        help="path where model label is saved on",
+    )
+    parser.add_argument(
+        "-rl",
+        "--base_path",
+        dest="base_path",
+        default="test",
+        action="store",
+        help="base path of ntuples",
+    )
+    parser.add_argument(
+        "-gate",
+        "--use_gateway",
+        dest="use_gateway",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="If true, uses dask gateway client instead of local",
+        )
+    parser.add_argument(
+        "-data",
+        "--data",
+        dest="data_samples",
+        default=[],
+        nargs="*",
+        type=str,
+        action="store",
+        help="list of data samples represented by alphabetical letters A-H",
+    )
+    parser.add_argument(
+        "-bkg",
+        "--background",
+        dest="bkg_samples",
+        default=[],
+        nargs="*",
+        type=str,
+        action="store",
+        help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
+    )
+    parser.add_argument(
+        "-sig",
+        "--signal",
+        dest="sig_samples",
+        default=[],
+        nargs="*",
+        type=str,
+        action="store",
+        help="list of sig samples represented by shorthands: ggH, VBF",
+    )
+    parser.add_argument(
+        "--log-level",
+        default=logging.INFO,
+        type=lambda x: getattr(logging, x),
+        help="Configure the logging level."
+        )
+    parser.add_argument(
+        "-nfolds",
+        "--nfolds",
+        dest="nfolds",
+        default=4,
+        type=int,
+        action="store",
+        help="Number of folds for cross-validation (default: 4)",
+    )
+    args = parser.parse_args()
+
+    logger.setLevel(args.log_level)
+
     start_time = time.time()
     if args.use_gateway:
         from dask_gateway import Gateway
@@ -401,7 +404,14 @@ if __name__ == "__main__":
     data_samples = args.data_samples
     logger.info(f"data_samples: {data_samples}")
 
-    stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0"
+    # stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0"
+    # stage1_path = f"{base_path}/stage1_output/{args.year}/compacted"  # use compacted files for speedup
+    stage1_path = f"{base_path}/stage1_output/{args.year}/compacted_ch250k"  # use compacted files for speedup
+
+    if not os.path.exists(stage1_path):
+        logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
+        raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
+
     full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
 
     logger.debug(f"full_sample_dict: {full_sample_dict}")
@@ -415,11 +425,11 @@ if __name__ == "__main__":
 
         events_stage1 = dak.from_parquet(sample_l)
         logger.info(f"Sample type: {sample_type}")
-        if "powheg" not in sample_type:
-            target_chunksize = 1_000_000
-            events_stage1 = events_stage1.repartition(rows_per_partition=target_chunksize)
-        else:
-            logger.info("No repartitioning for signal samples")
+        # if "powheg" not in sample_type:
+            # target_chunksize = 1_000_000
+            # events_stage1 = events_stage1.repartition(rows_per_partition=target_chunksize)
+        # else:
+            # logger.info("No repartitioning for signal samples")
 
         model_trained_path = f"{args.model_path}/{args.model_label}"
 
@@ -471,7 +481,23 @@ if __name__ == "__main__":
         # add axis for systematic variation
         score_hist = score_hist.StrCat(variations, name="variation")
         # add score category
-        bins = np.linspace(0, 1, num=13)  # TODO: update this
+        # bins = np.linspace(0, 1, num=13)  # TODO: update this
+        bins = np.array([
+            0,
+            0.07,
+            0.432,
+            0.71,
+            0.926,
+            1.114,
+            1.28,
+            1.428,
+            1.564,
+            1.686,
+            1.798,
+            1.9,
+            2.0,
+            2.8,
+        ])
         score_name = f"score_{args.model_label}"
         score_hist = score_hist.Var(bins, name=score_name)
 

@@ -369,8 +369,6 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
     return return_dict
 
 
-
-
 def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=101, save_path=""):
     if save_path == "save_path":
         logger.error("ERROR: please define the save path for the results")
@@ -747,26 +745,27 @@ def calculateSignificance(sig_hist, bkg_hist):
     value = np.sum(value)
     return np.sqrt(value)
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-l",
-    "--label",
-    dest="label",
-    default="test",
-    action="store",
-    help="Unique run label (to create output path)",
-)
-parser.add_argument(
-    "--log-level",
-    default=logging.INFO,
-    type=lambda x: getattr(logging, x),
-    help="Configure the logging level."
-    )
-args = parser.parse_args()
-logger.setLevel(args.log_level)
 
 if __name__ == "__main__":
-    save_path = f"dnn/trained_models/{args.label}"
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-l",
+        "--label",
+        dest="label",
+        default="test",
+        action="store",
+        help="Unique run label (to create output path)",
+    )
+    parser.add_argument(
+        "--log-level",
+        default=logging.INFO,
+        type=lambda x: getattr(logging, x),
+        help="Configure the logging level."
+        )
+    args = parser.parse_args()
+    logger.setLevel(args.log_level)
+    # save_path = f"dnn/trained_models/{args.label}"
+    save_path = f"dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf"
     # training_features = [
     #     'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_eta', \
     #      'dimuon_cos_theta_cs', 'dimuon_phi_cs',
