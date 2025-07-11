@@ -709,8 +709,12 @@ if __name__ == "__main__":
             continue
         if var == "atanh_dnn_vbf_score":
             # custom non-uniform bin edges from validation plot
-            # binning = np.array([0.0, 0.8, 1.3, 1.8, 2.0, 2.5, 2.8, 3.0, 3.5, 5.0])
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        elif var == "dnn_vbf_score":
+            # binning = np.array(plot_settings[plot_var]["binning_nonuniform"])
+            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+            logger.warning(f"Using non-uniform binning for {var} variable!")
+            logger.warning(f"binning: {binning}")
         else:
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
@@ -737,9 +741,12 @@ if __name__ == "__main__":
         #-----------------------------------------------
         # intialize variables for filling histograms
         if var == "atanh_dnn_vbf_score":
-            # custom non-uniform bin edges from validation plot
-            # binning = np.array([0.0, 0.8, 1.3, 1.8, 2.0, 2.5, 2.8, 3.0, 3.5, 5.0])
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        elif var == "dnn_vbf_score":
+            # binning = np.array(plot_settings[plot_var]["binning_nonuniform"])
+            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+            logger.warning(f"Using non-uniform binning for {var} variable!")
+            logger.warning(f"binning: {binning}")
         else:
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
@@ -821,6 +828,8 @@ if __name__ == "__main__":
                     values = ak.fill_none(events[var], value=-999.0)
 
                 #### TODO: Add overflow bins to the last bin
+
+
 
                 # MC samples are already normalized by their xsec*lumi, but data is not
                 if process in group_dict["DATA"]: # FIXME: Why weights with data?
@@ -957,6 +966,11 @@ if __name__ == "__main__":
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
             if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
                 binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+            # elif var == "dnn_vbf_score":
+            #     # binning = np.array(plot_settings[var]["binning_nonuniform"])
+            #     binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+            # elif var == "atanh_dnn_vbf_score":
+            #     binning = np.linspace(*plot_settings[var]["binning_linspace"])
             plotDataMC_compare(
                 binning,
                 data_dict,

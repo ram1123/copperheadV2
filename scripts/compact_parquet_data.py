@@ -58,7 +58,7 @@ def is_typetracer_array(arr):
 def add_dnn_score(events_partition,
               training_features,
               model_cache,
-              nfolds):
+              nfolds, fix_dimuon_mass):
     if getattr(events_partition.layout.backend, "name", None) == "typetracer":
         return ak.with_field(
             events_partition,
@@ -68,7 +68,15 @@ def add_dnn_score(events_partition,
     # Prepare features for this partition
     features_to_use = prepare_features(events_partition, training_features)
     nan_val = -999.0
-    input_arr_dict = {feat: nan_val * ak.ones_like(events_partition.event) for feat in features_to_use}
+    input_arr_dict = {}
+    for feat in features_to_use:
+        arr = nan_val * ak.ones_like(events_partition.event)
+        # If the feature is "dimuon_mass", set its value to 125.0
+        if feat == "dimuon_mass" and fix_dimuon_mass:
+            logger.info(f"Setting 'dimuon_mass' feature to 125.0 for all events in partition.")
+            arr = 125.0 * ak.ones_like(events_partition.event)
+        input_arr_dict[feat] = arr
+
     for fold in range(nfolds):
         eval_folds = [(fold + f) % nfolds for f in [3]]
         eval_filter = getFoldFilter(events_partition, eval_folds, nfolds)
@@ -94,10 +102,15 @@ def add_dnn_score(events_partition,
         "dnn_vbf_score"
     )
 
-def new_function_toInclude_DNN_Score(year, sample, load_path, compacted_dir, model_path, add_dnn_score_flag=False):
+def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path, add_dnn_score_flag=False, tag="", fix_dimuon_mass=False):
     compacted_path = os.path.join(compacted_dir, sample, "0") # Added zero to match the original path structure
-    compacted_path_DNN = os.path.join(f"{compacted_dir}_WithDNNScore", sample, "0")
+
+    compacted_dir_tagged = f"{compacted_dir}_{tag}" if tag else compacted_dir
+    compacted_dir_tagged = f"{compacted_dir_tagged}_FixDimuonMass" if fix_dimuon_mass else compacted_dir_tagged
+    compacted_path_DNN = os.path.join(compacted_dir_tagged, sample, "0")
+
     logger.debug(f"Checking compacted dataset for: {compacted_path}")
+    logger.debug(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
 
     if not os.path.exists(compacted_path):
         logger.debug(f"Compacted dataset not found. Creating at {compacted_path}")
@@ -136,6 +149,7 @@ def new_function_toInclude_DNN_Score(year, sample, load_path, compacted_dir, mod
         training_features=training_features,
         model_cache=model_cache,
         nfolds=nfolds,
+        fix_dimuon_mass=fix_dimuon_mass,
         meta=meta,
     )
 
@@ -149,7 +163,13 @@ if __name__ == "__main__":
     parser.add_argument("-y", "--year", required=True, help="Year of the dataset")
     parser.add_argument("-l", "--load_path", required=True, help="Path to the original dataset")
     parser.add_argument("-c", "--compacted_dir", default="", help="Path to store the compacted dataset")
+    parser.add_argument("-t", "--tag", default="", help="Tag for the compacted directory")
     parser.add_argument("-m", "--model_path", required=True, help="Path to the DNN model directory")
+    parser.add_argument(
+        "--fix_dimuon_mass",
+        action="store_true",
+        help="Fix dimuon mass to 125.0"
+    )
     parser.add_argument(
         "--add_dnn_score",
         action="store_true",
@@ -190,4 +210,4 @@ if __name__ == "__main__":
     samples = os.listdir(args.load_path)
     for sample in samples:
         logger.info(f"Processing sample: {sample}")
-        new_function_toInclude_DNN_Score(args.year, sample, args.load_path, args.compacted_dir, args.model_path, args.add_dnn_score)
+        compact_and_add_dnn_score(args.year, sample, args.load_path, args.compacted_dir, args.model_path, args.add_dnn_score, args.tag, args.fix_dimuon_mass)

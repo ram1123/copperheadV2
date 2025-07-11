@@ -369,7 +369,7 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
     return return_dict
 
 
-def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=101, save_path=""):
+def dnn_train(data_dict, training_features=[], batch_size=65536, nepochs=101, save_path=""):
     if save_path == "save_path":
         logger.error("ERROR: please define the save path for the results")
         raise ValueError
@@ -398,6 +398,7 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
     # Iterating through the DataLoader
     #
     device = "cuda"
+    model = Net(len(training_features))
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     dataset_train = NumpyDataset(input_arr_train, label_arr_train)
@@ -417,8 +418,6 @@ def dnn_train(model, data_dict, training_features=[], batch_size=65536, nepochs=
         for batch_idx, (inputs, labels) in enumerate(dataloader_train):
             inputs = inputs.to(device)
             labels = labels.to(device).reshape((-1,1))
-
-
 
             optimizer.zero_grad()
 
@@ -765,7 +764,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logger.setLevel(args.log_level)
     # save_path = f"dnn/trained_models/{args.label}"
-    save_path = f"dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf"
+    save_path = f"dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf_GUP"
     # training_features = [
     #     'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_eta', \
     #      'dimuon_cos_theta_cs', 'dimuon_phi_cs',
@@ -776,7 +775,6 @@ if __name__ == "__main__":
         training_features = pickle.load(f)
 
     nfolds = 4 #4
-    model = Net(22)
     for i in range(nfolds):
         # input_arr_train = np.load(f"{save_path}/data_input_train_{i}.npy")
         # label_arr_train = np.load(f"{save_path}/data_label_train_{i}.npy")
@@ -800,4 +798,4 @@ if __name__ == "__main__":
         }
         nepochs = 100 # 100
         batch_size = 65536
-        dnn_train(model, data_dict,training_features=training_features, save_path=save_path,batch_size=batch_size,nepochs=nepochs)
+        dnn_train(data_dict,training_features=training_features, save_path=save_path,batch_size=batch_size,nepochs=nepochs)

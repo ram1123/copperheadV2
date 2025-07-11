@@ -35,6 +35,9 @@ njet="0"
 nbin="100"
 model_path="/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models"
 model_label="Run2_nanoAODv12_08June"
+# model_path="/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models" # Trained in signal region with VBF filter and M100-200 both
+# model_label="Run2_nanoAODv12_08June_signal_vbf"
+training_fold=3
 outAppend="$(date +%b%d_%Y)"   # Default: today's date, e.g. Jun24_2025
 
 
@@ -123,7 +126,8 @@ for year in "${years[@]}"; do
     command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --use_gateway --max_file_len 2500  "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --max_file_len 2500  "
 
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway "
 
     command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l  "

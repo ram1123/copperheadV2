@@ -1,3 +1,47 @@
+# 08 July 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -v 12 -l Run2_nanoAODv12_08June -y 2018 -m 2)
+```
+
+# 03 July 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m zpt_fit0)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m zpt_fit12 -n 2)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l DmitryServiceX_Check -y 2018 -m 0 -d 1)
+```
+
+# 30 June 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m 0 -d 1)
+```
+
+
+# 26 June 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2016postVFP -m all -d 1)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2016preVFP -m all -d 1)
+```
+
+# File list to be deleted
+
+```bash
+root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/E0B5655A-CAEB-9D45-BD47-00B4AECBB5FD.root
+```
+
+# 20 June 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2016postVFP -m all)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2016preVFP -m all)
+
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2016postVFP -m zpt_fit0)
+
+```
+
 # 17 June 2025
 
 ```bash
@@ -5,12 +49,10 @@ time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -
 
 time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2017 -m all)
 
-```bash
 time(python MVA_training/VBF/dnn_preprocessor.py --label "Run2_nanoAODv12_08June_MiNNLO" -cat "vbf" --year 2018)
 time(python MVA_training/VBF/dnn_train.py --label "Run2_nanoAODv12_08June_MiNNLO")
 ```
 
-```
 
 # 16 June 2025
 
