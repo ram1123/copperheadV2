@@ -20,7 +20,8 @@ import mplhep as hep
 from time import time
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 plt.style.use(hep.style.CMS)
-# hep.style.use("CMS")
+import concurrent
+
 
 import torch.profiler
 from torch.cuda.amp import autocast, GradScaler
@@ -327,9 +328,8 @@ class Net(nn.Module):
         x = self.dropout3(x)
 
         x = self.output(x)
-        # output = torch.sigmoid(x)
-        # return output
-        return x
+        output = F.sigmoid(x)
+        return output
 
 # Custom Dataset class
 class NumpyDataset(Dataset):
@@ -366,8 +366,8 @@ def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False, nor
         label_total = output_dict["label"]
         wgt_total = output_dict["weight"]
         if transformPrediction:
-            eps = 1e-6
-            pred_total = np.clip(pred_total, -1 + eps, 1 - eps)
+            # eps = 1e-6
+            # pred_total = np.clip(pred_total, -1 + eps, 1 - eps)
             pred_total = np.arctanh(pred_total)
             if log_scale:
                 plt.ylim((0.001, 1e5))
@@ -416,7 +416,7 @@ def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False, nor
     plt.close(fig)  # Close the figure to free memory
 
 
-def customROC_curve_AN(label, pred, weight):
+def customROC_curve_AN(label, pred, weight, ucsd_mode=False):
     """
     generates signal and background efficiency consistent with the AN,
     as described by Fig 4.6 of Dmitry's PhD thesis
@@ -445,10 +445,13 @@ def customROC_curve_AN(label, pred, weight):
 
 
 
-        # effBkg = TN / (TN + FP) # Dmitry PhD thesis definition
-        # effSig = FN / (FN + TP) # Dmitry PhD thesis definition
-        effBkg = FP / (TN + FP) # AN-19-124 ggH Cat definition
-        effSig = TP / (FN + TP) # AN-19-124 ggH Cat definition
+        if ucsd_mode:
+            effBkg = FP / (TN + FP) # AN-19-124 ggH Cat definition
+            effSig = TP / (FN + TP) # AN-19-124 ggH Cat definition
+        else:
+            effBkg = TN / (TN + FP) # Dmitry PhD thesis definition
+            effSig = FN / (FN + TP) # Dmitry PhD thesis definition
+
         effBkg_total[ix] = effBkg
         effSig_total[ix] = effSig
 
@@ -476,6 +479,7 @@ def plotROC(score_dict, plt_save_path):
     """
     TODO: add weights
     """
+    ucsd_mode = "ucsd" in plt_save_path
     fig, ax_main = plt.subplots()
     status = "Private Work 2018"
     CenterOfMass = "13"
@@ -486,14 +490,20 @@ def plotROC(score_dict, plt_save_path):
         pred_total = output_dict["prediction"]
         label_total = output_dict["label"]
         wgt_total = output_dict["weight"]
-        eff_bkg, eff_sig, thresholds = customROC_curve_AN(label_total, pred_total, wgt_total)
+        eff_bkg, eff_sig, thresholds = customROC_curve_AN(label_total, pred_total, wgt_total, ucsd_mode=ucsd_mode)
         plt.plot(eff_sig, eff_bkg, label=f"{stage}")
 
     plt.vlines(np.linspace(0,1,11), 0, 1, linestyle="dashed", color="grey")
-    plt.hlines(np.logspace(-4,0,5), 0, 1, linestyle="dashed", color="grey")
+    # plt.hlines(np.logspace(-4,0,5), 0, 1, linestyle="dashed", color="grey")
     # plt.hlines(eff_bkg, 0, eff_sig, linestyle="dashed")
     plt.xlim([0.0, 1.0])
-    plt.ylim([0.0001, 1.0])
+    if ucsd_mode:
+        plt.hlines(np.logspace(-4,0,5), 0, 1, linestyle="dashed", color="grey")
+        plt.yscale('log')
+        plt.ylim([0.001, 1.0])
+    else:
+        plt.ylim([0.0, 1.0])
+        plt.hlines(np.linspace(0,1,11), 0, 1, linestyle="dashed", color="grey")
     plt.xlabel('$\\epsilon_{sig}$')
     plt.ylabel('$\\epsilon_{bkg}$')
     plt.yscale("log")
@@ -534,7 +544,7 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
 
     # logger.info(f"pred_l: {pred_l}")
     # logger.info(f"label_l: {label_l}")
-    # auc_score = roc_auc_score(label_total, pred_total)
+    auc_score = roc_auc_score(label_total, pred_total)
     return_dict = {
         "label" : label_total,
         "prediction" : pred_total,
@@ -545,7 +555,7 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
     return return_dict
 
 
-def dnn_train(data_dict, training_features=[], batch_size=65536, nepochs=101, save_path="", nfolds=1, callback=None):
+def dnn_train(model, data_dict, nfolds, training_features, batch_size, nepochs, save_path, callback=None):
     if len(training_features) == 0:
         logger.error("ERROR: please define the training features the DNN will train on")
         raise ValueError
@@ -571,8 +581,7 @@ def dnn_train(data_dict, training_features=[], batch_size=65536, nepochs=101, sa
     input_arr_eval = df_eval[training_features].values
     label_arr_eval = df_eval.label.values
 
-    # loss_fn = torch.nn.BCELoss()
-    loss_fn = torch.nn.BCEWithLogitsLoss()
+    loss_fn = torch.nn.BCELoss()
     # loss_fn = FocalLoss(alpha=1, gamma=2)
     # loss_fn = HingeLoss()
 
@@ -580,59 +589,42 @@ def dnn_train(data_dict, training_features=[], batch_size=65536, nepochs=101, sa
     #
     logger.info(f"input_arr_train shape: {input_arr_train.shape}")
 
-    model = Net(len(training_features))
     model.to(DEVICE)
 
-    scaler = torch.amp.GradScaler(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     dataset_train = NumpyDataset(input_arr_train, label_arr_train)
-    dataloader_train_ordered = DataLoader(dataset_train, batch_size=batch_size, shuffle=False, num_workers=NWORKERS, pin_memory=PIN_MEMORY, persistent_workers=True, prefetch_factor=PREFETCH_FACTOR) # for plotting
+    dataloader_train_ordered = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY) # for plotting
     dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid)
-    dataloader_valid = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False, num_workers=NWORKERS, pin_memory=PIN_MEMORY, persistent_workers=True, prefetch_factor=PREFETCH_FACTOR)
+    dataloader_valid = DataLoader(dataset_valid, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY)
     dataset_eval = NumpyDataset(input_arr_eval, label_arr_eval)
-    dataloader_eval = DataLoader(dataset_eval, batch_size=batch_size, shuffle=False, num_workers=NWORKERS, pin_memory=PIN_MEMORY, persistent_workers=True, prefetch_factor=PREFETCH_FACTOR)
+    dataloader_eval = DataLoader(dataset_eval, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY)
     best_significance = 0
-    model.train()
     early_stopping_callback = EarlyStopping(patience=5, delta=1e-3, mode="min", fold_save_path=f"{fold_save_path}", model=model, training_features=training_features, verbose=True)
 
     for epoch in range(nepochs):
-    #   with torch.profiler.profile(
-    #         schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
-    #         on_trace_ready=torch.profiler.tensorboard_trace_handler(f"{save_path}/profiler_logs"),
-    #         record_shapes=True,
-    #         profile_memory=True,
-    #         with_stack=True
-    #         ) as prof:
+        model.train()
         callback.on_epoch_begin(epoch)
         # every epoch, reshuffle train data loader (could be unncessary)
-        dataloader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY, persistent_workers=True, prefetch_factor=PREFETCH_FACTOR)
+        dataloader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY)
 
         epoch_loss = 0
         batch_losses = []
         for batch_idx, (inputs, labels) in enumerate(dataloader_train):
-            inputs = inputs.to(DEVICE, non_blocking=True)
-            labels = labels.to(DEVICE, non_blocking=True).reshape((-1,1))
+            inputs = inputs.to(DEVICE)
+            labels = labels.to(DEVICE).reshape((-1,1))
 
             optimizer.zero_grad()
 
             # Make predictions for this batch
-            # pred = model(inputs)
+            pred = model(inputs)
 
             # Compute the loss and its gradients
-            # loss = loss_fn(pred, labels)
-            # loss.backward()
+            loss = loss_fn(pred, labels)
+            loss.backward()
 
             # Adjust learning weights
-            # optimizer.step()
-
-            with torch.amp.autocast(DEVICE):
-                pred = model(inputs)
-                loss = loss_fn(pred, labels)
-
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            optimizer.step()
 
             # Gather data and report
             batch_loss = loss.item()
@@ -809,7 +801,16 @@ def main():
         training_features = pickle.load(f)
 
     nfolds = 4 #4
+    model_l = []
+    data_dict_l = []
+    fold_l = []
+    training_features_l = []
+    save_path_l = []
+    batch_size_l = []
+    nepochs_l = []
+    callback_l = []
     for i in range(nfolds):
+        model = Net(len(training_features))
         df_train = pd.read_parquet(f"{save_path}/data_df_train_{i}.parquet") # these have been already scaled
         df_valid = pd.read_parquet(f"{save_path}/data_df_validation_{i}.parquet") # these have been already scaled
         df_eval = pd.read_parquet(f"{save_path}/data_df_evaluation_{i}.parquet") # these have been already scaled
@@ -821,8 +822,35 @@ def main():
             "validation": df_valid,
             "evaluation": df_eval,
         }
-        callback = TrainingLogger(log_interval=10)
-        dnn_train(data_dict,training_features=training_features, save_path=save_path,batch_size=args.batch_size,nepochs=args.n_epochs, callback=callback, nfolds=i)
+        nepochs = args.n_epochs
+        batch_size = args.batch_size
+        # dnn_train(model, data_dict, i, training_features, batch_size, nepochs, save_path)
+
+        # collect the input parameters
+        model_l.append(model)
+        data_dict_l.append(data_dict)
+        fold_l.append(i)
+        training_features_l.append(training_features)
+        save_path_l.append(save_path)
+        batch_size_l.append(batch_size)
+        nepochs_l.append(nepochs)
+        callback_l.append(TrainingLogger(log_interval=10))
+
+    with concurrent.futures.ProcessPoolExecutor(max_workers=nfolds) as executor:
+        # Submit each file check to the executor
+        result_l = list(executor.map(
+            dnn_train,
+            model_l,
+            data_dict_l,
+            fold_l,
+            training_features_l,
+            batch_size_l,
+            nepochs_l,
+            save_path_l,
+            callback_l,
+        ))
+        print(f"result_l: {result_l}")
+        print("Success!")
 
 
 # Script entrypoint
