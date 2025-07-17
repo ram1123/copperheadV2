@@ -319,5 +319,22 @@
         "ylabel": "Events",
         "xlabel": "Number of Good Primary Vertices",
         "color": "royalblue"
+    },
+   "dnn_vbf_score": {
+        "variable": "dnn_score",
+        "binning_linspace": [0, 1.0, 10],
+        "binning_nonuniform": [0.0, 0.13914499, 0.27831182, 0.33280191, 0.37281281, 0.41756606, 0.44700417, 0.50403064, 0.56419611, 0.61075753, 0.65993273, 1.0],
+        "density": false,
+        "ylabel": "Events / 0.1",
+        "xlabel": "DNN VBF Score",
+        "color": "royalblue"
+    },
+    "atanh_dnn_vbf_score": {
+        "variable": "atanh_dnn_vbf_score",
+        "binning_linspace": [0, 2.8, 10],
+        "density": false,
+        "ylabel": "Events / 0.12",
+        "xlabel": "$\\mathrm{tanh}^{-1}(DNN~VBF~Score)$",
+        "color": "royalblue"
     }
 }

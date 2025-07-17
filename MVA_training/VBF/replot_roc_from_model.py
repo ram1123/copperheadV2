@@ -1,3 +1,4 @@
+import pickle
 import torch
 import pandas as pd
 import numpy as np
@@ -15,21 +16,58 @@ FOLD = 3
 LABEL = "Run2_nanoAODv12_08June"
 # TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June_MiNNLO/fold{FOLD}"
 # DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/{LABEL}"
-TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf/fold{FOLD}"
-DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf"
+# TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf/fold{FOLD}"
+# DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf"
+# TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_h-peak_vbf/fold{FOLD}"
+# DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_h-peak_vbf"
+# TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_h-peak_vbf/fold{FOLD}"
+# DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_h-peak_vbf"
+# TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_signal_vbf_15July2025/fold{FOLD}"
+# DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_signal_vbf_15July2025"
+
+TRAINED_MODEL_DIR = (
+    f"/depot/cms/users/shar1172/"
+    f"copperheadV2_main/dnn/trained_models/"
+    f"{LABEL}/2018_h-peak_vbf_AllYear_16July/fold{FOLD}"
+)
+DATA_PATH = (
+    f"/depot/cms/users/shar1172/"
+    f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_AllYear_16July"
+)
+FEATURES_PKL = f"{DATA_PATH}/training_features.pkl"
 
 training_features = [
-    'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
-    'dimuon_cos_theta_cs', 'dimuon_phi_cs',
-    'jet1_pt_nominal', 'jet1_eta_nominal', 'jet1_phi_nominal', 'jet1_qgl_nominal',
-    'jet2_pt_nominal', 'jet2_eta_nominal', 'jet2_phi_nominal', 'jet2_qgl_nominal',
-    'jj_mass_nominal', 'jj_mass_log_nominal', 'jj_dEta_nominal', 'rpt_nominal',
-    'll_zstar_log_nominal', 'mmj_min_dEta_nominal', 'nsoftjets5_nominal', 'htsoft2_nominal'
+        'dimuon_mass', 
+        "dimuon_ebe_mass_res", "dimuon_ebe_mass_res_rel",
+         'jj_mass_nominal', 'jj_mass_log_nominal',
+         'rpt_nominal',
+         'll_zstar_log_nominal',
+         'jj_dEta_nominal',
+         'nsoftjets5_nominal',
+         'mmj_min_dEta_nominal',
+         'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
+         'jet1_pt_nominal', 'jet1_eta_nominal', 'jet1_phi_nominal',  'jet2_pt_nominal', 'jet2_eta_nominal', 'jet2_phi_nominal',
+         'jet1_qgl_nominal', 'jet2_qgl_nominal',
+         'dimuon_cos_theta_cs', 'dimuon_phi_cs',
+         'htsoft2_nominal',
+         'pt_centrality_nominal',
+         'year'
 ]
+
+# 1) load feature names
+with open(FEATURES_PKL, "rb") as f:
+    training_features_test = pickle.load(f)
+n_inputs = len(training_features)
+
+print(f"Input features: {training_features}")
+print(f"Total number of input features: {n_inputs}")
+
+print(f"From PKL: Input features: {training_features_test}")
+print(f"From PKL: Total number of input features: {len(training_features_test)}")
 
 # Load model
 model = Net(n_feat=len(training_features))
-model.load_state_dict(torch.load(f"{TRAINED_MODEL_DIR}/best_model_weights.pt", map_location=torch.device("cpu"), weights_only=True))
+model.load_state_dict(torch.load(f"{TRAINED_MODEL_DIR}/final_model_weights.pt", map_location=torch.device("cpu"), weights_only=True))
 model.eval()
 
 # Load data
@@ -55,8 +93,8 @@ with torch.no_grad():
 # Optional: Debug score distribution using ROOT
 ROOT.gStyle.SetOptStat(0)
 c1 = ROOT.TCanvas("c1", "", 800, 600)
-h_sig = ROOT.TH1F("h_sig", "Model Score;Score;Normalized Events", 50, 0, 1)
-h_bkg = ROOT.TH1F("h_bkg", "Model Score;Score;Normalized Events", 50, 0, 1)
+h_sig = ROOT.TH1F("h_sig", "Model Score;Score;Normalized Events", 21, 0, 1)
+h_bkg = ROOT.TH1F("h_bkg", "Model Score;Score;Normalized Events", 21, 0, 1)
 for val, weight in zip(y_pred[y == 1], w[y == 1]):
     h_sig.Fill(val, weight)
 for val, weight in zip(y_pred[y == 0], w[y == 0]):
@@ -65,6 +103,7 @@ h_sig.Scale(1.0 / h_sig.Integral())
 h_bkg.Scale(1.0 / h_bkg.Integral())
 h_sig.SetLineColor(ROOT.kRed)
 h_bkg.SetLineColor(ROOT.kBlue)
+h_sig.SetMaximum(1.2 * max(h_sig.GetMaximum(), h_bkg.GetMaximum()))
 h_sig.Draw("HIST")
 h_bkg.Draw("HIST SAME")
 leg = ROOT.TLegend(0.4, 0.75, 0.6, 0.9)

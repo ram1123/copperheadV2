@@ -10,8 +10,13 @@ import os
 import copy
 import pickle
 
+import sys
+import random
+
 import logging
 from modules.utils import logger
+
+from dnn_helper import DIR_TAG
 
 # def getParquetFiles(path):
     # return glob.glob(path)
@@ -49,13 +54,13 @@ def applyCatAndFeatFilter(events, features: list, region="h-peak", category="vbf
         region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
 
     if category.lower() == "vbf":
-        # btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        btag_loose = ak.fill_none(events.nBtagLoose_nominal, 0)
-        btag_medium = ak.fill_none(events.nBtagMedium_nominal, 0)
-        cut_loose = btag_loose >= 2
-        cut_medium = btag_medium >= 1
-        btag_cut = cut_loose | cut_medium
-        btag_cut = ak.fill_none(btag_cut, False)
+        btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
+        # btag_loose = ak.fill_none(events.nBtagLoose_nominal, 0)
+        # btag_medium = ak.fill_none(events.nBtagMedium_nominal, 0)
+        # cut_loose = btag_loose >= 2
+        # cut_medium = btag_medium >= 1
+        # btag_cut = cut_loose | cut_medium
+        # btag_cut = ak.fill_none(btag_cut, False)
         vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
         cat_cut = vbf_cut & (~btag_cut) # btag cut is for VH and ttH categories
     elif category.lower()== "ggh":
@@ -73,15 +78,8 @@ def applyCatAndFeatFilter(events, features: list, region="h-peak", category="vbf
     events = events[cat_filter] # apply the category filter
     # logger.info(f"events dimuon_mass: {events.dimuon_mass.compute()}")
     # apply the feature filter (so the ak zip only contains features we are interested)
-    logger.info(f"features: {features}")
-    events = ak.zip({field : events[field] for field in features}) # FIXME: What values are there for empty entries?
-    # filled = {}
-    # for field in features:
-    #     if "phi" in field or "theta" in field:
-    #         filled[field] = ak.fill_none(events[field], -10)
-    #     else:
-    #         filled[field] = ak.fill_none(events[field], 0)
-    # events = ak.zip(filled)
+    logger.debug(f"features: {features}")
+    events = ak.zip({field : events[field] for field in features})
     return events
 
 
@@ -115,8 +113,7 @@ def preprocess_loop(events, features2load, region="h-peak", category="vbf", labe
     elif label== "background":
         df["label"] = 0.0
     else:
-        logger.info("Error: please define the label: signal or background")
-        raise ValueError
+        raise ValueError("Error: please define the label: signal or background")
     return df
 
 # def scale_data(inputs, model_name: str, fold_idx: int):
@@ -135,6 +132,7 @@ def weighted_std(values, weights):
 
     values, weights -- Numpy ndarrays with the same shape.
     """
+    weights = np.abs(weights) # INFO: for pT centrality weights being negative causes variance to be negative
     average = np.average(values, weights=weights, axis=0)
     # logger.info(f"average.shape: {average.shape}")
     variance = np.average((values - average)**2, weights=weights, axis=0)
@@ -185,10 +183,6 @@ def weighted_std(values, weights):
 """mixup code start. credits to https://github.com/makeyourownmaker/mixupy """
 
 
-import sys
-import random
-import numpy as np
-import pandas as pd
 
 
 def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
@@ -259,17 +253,13 @@ def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
         # logger.info(f"mixup index with no replacement: {index2}")
     else:
         # with replacement
-        # index = np.random.randint(0, data_len, size=batch_size)
         index1 = np.random.randint(0, data_len, size=batch_size)
         index2 = np.random.randint(0, data_len, size=batch_size)
-        # logger.info(f"mixup index with replacement: {index1}")
-        # logger.info(f"mixup index with replacement: {index2}")
 
 
     # data = data.sample(frac=1)
     data_orig = data
 
-    # logger.info(f"data_orig: {data_orig}")
     # Cut data into specified size
     # data1 = resize_data(data, batch_size).reset_index(drop=True)
     data1 = data_orig.iloc[index1]
@@ -293,9 +283,6 @@ def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
     if concat is True:
         data_new = pd.concat([data_orig, data_mix])
 
-    # logger.info(f"data1: {data1.head()}")
-    # logger.info(f"data2: {data2.head()}")
-    # logger.info(f"data_mix: {data_mix.head()}")
     return data_new
 
 def cartesian(arrays, out=None):
@@ -485,15 +472,25 @@ def _check_params(alpha, concat, batch_size):
 
 
 
-def preprocess(base_path, region="signal", category="vbf", do_mixup=False, run_label="test"):
+def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_label="test", year="2018"):
     training_features = [
-        'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
+        'dimuon_mass', "dimuon_ebe_mass_res", "dimuon_ebe_mass_res_rel",
+         'jj_mass', 'jj_mass_log',
+         'rpt',
+         'll_zstar_log',
+         'jj_dEta',
+         'nsoftjets5',
+         'mmj_min_dEta',
+        'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
+         'jet1_pt', 'jet1_eta', 'jet1_phi',  'jet2_pt', 'jet2_eta', 'jet2_phi',
+         'jet1_qgl', 'jet2_qgl',
          'dimuon_cos_theta_cs', 'dimuon_phi_cs',
-         'jet1_pt', 'jet1_eta', 'jet1_phi', 'jet1_qgl', 'jet2_pt', 'jet2_eta', 'jet2_phi', 'jet2_qgl',
-         'jj_mass', 'jj_mass_log', 'jj_dEta', 'rpt', 'll_zstar_log', 'mmj_min_dEta', 'nsoftjets5', 'htsoft2'
+         'htsoft2',
+         'pt_centrality',
+         'year'
     ]
     # generate directory to save training_features
-    save_path = f"dnn/trained_models/{run_label}_{region}_{category}"
+    save_path = f"dnn/trained_models/{run_label}/{year}_{region}_{category}{DIR_TAG}"
     os.makedirs(save_path, exist_ok=True)
     logger.debug(f"save_path: {save_path}")
 
@@ -523,6 +520,7 @@ def preprocess(base_path, region="signal", category="vbf", do_mixup=False, run_l
             logger.info(f"Error reading parquet for signal process {process}: {e}, skipping.")
             continue
         sig_events_dict[process] = sig_events
+        print(f"fields in sig_events: {sig_events.fields}")
 
     bkg_events_dict = {}
     for process in bkg_processes:
@@ -542,9 +540,10 @@ def preprocess(base_path, region="signal", category="vbf", do_mixup=False, run_l
     # Prepare features based on a sample signal dataset
     if not sig_events_dict:
         raise ValueError(f"No signal events loaded; please check base_path: {base_path} and signal processes.")
-    # Use the first available signal events as template for feature names
-    sample_events = next(iter(sig_events_dict.values()))
-    training_features = prepare_features(sample_events, training_features)
+    # # Use the first available signal events as template for feature names
+    # sample_events = next(iter(sig_events_dict.values()))
+    # training_features = prepare_features(sample_events, training_features)
+    training_features = prepare_features(sig_events, training_features)
     # logger.info(f"training_features: {training_features}")
     logger.info(f"len training_features: {len(training_features)}")
     features2load = training_features + ["event","wgt_nominal"]
@@ -569,14 +568,14 @@ def preprocess(base_path, region="signal", category="vbf", do_mixup=False, run_l
             elif "ggh" in process.lower():
                 df["process"] = "ggh" # add in process type
             # logger.info(f"df: {df.head()}")
-            logger.info(f"df.label: {df.label}")
-            logger.info(f"df.process: {df.process}")
+            logger.debug(f"df.label: {df.label}")
+            logger.debug(f"df.process: {df.process}")
             df_l.append(df)
 
 
     # merge sig and bkg dfs
     df_total = pd.concat(df_l)
-    logger.info(df_total)
+    logger.info(df_total.head())
     logger.info(f"df_total.isnull().values.any(): {df_total.isnull().values.any()}")
     # sanity check
     logger.info(f"signal weight sum: {np.sum(df_total.wgt_nominal[df_total.label==1])}")
@@ -609,6 +608,9 @@ def preprocess(base_path, region="signal", category="vbf", do_mixup=False, run_l
         wgt_train = df_train.wgt_nominal.values
         x_mean = np.average(x_train,axis=0, weights=wgt_train)
         x_std = weighted_std(x_train, wgt_train)
+        # replace zero std dev with one, since we will divide input by x_std)
+        where_cond = np.isclose(np.zeros_like(x_std), x_std)
+        x_std = np.where(where_cond, np.ones_like(x_std), x_std)
         logger.info(f"x_mean: {x_mean}")
         logger.info(f"x_std: {x_std}")
         # np.save(f"output/trained_models/{model}/scalers_{fold_idx}", [x_mean, x_std])
@@ -703,6 +705,14 @@ if __name__ == "__main__":
         help="production mode category. Options: vbf or ggh",
     )
     parser.add_argument(
+        "-r",
+        "--region",
+        dest="region",
+        default="h-peak",
+        action="store",
+        help="region of the data. Options: h-peak, h-sidebands, signal",
+    )
+    parser.add_argument(
         "-y",
         "--year",
         dest="year",
@@ -724,9 +734,20 @@ if __name__ == "__main__":
     client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
     logger.info("Local scale Client created")
 
-    RUN_LABEL = "Run2_nanoAODv12_08June"
-    YEAR      = args.year
-    base_path      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{RUN_LABEL}/stage1_output/{YEAR}/f1_0"
+    base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
+    base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/compacted"
+    # base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
+    # base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
+    if not os.path.exists(base_path_compact):
+        base_path = base_path_f1_0
+    else:
+        base_path = base_path_compact
+    base_path = base_path_compact
 
-    preprocess(base_path, run_label=args.label, category=args.category)
+    # if base_path does not exist, raise error
+    # if not os.path.exists(base_path):
+    #     raise ValueError(f"Base path {base_path} does not exist. Please check the path and try again.")
+
+    logger.info(f"Base path: {base_path}")
+    preprocess(base_path, run_label=args.label, category=args.category, region=args.region, year=args.year)
     logger.info("Success!")
