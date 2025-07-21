@@ -1867,11 +1867,14 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # get QGL cut
         if NanoAODv == 9 :
-            qgl_cut = (jets.qgl >= -2)
+            jets["qgl"] = jets.qgl
+        elif (NanoAODv == 12 and year in ["2016preVFP", "2016postVFP", "2017", "2018"]):
+            jets["qgl"] = jets.qgl
+            jets["btagPNetQvG"] = jets.btagPNetQvG
+            jets["btagDeepFlavQG"] = jets.btagDeepFlavQG
         else: # NanoAODv12
-            qgl_cut = (jets.btagPNetQvG >= -2) # TODO: find out if -2 is the actual threshold for run3
-            jets["qgl"] = jets.btagPNetQvG # this is for saving btagPNetQvG as "qgl" for stage1 outputs
-
+            jets["btagPNetQvG"] = jets.btagPNetQvG
+            jets["btagDeepFlavQG"] = jets.btagDeepFlavQG
 
         jet_pt_cut = (jets.pt > self.config["jet_pt_cut"])
         # add additonal pT cut for the forward regions to reduce jet horn  ----------------------------------------------
@@ -1888,7 +1891,6 @@ class EventProcessor(processor.ProcessorABC):
         jet_selection = (
             pass_jet_id
             & pass_jet_puid
-            & qgl_cut
             & clean
             & jet_pt_cut
             & (abs(jets.eta) < self.config["jet_eta_cut"])
@@ -2008,6 +2010,8 @@ class EventProcessor(processor.ProcessorABC):
             f"jet1_rapidity_{variation}" : jet1_rapidity,  # max rel err: 0.7394
             f"jet1_phi_{variation}" : jet1.phi,
             f"jet1_qgl_{variation}" : jet1.qgl,
+            f"jet1_btagPNetQvG_{variation}" : jet1.btagPNetQvG,
+            f"jet1_btagDeepFlavQG_{variation}" : jet1.btagDeepFlavQG,
             f"jet1_jetId_{variation}" : jet1.jetId,
             f"jet1_puId_{variation}" : jet1.puId,
             f"jet2_pt_{variation}" : jet2.pt,
@@ -2030,6 +2034,8 @@ class EventProcessor(processor.ProcessorABC):
             f"jet2_rapidity_{variation}" : jet2_rapidity,  # max rel err: 0.781
             f"jet2_phi_{variation}" : jet2.phi,
             f"jet2_qgl_{variation}" : jet2.qgl,
+            f"jet1_btagPNetQvG_{variation}" : jet1.btagPNetQvG,
+            f"jet1_btagDeepFlavQG_{variation}" : jet1.btagDeepFlavQG,
             f"jet2_jetId_{variation}" : jet2.jetId,
             f"jet2_puId_{variation}" : jet2.puId,
             f"jj_mass_{variation}" : dijet.mass,
