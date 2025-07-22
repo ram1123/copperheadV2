@@ -34,7 +34,7 @@ DY_HTBinned = [
     "dy_M-50_HT-70to100", "dy_M-50_HT-100to200", "dy_M-50_HT-200to400", "dy_M-50_HT-400to600", "dy_M-50_HT-600to800", "dy_M-50_HT-800to1200", "dy_M-50_HT-1200to2500", "dy_M-50_HT-2500toInf"
 ]
 
-DYVBF = ["dy_VBF_filter_NewZWgt"]
+DYVBF = ["dy_VBF_filter"]
 
 
 group_dict = {
@@ -44,7 +44,7 @@ group_dict = {
     # "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
-    "DYVBF": ["dy_VBF_filter_NewZWgt"],
+    "DYVBF": ["dy_VBF_filter"],
 
     "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
@@ -186,7 +186,7 @@ def applyRegionCatCuts(events, category: str, region_name: str, njets: str, proc
                 events with gjj_mass < 350 GeV and events with NaN values are included in the inclusive DY selection.
                 This guarantees that no events are lost due to NaN values in gjj_mass.
                 """
-                if ("dy_VBF_filter_NewZWgt" in process):
+                if ("dy_VBF_filter" in process):
                     logger.warning(f"Apply VBF filter gen cut > 350 for VBF DY!: process = {process}")
                     vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
                     # logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
@@ -275,6 +275,7 @@ if __name__ == "__main__":
     # default = ["OTHER", "EWK", "VV", "DY", "DYVBF"],
     # default = ["OTHER", "EWK", "VV",  "TOP", "DY", "DY_MiNNLO", "DY_aMCatNLO"],
     default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
+    # default = ["OTHER", "EWK", "VV", "TOP", "DY" ],
     # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
     nargs="*",
     type=str,
@@ -419,6 +420,14 @@ if __name__ == "__main__":
         default="inclusive",
         help="jet multiplicity selection: 'inclusive' or exactly '0', '1', or '2'",
     )
+    # add dnn score to the plotting variable list
+    parser.add_argument(
+     "--dnn-score",
+     dest="dnn_score",
+     default=False,
+     action=argparse.BooleanOptionalAction,
+     help="If true, include DNN score in the plots",
+    )
     parser.add_argument(
      "--log-level",
      default=logging.INFO,
@@ -498,10 +507,11 @@ if __name__ == "__main__":
     logger.info(f"available_processes: {available_processes}")
     # gather variables to plot:
     kinematic_vars = ['pt', 'eta', 'phi']
-    if args.minimum_set:  kinematic_vars = ['pt']
+    if args.minimum_set: kinematic_vars = ['pt']
     variables2plot = []
-    variables2plot.append("dnn_vbf_score")
-    variables2plot.append("atanh_dnn_vbf_score")
+    if args.dnn_score:
+        variables2plot.append("dnn_vbf_score")
+        variables2plot.append("atanh_dnn_vbf_score")
     if len(args.variables) == 0:
         logger.error("no variables to plot!")
         raise ValueError
@@ -816,7 +826,8 @@ if __name__ == "__main__":
                 # handle arctanh transform of dnn_vbf_score
                 if var == "atanh_dnn_vbf_score":
                     raw = ak.fill_none(events["dnn_vbf_score"], value=-999.0)
-                    values = np.arctanh((raw+1)/2.0)  # arctanh transform
+                    values = np.arctanh((raw))  # arctanh transform
+                    # values = np.arctanh((raw+1)/2.0)  # arctanh transform
                 # overwrite variable names with two bin ranges
                 elif ("_range2" in var):
                     var_reduced = var.replace("_range2","")
@@ -975,7 +986,7 @@ if __name__ == "__main__":
                 binning,
                 data_dict,
                 bkg_MC_dict,
-                full_save_fname,
+                full_save_fname.replace(".pdf", "_log.pdf"),
                 sig_MC_dict=sig_MC_dict,
                 title = "",
                 x_title = plot_settings[plot_var].get("xlabel"),
@@ -983,6 +994,19 @@ if __name__ == "__main__":
                 lumi = args.lumi,
                 status = status,
                 log_scale = do_logscale,
+            )
+            plotDataMC_compare(
+                binning,
+                data_dict,
+                bkg_MC_dict,
+                full_save_fname,
+                sig_MC_dict=sig_MC_dict,
+                title = "",
+                x_title = plot_settings[plot_var].get("xlabel"),
+                y_title = plot_settings[plot_var].get("ylabel"),
+                lumi = args.lumi,
+                status = status,
+                log_scale = False,
             )
     time_elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished in {time_elapsed} s.")

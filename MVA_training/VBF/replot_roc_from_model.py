@@ -13,7 +13,8 @@ plt.style.use(hep.style.CMS)
 
 # Setup
 FOLD = 3
-LABEL = "Run2_nanoAODv12_08June"
+LABEL = "Run2_nanoAODv12_08June" # With Jet QGL bug
+LABEL = "Run2_nanoAODv12_UpdatedQGL_17July"  # With Jet QGL bug fixed
 # TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June_MiNNLO/fold{FOLD}"
 # DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/{LABEL}"
 # TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf/fold{FOLD}"
@@ -28,16 +29,18 @@ LABEL = "Run2_nanoAODv12_08June"
 TRAINED_MODEL_DIR = (
     f"/depot/cms/users/shar1172/"
     f"copperheadV2_main/dnn/trained_models/"
-    f"{LABEL}/2018_h-peak_vbf_AllYear_16July/fold{FOLD}"
+    # f"{LABEL}/2018_h-peak_vbf_AllYear_16July/fold{FOLD}"
+    f"{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July/fold{FOLD}"
 )
 DATA_PATH = (
     f"/depot/cms/users/shar1172/"
-    f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_AllYear_16July"
+    # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_AllYear_16July"
+    f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July"
 )
 FEATURES_PKL = f"{DATA_PATH}/training_features.pkl"
 
 training_features = [
-        'dimuon_mass', 
+        'dimuon_mass',
         "dimuon_ebe_mass_res", "dimuon_ebe_mass_res_rel",
          'jj_mass_nominal', 'jj_mass_log_nominal',
          'rpt_nominal',
@@ -67,7 +70,8 @@ print(f"From PKL: Total number of input features: {len(training_features_test)}"
 
 # Load model
 model = Net(n_feat=len(training_features))
-model.load_state_dict(torch.load(f"{TRAINED_MODEL_DIR}/final_model_weights.pt", map_location=torch.device("cpu"), weights_only=True))
+# model.load_state_dict(torch.load(f"{TRAINED_MODEL_DIR}/final_model_weights.pt", map_location=torch.device("cpu"), weights_only=True))
+model.load_state_dict(torch.load(f"{TRAINED_MODEL_DIR}/best_model_weights.pt", map_location=torch.device("cpu"), weights_only=True))
 model.eval()
 
 # Load data
@@ -110,9 +114,9 @@ leg = ROOT.TLegend(0.4, 0.75, 0.6, 0.9)
 leg.AddEntry(h_sig, "Signal", "l")
 leg.AddEntry(h_bkg, "Background", "l")
 leg.Draw()
-c1.SaveAs(f"{TRAINED_MODEL_DIR}/score_distribution.pdf")
+c1.SaveAs(f"{TRAINED_MODEL_DIR}/score_distribution_best.pdf")
 c1.SetLogy()
-c1.SaveAs(f"{TRAINED_MODEL_DIR}/score_distribution_log.pdf")
+c1.SaveAs(f"{TRAINED_MODEL_DIR}/score_distribution_log_best.pdf")
 
 # Rebuild ROC
 eff_bkg, eff_sig, thresholds = customROC_curve_AN(y, y_pred, w)
@@ -143,10 +147,10 @@ auc_text.SetNDC()
 auc_text.SetTextSize(0.04)
 auc_text.Draw()
 c2.SetGrid()
-c2.SaveAs(f"{TRAINED_MODEL_DIR}/reconstructed_ROC.pdf")
+c2.SaveAs(f"{TRAINED_MODEL_DIR}/reconstructed_ROC_best.pdf")
 c2.SetLogy()
 roc.Draw("AL")
 roc.GetXaxis().SetLimits(0, 1.1)
 roc.GetYaxis().SetRangeUser(0.001, 1.)
 auc_text.Draw()
-c2.SaveAs(f"{TRAINED_MODEL_DIR}/reconstructed_ROC_log.pdf")
+c2.SaveAs(f"{TRAINED_MODEL_DIR}/reconstructed_ROC_log_best.pdf")

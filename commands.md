@@ -1,3 +1,33 @@
+# 21 July 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_UpdatedQGL_17July -y 2017 -m all -d 1)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July  -v 12 -y 2018 -m dnn)
+```
+
+# 18 July 2025
+
+```bash
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l DmitryServiceX_Check -y 2018 -d 1 -m all)
+```
+
+# 17 July 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -m all -v 12)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -m all -v 12 -y 2018)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -m compact -v 12 -y 2018)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -m dnn -v 12 -y 2018)
+```
+
+# 11 July 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_08June -y 2018 -m dnn_pre)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_08June -y 2018 -m dnn)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_08June -y 2018 -m compact)
+```
+
 # 08 July 2025
 
 ```bash
@@ -15,7 +45,7 @@ time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -
 # 30 June 2025
 
 ```bash
-time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2018 -m 0 -d 1)
+time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_08June -y 2017 -m 0 -d 1 -s 1)
 ```
 
 

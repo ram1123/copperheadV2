@@ -74,8 +74,8 @@ years:
             data_D: /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018D
 
         DY:
-            # dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9
-            # dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+            dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9
+            dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
             dy_M-50_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToMuMu_M-50_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
             dy_M-100To200_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
             dy_VBF_filter:
@@ -104,16 +104,16 @@ years:
             st_tw_antitop: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
             st_t_top: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/ST_t-channel_top_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8
             st_t_antitop: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/ST_t-channel_antitop_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8
-            st_s_lep: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-amcatnlo-pythia8_RunIISummer20UL18NanoAODv9
-            ## st_s_had: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/ST_s-channel_4f_hadronicDecays_TuneCP5_13TeV-amcatnlo-pythia8
-            tZq_ll: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/tZq_ll_4f_ckm_NLO_TuneCP5_13TeV-amcatnlo-pythia8
-            TTWjets_LNu: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8
-            TTWJets_QQ: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTWJetsToQQ_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8
-            TTZ_LLnunu: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTZToLLNuNu_M-10_TuneCP5_13TeV-amcatnlo-pythia8
-            TTTT: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTTT_TuneCP5_13TeV-amcatnlo-pythia8
-            TTTW: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTTW_TuneCP5_13TeV-madgraph-pythia8
-            TTTJ: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTTJ_TuneCP5_13TeV-madgraph-pythia8
-            TTWW: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTWW_TuneCP5_13TeV-madgraph-pythia8
+            # st_s_lep: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-amcatnlo-pythia8_RunIISummer20UL18NanoAODv9
+            # ## st_s_had: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/ST_s-channel_4f_hadronicDecays_TuneCP5_13TeV-amcatnlo-pythia8
+            # tZq_ll: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/tZq_ll_4f_ckm_NLO_TuneCP5_13TeV-amcatnlo-pythia8
+            # TTWjets_LNu: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8
+            # TTWJets_QQ: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTWJetsToQQ_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8
+            # TTZ_LLnunu: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTZToLLNuNu_M-10_TuneCP5_13TeV-amcatnlo-pythia8
+            # TTTT: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTTT_TuneCP5_13TeV-amcatnlo-pythia8
+            # TTTW: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTTW_TuneCP5_13TeV-madgraph-pythia8
+            # TTTJ: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTTJ_TuneCP5_13TeV-madgraph-pythia8
+            # TTWW: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/TTWW_TuneCP5_13TeV-madgraph-pythia8
 
         VV:
             ww_2l2nu: /eos/purdue/store/user/rasharma/customNanoAOD/UL2018/WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8_RunIISummer20UL18NanoAODv9
@@ -145,8 +145,22 @@ years:
             # ewk_lljj_mll105_160_py_dipole: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/
 
         Higgs:
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-lzma1
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-lzma5
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-lzma9
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-zstd1
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-zstd5
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-zstd9
+            # ggh_powhegPS: /work/projects/servicex/hmm/nanoaod
+            # ggh_powhegPS: /depot/cms/hmm/servicex/nanoaod
+            #
+            # ggh_powhegPS: /work/projects/servicex/hmm/ggh-zstd9
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-lzma1-rntuple
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-lzma9-rntuple
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-zstd1-rntuple
+            # ggh_powhegPS: /depot/cms/hmm/servicex/ggh-zstd9-rntuple
             ggh_powhegPS: /eos/purdue/store/user/rasharma/customNanoAOD/UL2018/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
-            ggh_amcPS: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/GluGluHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnloFXFX_pythia8
+            # ggh_amcPS: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/GluGluHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnloFXFX_pythia8
             vbf_powheg_dipole: /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8
 
     "2017":
@@ -157,10 +171,11 @@ years:
             data_E: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017E
             data_F: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017F
         DY:
-            # dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9
-            # dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+            dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9
+            dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
             dy_M-50_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToMuMu_M-50_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
             dy_M-100To200_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
+            dy_VBF_filter: /eos/purdue/store/user/hyeonseo/Run2UL/UL2017/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_hammer/
         Top:
             ttjets_dl: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8
             ttjets_sl: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8
@@ -185,7 +200,7 @@ years:
             ewk_lljj_mll50_mjj120: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/EWK_LLJJ_MLL-50_MJJ-120_TuneCP5_13TeV-madgraph-pythia8_dipole
         Higgs:
             ggh_powhegPS: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
-            ggh_amcPS: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/GluGluHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnloFXFX_pythia8
+            # ggh_amcPS: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/GluGluHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnloFXFX_pythia8
             vbf_powheg_dipole: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8
     "2016postVFP":
         Data:

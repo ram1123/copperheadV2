@@ -8,6 +8,7 @@ then
 fi
 
 conda activate /depot/cms/users/yun79/conda_envs/yun_coffea_latest
+# conda activate /depot/cms/conda_envs/shar1172/pfn_env
 # conda activate /depot/cms/kernels/root632 # FIXME: Temp fix, as coffea latest not working starting from early march 2025
 # conda activate /depot/cms/kernels/coffea_latest
 # conda activate /depot/cms/kernels/python3

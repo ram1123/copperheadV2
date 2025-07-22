@@ -27,6 +27,7 @@ from collections.abc import Sequence
 import logging
 from modules.utils import logger
 
+
 def getBadFile(fname):
     try:
         up_file = uproot.open(fname)
@@ -43,8 +44,6 @@ def getBadFile(fname):
             ak.to_parquet(up_file["Events"]['Jet_mass'].array(),tmp_path)
             ak.to_parquet(up_file["Events"]['Electron_pt'].array(),tmp_path)
             ak.to_parquet(up_file["Events"]['Electron_eta'].array(),tmp_path)
-            ak.to_parquet(up_file["Events"]['Electron_phi'].array(),tmp_path)
-            ak.to_parquet(up_file["Events"]['Electron_mass'].array(),tmp_path)
 
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -92,7 +91,10 @@ def removeBadFiles(filelist):
     clean_filtlist = list(set(filelist) - set(bad_filelist)) # remove bad files from the filelist
     return clean_filtlist
 
+# def getDatasetRootFiles(single_dataset_name: list, allowlist_sites: list)-> list:
 def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
+    # logger.info(f"dataset name: {single_dataset_name}")
+    # single_dataset_name = single_dataset_name["path"]
     logger.info(f"dataset name: {single_dataset_name}")
     if single_dataset_name.startswith("/eos"):
         fnames = glob.glob(f"{single_dataset_name}/*.root")
@@ -291,6 +293,9 @@ if __name__ == "__main__":
         big_sample_info = {}
         # load dataset sample paths from yaml files
         datasets = OmegaConf.load(args.dataset_yaml_file)
+        logger.debug(f'dataset: {datasets}')
+        logger.debug(f'datasets.years: {datasets.years}')
+        logger.debug(f'datasets.years.keys(): {datasets.years.keys()}')
         if args.run2_rereco: # temp condition for RERECO data case
             dataset = datasets.years[f"{year}_RERECO"]
         else: # normal

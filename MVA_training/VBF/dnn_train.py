@@ -1,3 +1,6 @@
+import multiprocessing as mp
+mp.set_start_method('spawn', force=True)
+
 import dask_awkward as dak
 import numpy as np
 import awkward as ak
@@ -5,7 +8,6 @@ import glob
 import pandas as pd
 import itertools
 import torch
-torch.multiprocessing.set_sharing_strategy('file_system') # reason: https://discuss.pytorch.org/t/training-crashes-due-to-insufficient-shared-memory-shm-nn-dataparallel/26396/44
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import torch.nn as nn
@@ -14,26 +16,21 @@ import pickle
 import os
 import argparse
 from sklearn.metrics import roc_auc_score
-# Add confusion matrix imports for fallback
 import matplotlib.pyplot as plt
 import mplhep as hep
+from sklearn.metrics import confusion_matrix
+
 from time import time
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+
 plt.style.use(hep.style.CMS)
 import concurrent
-
-
-import torch.profiler
-from torch.cuda.amp import autocast, GradScaler
-
-torch.set_float32_matmul_precision('high')
-
+# torch.multiprocessing.set_sharing_strategy('file_descriptor') # reason: https://discuss.pytorch.org/t/training-crashes-due-to-insufficient-shared-memory-shm-nn-dataparallel/26396/44
 
 import logging
 from modules.utils import logger
 
 from dnn_helper import *
-
 
 if not torch.cuda.is_available():
     logger.warning("CUDA is not available. Using CPU for training.")
@@ -91,9 +88,15 @@ class TrainingLogger:
         if (batch + 1) % self.log_interval == 0:
             logger.info(f"Batch {batch + 1}: Loss = {logs['loss']:.4f}, Accuracy = {logs['accuracy']:.4f}")
 
+    # Save the training_logs to a file
+    def save_logs(self, filepath):
+        with open(filepath, 'wb') as f:
+            pickle.dump(training_logs, f)
+        logger.info(f"Training logs saved to {filepath}")
+
 
 class EarlyStopping:
-    def __init__(self, patience=10, delta=0.0, mode="min",
+    def __init__(self, patience=10, delta=0.0, mode="min", nfold=0,
                  fold_save_path=None, model=None, training_features=None, verbose=True):
         """
         Args:
@@ -108,6 +111,7 @@ class EarlyStopping:
         self.patience = patience
         self.delta = delta
         self.mode = mode
+        self.nfold = nfold
         self.fold_save_path = fold_save_path
         self.model = model
         self.training_features = training_features
@@ -126,14 +130,14 @@ class EarlyStopping:
     def on_epoch_end(self, epoch, current_score):
         if self.best_score is None or self.monitor_op(current_score, self.best_score):
             if self.verbose:
-                logger.info(f"[EarlyStopping] Epoch {epoch}: best {self.mode} improved from {self.best_score} to {current_score}")
+                logger.info(f"[EarlyStopping] Fold {self.nfold}, Epoch {epoch}: best {self.mode} improved from {self.best_score} to {current_score}")
             self.best_score = current_score
             self.counter = 0
             # self._save_model()
         else:
             self.counter += 1
             if self.verbose:
-                logger.info(f"[EarlyStopping] Epoch {epoch}: no improvement ({self.counter}/{self.patience})")
+                logger.info(f"[EarlyStopping] Fold {self.nfold}, Epoch {epoch}: no improvement ({self.counter}/{self.patience})")
             if self.counter >= self.patience:
                 logger.warning("[EarlyStopping] Triggered.")
                 self.early_stop = True
@@ -366,8 +370,6 @@ def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False, nor
         label_total = output_dict["label"]
         wgt_total = output_dict["weight"]
         if transformPrediction:
-            # eps = 1e-6
-            # pred_total = np.clip(pred_total, -1 + eps, 1 - eps)
             pred_total = np.arctanh(pred_total)
             if log_scale:
                 plt.ylim((0.001, 1e5))
@@ -477,15 +479,12 @@ def customROC_curve_AN(label, pred, weight, ucsd_mode=False):
 
 def plotROC(score_dict, plt_save_path):
     """
-    TODO: add weights
     """
     ucsd_mode = "ucsd" in plt_save_path
     fig, ax_main = plt.subplots()
     status = "Private Work 2018"
     CenterOfMass = "13"
     hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, ax=ax_main)
-    plt.yscale('log')
-    plt.ylim((0.001, 1e3))
     for stage, output_dict in score_dict.items():
         pred_total = output_dict["prediction"]
         label_total = output_dict["label"]
@@ -506,8 +505,6 @@ def plotROC(score_dict, plt_save_path):
         plt.hlines(np.linspace(0,1,11), 0, 1, linestyle="dashed", color="grey")
     plt.xlabel('$\\epsilon_{sig}$')
     plt.ylabel('$\\epsilon_{bkg}$')
-    plt.yscale("log")
-    plt.ylim([0.0001, 1.0])
 
     plt.legend(loc="lower right")
     # plt.title(f'ROC curve for ggH BDT {year}')
@@ -554,13 +551,209 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
     model.train() # turn back to train mode
     return return_dict
 
+def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_features, best_significance, score_dict, pred_total, label_total):
+    # if True: # (epoch==0) or ((epoch % validate_interval) == (validate_interval-1)):
+    # plot ROC curve
+    plt_save_path = f"{fold_save_path}/epoch{epoch}_ROC.png"
+    plotROC(score_dict, plt_save_path)
+    plt_save_path = f"{fold_save_path}/epoch{epoch}_ROC_ucsd.png" # plot with sig eff and bkg eff in AN-19-124
+    plotROC(score_dict, plt_save_path)
 
-def dnn_train(model, data_dict, nfolds, training_features, batch_size, nepochs, save_path, callback=None):
+    bins = np.linspace(0, 1, 30)
+    plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_combined_dist_bySigBkg.png"
+    # plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
+    plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False)
+
+    bins = np.array([
+        0,
+        0.07,
+        0.432,
+        0.71,
+        0.926,
+        1.114,
+        1.28,
+        1.428,
+        1.564,
+        1.686,
+        1.798,
+        1.9,
+        2.0,
+        2.8,
+    ])
+    plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_combined_transformedDist_bySigBkg.png"
+
+    # plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
+    plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=True)
+    # raise ValueError
+
+    # # ------------------------------------------
+    # # do the signal ratio plot
+    # # ------------------------------------------
+
+
+    # # Histogram for signal, normalized to one
+    # wgt_signal = df_valid.wgt_nominal[label_total==1]
+    # hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, weights=wgt_signal)
+    # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
+
+    # # Histogram for background, normalized to one
+    # wgt_background = df_valid.wgt_nominal[label_total==0]
+    # hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, weights=wgt_background)
+    # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+
+    # # hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins)
+    # # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
+
+    # # hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins)
+    # # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+    # sigBkg_ratio = np.zeros_like(hist_background)
+    # nan_filter = hist_background !=0
+    # sigBkg_ratio[nan_filter] = hist_signal[nan_filter] /hist_background[nan_filter]
+
+    #  # Plotting
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(bin_centers_signal, sigBkg_ratio, label='Sig/Bkg', drawstyle='steps-mid')
+    # plt.xlabel('arctanh Score')
+    # plt.ylabel('Sig/Bkg')
+    # plt.title('Sig / Bkg DNN Score Distributions ')
+    # plt.legend()
+    # plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_sigBkgRatio.png")
+    # plt.clf()
+
+
+    # Create histograms and normalize them separated by process samples
+    processes = ["dy", "top", "ewk", "vbf", "ggh"]
+
+    # # sanity check that pred and labels have same row idx as df_valid
+    # logger.info(f"x_total: {x_total[:10, :]}")
+    # logger.info(f"df_valid: {df_valid.iloc[:10]}")
+
+    for proc in processes:
+        proc_filter = df_valid.process == proc
+        # logger.info(f"proc_filter: {proc_filter}")
+        dnn_scores = pred_total[proc_filter]
+        dnn_scores = transformDnnScore(dnn_scores)
+        wgt_proc = df_valid.wgt_nominal[proc_filter]
+        hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt_proc)
+        # logger.info(f"{proc} hist: {hist_proc}")
+        bin_centers_proc = 0.5 * (bins_proc[:-1] + bins_proc[1:])
+        plt.plot(bin_centers_proc, hist_proc, label=proc, drawstyle='steps-mid')
+    plt.xlabel('arctanh Score')
+    plt.ylabel('Density')
+    plt.title('Normalized DNN Score Distributions by Sample')
+    plt.legend()
+    plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_byProcess.png")
+    plt.clf()
+
+
+    # Do the logscale plot
+    fig, ax_main = plt.subplots()
+
+
+    ax_main.set_yscale('log')
+    ax_main.set_ylim(0.01, 1e9)
+
+    # stack bkg
+
+    bkg_processes = ["ewk", "top", "dy"] # smallest samples first
+    bkg_hist_l = []
+    for proc in bkg_processes:
+        proc_filter = df_valid.process == proc
+        dnn_scores = pred_total[proc_filter]
+        dnn_scores = transformDnnScore(dnn_scores)
+        wgt = df_valid.wgt_nominal[proc_filter]
+        hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt)
+        # logger.info(f"{proc} hist: {hist_proc}")
+        bkg_hist_l.append(hist_proc)
+
+    hep.histplot(
+        bkg_hist_l,
+        bins=bins,
+        stack=True,
+        histtype='fill',
+        label=bkg_processes,
+        sort='label_r',
+        ax=ax_main,
+    )
+
+
+    # plot signal, no stack
+
+    sig_processes = ["vbf", "ggh"]
+    sig_hist_l = []
+
+    for proc in sig_processes:
+        proc_filter = df_valid.process == proc
+        dnn_scores = pred_total[proc_filter]
+        # logger.info(f"min dnn_scores: {np.min(dnn_scores)}")
+        # logger.info(f"max dnn_scores: {np.max(dnn_scores)}")
+        dnn_scores = transformDnnScore(dnn_scores)
+        wgt = df_valid.wgt_nominal[proc_filter]
+        hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt)
+        # logger.info(f"{proc} hist: {hist_proc}")
+        sig_hist_l.append(hist_proc)
+        hep.histplot(
+            hist_proc,
+            bins=bins,
+            histtype='step',
+            label=proc,
+            # color =  "black",
+            ax=ax_main,
+        )
+    ax_main.set_xlabel('arctanh Score')
+    ax_main.set_ylabel("Events")
+
+    sig_hist_total = np.sum(sig_hist_l)
+    bkg_hist_total = np.sum(bkg_hist_l)
+    significance = calculateSignificance(sig_hist_total, bkg_hist_total)
+    # if significance > best_significance:
+    #     best_significance = significance
+    #     # save state_dict
+    #     model.eval()
+    #     torch.save(model.state_dict(), f'{fold_save_path}/best_model_weights.pt')
+    #     # save torch jit version for coffea torch_wrapper while you're at it
+    #     dummy_input = torch.rand(100, len(training_features))
+    #     # temporarily move model to cpu
+    #     model.to("cpu")
+    #     torch.jit.trace(model, dummy_input).save(f'{fold_save_path}/best_model_torchJit_ver.pt')
+    #     model.to(DEVICE)
+    #     model.train() # turn model back to train mode
+    #     logger.info(f"new best significance for fold {i} is {best_significance} from {epoch} epoch")
+
+    best_significance = significance
+    # save state_dict
+    # model.eval()
+    # torch.save(model.state_dict(), f'{fold_save_path}/best_model_weights.pt')
+    # save torch jit version for coffea torch_wrapper while you're at it
+    # dummy_input = torch.rand(100, len(training_features))
+    # temporarily move model to cpu
+    # model.to("cpu")
+    # torch.jit.trace(model, dummy_input).save(f'{fold_save_path}/best_model_torchJit_ver.pt')
+    # model.to(DEVICE)
+    # model.train() # turn model back to train mode
+    logger.info(f"new best significance for fold {fold_idx} is {best_significance} from {epoch} epoch")
+
+
+    # add significance to plot
+    significance = str(significance)[:5] # round to 3 d.p.
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    ax_main.text(0.05, 0.95, f"Significance: {significance}", transform=ax_main.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+
+    plt.title('DNN Score Distributions')
+    plt.legend()
+    plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_stackedDist_byProcess.png")
+    plt.clf()
+    plt.close(fig)  # Close the figure to free memory
+    return best_significance
+
+
+def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs, save_path, callback=None):
+    logger.setLevel(logging.INFO)
     if len(training_features) == 0:
         logger.error("ERROR: please define the training features the DNN will train on")
         raise ValueError
 
-    fold_save_path = f"{save_path}/fold{nfolds}"
+    fold_save_path = f"{save_path}/fold{fold_idx}"
     if not os.path.exists(fold_save_path):
         os.makedirs(fold_save_path)
 
@@ -600,7 +793,7 @@ def dnn_train(model, data_dict, nfolds, training_features, batch_size, nepochs, 
     dataset_eval = NumpyDataset(input_arr_eval, label_arr_eval)
     dataloader_eval = DataLoader(dataset_eval, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY)
     best_significance = 0
-    early_stopping_callback = EarlyStopping(patience=5, delta=1e-3, mode="min", fold_save_path=f"{fold_save_path}", model=model, training_features=training_features, verbose=True)
+    early_stopping_callback = EarlyStopping(patience=5, delta=1e-3, mode="min", nfold=fold_idx, fold_save_path=f"{fold_save_path}", model=model, training_features=training_features, verbose=True)
 
     for epoch in range(nepochs):
         model.train()
@@ -619,6 +812,10 @@ def dnn_train(model, data_dict, nfolds, training_features, batch_size, nepochs, 
             # Make predictions for this batch
             pred = model(inputs)
 
+            logger.debug(f"inputs: {inputs}")
+            logger.debug(f"labels: {labels}")
+            logger.debug(f"pred: {pred}")
+
             # Compute the loss and its gradients
             loss = loss_fn(pred, labels)
             loss.backward()
@@ -630,43 +827,52 @@ def dnn_train(model, data_dict, nfolds, training_features, batch_size, nepochs, 
             batch_loss = loss.item()
             epoch_loss += batch_loss
             batch_losses.append(batch_loss)
-            # prof.step() # for profiler
+            callback.on_batch_end(batch_idx, logs={'loss': batch_loss, 'accuracy': 0.0})  # accuracy not computed here
+
         train_losses.append(epoch_loss)
-        logger.debug(f"fold {nfolds} epoch {epoch}            train total loss: {epoch_loss}")
-        logger.debug(f"fold {nfolds} epoch {epoch}    train average batch loss: {np.mean(batch_losses)}")
+        logger.debug(f"fold {fold_idx} epoch {epoch}            train total loss: {epoch_loss}")
+        logger.debug(f"fold {fold_idx} epoch {epoch}    train average batch loss: {np.mean(batch_losses)}")
+        valid_loop_dict = dnnEvaluateLoop(model, dataloader_valid, loss_fn, device=DEVICE)
+        train_loop_dict = dnnEvaluateLoop(model, dataloader_train_ordered, loss_fn, device=DEVICE)
+        eval_loop_dict = dnnEvaluateLoop(model, dataloader_eval, loss_fn, device=DEVICE)
+        score_dict = {
+            "train" :  {
+                "prediction": train_loop_dict["prediction"],
+                "label": train_loop_dict["label"],
+                "weight": df_train.wgt_nominal.values,
+            },
+            "valid+eval" : {
+                "prediction": np.concatenate([valid_loop_dict["prediction"], eval_loop_dict["prediction"]], axis=0),
+                "label":  np.concatenate([valid_loop_dict["label"], eval_loop_dict["label"]], axis=0),
+                "weight": np.concatenate([df_valid.wgt_nominal.values, df_eval.wgt_nominal.values], axis=0),
+            },
+        }
+
+        pred_total = valid_loop_dict["prediction"]
+        label_total = valid_loop_dict["label"]
+        valid_loss = valid_loop_dict["total_loss"]
+        batch_losses = valid_loop_dict["batch_losses"]
+        auc_score = roc_auc_score(label_total, pred_total)
+        val_losses.append(valid_loss)
+        logger.debug(f"fold {fold_idx} epoch {epoch} validation total loss: {valid_loss}")
+        logger.debug(f"fold {fold_idx} epoch {epoch} validation average batch loss: {np.mean(batch_losses)}")
+        logger.debug(f"fold {fold_idx} epoch {epoch} validation AUC: {auc_score}")
+
+        # call early stopping
+        if early_stopping_callback and  early_stopping_callback.on_epoch_end(epoch, valid_loss):
+            logger.warning(f"Early stopping at epoch {epoch} for fold {fold_idx}")
+            # save_model_final(model, training_features, fold_save_path)
+            break
+
+        # ------------------------------------------------
+        # plot the score distributions
+        # ------------------------------------------------
         validate_interval = 20
-        if True:
-            valid_loop_dict = dnnEvaluateLoop(model, dataloader_valid, loss_fn, device=DEVICE)
-            train_loop_dict = dnnEvaluateLoop(model, dataloader_train_ordered, loss_fn, device=DEVICE)
-            eval_loop_dict = dnnEvaluateLoop(model, dataloader_eval, loss_fn, device=DEVICE)
-            score_dict = {
-                "train" :  {
-                    "prediction": train_loop_dict["prediction"],
-                    "label": train_loop_dict["label"],
-                    "weight": df_train.wgt_nominal.values,
-                },
-                "valid+eval" : {
-                    "prediction": np.concatenate([valid_loop_dict["prediction"], eval_loop_dict["prediction"]], axis=0),
-                    "label":  np.concatenate([valid_loop_dict["label"], eval_loop_dict["label"]], axis=0),
-                    "weight": np.concatenate([df_valid.wgt_nominal.values, df_eval.wgt_nominal.values], axis=0),
-                },
-            }
+        if ((epoch==0) or ((epoch % validate_interval) == (validate_interval-1))) or (epoch==nepochs-1):
+            best_significance = ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_features, best_significance, score_dict, pred_total, label_total)
 
-            pred_total = valid_loop_dict["prediction"]
-            label_total = valid_loop_dict["label"]
-            valid_loss = valid_loop_dict["total_loss"]
-            batch_losses = valid_loop_dict["batch_losses"]
-            # auc_score = roc_auc_score(label_total, pred_total)
-            val_losses.append(valid_loss)
-            logger.debug(f"fold {nfolds} epoch {epoch} validation total loss: {valid_loss}")
-            logger.debug(f"fold {nfolds} epoch {epoch} validation average batch loss: {np.mean(batch_losses)}")
-            # logger.debug(f"fold {nfolds} epoch {epoch} validation AUC: {auc_score}")
+        callback.on_epoch_end(epoch, logs={'loss': epoch_loss, 'auc': auc_score, 'significance': best_significance})
 
-            # call early stopping
-            if early_stopping_callback and  early_stopping_callback.on_epoch_end(epoch, valid_loss):
-                logger.warning(f"Early stopping at epoch {epoch} for fold {nfolds}")
-                save_model_final(model, training_features, fold_save_path)
-                break
 
     # Save final model state (in case early stopping did not trigger)
     save_model_final(model, training_features, fold_save_path)
@@ -674,13 +880,13 @@ def dnn_train(model, data_dict, nfolds, training_features, batch_size, nepochs, 
     # Validation plots
     # ------------------------------------------------
     # 1. Plot the loss curves
-    plot_loss_curves(train_losses, val_losses, save_path=f"{fold_save_path}/loss_curves_{nfolds}.pdf")
+    plot_loss_curves(train_losses, val_losses, save_path=f"{fold_save_path}/loss_curves_{fold_idx}.pdf")
     # 2. Plot the ROC curve
-    plotROC(score_dict, plt_save_path=f"{fold_save_path}/ROC_curve_{nfolds}.pdf")
+    plotROC(score_dict, plt_save_path=f"{fold_save_path}/ROC_curve_{fold_idx}.pdf")
     # 3. Plot the Sig/Bkg distributions
     bins = np.linspace(0, 1, 30)
-    plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_{nfolds}.pdf", transformPrediction=False, normalize=True)
-    plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_{nfolds}_log.pdf", transformPrediction=False, normalize=True, log_scale=True)
+    plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_{fold_idx}.pdf", transformPrediction=False, normalize=True)
+    plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_{fold_idx}_log.pdf", transformPrediction=False, normalize=True, log_scale=True)
     # 4. Plot the Sig/Bkg distributions with transformed scores
     bins = np.array([
                     0,
@@ -698,15 +904,16 @@ def dnn_train(model, data_dict, nfolds, training_features, batch_size, nepochs, 
                     2.0,
                     2.8,
                 ])
-    plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_transformed_{nfolds}.pdf", transformPrediction=True, normalize=True)
-    plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_transformed_{nfolds}_log.pdf", transformPrediction=True, normalize=True, log_scale=True)
+    plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_transformed_{fold_idx}.pdf", transformPrediction=True, normalize=True)
+    plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_transformed_{fold_idx}_log.pdf", transformPrediction=True, normalize=True, log_scale=True)
     # 4. Precision vs Recall curve
-    plotPrecisionRecall(score_dict, plt_save_path=f"{fold_save_path}/PrecisionRecall_curve_{nfolds}.pdf")
+    plotPrecisionRecall(score_dict, plt_save_path=f"{fold_save_path}/PrecisionRecall_curve_{fold_idx}.pdf")
     # 5. Confusion matrix
-    plotConfusionMatrix(score_dict, plt_save_path=f"{fold_save_path}/ConfusionMatrix_{nfolds}.pdf")
+    plotConfusionMatrix(score_dict, plt_save_path=f"{fold_save_path}/ConfusionMatrix_{fold_idx}.pdf")
     # 6. Feature importance
-    # plotFeatureImportance(model, training_features, plt_save_path=f"{fold_save_path}/FeatureImportance_{nfolds}.pdf")
+    # plotFeatureImportance(model, training_features, plt_save_path=f"{fold_save_path}/FeatureImportance_{fold_idx}.pdf")
 
+    callback.save_logs(f"{fold_save_path}/epoch{epoch}_training_logs.pkl")
     # calculate the scale, save it
     # save the resulting df for training
 def prepare_features(df, features, variation="nominal"):
@@ -725,7 +932,7 @@ def prepare_features(df, features, variation="nominal"):
         elif trf in df.columns:
             features_var.append(trf)
         else:
-            logger.warning(f"Variable {trf} not found in training dataframe!")
+            logger.info(f"Variable {trf} not found in training dataframe!")
     return features_var
 
 
@@ -781,7 +988,7 @@ def main():
     )
     parser.add_argument(
         "--batch-size",
-        default=35536,
+        default=15536,
         type=int,
         help="Batch size for training the DNN.",
     )
@@ -793,6 +1000,8 @@ def main():
         )
     args = parser.parse_args()
     logger.setLevel(args.log_level)
+    for handler in logger.handlers:
+        handler.setLevel(args.log_level)
     save_path = f"dnn/trained_models/{args.label}/{args.year}_{args.region}_{args.category}{DIR_TAG}"
     if not os.path.exists(save_path):
         raise ValueError(f"Save path {save_path} does not exist. Please run dnn_preprocessor.py first.")
@@ -801,6 +1010,8 @@ def main():
         training_features = pickle.load(f)
 
     nfolds = 4 #4
+
+    #Parallelization list intitializtation
     model_l = []
     data_dict_l = []
     fold_l = []
@@ -811,12 +1022,14 @@ def main():
     callback_l = []
     for i in range(nfolds):
         model = Net(len(training_features))
+
         df_train = pd.read_parquet(f"{save_path}/data_df_train_{i}.parquet") # these have been already scaled
         df_valid = pd.read_parquet(f"{save_path}/data_df_validation_{i}.parquet") # these have been already scaled
         df_eval = pd.read_parquet(f"{save_path}/data_df_evaluation_{i}.parquet") # these have been already scaled
 
         training_features = prepare_features(df_train, training_features) # add variation to the name
         logger.info(f"fold {i} training features: {training_features}")
+        logger.debug(f"df_train: {df_train}")
         data_dict = {
             "train": df_train,
             "validation": df_valid,
@@ -836,7 +1049,7 @@ def main():
         nepochs_l.append(nepochs)
         callback_l.append(TrainingLogger(log_interval=10))
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=nfolds) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
         # Submit each file check to the executor
         result_l = list(executor.map(
             dnn_train,
@@ -849,10 +1062,8 @@ def main():
             save_path_l,
             callback_l,
         ))
-        print(f"result_l: {result_l}")
-        print("Success!")
+        logger.debug(f"result_l: {result_l}")
+        logger.info("Success!")
 
-
-# Script entrypoint
 if __name__ == '__main__':
     main()

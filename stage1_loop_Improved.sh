@@ -18,6 +18,8 @@ Options:
   -n <njet>     nJet value (optional, default: 0)
   -b <bins>     Number of bins (optional, default: 100)
   -o <outAppend>  String to append to output files (default: today's date)
+  -r <region>   DNN training region (default: h-peak)
+  -t <category> DNN training category (default: vbf)
 EOF
     exit 1
 }
@@ -33,16 +35,13 @@ skipBadFiles="0"
 frac="0"
 njet="0"
 nbin="100"
-model_path="/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models"
-model_label="Run2_nanoAODv12_08June"
-# model_path="/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models" # Trained in signal region with VBF filter and M100-200 both
-# model_label="Run2_nanoAODv12_08June_signal_vbf"
-training_fold=3
+PWD="$(pwd)"
 outAppend="$(date +%b%d_%Y)"   # Default: today's date, e.g. Jun24_2025
-
+region="h-peak" # h-peak, h-sideband, signal
+category="vbf"
 
 # ----------- Parse options -----------
-while getopts ":hc:m:v:y:l:n:b:d:o:sf" option; do
+while getopts ":hc:m:v:y:l:n:b:d:o:sfr:t:" option; do
     case "$option" in
         h) usage ;;
         c) datasetYAML="$OPTARG" ;;
@@ -56,10 +55,26 @@ while getopts ":hc:m:v:y:l:n:b:d:o:sf" option; do
         o) outAppend="$OPTARG" ;;
         s) skipBadFiles="1" ;;
         f) frac="1" ;;
+        r) region="$OPTARG" ;;
+        t) category="$OPTARG" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
 done
+
+# ----------- Check environment and load modules -----------
+# if DNN training is enabled, check if the conda environment is `pfn_env` else it should be `yun_coffea_latest`
+if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" ]]; then
+    if [[ "$CONDA_PREFIX" != *"pfn_env"* ]]; then
+        echo "Please run this script in the pfn_env conda environment for DNN training"
+        exit 1
+    fi
+else
+    if [[ "$CONDA_PREFIX" != *"yun_coffea_latest"* ]]; then
+        echo "Please run this script in the yun_coffea_latest conda environment"
+        exit 1
+    fi
+fi
 
 # ----------- Utility functions -----------
 log_dir="log_old"
@@ -126,8 +141,15 @@ for year in "${years[@]}"; do
     command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --use_gateway --max_file_len 2500  "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --max_file_len 2500  "
 
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score "
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway "
+    ### DNN training parameters
+    training_fold=3
+    model_path="${PWD}/dnn/trained_models"
+    model_label="${label}/${year}_${region}_${category}_17July2025"
+    compact_tag="hpeak_17July2025"
+
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score --tag $compact_tag"
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
 
     command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l  "
@@ -209,6 +231,23 @@ for year in "${years[@]}"; do
             log "Compacting parquet data for year $year..."
             log "Command: $command_compact"
             eval "$command_compact"
+            ;;
+        dnn|dnn_pre|dnn_train)
+            log "Running DNN step(s) for year $year..."
+            cmd_preproc="python MVA_training/VBF/dnn_preprocessor.py --label $label --region $region --category $category --year $year"
+            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year"
+
+            if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then
+                log "Running DNN preprocessor..."
+                log "Command: $cmd_preproc"
+                eval "$cmd_preproc"
+            fi
+
+            if [[ "$mode" == "dnn_train" || "$mode" == "dnn" ]]; then
+                log "Running DNN training..."
+                log "Command: $cmd_train"
+                eval "$cmd_train"
+            fi
             ;;
         *)
             echo "Error: Invalid mode. Use 0, 1, 2, 3, all, zpt_fit, zpt_val, or calib."

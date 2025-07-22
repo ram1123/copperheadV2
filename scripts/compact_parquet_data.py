@@ -164,7 +164,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--load_path", required=True, help="Path to the original dataset")
     parser.add_argument("-c", "--compacted_dir", default="", help="Path to store the compacted dataset")
     parser.add_argument("-t", "--tag", default="", help="Tag for the compacted directory")
-    parser.add_argument("-m", "--model_path", required=True, help="Path to the DNN model directory")
+    parser.add_argument("-m", "--model_path", help="Path to the DNN model directory")
     parser.add_argument(
         "--fix_dimuon_mass",
         action="store_true",

@@ -504,7 +504,8 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     sig_processes = ["vbf_powheg_dipole"]
     # bkg_processes = ["dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     # bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
-    bkg_processes = ["dy_VBF_filter_NewZWgt", "dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
+    bkg_processes = ["dy_VBF_filter_NewZWgt", "dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
+    # bkg_processes = ["dy_VBF_filter_NewZWgt", "dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     # sig_processes = ["ggh_powhegPS"] # testing
     # bkg_processes = ["ewk_lljj_mll105_160_ptj0"] # testing
 
@@ -734,15 +735,15 @@ if __name__ == "__main__":
     client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
     logger.info("Local scale Client created")
 
-    base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
-    base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/compacted"
-    # base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
-    # base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
+    # base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
+    # base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/compacted"
+    base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
+    base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
     if not os.path.exists(base_path_compact):
         base_path = base_path_f1_0
     else:
         base_path = base_path_compact
-    base_path = base_path_compact
+    # base_path = base_path_compact
 
     # if base_path does not exist, raise error
     # if not os.path.exists(base_path):
