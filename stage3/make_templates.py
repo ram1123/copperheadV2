@@ -55,7 +55,7 @@ def load_stage2_output_hists(argset, parameters, dataset):
         raise ValueError("global_path is not set in parameters!")
         # return
 
-    path = f"{global_path}/stage2_histograms/{var_name}/{year}/"
+    path = f"{global_path}/stage2_histograms/{var_name}/{year}_h-peak_vbf_{year}_UpdatedQGL_17July_Test_RenameScore/{year}"
     paths = glob.glob(f"{path}/{dataset}*.pkl")
 
     logger.debug(f"dataset: {dataset}")
@@ -123,7 +123,7 @@ def getTH1D_from_numpy(group_hist, bin_edges, group_sumw2, centers, name):
     #     logger.info(f"Bin {i}, content: {hist.GetBinContent(i)}")
     return hist
 
-def to_templates(client, parameters, hist_df=None):
+def to_templates(parameters, hist_df=None):
     # datasets = list(parameters["datasets"]) # original
     # datasets = list(parameters["datasets"]) + ["ewk_lljj_mll105_160_py_dipole", "vbf_powheg_herwig"] # manually add partonShower
     datasets = list(parameters["datasets"])
@@ -323,7 +323,7 @@ def make_templates(args, parameters={}):
                     variation_dataset = "vbf_powheg_herwig"
                 elif ("EWK" in variation):
                     # ewk_lljj_mll50_mjj120_hist.pkl
-                    baseline_dataset = "ewk_lljj_mll105_160_ptj0"
+                    baseline_dataset = "ewk_lljj_mll50_mjj120"
                     variation_dataset = "ewk_lljj_mll105_160_py_dipole"
                 else:
                     logger.info("no parton shower exists for this sample!")

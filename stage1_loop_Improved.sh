@@ -117,8 +117,8 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2017"]=""
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
-    bkg_l=""
-    sig_l="Higgs"
+    bkg_l="DY"
+    sig_l=""
 fi
 
 chunksize=300000
@@ -144,14 +144,21 @@ for year in "${years[@]}"; do
     ### DNN training parameters
     training_fold=3
     model_path="${PWD}/dnn/trained_models"
-    model_label="${label}/${year}_${region}_${category}_17July2025"
-    compact_tag="hpeak_17July2025"
+    model_label="${label}/${year}_${region}_${category}_${year}_UpdatedQGL_17July_Test"
+    compact_tag="hpeak_UpdatedQGL_17July_Test"
 
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score --tag $compact_tag"
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
 
-    command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l --use_gateway "
+    # rename "Top" to "TT ST" in the $bkg_l for stage2
+    # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
+    bkg_l_stage2=""
+    if [[ "$bkg_l" == *"Top"* ]]; then
+        bkg_l_stage2="${bkg_l/Top/TT ST}"
+    fi
+    command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l  "
 
     command3="python run_stage3_vbf.py --base_path $save_path -y $year  "
@@ -234,8 +241,8 @@ for year in "${years[@]}"; do
             ;;
         dnn|dnn_pre|dnn_train)
             log "Running DNN step(s) for year $year..."
-            cmd_preproc="python MVA_training/VBF/dnn_preprocessor.py --label $label --region $region --category $category --year $year"
-            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year"
+            cmd_preproc="python MVA_training/VBF/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level INFO "
+            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --log-level INFO "
 
             if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then
                 log "Running DNN preprocessor..."

@@ -208,8 +208,8 @@ years:
           data_G: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/SingleMuon_Run2016G
           data_H: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/SingleMuon_Run2016H
         DY:
-        #   dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9
-        #   dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+          dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9
+          dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
           dy_M-50_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToMuMu_M-50_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
           dy_M-100To200_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
         Top:
@@ -246,8 +246,8 @@ years:
             data_E: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/SingleMuon_Run2016E
             data_F: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/SingleMuon_Run2016F
         DY:
-            # dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODAPVv9
-            # dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+            dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODAPVv9
+            dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
             dy_M-50_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/DYJetsToMuMu_M-50_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
             dy_M-100To200_MiNNLO: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
         Top:

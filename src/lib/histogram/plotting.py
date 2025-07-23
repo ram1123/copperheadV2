@@ -232,10 +232,10 @@ def plotDataMC_compare(
         for bkg_mc_sample, bkg_mc_hist in zip(bkg_mc_sample_names, bkg_MC_hist_l):
             f.write(f"{bkg_mc_sample}: {np.sum(bkg_mc_hist)}\n")
         if len(sig_MC_dict.keys()) > 0:
-            for sig_mc_sample, sig_mc_hist in sig_MC_dict.items():
+            for sig_mc_sample, sig_mc_hist in zip(sig_mc_sample, sig_MC_hist):
                 f.write(f"{sig_mc_sample}: {np.sum(sig_mc_hist)}\n")
         if plot_ratio:
-            f.write(f"Data/MC ratio: {ratio_hist}\n")
+            f.write(f"Data/MC ratio: {np.sum(ratio_hist)}\n")
     print(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
 
 

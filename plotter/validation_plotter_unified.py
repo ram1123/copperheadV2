@@ -17,6 +17,8 @@ import dask
 import logging
 from modules.utils import logger
 
+from scripts.compact_parquet_data import ensure_compacted
+
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
@@ -40,8 +42,8 @@ DYVBF = ["dy_VBF_filter"]
 group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
 
-    "DY": DY_aMCatNLO,
-    # "DY": DY_MiNNLO,
+    # "DY": DY_aMCatNLO,
+    "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
     "DYVBF": ["dy_VBF_filter"],
@@ -58,27 +60,6 @@ group_dict = {
     "GGH": ["ggh_powhegPS"],
     "VBF": ["vbf_powheg_dipole"]
 }
-
-def ensure_compacted(year, sample, load_path, compacted_dir):
-    compacted_path = f"{compacted_dir}/{sample}"
-    print(f"inside ensure compacted: {compacted_path}")
-    if not os.path.exists(compacted_path):
-        print(f"Compacted path for {year}/{sample} not found. Creating compacted dataset...")
-        # Read original data
-        orig_path = f"{load_path}/{sample}"
-        print(f"Original path: {orig_path}")
-        if not os.path.exists(orig_path):
-            print(f"Original path for {year}/{sample} not found. Skipping compacted dataset creation.")
-            return
-        inFile = dak.from_parquet(orig_path)
-        # Repartition and write to compacted path
-        target_chunksize = 500_000
-        inFile = inFile.repartition(rows_per_partition=target_chunksize)
-        # save to parquet file
-        inFile.to_parquet(compacted_path)
-        print(f"Compacted dataset created at {compacted_path}")
-    else:
-        pass
 
 def find_group_name(process_name, group_dict_param):
     # Avoid redefining group_dict from outer scope
@@ -612,9 +593,11 @@ if __name__ == "__main__":
     time_step = time.time()
 
     # check if the compacted path exists
-    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted_ch250k_WithDNNScore")
+    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted")
+
     for process in available_processes:
-        ensure_compacted(args.year, process, args.load_path, COMPACTED_PATH)
+        compacted_path_DNN = os.path.join(COMPACTED_PATH, process, "0")
+        ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
     args.load_path = COMPACTED_PATH
 
 

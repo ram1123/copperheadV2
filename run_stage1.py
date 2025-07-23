@@ -41,9 +41,6 @@ import gc
 import ctypes
 from src.lib.get_parameters import getParametersForYr
 
-from modules.utils import logger
-
-
 def trim_memory() -> int:
      libc = ctypes.CDLL("libc.so.6")
      return libc.malloc_trim(0)

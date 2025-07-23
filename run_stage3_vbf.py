@@ -9,6 +9,7 @@ from stage3.make_datacards import build_datacards
 import time
 import logging
 from modules.utils import logger
+logger.setLevel(logging.INFO)
 
 __all__ = ["dask"]
 
@@ -53,7 +54,7 @@ parameters = {
     "plot_vars": [],  # "dimuon_mass"],
     # "variables_lookup": variables_lookup,
     "dnn_models": {
-         "vbf": ["May28_NanoV12"],
+         "vbf": ["Run2_nanoAODv12_UpdatedQGL_17July"],
     },
     "bdt_models": {},
     #
@@ -73,18 +74,19 @@ parameters["grouping"] = {
     # "data_G": "Data",
     # "data_H": "Data",
     "data": "Data",
-    # # # # # "dy_m105_160_amc": "DY",
-    # # # # # "dy_m105_160_vbf_amc": "DY",
+    "dy_VBF_filter": "DY",
+    # "dy_m105_160_vbf_amc": "DY",
     # "dy_m105_160_amc_01j": "DYJ01",
     # "dy_m105_160_vbf_amc_01j": "DYJ01",
     # "dy_M-100To200_01j": "DYJ01",
     # "dy_m105_160_amc_2j": "DYJ2",
     # "dy_m105_160_vbf_amc_2j": "DYJ2",
     # "dy_M-100To200_2j": "DYJ2",
-    "dy_M-50_MiNNLO": "DYJ01",
-    "dy_M-100To200_MiNNLO": "DYJ2",
-    # # # # # "ewk_lljj_mll105_160_py_dipole": "EWK",
-    "ewk_lljj_mll105_160_ptj0": "EWK",
+    # "dy_M-50_MiNNLO": "DYJ01",
+    # "dy_M-100To200_MiNNLO": "DYJ2",
+    # "ewk_lljj_mll105_160_py_dipole": "EWK",
+    # "ewk_lljj_mll105_160_ptj0": "EWK",
+    "ewk_lljj_mll50_mjj120": "EWK",
     "ttjets_dl": "TT+ST",
     "ttjets_sl": "TT+ST",
     # "ttw": "TT+ST",
@@ -100,8 +102,7 @@ parameters["grouping"] = {
     "wwz": "VVV",
     "wzz": "VVV",
     "zzz": "VVV",
-    # # # # # #"ggh_amcPS": "ggH_hmm",
-    # "ggh_powhegPS": "ggH_hmm",
+    "ggh_powhegPS": "ggH_hmm",
     "vbf_powheg_dipole": "qqH_hmm",
 }
 
@@ -118,9 +119,9 @@ parameters["plot_groups"] = {
 
 if __name__ == "__main__":
     start_time = time.time()
-    from distributed import Client
-    client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
-    logger.info("Local scale Client created")
+    # from distributed import Client
+    # client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
+    # logger.info("Local scale Client created")
 
     # add MVA scores to the list of variables to plot
     dnn_models = list(parameters["dnn_models"].values())
@@ -131,14 +132,14 @@ if __name__ == "__main__":
             parameters["templates_vars"] += ["score_" + model]
 
     parameters["datasets"] = parameters["grouping"].keys()
+    logger.info(f"parameters: {parameters}")
 
-    # skip plots for now
     # # make plots
     # yields = plotter(client, parameters)
     # logger.info(yields)
 
     # save templates to ROOT files
-    yield_df = to_templates(client, parameters)
+    yield_df = to_templates(parameters)
     logger.info(f'run stage3 yield_df: {yield_df}')
     if yield_df is None or yield_df.empty:
         logger.error("Yield DataFrame is empty. Cannot build datacards.")

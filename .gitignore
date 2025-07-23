@@ -1,3 +1,4 @@
+*.pkl
 *.gz
 *.json
 *.yaml

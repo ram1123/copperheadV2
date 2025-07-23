@@ -27,20 +27,48 @@ else: # use local cluster
     print("Local scale Client created")
 
 
+
 years = ["2018"]
 LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/" \
             "stage1_output/{year}/f1_0/{sample}/*/*.parquet"
-COMPACTED_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/compacted/{year}/{sample}/"
-plotpath = "./plots/vbf_h_sidebands_data_mc_VBFFilter/"
+COMPACTED_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted/{sample}/"
+plotpath = "./plots/vbf_h_sidebands_data_mc_VBFFilter_v4/"
 os.makedirs(plotpath, exist_ok=True)
 
+# When I run ask some user information and save it inside plotpath in a .md file with date and time
+# This is useful for tracking changes and debugging
+# Also, copy this script to the plotpath
+import datetime
+user_info = f"Run on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+user_info += f"User: {os.getenv('USER', 'unknown')}\n"
+user_info += f"Gateway: {use_gateway}\n"
+user_info += f"Cluster: {client.cluster.name if hasattr(client, 'cluster') else 'local'}\n"
+# user_info += f"Workers: {client.n_workers}\n"
+# user_info += f"Threads per worker: {client.nthreads}\n"
+# user_info += f"Memory limit per worker: {client.memory_limit}\n"
+# also ask user input and append it to user_info
+user_input = input("Enter any additional information (e.g. changes made, issues encountered): ")
+if user_input:
+    user_info += f"User input: {user_input}\n"
+# Save user_info to a file in plotpath
+with open(os.path.join(plotpath, "user_info.md"), "w") as f:
+    f.write(user_info)
 
+# Copy this script to the plotpath
+import shutil
+script_path = os.path.abspath(__file__)
+shutil.copy(script_path, os.path.join(plotpath, os.path.basename(script_path)))
+
+
+
+
+# --- Background MC groups and their order ---
 bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "GGH", "VBF"]
 group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D"], #, "data_E", "data_F", "data_G", "data_H"],
     # "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"],
-    "DY": ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"],
-    # "DYVBF": ["dy_VBF_filter_NewZWgt"],
+    "DY": ["dy_M-100To200_aMCatNLO"],
+    "DYVBF": ["dy_VBF_filter_NewZWgt"],
     "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
     "EWK": ["ewk_lljj_mll50_mjj120"],
     "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
@@ -59,7 +87,7 @@ parser.add_argument("--minimum_set", action="store_true", help="Use minimum set 
 parser.add_argument("--ifStichTwoDYs", action="store_true", help="Stitch two DY samples together")
 args = parser.parse_args()
 
-json_path = "/depot/cms/users/shar1172/copperheadV2_main/src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+json_path = "/depot/cms/users/shar1172/copperheadV2_main/src/lib/histogram/plot_settings_vbfCat_MVA_input_nominal.json"
 with open(json_path, "r") as f:
     plot_vars_config = json.load(f)
 
@@ -110,6 +138,7 @@ for particle in args.variables:
             variables2plot.append(f"{particle}1_pt_over_mass")
             variables2plot.append(f"{particle}2_pt_over_mass")
     if ("jet" in particle):
+        # variables2plot.append(f"gjj_mass")
         variables2plot.append(f"njets_nominal")
         for kinematic in kinematic_vars:
             variables2plot.append(f"{particle}1_{kinematic}_nominal")
@@ -156,10 +185,15 @@ def apply_mjj_stitching(df_mc, grp):
         df_mc = df_mc.assign(
             gjj_mass=df_mc.gjj_mass.where(df_mc.gjj_mass > 350, np.nan)
         )
+        # now invert the df_mc:
+        df_mc = ~df_mc
+
+        print("Applying stitching for DY group: gjj_mass < 350 GeV")
     elif grp == "DYVBF":
         df_mc = df_mc.assign(
-            gjj_mass=df_mc.gjj_mass.where(df_mc.gjj_mass <= 350, np.nan)
+            gjj_mass=df_mc.gjj_mass.where(df_mc.gjj_mass > 350, np.nan)
         )
+        print("Applying stitching for DYVBF group: gjj_mass > 350 GeV")
     else:
         print(f"WARNING: apply_mjj_stitching called with unexpected group {grp}. No stitching applied.")
     return df_mc
@@ -192,7 +226,7 @@ with performance_report(filename="dask_profile_report.html"):
             ensure_compacted(yr, s)
     valid_data_dirs = []
     for s in group_dict["DATA"]:
-        compacted_dir = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/compacted/2018/{s}/"
+        compacted_dir = COMPACTED_PATH.format(year=years[0], sample=s)
         if os.path.exists(compacted_dir):
             parquet_files = [f for f in os.listdir(compacted_dir) if f.endswith(".parquet")]
             if parquet_files:
@@ -233,7 +267,8 @@ with performance_report(filename="dask_profile_report.html"):
             for s in samples:
                 ensure_compacted(yr, s)
 
-        mc_globs = [f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/compacted/2018/{s}/" for s in samples]
+        # mc_globs = [f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/compacted/2018/{s}/" for s in samples]
+        mc_globs = [COMPACTED_PATH.format(year=years[0], sample=s) for s in samples]
         all_parquet_files = []
         for d in mc_globs:
             all_parquet_files.extend(glob.glob(os.path.join(d, "*.parquet")))
@@ -275,7 +310,8 @@ with performance_report(filename="dask_profile_report.html"):
         hist_data = results[f"data_{var['name']}"][0]
         h_data = ROOT.TH1F(f"h_data_{var['name']}","Data / MC in VBF H-sidebands", nbins, xlow, xhigh)
         h_data.Sumw2()
-        legends = ROOT.TLegend(0.6, 0.7, 0.9, 0.9)
+        legends = ROOT.TLegend(0.5, 0.7, 0.95, 0.9)
+        legends.SetNColumns(2)
         for i, c in enumerate(hist_data):
             h_data.SetBinContent(i+1, c)
             h_data.SetBinError(  i+1, np.sqrt(c) )  # if you want Poisson errors
@@ -287,19 +323,16 @@ with performance_report(filename="dask_profile_report.html"):
         # for the stacked display we'll also keep each component
         stack = ROOT.THStack(f"stack_{var['name']}","")
 
-        # pick a few ROOT colors for your groups (you can adjust)
-        root_colors = [
-            ROOT.kOrange-3,
-            ROOT.kGreen+1,
-            ROOT.kAzure-9,
-            ROOT.kRed-7,
-            ROOT.kMagenta-7,
-            ROOT.kCyan+1,
-            ROOT.kBlue-3,
-            ROOT.kGray+2,
+        # ─── build a color palette for the ROOT histograms ────────────────────────────
+        # just feed the hex-strings straight through
+        hex_colors = [
+            "#3f90da", "#ffa90e", "#bd1f01", "#94a4a2",
+            "#832db6", "#a96b59", "#e76300", "#b9ac70",
+            "#717581", "#92dadd"
         ]
 
-            # petroff10 = ListedColormap(["#3f90da", "#ffa90e", "#bd1f01", "#94a4a2", "#832db6", "#a96b59", "#e76300", "#b9ac70", "#717581", "#92dadd"])
+        root_colors = [ROOT.TColor.GetColor(h) for h in hex_colors]
+
 
         for idx, grp in enumerate(bkg_MC_order):
             vals = results.get(f"{grp}_{var['name']}")
@@ -372,3 +405,9 @@ with performance_report(filename="dask_profile_report.html"):
 
 # Close the Dask client
 client.close()
+
+# append the running information including running time to the user_info.md file
+with open(os.path.join(plotpath, "user_info.md"), "a") as f:
+    f.write(f"\nRun completed on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    f.write(f"Number of tasks: {len(hist_tasks)}\n")
+    f.write(f"Results saved in: {plotpath}\n")

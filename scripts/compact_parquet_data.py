@@ -56,9 +56,10 @@ def is_typetracer_array(arr):
         return False
 
 def add_dnn_score(events_partition,
-              training_features,
-              model_cache,
-              nfolds, fix_dimuon_mass):
+                model_trained_path,
+                training_features,
+                model_cache,
+                nfolds, fix_dimuon_mass):
     if getattr(events_partition.layout.backend, "name", None) == "typetracer":
         return ak.with_field(
             events_partition,
@@ -80,9 +81,19 @@ def add_dnn_score(events_partition,
     for fold in range(nfolds):
         eval_folds = [(fold + f) % nfolds for f in [3]]
         eval_filter = getFoldFilter(events_partition, eval_folds, nfolds)
-        for feat in features_to_use:
+        for ix in range(len(features_to_use)):
+            feat = features_to_use[ix]
             input_arr_fold = input_arr_dict[feat]
-            input_arr_fold = ak.where(eval_filter, events_partition[feat], input_arr_fold)
+
+            # scale the events feature
+            in_feat = events_partition[feat]
+            scalers_path = f"{model_trained_path}/scalers_{fold}.npy"
+            scaler_mean, scaler_mean_std = np.load(scalers_path)
+            scaler_mean = scaler_mean[ix] # get feature relevant mean & std dev
+            scaler_mean_std = scaler_mean_std[ix] # get feature relevant mean & std dev
+            in_feat = (in_feat - scaler_mean) / scaler_mean_std
+
+            input_arr_fold = ak.where(eval_filter, in_feat, input_arr_fold)
             input_arr_dict[feat] = input_arr_fold
     input_arr = ak.concatenate(
         [input_arr_dict[feat][:, np.newaxis] for feat in features_to_use], axis=1
@@ -95,12 +106,13 @@ def add_dnn_score(events_partition,
         dnn_score_fold = dnnWrap(input_arr)
         dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)
         dnn_vbf_score = ak.where(eval_filter, dnn_vbf_score, dnn_score_fold)
-    # return events_partition.assign(dnn_vbf_score=dnn_vbf_score)
-    return ak.with_field(
-        events_partition,
-        dnn_vbf_score,
-        "dnn_vbf_score"
-    )
+        # transformed DNN
+        dnn_vbf_score_atanh = np.arctanh(np.clip(dnn_vbf_score, -0.999999999999, 0.999999999999))
+
+    # return the events with the dnn_vbf_score and dnn_vbf_score_atanh fields added
+    events_partition = ak.with_field(events_partition, dnn_vbf_score, "dnn_vbf_score")
+    events_partition = ak.with_field(events_partition, dnn_vbf_score_atanh, "dnn_vbf_score_atanh")
+    return events_partition
 
 def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path, add_dnn_score_flag=False, tag="", fix_dimuon_mass=False):
     compacted_path = os.path.join(compacted_dir, sample, "0") # Added zero to match the original path structure
@@ -146,6 +158,7 @@ def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path
     events = dak.map_partitions(
         add_dnn_score,
         events,
+        model_trained_path=model_trained_path,
         training_features=training_features,
         model_cache=model_cache,
         nfolds=nfolds,
