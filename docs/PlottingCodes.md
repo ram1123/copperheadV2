@@ -21,3 +21,15 @@ command to run:
 ```bash
 time python compare_dy_parquet_v2.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  110         --xmin 105         --xmax 160         --output compareDY_M50M100_110bins.pdf
 ```
+
+# Plot the DNN score for VBF using the stage-2 output
+
+- Available code:  [plot_dnn_score.py](../plotter/plot_dnn_score.py)
+
+command to run:
+
+```bash
+bash run_script_dnn_score_plot.sh
+```
+
+***NOTE***: In the script currently there is hardcoded path: `load_path`.

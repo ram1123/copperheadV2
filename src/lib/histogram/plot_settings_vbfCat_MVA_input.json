@@ -490,5 +490,13 @@
         "ylabel": "Events / 0.12",
         "xlabel": "$\\mathrm{tanh}^{-1}(DNN~VBF~Score)$",
         "color": "royalblue"
+    },
+    "DNN_score": {
+        "variable": "DNN_score",
+        "binning_linspace": [0, 1.0, 10],
+        "density": false,
+        "ylabel": "Events / 0.1",
+        "xlabel": "DNN VBF Score",
+        "color": "royalblue"
     }
 }

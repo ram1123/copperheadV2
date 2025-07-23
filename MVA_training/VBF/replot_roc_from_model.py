@@ -30,12 +30,12 @@ TRAINED_MODEL_DIR = (
     f"/depot/cms/users/shar1172/"
     f"copperheadV2_main/dnn/trained_models/"
     # f"{LABEL}/2018_h-peak_vbf_AllYear_16July/fold{FOLD}"
-    f"{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July/fold{FOLD}"
+    f"{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/fold{FOLD}"
 )
 DATA_PATH = (
     f"/depot/cms/users/shar1172/"
     # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_AllYear_16July"
-    f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July"
+    f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test"
 )
 FEATURES_PKL = f"{DATA_PATH}/training_features.pkl"
 

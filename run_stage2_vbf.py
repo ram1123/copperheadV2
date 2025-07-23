@@ -32,6 +32,8 @@ import copy
 import logging
 from modules.utils import logger
 
+from modules.utils import fillEventNans
+
 def get_variation(wgt_variation, sys_variation):
     if "nominal" in wgt_variation:
         if "nominal" in sys_variation:
@@ -45,33 +47,39 @@ def get_variation(wgt_variation, sys_variation):
             return None
 
 
-def fillEventNans(events, category="vbf"):
+def get_compactedPath(stage1_path):
     """
-    checked that this function is unnecssary for vbf category, but have it for robustness
+    check if we have another directory, but with "compacted" in the name.
+    if so, then return that instead
+    NOTE: this is a lazy method that just looks if compacted directory exists.
+    It doesn't check if all the necessary samples are in the directory.
     """
-    if category == "vbf":
-        for field in events.fields:
-            if "phi" in field:
-                events[field] = ak.fill_none(events[field], value=-10) # we're working on a DNN, so significant deviation may be warranted
-            else: # for all other fields (this may need to be changed)
-                events[field] = ak.fill_none(events[field], value=0)
+    compacted_stage1_path = stage1_path.replace("/f1_0", "/compacted")
+    logger.info(f"compacted_stage1_path: {compacted_stage1_path}")
+    if os.path.isdir(compacted_stage1_path):
+        return compacted_stage1_path
+    elif os.path.isdir(stage1_path):
+        return stage1_path
     else:
-        logger.info("ERROR: unsupported category!")
+        logger.critical(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
+        raise FileNotFoundError(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
+
+
+def applyCatAndFeatFilter(events, region="h-peak", category="vbf", process=None):
+    """
+
+    """
+    if process is None:
+        logger.info("please give appropriate sample name!")
         raise ValueError
-    return events
-
-def applyCatAndFeatFilter(events, region="h-peak", category="vbf"):
-    """
-
-    """
     # apply category filter
     dimuon_mass = events.dimuon_mass
     if region =="h-peak":
-        region = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
+        region_filter = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
     elif region =="h-sidebands":
-        region = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
+        region_filter = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
     elif region =="signal":
-        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
+        region_filter = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
 
     if category.lower() == "vbf":
         btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
@@ -85,15 +93,40 @@ def applyCatAndFeatFilter(events, region="h-peak", category="vbf"):
         cat_cut = ak.ones_like(dimuon_mass, dtype="bool")
 
     cat_cut = ak.fill_none(cat_cut, value=False)
+
+
+    if "dy_" in process:
+        is_vbf_filter = ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc")
+        if is_vbf_filter:
+            logger.info(f"applying VBF filter cut on: {process}")
+
+            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
+            cat_cut =  (cat_cut
+                        & vbf_filter
+            )
+        else:
+            logger.info(f"cutting off inclusive dy: {process}")
+            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
+            cat_cut =  (
+                cat_cut
+                & ~vbf_filter
+                )
+
     cat_filter = (
         cat_cut &
-        region
+        region_filter
     )
     events = events[cat_filter] # apply the category filter
     # logger.info(f"events dimuon_mass: {events.dimuon_mass.compute()}")
     # apply the feature filter (so the ak zip only contains features we are interested)
     # logger.info(f"features: {features}")
     # events = ak.zip({field : events[field] for field in features})
+    # NOTE: we overwrite dimuon mass as 125 if region is h-siebands
+    logger.debug(f"events after category and region filter: {events.fields}")
+    logger.debug(f"region: {region}, category: {category}, process: {process}")
+    if region =="h-sidebands":
+        logger.debug(f"Region: {region} - Setting dimuon_mass to 125.0 for all events in partition.")
+        events["dimuon_mass"] = 125 * ak.ones_like(events.dimuon_mass)
     return events
 
 class DNNWrapper(torch_wrapper):
@@ -176,7 +209,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
     data_filelist = []
     for sample in data_l:
-        data_filelist += glob.glob(f"{stage1_path}/{sample}/*.parquet")
+        data_filelist += glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
         # return_filelist_dict[sample] = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
 
     if len(data_filelist) != 0:
@@ -190,8 +223,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     sig_sample_dict = {
         "VBF" : [
             "vbf_powheg_dipole", # pythia dipole
-            # "vbf_powheg_herwig", # herwig
-            # "vbf_powhegPS", # pythia 8
+            "vbf_powheg_herwig", # herwig
+            "vbf_powhegPS", # pythia 8
         ],
         "GGH" : [
             "ggh_powhegPS"
@@ -214,7 +247,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
     sig_filelist = []
     for sample in sig_sample_l:
-        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*.parquet")
+        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
         if len(sample_filelist) == 0:
             logger.warning(f"No {sample} files were found!")
             continue
@@ -233,10 +266,9 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             # "dy_M-50",
             # "dy_M-100To200_MiNNLO",
             # "dy_M-50_MiNNLO",
-            # "dy_M-100To200_aMCatNLO",
-            # "dy_M-50_aMCatNLO",
-            # "dy_VBF_filter", # VBF filter
-            "dy_VBF_filter_NewZWgt", # VBF filter
+            "dy_M-100To200_aMCatNLO",
+            "dy_M-50_aMCatNLO",
+            "dy_VBF_filter"
         ],
         "TT" : [
             "ttjets_dl",
@@ -245,10 +277,6 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
         "ST" : [
             "st_tw_top",
             "st_tw_antitop",
-            "st_t_antitop",
-            "st_t_top",
-            "st_s_lep",
-            "tZq_ll",
         ],
         "EWK" : [
             "ewk_lljj_mll105_160_ptj0", # herwig
@@ -279,7 +307,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
     bkg_filelist = []
     for sample in bkg_sample_l:
-        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*.parquet")
+        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
         if len(sample_filelist) == 0:
             logger.critical(f"No {sample} files were found!")
             continue
@@ -404,10 +432,8 @@ if __name__ == "__main__":
     data_samples = args.data_samples
     logger.info(f"data_samples: {data_samples}")
 
-    # stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0"
-    # stage1_path = f"{base_path}/stage1_output/{args.year}/compacted"  # use compacted files for speedup
-    stage1_path = f"{base_path}/stage1_output/{args.year}/compacted_ch250k"  # use compacted files for speedup
-
+    stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0" # FIXME
+    stage1_path = get_compactedPath(stage1_path)# get compacted stage1 output if they exist
     if not os.path.exists(stage1_path):
         logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
         raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
@@ -419,17 +445,14 @@ if __name__ == "__main__":
 
     nfolds = 4  # Define nfolds once for all samples
     for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
+        logger.info(f"Processing sample type: {sample_type}, number of files: {len(sample_l)}")
+        logger.debug(f"Sample list: {sample_l}")
         if len(sample_l) == 0:
             logger.critical(f"No files for {sample_type} is found! Skipping!")
             continue
 
         events_stage1 = dak.from_parquet(sample_l)
         logger.info(f"Sample type: {sample_type}")
-        # if "powheg" not in sample_type:
-            # target_chunksize = 1_000_000
-            # events_stage1 = events_stage1.repartition(rows_per_partition=target_chunksize)
-        # else:
-            # logger.info("No repartitioning for signal samples")
 
         model_trained_path = f"{args.model_path}/{args.model_label}"
 
@@ -439,12 +462,12 @@ if __name__ == "__main__":
         logger.info(f"training_features: {training_features}")
         logger.info(f"len training_features: {len(training_features)}")
 
-        # Load and Cache models for each fold
-        model_cache = {}
-        for fold in range(nfolds):
-            model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
-            model_cache[fold] = DNNWrapper(model_load_path)
-            logger.info(f"Loaded model for fold {fold} from {model_load_path}")
+        # # Load and Cache models for each fold
+        # model_cache = {}
+        # for fold in range(nfolds):
+        #     model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
+        #     model_cache[fold] = DNNWrapper(model_load_path)
+        #     logger.info(f"Loaded model for fold {fold} from {model_load_path}")
 
         # ------------------------------------------
         # Initialize sample histogram to save later
@@ -481,7 +504,6 @@ if __name__ == "__main__":
         # add axis for systematic variation
         score_hist = score_hist.StrCat(variations, name="variation")
         # add score category
-        # bins = np.linspace(0, 1, num=13)  # TODO: update this
         bins = np.array([
             0,
             0.07,
@@ -530,8 +552,8 @@ if __name__ == "__main__":
                 logger.warning(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
                 continue
 
-            events = applyCatAndFeatFilter(events_stage1, region=region, category=category)
-            events = fillEventNans(events, category=category)  # for vbf category, this may be unnecessary
+            events = applyCatAndFeatFilter(events_stage1, region=region, category=category, process=sample_type)
+            events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
 
             features_to_use = prepare_features(events, training_features, variation=variation)  # add variations where applicable
             logger.debug(f"features_to_use: {features_to_use}")
@@ -540,15 +562,25 @@ if __name__ == "__main__":
             nan_val = -999.0
 
             input_arr_dict = {feat: nan_val * ak.ones_like(events.event) for feat in features_to_use}
-            logger.info(f" input_arr_dict b4: {input_arr_dict}")
+            logger.debug(f" input_arr_dict b4: {input_arr_dict}")
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
-                logger.info(f" eval_folds: {eval_folds}")
+                logger.debug(f" eval_folds: {eval_folds}")
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
 
-                for feat in features_to_use:
+                for ix in range(len(features_to_use)):
+                    feat = features_to_use[ix]
                     input_arr_fold = input_arr_dict[feat]
-                    input_arr_fold = ak.where(eval_filter, events[feat], input_arr_fold)
+
+                    # scale the events feature
+                    in_feat = events[feat]
+                    scalers_path = f"{model_trained_path}/scalers_{fold}.npy"
+                    scaler_mean, scaler_mean_std = np.load(scalers_path)
+                    scaler_mean = scaler_mean[ix] # get feature relevant mean & std dev
+                    scaler_mean_std = scaler_mean_std[ix] # get feature relevant mean & std dev
+                    in_feat = (in_feat - scaler_mean) / scaler_mean_std
+
+                    input_arr_fold = ak.where(eval_filter, in_feat, input_arr_fold)
                     input_arr_dict[feat] = input_arr_fold
 
             # ---------------------------------------------------
@@ -563,11 +595,16 @@ if __name__ == "__main__":
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
-                dnnWrap = model_cache[fold]
+                model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
+                logger.debug(f"model_load_path: {model_load_path}")
+                # dnnWrap = model_cache[fold]
+                dnnWrap = DNNWrapper(model_load_path)
                 dnn_score_fold = dnnWrap(input_arr)
                 dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)  # DNN output is 2 dimensional
 
                 dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
+            # transform dnn_score
+            dnn_score = np.arctanh(dnn_score)
 
             # ---------------------------------------------------
             # Now onto converting DNN score as histograms
