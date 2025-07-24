@@ -27,7 +27,8 @@ base_script = ["python", "plotter/validation_plotter_unified.py"]
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterPlusaMCatNLO/"
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterPlusaMCatNLO_NoMjjCut/"
 
-SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_17July2025_DNN/"
+SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_17July2025/"
+# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_17July2025_DNN_FixDiMuonMass/"
 
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted/"
@@ -36,12 +37,13 @@ SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeakWithDYVBF/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeak_16July2025_FixDimuonMass/"
 
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/f1_0/"
+LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted/"
-LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test_FixDimuonMass/"
-# years = ["2016preVFP", "2016postVFP", "2017", "2018"]
+# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test_FixDimuonMass/"
+# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test/"
+years = ["2016preVFP", "2016postVFP", "2017", "2018"]
 # years = ["2016preVFP", "2016postVFP", "2017"]
-years = ["2018"]
+# years = ["2018"]
 
 # categories = ["vbf", "ggh", "nocat"]
 # categories = ["nocat", "ggh"]
@@ -50,7 +52,7 @@ categories = ["vbf"]
 # categories = ["nocat"]
 
 # Boolean flags
-vbf_filter_study_options = [True, False]
+vbf_filter_study_options = [False]
 remove_zpt_weights_options = [False]
 debug_options = False
 min_set_of_vars = False  # If True, only use a minimal set of variables  to plot
@@ -75,7 +77,7 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
          "--load", load_path,
          "-cat", cat,
          "--use_gateway",
-         "--dnn-score"
+        #  "--dnn-score"
          ]
     )
 

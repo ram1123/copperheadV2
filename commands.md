@@ -1,7 +1,7 @@
-# 23 July 2025
+# 24 July 2025
 
 ```bash
-
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July  -v 12 -y "2018 2017 2016preVFP 2016postVFP" -m compact)
 ```
 
 ## Z-pT reweighting

@@ -69,6 +69,11 @@ if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" ]]; the
         echo "Please run this script in the pfn_env conda environment for DNN training"
         exit 1
     fi
+elif [[ "$mode" == "zpt_fit" || "$mode" == "zpt_fit0" || "$mode" == "zpt_fit1" || "$mode" == "zpt_fit2" || "$mode" == "zpt_fit12" ]]; then
+    if [[ "$CONDA_PREFIX" != *"coffea_latest"* ]]; then
+        echo "Please run this script in the coffea_latest conda environment for ZpT fitting"
+        exit 1
+    fi
 else
     if [[ "$CONDA_PREFIX" != *"yun_coffea_latest"* ]]; then
         echo "Please run this script in the yun_coffea_latest conda environment"
@@ -232,7 +237,7 @@ for year in "${years[@]}"; do
             ;;
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             log "Running ZpT fitting step(s)..."
-            dy_sample="aMCatNLO" # FIXME: Hardcoded DY sample name
+            dy_sample="MiNNLO" # FIXME: Hardcoded DY sample name: aMCatNLO or MiNNLO
             cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year -dy_sample $dy_sample "
             cmd1="python data/zpt_rewgt/fitting/do_f_test.py               -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend --debug"
             cmd2="python data/zpt_rewgt/fitting/get_polyFit.py             -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend"

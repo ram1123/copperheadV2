@@ -5,23 +5,14 @@ import argparse
 from distributed import Client
 import logging
 from modules.utils import logger
-import sys
 import pickle
 import numpy as np
-from functools import partial
 
-
-# Importing DNNWrapper from run_stage2_vbf.py
-from run_stage2_vbf import DNNWrapper, prepare_features, fillEventNans, getFoldFilter
+from run_stage2_vbf import DNNWrapper, prepare_features, getFoldFilter
 
 
 def ensure_compacted(year, sample, load_path, compacted_path):
     logger.debug(f"Checking compacted dataset: {compacted_path}")
-
-    # if dir compacted_dir exists, then delete the directory
-    # if os.path.exists(compacted_dir): # For debugging purposes
-    #     logger.debug(f"Compacted directory exists: {compacted_dir}. Deleting the directory.")
-    #     os.system(f"rm -rf {compacted_dir}")
 
     if not os.path.exists(compacted_path):
         logger.info(f"Compacted dataset not found. Creating at {compacted_path}")
@@ -46,14 +37,6 @@ def ensure_compacted(year, sample, load_path, compacted_path):
         logger.debug(f"Dataset successfully compacted.")
     else:
         logger.debug(f"Compacted dataset already exists at {compacted_path}")
-
-def is_typetracer_array(arr):
-    # Checks if any backend is typetracer in modern awkward
-    try:
-        return arr.layout.backend.name == "typetracer"
-    except Exception:
-        # fallback for older awkward/empty arrays
-        return False
 
 def add_dnn_score(events_partition,
                 model_trained_path,
