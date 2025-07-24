@@ -123,6 +123,22 @@ fi
 
 chunksize=300000
 
+echo "Running with the following parameters:"
+echo "  Dataset YAML: $datasetYAML"
+echo "  NanoAOD version: $NanoAODv"
+echo "  Years: ${years[@]}"
+echo "  Label: $label"
+echo "  Save path: $save_path"
+echo "  Debug mode: $debug"
+echo "  Mode: $mode"
+echo "  Skip bad files: $skipBadFiles"
+echo "  Fraction: $frac"
+echo "  nJet: $njet"
+echo "  Number of bins: $nbin"
+echo "  Output append: $outAppend"
+echo "  Region: $region"
+echo "  Category: $category"
+
 # ----------- Main loop -----------
 for year in "${years[@]}"; do
     data_l="${data_l_dict[$year]}"
@@ -216,10 +232,10 @@ for year in "${years[@]}"; do
             ;;
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             log "Running ZpT fitting step(s)..."
-            dy_sample="aMCatNLO"
+            dy_sample="aMCatNLO" # FIXME: Hardcoded DY sample name
             cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year -dy_sample $dy_sample "
-            cmd1="python data/zpt_rewgt/fitting/do_f_test.py --run_label $label --year $year --nbins $nbin --njet $njet --outAppend $outAppend --debug"
-            cmd2="python data/zpt_rewgt/fitting/get_polyFit.py -l $label -y $year --nbins $nbin --njet $njet --outAppend $outAppend"
+            cmd1="python data/zpt_rewgt/fitting/do_f_test.py               -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend --debug"
+            cmd2="python data/zpt_rewgt/fitting/get_polyFit.py             -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend"
             [[ "$mode" =~ ^(zpt_fit0|zpt_fit)$ ]] && { log "Command0: $cmd0"; eval "$cmd0"; }
             [[ "$mode" =~ ^(zpt_fit1|zpt_fit|zpt_fit12)$ ]] && { log "Command1: $cmd1"; eval "$cmd1"; }
             [[ "$mode" =~ ^(zpt_fit2|zpt_fit|zpt_fit12)$ ]] && { log "Command2: $cmd2"; eval "$cmd2"; }

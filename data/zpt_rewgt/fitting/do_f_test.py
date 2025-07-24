@@ -14,8 +14,8 @@ from bin_definitions import poly_fit_ranges, define_custom_binning
 
 # Argument parsing
 parser = argparse.ArgumentParser()
-parser.add_argument("--run_label", type=str, help="Run label", required=True)
-parser.add_argument("--years", type=str, nargs="+", help="Year", required=True)
+parser.add_argument("-l", "--run_label", type=str, help="Run label", required=True)
+parser.add_argument("-y", "--years", type=str, nargs="+", help="Year", required=True)
 parser.add_argument("--njet", type=int, nargs="+", default=[0, 1, 2], help="Number of jets")
 parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("--outAppend", type=str, default="", help="Append to output file name")

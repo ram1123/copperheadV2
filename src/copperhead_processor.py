@@ -1188,12 +1188,6 @@ class EventProcessor(processor.ProcessorABC):
 
         # # # TODO: JER nuisances
 
-
-
-
-
-
-
         # # ------------------------------------------------------------#
         # # Apply genweights, PU weights
         # # and L1 prefiring weights

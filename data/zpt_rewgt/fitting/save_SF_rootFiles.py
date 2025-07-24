@@ -106,8 +106,6 @@ if __name__ == "__main__":
     else:
         years = [args.year]
 
-
-
     for year in years:
         plot_path = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
         os.makedirs(plot_path, exist_ok=True)

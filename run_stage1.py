@@ -123,6 +123,7 @@ def divide_chunks(data: dict, SIZE: int):
 
 
 if __name__ == "__main__":
+    t0 = time.perf_counter()
     parser = argparse.ArgumentParser()
     parser.add_argument(
     "-save",
@@ -191,6 +192,8 @@ if __name__ == "__main__":
     # make NanoAODv into an interger variable
     logger.info(f"args.NanoAODv: {args.NanoAODv}")
     logger.info(f"args.year: {args.year}")
+    t1 = time.perf_counter()
+    logger.info(f"[Timing] Time taken to parse arguments: {round(t1 - t0, 3)} seconds")
 
     time_step = time.time()
 
@@ -224,6 +227,8 @@ if __name__ == "__main__":
         else:
             client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             logger.info("Local scale Client created")
+        t2 = time.perf_counter()
+        logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
         #-------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
         logger.debug(f"Sample path: {sample_path}")
@@ -251,7 +256,7 @@ if __name__ == "__main__":
 
 
         with performance_report(filename="dask-report.html"):
-            for dataset, sample in tqdm.tqdm(samples.items()):
+            for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 # if dataset in ["ggh_amcPS", "ggh_powhegPS"]: # FIXME: temporary line to skip some datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
@@ -272,6 +277,8 @@ if __name__ == "__main__":
                     to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
                     logger.info(f"save_path: {save_path}")
+                    t3 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - var_step, 3)} seconds")
                     if not os.path.exists(save_path):
                         logger.debug(f"Path: {save_path} is going to be created")
                         os.makedirs(save_path)
@@ -282,13 +289,20 @@ if __name__ == "__main__":
                         for file in filelist:
                             os.remove(file)
                     logger.debug(f"Directory created or cleaned: {save_path}")
+                    t4 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to create directory and clean files: {round(t4 - t3, 3)} seconds")
+                    # to_persist.persist().to_parquet
                     to_persist.persist().to_parquet(save_path)
                     # to_persist.to_parquet(save_path)
+                    t5 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to save parquet files: {round(t5 - t4, 3)} seconds")
 
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
                 sample_elapsed = round(time.time() - sample_step, 3)
                 logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
+                t6 = time.perf_counter()
+                logger.info(f"[Timing] Time taken to process sample {dataset}: {round(t6 - t2, 3)} seconds")
 
     else:
         client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
