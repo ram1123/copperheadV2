@@ -51,10 +51,10 @@ def parse_arguments():
 
 def make_combined_function(order0, order, xmin, xmax):
     """
-    Builds a piecewise function that is zero below x=0,
-    uses a polynomial of degree 'order0' up to xmin,
-    then a polynomial of degree 'order' between xmin and xmax,
-    and a flat line beyond xmax.
+    Builds a piecewise function:
+    - Polynomial of degree 'order0' from 0 to xmin
+    - Polynomial of degree 'order' from xmin to xmax, shifted to ensure continuity
+    - Linear function y = m·x + c beyond xmax, matched to the value and slope at xmax
     """
     def func(x, par):
         xx = x[0]
@@ -63,20 +63,26 @@ def make_combined_function(order0, order, xmin, xmax):
 
         # Polynomial f0 up to xmin
         f0_xmin = sum(par[i] * (xmin**i) for i in range(order0 + 1))
-        # Polynomial f1 up to xmin and xmax
-        f1_xmin = sum(par[order0 + 1 + i] * (xmin**i) for i in range(order + 1))
-        f1_xmax = sum(par[order0 + 1 + i] * (xmax**i) for i in range(order + 1))
-        # Flat constant beyond xmax
-        flat_c = par[order0 + order + 2]
 
-        if xx <= xmin and xx >= 0:
+        # Polynomial f1 up to xmin and xmax
+        f1_coeffs = [par[order0 + 1 + i] for i in range(order + 1)]
+        f1_xmin = sum(f1_coeffs[i] * (xmin**i) for i in range(order + 1))
+        f1_xmax = sum(f1_coeffs[i] * (xmax**i) for i in range(order + 1))
+
+        # Evaluate derivative of f1 at xmax to compute slope for linear extension
+        df1_xmax = sum(i * f1_coeffs[i] * (xmax**(i - 1)) for i in range(1, order + 1))
+
+        if 0 <= xx <= xmin:
             return sum(par[i] * (xx**i) for i in range(order0 + 1))
         elif xx < xmax:
-            return (sum(par[order0 + 1 + i] * (xx**i) for i in range(order + 1))
-                    + (f0_xmin - f1_xmin))
+            return sum(f1_coeffs[i] * (xx**i) for i in range(order + 1)) + (f0_xmin - f1_xmin)
         else:
-            # return (sum(par[order0 + 1 + i] * (xx**i) for i in range(order + 1)) + (f0_xmin - f1_xmin) + (f1_xmax - flat_c))
-            return flat_c + (f0_xmin - f1_xmin) + (f1_xmax - flat_c)
+            # Straight line y = m·x + c, passing through (xmax, f_combined(xmax))
+            m = df1_xmax  # slope from derivative
+            y_at_xmax = f1_xmax + (f0_xmin - f1_xmin)
+            c = y_at_xmax - m * xmax
+            return m * xx + c
+
     return func
 
 def rebin_histogram(hist, edges):
@@ -107,7 +113,7 @@ def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
     Fits a constant line to hist_sf between [xmin, xmax].
     Returns the TF1 object for that line.
     """
-    func = ROOT.TF1("flat_line", "[0]", xmin, xmax)
+    func = ROOT.TF1("flat_line", "[0]*x + [1]", xmin, xmax)
     result = hist_sf.Fit(func, fit_opts, "", xmin, xmax)
     return func
 
@@ -128,7 +134,7 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     # f_flat = fit_polynomial(hist_sf, order1, xmax1, global_xmax, fit_opts="L I S R")
 
     # Build combined TF1
-    npar = (order0 + 1) + (order1 + 1) + 1  # coefficients: f0, f1, flat_c
+    npar = (order0 + 1) + (order1 + 1) + 2  # coefficients: f0, f1, flat_c
     comb_func = make_combined_function(order0, order1, xmin1, xmax1)
     f_combined = ROOT.TF1("f_combined", comb_func, 0.0, global_xmax, npar)
 
@@ -193,8 +199,10 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
             leg = ROOT.TLegend(0.0, 0.7, 0.4, 0.9)
         elif njet == 1:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
-            leg = ROOT.TLegend(0.7, 0.3, 0.9, 0.5)
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     elif year == "2017":
         if njet == 0:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
@@ -208,8 +216,9 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
     elif year == "2016postVFP":
         if njet == 0:
             leg = ROOT.TLegend(0.0, 0.7, 0.4, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         elif njet == 1:
-            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
         else:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
@@ -346,7 +355,8 @@ def main():
                 params_dict[f"f1_p{i}"] = f1.GetParameter(i)
                 params_dict[f"f1_p{i}_err"] = f1.GetParError(i)
 
-            params_dict["horizontal_c0"] = f_flat.GetParameter(0)
+            params_dict["horizontal_mx"] = f_flat.GetParameter(0)
+            params_dict["horizontal_c0"] = f_flat.GetParameter(1)
             params_dict["polynomial_range"] = {"xmin1": xmin1, "xmax1": xmax1}
 
             year_dict[f"njet_{njet}"] = {nbins_new: params_dict}
@@ -355,7 +365,9 @@ def main():
         save_dict[year] = year_dict
 
     # Merge with existing YAML or create fresh
-    yaml_path = "./zpt_rewgt_params_minnlo_may31_test.yaml"
+    in_dir_yaml = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
+    os.makedirs(in_dir_yaml, exist_ok=True)
+    yaml_path = f"{in_dir_yaml}/zpt_rewgt_params_{args.dy_sample}.yaml"
     if os.path.isfile(yaml_path):
         existing = OmegaConf.load(yaml_path)
         merged = OmegaConf.merge(existing, {"gof_results": save_dict})

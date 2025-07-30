@@ -27,7 +27,7 @@ base_script = ["python", "plotter/validation_plotter_unified.py"]
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterPlusaMCatNLO/"
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterPlusaMCatNLO_NoMjjCut/"
 
-SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_17July2025/"
+SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/CheckNewZpT_28July2025/"
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_17July2025_DNN_FixDiMuonMass/"
 
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/f1_0/"
@@ -36,37 +36,37 @@ SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_OLD_WithDNNScore_MassSetTo125/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeakWithDYVBF/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeak_16July2025_FixDimuonMass/"
-
+# python run_plotter.py
 LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test_FixDimuonMass/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test/"
 years = ["2016preVFP", "2016postVFP", "2017", "2018"]
 # years = ["2016preVFP", "2016postVFP", "2017"]
-# years = ["2018"]
+# years = ["2018", "2017"]
 
-# categories = ["vbf", "ggh", "nocat"]
+categories = ["vbf", "ggh", "nocat"]
 # categories = ["nocat", "ggh"]
 # categories = ["vbf", "ggh"]
-categories = ["vbf"]
+# categories = ["vbf"]
 # categories = ["nocat"]
 
 # Boolean flags
-vbf_filter_study_options = [False]
-remove_zpt_weights_options = [False]
+vbf_filter_study_options = [False, True]  # True to apply VBF filter study, False to skip it
+remove_zpt_weights_options = [False, True]  # True to remove zpt weights, False to keep them
 debug_options = False
 min_set_of_vars = False  # If True, only use a minimal set of variables  to plot
 
 region_options = [
-    # ["h-sidebands", "z-peak", "signal", "h-peak"]
-    ["h-sidebands", "signal", "h-peak"]
+    ["h-sidebands", "z-peak", "signal", "h-peak"]
+    # ["h-sidebands", "signal", "h-peak"]
     # ["h-sidebands", "z-peak"]
     # ["h-sidebands"]
 ]
-# njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets
+njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets
 # njets_options = ["inclusive", "0", "1"]  # inclusive = No cut on nJets
 # njets_options = [ "0", "1"]  # inclusive = No cut on nJets
-njets_options = ["inclusive"]  # inclusive = No cut on nJets
+# njets_options = ["inclusive"]  # inclusive = No cut on nJets
 # njets_options = ["2"]  # inclusive = No cut on nJets
 
 def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_weights, region, njets):
@@ -114,20 +114,25 @@ def run_all_combos():
             njets_options
         )
         for cat, vbf_flag, zpt_flag, region, njets in combo_iter:
-            i += 1
             save_path = str(Path(f"{SAVE_PATH}") / f"VBFfilter_{vbf_flag}")
             # if cat == "ggh" and vbf_flag:
             #     logger.debug(f"Skipping ggh with vbf_filter_study: {i}")
             #     continue  # skip --vbf_filter_study for ggh, not meaningful
 
-            if cat == "vbf" and (not (njets == "inclusive" or njets == "2")):
-                logger.info(f"Skipping vbf with njets: {njets}")
+            if cat == "vbf" and (not (njets == "inclusive" )):
+                logger.debug(f"Skipping vbf with njets: {njets}")
                 continue  # skip njets for vbf, not meaningful
+
+            # skip if vbf_filter_study_options is True then remove "z-peak" from region
+            if vbf_flag and "z-peak" in region:
+                region = [r for r in region if r != "z-peak"]
+                logger.debug(f"Removing 'z-peak' from region for vbf_filter_study: {region}")
 
             cmd = build_command(year, save_path, load_path, cat, vbf_flag, zpt_flag, region, njets)
             logger.info(f"[{year}][{cat}][{i}] Running: {' '.join(cmd)}")
             if not DRY_RUN:
                 subprocess.run(cmd, check=True)
+            i += 1
 
 if __name__ == "__main__":
     run_all_combos()

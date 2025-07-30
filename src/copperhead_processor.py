@@ -11,7 +11,7 @@ from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
 from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear
 # from src.corrections.weight import Weights
-from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
+from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old, get_jetpuid_weights_eta_dependent
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -1842,18 +1842,6 @@ class EventProcessor(processor.ProcessorABC):
         is_2017 = "2017" in year
         if NanoAODv == 9  or NanoAODv == 12:
             pass_jet_puid = jet_puid(jets, self.config)
-            # Jet PUID scale factors, which also takes pt < 50 into account within the function
-            if is_mc:
-                if is_2017:
-                    logger.info("doing jet puid weights!")
-                    jet_puid_opt = self.config["jet_puid"]
-                    pt_name = "pt"
-                    puId = jets.puId
-                    jetpuid_weight = get_jetpuid_weights_old(
-                        self.evaluator, year, jets, pt_name,
-                        jet_puid_opt, pass_jet_puid
-                    )
-                    # we add the jetpuid_weight later in the code
         else: # NanoAODv12 doesn't have Jet_PuID yet
             pass_jet_puid = ak.ones_like(pass_jet_id, dtype="bool")
         # ------------------------------------------------------------#
@@ -1862,7 +1850,7 @@ class EventProcessor(processor.ProcessorABC):
         # get QGL cut
         if NanoAODv == 9 :
             jets["qgl"] = jets.qgl
-        elif (NanoAODv == 12 and year in ["2016preVFP", "2016postVFP", "2017", "2018"]):
+        elif ((NanoAODv == 12 or NanoAODv == 15) and year in ["2016preVFP", "2016postVFP", "2017", "2018"]): # NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2
             jets["qgl"] = jets.qgl
             jets["btagPNetQvG"] = jets.btagPNetQvG
             jets["btagDeepFlavQG"] = jets.btagDeepFlavQG
@@ -1877,16 +1865,16 @@ class EventProcessor(processor.ProcessorABC):
         jetHorn_pt_cut = (jets.pt > self.config["jet_pt_cut"]) # pt cut on jethorn doesn't change
         jetHorn_puid_cut = (jets.puId >= 7) | (jets.pt >= 50) # tight pu Id #FIXME: hardcoded puID
         jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
-        jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
+        jetHorn_PUID_cut = ak.ones_like(pass_jet_puid, dtype="bool") # default value is True
+        jetHorn_PUID_cut = ak.where(jetHorn_region, jetHorn_cut, jetHorn_PUID_cut)
 
         # add additonal pT cut for the forward regions  ----------------------------------------------
-
-
         jet_selection = (
-            pass_jet_id
+            jet_pt_cut
+            & pass_jet_id
             & pass_jet_puid
             & clean
-            & jet_pt_cut
+            & jetHorn_PUID_cut
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
 
@@ -1897,8 +1885,8 @@ class EventProcessor(processor.ProcessorABC):
         jets = ak.to_packed(jets)
 
         # apply jetpuid if not have done already
-        if not is_2017 and is_mc:
-            jetpuid_weight =get_jetpuid_weights(year, jets, self.config)
+        if is_mc:
+            jetpuid_weight =get_jetpuid_weights_eta_dependent(year, jets, self.config) # FIXME
 
         if is_mc:
             # now we add jetpuid_wgt
