@@ -391,6 +391,21 @@ if __name__ == "__main__":
         help="list of sig samples represented by shorthands: ggH, VBF",
     )
     parser.add_argument(
+        "-nv",
+        "--no_variations",
+        dest="no_variations",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="If true, runs with all variations, otherwise only nominal",
+    )
+    parser.add_argument(
+        "--save_postfix",
+        default="",
+        type=str,
+        action="store",
+        help="Postfix to append to saved histogram files."
+    )
+    parser.add_argument(
         "--log-level",
         default=logging.INFO,
         type=lambda x: getattr(logging, x),
@@ -454,7 +469,7 @@ if __name__ == "__main__":
         events_stage1 = dak.from_parquet(sample_l)
         logger.info(f"Sample type: {sample_type}")
 
-        model_trained_path = f"{args.model_path}/{args.model_label}"
+        model_trained_path = f"{args.model_path}"
 
         # Load training features once per sample_type
         with open(f'{model_trained_path}/training_features.pkl', 'rb') as f:
@@ -481,7 +496,9 @@ if __name__ == "__main__":
             #                   'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
             #                   'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down'
             #                   ]  # FIXME: For debugging purpose.
-            # wgt_variations = ["wgt_nominal"]  # FIXME: For debugging purpose.
+            if args.no_variations:
+                logger.warning(f"No weight variations found for {sample_type}, using nominal only.")
+                wgt_variations = ["wgt_nominal"]
 
         logger.info(f"wgt_variations: {wgt_variations}")
         syst_variations = ["nominal"]  # FIXME
@@ -518,6 +535,13 @@ if __name__ == "__main__":
             1.798,
             1.9,
             2.0,
+            2.1,
+            2.2,
+            2.3,
+            2.4,
+            2.5,
+            2.6,
+            2.7,
             2.8,
         ])
         score_name = f"score_{args.model_label}"
@@ -646,6 +670,8 @@ if __name__ == "__main__":
         # Save Hist
         # ---------------------------------------------------
         hist_save_path = f"{base_path}/stage2_histograms/score_{args.model_label}/{args.year}/"
+        if args.save_postfix:
+            hist_save_path = f"{base_path}/stage2_histograms/score_{args.model_label}_{args.save_postfix}/{args.year}/"
 
         if not os.path.exists(hist_save_path):
             os.makedirs(hist_save_path)

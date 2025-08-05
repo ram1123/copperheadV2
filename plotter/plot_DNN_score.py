@@ -1,5 +1,6 @@
 import awkward as ak
 import dask_awkward as dak
+import dask
 import argparse
 import sys
 import os
@@ -41,6 +42,17 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
             logger.info(f"No histograms found for {group_name}, skipping!")
             continue
 
+        logger.debug(f"Combining histograms for {group_name}...")
+        logger.debug(f"Sample histograms keys: {[h.axes.name for h in sample_hist_l]}")
+
+        for i, h in enumerate(sample_hist_l):
+            logger.debug(f"Histogram {i} axes: {h.axes.name}")
+            for axis in h.axes:
+                logger.debug(f"  Axis: {axis.name}, type: {type(axis)}, labels: {getattr(axis, 'categories', 'None')}, edges: {getattr(axis, 'edges', 'None')}")
+
+        # logger.info("sample_hist_l compute:")
+        # logger.info(dask.compute(sample_hist_l))
+        # logger.info("=" * 50 )
 
         sample_hist = sum(sample_hist_l)
         to_project_setting = {
@@ -49,16 +61,17 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
             "variation" : "nominal",
             # "sample_group": group_name,
         }
-        # logger.info(f"to_project_setting: {to_project_setting}")
-        # logger.info(f"sample_hist: {sample_hist}")
+        logger.debug(f"to_project_setting: {to_project_setting}")
+        logger.debug(f"sample_hist: {sample_hist}")
 
         #  Print/check the type of sample_hist and its keys
         logger.info(f"Type of sample_hist: {type(sample_hist)}")
         logger.info(f"Keys in sample_hist: {sample_hist.axes.name}")
-        # dict.get("DNN_score", 0)
 
         to_project_setting_val = to_project_setting.copy()
+        logger.debug(f"to_project_setting_val: {to_project_setting_val}")
         to_project_setting_val["val_sumw2"] = "value"
+        logger.debug(f"to_project_setting_val: {to_project_setting_val}")
         hist_val = sample_hist[to_project_setting_val].view()
         #------------------------------------------------------
         to_project_setting_w2 = to_project_setting.copy()
@@ -169,7 +182,6 @@ def arrangeHist_bySampleGroup(pickled_hist_dict):
                     hist_bySampleGroup[sample_group].append(hist_instance)
                     continue
 
-    # debug:
     for sample_group, hist_l in hist_bySampleGroup.items():
         logger.info(f"{sample_group}, len:{len(hist_l)}")
     return hist_bySampleGroup
@@ -250,8 +262,12 @@ if __name__ == "__main__":
     else:
         year_param = year
     # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/stage2_histograms/score_{args.mva_name}/{year_param}/"
-    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/2018/" # FIXME
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/2018/" # FIXME
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July_Test/2018/"
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned/2018/"
     # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage2_histograms/score_{args.mva_name}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/{year}/" # FIXME
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinned/2018/"
+    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinned_NoSyst/2018/"
     pickled_filelist = glob.glob(f"{load_path}/*.pkl")
     logger.info(f"load_path : {load_path}")
     # logger.info(f"pickled_hists : {pickled_filelist}")
@@ -292,6 +308,13 @@ if __name__ == "__main__":
         1.798,
         1.9,
         2.0,
+        2.1,
+        2.2,
+        2.3,
+        2.4,
+        2.5,
+        2.6,
+        2.7,
         2.8,
     ])
     var = "DNN_score"

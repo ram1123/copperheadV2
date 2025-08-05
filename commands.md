@@ -1,3 +1,30 @@
+# 04 August 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt -y "2017 2016preVFP 2016postVFP" -m all -d 1)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt  -v 12 -y 2018 -m dnn_pre)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt -y "2017 2016preVFP 2016postVFP" -m compact -d 1)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt  -v 12 -y 2018 -m dnn)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt  -v 12 -y 2018 -m 2)
+```
+
+# 30 July 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Test -m all -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt -y "2018 2017 2016preVFP 2016postVFP" -m all)
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July  -v 12 -y 2018 -m 2)
+```
+
+# 28 July 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -y "2017" -m zpt_fit2 -n 1)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_UpdatedQGL_17July -m all -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_UpdatedQGL_17July -m all -y "2016preVFP 2016postVFP" -d 1)
+```
+
 # 24 July 2025
 
 ```bash

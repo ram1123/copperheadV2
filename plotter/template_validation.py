@@ -9,8 +9,8 @@ import ROOT
 ROOT.gStyle.SetOptStat(000)
 
 # --- User Input ---
-pkl_file = "vbf_powheg_dipole_hist_updated_TEST.pkl"
-output_dir = "variation_validation_plots"
+pkl_file = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned/2018/vbf_powheg_dipole_hist.pkl"
+output_dir = "variation_validation_plots/July31_Rebinned/2018/"
 variable_axis_name = "score_Run2_nanoAODv12_UpdatedQGL_17July"
 
 # Your custom binning

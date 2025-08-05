@@ -118,10 +118,10 @@ sig_l="Higgs"
 if [[ "$debug" -ge 1 ]]; then
     log "Debug mode ON "
     # years=("2016preVFP")
-    data_l_dict["2018"]=""
-    data_l_dict["2017"]=""
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
+    data_l_dict["2017"]=""
+    data_l_dict["2018"]=""
     bkg_l="DY"
     sig_l=""
 fi
@@ -159,19 +159,21 @@ for year in "${years[@]}"; do
     # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv    "
 
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500  --isCutflow  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --use_gateway --max_file_len 2500  "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv   --max_file_len 2500  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 2500 --use_gateway "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv. --max_file_len 2500  "
 
     ### DNN training parameters
     training_fold=3
     model_path="${PWD}/dnn/trained_models"
-    model_label="${label}/${year}_${region}_${category}_${year}_UpdatedQGL_17July_Test"
-    compact_tag="hpeak_UpdatedQGL_17July_Test"
+    model_label="${label}"
+    model_label_forCompact="${year}_${region}_${category}_${year}_UpdatedQGL_17July_Test"
+    compact_tag="4August"
+    postfix="July31_Rebinned_NoSyst"
 
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score --tag $compact_tag"
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
@@ -179,8 +181,9 @@ for year in "${years[@]}"; do
     if [[ "$bkg_l" == *"Top"* ]]; then
         bkg_l_stage2="${bkg_l/Top/TT ST}"
     fi
-    command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway "
-    # command2="python run_stage2_vbf.py --model_path $model_path --model_label $model_label --base_path $save_path -y $year -data $data_l -bkg $bkg_l -sig $sig_l  "
+    # use option "--no_variations" with stage2 if you want to run with only nominal weights
+    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway --save_postfix $postfix "
+    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway --save_postfix $postfix --no_variations "
 
     command3="python run_stage3_vbf.py --base_path $save_path -y $year  "
 
@@ -237,7 +240,7 @@ for year in "${years[@]}"; do
             ;;
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             log "Running ZpT fitting step(s)..."
-            dy_sample="MiNNLO" # FIXME: Hardcoded DY sample name: aMCatNLO or MiNNLO
+            dy_sample="aMCatNLO" # FIXME: Hardcoded DY sample name: aMCatNLO or MiNNLO
             cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year -dy_sample $dy_sample "
             cmd1="python data/zpt_rewgt/fitting/do_f_test.py               -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend --debug"
             cmd2="python data/zpt_rewgt/fitting/get_polyFit.py             -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend"
@@ -260,10 +263,11 @@ for year in "${years[@]}"; do
             log "Command: $command_compact"
             eval "$command_compact"
             ;;
-        dnn|dnn_pre|dnn_train)
+        dnn|dnn_pre|dnn_train|dnn_var_rank)
             log "Running DNN step(s) for year $year..."
             cmd_preproc="python MVA_training/VBF/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level INFO "
             cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --log-level INFO "
+            cmd_var_rank="python MVA_training/VBF/variable_ranking.py "
 
             if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then
                 log "Running DNN preprocessor..."
@@ -275,6 +279,12 @@ for year in "${years[@]}"; do
                 log "Running DNN training..."
                 log "Command: $cmd_train"
                 eval "$cmd_train"
+            fi
+
+            if [[ "$mode" == "dnn_var_rank" || "$mode" == "dnn" ]]; then
+                log "Running variable ranking..."
+                log "Command: $cmd_var_rank"
+                eval "$cmd_var_rank"
             fi
             ;;
         *)

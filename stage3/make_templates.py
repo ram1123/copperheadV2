@@ -17,7 +17,6 @@ import os
 
 import logging
 from modules.utils import logger
-logger.setLevel(logging.INFO)
 
 class Variable(object):
     def __init__(self, name_, caption_, nbins_, xmin_, xmax_):
@@ -55,7 +54,11 @@ def load_stage2_output_hists(argset, parameters, dataset):
         raise ValueError("global_path is not set in parameters!")
         # return
 
-    path = f"{global_path}/stage2_histograms/{var_name}/{year}_h-peak_vbf_{year}_UpdatedQGL_17July_Test_RenameScore/{year}"
+    # path = f"{global_path}/stage2_histograms/{var_name}/{year}_h-peak_vbf_{year}_UpdatedQGL_17July_Test_RenameScore/{year}"
+    path = f"{global_path}/stage2_histograms/{var_name}_July31_Rebinned/{year}"
+    # score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned
+    # stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned
+    # stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July/2018_h-peak_vbf_2018_UpdatedQGL
     paths = glob.glob(f"{path}/{dataset}*.pkl")
 
     logger.debug(f"dataset: {dataset}")
@@ -338,6 +341,13 @@ def make_templates(args, parameters={}):
 
                 # now sum them via Python, which will invoke your hist + hist properly
                 hist_baseline = sum(baseline_hists)
+
+                logger.debug(f"{group} hist_baseline: {hist_baseline}")
+                logger.debug(f"{group} hist_df: {hist_df}")
+                logger.debug(f"{group} baseline_dataset: {baseline_dataset}")
+                # var.name
+                logger.debug(f"{group} var.name: {var.name}")
+
 
                 the_hist_nominal_baseline = hist_baseline[slicer_nominal].project(var.name).values()
                 the_sumw2_baseline = hist_baseline[slicer_sumw2].project(var.name).values()

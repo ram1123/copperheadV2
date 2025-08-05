@@ -9,7 +9,7 @@ from stage3.make_datacards import build_datacards
 import time
 import logging
 from modules.utils import logger
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 __all__ = ["dask"]
 
@@ -54,7 +54,7 @@ parameters = {
     "plot_vars": [],  # "dimuon_mass"],
     # "variables_lookup": variables_lookup,
     "dnn_models": {
-         "vbf": ["Run2_nanoAODv12_UpdatedQGL_17July"],
+         "vbf": ["Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"],
     },
     "bdt_models": {},
     #

@@ -4,12 +4,12 @@ set -e
 
 # label="fullRun_Jun23_2025_1n2Revised"
 # label="Run2_nanoAODv12_08June"
-label="Run2_nanoAODv12_UpdatedQGL_17July"
+label="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
 
 category="vbf"
 # mvaName="fullRun_Jun23_2025_1n2Revised_2018_VBFOnly"
 # mvaName="Run2_nanoAODv12_08June_2018"
-mvaName="Run2_nanoAODv12_UpdatedQGL_17July"
+mvaName="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
 
 
 year="2018"
