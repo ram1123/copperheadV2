@@ -10,11 +10,16 @@ from typing import Tuple, List, Dict
 import glob, os
 
 from src.lib.MVA_functions import prepare_features, evaluate_bdt, evaluate_dnn
+from src.stage2_utils import filter_columns_for_stage2, log_column_reduction_stats
 import argparse
 import time
 import sys, inspect
 import configs.categories.category_cuts as category_cuts
 import json
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 
 def prepare_features(events, features, variation="nominal"):
@@ -542,7 +547,14 @@ if __name__ == "__main__":
         # else:
         #     bkg_MC_filelist.append(full_load_path)
         
-        events = dak.from_parquet(full_load_path)
+        # Optimize parquet reading by loading only essential columns
+        logging.info(f"Loading parquet files from: {full_load_path}")
+        
+        # Check if we have glob pattern or direct list
+        if isinstance(full_load_path, str):
+            events = filter_columns_for_stage2(full_load_path, category=category)
+        else:
+            events = filter_columns_for_stage2(full_load_path, category=category)
         
         # making so taht copperheadV1 results work start -------------------------------------------
         # fields2load = [
