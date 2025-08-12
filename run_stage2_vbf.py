@@ -31,6 +31,7 @@ import copy
 
 import logging
 from modules.utils import logger
+from modules import selection
 
 from modules.utils import fillEventNans
 
@@ -55,7 +56,7 @@ def get_compactedPath(stage1_path):
     It doesn't check if all the necessary samples are in the directory.
     """
     compacted_stage1_path = stage1_path.replace("/f1_0", "/compacted")
-    logger.info(f"compacted_stage1_path: {compacted_stage1_path}")
+    logger.debug(f"compacted_stage1_path: {compacted_stage1_path}")
     if os.path.isdir(compacted_stage1_path):
         return compacted_stage1_path
     elif os.path.isdir(stage1_path):
@@ -64,6 +65,19 @@ def get_compactedPath(stage1_path):
         logger.critical(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
         raise FileNotFoundError(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
 
+def columns_for_selection(category):
+    # minimal columns for cuts; add here if your selection changes
+    base = [
+        "dimuon_mass",
+        "event",
+        "gjj_mass",
+        "nBtagLoose_nominal",
+        "nBtagMedium_nominal",
+        "jj_mass_nominal",
+        "jj_dEta_nominal",
+        "jet1_pt_nominal",
+    ]
+    return base
 
 def applyCatAndFeatFilter(events, region="h-peak", category="vbf", process=None):
     """
@@ -185,6 +199,15 @@ def prepare_features(events, features, variation="nominal"):
 
     return features_var
 
+
+def feature_name_for_variation(feat, variation, fields):
+    # Protect soft-drop features; fall back gracefully
+    use_var = "nominal" if "soft" in feat else variation
+    candidates = [f"{feat}_{use_var}", f"{feat}_nominal", feat]
+    for c in candidates:
+        if c in fields:
+            return c
+    raise KeyError(f"Feature {feat} (var={variation}) not found in fields.")
 
 
 def getFoldFilter(events, fold_vals, nfolds):
@@ -441,7 +464,6 @@ if __name__ == "__main__":
 
     base_path = args.base_path
 
-
     bkg_samples = args.bkg_samples
     sig_samples = args.sig_samples
     data_samples = args.data_samples
@@ -449,6 +471,7 @@ if __name__ == "__main__":
 
     stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0" # FIXME
     stage1_path = get_compactedPath(stage1_path)# get compacted stage1 output if they exist
+    logger.info(f"stage1 path: {stage1_path}")
     if not os.path.exists(stage1_path):
         logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
         raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
@@ -461,13 +484,14 @@ if __name__ == "__main__":
     nfolds = 4  # Define nfolds once for all samples
     for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
         logger.info(f"Processing sample type: {sample_type}, number of files: {len(sample_l)}")
+        logger.info(f"Sample type: {sample_type}")
         logger.debug(f"Sample list: {sample_l}")
         if len(sample_l) == 0:
             logger.critical(f"No files for {sample_type} is found! Skipping!")
             continue
 
-        events_stage1 = dak.from_parquet(sample_l)
-        logger.info(f"Sample type: {sample_type}")
+        events_schema = dak.from_parquet(sample_l)
+        fields = set(events_schema.fields)
 
         model_trained_path = f"{args.model_path}"
 
@@ -487,20 +511,42 @@ if __name__ == "__main__":
         # ------------------------------------------
         # Initialize sample histogram to save later
         # ------------------------------------------
+        # logger.debug(f"fields: {events_stage1.fields}")
         if "data" in sample_type:
             wgt_variations = ["wgt_nominal"]
         else:
-            wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w and "separate" not in w)]
+            # # OLD Method
+            # wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w and "separate" not in w)]
+            # logger.info(f"wgt_variations: {wgt_variations}")
+
+            # NEW Method: After adding JES
+            wgt_variations = ["wgt_nominal"]
+            up_down_fields = [
+                w for w in fields if w.endswith("_up") or w.endswith("_down")
+            ]
+            # get unique base name without up/down fields
+            base_names = sorted({w.rsplit("_", 1)[0] for w in up_down_fields})
+
+            # Append each pair (_up, _down) together
+            # for base in base_names[:5]:
+            for base in base_names:
+                if f"{base}_up" in up_down_fields:
+                    wgt_variations.append(f"{base}_up")
+                if f"{base}_down" in up_down_fields:
+                    wgt_variations.append(f"{base}_down")
+
+            # wgt_variations = ['wgt_nominal',
+            #                   'wgt_muID_up', 'wgt_pu_wgt_down', 'wgt_muTrig_up', 'wgt_LHERen_down', 'wgt_muIso_down',
+            #                   'wgt_LHERen_up', 'wgt_pu_wgt_up', 'wgt_LHEFac_down', 'wgt_pdf_2rms_up', 'wgt_LHEFac_up',
+            #                   'wgt_muID_down', 'wgt_qgl_wgt_up', 'wgt_qgl_wgt_down', 'wgt_muTrig_down', 'wgt_muIso_up', 'wgt_pdf_2rms_down'] # For debugging purpose
             logger.info(f"wgt_variations: {wgt_variations}")
-            # wgt_variations = ["wgt_nominal",
-            #                   'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
-            #                   'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down'
-            #                   ]  # FIXME: For debugging purpose.
+            logger.info(f"length of wgt_variations: {len(wgt_variations)}")
+
             if args.no_variations:
                 logger.warning(f"No weight variations found for {sample_type}, using nominal only.")
                 wgt_variations = ["wgt_nominal"]
 
-        logger.info(f"wgt_variations: {wgt_variations}")
+        logger.debug(f"wgt_variations: {wgt_variations}")
         syst_variations = ["nominal"]  # FIXME
         # syst_variations = ['nominal', 'Absolute_up', 'Absolute_down', f'Absolute_{year}_up',
         variations = []
@@ -509,7 +555,7 @@ if __name__ == "__main__":
                 variation = get_variation(w, v)
                 if variation:
                     variations.append(variation)
-        logger.info(f"variations: {variations}")
+        logger.debug(f"variations: {variations}")
 
         regions = ["h-peak", "h-sidebands"]  # full list of possible regions to loop over
         channels = ["vbf"]  # full list of possible channels to loop over
@@ -521,29 +567,7 @@ if __name__ == "__main__":
         # add axis for systematic variation
         score_hist = score_hist.StrCat(variations, name="variation")
         # add score category
-        bins = np.array([
-            0,
-            0.07,
-            0.432,
-            0.71,
-            0.926,
-            1.114,
-            1.28,
-            1.428,
-            1.564,
-            1.686,
-            1.798,
-            1.9,
-            2.0,
-            2.1,
-            2.2,
-            2.3,
-            2.4,
-            2.5,
-            2.6,
-            2.7,
-            2.8,
-        ])
+        bins = selection.binning  # use the binning from selection module
         score_name = f"score_{args.model_label}"
         score_hist = score_hist.Var(bins, name=score_name)
 
@@ -560,26 +584,47 @@ if __name__ == "__main__":
             dict(zip(loop_args_dict.keys(), values))
             for values in itertools.product(*loop_args_dict.values())
         ]
-        logger.info(f"loop_args: {loop_args}")
+        logger.debug(f"loop_args: {loop_args}")
 
         score_hist_l = []
         iteration_counter = 0
-        for loop_arg in loop_args:
+        for count, loop_arg in enumerate(loop_args):
             score_hist = copy.deepcopy(score_hist_empty)
 
-            region = loop_arg["region"]
-            category = loop_arg["channel"]
+            region              = loop_arg["region"]
+            category          = loop_arg["channel"]
             syst_variation = loop_arg["syst_variation"]
-            wgt_variation = loop_arg["wgt_variation"]
-            variation = get_variation(wgt_variation, syst_variation)
+            wgt_variation  = loop_arg["wgt_variation"]
+            variation          = get_variation(wgt_variation, syst_variation)
             if not variation:
                 logger.warning(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
                 continue
 
+            sel_cols = columns_for_selection(category)
+            feat_cols = [
+                feature_name_for_variation(f, variation, fields)
+                for f in training_features
+            ]
+            needed_cols = sorted(set(sel_cols + feat_cols + [wgt_variation]))
+
+            # Re-open with column projection + row-group split
+            events_stage1 = dak.from_parquet(
+                sample_l,
+                columns=needed_cols,
+                split_row_groups=True,
+                # gather_statistics=True,   # helps pruning/indexing
+            )
             events = applyCatAndFeatFilter(events_stage1, region=region, category=category, process=sample_type)
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
 
-            features_to_use = prepare_features(events, training_features, variation=variation)  # add variations where applicable
+            # features_to_use = prepare_features(events, training_features, variation=variation)  # add variations where applicable
+            # Build feature list that matches the *projected* names
+            features_to_use = []
+            for f in training_features:
+                # must match what feature_name_for_variation returned
+                nm = feature_name_for_variation(f, variation, fields)
+                features_to_use.append(nm)
+
             logger.debug(f"features_to_use: {features_to_use}")
             logger.debug(f"features_to_use: {len(features_to_use)}")
 
@@ -649,7 +694,7 @@ if __name__ == "__main__":
             to_fill_sumw2["val_sumw2"] = "sumw2"
             score_hist.fill(**to_fill_sumw2, weight=weight * weight)
 
-            logger.info(f"score_hist is filled for {sample_type}, {variation} variation!")
+            logger.info(f"[{count:>4}]:score_hist is filled for {sample_type}, {variation:<35} variation!")
             score_hist_l.append(score_hist)
 
         # ---------------------------------------------------
