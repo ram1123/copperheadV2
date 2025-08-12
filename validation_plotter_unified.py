@@ -4,8 +4,8 @@ import numpy as np
 import json
 import argparse
 import os
-from src.lib.histogram.ROOT_utils import setTDRStyle, CMS_lumi, reweightROOTH_data, reweightROOTH_mc #reweightROOTH
-from src.lib.histogram.plotting import plotDataMC_compare
+from lib.histogram.ROOT_utils import setTDRStyle, CMS_lumi, reweightROOTH_data, reweightROOTH_mc #reweightROOTH
+from lib.histogram.plotting import plotDataMC_compare
 from distributed import Client
 import time    
 import tqdm

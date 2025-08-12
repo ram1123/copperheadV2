@@ -6,12 +6,12 @@ import awkward as ak
 import numpy as np
 from typing import Union, TypeVar, Tuple
 import correctionlib
-from src.corrections.rochester import apply_roccor, apply_roccorRun3
-from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
-from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear
-# from src.corrections.weight import Weights
-from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
+from lib.corrections.rochester import apply_roccor, apply_roccorRun3
+from lib.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
+from lib.corrections.geofit import apply_geofit
+from lib.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear
+# from lib.corrections.weight import Weights
+from lib.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old
 import json
 from coffea.lumi_tools import LumiMask
 import pandas as pd # just for debugging
@@ -21,7 +21,7 @@ from coffea.analysis_tools import Weights
 import copy
 from coffea.nanoevents.methods import vector
 import sys
-from src.corrections.custom_jec import ApplyJetCorrections
+from lib.corrections.custom_jec import ApplyJetCorrections
 from omegaconf import OmegaConf
 from coffea.analysis_tools import PackedSelection
 
