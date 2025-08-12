@@ -9,7 +9,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor, apply_roccorRun3
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear, get_jet_variation, applyUpDown, applyJetUncertaintyKinematics
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old, get_jetpuid_weights_eta_dependent
 import json
@@ -419,6 +419,7 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
         self.selection = PackedSelection()
+        do_jec_unc = True #True
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
         """
@@ -964,29 +965,10 @@ class EventProcessor(processor.ProcessorABC):
             else:
                 sumWeights = events.metadata['sumGenWgts']
                 logger.debug(f"sumWeights: {(sumWeights)}")
-        # skim off bad events onto events and other related variables
-        # # original -----------------------------------------------
-        # events = events[event_filter==True]
-        # muons = muons[event_filter==True]
-        # nmuons = nmuons[event_filter==True]
-        # applied_fsr = applied_fsr[event_filter==True]
-        # if is_mc:
-        #     for variation in pu_wgts.keys():
-        #         pu_wgts[variation] = pu_wgts[variation][event_filter==True]
-        # pass_leading_pt = pass_leading_pt[event_filter==True]
-        # # original end -----------------------------------------------
 
-
-        # to_packed testing -----------------------------------------------
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
-        # event_match = event_match[event_filter==True]
-        # applied_fsr = ak.to_packed(applied_fsr[event_filter==True]) # not sure the purpose of this line
-
-        # logger.info("testJetVector right after event filtering")
-        # testJetVector(events.Jet)
-
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
@@ -1067,7 +1049,7 @@ class EventProcessor(processor.ProcessorABC):
             # logger.debug(f"gl_pair: {gl_pair.compute()}")
             # logger.debug(f"dr_gl: {dr_gl.compute().show(formatter=np.set_printoptions(threshold=sys.maxsize))}")
             # logger.debug(f"gjets b4 isolation: {gjets.compute()}")
-            isolated = ak.all((dr_gl > 0.4), axis=-1) # this also returns true if there's no leptons near the gjet
+            isolated = ak.all((dr_gl > 0.3), axis=-1) # this also returns true if there's no leptons near the gjet
             # logger.debug(f"isolated: {isolated.compute()}")
             # logger.debug(f"dr_gl[isolated]: {dr_gl[isolated].compute()}")
             # original start ----------------------------------------
@@ -1136,6 +1118,10 @@ class EventProcessor(processor.ProcessorABC):
         # cache = events.caches[0]
         factory = None
         useclib = False
+        jet_default = ak.pad_none(jets, target=2) # save pre jec and jer Jet for comparison
+        jet1_default = jet_default[:, 0]
+        jet2_default = jet_default[:, 1]
+
         if do_jec: # old method
             if is_mc:
                 factory = self.jec_factories_mc["jec"]
@@ -1150,11 +1136,26 @@ class EventProcessor(processor.ProcessorABC):
                     raise ValueError
 
             # -------------------------------------
-            jets = do_jec_scale(jets, self.config, is_mc, dataset)
+            print("doing JEC + SMEARing!")
+            if do_jec_unc:
+                variation_l = ["nominal"] + self.config["jec_parameters"]["jec_unc_to_consider"]
+            else:
+                variation_l = ["nominal"]
+            jets = do_jec_scale(jets, self.config, is_mc, dataset, uncs=variation_l)
+            # jets = do_jec_scale(jets, self.config, is_mc, dataset)
+            # print(f"jets test: {jets.pt_Absolute_up.compute()}")
+            jets["mass_jec"] = jets.mass
+            jets["pt_jec"] = jets.pt
+
             if is_mc: # JER smearing
-                jets = do_jer_smear(jets, self.config, "nom", events.event)
+                jets = do_jer_smear(jets, self.config, events.event, year=year)
             sorted_args = ak.argsort(jets.pt, ascending=False)
             jets = (jets[sorted_args])
+
+            # now JER has been applied, we apply unc coeefficients to the latest value
+            variation_l.remove("nominal")
+            jets = applyJetUncertaintyKinematics(jets, variation_l)
+
             # -------------------------------------
 
 
@@ -1175,18 +1176,6 @@ class EventProcessor(processor.ProcessorABC):
         t13 = time.perf_counter()
         logger.info(f"[timing] JEC and JER time: {t13 - t12:.2f} seconds")
         # # ------------------------------------------------------------#
-
-        # # TODO: only consider nuisances that are defined in run parameters
-        # # Compute JEC uncertainties
-        # if events.metadata["is_mc"] and do_jecunc:
-        #     jets = self.jec_factories_mc["junc"].build(jets, lazy_cache=cache)
-
-        # # # Compute JER uncertainties
-        # # if events.metadata["is_mc"] and do_jerunc:
-        # #     jets = self.jec_factories_mc["jer"].build(jets, lazy_cache=cache)
-        # TODO: revert the JET pt and mass to just JET jec pt and mass, we only need JER uncertainties
-
-        # # # TODO: JER nuisances
 
         # # ------------------------------------------------------------#
         # # Apply genweights, PU weights
@@ -1242,16 +1231,16 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Calculate other event weights
         # ------------------------------------------------------------#
-        pt_variations = (
-            ["nominal"]
-            # + jec_pars["jec_variations"]
-            # + jec_pars["jer_variations"]
-        )
-        if is_mc:
-            pass
-            # pt_variations += self.config["jec_parameters"]["jec_variations"]
-            # pt_variations += self.config["jec_parameters"]["jer_variations"]
-            # pt_variations += ['Absolute_up', 'Absolute_down',]
+        jec_pars = self.config["jec_parameters"]
+        do_jec_unc = True
+        if do_jec_unc:
+            pt_variations = (
+                ["nominal"]
+                + applyUpDown(jec_pars["jec_unc_to_consider"])
+                + jec_pars["jer_variations"]
+            )
+        else:
+            pt_variations = ["nominal"]
 
         if is_mc:
             # moved nnlops reweighting outside of dak process and to run_stage1-----------------
@@ -1316,7 +1305,7 @@ class EventProcessor(processor.ProcessorABC):
                 and ("nominal" in pt_variations)
                 and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
             )
-            do_thu = False
+            # do_thu = False
             if do_thu:
                 logger.info("doing THU!")
                 add_stxs_variations(
@@ -1413,6 +1402,11 @@ class EventProcessor(processor.ProcessorABC):
             "event": events.event,
             "luminosityBlock": events.luminosityBlock,
             "fraction": ak.ones_like(events.event) * events.metadata["fraction"],
+            # add jet default kinematics here
+            "jet1_default_pt_nominal" : jet1_default.pt,
+            "jet1_default_eta_nominal" : jet1_default.eta,
+            "jet2_default_pt_nominal" : jet2_default.pt,
+            "jet2_default_eta_nominal" : jet2_default.eta,
         }
         if is_mc:
             mc_dict = {
@@ -1438,13 +1432,6 @@ class EventProcessor(processor.ProcessorABC):
 
         t16 = time.perf_counter()
         logger.info(f"[timing] Fill muon and gjet variables time: {t16 - t15:.2f} seconds")
-        # test_zip = ak.zip({
-        #     "mu1_iso" : mu1.pfRelIso04_all,
-        #     "mu2_iso" : mu2.pfRelIso04_all,
-        # })
-        # logger.info(f"test_zip.compute 1: {test_zip.to_parquet(save_path)}")
-        # logger.info(f"out_dict.persist 1: {ak.zip(out_dict).persist().to_parquet(save_path)}")
-        # logger.info(f"out_dict.compute 1: {ak.zip(out_dict).to_parquet(save_path)}")
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#
@@ -1466,6 +1453,8 @@ class EventProcessor(processor.ProcessorABC):
             )
 
             out_dict.update(jet_loop_dict)
+
+        logger.debug(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
         t17 = time.perf_counter()
         logger.info(f"[timing] Jet pT variations time: {t17 - t16:.2f} seconds")
@@ -1721,6 +1710,7 @@ class EventProcessor(processor.ProcessorABC):
         do_jerunc = False,
         event_match = None
     ):
+        logger.info(f'variation: {variation}')
         is_mc = events.metadata["is_mc"]
         dataset = events.metadata["dataset"]
         year = self.config["year"]
@@ -1785,6 +1775,18 @@ class EventProcessor(processor.ProcessorABC):
         clean = ak.fill_none(clean, value=True)
 
         # # Select particular JEC variation
+
+        if is_mc and (variation != "nominal"):
+            fields2add = [
+                "puId",
+                "jetId",
+                "qgl",
+                "rho",
+                "area",
+                "btagDeepB",
+            ]
+            jets =  get_jet_variation(jets, variation, fields2add)
+
         # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
         #     logger.info("doing JER unc!")
         #     jer_mask_dict ={
@@ -1852,8 +1854,8 @@ class EventProcessor(processor.ProcessorABC):
             jets["qgl"] = jets.qgl
         elif ((NanoAODv == 12 or NanoAODv == 15) and year in ["2016preVFP", "2016postVFP", "2017", "2018"]): # NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2
             jets["qgl"] = jets.qgl
-            jets["btagPNetQvG"] = jets.btagPNetQvG
-            jets["btagDeepFlavQG"] = jets.btagDeepFlavQG
+            jets["btagPNetQvG"] = jets.qgl
+            jets["btagDeepFlavQG"] = jets.qgl
         else: # NanoAODv12
             jets["btagPNetQvG"] = jets.btagPNetQvG
             jets["btagDeepFlavQG"] = jets.btagDeepFlavQG
@@ -1885,10 +1887,8 @@ class EventProcessor(processor.ProcessorABC):
         jets = ak.to_packed(jets)
 
         # apply jetpuid if not have done already
-        if is_mc:
-            jetpuid_weight =get_jetpuid_weights_eta_dependent(year, jets, self.config) # FIXME
-
-        if is_mc:
+        if is_mc and (variation=="nominal"):
+            jetpuid_weight = get_jetpuid_weights_eta_dependent(year, jets, self.config) # FIXME
             # now we add jetpuid_wgt
             weights.add("jetpuid_wgt",
                     weight=jetpuid_weight,
@@ -1905,38 +1905,11 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Fill jet-related variables
         # ------------------------------------------------------------#
-
-
-        # original start ----------------------------------------
-        # padded_jets = ak.pad_none(jets, target=2)
-        # # # jet1 = padded_jets[:,0]
-        # # # jet2 = padded_jets[:,1]
-        # # jet_flip = padded_jets.pt[:,0] < padded_jets.pt[:,1]
-        # # jet_flip = ak.fill_none(jet_flip, value=False)
-        # # # take the subleading muon values if that now has higher pt after corrections
-        # # jet1 = ak.where(jet_flip, padded_jets[:,1], padded_jets[:,0])
-        # # jet2 = ak.where(jet_flip, padded_jets[:,0], padded_jets[:,1])
-        # sorted_args = ak.argsort(padded_jets.pt, ascending=False)
-        # sorted_jets = (padded_jets[sorted_args])
-        # jet1 = sorted_jets[:,0]
-        # jet2 = sorted_jets[:,1]
-        # original end ----------------------------------------
-
-        # test start ----------------------------------------
-        sorted_args = ak.argsort(jets.pt, ascending=False)
-        sorted_jets = (jets[sorted_args])
-        jets = sorted_jets
-        paddedSorted_jets = ak.pad_none(sorted_jets, target=2)
-        jet1 = paddedSorted_jets[:,0]
-        jet2 = paddedSorted_jets[:,1]
-        # test end ----------------------------------------
-        # logger.info(f"event match jet2 pt: {ak.to_numpy(jet2.pt[event_match].compute())}")
+        padded_jets = ak.pad_none(jets, target=2) # padd jets
+        jet1 = padded_jets[:,0]
+        jet2 = padded_jets[:,1]
 
         dijet = jet1+jet2
-        # logger.info(f"type jet1: {type(jet1.compute())}")
-        # logger.info(f"type jet1_Lvec: {type(jet1_Lvec.compute())}")
-        # dijet = jet1_Lvec+jet2_Lvec
-
 
 
         # jet1_4D_vec = ak.zip({"x":jet1.x, "y":jet1.y, "z":jet1.z, "E":jet1.E}, with_name="Momentum4D")
@@ -1991,7 +1964,7 @@ class EventProcessor(processor.ProcessorABC):
             f"jet1_eta_{variation}" : jet1.eta,
             f"jet1_rapidity_{variation}" : jet1_rapidity,  # max rel err: 0.7394
             f"jet1_phi_{variation}" : jet1.phi,
-            f"jet1_qgl_{variation}" : jet1.qgl,
+            f"jet1_qgl_{variation}" : jet1.qgl, # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
             f"jet1_btagPNetQvG_{variation}" : jet1.btagPNetQvG,
             f"jet1_btagDeepFlavQG_{variation}" : jet1.btagDeepFlavQG,
             f"jet1_jetId_{variation}" : jet1.jetId,
@@ -2000,22 +1973,12 @@ class EventProcessor(processor.ProcessorABC):
             f"jet2_eta_{variation}" : jet2.eta,
             f"jet1_mass_{variation}" : jet1.mass,
             f"jet2_mass_{variation}" : jet2.mass,
-            f"jet1_pt_raw_{variation}" : jet1.pt_raw,
-            f"jet2_pt_raw_{variation}" : jet2.pt_raw,
-            f"jet1_mass_raw_{variation}" : jet1.mass_raw,
-            f"jet2_mass_raw_{variation}" : jet2.mass_raw,
-            f"jet1_rho_{variation}" : jet1.rho,
-            f"jet2_rho_{variation}" : jet2.rho,
             f"jet1_area_{variation}" : jet1.area,
             f"jet2_area_{variation}" : jet2.area,
-            f"jet1_pt_jec_{variation}" : jet1.pt_jec,
-            f"jet2_pt_jec_{variation}" : jet2.pt_jec,
-            f"jet1_mass_jec_{variation}" : jet1.mass_jec,
-            f"jet2_mass_jec_{variation}" : jet2.mass_jec,
             #-------------------------
             f"jet2_rapidity_{variation}" : jet2_rapidity,  # max rel err: 0.781
             f"jet2_phi_{variation}" : jet2.phi,
-            f"jet2_qgl_{variation}" : jet2.qgl,
+            f"jet2_qgl_{variation}" : jet2.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
             f"jet1_btagPNetQvG_{variation}" : jet1.btagPNetQvG,
             f"jet1_btagDeepFlavQG_{variation}" : jet1.btagDeepFlavQG,
             f"jet2_jetId_{variation}" : jet2.jetId,
@@ -2046,20 +2009,25 @@ class EventProcessor(processor.ProcessorABC):
             f"ll_zstar_log_{variation}" : np.log(np.abs(zeppenfeld)),
             f"njets_{variation}" : njets,
         }
-        if is_mc:
-            mc_dict = {
+        if is_mc and (variation == "nominal"):
+            nominal_dict = {
                 f"jet1_pt_gen_{variation}" : jet1.pt_gen,
                 f"jet2_pt_gen_{variation}" : jet2.pt_gen,
             }
-            jet_loop_out_dict.update(mc_dict)
+            jet_loop_out_dict.update(nominal_dict)
 
-        # jet_loop_out_dict = {
-        #     key: ak.to_numpy(val) for key, val in jet_loop_out_dict.items()
-        # }
-        # jet_loop_placeholder =  pd.DataFrame(
-        #     jet_loop_out_dict
-        # )
-        # jet_loop_placeholder.to_csv("./V2jet_loop.csv")
+        if (variation == "nominal"):
+            nominal_dict = {
+                f"jet1_pt_raw_{variation}" : jet1.pt_raw,
+                f"jet2_pt_raw_{variation}" : jet2.pt_raw,
+                f"jet1_mass_raw_{variation}" : jet1.mass_raw,
+                f"jet2_mass_raw_{variation}" : jet2.mass_raw,
+                f"jet1_mass_jec_{variation}" : jet1.mass_jec,
+                f"jet2_mass_jec_{variation}" : jet2.mass_jec,
+                f"jet1_pt_jec_{variation}" : jet1.pt_jec,
+                f"jet2_pt_jec_{variation}" : jet2.pt_jec,
+            }
+            jet_loop_out_dict.update(nominal_dict)
 
         # ------------------------------------------------------------#
         # Fill soft activity jet variables
@@ -2080,7 +2048,7 @@ class EventProcessor(processor.ProcessorABC):
             }
             sj_dict.update(sj_out)
 
-        logger.info(f"sj_dict.keys(): {sj_dict.keys()}")
+        logger.debug(f"sj_dict.keys(): {sj_dict.keys()}")
         jet_loop_out_dict.update(sj_dict)
 
 
@@ -2102,7 +2070,7 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc and (variation == "nominal"):
         #     # --- QGL weights  start --- #
             isHerwig = "herwig" in dataset
-            logger.info("adding QGL weights!")
+            logger.debug("adding QGL weights!")
 
             # keep dims start -------------------------------------
             # qgl_wgts = qgl_weights_keepDim(jet1, jet2, njets, isHerwig)
@@ -2113,13 +2081,7 @@ class EventProcessor(processor.ProcessorABC):
                         weightUp=qgl_wgts["up"],
                         weightDown=qgl_wgts["down"]
             )
-            # # debugging
-            # # ptOfInterest = (mu1.pt > 75) & (mu1.pt < 150)
-            # # qgl_filtered = qgl_wgts['nom'][ptOfInterest].compute()
-            # # logger.info(f"qgl_wgts: {qgl_filtered}")
-            # # logger.info(f"qgl_wgts mean : {np.mean(qgl_filtered)}")
-            # # logger.info(f"qgl_wgts max : {np.max(qgl_filtered)}")
-            # # logger.info(f"qgl_wgts min : {np.min(qgl_filtered)}")
+
         #     # --- QGL weights  end --- #
 
 

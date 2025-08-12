@@ -122,8 +122,8 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2016postVFP"]=""
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
-    bkg_l="DY"
-    sig_l=""
+    bkg_l=""
+    sig_l="Higgs"
 fi
 
 chunksize=300000
@@ -158,20 +158,23 @@ for year in "${years[@]}"; do
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  --use_gateway  "
     # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv    "
 
+    # INFO: If running with JES variation use the max file length = 350, else 2500
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500  --isCutflow  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 2500 --use_gateway "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv. --max_file_len 2500  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 350 --use_gateway "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 2500  "
 
     ### DNN training parameters
     training_fold=3
     model_path="${PWD}/dnn/trained_models"
-    model_label="${label}"
+    # model_label="${label}"
+    model_label="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
     model_label_forCompact="${year}_${region}_${category}_${year}_UpdatedQGL_17July_Test"
-    compact_tag="4August"
-    postfix="July31_Rebinned_NoSyst"
+    compact_tag="11August"
+    # postfix="July31_Rebinnedv2_NoSyst"
+    postfix="August12_Test"
 
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score --tag $compact_tag"
     command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
 
@@ -182,8 +185,9 @@ for year in "${years[@]}"; do
         bkg_l_stage2="${bkg_l/Top/TT ST}"
     fi
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway --save_postfix $postfix "
-    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway --save_postfix $postfix --no_variations "
+    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway --save_postfix $postfix "
+    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway --save_postfix $postfix --no_variations "
+    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
 
     command3="python run_stage3_vbf.py --base_path $save_path -y $year  "
 
