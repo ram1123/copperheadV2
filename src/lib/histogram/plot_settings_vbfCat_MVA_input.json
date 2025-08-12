@@ -90,7 +90,7 @@
     },
     "dimuon_ebe_mass_res": {
         "variable": "dimuon_ebe_mass_res",
-        "binning_linspace": [0, 10, 51],
+        "binning_linspace": [0, 20, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\sigma_{m_{\\mu\\mu}}$",
@@ -284,7 +284,7 @@
     },
     "mu1_pt": {
         "variable": "mu1_pt",
-        "binning_linspace": [20, 200, 31],
+        "binning_linspace": [20, 300, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(mu1)$ [GeV]",
@@ -316,7 +316,7 @@
     },
     "mu2_pt": {
         "variable": "mu2_pt",
-        "binning_linspace": [20, 120, 31],
+        "binning_linspace": [20, 300, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(mu2)$ [GeV]",

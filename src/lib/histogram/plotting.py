@@ -172,7 +172,7 @@ def plotDataMC_compare(
         # add relative uncertainty of data and bkg_mc by adding by quadrature
         rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2)
         ratio_err = rel_unc_ratio*ratio_hist
-        # print(f"plotDataMC_compare ratio_err: {ratio_err}")
+        # print(f"plotDataMC compare ratio_err: {ratio_err}")
 
 
         hep.histplot(ratio_hist,
@@ -213,7 +213,31 @@ def plotDataMC_compare(
         ax_main.set_xlabel(x_title)
 
 
-
+    # -----------------------------------------
+    # compute and display separation power
+    # -----------------------------------------
+    # Separation power, d=\frac{1}{2}\int{|s(x)~-~b(x)|}$, where $s(x)$ and $b(x)$ are normalized signal and background distributions.
+    if len(sig_MC_dict) > 0:
+        # bin widths for integral
+        widths = np.diff(binning)
+        # sum background histograms and normalize to density
+        bkg_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
+        bkg_density = bkg_sum / np.sum(bkg_sum * widths)
+        # loop over each signal sample and place text in upper-right, offset per sample
+        for idx, sig_name in enumerate(sig_MC_dict.keys()):
+            sig_arr = sig_MC_dict[sig_name]["hist_arr"]
+            # normalize signal to density
+            sig_density = sig_arr / np.sum(sig_arr * widths)
+            # separation power
+            d_val = 0.5 * np.sum(np.abs(sig_density - bkg_density) * widths)
+        # place text in upper-right, offset per sample
+        for idx, sig_name in enumerate(sig_MC_dict.keys()):
+            y_pos = 0.95 - idx * 0.05
+            ax_main.text(
+                0.95, y_pos,
+                f"{sig_name}: d = {d_val:.2f}",
+                ha="right", va="top", transform=ax_main.transAxes
+            )
 
     # -----------------------------------------
     # Legend, title, etc +  save figure
@@ -410,7 +434,7 @@ def plotDataMC_compare_normalized(
         # add relative uncertainty of data and bkg_mc by adding by quadrature
         rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2)
         ratio_err = rel_unc_ratio*ratio_hist
-        # print(f"plotDataMC_compare ratio_err: {ratio_err}")
+        # print(f"plotDataMC_compare_normalized ratio_err: {ratio_err}")
 
 
         hep.histplot(ratio_hist,
