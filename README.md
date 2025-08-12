@@ -16,17 +16,24 @@ This would start the GRID certificate password prompt, and then once given the p
 For VBF-category, our temporary implementation is to activate coffea_latest env and them execute stage1_sh.sh -> stage2_vbf_sh.sh -> stage3_vbf_sh.sh
 
 
-## Planned High-level arrangement of code in CopperheadV2
+## Current High-level arrangement of code in CopperheadV2
 
-| Task | Directory Location of Relevant Code |
-| ------------- | ------------- |
-|  Event by event dimuon mass calibration   | ./lib/ebeMassResCalibration/ |
-|  Zpt weight calculation   | ./lib/ZptWgtCalculation/ |
-|  ggH production channel MVA training | ./lib/MVA_training/ggH/ |
-|  VBF production channel MVA training | ./lib/MVA_training/VBF/ |
-|  General corrections (stage1) | ./lib/corrections/ |
-|  Roofit fitting (stage3) | ./lib/fit_models/ |
-|  Parameters (metadata) | ./parameters/*.yaml|
+**✅ IMPLEMENTED:** The framework has been restructured to match the following directory organization:
+
+| Task | Directory Location of Relevant Code | Status |
+| ------------- | ------------- | ------------- |
+|  Event by event dimuon mass calibration   | ./lib/ebeMassResCalibration/ | ✅ Implemented |
+|  Zpt weight calculation   | ./lib/ZptWgtCalculation/ | ✅ Implemented |
+|  ggH production channel MVA training | ./lib/MVA_training/ggH/ | ✅ Implemented |
+|  VBF production channel MVA training | ./lib/MVA_training/VBF/ | ✅ Implemented |
+|  General corrections (stage1) | ./lib/corrections/ | ✅ Implemented |
+|  Roofit fitting (stage3) | ./lib/fit_models/ | ✅ Implemented |
+|  Parameters (metadata) | ./parameters/*.yaml| ✅ Implemented |
+
+### Additional Directories
+- `./workflows/` - Contains workflow management scripts and shell scripts
+- `./lib/histogram/` - Histogram utilities and plotting functions
+- `./lib/` - Core library with shared utilities
 
 
 

@@ -30,10 +30,14 @@ class CategorizerMVA(CategorizerBase):
         self.MVA = MVA
         self.edges = scorebin_edges
     def runMVA(self):
-    def categorize(stage1_data):
+        # TODO: Implement MVA running logic
+        pass
+        
+    def categorize(self, stage1_data):
         input_data = stage1_data
         scores = self.MVA(input_data)
-        
+        # TODO: Implement categorization logic
+        return scores
 
 
 if __name__ == "__main__":

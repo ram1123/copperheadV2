@@ -9,7 +9,7 @@ def getParametersForYr(parameter_path: str, year: str) -> dict:
 
     Params:
     parameter_path -> path where parameter yaml files are saved in 
-        typically, the value is configs/parameters/
+        typically, the value is parameters/
     year -> Run era year in question
     """
     filelist = glob.glob(parameter_path + "*.yaml")

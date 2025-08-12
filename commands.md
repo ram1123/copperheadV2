@@ -115,7 +115,7 @@ bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 
 ```bash
 bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_12March_GeoFit -y 2018 -m 0 -d
 
-python src/lib/ebeMassResCalibration/getCalibrationFactor_Improved.py
+python lib/ebeMassResCalibration/getCalibrationFactor_Improved.py
 cp calibration_factors__2018C_12March.json data/res_calib/res_calib_BS_correction_2018UL.json
 
 bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_12March_BSC -y 2018 -m all -d
