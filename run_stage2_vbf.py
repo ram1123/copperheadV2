@@ -34,6 +34,12 @@ import itertools
 from functools import reduce
 import copy
 from dask.dot import dot_graph
+import logging
+
+from src.stage2_utils import filter_columns_for_stage2, log_column_reduction_stats
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 def get_variation(wgt_variation, sys_variation):
     if "nominal" in wgt_variation:
@@ -361,7 +367,9 @@ if __name__ == "__main__":
             print(f"No files for {sample_type} is found! Skipping!")
             continue
             
-        events_stage1 = dak.from_parquet(sample_l)
+        # Optimize parquet reading by loading only essential columns for VBF category
+        logging.info(f"Loading {sample_type} sample with {len(sample_l)} files")
+        events_stage1 = filter_columns_for_stage2(sample_l, category="vbf")
         target_chunksize = 150_000
         events_stage1 = events_stage1.repartition(rows_per_partition=target_chunksize)
 
