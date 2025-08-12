@@ -62,7 +62,9 @@ def get_essential_columns_for_stage2(events: dak.Array, category: str = "ggh") -
     essential_fields.update(weight_fields)
     
     # Include nominal versions of physics objects (avoid JEC/JER variations)
+    # Handle both cases: with and without _nominal suffix
     nominal_patterns = [
+        # Jet variables with _nominal suffix (when variations are present)
         "jet1_pt_nominal", "jet1_eta_nominal", "jet1_phi_nominal", "jet1_qgl_nominal",
         "jet2_pt_nominal", "jet2_eta_nominal", "jet2_phi_nominal", "jet2_qgl_nominal",
         "jj_mass_nominal", "jj_dEta_nominal", "jj_dPhi_nominal",
@@ -71,7 +73,17 @@ def get_essential_columns_for_stage2(events: dak.Array, category: str = "ggh") -
         "mmj2_dEta_nominal", "mmj2_dPhi_nominal",
         "mmj_min_dEta_nominal", "mmj_min_dPhi_nominal",
         "zeppenfeld_nominal", "ll_zstar_log_nominal", 
-        "nsoftjets5_nominal", "htsoft2_nominal", "rpt_nominal"
+        "nsoftjets5_nominal", "htsoft2_nominal", "rpt_nominal",
+        # Jet variables without _nominal suffix (when no variations are present) 
+        "jet1_pt", "jet1_eta", "jet1_phi", "jet1_qgl",
+        "jet2_pt", "jet2_eta", "jet2_phi", "jet2_qgl",
+        "jj_mass", "jj_dEta", "jj_dPhi",
+        "njets", "nBtagLoose", "nBtagMedium",
+        "mmj1_dEta", "mmj1_dPhi",
+        "mmj2_dEta", "mmj2_dPhi", 
+        "mmj_min_dEta", "mmj_min_dPhi",
+        "zeppenfeld", "ll_zstar", "rpt",
+        "nsoftjets5", "htsoft2"
     ]
     
     for pattern in nominal_patterns:
