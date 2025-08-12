@@ -29,6 +29,7 @@ base_script = ["python", "plotter/validation_plotter_unified.py"]
 
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/CheckNewZpT_28July2025/"
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_17July2025_DNN_FixDiMuonMass/"
+# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/Rerun_07August2025/"
 
 SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/"
 
@@ -107,7 +108,7 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
     return cmd
 
 def run_all_combos():
-    i = 0
+    i = 1
     for year in years:
         # save_path = f"{SAVE_PATH}"
         load_path = LOAD_PATH.format(year=year)

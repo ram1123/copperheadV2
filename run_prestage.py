@@ -322,7 +322,7 @@ if __name__ == "__main__":
 
         # take bkg and add to the list: `new_sample_list[]`
         bkg_l = [sample_name for sample_name in dataset.keys() if "data" not in sample_name.lower()]
-        logger.info(f"background samples defined in YAML file: {bkg_l}")
+        logger.debug(f"background samples defined in YAML file: {bkg_l}")
         bkg_samples = args.bkg_samples
         logger.info(f"background samples asked to read: {bkg_samples}")
         if len(bkg_samples) >0:

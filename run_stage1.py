@@ -103,7 +103,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
-    logger.info(f"out_collections keys: {out_collections.keys()}")
+    logger.debug(f"out_collections keys: {out_collections.keys()}")
 
     skim_dict = out_collections
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
@@ -263,10 +263,13 @@ if __name__ == "__main__":
                 # if "ewk_lljj_mll50_mjj120" not in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
+                # if "data_" in dataset or "Data" in dataset or "dy_" in dataset: # FIXME: temporary line to skip data datasets for which we already have stage1 output
+                #     logger.warning(f"Skipping dataset: {dataset}")
+                #     continue
                 sample_step = time.time()
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
-                logger.debug(f"max_file_len: {args.max_file_len}")
-                logger.debug(f"len(smaller_files): {len(smaller_files)}")
+                logger.info(f"max_file_len: {args.max_file_len}")
+                logger.info(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     # if idx < 50 or idx > 51: continue # for testing purposes
                     # if idx < 7: continue
