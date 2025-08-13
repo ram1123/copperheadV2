@@ -13,6 +13,7 @@ from coffea.nanoevents.schemas import PFNanoAODSchema
 import awkward as ak
 import dask_awkward as dak
 import numpy as np
+import sys
 
 
 import torch
@@ -96,11 +97,11 @@ def applyCatAndFeatFilter(events, region="h-peak", category="vbf", process=None)
         region_filter = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
 
     if category.lower() == "vbf":
-        btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
+        btag_cut = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
         cat_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
         cat_cut = cat_cut & (~btag_cut) # btag cut is for VH and ttH categories
     elif category.lower()== "ggh":
-        btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
+        btag_cut = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
         cat_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5)
         cat_cut = cat_cut & (~btag_cut) # btag cut is for VH and ttH categories
     else: # no category cut is applied
@@ -110,17 +111,16 @@ def applyCatAndFeatFilter(events, region="h-peak", category="vbf", process=None)
 
 
     if "dy_" in process:
+        vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
         is_vbf_filter = ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc")
         if is_vbf_filter:
             logger.info(f"applying VBF filter cut on: {process}")
 
-            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
             cat_cut =  (cat_cut
                         & vbf_filter
             )
         else:
             logger.info(f"cutting off inclusive dy: {process}")
-            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
             cat_cut =  (
                 cat_cut
                 & ~vbf_filter
@@ -342,6 +342,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
 
 if __name__ == "__main__":
+    t0 = time.perf_counter()
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-y",
@@ -446,6 +447,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
+    t1 = time.perf_counter()
+    logger.info(f"[timing] Argument parsing time: {t1 - t0:.2f} seconds")
 
     start_time = time.time()
     if args.use_gateway:
@@ -461,6 +464,9 @@ if __name__ == "__main__":
         from distributed import LocalCluster, Client
         client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
         logger.info("Local scale Client created")
+
+    t2 = time.perf_counter()
+    logger.info(f"[timing] Dask client creation time: {t2 - t1:.2f} seconds")
 
     base_path = args.base_path
 
@@ -480,9 +486,12 @@ if __name__ == "__main__":
 
     logger.debug(f"full_sample_dict: {full_sample_dict}")
     logger.info(f"full_sample_dict: {full_sample_dict.keys()}")
+    t3 = time.perf_counter()
+    logger.info(f"[timing] sample dict processing time: {t3 - t2:.2f} seconds")
 
     nfolds = 4  # Define nfolds once for all samples
     for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
+        t4 = time.perf_counter()
         logger.info(f"Processing sample type: {sample_type}, number of files: {len(sample_l)}")
         logger.info(f"Sample type: {sample_type}")
         logger.debug(f"Sample list: {sample_l}")
@@ -516,24 +525,26 @@ if __name__ == "__main__":
             wgt_variations = ["wgt_nominal"]
         else:
             # # OLD Method
-            # wgt_variations = [w for w in events_stage1.fields if ("wgt_" in w and "separate" not in w)]
-            # logger.info(f"wgt_variations: {wgt_variations}")
+            wgt_variations = [
+                w for w in fields if ("wgt_" in w and "separate" not in w)
+            ]
+            logger.info(f"wgt_variations: {wgt_variations}")
 
             # NEW Method: After adding JES
-            wgt_variations = ["wgt_nominal"]
-            up_down_fields = [
-                w for w in fields if w.endswith("_up") or w.endswith("_down")
-            ]
-            # get unique base name without up/down fields
-            base_names = sorted({w.rsplit("_", 1)[0] for w in up_down_fields})
+            # wgt_variations = ["wgt_nominal"]
+            # up_down_fields = [
+            #     w for w in fields if w.endswith("_up") or w.endswith("_down")
+            # ]
+            # # get unique base name without up/down fields
+            # base_names = sorted({w.rsplit("_", 1)[0] for w in up_down_fields})
 
-            # Append each pair (_up, _down) together
-            # for base in base_names[:5]:
-            for base in base_names:
-                if f"{base}_up" in up_down_fields:
-                    wgt_variations.append(f"{base}_up")
-                if f"{base}_down" in up_down_fields:
-                    wgt_variations.append(f"{base}_down")
+            # # Append each pair (_up, _down) together
+            # for base in base_names[:51]:
+            # # for base in base_names:
+            #     if f"{base}_up" in up_down_fields:
+            #         wgt_variations.append(f"{base}_up")
+            #     if f"{base}_down" in up_down_fields:
+            #         wgt_variations.append(f"{base}_down")
 
             # wgt_variations = ['wgt_nominal',
             #                   'wgt_muID_up', 'wgt_pu_wgt_down', 'wgt_muTrig_up', 'wgt_LHERen_down', 'wgt_muIso_down',
@@ -546,7 +557,9 @@ if __name__ == "__main__":
                 logger.warning(f"No weight variations found for {sample_type}, using nominal only.")
                 wgt_variations = ["wgt_nominal"]
 
-        logger.debug(f"wgt_variations: {wgt_variations}")
+        t5 = time.perf_counter()
+        logger.info(f"[timing] Weight variation processing time: {t5 - t4:.2f} seconds")
+        logger.info(f"wgt_variations: {wgt_variations}")
         syst_variations = ["nominal"]  # FIXME
         # syst_variations = ['nominal', 'Absolute_up', 'Absolute_down', f'Absolute_{year}_up',
         variations = []
@@ -555,7 +568,18 @@ if __name__ == "__main__":
                 variation = get_variation(w, v)
                 if variation:
                     variations.append(variation)
-        logger.debug(f"variations: {variations}")
+        logger.info(f"variations: {variations}")
+
+        # # compare wgt_variations and variations
+        # if set(wgt_variations) != set(variations):
+        #     logger.warning(f"Weight variations do not match for {sample_type}:")
+        #     logger.warning(f"  wgt_variations: {wgt_variations}")
+        #     logger.warning(f"  variations: {variations}")
+        #     # get diff of the two
+        #     diff = set(wgt_variations) - set(variations)
+        #     if diff:
+        #         logger.warning(f"  Missing variations: {diff}")
+        # sys.exit()
 
         regions = ["h-peak", "h-sidebands"]  # full list of possible regions to loop over
         channels = ["vbf"]  # full list of possible channels to loop over
@@ -585,6 +609,9 @@ if __name__ == "__main__":
             for values in itertools.product(*loop_args_dict.values())
         ]
         logger.debug(f"loop_args: {loop_args}")
+
+        t6 = time.perf_counter()
+        logger.info(f"[timing] Empty histogram time: {t6 - t5:.2f} seconds")
 
         score_hist_l = []
         iteration_counter = 0
@@ -697,6 +724,8 @@ if __name__ == "__main__":
             logger.info(f"[{count:>4}]:score_hist is filled for {sample_type}, {variation:<35} variation!")
             score_hist_l.append(score_hist)
 
+        t7 = time.perf_counter()
+        logger.info(f"[timing] Variation loop time: {t7 - t6:.2f} seconds")
         # ---------------------------------------------------
         # done with variation loop, compute hist
         # ---------------------------------------------------
@@ -710,6 +739,8 @@ if __name__ == "__main__":
         # Merge histograms from all loop configurations
         score_hist = reduce(lambda a, b: a + b, score_hist_l)
         logger.info("compute done!")
+        t8 = time.perf_counter()
+        logger.info(f"[timing] Dask compute time: {t8 - t7:.2f} seconds")
 
         # ---------------------------------------------------
         # Save Hist
@@ -724,6 +755,9 @@ if __name__ == "__main__":
         with open(f"{hist_save_path}/{sample_type}_hist.pkl", "wb") as file:
             pickle.dump(score_hist, file)
             logger.info(f"{sample_type} histogram on {hist_save_path}!")
+
+        t9 = time.perf_counter()
+        logger.info(f"[timing] Histogram saving time: {t9 - t8:.2f} seconds")
 
     logger.info("Success!")
     end_time = time.time()
