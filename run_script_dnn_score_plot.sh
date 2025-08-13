@@ -12,17 +12,17 @@ category="vbf"
 mvaName="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
 
 
-year="2018"
-lumi="59.83"
+# year="2018"
+# lumi="59.83"
 
-# year="2017"
-# lumi="41.48"
+year="2017"
+lumi="41.48"
 
-# year="2016postVFP"
-# lumi="19.50"
+year="2016postVFP"
+lumi="19.50"
 
-# year="2016preVFP"
-# lumi="16.81"
+year="2016preVFP"
+lumi="16.81"
 
 # year="all"
 # lumi="137"

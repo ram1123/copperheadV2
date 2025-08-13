@@ -116,7 +116,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
 
     if not os.path.exists(full_save_path):
         os.makedirs(full_save_path)
-    full_save_fname = f"{full_save_path}/{var}_{region_name}_UpdatedQGL_FixPUJetIDWgt_July31_Rebinnedv3_NoSyst.pdf"
+    full_save_fname = f"{full_save_path}/{var}_{region_name}_UpdatedQGL_FixPUJetIDWgt_Aug13_NewBinning_NoSyst.pdf"
     logger.info(f"full_save_fname: {full_save_fname}")
     # raise ValueError
 
@@ -269,11 +269,23 @@ if __name__ == "__main__":
     # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage2_histograms/score_{args.mva_name}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/{year}/" # FIXME
     # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinned/2018/"
     # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinned_NoSyst/2018/"
-    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinnedv2_NoSyst/2018/"
+
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinnedv2_NoSyst/*/"
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinnedv2_NoSyst/2018/"
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinnedv2_NoSyst/2017/"
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinnedv2_NoSyst/2016postVFP/"
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_July31_Rebinnedv2_NoSyst/2016preVFP/"
+
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_NoSyst/2018/"
+
+    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2018/"
+    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2017/"
+    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016postVFP/"
+    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016preVFP/"
+
     pickled_filelist = glob.glob(f"{load_path}/*.pkl")
     logger.info(f"load_path : {load_path}")
     # logger.info(f"pickled_hists : {pickled_filelist}")
-
 
     pickled_hist_dict = getPickledHist_byFname(pickled_filelist, load_path)
     logger.info(f"pickled_hist_dict.keys() : {pickled_hist_dict.keys()}")
@@ -297,6 +309,31 @@ if __name__ == "__main__":
         plot_settings = json.load(file)
     # logger.info(f"plot_settings: {plot_settings}")
     binning = selection.binning
+    # binning = np.array(
+    #     [
+    #         0,
+    #         0.07,
+    #         0.432,
+    #         0.71,
+    #         0.926,
+    #         1.114,
+    #         1.28,
+    #         1.428,
+    #         1.564,
+    #         1.686,
+    #         1.798,
+    #         1.9,
+    #         2.0,
+    #         2.1,
+    #         2.2,
+    #         2.3,
+    #         2.4,
+    #         2.5,
+    #         2.6,
+    #         2.7,
+    #         2.8,
+    #     ]
+    # )
     var = "DNN_score"
     region_name = args.region
     category = args.category

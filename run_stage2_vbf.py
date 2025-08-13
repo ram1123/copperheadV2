@@ -13,7 +13,6 @@ from coffea.nanoevents.schemas import PFNanoAODSchema
 import awkward as ak
 import dask_awkward as dak
 import numpy as np
-import sys
 
 
 import torch
@@ -546,10 +545,10 @@ if __name__ == "__main__":
             #     if f"{base}_down" in up_down_fields:
             #         wgt_variations.append(f"{base}_down")
 
-            # wgt_variations = ['wgt_nominal',
-            #                   'wgt_muID_up', 'wgt_pu_wgt_down', 'wgt_muTrig_up', 'wgt_LHERen_down', 'wgt_muIso_down',
-            #                   'wgt_LHERen_up', 'wgt_pu_wgt_up', 'wgt_LHEFac_down', 'wgt_pdf_2rms_up', 'wgt_LHEFac_up',
-            #                   'wgt_muID_down', 'wgt_qgl_wgt_up', 'wgt_qgl_wgt_down', 'wgt_muTrig_down', 'wgt_muIso_up', 'wgt_pdf_2rms_down'] # For debugging purpose
+            # wgt_variations = ["wgt_nominal",
+            #                   'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
+            #                   'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down'
+            #                   ]  # FIXME: For debugging purpose.
             logger.info(f"wgt_variations: {wgt_variations}")
             logger.info(f"length of wgt_variations: {len(wgt_variations)}")
 
@@ -569,17 +568,6 @@ if __name__ == "__main__":
                 if variation:
                     variations.append(variation)
         logger.info(f"variations: {variations}")
-
-        # # compare wgt_variations and variations
-        # if set(wgt_variations) != set(variations):
-        #     logger.warning(f"Weight variations do not match for {sample_type}:")
-        #     logger.warning(f"  wgt_variations: {wgt_variations}")
-        #     logger.warning(f"  variations: {variations}")
-        #     # get diff of the two
-        #     diff = set(wgt_variations) - set(variations)
-        #     if diff:
-        #         logger.warning(f"  Missing variations: {diff}")
-        # sys.exit()
 
         regions = ["h-peak", "h-sidebands"]  # full list of possible regions to loop over
         channels = ["vbf"]  # full list of possible channels to loop over
@@ -628,32 +616,29 @@ if __name__ == "__main__":
                 continue
 
             sel_cols = columns_for_selection(category)
-            feat_cols = [
+            features_to_use = [
                 feature_name_for_variation(f, variation, fields)
                 for f in training_features
             ]
-            needed_cols = sorted(set(sel_cols + feat_cols + [wgt_variation]))
+            needed_cols = sorted(set(sel_cols + features_to_use + [wgt_variation]))
+
+            logger.debug(f"sel_cols: {sel_cols}")
+            logger.debug(f"len(sel_cols): {len(sel_cols)}")
+
+            logger.debug(f"features_to_use: {features_to_use}")
+            logger.debug(f"len(features_to_use): {len(features_to_use)}")
+
+            logger.debug(f"needed_cols: {needed_cols}")
+            logger.debug(f"len(needed_cols): {len(needed_cols)}")
 
             # Re-open with column projection + row-group split
             events_stage1 = dak.from_parquet(
                 sample_l,
                 columns=needed_cols,
-                split_row_groups=True,
-                # gather_statistics=True,   # helps pruning/indexing
+                # split_row_groups=True, # FIXME: This introduces some issue and number of entries does not remain same.
             )
             events = applyCatAndFeatFilter(events_stage1, region=region, category=category, process=sample_type)
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
-
-            # features_to_use = prepare_features(events, training_features, variation=variation)  # add variations where applicable
-            # Build feature list that matches the *projected* names
-            features_to_use = []
-            for f in training_features:
-                # must match what feature_name_for_variation returned
-                nm = feature_name_for_variation(f, variation, fields)
-                features_to_use.append(nm)
-
-            logger.debug(f"features_to_use: {features_to_use}")
-            logger.debug(f"features_to_use: {len(features_to_use)}")
 
             nan_val = -999.0
 
@@ -745,9 +730,11 @@ if __name__ == "__main__":
         # ---------------------------------------------------
         # Save Hist
         # ---------------------------------------------------
-        hist_save_path = f"{base_path}/stage2_histograms/score_{args.model_label}/{args.year}/"
-        if args.save_postfix:
-            hist_save_path = f"{base_path}/stage2_histograms/score_{args.model_label}_{args.save_postfix}/{args.year}/"
+        histDirName = f"score_{args.model_label}" if args.save_postfix == "" else f"score_{args.model_label}_{args.save_postfix}"
+        if args.no_variations == True:
+            histDirName = f"{histDirName}_NoSyst"
+
+        hist_save_path = f"{base_path}/stage2_histograms/{histDirName}/{args.year}/"
 
         if not os.path.exists(hist_save_path):
             os.makedirs(hist_save_path)
