@@ -121,9 +121,9 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
     data_l_dict["2017"]=""
-    data_l_dict["2018"]=""
+    data_l_dict["2018"]="A B C D"
     bkg_l=""
-    sig_l="Higgs"
+    sig_l=""
 fi
 
 chunksize=300000
@@ -168,15 +168,18 @@ for year in "${years[@]}"; do
     model_path="${PWD}/dnn/trained_models"
     # model_label="${label}"
     model_label="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
-    model_label_forCompact="${year}_${region}_${category}_${year}_UpdatedQGL_17July_Test"
-    compact_tag="11August"
-    # postfix="July31_Rebinnedv2_NoSyst"
-    postfix="August12_Test"
 
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
+    # NOTE: This DNN is trained with all year but name contains hardcoded string "2018"
+    model_label_forCompact="2018_${region}_${category}_2018_UpdatedQGL_17July_Test"
+    compact_tag="13August"
+    # postfix="July31_Rebinnedv2_NoSyst"
+    # postfix="July31_Rebinnedv2"
+    postfix="FixPUJetIDWgt_Rebinned"
+
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score --tag $compact_tag"
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
@@ -185,11 +188,12 @@ for year in "${years[@]}"; do
         bkg_l_stage2="${bkg_l/Top/TT ST}"
     fi
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway --save_postfix $postfix "
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --use_gateway --save_postfix $postfix --no_variations "
+    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --use_gateway "
+    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
+    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
 
-    command3="python run_stage3_vbf.py --base_path $save_path -y $year  "
+    command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix"
 
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
     command5="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"

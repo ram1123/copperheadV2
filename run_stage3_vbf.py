@@ -27,6 +27,13 @@ parser.add_argument(
     action="store",
     help="base path of ntuples",
 )
+parser.add_argument(
+    "--save_postfix",
+    default="",
+    type=str,
+    action="store",
+    help="Postfix to append to saved histogram files."
+)
 args = parser.parse_args()
 
 
@@ -40,6 +47,7 @@ parameters = {
     # < general settings >
     "years": args.years,
     "global_path": args.base_path,
+    "global_path_postfix": args.save_postfix,
     # "global_path": "/work/users/yun79/copperhead_outputs/copperheadV1clean",
     # "label": "DmitryMaster_JECoff_GeofitFixed_Oct29",
     # "label": "DmitryMaster_JECoff_GeofitFixed_Nov01",

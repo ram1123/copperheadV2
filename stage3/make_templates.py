@@ -47,7 +47,7 @@ def load_stage2_output_hists(argset, parameters, dataset):
     year = argset["year"]
     var_name = argset["var_name"]
     global_path = parameters.get("global_path", None)
-
+    global_path_postfix = parameters.get("global_path_postfix", None)
 
     if (global_path is None):
         logger.error("global_path is not set in parameters!")
@@ -55,7 +55,10 @@ def load_stage2_output_hists(argset, parameters, dataset):
         # return
 
     # path = f"{global_path}/stage2_histograms/{var_name}/{year}_h-peak_vbf_{year}_UpdatedQGL_17July_Test_RenameScore/{year}"
-    path = f"{global_path}/stage2_histograms/{var_name}_July31_Rebinned/{year}"
+    if global_path_postfix:
+        path = f"{global_path}/stage2_histograms/{var_name}_{global_path_postfix}/{year}"
+    else:
+        path = f"{global_path}/stage2_histograms/{var_name}/{year}"
     # score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned
     # stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned
     # stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July/2018_h-peak_vbf_2018_UpdatedQGL
