@@ -23,7 +23,8 @@ from scripts.compact_parquet_data import ensure_compacted
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
-bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
+# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
+bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 
 DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
@@ -416,7 +417,7 @@ if __name__ == "__main__":
      help="Configure the logging level."
      )
 
-    #---------------------------------------------------------
+    # ---------------------------------------------------------
     # gather arguments
     args = parser.parse_args()
     logger.setLevel(args.log_level)
@@ -455,7 +456,6 @@ if __name__ == "__main__":
         else:
             args.label += "_no_zpt_weights"
 
-
     available_processes = []
 
     logger.info("group_dict: {group_dict}".format(group_dict=group_dict))
@@ -492,7 +492,7 @@ if __name__ == "__main__":
     variables2plot = []
     if args.dnn_score:
         variables2plot.append("dnn_vbf_score")
-        variables2plot.append("atanh_dnn_vbf_score")
+        variables2plot.append("dnn_vbf_score_atanh")
     if len(args.variables) == 0:
         logger.error("no variables to plot!")
         raise ValueError
@@ -557,13 +557,11 @@ if __name__ == "__main__":
         else:
             logger.warning(f"Unsupported variable: {particle} is given!")
 
-
     variables2plot_orig = copy.deepcopy(variables2plot)
     if "jj_mass_nominal" in variables2plot:
         variables2plot += ["jj_mass_nominal_range2"] # add another range to plot
     logger.info(f"variables2plot: {variables2plot}")
     # obtain plot settings from config file
-
 
     if args.category == "ggh":
         plot_setting_fname = "./src/lib/histogram/plot_settings_gghCat_BDT_input.json"
@@ -593,20 +591,18 @@ if __name__ == "__main__":
     time_step = time.time()
 
     # check if the compacted path exists
-    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted")
+    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted_13August_FixDimuonMass")
 
-    for process in available_processes:
-        compacted_path_DNN = os.path.join(COMPACTED_PATH, process, "0")
-        ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
+    # for process in available_processes:
+    #     compacted_path_DNN = os.path.join(COMPACTED_PATH, process, "0")
+    #     ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
     args.load_path = COMPACTED_PATH
-
 
     # load saved parquet files. This increases memory use, but increases runtime significantly
     loaded_events = {} # intialize dictionary containing all the arrays
     for process in tqdm.tqdm(available_processes):
-        full_load_path = args.load_path+f"/{process}/*/*.parquet"
-        if len(glob.glob(full_load_path)) ==0: # check if there's files in the load path
-            full_load_path = args.load_path+f"/{process}/*.parquet" # try coppperheadV1 path, if this also is empty, then skip
+        full_load_path = (args.load_path+f"/{process}/*/*.parquet").replace("//", "/")
+        logger.info(f"length of files: {len(glob.glob(full_load_path))}")
         logger.info(f"full_load_path: {full_load_path}")
         try:
             # FIXME: add the filter and selection while loading the parquet file
@@ -700,9 +696,10 @@ if __name__ == "__main__":
         if plot_var not in plot_settings.keys():
             logger.warning(f"variable {var} not configured in plot settings!")
             continue
-        if var == "atanh_dnn_vbf_score":
+        if var == "dnn_vbf_score_atanh":
             # custom non-uniform bin edges from validation plot
-            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+            # binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+            binning = np.array(plot_settings[plot_var]["binning_nonuniform"])
         elif var == "dnn_vbf_score":
             # binning = np.array(plot_settings[plot_var]["binning_nonuniform"])
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
@@ -731,10 +728,11 @@ if __name__ == "__main__":
         if plot_var not in plot_settings.keys():
             logger.warning(f"variable {var} not configured in plot settings!")
             continue
-        #-----------------------------------------------
+        # -----------------------------------------------
         # intialize variables for filling histograms
-        if var == "atanh_dnn_vbf_score":
-            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+        if var == "dnn_vbf_score_atanh":
+            # binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+            binning = np.array(plot_settings[plot_var]["binning_nonuniform"])
         elif var == "dnn_vbf_score":
             # binning = np.array(plot_settings[plot_var]["binning_nonuniform"])
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
@@ -768,7 +766,7 @@ if __name__ == "__main__":
                 is_data = "data" in process.lower()
                 logger.debug(f"is_data: {is_data}")
 
-                #-----------------------------------------------
+                # -----------------------------------------------
                 # obtain the category selection
                 # ------------------------------------------------
                 # take the mass region and category cuts
@@ -792,7 +790,7 @@ if __name__ == "__main__":
 
                     # To stich the DY aMC@NLO and MiNNLO samples, we need to divide the weight of MiNNLO sample by Luminosity (59830.0)
                     # if "dy_M-100To200_MiNNLO" in process or "dy_M-50_MiNNLO" in process :
-                        # weights = weights / 59830.0 # FIXME: this is hardcoded value, should be replaced with lumi value from config file
+                    # weights = weights / 59830.0 # FIXME: this is hardcoded value, should be replaced with lumi value from config file
 
                     # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
                     # temporary over write
@@ -807,12 +805,12 @@ if __name__ == "__main__":
                     fraction_weight = ak.ones_like(events["wgt_nominal"])  # MC is already normalized by lumisonity, so no need for scaling by fraction
 
                 # handle arctanh transform of dnn_vbf_score
-                if var == "atanh_dnn_vbf_score":
-                    raw = ak.fill_none(events["dnn_vbf_score"], value=-999.0)
-                    values = np.arctanh((raw))  # arctanh transform
-                    # values = np.arctanh((raw+1)/2.0)  # arctanh transform
+                # if var == "dnn_vbf_score_atanh":
+                #     raw = ak.fill_none(events["dnn_vbf_score"], value=-999.0)
+                #     values = np.arctanh((raw))  # arctanh transform
+                # values = np.arctanh((raw+1)/2.0)  # arctanh transform
                 # overwrite variable names with two bin ranges
-                elif ("_range2" in var):
+                if ("_range2" in var):
                     var_reduced = var.replace("_range2","")
                     values = ak.fill_none(events[var_reduced], value=-999.0)
                 elif ("_zpeak" in var):
@@ -822,8 +820,6 @@ if __name__ == "__main__":
                     values = ak.fill_none(events[var], value=-999.0)
 
                 #### TODO: Add overflow bins to the last bin
-
-
 
                 # MC samples are already normalized by their xsec*lumi, but data is not
                 if process in group_dict["DATA"]: # FIXME: Why weights with data?
@@ -872,7 +868,7 @@ if __name__ == "__main__":
 
                 to_project_setting_val["val_sumw2"] = "value"
                 hist_val = sample_hist[to_project_setting_val].project(var).values()
-                #------------------------------------------------------
+                # ------------------------------------------------------
                 to_project_setting_w2 = to_project_setting.copy()
                 to_project_setting_w2["val_sumw2"] = "sumw2"
                 hist_w2 = sample_hist[to_project_setting_w2].project(var).values()
@@ -944,14 +940,15 @@ if __name__ == "__main__":
             # ---------------------------------------------------
             # All data are prepped, now plot Data/MC histogram
             # -------------------------------------------------------
-            full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
+            if args.year == "*":
+                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
+            else:
+                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
             logger.debug(f"full_save_path: {full_save_path}")
-
 
             if not os.path.exists(full_save_path):
                 os.makedirs(full_save_path)
             full_save_fname = f"{full_save_path}/{var}.pdf"
-
 
             plot_var = getPlotVar(var)
             if plot_var not in plot_settings.keys():
@@ -963,8 +960,22 @@ if __name__ == "__main__":
             # elif var == "dnn_vbf_score":
             #     # binning = np.array(plot_settings[var]["binning_nonuniform"])
             #     binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
-            # elif var == "atanh_dnn_vbf_score":
-            #     binning = np.linspace(*plot_settings[var]["binning_linspace"])
+            elif var == "dnn_vbf_score_atanh":
+                binning = np.array(plot_settings[var]["binning_nonuniform"])
+
+            if args.lumi == "":
+                if args.year == "2016preVFP":
+                    args.lumi = "16.81"
+                elif args.year == "2016postVFP":
+                    args.lumi = "19.50"
+                elif args.year == "2016" or args.year == "2016*":
+                    args.lumi = "36.31"
+                elif args.year == "2017":
+                    args.lumi = "41.48"
+                elif args.year == "2018":
+                    args.lumi = "59.83"
+                elif args.year == "AllYear" or args.year == "*":
+                    args.lumi = "137.62"
             plotDataMC_compare(
                 binning,
                 data_dict,

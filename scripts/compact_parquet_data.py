@@ -45,9 +45,9 @@ def add_dnn_score(events_partition,
                 nfolds, fix_dimuon_mass):
     if getattr(events_partition.layout.backend, "name", None) == "typetracer":
         return ak.with_field(
-            events_partition,
-            np.empty(0, dtype=np.float32),
-            "dnn_vbf_score"
+            ak.with_field(events_partition, np.empty(0, np.float32), "dnn_vbf_score"),
+            np.empty(0, np.float32),
+            "dnn_vbf_score_atanh",
         )
     # Prepare features for this partition
     features_to_use = prepare_features(events_partition, training_features)
@@ -62,14 +62,18 @@ def add_dnn_score(events_partition,
         input_arr_dict[feat] = arr
 
     for fold in range(nfolds):
-        eval_folds = [(fold + f) % nfolds for f in [3]]
+        # eval_folds = [(fold + f) % nfolds for f in [3]]
+        eval_folds = [fold]
         eval_filter = getFoldFilter(events_partition, eval_folds, nfolds)
         for ix in range(len(features_to_use)):
             feat = features_to_use[ix]
             input_arr_fold = input_arr_dict[feat]
 
             # scale the events feature
-            in_feat = events_partition[feat]
+            if feat == "dimuon_mass" and fix_dimuon_mass:
+                in_feat = 125.0 * ak.ones_like(events_partition.event)
+            else:
+                in_feat = events_partition[feat]
             scalers_path = f"{model_trained_path}/scalers_{fold}.npy"
             scaler_mean, scaler_mean_std = np.load(scalers_path)
             scaler_mean = scaler_mean[ix] # get feature relevant mean & std dev
@@ -83,14 +87,16 @@ def add_dnn_score(events_partition,
     )
     dnn_vbf_score = nan_val * ak.ones_like(events_partition.event)
     for fold in range(nfolds):
-        eval_folds = [(fold + f) % nfolds for f in [3]]
+        # eval_folds = [(fold + f) % nfolds for f in [3]]
+        eval_folds = [fold]
         eval_filter = getFoldFilter(events_partition, eval_folds, nfolds)
         dnnWrap = model_cache[fold]
         dnn_score_fold = dnnWrap(input_arr)
         dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)
         dnn_vbf_score = ak.where(eval_filter, dnn_vbf_score, dnn_score_fold)
         # transformed DNN
-        dnn_vbf_score_atanh = np.arctanh(np.clip(dnn_vbf_score, -0.999999999999, 0.999999999999))
+        dnn_vbf_score = np.clip(dnn_vbf_score, -0.999999, 0.999999)
+        dnn_vbf_score_atanh = np.arctanh(dnn_vbf_score)
 
     # return the events with the dnn_vbf_score and dnn_vbf_score_atanh fields added
     events_partition = ak.with_field(events_partition, dnn_vbf_score, "dnn_vbf_score")
@@ -138,6 +144,7 @@ def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path
 
 
     meta = ak.with_field(events._meta, np.zeros(0, dtype=np.float32), "dnn_vbf_score")
+    meta = ak.with_field(meta,              np.zeros(0, dtype=np.float32), "dnn_vbf_score_atanh")
     events = dak.map_partitions(
         add_dnn_score,
         events,
@@ -205,5 +212,6 @@ if __name__ == "__main__":
 
     samples = os.listdir(args.load_path)
     for sample in samples:
+        # if sample != "vbf_powheg_dipole": continue
         logger.info(f"Processing sample: {sample}")
         compact_and_add_dnn_score(args.year, sample, args.load_path, args.compacted_dir, args.model_path, args.add_dnn_score, args.tag, args.fix_dimuon_mass)
