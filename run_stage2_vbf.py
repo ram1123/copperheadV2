@@ -65,17 +65,44 @@ def get_compactedPath(stage1_path):
         logger.critical(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
         raise FileNotFoundError(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
 
-def columns_for_selection(category):
+def discover_jes_systs(fields, jet_prefixes=None):
+    """
+    Discover available JES/JER-like up/down suffixes from any jet-related variable.
+    Returns a sorted list of strings like ['Absolute_2018_up', 'HF_down', ...].
+    """
+    if jet_prefixes is None:
+        jet_prefixes = [
+            "jet1_pt_",
+            "jet2_pt_",
+            "jj_mass_",
+            "jj_dEta_",
+            "njets_",
+            "nBtagLoose_",
+            "nBtagMedium_",
+        ]
+    suffixes = set()
+    for f in fields:
+        if not (f.endswith("_up") or f.endswith("_down")):
+            continue
+        for p in jet_prefixes:
+            if f.startswith(p):
+                suffixes.add(f[len(p):])
+                break
+    return sorted(suffixes)
+
+def columns_for_selection(category, variation):
     # minimal columns for cuts; add here if your selection changes
+    if variation.startswith("wgt"): variation = "nominal"
     base = [
         "dimuon_mass",
         "event",
+        f"njets_{variation}",
         "gjj_mass",
-        "nBtagLoose_nominal",
-        "nBtagMedium_nominal",
-        "jj_mass_nominal",
-        "jj_dEta_nominal",
-        "jet1_pt_nominal",
+        f"nBtagLoose_{variation}",
+        f"nBtagMedium_{variation}",
+        f"jj_mass_{variation}",
+        f"jj_dEta_{variation}",
+        f"jet1_pt_{variation}",
     ]
     return base
 
@@ -200,8 +227,12 @@ def prepare_features(events, features, variation="nominal"):
 
 
 def feature_name_for_variation(feat, variation, fields):
-    # Protect soft-drop features; fall back gracefully
-    use_var = "nominal" if "soft" in feat else variation
+    # For weight-only variations, features must stay at nominal.
+    # Also protect soft-drop features; fall back gracefully.
+    if variation.startswith("wgt"):
+        use_var = "nominal"
+    else:
+        use_var = "nominal" if "soft" in feat else variation
     candidates = [f"{feat}_{use_var}", f"{feat}_nominal", feat]
     for c in candidates:
         if c in fields:
@@ -500,6 +531,13 @@ if __name__ == "__main__":
 
         events_schema = dak.from_parquet(sample_l)
         fields = set(events_schema.fields)
+        logger.debug(f"fields: {fields}")
+
+        # Auto-discover JES/JER-like systematic suffixes from jet-related columns
+        jes_systs = discover_jes_systs(fields)
+        # if "log_" exist remove that element from jes_systs, as these are not variations. This log belongs to the log of a particular variable.
+        jes_systs = [sys for sys in jes_systs if not sys.startswith("log_")]
+        logger.info(f"Discovered JES/JER variations: {jes_systs}")
 
         model_trained_path = f"{args.model_path}"
 
@@ -523,32 +561,31 @@ if __name__ == "__main__":
         if "data" in sample_type:
             wgt_variations = ["wgt_nominal"]
         else:
-            # # OLD Method
-            wgt_variations = [
-                w for w in fields if ("wgt_" in w and "separate" not in w)
-            ]
+            # Collect nominal + _up/_down weight variations (exclude any 'separate' helpers)
+            wgt_variations = ["wgt_nominal"] + sorted([
+                w for w in fields
+                if w.startswith("wgt_") and (w.endswith("_up") or w.endswith("_down")) and ("separate" not in w)
+            ])
             logger.info(f"wgt_variations: {wgt_variations}")
+            logger.info(f"length of wgt_variations: {len(wgt_variations)}")
+            if args.no_variations:
+                logger.warning(f"Flag --no_variations set. Using nominal only for {sample_type}.")
+                wgt_variations = ["wgt_nominal"]
+            # else:
+            #     # # OLD Method
+            #     wgt_variations = [
+            #         w for w in fields if ("wgt_" in w and "separate" not in w)
+            #     ]
+            #     logger.info(f"wgt_variations: {wgt_variations}")
 
-            # NEW Method: After adding JES
-            # wgt_variations = ["wgt_nominal"]
-            # up_down_fields = [
-            #     w for w in fields if w.endswith("_up") or w.endswith("_down")
-            # ]
-            # # get unique base name without up/down fields
-            # base_names = sorted({w.rsplit("_", 1)[0] for w in up_down_fields})
+            #     wgt_variations = ["wgt_nominal",
+            #                       'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
+            #                       'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down',
+            #                       'jet1_pt_jer6_up', 'jet1_pt_BBEC1_2018_up', 'jet1_pt_HF_up',
+            #                       'jet1_pt_jer6_down', 'jet1_pt_BBEC1_2018_down', 'jet1_pt_HF_down',
 
-            # # Append each pair (_up, _down) together
-            # for base in base_names[:51]:
-            # # for base in base_names:
-            #     if f"{base}_up" in up_down_fields:
-            #         wgt_variations.append(f"{base}_up")
-            #     if f"{base}_down" in up_down_fields:
-            #         wgt_variations.append(f"{base}_down")
-
-            # wgt_variations = ["wgt_nominal",
-            #                   'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
-            #                   'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down'
-            #                   ]  # FIXME: For debugging purpose.
+            #                       ]  # FIXME: For debugging purpose.
+            # wgt_variations = ["wgt_nominal", "wgt_muIso_up", "wgt_muIso_down"]
             logger.info(f"wgt_variations: {wgt_variations}")
             logger.info(f"length of wgt_variations: {len(wgt_variations)}")
 
@@ -559,8 +596,13 @@ if __name__ == "__main__":
         t5 = time.perf_counter()
         logger.info(f"[timing] Weight variation processing time: {t5 - t4:.2f} seconds")
         logger.info(f"wgt_variations: {wgt_variations}")
-        syst_variations = ["nominal"]  # FIXME
+        # syst_variations = ["nominal"]  # FIXME
         # syst_variations = ['nominal', 'Absolute_up', 'Absolute_down', f'Absolute_{year}_up',
+        if args.no_variations:
+            syst_variations = ["nominal"]
+        else:
+            syst_variations = ["nominal"] + jes_systs
+        logger.info(f"syst_variations: {syst_variations}")
         variations = []
         for w in wgt_variations:
             for v in syst_variations:
@@ -596,7 +638,7 @@ if __name__ == "__main__":
             dict(zip(loop_args_dict.keys(), values))
             for values in itertools.product(*loop_args_dict.values())
         ]
-        logger.debug(f"loop_args: {loop_args}")
+        logger.info(f"loop_args: {loop_args}")
 
         t6 = time.perf_counter()
         logger.info(f"[timing] Empty histogram time: {t6 - t5:.2f} seconds")
@@ -611,17 +653,23 @@ if __name__ == "__main__":
             syst_variation = loop_arg["syst_variation"]
             wgt_variation  = loop_arg["wgt_variation"]
             variation          = get_variation(wgt_variation, syst_variation)
+            logger.debug(f"variation: {variation}")
             if not variation:
                 logger.warning(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
                 continue
 
-            sel_cols = columns_for_selection(category)
+            sel_cols = columns_for_selection(category, variation)
+            # Never decorate feature columns with weight-only variation suffixes
+            variation_for_features = "nominal" if variation.startswith("wgt") else variation
             features_to_use = [
-                feature_name_for_variation(f, variation, fields)
+                feature_name_for_variation(f, variation_for_features, fields)
                 for f in training_features
             ]
-            needed_cols = sorted(set(sel_cols + features_to_use + [wgt_variation]))
-
+            needed_cols = set(sel_cols + [wgt_variation])
+            for f_base in training_features:
+                f_name = feature_name_for_variation(f_base, variation_for_features, fields)
+                needed_cols.add(f_name)
+            needed_cols = sorted(needed_cols)
             logger.debug(f"sel_cols: {sel_cols}")
             logger.debug(f"len(sel_cols): {len(sel_cols)}")
 
@@ -637,7 +685,15 @@ if __name__ == "__main__":
                 columns=needed_cols,
                 # split_row_groups=True, # FIXME: This introduces some issue and number of entries does not remain same.
             )
-            events = applyCatAndFeatFilter(events_stage1, region=region, category=category, process=sample_type)
+            # events = applyCatAndFeatFilter(events_stage1, region=region, category=category, process=sample_type)
+            events = selection.applyRegionCatCuts(
+                events_stage1,
+                process=sample_type,
+                category=category,
+                region_name=region,
+                do_vbf_filter_study=True,
+                variation=variation,
+            )
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
 
             nan_val = -999.0
@@ -706,7 +762,7 @@ if __name__ == "__main__":
             to_fill_sumw2["val_sumw2"] = "sumw2"
             score_hist.fill(**to_fill_sumw2, weight=weight * weight)
 
-            logger.info(f"[{count:>4}]:score_hist is filled for {sample_type}, {variation:<35} variation!")
+            logger.info(f"[{count:>4}]:score_hist is filled for {sample_type}, {region:>11}, {variation:<35} variation!")
             score_hist_l.append(score_hist)
 
         t7 = time.perf_counter()
