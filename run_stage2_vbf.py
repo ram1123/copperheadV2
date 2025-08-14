@@ -506,7 +506,9 @@ if __name__ == "__main__":
     logger.info(f"data_samples: {data_samples}")
 
     stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0" # FIXME
-    stage1_path = get_compactedPath(stage1_path)# get compacted stage1 output if they exist
+    # FIXME: commented the compact path for the JES variation.
+    #               Later, this can be automated.
+    # stage1_path = get_compactedPath(stage1_path) # get compacted stage1 output if they exist
     logger.info(f"stage1 path: {stage1_path}")
     if not os.path.exists(stage1_path):
         logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
@@ -586,8 +588,8 @@ if __name__ == "__main__":
 
             #                       ]  # FIXME: For debugging purpose.
             # wgt_variations = ["wgt_nominal", "wgt_muIso_up", "wgt_muIso_down"]
-            logger.info(f"wgt_variations: {wgt_variations}")
-            logger.info(f"length of wgt_variations: {len(wgt_variations)}")
+            logger.debug(f"wgt_variations: {wgt_variations}")
+            logger.debug(f"length of wgt_variations: {len(wgt_variations)}")
 
             if args.no_variations:
                 logger.warning(f"No weight variations found for {sample_type}, using nominal only.")
@@ -638,7 +640,7 @@ if __name__ == "__main__":
             dict(zip(loop_args_dict.keys(), values))
             for values in itertools.product(*loop_args_dict.values())
         ]
-        logger.info(f"loop_args: {loop_args}")
+        logger.debug(f"loop_args: {loop_args}")
 
         t6 = time.perf_counter()
         logger.info(f"[timing] Empty histogram time: {t6 - t5:.2f} seconds")
@@ -655,26 +657,30 @@ if __name__ == "__main__":
             variation          = get_variation(wgt_variation, syst_variation)
             logger.debug(f"variation: {variation}")
             if not variation:
-                logger.warning(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
+                logger.debug(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
                 continue
 
             sel_cols = columns_for_selection(category, variation)
+            needed_cols = set(sel_cols + [wgt_variation])
+
+            logger.debug(f"sel_cols: {sel_cols}")
+            logger.debug(f"len(sel_cols): {len(sel_cols)}")
+
             # Never decorate feature columns with weight-only variation suffixes
             variation_for_features = "nominal" if variation.startswith("wgt") else variation
             features_to_use = [
                 feature_name_for_variation(f, variation_for_features, fields)
                 for f in training_features
             ]
-            needed_cols = set(sel_cols + [wgt_variation])
-            for f_base in training_features:
-                f_name = feature_name_for_variation(f_base, variation_for_features, fields)
-                needed_cols.add(f_name)
+            # Map base training feature name -> actual source column for this variation
+            feature_sources = {
+                f: feature_name_for_variation(f, variation_for_features, fields)
+                for f in training_features
+            }
+            logger.debug(f"feature_sources: {feature_sources}")
+            for src_name in feature_sources.values():
+                needed_cols.add(src_name)
             needed_cols = sorted(needed_cols)
-            logger.debug(f"sel_cols: {sel_cols}")
-            logger.debug(f"len(sel_cols): {len(sel_cols)}")
-
-            logger.debug(f"features_to_use: {features_to_use}")
-            logger.debug(f"len(features_to_use): {len(features_to_use)}")
 
             logger.debug(f"needed_cols: {needed_cols}")
             logger.debug(f"len(needed_cols): {len(needed_cols)}")
@@ -697,35 +703,39 @@ if __name__ == "__main__":
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
 
             nan_val = -999.0
-
-            input_arr_dict = {feat: nan_val * ak.ones_like(events.event) for feat in features_to_use}
+            input_arr_dict = {
+                feat: nan_val * ak.ones_like(events.event) for feat in training_features
+            }
             logger.debug(f" input_arr_dict b4: {input_arr_dict}")
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
                 logger.debug(f" eval_folds: {eval_folds}")
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
 
-                for ix in range(len(features_to_use)):
-                    feat = features_to_use[ix]
-                    input_arr_fold = input_arr_dict[feat]
+                for ix, base_feat in enumerate(training_features):
+                    src_feat = feature_sources[base_feat]  # e.g. 'jet1_eta_jer6_down' for JES/JER
+                    logger.debug(f"Processing feature: {base_feat}, source feature: {src_feat}")
+                    input_arr_fold = input_arr_dict[base_feat]
 
-                    # scale the events feature
-                    in_feat = events[feat]
+                    # scale from the *source* column, but keep the base key + index
+                    in_feat = events[src_feat]
                     scalers_path = f"{model_trained_path}/scalers_{fold}.npy"
                     scaler_mean, scaler_mean_std = np.load(scalers_path)
-                    scaler_mean = scaler_mean[ix] # get feature relevant mean & std dev
-                    scaler_mean_std = scaler_mean_std[ix] # get feature relevant mean & std dev
+                    scaler_mean = scaler_mean[ix]
+                    scaler_mean_std = scaler_mean_std[ix]
                     in_feat = (in_feat - scaler_mean) / scaler_mean_std
 
                     input_arr_fold = ak.where(eval_filter, in_feat, input_arr_fold)
-                    input_arr_dict[feat] = input_arr_fold
+                    input_arr_dict[base_feat] = input_arr_fold
 
             # ---------------------------------------------------
             # Now evaluate DNN score
             # ---------------------------------------------------
             input_arr = ak.concatenate(
-                [input_arr_dict[feat][:, np.newaxis] for feat in features_to_use],  # np.newaxis is added so that we can concat on axis=1
-                axis=1
+                [
+                    input_arr_dict[feat][:, np.newaxis] for feat in training_features
+                ],  # np.newaxis is added so that we can concat on axis=1
+                axis=1,
             )
             dnn_score = nan_val * ak.ones_like(events.event)
 
