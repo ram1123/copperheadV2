@@ -16,7 +16,7 @@ def _get_last_axis_edges(hobj) -> np.ndarray:
     # hist.axis.Variable exposes .edges
     try:
         edges = np.asarray(ax.edges)
-    except Exception:
+    except AttributeError:
         # Fallback for boost-histogram style
         edges = np.asarray(ax.edges)
     return edges

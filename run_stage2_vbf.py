@@ -472,7 +472,7 @@ if __name__ == "__main__":
 
         # Auto-discover JES/JER-like systematic suffixes from jet-related columns
         jes_systs = discover_jes_systs(fields)
-        # if "log_" exist remove that element from jes_systs, as these are not variations. This log belongs to the log of a particular variable.
+        # if "log_" exists remove that element from jes_systs, as these are not variations. This log belongs to the log of a particular variable.
         jes_systs = [sys for sys in jes_systs if not sys.startswith("log_")]
         logger.info(f"Discovered JES/JER variations: {jes_systs}")
 

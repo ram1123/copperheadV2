@@ -131,6 +131,27 @@ def applyRegionCatCuts(
 
     # Helper to fetch the right column, falling back to _nominal or base if needed
     def varcol(base):
+        """
+        Fetch the appropriate column from the events object, handling variations.
+
+        Attempts to retrieve the column named '{base}_{use_var}', falling back to '{base}_nominal' and then '{base}'.
+        Raises a KeyError if none of these columns are present in events.fields.
+
+        Parameters
+        ----------
+        base : str
+            The base name of the column to retrieve.
+
+        Returns
+        -------
+        awkward.Array
+            The selected column from the events object.
+
+        Raises
+        ------
+        KeyError
+            If none of the candidate columns are found in events.fields.
+        """
         # print(f"Fetching variable column for: {base}")
         # print(f"Using variation: {use_var}")
         for cand in (f"{base}_{use_var}", f"{base}_nominal", base):
@@ -154,7 +175,7 @@ def applyRegionCatCuts(
     elif region_name == "z-peak":
         region = z_peak
     else:
-        print("ERROR: acceptable region!")
+        print("ERROR: Invalid region specified. Acceptable regions are: signal, h-peak, h-sidebands, z-peak")
         raise ValueError
 
     # --- category cuts: USE varcol(...) for JES/JER-affected columns ---
@@ -193,7 +214,8 @@ def applyRegionCatCuts(
             )  # btag cut is for VH and ttH categories
         else:
             print("Error: invalid category option!")
-            raise ValueError
+            print("Error: invalid category option! Valid options are: 'vbf', 'ggh', 'nocat'.")
+            raise ValueError("Invalid category option! Valid options are: 'vbf', 'ggh', 'nocat'.")
 
     if do_vbf_filter_study:
         if "dy_" in process:
