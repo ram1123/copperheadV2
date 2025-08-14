@@ -65,82 +65,46 @@ def get_compactedPath(stage1_path):
         logger.critical(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
         raise FileNotFoundError(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
 
-def columns_for_selection(category):
+def discover_jes_systs(fields, jet_prefixes=None):
+    """
+    Discover available JES/JER-like up/down suffixes from any jet-related variable.
+    Returns a sorted list of strings like ['Absolute_2018_up', 'HF_down', ...].
+    """
+    if jet_prefixes is None:
+        jet_prefixes = [
+            "jet1_pt_",
+            "jet2_pt_",
+            "jj_mass_",
+            "jj_dEta_",
+            "njets_",
+            "nBtagLoose_",
+            "nBtagMedium_",
+        ]
+    suffixes = set()
+    for f in fields:
+        if not (f.endswith("_up") or f.endswith("_down")):
+            continue
+        for p in jet_prefixes:
+            if f.startswith(p):
+                suffixes.add(f[len(p):])
+                break
+    return sorted(suffixes)
+
+def columns_for_selection(category, variation):
     # minimal columns for cuts; add here if your selection changes
+    use_var = "nominal" if variation.startswith("wgt") else variation
     base = [
         "dimuon_mass",
         "event",
+        f"njets_{use_var}",
         "gjj_mass",
-        "nBtagLoose_nominal",
-        "nBtagMedium_nominal",
-        "jj_mass_nominal",
-        "jj_dEta_nominal",
-        "jet1_pt_nominal",
+        f"nBtagLoose_{use_var}",
+        f"nBtagMedium_{use_var}",
+        f"jj_mass_{use_var}",
+        f"jj_dEta_{use_var}",
+        f"jet1_pt_{use_var}",
     ]
     return base
-
-def applyCatAndFeatFilter(events, region="h-peak", category="vbf", process=None):
-    """
-
-    """
-    if process is None:
-        logger.info("please give appropriate sample name!")
-        raise ValueError
-    # apply category filter
-    dimuon_mass = events.dimuon_mass
-    if region =="h-peak":
-        region_filter = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
-    elif region =="h-sidebands":
-        region_filter = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
-    elif region =="signal":
-        region_filter = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
-
-    if category.lower() == "vbf":
-        btag_cut = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        cat_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
-        cat_cut = cat_cut & (~btag_cut) # btag cut is for VH and ttH categories
-    elif category.lower()== "ggh":
-        btag_cut = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        cat_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5)
-        cat_cut = cat_cut & (~btag_cut) # btag cut is for VH and ttH categories
-    else: # no category cut is applied
-        cat_cut = ak.ones_like(dimuon_mass, dtype="bool")
-
-    cat_cut = ak.fill_none(cat_cut, value=False)
-
-
-    if "dy_" in process:
-        vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-        is_vbf_filter = ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc")
-        if is_vbf_filter:
-            logger.info(f"applying VBF filter cut on: {process}")
-
-            cat_cut =  (cat_cut
-                        & vbf_filter
-            )
-        else:
-            logger.info(f"cutting off inclusive dy: {process}")
-            cat_cut =  (
-                cat_cut
-                & ~vbf_filter
-                )
-
-    cat_filter = (
-        cat_cut &
-        region_filter
-    )
-    events = events[cat_filter] # apply the category filter
-    # logger.info(f"events dimuon_mass: {events.dimuon_mass.compute()}")
-    # apply the feature filter (so the ak zip only contains features we are interested)
-    # logger.info(f"features: {features}")
-    # events = ak.zip({field : events[field] for field in features})
-    # NOTE: we overwrite dimuon mass as 125 if region is h-siebands
-    logger.debug(f"events after category and region filter: {events.fields}")
-    logger.debug(f"region: {region}, category: {category}, process: {process}")
-    if region =="h-sidebands":
-        logger.debug(f"Region: {region} - Setting dimuon_mass to 125.0 for all events in partition.")
-        events["dimuon_mass"] = 125 * ak.ones_like(events.dimuon_mass)
-    return events
 
 class DNNWrapper(torch_wrapper):
     def _create_model(self):
@@ -200,8 +164,12 @@ def prepare_features(events, features, variation="nominal"):
 
 
 def feature_name_for_variation(feat, variation, fields):
-    # Protect soft-drop features; fall back gracefully
-    use_var = "nominal" if "soft" in feat else variation
+    # For weight-only variations, features must stay at nominal.
+    # Also protect soft-drop features; fall back gracefully.
+    if variation.startswith("wgt"):
+        use_var = "nominal"
+    else:
+        use_var = "nominal" if "soft" in feat else variation
     candidates = [f"{feat}_{use_var}", f"{feat}_nominal", feat]
     for c in candidates:
         if c in fields:
@@ -460,8 +428,7 @@ if __name__ == "__main__":
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
     else:
-        from distributed import LocalCluster, Client
-        client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+        client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='2 GiB')
         logger.info("Local scale Client created")
 
     t2 = time.perf_counter()
@@ -475,7 +442,8 @@ if __name__ == "__main__":
     logger.info(f"data_samples: {data_samples}")
 
     stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0" # FIXME
-    stage1_path = get_compactedPath(stage1_path)# get compacted stage1 output if they exist
+    stage1_path = stage1_path.replace("//","/")
+    stage1_path = get_compactedPath(stage1_path) # get compacted stage1 output if they exist
     logger.info(f"stage1 path: {stage1_path}")
     if not os.path.exists(stage1_path):
         logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
@@ -488,7 +456,7 @@ if __name__ == "__main__":
     t3 = time.perf_counter()
     logger.info(f"[timing] sample dict processing time: {t3 - t2:.2f} seconds")
 
-    nfolds = 4  # Define nfolds once for all samples
+    nfolds = args.nfolds  # Define nfolds once for all samples
     for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
         t4 = time.perf_counter()
         logger.info(f"Processing sample type: {sample_type}, number of files: {len(sample_l)}")
@@ -500,6 +468,13 @@ if __name__ == "__main__":
 
         events_schema = dak.from_parquet(sample_l)
         fields = set(events_schema.fields)
+        logger.debug(f"fields: {fields}")
+
+        # Auto-discover JES/JER-like systematic suffixes from jet-related columns
+        jes_systs = discover_jes_systs(fields)
+        # if "log_" exists remove that element from jes_systs, as these are not variations. This log belongs to the log of a particular variable.
+        jes_systs = [sys for sys in jes_systs if not sys.startswith("log_")]
+        logger.info(f"Discovered JES/JER variations: {jes_systs}")
 
         model_trained_path = f"{args.model_path}"
 
@@ -523,34 +498,22 @@ if __name__ == "__main__":
         if "data" in sample_type:
             wgt_variations = ["wgt_nominal"]
         else:
-            # # OLD Method
-            wgt_variations = [
-                w for w in fields if ("wgt_" in w and "separate" not in w)
-            ]
-            logger.info(f"wgt_variations: {wgt_variations}")
+            # Collect nominal + _up/_down weight variations (exclude any 'separate' helpers)
+            wgt_variations = ["wgt_nominal"] + sorted([
+                w for w in fields
+                if w.startswith("wgt_") and (w.endswith("_up") or w.endswith("_down")) and ("separate" not in w)
+            ])
 
-            # NEW Method: After adding JES
-            # wgt_variations = ["wgt_nominal"]
-            # up_down_fields = [
-            #     w for w in fields if w.endswith("_up") or w.endswith("_down")
-            # ]
-            # # get unique base name without up/down fields
-            # base_names = sorted({w.rsplit("_", 1)[0] for w in up_down_fields})
+            #     wgt_variations = ["wgt_nominal",
+            #                       'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
+            #                       'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down',
+            #                       'jet1_pt_jer6_up', 'jet1_pt_BBEC1_2018_up', 'jet1_pt_HF_up',
+            #                       'jet1_pt_jer6_down', 'jet1_pt_BBEC1_2018_down', 'jet1_pt_HF_down',
 
-            # # Append each pair (_up, _down) together
-            # for base in base_names[:51]:
-            # # for base in base_names:
-            #     if f"{base}_up" in up_down_fields:
-            #         wgt_variations.append(f"{base}_up")
-            #     if f"{base}_down" in up_down_fields:
-            #         wgt_variations.append(f"{base}_down")
-
-            # wgt_variations = ["wgt_nominal",
-            #                   'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
-            #                   'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down'
-            #                   ]  # FIXME: For debugging purpose.
-            logger.info(f"wgt_variations: {wgt_variations}")
-            logger.info(f"length of wgt_variations: {len(wgt_variations)}")
+            #                       ]  # FIXME: For debugging purpose.
+            # wgt_variations = ["wgt_nominal", "wgt_muIso_up", "wgt_muIso_down"]
+            logger.debug(f"wgt_variations: {wgt_variations}")
+            logger.debug(f"length of wgt_variations: {len(wgt_variations)}")
 
             if args.no_variations:
                 logger.warning(f"No weight variations found for {sample_type}, using nominal only.")
@@ -559,8 +522,11 @@ if __name__ == "__main__":
         t5 = time.perf_counter()
         logger.info(f"[timing] Weight variation processing time: {t5 - t4:.2f} seconds")
         logger.info(f"wgt_variations: {wgt_variations}")
-        syst_variations = ["nominal"]  # FIXME
-        # syst_variations = ['nominal', 'Absolute_up', 'Absolute_down', f'Absolute_{year}_up',
+        if args.no_variations:
+            syst_variations = ["nominal"]
+        else:
+            syst_variations = ["nominal"] + jes_systs
+        logger.info(f"syst_variations: {syst_variations}")
         variations = []
         for w in wgt_variations:
             for v in syst_variations:
@@ -611,22 +577,29 @@ if __name__ == "__main__":
             syst_variation = loop_arg["syst_variation"]
             wgt_variation  = loop_arg["wgt_variation"]
             variation          = get_variation(wgt_variation, syst_variation)
+            logger.debug(f"variation: {variation}")
             if not variation:
-                logger.warning(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
+                logger.debug(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
                 continue
 
-            sel_cols = columns_for_selection(category)
-            features_to_use = [
-                feature_name_for_variation(f, variation, fields)
-                for f in training_features
-            ]
-            needed_cols = sorted(set(sel_cols + features_to_use + [wgt_variation]))
+            sel_cols = columns_for_selection(category, variation)
+            needed_cols = set(sel_cols + [wgt_variation])
 
             logger.debug(f"sel_cols: {sel_cols}")
             logger.debug(f"len(sel_cols): {len(sel_cols)}")
 
-            logger.debug(f"features_to_use: {features_to_use}")
-            logger.debug(f"len(features_to_use): {len(features_to_use)}")
+            # Never decorate feature columns with weight-only variation suffixes
+            variation_for_features = "nominal" if variation.startswith("wgt") else variation
+
+            # Map base training feature name -> actual source column for this variation
+            feature_sources = {
+                f: feature_name_for_variation(f, variation_for_features, fields)
+                for f in training_features
+            }
+            logger.debug(f"feature_sources: {feature_sources}")
+            for src_name in feature_sources.values():
+                needed_cols.add(src_name)
+            needed_cols = sorted(needed_cols)
 
             logger.debug(f"needed_cols: {needed_cols}")
             logger.debug(f"len(needed_cols): {len(needed_cols)}")
@@ -636,40 +609,60 @@ if __name__ == "__main__":
                 sample_l,
                 columns=needed_cols,
                 # split_row_groups=True, # FIXME: This introduces some issue and number of entries does not remain same.
+                # ).persist()  # Persist to memory for faster access
             )
-            events = applyCatAndFeatFilter(events_stage1, region=region, category=category, process=sample_type)
+            events = selection.applyRegionCatCuts(
+                events_stage1,
+                process=sample_type,
+                category=category,
+                region_name=region,
+                do_vbf_filter_study=True,
+                variation=variation,
+            )
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
+            # As DNN is trained in the h-peak region, so while evaluating for the h-sideband region
+            # we fix the dimuon mass to 125.0 GeV
+            if region == "h-sidebands":
+                try:
+                    events["dimuon_mass"] = 125.0 * ak.ones_like(events.dimuon_mass)
+                    logger.debug("[sidebands] Forced dimuon_mass=125.0 for DNN inputs")
+                except Exception as _e:
+                    logger.warning(f"[sidebands] Failed to fix dimuon_mass to 125.0: {_e}")
 
-            nan_val = -999.0
-
-            input_arr_dict = {feat: nan_val * ak.ones_like(events.event) for feat in features_to_use}
+            nan_val = -99.0
+            input_arr_dict = {
+                feat: nan_val * ak.ones_like(events.event) for feat in training_features
+            }
             logger.debug(f" input_arr_dict b4: {input_arr_dict}")
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
                 logger.debug(f" eval_folds: {eval_folds}")
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
 
-                for ix in range(len(features_to_use)):
-                    feat = features_to_use[ix]
-                    input_arr_fold = input_arr_dict[feat]
+                for ix, base_feat in enumerate(training_features):
+                    src_feat = feature_sources[base_feat]  # e.g. 'jet1_eta_jer6_down' for JES/JER
+                    logger.debug(f"Processing feature: {base_feat}, source feature: {src_feat}")
+                    input_arr_fold = input_arr_dict[base_feat]
 
-                    # scale the events feature
-                    in_feat = events[feat]
+                    # scale from the *source* column, but keep the base key + index
+                    in_feat = events[src_feat]
                     scalers_path = f"{model_trained_path}/scalers_{fold}.npy"
                     scaler_mean, scaler_mean_std = np.load(scalers_path)
-                    scaler_mean = scaler_mean[ix] # get feature relevant mean & std dev
-                    scaler_mean_std = scaler_mean_std[ix] # get feature relevant mean & std dev
+                    scaler_mean = scaler_mean[ix]
+                    scaler_mean_std = scaler_mean_std[ix]
                     in_feat = (in_feat - scaler_mean) / scaler_mean_std
 
                     input_arr_fold = ak.where(eval_filter, in_feat, input_arr_fold)
-                    input_arr_dict[feat] = input_arr_fold
+                    input_arr_dict[base_feat] = input_arr_fold
 
             # ---------------------------------------------------
             # Now evaluate DNN score
             # ---------------------------------------------------
             input_arr = ak.concatenate(
-                [input_arr_dict[feat][:, np.newaxis] for feat in features_to_use],  # np.newaxis is added so that we can concat on axis=1
-                axis=1
+                [
+                    input_arr_dict[feat][:, np.newaxis] for feat in training_features
+                ],  # np.newaxis is added so that we can concat on axis=1
+                axis=1,
             )
             dnn_score = nan_val * ak.ones_like(events.event)
 
@@ -683,7 +676,7 @@ if __name__ == "__main__":
                 dnn_score_fold = dnnWrap(input_arr)
                 dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)  # DNN output is 2 dimensional
 
-                dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
+                dnn_score = ak.where(eval_filter, dnn_score_fold, dnn_score)
             # transform dnn_score
             dnn_score = np.arctanh(dnn_score)
 
@@ -706,7 +699,7 @@ if __name__ == "__main__":
             to_fill_sumw2["val_sumw2"] = "sumw2"
             score_hist.fill(**to_fill_sumw2, weight=weight * weight)
 
-            logger.info(f"[{count:>4}]:score_hist is filled for {sample_type}, {variation:<35} variation!")
+            logger.info(f"[{count:>4}]:score_hist is filled for {sample_type}, {region:>11}, {variation:<35} variation!")
             score_hist_l.append(score_hist)
 
         t7 = time.perf_counter()
