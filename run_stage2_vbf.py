@@ -92,17 +92,17 @@ def discover_jes_systs(fields, jet_prefixes=None):
 
 def columns_for_selection(category, variation):
     # minimal columns for cuts; add here if your selection changes
-    if variation.startswith("wgt"): variation = "nominal"
+    use_var = "nominal" if variation.startswith("wgt") else variation
     base = [
         "dimuon_mass",
         "event",
-        f"njets_{variation}",
+        f"njets_{use_var}",
         "gjj_mass",
-        f"nBtagLoose_{variation}",
-        f"nBtagMedium_{variation}",
-        f"jj_mass_{variation}",
-        f"jj_dEta_{variation}",
-        f"jet1_pt_{variation}",
+        f"nBtagLoose_{use_var}",
+        f"nBtagMedium_{use_var}",
+        f"jj_mass_{use_var}",
+        f"jj_dEta_{use_var}",
+        f"jet1_pt_{use_var}",
     ]
     return base
 
