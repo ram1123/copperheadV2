@@ -106,69 +106,6 @@ def columns_for_selection(category, variation):
     ]
     return base
 
-def applyCatAndFeatFilter(events, region="h-peak", category="vbf", process=None):
-    """
-
-    """
-    if process is None:
-        logger.info("please give appropriate sample name!")
-        raise ValueError
-    # apply category filter
-    dimuon_mass = events.dimuon_mass
-    if region =="h-peak":
-        region_filter = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
-    elif region =="h-sidebands":
-        region_filter = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
-    elif region =="signal":
-        region_filter = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
-
-    if category.lower() == "vbf":
-        btag_cut = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        cat_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
-        cat_cut = cat_cut & (~btag_cut) # btag cut is for VH and ttH categories
-    elif category.lower()== "ggh":
-        btag_cut = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        cat_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5)
-        cat_cut = cat_cut & (~btag_cut) # btag cut is for VH and ttH categories
-    else: # no category cut is applied
-        cat_cut = ak.ones_like(dimuon_mass, dtype="bool")
-
-    cat_cut = ak.fill_none(cat_cut, value=False)
-
-
-    if "dy_" in process:
-        vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-        is_vbf_filter = ("dy_VBF_filter" in process) or (process =="dy_m105_160_vbf_amc")
-        if is_vbf_filter:
-            logger.info(f"applying VBF filter cut on: {process}")
-
-            cat_cut =  (cat_cut
-                        & vbf_filter
-            )
-        else:
-            logger.info(f"cutting off inclusive dy: {process}")
-            cat_cut =  (
-                cat_cut
-                & ~vbf_filter
-                )
-
-    cat_filter = (
-        cat_cut &
-        region_filter
-    )
-    events = events[cat_filter] # apply the category filter
-    # logger.info(f"events dimuon_mass: {events.dimuon_mass.compute()}")
-    # apply the feature filter (so the ak zip only contains features we are interested)
-    # logger.info(f"features: {features}")
-    # events = ak.zip({field : events[field] for field in features})
-    # NOTE: we overwrite dimuon mass as 125 if region is h-siebands
-    logger.debug(f"events after category and region filter: {events.fields}")
-    logger.debug(f"region: {region}, category: {category}, process: {process}")
-    if region =="h-sidebands":
-        logger.debug(f"Region: {region} - Setting dimuon_mass to 125.0 for all events in partition.")
-        events["dimuon_mass"] = 125 * ak.ones_like(events.dimuon_mass)
-    return events
-
 class DNNWrapper(torch_wrapper):
     def _create_model(self):
         model = torch.jit.load(self.torch_jit)
@@ -505,9 +442,8 @@ if __name__ == "__main__":
     logger.info(f"data_samples: {data_samples}")
 
     stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0" # FIXME
-    # FIXME: commented the compact path for the JES variation.
-    #               Later, this can be automated.
-    # stage1_path = get_compactedPath(stage1_path) # get compacted stage1 output if they exist
+    stage1_path = stage1_path.replace("//","/")
+    stage1_path = get_compactedPath(stage1_path) # get compacted stage1 output if they exist
     logger.info(f"stage1 path: {stage1_path}")
     if not os.path.exists(stage1_path):
         logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
@@ -567,8 +503,6 @@ if __name__ == "__main__":
                 w for w in fields
                 if w.startswith("wgt_") and (w.endswith("_up") or w.endswith("_down")) and ("separate" not in w)
             ])
-            logger.info(f"wgt_variations: {wgt_variations}")
-            logger.info(f"length of wgt_variations: {len(wgt_variations)}")
 
             #     wgt_variations = ["wgt_nominal",
             #                       'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
@@ -588,8 +522,6 @@ if __name__ == "__main__":
         t5 = time.perf_counter()
         logger.info(f"[timing] Weight variation processing time: {t5 - t4:.2f} seconds")
         logger.info(f"wgt_variations: {wgt_variations}")
-        # syst_variations = ["nominal"]  # FIXME
-        # syst_variations = ['nominal', 'Absolute_up', 'Absolute_down', f'Absolute_{year}_up',
         if args.no_variations:
             syst_variations = ["nominal"]
         else:
@@ -679,7 +611,6 @@ if __name__ == "__main__":
                 # split_row_groups=True, # FIXME: This introduces some issue and number of entries does not remain same.
                 # ).persist()  # Persist to memory for faster access
             )
-            # events = applyCatAndFeatFilter(events_stage1, region=region, category=category, process=sample_type)
             events = selection.applyRegionCatCuts(
                 events_stage1,
                 process=sample_type,
@@ -698,7 +629,7 @@ if __name__ == "__main__":
                 except Exception as _e:
                     logger.warning(f"[sidebands] Failed to fix dimuon_mass to 125.0: {_e}")
 
-            nan_val = -999.0
+            nan_val = -99.0
             input_arr_dict = {
                 feat: nan_val * ak.ones_like(events.event) for feat in training_features
             }

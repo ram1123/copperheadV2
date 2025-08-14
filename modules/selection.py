@@ -183,13 +183,13 @@ def applyRegionCatCuts(
             # print("vbf mode!")
             prod_cat_cut = vbf_cut
             prod_cat_cut = (
-                prod_cat_cut & ~btag_cut
+                prod_cat_cut & (~btag_cut)
             )  # btag cut is for VH and ttH categories
         elif category == "ggh":
             # print("ggH mode!")
             prod_cat_cut = ~vbf_cut
             prod_cat_cut = (
-                prod_cat_cut & ~btag_cut
+                prod_cat_cut & (~btag_cut)
             )  # btag cut is for VH and ttH categories
         else:
             print("Error: invalid category option!")
