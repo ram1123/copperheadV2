@@ -491,8 +491,7 @@ if __name__ == "__main__":
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
     else:
-        from distributed import LocalCluster, Client
-        client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+        client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='2 GiB')
         logger.info("Local scale Client created")
 
     t2 = time.perf_counter()
@@ -521,7 +520,7 @@ if __name__ == "__main__":
     t3 = time.perf_counter()
     logger.info(f"[timing] sample dict processing time: {t3 - t2:.2f} seconds")
 
-    nfolds = 4  # Define nfolds once for all samples
+    nfolds = args.nfolds  # Define nfolds once for all samples
     for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
         t4 = time.perf_counter()
         logger.info(f"Processing sample type: {sample_type}, number of files: {len(sample_l)}")
@@ -570,15 +569,6 @@ if __name__ == "__main__":
             ])
             logger.info(f"wgt_variations: {wgt_variations}")
             logger.info(f"length of wgt_variations: {len(wgt_variations)}")
-            if args.no_variations:
-                logger.warning(f"Flag --no_variations set. Using nominal only for {sample_type}.")
-                wgt_variations = ["wgt_nominal"]
-            # else:
-            #     # # OLD Method
-            #     wgt_variations = [
-            #         w for w in fields if ("wgt_" in w and "separate" not in w)
-            #     ]
-            #     logger.info(f"wgt_variations: {wgt_variations}")
 
             #     wgt_variations = ["wgt_nominal",
             #                       'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
@@ -668,10 +658,7 @@ if __name__ == "__main__":
 
             # Never decorate feature columns with weight-only variation suffixes
             variation_for_features = "nominal" if variation.startswith("wgt") else variation
-            features_to_use = [
-                feature_name_for_variation(f, variation_for_features, fields)
-                for f in training_features
-            ]
+
             # Map base training feature name -> actual source column for this variation
             feature_sources = {
                 f: feature_name_for_variation(f, variation_for_features, fields)
@@ -690,6 +677,7 @@ if __name__ == "__main__":
                 sample_l,
                 columns=needed_cols,
                 # split_row_groups=True, # FIXME: This introduces some issue and number of entries does not remain same.
+                # ).persist()  # Persist to memory for faster access
             )
             # events = applyCatAndFeatFilter(events_stage1, region=region, category=category, process=sample_type)
             events = selection.applyRegionCatCuts(
@@ -701,6 +689,14 @@ if __name__ == "__main__":
                 variation=variation,
             )
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
+            # As DNN is trained in the h-peak region, so while evaluating for the h-sideband region
+            # we fix the dimuon mass to 125.0 GeV
+            if region == "h-sidebands":
+                try:
+                    events["dimuon_mass"] = 125.0 * ak.ones_like(events.dimuon_mass)
+                    logger.debug("[sidebands] Forced dimuon_mass=125.0 for DNN inputs")
+                except Exception as _e:
+                    logger.warning(f"[sidebands] Failed to fix dimuon_mass to 125.0: {_e}")
 
             nan_val = -999.0
             input_arr_dict = {
@@ -749,7 +745,7 @@ if __name__ == "__main__":
                 dnn_score_fold = dnnWrap(input_arr)
                 dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)  # DNN output is 2 dimensional
 
-                dnn_score = ak.where(eval_filter, dnn_score, dnn_score_fold)
+                dnn_score = ak.where(eval_filter, dnn_score_fold, dnn_score)
             # transform dnn_score
             dnn_score = np.arctanh(dnn_score)
 
