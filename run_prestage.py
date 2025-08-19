@@ -328,7 +328,7 @@ if __name__ == "__main__":
         if len(bkg_samples) >0:
             for bkg_letter in bkg_samples:
                 for bkg_name in bkg_l:
-                    if bkg_letter in bkg_name:
+                    if bkg_letter == bkg_name:
                         for bkgs in dataset[bkg_name].keys():
                             new_sample_list.append(bkgs)
 
