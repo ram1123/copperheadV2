@@ -16,6 +16,7 @@ import hist.dask as hda
 import dask
 import logging
 from modules.utils import logger
+from modules import selection
 
 from scripts.compact_parquet_data import ensure_compacted
 
@@ -593,9 +594,9 @@ if __name__ == "__main__":
     # check if the compacted path exists
     COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted_13August_FixDimuonMass")
 
-    # for process in available_processes:
-    #     compacted_path_DNN = os.path.join(COMPACTED_PATH, process, "0")
-    #     ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
+    for process in available_processes:
+        compacted_path_DNN = os.path.join(COMPACTED_PATH, process, "0")
+        ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
     args.load_path = COMPACTED_PATH
 
     # load saved parquet files. This increases memory use, but increases runtime significantly
@@ -771,7 +772,15 @@ if __name__ == "__main__":
                 # ------------------------------------------------
                 # take the mass region and category cuts
                 # ------------------------------------------------
-                events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name, args.njets, process, args.do_vbf_filter_study)
+                # events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name, args.njets, process, args.do_vbf_filter_study)
+                events = dak.map_partitions(selection.applyRegionCatCuts,
+                    events,
+                    args.category,
+                    region_name,
+                    process,
+                    "nominal",
+                    args.do_vbf_filter_study
+                )
 
                 #  FOR DEBUG PURPOSES
                 # if process == "dy_M-100To200_aMCatNLO":
@@ -882,7 +891,10 @@ if __name__ == "__main__":
 
                 logger.debug(f"group_name: {group_name}\t hist_dict: {hist_dict}")
                 if "DATA" in group_name: # data
-                    data_dict = hist_dict
+                    if region_name != "h-peak":
+                        data_dict = hist_dict
+                    else: # keep data blinded
+                        data_dict = {key: np.zeros_like(value) for key, value in hist_dict.items()}
                 elif "GGH" == group_name or "VBF" == group_name: # signal
                     sig_MC_dict[group_name] = hist_dict
                 else: # bkg MC
@@ -973,9 +985,9 @@ if __name__ == "__main__":
                 elif args.year == "2017":
                     args.lumi = "41.48"
                 elif args.year == "2018":
-                    args.lumi = "59.83"
+                    args.lumi = "60" # 59.83
                 elif args.year == "AllYear" or args.year == "*":
-                    args.lumi = "137.62"
+                    args.lumi = "138" # 137.62fb-1
             plotDataMC_compare(
                 binning,
                 data_dict,

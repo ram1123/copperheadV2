@@ -74,7 +74,6 @@ def plotDataMC_compare(
     petroff10 = ListedColormap(["#3f90da", "#ffa90e", "#bd1f01", "#94a4a2", "#832db6", "#a96b59", "#e76300", "#b9ac70", "#717581", "#92dadd"])
     colors = petroff10.colors  # specify colors
 
-
     if plot_ratio:
         fig, (ax_main, ax_ratio) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
     else: # skip ratio plot
@@ -98,7 +97,6 @@ def plotDataMC_compare(
         label='Data',
         ax=ax_main,
     )
-
 
     # -----------------------------------------
     # plot bkg_MC
@@ -136,8 +134,6 @@ def plotDataMC_compare(
         # elif x_title == "$R_{p_T}$":
         #     ax_main.set_ylim(0.35938137,  774.26368268)
 
-
-
     # -----------------------------------------
     # plot signal MC
     # -----------------------------------------
@@ -174,7 +170,6 @@ def plotDataMC_compare(
         ratio_err = rel_unc_ratio*ratio_hist
         # print(f"plotDataMC compare ratio_err: {ratio_err}")
 
-
         hep.histplot(ratio_hist,
                      bins=binning, histtype='errorbar', yerr=ratio_err,
                      color='black', label='Ratio', ax=ax_ratio)
@@ -198,7 +193,6 @@ def plotDataMC_compare(
                 **ratio_err_opts,
             )
 
-
         ax_ratio.axhline(1, color='gray', linestyle='--')
         ax_ratio.axhline(1.2, color='gray', linestyle='--')
         ax_ratio.axhline(0.8, color='gray', linestyle='--')
@@ -211,7 +205,6 @@ def plotDataMC_compare(
         ax_ratio.set_yticks([0.6, 0.8, 1.0, 1.2, 1.4]) # explicitly ask for 1.4 and 0.6
     else:
         ax_main.set_xlabel(x_title)
-
 
     # -----------------------------------------
     # compute and display separation power
@@ -230,13 +223,16 @@ def plotDataMC_compare(
             sig_density = sig_arr / np.sum(sig_arr * widths)
             # separation power
             d_val = 0.5 * np.sum(np.abs(sig_density - bkg_density) * widths)
-        # place text in upper-right, offset per sample
-        for idx, sig_name in enumerate(sig_MC_dict.keys()):
-            y_pos = 0.95 - idx * 0.05
+            if log_scale:
+                y_pos = 0.93 - idx * 0.07
+                x_pos = 0.35
+            else:
+                y_pos = 0.45 - idx * 0.07
+                x_pos = 0.95
             ax_main.text(
-                0.95, y_pos,
+                x_pos, y_pos,
                 f"{sig_name}: d = {d_val:.2f}",
-                ha="right", va="top", transform=ax_main.transAxes
+                ha="right", va="center", transform=ax_main.transAxes
             )
 
     # -----------------------------------------
@@ -254,12 +250,16 @@ def plotDataMC_compare(
     with open(save_full_path.replace(".pdf", ".txt"), "w") as f:
         f.write(f"Data: {np.sum(data_hist)}\n")
         for bkg_mc_sample, bkg_mc_hist in zip(bkg_mc_sample_names, bkg_MC_hist_l):
-            f.write(f"{bkg_mc_sample}: {np.sum(bkg_mc_hist)}\n")
+            f.write(f"{bkg_mc_sample}: {np.sum(bkg_mc_hist):.2f}\n")
         if len(sig_MC_dict.keys()) > 0:
-            for sig_mc_sample, sig_mc_hist in zip(sig_mc_sample, sig_MC_hist):
-                f.write(f"{sig_mc_sample}: {np.sum(sig_mc_hist)}\n")
+            f.write(f"{sig_mc_sample}: {np.sum(sig_MC_hist):.2f}\n")
         if plot_ratio:
-            f.write(f"Data/MC ratio: {np.sum(ratio_hist)}\n")
+            f.write(
+                f"Data/MC ratio (Sum ratio_hist): {np.sum(ratio_hist)}\n"
+            )
+            f.write(
+                f"Data/MC ratio (Sum ratio_hist then divide by number of bins): {np.sum(ratio_hist) / len(binning):.2f}\n"
+            )
     print(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
 
 

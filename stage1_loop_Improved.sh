@@ -12,14 +12,15 @@ Options:
   -v <version>  NanoAOD version (default: 12)
   -y <year>     Year (default: 2018 2017 2016postVFP 2016preVFP)
   -l <label>    Label (default: Default_nanoAODv9)
-  -s            Skip bad files (default: 0)
-  -d            Enable debug mode (default: 0)
-  -f            Run only 10% of samples for debugging (default: 0)
   -n <njet>     nJet value (optional, default: 0)
   -b <bins>     Number of bins (optional, default: 100)
   -o <outAppend>  String to append to output files (default: today's date)
   -r <region>   DNN training region (default: h-peak)
   -t <category> DNN training category (default: vbf)
+  -p <postfix>  Postfix string to append to output directory for stage2 and 3 (default: "")
+  -s            Skip bad files (default: 0)
+  -d            Enable debug mode (default: 0)
+  -f            Run only 10% of samples for debugging (default: 0)
 EOF
     exit 1
 }
@@ -39,9 +40,10 @@ PWD="$(pwd)"
 outAppend="$(date +%b%d_%Y)"   # Default: today's date, e.g. Jun24_2025
 region="h-peak" # h-peak, h-sideband, signal
 category="vbf"
+postfix=""
 
 # ----------- Parse options -----------
-while getopts ":hc:m:v:y:l:n:b:d:o:sfr:t:" option; do
+while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:sf:" option; do
     case "$option" in
         h) usage ;;
         c) datasetYAML="$OPTARG" ;;
@@ -53,10 +55,11 @@ while getopts ":hc:m:v:y:l:n:b:d:o:sfr:t:" option; do
         b) nbin="$OPTARG" ;;
         d) debug="$OPTARG" ;;
         o) outAppend="$OPTARG" ;;
-        s) skipBadFiles="1" ;;
-        f) frac="1" ;;
         r) region="$OPTARG" ;;
         t) category="$OPTARG" ;;
+        p) postfix="$OPTARG" ;;
+        s) skipBadFiles="1" ;;
+        f) frac="1" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
@@ -64,7 +67,7 @@ done
 
 # ----------- Check environment and load modules -----------
 # if DNN training is enabled, check if the conda environment is `pfn_env` else it should be `yun_coffea_latest`
-if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" ]]; then
+if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" || "$mode" == "dnn_var_rank" ]]; then
     if [[ "$CONDA_PREFIX" != *"pfn_env"* ]]; then
         echo "Please run this script in the pfn_env conda environment for DNN training"
         exit 1
@@ -120,10 +123,12 @@ if [[ "$debug" -ge 1 ]]; then
     # years=("2016preVFP")
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
-    data_l_dict["2017"]=""
-    data_l_dict["2018"]="A B C D"
+    data_l_dict["2017"]="B C D E F"
+    data_l_dict["2018"]=""
     bkg_l=""
     sig_l=""
+    sig_l="Higgs"
+    # sig_l="VBF"
 fi
 
 chunksize=300000
@@ -174,12 +179,14 @@ for year in "${years[@]}"; do
     compact_tag="13August"
     # postfix="July31_Rebinnedv2_NoSyst"
     # postfix="July31_Rebinnedv2"
-    postfix="FixPUJetIDWgt_Rebinned"
+    # postfix="WithJES_13August"
+    # postfix="Aug14_OLDBR_NewSelv2"
+    # postfix="Latest"
 
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score --tag $compact_tag"
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
@@ -188,9 +195,9 @@ for year in "${years[@]}"; do
         bkg_l_stage2="${bkg_l/Top/TT ST}"
     fi
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --use_gateway "
+    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
-    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations --use_gateway "
+    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
 
     command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix"
