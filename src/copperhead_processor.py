@@ -1154,7 +1154,8 @@ class EventProcessor(processor.ProcessorABC):
 
             # now JER has been applied, we apply unc coeefficients to the latest value
             variation_l.remove("nominal")
-            jets = applyJetUncertaintyKinematics(jets, variation_l)
+            if is_mc:
+                jets = applyJetUncertaintyKinematics(jets, variation_l)
 
             # -------------------------------------
 
