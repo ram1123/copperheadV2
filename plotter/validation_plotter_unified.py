@@ -772,7 +772,6 @@ if __name__ == "__main__":
                 # ------------------------------------------------
                 # take the mass region and category cuts
                 # ------------------------------------------------
-                # events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name, args.njets, process, args.do_vbf_filter_study)
                 events = dak.map_partitions(selection.applyRegionCatCuts,
                     events,
                     args.category,
