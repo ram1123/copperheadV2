@@ -31,7 +31,7 @@ base_script = ["python", "plotter/validation_plotter_unified.py"]
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_17July2025_DNN_FixDiMuonMass/"
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/Rerun_07August2025/"
 
-SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/"
+SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/Aug18_DnnRange20"
 
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted/"
@@ -39,29 +39,30 @@ SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_OLD_WithDNNScore_MassSetTo125/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeakWithDYVBF/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeak_16July2025_FixDimuonMass/"
-# python run_plotter.py
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test_FixDimuonMass/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test/"
 
-LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/{year}/f1_0/"
+# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/{year}/f1_0/"
+LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt//stage1_output/{year}/compacted_13August_FixDimuonMass/"
 
-# years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-years = ["2017", "2016postVFP", "2016preVFP"]
-# years = ["2018"]
+# years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016"]
+# years = ["2017", "2016postVFP", "2016preVFP"]
+years = ["2018"]
+# years = ["*"]
 
-categories = ["vbf", "ggh", "nocat"]
+# categories = ["vbf", "ggh", "nocat"]
 # categories = ["nocat", "ggh"]
 # categories = ["vbf", "ggh"]
-# categories = ["vbf"]
+categories = ["vbf"]
 # categories = ["nocat"]
 
 # Boolean flags
-vbf_filter_study_options = [False, True]  # True to apply VBF filter study, False to skip it
-remove_zpt_weights_options = [False, True]  # True to remove zpt weights, False to keep them
+vbf_filter_study_options = [True]  # True to apply VBF filter study, False to skip it
+remove_zpt_weights_options = [False]  # True to remove zpt weights, False to keep them
 debug_options = False
-min_set_of_vars = False  # If True, only use a minimal set of variables  to plot
+min_set_of_vars = True  # If True, only use a minimal set of variables  to plot
 
 region_options = [
     ["h-sidebands", "z-peak", "signal", "h-peak"]
@@ -82,8 +83,8 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
          "--save_path", save_path,
          "--load", load_path,
          "-cat", cat,
-         "--use_gateway",
-        #  "--dnn-score"
+        #  "--use_gateway",
+         "--dnn-score"
          ]
     )
 
@@ -111,7 +112,10 @@ def run_all_combos():
     i = 1
     for year in years:
         # save_path = f"{SAVE_PATH}"
-        load_path = LOAD_PATH.format(year=year)
+        if year == "2016":
+            load_path = LOAD_PATH.format(year=str(year)+"*")
+        else:
+            load_path = LOAD_PATH.format(year=year)
         combo_iter = itertools.product(
             categories,
             vbf_filter_study_options,
