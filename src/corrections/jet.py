@@ -458,6 +458,8 @@ def do_jec_scale(jets, config, is_mc, dataset, uncs=["nominal"]):
 
     algo = jec_parameters["jet_algorithm"]
     for unc in uncs: # NOTE: we assume that "nominal" is the first element list
+        if (not is_mc) and "nominal" not in unc:
+            continue
         if unc == "nominal":
             lvl_compound = "L1L2L3Res"
         else:

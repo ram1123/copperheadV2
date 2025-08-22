@@ -21,6 +21,7 @@ Options:
   -s            Skip bad files (default: 0)
   -d            Enable debug mode (default: 0)
   -f            Run only 10% of samples for debugging (default: 0)
+  -dask         Enable Dask for distributed computing (default: 0)
 EOF
     exit 1
 }
@@ -41,6 +42,7 @@ outAppend="$(date +%b%d_%Y)"   # Default: today's date, e.g. Jun24_2025
 region="h-peak" # h-peak, h-sideband, signal
 category="vbf"
 postfix=""
+dask="0"
 
 # ----------- Parse options -----------
 while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:sf:" option; do
@@ -60,6 +62,7 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:sf:" option; do
         p) postfix="$OPTARG" ;;
         s) skipBadFiles="1" ;;
         f) frac="1" ;;
+        dask) dask="1" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
@@ -123,11 +126,11 @@ if [[ "$debug" -ge 1 ]]; then
     # years=("2016preVFP")
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
-    data_l_dict["2017"]="B C D E F"
-    data_l_dict["2018"]=""
+    data_l_dict["2017"]=""
+    data_l_dict["2018"]="A"
     bkg_l=""
     sig_l=""
-    sig_l="Higgs"
+    # sig_l="Higgs"
     # sig_l="VBF"
 fi
 
@@ -160,12 +163,12 @@ for year in "${years[@]}"; do
     log "  Save path: $save_path"
 
     # ---- Command templates ----
-    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  --use_gateway  "
-    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv    "
+    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv "
+    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500  --isCutflow  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 350 --use_gateway "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len 2500  --isCutflow  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 2500  "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 2500  "
 
     ### DNN training parameters
@@ -183,10 +186,10 @@ for year in "${years[@]}"; do
     # postfix="Aug14_OLDBR_NewSelv2"
     # postfix="Latest"
 
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag  "
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score --tag $compact_tag"
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --add_dnn_score --tag $compact_tag"
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path  "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
@@ -195,14 +198,14 @@ for year in "${years[@]}"; do
         bkg_l_stage2="${bkg_l/Top/TT ST}"
     fi
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --use_gateway "
+    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations --use_gateway "
+    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations  "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
 
     command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix"
 
-    command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
+    command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
     command5="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
     command6="python src/lib/ebeMassResCalibration/calibration_factor.py --path $save_path"
 
@@ -222,6 +225,16 @@ for year in "${years[@]}"; do
         command1+=" --test_mode"
     fi
     [[ "$skipBadFiles" == "1" ]] && command0+=" --skipBadFiles"
+
+    if [[ "$dask" == "1" ]]; then
+        command0+=" --use_gateway "
+        command1+=" --use_gateway "
+        command2+=" --use_gateway "
+        command3+=" --use_gateway "
+        command4+=" --use_gateway "
+        command5+=" --use_gateway "
+        command6+=" --use_gateway "
+    fi
 
     # ---- Mode switch ----
     case "$mode" in
