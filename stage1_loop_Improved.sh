@@ -8,7 +8,9 @@ Usage: $0 [options]
 Options:
   -h            Show this help message
   -c <file>     Dataset YAML file (default: configs/datasets/dataset_nanoAODv12.yaml)
-  -m <mode>     Mode: 0 (prestage), 1 (stage1), 2 (stage2), 3 (stage3), all (both), zpt_fit, zpt_val, calib (default: all)
+  -m <mode>     Mode: 0 (prestage), 1 (stage1), 2 (stage2), 3 (stage3), all,
+                zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12, zpt_val, calib,
+                compact, dnn|dnn_pre|dnn_train|dnn_var_rank (default: all)
   -v <version>  NanoAOD version (default: 12)
   -y <year>     Year (default: 2018 2017 2016postVFP 2016preVFP)
   -l <label>    Label (default: Default_nanoAODv9)
@@ -19,9 +21,9 @@ Options:
   -t <category> DNN training category (default: vbf)
   -p <postfix>  Postfix string to append to output directory for stage2 and 3 (default: "")
   -s            Skip bad files (default: 0)
-  -d            Enable debug mode (default: 0)
+  -d            Enable debug mode (0/1/2; default: 0)
   -f            Run only 10% of samples for debugging (default: 0)
-  -dask         Enable Dask for distributed computing (default: 0)
+  -k            Enable Dask/Gateway (default: 0)
 EOF
     exit 1
 }
@@ -45,13 +47,13 @@ postfix=""
 dask="0"
 
 # ----------- Parse options -----------
-while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:sf:" option; do
+while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:sfk" option; do
     case "$option" in
         h) usage ;;
         c) datasetYAML="$OPTARG" ;;
         m) mode="$OPTARG" ;;
         v) NanoAODv="$OPTARG" ;;
-        y) IFS=' ' read -r -a years <<< "$OPTARG" ;;
+        y) IFS=', ' read -r -a years <<< "$OPTARG" ;;
         l) label="$OPTARG" ;;
         n) njet="$OPTARG" ;;
         b) nbin="$OPTARG" ;;
@@ -62,13 +64,18 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:sf:" option; do
         p) postfix="$OPTARG" ;;
         s) skipBadFiles="1" ;;
         f) frac="1" ;;
-        dask) dask="1" ;;
+        k) dask="1" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
 done
 
 # ----------- Check environment and load modules -----------
+if [[ -z "${CONDA_PREFIX:-}" ]]; then
+    echo "No conda environment detected. Activate the appropriate env and retry."
+    exit 1
+fi
+
 # if DNN training is enabled, check if the conda environment is `pfn_env` else it should be `yun_coffea_latest`
 if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" || "$mode" == "dnn_var_rank" ]]; then
     if [[ "$CONDA_PREFIX" != *"pfn_env"* ]]; then
@@ -105,6 +112,7 @@ log() { echo "$@" | tee -a "$log_file"; }
 
 save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
 mkdir -p "$save_path"
+trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 
 declare -A data_l_dict=(
     [2016preVFP]="B C D E F"
@@ -193,9 +201,9 @@ for year in "${years[@]}"; do
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
-    bkg_l_stage2=""
-    if [[ "$bkg_l" == *"Top"* ]]; then
-        bkg_l_stage2="${bkg_l/Top/TT ST}"
+    bkg_l_stage2="$bkg_l"
+    if [[ "$bkg_l_stage2" == *"Top"* ]]; then
+        bkg_l_stage2="${bkg_l_stage2/Top/TT ST}"
     fi
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
     command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
@@ -316,7 +324,7 @@ for year in "${years[@]}"; do
             fi
             ;;
         *)
-            echo "Error: Invalid mode. Use 0, 1, 2, 3, all, zpt_fit, zpt_val, or calib."
+            echo "Error: Invalid mode. See -h for the full list of supported modes."
             usage
             ;;
     esac
