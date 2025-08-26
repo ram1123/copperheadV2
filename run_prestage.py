@@ -476,7 +476,7 @@ if __name__ == "__main__":
                 total_events += preprocess_metadata["nGenEvts"]
 
             # test start -------------------------------
-            if sample_name == "dy_VBF_filter":
+            if sample_name == "dy_VBF_filter_NoUSE": # FIXME: Temporary fix. Remove this patch
                 """
                 Starting from coffea 2024.4.1, this if statement is technically as obsolite preprocess
                 can now handle thousands of root files no problem, but this "manual" is at least three

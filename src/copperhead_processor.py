@@ -1233,6 +1233,7 @@ class EventProcessor(processor.ProcessorABC):
         # Calculate other event weights
         # ------------------------------------------------------------#
         jec_pars = self.config["jec_parameters"]
+        # FIXME: For data (is is_mc == False) I should not add this variations.
         do_jec_unc = True
         if do_jec_unc:
             pt_variations = (

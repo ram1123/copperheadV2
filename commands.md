@@ -1,8 +1,24 @@
+# 23 August 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l haddtest_olddir -y "2018" -m all -d 1 -k )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l haddtest_newhadddir -y "2018" -m all -d 1 -k )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_SoftJetBugFix_hadd -y "2018" -m all -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_SoftJetBugFix -y "2018" -m compact -d 1 -k)
+```
+
 # 21 August 2025
 
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l debug_softjet -y "2018" -m 0 -d 1)
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_SoftJetBugFix -y "2018" -m all -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_SoftJetBugFix -y "2018" -m all -d 1 -k)
+
+python scripts/mergeNanoAODRootFiles.py -i /eos/purdue/store/user/rasharma/customNanoAOD/UL2018/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8 -o /depot/cms/users/shar1172/hmm/test_hadd -f GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8.root
+
+python scripts/mergeNanoAODRootFiles.py -i  /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9 -o /depot/cms/users/shar1172/hmm/test_hadd -f DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9.root
+
+
+python scripts/mergeNanoAODRootFiles.py -i  /eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9 -o /store/user/rasharma/Run2_CustomNanoAODv12/hadded/UL2018/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9  -f DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9.root
 
 ```
 

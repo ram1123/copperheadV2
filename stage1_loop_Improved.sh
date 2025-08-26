@@ -135,8 +135,8 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
     data_l_dict["2017"]=""
-    data_l_dict["2018"]="A"
-    bkg_l=""
+    data_l_dict["2018"]=""
+    bkg_l="Top"
     sig_l=""
     # sig_l="Higgs"
     # sig_l="VBF"
@@ -176,7 +176,7 @@ for year in "${years[@]}"; do
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len 2500  --isCutflow  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 2500  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 350  "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 2500  "
 
     ### DNN training parameters
@@ -242,6 +242,7 @@ for year in "${years[@]}"; do
         command4+=" --use_gateway "
         command5+=" --use_gateway "
         command6+=" --use_gateway "
+        command_compact+=" --use_gateway "
     fi
 
     # ---- Mode switch ----
