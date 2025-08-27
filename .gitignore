@@ -1,3 +1,6 @@
+CMSSW_13_0_14/
+*.err
+*.log
 *.npy
 *.pkl
 *.gz

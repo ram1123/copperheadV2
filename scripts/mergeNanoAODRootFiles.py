@@ -14,9 +14,16 @@ source /cvmfs/oasis.opensciencegrid.org/osg-software/osg-wn-client/current/el8-x
 
 import logging
 # from modules.utils import logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger = logging.getLogger(__name__)
+logger.info("Logger initialized")
 
-logger.setLevel(logging.INFO)
+
+# logger.setLevel(logging.INFO)
 # logger.setLevel(logging.DEBUG)
 
 def system_with_terminal_display(command, show=False):
@@ -201,6 +208,24 @@ def merge_files(targetFile, filesToMerge, year):
             ),
             False
         )
+
+        # if move success (check also the xrdadler32 checksum?) then remove the local file
+        # step-1 check the xrdadler32 checksum for both files and compare
+        local_checksum = checksum(targetFile)
+        remote_checksum = checksum(
+            "/depot/cms/hmm/shar1172/HaddingEOS/" + year + "/" + name_of_targetFile
+        )
+        logger.info("Local checksum: {}".format(local_checksum))
+        logger.info("Remote checksum: {}".format(remote_checksum))
+
+        if local_checksum == remote_checksum:
+            logger.info("Checksum verified successfully; removing local file.")
+            os.remove(
+                "/depot/cms/hmm/shar1172/HaddingEOS/" + year + "/" + name_of_targetFile
+            )
+        else:
+            logger.error("Checksum verification failed; keeping local file.")
+            sys.exit()
 
         # Cleanup
         for tempTarget in tempTargets:

@@ -74,7 +74,8 @@ for e in fileHandles[0].GetListOfKeys():
             otherBranches = set(x.GetName() for x in otherObj.GetListOfBranches())
             missingBranches = list(branchNames - otherBranches)
             additionalBranches = list(otherBranches - branchNames)
-            print("missing:", missingBranches, "\n Additional:", additionalBranches)
+            if missingBranches:
+                print("missing:", missingBranches, "\n Additional:", additionalBranches)
             allow_nb = (obj.GetName() == 'Runs')
             for br in missingBranches:
                 zeroFill(otherObj, br, obj.GetListOfBranches().FindObject(br), allowNonBool=allow_nb)
