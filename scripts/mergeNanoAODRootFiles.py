@@ -131,7 +131,7 @@ def searchListFilesWithMemory(inputDir, recursive=False):
     chunks = []
     current_chunk = []
     current_size = 0.0
-    threshold_mb = 20480.0
+    threshold_mb = 4096.0 #  4 GB
 
     for f, size in file_sizes.items():
         if current_size + size < threshold_mb:

@@ -404,8 +404,8 @@ if __name__ == "__main__":
                 logger.info(f"Number of files after removing bad files: {len(fnames)}")
 
             # convert to xcachce paths if requested
-                if args.xcache:
-                    fnames = get_Xcache_filelist(fnames)
+            if args.xcache:
+                fnames = get_Xcache_filelist(fnames)
 
             logger.debug(f"file names: {fnames}")
             logger.debug(f"sample_name: {sample_name}")

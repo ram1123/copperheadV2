@@ -132,17 +132,18 @@ sig_l="Higgs"
 if [[ "$debug" -ge 1 ]]; then
     log "Debug mode ON "
     # years=("2016preVFP")
-    data_l_dict["2016preVFP"]=""
+    data_l_dict["2016preVFP"]="B C D E F"
     data_l_dict["2016postVFP"]=""
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
-    bkg_l="Top"
+    bkg_l=""
+    # sig_l=""
     sig_l=""
-    # sig_l="Higgs"
     # sig_l="VBF"
 fi
 
 chunksize=300000
+max_file_len=2500 # 2500 for data, 5 for MC
 
 echo "Running with the following parameters:"
 echo "  Dataset YAML: $datasetYAML"
@@ -172,12 +173,12 @@ for year in "${years[@]}"; do
 
     # ---- Command templates ----
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv "
-    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv "
+    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len 2500  --isCutflow  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 350  "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 2500  "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len  --isCutflow  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len  "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len  "
 
     ### DNN training parameters
     training_fold=3
@@ -303,7 +304,7 @@ for year in "${years[@]}"; do
         dnn|dnn_pre|dnn_train|dnn_var_rank)
             log "Running DNN step(s) for year $year..."
             cmd_preproc="python MVA_training/VBF/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level INFO "
-            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --log-level INFO "
+            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 5 --bo-epochs 10 --bo-fold 0 --n-epochs 10 --batch-size 15536 --log-level INFO "
             cmd_var_rank="python MVA_training/VBF/variable_ranking.py "
 
             if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then
