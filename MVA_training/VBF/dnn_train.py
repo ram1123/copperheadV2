@@ -12,6 +12,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 import pickle
 import os
 import argparse
@@ -29,6 +30,7 @@ import concurrent
 
 import logging
 from modules.utils import logger
+from modules import selection
 
 from dnn_helper import *
 
@@ -41,32 +43,6 @@ logger.info(f"using workers: {NWORKERS}")
 def transformDnnScore(dnn_scores):
     return np.atanh(dnn_scores)
 
-class FocalLoss(nn.Module):
-    def __init__(self, alpha=1, gamma=2):
-        super(FocalLoss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
-
-    def forward(self, inputs, targets):
-        BCE_loss = nn.functional.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
-        pt = torch.exp(-BCE_loss)  # Probabilities of correct classification
-        focal_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
-        return focal_loss.mean()
-
-
-class HingeLoss(nn.Module):
-    """
-    source: chatgpt, but verified on https://lightning.ai/docs/torchmetrics/stable/classification/hinge_loss.html
-    """
-    def __init__(self):
-        super(HingeLoss, self).__init__()
-
-    def forward(self, outputs, targets):
-        # Map targets {0, 1} -> {-1, 1}
-        targets = 2 * targets - 1  # Convert 0 -> -1, 1 -> 1
-        # Calculate hinge loss
-        loss = torch.mean(torch.clamp(1 - outputs * targets, min=0))
-        return loss
 
 training_logs = []
 class TrainingLogger:
@@ -170,6 +146,63 @@ def save_model_final(model, training_features, fold_save_path):
     model.train()
     logger.info(f"[FinalModel] Saved final model to {fold_save_path}")
 
+
+
+def prepare_features(df, features, variation="nominal"):
+    """
+    slightly different from the once in dnn_preprocecssor replacing events with df
+    """
+    features_var = []
+    for trf in features:
+        if "soft" in trf:
+            variation_current = "nominal"
+        else:
+            variation_current = variation
+
+        if f"{trf}_{variation_current}" in df.columns:
+            features_var.append(f"{trf}_{variation_current}")
+        elif trf in df.columns:
+            features_var.append(trf)
+        else:
+            logger.info(f"Variable {trf} not found in training dataframe!")
+    return features_var
+
+
+class Net(nn.Module):
+    def __init__(self, n_feat):
+        super(Net, self).__init__()
+        self.fc1 = nn.Linear(n_feat, 128)
+        self.bn1 = nn.BatchNorm1d(128)
+        self.dropout1 = nn.Dropout(0.2)
+        self.fc2 = nn.Linear(128, 64)
+        self.bn2 = nn.BatchNorm1d(64)
+        self.dropout2 = nn.Dropout(0.2)
+        self.fc3 = nn.Linear(64, 32)
+        self.bn3 = nn.BatchNorm1d(32)
+        self.dropout3 = nn.Dropout(0.2)
+        self.output = nn.Linear(32, 1)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.bn1(x)
+        x = F.tanh(x)
+        x = self.dropout1(x)
+
+        x = self.fc2(x)
+        x = self.bn2(x)
+        x = F.tanh(x)
+        x = self.dropout2(x)
+
+        x = self.fc3(x)
+        x = self.bn3(x)
+        x = F.tanh(x)
+        x = self.dropout3(x)
+
+        x = self.output(x)
+        output = F.sigmoid(x)
+        return output
+
+
 def plot_loss_curves(train_losses, val_losses, save_path="loss_curves.pdf"):
     """
     Plot training and validation loss vs. epoch.
@@ -256,84 +289,6 @@ def plotConfusionMatrix(score_dict, plt_save_path):
         plt.clf()
         plt.close(fig)  # Close the figure to free memory
 
-def plotFeatureImportance(model, features, plt_save_path):
-    """
-    Plot feature importance using SHAP values.
-    """
-    import shap
-
-    # Assuming model is a PyTorch model and features is a list of feature names
-    # Convert model to a format compatible with SHAP
-    def model_predict(input_data):
-        input_tensor = torch.tensor(input_data, dtype=torch.float32)
-        with torch.no_grad():
-            output = model(input_tensor).numpy()
-        return output
-
-    # Create a SHAP explainer
-    explainer = shap.KernelExplainer(model_predict, np.zeros((1, len(features))))
-    shap_values = explainer.shap_values(np.random.rand(100, len(features)))
-
-    # Plot the feature importance
-    shap.summary_plot(shap_values, features, plot_type="bar", show=False)
-    plt.savefig(plt_save_path)
-    plt.clf()
-    plt.close()  # Close the figure to free memory
-
-def prepare_features(events, features, variation="nominal"):
-    features_var = []
-    for trf in features:
-        if "soft" in trf:
-            variation_current = "nominal"
-        else:
-            variation_current = variation
-
-        if f"{trf}_{variation_current}" in events.fields:
-            features_var.append(f"{trf}_{variation_current}")
-        elif trf in events.fields:
-            features_var.append(trf)
-        else:
-            logger.warning(f"Variable {trf} not found in training dataframe!")
-    return features_var
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-
-class Net(nn.Module):
-    def __init__(self, n_feat):
-        super(Net, self).__init__()
-        self.fc1 = nn.Linear(n_feat, 128)
-        self.bn1 = nn.BatchNorm1d(128)
-        self.dropout1 = nn.Dropout(0.2)
-        self.fc2 = nn.Linear(128, 64)
-        self.bn2 = nn.BatchNorm1d(64)
-        self.dropout2 = nn.Dropout(0.2)
-        self.fc3 = nn.Linear(64, 32)
-        self.bn3 = nn.BatchNorm1d(32)
-        self.dropout3 = nn.Dropout(0.2)
-        self.output = nn.Linear(32, 1)
-
-    def forward(self, x):
-        x = self.fc1(x)
-        x = self.bn1(x)
-        x = F.tanh(x)
-        x = self.dropout1(x)
-
-        x = self.fc2(x)
-        x = self.bn2(x)
-        x = F.tanh(x)
-        x = self.dropout2(x)
-
-        x = self.fc3(x)
-        x = self.bn3(x)
-        x = F.tanh(x)
-        x = self.dropout3(x)
-
-        x = self.output(x)
-        output = F.sigmoid(x)
-        return output
 
 # Custom Dataset class
 class NumpyDataset(Dataset):
@@ -559,37 +514,20 @@ def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_f
     plt_save_path = f"{fold_save_path}/epoch{epoch}_ROC_ucsd.png" # plot with sig eff and bkg eff in AN-19-124
     plotROC(score_dict, plt_save_path)
 
+    # DNN Score plot with uniform bins
     bins = np.linspace(0, 1, 30)
     plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_combined_dist_bySigBkg.png"
-    # plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
     plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False)
 
-    bins = np.array([
-        0,
-        0.07,
-        0.432,
-        0.71,
-        0.926,
-        1.114,
-        1.28,
-        1.428,
-        1.564,
-        1.686,
-        1.798,
-        1.9,
-        2.0,
-        2.8,
-    ])
+    # DNN Score plot with last custom bins using which signal distribution is flat
+    bins = selection.binning
     plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_combined_transformedDist_bySigBkg.png"
-
-    # plotSigVsBkg(dnn_scores_signal, dnn_scores_background, bins, plt_save_path)
     plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=True)
     # raise ValueError
 
     # # ------------------------------------------
     # # do the signal ratio plot
     # # ------------------------------------------
-
 
     # # Histogram for signal, normalized to one
     # wgt_signal = df_valid.wgt_nominal[label_total==1]
@@ -620,7 +558,6 @@ def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_f
     # plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_sigBkgRatio.png")
     # plt.clf()
 
-
     # Create histograms and normalize them separated by process samples
     processes = ["dy", "top", "ewk", "vbf", "ggh"]
 
@@ -645,10 +582,8 @@ def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_f
     plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_dist_byProcess.png")
     plt.clf()
 
-
     # Do the logscale plot
     fig, ax_main = plt.subplots()
-
 
     ax_main.set_yscale('log')
     ax_main.set_ylim(0.01, 1e9)
@@ -675,7 +610,6 @@ def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_f
         sort='label_r',
         ax=ax_main,
     )
-
 
     # plot signal, no stack
 
@@ -733,7 +667,6 @@ def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_f
     # model.train() # turn model back to train mode
     logger.info(f"new best significance for fold {fold_idx} is {best_significance} from {epoch} epoch")
 
-
     # add significance to plot
     significance = str(significance)[:5] # round to 3 d.p.
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
@@ -775,8 +708,6 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     label_arr_eval = df_eval.label.values
 
     loss_fn = torch.nn.BCELoss()
-    # loss_fn = FocalLoss(alpha=1, gamma=2)
-    # loss_fn = HingeLoss()
 
     # Iterating through the DataLoader
     #
@@ -888,22 +819,7 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_{fold_idx}.pdf", transformPrediction=False, normalize=True)
     plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_{fold_idx}_log.pdf", transformPrediction=False, normalize=True, log_scale=True)
     # 4. Plot the Sig/Bkg distributions with transformed scores
-    bins = np.array([
-                    0,
-                    0.07,
-                    0.432,
-                    0.71,
-                    0.926,
-                    1.114,
-                    1.28,
-                    1.428,
-                    1.564,
-                    1.686,
-                    1.798,
-                    1.9,
-                    2.0,
-                    2.8,
-                ])
+    bins = selection.binning
     plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_transformed_{fold_idx}.pdf", transformPrediction=True, normalize=True)
     plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_transformed_{fold_idx}_log.pdf", transformPrediction=True, normalize=True, log_scale=True)
     # 4. Precision vs Recall curve
@@ -916,25 +832,6 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     callback.save_logs(f"{fold_save_path}/epoch{epoch}_training_logs.pkl")
     # calculate the scale, save it
     # save the resulting df for training
-def prepare_features(df, features, variation="nominal"):
-    """
-    slightly different from the once in dnn_preprocecssor replacing events with df
-    """
-    features_var = []
-    for trf in features:
-        if "soft" in trf:
-            variation_current = "nominal"
-        else:
-            variation_current = variation
-
-        if f"{trf}_{variation_current}" in df.columns:
-            features_var.append(f"{trf}_{variation_current}")
-        elif trf in df.columns:
-            features_var.append(trf)
-        else:
-            logger.info(f"Variable {trf} not found in training dataframe!")
-    return features_var
-
 
 def calculateSignificance(sig_hist, bkg_hist):
     """
