@@ -19,7 +19,7 @@ from modules.utils import logger
 from dnn_helper import DIR_TAG
 
 # def getParquetFiles(path):
-    # return glob.glob(path)
+# return glob.glob(path)
 
 def fillEventNans(events):
     """
@@ -181,8 +181,6 @@ def weighted_std(values, weights):
 #     return x_train_mixup
 
 """mixup code start. credits to https://github.com/makeyourownmaker/mixupy """
-
-
 
 
 def mixup(data, alpha=4, concat=False, batch_size=None, seed=1352):
@@ -470,8 +468,6 @@ def _check_params(alpha, concat, batch_size):
 """mixup code end """
 
 
-
-
 def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_label="test", year="2018"):
     training_features = [
         'dimuon_mass', "dimuon_ebe_mass_res", "dimuon_ebe_mass_res_rel",
@@ -504,7 +500,16 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     sig_processes = ["vbf_powheg_dipole"]
     # bkg_processes = ["dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     # bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
-    bkg_processes = ["dy_VBF_filter", "dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
+    bkg_processes = [
+        "dy_VBF_filter",
+        "dy_M-100To200_aMCatNLO",
+        "ewk_lljj_mll50_mjj120",
+        "ttjets_dl",
+        "ttjets_sl",
+    ]
+    # bkg_processes = [
+    #     "dy_VBF_filter",
+    # ]
     # bkg_processes = ["dy_VBF_filter_NewZWgt", "dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     # sig_processes = ["ggh_powhegPS"] # testing
     # bkg_processes = ["ewk_lljj_mll105_160_ptj0"] # testing
@@ -535,8 +540,6 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             logger.info(f"Error reading parquet for background process {process}: {e}, skipping.")
             continue
         bkg_events_dict[process] = bkg_events
-
-
 
     # Prepare features based on a sample signal dataset
     if not sig_events_dict:
@@ -572,7 +575,6 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             logger.debug(f"df.label: {df.label}")
             logger.debug(f"df.process: {df.process}")
             df_l.append(df)
-
 
     # merge sig and bkg dfs
     df_total = pd.concat(df_l)
@@ -618,7 +620,6 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
 
         np.save(f"{save_path}/scalers_{i}", [x_mean, x_std])
 
-
         # logger.info(f"df_train b4 mixup: {df_train}")
         do_mixup = False
         if do_mixup:
@@ -637,9 +638,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             df_mixup = df_mixup.drop("process", axis=1)
             df_train = df_train.drop("process", axis=1)
 
-
             multiplier = 1
-
 
             # df_mixup = mixup(df_train, batch_size = int(len(df_train)*multiplier)) # batch size is subject to change ofc
             df_mixup = mixup(df_mixup, batch_size = int(len(df_mixup)*multiplier)) # batch size is subject to change ofc
@@ -652,14 +651,12 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
             else:
                 df_train = df_mixup
 
-
             logger.info(f"df_train after mixup: {df_train}")
             # once mixup is done, recalculate the x, label and wgt for train
             x_train = df_train[training_features].values
             label_train = df_train.label.values
             wgt_train = df_train.wgt_nominal.values # idk if this is needed
             logger.info(f"x_train shape after mixup: {x_train.shape}")
-
 
         # apply scaling to data, and save the data for training
         x_train = (x_train-x_mean)/x_std
@@ -670,7 +667,6 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         x_eval = df_eval[training_features].values
         x_eval = (x_eval-x_mean)/x_std
         label_eval = df_eval.label.values
-
 
         # update the values on df and save that bc we need "process" column for analysis
         df_train[training_features] = x_train
@@ -722,6 +718,13 @@ if __name__ == "__main__":
         help="year of the data. Options: 2016, 2017, 2018",
     )
     parser.add_argument(
+    "--use_gateway",
+    dest="use_gateway",
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="If true, uses dask gateway client instead of local",
+    )
+    parser.add_argument(
         "--log-level",
         default=logging.DEBUG,
         type=lambda x: getattr(logging, x),
@@ -731,14 +734,26 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logger.setLevel(args.log_level)
 
-    from distributed import Client
-    client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
-    logger.info("Local scale Client created")
+    if args.use_gateway:
+        from dask_gateway import Gateway
+        gateway = Gateway(
+            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+        )
+        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+        client = gateway.connect(cluster_info.name).get_client()
+        logger.debug("Gateway Client created")
+    else: # use local cluster
+        from distributed import Client
+        client = Client(
+            n_workers=64, threads_per_worker=1, processes=True, memory_limit="10 GiB"
+        )
+        logger.info("Local scale Client created")
 
-    base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
-    base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/compacted"
-    # base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
-    # base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
+    # base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
+    # base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/compacted"
+    base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
+    base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
     if not os.path.exists(base_path_compact):
         base_path = base_path_f1_0
     else:

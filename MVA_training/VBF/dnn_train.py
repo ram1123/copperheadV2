@@ -9,7 +9,6 @@ import pandas as pd
 import itertools
 import torch
 from torch.utils.data import Dataset, DataLoader
-import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
@@ -34,14 +33,44 @@ from modules import selection
 
 from dnn_helper import *
 
+from MVA_training.VBF.dnn_plotting import plot_loss_curves
+from MVA_training.VBF.dnn_plotting import plotPrecisionRecall
+from MVA_training.VBF.dnn_plotting import plotConfusionMatrix
+from MVA_training.VBF.dnn_plotting import plot_auc_and_loss
+from MVA_training.VBF.dnn_plotting import plot_significance
+from MVA_training.VBF.dnn_plotting import plot_lr
+from MVA_training.VBF.dnn_plotting import plot_overtraining_KS_ROOT
+from MVA_training.VBF.dnn_plotting import plot_calibration_ROOT
+from MVA_training.VBF.dnn_plotting import plot_threshold_scan_ROOT
+from MVA_training.VBF.dnn_plotting import plot_score_feature_corr_ROOT_heatmap
+from MVA_training.VBF.dnn_plotting import plot_score_feature_corr_ROOT_bar
+from MVA_training.VBF.dnn_plotting import plot_score_shapes_and_roc_by_category_ROOT
+from MVA_training.VBF.dnn_plotting import plot_cumulative_SSB_per_process_ROOT
+from MVA_training.VBF.dnn_plotting import permutation_importance_auc
+from MVA_training.VBF.dnn_plotting import plot_perm_importance_ROOT
+from MVA_training.VBF.dnn_plotting import partial_dependence_curve
+from MVA_training.VBF.dnn_plotting import plot_pdp_ROOT
+from MVA_training.VBF.dnn_plotting import plot_weight_distribution_ROOT
+from MVA_training.VBF.dnn_plotting import yield_table_after_cut
+from MVA_training.VBF.dnn_plotting import _roc_weighted
+from MVA_training.VBF.dnn_plotting import cv_consistency_plots_ROOT
+from MVA_training.VBF.dnn_plotting import safe_weighted_auc
+
 if not torch.cuda.is_available():
     logger.warning("CUDA is not available. Using CPU for training.")
     DEVICE = "cpu"
 
 logger.info(f"using workers: {NWORKERS}")
 
+def _safe_auc(y, p, w=None):
+    try:
+        return safe_weighted_auc(y, p, sample_weight=w)
+    except ValueError:
+        return float("nan")
+
 def transformDnnScore(dnn_scores):
-    return np.atanh(dnn_scores)
+    s = np.clip(dnn_scores, 1e-6, 1-1e-6) # protection from atanh(0) or atanh(1 or -1) whose value is +/- inf
+    return np.atanh(s)
 
 
 training_logs = []
@@ -147,7 +176,6 @@ def save_model_final(model, training_features, fold_save_path):
     logger.info(f"[FinalModel] Saved final model to {fold_save_path}")
 
 
-
 def prepare_features(df, features, variation="nominal"):
     """
     slightly different from the once in dnn_preprocecssor replacing events with df
@@ -169,18 +197,27 @@ def prepare_features(df, features, variation="nominal"):
 
 
 class Net(nn.Module):
-    def __init__(self, n_feat):
+    def __init__(
+        self,
+        n_feat,
+        hidden=(128, 64, 32),
+        dropout=(0.2, 0.2, 0.2),
+        activation="tanh",
+        use_batchnorm=True,
+    ):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(n_feat, 128)
-        self.bn1 = nn.BatchNorm1d(128)
-        self.dropout1 = nn.Dropout(0.2)
-        self.fc2 = nn.Linear(128, 64)
-        self.bn2 = nn.BatchNorm1d(64)
-        self.dropout2 = nn.Dropout(0.2)
-        self.fc3 = nn.Linear(64, 32)
-        self.bn3 = nn.BatchNorm1d(32)
-        self.dropout3 = nn.Dropout(0.2)
-        self.output = nn.Linear(32, 1)
+        h1, h2, h3 = hidden
+        d1, d2, d3 = dropout
+        self.fc1 = nn.Linear(n_feat, h1)
+        self.bn1 = nn.BatchNorm1d(h1)
+        self.dropout1 = nn.Dropout(d1)
+        self.fc2 = nn.Linear(h1, h2)
+        self.bn2 = nn.BatchNorm1d(h2)
+        self.dropout2 = nn.Dropout(d2)
+        self.fc3 = nn.Linear(h2, h3)
+        self.bn3 = nn.BatchNorm1d(h3)
+        self.dropout3 = nn.Dropout(d3)
+        self.output = nn.Linear(h3, 1)
 
     def forward(self, x):
         x = self.fc1(x)
@@ -201,93 +238,6 @@ class Net(nn.Module):
         x = self.output(x)
         output = F.sigmoid(x)
         return output
-
-
-def plot_loss_curves(train_losses, val_losses, save_path="loss_curves.pdf"):
-    """
-    Plot training and validation loss vs. epoch.
-
-    Args:
-        train_losses (list): Training loss per epoch.
-        val_losses (list): Validation loss per epoch.
-        save_path (str): Path to save the plot. If None, shows the plot.
-    """
-    epochs = list(range(len(train_losses)))
-    plt.figure(figsize=(8,6))
-    plt.plot(epochs, train_losses, label='Training Loss', marker='o')
-    plt.plot(epochs, val_losses, label='Validation Loss', marker='s')
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Loss vs Epoch")
-    plt.legend()
-    hep.cms.text("Private Work", loc=0)
-    plt.grid(True)
-    plt.savefig(save_path)
-    logger.info(f"[plot_loss_curves] Saved loss curve to {save_path}")
-    plt.close()
-
-def plotPrecisionRecall(score_dict, plt_save_path):
-    """
-    Plot Precision-Recall curve for the given score dictionary.
-    """
-    from sklearn.metrics import precision_recall_curve
-    fig, ax_main = plt.subplots()
-    status = "Private Work 2018"
-    CenterOfMass = "13"
-    # hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, ax=ax_main)
-
-    for stage, output_dict in score_dict.items():
-        pred_total = output_dict["prediction"]
-        label_total = output_dict["label"]
-        wgt_total = output_dict["weight"]
-
-        precision, recall, _ = precision_recall_curve(label_total, pred_total, sample_weight=wgt_total)
-        ax_main.plot(recall, precision, label=f"{stage}")
-
-    ax_main.set_xlabel('Recall')
-    ax_main.set_ylabel('Precision')
-    ax_main.set_title('Precision-Recall Curve')
-    ax_main.legend()
-    plt.savefig(plt_save_path)
-    plt.clf()
-    plt.close(fig)  # Close the figure to free memory
-
-def plotConfusionMatrix(score_dict, plt_save_path):
-    """
-    Plot confusion matrix for the given score dictionary.
-    """
-    # Try importing seaborn, fallback to sklearn if unavailable
-    try:
-        import seaborn as sns
-    except ImportError:
-        from sklearn.metrics import ConfusionMatrixDisplay
-        sns = None
-
-    # status = "Private Work 2018"
-    # CenterOfMass = "13"
-
-    for stage, output_dict in score_dict.items():
-        fig, ax_main = plt.subplots()
-        # hep.cms.label(data=True, loc=0, ax=ax_main)
-        pred_total = output_dict["prediction"]
-        label_total = output_dict["label"]
-        wgt_total = output_dict["weight"]
-
-        # Convert predictions to binary (0 or 1)
-        pred_binary = (pred_total > 0.5).astype(int)
-
-        cm = confusion_matrix(label_total, pred_binary, sample_weight=wgt_total)
-        if sns:
-            sns.heatmap(cm, annot=True, cmap='Blues', ax=ax_main)
-        else:
-            ConfusionMatrixDisplay(cm).plot(ax=ax_main, cmap='Blues', values_format='d')
-        ax_main.set_title(f'Confusion Matrix - {stage}')
-        ax_main.set_xlabel('Predicted')
-        ax_main.set_ylabel('True')
-
-        plt.savefig(plt_save_path.replace('.pdf', f'_{stage}.pdf'))
-        plt.clf()
-        plt.close(fig)  # Close the figure to free memory
 
 
 # Custom Dataset class
@@ -496,7 +446,7 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
 
     # logger.info(f"pred_l: {pred_l}")
     # logger.info(f"label_l: {label_l}")
-    auc_score = roc_auc_score(label_total, pred_total)
+    auc_score = safe_weighted_auc(label_total, pred_total)
     return_dict = {
         "label" : label_total,
         "prediction" : pred_total,
@@ -506,7 +456,9 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
     model.train() # turn back to train mode
     return return_dict
 
-def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_features, best_significance, score_dict, pred_total, label_total):
+def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_features, best_significance, score_dict, pred_total, label_total,
+                    df_train, train_loop_dict, valid_loop_dict):
+    # if ((epoch==0) or ((epoch % validate_interval) == (validate_interval-1))) or (epoch==nepochs-1):
     # if True: # (epoch==0) or ((epoch % validate_interval) == (validate_interval-1)):
     # plot ROC curve
     plt_save_path = f"{fold_save_path}/epoch{epoch}_ROC.png"
@@ -677,6 +629,41 @@ def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_f
     plt.savefig(f"{fold_save_path}/epoch{epoch}_DNN_validation_stackedDist_byProcess.png")
     plt.clf()
     plt.close(fig)  # Close the figure to free memory
+
+    # =========================
+    # Extra validation (ROOT)
+    # =========================
+    # 1) Train vs Val score shapes with weighted KS p-values (sig/bkg)
+    plot_overtraining_KS_ROOT(
+        train_loop_dict["prediction"],
+        train_loop_dict["label"],
+        df_train.wgt_nominal.values,
+        valid_loop_dict["prediction"],
+        valid_loop_dict["label"],
+        df_valid.wgt_nominal.values,
+        save_path=f"{fold_save_path}/epoch{epoch}_KS_Overtraining.pdf",
+        nbins=30,
+    )
+
+    # 2) Calibration (reliability) curve + weighted Brier (RMSE)
+    plot_calibration_ROOT(
+        valid_loop_dict["prediction"],
+        valid_loop_dict["label"],
+        df_valid.wgt_nominal.values,
+        save_path=f"{fold_save_path}/epoch{epoch}_Calibration.pdf",
+        n_bins=15,
+    )
+
+    # 3) Threshold scan: TPR, FPR, Precision, and S/√B vs threshold
+    plot_threshold_scan_ROOT(
+        valid_loop_dict["prediction"],
+        valid_loop_dict["label"],
+        df_valid.wgt_nominal.values,
+        save_path=f"{fold_save_path}/epoch{epoch}_ThresholdScan.pdf",
+    )
+
+    plot_weight_distribution_ROOT(df_valid.wgt_nominal.values, f"{fold_save_path}/epoch{epoch}")
+
     return best_significance
 
 
@@ -726,6 +713,11 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     best_significance = 0
     early_stopping_callback = EarlyStopping(patience=5, delta=1e-3, mode="min", nfold=fold_idx, fold_save_path=f"{fold_save_path}", model=model, training_features=training_features, verbose=True)
 
+    history = {
+        "epoch": [], "train_loss": [], "val_loss": [],
+        "train_auc": [], "val_auc": [],
+        "significance": [], "lr": []
+    }
     for epoch in range(nepochs):
         model.train()
         callback.on_epoch_begin(epoch)
@@ -754,11 +746,18 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
             # Adjust learning weights
             optimizer.step()
 
-            # Gather data and report
+            # ---- Accuracy per batch ----
+            with torch.no_grad():
+                # Convert predictions to 0/1 using threshold 0.5
+                pred_binary = (pred >= 0.5).float()
+                correct = (pred_binary == labels).sum().item()
+                batch_acc = correct / labels.size(0)
+
+            # For logging: Gather data and report
             batch_loss = loss.item()
             epoch_loss += batch_loss
             batch_losses.append(batch_loss)
-            callback.on_batch_end(batch_idx, logs={'loss': batch_loss, 'accuracy': 0.0})  # accuracy not computed here
+            callback.on_batch_end(batch_idx, logs={'loss': batch_loss, 'accuracy': batch_acc})
 
         train_losses.append(epoch_loss)
         logger.debug(f"fold {fold_idx} epoch {epoch}            train total loss: {epoch_loss}")
@@ -783,7 +782,7 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
         label_total = valid_loop_dict["label"]
         valid_loss = valid_loop_dict["total_loss"]
         batch_losses = valid_loop_dict["batch_losses"]
-        auc_score = roc_auc_score(label_total, pred_total)
+        auc_score = safe_weighted_auc(label_total, pred_total)
         val_losses.append(valid_loss)
         logger.debug(f"fold {fold_idx} epoch {epoch} validation total loss: {valid_loss}")
         logger.debug(f"fold {fold_idx} epoch {epoch} validation average batch loss: {np.mean(batch_losses)}")
@@ -798,12 +797,149 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
         # ------------------------------------------------
         # plot the score distributions
         # ------------------------------------------------
-        validate_interval = 20
-        if ((epoch==0) or ((epoch % validate_interval) == (validate_interval-1))) or (epoch==nepochs-1):
-            best_significance = ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_features, best_significance, score_dict, pred_total, label_total)
+        # validate_interval = 20
+        # if ((epoch==0) or ((epoch % validate_interval) == (validate_interval-1))) or (epoch==nepochs-1):
+        best_significance = ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_features, best_significance, score_dict, pred_total, label_total,
+                                            df_train, train_loop_dict, valid_loop_dict)
 
         callback.on_epoch_end(epoch, logs={'loss': epoch_loss, 'auc': auc_score, 'significance': best_significance})
 
+        # AUCs (weighted, if you want)
+        train_auc = _safe_auc(train_loop_dict["label"], train_loop_dict["prediction"], w=None)
+        val_auc   = _safe_auc(valid_loop_dict["label"], valid_loop_dict["prediction"], w=None)
+
+        # physics significance from the SAME per-epoch stacked hists you already build
+        # reuse best_significance just computed by ValidationPlots:
+        sig_epoch = best_significance
+
+        # learning rate (works even without scheduler)
+        curr_lr = optimizer.param_groups[0]["lr"]
+
+        fpr, tpr = _roc_weighted(valid_loop_dict["prediction"],
+                                valid_loop_dict["label"],
+                                df_valid.wgt_nominal.values, n=300)
+
+        np.savez(f"{fold_save_path}/cv_artifacts.npz",
+                auc=safe_weighted_auc(valid_loop_dict["label"], valid_loop_dict["prediction"],
+                                sample_weight=df_valid.wgt_nominal.values),
+                fpr=fpr, tpr=tpr,
+                pred=valid_loop_dict["prediction"],
+                label=valid_loop_dict["label"],
+                weight=df_valid.wgt_nominal.values.astype("f"),
+                fold=fold_idx)
+
+        # log into history
+        history["epoch"].append(epoch)
+        history["train_loss"].append(epoch_loss)
+        history["val_loss"].append(valid_loop_dict["total_loss"])
+        history["train_auc"].append(train_auc)
+        history["val_auc"].append(val_auc)
+        history["significance"].append(sig_epoch)
+        history["lr"].append(curr_lr)
+        # END of epoch loop
+
+    # after you build train_loop_dict, valid_loop_dict, and have df_train/df_valid
+    plot_overtraining_KS_ROOT(
+        train_loop_dict["prediction"], train_loop_dict["label"], df_train.wgt_nominal.values,
+        valid_loop_dict["prediction"], valid_loop_dict["label"], df_valid.wgt_nominal.values,
+        save_path=f"{fold_save_path}/KS_Overtraining_{fold_idx}.pdf",
+        nbins=30
+    )
+    plot_calibration_ROOT(
+        valid_loop_dict["prediction"], valid_loop_dict["label"], df_valid.wgt_nominal.values,
+        save_path=f"{fold_save_path}/Calibration_{fold_idx}.pdf", n_bins=15
+    )
+
+    plot_threshold_scan_ROOT(
+        valid_loop_dict["prediction"], valid_loop_dict["label"], df_valid.wgt_nominal.values,
+        save_path=f"{fold_save_path}/ThresholdScan_{fold_idx}.pdf"
+    )
+
+    # Build the list once:
+    abs_rhos = []
+    from MVA_training.VBF.dnn_plotting import _wstd, _wcov
+
+    pred = np.asarray(valid_loop_dict["prediction"], dtype=float)
+    w = np.asarray(df_valid.wgt_nominal.values, dtype=float)
+    for f in training_features:
+        x = df_valid[f].values.astype(float)
+        # compute weighted |rho|: (use your existing weighted corr helpers)
+        sx, sp = _wstd(x, w), _wstd(pred, w)
+        rho = 0.0 if (sx==0 or sp==0) else _wcov(x, pred, w)/(sx*sp)
+        abs_rhos.append((f, abs(rho), rho))
+
+    try:
+        plot_score_feature_corr_ROOT_bar(
+            abs_rhos, f"{fold_save_path}/epoch{epoch}_CorrBar.pdf", topk=26
+        )
+    except Exception as e:
+        logger.exception("[CorrHeatmap] Skipped due to error: %s", e)
+
+    try:
+        plot_score_feature_corr_ROOT_heatmap(
+            abs_rhos,
+            save_path=f"{fold_save_path}/CorrHeatmap_{fold_idx}.pdf",
+            topk=26,
+        )
+    except Exception as e:
+        logger.exception("[CorrHeatmap] Skipped due to error: %s", e)
+
+    # # cats = np.where(df_valid.nJets.values>=2, "njet>=2", "njet<2")  # adapt to your column
+    # # plot_score_shapes_and_roc_by_category_ROOT(
+    # #     valid_loop_dict["prediction"], valid_loop_dict["label"], df_valid.wgt_nominal.values,
+    # #     cats, save_prefix=f"{fold_save_path}/PerCategory_{fold_idx}"
+    # # )
+
+    # # e.g., processes in your df_valid: ["dy","top","ewk","vbf","ggh"]
+    # signal_procs = ["vbf","ggh"]
+    # plot_cumulative_SSB_per_process_ROOT(
+    #     valid_loop_dict["prediction"], valid_loop_dict["label"], df_valid.wgt_nominal.values,
+    #     df_valid.process.values, signal_procs,
+    #     save_path=f"{fold_save_path}/Cumulative_SSB_{fold_idx}.pdf"
+    # )
+
+    auc_base, perm_res = permutation_importance_auc(
+        model, df_valid, training_features,
+        labels=valid_loop_dict["label"],
+        weights=df_valid.wgt_nominal.values,
+        device=DEVICE, n_repeats=1, subsample=50000  # subsample optional/speed
+    )
+    plot_perm_importance_ROOT(perm_res, f"{fold_save_path}/epoch{epoch}_PermImportance.pdf", topk=26)
+
+    # ['dimuon_mass', 'dimuon_ebe_mass_res', 'dimuon_ebe_mass_res_rel', 'jj_mass_nominal', 'jj_mass_log_nominal', 'rpt_nominal', 'll_zstar_log_nominal',
+    #  'jj_dEta_nominal', 'nsoftjets5_nominal', 'mmj_min_dEta_nominal', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity', 'jet1_pt_nominal', 'jet1_eta_nominal', 'jet1_phi_nominal',
+    #  'jet2_pt_nominal', 'jet2_eta_nominal', 'jet2_phi_nominal', 'jet1_qgl_nominal', 'jet2_qgl_nominal', 'dimuon_cos_theta_cs', 'dimuon_phi_cs', 'htsoft2_nominal',
+    #  'pt_centrality_nominal', 'year']
+    for feat, label in [
+        ("dimuon_pt", "p_{T}^{#mu#mu}"),
+        ("dimuon_ebe_mass_res", "m_{#mu#mu}^{res}"),
+        ("dimuon_ebe_mass_res_rel", "m_{#mu#mu}^{res, rel}"),
+        ("jet1_eta_nominal", "#eta_{jet1}"),
+        ("jet1_pt_nominal", "#p_{T}^{jet1}"),
+        ("jet2_eta_nominal", "#eta_{jet2}"),
+        ("jet2_pt_nominal", "#p_{T}^{jet2}"),
+        ("nsoftjets5_nominal", "N_{soft jets}"),
+        ("rpt_nominal", "rpt"),
+        ("jj_mass_nominal", "m_{jj}"),
+        ("jj_dEta_nominal", "#Delta#eta_{jj}"),
+    ]:
+        if feat in training_features:
+            gx, gy = partial_dependence_curve(
+                model, df_valid, training_features, feat, df_valid.wgt_nominal.values, DEVICE,
+                grid="quantile", nbins=15, subsample=40000
+            )
+            plot_pdp_ROOT(gx, gy, xlabel=label, save_path=f"{fold_save_path}/epoch{epoch}_PDP_{feat}.pdf")
+
+    # If you have the threshold scan arrays, choose best_t = thr[np.argmax(SSB)]
+    # Otherwise pick a fixed cut:
+    best_t = 0.70
+
+    res = yield_table_after_cut(
+        valid_loop_dict["prediction"], valid_loop_dict["label"],
+        df_valid.wgt_nominal.values, df_valid.process.values,
+        score_cut=best_t, save_prefix=f"{fold_save_path}/epoch{epoch}"
+    )
+    logger.info(f"[YieldTable] S/sqrt(B) at cut {best_t:.3f}: {res['ssb']:.3f}; table: {res['txt']} / {res['csv']}")
 
     # Save final model state (in case early stopping did not trigger)
     save_model_final(model, training_features, fold_save_path)
@@ -832,6 +968,13 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     callback.save_logs(f"{fold_save_path}/epoch{epoch}_training_logs.pkl")
     # calculate the scale, save it
     # save the resulting df for training
+    plot_auc_and_loss(
+        history, save_path=f"{fold_save_path}/AUC_and_Loss_vs_Epoch_{fold_idx}.pdf"
+    )
+    plot_significance(
+        history, save_path=f"{fold_save_path}/Significance_vs_Epoch_{fold_idx}.pdf"
+    )
+    plot_lr(history, save_path=f"{fold_save_path}/LearningRate_vs_Epoch_{fold_idx}.pdf")
 
 def calculateSignificance(sig_hist, bkg_hist):
     """
@@ -895,6 +1038,11 @@ def main():
         type=lambda x: getattr(logging, x),
         help="Configure the logging level."
         )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Use only 10% of the data for debugging.",
+    )
     args = parser.parse_args()
     logger.setLevel(args.log_level)
     for handler in logger.handlers:
@@ -908,7 +1056,7 @@ def main():
 
     nfolds = 4 #4
 
-    #Parallelization list intitializtation
+    # Parallelization list intitializtation
     model_l = []
     data_dict_l = []
     fold_l = []
@@ -924,6 +1072,12 @@ def main():
         df_valid = pd.read_parquet(f"{save_path}/data_df_validation_{i}.parquet") # these have been already scaled
         df_eval = pd.read_parquet(f"{save_path}/data_df_evaluation_{i}.parquet") # these have been already scaled
 
+        # use only 10% stats for debug
+        if args.debug:
+            df_train = df_train.sample(frac=0.1, random_state=42)
+            df_valid = df_valid.sample(frac=0.1, random_state=42)
+            df_eval = df_eval.sample(frac=0.1, random_state=42)
+
         training_features = prepare_features(df_train, training_features) # add variation to the name
         logger.info(f"fold {i} training features: {training_features}")
         logger.debug(f"df_train: {df_train}")
@@ -934,7 +1088,7 @@ def main():
         }
         nepochs = args.n_epochs
         batch_size = args.batch_size
-        # dnn_train(model, data_dict, i, training_features, batch_size, nepochs, save_path)
+        dnn_train(model, data_dict, i, training_features, batch_size, nepochs, save_path, TrainingLogger(log_interval=10))
 
         # collect the input parameters
         model_l.append(model)
@@ -946,21 +1100,27 @@ def main():
         nepochs_l.append(nepochs)
         callback_l.append(TrainingLogger(log_interval=10))
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
-        # Submit each file check to the executor
-        result_l = list(executor.map(
-            dnn_train,
-            model_l,
-            data_dict_l,
-            fold_l,
-            training_features_l,
-            batch_size_l,
-            nepochs_l,
-            save_path_l,
-            callback_l,
-        ))
-        logger.debug(f"result_l: {result_l}")
-        logger.info("Success!")
+    # with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
+    #     # Submit each file check to the executor
+    #     result_l = list(executor.map(
+    #         dnn_train,
+    #         model_l,
+    #         data_dict_l,
+    #         fold_l,
+    #         training_features_l,
+    #         batch_size_l,
+    #         nepochs_l,
+    #         save_path_l,
+    #         callback_l,
+    #     ))
+    #     logger.debug(f"result_l: {result_l}")
+    #     logger.info("Success!")
+
+    # After training all folds
+    fold_dirs = [f"{save_path}/fold{i}" for i in range(nfolds)]
+    cv_consistency_plots_ROOT(save_path, fold_dirs, nbins=30)
+
+    logger.info("Success!")
 
 if __name__ == '__main__':
     main()
