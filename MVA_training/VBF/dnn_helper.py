@@ -1,6 +1,6 @@
 DEVICE = "cuda"  # "cuda" or "cpu"
 
-DIR_TAG = "_2018_UpdatedQGL_17July_Test"
+DIR_TAG = "_ScanHyperParamV1"
 
 ### For PyTorch DataLoader
 NWORKERS = 0
