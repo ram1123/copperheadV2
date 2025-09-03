@@ -305,14 +305,15 @@ for year in "${years[@]}"; do
         dnn|dnn_pre|dnn_train|dnn_var_rank)
             log "Running DNN step(s) for year $year..."
             cmd_preproc="python MVA_training/VBF/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level INFO "
+            # Alternative cmd_train configurations (uncomment and adjust as needed):
+            # -- Bayesian Optimization:
             # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 75 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
-
             # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 21 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
-            # No Scan
-            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 100 --batch-size 2048 --log-level INFO "
-
+            # -- Quick test:
             # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 3 --bo-epochs 5 --bo-fold 0 --n-epochs 5 --batch-size 15536 --log-level INFO "
             # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 5 --batch-size 15536 --log-level INFO "
+            # Active configuration:
+            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 100 --batch-size 2048 --log-level INFO "
             cmd_var_rank="python MVA_training/VBF/variable_ranking.py "
 
             if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then
