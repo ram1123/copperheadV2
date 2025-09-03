@@ -672,7 +672,7 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
 
 
-        logger.debug(f"muons pT: {events.Muon.pt[:10].compute()}")
+        logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
 
         # # --------------------------------------------------------
         # # # Apply Rochester correction
@@ -1712,7 +1712,7 @@ class EventProcessor(processor.ProcessorABC):
         do_jerunc = False,
         event_match = None
     ):
-        logger.info(f'variation: {variation}')
+        logger.debug(f'variation: {variation}')
         is_mc = events.metadata["is_mc"]
         dataset = events.metadata["dataset"]
         year = self.config["year"]

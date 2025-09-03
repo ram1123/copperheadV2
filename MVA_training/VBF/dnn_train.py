@@ -20,7 +20,23 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 from sklearn.metrics import confusion_matrix
 
+# #### Libraries for scan HYPERPARAMETERS
+from ax.service.managed_loop import optimize
+from ax.storage.json_store.save import save_experiment
+from ax.service.utils.report_utils import exp_to_df, get_standard_plots
+from ax.plot.trace import optimization_trace_single_method
+from ax.plot.contour import plot_contour
+from ax.utils.notebook.plotting import render
+import plotly.io as pio
+
+from pathlib import Path
+import json
+import threading
+
 from time import time
+from time import time as _time
+
+# #### END: Libraries for scan HYPERPARAMETERS
 
 
 plt.style.use(hep.style.CMS)
@@ -71,6 +87,37 @@ def _safe_auc(y, p, w=None):
 def transformDnnScore(dnn_scores):
     s = np.clip(dnn_scores, 1e-6, 1-1e-6) # protection from atanh(0) or atanh(1 or -1) whose value is +/- inf
     return np.atanh(s)
+
+
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=1, gamma=2):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+
+    def forward(self, inputs, targets):
+        BCE_loss = nn.functional.binary_cross_entropy_with_logits(
+            inputs, targets, reduction="none"
+        )
+        pt = torch.exp(-BCE_loss)  # Probabilities of correct classification
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
+        return focal_loss.mean()
+
+
+class HingeLoss(nn.Module):
+    """
+    source: chatgpt, but verified on https://lightning.ai/docs/torchmetrics/stable/classification/hinge_loss.html
+    """
+
+    def __init__(self):
+        super(HingeLoss, self).__init__()
+
+    def forward(self, outputs, targets):
+        # Map targets {0, 1} -> {-1, 1}
+        targets = 2 * targets - 1  # Convert 0 -> -1, 1 -> 1
+        # Calculate hinge loss
+        loss = torch.mean(torch.clamp(1 - outputs * targets, min=0))
+        return loss
 
 
 training_logs = []
@@ -208,31 +255,39 @@ class Net(nn.Module):
         super(Net, self).__init__()
         h1, h2, h3 = hidden
         d1, d2, d3 = dropout
+        act_map = {"relu": F.relu, "gelu": F.gelu, "selu": F.selu, "tanh": torch.tanh}
+        if activation not in act_map:
+            raise ValueError(f"Unknown activation {activation}")
+        self.act = act_map[activation]
+
         self.fc1 = nn.Linear(n_feat, h1)
-        self.bn1 = nn.BatchNorm1d(h1)
+        self.bn1 = nn.BatchNorm1d(h1) if use_batchnorm else nn.Identity()
         self.dropout1 = nn.Dropout(d1)
+
         self.fc2 = nn.Linear(h1, h2)
-        self.bn2 = nn.BatchNorm1d(h2)
+        self.bn2 = nn.BatchNorm1d(h2) if use_batchnorm else nn.Identity()
         self.dropout2 = nn.Dropout(d2)
+
         self.fc3 = nn.Linear(h2, h3)
-        self.bn3 = nn.BatchNorm1d(h3)
+        self.bn3 = nn.BatchNorm1d(h3) if use_batchnorm else nn.Identity()
         self.dropout3 = nn.Dropout(d3)
+
         self.output = nn.Linear(h3, 1)
 
     def forward(self, x):
         x = self.fc1(x)
         x = self.bn1(x)
-        x = F.tanh(x)
+        x = self.act(x)
         x = self.dropout1(x)
 
         x = self.fc2(x)
         x = self.bn2(x)
-        x = F.tanh(x)
+        x = self.act(x)
         x = self.dropout2(x)
 
         x = self.fc3(x)
         x = self.bn3(x)
-        x = F.tanh(x)
+        x = self.act(x)
         x = self.dropout3(x)
 
         x = self.output(x)
@@ -475,6 +530,7 @@ def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_f
     bins = selection.binning
     plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_combined_transformedDist_bySigBkg.png"
     plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=True)
+    plotSigVsBkg(score_dict, bins, plt_save_path.replace(".png","_log.png"), transformPrediction=False, log_scale=True)
     # raise ValueError
 
     # # ------------------------------------------
@@ -667,7 +723,8 @@ def ValidationPlots(model, epoch, fold_idx, fold_save_path, df_valid, training_f
     return best_significance
 
 
-def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs, save_path, callback=None):
+def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs, save_path,
+              callback=None, lr=1e-3, optimizer_name="adam", weight_decay=0.0, loss_name="bce"):
     logger.setLevel(logging.INFO)
     if len(training_features) == 0:
         logger.error("ERROR: please define the training features the DNN will train on")
@@ -694,7 +751,14 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     input_arr_eval = df_eval[training_features].values
     label_arr_eval = df_eval.label.values
 
+    # CHOOSE LOSS
     loss_fn = torch.nn.BCELoss()
+    if loss_name == "focal":
+        loss_fn = FocalLoss(alpha=1, gamma=2)
+    elif loss_name == "hinge":
+        loss_fn = HingeLoss()
+    else:
+        loss_fn = torch.nn.BCELoss()
 
     # Iterating through the DataLoader
     #
@@ -702,7 +766,12 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
 
     model.to(DEVICE)
 
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    # CHOOSE OPTIMIZER
+    if optimizer_name.lower() == "adamw":
+        optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
     dataset_train = NumpyDataset(input_arr_train, label_arr_train)
     dataloader_train_ordered = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY) # for plotting
@@ -985,6 +1054,228 @@ def calculateSignificance(sig_hist, bkg_hist):
     return np.sqrt(value)
 
 
+def _make_dl(df_train, df_valid, feats, batch_size):
+    ds_tr = NumpyDataset(df_train[feats].values, df_train.label.values)
+    ds_va = NumpyDataset(df_valid[feats].values, df_valid.label.values)
+    dl_tr = DataLoader(
+        ds_tr,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=NWORKERS,
+        pin_memory=PIN_MEMORY,
+    )
+    dl_va = DataLoader(
+        ds_va,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=NWORKERS,
+        pin_memory=PIN_MEMORY,
+    )
+    return dl_tr, dl_va
+
+
+@torch.no_grad()
+def _valid_auc(model, dl, device):
+    model.eval()
+    probs, labels = [], []
+    for xb, yb in dl:
+        p = model(xb.to(device)).detach().cpu().numpy()
+        probs.append(p.ravel())
+        labels.append(yb.numpy().ravel())
+    return roc_auc_score(np.concatenate(labels), np.concatenate(probs))
+
+
+def bo_evaluate(params, *, save_path, training_features, bo_fold=0, bo_epochs=30):
+    """
+    Ax calls this with 'params' dict. We run a short train on one fold and return AUC.
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    df_tr = pd.read_parquet(f"{save_path}/data_df_train_{bo_fold}.parquet")
+    df_va = pd.read_parquet(f"{save_path}/data_df_validation_{bo_fold}.parquet")
+    feats = prepare_features(df_tr, training_features)
+
+    # derive architecture
+    h1 = int(params["hidden0"])
+    h2 = max(8, int(h1 * float(params["shrink1"])))
+    h3 = max(8, int(h2 * float(params["shrink2"])))
+    d = float(params["dropout"])
+    bs = int(params["batch_size"])
+
+    dl_tr, dl_va = _make_dl(df_tr, df_va, feats, bs)
+    model = Net(
+        n_feat=len(feats),
+        hidden=(h1, h2, h3),
+        dropout=(d, d, d),
+        activation=params["activation"],
+    ).to(device)
+
+    # loss/opt
+    loss_fn = (
+        FocalLoss(alpha=1, gamma=2)
+        if params["loss_name"] == "focal"
+        else torch.nn.BCELoss()
+    )
+    if params["optimizer"] == "adamw":
+        opt = optim.AdamW(
+            model.parameters(),
+            lr=float(params["lr"]),
+            weight_decay=float(params["weight_decay"]),
+        )
+    else:
+        opt = optim.Adam(
+            model.parameters(),
+            lr=float(params["lr"]),
+            weight_decay=float(params["weight_decay"]),
+        )
+
+    # short training with patience
+    best, bad, patience = -1.0, 0, 5
+    for _ in range(int(bo_epochs)):
+        model.train()
+        for xb, yb in dl_tr:
+            xb, yb = xb.to(device), yb.to(device).reshape((-1, 1))
+            opt.zero_grad()
+            loss = loss_fn(model(xb), yb)
+            loss.backward()
+            opt.step()
+        auc = _valid_auc(model, dl_va, device)
+        if auc > best + 1e-4:
+            best, bad = auc, 0
+        else:
+            bad += 1
+            if bad >= patience:
+                break
+    return best
+
+
+def save_bo_artifacts(experiment, values, best_params, outdir, objective_name="auc"):
+    os.makedirs(outdir, exist_ok=True)
+
+    # 1) Full experiment JSON (reloadable)
+    save_experiment(
+        experiment=experiment, filepath=os.path.join(outdir, "ax_experiment.json")
+    )
+
+    # 2) Trials table straight from Ax data
+    raw = experiment.fetch_data().df.copy()
+    # Expected columns include: ["arm_name","metric_name","mean","sem","trial_index", ...]
+    raw = raw[raw["metric_name"] == objective_name].sort_values("trial_index")
+    # Be defensive about the mean column name
+    mean_col = next((c for c in ["mean", "value", "data"] if c in raw.columns), None)
+    if mean_col is None:
+        raise RuntimeError(
+            f"No metric value column found in Ax data. Columns: {list(raw.columns)}"
+        )
+
+    raw.rename(columns={mean_col: objective_name}, inplace=True)
+    # keep a tidy table: trial, mean, sem, and parameters per arm
+    # Pull parameters per trial/arm
+    rows = []
+    for t in experiment.trials.values():
+        arms = (
+            list(t.arms)
+            if hasattr(t, "arms")
+            else ([t.arm] if hasattr(t, "arm") else [])
+        )
+        for arm in arms:
+            rows.append(
+                {"trial_index": t.index, "arm_name": arm.name, **arm.parameters}
+            )
+    ptab = pd.DataFrame(rows)
+
+    df = raw.merge(ptab, on=["trial_index", "arm_name"], how="left").reset_index(
+        drop=True
+    )
+    df.to_csv(os.path.join(outdir, "ax_trials.csv"), index=False)
+
+    # 3) Human-readable best summary
+    means, covs = values
+    best_mean = float(means.get(objective_name, float("nan")))
+    with open(os.path.join(outdir, "ax_best.txt"), "w") as f:
+        f.write(f"Objective: {objective_name}\n")
+        f.write(f"Best mean {objective_name}: {best_mean:.6f}\n")
+        f.write("Best parameters:\n")
+        for k, v in best_params.items():
+            f.write(f"  - {k}: {v}\n")
+
+    # 4) Plot: optimization trace (objective vs trial index)
+    # Use df grouped by trial in case of multiple arms
+    y_by_trial = df.groupby("trial_index")[objective_name].mean().sort_index()
+    y_np = y_by_trial.to_numpy()
+
+    try:
+        if y_np.size >= 1:
+            # shape -> (1, n_trials) as expected by Ax
+            y_mat = y_np[None, :]
+            trace_fig = optimization_trace_single_method(
+                y=y_mat,
+                title=f"Optimization Trace ({objective_name} vs. trial)",
+                ylabel=objective_name.upper(),
+            )
+            pio.write_html(
+                render(trace_fig),
+                file=os.path.join(outdir, "01_optimization_trace.html"),
+                include_plotlyjs="cdn",
+                auto_open=False,
+            )
+        else:
+            logger.warning("[Ax] Skipping optimization trace: no trials found.")
+    except Exception as e:
+        logger.warning(f"[Ax] optimization_trace_single_method failed: {e}")
+
+    # 5) Standard Ax plots (slice, contour, diagnostics) – guard with try
+    try:
+        for i, pc in enumerate(get_standard_plots(experiment)):
+            pio.write_html(
+                render(pc),
+                file=os.path.join(outdir, f"1{i+2}_standard_plot_{i:02d}.html"),
+                include_plotlyjs="cdn",
+                auto_open=False,
+            )
+    except Exception as e:
+        logger.warning(f"[Ax] get_standard_plots failed: {e}")
+
+
+class BOTrialRecorder:
+    def __init__(self, out_dir, objective_name="auc"):
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        self.csv_path = Path(out_dir) / "bo_trials_live.csv"
+        self.jsonl_path = Path(out_dir) / "bo_trials_live.jsonl"
+        self.objective = objective_name
+        self._lock = threading.Lock()
+        # write CSV header if new
+        if not self.csv_path.exists():
+            with open(self.csv_path, "w") as f:
+                f.write(
+                    "trial_index,duration_sec,status,"  # fixed fields first
+                    "auc,auc_sem,"  # metrics (sem kept for consistency)
+                    "params_json\n"
+                )  # keep params in a JSON column
+        # JSONL is schemaless; no header
+
+    def record(self, trial_index, params, auc, duration_sec, status="ok", auc_sem=""):
+        row = {
+            "trial_index": int(trial_index),
+            "duration_sec": float(duration_sec),
+            "status": str(status),
+            self.objective: float(auc),
+            f"{self.objective}_sem": auc_sem,
+            "params": params,  # preserve types
+        }
+        line_csv = (
+            f'{row["trial_index"]},{row["duration_sec"]:.3f},{row["status"]},'
+            f'{row[self.objective]:.7f},{row[f"{self.objective}_sem"]},'
+            f'{json.dumps(params, separators=(",", ":"))}\n'
+        )
+        line_json = json.dumps(row, separators=(",", ":")) + "\n"
+        with self._lock:
+            with open(self.csv_path, "a") as f:
+                f.write(line_csv)
+            with open(self.jsonl_path, "a") as f:
+                f.write(line_json)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1043,6 +1334,27 @@ def main():
         action="store_true",
         help="Use only 10% of the data for debugging.",
     )
+    parser.add_argument(
+        "--bo",
+        action="store_true",
+        help="Run GP-Bayesian optimization (Ax) before training"
+    )
+    parser.add_argument(
+        "--bo-trials",
+        type=int,
+        default=60
+    )
+    parser.add_argument(
+        "--bo-epochs",
+        type=int,
+        default=30
+    )
+    parser.add_argument(
+        "--bo-fold",
+        type=int,
+        default=0,
+        help="Which fold to use for Bayesian optimization"
+    )
     args = parser.parse_args()
     logger.setLevel(args.log_level)
     for handler in logger.handlers:
@@ -1051,8 +1363,142 @@ def main():
     if not os.path.exists(save_path):
         raise ValueError(f"Save path {save_path} does not exist. Please run dnn_preprocessor.py first.")
 
+    try:
+        import yaml
+
+        meta = {
+            "label": args.label,
+            "year": args.year,
+            "region": args.region,
+            "category": args.category,
+            "n_epochs": args.n_epochs,
+            "batch_size_cli": args.batch_size,
+            "bo": args.bo,
+            "bo_trials": args.bo_trials,
+            "bo_epochs": args.bo_epochs,
+            "bo_fold": args.bo_fold,
+        }
+        Path(save_path).mkdir(parents=True, exist_ok=True)
+        with open(Path(save_path) / "run_meta.yaml", "w") as f:
+            yaml.safe_dump(meta, f)
+    except Exception as _e:
+        logger.warning(f"Could not write run_meta.yaml: {_e}")
+
     with open(f'{save_path}/training_features.pkl', 'rb') as f:
         training_features = pickle.load(f)
+
+    best_hp = {
+        "hidden": (1024, 1024, 409), #(128, 64, 32),
+        "dropout": (0.0, 0.0, 0.0), #(0.2, 0.2, 0.2),
+        "activation": "selu", #"tanh",
+        "optimizer": "adamw", #"adam",
+        "lr": 0.011339465927284355, #1e-3,
+        "weight_decay": 1.9522171123020773e-06, #0.0,
+        "batch_size": 2048, #args.batch_size,
+        "loss_name": "bce",
+    }
+
+    if args.bo:
+        search_space = [
+            {"name":"hidden0",      "type":"choice", "values":[64,128,256,512,1024]},
+            {"name":"shrink1",      "type":"range",  "bounds":[0.4, 1.0]},
+            {"name":"shrink2",      "type":"range",  "bounds":[0.4, 1.0]},
+            {"name":"dropout",      "type":"range",  "bounds":[0.0, 0.5]},
+            {"name":"activation",   "type":"choice", "values":["relu","gelu","selu","tanh"]},
+            {"name":"optimizer",    "type":"choice", "values":["adam","adamw"]},
+            {"name":"lr",           "type":"range",  "bounds":[1e-4,3e-2], "log_scale":True},
+            {"name":"weight_decay", "type":"range",  "bounds":[1e-7,3e-3], "log_scale":True},
+            {"name":"batch_size",   "type":"choice", "values":[512,1024,2048,4096,8192,15536, 30000]},
+            {"name":"loss_name",    "type":"choice", "values":["bce","focal"]},
+        ]
+
+        try:
+            os.makedirs(Path(save_path) / "bo_logs", exist_ok=True)
+            with open(Path(save_path) / "bo_logs" / "search_space.yaml", "w") as f:
+                yaml.safe_dump({"parameters": search_space}, f)
+        except Exception as _e:
+            logger.warning(f"Could not write search_space.yaml: {_e}")
+
+        bo_dir = os.path.join(save_path, "bo_logs")
+        recorder = BOTrialRecorder(out_dir=bo_dir, objective_name="auc")
+
+        _TRIAL_COUNTER = {"i": 0}  # simple in-process counter
+
+        def _eval_logged(params):
+            _TRIAL_COUNTER["i"] += 1
+            trial_idx = _TRIAL_COUNTER["i"]
+            t0 = _time()
+            status = "ok"
+            try:
+                auc = bo_evaluate(
+                    params,
+                    save_path=save_path,
+                    training_features=training_features,
+                    bo_fold=int(args.bo_fold),
+                    bo_epochs=int(args.bo_epochs),
+                )
+            except torch.cuda.OutOfMemoryError:
+                torch.cuda.empty_cache()
+                auc = 0.0
+                status = "oom"
+            except Exception as e:
+                logger.exception(f"[Ax] Trial {trial_idx} failed: {e}")
+                auc = 0.0
+                status = "error"
+            dur = _time() - t0
+
+            # persist to disk (CSV + JSONL) and to logger
+            recorder.record(trial_idx, params, auc, dur, status=status)
+            logger.info(
+                f"[Ax] Trial {trial_idx} ({status}) AUC={auc:.6f} "
+                f"params={json.dumps(params, separators=(',',':'))} "
+                f"t={dur:.2f}s"
+            )
+            return auc
+
+        # === Save BO logs & plots ===
+        bo_dir = Path(save_path) / "bo_logs"
+        # best_params, values, experiment, model = optimize(
+        #     parameters=search_space,
+        #     evaluation_function=_eval,
+        #     total_trials=int(args.bo_trials),
+        #     minimize=False,  # we maximize AUC
+        #     objective_name="auc",
+        # )
+        best_params, values, experiment, model = optimize(
+            parameters=search_space,
+            evaluation_function=_eval_logged,  # <— use the logging wrapper
+            total_trials=int(args.bo_trials),
+            minimize=False,  # we maximize AUC
+            objective_name="auc",
+        )
+
+        logger.info(f"[Ax] Best parameters: {best_params}")
+        logger.info(f"[Ax] Values: {values}")
+
+        bo_out = os.path.join(save_path, "ax_bo_artifacts")
+        save_bo_artifacts(experiment, values, best_params, bo_out)
+
+        # translate to training knobs
+        h1 = int(best_params["hidden0"])
+        h2 = max(8, int(h1 * float(best_params["shrink1"])))
+        h3 = max(8, int(h2 * float(best_params["shrink2"])))
+        best_hp.update(
+            {
+                "hidden": (h1, h2, h3),
+                "dropout": (float(best_params["dropout"]),) * 3,
+                "activation": best_params["activation"],
+                "optimizer": best_params["optimizer"],
+                "lr": float(best_params["lr"]),
+                "weight_decay": float(best_params["weight_decay"]),
+                "batch_size": int(best_params["batch_size"]),
+                "loss_name": best_params["loss_name"],
+            }
+        )
+        logger.info(f"[Ax] Best parameters: {best_params}")
+        logger.info(f"[Ax] Best values: {values}")
+        # logger.info(f"[Ax] Best AUC ~ {values[0]['auc']:.5f}")
+        logger.info(f"[Ax] Best params: {best_hp}")
 
     nfolds = 4 #4
 
@@ -1066,7 +1512,12 @@ def main():
     nepochs_l = []
     callback_l = []
     for i in range(nfolds):
-        model = Net(len(training_features))
+        model = Net(
+            n_feat=len(training_features),
+            hidden=best_hp["hidden"],
+            dropout=best_hp["dropout"],
+            activation=best_hp["activation"],
+        )
 
         df_train = pd.read_parquet(f"{save_path}/data_df_train_{i}.parquet") # these have been already scaled
         df_valid = pd.read_parquet(f"{save_path}/data_df_validation_{i}.parquet") # these have been already scaled
@@ -1087,8 +1538,8 @@ def main():
             "evaluation": df_eval,
         }
         nepochs = args.n_epochs
-        batch_size = args.batch_size
-        dnn_train(model, data_dict, i, training_features, batch_size, nepochs, save_path, TrainingLogger(log_interval=10))
+        batch_size = int(best_hp["batch_size"])
+        # dnn_train(model, data_dict, i, training_features, batch_size, nepochs, save_path, TrainingLogger(log_interval=10))
 
         # collect the input parameters
         model_l.append(model)
@@ -1100,21 +1551,29 @@ def main():
         nepochs_l.append(nepochs)
         callback_l.append(TrainingLogger(log_interval=10))
 
-    # with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
-    #     # Submit each file check to the executor
-    #     result_l = list(executor.map(
-    #         dnn_train,
-    #         model_l,
-    #         data_dict_l,
-    #         fold_l,
-    #         training_features_l,
-    #         batch_size_l,
-    #         nepochs_l,
-    #         save_path_l,
-    #         callback_l,
-    #     ))
-    #     logger.debug(f"result_l: {result_l}")
-    #     logger.info("Success!")
+    lr_l = [best_hp["lr"]] * nfolds
+    opt_name_l = [best_hp["optimizer"]] * nfolds
+    wd_l = [best_hp["weight_decay"]] * nfolds
+    loss_name_l = [best_hp["loss_name"]] * nfolds
+    with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
+        # Submit each file check to the executor
+        result_l = list(executor.map(
+            dnn_train,
+            model_l,
+            data_dict_l,
+            fold_l,
+            training_features_l,
+            batch_size_l,
+            nepochs_l,
+            save_path_l,
+            callback_l,
+            lr_l,
+            opt_name_l,
+            wd_l,
+            loss_name_l
+        ))
+        logger.debug(f"result_l: {result_l}")
+        logger.info("done!")
 
     # After training all folds
     fold_dirs = [f"{save_path}/fold{i}" for i in range(nfolds)]

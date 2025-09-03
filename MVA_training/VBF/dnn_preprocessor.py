@@ -750,11 +750,13 @@ if __name__ == "__main__":
         )
         logger.info("Local scale Client created")
 
-    # base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
-    # base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/compacted"
-    base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
-    base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
-    if not os.path.exists(base_path_compact):
+    if args.year == "run2":
+        base_path_f1_0 = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
+        base_path_compact = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/compacted"
+    else:
+        base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
+        base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
+    if not os.path.exists(base_path_compact) and not args.year == "run2":
         base_path = base_path_f1_0
     else:
         base_path = base_path_compact

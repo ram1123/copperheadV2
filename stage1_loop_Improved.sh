@@ -121,6 +121,7 @@ declare -A data_l_dict=(
     [2018]="A B C D"
     [2022preEE]="C D"
     [2022postEE]="E F G"
+    [run2]="A B C D E F G H"
 )
 
 # bkg_l="DY TT ST VV EWK VVV"
@@ -132,13 +133,13 @@ sig_l="Higgs"
 if [[ "$debug" -ge 1 ]]; then
     log "Debug mode ON "
     # years=("2016preVFP")
-    data_l_dict["2016preVFP"]="B C D E F"
+    data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
-    bkg_l=""
+    bkg_l="VVV"
     # sig_l=""
-    sig_l=""
+    sig_l="Higgs"
     # sig_l="VBF"
 fi
 
@@ -304,22 +305,35 @@ for year in "${years[@]}"; do
         dnn|dnn_pre|dnn_train|dnn_var_rank)
             log "Running DNN step(s) for year $year..."
             cmd_preproc="python MVA_training/VBF/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level INFO "
-            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 5 --bo-epochs 10 --bo-fold 0 --n-epochs 10 --batch-size 15536 --log-level INFO "
+            # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 75 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
+
+            # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 21 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
+            # No Scan
+            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 100 --batch-size 2048 --log-level INFO "
+
+            # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 3 --bo-epochs 5 --bo-fold 0 --n-epochs 5 --batch-size 15536 --log-level INFO "
+            # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 5 --batch-size 15536 --log-level INFO "
             cmd_var_rank="python MVA_training/VBF/variable_ranking.py "
 
             if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then
+                if [[ "$dask" == "1" ]]; then
+                    cmd_preproc+=" --use_gateway "
+                fi
                 log "Running DNN preprocessor..."
                 log "Command: $cmd_preproc"
                 eval "$cmd_preproc"
             fi
 
             if [[ "$mode" == "dnn_train" || "$mode" == "dnn" ]]; then
+                if [[ "$debug" == "1" ]]; then
+                    cmd_train+=" --debug "
+                fi
                 log "Running DNN training..."
                 log "Command: $cmd_train"
                 eval "$cmd_train"
             fi
 
-            if [[ "$mode" == "dnn_var_rank" || "$mode" == "dnn" ]]; then
+            if [[ "$mode" == "dnn_var_rank" ]]; then
                 log "Running variable ranking..."
                 log "Command: $cmd_var_rank"
                 eval "$cmd_var_rank"
