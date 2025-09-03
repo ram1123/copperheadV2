@@ -44,8 +44,8 @@ DYVBF = ["dy_VBF_filter"]
 group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
 
-    "DY": DY_aMCatNLO,
-    # "DY": DY_MiNNLO,
+    # "DY": DY_aMCatNLO,
+    "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
     "DYVBF": ["dy_VBF_filter"],
