@@ -187,18 +187,12 @@ for year in "${years[@]}"; do
     model_label="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
 
     # NOTE: This DNN is trained with all year but name contains hardcoded string "2018"
-    model_label_forCompact="2018_${region}_${category}_2018_UpdatedQGL_17July_Test"
-    compact_tag="13August"
-    # postfix="July31_Rebinnedv2_NoSyst"
-    # postfix="July31_Rebinnedv2"
-    # postfix="WithJES_13August"
-    # postfix="Aug14_OLDBR_NewSelv2"
-    # postfix="Latest"
+    # model_label_forCompact="2018_${region}_${category}_2018_UpdatedQGL_17July_Test" # August training
+    model_label_forCompact="run2_${region}_${category}_ScanHyperParamV1" # Latest training; 03 Sep 2025
+    compact_tag="03September"
 
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag  "
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --add_dnn_score --tag $compact_tag"
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path  "
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag  "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path  "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
