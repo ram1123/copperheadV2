@@ -234,7 +234,6 @@ for year in "${years[@]}"; do
         command0+=" --use_gateway "
         command1+=" --use_gateway "
         command2+=" --use_gateway "
-        command3+=" --use_gateway "
         command4+=" --use_gateway "
         command5+=" --use_gateway "
         command6+=" --use_gateway "

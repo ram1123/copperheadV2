@@ -9,7 +9,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor, apply_roccorRun3
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, applyHemVeto, do_jec_scale, do_jer_smear, get_jet_variation, applyUpDown, applyJetUncertaintyKinematics
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, fill_softjets_HIG19006, applyHemVeto, do_jec_scale, do_jer_smear, get_jet_variation, applyUpDown, applyJetUncertaintyKinematics
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old, get_jetpuid_weights_eta_dependent
 import json
@@ -2039,6 +2039,7 @@ class EventProcessor(processor.ProcessorABC):
         # no need to calcluate this for each jet pT variation
 
         sj_dict = {}
+        sj_dict_HIG19006 = {}
         cutouts = [2,5]
         nmuons = ak.num(events.Muon, axis=1) # FIXME (I think it should be selected muons)
         # PLEASE NOTE: SoftJET variables are all from Nominal variation despite variation names
@@ -2050,8 +2051,16 @@ class EventProcessor(processor.ProcessorABC):
             }
             sj_dict.update(sj_out)
 
+            sj_out_HIG19006 = fill_softjets_HIG19006(events, jets, mu1, mu2, nmuons, cutout) # obtain nominal softjet values
+            sj_out_HIG19006 = { # add variation even thought it's always nominal
+                key+"_"+variation : val \
+                for key, val in sj_out_HIG19006.items()
+            }
+            sj_dict_HIG19006.update(sj_out_HIG19006)
+
         logger.debug(f"sj_dict.keys(): {sj_dict.keys()}")
         jet_loop_out_dict.update(sj_dict)
+        jet_loop_out_dict.update(sj_dict_HIG19006)
 
 
         # ------------------------------------------------------------#
