@@ -82,7 +82,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         schemaclass=NanoAODSchema,
         metadata= dataset_dict["metadata"],
         uproot_options={
-            "timeout":2400,
+            "timeout":300,
+            "num_workers": 1, # needs to be 1 for dask, solves vector_read error
+            "max_num_elements": 4000,
             # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
         },
     ).events()
@@ -267,6 +269,9 @@ if __name__ == "__main__":
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
                 sample_step = time.time()
+                if "data_" not in dataset:
+                    args.max_file_len = 5 # FIXME: temp to 1 for ttbar debug change to 5
+
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
                 logger.info(f"max_file_len: {args.max_file_len}")
                 logger.info(f"len(smaller_files): {len(smaller_files)}")
@@ -277,11 +282,12 @@ if __name__ == "__main__":
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
+                    t3a = time.perf_counter()
                     to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
                     logger.info(f"save_path: {save_path}")
                     t3 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - var_step, 3)} seconds")
+                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
                     if not os.path.exists(save_path):
                         logger.debug(f"Path: {save_path} is going to be created")
                         os.makedirs(save_path)
@@ -294,7 +300,10 @@ if __name__ == "__main__":
                     logger.debug(f"Directory created or cleaned: {save_path}")
                     t4 = time.perf_counter()
                     logger.info(f"[Timing] Time taken to create directory and clean files: {round(t4 - t3, 3)} seconds")
-                    # to_persist.persist().to_parquet
+                    to_persist = to_persist.repartition(npartitions=256)
+                    t4b = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to repartition to 256 partitions: {round(t4b - t4, 3)} seconds")
+                    # persist and save to parquet
                     to_persist.persist().to_parquet(save_path)
                     # to_persist.to_parquet(save_path)
                     t5 = time.perf_counter()
