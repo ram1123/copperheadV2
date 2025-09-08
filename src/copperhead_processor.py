@@ -221,7 +221,7 @@ def testJetVector(jets):
     jet1 = padded_jets[:, 0]
     jet2 = padded_jets[:, 1]
     normal_dijet =  jet1 + jet2
-    logger.info(f"type normal_dijet: {type(normal_dijet.compute())}")
+    # logger.info(f"type normal_dijet: {type(normal_dijet.compute())}")
     # explicitly reinitialize the jets
     jet1_4D_vec = ak.zip({"pt":jet1.pt, "eta":jet1.eta, "phi":jet1.phi, "mass":jet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
     jet2_4D_vec = ak.zip({"pt":jet2.pt, "eta":jet2.eta, "phi":jet2.phi, "mass":jet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
@@ -511,41 +511,41 @@ class EventProcessor(processor.ProcessorABC):
             dr_gl = gl_pair["jet"].delta_r(gl_pair["lepton"])
             isolated = ak.all((dr_gl > 0.4), axis=-1)
 
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f"gl_pair type: {type(gl_pair)}")
-                logger.debug(f"gl_pair: {gl_pair[:10].compute()}")
+            # if logger.isEnabledFor(logging.DEBUG):
+            #     logger.debug(f"gl_pair type: {type(gl_pair)}")
+            #     logger.debug(f"gl_pair: {gl_pair[:10].compute()}")
 
-                temp_gl_pair_jets = gl_pair[1].compute()['jet']
-                temp_gl_pair_leptons = gl_pair[1].compute()['lepton']
-                logger.debug(f"gl_pair (jet): {temp_gl_pair_jets}")
-                logger.debug(f"gl_pair (lepton): {temp_gl_pair_leptons}")
-                logger.debug(f"gl_pair (jet.eta): {temp_gl_pair_jets.eta}")
-                for i in range(len(temp_gl_pair_jets.eta)):
-                    logger.debug(f"gl_pair (jet.eta)[{i}]: {temp_gl_pair_jets.eta[i]}")
-                    logger.debug(f"gl_pair (jet.phi)[{i}]: {temp_gl_pair_jets.phi[i]}")
-                logger.debug(f"gl_pair (lepton.eta): {temp_gl_pair_leptons.eta}")
-                for i in range(len(temp_gl_pair_leptons.eta)):
-                    logger.debug(f"gl_pair (lepton.eta)[{i}]: {temp_gl_pair_leptons.eta[i]}")
-                    logger.debug(f"gl_pair (lepton.phi)[{i}]: {temp_gl_pair_leptons.phi[i]}")
-                # logger.debug(f"gl_pair (jet.phi): {temp_gl_pair_jets.phi}")
-                # logger.debug(f"gl_pair (lepton.phi): {temp_gl_pair_leptons.phi}")
+            #     temp_gl_pair_jets = gl_pair[1].compute()['jet']
+            #     temp_gl_pair_leptons = gl_pair[1].compute()['lepton']
+            #     logger.debug(f"gl_pair (jet): {temp_gl_pair_jets}")
+            #     logger.debug(f"gl_pair (lepton): {temp_gl_pair_leptons}")
+            #     logger.debug(f"gl_pair (jet.eta): {temp_gl_pair_jets.eta}")
+            #     for i in range(len(temp_gl_pair_jets.eta)):
+            #         logger.debug(f"gl_pair (jet.eta)[{i}]: {temp_gl_pair_jets.eta[i]}")
+            #         logger.debug(f"gl_pair (jet.phi)[{i}]: {temp_gl_pair_jets.phi[i]}")
+            #     logger.debug(f"gl_pair (lepton.eta): {temp_gl_pair_leptons.eta}")
+            #     for i in range(len(temp_gl_pair_leptons.eta)):
+            #         logger.debug(f"gl_pair (lepton.eta)[{i}]: {temp_gl_pair_leptons.eta[i]}")
+            #         logger.debug(f"gl_pair (lepton.phi)[{i}]: {temp_gl_pair_leptons.phi[i]}")
+            #     # logger.debug(f"gl_pair (jet.phi): {temp_gl_pair_jets.phi}")
+            #     # logger.debug(f"gl_pair (lepton.phi): {temp_gl_pair_leptons.phi}")
 
-                deta_gl = gl_pair["jet"].deltaeta(gl_pair["lepton"])
-                temp_dEta_gl = deta_gl[1].compute()
-                logger.debug(f"deta_gl type: {temp_dEta_gl}")
-                for i in range(len(temp_dEta_gl)):
-                    logger.debug(f"deta_gl[{i}]: {temp_dEta_gl[i]}")
+            #     deta_gl = gl_pair["jet"].deltaeta(gl_pair["lepton"])
+            #     temp_dEta_gl = deta_gl[1].compute()
+            #     logger.debug(f"deta_gl type: {temp_dEta_gl}")
+            #     for i in range(len(temp_dEta_gl)):
+            #         logger.debug(f"deta_gl[{i}]: {temp_dEta_gl[i]}")
 
-                temp_dR_gl = dr_gl[1].compute()
-                logger.debug(f"dr_gl type: {temp_dR_gl}")
-                logger.debug(f"dr_gl length: {len(temp_dR_gl)}")
-                for i in range(len(temp_dR_gl)):
-                    logger.debug(f"dr_gl[{i}]: {temp_dR_gl[i]}")
+            #     temp_dR_gl = dr_gl[1].compute()
+            #     logger.debug(f"dr_gl type: {temp_dR_gl}")
+            #     logger.debug(f"dr_gl length: {len(temp_dR_gl)}")
+            #     for i in range(len(temp_dR_gl)):
+            #         logger.debug(f"dr_gl[{i}]: {temp_dR_gl[i]}")
 
 
-                logger.debug(f"isolated type: {isolated[1].compute()}")
-                for i in range(len(isolated[1].compute())):
-                    logger.debug(f"isolated[{i}]: {isolated[1].compute()[i]}")
+            #     logger.debug(f"isolated type: {isolated[1].compute()}")
+            #     for i in range(len(isolated[1].compute())):
+            #         logger.debug(f"isolated[{i}]: {isolated[1].compute()[i]}")
 
             gjets_clean = gjets[isolated]
             # Sort by pt, pad to 2
@@ -672,7 +672,7 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
 
 
-        logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
+        # logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
 
         # # --------------------------------------------------------
         # # # Apply Rochester correction
@@ -961,7 +961,7 @@ class EventProcessor(processor.ProcessorABC):
             # if True:
             if self.test_mode: # for small files local testing
                 sumWeights = ak.sum(events.genWeight, axis=0) # for testing
-                logger.debug(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
+                # logger.debug(f"small file test sumWeights: {(sumWeights.compute())}") # for testing
             else:
                 sumWeights = events.metadata['sumGenWgts']
                 logger.debug(f"sumWeights: {(sumWeights)}")
@@ -1330,7 +1330,7 @@ class EventProcessor(processor.ProcessorABC):
                 and ("mg" not in dataset)
             )
             if do_pdf:
-                logger.info("doing pdf!")
+                logger.debug("doing pdf!")
                 # add_pdf_variations(events, self.weight_collection, self.config, dataset)
                 pdf_vars = add_pdf_variations(events, self.config, dataset)
                 weights.add("pdf_2rms",
