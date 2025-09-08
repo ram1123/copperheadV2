@@ -539,14 +539,14 @@ def do_jec_scale(jets, config, is_mc, dataset, uncs=["nominal"]):
             lvl_compound = f"Regrouped_{unc}"
 
         key = "{}_{}_{}".format(jec_tag, lvl_compound, algo)
-        logger.info(f"jec key: {key}")
+        logger.debug(f"jec key: {key}")
         if unc == "nominal":
             sf = cset.compound[key]
         else:
             sf = cset[key]
 
         sf_input_names = [inp.name for inp in sf.inputs]
-        logger.info(f"{unc} JEC input: {sf_input_names}") # use this a reference to add inputs
+        logger.debug(f"{unc} JEC input: {sf_input_names}") # use this a reference to add inputs
 
         if unc == "nominal":
             inputs = (
@@ -563,7 +563,7 @@ def do_jec_scale(jets, config, is_mc, dataset, uncs=["nominal"]):
         # inputs = get_corr_inputs(example_value_dict, sf)
         new_jec_scale = sf.evaluate(*inputs)
         # print(f"new_jec_scale: {new_jec_scale}")
-        # logger.info(f"new_jec_scale {unc}: {new_jec_scale.compute()}")
+        # logger.debug(f"new_jec_scale {unc}: {new_jec_scale.compute()}")
 
         # logger.debug("JSON result AK4: {}".format(new_jec_scale[:20].compute()))
 
@@ -704,7 +704,7 @@ def do_jer_smear(jets, config, event_id, year="2018", syst_l=["nom", "up", "down
     sf_ptres = cset[key]
 
     sf_input_names = [inp.name for inp in sf_ptres.inputs]
-    print(f"JER resolution input: {sf_input_names}")
+    logger.debug(f"JER resolution input: {sf_input_names}")
 
     for syst in syst_l:
         # Second, get JER resolution

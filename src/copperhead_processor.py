@@ -615,7 +615,7 @@ class EventProcessor(processor.ProcessorABC):
                 run_campaign = 2
             logger.debug(f"run_campaign: {run_campaign}")
             if is_mc:
-                logger.info("doing PU re-wgt!")
+                logger.debug("doing PU re-wgt!")
                 pu_wgts = pu_evaluator(
                             self.config,
                             events.Pileup.nTrueInt,
@@ -643,7 +643,7 @@ class EventProcessor(processor.ProcessorABC):
 
         # Apply event quality flags MET filter
         evnt_qual_flg_selection = ak.ones_like(event_filter, dtype="bool")
-        logger.info("Applying event quality (MET-filter) flags")
+        logger.debug("Applying event quality (MET-filter) flags")
         for evt_qual_flg in self.config["event_flags"]:
             logger.debug(f"evt_qual_flg: {evt_qual_flg}")
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
@@ -656,7 +656,7 @@ class EventProcessor(processor.ProcessorABC):
 
         doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
         if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
-            logger.info(f"doing beam constraint!")
+            logger.debug(f"doing beam constraint!")
             doing_BS_correction = True
             """
             TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
@@ -679,10 +679,10 @@ class EventProcessor(processor.ProcessorABC):
         if self.config["do_roccor"]:
             # TODO make more elegant distinction between Run2 and Run3
             if "16" in year or "17" in year or "18" in year:# Run2 roccor
-                logger.info("doing Run2 rochester!")
+                logger.debug("doing Run2 rochester!")
                 apply_roccor(events, self.config["roccor_file"], is_mc)
             else:
-                logger.info("doing Run3 rochester!")
+                logger.debug("doing Run3 rochester!")
                 apply_roccorRun3(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
             # logger.info(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
@@ -705,7 +705,7 @@ class EventProcessor(processor.ProcessorABC):
         # but apply muon iso overwrite, so base muon selection could be done
         do_fsr = self.config["do_fsr"]
         if do_fsr:
-            logger.info(f"doing fsr!")
+            logger.debug(f"doing fsr!")
             # applied_fsr = fsr_recovery(events)
             applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
@@ -722,7 +722,7 @@ class EventProcessor(processor.ProcessorABC):
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
         if self.config["do_trigger_match"]:
             do_seperate_mu1_leading_pt_cut = False
-            logger.info("doing trigger match!")
+            logger.debug("doing trigger match!")
             """
             Apply trigger matching. We take the two leading pT reco muons and try to have at least one of the muons
             to be matched with the trigger object that fired our HLT. If none of the muons did it, then we reject the
@@ -1136,7 +1136,7 @@ class EventProcessor(processor.ProcessorABC):
                     raise ValueError
 
             # -------------------------------------
-            print("doing JEC + SMEARing!")
+            logger.debug("doing JEC + SMEARing!")
             if do_jec_unc:
                 variation_l = ["nominal"] + self.config["jec_parameters"]["jec_unc_to_consider"]
             else:
@@ -1198,7 +1198,7 @@ class EventProcessor(processor.ProcessorABC):
                 cross_section = cross_section[year] # we assume cross_section is a map (Omegaconf)
             except:
                 cross_section = cross_section # we assume this is a number
-            logger.info(f"cross_section: {cross_section}")
+            logger.debug(f"cross_section: {cross_section}")
             logger.debug(f"type(cross_section): {type(cross_section)}")
             integrated_lumi = self.config["integrated_lumis"]
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
@@ -1206,12 +1206,12 @@ class EventProcessor(processor.ProcessorABC):
             # original initial weight end ----------------
 
             if do_pu_wgt:
-                logger.info("adding PU wgts!")
+                logger.debug("adding PU wgts!")
                 weights.add("pu_wgt", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
                 # logger.info(f"pu_wgts['nom']: {ak.to_numpy(pu_wgts['nom'].compute())}")
             # L1 prefiring weights
             if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
-                logger.info("adding L1 prefiring wgts!")
+                logger.debug("adding L1 prefiring wgts!")
                 L1_nom = events.L1PreFiringWeight.Nom
                 L1_up = events.L1PreFiringWeight.Up
                 L1_down = events.L1PreFiringWeight.Dn
@@ -1248,7 +1248,7 @@ class EventProcessor(processor.ProcessorABC):
             # moved nnlops reweighting outside of dak process and to run_stage1-----------------
             do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
             if do_nnlops:
-                logger.info("doing NNLOPS!")
+                logger.debug("doing NNLOPS!")
                 nnlopsw = nnlops_weights(events.HTXS.Higgs_pt, events.HTXS.njets30, self.config, events.metadata["dataset"])
                 # logger.info(f"nnlopsw: {ak.to_numpy(nnlopsw.compute())}")
                 weights.add("nnlops", weight=nnlopsw)
@@ -1256,7 +1256,7 @@ class EventProcessor(processor.ProcessorABC):
 
 
             #do mu SF start -------------------------------------
-            logger.info("doing musf!")
+            logger.debug("doing musf!")
             musf_lookup = get_musf_lookup(self.config)
             muID, muIso, muTrig = musf_evaluator(
                 musf_lookup, self.config["year"], mu1, mu2
@@ -1286,7 +1286,7 @@ class EventProcessor(processor.ProcessorABC):
                 and ("nominal" in pt_variations)
             )
             if do_lhe:
-                logger.info("doing LHE!")
+                logger.debug("doing LHE!")
                 lhe_ren, lhe_fac = lhe_weights(events, events.metadata["dataset"], self.config["year"])
                 weights.add("LHERen",
                     weight=ak.ones_like(lhe_ren["up"]),
@@ -1542,8 +1542,8 @@ class EventProcessor(processor.ProcessorABC):
         #             weight=vbfReverseFilter,
         #     )
         # apply vbf filter phase cut if DY test end ---------------------------------
-        logger.info(f"weight statistics: {weights.weightStatistics.keys()}")
-        # logger.info(f"weight variations: {weights.variations}")
+        logger.debug(f"weight statistics: {weights.weightStatistics.keys()}")
+        # logger.debug(f"weight variations: {weights.variations}")
         wgt_nominal = weights.weight()
 
         # add in weights
@@ -1620,7 +1620,7 @@ class EventProcessor(processor.ProcessorABC):
             yearUL = year
         if doing_BS_correction: # apply resolution calibration from BeamSpot constraint correction
             # TODO: add 2016pre and 2016post versions too
-            logger.info("Doing BS constraint correction mass calibration!")
+            logger.debug("Doing BS constraint correction mass calibration!")
 
             # Load the correction set
             json_path = self.config["BS_res_calib_path"]["MC"] if is_mc else self.config["BS_res_calib_path"]["Data"]
@@ -1629,8 +1629,8 @@ class EventProcessor(processor.ProcessorABC):
 
             # Access the specific correction by name
             correction = correction_set["BS_ebe_mass_res_calibration"]
-            logger.info(f"correction_set: {correction_set}")
-            logger.info(f"correction: {correction}")
+            logger.debug(f"correction_set: {correction_set}")
+            logger.debug(f"correction: {correction}")
 
             calibration = correction.evaluate(mu1.pt, abs(mu1.eta), abs(mu2.eta))
         else:
@@ -1638,7 +1638,7 @@ class EventProcessor(processor.ProcessorABC):
                 label = f"res_calib_MC_{yearUL}"
             else:
                 label = f"res_calib_Data_{yearUL}"
-            logger.info(f"yearUL: {yearUL}")
+            logger.debug(f"yearUL: {yearUL}")
             calibration =  self.evaluator[label]( # this is a coffea.dense_lookup instance
                 mu1.pt,
                 abs(mu1.eta),
