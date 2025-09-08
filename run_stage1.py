@@ -184,6 +184,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Get the cutflow",
     )
+    parser.add_argument(
+        "--rerun",
+        action="store_true",
+        help="If true, deletes the existing stage1 output directory and reruns stage1",
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -282,27 +287,32 @@ if __name__ == "__main__":
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
-                    t3a = time.perf_counter()
-                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
                     logger.info(f"save_path: {save_path}")
-                    t3 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
                     if not os.path.exists(save_path):
                         logger.debug(f"Path: {save_path} is going to be created")
                         os.makedirs(save_path)
                     else:
-                        # remove previously existing files and make path if doesn't exist
-                        filelist = glob.glob(f"{save_path}/*.parquet")
-                        logger.warning(f"Going to delete files: len(filelist): {len(filelist)}")
-                        for file in filelist:
-                            os.remove(file)
-                    logger.debug(f"Directory created or cleaned: {save_path}")
-                    t4 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to create directory and clean files: {round(t4 - t3, 3)} seconds")
+                        if args.rerun:
+                            # remove previously existing directory, if exists, then remake path
+                            if os.path.exists(save_path):
+                                logger.warning(f"Going to delete directory: {save_path}")
+                                os.system(f"rm -r {save_path}")
+                            logger.info(f"Path: {save_path} is going to be created")
+                            os.makedirs(save_path)
+                        else:
+                            logger.warning(f"Path: {save_path} already exists. Skipping this file index. Use --rerun to overwrite.")
+                            continue
+                    t3a = time.perf_counter()
+
+                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
+                    t3 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
+
                     to_persist = to_persist.repartition(npartitions=256)
-                    t4b = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to repartition to 256 partitions: {round(t4b - t4, 3)} seconds")
+                    t4 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to repartition to 256 partitions: {round(t4 - t3, 3)} seconds")
+
                     # persist and save to parquet
                     to_persist.persist().to_parquet(save_path)
                     # to_persist.to_parquet(save_path)
