@@ -417,6 +417,15 @@ if __name__ == "__main__":
      type=lambda x: getattr(logging, x),
      help="Configure the logging level."
      )
+    # add option to use compacted parquet files, as string. This string will be replaced in the load_path
+    # default path has f1_0, which will be replaced with input string
+    parser.add_argument(
+        "--use-compacted",
+        dest="use_compacted",
+        default="",
+        type=str,
+       help="Path to the compacted parquet files"
+    )
 
     # ---------------------------------------------------------
     # gather arguments
@@ -534,6 +543,10 @@ if __name__ == "__main__":
             variables2plot.append(f"htsoft2_nominal")
             variables2plot.append(f"nsoftjets5_nominal")
             variables2plot.append(f"htsoft5_nominal")
+            variables2plot.append(f"nsoftjets2_new_nominal")
+            variables2plot.append(f"htsoft2_new_nominal")
+            variables2plot.append(f"nsoftjets5_new_nominal")
+            variables2plot.append(f"htsoft5_new_nominal")
 
             # --------------------------------------------------
             # variables2plot.append(f"gjj_mass")
@@ -592,13 +605,15 @@ if __name__ == "__main__":
     time_step = time.time()
 
     # check if the compacted path exists
-    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted_13August_FixDimuonMass")
+    if args.use_compacted != "":
+        args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
 
-    for process in available_processes:
-        compacted_path_DNN = os.path.join(COMPACTED_PATH, process, "0")
-        ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
-    args.load_path = COMPACTED_PATH
+        # run compact script for each process
+        # for process in available_processes:
+        #     compacted_path_DNN = os.path.join(args.load_path, process, "0")
+        #     ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
 
+    logger.info(f"Using parquet files from {args.load_path}")
     # load saved parquet files. This increases memory use, but increases runtime significantly
     loaded_events = {} # intialize dictionary containing all the arrays
     for process in tqdm.tqdm(available_processes):
