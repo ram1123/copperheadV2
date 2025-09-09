@@ -6,6 +6,7 @@ import awkward as ak
 import matplotlib.pyplot as plt
 import numpy as np
 import dask
+dask.config.set(annotations={"retries": 3})
 # from dask.distributed import Client
 import sys
 import time
@@ -82,9 +83,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         schemaclass=NanoAODSchema,
         metadata= dataset_dict["metadata"],
         uproot_options={
-            "timeout":300,
+            "timeout": 900,
             "num_workers": 1, # needs to be 1 for dask, solves vector_read error
-            "max_num_elements": 4000,
+            "max_num_elements": 800,
             # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
         },
     ).events()
@@ -115,7 +116,6 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # skim_zip.persist().to_parquet(save_path)
     # raise ValueError
     return skim_zip
-
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -204,12 +204,10 @@ if __name__ == "__main__":
 
     time_step = time.time()
 
-
     warnings.filterwarnings('ignore')
     """
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
-
 
     config = getParametersForYr("./configs/parameters/" , args.year)
     logger.debug(f"stage1 config: {config}")
@@ -231,12 +229,19 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug(f"client: {client}")
             logger.info("Gateway Client created")
+            xrd_env = {
+                "XRD_REQUESTTIMEOUT": "900",
+                "XRD_STREAMTIMEOUT": "900",
+                "XRD_CONNECTIONWINDOW": "120",
+                "XRD_TIMEOUTRESOLUTION": "5",
+            }
+            client.run(lambda env=xrd_env: __import__("os").environ.update(env))
         else:
             client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             logger.info("Local scale Client created")
         t2 = time.perf_counter()
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
-        #-------------------------------------------------------------------------------------
+        # -------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
         logger.debug(f"Sample path: {sample_path}")
         with open(sample_path) as file:
@@ -261,13 +266,12 @@ if __name__ == "__main__":
             f.write(f"Diff:\n{diff}\n")
         logger.info(f"git_info_path: {git_info_path}")
 
-
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 # if dataset in ["ggh_amcPS", "ggh_powhegPS"]: # FIXME: temporary line to skip some datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
-                # if "ewk_lljj_mll50_mjj120" not in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
+                # if "dy_VBF_filter" in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
                 # if "data_" in dataset or "Data" in dataset or "dy_" in dataset: # FIXME: temporary line to skip data datasets for which we already have stage1 output
@@ -275,7 +279,7 @@ if __name__ == "__main__":
                 #     continue
                 sample_step = time.time()
                 if "data_" not in dataset:
-                    args.max_file_len = 5 # FIXME: temp to 1 for ttbar debug change to 5
+                    args.max_file_len = 10 # FIXME: temp to 1 for ttbar debug change to 5
 
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
                 logger.info(f"max_file_len: {args.max_file_len}")
@@ -309,12 +313,20 @@ if __name__ == "__main__":
                     t3 = time.perf_counter()
                     logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
 
-                    to_persist = to_persist.repartition(npartitions=256)
+                    # DOC:
+                    #   1. Dibosons with 256 partitions,
+                    #   2. EWK failed with 256 partitions, trying 512 partitions for ewk
+                    npartitions = 1024
+                    # if "ewk_lljj" in dataset or "www" in dataset:
+                        # npartitions = 512
+                    # logger.info(f"Repartitioning to {npartitions} partitions")
+                    # to_persist = to_persist.repartition(npartitions=npartitions)
                     t4 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to repartition to 256 partitions: {round(t4 - t3, 3)} seconds")
+                    # logger.info(f"[Timing] Time taken to repartition to {npartitions} partitions: {round(t4 - t3, 3)} seconds")
 
                     # persist and save to parquet
-                    to_persist.persist().to_parquet(save_path)
+                    to_persist = to_persist.persist()
+                    to_persist.to_parquet(save_path)
                     # to_persist.to_parquet(save_path)
                     t5 = time.perf_counter()
                     logger.info(f"[Timing] Time taken to save parquet files: {round(t5 - t4, 3)} seconds")
