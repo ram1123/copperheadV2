@@ -443,7 +443,7 @@ class EventProcessor(processor.ProcessorABC):
 
         dataset = events.metadata['dataset']
         logger.info(f"Dataset going to read: {dataset}")
-        logger.info(f"events.metadata: {events.metadata}")
+        logger.debug(f"events.metadata: {events.metadata}")
         NanoAODv = events.metadata['NanoAODv']
         is_mc = events.metadata['is_mc']
         logger.debug(f"NanoAODv: {NanoAODv}")

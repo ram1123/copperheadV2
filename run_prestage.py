@@ -130,7 +130,7 @@ def get_Xcache_filelist(fnames: list):
     logger.debug(f"fnames: {fnames}")
     for fname in fnames:
         root_file = re.findall(r"/store.*", fname)[0]
-        x_cache_fname = "root://cms-xcache.rcac.purdue.edu/" + root_file
+        x_cache_fname = "root://xcache.cms.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
     print(f"new_fnames: {new_fnames}")
     return new_fnames
