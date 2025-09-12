@@ -137,9 +137,9 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2016postVFP"]=""
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
-    bkg_l="VVV"
+    bkg_l="DY Top"
     # sig_l=""
-    sig_l="Higgs"
+    sig_l=""
     # sig_l="VBF"
 fi
 
@@ -173,8 +173,8 @@ for year in "${years[@]}"; do
     log "  Save path: $save_path"
 
     # ---- Command templates ----
-    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv "
-    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
+    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv "
+    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len  --isCutflow  "
@@ -192,8 +192,8 @@ for year in "${years[@]}"; do
     model_label_forCompact="run2_${region}_${category}_ScanHyperParamV1" # Latest training; 03 Sep 2025
     compact_tag="03September"
 
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag  "
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path  "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag  "
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path  "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.

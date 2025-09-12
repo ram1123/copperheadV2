@@ -78,6 +78,21 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     logger.debug(f"test: {test}")
     logger.debug(f"Output path: {save_path}")
 
+    # dict to hold the max_num_elements info per sample
+    dict_max_num_elements = {
+        "data_": 800,
+        "dy_": 200,
+        "ttjets_dl": 400,
+        "ttjets_sl": 1500,
+        }
+    max_num_elements = 800 # default
+    if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
+        max_num_elements = dict_max_num_elements[[key for key in dict_max_num_elements.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
+        logger.debug(f"Setting max_num_elements for {dataset_dict['metadata']['dataset']} to {max_num_elements}")
+    else:
+        max_num_elements = 800
+    logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
+
     events = NanoEventsFactory.from_root(
         dataset_dict["files"],
         schemaclass=NanoAODSchema,
@@ -85,7 +100,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         uproot_options={
             "timeout": 900,
             "num_workers": 1, # needs to be 1 for dask, solves vector_read error
-            "max_num_elements": 800,
+            "max_num_elements": max_num_elements,
             # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
         },
     ).events()
@@ -278,9 +293,21 @@ if __name__ == "__main__":
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
                 sample_step = time.time()
-                if "data_" not in dataset:
-                    args.max_file_len = 10 # FIXME: temp to 1 for ttbar debug change to 5
+                # dict to hold file lenght info per sample
+                dict_file_length = {
+                    "data_": 2500,
+                    "dy_": 10,
+                    "ttjets_dl": 15,
+                    "ttjets_sl": 30
+                    }
+                if any(key in dataset for key in dict_file_length.keys()):
+                    args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
+                    logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
+                else:
+                    args.max_file_len = 2500
+                logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
 
+                # split the sample files into smaller chunks of size args.max_file_len
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
                 logger.info(f"max_file_len: {args.max_file_len}")
                 logger.info(f"len(smaller_files): {len(smaller_files)}")

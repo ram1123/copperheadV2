@@ -3,6 +3,10 @@
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_07Sep2025 -p HPScan_03Sep -y "2018 2017 2016preVFP 2016postVFP" -m all -k)
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l Run2_nanoAODv12_07Sep2025 -p HPScan_03Sep -y "2018 2017 2016preVFP 2016postVFP" -m all -k -d 1) 2>&1 | tee Run2_nanoAODv12_07Sep2025_Run9Sep.log
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar -p HPScan_03Sep -y "2018" -m 2 -d 1 -k) 2>&1 | tee stage2_07Sep_2018.log
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar -p HPScan_03Sep -y "2018" -m 3 -d 1 -k) 2>&1 | tee stage3_07Sep_2018.log
 ```
 
 # 04 September 2025

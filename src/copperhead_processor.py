@@ -442,7 +442,7 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("TotalEntries", event_filter)
 
         dataset = events.metadata['dataset']
-        logger.info(f"Dataset going to read: {dataset}")
+        logger.debug(f"Dataset going to read: {dataset}")
         logger.debug(f"events.metadata: {events.metadata}")
         NanoAODv = events.metadata['NanoAODv']
         is_mc = events.metadata['is_mc']
@@ -451,7 +451,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.info(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
         # LHE cut original start -----------------------------------------------------------------------------
         if 'dy_M-50' in dataset: # if dy_M-50, apply LHE cut
-            logger.info("doing dy_M-50 LHE cut!")
+            logger.debug("doing dy_M-50 LHE cut!")
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
             LHE_leptons = LHE_particles[bool_filter]
