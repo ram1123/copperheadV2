@@ -216,6 +216,7 @@ def get_jec_factories(jec_parameters: dict, year):
     return jec_factories, jec_factories_data
 
 
+
 def jet_id(jets, config):
     # logger.debug(f"jets parameters: {parameters}")
     pass_jet_id = ak.ones_like(jets.jetId, dtype=bool)
@@ -285,51 +286,16 @@ def fill_softjets(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
     if test_mode:
         logger.debug(f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}")
         logger.debug(f"jets cutoff: {cutoff}")
-    saj = events.SoftActivityJet
-
-    padded_jets = ak.pad_none(jets, 2)
-    jet1 = padded_jets[:,0]
-    jet2 = padded_jets[:,1]
-
-    # line 2966 of AN-19-124: "The two identified muons and the charged PF candidates associated to the two leading jets in the event are not included in the soft-jet definition"
-    dR_m1 = saj.delta_r(mu1)
-    dR_m2 = saj.delta_r(mu2)
-    dR_j1 = saj.delta_r(jet1)
-    dR_j2 = saj.delta_r(jet2)
-    dR_m1_filter = ak.fill_none((dR_m1 > 0.4), value=True, axis=None)
-    dR_m2_filter = ak.fill_none((dR_m2 > 0.4), value=True, axis=None)
-    dR_j1_filter = ak.fill_none((dR_j1 > 0.4), value=True, axis=None)
-    dR_j2_filter = ak.fill_none((dR_j2 > 0.4), value=True, axis=None)
-
-    good_saj = dR_m1_filter & dR_m2_filter & dR_j1_filter & dR_j2_filter
-    softjet_cleaning = (good_saj) & (saj.pt > cutoff)
-    saj_of_interest = saj[softjet_cleaning]
-
-    ht_corrected = ak.sum(saj_of_interest.pt, axis=1)
-    corrected_njets = ak.num(saj_of_interest, axis=1)
-
-    out_dict = {
-        f"nsoftjets{cutoff}_new": corrected_njets,
-        f"htsoft{cutoff}_new": ht_corrected
-    }
-    return out_dict
-
-
-def fill_softjets_HIG19006(events, jets, mu1, mu2, nmuons, cutoff, test_mode=False):
-    if test_mode:
-        logger.debug(
-            f"jets events.SoftActivityJet.fields: {events.SoftActivityJet.fields}"
-        )
-        logger.debug(f"jets cutoff: {cutoff}")
-    events["SoftActivityJet", "mass"] = 0
+    events["SoftActivityJet","mass"] = 0
     saj = events.SoftActivityJet
     saj_Njets = events[f"SoftActivityJetNjets{cutoff}"]
     saj_HT = events[f"SoftActivityJetHT{cutoff}"]
 
+
     njets = ak.num(jets, axis=1)
     padded_jets = ak.pad_none(jets, 2)
-    jet1 = padded_jets[:, 0]
-    jet2 = padded_jets[:, 1]
+    jet1 = padded_jets[:,0]
+    jet2 = padded_jets[:,1]
 
     # nmuons = ak.num(muons, axis=1)
     # mu1 = muons[:,0]
@@ -359,6 +325,7 @@ def fill_softjets_HIG19006(events, jets, mu1, mu2, nmuons, cutoff, test_mode=Fal
     saj_to_remove = dR_m1_filter | dR_m2_filter | dR_j1_filter | dR_j2_filter
     saj_to_remove = ak.fill_none(saj_to_remove, value=False)
 
+
     footprint = saj[(saj_to_remove) & (saj.pt > cutoff)]
     footprint_sumPt = ak.sum(footprint.pt, axis=1)
     if test_mode:
@@ -373,20 +340,24 @@ def fill_softjets_HIG19006(events, jets, mu1, mu2, nmuons, cutoff, test_mode=Fal
         logger.debug(f"jets corrected_njets: {ak.to_numpy(corrected_njets)}")
         logger.debug(f"jets saj_Njets: {saj_Njets}")
 
-    evnts_to_correct = (nmuons == 2) | (njets > 0)
+    evnts_to_correct = (nmuons==2) |(njets > 0)
     if test_mode:
         logger.debug(f"jets evnts_to_correct: {evnts_to_correct}")
         logger.debug(f"jets footprint_njets b4: {ak.to_numpy(saj_Njets)}")
         logger.debug(f"jets corrected_njets b4: {ak.to_numpy(saj_HT)}")
 
-    saj_Njets = ak.where(evnts_to_correct, corrected_njets, saj_Njets)
-    saj_HT = ak.where(evnts_to_correct, ht_corrected, saj_HT)
+    saj_Njets = ak.where(evnts_to_correct,corrected_njets,saj_Njets)
+    saj_HT = ak.where(evnts_to_correct,ht_corrected,saj_HT)
 
     if test_mode:
         logger.debug(f"jets footprint_njets after: {ak.to_numpy(saj_Njets)}")
         logger.debug(f"jets corrected_njets after: {ak.to_numpy(saj_HT)}")
-    out_dict = {f"nsoftjets{cutoff}": saj_Njets, f"htsoft{cutoff}": saj_HT}
+    out_dict = {
+        f"nsoftjets{cutoff}" : saj_Njets,
+        f"htsoft{cutoff}" : saj_HT
+    }
     return out_dict
+
 
 
 def getHemVetoRunFilter(run, event_num, config, is_mc):
@@ -531,22 +502,20 @@ def do_jec_scale(jets, config, is_mc, dataset, uncs=["nominal"]):
 
     algo = jec_parameters["jet_algorithm"]
     for unc in uncs: # NOTE: we assume that "nominal" is the first element list
-        if (not is_mc) and "nominal" not in unc:
-            continue
         if unc == "nominal":
             lvl_compound = "L1L2L3Res"
         else:
             lvl_compound = f"Regrouped_{unc}"
 
         key = "{}_{}_{}".format(jec_tag, lvl_compound, algo)
-        logger.debug(f"jec key: {key}")
+        logger.info(f"jec key: {key}")
         if unc == "nominal":
             sf = cset.compound[key]
         else:
             sf = cset[key]
 
         sf_input_names = [inp.name for inp in sf.inputs]
-        logger.debug(f"{unc} JEC input: {sf_input_names}") # use this a reference to add inputs
+        logger.info(f"{unc} JEC input: {sf_input_names}") # use this a reference to add inputs
 
         if unc == "nominal":
             inputs = (
@@ -563,7 +532,7 @@ def do_jec_scale(jets, config, is_mc, dataset, uncs=["nominal"]):
         # inputs = get_corr_inputs(example_value_dict, sf)
         new_jec_scale = sf.evaluate(*inputs)
         # print(f"new_jec_scale: {new_jec_scale}")
-        # logger.debug(f"new_jec_scale {unc}: {new_jec_scale.compute()}")
+        # logger.info(f"new_jec_scale {unc}: {new_jec_scale.compute()}")
 
         # logger.debug("JSON result AK4: {}".format(new_jec_scale[:20].compute()))
 
@@ -615,6 +584,7 @@ def applyStrat1(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
     keep_jerSmear = keep_jerSmear | apply_scaling # if scaling, don't change anything
     no_smearing = ak.ones_like(jer_smearing)
     return ak.where(keep_jerSmear, jer_smearing, no_smearing)
+
 
 
 def applyStrat2(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta):
@@ -704,7 +674,7 @@ def do_jer_smear(jets, config, event_id, year="2018", syst_l=["nom", "up", "down
     sf_ptres = cset[key]
 
     sf_input_names = [inp.name for inp in sf_ptres.inputs]
-    logger.debug(f"JER resolution input: {sf_input_names}")
+    print(f"JER resolution input: {sf_input_names}")
 
     for syst in syst_l:
         # Second, get JER resolution

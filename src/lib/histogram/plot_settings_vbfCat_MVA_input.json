@@ -372,7 +372,7 @@
     },
     "nsoftjets2": {
         "variable": "nsoftjets2",
-        "binning_linspace": [0, 55, 56],
+        "binning_linspace": [0, 25, 26],
         "density": false,
         "ylabel": "Events",
         "xlabel": "nsoftjets2",
@@ -380,7 +380,7 @@
     },
     "nsoftjets5": {
         "variable": "nsoftjets5",
-        "binning_linspace": [0, 15, 16],
+        "binning_linspace": [0, 25, 26],
         "density": false,
         "ylabel": "Events",
         "xlabel": "nsoftjets5",
@@ -388,7 +388,7 @@
     },
     "htsoft2": {
         "variable": "htsoft2",
-        "binning_linspace": [0, 200, 26],
+        "binning_linspace": [0, 60, 26],
         "density": false,
         "ylabel": "Events",
         "xlabel": "htsoft2",
@@ -396,39 +396,7 @@
     },
     "htsoft5": {
         "variable": "htsoft5",
-        "binning_linspace": [0, 200, 26],
-        "density": false,
-        "ylabel": "Events",
-        "xlabel": "htsoft5",
-        "color": "royalblue"
-    },
-    "nsoftjets2_new": {
-        "variable": "nsoftjets2_new",
-        "binning_linspace": [0, 7, 8],
-        "density": false,
-        "ylabel": "Events",
-        "xlabel": "nsoftjets2",
-        "color": "royalblue"
-    },
-    "nsoftjets5_new": {
-        "variable": "nsoftjets5_new",
-        "binning_linspace": [0, 7, 8],
-        "density": false,
-        "ylabel": "Events",
-        "xlabel": "nsoftjets5",
-        "color": "royalblue"
-    },
-    "htsoft2_new": {
-        "variable": "htsoft2_new",
-        "binning_linspace": [0, 200, 26],
-        "density": false,
-        "ylabel": "Events",
-        "xlabel": "htsoft2",
-        "color": "royalblue"
-    },
-    "htsoft5_new": {
-        "variable": "htsoft5_new",
-        "binning_linspace": [0, 200, 26],
+        "binning_linspace": [0, 60, 26],
         "density": false,
         "ylabel": "Events",
         "xlabel": "htsoft5",

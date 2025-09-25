@@ -130,7 +130,7 @@ def get_Xcache_filelist(fnames: list):
     logger.debug(f"fnames: {fnames}")
     for fname in fnames:
         root_file = re.findall(r"/store.*", fname)[0]
-        x_cache_fname = "root://xcache.cms.rcac.purdue.edu/" + root_file
+        x_cache_fname = "root://cms-xcache.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
     print(f"new_fnames: {new_fnames}")
     return new_fnames
@@ -328,7 +328,7 @@ if __name__ == "__main__":
         if len(bkg_samples) >0:
             for bkg_letter in bkg_samples:
                 for bkg_name in bkg_l:
-                    if bkg_letter == bkg_name:
+                    if bkg_letter in bkg_name:
                         for bkgs in dataset[bkg_name].keys():
                             new_sample_list.append(bkgs)
 
@@ -404,8 +404,8 @@ if __name__ == "__main__":
                 logger.info(f"Number of files after removing bad files: {len(fnames)}")
 
             # convert to xcachce paths if requested
-            if args.xcache:
-                fnames = get_Xcache_filelist(fnames)
+                if args.xcache:
+                    fnames = get_Xcache_filelist(fnames)
 
             logger.debug(f"file names: {fnames}")
             logger.debug(f"sample_name: {sample_name}")
@@ -476,7 +476,7 @@ if __name__ == "__main__":
                 total_events += preprocess_metadata["nGenEvts"]
 
             # test start -------------------------------
-            if sample_name == "dy_VBF_filter_NoUSE": # FIXME: Temporary fix. Remove this patch
+            if sample_name == "dy_VBF_filter":
                 """
                 Starting from coffea 2024.4.1, this if statement is technically as obsolite preprocess
                 can now handle thousands of root files no problem, but this "manual" is at least three
