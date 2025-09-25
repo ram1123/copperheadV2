@@ -25,13 +25,14 @@ from scripts.compact_parquet_data import ensure_compacted
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
-bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
+bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 
 DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
 
 DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
+
 
 DY_HTBinned = [
     "dy_M-4to50_HT-70to100", "dy_M-4to50_HT-100to200", "dy_M-4to50_HT-200to400", "dy_M-4to50_HT-400to600", "dy_M-4to50_HT-600toInf",
@@ -49,6 +50,9 @@ group_dict = {
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
     "DYVBF": ["dy_VBF_filter"],
+
+    # "DYJ01": ["DYJ01"],
+    # "DYJ2": ["DYJ2"],
 
     "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
@@ -257,7 +261,7 @@ if __name__ == "__main__":
     # default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
     # default = ["OTHER", "EWK", "VV", "DY", "DYVBF"],
     # default = ["OTHER", "EWK", "VV",  "TOP", "DY", "DY_MiNNLO", "DY_aMCatNLO"],
-    default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
+    default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
     # default = ["OTHER", "EWK", "VV", "TOP", "DY" ],
     # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
     nargs="*",
@@ -417,8 +421,6 @@ if __name__ == "__main__":
      type=lambda x: getattr(logging, x),
      help="Configure the logging level."
      )
-    # add option to use compacted parquet files, as string. This string will be replaced in the load_path
-    # default path has f1_0, which will be replaced with input string
     parser.add_argument(
         "--use-compacted",
         dest="use_compacted",
@@ -543,10 +545,10 @@ if __name__ == "__main__":
             variables2plot.append(f"htsoft2_nominal")
             variables2plot.append(f"nsoftjets5_nominal")
             variables2plot.append(f"htsoft5_nominal")
-            variables2plot.append(f"nsoftjets2_new_nominal")
-            variables2plot.append(f"htsoft2_new_nominal")
-            variables2plot.append(f"nsoftjets5_new_nominal")
-            variables2plot.append(f"htsoft5_new_nominal")
+            # variables2plot.append(f"nsoftjets2_new_nominal")
+            # variables2plot.append(f"htsoft2_new_nominal")
+            # variables2plot.append(f"nsoftjets5_new_nominal")
+            # variables2plot.append(f"htsoft5_new_nominal")
 
             # --------------------------------------------------
             # variables2plot.append(f"gjj_mass")
@@ -595,7 +597,7 @@ if __name__ == "__main__":
             "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
             proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
         )
-        cluster_info = gateway.list_clusters()[0]  # get the first cluster by default. There only should be one anyways
+        cluster_info = gateway.list_clusters()[-1]  # get the first cluster by default. There only should be one anyways
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
     else:
@@ -724,7 +726,7 @@ if __name__ == "__main__":
         else:
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
-            # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+        # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
         logger.debug(f"var: {var}")
         sample_hist_dictByVar[var] = sample_hist.Var(binning, name=var).Double()
 
@@ -757,7 +759,7 @@ if __name__ == "__main__":
         else:
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
-            # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+        # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
         if args.linear_scale:
             do_logscale = False
         else:

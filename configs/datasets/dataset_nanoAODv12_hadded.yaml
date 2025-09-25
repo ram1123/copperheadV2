@@ -211,8 +211,8 @@ years:
           data_G: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/SingleMuon_Run2016G
           data_H: /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/SingleMuon_Run2016H
         DY:
-          dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9
-          dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        #   dy_M-50_aMCatNLO: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9
+        #   dy_M-100To200_aMCatNLO: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
           dy_VBF_filter: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8
           dy_M-50_MiNNLO: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToMuMu_M-50_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
           dy_M-100To200_MiNNLO: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos

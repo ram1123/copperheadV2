@@ -346,6 +346,11 @@ def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False, nor
         # Histogram for background, normalized to one
         hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, weights=wgt_total_background, density=normalize)
         # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+
+        # set ylim based on maximum bin content in all histograms
+        max_bin_content = max(hist_signal.max(), hist_background.max())
+        plt.ylim((0.0, max_bin_content * 1.1))
+
         hep.histplot(
             hist_signal,
             bins=bins,
@@ -780,7 +785,8 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     dataset_eval = NumpyDataset(input_arr_eval, label_arr_eval)
     dataloader_eval = DataLoader(dataset_eval, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY)
     best_significance = 0
-    early_stopping_callback = EarlyStopping(patience=5, delta=1e-3, mode="min", nfold=fold_idx, fold_save_path=f"{fold_save_path}", model=model, training_features=training_features, verbose=True)
+    mode = "max" # max: maximize the auc, min: minimize the loss
+    early_stopping_callback = EarlyStopping(patience=5, delta=1e-3, mode=mode, nfold=fold_idx, fold_save_path=f"{fold_save_path}", model=model, training_features=training_features, verbose=True)
 
     history = {
         "epoch": [], "train_loss": [], "val_loss": [],
@@ -858,7 +864,12 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
         logger.debug(f"fold {fold_idx} epoch {epoch} validation AUC: {auc_score}")
 
         # call early stopping
-        if early_stopping_callback and  early_stopping_callback.on_epoch_end(epoch, valid_loss):
+        best_score_for_earlyStopping = 0
+        if mode == "min":
+            best_score_for_earlyStopping = valid_loss
+        if mode == "max":
+            best_score_for_earlyStopping = auc_score
+        if early_stopping_callback and  early_stopping_callback.on_epoch_end(epoch, best_score_for_earlyStopping):
             logger.warning(f"Early stopping at epoch {epoch} for fold {fold_idx}")
             # save_model_final(model, training_features, fold_save_path)
             break
@@ -1387,6 +1398,8 @@ def main():
     with open(f'{save_path}/training_features.pkl', 'rb') as f:
         training_features = pickle.load(f)
 
+    # best hyperparameters from the hyperparameter optimization
+    #  03 Sep 2025: Best hyperparameters from the full search (45 trials)
     best_hp = {
         "hidden": (1024, 1024, 409), #(128, 64, 32),
         "dropout": (0.0, 0.0, 0.0), #(0.2, 0.2, 0.2),
@@ -1397,6 +1410,17 @@ def main():
         "batch_size": 2048, #args.batch_size,
         "loss_name": "bce",
     }
+    # # Best hyperparameters (from 03 Sep 2025 training) except hidden layers. Here hidden layers are set to (128, 64, 32) similar as last training
+    # best_hp = {
+    #     "hidden": (128, 64, 32), #(128, 64, 32),
+    #     "dropout": (0.0, 0.0, 0.0), #(0.2, 0.2, 0.2),
+    #     "activation": "selu", #"tanh",
+    #     "optimizer": "adamw", #"adam",
+    #     "lr": 0.011339465927284355, #1e-3,
+    #     "weight_decay": 1.9522171123020773e-06, #0.0,
+    #     "batch_size": 2048, #args.batch_size,
+    #     "loss_name": "bce",
+    # }
 
     if args.bo:
         search_space = [

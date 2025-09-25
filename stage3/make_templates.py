@@ -315,8 +315,7 @@ def make_templates(args, parameters={}):
                 "val_sumw2": "value",
             }
 
-
-            #Parton Shower case start -----------------------------
+            # Parton Shower case start -----------------------------
             if ("PartonShower" in variation):
                 slicer_sumw2 = { # slicer_sumw2 needs to be overwritten
                     "region": region,
@@ -351,10 +350,8 @@ def make_templates(args, parameters={}):
                 # var.name
                 logger.debug(f"{group} var.name: {var.name}")
 
-
                 the_hist_nominal_baseline = hist_baseline[slicer_nominal].project(var.name).values()
                 the_sumw2_baseline = hist_baseline[slicer_sumw2].project(var.name).values()
-
 
                 # logger.debug(f"{group} the_hist_nominal_baseline: {the_hist_nominal_baseline}")
                 # logger.debug(f"{group} the_sumw2_baseline: {the_sumw2_baseline}")
@@ -372,7 +369,6 @@ def make_templates(args, parameters={}):
                 if not variation_hists:
                     continue
 
-
                 logger.debug(f"{group} hist_variation: {hist_variation}")
                 logger.debug(f"{group} hist_df: {hist_df}")
                 logger.debug(f"{group} variation_dataset: {variation_dataset}")
@@ -384,7 +380,6 @@ def make_templates(args, parameters={}):
                 logger.debug(f"{group} the_sumw2_variation: {the_sumw2_variation}")
                 logger.debug(f"{group} the_hist_nominal_variation: {type(the_hist_nominal_variation)}")
                 logger.debug(f"{group} the_sumw2_variation: {type(the_sumw2_variation)}")
-
 
                 edges = hist_baseline[slicer_nominal].project(var.name).axes[0].edges
                 edges = np.array(edges)
@@ -403,7 +398,6 @@ def make_templates(args, parameters={}):
                 # logger.debug(f"group_hist: {group_hist}")
                 # group_sumw2 = the_sumw2_variation*0
                 group_sumw2 = 2*the_sumw2_baseline + the_sumw2_variation
-
 
                 # logger.debug(f"variation name: {name}")
                 th1 = from_numpy([group_hist, edges])
@@ -452,7 +446,7 @@ def make_templates(args, parameters={}):
                     if len(vals) == 0:
                         logger.debug(f"No template found for {dataset} in {year}. Skipping!")
                         continue
-                    #---------------------------------------------------------
+                    # ---------------------------------------------------------
                     # available_axes = ['region', 'channel', 'val_sumw2', 'score_vbf', 'variation'] # debugging
                     # for axes in available_axes:
                     #     logger.debug(f"testing axes: {axes}")
@@ -463,7 +457,7 @@ def make_templates(args, parameters={}):
                     # logger.debug(f"testing sliced_val: {sliced_val}")
                     # projection = vals[slicer_value].project(var.name).sum()
                     # logger.debug(f"testing projection: {projection}")
-                    #---------------------------------------------------------
+                    # ---------------------------------------------------------
                     # logger.debug(f"make_templates len vals: {len(vals)}")
                     # logger.debug(f"make_templates type(vals[0]): {type(vals[0])}")
                     # for histogram in list(vals)[:4]:
@@ -568,8 +562,6 @@ def make_templates(args, parameters={}):
                 #     the_hist = the_hist * scale
                 #     the_sumw2 = the_sumw2 * scale
 
-
-
                 # -------------------------------------
 
                 logger.debug(f"the_hist: {the_hist}")
@@ -643,8 +635,6 @@ def make_templates(args, parameters={}):
                 elif variation_core in ["qgl"]:
                     suffix = "_wgt"
 
-
-
                 # TODO: decorrelate LHE, QGL, PDF uncertainties
                 variation_fixed = variation.replace("wgt_", "")
                 variation_fixed = variation_fixed.replace("_up", f"{suffix}Up")
@@ -682,7 +672,10 @@ def make_templates(args, parameters={}):
         # mkdir(out_dir)
         # out_dir += "/" + parameters["label"]
         # mkdir(out_dir)
-        out_dir += "/" + "stage3_templates"
+        outpath_postfix = "_" + parameters["outpath_postfix"] if parameters["outpath_postfix"] else ""
+        out_dir += (
+            f"/stage3_datacards{outpath_postfix}/stage3_templates{outpath_postfix}"
+        )
         # mkdir(out_dir)
         out_dir += "/" + var.name
         # mkdir(out_dir)

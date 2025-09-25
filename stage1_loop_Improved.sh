@@ -77,7 +77,8 @@ if [[ -z "${CONDA_PREFIX:-}" ]]; then
 fi
 
 # if DNN training is enabled, check if the conda environment is `pfn_env` else it should be `yun_coffea_latest`
-if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" || "$mode" == "dnn_var_rank" ]]; then
+# if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" || "$mode" == "dnn_var_rank" ]]; then
+if [[ "$mode" == "dnn" || "$mode" == "dnn_train" || "$mode" == "dnn_var_rank" ]]; then
     if [[ "$CONDA_PREFIX" != *"pfn_env"* ]]; then
         echo "Please run this script in the pfn_env conda environment for DNN training"
         exit 1
@@ -110,7 +111,8 @@ exec 3>>"$log_file"  # FD 3 for logging
 
 log() { echo "$@" | tee -a "$log_file"; }
 
-save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
+# save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
+save_path="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
 mkdir -p "$save_path"
 trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 
@@ -137,7 +139,8 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2016postVFP"]=""
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
-    bkg_l="DY Top"
+
+    bkg_l="DY"
     # sig_l=""
     sig_l=""
     # sig_l="VBF"
@@ -185,12 +188,16 @@ for year in "${years[@]}"; do
     training_fold=3
     model_path="${PWD}/dnn/trained_models"
     # model_label="${label}"
-    model_label="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
+    model_label="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt" # THis name was hardcoded for older runs.
 
     # NOTE: This DNN is trained with all year but name contains hardcoded string "2018"
     # model_label_forCompact="2018_${region}_${category}_2018_UpdatedQGL_17July_Test" # August training
     model_label_forCompact="run2_${region}_${category}_ScanHyperParamV1" # Latest training; 03 Sep 2025
-    compact_tag="03September"
+    # model_label_forCompact="run2_h-peak_vbf_BestHPButSmallHidden_128_64_32_maxAUC" # 10 Sep 2025: Same as training on 03 Sep 2025, except with old hidden layers
+    # model_label_forCompact="run2_h-peak_vbf_BestHPOld_NewSoftJetVarV0" # 12 Sep 2025 training: Trained with same architecture as 03 Sep 2025, Just added new soft jet variables
+
+    # compact_tag="03September"
+    compact_tag="19September"
 
     # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag  "
     command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path  "
@@ -207,7 +214,12 @@ for year in "${years[@]}"; do
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations  "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
 
-    command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix"
+    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO "
+    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO "
+    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_DY012 "
+    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLOSplitMjj "
+    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO_NoDYVBF "
+    command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO_NoDYVBF "
 
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
     command5="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
@@ -217,6 +229,7 @@ for year in "${years[@]}"; do
     if [[ "$debug" -ge 2 ]]; then
         command0+=" --log-level DEBUG "
         command1+=" --log-level DEBUG "
+        # command3+=" --log-level DEBUG "
         command4+=" --log-level DEBUG --debug "
     else
         command0+=" --log-level INFO "
@@ -306,7 +319,7 @@ for year in "${years[@]}"; do
             # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 3 --bo-epochs 5 --bo-fold 0 --n-epochs 5 --batch-size 15536 --log-level INFO "
             # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 5 --batch-size 15536 --log-level INFO "
             # Active configuration:
-            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 100 --batch-size 2048 --log-level INFO "
+            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 100 --log-level INFO "
             cmd_var_rank="python MVA_training/VBF/variable_ranking.py "
 
             if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then

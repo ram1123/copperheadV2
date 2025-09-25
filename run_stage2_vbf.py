@@ -251,11 +251,13 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     # ------------------------------------
     bkg_sample_dict = {
         "DY" : [
+            # NOTE: If we want to results with only aMCatNLO or MiNNLO samples then in
+            #            the function `selection.applyRegionCatCuts` set `do_vbf_filter_study=False`.
             # "dy_M-100To200",
             # "dy_m105_160_vbf_amc",
             # "dy_M-50",
-            "dy_M-100To200_MiNNLO",
-            "dy_M-50_MiNNLO",
+            # "dy_M-100To200_MiNNLO",
+            # "dy_M-50_MiNNLO",
             "dy_M-100To200_aMCatNLO",
             "dy_M-50_aMCatNLO",
             "dy_VBF_filter"
@@ -300,6 +302,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     bkg_filelist = []
     for sample in bkg_sample_l:
         sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        logger.info(f"sample: {sample}, number of files: {len(sample_filelist)}")
+        logger.info(f"sample_filelist: {sample_filelist}")
         if len(sample_filelist) == 0:
             logger.critical(f"No {sample} files were found!")
             continue

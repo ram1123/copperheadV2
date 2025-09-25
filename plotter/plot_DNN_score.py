@@ -100,7 +100,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         else: # bkg MC
             bkg_MC_dict[group_name] = hist_dict
     # order bkg_MC_dict in a specific way for plotting, smallest yielding process first:
-    bkg_MC_order = ["other", "VV", "Ewk", "Top", "DY"]
+    bkg_MC_order = ["other", "VV", "Ewk", "Top", "DY","DYJ01", "DYJ2"]
     bkg_MC_dict = {process: bkg_MC_dict[process] for process in bkg_MC_order if process in bkg_MC_dict}
     logger.info(f"data_dict : {data_dict}")
     logger.info(f"bkg_MC_dict : {bkg_MC_dict}")
@@ -116,7 +116,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
 
     if not os.path.exists(full_save_path):
         os.makedirs(full_save_path)
-    full_save_fname = f"{full_save_path}/{var}_{region_name}_UpdatedQGL_FixPUJetIDWgt_Aug13_NewBinning_NoSyst.pdf"
+    full_save_fname = f"{full_save_path}/{var}_{region_name}_UpdatedQGL_FixPUJetIDWgt_Sep19_WithDY012_21bins.pdf"
     logger.info(f"full_save_fname: {full_save_fname}")
     # raise ValueError
 
@@ -163,15 +163,18 @@ def getPickledHist_byFname(pickled_filelist, load_path):
     return return_dict
 
 def arrangeHist_bySampleGroup(pickled_hist_dict):
-    sample_group_dict = { # keys are sample group names and values are string indicators
+    sample_group_dict = {  # keys are sample group names and values are string indicators
         "data": ["data"],
         "ggH": ["ggh_"],
         "VBF": ["vbf_"],
-        "DY": ["dy_"],
+        # "DY": ["dy_"],
+        "DYJ01": ["DYJ01"],
+        "DYJ2": ["DYJ2"],
         "Top": ["ttjets", "top"],
         "Ewk": ["ewk"],
-        "VV": ["ww_", "wz_", "zz"],
-        # "other": ["other"],
+        "VV": ["ww_", "wz_"],
+        # "VV": ["ww_", "wz_", "zz"],
+        "other": ["other"],
     }
 
     hist_bySampleGroup = {sample_group: [] for sample_group in sample_group_dict.keys()}
@@ -185,6 +188,9 @@ def arrangeHist_bySampleGroup(pickled_hist_dict):
 
     for sample_group, hist_l in hist_bySampleGroup.items():
         logger.info(f"{sample_group}, len:{len(hist_l)}")
+        # check hist_l number of bins
+        for i, h in enumerate(hist_l):
+            logger.warning(f"  {i} : {h.axes.name}, bins: {[getattr(axis, 'edges', 'None') for axis in h.axes]}")
     return hist_bySampleGroup
 
 def getPlotVar(var: str):
@@ -211,7 +217,7 @@ if __name__ == "__main__":
     "-cat",
     "--category",
     dest="category",
-    default="ggH",
+    default="vbf",
     action="store",
     help="string value production category we're working on",
     )
@@ -227,7 +233,7 @@ if __name__ == "__main__":
     "-y",
     "--year",
     dest="year",
-    default="all",
+    default="2018",
     action="store",
     help="label",
     )
@@ -282,7 +288,7 @@ if __name__ == "__main__":
     load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2017/"
     load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016postVFP/"
     load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016preVFP/"
-
+    load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_21bins/2018/"
     pickled_filelist = glob.glob(f"{load_path}/*.pkl")
     logger.info(f"load_path : {load_path}")
     # logger.info(f"pickled_hists : {pickled_filelist}")
@@ -309,34 +315,9 @@ if __name__ == "__main__":
         plot_settings = json.load(file)
     # logger.info(f"plot_settings: {plot_settings}")
     binning = selection.binning
-    # binning = np.array(
-    #     [
-    #         0,
-    #         0.07,
-    #         0.432,
-    #         0.71,
-    #         0.926,
-    #         1.114,
-    #         1.28,
-    #         1.428,
-    #         1.564,
-    #         1.686,
-    #         1.798,
-    #         1.9,
-    #         2.0,
-    #         2.1,
-    #         2.2,
-    #         2.3,
-    #         2.4,
-    #         2.5,
-    #         2.6,
-    #         2.7,
-    #         2.8,
-    #     ]
-    # )
     var = "DNN_score"
     region_name = args.region
     category = args.category
     label = args.label
-    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{label}"
+    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{label}/"
     plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_path, region_name, category, do_logscale=True, binning=binning, lumi=args.lumi, status="Private")

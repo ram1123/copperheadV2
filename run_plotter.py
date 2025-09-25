@@ -32,8 +32,10 @@ base_script = ["python", "plotter/validation_plotter_unified.py"]
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/Rerun_07August2025/"
 
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/Aug18_DnnRange20"
+# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/WithDY012_jets_18September"
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_SoftJetBugFixV3/Aug18_DnnRange20/Aug29_2025"
-SAVE_PATH = "./validation/figs/Run2_nanoAODv12_07Sep2025/BothSoftJetVars/Sep09_2025/"
+# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_07Sep2025/BothSoftJetVars/Sep12_2025/"
+SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/LatestBin_23September"
 
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted/"
@@ -48,11 +50,14 @@ SAVE_PATH = "./validation/figs/Run2_nanoAODv12_07Sep2025/BothSoftJetVars/Sep09_2
 
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt//stage1_output/{year}/compacted_13August_FixDimuonMass/"
+LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2018/compacted_19September_FixDimuonMass/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_SoftJetBugFixV3/stage1_output/{year}/f1_0/"
-LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_07Sep2025/stage1_output/{year}/f1_0/"
+# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_07Sep2025/stage1_output/{year}/f1_0/"
+# LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage1_output/{year}/compacted/"
 # years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016"]
 # years = ["2017", "2016postVFP", "2016preVFP"]
-years = ["2018"]
+years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016", "*"]
+# years = ["2018"]
 # years = ["*"]
 
 # categories = ["vbf", "ggh", "nocat"]
@@ -88,7 +93,7 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
          "-cat", cat,
         #  "--use_compacted", "compacted",  # options: "", "compacted", "compacted_WithDNNScore"
         #  "--use_gateway",
-        #  "--dnn-score"
+         "--dnn-score"
          ]
     )
 

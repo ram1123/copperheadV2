@@ -475,13 +475,15 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
          'rpt',
          'll_zstar_log',
          'jj_dEta',
-         'nsoftjets5',
+        #  'nsoftjets5',
+         'nsoftjets5_new',
          'mmj_min_dEta',
         'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
          'jet1_pt', 'jet1_eta', 'jet1_phi',  'jet2_pt', 'jet2_eta', 'jet2_phi',
          'jet1_qgl', 'jet2_qgl',
          'dimuon_cos_theta_cs', 'dimuon_phi_cs',
-         'htsoft2',
+        #  'htsoft2',
+         'htsoft2_new',
          'pt_centrality',
          'year'
     ]
@@ -502,7 +504,10 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     # bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     bkg_processes = [
         "dy_VBF_filter",
+        "dy_M-50_aMCatNLO",
         "dy_M-100To200_aMCatNLO",
+        # "dy_M-50_MiNNLO",
+        # "dy_M-100To200_MiNNLO",
         "ewk_lljj_mll50_mjj120",
         "ttjets_dl",
         "ttjets_sl",
@@ -756,7 +761,7 @@ if __name__ == "__main__":
     else:
         base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
         base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
-    if not os.path.exists(base_path_compact) and not args.year == "run2":
+    if not os.path.exists(base_path_compact) or not args.year == "run2":
         base_path = base_path_f1_0
     else:
         base_path = base_path_compact

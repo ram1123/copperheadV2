@@ -34,6 +34,13 @@ parser.add_argument(
     action="store",
     help="Postfix to append to saved histogram files."
 )
+parser.add_argument(
+    "--out_postfix",
+    default="",
+    type=str,
+    action="store",
+    help="Postfix to append to output datacard directory."
+)
 args = parser.parse_args()
 
 
@@ -47,6 +54,7 @@ parameters = {
     "years": args.years,
     "global_path": args.base_path,
     "global_path_postfix": args.save_postfix,
+    "outpath_postfix": args.out_postfix,
     # "global_path": "/work/users/yun79/copperhead_outputs/copperheadV1clean",
     # "label": "DmitryMaster_JECoff_GeofitFixed_Oct29",
     # "label": "DmitryMaster_JECoff_GeofitFixed_Nov01",
@@ -62,6 +70,7 @@ parameters = {
     # "variables_lookup": variables_lookup,
     "dnn_models": {
          "vbf": ["Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"],
+        #  "vbf": ["Run2_nanoAODv12_07Sep2025"],
     },
     "bdt_models": {},
     #
@@ -81,11 +90,21 @@ parameters["grouping"] = {
     # "data_G": "Data",
     # "data_H": "Data",
     "data": "Data",
+    # "dy_M-50_MiNNLO": "DY_LowMjj",
+    # "dy_M-100To200_MiNNLO": "DY_LowMjj",
+    # "dy_VBF_filter": "DY_HighMjj",
+
+    # "dy_M-50_MiNNLO_NoDYVBF": "DY",
+    # "dy_M-100To200_MiNNLO_NoDYVBF": "DY",
+
+    "dy_M-50_aMCatNLO_NoDYVBF": "DY",
+    "dy_M-100To200_aMCatNLO_NoDYVBF": "DY",
+
     # "dy_M-50_MiNNLO": "DY",
     # "dy_M-100To200_MiNNLO": "DY",
-    "dy_VBF_filter": "DY",
-    "dy_M-50_aMCatNLO": "DY",
-    "dy_M-100To200_aMCatNLO": "DY",
+    # "dy_VBF_filter": "DY",
+    # "dy_M-50_aMCatNLO": "DY",
+    # "dy_M-100To200_aMCatNLO": "DY",
     # "DYJ01": "DYJ01",
     # "DYJ2": "DYJ2",
     # "dy_m105_160_vbf_amc": "DY",
@@ -107,7 +126,7 @@ parameters["grouping"] = {
     "st_tw_antitop": "TT+ST",
     "ww_2l2nu": "VV",
     "wz_2l2q": "VV",
-    "wz_1l1nu2q": "VV", # bad for 2016
+    "wz_1l1nu2q": "VV",  # bad for 2016
     "wz_3lnu": "VV",
     "zz": "VV",
     "www": "VVV",

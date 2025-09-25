@@ -1,8 +1,115 @@
 import numpy as np
 import awkward as ak
 
+binning_based_on_significanceScan = np.array([
+  0.000000,
+  0.349433,
+  0.662083,
+  0.882777,
+  1.066689,
+  1.250601,
+  1.388535,
+  1.590838,
+  1.793141,
+  1.958661,
+  2.069008,
+  2.262116,
+  2.482810,
+  3.678237,
+])
+
+binning_based_on_significanceScanV2 = np.array(  # 17 bins /depot/cms/users/shar1172/HHWWyy_DNN_For_HMuMu/best_binning_25bins_0p01.txt
+    [  # one used for September 25, 2025 HiggsMuMu working group meeting.
+        0.000000,
+        0.179242,
+        0.358485,
+        0.537727,
+        0.716970,
+        0.896212,
+        1.075455,
+        1.254697,
+        1.433940,
+        1.613182,
+        1.792425,
+        1.971667,
+        2.150910,
+        2.330152,
+        2.509395,
+        2.688637,
+        3.047122,
+        4.301819,
+    ]
+)
+
+
 # Binning for DNN scores
-binning = np.array(
+binning_HPScan_21bins = np.array([  #Latest training; 03 Sep 2025 (21 bins)
+    0.0,
+    0.382,
+    0.579,
+    0.733,
+    0.863,
+    0.979,
+    1.087,
+    1.191,
+    1.291,
+    1.389,
+    1.487,
+    1.584,
+    1.683,
+    1.783,
+    1.884,
+    1.989,
+    2.098,
+    2.214,
+    2.338,
+    2.478,
+    2.65,
+    3.188,
+])
+
+binning_HPScan_17bins = np.array(  # Latest training; 03 Sep 2025 (17 bins) having yields ~0.6 in each bin
+    [
+        0.0,
+        0.435,
+        0.655,
+        0.826,
+        0.972,
+        1.105,
+        1.233,
+        1.355,
+        1.476,
+        1.596,
+        1.719,
+        1.842,
+        1.97,
+        2.104,
+        2.249,
+        2.409,
+        2.606,
+        3.188,
+    ]
+)
+
+binning_HPScan_13bins = np.array([  #Latest training; 03 Sep 2025 (13 bins)
+        0.0,
+        0.511,
+        0.765,
+        0.962,
+        1.136,
+        1.298,
+        1.457,
+        1.614,
+        1.775,
+        1.94,
+        2.115,
+        2.309,
+        2.539,
+        3.188,
+    ]
+)
+
+binning_August = np.array(  # _August DNN training
     [
         0.0,
         0.564,
@@ -19,50 +126,7 @@ binning = np.array(
     ]
 )
 
-binning_vbf_v0 = np.array(
-    [
-        0.0,
-        0.511,
-        0.764,
-        0.962,
-        1.136,
-        1.298,
-        1.457,
-        1.614,
-        1.775,
-        1.94,
-        2.115,
-        2.309,
-        2.539,
-        3.188,
-    ]
-)
-
-binning_old = np.array([
-    0,
-    0.07,
-    0.432,
-    0.71,
-    0.926,
-    1.114,
-    1.28,
-    1.428,
-    1.564,
-    1.686,
-    1.798,
-    1.9,
-    2.0,
-    # 2.1,
-    # 2.2,
-    # 2.3,
-    2.4,
-    # 2.5,
-    # 2.6,
-    # 2.7,
-    2.8,
-])
-
-binning_v1 = np.array([
+binning_DNN_HIG19006 = np.array([
     0,
     0.07,
     0.432,
@@ -79,30 +143,11 @@ binning_v1 = np.array([
     2.8,
 ])
 
-binning_DNNTrainedWith2018Only = np.array([
-    0,
-    0.07,
-    0.432,
-    0.71,
-    0.926,
-    1.114,
-    1.28,
-    1.428,
-    1.564,
-    1.686,
-    1.798,
-    1.9,
-    2.0,
-    2.1,
-    2.2,
-    2.3,
-    2.4,
-    2.5,
-    2.6,
-    2.7,
-    2.8,
-])
-
+# binning = binning_HPScan_21bins
+# binning = binning_HPScan_13bins
+# binning = binning_HPScan_17bins
+# binning = binning_based_on_significanceScan
+binning = binning_based_on_significanceScanV2  # 17 bins; one used for September 25, 2025 HiggsMuMu working group meeting.
 
 def filterRegion(events, region="h-peak"):
     dimuon_mass = events.dimuon_mass
