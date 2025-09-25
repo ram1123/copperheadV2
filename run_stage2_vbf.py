@@ -254,11 +254,13 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             # "dy_M-100To200",
             # "dy_m105_160_vbf_amc",
             # "dy_M-50",
-            # "dy_M-100To200_MiNNLO",
-            # "dy_M-50_MiNNLO",
+            "dy_M-100To200_MiNNLO",
+            "dy_M-50_MiNNLO",
             "dy_M-100To200_aMCatNLO",
             "dy_M-50_aMCatNLO",
             "dy_VBF_filter"
+            # "DYJ01",
+            # "DYJ2"
         ],
         "TT" : [
             "ttjets_dl",
@@ -428,7 +430,7 @@ if __name__ == "__main__":
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
     else:
-        client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='2 GiB')
+        client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='2 GiB')
         logger.info("Local scale Client created")
 
     t2 = time.perf_counter()

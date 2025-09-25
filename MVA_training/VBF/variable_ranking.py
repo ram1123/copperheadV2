@@ -9,7 +9,7 @@ from dnn_train import Net  # our model definition
 # —— CONFIG —————————————————————————————————————————————————————————————————
 FOLD = 3
 LABEL = "Run2_nanoAODv12_08June"
-LABEL = "Run2_nanoAODv12_UpdatedQGL_17July"
+LABEL = "Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
 TRAINED_MODEL_DIR = (
     f"/depot/cms/users/shar1172/"
     f"copperheadV2_main/dnn/trained_models/"
@@ -120,6 +120,9 @@ if isinstance(shap_values, list):
 # Now shap_values.shape is (n_samples, n_features, 1); we need to drop that last axis
 shap_values = np.squeeze(shap_values, axis=2)   # result is (n_samples, n_features)
 
+# Save shap values so that I can modify plots anytime later
+np.save("shap_values.npy", shap_values)
+
 # 11) plot SHAP values
 shap.summary_plot(shap_values, X_valid, feature_names=feature_names, max_display=30, show=False)
 plt.title("SHAP Feature Importance")
@@ -130,11 +133,20 @@ plt.close()
 # 12) now we can build our DataFrame
 shap_values_df = pd.DataFrame(shap_values, columns=feature_names)
 shap_values_mean = shap_values_df.abs().mean().sort_values(ascending=False)
-plt.figure(figsize=(11,21))
-plt.barh(shap_values_mean.index[:30][::-1],
-         shap_values_mean.values[:30][::-1])
-plt.title("SHAP Feature Importance (mean absolute value)")
+# plt.figure(figsize=(11,21))
+plt.barh(shap_values_mean.index[:10][::-1],
+         shap_values_mean.values[:10][::-1])
+plt.title("SHAP Feature Importance")
+plt.tight_layout()
+plt.savefig("shap_feature_importance_mean_10.pdf")
+plt.close()
+
+
+shap_values_df = pd.DataFrame(shap_values, columns=feature_names)
+shap_values_mean = shap_values_df.abs().mean().sort_values(ascending=False)
+plt.figure(figsize=(11, 21))
+plt.barh(shap_values_mean.index[:26][::-1], shap_values_mean.values[:26][::-1])
+plt.title("SHAP Feature Importance")
 plt.tight_layout()
 plt.savefig("shap_feature_importance_mean.pdf")
 plt.close()
-
