@@ -251,6 +251,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     # ------------------------------------
     bkg_sample_dict = {
         "DY" : [
+            # NOTE: If we want to results with only aMCatNLO or MiNNLO samples then in
+            #            the function `selection.applyRegionCatCuts` set `do_vbf_filter_study=False`.
             # "dy_M-100To200",
             # "dy_m105_160_vbf_amc",
             # "dy_M-50",
@@ -259,6 +261,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             "dy_M-100To200_aMCatNLO",
             "dy_M-50_aMCatNLO",
             "dy_VBF_filter"
+            # "DYJ01",
+            # "DYJ2"
         ],
         "TT" : [
             "ttjets_dl",
@@ -298,6 +302,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     bkg_filelist = []
     for sample in bkg_sample_l:
         sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        logger.info(f"sample: {sample}, number of files: {len(sample_filelist)}")
+        logger.info(f"sample_filelist: {sample_filelist}")
         if len(sample_filelist) == 0:
             logger.critical(f"No {sample} files were found!")
             continue
@@ -428,7 +434,7 @@ if __name__ == "__main__":
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
     else:
-        client =  Client(n_workers=5,  threads_per_worker=1, processes=True, memory_limit='2 GiB')
+        client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='2 GiB')
         logger.info("Local scale Client created")
 
     t2 = time.perf_counter()

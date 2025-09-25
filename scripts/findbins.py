@@ -7,7 +7,9 @@ import awkward as ak
 import matplotlib.pyplot as plt
 import numpy as np
 
-from plotter.validation_plotter_unified import applyRegionCatCuts
+from rich import print
+
+from modules import selection
 
 # ----------------------------
 # Utilities
@@ -101,17 +103,21 @@ def check_flatness(signal_scores, signal_weights, edges):
 # ----------------------------
 
 if __name__ == "__main__":
-    parquet_file_path = "/depot/cms/private/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2018/compacted_11August_FixDimuonMass/vbf_powheg_dipole/0/*.parquet"
+    # from distributed import Client
+    # client =  Client(n_workers=8,  threads_per_worker=1, processes=True, memory_limit='2 GiB')
+    # print("Local scale Client created")
+
+    parquet_file_path = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_11August_FixDimuonMass/vbf_powheg_dipole/0/*.parquet"
     events = dak.from_parquet(parquet_file_path)
 
     # apply the region and category cuts
-    events = applyRegionCatCuts(
+    events = selection.applyRegionCatCuts(
         events,
         category="vbf",
         region_name="h-peak",
-        njets="inclusive",
         process="vbf_powheg_dipole",
-        do_vbf_filter_study=False
+        variation="nominal",
+        do_vbf_filter_study=False,
     )
 
     # Compute the DNN VBF score and weights
@@ -122,37 +128,40 @@ if __name__ == "__main__":
     vbf_w = wgt_nominal
 
     # choose number of bins (same count as your current scheme, or whatever you want)
-    nbins = 11
+    # nbins = 10
+    nbins_scan = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
 
-    # build quantile-based edges
-    edges = make_quantile_binning(
-        signal_scores=vbf_score,
-        signal_weights=vbf_w,
-        nbins=nbins,
-        min_bin_width=None,   # e.g. 0.01 to prevent ultra-narrow bins near the peak
-        decimals=3            # tidy printing
-    )
+    for nbins in nbins_scan:
+        print(f"\n=== Scanning for {nbins} bins ===")
+        # build quantile-based edges
+        edges = make_quantile_binning(
+            signal_scores=vbf_score,
+            signal_weights=vbf_w,
+            nbins=nbins,
+            min_bin_width=None,   # e.g. 0.01 to prevent ultra-narrow bins near the peak
+            decimals=3            # tidy printing
+        )
 
-    # edges should start from 0.0
-    edges[0] = 0.0
+        # edges should start from 0.0
+        edges[0] = 0.0
 
-    print("Proposed quantile binning:")
-    print("binning_vbf = np.array([")
-    for e in edges:
-        print(f"    {e},")
-    print("])")
+        print(f"Proposed quantile binning for {nbins} bins:")
+        print("binning_vbf = np.array([")
+        for e in edges:
+            print(f"    {e},")
+        print("])")
 
-    # plot the dnn score
-    plt.figure(figsize=(10, 6))
-    plt.hist((vbf_score), bins=edges, weights=vbf_w, alpha=0.7)
-    plt.xlabel("DNN VBF Score")
-    plt.ylabel("Weighted Events")
-    plt.title("Weighted Distribution of DNN VBF Score")
-    plt.grid()
-    plt.savefig("dnn_vbf_score_distribution.pdf")
+        # plot the dnn score
+        plt.figure(figsize=(10, 6))
+        plt.hist((vbf_score), bins=edges, weights=vbf_w, alpha=0.7)
+        plt.xlabel("DNN VBF Score")
+        plt.ylabel("Weighted Events")
+        plt.title(f"Weighted Distribution of DNN VBF Score: {nbins} bins")
+        plt.grid()
+        plt.savefig(f"dnn_vbf_score_distribution_bins{nbins}.pdf")
 
-    # sanity check: are VBF yields flat across bins?
-    y, spread, chi2_ndf = check_flatness(vbf_score, vbf_w, edges)
-    print(f"\nVBF yield per bin: {y.astype(int)}")
-    print(f"Relative spread (std/mean): {spread:.3f}")
-    print(f"Flatness chi2/ndf: {chi2_ndf:.2f}")
+        # sanity check: are VBF yields flat across bins?
+        y, spread, chi2_ndf = check_flatness(vbf_score, vbf_w, edges)
+        print(f"\nVBF yield per bin: {y.astype(int)}")
+        print(f"Relative spread (std/mean): {spread:.3f}")
+        print(f"Flatness chi2/ndf: {chi2_ndf:.2f}")

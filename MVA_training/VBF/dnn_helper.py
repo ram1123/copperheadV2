@@ -1,6 +1,6 @@
 DEVICE = "cuda"  # "cuda" or "cpu"
 
-DIR_TAG = "_2018_UpdatedQGL_17July_Test"
+DIR_TAG = "_BestHPOld_NewSoftJetVarV0"  # tag to append to the save directory
 
 ### For PyTorch DataLoader
 NWORKERS = 0

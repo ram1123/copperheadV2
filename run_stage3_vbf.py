@@ -9,7 +9,7 @@ from stage3.make_datacards import build_datacards
 import time
 import logging
 from modules.utils import logger
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 __all__ = ["dask"]
 
@@ -34,8 +34,14 @@ parser.add_argument(
     action="store",
     help="Postfix to append to saved histogram files."
 )
+parser.add_argument(
+    "--out_postfix",
+    default="",
+    type=str,
+    action="store",
+    help="Postfix to append to output datacard directory."
+)
 args = parser.parse_args()
-
 
 
 year = args.years[0]
@@ -48,6 +54,7 @@ parameters = {
     "years": args.years,
     "global_path": args.base_path,
     "global_path_postfix": args.save_postfix,
+    "outpath_postfix": args.out_postfix,
     # "global_path": "/work/users/yun79/copperhead_outputs/copperheadV1clean",
     # "label": "DmitryMaster_JECoff_GeofitFixed_Oct29",
     # "label": "DmitryMaster_JECoff_GeofitFixed_Nov01",
@@ -63,6 +70,7 @@ parameters = {
     # "variables_lookup": variables_lookup,
     "dnn_models": {
          "vbf": ["Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"],
+        #  "vbf": ["Run2_nanoAODv12_07Sep2025"],
     },
     "bdt_models": {},
     #
@@ -82,7 +90,23 @@ parameters["grouping"] = {
     # "data_G": "Data",
     # "data_H": "Data",
     "data": "Data",
-    "dy_VBF_filter": "DY",
+    # "dy_M-50_MiNNLO": "DY_LowMjj",
+    # "dy_M-100To200_MiNNLO": "DY_LowMjj",
+    # "dy_VBF_filter": "DY_HighMjj",
+
+    # "dy_M-50_MiNNLO_NoDYVBF": "DY",
+    # "dy_M-100To200_MiNNLO_NoDYVBF": "DY",
+
+    "dy_M-50_aMCatNLO_NoDYVBF": "DY",
+    "dy_M-100To200_aMCatNLO_NoDYVBF": "DY",
+
+    # "dy_M-50_MiNNLO": "DY",
+    # "dy_M-100To200_MiNNLO": "DY",
+    # "dy_VBF_filter": "DY",
+    # "dy_M-50_aMCatNLO": "DY",
+    # "dy_M-100To200_aMCatNLO": "DY",
+    # "DYJ01": "DYJ01",
+    # "DYJ2": "DYJ2",
     # "dy_m105_160_vbf_amc": "DY",
     # "dy_m105_160_amc_01j": "DYJ01",
     # "dy_m105_160_vbf_amc_01j": "DYJ01",
@@ -91,7 +115,6 @@ parameters["grouping"] = {
     # "dy_m105_160_vbf_amc_2j": "DYJ2",
     # "dy_M-100To200_2j": "DYJ2",
     # "dy_M-50_MiNNLO": "DYJ01",
-    # "dy_M-100To200_MiNNLO": "DYJ2",
     # "ewk_lljj_mll105_160_py_dipole": "EWK",
     # "ewk_lljj_mll105_160_ptj0": "EWK",
     "ewk_lljj_mll50_mjj120": "EWK",
@@ -103,7 +126,7 @@ parameters["grouping"] = {
     "st_tw_antitop": "TT+ST",
     "ww_2l2nu": "VV",
     "wz_2l2q": "VV",
-    "wz_1l1nu2q": "VV", # bad for 2016
+    "wz_1l1nu2q": "VV",  # bad for 2016
     "wz_3lnu": "VV",
     "zz": "VV",
     "www": "VVV",
@@ -113,8 +136,6 @@ parameters["grouping"] = {
     "ggh_powhegPS": "ggH_hmm",
     "vbf_powheg_dipole": "qqH_hmm",
 }
-
-
 
 
 parameters["plot_groups"] = {

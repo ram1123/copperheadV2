@@ -93,7 +93,7 @@ def add_dnn_score(events_partition,
         dnnWrap = model_cache[fold]
         dnn_score_fold = dnnWrap(input_arr)
         dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)
-        dnn_vbf_score = ak.where(eval_filter, dnn_vbf_score, dnn_score_fold)
+        dnn_vbf_score = ak.where(eval_filter, dnn_score_fold, dnn_vbf_score)
         # transformed DNN
         dnn_vbf_score = np.clip(dnn_vbf_score, -0.999999, 0.999999)
         dnn_vbf_score_atanh = np.arctanh(dnn_vbf_score)
@@ -110,13 +110,13 @@ def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path
     compacted_dir_tagged = f"{compacted_dir_tagged}_FixDimuonMass" if fix_dimuon_mass else compacted_dir_tagged
     compacted_path_DNN = os.path.join(compacted_dir_tagged, sample, "0")
 
-    logger.debug(f"Checking compacted dataset for: {compacted_path}")
-    logger.debug(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
+    logger.info(f"Checking compacted dataset for: {compacted_path}")
 
     if not os.path.exists(compacted_path):
         logger.debug(f"Compacted dataset not found. Creating at {compacted_path}")
         ensure_compacted(year, sample, load_path, compacted_path)
 
+    logger.info(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
     # don't run if add_dnn_score is False
     if not add_dnn_score_flag:
         logger.info("Skipping DNN score addition as add_dnn_score is False.")
@@ -141,7 +141,6 @@ def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path
         logger.debug(f"Loading model for fold {fold} from {model_load_path}")
         model_cache[fold] = DNNWrapper(model_load_path)
         logger.debug(f"Loaded model for fold {fold} from {model_load_path}")
-
 
     meta = ak.with_field(events._meta, np.zeros(0, dtype=np.float32), "dnn_vbf_score")
     meta = ak.with_field(meta,              np.zeros(0, dtype=np.float32), "dnn_vbf_score_atanh")
@@ -213,5 +212,9 @@ if __name__ == "__main__":
     samples = os.listdir(args.load_path)
     for sample in samples:
         # if sample != "vbf_powheg_dipole": continue
+        # if "MiNNLO" not in sample: continue
+        # if "dy_VBF_filter" not in sample:
+            # continue
+        # if "DY" not in sample: continue
         logger.info(f"Processing sample: {sample}")
         compact_and_add_dnn_score(args.year, sample, args.load_path, args.compacted_dir, args.model_path, args.add_dnn_score, args.tag, args.fix_dimuon_mass)

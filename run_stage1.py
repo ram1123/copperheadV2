@@ -6,6 +6,7 @@ import awkward as ak
 import matplotlib.pyplot as plt
 import numpy as np
 import dask
+dask.config.set(annotations={"retries": 3})
 # from dask.distributed import Client
 import sys
 import time
@@ -77,12 +78,29 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     logger.debug(f"test: {test}")
     logger.debug(f"Output path: {save_path}")
 
+    # dict to hold the max_num_elements info per sample
+    dict_max_num_elements = {
+        "data_": 800,
+        "dy_": 200,
+        "ttjets_dl": 400,
+        "ttjets_sl": 1500,
+        }
+    max_num_elements = 800 # default
+    if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
+        max_num_elements = dict_max_num_elements[[key for key in dict_max_num_elements.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
+        logger.debug(f"Setting max_num_elements for {dataset_dict['metadata']['dataset']} to {max_num_elements}")
+    else:
+        max_num_elements = 800
+    logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
+
     events = NanoEventsFactory.from_root(
         dataset_dict["files"],
         schemaclass=NanoAODSchema,
         metadata= dataset_dict["metadata"],
         uproot_options={
-            "timeout":2400,
+            "timeout": 900,
+            "num_workers": 1, # needs to be 1 for dask, solves vector_read error
+            "max_num_elements": max_num_elements,
             # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
         },
     ).events()
@@ -113,7 +131,6 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # skim_zip.persist().to_parquet(save_path)
     # raise ValueError
     return skim_zip
-
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -182,6 +199,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Get the cutflow",
     )
+    parser.add_argument(
+        "--rerun",
+        action="store_true",
+        help="If true, deletes the existing stage1 output directory and reruns stage1",
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -197,12 +219,10 @@ if __name__ == "__main__":
 
     time_step = time.time()
 
-
     warnings.filterwarnings('ignore')
     """
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
-
 
     config = getParametersForYr("./configs/parameters/" , args.year)
     logger.debug(f"stage1 config: {config}")
@@ -224,12 +244,19 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug(f"client: {client}")
             logger.info("Gateway Client created")
+            xrd_env = {
+                "XRD_REQUESTTIMEOUT": "900",
+                "XRD_STREAMTIMEOUT": "900",
+                "XRD_CONNECTIONWINDOW": "120",
+                "XRD_TIMEOUTRESOLUTION": "5",
+            }
+            client.run(lambda env=xrd_env: __import__("os").environ.update(env))
         else:
             client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             logger.info("Local scale Client created")
         t2 = time.perf_counter()
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
-        #-------------------------------------------------------------------------------------
+        # -------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
         logger.debug(f"Sample path: {sample_path}")
         with open(sample_path) as file:
@@ -254,19 +281,33 @@ if __name__ == "__main__":
             f.write(f"Diff:\n{diff}\n")
         logger.info(f"git_info_path: {git_info_path}")
 
-
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 # if dataset in ["ggh_amcPS", "ggh_powhegPS"]: # FIXME: temporary line to skip some datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
-                # if "ewk_lljj_mll50_mjj120" not in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
+                # if "dy_VBF_filter" in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
                 # if "data_" in dataset or "Data" in dataset or "dy_" in dataset: # FIXME: temporary line to skip data datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
                 sample_step = time.time()
+                # dict to hold file lenght info per sample
+                dict_file_length = {
+                    "data_": 2500,
+                    "dy_": 10,
+                    "ttjets_dl": 15,
+                    "ttjets_sl": 30
+                    }
+                if any(key in dataset for key in dict_file_length.keys()):
+                    args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
+                    logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
+                else:
+                    args.max_file_len = 2500
+                logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
+
+                # split the sample files into smaller chunks of size args.max_file_len
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
                 logger.info(f"max_file_len: {args.max_file_len}")
                 logger.info(f"len(smaller_files): {len(smaller_files)}")
@@ -277,25 +318,42 @@ if __name__ == "__main__":
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
-                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
                     logger.info(f"save_path: {save_path}")
-                    t3 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - var_step, 3)} seconds")
                     if not os.path.exists(save_path):
                         logger.debug(f"Path: {save_path} is going to be created")
                         os.makedirs(save_path)
                     else:
-                        # remove previously existing files and make path if doesn't exist
-                        filelist = glob.glob(f"{save_path}/*.parquet")
-                        logger.warning(f"Going to delete files: len(filelist): {len(filelist)}")
-                        for file in filelist:
-                            os.remove(file)
-                    logger.debug(f"Directory created or cleaned: {save_path}")
+                        if args.rerun:
+                            # remove previously existing directory, if exists, then remake path
+                            if os.path.exists(save_path):
+                                logger.warning(f"Going to delete directory: {save_path}")
+                                os.system(f"rm -r {save_path}")
+                            logger.info(f"Path: {save_path} is going to be created")
+                            os.makedirs(save_path)
+                        else:
+                            logger.warning(f"Path: {save_path} already exists. Skipping this file index. Use --rerun to overwrite.")
+                            continue
+                    t3a = time.perf_counter()
+
+                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
+                    t3 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
+
+                    # DOC:
+                    #   1. Dibosons with 256 partitions,
+                    #   2. EWK failed with 256 partitions, trying 512 partitions for ewk
+                    npartitions = 1024
+                    # if "ewk_lljj" in dataset or "www" in dataset:
+                        # npartitions = 512
+                    # logger.info(f"Repartitioning to {npartitions} partitions")
+                    # to_persist = to_persist.repartition(npartitions=npartitions)
                     t4 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to create directory and clean files: {round(t4 - t3, 3)} seconds")
-                    # to_persist.persist().to_parquet
-                    to_persist.persist().to_parquet(save_path)
+                    # logger.info(f"[Timing] Time taken to repartition to {npartitions} partitions: {round(t4 - t3, 3)} seconds")
+
+                    # persist and save to parquet
+                    to_persist = to_persist.persist()
+                    to_persist.to_parquet(save_path)
                     # to_persist.to_parquet(save_path)
                     t5 = time.perf_counter()
                     logger.info(f"[Timing] Time taken to save parquet files: {round(t5 - t4, 3)} seconds")

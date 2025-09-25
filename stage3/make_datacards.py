@@ -93,8 +93,11 @@ def build_datacards(var_name, yield_df, parameters):
     global_path = parameters["global_path"]
     # label = parameters["label"]
 
-    templates_path = f"{global_path}/stage3_templates/{var_name}"
-    datacard_path = f"{global_path}/stage3_datacards/"
+    outpath_postfix = "_" + parameters["outpath_postfix"] if parameters["outpath_postfix"] else ""
+
+    datacard_path = f"{global_path}/stage3_datacards{outpath_postfix}/"
+    templates_path = f"{global_path}/stage3_datacards{outpath_postfix}/stage3_templates{outpath_postfix}/{var_name}"
+    templates_path_to_remove_from_datacard = f"{global_path}/stage3_datacards{outpath_postfix}/"
     # mkdir(datacard_path)
     datacard_path += "/" + var_name
 
@@ -125,7 +128,7 @@ def build_datacards(var_name, yield_df, parameters):
                 datacard.write("kmax *\n")
                 datacard.write("---------------\n")
                 datacard.write(
-                    f"shapes * {bin_name} {templates_file} $PROCESS $PROCESS_$SYSTEMATIC\n"
+                    f"shapes * {bin_name} {templates_file.replace(templates_path_to_remove_from_datacard, '../')} $PROCESS $PROCESS_$SYSTEMATIC\n"
                 )
                 datacard.write("---------------\n")
                 data_str = print_data(

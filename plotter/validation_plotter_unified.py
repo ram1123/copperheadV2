@@ -16,6 +16,7 @@ import hist.dask as hda
 import dask
 import logging
 from modules.utils import logger
+from modules import selection
 
 from scripts.compact_parquet_data import ensure_compacted
 
@@ -24,13 +25,14 @@ from scripts.compact_parquet_data import ensure_compacted
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
-bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
+bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 
 DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
 
 DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
+
 
 DY_HTBinned = [
     "dy_M-4to50_HT-70to100", "dy_M-4to50_HT-100to200", "dy_M-4to50_HT-200to400", "dy_M-4to50_HT-400to600", "dy_M-4to50_HT-600toInf",
@@ -43,11 +45,14 @@ DYVBF = ["dy_VBF_filter"]
 group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
 
-    "DY": DY_aMCatNLO,
-    # "DY": DY_MiNNLO,
+    # "DY": DY_aMCatNLO,
+    "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
     "DYVBF": ["dy_VBF_filter"],
+
+    # "DYJ01": ["DYJ01"],
+    # "DYJ2": ["DYJ2"],
 
     "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
@@ -256,7 +261,7 @@ if __name__ == "__main__":
     # default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
     # default = ["OTHER", "EWK", "VV", "DY", "DYVBF"],
     # default = ["OTHER", "EWK", "VV",  "TOP", "DY", "DY_MiNNLO", "DY_aMCatNLO"],
-    default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
+    default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
     # default = ["OTHER", "EWK", "VV", "TOP", "DY" ],
     # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
     nargs="*",
@@ -416,6 +421,13 @@ if __name__ == "__main__":
      type=lambda x: getattr(logging, x),
      help="Configure the logging level."
      )
+    parser.add_argument(
+        "--use-compacted",
+        dest="use_compacted",
+        default="",
+        type=str,
+       help="Path to the compacted parquet files"
+    )
 
     # ---------------------------------------------------------
     # gather arguments
@@ -533,6 +545,10 @@ if __name__ == "__main__":
             variables2plot.append(f"htsoft2_nominal")
             variables2plot.append(f"nsoftjets5_nominal")
             variables2plot.append(f"htsoft5_nominal")
+            # variables2plot.append(f"nsoftjets2_new_nominal")
+            # variables2plot.append(f"htsoft2_new_nominal")
+            # variables2plot.append(f"nsoftjets5_new_nominal")
+            # variables2plot.append(f"htsoft5_new_nominal")
 
             # --------------------------------------------------
             # variables2plot.append(f"gjj_mass")
@@ -581,7 +597,7 @@ if __name__ == "__main__":
             "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
             proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
         )
-        cluster_info = gateway.list_clusters()[0]  # get the first cluster by default. There only should be one anyways
+        cluster_info = gateway.list_clusters()[-1]  # get the first cluster by default. There only should be one anyways
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
     else:
@@ -591,13 +607,15 @@ if __name__ == "__main__":
     time_step = time.time()
 
     # check if the compacted path exists
-    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted_13August_FixDimuonMass")
+    if args.use_compacted != "":
+        args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
 
-    # for process in available_processes:
-    #     compacted_path_DNN = os.path.join(COMPACTED_PATH, process, "0")
-    #     ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
-    args.load_path = COMPACTED_PATH
+        # run compact script for each process
+        # for process in available_processes:
+        #     compacted_path_DNN = os.path.join(args.load_path, process, "0")
+        #     ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
 
+    logger.info(f"Using parquet files from {args.load_path}")
     # load saved parquet files. This increases memory use, but increases runtime significantly
     loaded_events = {} # intialize dictionary containing all the arrays
     for process in tqdm.tqdm(available_processes):
@@ -708,7 +726,7 @@ if __name__ == "__main__":
         else:
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
-            # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+        # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
         logger.debug(f"var: {var}")
         sample_hist_dictByVar[var] = sample_hist.Var(binning, name=var).Double()
 
@@ -741,7 +759,7 @@ if __name__ == "__main__":
         else:
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         # if region_name == "z-peak" and plot_var == "dimuon_mass": # When z-peak region is selected, use different binning for mass
-            # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
+        # binning = np.linspace(*plot_settings[var]["binning_zpeak_linspace"])
         if args.linear_scale:
             do_logscale = False
         else:
@@ -771,7 +789,14 @@ if __name__ == "__main__":
                 # ------------------------------------------------
                 # take the mass region and category cuts
                 # ------------------------------------------------
-                events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name, args.njets, process, args.do_vbf_filter_study)
+                events = dak.map_partitions(selection.applyRegionCatCuts,
+                    events,
+                    args.category,
+                    region_name,
+                    process,
+                    "nominal",
+                    args.do_vbf_filter_study
+                )
 
                 #  FOR DEBUG PURPOSES
                 # if process == "dy_M-100To200_aMCatNLO":
@@ -882,7 +907,10 @@ if __name__ == "__main__":
 
                 logger.debug(f"group_name: {group_name}\t hist_dict: {hist_dict}")
                 if "DATA" in group_name: # data
-                    data_dict = hist_dict
+                    if region_name != "h-peak":
+                        data_dict = hist_dict
+                    else: # keep data blinded
+                        data_dict = {key: np.zeros_like(value) for key, value in hist_dict.items()}
                 elif "GGH" == group_name or "VBF" == group_name: # signal
                     sig_MC_dict[group_name] = hist_dict
                 else: # bkg MC
@@ -973,9 +1001,9 @@ if __name__ == "__main__":
                 elif args.year == "2017":
                     args.lumi = "41.48"
                 elif args.year == "2018":
-                    args.lumi = "59.83"
+                    args.lumi = "60" # 59.83
                 elif args.year == "AllYear" or args.year == "*":
-                    args.lumi = "137.62"
+                    args.lumi = "138" # 137.62fb-1
             plotDataMC_compare(
                 binning,
                 data_dict,
