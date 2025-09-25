@@ -9,7 +9,7 @@ from stage3.make_datacards import build_datacards
 import time
 import logging
 from modules.utils import logger
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 __all__ = ["dask"]
 
@@ -35,6 +35,7 @@ parser.add_argument(
     help="Postfix to append to saved histogram files."
 )
 args = parser.parse_args()
+
 
 
 year = args.years[0]
@@ -81,13 +82,7 @@ parameters["grouping"] = {
     # "data_G": "Data",
     # "data_H": "Data",
     "data": "Data",
-    # "dy_M-50_MiNNLO": "DY",
-    # "dy_M-100To200_MiNNLO": "DY",
     "dy_VBF_filter": "DY",
-    "dy_M-50_aMCatNLO": "DY",
-    "dy_M-100To200_aMCatNLO": "DY",
-    # "DYJ01": "DYJ01",
-    # "DYJ2": "DYJ2",
     # "dy_m105_160_vbf_amc": "DY",
     # "dy_m105_160_amc_01j": "DYJ01",
     # "dy_m105_160_vbf_amc_01j": "DYJ01",
@@ -96,6 +91,7 @@ parameters["grouping"] = {
     # "dy_m105_160_vbf_amc_2j": "DYJ2",
     # "dy_M-100To200_2j": "DYJ2",
     # "dy_M-50_MiNNLO": "DYJ01",
+    # "dy_M-100To200_MiNNLO": "DYJ2",
     # "ewk_lljj_mll105_160_py_dipole": "EWK",
     # "ewk_lljj_mll105_160_ptj0": "EWK",
     "ewk_lljj_mll50_mjj120": "EWK",
@@ -117,6 +113,8 @@ parameters["grouping"] = {
     "ggh_powhegPS": "ggH_hmm",
     "vbf_powheg_dipole": "qqH_hmm",
 }
+
+
 
 
 parameters["plot_groups"] = {

@@ -166,21 +166,21 @@ def compare_nominals(pkl1, pkl2, region=None, channel=None, tol_edges=1e-12):
 if __name__ == "__main__":
     # Example usage (current paths). Adjust region/channel as needed, e.g. region='h-peak', channel='vbf'.
     compare_nominals(
-        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar//stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_Aug14_OLDBR_NewSel_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
-        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar//stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_Aug14_OLDBR_NewSelv2_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
+        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar//stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_WithJES_13August_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
+        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
         region=None,
         channel="vbf",
     )
     compare_nominals(
-        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar//stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_Aug14_OLDBR_NewSel_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
-        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar//stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_Aug14_OLDBR_NewSelv2_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
+        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar//stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_WithJES_13August_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
+        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
         region="h-peak",
         channel="vbf",
     )
 
     compare_nominals(
-        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar//stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_Aug14_OLDBR_NewSel_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
-        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar//stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_Aug14_OLDBR_NewSelv2_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
+        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar//stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_WithJES_13August_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
+        "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2018/vbf_powheg_dipole_hist.pkl",
         region="h-sidebands",
         channel="vbf",
     )

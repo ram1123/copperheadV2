@@ -5,19 +5,31 @@ import os
 import re
 import ROOT
 
-from modules import selection
-
 # No stat box
 ROOT.gStyle.SetOptStat(000)
 
 # --- User Input ---
-# pkl_file = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned/2018/vbf_powheg_dipole_hist.pkl"
-pkl_file = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_Latest/2018/vbf_powheg_dipole_hist.pkl"
-output_dir = "variation_validation_plots/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/2018/"
-variable_axis_name = "score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
+pkl_file = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned/2018/vbf_powheg_dipole_hist.pkl"
+output_dir = "variation_validation_plots/July31_Rebinned/2018/"
+variable_axis_name = "score_Run2_nanoAODv12_UpdatedQGL_17July"
 
 # Your custom binning
-bins = selection.binning
+bins = np.array([
+    0,
+    0.07,
+    0.432,
+    0.71,
+    0.926,
+    1.114,
+    1.28,
+    1.428,
+    1.564,
+    1.686,
+    1.798,
+    1.9,
+    2.0,
+    2.8,
+])
 
 os.makedirs(output_dir, exist_ok=True)
 
@@ -95,13 +107,11 @@ for sys in sys_list:
     h_dn.SetLineColor(6)
     h_dn.SetLineStyle(3)
 
-    # h_nom.SetMinimum(0.001)
-    # h_nom.SetMaximum(10e9)
     h_nom.Draw("hist")
     h_up.Draw("hist same")
     h_dn.Draw("hist same")
 
-    leg = ROOT.TLegend(0.7, 0.7, 0.99, 0.89)
+    leg = ROOT.TLegend(0.2, 0.7, 0.49, 0.89)
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
     leg.AddEntry(h_nom, "Nominal", "l")

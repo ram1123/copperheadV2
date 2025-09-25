@@ -93,7 +93,7 @@ def add_dnn_score(events_partition,
         dnnWrap = model_cache[fold]
         dnn_score_fold = dnnWrap(input_arr)
         dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)
-        dnn_vbf_score = ak.where(eval_filter, dnn_score_fold, dnn_vbf_score)
+        dnn_vbf_score = ak.where(eval_filter, dnn_vbf_score, dnn_score_fold)
         # transformed DNN
         dnn_vbf_score = np.clip(dnn_vbf_score, -0.999999, 0.999999)
         dnn_vbf_score_atanh = np.arctanh(dnn_vbf_score)
@@ -213,9 +213,5 @@ if __name__ == "__main__":
     samples = os.listdir(args.load_path)
     for sample in samples:
         # if sample != "vbf_powheg_dipole": continue
-        # if "MiNNLO" not in sample: continue
-        # if "dy_VBF_filter" not in sample:
-            # continue
-        # if "dy_" in sample: continue
         logger.info(f"Processing sample: {sample}")
         compact_and_add_dnn_score(args.year, sample, args.load_path, args.compacted_dir, args.model_path, args.add_dnn_score, args.tag, args.fix_dimuon_mass)

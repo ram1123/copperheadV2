@@ -16,7 +16,6 @@ import hist.dask as hda
 import dask
 import logging
 from modules.utils import logger
-from modules import selection
 
 from scripts.compact_parquet_data import ensure_compacted
 
@@ -44,8 +43,8 @@ DYVBF = ["dy_VBF_filter"]
 group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
 
-    # "DY": DY_aMCatNLO,
-    "DY": DY_MiNNLO,
+    "DY": DY_aMCatNLO,
+    # "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
     "DYVBF": ["dy_VBF_filter"],
@@ -417,15 +416,6 @@ if __name__ == "__main__":
      type=lambda x: getattr(logging, x),
      help="Configure the logging level."
      )
-    # add option to use compacted parquet files, as string. This string will be replaced in the load_path
-    # default path has f1_0, which will be replaced with input string
-    parser.add_argument(
-        "--use-compacted",
-        dest="use_compacted",
-        default="",
-        type=str,
-       help="Path to the compacted parquet files"
-    )
 
     # ---------------------------------------------------------
     # gather arguments
@@ -543,10 +533,6 @@ if __name__ == "__main__":
             variables2plot.append(f"htsoft2_nominal")
             variables2plot.append(f"nsoftjets5_nominal")
             variables2plot.append(f"htsoft5_nominal")
-            variables2plot.append(f"nsoftjets2_new_nominal")
-            variables2plot.append(f"htsoft2_new_nominal")
-            variables2plot.append(f"nsoftjets5_new_nominal")
-            variables2plot.append(f"htsoft5_new_nominal")
 
             # --------------------------------------------------
             # variables2plot.append(f"gjj_mass")
@@ -605,15 +591,13 @@ if __name__ == "__main__":
     time_step = time.time()
 
     # check if the compacted path exists
-    if args.use_compacted != "":
-        args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
+    COMPACTED_PATH = (args.load_path).replace("f1_0", "compacted_13August_FixDimuonMass")
 
-        # run compact script for each process
-        # for process in available_processes:
-        #     compacted_path_DNN = os.path.join(args.load_path, process, "0")
-        #     ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
+    # for process in available_processes:
+    #     compacted_path_DNN = os.path.join(COMPACTED_PATH, process, "0")
+    #     ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
+    args.load_path = COMPACTED_PATH
 
-    logger.info(f"Using parquet files from {args.load_path}")
     # load saved parquet files. This increases memory use, but increases runtime significantly
     loaded_events = {} # intialize dictionary containing all the arrays
     for process in tqdm.tqdm(available_processes):
@@ -787,14 +771,7 @@ if __name__ == "__main__":
                 # ------------------------------------------------
                 # take the mass region and category cuts
                 # ------------------------------------------------
-                events = dak.map_partitions(selection.applyRegionCatCuts,
-                    events,
-                    args.category,
-                    region_name,
-                    process,
-                    "nominal",
-                    args.do_vbf_filter_study
-                )
+                events = dak.map_partitions(applyRegionCatCuts,events, args.category, region_name, args.njets, process, args.do_vbf_filter_study)
 
                 #  FOR DEBUG PURPOSES
                 # if process == "dy_M-100To200_aMCatNLO":
@@ -905,10 +882,7 @@ if __name__ == "__main__":
 
                 logger.debug(f"group_name: {group_name}\t hist_dict: {hist_dict}")
                 if "DATA" in group_name: # data
-                    if region_name != "h-peak":
-                        data_dict = hist_dict
-                    else: # keep data blinded
-                        data_dict = {key: np.zeros_like(value) for key, value in hist_dict.items()}
+                    data_dict = hist_dict
                 elif "GGH" == group_name or "VBF" == group_name: # signal
                     sig_MC_dict[group_name] = hist_dict
                 else: # bkg MC
@@ -999,9 +973,9 @@ if __name__ == "__main__":
                 elif args.year == "2017":
                     args.lumi = "41.48"
                 elif args.year == "2018":
-                    args.lumi = "60" # 59.83
+                    args.lumi = "59.83"
                 elif args.year == "AllYear" or args.year == "*":
-                    args.lumi = "138" # 137.62fb-1
+                    args.lumi = "137.62"
             plotDataMC_compare(
                 binning,
                 data_dict,

@@ -13,9 +13,8 @@ plt.style.use(hep.style.CMS)
 
 # Setup
 FOLD = 3
-# LABEL = "Run2_nanoAODv12_08June" # With Jet QGL bug
+LABEL = "Run2_nanoAODv12_08June" # With Jet QGL bug
 LABEL = "Run2_nanoAODv12_UpdatedQGL_17July"  # With Jet QGL bug fixed
-LABEL = "Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"  # With Jet QGL bug fixed
 # TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June_MiNNLO/fold{FOLD}"
 # DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/{LABEL}"
 # TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf/fold{FOLD}"
@@ -31,14 +30,12 @@ TRAINED_MODEL_DIR = (
     f"/depot/cms/users/shar1172/"
     f"copperheadV2_main/dnn/trained_models/"
     # f"{LABEL}/2018_h-peak_vbf_AllYear_16July/fold{FOLD}"
-    # f"{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/fold{FOLD}"
-    f"{LABEL}/2018_h-peak_vbf_ScanHyperParamV2/fold{FOLD}"
+    f"{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/fold{FOLD}"
 )
 DATA_PATH = (
     f"/depot/cms/users/shar1172/"
     # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_AllYear_16July"
-    # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test"
-    f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_ScanHyperParamV2"
+    f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test"
 )
 FEATURES_PKL = f"{DATA_PATH}/training_features.pkl"
 
@@ -74,34 +71,8 @@ print(f"From PKL: Total number of input features: {len(training_features_test)}"
 # Load model
 model = Net(n_feat=len(training_features))
 # model.load_state_dict(torch.load(f"{TRAINED_MODEL_DIR}/final_model_weights.pt", map_location=torch.device("cpu"), weights_only=True))
-model.load_state_dict(torch.load(f"{TRAINED_MODEL_DIR}/best_model_weights.pt", map_location=torch.device("cuda")))
+model.load_state_dict(torch.load(f"{TRAINED_MODEL_DIR}/best_model_weights.pt", map_location=torch.device("cpu"), weights_only=True))
 model.eval()
-
-print("Model Architecture:\n", model)
-
-print("====== torch summary.  ============")
-from torchsummary import summary
-summary(model, input_size=(len(training_features),))
-print("==================================\n\n")
-
-print("====== Print model parameter  ============")
-for name, param in model.named_parameters():
-    print(f"\t==> {name}: {param.shape}")
-print("=========================================\n\n")
-
-# save model architecture as pdf file
-## Create a dummy input to trace the model
-dummy_input = torch.randn(1, len(training_features))
-
-## Generate graph
-from torchviz import make_dot
-y = model(dummy_input)
-graph = make_dot(y, params=dict(model.named_parameters()))
-
-# Save as PDF
-graph.render(f"{TRAINED_MODEL_DIR}/model_architecture", format="pdf")
-
-print(f"Model architecture graph saved to {TRAINED_MODEL_DIR}/model_architecture.pdf")
 
 # Load data
 df_valid = pd.read_parquet(f"{DATA_PATH}/data_df_validation_{FOLD}.parquet")

@@ -8,22 +8,18 @@ Usage: $0 [options]
 Options:
   -h            Show this help message
   -c <file>     Dataset YAML file (default: configs/datasets/dataset_nanoAODv12.yaml)
-  -m <mode>     Mode: 0 (prestage), 1 (stage1), 2 (stage2), 3 (stage3), all,
-                zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12, zpt_val, calib,
-                compact, dnn|dnn_pre|dnn_train|dnn_var_rank (default: all)
+  -m <mode>     Mode: 0 (prestage), 1 (stage1), 2 (stage2), 3 (stage3), all (both), zpt_fit, zpt_val, calib (default: all)
   -v <version>  NanoAOD version (default: 12)
   -y <year>     Year (default: 2018 2017 2016postVFP 2016preVFP)
   -l <label>    Label (default: Default_nanoAODv9)
+  -s            Skip bad files (default: 0)
+  -d            Enable debug mode (default: 0)
+  -f            Run only 10% of samples for debugging (default: 0)
   -n <njet>     nJet value (optional, default: 0)
   -b <bins>     Number of bins (optional, default: 100)
   -o <outAppend>  String to append to output files (default: today's date)
   -r <region>   DNN training region (default: h-peak)
   -t <category> DNN training category (default: vbf)
-  -p <postfix>  Postfix string to append to output directory for stage2 and 3 (default: "")
-  -s            Skip bad files (default: 0)
-  -d            Enable debug mode (0/1/2; default: 0)
-  -f            Run only 10% of samples for debugging (default: 0)
-  -k            Enable Dask/Gateway (default: 0)
 EOF
     exit 1
 }
@@ -43,41 +39,32 @@ PWD="$(pwd)"
 outAppend="$(date +%b%d_%Y)"   # Default: today's date, e.g. Jun24_2025
 region="h-peak" # h-peak, h-sideband, signal
 category="vbf"
-postfix=""
-dask="0"
 
 # ----------- Parse options -----------
-while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:sfk" option; do
+while getopts ":hc:m:v:y:l:n:b:d:o:sfr:t:" option; do
     case "$option" in
         h) usage ;;
         c) datasetYAML="$OPTARG" ;;
         m) mode="$OPTARG" ;;
         v) NanoAODv="$OPTARG" ;;
-        y) IFS=', ' read -r -a years <<< "$OPTARG" ;;
+        y) IFS=' ' read -r -a years <<< "$OPTARG" ;;
         l) label="$OPTARG" ;;
         n) njet="$OPTARG" ;;
         b) nbin="$OPTARG" ;;
         d) debug="$OPTARG" ;;
         o) outAppend="$OPTARG" ;;
-        r) region="$OPTARG" ;;
-        t) category="$OPTARG" ;;
-        p) postfix="$OPTARG" ;;
         s) skipBadFiles="1" ;;
         f) frac="1" ;;
-        k) dask="1" ;;
+        r) region="$OPTARG" ;;
+        t) category="$OPTARG" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
 done
 
 # ----------- Check environment and load modules -----------
-if [[ -z "${CONDA_PREFIX:-}" ]]; then
-    echo "No conda environment detected. Activate the appropriate env and retry."
-    exit 1
-fi
-
 # if DNN training is enabled, check if the conda environment is `pfn_env` else it should be `yun_coffea_latest`
-if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" || "$mode" == "dnn_var_rank" ]]; then
+if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" ]]; then
     if [[ "$CONDA_PREFIX" != *"pfn_env"* ]]; then
         echo "Please run this script in the pfn_env conda environment for DNN training"
         exit 1
@@ -112,7 +99,6 @@ log() { echo "$@" | tee -a "$log_file"; }
 
 save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
 mkdir -p "$save_path"
-trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 
 declare -A data_l_dict=(
     [2016preVFP]="B C D E F"
@@ -121,7 +107,6 @@ declare -A data_l_dict=(
     [2018]="A B C D"
     [2022preEE]="C D"
     [2022postEE]="E F G"
-    [run2]="A B C D E F G H"
 )
 
 # bkg_l="DY TT ST VV EWK VVV"
@@ -136,15 +121,12 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
     data_l_dict["2017"]=""
-    data_l_dict["2018"]=""
-    bkg_l="DY Top"
-    # sig_l=""
+    data_l_dict["2018"]="A B C D"
+    bkg_l=""
     sig_l=""
-    # sig_l="VBF"
 fi
 
 chunksize=300000
-max_file_len=2500 # 2500 for data, 5 for MC
 
 echo "Running with the following parameters:"
 echo "  Dataset YAML: $datasetYAML"
@@ -173,13 +155,13 @@ for year in "${years[@]}"; do
     log "  Save path: $save_path"
 
     # ---- Command templates ----
-    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv "
-    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
+    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  --use_gateway  "
+    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv    "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len  --isCutflow  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len  "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len  "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --use_gateway  --max_file_len 2500  --isCutflow  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 350 --use_gateway "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len 2500  "
 
     ### DNN training parameters
     training_fold=3
@@ -188,28 +170,32 @@ for year in "${years[@]}"; do
     model_label="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
 
     # NOTE: This DNN is trained with all year but name contains hardcoded string "2018"
-    # model_label_forCompact="2018_${region}_${category}_2018_UpdatedQGL_17July_Test" # August training
-    model_label_forCompact="run2_${region}_${category}_ScanHyperParamV1" # Latest training; 03 Sep 2025
-    compact_tag="03September"
+    model_label_forCompact="2018_${region}_${category}_2018_UpdatedQGL_17July_Test"
+    compact_tag="13August"
+    # postfix="July31_Rebinnedv2_NoSyst"
+    # postfix="July31_Rebinnedv2"
+    postfix="FixPUJetIDWgt_Rebinned"
 
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag  "
-    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path  "
+    command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag --use_gateway "
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag"
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label --use_gateway  --add_dnn_score --tag $compact_tag"
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path --use_gateway "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
-    bkg_l_stage2="$bkg_l"
-    if [[ "$bkg_l_stage2" == *"Top"* ]]; then
-        bkg_l_stage2="${bkg_l_stage2/Top/TT ST}"
+    bkg_l_stage2=""
+    if [[ "$bkg_l" == *"Top"* ]]; then
+        bkg_l_stage2="${bkg_l/Top/TT ST}"
     fi
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
+    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations  "
+    command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations --use_gateway "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
 
     command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix"
 
-    command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
+    command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l  --use_gateway "
     command5="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
     command6="python src/lib/ebeMassResCalibration/calibration_factor.py --path $save_path"
 
@@ -229,16 +215,6 @@ for year in "${years[@]}"; do
         command1+=" --test_mode"
     fi
     [[ "$skipBadFiles" == "1" ]] && command0+=" --skipBadFiles"
-
-    if [[ "$dask" == "1" ]]; then
-        command0+=" --use_gateway "
-        command1+=" --use_gateway "
-        command2+=" --use_gateway "
-        command4+=" --use_gateway "
-        command5+=" --use_gateway "
-        command6+=" --use_gateway "
-        command_compact+=" --use_gateway "
-    fi
 
     # ---- Mode switch ----
     case "$mode" in
@@ -298,43 +274,29 @@ for year in "${years[@]}"; do
         dnn|dnn_pre|dnn_train|dnn_var_rank)
             log "Running DNN step(s) for year $year..."
             cmd_preproc="python MVA_training/VBF/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level INFO "
-            # Alternative cmd_train configurations (uncomment and adjust as needed):
-            # -- Bayesian Optimization:
-            # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 75 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
-            # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 21 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
-            # -- Quick test:
-            # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 3 --bo-epochs 5 --bo-fold 0 --n-epochs 5 --batch-size 15536 --log-level INFO "
-            # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 5 --batch-size 15536 --log-level INFO "
-            # Active configuration:
-            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 100 --batch-size 2048 --log-level INFO "
+            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --log-level INFO "
             cmd_var_rank="python MVA_training/VBF/variable_ranking.py "
 
             if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then
-                if [[ "$dask" == "1" ]]; then
-                    cmd_preproc+=" --use_gateway "
-                fi
                 log "Running DNN preprocessor..."
                 log "Command: $cmd_preproc"
                 eval "$cmd_preproc"
             fi
 
             if [[ "$mode" == "dnn_train" || "$mode" == "dnn" ]]; then
-                if [[ "$debug" == "1" ]]; then
-                    cmd_train+=" --debug "
-                fi
                 log "Running DNN training..."
                 log "Command: $cmd_train"
                 eval "$cmd_train"
             fi
 
-            if [[ "$mode" == "dnn_var_rank" ]]; then
+            if [[ "$mode" == "dnn_var_rank" || "$mode" == "dnn" ]]; then
                 log "Running variable ranking..."
                 log "Command: $cmd_var_rank"
                 eval "$cmd_var_rank"
             fi
             ;;
         *)
-            echo "Error: Invalid mode. See -h for the full list of supported modes."
+            echo "Error: Invalid mode. Use 0, 1, 2, 3, all, zpt_fit, zpt_val, or calib."
             usage
             ;;
     esac
