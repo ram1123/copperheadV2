@@ -1409,9 +1409,8 @@ class EventProcessor(processor.ProcessorABC):
             "jet2_default_eta_nominal": jet2_default.eta,
 
             "nfatJets": nfatJets,
-            # "nfatJets_pre": nfatJets_pre,
-            # "nfatJets_drmuon": nfatJets_drmuon,
-            # "fatjet1_drmuon": fatjet1_drmuon,
+            "nfatJets_pre": nfatJets_pre,
+            "nfatJets_drmuon": nfatJets_drmuon,
 
 
             # add fatjet1 default kinematics

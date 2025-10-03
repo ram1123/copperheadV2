@@ -28,6 +28,8 @@ import time
 import csv
 from tqdm import tqdm
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 def find_parquet_files(base_path: str):
     """Recursively find all .parquet files under base_path."""
@@ -48,20 +50,32 @@ def find_parquet_files(base_path: str):
 
 def get_file_info(file_path: str):
     """Get basic info of the file: size, checksum, creation time."""
-    import zlib
     try:
         size = os.path.getsize(file_path)
-        # ctime = os.path.getctime(file_path)
         ctime = time.ctime(os.path.getctime(file_path))
-        # Assuming xrdadler32 checksum is computed `xrdadler32 {file_path}` subprocess
         result = subprocess.run(['xrdadler32', file_path], capture_output=True, text=True)
         if result.returncode != 0:
             raise Exception(f"xrdadler32 command failed: {result.stderr}")
-        checksum = result.stdout.strip().split()[0]  # output like "3a1b2c3d  filename"
+        checksum = result.stdout.strip().split()[0]
         return size, checksum, ctime
     except Exception as e:
         sys.stderr.write(f"Error getting info for {file_path}: {e}\n")
         return None, None, None
+
+
+def process_file(file_path, base_path):
+    parts = Path(file_path).parts
+    try:
+        rel = Path(file_path).relative_to(base_path)
+        year, _, sample, *_ = rel.parts
+        size, checksum, ctime = get_file_info(file_path)
+        if None in (size, checksum, ctime):
+            return None
+        return [year, sample, checksum, size, file_path, ctime]
+    except Exception as e:
+        sys.stderr.write(f"Failed to process {file_path}: {e}\n")
+        return None
+
 
 def main(label: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
@@ -70,24 +84,24 @@ def main(label: str, output_dir: str):
     output_file = f"{output_dir}/{label}.csv"
 
     root_files = find_parquet_files(base_path)
+    results = []
+
+    with ThreadPoolExecutor(max_workers=128) as executor:
+        futures = [executor.submit(process_file, f, base_path) for f in root_files]
+        for future in tqdm(
+            as_completed(futures), total=len(futures), desc="Processing files"
+        ):
+            res = future.result()
+            if res:
+                results.append(res)
 
     with open(output_file, 'w', newline='') as out_f:
         writer = csv.writer(out_f)
         writer.writerow(["year", "sample", "checksum", "size", "full_path", "ctime"])
-        for file_path in tqdm(root_files, desc="Processing files"):
-            parts = Path(file_path).parts
+        writer.writerows(results)
 
-            rel = Path(file_path).relative_to(base_path)
-            year, _, sample, *_ = rel.parts
-            # print(f"rel: {rel}, year: {year}, sample: {sample}")
+    print(f"Saved info for {len(results)} files to {output_file}")
 
-            size, checksum, ctime = get_file_info(file_path)
-            if size is None or checksum is None or ctime is None:
-                continue
-
-            writer.writerow([year, sample, checksum, size, file_path, ctime])
-
-    print(f"Saved info for {len(root_files)} files to {output_file}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create basic info files for stage1 parquet datasets.")
