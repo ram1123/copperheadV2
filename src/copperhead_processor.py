@@ -422,15 +422,13 @@ class EventProcessor(processor.ProcessorABC):
         do_jec_unc = True #True
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
-        """
 
-        """
         Apply LHE cuts for DY sample stitching
         Basically remove events that has dilepton mass between 100 and 200 GeV
         """
 
         event_filter = ak.ones_like(events.event, dtype="bool") # 1D boolean array to be used to filter out bad events
-            # Debugging: Check structure of event_filter
+        # Debugging: Check structure of event_filter
         logger.debug(f"event_filter type: {type(event_filter)}")
         logger.debug(f"event_filter length: {len(event_filter)}")
         logger.debug(f"events length: {len(events)}")
@@ -455,7 +453,6 @@ class EventProcessor(processor.ProcessorABC):
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
             LHE_leptons = LHE_particles[bool_filter]
-
 
             """
             TODO: maybe we can get faster by just indexing first and second, instead of argmax and argmins
@@ -542,7 +539,6 @@ class EventProcessor(processor.ProcessorABC):
             #     for i in range(len(temp_dR_gl)):
             #         logger.debug(f"dr_gl[{i}]: {temp_dR_gl[i]}")
 
-
             #     logger.debug(f"isolated type: {isolated[1].compute()}")
             #     for i in range(len(isolated[1].compute())):
             #         logger.debug(f"isolated[{i}]: {isolated[1].compute()[i]}")
@@ -589,7 +585,6 @@ class EventProcessor(processor.ProcessorABC):
             lumi_mask = ak.ones_like(event_filter, dtype="bool")
             self.selection.add("lumi_mask", lumi_mask)
 
-
         else:
             logger.debug(f'self.config["lumimask"]: {self.config["lumimask"]}')
             lumi_info = LumiMask(self.config["lumimask"])
@@ -603,7 +598,6 @@ class EventProcessor(processor.ProcessorABC):
         do_pu_wgt = True # True
         if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
             do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
-
 
         if do_pu_wgt:
 
@@ -623,7 +617,6 @@ class EventProcessor(processor.ProcessorABC):
                             Run = run_campaign,
                             is_rereco = ("RERECO" in year),
                     )
-
 
         # # Save raw variables before computing any corrections
         # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
@@ -649,7 +642,6 @@ class EventProcessor(processor.ProcessorABC):
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
         self.selection.add("event_quality_flags", evnt_qual_flg_selection)
 
-
         # # --------------------------------------------------------
         # apply Beam constraint b4 Rochester. We need Rochester b4 trigger matching
         # # --------------------------------------------------------
@@ -671,7 +663,6 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
 
-
         # logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
 
         # # --------------------------------------------------------
@@ -687,7 +678,6 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "pt"] = events.Muon.pt_roch
             # logger.info(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
 
-
         muon_selection = (
             (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
             & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
@@ -700,7 +690,6 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
         self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
 
-
         # calculate FSR recovery, but don't apply it until trigger matching is done
         # but apply muon iso overwrite, so base muon selection could be done
         do_fsr = self.config["do_fsr"]
@@ -709,7 +698,6 @@ class EventProcessor(processor.ProcessorABC):
             # applied_fsr = fsr_recovery(events)
             applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
-
 
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
@@ -738,7 +726,6 @@ class EventProcessor(processor.ProcessorABC):
 
             logger.debug(f"pt_threshold: {pt_threshold}")
 
-
             pass_id = abs(events.TrigObj.id) == mu_id
             # pass_pt = events.TrigObj.pt >= pt_threshold
             # # start TrigObject matching
@@ -757,11 +744,10 @@ class EventProcessor(processor.ProcessorABC):
             trigger_cands_filter = pass_id & pass_filterbit
             trigger_cands = events.TrigObj[trigger_cands_filter]
 
-
             dr_threshold = self.config["muon_trigmatch_dr"]
             logger.debug(f"dr_threshold: {dr_threshold}")
 
-            #check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
+            # check the first two leading muons match any of the HLT trigger objs. if neither match, reject event
             padded_muons = ak.pad_none(events.Muon[muon_selection], 2) # pad in case we have only one muon or zero in an event
             sorted_args = ak.argsort(padded_muons.pt, ascending=False)
             muons_sorted = (padded_muons[sorted_args])
@@ -806,8 +792,7 @@ class EventProcessor(processor.ProcessorABC):
 
         t6a = time.perf_counter()
         logger.info(f"[timing] FSR correction time: {t6a - t6:.2f} seconds")
-        #-----------------------------------------------------------------
-
+        # -----------------------------------------------------------------
 
         if not doing_BS_correction: # apply geofit
             if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
@@ -849,7 +834,6 @@ class EventProcessor(processor.ProcessorABC):
         t7 = time.perf_counter()
         logger.info(f"[timing] diMuon selection time: {t7 - t6:.2f} seconds")
         # --------------------------------------------------------#
-
 
         electron_id = self.config[f"electron_id_v{NanoAODv}"]
         logger.debug(f"electron_id: {electron_id}")
@@ -951,10 +935,8 @@ class EventProcessor(processor.ProcessorABC):
         # pass_leading_pt = mu1.pt_raw > self.config["muon_leading_pt"]
         # pass_leading_pt = ak.fill_none(pass_leading_pt, value=False)
 
-
         # event_filter = event_filter & pass_leading_pt
         # test end -----------------------------------------------------------------------
-
 
         # calculate sum of gen weight b4 skimming off bad events
         if is_mc:
@@ -975,11 +957,8 @@ class EventProcessor(processor.ProcessorABC):
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
         # pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
-
         t9 = time.perf_counter()
         logger.info(f"[timing] GEN weight and PU time: {t9 - t8:.2f} seconds")
-
-
 
         # --------------------------------------------------------#
         # Fill dimuon and muon variables
@@ -1003,7 +982,6 @@ class EventProcessor(processor.ProcessorABC):
         acoplanarity = 1 - dimuon_dPhi/ np.pi  # acoplanarity = 1 - delta_phi/pi
         dimuon = mu1+mu2
 
-
         uncalibrated_dimuon_ebe_mass_res, calibration = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode, doing_BS_correction=doing_BS_correction)
         dimuon_ebe_mass_res = uncalibrated_dimuon_ebe_mass_res * calibration
         dimuon_ebe_mass_res_rel = dimuon_ebe_mass_res/dimuon.mass
@@ -1017,12 +995,10 @@ class EventProcessor(processor.ProcessorABC):
         # logger.info(dimuon_cos_theta_cs.compute())
         # logger.info(dimuon_phi_cs.compute())
 
-
-
         # #fill genjets
 
         if is_mc:
-            #fill gen jets for VBF filter on postprocess
+            # fill gen jets for VBF filter on postprocess
             gjets = events.GenJet
             gleptons = events.GenPart[
                 (
@@ -1099,9 +1075,10 @@ class EventProcessor(processor.ProcessorABC):
         # JER: https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetResolution
         # JES: https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC
 
-
         year = self.config["year"]
         jets = events.Jet
+        fatJets = events.FatJet
+        nfatJets = ak.num(fatJets, axis=1)
         self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
             self.config["jec_parameters"],
             year
@@ -1112,7 +1089,7 @@ class EventProcessor(processor.ProcessorABC):
         do_jec = True # True # FIXME: Hardcoded
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
-        #testing
+        # testing
         do_jecunc = False
         do_jerunc = False
         # cache = events.caches[0]
@@ -1121,6 +1098,29 @@ class EventProcessor(processor.ProcessorABC):
         jet_default = ak.pad_none(jets, target=2) # save pre jec and jer Jet for comparison
         jet1_default = jet_default[:, 0]
         jet2_default = jet_default[:, 1]
+
+        # -----------------------------------------------------
+        # pre-selection for fatjets
+        # add pre-selection for fatjets before saving the information: pT > 150 GeV and |eta| < 2.4 and pass the tight jet ID, dR(j, muons) > 0.8, FatJet_particleNetWithMass_WvsQCD > 0.75
+        # Save the number of fat jets that passes this conditions
+        fatjet_selection = (
+            (fatJets.pt > 150)
+            & (abs(fatJets.eta) < 2.4)
+            & (fatJets.jetId >= 2) # tight jet ID
+            & (fatJets.particleNetWithMass_WvsQCD > 0.75) # W vs QCD discriminator
+        )
+        fatJets = fatJets[fatjet_selection]
+        nfatJets_pre = ak.num(fatJets, axis=1)
+
+        # if nfatJets_pre > 0, we apply the dR(jet, muon) > 0.8 cut and save the number of fatjets that passes this
+        # here muons are mu1 and mu2, as defined above
+        fatjet_default = ak.pad_none(fatJets, target=1) # pad to ensure we have at least one fatjet in each event
+        fatjet1_default = fatjet_default[:,0]
+        dr_fatjet1_mu1 = fatjet1_default.delta_r(mu1)
+        dr_fatjet1_mu2 = fatjet1_default.delta_r(mu2)
+        fatjet1_drmuon = (dr_fatjet1_mu1 > 0.8) & (dr_fatjet1_mu2 > 0.8)
+        fatJets = fatJets[fatjet1_drmuon]
+        nfatJets_drmuon = ak.num(fatJets, axis=1)
 
         if do_jec: # old method
             if is_mc:
@@ -1159,7 +1159,6 @@ class EventProcessor(processor.ProcessorABC):
 
             # -------------------------------------
 
-
             # testJetVector(jets)
             # logger.info(f"jets pt b4 jec: {jets.pt.compute()}")
             # -------------------------------------
@@ -1172,7 +1171,6 @@ class EventProcessor(processor.ProcessorABC):
         else:
             jets["mass_jec"] = jets.mass
             jets["pt_jec"] = jets.pt
-
 
         t13 = time.perf_counter()
         logger.info(f"[timing] JEC and JER time: {t13 - t12:.2f} seconds")
@@ -1224,10 +1222,8 @@ class EventProcessor(processor.ProcessorABC):
         else: # data-> just add in ak ones for consistency
             weights.add("ones", weight=ak.values_astype(ak.ones_like(events.HLT.IsoMu24), "float32"))
 
-
         t14 = time.perf_counter()
         logger.info(f"[timing] Weights time: {t14 - t13:.2f} seconds")
-
 
         # ------------------------------------------------------------#
         # Calculate other event weights
@@ -1254,8 +1250,7 @@ class EventProcessor(processor.ProcessorABC):
                 weights.add("nnlops", weight=nnlopsw)
             # moved nnlops reweighting outside of dak process-----------------
 
-
-            #do mu SF start -------------------------------------
+            # do mu SF start -------------------------------------
             logger.debug("doing musf!")
             musf_lookup = get_musf_lookup(self.config)
             muID, muIso, muTrig = musf_evaluator(
@@ -1276,8 +1271,7 @@ class EventProcessor(processor.ProcessorABC):
                     weightUp=muTrig["up"],
                     weightDown=muTrig["down"]
             )
-            #do mu SF end -------------------------------------
-
+            # do mu SF end -------------------------------------
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_lhe = (
@@ -1316,7 +1310,6 @@ class EventProcessor(processor.ProcessorABC):
                     self.config,
                 )
 
-
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_pdf = (
                 self.config["do_pdf"]
@@ -1350,65 +1343,104 @@ class EventProcessor(processor.ProcessorABC):
             dnn_year = int(year)
         logger.debug(f"dnn_year: {dnn_year}")
         out_dict = {
-            "event" : events.event,
-            "PV_npvs" : events.PV.npvs,
-            "PV_npvsGood" : events.PV.npvsGood,
-            "MET_pt" : events.PuppiMET.pt,
-            "MET_phi" : events.PuppiMET.phi,
-            "MET_sumEt" : events.PuppiMET.sumEt,
-            "mu1_pt" : mu1.pt,
-            "mu1_ptErr" : mu1.ptErr,
-            "mu2_pt" : mu2.pt,
-            "mu2_ptErr" : mu2.ptErr,
-            "mu1_pt_over_mass" : mu1.pt / dimuon.mass,
-            "mu2_pt_over_mass" : mu2.pt / dimuon.mass,
-            "mu1_eta" : mu1.eta,
-            "mu2_eta" : mu2.eta,
-            "mu1_phi" : mu1.phi,
-            "mu2_phi" : mu2.phi,
-            "mu1_charge" : mu1.charge,
-            "mu2_charge" : mu2.charge,
-            "mu1_iso" : mu1.pfRelIso04_all,
-            "mu2_iso" : mu2.pfRelIso04_all,
+            "event": events.event,
+            "PV_npvs": events.PV.npvs,
+            "PV_npvsGood": events.PV.npvsGood,
+            "MET_pt": events.MET.pt,
+            "MET_phi": events.MET.phi,
+            "MET_sumEt": events.MET.sumEt,
+            "mu1_pt": mu1.pt,
+            "mu1_ptErr": mu1.ptErr,
+            "mu2_pt": mu2.pt,
+            "mu2_ptErr": mu2.ptErr,
+            "mu1_pt_over_mass": mu1.pt / dimuon.mass,
+            "mu2_pt_over_mass": mu2.pt / dimuon.mass,
+            "mu1_eta": mu1.eta,
+            "mu2_eta": mu2.eta,
+            "mu1_phi": mu1.phi,
+            "mu2_phi": mu2.phi,
+            "mu1_charge": mu1.charge,
+            "mu2_charge": mu2.charge,
+            "mu1_iso": mu1.pfRelIso04_all,
+            "mu2_iso": mu2.pfRelIso04_all,
+            "mu1_pt_over_mu2_pt": mu1.pt / mu2.pt,
+            "mu1_eta_over_mu2_eta": abs(mu1.eta) / abs(mu2.eta),
             # "mu1_pt_roch" : mu1.pt_roch,
             # "mu1_pt_fsr" : mu1.pt_fsr,
             # "mu1_pt_gf" : mu1.pt_gf,
             # "mu2_pt_roch" : mu2.pt_roch,
             # "mu2_pt_fsr" : mu2.pt_fsr,
             # "mu2_pt_gf" : mu2.pt_gf,
-            "nmuons" : nmuons,
-            "dimuon_mass" : dimuon.mass,
-            "dimuon_pt" : dimuon.pt,
-            "dimuon_pt_log" : np.log(dimuon.pt),
-            "dimuon_eta" : dimuon.eta,
-            "dimuon_rapidity" : getRapidity(dimuon),
-            "dimuon_phi" : dimuon.phi,
-            "dimuon_dEta" : dimuon_dEta,
-            "dimuon_dPhi" : dimuon_dPhi,
-            "dimuon_dR" : dimuon_dR,
+            "nmuons": nmuons,
+            "dimuon_mass": dimuon.mass,
+            "dimuon_pt": dimuon.pt,
+            "dimuon_pt_log": np.log(dimuon.pt),
+            "dimuon_eta": dimuon.eta,
+            "dimuon_rapidity": getRapidity(dimuon),
+            "dimuon_phi": dimuon.phi,
+            "dimuon_dEta": dimuon_dEta,
+            "dimuon_dPhi": dimuon_dPhi,
+            "dimuon_dR": dimuon_dR,
             "acoplanarity": acoplanarity,
-            "dimuon_ebe_mass_res" : dimuon_ebe_mass_res,
-            "dimuon_ebe_mass_res_rel" : dimuon_ebe_mass_res_rel,
-            "uncalibrated_dimuon_ebe_mass_res" : uncalibrated_dimuon_ebe_mass_res,
-            "dimuon_cos_theta_cs" : dimuon_cos_theta_cs,
-            "dimuon_phi_cs" : dimuon_phi_cs,
-            "dimuon_cos_theta_eta" : dimuon_cos_theta_eta,
-            "dimuon_phi_eta" : dimuon_phi_eta,
-            "mu1_pt_raw" : mu1.pt_raw,
-            "mu2_pt_raw" : mu2.pt_raw,
-            "mu1_pt_fsr" : mu1.pt_fsr,
-            "mu2_pt_fsr" : mu2.pt_fsr,
+            "dimuon_ebe_mass_res": dimuon_ebe_mass_res,
+            "dimuon_ebe_mass_res_rel": dimuon_ebe_mass_res_rel,
+            "uncalibrated_dimuon_ebe_mass_res": uncalibrated_dimuon_ebe_mass_res,
+            "dimuon_cos_theta_cs": dimuon_cos_theta_cs,
+            "dimuon_phi_cs": dimuon_phi_cs,
+            "dimuon_cos_theta_eta": dimuon_cos_theta_eta,
+            "dimuon_phi_eta": dimuon_phi_eta,
+            "dimuon_pt_over_MET_pt": dimuon.pt / events.MET.pt,
+            "dimuon_pt_over_jet1_pt": dimuon.pt / jet1_default.pt,
+            "dimuon_pt_over_jet2_pt": dimuon.pt / jet2_default.pt,
+            "mu1_pt_raw": mu1.pt_raw,
+            "mu2_pt_raw": mu2.pt_raw,
+            "mu1_pt_fsr": mu1.pt_fsr,
+            "mu2_pt_fsr": mu2.pt_fsr,
             # "pass_leading_pt" : pass_leading_pt,
-            "year" : ak.ones_like(nmuons) * dnn_year,
+            "year": ak.ones_like(nmuons) * dnn_year,
             "run": events.run,
             "event": events.event,
             "luminosityBlock": events.luminosityBlock,
             "fraction": ak.ones_like(events.event) * events.metadata["fraction"],
             # add jet default kinematics here
-            "jet1_default_pt_nominal" : jet1_default.pt,
-            "jet1_default_eta_nominal" : jet1_default.eta,
-            "jet2_default_pt_nominal" : jet2_default.pt,
-            "jet2_default_eta_nominal" : jet2_default.eta,
+            "jet1_default_pt_nominal": jet1_default.pt,
+            "jet1_default_eta_nominal": jet1_default.eta,
+            "jet2_default_pt_nominal": jet2_default.pt,
+            "jet2_default_eta_nominal": jet2_default.eta,
+
+            "nfatJets": nfatJets,
+            # "nfatJets_pre": nfatJets_pre,
+            # "nfatJets_drmuon": nfatJets_drmuon,
+            # "fatjet1_drmuon": fatjet1_drmuon,
+
+
+            # add fatjet1 default kinematics
+            "fatjet1_default_pt_nominal": fatjet1_default.pt,
+            "fatjet1_default_eta_nominal": fatjet1_default.eta,
+            "fatjet1_default_phi_nominal": fatjet1_default.phi,
+            "fatjet1_default_mass_nominal": fatjet1_default.mass,
+            "fatjet1_default_jetId_nominal": fatjet1_default.jetId,
+            "fatjet1_default_msoftdrop_nominal": fatjet1_default.msoftdrop,
+            "fatjet1_default_electronIdx3SJ_nominal": fatjet1_default.electronIdx3SJ,
+            "fatjet1_default_nConstituents_nominal": fatjet1_default.nConstituents,
+            "fatjet1_default_tau1_nominal": fatjet1_default.tau1,
+            "fatjet1_default_tau2_nominal": fatjet1_default.tau2,
+            "fatjet1_default_tau3_nominal": fatjet1_default.tau3,
+            "fatjet1_default_tau4_nominal": fatjet1_default.tau4,
+            "fatjet1_default_btagDDBvLV2_nominal": fatjet1_default.btagDDBvLV2,
+            "fatjet1_default_btagDDCvBV2_nominal": fatjet1_default.btagDDCvBV2,
+            "fatjet1_default_btagDDCvLV2_nominal": fatjet1_default.btagDDCvLV2,
+            "fatjet1_default_btagDeepB_nominal": fatjet1_default.btagDeepB,
+            "fatjet1_default_btagHbb_nominal": fatjet1_default.btagHbb,
+            "fatjet1_default_particleNetWithMass_QCD_nominal": fatjet1_default.particleNetWithMass_QCD,
+            "fatjet1_default_particleNetWithMass_WvsQCD_nominal": fatjet1_default.particleNetWithMass_WvsQCD,
+            "fatjet1_default_particleNetWithMass_ZvsQCD_nominal": fatjet1_default.particleNetWithMass_ZvsQCD,
+            "fatjet1_default_particleNet_QCD_nominal": fatjet1_default.particleNet_QCD,
+            "fatjet1_default_particleNet_XbbVsQCD_nominal": fatjet1_default.particleNet_XbbVsQCD,
+            "fatjet1_default_particleNet_XccVsQCD_nominal": fatjet1_default.particleNet_XccVsQCD,
+            "fatjet1_default_particleNet_XggVsQCD_nominal": fatjet1_default.particleNet_XggVsQCD,
+            "fatjet1_default_particleNet_XqqVsQCD_nominal": fatjet1_default.particleNet_XqqVsQCD,
+            "fatjet1_default_particleNet_massCorr_nominal": fatjet1_default.particleNet_massCorr
         }
         if is_mc:
             mc_dict = {
@@ -1483,8 +1515,6 @@ class EventProcessor(processor.ProcessorABC):
 
         out_dict.update(region_dict)
 
-
-
         # b4 we do any filtering, we obtain the sum of gen weights for normalization
         # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
 
@@ -1510,7 +1540,6 @@ class EventProcessor(processor.ProcessorABC):
             # logger.info(f"zpt_weight_mine_nbins100: {type(zpt_weight_mine_nbins100)}")
             # logger.info(f"zpt_weight_mine_nbins100: {(zpt_weight_mine_nbins100)}")
 
-
             # calibration = correction.evaluate(mu1.pt, abs(mu1.eta), abs(mu2.eta))
             #
             # correction_set = correctionlib.CorrectionSet.from_file("/depot/cms/private/users/shar1172/copperheadV2_CheckSetup/data/zpt_rewgt/fitting_mu1mu2pt/sf_data_correctionlib.json")
@@ -1522,7 +1551,6 @@ class EventProcessor(processor.ProcessorABC):
             # logger.info(f"zpt_weight: {zpt_weight}")
 
             # logger.info( f"zpt_weight_mine_nbins100 after new sf_dict: {zpt_weight_mine_nbins100.compute()}")
-
 
             zpt_weight = zpt_weight_mine_nbins100
             weights.add("zpt_wgt",
@@ -1583,7 +1611,7 @@ class EventProcessor(processor.ProcessorABC):
             required_selections = ['TotalEntries', 'HLT_filter', 'lumi_mask', 'event_quality_flags',
                                'muon_pT_roch', 'muon_eta', 'muon_id', 'muon_isGlobal_or_Tracker', 'muon_selection', 'muon_iso', 'nmuons',
                                 'mm_charge', 'electron_veto', 'HemVeto']
-                                # , weights=weights, weightsmodifier=None) # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
+            # , weights=weights, weightsmodifier=None) # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
             self.cutflow = self.selection.cutflow(*required_selections)
             logger.info(f"cutflow: {self.cutflow}")
             logger.info(f"self.cutflow.logger.info(): {self.cutflow.print()}")
@@ -1601,14 +1629,13 @@ class EventProcessor(processor.ProcessorABC):
         logger.info(f"postprocess: {accumulator}")
         return accumulator
 
-
     def get_mass_resolution(self, dimuon, mu1,mu2, is_mc:bool, doing_BS_correction=False, test_mode=False):
         # Returns absolute mass resolution!
         muon_E = dimuon.mass /2
         dpt1 = (mu1.ptErr / mu1.pt) * muon_E
         dpt2 = (mu2.ptErr / mu2.pt) * muon_E
-        if test_mode:
-            logger.info(f"muons mass_resolution dpt1: {dpt1}")
+        logger.debug(f"muons mass_resolution dpt1: {dpt1}")
+
         year = self.config["year"]
         if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
             yearUL = "2016"
@@ -1625,7 +1652,6 @@ class EventProcessor(processor.ProcessorABC):
             # Load the correction set
             json_path = self.config["BS_res_calib_path"]["MC"] if is_mc else self.config["BS_res_calib_path"]["Data"]
             correction_set = correctionlib.CorrectionSet.from_file(json_path)
-
 
             # Access the specific correction by name
             correction = correction_set["BS_ebe_mass_res_calibration"]
@@ -1672,30 +1698,27 @@ class EventProcessor(processor.ProcessorABC):
 
         return
 
-
     # def prepare_lookups(self):
-        # JEC, JER and uncertainties
-        # self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
-        #     self.config["jec_parameters"],
-        #     self.year
-        # )
+    # JEC, JER and uncertainties
+    # self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
+    #     self.config["jec_parameters"],
+    #     self.year
+    # )
 
-        # # Muon scale factors
-        # self.musf_lookup = musf_lookup(self.parameters)
-        # # Pile-up reweighting
-        # #self.pu_lookups = pu_lookups(self.parameters)
-        # # Btag weights
-        # #self.btag_csv = BTagScaleFactor(
-        #     #self.parameters["btag_sf_csv"],
-        #     #BTagScaleFactor.RESHAPE,
-        #     #"iterativefit,iterativefit,iterativefit",
-        # #)
-        # self.btag_json =  correctionlib.CorrectionSet.from_file(self.parameters["btag_sf_json"],)
+    # # Muon scale factors
+    # self.musf_lookup = musf_lookup(self.parameters)
+    # # Pile-up reweighting
+    # #self.pu_lookups = pu_lookups(self.parameters)
+    # # Btag weights
+    # #self.btag_csv = BTagScaleFactor(
+    #     #self.parameters["btag_sf_csv"],
+    #     #BTagScaleFactor.RESHAPE,
+    #     #"iterativefit,iterativefit,iterativefit",
+    # #)
+    # self.btag_json =  correctionlib.CorrectionSet.from_file(self.parameters["btag_sf_json"],)
 
-        # # STXS VBF cross-section uncertainty
-        # self.stxs_acc_lookups, self.powheg_xsec_lookup = stxs_lookups()
-
-
+    # # STXS VBF cross-section uncertainty
+    # self.stxs_acc_lookups, self.powheg_xsec_lookup = stxs_lookups()
 
     def jet_loop(
         self,
@@ -1731,7 +1754,6 @@ class EventProcessor(processor.ProcessorABC):
         # logger.info(f"jets.matched_muons: {jets.matched_muons.compute()}")
         # AN-19-124 line 465: "Jets are also cleaned w.r.t. the selected muon candidates by requiring a geometrical separation of ∆R ( j, µ ) > 0.4"
 
-
         # --------------------------------------
         # matched_mu_pass = ( # apply the same muon selection condition from before
         #     (matched_mu_pt > self.config["muon_pt_cut"])
@@ -1747,7 +1769,6 @@ class EventProcessor(processor.ProcessorABC):
         # # # logger.info(f"clean: {clean.compute()}")
         # # # logger.info(f"jets: {jets.compute()}")
         # --------------------------------------
-
 
         # apply clean jet selection
         # mu1_jet_dR = jets.delta_r(mu1[:, np.newaxis])
@@ -1829,7 +1850,6 @@ class EventProcessor(processor.ProcessorABC):
         #     else:
         #         jets = jets
 
-
         # if variation == "nominal":
         #     # Update pt and mass if JEC was applied
         #     if do_jec:
@@ -1882,7 +1902,6 @@ class EventProcessor(processor.ProcessorABC):
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
 
-
         # jets = jets[jet_selection] # this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
         jets = jets[jet_selection]
         # jets = ak.to_layout(jets)
@@ -1896,10 +1915,6 @@ class EventProcessor(processor.ProcessorABC):
                     weight=jetpuid_weight,
             )
 
-
-
-
-
         # jets = ak.where(jet_selection, jets, None)
         # muons = events.Muon
         njets = ak.num(jets, axis=1)
@@ -1912,7 +1927,6 @@ class EventProcessor(processor.ProcessorABC):
         jet2 = padded_jets[:,1]
 
         dijet = jet1+jet2
-
 
         # jet1_4D_vec = ak.zip({"x":jet1.x, "y":jet1.y, "z":jet1.z, "E":jet1.E}, with_name="Momentum4D")
         # jet2_4D_vec = ak.zip({"x":jet2.x, "y":jet2.y, "z":jet2.z, "E":jet2.E}, with_name="Momentum4D")
@@ -2062,7 +2076,6 @@ class EventProcessor(processor.ProcessorABC):
         jet_loop_out_dict.update(sj_dict)
         jet_loop_out_dict.update(sj_dict_HIG19006)
 
-
         # ------------------------------------------------------------#
         # Apply remaining cuts
         # ------------------------------------------------------------#
@@ -2079,7 +2092,7 @@ class EventProcessor(processor.ProcessorABC):
         # # Calculate QGL weights, btag SF and apply btag veto
         # # ------------------------------------------------------------#
         if is_mc and (variation == "nominal"):
-        #     # --- QGL weights  start --- #
+            # --- QGL weights  start --- #
             isHerwig = "herwig" in dataset
             logger.debug("adding QGL weights!")
 
@@ -2093,10 +2106,9 @@ class EventProcessor(processor.ProcessorABC):
                         weightDown=qgl_wgts["down"]
             )
 
-        #     # --- QGL weights  end --- #
+            #     # --- QGL weights  end --- #
 
-
-        #     # # --- Btag weights  start--- #
+            #     # # --- Btag weights  start--- #
             do_btag_wgt = True # True
             if NanoAODv ==12:
                 do_btag_wgt = False # temporary condition
@@ -2105,7 +2117,7 @@ class EventProcessor(processor.ProcessorABC):
                 bjet_sel_mask = ak.ones_like(njets) #& two_jets & vbf_cut
                 btag_systs = self.config["btag_systs"] #if do_btag_syst else []
                 if "RERECO" in year:
-                # if True:
+                    # if True:
                     btag_json = BTagScaleFactor(
                     self.config["btag_sf_csv"],
                     BTagScaleFactor.RESHAPE,
@@ -2123,7 +2135,7 @@ class EventProcessor(processor.ProcessorABC):
                 weights.add("btag_wgt",
                         weight=btag_wgt,
                 )
-                 # --- Btag weights variations --- #
+                # --- Btag weights variations --- #
                 for name, bs in btag_syst.items():
                     logger.info(f"{name} value: {bs}")
                     weights.add(f"btag_wgt_{name}",
@@ -2137,7 +2149,6 @@ class EventProcessor(processor.ProcessorABC):
                 # logger.info(f"btag_syst['jes_up']: {ak.to_numpy(btag_syst['jes']['up'].compute())}")
                 # logger.info(f"btag_syst['jes_down']: {ak.to_numpy(btag_syst['jes']['down'].compute())}")
             # # --- Btag weights end --- #
-
 
             # logger.info(f"weight nom b4 adding btag: {ak.to_numpy(weights.weight().compute())}")
             # adding btag wgt directly to weights doesn't work, this may
@@ -2188,18 +2199,16 @@ class EventProcessor(processor.ProcessorABC):
         }
         jet_loop_out_dict.update(temp_out_dict)
 
-
-
         # --------------------------------------------------------------#
         # Fill outputs
         # --------------------------------------------------------------#
 
         # variables.update({"wgt_nominal": weights.get_weight("nominal")})
 
-    #     # All variables are affected by jet pT because of jet selections:
-    #     # a jet may or may not be selected depending on pT variation.
+        # All variables are affected by jet pT because of jet selections:
+        # a jet may or may not be selected depending on pT variation.
 
-    #     for key, val in variables.items():
-    #         output.loc[:, pd.IndexSlice[key, variation]] = val
+        #     for key, val in variables.items():
+        #         output.loc[:, pd.IndexSlice[key, variation]] = val
 
         return jet_loop_out_dict
