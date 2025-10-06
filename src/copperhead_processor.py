@@ -1103,6 +1103,10 @@ class EventProcessor(processor.ProcessorABC):
         # pre-selection for fatjets
         # add pre-selection for fatjets before saving the information: pT > 150 GeV and |eta| < 2.4 and pass the tight jet ID, dR(j, muons) > 0.8, FatJet_particleNetWithMass_WvsQCD > 0.75
         # Save the number of fat jets that passes this conditions
+        # print first 5 events, fatjet pT
+        # logger.warning(f"Number of fatjets (before selection): {nfatJets[:25].compute()}")
+        # logger.warning(f"FatJet pT (before selection): {fatJets.pt[:25].compute()}")
+
         fatjet_selection = (
             (fatJets.pt > 150)
             & (abs(fatJets.eta) < 2.4)
@@ -1111,16 +1115,29 @@ class EventProcessor(processor.ProcessorABC):
         )
         fatJets = fatJets[fatjet_selection]
         nfatJets_pre = ak.num(fatJets, axis=1)
+        # logger.warning(f"Number of fatjets (after selection): {nfatJets_pre[:25].compute()}")
+        # logger.warning(f"FatJet pT (after pre-selection): {fatJets.pt[:25].compute()}")
 
         # if nfatJets_pre > 0, we apply the dR(jet, muon) > 0.8 cut and save the number of fatjets that passes this
         # here muons are mu1 and mu2, as defined above
-        fatjet_default = ak.pad_none(fatJets, target=1) # pad to ensure we have at least one fatjet in each event
-        fatjet1_default = fatjet_default[:,0]
-        dr_fatjet1_mu1 = fatjet1_default.delta_r(mu1)
-        dr_fatjet1_mu2 = fatjet1_default.delta_r(mu2)
-        fatjet1_drmuon = (dr_fatjet1_mu1 > 0.8) & (dr_fatjet1_mu2 > 0.8)
-        fatJets = fatJets[fatjet1_drmuon]
+        fatJets_dRmu1 = fatJets.delta_r(mu1)
+        fatJets_dRmu2 = fatJets.delta_r(mu2)
+        fatJets_dRmu1 = ak.fill_none(fatJets_dRmu1, 999) # if there's no fatjet, set dR to a large number, set it to +999 as later I am checking min of the two numbers. So, set it to large +ve number
+        fatJets_dRmu2 = ak.fill_none(fatJets_dRmu2, 999)
+        fatJets_dRmu = np.minimum(fatJets_dRmu1, fatJets_dRmu2)
+
+        # logger.warning(f"dR(jet, mu1) (before dR cut): {fatJets_dRmu1[:25].compute()}")
+        # logger.warning(f"dR(jet, mu2) (before dR cut): {fatJets_dRmu2[:25].compute()}")
+        # logger.warning(f"mininum dR(jet, muon) (before dR cut): {fatJets_dRmu[:25].compute()}")
+
+        fatJets = fatJets[fatJets_dRmu > 0.8]
         nfatJets_drmuon = ak.num(fatJets, axis=1)
+        # logger.warning(f"FatJet pT (after dR(jet, muon) > 0.8 cut): {fatJets.pt[:25].compute()}")
+        # logger.warning(f"Number of fatjets (after dR(jet, muon) > 0.8 cut): {nfatJets_drmuon[:25].compute()}")
+
+        # keep only the leading fatjet after all the selections above
+        fatJets_default = ak.pad_none(fatJets, target=1)
+        fatJet1_default = fatJets_default[:, 0]
 
         if do_jec: # old method
             if is_mc:
@@ -1411,35 +1428,36 @@ class EventProcessor(processor.ProcessorABC):
             "nfatJets": nfatJets,
             "nfatJets_pre": nfatJets_pre,
             "nfatJets_drmuon": nfatJets_drmuon,
+            # "fatjets_dRmu_gt0p8": fatJets_dRmu,
 
 
             # add fatjet1 default kinematics
-            "fatjet1_default_pt_nominal": fatjet1_default.pt,
-            "fatjet1_default_eta_nominal": fatjet1_default.eta,
-            "fatjet1_default_phi_nominal": fatjet1_default.phi,
-            "fatjet1_default_mass_nominal": fatjet1_default.mass,
-            "fatjet1_default_jetId_nominal": fatjet1_default.jetId,
-            "fatjet1_default_msoftdrop_nominal": fatjet1_default.msoftdrop,
-            "fatjet1_default_electronIdx3SJ_nominal": fatjet1_default.electronIdx3SJ,
-            "fatjet1_default_nConstituents_nominal": fatjet1_default.nConstituents,
-            "fatjet1_default_tau1_nominal": fatjet1_default.tau1,
-            "fatjet1_default_tau2_nominal": fatjet1_default.tau2,
-            "fatjet1_default_tau3_nominal": fatjet1_default.tau3,
-            "fatjet1_default_tau4_nominal": fatjet1_default.tau4,
-            "fatjet1_default_btagDDBvLV2_nominal": fatjet1_default.btagDDBvLV2,
-            "fatjet1_default_btagDDCvBV2_nominal": fatjet1_default.btagDDCvBV2,
-            "fatjet1_default_btagDDCvLV2_nominal": fatjet1_default.btagDDCvLV2,
-            "fatjet1_default_btagDeepB_nominal": fatjet1_default.btagDeepB,
-            "fatjet1_default_btagHbb_nominal": fatjet1_default.btagHbb,
-            "fatjet1_default_particleNetWithMass_QCD_nominal": fatjet1_default.particleNetWithMass_QCD,
-            "fatjet1_default_particleNetWithMass_WvsQCD_nominal": fatjet1_default.particleNetWithMass_WvsQCD,
-            "fatjet1_default_particleNetWithMass_ZvsQCD_nominal": fatjet1_default.particleNetWithMass_ZvsQCD,
-            "fatjet1_default_particleNet_QCD_nominal": fatjet1_default.particleNet_QCD,
-            "fatjet1_default_particleNet_XbbVsQCD_nominal": fatjet1_default.particleNet_XbbVsQCD,
-            "fatjet1_default_particleNet_XccVsQCD_nominal": fatjet1_default.particleNet_XccVsQCD,
-            "fatjet1_default_particleNet_XggVsQCD_nominal": fatjet1_default.particleNet_XggVsQCD,
-            "fatjet1_default_particleNet_XqqVsQCD_nominal": fatjet1_default.particleNet_XqqVsQCD,
-            "fatjet1_default_particleNet_massCorr_nominal": fatjet1_default.particleNet_massCorr
+            "fatJet1_default_pt_nominal": fatJet1_default.pt,
+            "fatJet1_default_eta_nominal": fatJet1_default.eta,
+            "fatJet1_default_phi_nominal": fatJet1_default.phi,
+            "fatJet1_default_mass_nominal": fatJet1_default.mass,
+            "fatJet1_default_jetId_nominal": fatJet1_default.jetId,
+            "fatJet1_default_msoftdrop_nominal": fatJet1_default.msoftdrop,
+            "fatJet1_default_electronIdx3SJ_nominal": fatJet1_default.electronIdx3SJ,
+            "fatJet1_default_nConstituents_nominal": fatJet1_default.nConstituents,
+            "fatJet1_default_tau1_nominal": fatJet1_default.tau1,
+            "fatJet1_default_tau2_nominal": fatJet1_default.tau2,
+            "fatJet1_default_tau3_nominal": fatJet1_default.tau3,
+            "fatJet1_default_tau4_nominal": fatJet1_default.tau4,
+            "fatJet1_default_btagDDBvLV2_nominal": fatJet1_default.btagDDBvLV2,
+            "fatJet1_default_btagDDCvBV2_nominal": fatJet1_default.btagDDCvBV2,
+            "fatJet1_default_btagDDCvLV2_nominal": fatJet1_default.btagDDCvLV2,
+            "fatJet1_default_btagDeepB_nominal": fatJet1_default.btagDeepB,
+            "fatJet1_default_btagHbb_nominal": fatJet1_default.btagHbb,
+            "fatJet1_default_particleNetWithMass_QCD_nominal": fatJet1_default.particleNetWithMass_QCD,
+            "fatJet1_default_particleNetWithMass_WvsQCD_nominal": fatJet1_default.particleNetWithMass_WvsQCD,
+            "fatJet1_default_particleNetWithMass_ZvsQCD_nominal": fatJet1_default.particleNetWithMass_ZvsQCD,
+            "fatJet1_default_particleNet_QCD_nominal": fatJet1_default.particleNet_QCD,
+            "fatJet1_default_particleNet_XbbVsQCD_nominal": fatJet1_default.particleNet_XbbVsQCD,
+            "fatJet1_default_particleNet_XccVsQCD_nominal": fatJet1_default.particleNet_XccVsQCD,
+            "fatJet1_default_particleNet_XggVsQCD_nominal": fatJet1_default.particleNet_XggVsQCD,
+            "fatJet1_default_particleNet_XqqVsQCD_nominal": fatJet1_default.particleNet_XqqVsQCD,
+            "fatJet1_default_particleNet_massCorr_nominal": fatJet1_default.particleNet_massCorr
         }
         if is_mc:
             mc_dict = {
