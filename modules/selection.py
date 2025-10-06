@@ -239,6 +239,12 @@ def applyRegionCatCuts(
         # prod_cat_cut = prod_cat_cut & ak.fill_none(events[f"jet1_pt_{variation}"] > 35, value=False)
 
     else:  # VBF or ggH
+        prod_cat_cut = ak.ones_like(region, dtype="bool")
+        # fatjet and MET veto for VH: nfatJets_drmuon == 0 and MET_pt < 150 GeV
+        fatjet_veto = ak.fill_none((events.nfatJets_drmuon == 0), value=False)
+        met_veto = ak.fill_none((events.MET_pt < 150), value=False)
+        prod_cat_cut = prod_cat_cut & fatjet_veto & met_veto
+        # btag cut for VH and ttH categories
         btagLoose_filter = ak.fill_none((nbt_loose >= 2), value=False)
         btagMedium_filter = ak.fill_none((nbt_medium >= 1), value=False) & ak.fill_none((njets >= 2), value=False)
         btag_cut = btagLoose_filter | btagMedium_filter
@@ -247,13 +253,13 @@ def applyRegionCatCuts(
         vbf_cut = ak.fill_none(vbf_cut, value=False)
         if category == "vbf":
             # print("vbf mode!")
-            prod_cat_cut = vbf_cut
+            prod_cat_cut = prod_cat_cut & vbf_cut
             prod_cat_cut = (
                 prod_cat_cut & (~btag_cut)
             )  # btag cut is for VH and ttH categories
         elif category == "ggh":
             # print("ggH mode!")
-            prod_cat_cut = ~vbf_cut
+            prod_cat_cut = prod_cat_cut & ~vbf_cut
             prod_cat_cut = (
                 prod_cat_cut & (~btag_cut)
             )  # btag cut is for VH and ttH categories
