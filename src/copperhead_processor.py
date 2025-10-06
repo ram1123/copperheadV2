@@ -1095,9 +1095,11 @@ class EventProcessor(processor.ProcessorABC):
         # cache = events.caches[0]
         factory = None
         useclib = False
-        jet_default = ak.pad_none(jets, target=2) # save pre jec and jer Jet for comparison
+        jet_default = ak.pad_none(jets, target=4) # save pre jec and jer Jet for comparison
         jet1_default = jet_default[:, 0]
         jet2_default = jet_default[:, 1]
+        jet3_default = jet_default[:, 2]
+        jet4_default = jet_default[:, 3]
 
         # -----------------------------------------------------
         # pre-selection for fatjets
@@ -1422,8 +1424,20 @@ class EventProcessor(processor.ProcessorABC):
             # add jet default kinematics here
             "jet1_default_pt_nominal": jet1_default.pt,
             "jet1_default_eta_nominal": jet1_default.eta,
+            "jet1_default_phi_nominal": jet1_default.phi,
+            "jet1_default_mass_nominal": jet1_default.mass,
             "jet2_default_pt_nominal": jet2_default.pt,
             "jet2_default_eta_nominal": jet2_default.eta,
+            "jet2_default_phi_nominal": jet2_default.phi,
+            "jet2_default_mass_nominal": jet2_default.mass,
+            "jet3_default_pt_nominal": jet3_default.pt,
+            "jet3_default_eta_nominal": jet3_default.eta,
+            "jet3_default_phi_nominal": jet3_default.phi,
+            "jet3_default_mass_nominal": jet3_default.mass,
+            "jet4_default_pt_nominal": jet4_default.pt,
+            "jet4_default_eta_nominal": jet4_default.eta,
+            "jet4_default_phi_nominal": jet4_default.phi,
+            "jet4_default_mass_nominal": jet4_default.mass,
 
             "nfatJets": nfatJets,
             "nfatJets_pre": nfatJets_pre,
