@@ -25,3 +25,4 @@ log*.txt
 *.pcm
 *.d
 *.bak
+*.tsv

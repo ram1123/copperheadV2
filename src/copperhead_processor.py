@@ -1953,9 +1953,11 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Fill jet-related variables
         # ------------------------------------------------------------#
-        padded_jets = ak.pad_none(jets, target=2) # padd jets
+        padded_jets = ak.pad_none(jets, target=4) # padd jets
         jet1 = padded_jets[:,0]
         jet2 = padded_jets[:,1]
+        jet3 = padded_jets[:,2]
+        jet4 = padded_jets[:,3]
 
         dijet = jet1+jet2
 
@@ -1992,6 +1994,8 @@ class EventProcessor(processor.ProcessorABC):
         dimuon_rapidity = getRapidity(dimuon)
         jet1_rapidity = getRapidity(jet1)
         jet2_rapidity = getRapidity(jet2)
+        jet3_rapidity = getRapidity(jet3)
+        jet4_rapidity = getRapidity(jet4)
         zeppenfeld = dimuon_rapidity - 0.5 * (jet1_rapidity + jet2_rapidity)
         zeppenfeld = zeppenfeld / np.abs(jet1_rapidity - jet2_rapidity)
         mmjj = dimuon + dijet
@@ -2007,54 +2011,79 @@ class EventProcessor(processor.ProcessorABC):
         # pt_centrality = pt_centrality / j12_subtract_pt
 
         jet_loop_out_dict = {
-            f"jet1_pt_{variation}" : jet1.pt,
-            f"jet1_eta_{variation}" : jet1.eta,
-            f"jet1_rapidity_{variation}" : jet1_rapidity,  # max rel err: 0.7394
-            f"jet1_phi_{variation}" : jet1.phi,
-            f"jet1_qgl_{variation}" : jet1.qgl, # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
-            f"jet1_btagPNetQvG_{variation}" : jet1.btagPNetQvG,
-            f"jet1_btagDeepFlavQG_{variation}" : jet1.btagDeepFlavQG,
-            f"jet1_jetId_{variation}" : jet1.jetId,
-            f"jet1_puId_{variation}" : jet1.puId,
-            f"jet2_pt_{variation}" : jet2.pt,
-            f"jet2_eta_{variation}" : jet2.eta,
-            f"jet1_mass_{variation}" : jet1.mass,
-            f"jet2_mass_{variation}" : jet2.mass,
-            f"jet1_area_{variation}" : jet1.area,
-            f"jet2_area_{variation}" : jet2.area,
-            #-------------------------
-            f"jet2_rapidity_{variation}" : jet2_rapidity,  # max rel err: 0.781
-            f"jet2_phi_{variation}" : jet2.phi,
-            f"jet2_qgl_{variation}" : jet2.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
-            f"jet1_btagPNetQvG_{variation}" : jet1.btagPNetQvG,
-            f"jet1_btagDeepFlavQG_{variation}" : jet1.btagDeepFlavQG,
-            f"jet2_jetId_{variation}" : jet2.jetId,
-            f"jet2_puId_{variation}" : jet2.puId,
-            f"jj_mass_{variation}" : dijet.mass,
+            f"jet1_pt_{variation}": jet1.pt,
+            f"jet1_eta_{variation}": jet1.eta,
+            f"jet1_rapidity_{variation}": jet1_rapidity,  # max rel err: 0.7394
+            f"jet1_phi_{variation}": jet1.phi,
+            f"jet1_qgl_{variation}": jet1.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
+            f"jet1_btagPNetQvG_{variation}": jet1.btagPNetQvG,
+            f"jet1_btagDeepFlavQG_{variation}": jet1.btagDeepFlavQG,
+            f"jet1_jetId_{variation}": jet1.jetId,
+            f"jet1_puId_{variation}": jet1.puId,
+            f"jet1_mass_{variation}": jet1.mass,
+            f"jet1_area_{variation}": jet1.area,
+            # -------------------------
+            f"jet2_pt_{variation}": jet2.pt,
+            f"jet2_eta_{variation}": jet2.eta,
+            f"jet2_rapidity_{variation}": jet2_rapidity,  # max rel err: 0.781
+            f"jet2_phi_{variation}": jet2.phi,
+            f"jet2_qgl_{variation}": jet2.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
+            f"jet2_btagPNetQvG_{variation}": jet2.btagPNetQvG,
+            f"jet2_btagDeepFlavQG_{variation}": jet2.btagDeepFlavQG,
+            f"jet2_jetId_{variation}": jet2.jetId,
+            f"jet2_puId_{variation}": jet2.puId,
+            f"jet2_mass_{variation}": jet2.mass,
+            f"jet2_area_{variation}": jet2.area,
+            # -------------------------
+            f"jet3_pt_{variation}": jet3.pt,
+            f"jet3_eta_{variation}": jet3.eta,
+            f"jet3_rapidity_{variation}": jet3_rapidity,  # max rel err: 0.781
+            f"jet3_phi_{variation}": jet3.phi,
+            f"jet3_qgl_{variation}": jet3.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
+            f"jet3_btagPNetQvG_{variation}": jet3.btagPNetQvG,
+            f"jet3_btagDeepFlavQG_{variation}": jet3.btagDeepFlavQG,
+            f"jet3_jetId_{variation}": jet3.jetId,
+            f"jet3_puId_{variation}": jet3.puId,
+            f"jet3_mass_{variation}": jet3.mass,
+            f"jet3_area_{variation}": jet3.area,
+            # -------------------------
+            f"jet4_pt_{variation}": jet4.pt,
+            f"jet4_eta_{variation}": jet4.eta,
+            f"jet4_rapidity_{variation}": jet4_rapidity,  # max rel err: 0.781
+            f"jet4_phi_{variation}": jet4.phi,
+            f"jet4_qgl_{variation}": jet4.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
+            f"jet4_btagPNetQvG_{variation}": jet4.btagPNetQvG,
+            f"jet4_btagDeepFlavQG_{variation}": jet4.btagDeepFlavQG,
+            f"jet4_jetId_{variation}": jet4.jetId,
+            f"jet4_puId_{variation}": jet4.puId,
+            f"jet4_mass_{variation}": jet4.mass,
+            f"jet4_area_{variation}": jet4.area,
+            # -------------------------
+            f"jj_mass_{variation}": dijet.mass,
             # f"jj_mass_{variation}" : p4_sum_mass(jet1,jet2),
-            f'jj_mass_log_{variation}': np.log(dijet.mass),
-            f"jj_pt_{variation}" : dijet.pt,
-            f"jj_eta_{variation}" : dijet.eta,
-            f"jj_phi_{variation}" : dijet.phi,
-            f"jj_dEta_{variation}" : jj_dEta,
-            f"jj_dPhi_{variation}":  jj_dPhi,
-            f"mmj1_dEta_{variation}" : mmj1_dEta,
-            f"mmj1_dPhi_{variation}" : mmj1_dPhi,
-            f"mmj1_dR_{variation}" : mmj1_dR,
-            f"mmj2_dEta_{variation}" : mmj2_dEta,
-            f"mmj2_dPhi_{variation}" : mmj2_dPhi,
-            f"mmj2_dR_{variation}" : mmj2_dR,
-            f"mmj_min_dEta_{variation}" : mmj_min_dEta,
-            f"mmj_min_dPhi_{variation}" : mmj_min_dPhi,
-            f"mmjj_pt_{variation}" : mmjj.pt,
-            f"mmjj_eta_{variation}" : mmjj.eta,
-            f"mmjj_phi_{variation}" : mmjj.phi,
-            f"mmjj_mass_{variation}" : mmjj.mass,
-            f"rpt_{variation}" : rpt,
-            f"pt_centrality_{variation}" : pt_centrality,
-            f"zeppenfeld_{variation}" : zeppenfeld,
-            f"ll_zstar_log_{variation}" : np.log(np.abs(zeppenfeld)),
-            f"njets_{variation}" : njets,
+            f"jj_mass_log_{variation}": np.log(dijet.mass),
+            f"jj_pt_{variation}": dijet.pt,
+            f"jj_eta_{variation}": dijet.eta,
+            f"jj_phi_{variation}": dijet.phi,
+            f"jj_dEta_{variation}": jj_dEta,
+            f"jj_dPhi_{variation}": jj_dPhi,
+            f"mmj1_dEta_{variation}": mmj1_dEta,
+            f"mmj1_dPhi_{variation}": mmj1_dPhi,
+            f"mmj1_dR_{variation}": mmj1_dR,
+            f"mmj2_dEta_{variation}": mmj2_dEta,
+            f"mmj2_dPhi_{variation}": mmj2_dPhi,
+            f"mmj2_dR_{variation}": mmj2_dR,
+            f"mmj_min_dEta_{variation}": mmj_min_dEta,
+            f"mmj_min_dPhi_{variation}": mmj_min_dPhi,
+            f"mmjj_pt_{variation}": mmjj.pt,
+            f"mmjj_eta_{variation}": mmjj.eta,
+            f"mmjj_phi_{variation}": mmjj.phi,
+            f"mmjj_mass_{variation}": mmjj.mass,
+            f"rpt_{variation}": rpt,
+            f"pt_centrality_{variation}": pt_centrality,
+            f"zeppenfeld_{variation}": zeppenfeld,
+            f"ll_zstar_log_{variation}": np.log(np.abs(zeppenfeld)),
+            f"njets_{variation}": njets,
         }
         if is_mc and (variation == "nominal"):
             nominal_dict = {

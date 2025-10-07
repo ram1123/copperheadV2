@@ -480,7 +480,7 @@ if __name__ == "__main__":
         # if output pkl file already exists, skip
         output_pkl_path = f"{hist_save_path}/{sample_type}_hist.pkl"
         if os.path.exists(output_pkl_path):
-            logger.info(f"Output pkl file {output_pkl_path} already exists. Skipping {sample_type}.")
+            logger.warning(f"Output pkl file {output_pkl_path} already exists. Skipping {sample_type}.")
             continue
 
         logger.info(f"Processing sample type: {sample_type}, number of files: {len(sample_l)}")

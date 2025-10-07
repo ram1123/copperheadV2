@@ -279,7 +279,7 @@ if __name__ == "__main__":
             logger.info(f"gateway: {gateway}")
             logger.info(f"gateway list clusters: {gateway.list_clusters()}")
 
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+            cluster_info = gateway.list_clusters()[-1]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug(f"client: {client}")
             logger.info("Gateway Client created")
@@ -325,9 +325,9 @@ if __name__ == "__main__":
                 # if dataset in ["ggh_amcPS", "ggh_powhegPS"]: # FIXME: temporary line to skip some datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue
-                # if "dy_VBF_filter" in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
-                #     logger.warning(f"Skipping dataset: {dataset}")
-                #     continue
+                # if "data_B" in dataset or "data_C" in dataset or "data_D" in dataset or "data_F" in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
+                    # logger.warning(f"Skipping dataset: {dataset}")
+                    # continue
                 # if "data_" in dataset or "Data" in dataset or "dy_" in dataset: # FIXME: temporary line to skip data datasets for which we already have stage1 output
                 #     logger.warning(f"Skipping dataset: {dataset}")
                 #     continue

@@ -1,3 +1,19 @@
+# 06 October 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l Run2_nanoAODv12_AK8jets -p HPScan_03Sep_17bins -y "2018" -m 0 -k -d 1) 2>&1 | tee Run2_nanoAODv12_AK8jets_stage1_2018_MC.log
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l Run2_nanoAODv12_AK8jets -p HPScan_03Sep_17bins -y "2018" -m all -k) 2>&1 | tee Run2_nanoAODv12_AK8jets_stage01_2018_Data.log
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l Run2_nanoAODv12_AK8jets -p HPScan_03Sep_17bins -y "2016postVFP" -m all -k) 2>&1 | tee Run2_nanoAODv12_AK8jets_stage01_2016postVFP_Data.log
+```
+
+# 02 October 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l Run2_nanoAODv12_AK8jets -p HPScan_03Sep_17bins -y "2017" -m 0 -k) 2>&1 | tee Run2_nanoAODv12_AK8jets_stage1_05Oct_data.log
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l Run2_nanoAODv12_AK8jets -p HPScan_03Sep_17bins -y "2017" -m all -k -d 1) 2>&1 | tee Run2_nanoAODv12_AK8jets_stage1_05Oct_all.log
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l Run2_nanoAODv12_AK8jets -p HPScan_03Sep_17bins -y "2017" -m 2 -k ) 2>&1 | tee Run2_nanoAODv12_AK8jets_stage2_05Oct.log
+```
+
 # 23 September 2025
 
 ```bash

@@ -113,7 +113,8 @@ log() { echo "$@" | tee -a "$log_file"; }
 
 # save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
 save_path="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
-mkdir -p "$save_path"
+# save_path="/store/user/rasharma/hmm/copperheadV1clean/$label/"
+
 trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 
 declare -A data_l_dict=(
@@ -128,9 +129,11 @@ declare -A data_l_dict=(
 
 # bkg_l="DY TT ST VV EWK VVV"
 bkg_l="DY Top VV EWK VVV"
+# bkg_l=""
 
 # sig_l="VBF"
 sig_l="Higgs"
+# sig_l=""
 
 if [[ "$debug" -ge 1 ]]; then
     log "Debug mode ON "
@@ -140,10 +143,11 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
 
-    bkg_l="DY"
+    bkg_l="DY Top VV EWK VVV"
+    # bkg_l="Top"
+
+    sig_l="Higgs"
     # sig_l=""
-    sig_l=""
-    # sig_l="VBF"
 fi
 
 chunksize=300000
@@ -180,9 +184,9 @@ for year in "${years[@]}"; do
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len  --isCutflow  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len  "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len  "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --isCutflow "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --rerun "
 
     ### DNN training parameters
     training_fold=3
@@ -210,16 +214,14 @@ for year in "${years[@]}"; do
     fi
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
     command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations  "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
 
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO "
-    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO "
+    command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO "
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_DY012 "
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLOSplitMjj "
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO_NoDYVBF "
-    command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO_NoDYVBF "
+    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO_NoDYVBF "
 
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
     command5="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
