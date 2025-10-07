@@ -143,11 +143,11 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
 
-    bkg_l="DY Top VV EWK VVV"
+    bkg_l="DY"
     # bkg_l="Top"
 
-    sig_l="Higgs"
-    # sig_l=""
+    # sig_l="Higgs"
+    sig_l=""
 fi
 
 chunksize=300000
@@ -271,6 +271,18 @@ for year in "${years[@]}"; do
             log "Running stage2 for year $year..."
             log "Command: $command2"
             eval "$command2"
+            ;;
+        2p)
+            log "Running the validation of stage2 (i.e. data/mc plot for dnn score) for year $year..."
+            region2p="h-sidebands"
+            command2p1="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p}"
+            log "Command: $command2p1"
+            eval "$command2p1"
+
+            region2p="h-peak"
+            command2p2="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p}"
+            log "Command: $command2p2"
+            eval "$command2p2"
             ;;
         3)
             log "Running stage3 for year $year..."

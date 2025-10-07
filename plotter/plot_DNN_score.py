@@ -74,7 +74,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         to_project_setting_val["val_sumw2"] = "value"
         logger.debug(f"to_project_setting_val: {to_project_setting_val}")
         hist_val = sample_hist[to_project_setting_val].view()
-        #------------------------------------------------------
+        # ------------------------------------------------------
         to_project_setting_w2 = to_project_setting.copy()
         to_project_setting_w2["val_sumw2"] = "sumw2"
         hist_w2 = sample_hist[to_project_setting_w2].view()
@@ -88,7 +88,6 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
             "hist_arr" : hist_val,
             "hist_w2_arr": hist_w2
         }
-
 
         if "data" in group_name:
             if region_name != "h-peak":
@@ -106,17 +105,17 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
     logger.info(f"bkg_MC_dict : {bkg_MC_dict}")
     logger.info(f"sig_MC_dict : {sig_MC_dict}")
 
-
     # -------------------------------------------------------
     # All data are prepped, now plot Data/MC histogram
     # -------------------------------------------------------
     # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/{args.label}"
     # logger.info(f"full_save_path: {full_save_path}")
 
-
     if not os.path.exists(full_save_path):
         os.makedirs(full_save_path)
-    full_save_fname = f"{full_save_path}/{var}_{region_name}_UpdatedQGL_FixPUJetIDWgt_Sep19_WithDY012_21bins.pdf"
+    # tag = "Run2_nanoAODv12_AK8jets"
+    dnn_tag = "HPScan_03Sep_17bins"
+    full_save_fname = f"{full_save_path}/{var}_{region_name}_{dnn_tag}.pdf"
     logger.info(f"full_save_fname: {full_save_fname}")
     # raise ValueError
 
@@ -167,9 +166,9 @@ def arrangeHist_bySampleGroup(pickled_hist_dict):
         "data": ["data"],
         "ggH": ["ggh_"],
         "VBF": ["vbf_"],
-        # "DY": ["dy_"],
-        "DYJ01": ["DYJ01"],
-        "DYJ2": ["DYJ2"],
+        "DY": ["dy_"],
+        # "DYJ01": ["DYJ01"],
+        # "DYJ2": ["DYJ2"],
         "Top": ["ttjets", "top"],
         "Ewk": ["ewk"],
         "VV": ["ww_", "wz_"],
@@ -206,12 +205,12 @@ def getPlotVar(var: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-    "-label",
-    "--label",
-    dest="label",
-    default="",
-    action="store",
-    help="label",
+        "-label",
+        "--label",
+        dest="label",
+        default="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar",
+        action="store",
+        help="label",
     )
     parser.add_argument(
     "-cat",
@@ -240,7 +239,7 @@ if __name__ == "__main__":
     parser.add_argument(
     "--mva_name",
     dest="mva_name",
-    default="test",
+    default="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar",
     action="store",
     help="label",
     )
@@ -251,14 +250,6 @@ if __name__ == "__main__":
     default="signal",
     action="store",
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
-    )
-    parser.add_argument(
-    "-lumi",
-    "--lumi",
-    dest="lumi",
-    default="",
-    action="store",
-    help="string value of integrated luminosity to label",
     )
     args = parser.parse_args()
     year = args.year
@@ -289,6 +280,10 @@ if __name__ == "__main__":
     load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016postVFP/"
     load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016preVFP/"
     load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_21bins/2018/"
+
+    # Path with FatJet variables
+    load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_17bins/{year}/"
+
     pickled_filelist = glob.glob(f"{load_path}/*.pkl")
     logger.info(f"load_path : {load_path}")
     # logger.info(f"pickled_hists : {pickled_filelist}")
@@ -320,4 +315,15 @@ if __name__ == "__main__":
     category = args.category
     label = args.label
     full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{label}/"
-    plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_path, region_name, category, do_logscale=True, binning=binning, lumi=args.lumi, status="Private")
+    plotStage2DNN_score(
+        hist_dict_bySampleGroup,
+        var,
+        plot_settings,
+        full_save_path,
+        region_name,
+        category,
+        do_logscale=True,
+        binning=binning,
+        lumi=lumi_val,
+        status="Private",
+    )

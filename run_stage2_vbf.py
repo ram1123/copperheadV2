@@ -258,10 +258,10 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             # "dy_M-100To200",
             # "dy_m105_160_vbf_amc",
             # "dy_M-50",
-            # "dy_M-100To200_MiNNLO",
-            # "dy_M-50_MiNNLO",
-            "dy_M-100To200_aMCatNLO",
-            "dy_M-50_aMCatNLO",
+            "dy_M-100To200_MiNNLO",
+            "dy_M-50_MiNNLO",
+            # "dy_M-100To200_aMCatNLO",
+            # "dy_M-50_aMCatNLO",
             "dy_VBF_filter"
             # "DYJ01",
             # "DYJ2"
