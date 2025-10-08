@@ -31,7 +31,7 @@ EOF
 # ---------- Default values ----------
 datasetYAML="configs/datasets/dataset_nanoAODv12.yaml"
 NanoAODv="12"
-declare -a years=("2018" "2017" "2016postVFP" "2016preVFP")
+declare -a years=("2018" "2017" "2016postVFP" "2016preVFP" "2016" "run2")
 label="Default_nanoAODv9"
 debug="0"
 mode="all"
@@ -120,6 +120,7 @@ trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 declare -A data_l_dict=(
     [2016preVFP]="B C D E F"
     [2016postVFP]="F G H"
+    [2016]="B C D E F G H"
     [2017]="B C D E F"
     [2018]="A B C D"
     [2022preEE]="C D"
@@ -143,6 +144,7 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
 
+    # bkg_l="DY Top VV EWK VVV"
     bkg_l="DY"
     # bkg_l="Top"
 

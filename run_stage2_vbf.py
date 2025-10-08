@@ -273,6 +273,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
         "ST" : [
             "st_tw_top",
             "st_tw_antitop",
+            "st_t_top",
+            "st_t_antitop",
         ],
         "EWK" : [
             "ewk_lljj_mll105_160_ptj0", # herwig
