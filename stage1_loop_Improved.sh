@@ -31,7 +31,7 @@ EOF
 # ---------- Default values ----------
 datasetYAML="configs/datasets/dataset_nanoAODv12.yaml"
 NanoAODv="12"
-declare -a years=("2018" "2017" "2016postVFP" "2016preVFP" "2016" "run2")
+declare -a years=("2018PR" "2018" "2017" "2016postVFP" "2016preVFP" "2016" "run2")
 label="Default_nanoAODv9"
 debug="0"
 mode="all"
@@ -118,6 +118,7 @@ save_path="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
 trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 
 declare -A data_l_dict=(
+    [2018PR]="A"
     [2016preVFP]="B C D E F"
     [2016postVFP]="F G H"
     [2016]="B C D E F G H"
@@ -186,8 +187,8 @@ for year in "${years[@]}"; do
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --isCutflow "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --isCutflow "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --rerun "
 
     ### DNN training parameters
