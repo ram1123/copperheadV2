@@ -216,7 +216,6 @@ def main():
     rows = []
     file_tasks = []
     max_workers = args.max_workers
-    max_workers = 1
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
         for year, group, sample, dataset in iter_datasets_from_yaml(args.yaml):
             base = f"{args.prefix}{dataset}{args.suffix}"
