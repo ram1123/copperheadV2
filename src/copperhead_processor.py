@@ -1950,6 +1950,30 @@ class EventProcessor(processor.ProcessorABC):
         # muons = events.Muon
         njets = ak.num(jets, axis=1)
 
+        # # FIXME: Out of all jets get the two jets with maximum di-jet rapidity gap
+        # # if there are at least two jets
+        # print the pt, eta and phi of the first 3 events for debugging
+        # logger.info(f"Before: jets[:3].pt: {jets[:3].pt.compute()}")
+        # logger.info(f"Before: jets[:3].eta: {jets[:3].eta.compute()}")
+        # logger.info(f"Before: jets[:3].phi: {jets[:3].phi.compute()}")
+
+        # gl_pair = ak.cartesian({"jet1": jets, "jet2": jets}, axis=1, nested=True)
+        # dr_j12 = gl_pair["jet1"].delta_r(gl_pair["jet2"])
+        # # print out the dr_j12 for the first 3 events for debugging
+        # logger.info(f"dr_j12[:3]: {dr_j12[:3].compute()}")
+
+        # # get pair with max dr and then sort them in pt. After that print out the pt, eta and phi of the first 3 events for debugging
+        # gl_pair = gl_pair[dr_j12.argmax(axis=2)]
+        # gl_pair = gl_pair[gl_pair.jet1.pt > gl_pair.jet2.pt]
+        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet1.pt: {gl_pair[:3].jet1.pt.compute()}")
+        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet1.eta: {gl_pair[:3].jet1.eta.compute()}")
+        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet1.phi: {gl_pair[:3].jet1.phi.compute()}")
+        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet2.pt: {gl_pair[:3].jet2.pt.compute()}")
+        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet2.eta: {gl_pair[:3].jet2.eta.compute()}")
+        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet2.phi: {gl_pair[:3].jet2.phi.compute()}")
+        # # print dr of jet1 and jet2 for the first 3 events for debugging
+        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].dr: {gl_pair[:3].jet1.delta_r(gl_pair[:3].jet2).compute()}")
+
         # ------------------------------------------------------------#
         # Fill jet-related variables
         # ------------------------------------------------------------#
