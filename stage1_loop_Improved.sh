@@ -187,7 +187,7 @@ for year in "${years[@]}"; do
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --isCutflow "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --isCutflow --rerun"
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --rerun "
 

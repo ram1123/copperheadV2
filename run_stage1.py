@@ -263,7 +263,10 @@ if __name__ == "__main__":
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
 
-    config = getParametersForYr("./configs/parameters/" , args.year)
+    if "2018" in args.year:
+        yearForConfig = "2018" # use 2018 parameters for 2018PR as well
+
+    config = getParametersForYr("./configs/parameters/" , yearForConfig)
     logger.debug(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
