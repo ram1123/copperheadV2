@@ -243,6 +243,11 @@ if __name__ == "__main__":
         action="store_true",
         help="If true, deletes the existing stage1 output directory and reruns stage1",
     )
+    parser.add_argument(
+        "--skipSamples",
+        action="store_true",
+        help="If true, skips samples listed in configs/skip_stage1_run.py",
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -325,15 +330,10 @@ if __name__ == "__main__":
 
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
-                # if dataset in ["ggh_amcPS", "ggh_powhegPS"]: # FIXME: temporary line to skip some datasets for which we already have stage1 output
-                #     logger.warning(f"Skipping dataset: {dataset}")
-                #     continue
-                # if "data_B" in dataset or "data_C" in dataset or "data_D" in dataset or "data_F" in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
-                    # logger.warning(f"Skipping dataset: {dataset}")
-                    # continue
-                # if "data_" in dataset or "Data" in dataset or "dy_" in dataset: # FIXME: temporary line to skip data datasets for which we already have stage1 output
-                #     logger.warning(f"Skipping dataset: {dataset}")
-                #     continue
+                from configs.skip_stage1_run import samples_to_skip
+                if dataset in samples_to_skip and args.skipSamples:
+                    logger.warning(f"Skipping dataset as per configs/skip_stage1_run.py: {dataset}")
+                    continue
                 sample_step = time.time()
                 # dict to hold file lenght info per sample
                 dict_file_length = {
@@ -354,8 +354,6 @@ if __name__ == "__main__":
                 logger.info(f"max_file_len: {args.max_file_len}")
                 logger.info(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    # if idx < 50 or idx > 51: continue # for testing purposes
-                    # if idx < 7: continue
                     logger.info(f"Processing {dataset} file index {idx}")
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
@@ -382,23 +380,12 @@ if __name__ == "__main__":
                     t3 = time.perf_counter()
                     logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
 
-                    # DOC:
-                    #   1. Dibosons with 256 partitions,
-                    #   2. EWK failed with 256 partitions, trying 512 partitions for ewk
-                    npartitions = 1024
-                    # if "ewk_lljj" in dataset or "www" in dataset:
-                        # npartitions = 512
-                    # logger.info(f"Repartitioning to {npartitions} partitions")
-                    # to_persist = to_persist.repartition(npartitions=npartitions)
-                    t4 = time.perf_counter()
-                    # logger.info(f"[Timing] Time taken to repartition to {npartitions} partitions: {round(t4 - t3, 3)} seconds")
 
                     # persist and save to parquet
                     to_persist = to_persist.persist()
                     to_persist.to_parquet(save_path)
-                    # to_persist.to_parquet(save_path)
-                    t5 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to save parquet files: {round(t5 - t4, 3)} seconds")
+                    t4 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to save parquet files: {round(t4 - t3, 3)} seconds")
 
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
