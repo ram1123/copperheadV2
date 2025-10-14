@@ -49,7 +49,7 @@ def main():
         print(f"gateway: {gateway}")
         print(f"gateway list clusters: {gateway.list_clusters()}")
 
-        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+        cluster_info = gateway.list_clusters()[0] # get the first cluster by default. There only should be one anyways
         client = gateway.connect(cluster_info.name).get_client()
         print(f"client: {client}")
         print("Gateway Client created")
