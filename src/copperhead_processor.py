@@ -665,6 +665,8 @@ class EventProcessor(processor.ProcessorABC):
 
         # logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
 
+        # logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
+
         # # --------------------------------------------------------
         # # # Apply Rochester correction
         if self.config["do_roccor"]:

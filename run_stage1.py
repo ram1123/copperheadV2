@@ -287,7 +287,7 @@ if __name__ == "__main__":
             logger.info(f"gateway: {gateway}")
             logger.info(f"gateway list clusters: {gateway.list_clusters()}")
 
-            cluster_info = gateway.list_clusters()[-1]# get the first cluster by default. There only should be one anyways
+            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug(f"client: {client}")
             logger.info("Gateway Client created")
