@@ -1367,7 +1367,7 @@ class EventProcessor(processor.ProcessorABC):
             "event": events.event,
             "PV_npvs": events.PV.npvs,
             "PV_npvsGood": events.PV.npvsGood,
-            "MET_pt": events.MET.pt,
+            "MET_pt": events.MET.pt, # As we are using CHS jets, so use MET not PuppiMET
             "MET_phi": events.MET.phi,
             "MET_sumEt": events.MET.sumEt,
             "mu1_pt": mu1.pt,

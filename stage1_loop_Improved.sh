@@ -113,7 +113,7 @@ log() { echo "$@" | tee -a "$log_file"; }
 
 # save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
 save_path="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
-# save_path="/store/user/rasharma/hmm/copperheadV1clean/$label/"
+# save_path="/store/user/rasharma/hmm/copperheadV1clean/$label/" # EOS path
 
 trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 

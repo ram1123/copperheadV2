@@ -284,7 +284,7 @@ if __name__ == "__main__":
                 "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
                 proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
             )
-            cluster_info = gateway.list_clusters()[-1]# get the first cluster by default. There only should be one anyways
+            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug("Gateway Client created")
         else: # use local cluster
