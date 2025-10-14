@@ -1,4 +1,5 @@
 import ROOT
+import array
 from scipy.stats import f
 import os
 import argparse
@@ -7,49 +8,29 @@ import yaml
 from collections import defaultdict
 from modules.utils import logger
 from omegaconf import OmegaConf
+import numpy as np
 
-
-# define cut ranges to do polynomial fits. pt ranges beyond that point we fit with a constant
-poly_fit_ranges = {
-    "2018" : {
-        "njet0" : [10, 115],
-        "njet1" : [10, 100],
-        "njet2" : [10, 100],
-    },
-    "2017" : {
-        "njet0" : [0, 75],
-        "njet1" : [0, 100],
-        "njet2" : [0, 65],
-    },
-    "2016postVFP" : {
-        "njet0" : [9, 100],
-        "njet1" : [9, 100],
-        "njet2" : [9, 100],
-    },
-    "2016preVFP" : {
-        "njet0" : [0, 70],
-        "njet1" : [0, 55],
-        "njet2" : [0, 55],
-    },
-}
+from bin_definitions import poly_fit_ranges, define_custom_binning
 
 # Argument parsing
 parser = argparse.ArgumentParser()
-parser.add_argument("--run_label", type=str, help="Run label", required=True)
-parser.add_argument("--years", type=str, nargs="+", help="Year", required=True)
+parser.add_argument("-l", "--run_label", type=str, help="Run label", required=True)
+parser.add_argument("-y", "--years", type=str, nargs="+", help="Year", required=True)
 parser.add_argument("--njet", type=int, nargs="+", default=[0, 1, 2], help="Number of jets")
 parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("--outAppend", type=str, default="", help="Append to output file name")
 parser.add_argument("--nbins", type=str, default="CustomBins", help="Number of bins")
 parser.add_argument("-save", "--plot_path", dest="plot_path", default="plots", action="store", help="save path to store plots")
+parser.add_argument("--dy_sample", type=str, default="MiNNLO", choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
+                    help="DY sample to use for reweighting")
 args = parser.parse_args()
 
 logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
 
 year = args.years[0]
 run_label = args.run_label
-inPath = f"{args.plot_path}/{run_label}/{year}"
-save_path = f"{args.plot_path}/{run_label}/{year}/fTest_{args.outAppend}"
+inPath = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
+save_path = f"{inPath}/fTest_{args.outAppend}"
 os.makedirs(save_path, exist_ok=True)
 
 optimized_orders = {}
@@ -82,7 +63,7 @@ def save_histogram(hist_SF, fit_func_high, order_high, year, njet, target_nbins,
     canvas.SaveAs(f"{save_path}/fit_best_{year}_njet{njet}_{target_nbins}_order{order_high}_{outtext}.pdf")
 
 
-def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, outTextFile, outTextFile_keys, year, njet, outtext=""):
+def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outTextFile, outTextFile_keys, year, njet, outtext=""):
     optimized_orders = {}
     print(f"Performing F-test for {year} njet{njet} with {target_nbins} bins; outtext: {outtext}")
     fit_order_start = 1 if outtext == "f0" else 2
@@ -146,7 +127,10 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, outTextFile, outTe
 
                 save_fit_config[year][f"njet{njet}"][f"{outtext}"] = {
                     "order": order_high,
-                    "fit_range": [fit_xmin, fit_xmax]
+                    "fit_range": [fit_xmin, fit_xmax],
+                    "bins": target_nbins,
+                    "bin_edges": bin_array.tolist(),
+                    "polynomial_expr": polynomial_expr_high
                 }
 
                 save_histogram(hist_SF, fit_func_high, order_high, year, njet, target_nbins, outtext)
@@ -175,6 +159,18 @@ for njet in args.njet:
         hist_data = workspace.obj("hist_data").Clone("hist_data_clone")
         hist_dy = workspace.obj("hist_dy").Clone("hist_dy_clone")
 
+        # Define custom bin edges: adaptive binning with finer bins near zero and coarser bins at higher pt
+        edges = define_custom_binning()
+
+        nbins_new = len(edges) - 1
+        xbins = array.array('d', edges)
+
+        print(f"Using custom binning with {nbins_new} bins: {edges}")
+
+        # Rebin to exactly these custom edges
+        hist_data = hist_data.Rebin(nbins_new, "hist_data_rebinned", xbins)
+        hist_dy   = hist_dy.  Rebin(nbins_new, "hist_dy_rebinned",   xbins)
+
 
         # Run F-test
         with open(f"{save_path}/fTest_results_{year}_njet{njet}_nbins{args.nbins}_f0_UpdatedCode.txt", "w") as outTextFile, \
@@ -182,20 +178,15 @@ for njet in args.njet:
             # Compute Scale Factor (SF)
             hist_SF_f0 = hist_data.Clone("hist_SF_f0")
             hist_SF_f0.Divide(hist_dy)
-            perform_f_test(hist_SF_f0, 0., fit_xmin, "500", outTextFile, outTextFile_keys, year, njet, outtext="f0")
+            perform_f_test(hist_SF_f0, 0., fit_xmin, nbins_new, xbins, outTextFile, outTextFile_keys, year, njet, outtext="f0")
 
         with open(f"{save_path}/fTest_results_{year}_njet{njet}_nbins{args.nbins}_f1_UpdatedCode.txt", "w") as outTextFile, \
             open(f"{save_path}/fTest_results_{year}_njet{njet}_nbins{args.nbins}_f1_keys.txt", "w") as outTextFile_keys:
-            orig_nbins = hist_data.GetNbinsX()
-            rebin_coeff = int(int(orig_nbins)/int(target_nbins))
-            # Rebin histograms
-            hist_data = hist_data.Rebin(rebin_coeff, "rebinned hist_data")
-            hist_dy = hist_dy.Rebin(rebin_coeff, "rebinned hist_dy")
 
-            # Compute Scale Factor (SF)
+            # Compute Scale Factor (SF) on rebinned histograms
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
-            perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, outTextFile, outTextFile_keys, year, njet, outtext="f1")
+            perform_f_test(hist_SF, fit_xmin, fit_xmax, nbins_new, xbins, outTextFile, outTextFile_keys, year, njet, outtext="f1")
         file.Close()
 
 # Save config to YAML

@@ -26,7 +26,6 @@ from collections.abc import Sequence
 
 import logging
 from modules.utils import logger
-from rich import print
 
 
 def getBadFile(fname):
@@ -45,8 +44,6 @@ def getBadFile(fname):
             ak.to_parquet(up_file["Events"]['Jet_mass'].array(),tmp_path)
             ak.to_parquet(up_file["Events"]['Electron_pt'].array(),tmp_path)
             ak.to_parquet(up_file["Events"]['Electron_eta'].array(),tmp_path)
-            ak.to_parquet(up_file["Events"]['Electron_phi'].array(),tmp_path)
-            ak.to_parquet(up_file["Events"]['Electron_mass'].array(),tmp_path)
 
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -62,13 +59,13 @@ def getBadFile(fname):
 #     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
 #         # Submit each file check to the executor
 #         results = list(executor.map(getBadFile, filelist))
-    
+
 #     bad_file_l = []
 #     for result in results:
 #         if result != "":
 #             # print(result)
 #             bad_file_l.append(result)
-    
+
 #     return bad_file_l
 
 def getBadFileParallelizeDask(filelist):
@@ -89,9 +86,16 @@ def getBadFileParallelizeDask(filelist):
     print(f"bad_file_l: {bad_file_l}")
     return bad_file_l
 
+def removeBadFiles(filelist):
+    bad_filelist = getBadFileParallelizeDask(filelist)
+    clean_filtlist = list(set(filelist) - set(bad_filelist)) # remove bad files from the filelist
+    return clean_filtlist
 
+# def getDatasetRootFiles(single_dataset_name: list, allowlist_sites: list)-> list:
 def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
-    print(f"single_dataset_name {single_dataset_name}")
+    # logger.info(f"dataset name: {single_dataset_name}")
+    # single_dataset_name = single_dataset_name["path"]
+    logger.info(f"dataset name: {single_dataset_name}")
     if single_dataset_name.startswith("/eos"):
         fnames = glob.glob(f"{single_dataset_name}/*.root")
         logger.debug(f"fnames: {fnames}")
@@ -101,8 +105,6 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
         logger.debug(f"fnames: {fnames}")
     else:
         das_query = single_dataset_name
-        logger.debug(f"das query: {das_query}")
-        print(f"allowlist_sites: {allowlist_sites}")
 
         rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
 
@@ -128,7 +130,7 @@ def get_Xcache_filelist(fnames: list):
     logger.debug(f"fnames: {fnames}")
     for fname in fnames:
         root_file = re.findall(r"/store.*", fname)[0]
-        x_cache_fname = "root://cms-xcache.rcac.purdue.edu/" + root_file
+        x_cache_fname = "root://xcache.cms.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
     print(f"new_fnames: {new_fnames}")
     return new_fnames
@@ -274,8 +276,6 @@ if __name__ == "__main__":
     logger.info(f"year: {year}")
 
     if args.fraction is None: # do the normal prestage setup
-        allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_CH_CERN", "T2_US_Vanderbilt", "T2_US_Florida", "T2_IT_Pisa", "T2_DE_RWTH"]
-        
         total_events = 0
         # get dask client
         if args.use_gateway:
@@ -288,11 +288,14 @@ if __name__ == "__main__":
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug("Gateway Client created")
         else: # use local cluster
-            client = Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
+            client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
             logger.info("Local scale Client created")
         big_sample_info = {}
         # load dataset sample paths from yaml files
         datasets = OmegaConf.load(args.dataset_yaml_file)
+        logger.debug(f'dataset: {datasets}')
+        logger.debug(f'datasets.years: {datasets.years}')
+        logger.debug(f'datasets.years.keys(): {datasets.years.keys()}')
         if args.run2_rereco: # temp condition for RERECO data case
             dataset = datasets.years[f"{year}_RERECO"]
         else: # normal
@@ -319,13 +322,13 @@ if __name__ == "__main__":
 
         # take bkg and add to the list: `new_sample_list[]`
         bkg_l = [sample_name for sample_name in dataset.keys() if "data" not in sample_name.lower()]
-        logger.info(f"background samples defined in YAML file: {bkg_l}")
+        logger.debug(f"background samples defined in YAML file: {bkg_l}")
         bkg_samples = args.bkg_samples
         logger.info(f"background samples asked to read: {bkg_samples}")
         if len(bkg_samples) >0:
             for bkg_letter in bkg_samples:
                 for bkg_name in bkg_l:
-                    if bkg_letter in bkg_name:
+                    if bkg_letter == bkg_name:
                         for bkgs in dataset[bkg_name].keys():
                             new_sample_list.append(bkgs)
 
@@ -362,14 +365,20 @@ if __name__ == "__main__":
         fnames = ""
 
         for sample_name in tqdm.tqdm(dataset.keys()):
-            print(f"sample_name: {sample_name}")
             is_data =  ("data" in sample_name)
             logger.debug(f"Sample Name: {sample_name}")
             logger.debug(f"dataset[sample_name]: {dataset[sample_name]}")
             logger.debug(f"is data?: {is_data}")
 
             dataset_name = dataset[sample_name]
-            allowlist_sites=["T2_US_Purdue", "T2_US_MIT","T2_US_FNAL", "T2_CH_CERN", "T2_US_Vanderbilt", "T2_US_Florida", "T2_IT_Pisa", "T2_DE_RWTH"]
+            allowlist_sites = ["T2_DE_DESY", "T2_AT_Vienna", "T2_DE_RWTH", "T2_IT_Legnaro",
+                                "T2_US_Caltech", "T2_UL_Florida", "T2_US_MIT", "T2_US_Purdue", "T2_US_Wisconsin", "T2_US_Nebraska", "T2_US_Vanderbilt",
+                                "T2_BE_UCL", "T2_BR_SPRACE", "T2_EE_Estonia",
+                                "T2_ES_CIEMAT", "T2_ES_IFCA", "T2_FR_IPHC", "T2_PL_Swierk",
+                                "T2_FR_GRIF", "T2_IN_TIFR", "T2_RU_JINR", "T2_BE_IIHE", "T2_CH_CSCS",
+                                ]
+
+            logger.debug(f"allowlist_sites: {allowlist_sites}")
 
             # print(f"type(dataset_name): {type(dataset_name)}")
             is_some_list_type = isinstance(dataset_name, Sequence) and not isinstance(dataset_name, str)
@@ -384,9 +393,19 @@ if __name__ == "__main__":
                 single_dataset_name = dataset_name
                 fnames = getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
+            if len(fnames) == 0:
+                logger.error(f"No files found for sample {sample_name}. Skipping this sample.")
+                continue
+
+            if args.skipBadFiles: # if we want to skip bad files
+                logger.info("Skipping bad files")
+                logger.info(f"Number of files before removing bad files: {len(fnames)}")
+                fnames = removeBadFiles(fnames)
+                logger.info(f"Number of files after removing bad files: {len(fnames)}")
+
             # convert to xcachce paths if requested
-                if args.xcache:
-                    fnames = get_Xcache_filelist(fnames)
+            if args.xcache:
+                fnames = get_Xcache_filelist(fnames)
 
             logger.debug(f"file names: {fnames}")
             logger.debug(f"sample_name: {sample_name}")
@@ -457,7 +476,7 @@ if __name__ == "__main__":
                 total_events += preprocess_metadata["nGenEvts"]
 
             # test start -------------------------------
-            if sample_name == "dy_VBF_filter":
+            if sample_name == "dy_VBF_filter_NoUSE": # FIXME: Temporary fix. Remove this patch
                 """
                 Starting from coffea 2024.4.1, this if statement is technically as obsolite preprocess
                 can now handle thousands of root files no problem, but this "manual" is at least three
@@ -595,3 +614,4 @@ if __name__ == "__main__":
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")
+

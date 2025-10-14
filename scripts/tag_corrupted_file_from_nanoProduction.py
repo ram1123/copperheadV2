@@ -215,9 +215,8 @@ def check_missing_files(input_file, output_dir, year, additional_string, client)
 
 
 
-    """
     # Step-4(a): Use Dask to compute the number of entries in the MiniAOD files
-    print("Goint to compute the results: Fetch miniAOD entries ")
+    print("Going to compute the results: Fetch miniAOD entries ")
     task1 = [delayed(get_num_entries_in_nanoAOD_uproot)(file, ifMiniAOD=True) for file in df['inputMiniAOD']]
     results_mini = compute(*task1)
     # Step-4(a)(a): Store the results in the DataFrame
@@ -245,7 +244,6 @@ def check_missing_files(input_file, output_dir, year, additional_string, client)
 
     df_mismatch = df_mismatch[['configFile', 'inputMiniAOD', 'outputDirectory', 'nEvents', 'CondorLogPath']]
     df_mismatch.to_csv(f"Mismatch_MiniNano_nNano0_nMini0_{year}_{additional_string}_configFile.txt", sep=' ', header=False, index=False)
-    """
 
 def main():
     """Main processing function."""
@@ -258,6 +256,7 @@ def main():
         '2017': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_3Feb_AllJobs.txt',
         '2016APV': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_8Feb_2016APV.txt',
         '2016': 'OriginalTxtFilesForNanoAODv12Production/HMuMu_UL2017_8Feb_2016.txt',
+        '2018missing': 'temp_files/HMuMu_UL2018_NanoAODv12_MissingSamples.txt'
     }
 
     years_and_output_dirs = {
@@ -269,12 +268,13 @@ def main():
         '2017': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/',
         '2016APV': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/',
         '2016': '/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/',
+        '2018missing': '/eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/'
     }
 
     # years = ['2018']
     # year = ['2018Re', '2018', '2017', '2016APV', '2016']
     # years = ['2017', '2016APV', '2016', '2018']
-    years = ['2017', '2016APV', '2016', '2018MC', '2018GT36']
+    years = ['2018missing']
     # years = ['2018GT36_debug']
     # years = ['2018GT36']
     # years = ['2018MC']
@@ -283,7 +283,7 @@ def main():
     # additional_string = "4April_Xcache"
     # additional_string = "4April_local_retries"
     # additional_string = "4April_debug"
-    additional_string = "18April"
+    additional_string = "10June"
     # additional_string = "4April_AllYears"
 
     client = create_dask_client()  # Initialize Dask client

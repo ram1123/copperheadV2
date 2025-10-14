@@ -8,7 +8,6 @@ Z mass: 91.1880 GeV from PDG -->
 - H boson mass: 125.200 GeV (from PDG)
 - H boson width: 3.7 MeV (from PDG)
 
-
 # Fitting of Z-peak Mass Resolution
 
 ## Things to note
@@ -33,5 +32,3 @@ Z mass: 91.1880 GeV from PDG -->
    ```
 
 - To get the fit result use this method:
-
-

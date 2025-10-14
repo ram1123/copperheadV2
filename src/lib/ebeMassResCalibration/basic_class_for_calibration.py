@@ -122,17 +122,62 @@ def get_calib_categories(events):
         "62-200_EE": mask_62_200 & EE,
     }
 
-    categories = {
-        "30-45_BB_OB_EB": cat_30_45_1,
-        "30-45_BO_OO_EO": cat_30_45_2,
-        "30-45_BE_OE_EE": cat_30_45_3
-    }
-    # categories = cats_30_45
+    # categories = {
+    #     "30-45_BB_OB_EB": cat_30_45_1,
+    #     "30-45_BO_OO_EO": cat_30_45_2,
+    #     "30-45_BE_OE_EE": cat_30_45_3
+    # }
+    categories = cats_30_45
     categories.update(cats_45_52)
     categories.update(cats_52_62)
     categories.update(cats_62_200)
 
     return categories
+
+def save_fit_params_to_json(fit_result, cat_idx, json_path, model_name="BWxDCB", chi2_val=None):
+    import time, json, os
+
+    param_dict = {}
+    sigma_val = None
+    sigma_err = None
+
+    for i in range(fit_result.floatParsFinal().getSize()):
+        p = fit_result.floatParsFinal().at(i)
+        param_dict[p.GetName()] = {
+            "val": p.getVal(),
+            "err": p.getError(),
+            "const": p.isConstant(),
+            "min": p.getMin(),
+            "max": p.getMax()
+        }
+        if p.GetName().lower() == "sigma":
+            sigma_val = p.getVal()
+            sigma_err = p.getError()
+
+    # Build full record
+    fit_metadata = {
+        "model": model_name,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "nllVal": fit_result.minNll(),
+        "status": fit_result.status(),
+        "chi2": chi2_val,
+        "sigma": sigma_val,
+        "sigma_err": sigma_err,
+        "params": param_dict
+    }
+
+    # Load existing fits
+    if os.path.exists(json_path):
+        with open(json_path, "r") as f:
+            all_fits = json.load(f)
+    else:
+        all_fits = {}
+
+    all_fits[cat_idx] = fit_metadata
+
+    with open(json_path, "w") as f:
+        json.dump(all_fits, f, indent=2)
+
 
 def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="CalibrationLog.txt", out_string=""):
     """
@@ -330,9 +375,20 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # n2 = rt.RooRealVar("n2" , "n2", 114, 0.01, 385) #test 114
     n1.setConstant(True)
     n2.setConstant(True)
-    if cat_idx == "30-45_EE":
+    if "EE" in cat_idx:
         n1.setConstant(False)
         n2.setConstant(False)
+        alpha1.setRange(0.2, 10)  # don't fix it too low
+        alpha2.setRange(0.2, 10)
+        # mean.setRange(-2, 2)  # instead of full -10 to 10
+        # # alpha1.setRange(0.1, 10)
+        # alpha1.setVal(6.11551)
+        # alpha1.setConstant(True)
+
+        # # alpha2.setRange(0.1, 10)
+        # alpha2.setVal(6.78)
+        # alpha2.setConstant(True)
+
     model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
 
     # merge BW with DCB via convolution
@@ -342,6 +398,24 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     mass.setBins(10000,"cache") # This nbins has nothing to do with actual nbins of mass. cache bins is representation of the variable only used in FFT
     mass.setMin("cache",50.5)
     mass.setMax("cache",130.5)
+
+    # Add RooCMSShape Background --------------------------------------------------------------------------
+    exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 101.0, 0.0, 300.0)
+    exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.15, 0.0, 2.0)
+    exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 1.0)
+    exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
+    # if (cat_idx == "30-45_BO"
+    #     or cat_idx == "30-45_EE"
+    #     ):
+    #     # exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 5.0)
+        # exp_gamma.setRange(0.0, 5.0)
+
+    exp_gamma.setRange(0.0, 5.0)
+    exp_peak.setConstant(True)
+    exp_beta.setVal(0.45)
+    exp_beta.setConstant(True)
+
+    model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
 
     # # Exp Background --------------------------------------------------------------------------
     # coeff = rt.RooRealVar("coeff", "coeff", 0.01, 0.00000001, 1)
@@ -372,19 +446,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # # #-----------------------------------------------------
 
 
-    # Add RooCMSShape Background --------------------------------------------------------------------------
-    exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 101.0, 20.0, 160.0)
-    exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.15, 0.0, 2.0)
-    exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 1.0)
-    exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
-    if (cat_idx == "30-45_BB_OB_EB" or cat_idx == "30-45_BO_OO_EO" or cat_idx == "30-45_BE_OE_EE" 
-        or cat_idx == "30-45_BB"
-        or cat_idx == "30-45_BO"
-        or cat_idx == "30-45_EE"
-        ):
-        exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 5.0)
-
-    model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
 
 
     # Exp x Erf Background --------------------------------------------------------------------------
@@ -457,7 +518,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
 
     fit_result.Print()
 
-
     # # Save model and variables into RooWorkspace
     # w = rt.RooWorkspace("w", "workspace")
     # getattr(w, 'import')(mass, rt.RooFit.RecycleConflictNodes())
@@ -489,6 +549,10 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
     chi2 = float('%.3g' % chi2) # get upt to 3 sig fig
     logger.info(f"chi2: {chi2}")
+
+    # store the fit result in a json file
+    save_fit_params_to_json(fit_result, cat_idx, f"plots/{out_string}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2)
+
     latex = rt.TLatex()
     latex.SetNDC()
     latex.SetTextAlign(11)
@@ -801,7 +865,7 @@ def save_calibration_json(df_merged, json_filename="calibration_factors.json"):
     content = []
     # Loop over pt bins:
     for pt_bin in pt_bins:
-        if pt_bin == "30-45":
+        if pt_bin == "30-45_NOTUSED":
             # For pt bin "30-45", we have only three merged categories.
             # Loop over all 9 (leading, subleading) combinations but choose the factor based solely on subleading muon.
             for eta1 in eta_bins:

@@ -38,11 +38,11 @@ print(f"Connected to Dask Gateway Cluster: {client}")
 # "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/"
 # "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/"
 input_files = glob.glob(
-    "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/"
+    "/eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/UL2018/"
     "*/*.root"
 )
 
-log_file = "UL2016_LZMA_errors_cpp_NEW.txt"
+log_file = "UL2018_LZMA_errors.txt"
 
 @dask.delayed
 def process_file(remote_file):
@@ -50,7 +50,7 @@ def process_file(remote_file):
 
     try:
         result = subprocess.run(
-            ["root", "-l", "-b", "-q", f"/depot/cms/private/users/shar1172/copperheadV2_CheckSetup/scripts/muon_pt_reader.C(\"{remote_file}\")"],
+            ["root", "-l", "-b", "-q", f"/depot/cms/private/users/shar1172/copperheadV2_main/scripts/muon_pt_reader.C(\"{remote_file}\")"],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

@@ -1,6 +1,12 @@
+CMSSW_13_0_14/
+*.err
+*.log
+*.npy
+*.pkl
 *.gz
 *.json
 *.yaml
+trained_models/
 fitting_mu1mu2pt/
 .ipynb_checkpoints/
 __pycache__/
@@ -18,3 +24,4 @@ log*.txt
 *.tex
 *.pcm
 *.d
+*.bak
