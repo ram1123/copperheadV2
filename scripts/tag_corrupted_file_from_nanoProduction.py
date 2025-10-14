@@ -216,7 +216,7 @@ def check_missing_files(input_file, output_dir, year, additional_string, client)
 
 
     # Step-4(a): Use Dask to compute the number of entries in the MiniAOD files
-    print("Goint to compute the results: Fetch miniAOD entries ")
+    print("Going to compute the results: Fetch miniAOD entries ")
     task1 = [delayed(get_num_entries_in_nanoAOD_uproot)(file, ifMiniAOD=True) for file in df['inputMiniAOD']]
     results_mini = compute(*task1)
     # Step-4(a)(a): Store the results in the DataFrame
