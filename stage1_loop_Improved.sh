@@ -151,6 +151,7 @@ if [[ "$debug" -ge 1 ]]; then
 
     # sig_l="Higgs"
     sig_l=""
+    # sig_l="VBF"
 fi
 
 chunksize=300000
