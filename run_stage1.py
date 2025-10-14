@@ -270,6 +270,8 @@ if __name__ == "__main__":
 
     if "2018" in args.year:
         yearForConfig = "2018" # use 2018 parameters for 2018PR as well
+    else:
+        yearForConfig = args.year
 
     config = getParametersForYr("./configs/parameters/" , yearForConfig)
     logger.debug(f"stage1 config: {config}")
