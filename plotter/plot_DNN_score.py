@@ -166,13 +166,13 @@ def arrangeHist_bySampleGroup(pickled_hist_dict):
         "data": ["data"],
         "ggH": ["ggh_"],
         "VBF": ["vbf_"],
-        "DY": ["dy_"],
+        "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO", "dy_VBF_filter"],
         # "DYJ01": ["DYJ01"],
         # "DYJ2": ["DYJ2"],
-        "Top": ["ttjets", "top","st"],
+        "Top": ["ttjets", "top", "st"],
         "Ewk": ["ewk"],
-        # "VV": ["ww_", "wz_"],
-        "VV": ["ww_", "wz_", "zz"],
+        "VV": ["ww_", "wz_"],
+        # "VV": ["ww_", "wz_", "zz"],
         "VVV": ["www_", "wwz", "wzz", "zzz"],
     }
 
@@ -282,7 +282,8 @@ if __name__ == "__main__":
     # load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_21bins/2018/"
 
     # Path with FatJet variables
-    load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_17bins_NoSyst/{year_param}/"
+    # load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_17bins_NoSyst/{year_param}/"
+    load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_17bins/{year_param}/"
 
     logger.info(f"Looking for pickled histograms in: {load_path}")
 
