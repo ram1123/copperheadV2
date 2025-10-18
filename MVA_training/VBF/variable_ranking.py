@@ -10,16 +10,19 @@ from dnn_train import Net  # our model definition
 FOLD = 3
 LABEL = "Run2_nanoAODv12_08June"
 LABEL = "Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"
+LABEL = "Run2_nanoAODv12_AK8jets"
 TRAINED_MODEL_DIR = (
     f"/depot/cms/users/shar1172/"
     f"copperheadV2_main/dnn/trained_models/"
     # f"{LABEL}/2018_signal_vbf_16July2025/fold{FOLD}"
-    f"{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/fold{FOLD}"
+    # f"{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/fold{FOLD}"
+    f"{LABEL}/2017_h-peak_vbf_MoreVars/fold{FOLD}"
 )
 DATA_PATH = (
     f"/depot/cms/users/shar1172/"
     # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_signal_vbf_16July2025"
-    f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test"
+    # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test"
+    f"copperheadV2_main/dnn/trained_models/{LABEL}/2017_h-peak_vbf_MoreVars"
 )
 # CHECKPOINT = f"{TRAINED_MODEL_DIR}/best_model_weights.pt"
 CHECKPOINT = f"{TRAINED_MODEL_DIR}/final_model_weights.pt"
@@ -30,26 +33,158 @@ FEATURES_PKL = f"{DATA_PATH}/training_features.pkl"
 # with open(FEATURES_PKL, "rb") as f:
 #     feature_names = pickle.load(f)
 feature_names = [
-        'dimuon_mass',
-        "dimuon_ebe_mass_res", "dimuon_ebe_mass_res_rel",
-         'jj_mass_nominal', 'jj_mass_log_nominal',
-         'rpt_nominal',
-         'll_zstar_log_nominal',
-         'jj_dEta_nominal',
-         'nsoftjets5_nominal',
-         'mmj_min_dEta_nominal',
-         'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
-         'jet1_pt_nominal', 'jet1_eta_nominal', 'jet1_phi_nominal',  'jet2_pt_nominal', 'jet2_eta_nominal', 'jet2_phi_nominal',
-         'jet1_qgl_nominal', 'jet2_qgl_nominal',
-         'dimuon_cos_theta_cs', 'dimuon_phi_cs',
-         'htsoft2_nominal',
-         'pt_centrality_nominal',
-         'year'
+    "MET_pt",
+    "MET_phi",
+    "mu1_pt",
+    "mu2_pt",
+    "mu1_eta",
+    "mu2_eta",
+    "mu1_phi",
+    "mu2_phi",
+    "dimuon_pt_over_mass",
+    "dimuon_pt_over_mass_log",
+    "dimuon_rapidity",
+    "dimuon_dR",
+    "dimuon_ebe_mass_res_rel",
+    "dimuon_cos_theta_cs",
+    "dimuon_phi_cs",
+    "year",
+    "nfatJets_drmuon",
+    "jet1_pt_nominal",
+    "jet1_eta_nominal",
+    "jet1_phi_nominal",
+    "jet1_qgl_nominal",
+    "jet1_mass_nominal",
+    "jet2_pt_nominal",
+    "jet2_eta_nominal",
+    "jet2_phi_nominal",
+    "jet2_qgl_nominal",
+    "jet2_mass_nominal",
+    "jet3_pt_nominal",
+    "jet3_eta_nominal",
+    "jet3_phi_nominal",
+    "jet3_qgl_nominal",
+    "jet3_mass_nominal",
+    "jet4_pt_nominal",
+    "jet4_eta_nominal",
+    "jet4_phi_nominal",
+    "jet4_qgl_nominal",
+    "jet4_mass_nominal",
+    "jj_mass_nominal",
+    "jj_mass_log_nominal",
+    "jj_dEta_nominal",
+    "jj_dPhi_nominal",
+    "mmj_min_dEta_nominal",
+    "mmj_min_dPhi_nominal",
+    "rpt_nominal",
+    "pt_centrality_nominal",
+    "zeppenfeld_nominal",
+    "ll_zstar_log_nominal",
+    "njets_nominal",
+    "htsoft2_nominal",
+    "nsoftjets5_nominal",
+    "nBtagLoose_nominal",
+    "nBtagMedium_nominal",
+    "dR_mu1_mu2",
+    "kT_mu1_mu2",
+    "Z_mu1_mu2",
+    "dPhi_mu1_MET",
+    "kT_mu1_MET",
+    "Z_mu1_MET",
+    "transverseMass_mu1_MET",
+    "dPhi_mu2_MET",
+    "kT_mu2_MET",
+    "Z_mu2_MET",
+    "transverseMass_mu2_MET",
+    "dR_jet1_jet2",
+    "kT_jet1_jet2",
+    "Z_jet1_jet2",
+    "invariantMass_jet1_jet2",
+    "dR_jet1_jet3",
+    "kT_jet1_jet3",
+    "Z_jet1_jet3",
+    "invariantMass_jet1_jet3",
+    "dR_jet1_jet4",
+    "kT_jet1_jet4",
+    "Z_jet1_jet4",
+    "invariantMass_jet1_jet4",
+    "dR_jet2_jet3",
+    "kT_jet2_jet3",
+    "Z_jet2_jet3",
+    "invariantMass_jet2_jet3",
+    "dR_jet2_jet4",
+    "kT_jet2_jet4",
+    "Z_jet2_jet4",
+    "invariantMass_jet2_jet4",
+    "dR_jet3_jet4",
+    "kT_jet3_jet4",
+    "Z_jet3_jet4",
+    "invariantMass_jet3_jet4",
+    "dR_mu1_jet1",
+    "kT_mu1_jet1",
+    "Z_mu1_jet1",
+    "invariantMass_mu1_jet1",
+    "dR_mu2_jet1",
+    "kT_mu2_jet1",
+    "Z_mu2_jet1",
+    "invariantMass_mu2_jet1",
+    "dPhi_jet1_MET",
+    "kT_jet1_MET",
+    "Z_jet1_MET",
+    "transverseMass_jet1_MET",
+    "dR_mu1_jet2",
+    "kT_mu1_jet2",
+    "Z_mu1_jet2",
+    "invariantMass_mu1_jet2",
+    "dR_mu2_jet2",
+    "kT_mu2_jet2",
+    "Z_mu2_jet2",
+    "invariantMass_mu2_jet2",
+    "dPhi_jet2_MET",
+    "kT_jet2_MET",
+    "Z_jet2_MET",
+    "transverseMass_jet2_MET",
+    "dR_mu1_jet3",
+    "kT_mu1_jet3",
+    "Z_mu1_jet3",
+    "invariantMass_mu1_jet3",
+    "dR_mu2_jet3",
+    "kT_mu2_jet3",
+    "Z_mu2_jet3",
+    "invariantMass_mu2_jet3",
+    "dPhi_jet3_MET",
+    "kT_jet3_MET",
+    "Z_jet3_MET",
+    "transverseMass_jet3_MET",
+    "dR_mu1_jet4",
+    "kT_mu1_jet4",
+    "Z_mu1_jet4",
+    "invariantMass_mu1_jet4",
+    "dR_mu2_jet4",
+    "kT_mu2_jet4",
+    "Z_mu2_jet4",
+    "invariantMass_mu2_jet4",
+    "dPhi_jet4_MET",
+    "kT_jet4_MET",
+    "Z_jet4_MET",
+    "transverseMass_jet4_MET",
+    "year",
 ]
 n_inputs = len(feature_names)
 
+# 0) load scaler used in training
+with open(f"{DATA_PATH}/scalers_3.npy", "rb") as f:
+    scaler = pickle.load(f)  # e.g., StandardScaler
+
+# 1) ensure exact same feature order as training (ideally load from pkl)
+with open(FEATURES_PKL, "rb") as f:
+    feature_names = pickle.load(f)
+
+# 2) build the exact same Net as in training (same widths/BN/dropout)
+model = Net(n_inputs=len(feature_names))
+
 # 2) build our model
-model = Net(n_inputs)
+# model = Net(n_inputs)
 model.eval()
 
 # 3) load checkpoint (yours is actually the state_dict itself)
@@ -57,6 +192,7 @@ ckpt = torch.load(CHECKPOINT, map_location="cpu")
 print(">>> checkpoint keys:", ckpt.keys())
 # since ckpt.keys() are the layer parameter names, we load it directly:
 model.load_state_dict(ckpt)
+model.summary()
 
 # 4) grab the first‐layer weight matrix
 #    assume our Net has an attribute `fc1` for the very first Linear layer
@@ -95,6 +231,8 @@ import shap
 Valid_parquet = f"{DATA_PATH}/data_df_validation_{FOLD}.parquet"
 df_valid = pd.read_parquet(Valid_parquet)
 X_valid = df_valid[feature_names].values
+
+X_valid = X_valid[:10000]  # use only 10k samples for speed
 
 # Prepare a background sample (e.g., 100 random validation samples)
 background = torch.tensor(X_valid[np.random.choice(X_valid.shape[0], 100, replace=False)], dtype=torch.float32)

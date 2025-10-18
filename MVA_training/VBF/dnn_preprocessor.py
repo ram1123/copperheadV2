@@ -21,24 +21,37 @@ from dnn_helper import DIR_TAG
 # def getParquetFiles(path):
 # return glob.glob(path)
 
+import awkward as ak
+import numpy as np
+
+
 def fillEventNans(events):
     """
-    checked that this function is unnecssary for vbf category, but have it for robustness
+    Replace None, NaN, ±Inf in event fields with safe finite values
+    suitable for ML training.
     """
     for field in events.fields:
+        arr = events[field]
+        # Replace None first
+        arr = ak.fill_none(arr, -9.0)
+        arr = ak.nan_to_num(arr, nan=-9.0, posinf=-9.0, neginf=-9.0)
+
+        # Convert to numpy for numeric fix if regular array
+        if ak.any(ak.is_none(arr)):
+            arr = ak.fill_none(arr, -9.0)
+
+        # Handle NaN/Inf explicitly
+        # arr = ak.where(~ak.isfinite(arr), -9.0, arr)
+
+        # Optional: treat phi carefully
         if "phi" in field:
-            events[field] = ak.fill_none(events[field], value=-10) # we're working on a DNN, so significant deviation may be warranted
-        else: # for all other fields (this may need to be changed)
-            events[field] = ak.fill_none(events[field], value=0)
+            # Keep phi within [-pi, pi]
+            arr = ak.where((arr <= -np.pi) | (arr >= np.pi), -5.0, arr)
+
+        events[field] = arr
+
     return events
 
-# def replaceSidebandMass(events):
-#     for field in events.fields:
-#         if "phi" in field:
-#             events[field] = ak.fill_none(events[field], value=-1)
-#         else: # for all other fields (this may need to be changed)
-#             events[field] = ak.fill_none(events[field], value=0)
-#     return events
 
 def applyCatAndFeatFilter(events, features: list, region="h-peak", category="vbf"):
     """
@@ -470,22 +483,142 @@ def _check_params(alpha, concat, batch_size):
 
 def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_label="test", year="2018"):
     training_features = [
-        'dimuon_mass', "dimuon_ebe_mass_res", "dimuon_ebe_mass_res_rel",
-         'jj_mass', 'jj_mass_log',
-         'rpt',
-         'll_zstar_log',
-         'jj_dEta',
-        #  'nsoftjets5',
-         'nsoftjets5_new',
-         'mmj_min_dEta',
-        'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
-         'jet1_pt', 'jet1_eta', 'jet1_phi',  'jet2_pt', 'jet2_eta', 'jet2_phi',
-         'jet1_qgl', 'jet2_qgl',
-         'dimuon_cos_theta_cs', 'dimuon_phi_cs',
-        #  'htsoft2',
-         'htsoft2_new',
-         'pt_centrality',
-         'year'
+        "MET_pt",
+        "MET_phi",
+        "mu1_pt",
+        "mu2_pt",
+        "mu1_eta",
+        "mu2_eta",
+        "mu1_phi",
+        "mu2_phi",
+        "dimuon_pt_over_mass",
+        "dimuon_pt_over_mass_log",
+        "dimuon_rapidity",
+        "dimuon_dR",
+        "dimuon_ebe_mass_res_rel",
+        "dimuon_cos_theta_cs",
+        "dimuon_phi_cs",
+        "year",
+        "nfatJets_drmuon",
+        "jet1_pt_nominal",
+        "jet1_eta_nominal",
+        "jet1_phi_nominal",
+        "jet1_qgl_nominal",
+        "jet1_mass_nominal",
+        "jet2_pt_nominal",
+        "jet2_eta_nominal",
+        "jet2_phi_nominal",
+        "jet2_qgl_nominal",
+        "jet2_mass_nominal",
+        "jet3_pt_nominal",
+        "jet3_eta_nominal",
+        "jet3_phi_nominal",
+        "jet3_qgl_nominal",
+        "jet3_mass_nominal",
+        "jet4_pt_nominal",
+        "jet4_eta_nominal",
+        "jet4_phi_nominal",
+        "jet4_qgl_nominal",
+        "jet4_mass_nominal",
+        "jj_mass_nominal",
+        "jj_mass_log_nominal",
+        "jj_dEta_nominal",
+        "jj_dPhi_nominal",
+        "mmj_min_dEta_nominal",
+        "mmj_min_dPhi_nominal",
+        "rpt_nominal",
+        "pt_centrality_nominal",
+        "zeppenfeld_nominal",
+        "ll_zstar_log_nominal",
+        "njets_nominal",
+        "htsoft2_nominal",
+        "nsoftjets5_nominal",
+        "nBtagLoose_nominal",
+        "nBtagMedium_nominal",
+        "dR_mu1_mu2",
+        "kT_mu1_mu2",
+        "Z_mu1_mu2",
+        "dPhi_mu1_MET",
+        "kT_mu1_MET",
+        "Z_mu1_MET",
+        "transverseMass_mu1_MET",
+        "dPhi_mu2_MET",
+        "kT_mu2_MET",
+        "Z_mu2_MET",
+        "transverseMass_mu2_MET",
+        "dR_jet1_jet2",
+        "kT_jet1_jet2",
+        "Z_jet1_jet2",
+        "invariantMass_jet1_jet2",
+        "dR_jet1_jet3",
+        "kT_jet1_jet3",
+        "Z_jet1_jet3",
+        "invariantMass_jet1_jet3",
+        "dR_jet1_jet4",
+        "kT_jet1_jet4",
+        "Z_jet1_jet4",
+        "invariantMass_jet1_jet4",
+        "dR_jet2_jet3",
+        "kT_jet2_jet3",
+        "Z_jet2_jet3",
+        "invariantMass_jet2_jet3",
+        "dR_jet2_jet4",
+        "kT_jet2_jet4",
+        "Z_jet2_jet4",
+        "invariantMass_jet2_jet4",
+        "dR_jet3_jet4",
+        "kT_jet3_jet4",
+        "Z_jet3_jet4",
+        "invariantMass_jet3_jet4",
+        "dR_mu1_jet1",
+        "kT_mu1_jet1",
+        "Z_mu1_jet1",
+        "invariantMass_mu1_jet1",
+        "dR_mu2_jet1",
+        "kT_mu2_jet1",
+        "Z_mu2_jet1",
+        "invariantMass_mu2_jet1",
+        "dPhi_jet1_MET",
+        "kT_jet1_MET",
+        "Z_jet1_MET",
+        "transverseMass_jet1_MET",
+        "dR_mu1_jet2",
+        "kT_mu1_jet2",
+        "Z_mu1_jet2",
+        "invariantMass_mu1_jet2",
+        "dR_mu2_jet2",
+        "kT_mu2_jet2",
+        "Z_mu2_jet2",
+        "invariantMass_mu2_jet2",
+        "dPhi_jet2_MET",
+        "kT_jet2_MET",
+        "Z_jet2_MET",
+        "transverseMass_jet2_MET",
+        "dR_mu1_jet3",
+        "kT_mu1_jet3",
+        "Z_mu1_jet3",
+        "invariantMass_mu1_jet3",
+        "dR_mu2_jet3",
+        "kT_mu2_jet3",
+        "Z_mu2_jet3",
+        "invariantMass_mu2_jet3",
+        "dPhi_jet3_MET",
+        "kT_jet3_MET",
+        "Z_jet3_MET",
+        "transverseMass_jet3_MET",
+        "dR_mu1_jet4",
+        "kT_mu1_jet4",
+        "Z_mu1_jet4",
+        "invariantMass_mu1_jet4",
+        "dR_mu2_jet4",
+        "kT_mu2_jet4",
+        "Z_mu2_jet4",
+        "invariantMass_mu2_jet4",
+        "dPhi_jet4_MET",
+        "kT_jet4_MET",
+        "Z_jet4_MET",
+        "transverseMass_jet4_MET",
+        "year"
     ]
     # generate directory to save training_features
     save_path = f"dnn/trained_models/{run_label}/{year}_{region}_{category}{DIR_TAG}"
@@ -504,10 +637,10 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     # bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     bkg_processes = [
         "dy_VBF_filter",
-        "dy_M-50_aMCatNLO",
-        "dy_M-100To200_aMCatNLO",
-        # "dy_M-50_MiNNLO",
-        # "dy_M-100To200_MiNNLO",
+        # "dy_M-50_aMCatNLO",
+        # "dy_M-100To200_aMCatNLO",
+        "dy_M-50_MiNNLO",
+        "dy_M-100To200_MiNNLO",
         "ewk_lljj_mll50_mjj120",
         "ttjets_dl",
         "ttjets_sl",
@@ -521,7 +654,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
 
     sig_events_dict = {}
     for process in sig_processes:
-        filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
+        filenames = glob.glob(f"{base_path}/{process}/*.parquet")
         if not filenames:
             logger.info(f"No parquet files found for signal process {process}, skipping.")
             continue
@@ -535,7 +668,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
 
     bkg_events_dict = {}
     for process in bkg_processes:
-        filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
+        filenames = glob.glob(f"{base_path}/{process}/*.parquet")
         if not filenames:
             logger.info(f"No parquet files found for background process {process}, skipping.")
             continue
@@ -756,11 +889,13 @@ if __name__ == "__main__":
         logger.info("Local scale Client created")
 
     if args.year == "run2":
-        base_path_f1_0 = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
-        base_path_compact = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/*/compacted"
+        base_path_f1_0 = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
+        base_path_compact = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/*/compacted"
     else:
-        base_path_f1_0      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
-        base_path_compact      = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
+        base_path_f1_0 = (
+            f"/depot/cms/hmm/shar1172/hmm_ntuples/skimmed_for_dnn_AK8jets/2017/"
+        )
+        base_path_compact      = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
     if not os.path.exists(base_path_compact) or not args.year == "run2":
         base_path = base_path_f1_0
     else:
