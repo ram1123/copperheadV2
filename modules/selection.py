@@ -243,8 +243,6 @@ def applyRegionCatCuts(
         # NOTE: fatjet and MET veto for VH: nfatJets_drmuon == 0 and MET_pt < 150 GeV
         fatjet_veto = ak.fill_none((events.nfatJets_drmuon == 0), value=False)
         met_veto = ak.fill_none((events.MET_pt < 150), value=False)
-        # prod_cat_cut = prod_cat_cut & fatjet_veto
-        # prod_cat_cut = prod_cat_cut & met_veto
 
         # INFO: Apply both fatjet and MET vetoes together
         prod_cat_cut = prod_cat_cut & fatjet_veto & met_veto

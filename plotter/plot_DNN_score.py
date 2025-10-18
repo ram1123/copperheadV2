@@ -317,7 +317,7 @@ if __name__ == "__main__":
     region_name = args.region
     category = args.category
     label = args.label
-    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{label}/"
+    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{label}_NoVHveto/"
     plotStage2DNN_score(
         hist_dict_bySampleGroup,
         var,

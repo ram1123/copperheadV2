@@ -35,7 +35,9 @@ base_script = ["python", "plotter/validation_plotter_unified.py"]
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/WithDY012_jets_18September"
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_SoftJetBugFixV3/Aug18_DnnRange20/Aug29_2025"
 # SAVE_PATH = "./validation/figs/Run2_nanoAODv12_07Sep2025/BothSoftJetVars/Sep12_2025/"
-SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/LatestBin_23September"
+# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/LatestBin_23September"
+# SAVE_PATH = "./validation/figs/skimmed_for_dnn_AK8jets/LatestBin_23September"
+SAVE_PATH = "./validation/figs/Run2_nanoAODv12_AK8jets/LatestBin_23September_NoVHveto"
 
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted/"
@@ -50,14 +52,20 @@ SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reor
 
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt//stage1_output/{year}/compacted_13August_FixDimuonMass/"
-LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2018/compacted_19September_FixDimuonMass/"
+# LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2018/compacted_19September_FixDimuonMass/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_SoftJetBugFixV3/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_07Sep2025/stage1_output/{year}/f1_0/"
 # LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage1_output/{year}/compacted/"
+
+# LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/skimmed_for_dnn_AK8jets/2017/"
+
+LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_AK8jets/stage1_output/{year}/f1_0/"
+
+
 # years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016"]
 # years = ["2017", "2016postVFP", "2016preVFP"]
-years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016", "*"]
-# years = ["2018"]
+# years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016", "*"]
+years = ["2016preVFP"]
 # years = ["*"]
 
 # categories = ["vbf", "ggh", "nocat"]
@@ -73,9 +81,9 @@ debug_options = False
 min_set_of_vars = False  # If True, only use a minimal set of variables  to plot
 
 region_options = [
-    ["h-sidebands", "z-peak", "signal", "h-peak"]
+    # ["h-sidebands", "z-peak", "signal", "h-peak"]
     # ["h-sidebands", "signal", "h-peak"]
-    # ["h-sidebands", "z-peak"]
+    ["h-sidebands", "z-peak"]
     # ["h-sidebands"]
 ]
 njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets
@@ -92,8 +100,8 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
          "--load", load_path,
          "-cat", cat,
         #  "--use_compacted", "compacted",  # options: "", "compacted", "compacted_WithDNNScore"
-        #  "--use_gateway",
-         "--dnn-score"
+         "--use_gateway",
+        #  "--dnn-score"
          ]
     )
 
