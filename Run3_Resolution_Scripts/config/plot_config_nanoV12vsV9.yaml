@@ -1,0 +1,30 @@
+year: 2018C
+control_region: None
+directoryTag: March24_NanoV12SanityCheck
+
+input_paths_labels:
+    # "v9": "/depot/cms/hmm/shar1172/OfficialNanoAODv9/Data/Run2018C/*.root"
+    # "v12": "/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018C/*.root"
+    "v9": "/depot/cms/hmm/shar1172/test/*.root"
+    "v12": "/depot/cms/hmm/shar1172/test2/*.root"
+
+plot_types:
+    plot_1D: true
+
+fields_to_load:
+    - Muon_pt
+    - Muon_eta
+    - Muon_phi
+
+variables:
+    muon:
+        - Muon_pt:
+            - Range: [50, 20, 80]
+            - Title: "Muon p_{T} [GeV]"
+            - RatioPlot: [0.01, -0.01]
+        - Muon_eta:
+            - Range: [50, -4.7, 4.7]
+            - Title: "Muon #eta"
+            - RatioPlot: [0.01, -0.1]
+
+

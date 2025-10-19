@@ -20,7 +20,9 @@ def filter_region(events, region="h-peak"):
     elif region == "signal":
         region_filter = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
     elif region == "z-peak" or region == "z_peak":
-        region_filter = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
+        region_filter = (dimuon_mass >= 76) & (dimuon_mass <= 106.0)
+        # region_filter = (dimuon_mass >= 80) & (dimuon_mass <= 100.0)
+        # region_filter = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
     return events[region_filter]
 
 
@@ -574,7 +576,7 @@ def closure_test_from_df(df, additional_string, output_plot="closure_test.pdf"):
     # Plot the reference y = x line.
     x_min = df["median_val"].min()
     x_max = df["median_val"].max()
-    x_vals = np.linspace(0, x_max*1.2, 100)
+    x_vals = np.linspace(0.5, x_max*1.1, 100)
     plt.plot(x_vals, x_vals, "r--", label="y = x")
 
     # plot the 10% dotted line for reference
@@ -585,9 +587,9 @@ def closure_test_from_df(df, additional_string, output_plot="closure_test.pdf"):
 
 
 
-    plt.xlabel("Median Predicted Resolution (GeV)")
-    plt.ylabel("Fitted Resolution (GeV)")
-    plt.title("Closure Test: Fitted vs. Predicted Resolution")
+    plt.xlabel("Predicted $\\sigma_{\\mu\\mu}$ [GeV]")
+    plt.ylabel("Measured $\\sigma_{\\mu\\mu}$ [GeV]")
+    plt.title("Closure Test: Measured vs. Predicted Resolution")
     plt.legend()
     output_plot = output_plot.replace(".pdf", f"_{additional_string}.pdf")
     plt.savefig(output_plot)

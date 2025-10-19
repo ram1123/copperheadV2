@@ -1,0 +1,463 @@
+/cvmfs/sft.cern.ch/lcg/views/LCG_106b_cuda/x86_64-el8-gcc11-opt/lib/python3.11/site-packages/coffea/nanoevents/schemas/fcc.py:5: FutureWarning: In version 2025.1.0 (target date: 2024-12-31 11:59:59-06:00), this will be an error.
+To raise these warnings as errors (and get stack traces to find out where they're called), run
+    import warnings
+    warnings.filterwarnings("error", module="coffea.*")
+after the first `import coffea` or use `@pytest.mark.filterwarnings("error:::coffea.*")` in pytest.
+Issue: coffea.nanoevents.methods.vector will be removed and replaced with scikit-hep vector. Nanoevents schemas internal to coffea will be migrated. Otherwise please consider using that package!.
+  from coffea.nanoevents.methods import vector
+[#1] INFO:Caching -- Changing internal binning of variable 'mh_ggh' in FFT 'DCB_BW' from 100 to 930 to improve the precision of the numerical FFT. This can be done manually by setting an additional binning named 'cache'.
+[#1] INFO:Eval -- RooRealVar::setRange(mh_ggh) new range named 'refrange_fft_DCB_BW' created with bounds [100,150]
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0xf5dc160 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh]_NORM_mh_ggh for nset (mh_ggh) with code 0
+[#1] INFO:Fitting -- RooAbsPdf::fitTo(DCB_BW_over_DCB_BW_Int[mh_ggh]) fixing normalization set for coefficient determination to observables in data
+[#1] INFO:Fitting -- using CPU computation library compiled with -mavx2
+[#1] INFO:Fitting -- using CUDA computation library
+[#1] INFO:Fitting -- RooAddition::defaultErrorLevel(nll_DCB_BW_over_DCB_BW_Int[mh_ggh]_BSC ON) Summation contains a RooNLLVar, using its error level
+[#1] INFO:Minimization -- RooAbsMinimizerFcn::setOptimizeConst: activating const optimization
+Minuit2Minimizer: Minimize with max-calls 3000 convergence for edm < 1 strategy 1
+Info in <Minuit2>: MnSeedGenerator Computing seed using NumericalGradient calculator
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0x10dbb0a0 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh] for nset () with code 1 from preexisting content.
+Info in <Minuit2>: MnSeedGenerator Initial state: FCN =       478689.2988 Edm =       -1632655.09 NCalls =     25
+Info in <Minuit2>: NegativeG2LineSearch Doing a NegativeG2LineSearch since one of the G2 component is negative
+Info in <Minuit2>: MnSeedGenerator Negative G2 found - new state: 
+  Minimum value : 274062.9113
+  Edm           : 598.4070221
+  Internal parameters:	[     -1.036850606      -1.25011863     -1.604906894     -1.131197931     -1.542518999    -0.3398369095]	
+  Internal gradient  :	[      884.0221606      3893.330967     -748.0630974     -2877.823389      1976.430908     -3637.078504]	
+  Internal covariance matrix:
+[[  1.4097898e-05              0              0              0              0              0]
+ [              0  1.0026246e-05              0              0              0              0]
+ [              0              0  9.0638854e-05              0              0              0]
+ [              0              0              0  0.00011815023              0              0]
+ [              0              0              0              0  2.3786979e-05              0]
+ [              0              0              0              0              0   8.379646e-05]]]
+Info in <Minuit2>: MnSeedGenerator Initial state  
+  Minimum value : 274062.9113
+  Edm           : 598.4070221
+  Internal parameters:	[     -1.036850606      -1.25011863     -1.604906894     -1.131197931     -1.542518999    -0.3398369095]	
+  Internal gradient  :	[      884.0221606      3893.330967     -748.0630974     -2877.823389      1976.430908     -3637.078504]	
+  Internal covariance matrix:
+[[  1.4097898e-05              0              0              0              0              0]
+ [              0  1.0026246e-05              0              0              0              0]
+ [              0              0  9.0638854e-05              0              0              0]
+ [              0              0              0  0.00011815023              0              0]
+ [              0              0              0              0  2.3786979e-05              0]
+ [              0              0              0              0              0   8.379646e-05]]]
+Info in <Minuit2>: VariableMetricBuilder Start iterating until Edm is < 0.001 with call limit = 3000
+Info in <Minuit2>: VariableMetricBuilder    0 - FCN =       274062.9113 Edm =       598.4070221 NCalls =    192
+Info in <Minuit2>: VariableMetricBuilder    1 - FCN =       273303.7561 Edm =       236.5644701 NCalls =    211
+Info in <Minuit2>: VariableMetricBuilder    2 - FCN =       270334.3365 Edm =       58.84678408 NCalls =    235
+Info in <Minuit2>: VariableMetricBuilder    3 - FCN =       270242.5945 Edm =       36.58959116 NCalls =    252
+Info in <Minuit2>: VariableMetricBuilder    4 - FCN =       270150.3015 Edm =       32.52895207 NCalls =    267
+Info in <Minuit2>: VariableMetricBuilder    5 - FCN =       270119.4038 Edm =       10.12687811 NCalls =    282
+Info in <Minuit2>: VariableMetricBuilder    6 - FCN =       270090.9738 Edm =       3.326732816 NCalls =    300
+Info in <Minuit2>: VariableMetricBuilder    7 - FCN =       270086.5891 Edm =       1.115059261 NCalls =    314
+Info in <Minuit2>: VariableMetricBuilder    8 - FCN =       270083.9656 Edm =      0.2759424054 NCalls =    329
+Info in <Minuit2>: VariableMetricBuilder    9 - FCN =       270083.5122 Edm =      0.1805259486 NCalls =    343
+Info in <Minuit2>: VariableMetricBuilder   10 - FCN =       270081.7154 Edm =      0.3468800138 NCalls =    363
+Info in <Minuit2>: VariableMetricBuilder   11 - FCN =       270081.0218 Edm =      0.0338186829 NCalls =    377
+Info in <Minuit2>: VariableMetricBuilder   12 - FCN =       270080.9525 Edm =     0.01290457157 NCalls =    392
+Info in <Minuit2>: VariableMetricBuilder   13 - FCN =       270080.8936 Edm =    0.006879291841 NCalls =    411
+Info in <Minuit2>: VariableMetricBuilder   14 - FCN =       270080.8877 Edm =   0.0009433552417 NCalls =    429
+Warning in <Minuit2>: DavidonErrorUpdator delgam < 0 : first derivatives increasing along search line (details in info log)
+Info in <Minuit2>: DavidonErrorUpdator Explanation:
+   The distance from the minimum cannot be estimated, since the minimized
+   function seems not to be strictly convex in the space probed by the fit.
+   That is expected if the starting parameters are e.g. close to a local maximum
+   of the minimized function. If this function is expected to be fully convex
+   in the probed range or Minuit is already close to the function minimum, this
+   may hint to numerical or analytical issues with the minimized function.
+   This was found by projecting the difference of gradients at two points, s0 and p1,
+   onto the direction given by the difference of s0 and p1, where:
+ * s0:  	[    -0.1201367622     -1.198220209     -1.570830528      1.536927842     -1.570733609     0.2818607273]	 
+ * p1:  	[    -0.1092664399     -1.198210983     -1.570801161      1.561635033      -1.57078142     0.2816177571]	 
+ * gradient at s0:  	[    -0.1509096147     -1.490803129    -0.4159944803 -4.662433639e-08     0.7991285298      4.190378756]	 
+ * gradient at p1:  	[     -1.331537168     0.3387033309   -0.05885756796 -2.037268132e-09     0.1903008998   -0.08425101851]	 
+   To understand whether this hints to an issue in the minimized function,
+   the minimized function can be plotted along points between s0 and p1 to
+   look for unexpected behavior.
+Info in <Minuit2>: VariableMetricBuilder   15 - FCN =       270080.8871 Edm =     0.05522881635 NCalls =    448
+Warning in <Minuit2>: VariableMetricBuilder Matrix not pos.def, gdel = 0.0166408 > 0
+Warning in <Minuit2>: MnPosDef non-positive diagonal element in covariance matrix[ 0 ] = -0.00938959
+Warning in <Minuit2>: MnPosDef non-positive diagonal element in covariance matrix[ 3 ] = -0.048649
+Warning in <Minuit2>: MnPosDef Added to diagonal of Error matrix a value 0.548649
+Warning in <Minuit2>: VariableMetricBuilder gdel = -1.04471
+Info in <Minuit2>: VariableMetricBuilder   16 - FCN =       270080.8871 Edm =     0.01380817872 NCalls =    471
+Warning in <Minuit2>: DavidonErrorUpdator delgam < 0 : first derivatives increasing along search line (details in info log)
+Info in <Minuit2>: DavidonErrorUpdator Explanation:
+   The distance from the minimum cannot be estimated, since the minimized
+   function seems not to be strictly convex in the space probed by the fit.
+   That is expected if the starting parameters are e.g. close to a local maximum
+   of the minimized function. If this function is expected to be fully convex
+   in the probed range or Minuit is already close to the function minimum, this
+   may hint to numerical or analytical issues with the minimized function.
+   This was found by projecting the difference of gradients at two points, s0 and p1,
+   onto the direction given by the difference of s0 and p1, where:
+ * s0:  	[    -0.1092573084     -1.198213346      -1.57080075       1.56163467     -1.570782748     0.2816183458]	 
+ * p1:  	[       -0.1092567     -1.198211209     -1.570799397      1.561634647     -1.570787102     0.2816201269]	 
+ * gradient at s0:  	[   -0.09245967886   -0.06260823885   -0.05385899805 -1.979060471e-09     0.1733044096   -0.07122154072]	 
+ * gradient at p1:  	[     -4.258337663      0.297686388   -0.03737643159 -2.037268132e-09     0.1177561952   -0.04228505982]	 
+   To understand whether this hints to an issue in the minimized function,
+   the minimized function can be plotted along points between s0 and p1 to
+   look for unexpected behavior.
+Info in <Minuit2>: VariableMetricBuilder   17 - FCN =       270080.8871 Edm =      0.2912291901 NCalls =    492
+Info in <Minuit2>: VariableMetricBuilder   18 - FCN =       270080.8871 Edm =   0.0002962954672 NCalls =    514
+Info in <Minuit2>: VariableMetricBuilder   19 - FCN =       270080.8871 Edm =    0.001463844508 NCalls =    535
+Info in <Minuit2>: VariableMetricBuilder   20 - FCN =       270080.8871 Edm =   0.0002615469715 NCalls =    554
+Warning in <Minuit2>: VariableMetricBuilder No improvement in line search
+Info in <Minuit2>: VariableMetricBuilder   21 - FCN =       270080.8871 Edm =   0.0002615469715 NCalls =    561
+Info in <Minuit2>: VariableMetricBuilder Edm is close to limit - return current minimum
+Info in <Minuit2>: VariableMetricBuilder After Hessian
+Info in <Minuit2>: VariableMetricBuilder   22 - FCN =       270080.8871 Edm =   3.527759141e-07 NCalls =    607
+Minuit2Minimizer : Valid minimum - status = 0
+FVAL  = 270080.887119509396
+Edm   = 3.52775914139334816e-07
+Nfcn  = 607
+alpha1	  = 4.51026	 +/-  7.12186	(limited)
+alpha2	  = 0.439623	 +/-  0.00438239	(limited)
+mean_dcb	  = -10	 +/-  0.000410684	(limited)
+n1	  = 99.9979	 +/-  98.1229	(limited)
+n2	  = 1	 +/-  0.00194791	(limited)
+sigma	  = 3.3753	 +/-  0.0163102	(limited)
+Info in <Minuit2>: Minuit2Minimizer::Hesse Using max-calls 3000
+Info in <Minuit2>: Minuit2Minimizer::Hesse Hesse is valid - matrix is accurate
+Info in <Minuit2>: Minuit2Minimizer::Hesse Using max-calls 3000
+Info in <Minuit2>: Minuit2Minimizer::Hesse Hesse is valid - matrix is accurate
+[#1] INFO:Fitting -- RooAbsPdf::fitTo(DCB_BW) Calculating sum-of-weights-squared correction matrix for covariance matrix
+[#1] INFO:Minimization -- RooAbsMinimizerFcn::setOptimizeConst: deactivating const optimization
+
+  RooFitResult: minimized FCN value: 270081, estimated distance to minimum: 3.52068e-07
+                covariance matrix quality: Full, accurate covariance matrix
+                Status : MINIMIZE=0 HESSE=0 HESSE=0 
+
+    Floating Parameter    FinalValue +/-  Error   
+  --------------------  --------------------------
+                alpha1    4.5103e+00 +/-  2.79e-01
+                alpha2    4.3962e-01 +/-  4.38e-03
+              mean_dcb   -1.0000e+01 +/-  1.58e-07
+                    n1    9.9998e+01 +/-  9.88e+02
+                    n2    1.0000e+00 +/-  1.55e-06
+                 sigma    3.3753e+00 +/-  1.63e-02
+
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0xf8e4880 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh]_NORM_mh_ggh for nset (mh_ggh) with code 0
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0xf424af0 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh]_NORM_mh_ggh for nset (mh_ggh) with code 0 from preexisting content.
+[#1] INFO:Fitting -- RooAbsPdf::fitTo(DCB_BW_over_DCB_BW_Int[mh_ggh]) fixing normalization set for coefficient determination to observables in data
+[#1] INFO:Fitting -- RooAddition::defaultErrorLevel(nll_DCB_BW_over_DCB_BW_Int[mh_ggh]_BSC OFF) Summation contains a RooNLLVar, using its error level
+[#1] INFO:Minimization -- RooAbsMinimizerFcn::setOptimizeConst: activating const optimization
+Minuit2Minimizer: Minimize with max-calls 3000 convergence for edm < 1 strategy 1
+Info in <Minuit2>: MnSeedGenerator Computing seed using NumericalGradient calculator
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0x112124e0 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh] for nset () with code 1
+Info in <Minuit2>: MnSeedGenerator Initial state: FCN =       275703.2155 Edm =       1.458491313 NCalls =     21
+Info in <Minuit2>: MnSeedGenerator Initial state  
+  Minimum value : 275703.2155
+  Edm           : 1.458491313
+  Internal parameters:	[    -0.1092565944     -1.198210895     -1.568843202      1.561634641     -1.568843202      0.281617742]	
+  Internal gradient  :	[    -0.1454497575       -665.30083      25.82603144 -1.979060471e-09      17.36176668     -68.83652155]	
+  Internal covariance matrix:
+[[      0.7333949              0              0              0              0              0]
+ [              0  1.1588952e-05              0              0              0              0]
+ [              0              0   0.0001512414              0              0              0]
+ [              0              0              0      9439488.6              0              0]
+ [              0              0              0              0  0.00022376707              0]
+ [              0              0              0              0              0  0.00010985872]]]
+Info in <Minuit2>: VariableMetricBuilder Start iterating until Edm is < 0.001 with call limit = 3000
+Info in <Minuit2>: VariableMetricBuilder    0 - FCN =       275703.2155 Edm =       1.458491313 NCalls =     21
+Info in <Minuit2>: VariableMetricBuilder    1 - FCN =       275701.7413 Edm =     0.03327113881 NCalls =     38
+Info in <Minuit2>: VariableMetricBuilder    2 - FCN =        275701.741 Edm =   0.0001567715467 NCalls =     57
+Warning in <Minuit2>: MnPosDef non-positive diagonal element in covariance matrix[ 3 ] = -4.65661e-10
+Warning in <Minuit2>: MnPosDef Added to diagonal of Error matrix a value 0.5
+Info in <Minuit2>: VariableMetricBuilder After Hessian
+Info in <Minuit2>: VariableMetricBuilder    3 - FCN =        275701.741 Edm =   0.0001465450239 NCalls =     99
+Minuit2Minimizer : Valid minimum - status = 0
+FVAL  = 275701.740974395885
+Edm   = 0.000146545023852218039
+Nfcn  = 99
+alpha1	  = 5.10107	 +/-  7.41613	(limited)
+alpha2	  = 0.446686	 +/-  0.00436339	(limited)
+mean_dcb	  = -10	 +/-  0.000392455	(limited)
+n1	  = 100	 +/-  70.3866	(limited)
+n2	  = 1	 +/-  0.00174105	(limited)
+sigma	  = 3.38375	 +/-  0.0161219	(limited)
+Info in <Minuit2>: Minuit2Minimizer::Hesse Using max-calls 3000
+Warning in <Minuit2>: MnHesse 2nd derivative zero for parameter n1 ; MnHesse fails and will return diagonal matrix
+Warning in <Minuit2>: Minuit2Minimizer::Hesse Hesse failed - matrix is full but not positive defined
+Warning in <Minuit2>: Minuit2Minimizer::Hesse 3
+Warning in <ROOT::Math::Fitter::CalculateHessErrors>: Error when calculating Hessian
+Info in <Minuit2>: Minuit2Minimizer::Hesse Using max-calls 3000
+Warning in <Minuit2>: MnHesse 2nd derivative zero for parameter n1 ; MnHesse fails and will return diagonal matrix
+Warning in <Minuit2>: Minuit2Minimizer::Hesse Hesse failed - matrix is full but not positive defined
+Warning in <Minuit2>: Minuit2Minimizer::Hesse 3
+Warning in <ROOT::Math::Fitter::CalculateHessErrors>: Error when calculating Hessian
+[#1] INFO:Fitting -- RooAbsPdf::fitTo(DCB_BW) Calculating sum-of-weights-squared correction matrix for covariance matrix
+[#1] INFO:Minimization -- RooAbsMinimizerFcn::setOptimizeConst: deactivating const optimization
+
+  RooFitResult: minimized FCN value: 275702, estimated distance to minimum: 0.000146545
+                covariance matrix quality: Not calculated at all
+                Status : MINIMIZE=0 HESSE=300 HESSE=600 
+
+    Floating Parameter    FinalValue +/-  Error   
+  --------------------  --------------------------
+                alpha1    5.1011e+00 +/-  7.00e+00
+                alpha2    4.4669e-01 +/-  4.36e-03
+              mean_dcb   -1.0000e+01 +/-  1.70e-06
+                    n1    1.0000e+02 +/-  1.08e-02
+                    n2    1.0000e+00 +/-  6.53e-06
+                 sigma    3.3838e+00 +/-  1.61e-02
+
+[#1] INFO:Plotting -- RooPlot::updateFitRangeNorm: New event count of 76396 will supersede previous event count of 74808 for normalization of PDF projections
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0x112124e0 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh]_NORM_mh_ggh for nset (mh_ggh) with code 0
+Info in <TCanvas::Print>: pdf file plots/mass_resolution_unbinned/2022preEE/October19_signal_massResolution_Unbinned/signal/nbins1000/fitPlot_Unbinned_signal_Inclusive_nbins1000.pdf has been created
+Info in <TCanvas::SaveAs>: ROOT file plots/mass_resolution_unbinned/2022preEE/October19_signal_massResolution_Unbinned/signal/nbins1000/fitPlot_Unbinned_signal_Inclusive_nbins1000.root has been created
+[#1] INFO:Caching -- Changing internal binning of variable 'mh_ggh' in FFT 'DCB_BW' from 100 to 930 to improve the precision of the numerical FFT. This can be done manually by setting an additional binning named 'cache'.
+[#1] INFO:Eval -- RooRealVar::setRange(mh_ggh) new range named 'refrange_fft_DCB_BW' created with bounds [100,150]
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0xf841510 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh]_NORM_mh_ggh for nset (mh_ggh) with code 0
+[#1] INFO:Fitting -- RooAbsPdf::fitTo(DCB_BW_over_DCB_BW_Int[mh_ggh]) fixing normalization set for coefficient determination to observables in data
+[#1] INFO:Fitting -- RooAddition::defaultErrorLevel(nll_DCB_BW_over_DCB_BW_Int[mh_ggh]_BSC ON) Summation contains a RooNLLVar, using its error level
+[#1] INFO:Minimization -- RooAbsMinimizerFcn::setOptimizeConst: activating const optimization
+Minuit2Minimizer: Minimize with max-calls 3000 convergence for edm < 1 strategy 1
+Info in <Minuit2>: MnSeedGenerator Computing seed using NumericalGradient calculator
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0x117da350 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh] for nset () with code 1 from preexisting content.
+Info in <Minuit2>: MnSeedGenerator Initial state: FCN =       101707.1152 Edm =      -396983.8056 NCalls =     25
+Info in <Minuit2>: NegativeG2LineSearch Doing a NegativeG2LineSearch since one of the G2 component is negative
+Info in <Minuit2>: MnSeedGenerator Negative G2 found - new state: 
+  Minimum value : 58042.62418
+  Edm           : 196.4655087
+  Internal parameters:	[     -1.014165734     -1.251207768     -1.627496031     -1.102253516     -1.559842855    -0.3398369095]	
+  Internal gradient  :	[      1328.609866     -166.4494653     -354.4694358     -392.2940639      76.07188622     -1205.747063]	
+  Internal covariance matrix:
+[[  7.6511068e-05              0              0              0              0              0]
+ [              0  4.9566097e-05              0              0              0              0]
+ [              0              0  0.00031562843              0              0              0]
+ [              0              0              0  0.00082418146              0              0]
+ [              0              0              0              0  0.00026863589              0]
+ [              0              0              0              0              0  0.00033111334]]]
+Info in <Minuit2>: MnSeedGenerator Initial state  
+  Minimum value : 58042.62418
+  Edm           : 196.4655087
+  Internal parameters:	[     -1.014165734     -1.251207768     -1.627496031     -1.102253516     -1.559842855    -0.3398369095]	
+  Internal gradient  :	[      1328.609866     -166.4494653     -354.4694358     -392.2940639      76.07188622     -1205.747063]	
+  Internal covariance matrix:
+[[  7.6511068e-05              0              0              0              0              0]
+ [              0  4.9566097e-05              0              0              0              0]
+ [              0              0  0.00031562843              0              0              0]
+ [              0              0              0  0.00082418146              0              0]
+ [              0              0              0              0  0.00026863589              0]
+ [              0              0              0              0              0  0.00033111334]]]
+Info in <Minuit2>: VariableMetricBuilder Start iterating until Edm is < 0.001 with call limit = 3000
+Info in <Minuit2>: VariableMetricBuilder    0 - FCN =       58042.62418 Edm =       196.4655087 NCalls =    200
+Info in <Minuit2>: VariableMetricBuilder    1 - FCN =       57894.86724 Edm =       67.56100456 NCalls =    214
+Info in <Minuit2>: VariableMetricBuilder    2 - FCN =       57476.74594 Edm =       175.1695851 NCalls =    235
+Info in <Minuit2>: VariableMetricBuilder    3 - FCN =       57322.87096 Edm =        29.5668511 NCalls =    254
+Info in <Minuit2>: VariableMetricBuilder    4 - FCN =         57263.775 Edm =       42.79974364 NCalls =    273
+Info in <Minuit2>: VariableMetricBuilder    5 - FCN =       57229.23948 Edm =       40.65821157 NCalls =    290
+Info in <Minuit2>: VariableMetricBuilder    6 - FCN =       57178.74788 Edm =       3.627300828 NCalls =    310
+Info in <Minuit2>: VariableMetricBuilder    7 - FCN =       57168.76289 Edm =       6.980058945 NCalls =    324
+Info in <Minuit2>: VariableMetricBuilder    8 - FCN =       57162.21755 Edm =        1.39657832 NCalls =    341
+Info in <Minuit2>: VariableMetricBuilder    9 - FCN =       57157.59988 Edm =      0.3131949061 NCalls =    363
+Info in <Minuit2>: VariableMetricBuilder   10 - FCN =       57156.92794 Edm =      0.1690827937 NCalls =    377
+Info in <Minuit2>: VariableMetricBuilder   11 - FCN =       57156.40673 Edm =     0.05301735497 NCalls =    395
+Info in <Minuit2>: VariableMetricBuilder   12 - FCN =       57156.25985 Edm =     0.01889010146 NCalls =    412
+Info in <Minuit2>: VariableMetricBuilder   13 - FCN =       57156.21862 Edm =    0.003948227922 NCalls =    429
+Info in <Minuit2>: VariableMetricBuilder   14 - FCN =       57156.20657 Edm =    0.002163938838 NCalls =    447
+Info in <Minuit2>: VariableMetricBuilder   15 - FCN =       57156.19813 Edm =   0.0007946518006 NCalls =    469
+Warning in <Minuit2>: DavidonErrorUpdator delgam < 0 : first derivatives increasing along search line (details in info log)
+Info in <Minuit2>: DavidonErrorUpdator Explanation:
+   The distance from the minimum cannot be estimated, since the minimized
+   function seems not to be strictly convex in the space probed by the fit.
+   That is expected if the starting parameters are e.g. close to a local maximum
+   of the minimized function. If this function is expected to be fully convex
+   in the probed range or Minuit is already close to the function minimum, this
+   may hint to numerical or analytical issues with the minimized function.
+   This was found by projecting the difference of gradients at two points, s0 and p1,
+   onto the direction given by the difference of s0 and p1, where:
+ * s0:  	[    -0.1218193126     -1.188489134      -1.57076688      1.891237188     -1.571399611     0.2945057746]	 
+ * p1:  	[    -0.1128414489     -1.188419662     -1.570825251       1.90996748     -1.570895055     0.2939318408]	 
+ * gradient at s0:  	[   -0.01384475705     -1.872478518    0.08138751114  2.816523192e-08      -1.87454738      1.940657491]	 
+ * gradient at p1:  	[      -1.27042657     0.7382055053   -0.08010993878  1.588341547e-08     -0.309456513    -0.1953098461]	 
+   To understand whether this hints to an issue in the minimized function,
+   the minimized function can be plotted along points between s0 and p1 to
+   look for unexpected behavior.
+Info in <Minuit2>: VariableMetricBuilder   16 - FCN =       57156.19703 Edm =      0.2322633157 NCalls =    488
+Warning in <Minuit2>: VariableMetricBuilder Matrix not pos.def, gdel = 0.0126147 > 0
+Warning in <Minuit2>: MnPosDef non-positive diagonal element in covariance matrix[ 0 ] = -0.00777932
+Warning in <Minuit2>: MnPosDef non-positive diagonal element in covariance matrix[ 3 ] = -0.0343679
+Warning in <Minuit2>: MnPosDef Added to diagonal of Error matrix a value 0.534368
+Warning in <Minuit2>: VariableMetricBuilder gdel = -1.21603
+Info in <Minuit2>: VariableMetricBuilder   17 - FCN =       57156.19702 Edm =     0.03516286277 NCalls =    510
+Warning in <Minuit2>: DavidonErrorUpdator delgam < 0 : first derivatives increasing along search line (details in info log)
+Info in <Minuit2>: DavidonErrorUpdator Explanation:
+   The distance from the minimum cannot be estimated, since the minimized
+   function seems not to be strictly convex in the space probed by the fit.
+   That is expected if the starting parameters are e.g. close to a local maximum
+   of the minimized function. If this function is expected to be fully convex
+   in the probed range or Minuit is already close to the function minimum, this
+   may hint to numerical or analytical issues with the minimized function.
+   This was found by projecting the difference of gradients at two points, s0 and p1,
+   onto the direction given by the difference of s0 and p1, where:
+ * s0:  	[    -0.1128003326     -1.188443909     -1.570822618       1.90996618     -1.570884908     0.2939382716]	 
+ * p1:  	[    -0.1127900401     -1.188426478     -1.570810513      1.909965838     -1.570838845     0.2939659607]	 
+ * gradient at s0:  	[  -0.001902939219    -0.1483020082   -0.07282499823  1.585431164e-08     -0.276984396    -0.1659581773]	 
+ * gradient at p1:  	[     -3.798526351     0.4805379701   -0.03928562663  1.583248377e-08    -0.1331634315   -0.06738024719]	 
+   To understand whether this hints to an issue in the minimized function,
+   the minimized function can be plotted along points between s0 and p1 to
+   look for unexpected behavior.
+Info in <Minuit2>: VariableMetricBuilder   18 - FCN =       57156.19701 Edm =      0.8457494079 NCalls =    530
+Info in <Minuit2>: VariableMetricBuilder   19 - FCN =       57156.19701 Edm =   0.0002431223654 NCalls =    552
+Info in <Minuit2>: VariableMetricBuilder   20 - FCN =       57156.19701 Edm =   6.601974268e-05 NCalls =    572
+Info in <Minuit2>: VariableMetricBuilder After Hessian
+Info in <Minuit2>: VariableMetricBuilder   21 - FCN =       57156.19701 Edm =   5.575045543e-06 NCalls =    618
+Minuit2Minimizer : Valid minimum - status = 0
+FVAL  = 57156.1970084917702
+Edm   = 5.57504554274727557e-06
+Nfcn  = 618
+alpha1	  = 4.49288	 +/-  1.08547	(limited)
+alpha2	  = 0.457479	 +/-  0.00967905	(limited)
+mean_dcb	  = -10	 +/-  0.00180557	(limited)
+n1	  = 97.1801	 +/-  50.3651	(limited)
+n2	  = 1	 +/-  0.00792901	(limited)
+sigma	  = 3.40194	 +/-  0.0354029	(limited)
+Info in <Minuit2>: Minuit2Minimizer::Hesse Using max-calls 3000
+Info in <Minuit2>: Minuit2Minimizer::Hesse Hesse is valid - matrix is accurate
+Info in <Minuit2>: Minuit2Minimizer::Hesse Using max-calls 3000
+Info in <Minuit2>: Minuit2Minimizer::Hesse Hesse is valid - matrix is accurate
+[#1] INFO:Fitting -- RooAbsPdf::fitTo(DCB_BW) Calculating sum-of-weights-squared correction matrix for covariance matrix
+[#1] INFO:Minimization -- RooAbsMinimizerFcn::setOptimizeConst: deactivating const optimization
+
+  RooFitResult: minimized FCN value: 57156.2, estimated distance to minimum: 5.4107e-06
+                covariance matrix quality: Full, accurate covariance matrix
+                Status : MINIMIZE=0 HESSE=0 HESSE=0 
+
+    Floating Parameter    FinalValue +/-  Error   
+  --------------------  --------------------------
+                alpha1    4.4929e+00 +/-  5.86e-01
+                alpha2    4.5748e-01 +/-  9.67e-03
+              mean_dcb   -1.0000e+01 +/-  1.01e-06
+                    n1    9.7180e+01 +/-  7.49e+04
+                    n2    1.0000e+00 +/-  1.93e-05
+                 sigma    3.4019e+00 +/-  3.54e-02
+
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0x117da350 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh]_NORM_mh_ggh for nset (mh_ggh) with code 0
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0x117da350 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh]_NORM_mh_ggh for nset (mh_ggh) with code 0 from preexisting content.
+[#1] INFO:Fitting -- RooAbsPdf::fitTo(DCB_BW_over_DCB_BW_Int[mh_ggh]) fixing normalization set for coefficient determination to observables in data
+[#1] INFO:Fitting -- RooAddition::defaultErrorLevel(nll_DCB_BW_over_DCB_BW_Int[mh_ggh]_BSC OFF) Summation contains a RooNLLVar, using its error level
+[#1] INFO:Minimization -- RooAbsMinimizerFcn::setOptimizeConst: activating const optimization
+Minuit2Minimizer: Minimize with max-calls 3000 convergence for edm < 1 strategy 1
+Info in <Minuit2>: MnSeedGenerator Computing seed using NumericalGradient calculator
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0xf841510 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh] for nset () with code 1
+Info in <Minuit2>: MnSeedGenerator Initial state: FCN =       58260.58956 Edm =      0.4067945877 NCalls =     23
+Info in <Minuit2>: MnSeedGenerator Initial state  
+  Minimum value : 58260.58956
+  Edm           : 0.4067945877
+  Internal parameters:	[    -0.1127887366     -1.188423835     -1.568843202      1.231626878     -1.568843202     0.2939660241]	
+  Internal gradient  :	[   -0.03247451882     -171.4731509      5.730804479 -1.618900569e-08       3.84158443    0.03187194244]	
+  Internal covariance matrix:
+[[      3.3036387              0              0              0              0              0]
+ [              0  5.3953059e-05              0              0              0              0]
+ [              0              0  0.00068158219              0              0              0]
+ [              0              0              0       40328331              0              0]
+ [              0              0              0              0   0.0010113441              0]
+ [              0              0              0              0              0  0.00052587639]]]
+Info in <Minuit2>: VariableMetricBuilder Start iterating until Edm is < 0.001 with call limit = 3000
+Info in <Minuit2>: VariableMetricBuilder    0 - FCN =       58260.58956 Edm =      0.4067945877 NCalls =     23
+Info in <Minuit2>: VariableMetricBuilder    1 - FCN =       58260.18274 Edm =    0.006124108015 NCalls =     38
+Info in <Minuit2>: VariableMetricBuilder    2 - FCN =       58260.18268 Edm =   6.255039906e-05 NCalls =     57
+Warning in <Minuit2>: MnHesse 2nd derivative zero for parameter n1 ; MnHesse fails and will return diagonal matrix
+Info in <Minuit2>: VariableMetricBuilder After Hessian
+Info in <Minuit2>: VariableMetricBuilder    3 - FCN =       58260.18268 Edm =   6.255039906e-05 NCalls =     68
+Warning in <Minuit2>: VariableMetricBuilder Invalid Hessian - exit the minimization
+Warning in <Minuit2>: Minuit2Minimizer::Minimize Minimization did NOT converge, Hesse is not valid
+Minuit2Minimizer : Invalid minimum - status = 2
+FVAL  = 58260.2
+Edm   = 6.25504e-05
+Nfcn  = 68
+Info in <Minuit2>: Minuit2Minimizer::Hesse Using max-calls 3000
+Warning in <Minuit2>: MnHesse 2nd derivative zero for parameter n1 ; MnHesse fails and will return diagonal matrix
+Warning in <Minuit2>: Minuit2Minimizer::Hesse Hesse failed - matrix is full but not positive defined
+Warning in <Minuit2>: Minuit2Minimizer::Hesse 3
+Warning in <ROOT::Math::Fitter::CalculateHessErrors>: Error when calculating Hessian
+Info in <Minuit2>: Minuit2Minimizer::Hesse Using max-calls 3000
+Warning in <Minuit2>: MnHesse 2nd derivative zero for parameter n1 ; MnHesse fails and will return diagonal matrix
+Warning in <Minuit2>: Minuit2Minimizer::Hesse Hesse failed - matrix is full but not positive defined
+Warning in <Minuit2>: Minuit2Minimizer::Hesse 3
+Warning in <ROOT::Math::Fitter::CalculateHessErrors>: Error when calculating Hessian
+[#1] INFO:Fitting -- RooAbsPdf::fitTo(DCB_BW) Calculating sum-of-weights-squared correction matrix for covariance matrix
+[#0] ERROR:Fitting -- RooAbsPdf::fitTo(DCB_BW) ERROR: Cannot apply sum-of-weights correction to covariance matrix: correction matrix calculated with weight-squared is singular
+[#1] INFO:Minimization -- RooAbsMinimizerFcn::setOptimizeConst: deactivating const optimization
+
+  RooFitResult: minimized FCN value: 58260.2, estimated distance to minimum: 6.25504e-05
+                covariance matrix quality: Unknown, matrix was externally provided
+                Status : MINIMIZE=-1 HESSE=302 HESSE=602 
+
+    Floating Parameter    FinalValue +/-  Error   
+  --------------------  --------------------------
+                alpha1    5.1637e+00 +/-  0.00e+00
+                alpha2    4.6613e-01 +/-  0.00e+00
+              mean_dcb   -1.0000e+01 +/-  0.00e+00
+                    n1    9.9998e+01 +/-  0.00e+00
+                    n2    1.0000e+00 +/-  0.00e+00
+                 sigma    3.4022e+00 +/-  0.00e+00
+
+[#1] INFO:Plotting -- RooPlot::updateFitRangeNorm: New event count of 16166 will supersede previous event count of 15847 for normalization of PDF projections
+[#1] INFO:Caching -- RooAbsCachedPdf::getCache(DCB_BW) creating new cache 0xf841510 with pdf bw_CONV_DCB_CACHE_Obs[mh_ggh]_NORM_mh_ggh for nset (mh_ggh) with code 0
+Info in <TCanvas::Print>: pdf file plots/mass_resolution_unbinned/2022preEE/October19_signal_massResolution_Unbinned/signal/nbins1000/fitPlot_Unbinned_signal_BB_nbins1000.pdf has been created
+Info in <TCanvas::SaveAs>: ROOT file plots/mass_resolution_unbinned/2022preEE/October19_signal_massResolution_Unbinned/signal/nbins1000/fitPlot_Unbinned_signal_BB_nbins1000.root has been created
+Loading BSC ON : /depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_*/*/*.parquet
+Available fields: ['event', 'mu1_pt', 'mu1_ptErr', 'mu2_pt', 'mu2_ptErr', 'mu1_pt_over_mass', 'mu2_pt_over_mass', 'mu1_eta', 'mu2_eta', 'mu1_phi', 'mu2_phi', 'mu1_charge', 'mu2_charge', 'mu1_iso', 'mu2_iso', 'nmuons', 'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_eta', 'dimuon_rapidity', 'dimuon_phi', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_ebe_mass_res', 'dimuon_ebe_mass_res_rel', 'dimuon_cos_theta_cs', 'dimuon_phi_cs', 'dimuon_cos_theta_eta', 'dimuon_phi_eta', 'mu1_pt_raw', 'mu2_pt_raw', 'mu1_pt_fsr', 'mu2_pt_fsr', 'year', 'jet1_pt_nominal', 'jet1_eta_nominal', 'jet1_rapidity_nominal', 'jet1_phi_nominal', 'jet1_qgl_nominal', 'jet1_jetId_nominal', 'jet2_pt_nominal', 'jet2_eta_nominal', 'jet1_mass_nominal', 'jet2_mass_nominal', 'jet1_pt_raw_nominal', 'jet2_pt_raw_nominal', 'jet1_mass_raw_nominal', 'jet2_mass_raw_nominal', 'jet1_rho_nominal', 'jet2_rho_nominal', 'jet1_area_nominal', 'jet2_area_nominal', 'jet1_pt_jec_nominal', 'jet2_pt_jec_nominal', 'jet1_mass_jec_nominal', 'jet2_mass_jec_nominal', 'jet2_rapidity_nominal', 'jet2_phi_nominal', 'jet2_qgl_nominal', 'jet2_jetId_nominal', 'jj_mass_nominal', 'jj_mass_log_nominal', 'jj_pt_nominal', 'jj_eta_nominal', 'jj_phi_nominal', 'jj_dEta_nominal', 'jj_dPhi_nominal', 'mmj1_dEta_nominal', 'mmj1_dPhi_nominal', 'mmj1_dR_nominal', 'mmj2_dEta_nominal', 'mmj2_dPhi_nominal', 'mmj2_dR_nominal', 'mmj_min_dEta_nominal', 'mmj_min_dPhi_nominal', 'mmjj_pt_nominal', 'mmjj_eta_nominal', 'mmjj_phi_nominal', 'mmjj_mass_nominal', 'rpt_nominal', 'pt_centrality_nominal', 'zeppenfeld_nominal', 'll_zstar_log_nominal', 'njets_nominal', 'nsoftjets2_nominal', 'htsoft2_nominal', 'nsoftjets5_nominal', 'htsoft5_nominal', 'nBtagLoose_nominal', 'nBtagMedium_nominal', 'wgt_nominal', 'separate_wgt_ones', 'fraction', 'entry']
+Loaded 4366885 events from /depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_*/*/*.parquet
+control_region: signal
+Filtering events for region: signal
+Filtering events for region: signal
+BSC ON data loaded: 74808 events
+Loading BSC OFF : /depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff_UpdateMassCalib//stage1_output/2022preEE/f1_0/data_*/*/*.parquet
+Available fields: ['event', 'mu1_pt', 'mu1_ptErr', 'mu2_pt', 'mu2_ptErr', 'mu1_pt_over_mass', 'mu2_pt_over_mass', 'mu1_eta', 'mu2_eta', 'mu1_phi', 'mu2_phi', 'mu1_charge', 'mu2_charge', 'mu1_iso', 'mu2_iso', 'nmuons', 'dimuon_mass', 'dimuon_pt', 'dimuon_pt_log', 'dimuon_eta', 'dimuon_rapidity', 'dimuon_phi', 'dimuon_dEta', 'dimuon_dPhi', 'dimuon_dR', 'dimuon_ebe_mass_res', 'dimuon_ebe_mass_res_rel', 'dimuon_cos_theta_cs', 'dimuon_phi_cs', 'dimuon_cos_theta_eta', 'dimuon_phi_eta', 'mu1_pt_raw', 'mu2_pt_raw', 'mu1_pt_fsr', 'mu2_pt_fsr', 'year', 'jet1_pt_nominal', 'jet1_eta_nominal', 'jet1_rapidity_nominal', 'jet1_phi_nominal', 'jet1_qgl_nominal', 'jet1_jetId_nominal', 'jet2_pt_nominal', 'jet2_eta_nominal', 'jet1_mass_nominal', 'jet2_mass_nominal', 'jet1_pt_raw_nominal', 'jet2_pt_raw_nominal', 'jet1_mass_raw_nominal', 'jet2_mass_raw_nominal', 'jet1_rho_nominal', 'jet2_rho_nominal', 'jet1_area_nominal', 'jet2_area_nominal', 'jet1_pt_jec_nominal', 'jet2_pt_jec_nominal', 'jet1_mass_jec_nominal', 'jet2_mass_jec_nominal', 'jet2_rapidity_nominal', 'jet2_phi_nominal', 'jet2_qgl_nominal', 'jet2_jetId_nominal', 'jj_mass_nominal', 'jj_mass_log_nominal', 'jj_pt_nominal', 'jj_eta_nominal', 'jj_phi_nominal', 'jj_dEta_nominal', 'jj_dPhi_nominal', 'mmj1_dEta_nominal', 'mmj1_dPhi_nominal', 'mmj1_dR_nominal', 'mmj2_dEta_nominal', 'mmj2_dPhi_nominal', 'mmj2_dR_nominal', 'mmj_min_dEta_nominal', 'mmj_min_dPhi_nominal', 'mmjj_pt_nominal', 'mmjj_eta_nominal', 'mmjj_phi_nominal', 'mmjj_mass_nominal', 'rpt_nominal', 'pt_centrality_nominal', 'zeppenfeld_nominal', 'll_zstar_log_nominal', 'njets_nominal', 'nsoftjets2_nominal', 'htsoft2_nominal', 'nsoftjets5_nominal', 'htsoft5_nominal', 'nBtagLoose_nominal', 'nBtagMedium_nominal', 'wgt_nominal', 'separate_wgt_ones', 'fraction', 'entry']
+Loaded 4366885 events from /depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff_UpdateMassCalib//stage1_output/2022preEE/f1_0/data_*/*/*.parquet
+control_region: signal
+Filtering events for region: signal
+Filtering events for region: signal
+BSC OFF data loaded: 76396 events
+Saving plots to: plots/mass_resolution_unbinned/2022preEE/October19_signal_massResolution_Unbinned/signal/nbins1000
+mass fit range: 100.0 to 150.0
+Performing unbinned fit on: BSC ON
+CUDA available, using GPU
+===================================================
+Dataset: BSC ON
+  bins: 1000
+  sigma: 3.375 +/- 0.016
+  Chi2/NDF: 6.715 | Free Params: 6
+===================================================
+Performing unbinned fit on: BSC OFF
+CUDA available, using GPU
+===================================================
+Dataset: BSC OFF
+  bins: 1000
+  sigma: 3.384 +/- 0.016
+  Chi2/NDF: 7.033 | Free Params: 6
+===================================================
+-------------------------------------------        
+{'Inclusive': {'BSC ON': {'sigma': 3.375, 'sigma_err': 0.016, 'mean': -10.0, 'mean_err': 0.0, 'chi2_ndf': 6.715463140213809}, 'BSC OFF': {'sigma': 3.384, 'sigma_err': 0.016, 'mean': -10.0, 'mean_err': 0.0, 'chi2_ndf': 7.033311388144799}}}
+{'sigma': 3.384, 'sigma_err': 0.016, 'mean': -10.0, 'mean_err': 0.0, 'chi2_ndf': 7.033311388144799}
+Summary written to: plots/mass_resolution_unbinned/2022preEE/October19_signal_massResolution_Unbinned/signal/nbins1000/fit_summary_comparison.csv
+-------------------------------------------        
+Region: BB
+Saving plots to: plots/mass_resolution_unbinned/2022preEE/October19_signal_massResolution_Unbinned/signal/nbins1000
+mass fit range: 100.0 to 150.0
+Performing unbinned fit on: BSC ON
+CUDA available, using GPU
+===================================================
+Dataset: BSC ON
+  bins: 1000
+  sigma: 3.402 +/- 0.035
+  Chi2/NDF: 2.039 | Free Params: 6
+===================================================
+Performing unbinned fit on: BSC OFF
+CUDA available, using GPU
+===================================================
+Dataset: BSC OFF
+  bins: 1000
+  sigma: 3.402 +/- 0.000
+  Chi2/NDF: 2.078 | Free Params: 6
+===================================================
+-------------------------------------------        
+{'BB': {'BSC ON': {'sigma': 3.402, 'sigma_err': 0.035, 'mean': -10.0, 'mean_err': 0.0, 'chi2_ndf': 2.0389880266526843}, 'BSC OFF': {'sigma': 3.402, 'sigma_err': 0.0, 'mean': -10.0, 'mean_err': 0.0, 'chi2_ndf': 2.07817070239944}}}
+{'sigma': 3.402, 'sigma_err': 0.0, 'mean': -10.0, 'mean_err': 0.0, 'chi2_ndf': 2.07817070239944}
+Summary written to: plots/mass_resolution_unbinned/2022preEE/October19_signal_massResolution_Unbinned/signal/nbins1000/fit_summary_comparison.csv
+-------------------------------------------        

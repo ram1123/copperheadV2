@@ -6,7 +6,7 @@ input_files:
     # "v9": "/depot/cms/hmm/shar1172/test/*.root"
     # "v12": "/depot/cms/hmm/shar1172/test2/*.root"
 
-outputDir: "plots/March25"
+outputDir: "plots/March28"
 
 variables:
     Muon_pt:
@@ -36,7 +36,7 @@ variables:
     Jet_pt:
         Range: [50, 0, 150]
         Title: "Jet p_{T} [GeV]"
-        RatioPlot: [-20.0, 20.]
+        RatioPlot: [-10.0, 10.]
     Jet_eta:
         Range: [50, -4.7, 4.7]
         Title: "Jet #eta"

@@ -95,6 +95,9 @@ def step2_mass_resolution(parquet_path, out_string = ""):
     # Load the same common input parquet files.
     df = dd.read_parquet(parquet_path)
 
+    # apply a ZCR filter: 80-100 GeV, without using the filter_region function
+    df = df[(df['dimuon_mass'] > 76) & (df['dimuon_mass'] < 106)]
+
     # Compute per-event muon energy (assumed as half the dimuon mass) and error contributions.
     df = df.assign(
         muon_E = df['dimuon_mass'] / 2,
@@ -177,16 +180,27 @@ def step4_save_csv(df_merged, out_csv="calibration_factors.csv"):
 def main():
     total_time_start = time.time()
 
-    # out_String = "_2018C"
+    # OUTPUT_DIR = "calibration_outputs/{year}"
+    # out_String = "_2018C" # OLD
     # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_*/*/part*.parquet"
     # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_C/*/part*.parquet"
 
-    out_String = "_2022preEE"
-    INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+    year = "2018"
+    # out_String = "_2018C_12March"
+    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_GeoFit//stage1_output/2018/f1_0/data_C/*/*.parquet"
+    out_String = "2018C_18April"
+    INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/April17_NanoV12/stage1_output/2018/f1_0/data_C/*/*.parquet"
+
+    # out_String = "_2022preEE"
+    # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
     # out_String = "_2022preEE_C"
     # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_C/*/*.parquet"
     # out_String = "_2022preEE_D"
     # INPUT_DATASET = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_D/*/*.parquet"
+
+    # OUTPUT_DIR = OUTPUT_DIR.format(year=year)
+    # if not os.path.exists(os.path.join(OUTPUT_DIR, out_String)):
+        # os.makedirs(os.path.join(OUTPUT_DIR))
 
     # Step 1: Mass Fitting in ZCR
     df_fit = step1_mass_fitting_zcr(INPUT_DATASET, out_String)
@@ -218,7 +232,7 @@ def main():
     #
 
     # Step 5: Closure test
-    closure_test_from_df(df_merged, out_String)
+    closure_test_from_df(df_merged, out_String+"_BeforeCalib") # This function will give me the closure test with GeoFit. As of now, the input files does not have latest BSC applied and stage1 run with GeoFit.
 
     logger.info("All steps completed!")
     logger.info(f"Total time elapsed: {time.time() - total_time_start:.2f} s")

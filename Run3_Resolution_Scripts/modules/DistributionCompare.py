@@ -4,7 +4,11 @@ import yaml
 import ROOT as rt
 import array
 import os
+import sys
 import numpy as np
+import glob
+import uproot
+from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
 
 class DistributionCompare:
     def __init__(self, year, input_paths_labels, fields, control_region=None, directoryTag="test", varlist_file="varlist.yaml"):
@@ -27,12 +31,16 @@ class DistributionCompare:
     def filter_region(self, events, region="h-peak"):
         dimuon_mass = events.dimuon_mass
         if region == "h-peak":
+            print("Filtering events for region: h-peak")
             region_filter = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
         elif region == "h-sidebands":
+            print("Filtering events for region: h-sidebands")
             region_filter = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
         elif region == "signal":
+            print("Filtering events for region: signal")
             region_filter = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
         elif region == "z-peak":
+            print("Filtering events for region: z-peak")
             region_filter = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
         return events[region_filter]
 
@@ -82,15 +90,33 @@ class DistributionCompare:
 
     def load_data(self):
         def load(path):
-            events_data = dak.from_parquet(path)
-            # # Add new variable: ptErr/pT for both leading and sub-leading muons
-            # events_data = self.add_new_variable(events_data)
+            if path.endswith(".root"):
+                events = NanoEventsFactory.from_root(
+                    {path: "Events"},
+                    schemaclass=NanoAODSchema,
+                    uproot_options={"timeout": 2400},
+                    metadata={"dataset": "SingleMuon_Run2018C"},
+                ).events()
 
-            # Load only the required fields
-            events_data = ak.zip({field: events_data[field] for field in self.fields}).compute()
+                print(f"Available fields: {events.fields}")
+
+                print(f"Muon fields: {events.Muon.fields}")
+
+                events_data = {}
+                if self.fields:
+                    for field in self.fields:
+                        events_data[field] = events.Muon[field.replace("Muon_", "")]
+                        # events_data[f"Muon_{field}"] = events.Muon[field]
+            elif path.endswith(".parquet"):
+                events_data = dak.from_parquet(path)
+                print(f"Available fields: {events_data.fields}")
+                # Load only the required fields
+                events_data = ak.zip({field: events_data[field] for field in self.fields}).compute()
             print(f"Loaded {len(events_data)} events from {path}")
+            # print(f"Loaded fields: {events_data.keys()}")
             print(f"control_region: {self.control_region}")
-            if self.control_region:
+            if self.control_region is not None:
+                print(f"Filtering events for region: {self.control_region}")
                 events_data = self.filter_region(events_data, region=self.control_region)
             return events_data
 
@@ -163,6 +189,7 @@ class DistributionCompare:
             canvas.Update()
 
         canvas.SaveAs(filename)
+        canvas.SaveAs(filename.replace(".pdf", ".root"))
 
         # Save the log version of the plot
         ratio_plot.GetUpperPad().SetLogy()
@@ -170,6 +197,7 @@ class DistributionCompare:
         histograms[0].SetMaximum(max(histograms[0].GetMaximum(), histograms[1].GetMaximum())*100)
 
         canvas.SaveAs(filename.replace(".pdf", "_log.pdf"))
+        canvas.SaveAs(filename.replace(".pdf", "_log.root"))
 
         # clear memory
         for hist in histograms:
@@ -241,6 +269,52 @@ class DistributionCompare:
             label_modified = label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")
             filename = f"{outdir}/{filename_prefix}_{var1}_vs_{var2}_{suffix}_{label_modified}.pdf"
             canvas.SaveAs(filename)
+            canvas.SaveAs(filename.replace(".pdf", ".root"))
+
+    def summarize_improvements(self, fit_results_for_csv, output_file="fit_summary_comparison.csv"):
+        """
+        Compare sigma between any two methods per suffix.
+        Picks the first two keys alphabetically for comparison.
+        """
+
+        rows = []
+        for suffix, label_dict in fit_results_for_csv.items():
+            if len(label_dict) < 2:
+                continue  # skip if less than 2 configs
+
+            labels = sorted(label_dict.keys())[:2]  # pick first 2
+            label1, label2 = labels
+            # label1 = label1.replace(" ", "")
+            # label2 = label2.replace(" ", "")
+
+            sigma1 = label_dict[label1]["sigma"]
+            sigma2 = label_dict[label2]["sigma"]
+
+            print(label_dict[label1])
+
+            if sigma2 != 0:
+                improvement = (sigma1 - sigma2) / sigma1 * 100
+            else:
+                improvement = 0
+
+            rows.append({
+                "suffix": suffix,
+                f"sigma_{label1}": f'{round(sigma1, 3)} +/- {round(label_dict[label1]["sigma_err"], 3)}',
+                f"sigma_{label2}": f'{round(sigma2, 3)} +/- {round(label_dict[label1]["sigma_err"], 3)}',
+                "improvement(%)": round(improvement, 0),
+            })
+
+        # Write CSV
+        with open(output_file, "a") as f:  # "w" to overwrite; use "a" to append
+            headers = rows[0].keys()
+            if suffix == "Inclusive":
+                f.write(",".join(headers) + "\n")
+            for row in rows:
+                line = ",".join(str(row[h]) for h in headers)
+                f.write(line + "\n")
+
+        print(f"Summary written to: {output_file}")
+
 
     def generateRooHist(self, x, dimuon_mass, wgts, name=""):
         print("generateRooHist version 2")
@@ -259,6 +333,7 @@ class DistributionCompare:
             c = rt.TCanvas("c","c",800,800)
             TH.Draw()
             c.SaveAs("TH.pdf")
+            c.SaveAs("TH.root")
 
         roohist = rt.RooDataHist(name, name, rt.RooArgSet(x), TH)
         return roohist
@@ -275,7 +350,7 @@ class DistributionCompare:
         roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist)
         return roo_hist_normalized
 
-    def fit_dimuonInvariantMass(self, events_dict=None, outdir = "plots/mass_resolution_defaultfunc", suffix=None):
+    def fit_dimuonInvariantMass(self, events_dict=None, outdir = "plots/mass_resolution_binned_test", suffix=None):
         """
         generate histogram from dimuon mass and wgt, fit DCB
         aftwards, plot the histogram and return the fit params
@@ -449,14 +524,21 @@ class DistributionCompare:
         if not os.path.exists(os.path.dirname(save_filename)):
             os.makedirs(os.path.dirname(save_filename))
         canvas.SaveAs(save_filename)
+        canvas.SaveAs(save_filename.replace(".pdf", ".root"))
 
-    def fit_dimuonInvariantMass_DCBXBW(self, events_dict=None, outdir="plots/mass_resolution_defaultfunc2", suffix=None):
+    def fit_dimuonInvariantMass_DCB(self, events_dict=None, outdir="plots/mass_resolution_binned", suffix=None):
         """
-        Generate a histogram from dimuon mass and weight, fit with DCB × BW (Double Crystal Ball × Breit-Wigner),
+        Generate a histogram from dimuon mass and weight, fit with DCB (Double Crystal Ball × Breit-Wigner),
         and return fit parameters: sigma and chi2/dof.
         """
         if events_dict is None:
             events_dict = self.events
+
+        nbins = 320  # Optimal bin count to reduce statistical noise
+        # save path
+        save_path = f"{outdir}/{self.year}/{self.directoryTag}/binned/{self.control_region}/nbins{nbins}"
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
 
         print("==================================================")
         print(f"Fitting {len(events_dict)} datasets...")
@@ -475,23 +557,171 @@ class DistributionCompare:
         #  Define Mass Variable
         # -----------------------------
         mass_name = "mh_ggh"
-        if self.control_region in ["z-peak", "z_peak"]:
-            mass = rt.RooRealVar(mass_name, mass_name, 91.2, 70, 110)  # Z-peak
-        elif self.control_region == "signal":
-            mass = rt.RooRealVar(mass_name, mass_name, 125, 115, 135)  # Higgs peak
+        if self.control_region == "signal":
+            mass = rt.RooRealVar(mass_name, mass_name, 125, 110, 150)  # Higgs peak
+        else:
+            print(f"Control region: {self.control_region} not recognized for this member function. Exiting...")
+            sys.exit(1)
 
         frame = mass.frame()
         mass_fit_range = self.mass_fit_range[self.control_region]
-        nbins = 250  # Optimal bin count to reduce statistical noise
+        mass.setBins(nbins)
+
+        # -----------------------------
+        #  Define DCB Model
+        # -----------------------------
+        mean_bsOn = rt.RooRealVar("mean_bsOn", "mean_bsOn", 125.2, 110, 150)  # Offset relative to BW
+        sigma_bsOn = rt.RooRealVar("sigma", "sigma", 1.8228, 0.1, 4.0)  # Gaussian resolution
+        alpha1_bsOn = rt.RooRealVar("alpha1", "alpha1", 1.12842, 0.01, 65.0)
+        n1_bsOn = rt.RooRealVar("n1", "n1", 4.019960, 0.01, 100.0)
+        alpha2_bsOn = rt.RooRealVar("alpha2", "alpha2", 1.3132, 0.01, 65.0)
+        n2_bsOn = rt.RooRealVar("n2", "n2", 9.97411, 0.01, 100.0)
+
+        model = rt.RooCrystalBall("DCB", "DCB Fit", mass, mean_bsOn, sigma_bsOn, alpha1_bsOn, n1_bsOn, alpha2_bsOn, n2_bsOn)
+
+        colors = [rt.kBlue, rt.kRed, rt.kGreen+2, rt.kMagenta, rt.kCyan, rt.kOrange, rt.kViolet]
+        # -----------------------------
+        #  Fit All Event Keys
+        # -----------------------------
+        fit_results = {}
+        fit_results_for_csv = {}
+        for idx, (label, events) in enumerate(events_dict.items()):
+            print(f"Processing dataset: {label}")
+
+            dimuon_mass = ak.to_numpy(events.dimuon_mass)
+            wgt = ak.to_numpy(events.wgt_nominal)
+
+            hist = self.generateRooHist(mass, dimuon_mass, wgt, name=label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", ""))
+            hist = self.normalizeRooHist(mass, hist)
+
+            # Fit
+            rt.EnableImplicitMT()
+            _ = model.fitTo(hist, EvalBackend="cpu", Save=True, SumW2Error=True)
+            _ = model.fitTo(hist, EvalBackend="cpu", Save=True, SumW2Error=True)
+            fit_result = model.fitTo(hist, EvalBackend="cpu", Save=True, SumW2Error=True)
+            fit_result.Print()
+            fit_results[label] = fit_result
+
+            # Plot
+            color = colors[idx % len(colors)]  # Assign different color to each dataset
+            hist.plotOn(frame, rt.RooFit.Name(f'hist_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}'), rt.RooFit.MarkerColor(color), rt.RooFit.LineColor(color))
+            model.plotOn(frame, rt.RooFit.Name(f'model_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}'), rt.RooFit.LineColor(color))
+
+            # Compute Fit Metrics
+            sigma_val = round(sigma_bsOn.getVal(), 3)
+            sigma_err = round(sigma_bsOn.getError(), 3)
+            mean_val = round(mean_bsOn.getVal(), 3)
+            mean_err = round(mean_bsOn.getError(), 3)
+
+            chi2_obj = model.createChi2(hist, rt.RooFit.DataError(rt.RooAbsData.SumW2))
+            chi2_val = chi2_obj.getVal()
+
+            # manually compute degrees of freedom
+            ndf = hist.numEntries() - fit_result.floatParsFinal().getSize()
+            chi2_o_ndf = chi2_val / ndf
+
+            new_nfree_params = fit_result.floatParsFinal().getSize()
+            chi2_ndf = frame.chiSquare(f'model_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', f'hist_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', new_nfree_params)
+            chi2_ndf = round(chi2_ndf, 3)
+
+            # Add Legend Entries
+            legend.AddEntry(frame.getObject(int(frame.numItems()) - 1), f"{label} (DCB x BW)", "L")
+            # legend.AddEntry("", f"   mean: {mean_val} #pm {mean_err}", "")
+            legend.AddEntry("", f"   sigma: {sigma_val} #pm {sigma_err}", "")
+            # legend.AddEntry("", f" #chi^2 : {round(chi2_ndf, 3)}", "")
+            legend.AddEntry("", f" #chi^2 / ndf: {round(chi2_ndf,3)}", "")
+
+            print(f"\n{label} -> Chi2/NDF: {chi2_ndf:.3f} | Free Params: {new_nfree_params}")
+            print(f"{label} -> Mean: {mean_val} +/- {mean_err}")
+            print(f"{label} -> Sigma: {sigma_val} +/- {sigma_err}")
+            print(f"{label} -> Chi2/NDF (from createChi2): {chi2_o_ndf:.3f}")
+            print(f"{label} -> ndf (from createChi2): {ndf}")
+
+            suffix = "Inclusive" if suffix == None else suffix
+            fit_results_for_csv.setdefault(suffix, {})[label] = {
+                "sigma": sigma_val,
+                "sigma_err": sigma_err,
+                "mean": mean_val,
+                "mean_err": mean_err,
+                "chi2_ndf": chi2_ndf
+            }
+
+        # -----------------------------
+        #  Save Results
+        # -----------------------------
+
+        print("-------------------------------------------        ")
+        print(fit_results_for_csv)
+        self.summarize_improvements(fit_results_for_csv, f"{save_path}/fit_summary_comparison.csv")
+        print("-------------------------------------------        ")
+
+        frame.SetYTitle(f"A.U.")
+        frame.SetXTitle(f"Dimuon Mass (GeV)")
+        frame.SetTitle("")
+
+        frame.Draw()
+        legend.Draw()
+        canvas.Update()
+        canvas.Draw()
+
+        save_filename = f"{save_path}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.pdf"
+        canvas.SaveAs(save_filename)
+        canvas.SaveAs(save_filename.replace(".pdf", ".root"))
+
+
+    def fit_dimuonInvariantMass_DCBXBW(self, events_dict=None, outdir="plots/mass_resolution_binned", suffix=None):
+        """
+        Generate a histogram from dimuon mass and weight, fit with DCB x BW (Double Crystal Ball x Breit-Wigner),
+        and return fit parameters: sigma and chi2/dof.
+        """
+        if events_dict is None:
+            events_dict = self.events
+
+        nbins = 100  # Optimal bin count to reduce statistical noise
+        # save path
+        save_path = f"{outdir}/{self.year}/{self.directoryTag}/{self.control_region}/nbins{nbins}"
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        print("==================================================")
+        print(f"Fitting {len(events_dict)} datasets...")
+        print("==================================================")
+
+        # -----------------------------
+        #  Setup Canvas & Legend
+        # -----------------------------
+        canvas = rt.TCanvas(f"Canvas_{self.control_region}", f"Canvas_{self.control_region}", 800, 800)
+        canvas.cd()
+        legend = rt.TLegend(0.6, 0.60, 0.9, 0.9)
+
+        # Save fit
+
+        # -----------------------------
+        #  Define Mass Variable
+        # -----------------------------
+        mass_name = "mh_ggh"
+        mean_init = 91.1880  # PDG value for Z
+        width_init = 2.4955  # PDG Z width
+        if self.control_region in ["z-peak", "z_peak"]:
+            mass = rt.RooRealVar(mass_name, mass_name, 91.2, 70, 110)  # Z-peak
+            mean_init = 91.1880  # PDG value for Z
+            width_init = 2.4955  # PDG Z width
+        elif self.control_region == "signal":
+            mass = rt.RooRealVar(mass_name, mass_name, 125, 120, 130)  # Higgs peak
+            mean_init = 125.2
+            width_init = 0.00407  # Higgs width
+
+        frame = mass.frame()
+        mass_fit_range = self.mass_fit_range[self.control_region]
         mass.setBins(nbins)
 
         # -----------------------------
         #  Define Breit-Wigner Model
         # -----------------------------
-        mean = rt.RooRealVar("mean", "mean", 91.1880, 91, 92)  # PDG value for Z
-        width = rt.RooRealVar("width", "width", 2.4955, 1.0, 3.0)  # PDG Z width (fixed)
+        mean = rt.RooRealVar("mean", "mean", mean_init, mean_init - width_init, mean_init + width_init)
+        width = rt.RooRealVar("width", "width", width_init, width_init * 0.5, width_init * 1.5)
         bw = rt.RooBreitWigner("bw", "Breit-Wigner", mass, mean, width)
-        # width.setConstant(True)
+        width.setConstant(True)
         mean.setConstant(True)
 
         # -----------------------------
@@ -518,6 +748,7 @@ class DistributionCompare:
         #  Fit All Event Keys
         # -----------------------------
         fit_results = {}
+        fit_results_for_csv = {}
         for idx, (label, events) in enumerate(events_dict.items()):
             print(f"Processing dataset: {label}")
 
@@ -551,11 +782,26 @@ class DistributionCompare:
                 # print(f"Item {i}: {frame.getObject(i).GetName()}")
 
 
-            chi2_o_ndf = model.createChi2(hist, rt.RooFit.Extended(True), rt.RooFit.DataError(rt.RooAbsData.SumW2))
-            chiSquare_dof = round(chi2_o_ndf.getVal(), 3)
+            # chi2_o_ndf = model.createChi2(hist, rt.RooFit.Extended(True), rt.RooFit.DataError(rt.RooAbsData.SumW2))
+            # chi2_raw = model.createChi2(hist, rt.RooFit.DataError(rt.RooAbsData.SumW2))
+            # ndf = chi2_raw.getNDOF()
+            # chi2_o_ndf = round(chi2_raw.getVal() / ndf, 3)
+
+            chi2_obj = model.createChi2(hist, rt.RooFit.DataError(rt.RooAbsData.SumW2))
+            chi2_val = chi2_obj.getVal()
+
+            # You need to manually compute degrees of freedom
+            ndf = hist.numEntries() - fit_result.floatParsFinal().getSize()
+            chi2_o_ndf = chi2_val / ndf
+
+            # print(f"Chi2 = {chi2_val:.3f}")
+            # print(f"NDF  = {ndf}")
+            # print(f"Chi2/NDF = {chi2_ndf:.3f}")
+
 
             new_nfree_params = fit_result.floatParsFinal().getSize()
             chi2_ndf = frame.chiSquare(f'model_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', f'hist_{label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")}', new_nfree_params)
+            chi2_ndf = round(chi2_ndf, 3)
 
             # Add Legend Entries
             legend.AddEntry(frame.getObject(int(frame.numItems()) - 1), f"{label} (DCB x BW)", "L")
@@ -564,13 +810,58 @@ class DistributionCompare:
             # legend.AddEntry("", f" #chi^2 : {round(chi2_ndf, 3)}", "")
             legend.AddEntry("", f" #chi^2 / ndf: {round(chi2_ndf,3)}", "")
 
-            print(f"\n{label} -> Chi²: {chi2_ndf:.3f} | Free Params: {new_nfree_params}")
-            print(f"   Chi²/NDF: {chi2_ndf/new_nfree_params:.3f}")
-            # break
+            print(f"\n{label} -> Chi2/NDF: {chi2_ndf:.3f} | Free Params: {new_nfree_params}")
+            print(f"{label} -> Mean: {mean_val} +/- {mean_err}")
+            print(f"{label} -> Sigma: {sigma_val} +/- {sigma_err}")
+            print(f"{label} -> Chi2/NDF (from createChi2): {chi2_o_ndf:.3f}")
+            print(f"{label} -> ndf (from createChi2): {ndf}")
 
+            # with open(f"{save_path}/fit_results_{self.control_region}.csv", "a") as f:
+                # suffix = "Inclusive" if suffix == None else suffix
+                # f.write(f"{label},{suffix},{sigma_val},{sigma_err},{mean_val},{mean_err},{chi2_ndf:.3f}\n")
+
+            suffix = "Inclusive" if suffix == None else suffix
+            # fit_results_for_csv.setdefault(suffix, {})[label.replace(" ", "")] = {
+            fit_results_for_csv.setdefault(suffix, {})[label] = {
+                "sigma": sigma_val,
+                "sigma_err": sigma_err,
+                "mean": mean_val,
+                "mean_err": mean_err,
+                "chi2_ndf": chi2_ndf
+            }
+
+            # with rt.TFile(f"{save_path}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.root", "UPDATE") as f:
+            #     model.SetName(f"model_{label.replace(' ', '_').replace('-', '_').replace('(', '').replace(')', '')}")
+            #     model.Write()
+
+            #     hist.SetName(f"data_{label.replace(' ', '_').replace('-', '_').replace('(', '').replace(')', '')}")
+            #     hist.Write()
+
+                # fit_result.SetName(f"fit_result_{label.replace(' ', '_').replace('-', '_').replace('(', '').replace(')', '')}")
+                # fit_result.Write()
+
+            # save the model to root file
+            # save_path = f"{save_path}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.root"
+            # with rt.TFile(save_path, "UPDATE") as f:
+            #     model.Write(label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", ""))
+            #     f.Write("model", model)
+            #     f.Write("data", data)
+            #     f.Write("fit_result", fit_result)
+
+            # # get a latex style table
+            # with open(f"fit_results_{self.control_region}.txt", "a") as f:
+            #     suffix = "Inclusive" if suffix == None else suffix
+            #     f.write(f"{label} & {suffix} & {sigma_val} $\\pm$ {sigma_err} & {mean_val} $\\pm$ {mean_err} & {chi2_ndf} \\\\ \n")
+            # break
         # -----------------------------
         #  Save Results
         # -----------------------------
+
+        print("-------------------------------------------        ")
+        print(fit_results_for_csv)
+        self.summarize_improvements(fit_results_for_csv, f"{save_path}/fit_summary_comparison.csv")
+        print("-------------------------------------------        ")
+
         frame.SetYTitle(f"A.U.")
         frame.SetXTitle(f"Dimuon Mass (GeV)")
         frame.SetTitle("")
@@ -580,19 +871,25 @@ class DistributionCompare:
         canvas.Update()
         canvas.Draw()
 
-        save_filename = f"{outdir}/{self.year}/{self.directoryTag}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.pdf"
-        os.makedirs(os.path.dirname(save_filename), exist_ok=True)
+        save_filename = f"{save_path}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.pdf"
         canvas.SaveAs(save_filename)
-        canvas.SaveAs(save_filename.replace(".pdf", ".png"))
-
+        canvas.SaveAs(save_filename.replace(".pdf", ".root"))
         # return fit_results
 
 
-    def fit_dimuonInvariantMass_DCBXBW_OLD(self, events_dict=None, outdir="plots/mass_resolution_defaultfunc_old", suffix=None):
+    def fit_dimuonInvariantMass_DCBXBW_OLD(self, events_dict=None, outdir="plots/mass_resolution_binned_old", suffix=None):
         """
         Generate a histogram from dimuon mass and weight, fit with DCB × BW (Double Crystal Ball × Breit-Wigner),
         and return fit parameters: sigma and chi2/dof.
         """
+        nbins = 250
+        save_path = f"{outdir}/{self.year}/{self.directoryTag}/{self.control_region}/nbins{nbins}"
+        print(f"Saving plots to: {save_path}")
+        # check if the directory exists
+        if not os.path.exists(save_path):
+            print(f"Creating directory: {save_path}")
+            os.makedirs(save_path)
+
         if events_dict is None:
             events_dict = self.events
 
@@ -629,7 +926,6 @@ class DistributionCompare:
 
         frame = mass.frame()
         mass_fit_range = self.mass_fit_range[self.control_region]
-        nbins = 250
         mass.setBins(nbins)
 
         # -----------------------------
@@ -723,10 +1019,9 @@ class DistributionCompare:
         canvas.Update()
         canvas.Draw()
 
-        save_filename = f"{outdir}/{self.year}/{self.directoryTag}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.pdf"
-        os.makedirs(os.path.dirname(save_filename), exist_ok=True)
+        save_filename = f"{save_path}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.pdf"
         canvas.SaveAs(save_filename)
-        canvas.SaveAs(save_filename.replace(".pdf", ".png"))
+        canvas.SaveAs(save_filename.replace(".pdf", ".root"))
 
     def fit_dimuonInvariantMass_DCBXBW_Unbinned(self, events_dict=None, outdir="plots/mass_resolution_unbinned", suffix=None):
         """
@@ -735,9 +1030,19 @@ class DistributionCompare:
 
         Note: Uses RooDataSet (not RooDataHist) for unbinned maximum likelihood fit.
         """
+        nbins = 75
+        save_path = f"{outdir}/{self.year}/{self.directoryTag}/{self.control_region}/nbins{nbins}"
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        print(f"Saving plots to: {save_path}")
+        # check if the directory exists
+        if not os.path.exists(save_path):
+            print(f"Creating directory: {save_path}")
+            os.makedirs(save_path)
+
         if events_dict is None:
             events_dict = self.events
 
+        fit_results_for_csv = {}
         # Setup plotting
         canvas = rt.TCanvas("canvas", "canvas", 800, 800)
         legend = rt.TLegend(0.6, 0.6, 0.9, 0.9)
@@ -751,12 +1056,15 @@ class DistributionCompare:
             width_bw_value = 2.4955
         elif self.control_region == "signal":
             mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 125.2, 115, 135)
+            # mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 110, 100, 150)
             mean_bw_value = 125.2
             width_bw_value = 0.0037
         else:
             raise ValueError(f"Unknown control region: {self.control_region}")
 
-        frame = mass.frame()
+        frame = mass.frame(nbins)
+
+        print(f"mass fit range: {mass.getMin()} to {mass.getMax()}")
 
         # BW parameters (fixed)
 
@@ -798,7 +1106,15 @@ class DistributionCompare:
                 data.add(rt.RooArgSet(mass), w)
 
             # Fit
-            fit_result = model.fitTo(data, EvalBackend="cpu", Save=True, SumW2Error=True)
+            rt.EnableImplicitMT() # Enable multi-threading
+
+            if rt.RooFit.EvalBackend.Cuda() is not None:
+                print("CUDA available, using GPU")
+                fit_result = model.fitTo(data, rt.RooFit.EvalBackend.Cuda(), Save=True, SumW2Error=True) # use GPU
+            else:
+                print("CUDA not available, using CPU")
+                fit_result = model.fitTo(data, EvalBackend="cpu", Save=True, SumW2Error=True)
+            # fit_result = model.fitTo(data, EvalBackend="cuda", Save=True, SumW2Error=True)
             fit_result.Print()
 
             # Plot
@@ -820,7 +1136,37 @@ class DistributionCompare:
             # legend.AddEntry("", f"#chi^{2}/NDF: {round(chi2_ndf/n_params, 3)}", "")
             legend.AddEntry("", f"#chi^{2}/NDF: {round(chi2_ndf, 3)}", "")
 
+            print("===================================================")
+            print(f"Dataset: {label}")
+            print(f"  bins: {nbins}")
+            print(f"  sigma: {sigma_val:.3f} +/- {sigma_err:.3f}")
+            print(f"  Chi2/NDF: {chi2_ndf:.3f} | Free Params: {n_params}")
+            print("===================================================")
+
+            # save the model to root file
+            # save_path = f"{save_path}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.root"
+            # with rt.TFile(save_path, "UPDATE") as f:
+            #     model.Write(label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", ""))
+            #     f.Write("model", model)
+            #     f.Write("data", data)
+            #     f.Write("fit_result", fit_result)
+
+            suffix = "Inclusive" if suffix == None else suffix
+            # fit_results_for_csv.setdefault(suffix, {})[label.replace(" ", "")] = {
+            fit_results_for_csv.setdefault(suffix, {})[label] = {
+                "sigma": sigma_val,
+                "sigma_err": sigma_err,
+                "mean": mean_val,
+                "mean_err": mean_err,
+                "chi2_ndf": chi2_ndf
+            }
             # break  # only one fit for now
+
+
+        print("-------------------------------------------        ")
+        print(fit_results_for_csv)
+        self.summarize_improvements(fit_results_for_csv, f"{save_path}/fit_summary_comparison.csv")
+        print("-------------------------------------------        ")
 
         frame.SetXTitle("Dimuon Mass (GeV)")
         frame.SetYTitle("Events")
@@ -830,20 +1176,30 @@ class DistributionCompare:
         canvas.Update()
         canvas.Draw()
 
-        save_path = f"{outdir}/{self.year}/{self.directoryTag}/fitPlot_Unbinned_{self.control_region}_{suffix}.pdf"
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        save_path = f"{save_path}/fitPlot_Unbinned_{self.control_region}_{suffix}_nbins{nbins}.pdf"
         canvas.SaveAs(save_path)
-        canvas.SaveAs(save_path.replace(".pdf", ".png"))
+        canvas.SaveAs(save_path.replace(".pdf", ".root"))
 
     def fit_dimuonInvariantMass_DCB_Unbinned(self, events_dict=None, outdir="plots/mass_resolution_unbinned", suffix=None):
         """
-        Perform an unbinned fit to the dimuon mass using a DCB × BW model.
+        Perform an unbinned fit to the dimuon mass using a DCB x BW model.
         Returns fit result and plots.
 
         Note: Uses RooDataSet (not RooDataHist) for unbinned maximum likelihood fit.
         """
         if events_dict is None:
             events_dict = self.events
+
+        nbins = 320
+        save_path = f"{outdir}/{self.year}/{self.directoryTag}/{self.control_region}/nbins{nbins}"
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        print(f"Saving plots to: {save_path}")
+        # check if the directory exists
+        if not os.path.exists(save_path):
+            print(f"Creating directory: {save_path}")
+            os.makedirs(save_path)
+
+        fit_results_for_csv = {}
 
         # Setup plotting
         canvas = rt.TCanvas("canvas", "canvas", 800, 800)
@@ -855,21 +1211,21 @@ class DistributionCompare:
         if self.control_region in ["z-peak", "z_peak"]:
             sys.exit("DCB Unbinned fit not implemented for Z-peak")
         elif self.control_region == "signal":
-            mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 125.2, 115, 135)
+            mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 125.2, 110, 150)
             mean_bw_value = 125.2
             width_bw_value = 0.0037
         else:
             raise ValueError(f"Unknown control region: {self.control_region}")
 
-        frame = mass.frame()
+        frame = mass.frame(nbins)
 
         # DCB parameters (floating)
-        mean_dcb = rt.RooRealVar("mean_dcb", "mean_dcb", 125.2, 115, 135)
-        sigma = rt.RooRealVar("sigma", "sigma", 2.0, 0.5, 5.0)
-        alpha1 = rt.RooRealVar("alpha1", "alpha1", 1.5, 0.1, 10.0)
-        n1 = rt.RooRealVar("n1", "n1", 10.0, 1.0, 100.0)
-        alpha2 = rt.RooRealVar("alpha2", "alpha2", 1.5, 0.1, 10.0)
-        n2 = rt.RooRealVar("n2", "n2", 10.0, 1.0, 100.0)
+        mean_dcb = rt.RooRealVar("mean_dcb", "mean_dcb", 125.2, 110, 150)
+        sigma = rt.RooRealVar("sigma", "sigma", 1.8228, 0.1, 4.0)
+        alpha1 = rt.RooRealVar("alpha1", "alpha1", 1.12842, 0.01, 65.0)
+        n1 = rt.RooRealVar("n1", "n1", 4.019960, 0.01, 100.0)
+        alpha2 = rt.RooRealVar("alpha2", "alpha2", 1.3132, 0.01, 65.0)
+        n2 = rt.RooRealVar("n2", "n2", 9.97411, 0.01, 100.0)
 
         model = rt.RooCrystalBall("DCB", "DCB", mass, mean_dcb, sigma, alpha1, n1, alpha2, n2)
 
@@ -892,7 +1248,13 @@ class DistributionCompare:
                 data.add(rt.RooArgSet(mass), w)
 
             # Fit
-            fit_result = model.fitTo(data, EvalBackend="cpu", Save=True, SumW2Error=True)
+            rt.EnableImplicitMT() # Enable multi-threading
+            if rt.RooFit.EvalBackend.Cuda() is not None:
+                print("CUDA available, using GPU")
+                fit_result = model.fitTo(data, EvalBackend="cuda", Save=True, SumW2Error=True)
+            else:
+                print("CUDA not available, using CPU")
+                fit_result = model.fitTo(data, EvalBackend="cpu", Save=True, SumW2Error=True)
             fit_result.Print()
 
             # Plot
@@ -913,7 +1275,27 @@ class DistributionCompare:
             legend.AddEntry("", f"sigma: {sigma_val} #pm {sigma_err}", "")
             legend.AddEntry("", f"#chi^{2}/NDF: {round(chi2_ndf, 3)}", "")
 
+            print("===================================================")
+            print(f"Dataset: {label}")
+            print(f"  bins: {nbins}")
+            print(f"  sigma: {sigma_val:.3f} +/- {sigma_err:.3f}")
+            print(f"  Chi2/NDF: {chi2_ndf:.3f} | Free Params: {n_params}")
+            print("===================================================")
+
+            suffix = "Inclusive" if suffix == None else suffix
+            fit_results_for_csv.setdefault(suffix, {})[label] = {
+                "sigma": sigma_val,
+                "sigma_err": sigma_err,
+                "mean": mean_val,
+                "mean_err": mean_err,
+                "chi2_ndf": chi2_ndf
+            }
             # break  # only one fit for now
+
+        print("-------------------------------------------        ")
+        print(fit_results_for_csv)
+        self.summarize_improvements(fit_results_for_csv, f"{save_path}/fit_summary_comparison.csv")
+        print("-------------------------------------------        ")
 
         frame.SetXTitle("Dimuon Mass (GeV)")
         frame.SetYTitle("Events")
@@ -923,7 +1305,6 @@ class DistributionCompare:
         canvas.Update()
         canvas.Draw()
 
-        save_path = f"{outdir}/{self.year}/{self.directoryTag}/fitPlot_Unbinned_{self.control_region}_{suffix}.pdf"
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        save_path = f"{save_path}/fitPlot_Unbinned_{self.control_region}_{suffix}_nbins{nbins}.pdf"
         canvas.SaveAs(save_path)
-        canvas.SaveAs(save_path.replace(".pdf", ".png"))
+        canvas.SaveAs(save_path.replace(".pdf", ".root"))

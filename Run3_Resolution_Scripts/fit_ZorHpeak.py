@@ -4,11 +4,18 @@ from modules.DistributionCompare import DistributionCompare
 
 # Example main usage
 if __name__ == "__main__":
-    varlist_file = "varlist.yaml"
+    varlist_file = "config/varlist.yaml"
 
-    input_paths_labels_1 = { # Compare with data 2022preEE
-        "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_*/*/*.parquet",
-        "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/data_*/*/*.parquet",
+    # input_paths_labels_1 = { # Compare with data 2022preEE
+    #     "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_*/*/*.parquet",
+    #     "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff_UpdateMassCalib//stage1_output/2022preEE/f1_0/data_*/*/*.parquet",
+    #     # "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_C/0/part.189.parquet",
+    #     # "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/data_C/0/part.189.parquet",
+    # }
+
+    input_paths_labels_1 = {  # Compare with data 2022preEE
+        "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/ggh_powhegPS/*/*.parquet",
+        "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff_UpdateMassCalib//stage1_output/2022preEE/f1_0/ggh_powhegPS/*/*.parquet",
         # "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_C/0/part.189.parquet",
         # "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/data_C/0/part.189.parquet",
     }
@@ -29,9 +36,10 @@ if __name__ == "__main__":
     }
 
     year = "2022preEE"  # or "2018"
-    # control_region = "signal"  # z-peak or "signal"
-    control_region = "z-peak"  # z-peak or "signal"
-    directoryTag = f"March21_{control_region}_massResolution_binned"
+    control_region = "signal"  # z-peak or "signal"
+    # control_region = "z-peak"  # z-peak or "signal"
+    directoryTag = f"October19_{control_region}_massResolution_binned"
+    # directoryTag = f"October19_{control_region}_massResolution_Unbinned"
     input_paths_labels = input_paths_labels_1
 
     fields_to_load = [
@@ -58,7 +66,9 @@ if __name__ == "__main__":
 
     # comparer.fit_dimuonInvariantMass_DCBXBW_Unbinned()
 
-    double_Muon_regions = ['BB', 'BO', 'BE', 'OB', 'OO', 'OE', 'EB', 'EO', 'EE']
+    # double_Muon_regions = ['BB', 'BO', 'BE', 'OB', 'OO', 'OE', 'EB', 'EO', 'EE']
+    # double_Muon_regions = ['BB', 'BO', 'BE', 'OB', 'OO', 'OE', 'EB', 'EO', 'EE']
+    double_Muon_regions = ['BB']
     for region in double_Muon_regions:
         print(f"Region: {region}")
         filtered_events = {}

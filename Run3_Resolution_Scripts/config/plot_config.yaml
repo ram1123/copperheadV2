@@ -1,58 +1,33 @@
 year: 2022preEE
-control_region: z-peak
-directoryTag: March24
+# control_region: z-peak
+control_region: signal
+# directoryTag: March24
+directoryTag: Oct19_MeanWidthConstant
+# directoryTag: March24_GPU_1000bins
 
 input_paths_labels:
-  "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib/stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
-  "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
-
-fields_to_load:
-  - wgt_nominal
-  - mu1_pt
-  - mu1_eta
-  - mu1_phi
-  - mu2_pt
-  - mu2_eta
-  - mu2_phi
-  - mu1_ptErr
-  - mu2_ptErr
-  - dimuon_pt
-  - dimuon_eta
-  - dimuon_phi
-  - dimuon_mass
-  - dimuon_ebe_mass_res_rel
-
-variables:
-  leading_muon:
-    - mu1_pt
-    - mu1_ptErr
-    - ratio_pTErr_pt_mu1
-    - mu1_eta
-    - mu1_phi
-  subleading_muon:
-    - mu2_pt
-    - mu2_ptErr
-    - ratio_pTErr_pt_mu2
-    - mu2_eta
-    - mu2_phi
-  dimuon:
-    - dimuon_pt
-    - dimuon_eta
-    - dimuon_phi
-    - dimuon_mass
-    - dimuon_ebe_mass_res_rel
+  # Data
+  "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn_UpdateMassCalib//stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+  "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff_UpdateMassCalib//stage1_output/2022preEE/f1_0/data_*/*/*.parquet"
+  # # Signal
+  # "BSC ON": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOn/stage1_output/2022preEE/f1_0/ggh_powhegPS/0/*.parquet"
+  # "BSC OFF": "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_12March_NoGeoNoBSC//stage1_output/2022preEE/f1_0/ggh_powhegPS/0/*.parquet"
 
 plot_types:
   plot_1D: false
   plot_2D: false
-  fit_z_peak: true
-  fit_signal: false
+  fit_z_peak: false
+  fit_signal: true
 
 fit_categories:
   z-peak:
     binned: false
     unbinned: true
-
+    regions: false # dimuon regions in different eta
+  signal:
+    binned: true
+    unbinned: false
+    regions: true # dimuon regions in different eta
 
 regions_plot:
   leading_muon:
@@ -91,3 +66,44 @@ regions_plot:
       - [dimuon_eta, dimuon_ebe_mass_res_rel]
       - [dimuon_phi, dimuon_ebe_mass_res_rel]
 
+fields_to_load:
+  - wgt_nominal
+  - mu1_pt
+  - mu1_eta
+  - mu1_phi
+  - mu2_pt
+  - mu2_eta
+  - mu2_phi
+  - mu1_ptErr
+  - mu2_ptErr
+  - dimuon_pt
+  - dimuon_eta
+  - dimuon_phi
+  - dimuon_mass
+  - dimuon_ebe_mass_res_rel
+  - dimuon_dEta
+  - dimuon_dPhi
+  - dimuon_dR
+
+variables:
+  leading_muon:
+    - mu1_pt
+    - mu1_ptErr
+    - ratio_pTErr_pt_mu1
+    - mu1_eta
+    - mu1_phi
+  subleading_muon:
+    - mu2_pt
+    - mu2_ptErr
+    - ratio_pTErr_pt_mu2
+    - mu2_eta
+    - mu2_phi
+  dimuon:
+    - dimuon_pt
+    - dimuon_eta
+    - dimuon_phi
+    - dimuon_mass
+    - dimuon_ebe_mass_res_rel
+    - dimuon_dEta
+    - dimuon_dPhi
+    - dimuon_dR

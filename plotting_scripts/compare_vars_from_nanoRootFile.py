@@ -58,9 +58,12 @@ for var, var_info in config["variables"].items():
     upper_pad.cd()
     h_var1.Draw("")
     h_var2.Draw("SAME")
-    h_var1.GetXaxis().SetTitle(f"{var_info['Title']}")
+    # h_var1.GetXaxis().SetTitle(f"{var_info['Title']}")
     h_var1.GetYaxis().SetTitle("Entries")
     h_var1.GetYaxis().SetRangeUser(0, 1.5 * max(h_var1.GetMaximum(), h_var2.GetMaximum()))
+    # increase size of the y axis title, and labels
+    h_var1.GetYaxis().SetTitleSize(0.04)
+    h_var1.GetYaxis().SetLabelSize(0.03)
 
     legend = rt.TLegend(0.7, 0.7, 0.9, 0.9)
     legend.AddEntry(h_var1, "v9", "l")
@@ -71,10 +74,13 @@ for var, var_info in config["variables"].items():
     lower_pad.cd()
     hist_diff = h_var1.Clone("hist_diff")
     hist_diff.Add(h_var2, -1)
-    hist_diff.SetTitle("Difference")
+    # hist_diff.SetTitle("Difference")
     hist_diff.GetXaxis().SetTitle(f"{var_info['Title']}")
     hist_diff.GetYaxis().SetTitle("Difference")
     hist_diff.GetYaxis().SetRangeUser(var_info["RatioPlot"][0], var_info["RatioPlot"][1])
+    # increase size of the y axis title, and labels
+    hist_diff.GetYaxis().SetTitleSize(0.04)
+    hist_diff.GetYaxis().SetLabelSize(0.03)
     hist_diff.Draw("")
     # also draw a horizontal line at 0
     line = rt.TLine(hist_diff.GetXaxis().GetXmin(), 0, hist_diff.GetXaxis().GetXmax(), 0)

@@ -6,7 +6,8 @@ from basic_class_for_calibration import get_calib_categories
 
 # --- Step 1. Load the data and compute mass resolution ---
 # Read the parquet files into a Dask DataFrame
-df = dd.read_parquet("/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_*/*/part*.parquet")
+# df = dd.read_parquet("/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_24Feb_BSCorr//stage1_output/2018/f1_0/data_*/*/part*.parquet")
+df = dd.read_parquet("/depot/cms/users/shar1172/hmm/copperheadV1clean/Run3_nanoAODv12_BSOff/stage1_output/2022preEE/f1_0/data_*/*/*.parquet")
 
 # Compute the per-event energy per muon (assumed to be half the dimuon mass) and the error contributions
 df = df.assign(

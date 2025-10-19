@@ -1,3 +1,32 @@
+# 18 October 2025
+
+```bash
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run3_nanoAODv12_BSOn_UpdateMassCalib -y 2022preEE -m 1
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run3_nanoAODv12_BSOff_UpdateMassCalib -y 2022preEE -m 1
+```
+
+# 25 March 2025
+
+## nanoAODv9 vs v12
+
+```bash
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv9.yaml -v 9 -l Run2_nanoAODv9_25March -y 2018 -m 0 -d
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_25March -y 2018 -m all -d
+```
+
+
+# 25 March 2025
+
+```bash
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_March25 -y 2018 -m 0 -d
+```
+
+# 24 March 2025
+
+```bash
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12  -y 2018 -m 0
+```
+
 # 17 March 2025
 
 ## Get Z-pT reweight
@@ -32,6 +61,8 @@ cp calibration_factors__2018C_12March.json data/res_calib/res_calib_BS_correctio
 
 bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_12March_BSC -y 2018 -m all -d
 bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_12March_BSC -y 2022preEE -m all -d
+
+bash stage1_loop.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l Run2_nanoAODv12_12March_NoGeoNoBSC -y 2022preEE -m 0 -d
 
 ```
 
