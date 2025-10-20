@@ -31,12 +31,16 @@ class DistributionCompare:
     def filter_region(self, events, region="h-peak"):
         dimuon_mass = events.dimuon_mass
         if region == "h-peak":
+            print("Filtering events for region: h-peak")
             region_filter = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
         elif region == "h-sidebands":
+            print("Filtering events for region: h-sidebands")
             region_filter = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
         elif region == "signal":
+            print("Filtering events for region: signal")
             region_filter = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
         elif region == "z-peak":
+            print("Filtering events for region: z-peak")
             region_filter = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
         return events[region_filter]
 
@@ -105,12 +109,14 @@ class DistributionCompare:
                         # events_data[f"Muon_{field}"] = events.Muon[field]
             elif path.endswith(".parquet"):
                 events_data = dak.from_parquet(path)
+                print(f"Available fields: {events_data.fields}")
                 # Load only the required fields
                 events_data = ak.zip({field: events_data[field] for field in self.fields}).compute()
             print(f"Loaded {len(events_data)} events from {path}")
-            print(f"Loaded fields: {events_data.keys()}")
+            # print(f"Loaded fields: {events_data.keys()}")
             print(f"control_region: {self.control_region}")
             if self.control_region is not None:
+                print(f"Filtering events for region: {self.control_region}")
                 events_data = self.filter_region(events_data, region=self.control_region)
             return events_data
 
@@ -183,6 +189,7 @@ class DistributionCompare:
             canvas.Update()
 
         canvas.SaveAs(filename)
+        canvas.SaveAs(filename.replace(".pdf", ".root"))
 
         # Save the log version of the plot
         ratio_plot.GetUpperPad().SetLogy()
@@ -190,6 +197,7 @@ class DistributionCompare:
         histograms[0].SetMaximum(max(histograms[0].GetMaximum(), histograms[1].GetMaximum())*100)
 
         canvas.SaveAs(filename.replace(".pdf", "_log.pdf"))
+        canvas.SaveAs(filename.replace(".pdf", "_log.root"))
 
         # clear memory
         for hist in histograms:
@@ -261,6 +269,7 @@ class DistributionCompare:
             label_modified = label.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")
             filename = f"{outdir}/{filename_prefix}_{var1}_vs_{var2}_{suffix}_{label_modified}.pdf"
             canvas.SaveAs(filename)
+            canvas.SaveAs(filename.replace(".pdf", ".root"))
 
     def summarize_improvements(self, fit_results_for_csv, output_file="fit_summary_comparison.csv"):
         """
@@ -324,6 +333,7 @@ class DistributionCompare:
             c = rt.TCanvas("c","c",800,800)
             TH.Draw()
             c.SaveAs("TH.pdf")
+            c.SaveAs("TH.root")
 
         roohist = rt.RooDataHist(name, name, rt.RooArgSet(x), TH)
         return roohist
@@ -514,6 +524,7 @@ class DistributionCompare:
         if not os.path.exists(os.path.dirname(save_filename)):
             os.makedirs(os.path.dirname(save_filename))
         canvas.SaveAs(save_filename)
+        canvas.SaveAs(save_filename.replace(".pdf", ".root"))
 
     def fit_dimuonInvariantMass_DCB(self, events_dict=None, outdir="plots/mass_resolution_binned", suffix=None):
         """
@@ -655,6 +666,7 @@ class DistributionCompare:
 
         save_filename = f"{save_path}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.pdf"
         canvas.SaveAs(save_filename)
+        canvas.SaveAs(save_filename.replace(".pdf", ".root"))
 
 
     def fit_dimuonInvariantMass_DCBXBW(self, events_dict=None, outdir="plots/mass_resolution_binned", suffix=None):
@@ -665,7 +677,7 @@ class DistributionCompare:
         if events_dict is None:
             events_dict = self.events
 
-        nbins = 1000  # Optimal bin count to reduce statistical noise
+        nbins = 100  # Optimal bin count to reduce statistical noise
         # save path
         save_path = f"{outdir}/{self.year}/{self.directoryTag}/{self.control_region}/nbins{nbins}"
         if not os.path.exists(save_path):
@@ -688,10 +700,16 @@ class DistributionCompare:
         #  Define Mass Variable
         # -----------------------------
         mass_name = "mh_ggh"
+        mean_init = 91.1880  # PDG value for Z
+        width_init = 2.4955  # PDG Z width
         if self.control_region in ["z-peak", "z_peak"]:
             mass = rt.RooRealVar(mass_name, mass_name, 91.2, 70, 110)  # Z-peak
+            mean_init = 91.1880  # PDG value for Z
+            width_init = 2.4955  # PDG Z width
         elif self.control_region == "signal":
-            mass = rt.RooRealVar(mass_name, mass_name, 125, 115, 135)  # Higgs peak
+            mass = rt.RooRealVar(mass_name, mass_name, 125, 120, 130)  # Higgs peak
+            mean_init = 125.2
+            width_init = 0.00407  # Higgs width
 
         frame = mass.frame()
         mass_fit_range = self.mass_fit_range[self.control_region]
@@ -700,8 +718,8 @@ class DistributionCompare:
         # -----------------------------
         #  Define Breit-Wigner Model
         # -----------------------------
-        mean = rt.RooRealVar("mean", "mean", 91.1880, 91, 92)  # PDG value for Z
-        width = rt.RooRealVar("width", "width", 2.4955, 1.0, 3.0)  # PDG Z width (fixed)
+        mean = rt.RooRealVar("mean", "mean", mean_init, mean_init - width_init, mean_init + width_init)
+        width = rt.RooRealVar("width", "width", width_init, width_init * 0.5, width_init * 1.5)
         bw = rt.RooBreitWigner("bw", "Breit-Wigner", mass, mean, width)
         width.setConstant(True)
         mean.setConstant(True)
@@ -855,7 +873,7 @@ class DistributionCompare:
 
         save_filename = f"{save_path}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.pdf"
         canvas.SaveAs(save_filename)
-        # canvas.SaveAs(save_filename.replace(".pdf", ".png"))
+        canvas.SaveAs(save_filename.replace(".pdf", ".root"))
         # return fit_results
 
 
@@ -1003,6 +1021,7 @@ class DistributionCompare:
 
         save_filename = f"{save_path}/fitPlot_{self.control_region}_{suffix}_nbins{nbins}.pdf"
         canvas.SaveAs(save_filename)
+        canvas.SaveAs(save_filename.replace(".pdf", ".root"))
 
     def fit_dimuonInvariantMass_DCBXBW_Unbinned(self, events_dict=None, outdir="plots/mass_resolution_unbinned", suffix=None):
         """
@@ -1011,7 +1030,7 @@ class DistributionCompare:
 
         Note: Uses RooDataSet (not RooDataHist) for unbinned maximum likelihood fit.
         """
-        nbins = 1000
+        nbins = 75
         save_path = f"{outdir}/{self.year}/{self.directoryTag}/{self.control_region}/nbins{nbins}"
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         print(f"Saving plots to: {save_path}")
@@ -1037,12 +1056,15 @@ class DistributionCompare:
             width_bw_value = 2.4955
         elif self.control_region == "signal":
             mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 125.2, 115, 135)
+            # mass = rt.RooRealVar("mh_ggh", "Dimuon Mass", 110, 100, 150)
             mean_bw_value = 125.2
             width_bw_value = 0.0037
         else:
             raise ValueError(f"Unknown control region: {self.control_region}")
 
         frame = mass.frame(nbins)
+
+        print(f"mass fit range: {mass.getMin()} to {mass.getMax()}")
 
         # BW parameters (fixed)
 
@@ -1156,6 +1178,7 @@ class DistributionCompare:
 
         save_path = f"{save_path}/fitPlot_Unbinned_{self.control_region}_{suffix}_nbins{nbins}.pdf"
         canvas.SaveAs(save_path)
+        canvas.SaveAs(save_path.replace(".pdf", ".root"))
 
     def fit_dimuonInvariantMass_DCB_Unbinned(self, events_dict=None, outdir="plots/mass_resolution_unbinned", suffix=None):
         """
@@ -1284,3 +1307,4 @@ class DistributionCompare:
 
         save_path = f"{save_path}/fitPlot_Unbinned_{self.control_region}_{suffix}_nbins{nbins}.pdf"
         canvas.SaveAs(save_path)
+        canvas.SaveAs(save_path.replace(".pdf", ".root"))
