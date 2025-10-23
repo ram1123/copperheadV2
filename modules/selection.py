@@ -10,21 +10,21 @@ def filterRegion(events, region="h-peak"):
         (dimuon_mass >= 135.0) & (dimuon_mass < 150.0)
     )
     if region == "z-peak":
-        region = z_peak
+        mask = z_peak
     elif region == "h-peak":
-        region = h_peak
+        mask = h_peak
     elif region == "h-sidebands":
-        region = h_sidebands
+        mask = h_sidebands
     elif region == "signal":
-        region = h_sidebands | h_peak
+        mask = h_sidebands | h_peak
     elif region == "full":
-        region = z_peak | h_sidebands | h_peak
+        mask = z_peak | h_sidebands | h_peak
     else:
         raise ValueError(
             f"Invalid region selection: {region}. Valid options are: 'z-peak', 'h-peak', 'h-sidebands', 'signal', 'full'."
         )
 
-    return events[region]
+    return mask, events[mask]
 
 
 def applyRegionCatCuts(
@@ -75,7 +75,7 @@ def applyRegionCatCuts(
         )
 
     # do mass region cut
-    region = filterRegion(events, region=region_name)
+    region, _ = filterRegion(events, region=region_name)
 
     # --- category cuts: USE varcol(...) for JES/JER-affected columns ---
     nbt_loose = varcol("nBtagLoose")
@@ -87,11 +87,7 @@ def applyRegionCatCuts(
 
     # do category cut
     if category == "nocat":
-        # print("nocat mode!")
         prod_cat_cut = ak.ones_like(region, dtype="bool")
-        # prod_cat_cut = ak.fill_none(events[f"jj_mass_{variation}"] > 400, value=False)
-        # prod_cat_cut = prod_cat_cut & ak.fill_none(events[f"jet1_pt_{variation}"] > 35, value=False)
-
     else:  # VBF or ggH
         prod_cat_cut = ak.ones_like(region, dtype="bool")
         if do_VH_veto:
@@ -152,7 +148,7 @@ def applyRegionCatCuts(
             pass
 
     category_selection = prod_cat_cut & region
-    # filter events fro selected category
+    # filter events for selected category
 
     # print(f"len(events) {process} b4 selection: {len(events)}")
     events = events[category_selection]
