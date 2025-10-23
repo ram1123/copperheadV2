@@ -82,7 +82,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # dict to hold the max_num_elements info per sample
     dict_max_num_elements = {
-        "data_": None, # default
+        "data_": None, # None means no limit (use uproot's default behavior)
         "dy_": 200,
         "ttjets_dl": 400,
         "ttjets_sl": 1500,
