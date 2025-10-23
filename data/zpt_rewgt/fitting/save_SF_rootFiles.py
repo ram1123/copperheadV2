@@ -12,19 +12,8 @@ from array import array
 from ROOT import RooFit
 import argparse
 
-def filterRegion(events, region="h-peak"):
-    dimuon_mass = events.dimuon_mass
-    if region =="h-peak":
-        region = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
-    elif region =="h-sidebands":
-        region = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
-    elif region =="signal":
-        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
-    elif region =="z-peak":
-        region = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
+from modules.selection import filterRegion
 
-    events = events[region]
-    return events
 
 def zipAndCompute(events, fields2load):
     zpt_wgt_name = "separate_wgt_zpt_wgt"
@@ -56,6 +45,14 @@ if __name__ == "__main__":
     default="all",
     action="store",
     help="string value of year we are calculating",
+    )
+    parser.add_argument(
+    "-i",
+    "--input_path",
+    dest="input_path",
+    default=None,
+    action="store",
+    help="input parquet files path",
     )
     parser.add_argument(
     "-save",
@@ -117,7 +114,7 @@ if __name__ == "__main__":
             print("Error: USER environment variable is not set.")
             sys.exit(1)
 
-        base_path = f"/depot/cms/users/{user_name}/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0" # define the save path of stage1 outputs
+        base_path = f"{args.input_path}/stage1_output/{year}/f1_0"  # define the save path of stage1 outputs
 
         # load the data and dy samples
         print(f"base path data : {base_path}/data_*/*/*.parquet")
@@ -148,7 +145,6 @@ if __name__ == "__main__":
                 data_events_loop = data_events[data_events[njet_field] >=njet]
                 dy_events_loop = dy_events[dy_events[njet_field] >=njet]
 
-
             fields2load = ["wgt_nominal", "dimuon_pt"]
             # data_dict = {field: ak.to_numpy(data_events_loop[field].compute()) for field in fields2load}
             # dy_dict = {field: ak.to_numpy(dy_events_loop[field].compute()) for field in fields2load}
@@ -160,7 +156,6 @@ if __name__ == "__main__":
             # print(f"data_dict: {data_dict}")
             # print(f"dy_dict: {dy_dict}")
 
-
             # binning = config["rewgt_binning"]
             # # Convert the list of bin edges to a C-style array
             # # binning_array = np.array(binning)
@@ -169,7 +164,6 @@ if __name__ == "__main__":
             # Step 2: Create the histogram with variable bin widths
             hist_data = ROOT.TH1F("hist_data", "Data", len(binning_array) - 1, binning_array)
             hist_dy = ROOT.TH1F("hist_dy", "DY", len(binning_array) - 1, binning_array)
-
 
             #  Step 3: Fill the histogram with data
             # Convert the values and weights to arrays
@@ -186,7 +180,6 @@ if __name__ == "__main__":
             weights = array('d', weights)
             hist_dy.FillN(len(values), values, weights)
 
-
             # Step 4: Get the Scale Factor (SF) histogram, by dividing data histogram by DY histogram
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
@@ -202,7 +195,6 @@ if __name__ == "__main__":
             copy_file = ROOT.TFile(f"{plot_path}/{year}_njet{njet}.root", "RECREATE")
             workspace.Write()  # Write the workspace to the file
             copy_file.Close()
-
 
             # # Sanity check: Loop through the bins and calculate the relative error
             # print("data Hist Bin | Content | Error | Relative Error (%)")
@@ -258,7 +250,6 @@ if __name__ == "__main__":
             legend.AddEntry(hist_dy, "DY", "l")
             legend.Draw()
 
-
             # Save the canvas as an image
             canvas.SaveAs(f"{plot_path}/dataDy_{year}_njet{njet}.pdf")
 
@@ -268,7 +259,6 @@ if __name__ == "__main__":
             canvas.SetLogy(0)
             canvas.Update()
             # ---------------------------------------------------------
-
 
             canvas = ROOT.TCanvas("canvas", f"SF histogram {run_label}", 800, 600)
             hist_SF.Draw()

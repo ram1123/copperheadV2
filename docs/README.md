@@ -8,3 +8,4 @@
 4. [Plotting codes](PlottingCodes.md)
 5. [Main framework - Basic idea](mainFramework.md)
     1. [Technical details](mainFramework_technicalDetails.md)
+6. [Get yield](GetYields.md)

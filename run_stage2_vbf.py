@@ -103,6 +103,8 @@ def columns_for_selection(category, variation):
         f"jj_mass_{use_var}",
         f"jj_dEta_{use_var}",
         f"jet1_pt_{use_var}",
+        f"nfatJets_drmuon",
+        f"MET_pt",
     ]
     return base
 
@@ -256,10 +258,10 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             # "dy_M-100To200",
             # "dy_m105_160_vbf_amc",
             # "dy_M-50",
-            # "dy_M-100To200_MiNNLO",
-            # "dy_M-50_MiNNLO",
-            "dy_M-100To200_aMCatNLO",
-            "dy_M-50_aMCatNLO",
+            "dy_M-100To200_MiNNLO",
+            "dy_M-50_MiNNLO",
+            # "dy_M-100To200_aMCatNLO",
+            # "dy_M-50_aMCatNLO",
             "dy_VBF_filter"
             # "DYJ01",
             # "DYJ2"
@@ -271,6 +273,8 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
         "ST" : [
             "st_tw_top",
             "st_tw_antitop",
+            "st_t_top",
+            "st_t_antitop",
         ],
         "EWK" : [
             "ewk_lljj_mll105_160_ptj0", # herwig
@@ -455,6 +459,15 @@ if __name__ == "__main__":
         logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
         raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
 
+    histDirName = f"score_{args.model_label}" if args.save_postfix == "" else f"score_{args.model_label}_{args.save_postfix}"
+    if args.no_variations == True:
+        histDirName = f"{histDirName}_NoSyst"
+
+    hist_save_path = f"{base_path}/stage2_histograms/{histDirName}/{args.year}/"
+
+    if not os.path.exists(hist_save_path):
+        os.makedirs(hist_save_path)
+
     full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
 
     logger.debug(f"full_sample_dict: {full_sample_dict}")
@@ -465,6 +478,13 @@ if __name__ == "__main__":
     nfolds = args.nfolds  # Define nfolds once for all samples
     for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
         t4 = time.perf_counter()
+
+        # if output pkl file already exists, skip
+        output_pkl_path = f"{hist_save_path}/{sample_type}_hist.pkl"
+        if os.path.exists(output_pkl_path):
+            logger.warning(f"Output pkl file {output_pkl_path} already exists. Skipping {sample_type}.")
+            continue
+
         logger.info(f"Processing sample type: {sample_type}, number of files: {len(sample_l)}")
         logger.info(f"Sample type: {sample_type}")
         logger.debug(f"Sample list: {sample_l}")
@@ -729,18 +749,9 @@ if __name__ == "__main__":
         # ---------------------------------------------------
         # Save Hist
         # ---------------------------------------------------
-        histDirName = f"score_{args.model_label}" if args.save_postfix == "" else f"score_{args.model_label}_{args.save_postfix}"
-        if args.no_variations == True:
-            histDirName = f"{histDirName}_NoSyst"
-
-        hist_save_path = f"{base_path}/stage2_histograms/{histDirName}/{args.year}/"
-
-        if not os.path.exists(hist_save_path):
-            os.makedirs(hist_save_path)
-
-        with open(f"{hist_save_path}/{sample_type}_hist.pkl", "wb") as file:
+        with open(f"{output_pkl_path}", "wb") as file:
             pickle.dump(score_hist, file)
-            logger.info(f"{sample_type} histogram on {hist_save_path}!")
+            logger.info(f"{sample_type} histogram on {output_pkl_path}!")
 
         t9 = time.perf_counter()
         logger.info(f"[timing] Histogram saving time: {t9 - t8:.2f} seconds")

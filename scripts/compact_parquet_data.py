@@ -8,6 +8,8 @@ from modules.utils import logger
 import pickle
 import numpy as np
 
+from tqdm import tqdm
+
 from run_stage2_vbf import DNNWrapper, prepare_features, getFoldFilter
 
 
@@ -36,7 +38,7 @@ def ensure_compacted(year, sample, load_path, compacted_path):
         inFile.to_parquet(compacted_path)
         logger.debug(f"Dataset successfully compacted.")
     else:
-        logger.debug(f"Compacted dataset already exists at {compacted_path}")
+        logger.warning(f"Compacted dataset already exists at {compacted_path}")
 
 def add_dnn_score(events_partition,
                 model_trained_path,
@@ -112,16 +114,15 @@ def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path
 
     logger.info(f"Checking compacted dataset for: {compacted_path}")
 
-    if not os.path.exists(compacted_path):
-        logger.debug(f"Compacted dataset not found. Creating at {compacted_path}")
-        ensure_compacted(year, sample, load_path, compacted_path)
+    # compact the dataset
+    ensure_compacted(year, sample, load_path, compacted_path)
 
-    logger.info(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
-    # don't run if add_dnn_score is False
+    # Add the DNN score to the compacted dataset
     if not add_dnn_score_flag:
         logger.info("Skipping DNN score addition as add_dnn_score is False.")
         return
 
+    logger.info(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
     # Load the compacted dataset
     logger.debug(f"Loading compacted dataset from {compacted_path}")
     events = dak.from_parquet(compacted_path)
@@ -210,7 +211,8 @@ if __name__ == "__main__":
     logger.info(f"Compacted directory set to: {args.compacted_dir}")
 
     samples = os.listdir(args.load_path)
-    for sample in samples:
+    for sample in tqdm(samples, desc="Processing samples"):
+        # Uncomment below lines to filter specific samples for testing
         # if sample != "vbf_powheg_dipole": continue
         # if "MiNNLO" not in sample: continue
         # if "dy_VBF_filter" not in sample:

@@ -31,7 +31,7 @@ EOF
 # ---------- Default values ----------
 datasetYAML="configs/datasets/dataset_nanoAODv12.yaml"
 NanoAODv="12"
-declare -a years=("2018" "2017" "2016postVFP" "2016preVFP")
+declare -a years=("2018PR" "2018" "2017" "2016postVFP" "2016preVFP" "2016" "run2")
 label="Default_nanoAODv9"
 debug="0"
 mode="all"
@@ -113,12 +113,15 @@ log() { echo "$@" | tee -a "$log_file"; }
 
 # save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
 save_path="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
-mkdir -p "$save_path"
+# save_path="/store/user/rasharma/hmm/copperheadV1clean/$label/" # EOS path
+
 trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 
 declare -A data_l_dict=(
+    [2018PR]="A"
     [2016preVFP]="B C D E F"
     [2016postVFP]="F G H"
+    [2016]="B C D E F G H"
     [2017]="B C D E F"
     [2018]="A B C D"
     [2022preEE]="C D"
@@ -128,9 +131,11 @@ declare -A data_l_dict=(
 
 # bkg_l="DY TT ST VV EWK VVV"
 bkg_l="DY Top VV EWK VVV"
+# bkg_l=""
 
 # sig_l="VBF"
 sig_l="Higgs"
+# sig_l=""
 
 if [[ "$debug" -ge 1 ]]; then
     log "Debug mode ON "
@@ -140,10 +145,12 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
 
-    bkg_l="DY"
+    bkg_l="DY Top VV EWK VVV"
+    # bkg_l="DY"
+    # bkg_l="Top"
+
+    sig_l="Higgs"
     # sig_l=""
-    sig_l=""
-    # sig_l="VBF"
 fi
 
 chunksize=300000
@@ -180,9 +187,9 @@ for year in "${years[@]}"; do
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len  --isCutflow  "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len  "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len  "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --isCutflow --rerun"
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --rerun  --skipSamples "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len "
 
     ### DNN training parameters
     training_fold=3
@@ -210,16 +217,14 @@ for year in "${years[@]}"; do
     fi
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
     command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations  "
     # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
 
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO "
-    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO "
+    command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO "
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_DY012 "
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLOSplitMjj "
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO_NoDYVBF "
-    command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO_NoDYVBF "
+    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO_NoDYVBF "
 
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
     command5="python src/lib/ebeMassResCalibration/ebeMassResPlotter.py --path $save_path"
@@ -270,6 +275,18 @@ for year in "${years[@]}"; do
             log "Command: $command2"
             eval "$command2"
             ;;
+        2p)
+            log "Running the validation of stage2 (i.e. data/mc plot for dnn score) for year $year..."
+            region2p="h-sidebands"
+            command2p1="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p}"
+            log "Command: $command2p1"
+            eval "$command2p1"
+
+            region2p="h-peak"
+            command2p2="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p}"
+            log "Command: $command2p2"
+            eval "$command2p2"
+            ;;
         3)
             log "Running stage3 for year $year..."
             log "Command: $command3"
@@ -286,7 +303,7 @@ for year in "${years[@]}"; do
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             log "Running ZpT fitting step(s)..."
             dy_sample="aMCatNLO" # FIXME: Hardcoded DY sample name: aMCatNLO or MiNNLO
-            cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year -dy_sample $dy_sample "
+            cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year --input_path $save_path -dy_sample $dy_sample "
             cmd1="python data/zpt_rewgt/fitting/do_f_test.py               -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend --debug"
             cmd2="python data/zpt_rewgt/fitting/get_polyFit.py             -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend"
             [[ "$mode" =~ ^(zpt_fit0|zpt_fit)$ ]] && { log "Command0: $cmd0"; eval "$cmd0"; }

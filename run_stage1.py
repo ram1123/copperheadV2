@@ -27,6 +27,8 @@ from omegaconf import OmegaConf
 from coffea.nanoevents.methods import vector
 from rich import print
 
+import subprocess, time
+from pathlib import Path
 
 # dask.config.set({'logging.distributed': 'error'})
 import logging
@@ -80,7 +82,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # dict to hold the max_num_elements info per sample
     dict_max_num_elements = {
-        "data_": 800,
+        "data_": None, # None means no limit (use uproot's default behavior)
         "dy_": 200,
         "ttjets_dl": 400,
         "ttjets_sl": 1500,
@@ -137,6 +139,43 @@ def divide_chunks(data: dict, SIZE: int):
    it = iter(data)
    for i in range(0, len(data), SIZE):
       yield {k:data[k] for k in islice(it, SIZE)}
+
+
+def _run(cmd):
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
+    """Create directories on EOS if they do not exist.
+
+    To create directory use gfal command:
+    gfal-mkdir davs://eos.cms.rcac.purdue.edu:9000/store/user/<username>/<directoryname>
+
+    Args:
+        eos_path (str): The EOS path where directories should be created.
+        retries (int, optional): Number of retries in case of failure. Defaults to 3.
+        sleep (float, optional): Sleep time between retries in seconds. Defaults to 2.0.
+
+    FIXME: This function currently does not handle /store paths correctly. As gfal-mkdir command does not work with coffea_latest environment.
+    """
+    if eos_path.startswith("/depot"):
+        os.makedirs(eos_path, exist_ok=True)
+        return
+
+    if not eos_path.startswith("davs://eos.cms.rcac.purdue.edu:9000/"):
+        eos_path = f"davs://eos.cms.rcac.purdue.edu:9000/{eos_path.lstrip('/')}"
+    logger.info(f"Creating EOS directory: {eos_path}")
+    cmd = ["gfal-mkdir", "-p", eos_path]
+    for attempt in range(retries):
+        logger.info(f"command: {' '.join(cmd)}")
+        result = _run(cmd)
+        if result.returncode == 0:
+            logger.info(f"Successfully created EOS directory: {eos_path}")
+            return
+        else:
+            logger.warning(f"Attempt {attempt + 1} to create EOS directory failed: {result.stderr}")
+            time.sleep(sleep)
+    logger.error(f"Failed to create EOS directory after {retries} attempts: {eos_path}")
+    raise RuntimeError(f"Failed to create EOS directory: {eos_path}")
 
 
 if __name__ == "__main__":
@@ -204,6 +243,11 @@ if __name__ == "__main__":
         action="store_true",
         help="If true, deletes the existing stage1 output directory and reruns stage1",
     )
+    parser.add_argument(
+        "--skipSamples",
+        action="store_true",
+        help="If true, skips samples listed in configs/skip_stage1_run.py",
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -224,7 +268,12 @@ if __name__ == "__main__":
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
 
-    config = getParametersForYr("./configs/parameters/" , args.year)
+    if "2018" in args.year:
+        yearForConfig = "2018" # use 2018 parameters for 2018PR as well
+    else:
+        yearForConfig = args.year
+
+    config = getParametersForYr("./configs/parameters/" , yearForConfig)
     logger.debug(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
@@ -266,10 +315,10 @@ if __name__ == "__main__":
         # add in NanoAODv info into samples metadata for coffea processor
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
-        start_save_path = args.save_path + f"/stage1_output/{args.year}"
+        start_save_path = f"{args.save_path}/stage1_output/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
         # make the directory if it doesn't exist
-        os.makedirs(start_save_path, exist_ok=True)
+        eos_mkdirs(start_save_path)
 
         # Get git information; for the log. Also, it will help with debugging, if needed.
         git_commit_hash, branch_name, diff = get_git_info()
@@ -283,15 +332,10 @@ if __name__ == "__main__":
 
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
-                # if dataset in ["ggh_amcPS", "ggh_powhegPS"]: # FIXME: temporary line to skip some datasets for which we already have stage1 output
-                #     logger.warning(f"Skipping dataset: {dataset}")
-                #     continue
-                # if "dy_VBF_filter" in dataset: # FIXME: temporary line to skip some datasets for which we already have stage1 output
-                #     logger.warning(f"Skipping dataset: {dataset}")
-                #     continue
-                # if "data_" in dataset or "Data" in dataset or "dy_" in dataset: # FIXME: temporary line to skip data datasets for which we already have stage1 output
-                #     logger.warning(f"Skipping dataset: {dataset}")
-                #     continue
+                from configs.skip_stage1_run import samples_to_skip
+                if dataset in samples_to_skip and args.skipSamples:
+                    logger.warning(f"Skipping dataset as per configs/skip_stage1_run.py: {dataset}")
+                    continue
                 sample_step = time.time()
                 # dict to hold file lenght info per sample
                 dict_file_length = {
@@ -312,8 +356,6 @@ if __name__ == "__main__":
                 logger.info(f"max_file_len: {args.max_file_len}")
                 logger.info(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    # if idx < 50 or idx > 51: continue # for testing purposes
-                    # if idx < 7: continue
                     logger.info(f"Processing {dataset} file index {idx}")
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
@@ -322,7 +364,7 @@ if __name__ == "__main__":
                     logger.info(f"save_path: {save_path}")
                     if not os.path.exists(save_path):
                         logger.debug(f"Path: {save_path} is going to be created")
-                        os.makedirs(save_path)
+                        eos_mkdirs(save_path)
                     else:
                         if args.rerun:
                             # remove previously existing directory, if exists, then remake path
@@ -330,7 +372,7 @@ if __name__ == "__main__":
                                 logger.warning(f"Going to delete directory: {save_path}")
                                 os.system(f"rm -r {save_path}")
                             logger.info(f"Path: {save_path} is going to be created")
-                            os.makedirs(save_path)
+                            eos_mkdirs(save_path)
                         else:
                             logger.warning(f"Path: {save_path} already exists. Skipping this file index. Use --rerun to overwrite.")
                             continue
@@ -340,23 +382,12 @@ if __name__ == "__main__":
                     t3 = time.perf_counter()
                     logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
 
-                    # DOC:
-                    #   1. Dibosons with 256 partitions,
-                    #   2. EWK failed with 256 partitions, trying 512 partitions for ewk
-                    npartitions = 1024
-                    # if "ewk_lljj" in dataset or "www" in dataset:
-                        # npartitions = 512
-                    # logger.info(f"Repartitioning to {npartitions} partitions")
-                    # to_persist = to_persist.repartition(npartitions=npartitions)
-                    t4 = time.perf_counter()
-                    # logger.info(f"[Timing] Time taken to repartition to {npartitions} partitions: {round(t4 - t3, 3)} seconds")
 
                     # persist and save to parquet
                     to_persist = to_persist.persist()
                     to_persist.to_parquet(save_path)
-                    # to_persist.to_parquet(save_path)
-                    t5 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to save parquet files: {round(t5 - t4, 3)} seconds")
+                    t4 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to save parquet files: {round(t4 - t3, 3)} seconds")
 
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
@@ -366,8 +397,40 @@ if __name__ == "__main__":
                 logger.info(f"[Timing] Time taken to process sample {dataset}: {round(t6 - t2, 3)} seconds")
 
     else:
-        client = Client(n_workers=12,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
-        logger.info("Local scale Client created")
+        # FIXME: update this for /store usage
+        if args.use_gateway:
+            from dask_gateway import Gateway
+
+            gateway = Gateway(
+                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+            )
+            # gateway = Gateway()
+            logger.info("Connecting to Dask Gateway")
+            logger.info(f"gateway: {gateway}")
+            logger.info(f"gateway list clusters: {gateway.list_clusters()}")
+
+            cluster_info = gateway.list_clusters()[
+                0
+            ]  # get the first cluster by default. There only should be one anyways
+            client = gateway.connect(cluster_info.name).get_client()
+            logger.debug(f"client: {client}")
+            logger.info("Gateway Client created")
+            xrd_env = {
+                "XRD_REQUESTTIMEOUT": "900",
+                "XRD_STREAMTIMEOUT": "900",
+                "XRD_CONNECTIONWINDOW": "120",
+                "XRD_TIMEOUTRESOLUTION": "5",
+            }
+            client.run(lambda env=xrd_env: __import__("os").environ.update(env))
+        else:
+            client = Client(
+                n_workers=64,
+                threads_per_worker=1,
+                processes=True,
+                memory_limit="10 GiB",
+            )
+            logger.info("Local scale Client created")
 
         sample_path = "./prestage_output/fraction_processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(sample_path) as file:

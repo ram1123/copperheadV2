@@ -97,12 +97,12 @@ parameters["grouping"] = {
     # "dy_M-50_MiNNLO_NoDYVBF": "DY",
     # "dy_M-100To200_MiNNLO_NoDYVBF": "DY",
 
-    "dy_M-50_aMCatNLO_NoDYVBF": "DY",
-    "dy_M-100To200_aMCatNLO_NoDYVBF": "DY",
+    # "dy_M-50_aMCatNLO_NoDYVBF": "DY",
+    # "dy_M-100To200_aMCatNLO_NoDYVBF": "DY",
 
-    # "dy_M-50_MiNNLO": "DY",
-    # "dy_M-100To200_MiNNLO": "DY",
-    # "dy_VBF_filter": "DY",
+    "dy_M-50_MiNNLO": "DY",
+    "dy_M-100To200_MiNNLO": "DY",
+    "dy_VBF_filter": "DY",
     # "dy_M-50_aMCatNLO": "DY",
     # "dy_M-100To200_aMCatNLO": "DY",
     # "DYJ01": "DYJ01",

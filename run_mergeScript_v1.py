@@ -54,6 +54,18 @@ JOBS_UL2018 = [
         "UL2018",
     ),
     (
+        "/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9",
+        "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9",
+        "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX.root",
+        "UL2018",
+    ),
+    (
+        "/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
+        "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
+        "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX.root",
+        "UL2018",
+    ),
+    (
         "/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/DYJetsToMuMu_M-50_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos",
         "DYJetsToMuMu_M-50_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos",
         "DYJetsToMuMu_M50_MiNNLO.root",
@@ -213,18 +225,18 @@ JOBS_UL2017 = [
     #     "SingleMuon_Run2017F.root",
     #     "UL2017",
     # ),
-    # (
-    #     "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9",
-    #     "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9",
-    #     "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9.root",
-    #     "UL2017",
-    # ),
-    # (
-    #     "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
-    #     "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
-    #     "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8.root",
-    #     "UL2017",
-    # ),
+    (
+        "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9",
+        "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9",
+        "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9.root",
+        "UL2017",
+    ),
+    (
+        "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
+        "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
+        "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8.root",
+        "UL2017",
+    ),
     (
         "/eos/purdue/store/user/hyeonseo/Run2UL/UL2017/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_hammer",
         "DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8",
@@ -366,18 +378,18 @@ JOBS_UL2017 = [
 ]
 
 JOBS_UL2016postVFP = [
-    # (
-    #     "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9",
-    #     "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9",
-    #     "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9.root",
-    #     "UL2016postVFP",
-    # ),
-    # (
-    #     "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
-    #     "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
-    #     "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8.root",
-    #     "UL2016postVFP",
-    # ),
+    (
+        "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9",
+        "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9",
+        "DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9.root",
+        "UL2016postVFP",
+    ),
+    (
+        "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
+        "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8",
+        "DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8.root",
+        "UL2016postVFP",
+    ),
     (
         "/eos/purdue/store/user/hyeonseo/Run2UL/UL2016postVFP/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/nanoV12_hammer/",
         "DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8",

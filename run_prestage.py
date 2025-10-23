@@ -404,6 +404,8 @@ if __name__ == "__main__":
                 logger.info(f"Number of files after removing bad files: {len(fnames)}")
 
             # convert to xcachce paths if requested
+            if is_data:
+                args.xcache = False # FIXME: force turn off xcache for data. This is temporary solution, until hadded for customnanod is fixed for the data files
             if args.xcache:
                 fnames = get_Xcache_filelist(fnames)
 

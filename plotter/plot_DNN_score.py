@@ -74,7 +74,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         to_project_setting_val["val_sumw2"] = "value"
         logger.debug(f"to_project_setting_val: {to_project_setting_val}")
         hist_val = sample_hist[to_project_setting_val].view()
-        #------------------------------------------------------
+        # ------------------------------------------------------
         to_project_setting_w2 = to_project_setting.copy()
         to_project_setting_w2["val_sumw2"] = "sumw2"
         hist_w2 = sample_hist[to_project_setting_w2].view()
@@ -89,7 +89,6 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
             "hist_w2_arr": hist_w2
         }
 
-
         if "data" in group_name:
             if region_name != "h-peak":
                 data_dict = hist_dict
@@ -100,12 +99,11 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         else: # bkg MC
             bkg_MC_dict[group_name] = hist_dict
     # order bkg_MC_dict in a specific way for plotting, smallest yielding process first:
-    bkg_MC_order = ["other", "VV", "Ewk", "Top", "DY","DYJ01", "DYJ2"]
+    bkg_MC_order = ["VVV", "VV", "Ewk", "Top", "DY","DYJ01", "DYJ2"]
     bkg_MC_dict = {process: bkg_MC_dict[process] for process in bkg_MC_order if process in bkg_MC_dict}
     logger.info(f"data_dict : {data_dict}")
     logger.info(f"bkg_MC_dict : {bkg_MC_dict}")
     logger.info(f"sig_MC_dict : {sig_MC_dict}")
-
 
     # -------------------------------------------------------
     # All data are prepped, now plot Data/MC histogram
@@ -113,10 +111,11 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
     # full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/{args.label}"
     # logger.info(f"full_save_path: {full_save_path}")
 
-
     if not os.path.exists(full_save_path):
         os.makedirs(full_save_path)
-    full_save_fname = f"{full_save_path}/{var}_{region_name}_UpdatedQGL_FixPUJetIDWgt_Sep19_WithDY012_21bins.pdf"
+    # tag = "Run2_nanoAODv12_AK8jets"
+    dnn_tag = "HPScan_03Sep_17bins_08Oct"  # FIXME
+    full_save_fname = f"{full_save_path}/{var}_{region_name}_{dnn_tag}.pdf"
     logger.info(f"full_save_fname: {full_save_fname}")
     # raise ValueError
 
@@ -167,14 +166,14 @@ def arrangeHist_bySampleGroup(pickled_hist_dict):
         "data": ["data"],
         "ggH": ["ggh_"],
         "VBF": ["vbf_"],
-        # "DY": ["dy_"],
-        "DYJ01": ["DYJ01"],
-        "DYJ2": ["DYJ2"],
-        "Top": ["ttjets", "top"],
+        "DY": ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO", "dy_VBF_filter"],
+        # "DYJ01": ["DYJ01"],
+        # "DYJ2": ["DYJ2"],
+        "Top": ["ttjets", "top", "st"],
         "Ewk": ["ewk"],
         "VV": ["ww_", "wz_"],
         # "VV": ["ww_", "wz_", "zz"],
-        "other": ["other"],
+        "VVV": ["www_", "wwz", "wzz", "zzz"],
     }
 
     hist_bySampleGroup = {sample_group: [] for sample_group in sample_group_dict.keys()}
@@ -206,12 +205,12 @@ def getPlotVar(var: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-    "-label",
-    "--label",
-    dest="label",
-    default="",
-    action="store",
-    help="label",
+        "-label",
+        "--label",
+        dest="label",
+        default="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar",
+        action="store",
+        help="label",
     )
     parser.add_argument(
     "-cat",
@@ -222,12 +221,12 @@ if __name__ == "__main__":
     help="string value production category we're working on",
     )
     parser.add_argument(
-    "-save",
-    "--save_path",
-    dest="save_path",
-    default="plots",
-    action="store",
-    help="string value production category we're working on",
+        "-save",
+        "--save_path",
+        dest="save_path",
+        default="validation/from_stage2/",
+        action="store",
+        help="string value production category we're working on",
     )
     parser.add_argument(
     "-y",
@@ -240,7 +239,7 @@ if __name__ == "__main__":
     parser.add_argument(
     "--mva_name",
     dest="mva_name",
-    default="test",
+    default="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar",
     action="store",
     help="label",
     )
@@ -252,17 +251,9 @@ if __name__ == "__main__":
     action="store",
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
     )
-    parser.add_argument(
-    "-lumi",
-    "--lumi",
-    dest="lumi",
-    default="",
-    action="store",
-    help="string value of integrated luminosity to label",
-    )
     args = parser.parse_args()
     year = args.year
-    if year == "all":
+    if year == "run2":
         year_param = "*"
     elif year == "2016":
         year_param = "2016*"
@@ -284,11 +275,18 @@ if __name__ == "__main__":
 
     # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_NoSyst/2018/"
 
-    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2018/"
-    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2017/"
-    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016postVFP/"
-    load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016preVFP/"
-    load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_21bins/2018/"
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2018/"
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2017/"
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016postVFP/"
+    # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016preVFP/"
+    # load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_21bins/2018/"
+
+    # Path with FatJet variables
+    # load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_17bins_NoSyst/{year_param}/"
+    load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_17bins/{year_param}/"
+
+    logger.info(f"Looking for pickled histograms in: {load_path}")
+
     pickled_filelist = glob.glob(f"{load_path}/*.pkl")
     logger.info(f"load_path : {load_path}")
     # logger.info(f"pickled_hists : {pickled_filelist}")
@@ -304,11 +302,11 @@ if __name__ == "__main__":
         "2016postVFP": 19.50,
         "2016preVFP": 16.81,
         "2016": 36.3,
-        "all" : 137,
+        "run2": 137,
     }
     lumi_val = lumi_dict[year]
 
-    possible_samples = ["data", "ggh", "vbf", "dy", "ewk", "tt", "st", "ww", "wz", "zz","other"]
+    possible_samples = ["data", "ggh", "vbf", "dy", "ewk", "tt", "st", "ww", "wz", "zz","VVV"]
 
     plot_setting_fname = "src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
     with open(plot_setting_fname, "r") as file:
@@ -319,5 +317,16 @@ if __name__ == "__main__":
     region_name = args.region
     category = args.category
     label = args.label
-    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{label}/"
-    plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_path, region_name, category, do_logscale=True, binning=binning, lumi=args.lumi, status="Private")
+    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{label}_NoVHveto/"
+    plotStage2DNN_score(
+        hist_dict_bySampleGroup,
+        var,
+        plot_settings,
+        full_save_path,
+        region_name,
+        category,
+        do_logscale=True,
+        binning=binning,
+        lumi=lumi_val,
+        status="Private",
+    )

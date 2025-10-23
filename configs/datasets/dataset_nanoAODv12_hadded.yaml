@@ -1,8 +1,6 @@
 years:
     "2022preEE":
         Data:
-            # data_C_single: /Muon/Run2022C-16Dec2023-v1/NANOAOD
-            # data_C: /Muon/Run2022C-16Dec2023-v1/NANOAOD
             data_C:
                 - /Muon/Run2022C-16Dec2023-v1/NANOAOD
                 - /SingleMuon/Run2022C-16Dec2023-v1/NANOAOD
@@ -62,6 +60,14 @@ years:
         Higgs:
             ggh_powhegPS: /GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v1/NANOAODSIM
             vbf_powheg_dipole: /VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM
+    "2018PR":
+        Data:
+            data_A: /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/SingleMuon_Run2018A
+        DY:
+            dy_M-100To200_aMCatNLO: /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        Higgs:
+            vbf_powheg_dipole: /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8
+            ggh_powhegPS: /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
     "2018":
         Data:
             # data_A: /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/SingleMuon_Run2018A
