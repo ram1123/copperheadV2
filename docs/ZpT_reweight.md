@@ -1,9 +1,10 @@
 # Introduction
 
 There are three steps to run:
-1. `step1`: get the root file with the histogram that contains the ratio of data and MC (DY) in the z-peak region.
-2. `step2`: Use the f-test to determine the best polynomial order for the fit.
-3. `step3`: Use the best polynomial order to fit the data and get the reweighting factors.
+1. `step-1`: get the root file with the histogram that contains the ratio of data and MC (DY) in the z-peak region.
+2. `step-2`: Use the f-test to determine the best polynomial order for the fit.
+   1. **NOTE** : Before running this step, make sure to update bins and ranges in [bin_definitions.py](data/zpt_rewgt/fitting/bin_definitions.py)
+3. `step-3`: Use the best polynomial order to fit the data and get the reweighting factors.
 
 # Technical Details
 
@@ -44,5 +45,20 @@ Where
     time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -y 2018 -m zpt_fit1 -n 0)
     time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -y 2018 -m zpt_fit2 -n 0)
     ```
+
+
+## Details of step-1
+
+- Code location: [save_SF_rootFiles.py](data/zpt_rewgt/fitting/save_SF_rootFiles.py)
+
+
+## Details of step-2
+- Code location: [do_f_test.py](data/zpt_rewgt/fitting/do_f_test.py)
+
+## Details of step-3
+- Code location: [get_polyFit.py](data/zpt_rewgt/fitting/get_polyFit.py)
+
+
+**At the end don't forgot to commit the two YAML files. First file contains the details of the fit and the second file contains the reweighting factors.**
 
 # References/Important links

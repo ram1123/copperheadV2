@@ -303,7 +303,7 @@ for year in "${years[@]}"; do
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             log "Running ZpT fitting step(s)..."
             dy_sample="aMCatNLO" # FIXME: Hardcoded DY sample name: aMCatNLO or MiNNLO
-            cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year -dy_sample $dy_sample "
+            cmd0="python data/zpt_rewgt/fitting/save_SF_rootFiles.py -l $label -y $year --input_path $save_path -dy_sample $dy_sample "
             cmd1="python data/zpt_rewgt/fitting/do_f_test.py               -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend --debug"
             cmd2="python data/zpt_rewgt/fitting/get_polyFit.py             -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend"
             [[ "$mode" =~ ^(zpt_fit0|zpt_fit)$ ]] && { log "Command0: $cmd0"; eval "$cmd0"; }

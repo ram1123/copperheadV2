@@ -151,17 +151,23 @@ binning = binning_based_on_significanceScanV2  # 17 bins; one used for September
 
 def filterRegion(events, region="h-peak"):
     dimuon_mass = events.dimuon_mass
-    if region =="h-peak":
-        region = (dimuon_mass > 115) & (dimuon_mass < 135)
+    z_peak = (dimuon_mass >= 70.0) & (dimuon_mass < 110.0)
+    h_peak = (dimuon_mass >= 115.0) & (dimuon_mass < 135.0)
+    h_sidebands = ((dimuon_mass >= 110.0) & (dimuon_mass < 115.0)) | ((dimuon_mass >= 135.0) & (dimuon_mass < 150.0))
+    if region =="z-peak":
+        region = z_peak
+    elif region =="h-peak":
+        region = h_peak
     elif region =="h-sidebands":
-        region = ((dimuon_mass > 110) & (dimuon_mass < 115)) | ((dimuon_mass > 135) & (dimuon_mass < 150))
+        region = h_sidebands
     elif region =="signal":
-        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
-    elif region =="z-peak":
-        region = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
+        region = h_sidebands | h_peak
+    elif region == "full":
+        region = z_peak | h_sidebands | h_peak
+    else:
+        raise ValueError(f"Invalid region selection: {region}. Valid options are: 'z-peak', 'h-peak', 'h-sidebands', 'signal', 'full'.")
 
-    events = events[region]
-    return events
+    return events[region]
 
 
 def applyRegionCatCuts(
@@ -207,21 +213,7 @@ def applyRegionCatCuts(
         )
 
     # do mass region cut
-    mass = events.dimuon_mass
-    z_peak = (mass > 70) & (mass < 110)
-    h_sidebands = ((mass > 110) & (mass < 115)) | ((mass > 135) & (mass < 150))
-    h_peak = (mass > 115) & (mass < 135)
-    if region_name == "signal":
-        region = h_sidebands | h_peak
-    elif region_name == "h-peak":
-        region = h_peak
-    elif region_name == "h-sidebands":
-        region = h_sidebands
-    elif region_name == "z-peak":
-        region = z_peak
-    else:
-        print("ERROR: Invalid region specified. Acceptable regions are: signal, h-peak, h-sidebands, z-peak")
-        raise ValueError
+    region = filterRegion(events, region=region_name)
 
     # --- category cuts: USE varcol(...) for JES/JER-affected columns ---
     nbt_loose = varcol("nBtagLoose")

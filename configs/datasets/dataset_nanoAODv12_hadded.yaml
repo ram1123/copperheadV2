@@ -1,8 +1,6 @@
 years:
     "2022preEE":
         Data:
-            # data_C_single: /Muon/Run2022C-16Dec2023-v1/NANOAOD
-            # data_C: /Muon/Run2022C-16Dec2023-v1/NANOAOD
             data_C:
                 - /Muon/Run2022C-16Dec2023-v1/NANOAOD
                 - /SingleMuon/Run2022C-16Dec2023-v1/NANOAOD
