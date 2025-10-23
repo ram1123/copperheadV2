@@ -32,7 +32,7 @@ time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.
 # 09 October 2025
 
 ```bash
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l CrossCheckCutFlow_BR_fatjet -p HPScan_03Sep_17bins -y "2018PR" -m all -k )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l CrossCheckCutFlow_BR_fatjet -p HPScan_03Sep_17bins -y "2018PR" -m 1 -k )
 
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l Run2_nanoAODv12_AK8jets -p HPScan_03Sep_17bins -y "2018" -m 1 -k ) 2>&1 | tee Run2_nanoAODv12_AK8jets_stage1_2018_10Oct.log
 time bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_hadded.yaml -v 12 -l Run2_nanoAODv12_AK8jets -p HPScan_03Sep_17bins -y "2018" -m 1 -k
