@@ -4,6 +4,7 @@ from rich.console import Console
 from typing import Optional
 import os
 import sys
+import awkward as ak
 
 LOGGER_NAME = "CopperHead"
 NO_GIT_INFO_AVAILABLE = "No git info available"
@@ -97,3 +98,33 @@ def get_git_info_str():
         return NO_GIT_INFO_AVAILABLE
     else:
         return f"Commit: {commit_hash}, Branch: {branch_name}, Diff: {diff}"
+
+
+def fillEventNans(events, category="vbf"):
+    """
+    checked that this function is unnecssary for vbf category, but have it for robustness
+    """
+    if category == "vbf":
+        for field in events.fields:
+            if "phi" in field:
+                events[field] = ak.fill_none(events[field], value=-10) # we're working on a DNN, so significant deviation may be warranted
+            else: # for all other fields (this may need to be changed)
+                events[field] = ak.fill_none(events[field], value=0)
+    else:
+        logger.info("ERROR: unsupported category!")
+        raise ValueError
+    return events
+
+def filterRegion(events, region="h-peak"):
+    dimuon_mass = events.dimuon_mass
+    if region =="h-peak":
+        region = (dimuon_mass > 115) & (dimuon_mass < 135)
+    elif region =="h-sidebands":
+        region = ((dimuon_mass > 110) & (dimuon_mass < 115)) | ((dimuon_mass > 135) & (dimuon_mass < 150))
+    elif region =="signal":
+        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
+    elif region =="z-peak":
+        region = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
+
+    events = events[region]
+    return events

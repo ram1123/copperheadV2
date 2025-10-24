@@ -1,6 +1,8 @@
 import pandas as pd
 # from python.io import mkdir
 import os
+import logging
+from modules.utils import logger
 
 rename_regions = {
     "h-peak": "SR",
@@ -81,17 +83,24 @@ def editNuisance_names(nuisance, nuisance_titles, year):
     return nuisance_name
 
 def build_datacards(var_name, yield_df, parameters):
+    if yield_df is None or yield_df.empty:
+        logger.error("Yield DataFrame is empty. Cannot build datacards.")
+        return
+
     channels = parameters["channels"]
     regions = parameters["regions"]
     years = parameters["years"]
     global_path = parameters["global_path"]
-    label = parameters["label"]
+    # label = parameters["label"]
 
-    templates_path = f"{global_path}/{label}/stage3_templates/{var_name}"
-    datacard_path = f"{global_path}/{label}/stage3_datacards/"
+    outpath_postfix = "_" + parameters["outpath_postfix"] if parameters["outpath_postfix"] else ""
+
+    datacard_path = f"{global_path}/stage3_datacards{outpath_postfix}/"
+    templates_path = f"{global_path}/stage3_datacards{outpath_postfix}/stage3_templates{outpath_postfix}/{var_name}"
+    templates_path_to_remove_from_datacard = f"{global_path}/stage3_datacards{outpath_postfix}/"
     # mkdir(datacard_path)
     datacard_path += "/" + var_name
-    
+
     # mkdir(datacard_path)
     if not os.path.exists(datacard_path):
         os.makedirs(datacard_path)
@@ -119,7 +128,7 @@ def build_datacards(var_name, yield_df, parameters):
                 datacard.write("kmax *\n")
                 datacard.write("---------------\n")
                 datacard.write(
-                    f"shapes * {bin_name} {templates_file} $PROCESS $PROCESS_$SYSTEMATIC\n"
+                    f"shapes * {bin_name} {templates_file.replace(templates_path_to_remove_from_datacard, '../')} $PROCESS $PROCESS_$SYSTEMATIC\n"
                 )
                 datacard.write("---------------\n")
                 data_str = print_data(
@@ -154,17 +163,23 @@ def build_datacards(var_name, yield_df, parameters):
                 datacard.write("---------------\n")
                 # nuisnace edit end ----------------------------
                 datacard.close()
-                print(f"Saved datacard to {datacard_name}")
+                logger.info(f"Saved datacard to {datacard_name}")
 
                 # debugging
                 with open(datacard_name, 'r') as file:
-                    print("printing datacard")
+                    logger.info("printing datacard")
                     content = file.read()  # Read the entire file content
-                    print(content)
+                    logger.info(content)
     return
 
 
 def print_data(yield_df, var_name, region, channel, year, bin_name):
+    if 'group' not in yield_df.columns:
+        logger.error("Yield DataFrame does not contain 'group' column.")
+        return ""
+    if "Data" not in yield_df.group.unique():
+        logger.warning("No 'Data' group found in yield DataFrame.")
+        return ""
     if "Data" in yield_df.group.unique():
         try:
             data_yield = yield_df.loc[
@@ -239,7 +254,7 @@ def print_mc(yield_df, var_name, region, channel, year, bin_name):
                 #     nuisance_name = v_name
                 # adding nuisance name to match the official workspace -------
                 nuisance_name = v_name
-                # print(f"nuisance_name: {nuisance_name}")
+                # logger.info(f"nuisance_name: {nuisance_name}")
                 nuisance_lines[v_name] = "{:<20} {:<9}".format(nuisance_name, "shape")
             if v_name not in nuisances[group]:
                 nuisances[group].append(v_name)

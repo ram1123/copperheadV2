@@ -2,14 +2,7 @@
     "dimuon_mass": {
         "variable": "dimuon_mass",
         "binning_linspace": [110, 150, 51],
-        "density": false,
-        "ylabel": "Events / 1 GeV",
-        "xlabel": "$m_{\\mu\\mu}$ [GeV]",
-        "color": "royalblue"
-    },
-    "dimuon_mass_zpeak": {
-        "variable": "dimuon_mass",
-        "binning_linspace": [70, 110, 51],
+        "binning_zpeak_linspace": [76, 106, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$m_{\\mu\\mu}$ [GeV]",
@@ -97,7 +90,7 @@
     },
     "dimuon_ebe_mass_res": {
         "variable": "dimuon_ebe_mass_res",
-        "binning_linspace": [0, 4, 51],
+        "binning_linspace": [0, 20, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\sigma_{m_{\\mu\\mu}}$",
@@ -291,7 +284,7 @@
     },
     "mu1_pt": {
         "variable": "mu1_pt",
-        "binning_linspace": [20, 200, 31],
+        "binning_linspace": [20, 300, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(mu1)$ [GeV]",
@@ -323,7 +316,7 @@
     },
     "mu2_pt": {
         "variable": "mu2_pt",
-        "binning_linspace": [20, 120, 31],
+        "binning_linspace": [20, 300, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_{T}(mu2)$ [GeV]",
@@ -374,12 +367,12 @@
         "binning_linspace": [-0.5, 9.5, 11],
         "density": false,
         "ylabel": "Events",
-        "xlabel": "nBtagLoose",
+        "xlabel": "nBtagMedium",
         "color": "royalblue"
     },
     "nsoftjets2": {
         "variable": "nsoftjets2",
-        "binning_linspace": [0, 25, 26],
+        "binning_linspace": [0, 55, 56],
         "density": false,
         "ylabel": "Events",
         "xlabel": "nsoftjets2",
@@ -387,7 +380,7 @@
     },
     "nsoftjets5": {
         "variable": "nsoftjets5",
-        "binning_linspace": [0, 25, 26],
+        "binning_linspace": [0, 15, 16],
         "density": false,
         "ylabel": "Events",
         "xlabel": "nsoftjets5",
@@ -395,7 +388,7 @@
     },
     "htsoft2": {
         "variable": "htsoft2",
-        "binning_linspace": [0, 60, 26],
+        "binning_linspace": [0, 200, 26],
         "density": false,
         "ylabel": "Events",
         "xlabel": "htsoft2",
@@ -403,7 +396,39 @@
     },
     "htsoft5": {
         "variable": "htsoft5",
-        "binning_linspace": [0, 60, 26],
+        "binning_linspace": [0, 200, 26],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "htsoft5",
+        "color": "royalblue"
+    },
+    "nsoftjets2_new": {
+        "variable": "nsoftjets2_new",
+        "binning_linspace": [0, 7, 8],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "nsoftjets2",
+        "color": "royalblue"
+    },
+    "nsoftjets5_new": {
+        "variable": "nsoftjets5_new",
+        "binning_linspace": [0, 7, 8],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "nsoftjets5",
+        "color": "royalblue"
+    },
+    "htsoft2_new": {
+        "variable": "htsoft2_new",
+        "binning_linspace": [0, 200, 26],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "htsoft2",
+        "color": "royalblue"
+    },
+    "htsoft5_new": {
+        "variable": "htsoft5_new",
+        "binning_linspace": [0, 200, 26],
         "density": false,
         "ylabel": "Events",
         "xlabel": "htsoft5",
@@ -411,7 +436,7 @@
     },
     "zeppenfeld": {
         "variable": "zeppenfeld",
-        "binning_linspace": [-5, 5, 51],
+        "binning_linspace": [-2, 2, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "Zeppenfeld",
@@ -431,6 +456,112 @@
         "density": false,
         "ylabel": "Events",
         "xlabel": "pT centrality",
+        "color": "royalblue"
+    },
+    "MET_pt": {
+        "variable": "MET_pt",
+        "binning_linspace": [0, 200, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$p_{T}(MET)$ [GeV]",
+        "color": "royalblue"
+    },
+    "MET_phi": {
+        "variable": "MET_phi",
+        "binning_linspace": [-3.2, 3.2, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$\\phi(MET)$",
+        "color": "royalblue"
+    },
+    "MET_sumEt": {
+        "variable": "MET_sumEt",
+        "binning_linspace": [0, 500, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$sumEt(MET)$ [GeV]",
+        "color": "royalblue"
+    },
+    "acoplanarity": {
+        "variable": "acoplanarity",
+        "binning_linspace": [0, 1, 51],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$\\Delta\\phi_{jj}$",
+        "color": "royalblue"
+    },
+    "PV_npvs": {
+        "variable": "PV_npvs",
+        "binning_linspace": [0, 100, 101],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Number of Primary Vertices",
+        "color": "royalblue"
+    },
+    "PV_npvsGood": {
+        "variable": "PV_npvsGood",
+        "binning_linspace": [0, 100, 101],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Number of Good Primary Vertices",
+        "color": "royalblue"
+    },
+    "dnn_vbf_score": {
+        "variable": "dnn_score",
+        "binning_linspace": [0, 1.0, 10],
+        "binning_nonuniform": [
+            0.0,
+            0.564,
+            0.84,
+            1.059,
+            1.255,
+            1.442,
+            1.629,
+            1.819,
+            2.018,
+            2.236,
+            2.492,
+            3.188
+        ],
+        "density": false,
+        "ylabel": "Events / 0.1",
+        "xlabel": "DNN VBF Score",
+        "color": "royalblue"
+    },
+    "dnn_vbf_score_atanh": {
+        "variable": "dnn_vbf_score_atanh",
+        "binning_linspace": [0, 2.8, 10],
+        "binning_nonuniform": [
+        0.000000,
+        0.179242,
+        0.358485,
+        0.537727,
+        0.716970,
+        0.896212,
+        1.075455,
+        1.254697,
+        1.433940,
+        1.613182,
+        1.792425,
+        1.971667,
+        2.150910,
+        2.330152,
+        2.509395,
+        2.688637,
+        3.047122,
+        4.301819
+        ],
+        "density": false,
+        "ylabel": "Events / 0.12",
+        "xlabel": "$\\mathrm{tanh}^{-1}(DNN~VBF~Score)$",
+        "color": "royalblue"
+    },
+    "DNN_score": {
+        "variable": "DNN_score",
+        "binning_linspace": [0, 1.0, 10],
+        "density": false,
+        "ylabel": "Events / 0.1",
+        "xlabel": "DNN VBF Score",
         "color": "royalblue"
     }
 }

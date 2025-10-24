@@ -7,16 +7,23 @@ then
     module load anaconda/2024.06-1
 fi
 
-conda activate /depot/cms/users/yun79/conda_envs/yun_coffea_latest
+# conda activate /depot/cms/conda_envs/shar1172/pfn_env
 # conda activate /depot/cms/kernels/root632 # FIXME: Temp fix, as coffea latest not working starting from early march 2025
 # conda activate /depot/cms/kernels/coffea_latest
 # conda activate /depot/cms/kernels/python3
 # if there is no arguments only then setup proxy
 if [ "$#" -eq 0 ]; then
+    conda activate /depot/cms/users/yun79/conda_envs/yun_coffea_latest
+    # conda activate /depot/cms/kernels/coffea_dask
+    # conda activate /depot/cms/kernels/coffea_latest
     echo "No arguments provided. Setting up the proxy..."
     voms-proxy-init -voms cms -rfc -valid 192:00 --out $(pwd)/voms_proxy.txt
     echo "Your proxy is here: $(pwd)/voms_proxy.txt"
     export X509_USER_PROXY=$(pwd)/voms_proxy.txt
+else
+    echo "Arguments provided. Not setting up the proxy."
+    echo "Setting up conda env: pfn_env"
+    conda activate /depot/cms/conda_envs/shar1172/pfn_env
 fi
 export WORKDIR=$PWD
 export XRD_REQUESTTIMEOUT=2400

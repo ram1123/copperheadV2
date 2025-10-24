@@ -23,7 +23,7 @@ from modules.utils import logger, ifPathExists
 import cmsstyle as CMS
 main_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(main_dir)
-from lib.histogram.plotting import plotDataMC_compare
+from src.lib.histogram.plotting import plotDataMC_compare
 
 # Define groupings
 GROUPS = {

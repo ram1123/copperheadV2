@@ -9,7 +9,7 @@ from typing import Tuple, List, Dict
 # import ROOT as rt
 import glob, os
 
-from lib.MVA_training.MVA_functions import prepare_features, evaluate_bdt, evaluate_dnn
+from src.lib.MVA_functions import prepare_features, evaluate_bdt, evaluate_dnn
 import argparse
 import time
 import sys, inspect

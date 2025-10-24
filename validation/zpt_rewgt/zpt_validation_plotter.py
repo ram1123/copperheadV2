@@ -24,7 +24,7 @@ from rich import print
 # Add the parent directory to the system path
 main_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")) # in order to import plotDataMC_compare
 sys.path.append(main_dir)
-from lib.histogram.plotting import plotDataMC_compare
+from src.lib.histogram.plotting import plotDataMC_compare
 
 
 # real process arrangement

@@ -9,7 +9,7 @@ from omegaconf import OmegaConf
 from typing import Tuple, List, Dict
 import ROOT as rt
 import ROOT
-from lib.fit_models.fit_functions import MakeFEWZxBernDof3_ucsd
+from src.lib.fit_models.fit_functions import MakeFEWZxBernDof3_ucsd
 import argparse
 import os
 import copy

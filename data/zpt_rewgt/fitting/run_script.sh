@@ -26,11 +26,11 @@ label="April09_NanoV12"
 # /depot/cms/users/shar1172/hmm/copperheadV1clean/March25_NanoAODv9_WithUpdatedZptWgt//stage1_output/2016postVFP/f1_0/dy_M-100To200_MiNNLO/0
 
 # Get SF root files
-# python save_SF_rootFiles.py -l ${label} -y ${year}
+python save_SF_rootFiles.py -l ${label} -y ${year}
 
 # do F test
 nbin="100"
 njet=2
 # python do_f_test_RooFit.py --run_label ${label} --year ${year} --nbins ${nbin} --njet ${njet}
 # python do_f_test.py --run_label ${label} --year ${year} --nbins ${nbin} --njet ${njet} --outAppend "final" --debug
-python get_polyFit.py -l ${label} -y ${year} --nbins ${nbin} --njet ${njet} --outAppend "final"
+# python get_polyFit.py -l ${label} -y ${year} --nbins ${nbin} --njet ${njet} --outAppend "final"

@@ -23,7 +23,7 @@ from distributed import LocalCluster, Client, progress
 # Add the parent directory to the system path
 main_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")) # in order to import plotDataMC_compare
 sys.path.append(main_dir)
-from lib.histogram.plotting import plotDataMC_compare
+from src.lib.histogram.plotting import plotDataMC_compare
 
 def plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=False, is_mc=False):
     # Define your bin ranges

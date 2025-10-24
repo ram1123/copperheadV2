@@ -1,0 +1,4 @@
+- Muon_pt:
+    - Range: [50, 20, 80]
+    - Title: "Muon p_{T} [GeV]"
+    - RatioPlot: [0.01, -0.01]

@@ -6,6 +6,7 @@ import awkward as ak
 import matplotlib.pyplot as plt
 import numpy as np
 import dask
+dask.config.set(annotations={"retries": 3})
 # from dask.distributed import Client
 import sys
 import time
@@ -26,6 +27,8 @@ from omegaconf import OmegaConf
 from coffea.nanoevents.methods import vector
 from rich import print
 
+import subprocess, time
+from pathlib import Path
 
 # dask.config.set({'logging.distributed': 'error'})
 import logging
@@ -39,10 +42,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 np.set_printoptions(threshold=sys.maxsize)
 import gc
 import ctypes
-from lib.get_parameters import getParametersForYr
-
-from modules.utils import logger
-
+from src.lib.get_parameters import getParametersForYr
 
 def trim_memory() -> int:
      libc = ctypes.CDLL("libc.so.6")
@@ -80,12 +80,29 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     logger.debug(f"test: {test}")
     logger.debug(f"Output path: {save_path}")
 
+    # dict to hold the max_num_elements info per sample
+    dict_max_num_elements = {
+        "data_": None, # None means no limit (use uproot's default behavior)
+        "dy_": 200,
+        "ttjets_dl": 400,
+        "ttjets_sl": 1500,
+        }
+    max_num_elements = 800 # default
+    if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
+        max_num_elements = dict_max_num_elements[[key for key in dict_max_num_elements.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
+        logger.debug(f"Setting max_num_elements for {dataset_dict['metadata']['dataset']} to {max_num_elements}")
+    else:
+        max_num_elements = 800
+    logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
+
     events = NanoEventsFactory.from_root(
         dataset_dict["files"],
         schemaclass=NanoAODSchema,
         metadata= dataset_dict["metadata"],
         uproot_options={
-            "timeout":2400,
+            "timeout": 900,
+            "num_workers": 1, # needs to be 1 for dask, solves vector_read error
+            "max_num_elements": max_num_elements,
             # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
         },
     ).events()
@@ -106,7 +123,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
-    logger.info(f"out_collections keys: {out_collections.keys()}")
+    logger.debug(f"out_collections keys: {out_collections.keys()}")
 
     skim_dict = out_collections
     skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
@@ -118,14 +135,51 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     return skim_zip
 
 
-
 def divide_chunks(data: dict, SIZE: int):
    it = iter(data)
    for i in range(0, len(data), SIZE):
       yield {k:data[k] for k in islice(it, SIZE)}
 
 
+def _run(cmd):
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
+    """Create directories on EOS if they do not exist.
+
+    To create directory use gfal command:
+    gfal-mkdir davs://eos.cms.rcac.purdue.edu:9000/store/user/<username>/<directoryname>
+
+    Args:
+        eos_path (str): The EOS path where directories should be created.
+        retries (int, optional): Number of retries in case of failure. Defaults to 3.
+        sleep (float, optional): Sleep time between retries in seconds. Defaults to 2.0.
+
+    FIXME: This function currently does not handle /store paths correctly. As gfal-mkdir command does not work with coffea_latest environment.
+    """
+    if eos_path.startswith("/depot"):
+        os.makedirs(eos_path, exist_ok=True)
+        return
+
+    if not eos_path.startswith("davs://eos.cms.rcac.purdue.edu:9000/"):
+        eos_path = f"davs://eos.cms.rcac.purdue.edu:9000/{eos_path.lstrip('/')}"
+    logger.info(f"Creating EOS directory: {eos_path}")
+    cmd = ["gfal-mkdir", "-p", eos_path]
+    for attempt in range(retries):
+        logger.info(f"command: {' '.join(cmd)}")
+        result = _run(cmd)
+        if result.returncode == 0:
+            logger.info(f"Successfully created EOS directory: {eos_path}")
+            return
+        else:
+            logger.warning(f"Attempt {attempt + 1} to create EOS directory failed: {result.stderr}")
+            time.sleep(sleep)
+    logger.error(f"Failed to create EOS directory after {retries} attempts: {eos_path}")
+    raise RuntimeError(f"Failed to create EOS directory: {eos_path}")
+
+
 if __name__ == "__main__":
+    t0 = time.perf_counter()
     parser = argparse.ArgumentParser()
     parser.add_argument(
     "-save",
@@ -184,6 +238,16 @@ if __name__ == "__main__":
         action="store_true",
         help="Get the cutflow",
     )
+    parser.add_argument(
+        "--rerun",
+        action="store_true",
+        help="If true, deletes the existing stage1 output directory and reruns stage1",
+    )
+    parser.add_argument(
+        "--skipSamples",
+        action="store_true",
+        help="If true, skips samples listed in configs/skip_stage1_run.py",
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -194,21 +258,25 @@ if __name__ == "__main__":
     # make NanoAODv into an interger variable
     logger.info(f"args.NanoAODv: {args.NanoAODv}")
     logger.info(f"args.year: {args.year}")
+    t1 = time.perf_counter()
+    logger.info(f"[Timing] Time taken to parse arguments: {round(t1 - t0, 3)} seconds")
 
     time_step = time.time()
-
 
     warnings.filterwarnings('ignore')
     """
     Coffea Dask automatically uses the Dask Client that has been defined above
     """
 
+    if "2018" in args.year:
+        yearForConfig = "2018" # use 2018 parameters for 2018PR as well
+    else:
+        yearForConfig = args.year
 
-    config = getParametersForYr("./parameters/" , args.year)
+    config = getParametersForYr("./configs/parameters/" , yearForConfig)
     logger.debug(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
-    # test_mode = False
     if not test_mode: # full scale implementation
         if args.use_gateway:
             from dask_gateway import Gateway
@@ -216,14 +284,28 @@ if __name__ == "__main__":
                 "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
                 proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
             )
+            # gateway = Gateway()
+            logger.info("Connecting to Dask Gateway")
+            logger.info(f"gateway: {gateway}")
+            logger.info(f"gateway list clusters: {gateway.list_clusters()}")
+
             cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug(f"client: {client}")
             logger.info("Gateway Client created")
+            xrd_env = {
+                "XRD_REQUESTTIMEOUT": "900",
+                "XRD_STREAMTIMEOUT": "900",
+                "XRD_CONNECTIONWINDOW": "120",
+                "XRD_TIMEOUTRESOLUTION": "5",
+            }
+            client.run(lambda env=xrd_env: __import__("os").environ.update(env))
         else:
-            client = Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+            client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
             logger.info("Local scale Client created")
-        #-------------------------------------------------------------------------------------
+        t2 = time.perf_counter()
+        logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
+        # -------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
         logger.debug(f"Sample path: {sample_path}")
         with open(sample_path) as file:
@@ -233,10 +315,10 @@ if __name__ == "__main__":
         # add in NanoAODv info into samples metadata for coffea processor
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
-        start_save_path = args.save_path + f"/stage1_output/{args.year}"
+        start_save_path = f"{args.save_path}/stage1_output/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
         # make the directory if it doesn't exist
-        os.makedirs(start_save_path, exist_ok=True)
+        eos_mkdirs(start_save_path)
 
         # Get git information; for the log. Also, it will help with debugging, if needed.
         git_commit_hash, branch_name, diff = get_git_info()
@@ -248,54 +330,106 @@ if __name__ == "__main__":
             f.write(f"Diff:\n{diff}\n")
         logger.info(f"git_info_path: {git_info_path}")
 
-
         with performance_report(filename="dask-report.html"):
-            for dataset, sample in tqdm.tqdm(samples.items()):
+            for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
+                from configs.skip_stage1_run import samples_to_skip
+                if dataset in samples_to_skip and args.skipSamples:
+                    logger.warning(f"Skipping dataset as per configs/skip_stage1_run.py: {dataset}")
+                    continue
                 sample_step = time.time()
+                # dict to hold file lenght info per sample
+                dict_file_length = {
+                    "data_": 2500,
+                    "dy_": 10,
+                    "ttjets_dl": 15,
+                    "ttjets_sl": 30
+                    }
+                if any(key in dataset for key in dict_file_length.keys()):
+                    args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
+                    logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
+                else:
+                    args.max_file_len = 2500
+                logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
+
+                # split the sample files into smaller chunks of size args.max_file_len
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
-                logger.debug(f"max_file_len: {args.max_file_len}")
-                logger.debug(f"len(smaller_files): {len(smaller_files)}")
+                logger.info(f"max_file_len: {args.max_file_len}")
+                logger.info(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    # if idx < 50 or idx > 51: continue # for testing purposes
-                    # if idx < 2: continue
                     logger.info(f"Processing {dataset} file index {idx}")
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
-                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
                     logger.info(f"save_path: {save_path}")
                     if not os.path.exists(save_path):
                         logger.debug(f"Path: {save_path} is going to be created")
-                        os.makedirs(save_path)
+                        eos_mkdirs(save_path)
                     else:
-                        # remove previously existing files and make path if doesn't exist
-                        filelist = glob.glob(f"{save_path}/*.parquet")
-                        logger.debug(f"Going to delete files: len(filelist): {len(filelist)}")
-                        for file in filelist:
-                            os.remove(file)
-                    logger.debug("Directory created or cleaned")
-                    to_persist.persist().to_parquet(save_path)
-                    # to_persist.to_parquet(save_path)
+                        if args.rerun:
+                            # remove previously existing directory, if exists, then remake path
+                            if os.path.exists(save_path):
+                                logger.warning(f"Going to delete directory: {save_path}")
+                                os.system(f"rm -r {save_path}")
+                            logger.info(f"Path: {save_path} is going to be created")
+                            eos_mkdirs(save_path)
+                        else:
+                            logger.warning(f"Path: {save_path} already exists. Skipping this file index. Use --rerun to overwrite.")
+                            continue
+                    t3a = time.perf_counter()
+
+                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
+                    t3 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
+
+
+                    # persist and save to parquet
+                    to_persist = to_persist.persist()
+                    to_persist.to_parquet(save_path)
+                    t4 = time.perf_counter()
+                    logger.info(f"[Timing] Time taken to save parquet files: {round(t4 - t3, 3)} seconds")
 
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
                 sample_elapsed = round(time.time() - sample_step, 3)
                 logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
+                t6 = time.perf_counter()
+                logger.info(f"[Timing] Time taken to process sample {dataset}: {round(t6 - t2, 3)} seconds")
 
     else:
+        # FIXME: update this for /store usage
         if args.use_gateway:
             from dask_gateway import Gateway
+
             gateway = Gateway(
                 "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
                 proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
             )
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+            # gateway = Gateway()
+            logger.info("Connecting to Dask Gateway")
+            logger.info(f"gateway: {gateway}")
+            logger.info(f"gateway list clusters: {gateway.list_clusters()}")
+
+            cluster_info = gateway.list_clusters()[
+                0
+            ]  # get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug(f"client: {client}")
             logger.info("Gateway Client created")
+            xrd_env = {
+                "XRD_REQUESTTIMEOUT": "900",
+                "XRD_STREAMTIMEOUT": "900",
+                "XRD_CONNECTIONWINDOW": "120",
+                "XRD_TIMEOUTRESOLUTION": "5",
+            }
+            client.run(lambda env=xrd_env: __import__("os").environ.update(env))
         else:
-            client = Client(n_workers=60,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
+            client = Client(
+                n_workers=64,
+                threads_per_worker=1,
+                processes=True,
+                memory_limit="10 GiB",
+            )
             logger.info("Local scale Client created")
 
         sample_path = "./prestage_output/fraction_processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename

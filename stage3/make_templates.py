@@ -5,16 +5,18 @@ import pandas as pd
 # from python.variable import Variable
 # from python.io import load_stage2_output_hists, save_template, mkdir, load_stage2_output_df2hists
 
-import warnings
+# import warnings
 
-warnings.simplefilter(action="ignore", category=FutureWarning)
+# warnings.simplefilter(action="ignore", category=FutureWarning)
 # from uproot3_methods.classes.TH1 import from_numpy
 import glob
-import dask.dataframe as dd
 import pickle
 import itertools
 import ROOT
 import os
+
+import logging
+from modules.utils import logger
 
 class Variable(object):
     def __init__(self, name_, caption_, nbins_, xmin_, xmax_):
@@ -28,6 +30,7 @@ decorrelation_scheme = {
     "LHERen": ["DY", "EWK", "ggH", "TT+ST"],
     "LHEFac": ["DY", "EWK", "ggH", "TT+ST"],
     "pdf_2rms": ["DY", "VBF", "ggH"], # ["DY", "qqH_hmm", "ggH_hmm"],
+    # "pdf_2rms": ["DY", "qqH_hmm", "ggH_hmm"],
 }
 shape_only = [
     "wgt_LHERen_up",
@@ -43,20 +46,28 @@ shape_only = [
 def load_stage2_output_hists(argset, parameters, dataset):
     year = argset["year"]
     var_name = argset["var_name"]
-    # dataset = argset["dataset"]
     global_path = parameters.get("global_path", None)
-    label = parameters.get("label", None)
+    global_path_postfix = parameters.get("global_path_postfix", None)
 
-    if (global_path is None) or (label is None):
-        return
+    if (global_path is None):
+        logger.error("global_path is not set in parameters!")
+        raise ValueError("global_path is not set in parameters!")
+        # return
 
-    path = f"{global_path}/{label}/stage2_histograms/{var_name}/{year}/"
+    # path = f"{global_path}/stage2_histograms/{var_name}/{year}_h-peak_vbf_{year}_UpdatedQGL_17July_Test_RenameScore/{year}"
+    if global_path_postfix:
+        path = f"{global_path}/stage2_histograms/{var_name}_{global_path_postfix}/{year}"
+    else:
+        path = f"{global_path}/stage2_histograms/{var_name}/{year}"
+    # score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned
+    # stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned
+    # stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July/2018_h-peak_vbf_2018_UpdatedQGL
     paths = glob.glob(f"{path}/{dataset}*.pkl")
-    
-    print(f"dataset: {dataset}")
-    print(f"var_name: {var_name}")
-    print(f"path: {path}")
-    print(f"paths: {paths}")
+
+    logger.debug(f"dataset: {dataset}")
+    logger.debug(f"var_name: {var_name}")
+    logger.debug(f"path: {path}")
+    logger.debug(f"paths: {paths}")
     hist_df = pd.DataFrame()
     for path in paths:
         with open(path, "rb") as handle:
@@ -69,63 +80,80 @@ def load_stage2_output_hists(argset, parameters, dataset):
             }
             hist_df = pd.concat([hist_df, pd.DataFrame([new_row])])
             hist_df.reset_index(drop=True, inplace=True)
+            logger.debug(f"Loaded histogram for {dataset} in {year} with variable {var_name}: {hist}")
+            # logger.debug(f"Loaded histogram for {dataset} in {year} with variable {var_name}")
+            logger.debug(f"hist_df shape: {hist_df.shape}")
+    if hist_df.shape[0] == 0:
+        logger.debug(f"No histograms found for {dataset} in {year} with variable {var_name}")
+        return pd.DataFrame()
 
     return hist_df
 
 def getTH1D_from_numpy(group_hist, bin_edges, group_sumw2, centers, name):
+    logger.debug("=================== getTH1D_from_numpy ============")
+    logger.debug("Creating ROOT.TH1D histogram from numpy arrays")
+    logger.debug(f"Group histogram: {group_hist}")
+    logger.debug(f"Bin edges: {bin_edges}")
+    logger.debug(f"Group sumw2: {group_sumw2}")
+    logger.debug(f"Centers: {centers}")
+    logger.debug(f"Histogram name: {name}")
     # Create a ROOT.TH1D histogram
     hist_values = group_hist
     hist_w2 = group_sumw2
     hist_name = name
     n_bins = len(hist_values)
     hist = ROOT.TH1D(hist_name, "", n_bins, bin_edges[0], bin_edges[-1])
-    
+
     # Fill the ROOT.TH1D histogram with the bin contents
+    logger.debug(f"Filling histogram {hist_name} with {n_bins} bins")
     for i, value in enumerate(hist_values):
         hist.SetBinContent(i + 1, value)  # Bin index starts at 1 in ROOT
-    
+        logger.debug(f"Set bin {i + 1} content to {value}")
+
     # Enable Sumw2 and overwrite it
     hist.Sumw2()  # Ensure Sumw2 is enabled
     sumw2_array = hist.GetSumw2()
-    
+
     # Overwrite the Sumw2 array values
     # Overwrite Sumw2 with weights_squared
     for i, w2 in enumerate(hist_w2, start=1):  # Start at 1 for ROOT bin indexing
-        # print(f"w2 {w2}, for idx {i}")
+        # logger.debug(f"w2 {w2}, for idx {i}")
         sumw2_array[i] = w2
-    
+
     # # Debugging: Verify the new Sumw2 values
-    # print("Updated Sumw2 values:")
+    # logger.debug("Updated Sumw2 values:")
     # for i in range(0, n_bins + 1):
-    #     print(f"Bin {i}, Sumw2: {sumw2_array[i]}")
-    # print("Updated hist values:")
+    #     logger.debug(f"Bin {i}, Sumw2: {sumw2_array[i]}")
+    # logger.debug("Updated hist values:")
     # for i in range(0, n_bins + 1):
-    #     print(f"Bin {i}, content: {hist.GetBinContent(i)}")
+    #     logger.debug(f"Bin {i}, content: {hist.GetBinContent(i)}")
     return hist
-        
-def to_templates(client, parameters, hist_df=None):
+
+def to_templates(parameters, hist_df=None):
     # datasets = list(parameters["datasets"]) # original
-    datasets = list(parameters["datasets"]) + ["ewk_lljj_mll105_160_py_dipole", "vbf_powheg_herwig"] # manually add partonShower
+    # datasets = list(parameters["datasets"]) + ["ewk_lljj_mll105_160_py_dipole", "vbf_powheg_herwig"] # manually add partonShower
+    datasets = list(parameters["datasets"])
     if hist_df is None:
+        logger.debug("Loading histograms from stage2 output")
+        logger.debug(f"datasets: {datasets}")
+        logger.debug(f"parameters: {parameters}")
+
         argset_load = {
             "year": parameters["years"][0],
             "var_name": parameters["templates_vars"][0],
             "dataset": datasets,
         }
-        print(f"datasets: {datasets}")
-        # hist_rows = parallelize(
-        #     load_stage2_output_hists, argset_load, client, parameters
-        # )
+
         hist_rows = []
         for dataset in datasets:
             hist_row = load_stage2_output_hists(argset_load, parameters, dataset)
-            print(f"hist_row: {hist_row}")
+            logger.debug(f"hist_row: {hist_row}")
             hist_rows.append(hist_row)
-        
+
         hist_df = pd.concat(hist_rows).reset_index(drop=True)
-        print(f"hist_df: {hist_df}")
+        logger.debug(f"hist_df: {hist_df}")
         if hist_df.shape[0] == 0:
-            print("No templates to create!")
+            logger.warning("No templates to create!")
             return []
 
     # argset = {
@@ -138,7 +166,7 @@ def to_templates(client, parameters, hist_df=None):
     #     "hist_df": [hist_df],
     # }
     # yield_dfs = parallelize(make_templates, argset, client, parameters, seq=True)
-    
+
     argset = {
         "year": parameters["years"],
         "region": parameters["regions"],
@@ -148,33 +176,42 @@ def to_templates(client, parameters, hist_df=None):
         ],
         "hist_df": [hist_df],
     }
-    print(f"argset: {argset}")
+    logger.debug(f"argset: {argset}")
     # generate all combinations within argset and loop through them
-    
+
     combinations = list(itertools.product(*argset.values()))
-    
+
     # Convert to list of dictionaries
     combination_dicts = [
         dict(zip(argset.keys(), combination)) for combination in combinations
     ]
-    
+    logger.debug(f"Generated {len(combination_dicts)} combinations from argset")
+    logger.debug(f"Combination dicts: {combination_dicts}")
+
     # loop through combinations
     yield_dfs = []
     for combo in combination_dicts:
-        print(f"argset combo: {combo}")
+        logger.debug(f"argset combo: {combo}")
         yield_df = make_templates(combo, parameters)
-        print(f"yield_df: {yield_df}")
+        logger.debug(f"yield_df: {yield_df}")
+        if yield_df is None or yield_df.empty:
+            logger.error(f"argset combo: {combo}")
+            logger.error(f"parameters: {parameters}")
+            raise ValueError("No templates to create for this combination!")
         yield_dfs.append(yield_df)
-    
-    
+
+
     yield_df = pd.concat(yield_dfs).reset_index(drop=True)
     return yield_df
 
 
 def make_templates(args, parameters={}):
+    logger.debug("============= make_templates ============")
+    logger.debug(f"args: {args}")
+    logger.debug(f"parameters: {parameters}")
     year = args["year"]
-    print(f"make_template year: {year}")
-    print(f'args["hist_df"].year: {args["hist_df"].year}')
+    logger.debug(f"make_template year: {year}")
+    logger.debug(f'args["hist_df"].year: {args["hist_df"].year}')
 
     region = args["region"]
     channel = args["channel"]
@@ -182,7 +219,7 @@ def make_templates(args, parameters={}):
     hist_df = args["hist_df"].loc[
         (args["hist_df"].var_name == var_name) & (args["hist_df"].year == year)
     ]
-    print(f"hist_df: {hist_df}")
+    logger.debug(f"hist_df: {hist_df}")
     if "2016" in year:
         year_savepath = year
         year = "2016"
@@ -194,17 +231,18 @@ def make_templates(args, parameters={}):
     # else:
     #     var = Variable(var_name, var_name, 50, 0, 5)
     var = Variable(var_name, var_name, 50, 0, 5)
-    
+
     if hist_df.shape[0] == 0:
+        logger.error(f"No templates found for {var_name} in {year} for {region} and {channel}. Skipping!")
         return
 
     yield_rows = []
     templates = []
 
     groups = list(set(parameters["grouping"].values()))
-    # print(f"groups: {groups}")
-    # print(f"hist_df.dataset.unique(): {hist_df.dataset.unique()}")
-    
+    logger.debug(f"groups: {groups}")
+    logger.debug(f"hist_df.dataset.unique(): {hist_df.dataset.unique()}")
+
     for group in groups:
         datasets = []
         for d in hist_df.dataset.unique():
@@ -217,7 +255,7 @@ def make_templates(args, parameters={}):
         if len(datasets) == 0:
             continue
 
-        print(f"datasets: {datasets}")
+        logger.debug(f"datasets: {datasets}")
 
         # make a list of systematics;
         # avoid situation where different datasets have incompatible systematics
@@ -230,13 +268,13 @@ def make_templates(args, parameters={}):
                     .values[i]
                     .axes["variation"]
                 )
-                # print(f"new_wgt_vars: {new_wgt_vars}")
+                # logger.debug(f"new_wgt_vars: {new_wgt_vars}")
                 if len(wgt_variations) == 0:
                     wgt_variations = new_wgt_vars
                 else:
                     wgt_variations = list(set(wgt_variations) & set(new_wgt_vars))
 
-        # print(f"wgt_variations: {wgt_variations}")
+        # logger.debug(f"wgt_variations: {wgt_variations}")
         # manually add parton shower variations start -------------------------------
         add_VBF_PartonShower = False
         add_EWK_PartonShower = False
@@ -252,15 +290,15 @@ def make_templates(args, parameters={}):
         if add_EWK_PartonShower:
             wgt_variations += ["EWK_EWKPartonShowerUp", "EWK_EWKPartonShowerDown"]
 
-        # print(f"add_VBF_PartonShower: {add_VBF_PartonShower}")
-        # print(f"add_EWK_PartonShower: {add_EWK_PartonShower}")
+        # logger.debug(f"add_VBF_PartonShower: {add_VBF_PartonShower}")
+        # logger.debug(f"add_EWK_PartonShower: {add_EWK_PartonShower}")
         # manually add parton shower variations end -------------------------------
-        # print(f"wgt_variations: {wgt_variations}")
+        logger.debug(f"wgt_variations: {wgt_variations}")
 
         for variation in wgt_variations:
-            # print(f"variation: {variation}")
-            # print(f"channel: {channel}")
-            
+            logger.debug(f"variation: {variation}")
+            logger.debug(f"channel: {channel}")
+
             group_hist = []
             group_sumw2 = []
 
@@ -276,9 +314,8 @@ def make_templates(args, parameters={}):
                 "variation": variation,
                 "val_sumw2": "value",
             }
-            
 
-            #Parton Shower case start -----------------------------
+            # Parton Shower case start -----------------------------
             if ("PartonShower" in variation):
                 slicer_sumw2 = { # slicer_sumw2 needs to be overwritten
                     "region": region,
@@ -290,46 +327,63 @@ def make_templates(args, parameters={}):
                     baseline_dataset = "vbf_powheg_dipole"
                     variation_dataset = "vbf_powheg_herwig"
                 elif ("EWK" in variation):
-                    baseline_dataset = "ewk_lljj_mll105_160_ptj0"
+                    # ewk_lljj_mll50_mjj120_hist.pkl
+                    baseline_dataset = "ewk_lljj_mll50_mjj120"
                     variation_dataset = "ewk_lljj_mll105_160_py_dipole"
                 else:
-                    print("no parton shower exists for this sample!")
+                    logger.warning("no parton shower exists for this sample!")
                     raise ValueError
-                # vals_baseline = hist_df.loc[hist_df.dataset == baseline_dataset, "hist"].values 
-                print(f'hist_df.loc[hist_df.dataset == baseline_dataset, "hist"]: {hist_df.loc[hist_df.dataset == baseline_dataset, "hist"]}')
-                hist_baseline = hist_df.loc[hist_df.dataset == baseline_dataset, "hist"].values.sum()
-                
+                # vals_baseline = hist_df.loc[hist_df.dataset == baseline_dataset, "hist"].values
+                logger.debug(f'hist_df.loc[hist_df.dataset == baseline_dataset, "hist"]: {hist_df.loc[hist_df.dataset == baseline_dataset, "hist"]}')
+                # hist_baseline = hist_df.loc[hist_df.dataset == baseline_dataset, "hist"].values.sum()
+
+                baseline_hists = hist_df.loc[hist_df.dataset == baseline_dataset, "hist"].tolist()
+                if not baseline_hists:
+                    raise ValueError(f"No histograms found for baseline dataset {baseline_dataset}")
+
+                # now sum them via Python, which will invoke your hist + hist properly
+                hist_baseline = sum(baseline_hists)
+
+                logger.debug(f"{group} hist_baseline: {hist_baseline}")
+                logger.debug(f"{group} hist_df: {hist_df}")
+                logger.debug(f"{group} baseline_dataset: {baseline_dataset}")
+                # var.name
+                logger.debug(f"{group} var.name: {var.name}")
+
                 the_hist_nominal_baseline = hist_baseline[slicer_nominal].project(var.name).values()
                 the_sumw2_baseline = hist_baseline[slicer_sumw2].project(var.name).values()
 
-                
-                # print(f"{group} the_hist_nominal_baseline: {the_hist_nominal_baseline}")
-                # print(f"{group} the_sumw2_baseline: {the_sumw2_baseline}")
+                # logger.debug(f"{group} the_hist_nominal_baseline: {the_hist_nominal_baseline}")
+                # logger.debug(f"{group} the_sumw2_baseline: {the_sumw2_baseline}")
 
-                # vals_variation = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].values 
-                hist_variation = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].values.sum() # no need to sum() different histograms yet
-                hist_variation = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].values
-                if len(hist_variation) ==0:
-                    print(f"No template found for {group} variation_dataset: {variation_dataset}. Skipping!")
+                # vals_variation = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].values
+                # hist_variation = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].values.sum() # no need to sum() different histograms yet
+
+                variation_hists = hist_df.loc[hist_df.dataset == variation_dataset, "hist"].tolist()
+                if not variation_hists:
+                    logger.warning(f"No template found for {group} variation_dataset: {variation_dataset}. Skipping!")
                     continue
 
-                hist_variation = hist_variation.sum()
-                print(f"{group} hist_variation: {hist_variation}")
-                print(f"{group} hist_df: {hist_df}")
-                print(f"{group} variation_dataset: {variation_dataset}")
+                hist_variation = sum(variation_hists)
+
+                if not variation_hists:
+                    continue
+
+                logger.debug(f"{group} hist_variation: {hist_variation}")
+                logger.debug(f"{group} hist_df: {hist_df}")
+                logger.debug(f"{group} variation_dataset: {variation_dataset}")
 
                 the_hist_nominal_variation = hist_variation[slicer_nominal].project(var.name).values()
                 the_sumw2_variation = hist_variation[slicer_sumw2].project(var.name).values()
-                
-                print(f"{group} the_hist_nominal_variation: {the_hist_nominal_variation}")
-                print(f"{group} the_sumw2_variation: {the_sumw2_variation}")
-                print(f"{group} the_hist_nominal_variation: {type(the_hist_nominal_variation)}")
-                print(f"{group} the_sumw2_variation: {type(the_sumw2_variation)}")
-                
+
+                logger.debug(f"{group} the_hist_nominal_variation: {the_hist_nominal_variation}")
+                logger.debug(f"{group} the_sumw2_variation: {the_sumw2_variation}")
+                logger.debug(f"{group} the_hist_nominal_variation: {type(the_hist_nominal_variation)}")
+                logger.debug(f"{group} the_sumw2_variation: {type(the_sumw2_variation)}")
 
                 edges = hist_baseline[slicer_nominal].project(var.name).axes[0].edges
                 edges = np.array(edges)
-                print(f"edges: {edges}")
+                logger.debug(f"edges: {edges}")
                 centers = (edges[:-1] + edges[1:]) / 2.0
                 name = variation
 
@@ -338,15 +392,14 @@ def make_templates(args, parameters={}):
                 elif "Down" in variation:
                     group_hist = the_hist_nominal_baseline + (the_hist_nominal_baseline -  the_hist_nominal_variation)
                 else:
-                    print("unknown variation in parton shower")
+                    logger.warning("unknown variation in parton shower")
                     raise ValueError
 
-                # print(f"group_hist: {group_hist}")
+                # logger.debug(f"group_hist: {group_hist}")
                 # group_sumw2 = the_sumw2_variation*0
                 group_sumw2 = 2*the_sumw2_baseline + the_sumw2_variation
-                
 
-                # print(f"variation name: {name}")
+                # logger.debug(f"variation name: {name}")
                 th1 = from_numpy([group_hist, edges])
                 th1._fName = name
                 th1._fSumw2 = np.array(np.append([0], group_sumw2)) # -> np.array([0, group_sumw2])
@@ -357,7 +410,7 @@ def make_templates(args, parameters={}):
                 # variation_fixed = variation.replace("VBF_", "").replace("EWK_", "")
                 variation_fixed = variation.replace("qqH_hmm_", "").replace("EWK_", "")
 
-                # print(f"variation_fixed: {variation_fixed}")
+                # logger.debug(f"variation_fixed: {variation_fixed}")
                 yield_row = {
                         "var_name": var_name,
                         "group": group,
@@ -367,82 +420,101 @@ def make_templates(args, parameters={}):
                         "variation": variation_fixed,
                         "yield": group_hist.sum(),
                 }
-                # print(f"yield_rows: {yield_rows}")
+                # logger.debug(f"yield_rows: {yield_rows}")
                 yield_rows.append(yield_row)
                 continue # done parton shower, skip the rest of the loop
             # Parton Shower case end -----------------------------
             # do the normal for loop if not PartonShower
-            
+
             slicer_sumw2 = {
                 "region": region,
                 "channel": channel,
                 "variation": variation,
                 "val_sumw2": "sumw2",
             }
+            logger.debug(f"datasets: {datasets}")
+            logger.debug(f"slicer_value: {slicer_value}")
+            logger.debug(f"slicer_nominal: {slicer_nominal}")
+            logger.debug(f"hist_df: {hist_df}")
             for dataset in datasets:
                 try:
                     # hist = hist_df.loc[hist_df.dataset == dataset, "hist"].values.sum()
 
                     # my attempt start -----------------------------------------------------------
                     vals = hist_df.loc[hist_df.dataset == dataset, "hist"].values
-                    #---------------------------------------------------------
-                    available_axes = ['region', 'channel', 'val_sumw2', 'score_vbf', 'variation'] # debugging
+                    logger.debug(f"vals for dataset {dataset}: {vals}")
+                    if len(vals) == 0:
+                        logger.debug(f"No template found for {dataset} in {year}. Skipping!")
+                        continue
+                    # ---------------------------------------------------------
+                    # available_axes = ['region', 'channel', 'val_sumw2', 'score_vbf', 'variation'] # debugging
                     # for axes in available_axes:
-                    #     print(f"testing axes: {axes}")
+                    #     logger.debug(f"testing axes: {axes}")
                     #     projection = vals[slicer_value].project(var.name)#.values().sum()
-                    #     print(f"testing projection: {projection}")
-                    # print(f"make_templates vals: {vals}")
+                    #     logger.debug(f"testing projection: {projection}")
+                    # logger.debug(f"make_templates vals: {vals}")
                     # sliced_val = vals[slicer_value]
-                    # print(f"testing sliced_val: {sliced_val}")
+                    # logger.debug(f"testing sliced_val: {sliced_val}")
                     # projection = vals[slicer_value].project(var.name).sum()
-                    # print(f"testing projection: {projection}")
-                    #---------------------------------------------------------
-                    # print(f"make_templates len vals: {len(vals)}")
-                    # print(f"make_templates type(vals[0]): {type(vals[0])}")
+                    # logger.debug(f"testing projection: {projection}")
+                    # ---------------------------------------------------------
+                    # logger.debug(f"make_templates len vals: {len(vals)}")
+                    # logger.debug(f"make_templates type(vals[0]): {type(vals[0])}")
                     # for histogram in list(vals)[:4]:
                     val_l = list(vals)
+                    logger.debug(f"make_templates len(val_l): {len(val_l)}")
+                    logger.debug(f"make_templates val_l: {val_l}")
                     # bad_idxs = [4, 6, 7, 8, 10, 13, 15, 16, 17, 25, 28, 34, 41, 42, 51, 53, 55, 58, 60, 73, 78, 80, 81, 82, 83, 91, 92, 99, 101, 102, 104, 121]
                     bad_idxs = []
                     hist_sum = val_l[0]
+                    logger.debug(f"hist_sum: {hist_sum}")
+
                     for hist_idx in range(1, len(val_l)):
+                        logger.debug(f"make_templates hist_idx: {hist_idx}")
                         histogram = val_l[hist_idx]
                         # axes_l = [axis.label for axis in histogram.axes]
-                        # print(f"{hist_idx} axes_l: {axes_l}")   
+                        # logger.debug(f"{hist_idx} axes_l: {axes_l}")
                         if hist_idx in bad_idxs:
+                            logger.warning(f"Skipping bad histogram index {hist_idx} for dataset {dataset}")
                             continue
                         try:
                             hist_sum = hist_sum+histogram
                         except Exception as e:
-                            # print(f"Exception {e}")
                             bad_idxs.append(hist_idx)
-                            # print(f"bad idx {hist_idx} with error {e}")
-                        # print(f"make_templates histogram: {histogram}")
-                        # print(f"make_templates histogram.axes: {histogram.axes}")
+                            logger.info(f"bad idx {hist_idx} with error {e}")
+                        # logger.debug(f"make_templates histogram: {histogram}")
+                        # logger.debug(f"make_templates histogram.axes: {histogram.axes}")
                         # np_val = histogram.values()
-                        # print(f"make_templates histogram.values(): {np_val}")
-                        # print(f"make_templates histogram.values().shape: {np_val.shape}")
-                        
-                    # print(f"make_templates type(vals): {type(vals)}")
-                    # print(f"make_templates axes: {vals.axes}")
+                        # logger.debug(f"make_templates histogram.values(): {np_val}")
+                        # logger.debug(f"make_templates histogram.values().shape: {np_val.shape}")
+                    # logger.debug(f"make_templates type(vals): {type(vals)}")
+                    # logger.debug(f"make_templates axes: {vals.axes}")
                     # hist = np.sum(vals.values().flatten())
                     if len(bad_idxs) > 0:
-                        print(f"{dataset} bad_idxs: {bad_idxs}")
+                        logger.warning(f"{dataset} bad_idxs: {bad_idxs}")
                     # hist = vals.sum()
                     hist = hist_sum
                     # vals = list(vals)
                     # hist = np.array([val.values() for val in vals]).sum(axis=0)
-                    # print(f"make_templates his.shapet: {hist.shape}")
+                    # logger.debug(f"make_templates his.shapet: {hist.shape}")
                     # raise ValueError
                     # my attempt end -----------------------------------------------------------
-                    
+
                 except Exception as e:
-                    print(f"Could not merge histograms for {dataset} due to error {e}")
+                    logger.warning(f"Could not merge histograms for {dataset} due to error {e}")
                     continue
 
-                try: 
+                try:
+                    logger.debug(f"hist_sum: {hist_sum}")
+                    logger.debug(f"hist: {hist}")
+                    logger.debug(f"slicer_value: {slicer_value}")
+                    logger.debug(f"var.name: {var.name}")
+                    # logger.debug(f"hist_sum.view(): {hist_sum.view()}")
+                    # logger.debug(f"hist.view(): {hist.view()}")
+                    # slicer_value["val_sumw2"] = "sumw2"
                     the_hist = hist[slicer_value].project(var.name).values()
                 except Exception as e:
-                    print(f"Could not project histograms for {dataset} due to error {e}")
+                    logger.warning(f"Could not project histograms for {dataset} due to error {e}")
                     continue
                 the_hist_nominal = hist[slicer_nominal].project(var.name).values()
                 the_sumw2 = hist[slicer_sumw2].project(var.name).values()
@@ -461,7 +533,7 @@ def make_templates(args, parameters={}):
                 #     the_hist = the_hist * scale
                 #     the_sumw2 = the_sumw2 * scale
                 # if group=="Data":
-                #     # print("data is present!")
+                #     # logger.debug("data is present!")
                 #     scale=3975.000/3939
                 #     the_hist = the_hist * scale
                 #     the_sumw2 = the_sumw2 * scale
@@ -478,7 +550,7 @@ def make_templates(args, parameters={}):
                 #     the_hist = the_hist * scale
                 #     the_sumw2 = the_sumw2 * scale
                 # elif group=="VBF":
-                #     scale=11.784/11.936208 
+                #     scale=11.784/11.936208
                 #     the_hist = the_hist * scale
                 #     the_sumw2 = the_sumw2 * scale
                 # elif group=="EWK":
@@ -490,12 +562,12 @@ def make_templates(args, parameters={}):
                 #     the_hist = the_hist * scale
                 #     the_sumw2 = the_sumw2 * scale
 
-                
-
                 # -------------------------------------
 
-                
+                logger.debug(f"the_hist: {the_hist}")
+
                 if (the_hist.sum() < 0) or (the_sumw2.sum() < 0):
+                    logger.debug(f"Negative histogram found for {group} in {year} for {region} and {channel}. Skipping!")
                     continue
 
                 if len(group_hist) == 0:
@@ -508,10 +580,13 @@ def make_templates(args, parameters={}):
                 edges = hist[slicer_value].project(var.name).axes[0].edges
                 edges = np.array(edges)
                 centers = (edges[:-1] + edges[1:]) / 2.0
+            logger.debug(f"group_hist: {group_hist}")
 
             if len(group_hist) == 0:
+                logger.debug(f"No histograms found for group {group} in {year} for {region} and {channel}. Skipping!")
                 continue
             if sum(group_hist) == 0:
+                logger.debug(f"Sum of histogram for group {group} is zero in {year} for {region} and {channel}. Skipping!")
                 continue
 
             if group == "Data":
@@ -519,34 +594,36 @@ def make_templates(args, parameters={}):
             else:
                 name = group
 
+            logger.debug(f"group: {group}")
+            logger.debug(f"variation: {variation}")
             if variation == "nominal":
                 # variation_core = variation.replace("wgt_", "")
                 # variation_core = variation_core.replace("_up", "")
                 # variation_core = variation_core.replace("_down", "")
-                # print(f"variation_core: {variation_core}")
-                
+                # logger.debug(f"variation_core: {variation_core}")
+
                 # else:
                 variation_fixed = variation
             else:
                 variation_core = variation.replace("wgt_", "")
                 variation_core = variation_core.replace("_up", "")
                 variation_core = variation_core.replace("_down", "")
-                print(f"variation_core: {variation_core}")
+                logger.debug(f"variation_core: {variation_core}")
                 suffix = ""
                 if variation_core in decorrelation_scheme.keys():
                     group_LHE = group
-                    print(f"group_LHE: {group_LHE}")
+                    logger.debug(f"group_LHE: {group_LHE}")
                     if group_LHE == "DYJ2" or group_LHE == "DYJ01" :
                         group_LHE = "DY"
                     elif "qqH" in group_LHE :
                         group_LHE = "VBF"
                     elif "ggH" in group_LHE :
                         group_LHE = "ggH"
-                    print(f"group_LHE after: {group_LHE}")
+                    logger.debug(f"group_LHE after: {group_LHE}")
                     if group_LHE in decorrelation_scheme[variation_core]:
                         if variation_core == "pdf_2rms" :
                             suffix = "_"+group_LHE+str(year)
-                            print(f"pdf_2rms suffix: {suffix}")
+                            logger.debug(f"pdf_2rms suffix: {suffix}")
                         else:
                             suffix = "_"+group_LHE
                     else:
@@ -557,25 +634,24 @@ def make_templates(args, parameters={}):
                     suffix = "_wgt"+str(year)
                 elif variation_core in ["qgl"]:
                     suffix = "_wgt"
-                        
-                
-                    
+
                 # TODO: decorrelate LHE, QGL, PDF uncertainties
-                variation_fixed = variation.replace("wgt_", "")               
+                variation_fixed = variation.replace("wgt_", "")
                 variation_fixed = variation_fixed.replace("_up", f"{suffix}Up")
                 variation_fixed = variation_fixed.replace("_down", f"{suffix}Down")
                 group_name = group
                 name = f"{group_name}_{variation_fixed}"
-                print(f"name: {name}")
+                logger.debug(f"name: {name}")
 
-            # print(f"variation name: {name}")
-            # print(f"var_name: {var_name}")
-            # print(f"variation_fixed: {variation_fixed}")
+            # logger.debug(f"variation name: {name}")
+            # logger.debug(f"var_name: {var_name}")
+            # logger.debug(f"variation_fixed: {variation_fixed}")
             # th1 = from_numpy([group_hist, edges])
             # th1._fName = name
             # th1._fSumw2 = np.array(np.append([0], group_sumw2)) # -> np.array([0, group_sumw2])
             # th1._fTsumw2 = np.array(group_sumw2).sum()
             # th1._fTsumwx2 = np.array(group_sumw2 * centers).sum() #-> this is w*(x**2) distibution
+            logger.debug(f"Creating TH1D histogram for group {group} with variation {variation_fixed}")
             th1 = getTH1D_from_numpy(group_hist, edges, group_sumw2, centers, name)
             templates.append(th1)
 
@@ -594,9 +670,12 @@ def make_templates(args, parameters={}):
     if parameters["save_templates"]:
         out_dir = parameters["global_path"]
         # mkdir(out_dir)
-        out_dir += "/" + parameters["label"]
+        # out_dir += "/" + parameters["label"]
         # mkdir(out_dir)
-        out_dir += "/" + "stage3_templates"
+        outpath_postfix = "_" + parameters["outpath_postfix"] if parameters["outpath_postfix"] else ""
+        out_dir += (
+            f"/stage3_datacards{outpath_postfix}/stage3_templates{outpath_postfix}"
+        )
         # mkdir(out_dir)
         out_dir += "/" + var.name
         # mkdir(out_dir)
@@ -604,8 +683,8 @@ def make_templates(args, parameters={}):
 
         # out_fn = f"{out_dir}/{channel}_{region}_{year}.root"
         out_fn = f"{out_dir}/{channel}_{region}_{year_savepath}.root"
-        
-        print(f"out_fn: {out_fn}")
+
+        logger.debug(f"out_fn: {out_fn}")
         # save_template(templates, out_fn, parameters)
 
         # Save all histograms to the same ROOT file

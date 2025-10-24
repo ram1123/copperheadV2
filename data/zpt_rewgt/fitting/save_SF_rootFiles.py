@@ -12,22 +12,8 @@ from array import array
 from ROOT import RooFit
 import argparse
 
-def filterRegion(events, region="h-peak"):
-    dimuon_mass = events.dimuon_mass
-    if region =="h-peak":
-        region = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
-    elif region =="h-sidebands":
-        region = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
-    elif region =="signal":
-        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
-    elif region =="z-peak":
-        region = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
+from modules.selection import filterRegion
 
-    # mu1_pt = events.mu1_pt
-    # mu1ptOfInterest = (mu1_pt > 75) & (mu1_pt < 150.0)
-    # events = events[region&mu1ptOfInterest]
-    events = events[region]
-    return events
 
 def zipAndCompute(events, fields2load):
     zpt_wgt_name = "separate_wgt_zpt_wgt"
@@ -61,6 +47,14 @@ if __name__ == "__main__":
     help="string value of year we are calculating",
     )
     parser.add_argument(
+    "-i",
+    "--input_path",
+    dest="input_path",
+    default=None,
+    action="store",
+    help="input parquet files path",
+    )
+    parser.add_argument(
     "-save",
     "--plot_path",
     dest="plot_path",
@@ -74,6 +68,16 @@ if __name__ == "__main__":
     default=False,
     action=argparse.BooleanOptionalAction,
     help="If true, uses dask gateway client instead of local",
+    )
+    # option for dy samples: aMCatNLO, MiNNLO, or VBF_filter
+    parser.add_argument(
+    "-dy_sample",
+    "--dy_sample",
+    dest="dy_sample",
+    default="MiNNLO",
+    choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
+    action="store",
+    help="choose the type of DY samples to use for Zpt reweighting",
     )
     args = parser.parse_args()
 
@@ -99,24 +103,32 @@ if __name__ == "__main__":
     else:
         years = [args.year]
 
-
-
     for year in years:
-        plot_path = f"{args.plot_path}/{run_label}/{year}"
+        plot_path = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
         os.makedirs(plot_path, exist_ok=True)
         print(f"years: {years}")
 
-        # base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0" # define the save path of stage1 outputs
-        base_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0" # define the save path of stage1 outputs
-        # base_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{run_label}/stage1_output/{year}/f1_0"  # 2017 Hyeon stage-1; Minlo samples
+        # get user name
+        user_name = os.getenv("USER")
+        if user_name is None:
+            print("Error: USER environment variable is not set.")
+            sys.exit(1)
+
+        base_path = f"{args.input_path}/stage1_output/{year}/f1_0"  # define the save path of stage1 outputs
 
         # load the data and dy samples
         print(f"base path data : {base_path}/data_*/*/*.parquet")
-        print(f"base path dy: {base_path}/dy*/*/*.parquet")
+        print(f"base path dy: {base_path}/dy*{args.dy_sample}/*/*.parquet")
         data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
-        # dy_events = dak.from_parquet(f"{base_path}/dy_M-50/*/*.parquet")
-        # dy_events = dak.from_parquet(f"{base_path}/dy*MiNNLO/*/*.parquet") # need to include dy_M-50 and dy_M100to200
-        dy_events = dak.from_parquet(f"{base_path}/dy*/*/*.parquet") # need to include dy_M-50 and dy_M100to200
+
+        if args.dy_sample == "MiNNLO":
+            dy_events = dak.from_parquet(f"{base_path}/dy*MiNNLO/*/*.parquet")
+        elif args.dy_sample == "aMCatNLO":
+            dy_events = dak.from_parquet(f"{base_path}/dy*_aMCatNLO/*/*.parquet")
+        elif args.dy_sample == "VBF_filter":
+            dy_events = dak.from_parquet(f"{base_path}/dy_VBF_filter/*/*.parquet")
+        else:
+            raise ValueError(f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, or VBF_filter.")
 
         # apply z-peak region filter and nothing else
         data_events = filterRegion(data_events, region="z-peak")
@@ -133,7 +145,6 @@ if __name__ == "__main__":
                 data_events_loop = data_events[data_events[njet_field] >=njet]
                 dy_events_loop = dy_events[dy_events[njet_field] >=njet]
 
-
             fields2load = ["wgt_nominal", "dimuon_pt"]
             # data_dict = {field: ak.to_numpy(data_events_loop[field].compute()) for field in fields2load}
             # dy_dict = {field: ak.to_numpy(dy_events_loop[field].compute()) for field in fields2load}
@@ -145,23 +156,18 @@ if __name__ == "__main__":
             # print(f"data_dict: {data_dict}")
             # print(f"dy_dict: {dy_dict}")
 
-
             # binning = config["rewgt_binning"]
             # # Convert the list of bin edges to a C-style array
             # # binning_array = np.array(binning)
-            binning_array = np.linspace(0,200, 501)
+            binning_array = np.linspace(0,200, 2001) # 2000 bins from 0 to 200 GeV
 
             # Step 2: Create the histogram with variable bin widths
             hist_data = ROOT.TH1F("hist_data", "Data", len(binning_array) - 1, binning_array)
             hist_dy = ROOT.TH1F("hist_dy", "DY", len(binning_array) - 1, binning_array)
 
-
-            # fill the histograms
-            # values = np.random.uniform(low=0.5, high=13.3, size=(1000,)) # temp test
-            # weights = np.random.uniform(low=0.5, high=13.3, size=(1000,)) # temp test
-
-
-
+            #  Step 3: Fill the histogram with data
+            # Convert the values and weights to arrays
+            # Note: The values and weights should be numpy arrays or lists
             values = data_dict["dimuon_pt"]
             values = array('d', values)
             weights = data_dict["wgt_nominal"]
@@ -174,27 +180,21 @@ if __name__ == "__main__":
             weights = array('d', weights)
             hist_dy.FillN(len(values), values, weights)
 
-
-            # generate SF histogram (Data/MC)
+            # Step 4: Get the Scale Factor (SF) histogram, by dividing data histogram by DY histogram
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
 
-            # save the histograms in workspace
+            # Step 5: save the histograms in workspace
             workspace = ROOT.RooWorkspace("zpt_Workspace")
 
             # Import the histograms into the workspace
             getattr(workspace, "import")(hist_data)  # Use getattr to call 'import' (Python keyword)
             getattr(workspace, "import")(hist_dy)
 
-            # Save the workspace to a ROOT file
-            # output_file = ROOT.TFile(f"{year}_njet{njet}.root", "RECREATE")
-            # workspace.Write()  # Write the workspace to the file
-            # output_file.Close()
-            # save a copy with the plots for backup
+            # Step 6: Save the workspace to a ROOT file
             copy_file = ROOT.TFile(f"{plot_path}/{year}_njet{njet}.root", "RECREATE")
             workspace.Write()  # Write the workspace to the file
             copy_file.Close()
-
 
             # # Sanity check: Loop through the bins and calculate the relative error
             # print("data Hist Bin | Content | Error | Relative Error (%)")
@@ -250,7 +250,6 @@ if __name__ == "__main__":
             legend.AddEntry(hist_dy, "DY", "l")
             legend.Draw()
 
-
             # Save the canvas as an image
             canvas.SaveAs(f"{plot_path}/dataDy_{year}_njet{njet}.pdf")
 
@@ -261,44 +260,8 @@ if __name__ == "__main__":
             canvas.Update()
             # ---------------------------------------------------------
 
-
             canvas = ROOT.TCanvas("canvas", f"SF histogram {run_label}", 800, 600)
             hist_SF.Draw()
 
             # Save the canvas as an image
             canvas.SaveAs(f"{plot_path}/SF_{year}_njet{njet}.pdf")
-
-
-            # # convert to RooHist and do polynomial fit
-            # x = ROOT.RooRealVar("dimuon_pt", "dimuon_pt", 0, 200)
-            # x.setRange("fit_range", 0, 200 )
-
-            # # Step 3: Convert the histogram to a RooDataHist
-            # roohist = ROOT.RooDataHist("data_hist", "RooDataHist from TH1F", ROOT.RooArgList(x), hist_SF)
-
-
-            # # Step 4: Define the polynomial parameters and model
-            # # a0 = RooRealVar("a0", "a0", 0, -10, 10)  # Constant term
-            # # a1 = RooRealVar("a1", "a1", 0, -10, 10)  # Linear coefficient
-            # # a2 = RooRealVar("a2", "a2", 0, -10, 10)  # Quadratic coefficient
-            # coeff_l = []
-            # for ix in range(1,6):
-            #     coeff_l.append(ROOT.RooRealVar(f"a{ix}", f"a{ix}", 0, -10, 10))
-
-            # polynomial = ROOT.RooPolynomial("polynomial", "polynomial PDF", x, coeff_l)
-
-            # # Step 5: Fit the polynomial model to the histogram data
-            # _ = polynomial.fitTo(roohist, RooFit.Range("fit_range"), RooFit.Save())
-            # fit_result = polynomial.fitTo(roohist, RooFit.Range("fit_range"), RooFit.Save())
-            # fitResult.Print()
-
-            # # Step 6: Visualize the results
-            # frame = x.frame()
-            # roohist.plotOn(frame)          # Plot the histogram
-            # polynomial.plotOn(frame)         # Plot the fitted model
-
-            # # Draw the frame
-            # canvas = ROOT.TCanvas("canvas", "Fit to Histogram", 800, 600)
-            # frame.Draw()
-            # canvas.SaveAs("histogram_fit.pdf")
-

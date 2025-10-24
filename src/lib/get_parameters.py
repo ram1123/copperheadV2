@@ -4,12 +4,12 @@ from omegaconf import OmegaConf
 def getParametersForYr(parameter_path: str, year: str) -> dict:
     """
     This is a simple python function that takes in all the parameters defined by the local yaml files, merges them and returns a dictionary of omegaconf variables (which are basically dictionaries) for a given year
-    If you would like to only accept certain yaml files, feel free to hard code the 
+    If you would like to only accept certain yaml files, feel free to hard code the
     filelist varaibles to contain the yaml files you want
 
     Params:
-    parameter_path -> path where parameter yaml files are saved in 
-        typically, the value is parameters/
+    parameter_path -> path where parameter yaml files are saved in
+        typically, the value is configs/parameters/
     year -> Run era year in question
     """
     filelist = glob.glob(parameter_path + "*.yaml")
