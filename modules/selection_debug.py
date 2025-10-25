@@ -290,7 +290,7 @@ def applyRegionCatCuts(
             pass
 
     category_selection = prod_cat_cut & region
-    # filter events fro selected category
+    # filter events for selected category
 
     # print(f"len(events) {process} b4 selection: {len(events)}")
     events = events[category_selection]
