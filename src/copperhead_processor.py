@@ -273,17 +273,7 @@ class EventProcessor(processor.ProcessorABC):
         self.isCutflow = isCutflow
 
         self.test_mode = test_mode
-        dict_update = {
-            # "hlt" :["IsoMu24"],
-            "do_trigger_match" : True, # False
-            "do_roccor" : True,# True
-            "do_fsr" : True, # True
-            "do_geofit" : False, # True # FIXME: Make it false for always
-            "do_beamConstraint": False, # if True, override do_geofit
-            "do_nnlops" : True,
-            "do_pdf" : True,
-        }
-        self.config.update(dict_update)
+
         # logger.info(f"self.config: {self.config}")
 
         # --- Evaluator
@@ -323,7 +313,7 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
         self.selection = PackedSelection()
-        do_jec_unc = True #True
+        do_jec_unc = self.config["switches"]["do_jec_unc"]
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
 
@@ -413,7 +403,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.info(f"[timing] HLT and lumi mask time: {t4 - t3:.2f} seconds")
         # ------------------------------------------------------------#
 
-        do_pu_wgt = True # True
+        do_pu_wgt = self.config["switches"]["do_pu_wgt"]
         if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
             do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
 
@@ -465,7 +455,7 @@ class EventProcessor(processor.ProcessorABC):
         # # --------------------------------------------------------
 
         doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
-        if self.config["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
+        if self.config["switches"]["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
             logger.debug(f"doing beam constraint!")
             doing_BS_correction = True
             """
@@ -487,7 +477,7 @@ class EventProcessor(processor.ProcessorABC):
 
         # # --------------------------------------------------------
         # # # Apply Rochester correction
-        if self.config["do_roccor"]:
+        if self.config["switches"]["do_roccor"]:
             # TODO make more elegant distinction between Run2 and Run3
             if "16" in year or "17" in year or "18" in year:# Run2 roccor
                 logger.debug("doing Run2 rochester!")
@@ -512,7 +502,7 @@ class EventProcessor(processor.ProcessorABC):
 
         # calculate FSR recovery, but don't apply it until trigger matching is done
         # but apply muon iso overwrite, so base muon selection could be done
-        do_fsr = self.config["do_fsr"]
+        do_fsr = self.config["switches"]["do_fsr"]
         if do_fsr:
             logger.debug(f"doing fsr!")
             # applied_fsr = fsr_recovery(events)
@@ -528,7 +518,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.info(f"[timing] Muon selection time: {t5 - t4:.2f} seconds")
         # --------------------------------------------------------
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
-        if self.config["do_trigger_match"]:
+        if self.config["switches"]["do_trigger_match"]:
             do_seperate_mu1_leading_pt_cut = False
             logger.debug("doing trigger match!")
             """
@@ -615,7 +605,7 @@ class EventProcessor(processor.ProcessorABC):
         # -----------------------------------------------------------------
 
         if not doing_BS_correction: # apply geofit
-            if self.config["do_geofit"] and ("dxybs" in events.Muon.fields):
+            if self.config["switches"]["do_geofit"] and ("dxybs" in events.Muon.fields):
                 logger.info(f"doing geofit!")
                 gf_filter, gf_pt_corr = apply_geofit(events, self.config["year"], ~applied_fsr)
                 events["Muon", "pt"] = events.Muon.pt_gf # original
@@ -684,7 +674,7 @@ class EventProcessor(processor.ProcessorABC):
         nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0)
         self.selection.add("electron_veto", electron_veto)
-        if self.config["do_HemVeto"]:
+        if self.config["switches"]["do_HemVeto"]:
             HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
         else:
             HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
@@ -903,7 +893,7 @@ class EventProcessor(processor.ProcessorABC):
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
-        do_jec = False # True # FIXME: Hardcoded
+        do_jec = self.config["switches"]["do_jec"]
         # do_jecunc = self.config["do_jecunc"]
         # do_jerunc = self.config["do_jerunc"]
         # testing
@@ -1075,7 +1065,7 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         jec_pars = self.config["jec_parameters"]
         # FIXME: For data (is is_mc == False) I should not add this variations.
-        do_jec_unc = False
+        do_jec_unc = self.config["switches"]["do_jec_unc"]
         if do_jec_unc:
             pt_variations = (
                 ["nominal"]
@@ -1087,7 +1077,7 @@ class EventProcessor(processor.ProcessorABC):
 
         if is_mc:
             # moved nnlops reweighting outside of dak process and to run_stage1-----------------
-            do_nnlops = self.config["do_nnlops"] and ("ggh" in events.metadata["dataset"])
+            do_nnlops = self.config["switches"]["do_nnlops"] and ("ggh" in events.metadata["dataset"])
             if do_nnlops:
                 logger.debug("doing NNLOPS!")
                 nnlopsw = nnlops_weights(events.HTXS.Higgs_pt, events.HTXS.njets30, self.config, events.metadata["dataset"])
@@ -1157,7 +1147,7 @@ class EventProcessor(processor.ProcessorABC):
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_pdf = (
-                self.config["do_pdf"]
+                self.config["switches"]["do_pdf"]
                 and ("nominal" in pt_variations)
                 and (
                     "dy" in dataset
@@ -1394,8 +1384,7 @@ class EventProcessor(processor.ProcessorABC):
 
         # do zpt weight at the very end
         dataset = events.metadata["dataset"]
-        do_zpt = ('dy' in dataset) and is_mc
-        # do_zpt = False # temporary overwrite to obtain for zpt re-wgt
+        do_zpt = ('dy' in dataset) and is_mc and self.config["switches"]["do_zpt"]
         if do_zpt:
             logger.info("=======================  apply zpt weights =======================")
             if "MiNNLO" in dataset: # FIXME: temporary fix for MiNNLO samples
@@ -2035,9 +2024,9 @@ class EventProcessor(processor.ProcessorABC):
             #     # --- QGL weights  end --- #
 
             #     # # --- Btag weights  start--- #
-            do_btag_wgt = False # True
-            if NanoAODv ==12:
-                do_btag_wgt = False # temporary condition
+            do_btag_wgt = self.config["switches"]["do_btag_wgt"]
+            # if NanoAODv ==12:
+            # do_btag_wgt = False # FIXME: temporary condition
             if do_btag_wgt:
                 logger.info("doing btag wgt!")
                 bjet_sel_mask = ak.ones_like(njets) #& two_jets & vbf_cut

@@ -996,7 +996,6 @@ def qgl_weights_V2(jets, config, isHerwig, dnn_year):
     #     out_wgts[systematic] = sf_val
     # print(f"isHerwig: {isHerwig}")
     # print(f"jets.qgl: {jets.qgl.compute()}")
-    qgl = None
 
     if dnn_year < 2022.0: # INFO: The b-tag discriminator is different in Run2 and Run3
         wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)

@@ -1,137 +1,165 @@
 cross_sections: # cross-section unit: pb
-  dy_M-50_aMCatNLO: 6077.22 # precision: NNLO source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
-  dy_M-50_MiNNLO: 1976
-  dy_M-50_MiNNLO_V2: 2002
-  dy_M-50_nocut: 6450.0
-  # dy_M-100To200: 247.9 # precision: NLO source: GenAnalyzer tool at https://github.com/green-cabbage/genproductions
-  dy_M-100To200_aMCatNLO: 233.8592627 # precision: NNLO
-  dy_M-100To200_MiNNLO: 77.95
-  dy_VBF_filter: 2.01  # subjet to change
-  dy_VBF_filter_customJMEoff: 2.01 # subjet to change
-  dy_VBF_filter_fromGenSim: 2.01 # subjet to change
-  dy_M-50To120: 254.2 # subjet to change
-  dy_M-120To200: 254.2 # subjet to change
-  dy_0j: 4620.52
-  dy_1j: 922.5
-  dy_2j: 293.6
-  dy_m105_160_mg: 47.17
-  dy_m105_160_vbf_mg:
-    '2016': 1.77
-    '2017': 2.04
-    '2018': 2.03
-  dy_m105_160_amc: 47.17
-  dy_m105_160_vbf_amc:
-    '2016': 1.77
-    '2017': 2.04
-    '2018': 2.03
-  dy_ZptWgt_MiNNLO: 2386000
-  dy_M-4to50_HT-70to100: 316.9
-  dy_M-4to50_HT-100to200: 190.0
-  dy_M-4to50_HT-200to400: 42.67
-  dy_M-4to50_HT-400to600: 4.072
-  dy_M-4to50_HT-600toInf: 1.202
-  dy_M-50_HT-70to100: 140.0
-  dy_M-50_HT-100to200: 140.2
-  dy_M-50_HT-200to400: 38.44
-  dy_M-50_HT-400to600: 5.216
-  dy_M-50_HT-600to800: 1.268
-  dy_M-50_HT-800to1200: 0.5691
-  dy_M-50_HT-1200to2500: 0.1335
-  dy_M-50_HT-2500toInf: 0.00299
-  dyTo2L_M-50_incl:
-    '2022preEE': 6688.0
-    'Reference': 'https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8'
-  ewk_lljj_mll105_160:
-    '2016': 0.0508896
-    '2017': 0.0508896
-    '2018': 0.0508896
-  ewk_lljj_mll105_160_py:
-    '2016': 0.0508896
-    '2017': 0.0508896
-    '2018': 0.0508896
-  ewk_lljj_mll105_160_ptj0:
-    '2016': 0.07486
-    '2017': 0.0789
-    '2018': 0.0789
-  ewk_lljj_mll50_mjj120: 1.719
-  ewk_lljj_mll105_160_py_dipole:
-    '2016': 0.07486
-    '2017': 0.0789
-    '2018': 0.0789
-  ewk_m50: 3.998
-  st_top: 136.02
-  st_tw_top: 32.45 # UL #FIXME
-  st_tw_antitop: 32.45 # UL #FIXME
-  # st_tw_top: 35.85 # rereco
-  # st_tw_antitop: 35.85 # rereco
-  st_t_top: 136.02 #FIXME source: AN-19-124 table 2.8
-  st_t_antitop: 80.95 #FIXME source: AN-19-124 table 2.8
-  st_s_lep: 3.549
-  st_s_had: 7.14
-  tZq_ll: 0.07561
-  ttjets_dl: 86.65 # UL
-  ttjets_sl: 358.57 # UL
-  TTWjets_LNu: 0.2159
-  TTWJets_QQ: 0.4369
-  TTZ_LLnunu: 0.2439
-  TTTT: 0.008091
-  TTTW: 0.0007298
-  TTTJ: 0.0004010
-  TTWW: 0.007002
-  ww_2l2nu: 11.09 # UL
-  wz_3lnu: 5.22 # UL
-  wz_2l2q: 6.45 # UL
-  wz_1l1nu2q: 9.12 # UL
-  zz: 12.17 # UL #FIXME
-  zz_2mu2nu: 0.001583
-  zz_2l2q: 3.698
-  zz_4l: 1.325
-  GluGluContin_ZZ2e2mu: 3.292
-  # GluGluContin_ZZ2e2nu: 0
-  GluGluContin_ZZ2e2tau: 3.294
-  GluGluContin_ZZ2mu2nu: 17.73
-  GluGluContin_ZZ2mu2tau: 3.294
-  GluGluContin_ZZ4e: 1.619
-  GluGluContin_ZZ4mu: 1.608
-  GluGluContin_ZZ4tau: 01.626
-  # ww_2l2nu: 12.178 # rereco
-  # wz_3lnu: 4.102 # rereco
-  # wz_2l2q: 5.606 # rereco
-  # wz_1l1nu2q: 7.031227 # rereco
-  # zz: 0.5664 # rereco
-  ttw: 0.2001
-  ttz: 0.2529
-  www: 0.2086 # source: AN-19-124 table 2.8
-  wwz: 0.1651 # source: AN-19-124 table 2.8
-  wzz: 0.05565 # source: AN-19-124 table 2.8
-  zzz: 0.01398 # source: AN-19-124 table 2.8
-  # ggh_powheg: 0.01057
-  ggh_powhegPS: 0.01057
-  ggh_amcPS: 0.01057
-  ggh_amcPS_TuneCP5down: 0.01057
-  ggh_amcPS_TuneCP5up: 0.01057
-  ggh_amc: 0.01057
-  ggh_localTest: 0.01057
-  vbf: 0.0008210722
-  vbf_sync: 0.0008210722
-  # vbf_powheg: 0.0008210722
-  vbf_powheg_herwig: 0.0008228
-  vbf_powheg_dipole: 0.0008228
-  vbf_powhegPS: 0.0008228
-  vbf_amc_herwig: 0.0008228
-  vbf_amcPS_TuneCP5down: 0.0008228
-  vbf_amcPS_TuneCP5up: 0.0008228
-  vbf_amcPS: 0.0008228
-  vbf_amc: 0.0008228
-  ggh_powhegPS_m120: 0.012652906
-  ggh_amcPS_m120: 0.012652906
-  vbf_powhegPS_m120: 0.0009534505
-  vbf_amcPS_m120: 0.0009534505
-  ggh_powhegPS_m130: 0.008504687
-  ggh_amcPS_m130: 0.008504687
-  vbf_powhegPS_m130: 0.0006826649
-  vbf_amcPS_m130: 0.0006826649
-  wmh: 0.000116
-  wph: 0.000183
-  zh: 0.000192
-  tth: 0.00011
+    dy_M-50_aMCatNLO: 6077.22 # precision: NNLO source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
+    dy_M-50_MiNNLO: 1976
+    dy_M-50_MiNNLO_V2: 2002
+    dy_M-50_nocut: 6450.0
+    # dy_M-100To200: 247.9 # precision: NLO source: GenAnalyzer tool at https://github.com/green-cabbage/genproductions
+    dy_M-100To200_aMCatNLO: 233.8592627 # precision: NNLO
+    dy_M-100To200_MiNNLO: 77.95
+    dy_VBF_filter: 2.01  # subjet to change
+    dy_VBF_filter_customJMEoff: 2.01 # subjet to change
+    dy_VBF_filter_fromGenSim: 2.01 # subjet to change
+    dy_M-50To120: 254.2 # subjet to change
+    dy_M-120To200: 254.2 # subjet to change
+    dy_0j: 4620.52
+    dy_1j: 922.5
+    dy_2j: 293.6
+    dy_m105_160_mg: 47.17
+    dy_m105_160_vbf_mg:
+        '2016': 1.77
+        '2017': 2.04
+        '2018': 2.03
+    dy_m105_160_amc: 47.17
+    dy_m105_160_vbf_amc:
+        '2016': 1.77
+        '2017': 2.04
+        '2018': 2.03
+    dy_ZptWgt_MiNNLO: 2386000
+    dy_M-4to50_HT-70to100: 316.9
+    dy_M-4to50_HT-100to200: 190.0
+    dy_M-4to50_HT-200to400: 42.67
+    dy_M-4to50_HT-400to600: 4.072
+    dy_M-4to50_HT-600toInf: 1.202
+    dy_M-50_HT-70to100: 140.0
+    dy_M-50_HT-100to200: 140.2
+    dy_M-50_HT-200to400: 38.44
+    dy_M-50_HT-400to600: 5.216
+    dy_M-50_HT-600to800: 1.268
+    dy_M-50_HT-800to1200: 0.5691
+    dy_M-50_HT-1200to2500: 0.1335
+    dy_M-50_HT-2500toInf: 0.00299
+    dyTo2L_M-50_incl:
+        '2022preEE': 6688.0
+        'Reference': 'https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8'
+    ewk_lljj_mll105_160:
+        '2016': 0.0508896
+        '2017': 0.0508896
+        '2018': 0.0508896
+    ewk_lljj_mll105_160_py:
+        '2016': 0.0508896
+        '2017': 0.0508896
+        '2018': 0.0508896
+    ewk_lljj_mll105_160_ptj0:
+        '2016': 0.07486
+        '2017': 0.0789
+        '2018': 0.0789
+    ewk_lljj_mll50_mjj120: 1.719
+    ewk_lljj_mll105_160_py_dipole:
+        '2016': 0.07486
+        '2017': 0.0789
+        '2018': 0.0789
+    ewk_m50: 3.998
+    tt_inclusive:
+        '2022preEE': 762.3
+        'Reference': 'https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TT_TuneCP5_13p6TeV_powheg-pythia8'
+    st_top: 136.02
+    st_tw_top: 32.45 # UL #FIXME
+    st_tw_antitop: 32.45 # UL #FIXME
+    # st_tw_top: 35.85 # rereco
+    # st_tw_antitop: 35.85 # rereco
+    st_t_top: 136.02 #FIXME source: AN-19-124 table 2.8
+    st_t_antitop: 80.95 #FIXME source: AN-19-124 table 2.8
+    st_s_lep: 3.549
+    st_s_had: 7.14
+    tZq_ll: 0.07561
+    ttjets_dl: 86.65 # UL
+    ttjets_sl: 358.57 # UL
+    TTWjets_LNu: 0.2159
+    TTWJets_QQ: 0.4369
+    TTZ_LLnunu: 0.2439
+    TTTT: 0.008091
+    TTTW: 0.0007298
+    TTTJ: 0.0004010
+    TTWW: 0.007002
+    ww_2l2nu:
+        '2018': 11.09 # UL
+        '2017': 11.09 # UL
+        '2016': 11.09 # UL
+        '2022preEE': 11.79
+        'Ref2022': 'https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=38535167&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8'
+    wz_3lnu:
+        '2018': 5.22 # UL
+        '2017': 5.22 # UL
+        '2016': 5.22 # UL
+        '2022preEE': 4.924
+        'Ref2022': 'https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=38535167&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8'
+    wz_2l2q:
+        '2018': 6.45 # UL
+        '2017': 6.45 # UL
+        '2016': 6.45 # UL
+        '2022preEE': 7.568
+        'Ref2022': 'https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=38535167&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8'
+    wz_1l1nu2q: 9.12 # UL
+    zz: 12.17 # UL #FIXME
+    zz_2mu2nu: 0.001583
+    zz_2l2q: 3.698
+    zz_4l: 1.325
+    GluGluContin_ZZ2e2mu: 3.292
+    # GluGluContin_ZZ2e2nu: 0
+    GluGluContin_ZZ2e2tau: 3.294
+    GluGluContin_ZZ2mu2nu: 17.73
+    GluGluContin_ZZ2mu2tau: 3.294
+    GluGluContin_ZZ4e: 1.619
+    GluGluContin_ZZ4mu: 1.608
+    GluGluContin_ZZ4tau: 01.626
+    # ww_2l2nu: 12.178 # rereco
+    # wz_3lnu: 4.102 # rereco
+    # wz_2l2q: 5.606 # rereco
+    # wz_1l1nu2q: 7.031227 # rereco
+    # zz: 0.5664 # rereco
+    ttw: 0.2001
+    ttz: 0.2529
+    www: 0.2086 # source: AN-19-124 table 2.8
+    wwz: 0.1651 # source: AN-19-124 table 2.8
+    wzz: 0.05565 # source: AN-19-124 table 2.8
+    zzz: 0.01398 # source: AN-19-124 table 2.8
+    # ggh_powheg: 0.01057
+    ggh_powhegPS:
+        '2018': 0.01057
+        '2017': 0.01057
+        '2016': 0.01057
+        '2022preEE': 0.0135096 # 51.96 * 2.6*10^{-4}
+        'Ref2022': https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+    ggh_amcPS: 0.01057
+    ggh_amcPS_TuneCP5down: 0.01057
+    ggh_amcPS_TuneCP5up: 0.01057
+    ggh_amc: 0.01057
+    ggh_localTest: 0.01057
+    vbf: 0.0008210722
+    vbf_sync: 0.0008210722
+    # vbf_powheg: 0.0008210722
+    vbf_powheg_herwig: 0.0008228
+    vbf_powheg_dipole:
+        '2018': 0.0008228
+        '2017': 0.0008228
+        '2016': 0.0008228
+        '2022preEE': 0.00105742 # 4.067*2.6*10^{-4}
+        'Ref2022': https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+    vbf_powhegPS: 0.0008228
+    vbf_amc_herwig: 0.0008228
+    vbf_amcPS_TuneCP5down: 0.0008228
+    vbf_amcPS_TuneCP5up: 0.0008228
+    vbf_amcPS: 0.0008228
+    vbf_amc: 0.0008228
+    ggh_powhegPS_m120: 0.012652906
+    ggh_amcPS_m120: 0.012652906
+    vbf_powhegPS_m120: 0.0009534505
+    vbf_amcPS_m120: 0.0009534505
+    ggh_powhegPS_m130: 0.008504687
+    ggh_amcPS_m130: 0.008504687
+    vbf_powhegPS_m130: 0.0006826649
+    vbf_amcPS_m130: 0.0006826649
+    wmh: 0.000116
+    wph: 0.000183
+    zh: 0.000192
+    tth: 0.00011
