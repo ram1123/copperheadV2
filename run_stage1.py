@@ -82,10 +82,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # dict to hold the max_num_elements info per sample
     dict_max_num_elements = {
-        "data_": None, # None means no limit (use uproot's default behavior)
+        "data_": 900, # None means no limit (use uproot's default behavior)
         "dy_": 200,
         "ttjets_dl": 400,
-        "ttjets_sl": 1500,
+        "ttjets_sl": 900,
         }
     max_num_elements = 800 # default
     if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
@@ -339,19 +339,27 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # dict to hold file lenght info per sample
                 dict_file_length = {
-                    "data_": 2500,
-                    "dy_": 10,
-                    "ttjets_dl": 15,
-                    "ttjets_sl": 30
+                    "data_": 900,
+                    "dy_": 900,
+                    "ttjets_dl": 900,
+                    "ttjets_sl": 900
                     }
                 if any(key in dataset for key in dict_file_length.keys()):
                     args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
                     logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
                 else:
-                    args.max_file_len = 2500
+                    args.max_file_len = 900
                 logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
 
                 # split the sample files into smaller chunks of size args.max_file_len
+                # # use only 1/4 of the total files available in sample for test mode
+                # if True:
+                #     total_files = len(sample["files"])
+                #     print(f"total_files for {dataset}: {total_files}")
+                #     print(f"files: {sample['files']}")
+                #     test_files = sample["files"][100]
+                #     sample["files"] = test_files
+                #     logger.info(f"Test mode: Using only 1/4 of total files for {dataset}. total_files: {total_files}, test_files used: {len(test_files)}")
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
                 logger.info(f"max_file_len: {args.max_file_len}")
                 logger.info(f"len(smaller_files): {len(smaller_files)}")

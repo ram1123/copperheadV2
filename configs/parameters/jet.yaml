@@ -56,8 +56,8 @@ btag_loose_wp: # for DeepCSV, DeepJet is different
   2016_RERECO: 0.2217  #central sources for RERECO https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
   '2017_RERECO': 0.1522
   '2018_RERECO': 0.1241
-  2022preEE: 0.12
-  2022postEE: 0.12
+  2022preEE: 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+  2022postEE: 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
 btag_medium_wp: # for DeepCSV, DeepJet is different
   2016preVFP: 0.6001
   2016postVFP: 0.5847
@@ -66,8 +66,8 @@ btag_medium_wp: # for DeepCSV, DeepJet is different
   2016_RERECO: 0.6321
   '2017_RERECO': 0.4941
   '2018_RERECO': 0.4184
-  2022preEE: 0.4168
-  2022postEE: 0.4168
+  2022preEE: 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+  2022postEE: 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
 softjet_dr2:
   2016preVFP: 0.16
   2016postVFP: 0.16
@@ -79,15 +79,16 @@ softjet_dr2:
   2022preEE: 0.16
   2022postEE: 0.16
 do_HemVeto:
-  2016preVFP: false
-  2016postVFP: false
+  2018: true
+  '2016preVFP': false
+  '2016postVFP': false
   '2017': false
   '2018': true
-  2016_RERECO: false
+  '2016_RERECO': false
   '2017_RERECO': false
   '2018_RERECO': false
-  2022preEE: false
-  2022postEE: false
+  '2022preEE': false
+  '2022postEE': false
 HemVeto_ratio: # ratio of HemVeto applicable run / total nevents for 2018UL
   2016preVFP: 0.0
   2016postVFP: 0.0

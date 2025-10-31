@@ -185,7 +185,6 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
     return pu_weights
 
 
-
 # NNLOPS SF-------------------------------------------------------------------------
 
 class DelayedInterp:
@@ -964,11 +963,9 @@ def add_pdf_variations(events, config, dataset):
     return pdf_vars
 
 
-
-
 # QGL SF-------------------------------------------------------------------------
 
-def qgl_weights_V2(jets, config, isHerwig):
+def qgl_weights_V2(jets, config, isHerwig, dnn_year):
     """
     source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/QuarkGluonLikelihood#Recommendation_for_13_TeV_data_a
     """
@@ -999,8 +996,14 @@ def qgl_weights_V2(jets, config, isHerwig):
     #     out_wgts[systematic] = sf_val
     # print(f"isHerwig: {isHerwig}")
     # print(f"jets.qgl: {jets.qgl.compute()}")
+    qgl = None
 
-    wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)
+    if dnn_year < 2022.0: # INFO: The b-tag discriminator is different in Run2 and Run3
+        wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)
+        qgl = jets.qgl
+    else:
+        wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2.5) & (jets.btagPNetQvG > 0)
+        qgl = jets.btagPNetQvG
     lightOrGluon = (abs(jets.partonFlavour) < 4) | (jets.partonFlavour == 21)
     jets = jets[wgt_mask & lightOrGluon]
     njets = ak.num(jets, axis=1)
@@ -1013,9 +1016,7 @@ def qgl_weights_V2(jets, config, isHerwig):
     light = (abs(jets.partonFlavour) < 4)
     gluon = (jets.partonFlavour == 21)
 
-    qgl = jets.qgl
     qgl_weights = ak.ones_like(jets.pt)
-
 
     if isHerwig:
         light_val =  (
@@ -1589,10 +1590,6 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
 #     return btag.wgt, btag_syst
 
 
-
-
-
-
 # -----------------------------------------------------------
 #
 # jet puid weight
@@ -1841,10 +1838,3 @@ def get_jetpuid_weights_old(evaluator, year, jets, pt_name, jet_puid_opt, jet_pu
         # print(f"puid_weight after: {puid_weight}")
         # print(f"puid_weight: {ak.to_numpy(puid_weight.compute())}")
     return puid_weight
-
-
-
-
-
-
-

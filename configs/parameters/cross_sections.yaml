@@ -38,6 +38,9 @@ cross_sections: # cross-section unit: pb
   dy_M-50_HT-800to1200: 0.5691
   dy_M-50_HT-1200to2500: 0.1335
   dy_M-50_HT-2500toInf: 0.00299
+  dyTo2L_M-50_incl:
+    '2022preEE': 6688.0
+    'Reference': 'https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8'
   ewk_lljj_mll105_160:
     '2016': 0.0508896
     '2017': 0.0508896

@@ -133,11 +133,7 @@ def get_name_map(stack):
     return name_map
 
 def get_jec_factories(jec_parameters: dict, year):
-    # jec_pars = {k: v[year] for k, v in jec_parameters.items()}
-    # jec_pars = {k: v for k, v in jec_parameters.items()}
-
     jec_pars = jec_parameters
-
 
     weight_sets, names = jec_weight_sets(jec_pars, year)
 
@@ -189,8 +185,6 @@ def get_jec_factories(jec_parameters: dict, year):
 
     # Create separate factories for JEC, JER, JEC variations
     for variation in jet_variations:
-
-
         stack = JECStack(jec_input_options[variation])
         # logger.debug(f"jec_factories JECStack: {stack}")
         # logger.debug(f"jec_factories get_name_map(stack): {get_name_map(stack)}")
@@ -681,6 +675,14 @@ def do_jer_smear(jets, config, event_id, year="2018", syst_l=["nom", "up", "down
     params:
     syst: nom, up and down
     """
+    # Skip JER smearing for 2022 (use JEC-corrected pt directly)
+    if "2022" in str(year):
+        for syst in syst_l:
+            jets[f"pt_jer_{syst}"] = jets.pt_jec
+        jets["pt"] = jets[f"pt_jer_nom"]
+        jets = apply_jer_unc(jets)
+        return jets
+
     jec_parameters = config["jec_parameters"]
     jerc_load_path = jec_parameters["jerc_load_path"]
     cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
@@ -714,9 +716,6 @@ def do_jer_smear(jets, config, event_id, year="2018", syst_l=["nom", "up", "down
         )
         jer_sf = sf.evaluate(*inputs)
         # logger.debug("JER SF : {}".format(jer_sf.compute()))
-
-
-
 
         inputs = ( # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L107C73-L107C75
             jets.eta, # == JetEta
