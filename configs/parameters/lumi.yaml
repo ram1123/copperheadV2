@@ -1,14 +1,14 @@
 integrated_lumis: # source: https://github.com/TopEFT/topeft/blob/252c6454e06e49adfe351b9234b6fd7f5fbabf9e/topeft/json/lumi.json, https://twiki.cern.ch/twiki/bin/viewauth/CMS/LumiRecommendationsRun2#Luminosity_for_pp_13_TeV_data
-  2016preVFP: 19500.0
-  2016postVFP: 16810.0
+  '2016preVFP': 19500.0
+  '2016postVFP': 16810.0
   '2017': 41480.0
   '2018': 59830.0
-  2022preEE: 59970.0
-  2022postEE: 59970.0
-  2016_RERECO: 35920.0
-  2017_RERECO: 41529.0
-  2018_RERECO: 59740.0
-lumimask: 
+  '2022preEE': 7980.4
+  '2022postEE': 266717.0
+  '2016_RERECO': 35920.0
+  '2017_RERECO': 41529.0
+  '2018_RERECO': 59740.0
+lumimask:
   2016preVFP: data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt
   2016postVFP: data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt
   '2017': data/lumimasks/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt
