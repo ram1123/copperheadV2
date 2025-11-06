@@ -29,6 +29,8 @@ import time
 import logging
 from modules.utils import logger
 
+from modules.get_sample_info import get_sample_info
+
 coffea_nanoevent = TypeVar('coffea_nanoevent')
 ak_array = TypeVar('ak_array')
 
@@ -342,7 +344,8 @@ class EventProcessor(processor.ProcessorABC):
         t1 = time.perf_counter()
         logger.info(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
         # LHE cut original start -----------------------------------------------------------------------------
-        if 'dy_M-50' in dataset: # if dy_M-50, apply LHE cut
+        do_remove_dy_M100to200 = self.config["switches"]["do_remove_dy_M100to200"]
+        if "dy_M-50" in dataset and do_remove_dy_M100to200:  # if dy_M-50, apply LHE cut
             logger.debug("doing dy_M-50 LHE cut!")
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
@@ -1025,15 +1028,27 @@ class EventProcessor(processor.ProcessorABC):
             # original initial weight start ----------------
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights) # temporary commenting out
 
-            cross_section = self.config["cross_sections"][dataset]
-            # check if there's a year-wise different cross section
-            try:
-                cross_section = cross_section[year] # we assume cross_section is a map (Omegaconf)
-            except:
-                cross_section = cross_section # we assume this is a number
+            if "2022" in str(year) or "2023" in str(year) or "2024" in str(year):
+                sample_info = get_sample_info("./configs/datasets/dataset_nanoAODv12_run3.yaml", dataset, year) # FIXME: hardcoded filename
+                sample_info = get_sample_info("./configs/datasets/dataset_nanoAODv12_run3.yaml", dataset, year) # FIXME: hardcoded filename
+                integrated_lumi = sample_info["total_lumi_pb"]
+
+                cross_section = sample_info["cross_section_pb"]
+                logger.info(f"cross_section: {cross_section}")
+
+                kfactor = sample_info["kfactor_value"]
+                cross_section = cross_section * kfactor
+                logger.debug(f"kfactor: {kfactor}")
+            else:
+                # check if there's a year-wise different cross section
+                try:
+                    cross_section = cross_section[year] # we assume cross_section is a map (Omegaconf)
+                except:
+                    cross_section = cross_section # we assume this is a number
+                integrated_lumi = self.config["integrated_lumis"]
+
             logger.debug(f"cross_section: {cross_section}")
-            logger.debug(f"type(cross_section): {type(cross_section)}")
-            integrated_lumi = self.config["integrated_lumis"]
+            logger.debug(f"integrated_lumi: {integrated_lumi}")
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
             # original initial weight end ----------------

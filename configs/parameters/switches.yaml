@@ -5,52 +5,67 @@ switches:
         '2017': true
         '2018': true
         '2022preEE': true
+        '2022postEE': true
     do_roccor:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': true
+        '2022postEE': true
     do_fsr:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': true
+        '2022postEE': true
     do_geofit:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
         '2018': false
         '2022preEE': false
+        '2022postEE': false
     do_beamConstraint:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': false
+        '2022postEE': false
     do_nnlops:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': true
+        '2022postEE': true
     do_pdf:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': true
+        '2022postEE': true
     do_pu_wgt:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': true
+        '2022postEE': true
     do_HemVeto:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+    do_remove_dy_M100to200:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
         '2018': true
         '2022preEE': false
         '2022postEE': false
@@ -60,21 +75,25 @@ switches:
         '2017': true
         '2018': true
         '2022preEE': false
+        '2022postEE': false
     do_jec:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': false
+        '2022postEE': false
     do_jec_unc:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': false
+        '2022postEE': false
     do_btag_wgt:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': false
+        '2022postEE': false
