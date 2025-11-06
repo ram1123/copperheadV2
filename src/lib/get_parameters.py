@@ -19,6 +19,7 @@ def getParametersForYr(parameter_path: str, year: str) -> dict:
     merged_param = OmegaConf.merge(*params)
     yr_specific_params = {}
     for key, val in merged_param.items():
+        # print(f"key: {key}, val: {val}")
         if "cross_sections" in key:
             yr_specific_params[key] = val
         elif "jec" in key: # if jec, then do it separately

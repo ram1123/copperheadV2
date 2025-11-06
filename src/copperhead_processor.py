@@ -1029,7 +1029,7 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights) # temporary commenting out
 
             if "2022" in str(year) or "2023" in str(year) or "2024" in str(year):
-                sample_info = get_sample_info("./configs/datasets/dataset_nanoAODv12_run3.yaml", dataset, year) # FIXME: hardcoded filename
+                # FIXME: Remove this if condition later when we update the yaml file for run2 too.
                 sample_info = get_sample_info("./configs/datasets/dataset_nanoAODv12_run3.yaml", dataset, year) # FIXME: hardcoded filename
                 integrated_lumi = sample_info["total_lumi_pb"]
 

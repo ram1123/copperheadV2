@@ -1,11 +1,9 @@
-import sys
 import awkward as ak
 import dask_awkward as dak
 import numpy as np
 import json
 import argparse
 import os
-from src.lib.histogram.ROOT_utils import setTDRStyle, CMS_lumi
 from src.lib.histogram.plotting import plotDataMC_compare
 from distributed import Client
 import time
@@ -18,7 +16,6 @@ import logging
 from modules.utils import logger
 from modules import selection
 
-from scripts.compact_parquet_data import ensure_compacted
 
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
@@ -28,10 +25,15 @@ from scripts.compact_parquet_data import ensure_compacted
 bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 
-DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
+# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dyTo2L_M-50_incl"]
+# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
+DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
+# DY_aMCatNLO = ["dyTo2L_M-50_incl"]
 
 DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
+
+DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
 
 
 DY_HTBinned = [
@@ -46,15 +48,16 @@ group_dict = {
     "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
 
     # "DY": DY_aMCatNLO,
-    "DY": DY_MiNNLO,
+    "DY": DY_jet_binned,
+    # "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
-    "DYVBF": ["dy_VBF_filter"],
+    # "DYVBF": ["dy_VBF_filter"],
 
     # "DYJ01": ["DYJ01"],
     # "DYJ2": ["DYJ2"],
 
-    "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
+    "TOP": ["tt_inclusive", "ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
 
     "EWK": ["ewk_lljj_mll50_mjj120"],
@@ -99,136 +102,6 @@ def getPlotVar(var_param: str):
     else:
         plot_var = var_param
     return plot_var
-
-
-def applyRegionCatCuts(events, category: str, region_name: str, njets: str, process: str, do_vbf_filter_study: bool):
-    # do mass region cut
-    mass = events.dimuon_mass
-    z_peak = ((mass > 70) & (mass < 110))
-    h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
-    h_peak = ((mass > 115.03) & (mass < 135.03))
-    if region_name == "signal":
-        region = h_sidebands | h_peak
-    elif region_name == "h-peak":
-        region = h_peak
-    elif region_name == "h-sidebands":
-        region = h_sidebands
-    elif region_name == "z-peak":
-        region = z_peak
-    else:
-        print(f"ERROR: acceptable region names are: z-peak, h-sidebands, h-peak, signal. Got {region_name} instead!")
-        raise ValueError
-
-    prod_cat_cut =  ak.ones_like(region, dtype="bool")
-
-    # FIXME: add cut to veto pileup jets: pT < 50 GeV in 2.5 < | eta(j) | 4.0
-    # pileup_jet_veto = ((events.jet1_pt_nominal < 50) & (abs(events.jet1_eta_nominal) > 2.5) & (abs(events.jet1_eta_nominal) < 4.0)) | (events.jet1_pt_nominal < 70)
-    # pileup_jet_veto = ak.fill_none(pileup_jet_veto, value=False)
-    # prod_cat_cut = prod_cat_cut & ~pileup_jet_veto
-
-    # Remove jets beyong 2.5 rapidity
-    # high_eta_jet_veto = (abs(events.jet1_eta_nominal) > 2.5) | (abs(events.jet2_eta_nominal) > 2.5)
-    # high_eta_jet_veto = ak.fill_none(high_eta_jet_veto, value=False)
-    # prod_cat_cut = prod_cat_cut & ~high_eta_jet_veto
-
-    # do category cut
-    if category.lower() == "nocat":
-        # print("nocat mode!")
-        pass
-    else: # VBF or ggH
-        btagLoose_filter = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False)
-        btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
-        btag_cut = btagLoose_filter | btagMedium_filter
-        # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
-        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
-        vbf_cut = ak.fill_none(vbf_cut, value=False)
-        if category.lower() == "vbf":
-            # print("vbf mode!")
-            prod_cat_cut =  prod_cat_cut & vbf_cut
-            prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-            if do_vbf_filter_study and process.startswith("dy_"):
-                """
-                Apply VBF filter, generator level di-jet invariant mass cut of 350 GeV
-                This is for the stiching the inclusive and VBF DY samples.
-                For inclusive DY samples, we apply the cut of < 350 GeV
-                For VBF DY samples, we apply the cut of >= 350 GeV
-                NOTE: For the inclusive DY category, we apply the cut (gjj_mass > 350 GeV)
-                and then invert it to select inclusive DY events.
-                This approach is necessary due to the behavior of NaN values when applying
-                comparison operators in awkward arrays:
-
-                - If we use (gjj_mass < 350 GeV), any event where gjj_mass is NaN will result in False,
-                so those events will be excluded from the selection.
-                Example:
-                    - Event 1: gjj_mass = 250 GeV  --> (250 < 350) = True  (selected)
-                    - Event 2: gjj_mass = NaN      --> (NaN < 350) = False (not selected)
-
-                - If we use (gjj_mass > 350 GeV), events with NaN will also result in False,
-                but if we then invert the selection (~), those NaN events will be included:
-                Example:
-                    - Event 1: gjj_mass = 250 GeV  --> (250 > 350) = False --> ~False = True  (selected)
-                    - Event 2: gjj_mass = NaN      --> (NaN > 350) = False --> ~False = True (selected)
-
-                Therefore, by using (gjj_mass > 350 GeV) and inverting the mask, we ensure that both
-                events with gjj_mass < 350 GeV and events with NaN values are included in the inclusive DY selection.
-                This guarantees that no events are lost due to NaN values in gjj_mass.
-                """
-                if ("dy_VBF_filter" in process):
-                    logger.warning(f"Apply VBF filter gen cut > 350 for VBF DY!: process = {process}")
-                    vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                    # logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
-                    # logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
-
-                    prod_cat_cut =  (prod_cat_cut
-                                & vbf_filter
-                    )
-                elif (process == "dy_M-100To200_MiNNLO" or
-                        process == "dy_M-50_MiNNLO" or
-                        process == "dy_M-100To200_aMCatNLO" or
-                        process == "dy_M-50_aMCatNLO"):
-                    logger.warning(f"Apply inverted VBF filter gen cut > 350 for inc. DY!: process = {process}")
-
-                    vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                    # logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
-                    # logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
-
-                    prod_cat_cut =  (
-                        prod_cat_cut
-                        & ~vbf_filter
-                    )
-                else:
-                    logger.warning(f"no extra processing for {process}")
-                    pass
-
-        elif category.lower() == "ggh":
-            # print("ggH mode!")
-            prod_cat_cut =  prod_cat_cut & ~vbf_cut
-            prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-        else:
-            print("Error: invalid category option!")
-            raise ValueError
-
-    # add njets cut
-    if njets != "inclusive":
-        if njets == "0":
-            njets_cut = (events.njets_nominal == 0)
-        elif njets == "1":
-            njets_cut = (events.njets_nominal == 1)
-        elif njets == "2":
-            njets_cut = (events.njets_nominal >= 2)
-        else:
-            logger.error(f"ERROR: njets value {njets} is not supported! Use 0, 1 or 2.")
-            raise ValueError
-        njets_cut = ak.fill_none(njets_cut, value=False)
-        prod_cat_cut = prod_cat_cut & njets_cut
-
-    category_selection = (
-        prod_cat_cut &
-        region
-    )
-
-    events = events[category_selection]
-    return events
 
 
 if __name__ == "__main__":
@@ -436,6 +309,26 @@ if __name__ == "__main__":
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
 
+    if args.lumi == "":
+        # read lumi value from configs/parameters/lumi.yaml
+        infile_lumi = os.path.join("configs", "parameters", "lumi.yaml")
+        import yaml
+        with open(infile_lumi, "r") as f:
+            lumi_config = yaml.safe_load(f)
+        lumi_dict = lumi_config.get("integrated_lumis", {})
+        args.lumi = lumi_dict.get(args.year, 0.0)
+        # convert from pb to fb
+        args.lumi = round(args.lumi / 1000.0, 1)
+        if args.lumi == 0.0:
+            logger.error(f"lumi for year {args.year} is not defined!")
+            raise ValueError(f"lumi for year {args.year} is not defined!")
+
+    # FIXME: Later try to get the lumi from the copperhead_processor get_sample_info function
+    # from modules.get_sample_info import get_sample_info
+    # sample_info = get_sample_info("./configs/datasets/dataset_nanoAODv12_run3.yaml", dataset, year) # FIXME: hardcoded filename
+    # integrated_lumi = sample_info["total_lumi_pb"]
+    logger.warning(f"lumi: {args.lumi}")
+
     # if cat is vbf and njet is < 2 then skip the program
     # if args.category.lower() == "vbf" and (args.njets == "0" or args.njets == "1"):
     #     logger.error("VBF category requires at least 2 jets! Exiting the program.")
@@ -567,8 +460,8 @@ if __name__ == "__main__":
                 # plot both leading and subleading muons/jets
                 variables2plot.append(f"{particle}1_{kinematic}_nominal")
                 variables2plot.append(f"{particle}2_{kinematic}_nominal")
-            variables2plot.append(f"jet1_qgl_nominal")
-            variables2plot.append(f"jet2_qgl_nominal")
+            # variables2plot.append(f"jet1_qgl_nominal")
+            # variables2plot.append(f"jet2_qgl_nominal")
 
         else:
             logger.warning(f"Unsupported variable: {particle} is given!")
@@ -576,6 +469,8 @@ if __name__ == "__main__":
     variables2plot_orig = copy.deepcopy(variables2plot)
     if "jj_mass_nominal" in variables2plot:
         variables2plot += ["jj_mass_nominal_range2"] # add another range to plot
+    if "dimuon_mass" in variables2plot:
+        variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
     logger.info(f"variables2plot: {variables2plot}")
     # obtain plot settings from config file
 
@@ -609,11 +504,6 @@ if __name__ == "__main__":
     # check if the compacted path exists
     if args.use_compacted != "":
         args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
-
-        # run compact script for each process
-        # for process in available_processes:
-        #     compacted_path_DNN = os.path.join(args.load_path, process, "0")
-        #     ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
 
     logger.info(f"Using parquet files from {args.load_path}")
     # load saved parquet files. This increases memory use, but increases runtime significantly
@@ -991,19 +881,6 @@ if __name__ == "__main__":
             elif var == "dnn_vbf_score_atanh":
                 binning = np.array(plot_settings[var]["binning_nonuniform"])
 
-            if args.lumi == "":
-                if args.year == "2016preVFP":
-                    args.lumi = "16.81"
-                elif args.year == "2016postVFP":
-                    args.lumi = "19.50"
-                elif args.year == "2016" or args.year == "2016*":
-                    args.lumi = "36.31"
-                elif args.year == "2017":
-                    args.lumi = "41.48"
-                elif args.year == "2018":
-                    args.lumi = "60" # 59.83
-                elif args.year == "AllYear" or args.year == "*":
-                    args.lumi = "138" # 137.62fb-1
             plotDataMC_compare(
                 binning,
                 data_dict,

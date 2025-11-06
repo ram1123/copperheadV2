@@ -1,8 +1,16 @@
 {
     "dimuon_mass": {
         "variable": "dimuon_mass",
-        "binning_linspace": [110, 150, 30],
+        "binning_linspace": [110, 150, 51],
         "binning_zpeak_linspace": [76, 106, 51],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "$m_{\\mu\\mu}$ [GeV]",
+        "color": "royalblue"
+    },
+    "dimuon_mass_zpeak": {
+        "variable": "dimuon_mass",
+        "binning_linspace": [76, 106, 51],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$m_{\\mu\\mu}$ [GeV]",
