@@ -12,84 +12,45 @@ DRY_RUN = len(sys.argv) > 1 and sys.argv[1] == "--dry-run"
 base_script = ["python", "plotter/validation_plotter_unified.py"]
 # base_script = ["python", "validation_plotter_unified.py"]
 
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_MiNNLO/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_aMCatNLO/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterAndAMCATNLO_MjjCutForAllCats/PUjetVeto50GeV_2p5_4p0_Jet70GeV/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterAndAMCATNLO_7July/SwitchedCutToHyeonCode_AddedbackToFun_InvertgJJcut/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/VBFStichingFinal_7July_DNNinSignalRegion/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/VBFStichingFinal_7July_DNN_MassSetTo125/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/compacted_hpeakWithDYVBF_FixDimuonMass/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/compacted_hpeakWithDYVBF/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/NobtagForVBF_16July2025_DNN/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/btagForVBF_16July2025_DNN/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/WithBtagForVBF_17July2025/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterOnly_diMuonLess100GeV/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterPlusaMCatNLO/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterPlusaMCatNLO_NoMjjCut/"
 
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/CheckNewZpT_28July2025/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_17July2025_DNN_FixDiMuonMass/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/Rerun_07August2025/"
-
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/Aug18_DnnRange20"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/WithDY012_jets_18September"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_SoftJetBugFixV3/Aug18_DnnRange20/Aug29_2025"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_07Sep2025/BothSoftJetVars/Sep12_2025/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/LatestBin_23September"
-# SAVE_PATH = "./validation/figs/skimmed_for_dnn_AK8jets/LatestBin_23September"
-SAVE_PATH = "./validation/figs/Run2_nanoAODv12_AK8jets/LatestBin_23September_NoVHveto"
-
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_WithDNNScore/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_OLD_WithDNNScore_MassSetTo125/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeakWithDYVBF/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeak_16July2025_FixDimuonMass/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test_FixDimuonMass/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test/"
-
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt//stage1_output/{year}/compacted_13August_FixDimuonMass/"
-# LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2018/compacted_19September_FixDimuonMass/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_SoftJetBugFixV3/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_07Sep2025/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage1_output/{year}/compacted/"
-
-# LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/skimmed_for_dnn_AK8jets/2017/"
-
-LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_AK8jets/stage1_output/{year}/f1_0/"
+# SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_DYto2L_2Jets_MLL50/"
+# SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_DYto2L_2Jets_MLL50_10Nov_NoEWK/"
+# SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_dy_M50_aMCatNLO_10Nov/"
+SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_dy_M50_aMCatNLO_11Nov_NoEWK/"
+# SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_dy_012jetbinned_10Nov_NoEWK/"
 
 
-# years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016"]
-# years = ["2017", "2016postVFP", "2016preVFP"]
+LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23October/stage1_output/{year}/f1_0/"
+
+
 # years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016", "*"]
-years = ["2016preVFP"]
+# years = ["2022postEE"]
+years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years = ["*"]
 
 # categories = ["vbf", "ggh", "nocat"]
 # categories = ["nocat", "ggh"]
 # categories = ["vbf", "ggh"]
-categories = ["vbf"]
-# categories = ["nocat"]
+# categories = ["vbf"]
+categories = ["nocat"]
 
 # Boolean flags
-vbf_filter_study_options = [True]  # True to apply VBF filter study, False to skip it
+vbf_filter_study_options = [False]  # True to apply VBF filter study, False to skip it
 remove_zpt_weights_options = [False]  # True to remove zpt weights, False to keep them
 debug_options = False
-min_set_of_vars = False  # If True, only use a minimal set of variables  to plot
+min_set_of_vars = True  # If True, only use a minimal set of variables  to plot
 
 region_options = [
     # ["h-sidebands", "z-peak", "signal", "h-peak"]
     # ["h-sidebands", "signal", "h-peak"]
-    ["h-sidebands", "z-peak"]
+    # ["h-sidebands", "z-peak"]
+    ["z-peak"]
     # ["h-sidebands"]
 ]
-njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets
-# njets_options = ["inclusive", "0", "1"]  # inclusive = No cut on nJets
+# njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets
+# njets_options = ["0", "1", "2"]  # inclusive = No cut on nJets
 # njets_options = [ "0", "1"]  # inclusive = No cut on nJets
-# njets_options = ["inclusive"]  # inclusive = No cut on nJets
+njets_options = ["inclusive"]  # inclusive = No cut on nJets
 # njets_options = ["2"]  # inclusive = No cut on nJets
 
 def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_weights, region, njets):
@@ -99,7 +60,7 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
          "--save_path", save_path,
          "--load", load_path,
          "-cat", cat,
-        #  "--use_compacted", "compacted",  # options: "", "compacted", "compacted_WithDNNScore"
+         "--use-compacted", "compacted",  # options: "", "compacted", "compacted_WithDNNScore"
          "--use_gateway",
         #  "--dnn-score"
          ]
@@ -121,7 +82,6 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
 
     if remove_zpt_weights:
         cmd.append("--remove_zpt_weights")
-
 
     return cmd
 

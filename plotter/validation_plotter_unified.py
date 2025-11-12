@@ -27,9 +27,9 @@ bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMC
 
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dyTo2L_M-50_incl"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
-DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
+# DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
-# DY_aMCatNLO = ["dyTo2L_M-50_incl"]
+DY_aMCatNLO = ["dyTo2L_M-50_incl"]
 
 DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
 
@@ -45,29 +45,41 @@ DYVBF = ["dy_VBF_filter"]
 
 
 group_dict = {
-    "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
-
-    # "DY": DY_aMCatNLO,
-    "DY": DY_jet_binned,
+    "DATA": [
+        "data_A",
+        "data_B",
+        "data_C",
+        "data_D",
+        "data_E",
+        "data_F",
+        "data_G",
+        "data_H",
+    ],
+    "DY": DY_aMCatNLO,
+    # "DY": DY_jet_binned,
     # "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
     # "DYVBF": ["dy_VBF_filter"],
-
     # "DYJ01": ["DYJ01"],
     # "DYJ2": ["DYJ2"],
-
-    "TOP": ["tt_inclusive", "ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
+    "TOP": [
+        # "tt_inclusive",
+        "ttjets_dl",
+        "ttjets_sl",
+        "ttjets_fh",
+        # "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"
+    ],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
+    # "EWK": ["ewk_lljj_mll50_mjj120",  "ewk_lljj"],
 
-    "EWK": ["ewk_lljj_mll50_mjj120"],
-
-    "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
+    # "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
+    "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz_2l2q", "zz_2l2nu", "zz_4l"],
     # "VVContinuum": ["GluGluContin_ZZ2e2mu", "GluGluContin_ZZ2mu2nu", "GluGluContin_ZZ2mu2tau", "GluGluContin_ZZ4mu", "GluGluContin_ZZ4tau"],
-
     "OTHER": ["www", "wwz", "wzz", "zzz"],
     "GGH": ["ggh_powhegPS"],
-    "VBF": ["vbf_powheg_dipole"]
+    # "VBF": ["vbf_powheg_dipole"]
+    "VBF": ["vbf_powheg_amcatnlo"],
 }
 
 def find_group_name(process_name, group_dict_param):

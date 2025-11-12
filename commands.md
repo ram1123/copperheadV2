@@ -2,7 +2,7 @@
 
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23October -p HPScan_03Sep_17bins -y "2022postEE" -m 0 -k -d 1)
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23October -p HPScan_03Sep_17bins -y "2023" -m 0 -k -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23October -p HPScan_03Sep_17bins -y "2023 2023BPix" -m 0 -k -d 1)
 ```
 
 # 05 November 2025
