@@ -546,6 +546,7 @@ if __name__ == "__main__":
                                 "TLS error" in msg
                                 or "hostname not in SAN" in msg
                                 or "File did not open properly" in msg
+                                or "File did not vector_read properly" in msg
                             )
                             logger.warning(
                                 f"[resume] attempt {attempt} failed for {dataset}[{idx}] "

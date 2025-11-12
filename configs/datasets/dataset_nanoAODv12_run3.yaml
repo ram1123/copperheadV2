@@ -62,8 +62,9 @@ years:
             dy_M-50_aMCatNLO:
                 datasets:
                     - /DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-                cross_section_pb: 5558.0
-                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8
+                cross_section_pb: 6372.24
+                notes: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -75,9 +76,9 @@ years:
                 datasets:
                     - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
                     - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v1/NANOAODSIM
-                notes: njets <= 2, not njets==2
-                cross_section_pb: 6275.1 # 2091.7 * 3
-                cross_section_source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV
+                notes: njets <= 2, not njets==2; cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_pb: 6372.24 # 2091.7 * 3
+                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -155,7 +156,7 @@ years:
             zz_2l2u:
                 datasets:
                     - /ZZto2L2Nu TuneCP5 13p6TeV powheg-pythia8
-                cross_section_pb: 12.75
+                cross_section_pb: 1.031
                 cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
                 kfactor:
                     value: 1.16
@@ -167,7 +168,7 @@ years:
             zz_2l2q:
                 datasets:
                     - /ZZto2L2Q TuneCP5 13p6TeV powheg-pythia8
-                cross_section_pb: 12.75
+                cross_section_pb: 6.788
                 cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
                 kfactor:
                     value: 1.19
@@ -179,7 +180,7 @@ years:
             zz_4l:
                 datasets:
                     - /ZZto4L TuneCP5 13p6TeV powheg-pythia8
-                cross_section_pb: 12.75
+                cross_section_pb: 1.39
                 cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
                 kfactor:
                     value: 1.19
@@ -301,8 +302,9 @@ years:
             dy_M-50_aMCatNLO:
                 datasets:
                     - /DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v5-v2/NANOAODSIM
-                cross_section_pb: 5558.0
-                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8
+                notes: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_pb: 6372.24
+                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -314,9 +316,9 @@ years:
                 datasets:
                     - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
                     - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v1/NANOAODSIM
-                notes: njets <= 2, not njets==2
-                cross_section_pb: 6275.1 # 2091.7 * 3
-                cross_section_source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV
+                notes: njets <= 2, not njets==2; cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_pb: 6372.24
+                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -438,7 +440,7 @@ years:
             # zz_2l2u:
             #     datasets:
             #         - /ZZto2L2Nu TuneCP5 13p6TeV powheg-pythia8
-            #     cross_section_pb: 12.75
+            #     cross_section_pb: 1.031
             #     cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
             #     kfactor:
             #         value: 1.16
@@ -450,7 +452,7 @@ years:
             # zz_2l2q:
             #     datasets:
             #         - /ZZto2L2Q TuneCP5 13p6TeV powheg-pythia8
-            #     cross_section_pb: 12.75
+            #     cross_section_pb: 6.788
             #     cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
             #     kfactor:
             #         value: 1.19
@@ -462,7 +464,7 @@ years:
             # zz_4l:
             #     datasets:
             #         - /ZZto4L TuneCP5 13p6TeV powheg-pythia8
-            #     cross_section_pb: 12.75
+            #     cross_section_pb: 1.39
             #     cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
             #     kfactor:
             #         value: 1.19
@@ -699,7 +701,7 @@ years:
             zz_2l2u:
                 datasets:
                     - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
-                cross_section_pb: 12.75
+                cross_section_pb: 1.031
                 cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
                 kfactor:
                     value: 1.16
@@ -711,7 +713,7 @@ years:
             zz_2l2q:
                 datasets:
                     - /ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
-                cross_section_pb: 12.75
+                cross_section_pb: 6.788
                 cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
                 kfactor:
                     value: 1.19
@@ -723,7 +725,7 @@ years:
             zz_4l:
                 datasets:
                     - /ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
-                cross_section_pb: 12.75
+                cross_section_pb: 1.39
                 cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
                 kfactor:
                     value: 1.19
@@ -857,8 +859,9 @@ years:
             # dy_M-50_aMCatNLO:
             #     datasets:
             #         - /DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8
-            #     cross_section_pb: 5558.0
-            #     cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8
+            #      notes: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+            #     cross_section_pb: 6372.24
+            #     cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
             #     kfactor:
             #         value: 1.0
             #         source: NONE
@@ -869,9 +872,9 @@ years:
             dyTo2L_M-50_incl:
                 datasets:
                     - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v4/NANOAODSIM
-                notes: njets <= 2, not njets==2
-                cross_section_pb: 6275.1 # 2091.7 * 3
-                cross_section_source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV
+                notes: njets <= 2, not njets==2; cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_pb: 6372.24 # 2091.7 * 3
+                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -969,10 +972,18 @@ years:
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG"
+
             wz_1l1nu2q:
                 datasets:
                     - /WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
-
+                cross_section_pb: 15.87
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
             zz:
                 datasets:
                     - /ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
@@ -988,7 +999,7 @@ years:
             zz_2l2u:
                 datasets:
                     - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
-                cross_section_pb: 12.75
+                cross_section_pb: 1.031
                 cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
                 kfactor:
                     value: 1.16
@@ -1000,7 +1011,7 @@ years:
             zz_2l2q:
                 datasets:
                     - /ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
-                cross_section_pb: 12.75
+                cross_section_pb: 6.788
                 cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
                 kfactor:
                     value: 1.19
@@ -1012,7 +1023,7 @@ years:
             zz_4l:
                 datasets:
                     - /ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
-                cross_section_pb: 12.75
+                cross_section_pb: 1.39
                 cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
                 kfactor:
                     value: 1.19
