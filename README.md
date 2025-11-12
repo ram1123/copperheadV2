@@ -7,10 +7,15 @@ git clone https://github.com/green-cabbage/copperheadV2.git
 cd copperheadV2
 git checkout main
 source setup_env.sh
-# Run first seven column of DaskGatewaySLURM.ipynb to start the DASK Gateway.
 ```
 
 ## Run the code
+
+### Create the dask client
+
+1. Open the jupyter notebook [DaskGatewaySLURM.ipynb](DaskGatewaySLURM.ipynb)
+1. Run cells upto "Create Dask Client" to create the dask client.
+
 ### Run the pre-stage
 Pre-stage reads the dataset information from the YAML file and saves the root files to read in next step with its metadata in a JSON file.
 
