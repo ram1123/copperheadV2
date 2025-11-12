@@ -8,6 +8,8 @@ electron_pt_cut:
   '2018_RERECO': 20.0
   2022preEE: 20.0
   2022postEE: 20.0
+  "2023": 20.0
+  "2023BPix": 20.0
 electron_eta_cut:
   2016preVFP: 2.5
   2016postVFP: 2.5
@@ -15,6 +17,8 @@ electron_eta_cut:
   '2018': 2.5
   2022preEE: 2.5
   2022postEE: 2.5
+  "2023": 2.5
+  "2023BPix": 2.5
   2016_RERECO: 2.5
   '2017_RERECO': 2.5
   '2018_RERECO': 2.5
@@ -28,6 +32,8 @@ electron_id_v9:
   '2018_RERECO': mvaFall17V2Iso_WP90
   2022preEE: mvaFall17V2Iso_WP90
   2022postEE: mvaFall17V2Iso_WP90
+  "2023": mvaFall17V2Iso_WP90
+  "2023BPix": mvaFall17V2Iso_WP90
 electron_id_v12:
   2016preVFP: mvaIso_WP90
   2016postVFP: mvaIso_WP90
@@ -38,3 +44,5 @@ electron_id_v12:
   '2018_RERECO': mvaIso_WP90
   2022preEE: mvaIso_WP90
   2022postEE: mvaIso_WP90
+  "2023": mvaIso_WP90
+  "2023BPix": mvaIso_WP90

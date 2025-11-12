@@ -6,10 +6,11 @@ import awkward as ak
 import matplotlib.pyplot as plt
 import numpy as np
 import dask
-dask.config.set(annotations={"retries": 3})
+dask.config.set(annotations={"retries": 5})
+dask.config.set({"distributed.scheduler.default-task-retries": 5})
+dask.config.set({"distributed.scheduler.worker-saturation": 1.0})
 # from dask.distributed import Client
 import sys
-import time
 import json
 from distributed import LocalCluster, Client, progress
 import pandas as pd
@@ -27,8 +28,11 @@ from omegaconf import OmegaConf
 from coffea.nanoevents.methods import vector
 from rich import print
 
-import subprocess, time
 from pathlib import Path
+import subprocess, time
+import traceback, time as _time
+import re
+
 
 # dask.config.set({'logging.distributed': 'error'})
 import logging
@@ -82,10 +86,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # dict to hold the max_num_elements info per sample
     dict_max_num_elements = {
-        "data_": 900, # None means no limit (use uproot's default behavior)
-        "dy_": 200,
-        "ttjets_dl": 400,
-        "ttjets_sl": 900,
+        "data_": 500, # None means no limit (use uproot's default behavior)
+        "dy_": 500,
+        "ttjets_dl": 500,
+        "ttjets_sl": 500,
         }
     max_num_elements = 800 # default
     if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
@@ -176,6 +180,135 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
             time.sleep(sleep)
     logger.error(f"Failed to create EOS directory after {retries} attempts: {eos_path}")
     raise RuntimeError(f"Failed to create EOS directory: {eos_path}")
+
+
+# ---- resumable job markers ---------------------------------------------------
+class JobStatus:
+    def __init__(self, status_dir: str):
+        self.dir = Path(status_dir)
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.ledger = self.dir / "job_status.jsonl"
+
+    def _paths(self, dataset: str, idx: int):
+        base = f"{dataset}__{idx}"
+        return (
+            self.dir / f"{base}.running",
+            self.dir / f"{base}.done",
+            self.dir / f"{base}.fail",
+        )
+
+    def should_run(self, dataset: str, idx: int) -> bool:
+        running, done, fail = self._paths(dataset, idx)
+        if done.exists():
+            # if it was later marked failed, allow rerun
+            if fail.exists() and fail.stat().st_mtime > done.stat().st_mtime:
+                return True
+            return False
+        return True
+
+    def _append_ledger(self, rec: dict):
+        with self.ledger.open("a") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    def mark_running(self, dataset: str, idx: int):
+        running, _, _ = self._paths(dataset, idx)
+        running.write_text(str(_time.time()))
+        self._append_ledger(
+            {"ts": _time.time(), "dataset": dataset, "idx": idx, "status": "running"}
+        )
+
+    def mark_done(self, dataset: str, idx: int, meta=None):
+        running, done, _ = self._paths(dataset, idx)
+        done.write_text(str(_time.time()))
+        running.unlink(missing_ok=True)
+        self._append_ledger(
+            {
+                "ts": _time.time(),
+                "dataset": dataset,
+                "idx": idx,
+                "status": "done",
+                "meta": meta or {},
+            }
+        )
+
+    def mark_failed(self, dataset: str, idx: int, err: Exception):
+        running, _, fail = self._paths(dataset, idx)
+        fail.write_text(str(_time.time()))
+        running.unlink(missing_ok=True)
+        self._append_ledger(
+            {
+                "ts": _time.time(),
+                "dataset": dataset,
+                "idx": idx,
+                "status": "failed",
+                "error": "".join(
+                    traceback.format_exception_only(type(err), err)
+                ).strip(),
+            }
+        )
+# ------------------------------------------------------------------------------
+
+def _parquet_dir_has_files(p: str) -> bool:
+    try:
+        return any(fn.endswith(".parquet") for fn in os.listdir(p))
+    except Exception:
+        return False
+
+
+AAA_REDIRECTORS = [
+    "root://xcache.cms.rcac.purdue.edu//",
+    "root://cms-xrd-global.cern.ch//",
+    "root://xrootd-cms.infn.it//",
+    "root://cmsxrootd.fnal.gov//",
+    "root://xcache.cms.rcac.purdue.edu//",
+]
+
+# Accept prefixes like:
+#   "root://xcache.cms.rcac.purdue.edu:1094//"
+#   "root://cms-xrd-global.cern.ch//"
+#   "root://xrootd-cms.infn.it//"
+_ROOT_URL_RE = re.compile(r"^root://([^/]+)/+(.+)$")   # host[:port], tail after the first // (usually 'store/...')
+_IP_RE        = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
+
+def _sanitize_prefix(prefix: str) -> str:
+    """Ensure prefix looks like 'root://host[:port]//'."""
+    if not prefix.startswith("root://"):
+        raise ValueError(f"Bad AAA redirector prefix: {prefix}")
+    if not prefix.endswith("//"):
+        prefix = prefix if prefix.endswith("/") else prefix + "/"
+        prefix += "/"
+    return prefix
+
+def _replace_host(url: str, host_prefix: str) -> str:
+    """Replace any ROOT URL host (or /store path) with host_prefix. Preserve the tail path."""
+    host_prefix = _sanitize_prefix(host_prefix)
+
+    # /store/... plain path -> just add prefix
+    if url.startswith("/store/"):
+        return f"{host_prefix}{url.lstrip('/')}"
+
+    # root://HOST[:PORT]//store/...
+    m = _ROOT_URL_RE.match(url)
+    if m:
+        _hostport, tail = m.groups()
+        # Always force through the chosen redirector (avoids IPs & bad SAN)
+        return f"{host_prefix}{tail.lstrip('/')}"
+    # Not a ROOT/STORE path; leave unchanged
+    return url
+
+def normalize_paths(files, host_prefix: str):
+    """Normalize input 'files' (str | list | tuple | dict) to use host_prefix."""
+    host_prefix = _sanitize_prefix(host_prefix)
+
+    if isinstance(files, dict):
+        # Preserve per-file metadata dicts
+        return { _replace_host(u, host_prefix): meta for u, meta in files.items() }
+    if isinstance(files, (list, tuple)):
+        return [ _replace_host(u, host_prefix) for u in files ]
+    if isinstance(files, str):
+        return _replace_host(files, host_prefix)
+    # Unknown type: return as-is
+    return files
 
 
 if __name__ == "__main__":
@@ -296,6 +429,8 @@ if __name__ == "__main__":
             xrd_env = {
                 "XRD_REQUESTTIMEOUT": "900",
                 "XRD_STREAMTIMEOUT": "900",
+                "XRD_CONNECTIONRETRY": "16",
+                "XRD_REDIRECTLIMIT": "16",
                 "XRD_CONNECTIONWINDOW": "120",
                 "XRD_TIMEOUTRESOLUTION": "5",
             }
@@ -319,6 +454,8 @@ if __name__ == "__main__":
         logger.info(f"start_save_path: {start_save_path}")
         # make the directory if it doesn't exist
         eos_mkdirs(start_save_path)
+        # Resumability markers ------------------------------------------------
+        jobstat = JobStatus(status_dir=os.path.join(start_save_path, "_status"))
 
         # Get git information; for the log. Also, it will help with debugging, if needed.
         git_commit_hash, branch_name, diff = get_git_info()
@@ -339,10 +476,10 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # dict to hold file lenght info per sample
                 dict_file_length = {
-                    "data_": 900,
-                    "dy_": 900,
-                    "ttjets_dl": 900,
-                    "ttjets_sl": 900
+                    "data_": 500,
+                    "dy_": 500,
+                    "ttjets_dl": 500,
+                    "ttjets_sl": 500,
                     }
                 if any(key in dataset for key in dict_file_length.keys()):
                     args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
@@ -369,33 +506,60 @@ if __name__ == "__main__":
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
-                    logger.info(f"save_path: {save_path}")
-                    if not os.path.exists(save_path):
-                        logger.debug(f"Path: {save_path} is going to be created")
-                        eos_mkdirs(save_path)
-                    else:
-                        if args.rerun:
-                            # remove previously existing directory, if exists, then remake path
-                            if os.path.exists(save_path):
-                                logger.warning(f"Going to delete directory: {save_path}")
-                                os.system(f"rm -r {save_path}")
-                            logger.info(f"Path: {save_path} is going to be created")
+                    # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
+                    for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+                        try:
+                            logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
+                            # build fresh file list with this redirector
+                            alt_sample = copy.deepcopy(smaller_sample)
+                            # logger.info(f"alt_sample['files']: {alt_sample['files']}")
+
+                            alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
+
+                            logger.debug(f"alt_sample['files']: {alt_sample['files']}")
+
+                            # rebuild the events/out collections for this attempt
+                            to_persist = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
+
+                            # clean partial output from previous tries
+                            os.system(f"rm -rf '{save_path}'")
                             eos_mkdirs(save_path)
-                        else:
-                            logger.warning(f"Path: {save_path} already exists. Skipping this file index. Use --rerun to overwrite.")
-                            continue
-                    t3a = time.perf_counter()
 
-                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
-                    t3 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
+                            jobstat.mark_running(dataset, idx)
 
+                            to_persist = to_persist.persist()
+                            # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
+                            to_persist.to_parquet(save_path)
 
-                    # persist and save to parquet
-                    to_persist = to_persist.persist()
-                    to_persist.to_parquet(save_path)
-                    t4 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to save parquet files: {round(t4 - t3, 3)} seconds")
+                            if not _parquet_dir_has_files(save_path):
+                                raise RuntimeError("Parquet write produced no files.")
+
+                            jobstat.mark_done(
+                                dataset, idx, meta={"path": save_path, "redirector": host_prefix}
+                            )
+                            logger.info(f"[resume] success on attempt {attempt} with {host_prefix}")
+                            break  # stop trying once successful
+
+                        except Exception as e:
+                            msg = str(e)
+                            tls_bad = (
+                                "TLS error" in msg
+                                or "hostname not in SAN" in msg
+                                or "File did not open properly" in msg
+                            )
+                            logger.warning(
+                                f"[resume] attempt {attempt} failed for {dataset}[{idx}] "
+                                f"({type(e).__name__}: {e})"
+                            )
+                            if attempt < len(AAA_REDIRECTORS) and tls_bad:
+                                logger.warning(f"Retrying {dataset}[{idx}] with next redirector ...")
+                                continue  # next redirector in list
+                            else:
+                                jobstat.mark_failed(dataset, idx, e)
+                                logger.exception(
+                                    f"[resume] write failed after {attempt} attempts for {dataset}[{idx}]"
+                                )
+                                raise
 
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
@@ -427,6 +591,8 @@ if __name__ == "__main__":
             xrd_env = {
                 "XRD_REQUESTTIMEOUT": "900",
                 "XRD_STREAMTIMEOUT": "900",
+                "XRD_CONNECTIONRETRY": "16",
+                "XRD_REDIRECTLIMIT": "16",
                 "XRD_CONNECTIONWINDOW": "120",
                 "XRD_TIMEOUTRESOLUTION": "5",
             }
@@ -448,7 +614,7 @@ if __name__ == "__main__":
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
 
-        start_save_path = args.save_path + f"/stage1_output_test/{args.year}"
+        start_save_path = f"{args.save_path}/stage1_output_test/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
         os.makedirs(start_save_path, exist_ok=True)
         with performance_report(filename="dask-report.html"):

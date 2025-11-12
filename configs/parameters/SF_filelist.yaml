@@ -8,6 +8,8 @@ nnlops_file:
   '2018_RERECO': data/NNLOPS_reweight.root
   2022preEE: data/NNLOPS_reweight.root
   2022postEE: data/NNLOPS_reweight.root
+  "2023": data/NNLOPS_reweight.root
+  "2023BPix": data/NNLOPS_reweight.root
 btag_sf_json:
   2016preVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2016preVFP_UL/btagging.json.gz
   2016postVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2016postVFP_UL/btagging.json.gz
@@ -18,6 +20,8 @@ btag_sf_json:
   '2018_RERECO': /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2018_UL/btagging.json.gz
   2022preEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2022_Summer22EE/btagging.json.gz
   2022postEE: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2022_Summer22EE/btagging.json.gz
+  "2023": /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23/btagging.json.gz
+  2023BPix: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23BPix/btagging.json.gz
 btag_sf_csv:
   2016preVFP: data/btag/DeepCSV_2016LegacySF_V1.csv
   2016postVFP: data/btag/DeepCSV_2016LegacySF_V1.csv
@@ -26,8 +30,10 @@ btag_sf_csv:
   2016_RERECO: data/btag/DeepCSV_2016LegacySF_V1.csv
   '2017_RERECO': data/btag/DeepCSV_94XSF_V5_B_F.csv
   '2018_RERECO': data/btag/DeepCSV_102XSF_V1.csv
-  2022preEE: data/btag/DeepCSV_106XUL18SF.csv
-  2022postEE: data/btag/DeepCSV_106XUL18SF.csv
+  2022preEE: data/btag/DeepCSV_106XUL18SF.csv # FIXME: Update SF
+  2022postEE: data/btag/DeepCSV_106XUL18SF.csv # FIXME: Update SF
+  "2023": data/btag/DeepCSV_106XUL18SF.csv # FIXME: Update SF
+  "2023BPix": data/btag/DeepCSV_106XUL18SF.csv # FIXME: Update SF
 pu_file_data:
   2016preVFP: data/pileup/puData2016_UL_withVar.root
   2016postVFP: data/pileup/puData2016_UL_withVar.root
@@ -38,6 +44,8 @@ pu_file_data:
   '2018_RERECO': data/pileup/puData2018_withVar.root
   2022preEE: dummy_only_pu_file_mc_is_needed
   2022postEE: dummy_only_pu_file_mc_is_needed
+  "2023": dummy_only_pu_file_mc_is_needed # FIXME
+  "2023BPix": dummy_only_pu_file_mc_is_needed # FIXME
 pu_file_mc: # source https://github.com/cms-sw/cmssw/blob/CMSSW_10_6_X/SimGeneral/MixingModule/python/mix_2018_25ns_UltraLegacy_PoissonOOTPU_cfi.py
   2016preVFP: data/pileup/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
   2016postVFP: data/pileup/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
@@ -46,8 +54,11 @@ pu_file_mc: # source https://github.com/cms-sw/cmssw/blob/CMSSW_10_6_X/SimGenera
   2016_RERECO: data/pileup/pileup_profile_Summer16.root
   '2017_RERECO': data/pileup/mcPileup2017.root
   '2018_RERECO': data/pileup/mcPileup2018.root
-  2022preEE: data/pileup/2022_Summer22/puWeights.json.gz
-  2022postEE: data/pileup/2022_Summer22EE/puWeights.json.gz
+  2022preEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-22CDSep23-Summer22-NanoAODv12/latest/puWeights.json.gz
+  2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-22EFGSep23-Summer22EE-NanoAODv12/latest/puWeights.json.gz
+  "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-23CSep23-Summer23-NanoAODv12/latest/puWeights.json.gz
+  2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-23DSep23-Summer23BPix-NanoAODv12/latest/puWeights.json.gz
+  # Reference: https://cms-analysis-corrections.docs.cern.ch/corrections/LUM/Run3-23DSep23-Summer23BPix-NanoAODv12/latest/
 muSFFileList:
   2016preVFP:
   - id:
@@ -198,31 +209,39 @@ muSFFileList:
     - IsoMu27_PtEtaBins/efficienciesDATA/abseta_pt_DATA
     - IsoMu27_PtEtaBins/efficienciesMC/abseta_pt_MC
     scale: 1.0
-zpt_weights_file:
-  # 2016preVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
-  # 2016postVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
-  2016preVFP: data/zpt_weights.histo.json # Dmitry's zpt
-  2016postVFP: data/zpt_weights.histo.json # Dmitry's zpt
-  # '2017': data/reweight_zpt_2018_nJetBinned_new.histo.root
-  '2017': data/zpt_weights.histo.json # Dmitry's zpt
-  # '2018': data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
-  '2018': data/zpt_weights.histo.json # Dmitry's zpt
-  2016_RERECO: data/zpt_weights.histo.json # FIXME
-  '2017_RERECO': data/zpt_weights.histo.json # FIXME
-  '2018_RERECO': data/zpt_weights.histo.json # FIXME
-zpt_weights_file_valerie:
-  2016preVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
-  2016postVFP: data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
-  '2017': data/reweight_zpt_2018_nJetBinned_new.histo.root
-  '2018': data/reweight_zpt_2018_nJetBinned_new.histo.root # Valerie's zpt
-  2016_RERECO: data/zpt_weights.histo.json # FIXME
-  '2017_RERECO': data/zpt_weights.histo.json # FIXME
-  '2018_RERECO': data/zpt_weights.histo.json # FIXME
+  "2023":
+  - id:
+    - data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root
+    - NUM_MediumID_DEN_TrackerMuons_abseta_pt
+    iso:
+    - data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root
+    - NUM_TightRelIso_DEN_MediumID_abseta_pt
+    trig:
+    - data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root
+    - IsoMu27_PtEtaBins/efficienciesDATA/abseta_pt_DATA
+    - IsoMu27_PtEtaBins/efficienciesMC/abseta_pt_MC
+    scale: 1.0
+  "2023BPix":
+  - id:
+    - data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root
+    - NUM_MediumID_DEN_TrackerMuons_abseta_pt
+    iso:
+    - data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root
+    - NUM_TightRelIso_DEN_MediumID_abseta_pt
+    trig:
+    - data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root
+    - IsoMu27_PtEtaBins/efficienciesDATA/abseta_pt_DATA
+    - IsoMu27_PtEtaBins/efficienciesMC/abseta_pt_MC
+    scale: 1.0
 new_zpt_weights_file_aMCatNLO:
   '2018': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
   '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
   '2016preVFP': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
   '2016postVFP': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
+  '2022preEE': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
+  '2022postEE': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
+  "2023": data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
+  "2023BPix": data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
 new_zpt_weights_file_MiNNLO:
   2016preVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml
   2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml
@@ -233,6 +252,8 @@ new_zpt_weights_file_MiNNLO:
   '2018_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   2022preEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
   2022postEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
+  "2023": data/reweight_zpt_2018_nJetBinned_new.histo.root
+  "2023BPix": data/reweight_zpt_2018_nJetBinned_new.histo.root
 jetpuid_sf_file: # old method as of Dec 16 2024,
   2016preVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   2016postVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
@@ -243,6 +264,8 @@ jetpuid_sf_file: # old method as of Dec 16 2024,
   '2018_RERECO': data/PUIDMaps.root
   2022preEE: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   2022postEE: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
+  "2023": data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root # FIXME
+  "2023BPix": data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root # FIXME
 jmar_sf_file:
   2016preVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jmar.json.gz
   2016postVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016postVFP_UL/jmar.json.gz
@@ -257,3 +280,5 @@ jmar_sf_file:
   '2018_RERECO': dummy
   2022preEE: dummy
   2022postEE: dummy
+  "2023": dummy
+  "2023BPix": dummy

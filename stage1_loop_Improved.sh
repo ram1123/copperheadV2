@@ -126,6 +126,8 @@ declare -A data_l_dict=(
     [2018]="A B C D"
     [2022preEE]="C D"
     [2022postEE]="E F G"
+    [2023]="C"
+    [2023BPix]="D"
     [run2]="A B C D E F G H"
 )
 
@@ -144,9 +146,13 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2016postVFP"]=""
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
+    data_l_dict["2022preEE"]=""
+    data_l_dict["2022postEE"]=""
+    data_l_dict["2023"]=""
+    data_l_dict["2023BPix"]=""
 
-    bkg_l="DY Top VV EWK VVV"
-    # bkg_l="DY"
+    # bkg_l="VV"
+    bkg_l=""
     # bkg_l="Top"
 
     sig_l="Higgs"
@@ -154,7 +160,7 @@ if [[ "$debug" -ge 1 ]]; then
 fi
 
 chunksize=300000
-max_file_len=2500 # 2500 for data, 5 for MC
+max_file_len=900 # 2500 for data, 5 for MC
 
 echo "Running with the following parameters:"
 echo "  Dataset YAML: $datasetYAML"
@@ -187,9 +193,9 @@ for year in "${years[@]}"; do
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --isCutflow --rerun"
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --rerun  --skipSamples "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len  --rerun --isCutflow "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --rerun  --skipSamples "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len "
 
     ### DNN training parameters
     training_fold=3

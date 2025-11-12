@@ -297,70 +297,70 @@ if __name__ == "__main__":
         logger.debug(f'datasets.years: {datasets.years}')
         logger.debug(f'datasets.years.keys(): {datasets.years.keys()}')
         if args.run2_rereco: # temp condition for RERECO data case
-            dataset = datasets.years[f"{year}_RERECO"]
+            year_node = datasets.years[f"{year}_RERECO"]
         else: # normal
-            dataset = datasets.years[f"{year}"]
+            year_node = datasets.years[f"{year}"]
         new_sample_list = []
 
-        logger.info(f'dataset: {dataset}')
+        # 1) DATA: allow -data C D ... (matches keys like data_C, data_D)
+        if "Data" in year_node:
+            data_keys = [k for k in year_node["Data"].keys() if k.lower().startswith("data_")]
+            logger.debug(data_keys)
+            data_samples = args.data_samples
+            logger.info(f"data_samples to read: {data_samples}")
+            if len(args.data_samples) > 0:
+                for data_letter in args.data_samples:
+                    for sample_name in data_keys:
+                        if sample_name.lower().endswith(data_letter.lower()):
+                            new_sample_list.append(sample_name)
+            else:
+                logger.warning("No -data letters specified; skipping data.")
+        else:
+            logger.warning("No 'Data' block found in YAML for this year.")
 
-        # take data and add to the list: `new_sample_list[]`
-        logger.debug(f'data: {dataset["Data"].keys()}')
-        data_l =  [sample_name for sample_name in dataset['Data'].keys() if "data" in sample_name]
-        logger.debug(data_l)
-        data_samples = args.data_samples
-        logger.info(f"data_samples to read: {data_samples}")
+        # 2) BKG/SIG groups: allow -bkg DY TT EWK VV VVV and -sig ggH VBF
+        group_keys = [k for k in year_node.keys() if k != "Data"]
+        logger.debug(f"Signal and background MC group keys: {group_keys}")
 
-        if len(data_samples) >0:
-            for data_letter in data_samples:
-                for sample_name in data_l:
-                    if data_letter in sample_name:
-                        logger.debug(sample_name)
-                        new_sample_list.append(sample_name)
+        def _append_group_samples(requested_names):
+            for wanted in requested_names:
+                for g in group_keys:
+                    if g == wanted:
+                        new_sample_list.extend(list(year_node[g].keys()))
 
-        logger.debug(f"Loaded samples: {new_sample_list}")
+        # backgrounds
+        if len(args.bkg_samples) > 0:
+            _append_group_samples(args.bkg_samples)
 
-        # take bkg and add to the list: `new_sample_list[]`
-        bkg_l = [sample_name for sample_name in dataset.keys() if "data" not in sample_name.lower()]
-        logger.debug(f"background samples defined in YAML file: {bkg_l}")
-        bkg_samples = args.bkg_samples
-        logger.info(f"background samples asked to read: {bkg_samples}")
-        if len(bkg_samples) >0:
-            for bkg_letter in bkg_samples:
-                for bkg_name in bkg_l:
-                    if bkg_letter == bkg_name:
-                        for bkgs in dataset[bkg_name].keys():
-                            new_sample_list.append(bkgs)
+        # signals (group names should also be top-level like ggH, VBF if present)
+        if len(args.sig_samples) > 0:
+            _append_group_samples(args.sig_samples)
 
-        logger.debug(f"Loaded samples: {new_sample_list}")
+        logger.debug(f"Loaded samples (names): {new_sample_list}")
 
-        # take sig and add to the list: `new_sample_list[]`
-        sig_samples = args.sig_samples
-        logger.info(f"signal samples to load: {sig_samples}")
-        if len(sig_samples) >0:
-            for sig_sample in sig_samples:
-                for bkg_letter in bkg_l: # bkg_l contains both bkg and signal samples keys
-                    logger.debug(f"bkg_letter: {bkg_letter}, sig_sample: {sig_sample}")
-                    if bkg_letter in sig_sample:
-                        for bkgs in dataset[bkg_letter].keys():
-                            new_sample_list.append(bkgs)
+        # --- flatten YAML for just the selected samples into a dict {sample_name: sample_dict} ----
+        dataset = {}
 
-        logger.debug(f"Loaded samples: {new_sample_list}")
-
-        dataset_dict = {}
-        for sample_name_temp in new_sample_list:
-            try:
-                temp_dict = find_keys_in_yaml(dataset, sample_name_temp)
-                dataset_dict.update(temp_dict)
-            except Exception as e:
-                logger.error(f"Sample {sample_name} gives error {e}. Skipping")
+        logger.debug(f"new_sample_list: {new_sample_list}")
+        for name in new_sample_list:
+            # search in Data first
+            if "Data" in year_node and name in year_node["Data"]:
+                dataset[name] = year_node["Data"][name]
                 continue
-        dataset = dataset_dict # overwrite dataset bc we don't need it anymore
-        logger.debug(f"dataset: {dataset}")
-        logger.debug(f"dataset keys: {dataset.keys()}")
-        logger.debug(f"year: {year}")
-        logger.debug(f"type(year): {type(year)}")
-        logger.debug(f"Is run2_rereco: {args.run2_rereco}")
+            # then search in each signal/bkg MC group
+            for g in group_keys:
+                if name in year_node[g]:
+                    dataset[name] = year_node[g][name]
+                    dataset[name]["__group__"] = g
+                    break
+
+        logger.debug(f"Number of selected samples: {len(dataset)}")
+        logger.debug(f"Selected sample keys: {list(dataset.keys())}")
+        logger.debug(f"Selected sample: {dataset}")
+        if not dataset:
+            raise RuntimeError("No samples matched your selection. Check -data/-bkg/-sig arguments vs YAML.")
+
+        logger.info(f"Final selected dataset keys: {list(dataset.keys())}")
 
         fnames = ""
 
@@ -370,7 +370,6 @@ if __name__ == "__main__":
             logger.debug(f"dataset[sample_name]: {dataset[sample_name]}")
             logger.debug(f"is data?: {is_data}")
 
-            dataset_name = dataset[sample_name]
             allowlist_sites = ["T2_DE_DESY", "T2_AT_Vienna", "T2_DE_RWTH", "T2_IT_Legnaro",
                                 "T2_US_Caltech", "T2_UL_Florida", "T2_US_MIT", "T2_US_Purdue", "T2_US_Wisconsin", "T2_US_Nebraska", "T2_US_Vanderbilt",
                                 "T2_BE_UCL", "T2_BR_SPRACE", "T2_EE_Estonia",
@@ -381,17 +380,27 @@ if __name__ == "__main__":
             logger.debug(f"allowlist_sites: {allowlist_sites}")
 
             # print(f"type(dataset_name): {type(dataset_name)}")
-            is_some_list_type = isinstance(dataset_name, Sequence) and not isinstance(dataset_name, str)
-            logger.debug(f"is_some_list_type: {is_some_list_type}")
-            if is_some_list_type:
-                fnames = []
-                for single_dataset_name in dataset_name:
-                    fnames += getDatasetRootFiles(single_dataset_name, allowlist_sites)
-                # print(f"fnames: {fnames}")
-                # raise ValueError
+            sample_cfg = dataset[sample_name]
+
+            logger.debug(f"sample_name: {sample_name}")
+            logger.debug(f"sample_cfg: {sample_cfg}")
+
+            logger.debug(f"type(sample_cfg): {type(sample_cfg)}")
+
+            # extract list of DAS paths or local files
+            if OmegaConf.is_dict(sample_cfg) and "datasets" in sample_cfg:
+                ds_list = OmegaConf.to_container(sample_cfg["datasets"], resolve=True)
+            elif OmegaConf.is_list(sample_cfg):
+                ds_list = OmegaConf.to_container(sample_cfg, resolve=True)
+            elif isinstance(sample_cfg, str):
+                ds_list = [sample_cfg]
             else:
-                single_dataset_name = dataset_name
-                fnames = getDatasetRootFiles(single_dataset_name, allowlist_sites)
+                raise ValueError(f"Unexpected sample_cfg type {type(sample_cfg)} for {sample_name}")
+
+            # resolve files
+            fnames = []
+            for single_dataset_name in ds_list:
+                fnames += getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
             if len(fnames) == 0:
                 logger.error(f"No files found for sample {sample_name}. Skipping this sample.")
@@ -551,7 +560,7 @@ if __name__ == "__main__":
         if not os.path.exists(directory):
             os.makedirs(directory)
         with open(filename, "w") as file:
-                json.dump(big_sample_info, file)
+            json.dump(big_sample_info, file)
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")
@@ -612,8 +621,7 @@ if __name__ == "__main__":
         #save the sample info
         filename = directory+"/fraction_processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(filename, "w") as file:
-                json.dump(new_samples, file)
+            json.dump(new_samples, file)
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")
-

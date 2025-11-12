@@ -1187,7 +1187,8 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Fill Muon variables and gjet variables
         # ------------------------------------------------------------#
-        if "pre" in year or "post" in year:
+        # if year length is > 4, then it contains "pre" or "post" or "BPix"
+        if len(year) > 4:
             """For the DNN training, we want to add year as one of the input variables.
 
             The expected format for `year` is a string like "2016pre", "2016post", "2017", "2018", "2022pre", or "2022post".
@@ -1197,9 +1198,10 @@ class EventProcessor(processor.ProcessorABC):
             If the year does not match these patterns, it is converted directly to float (e.g., "2017" -> 2017.0).
             If the format is unexpected, this may raise a ValueError.
             """
+            logger.warning(f"Year format contains more than 4 characters: {year}")
             dnn_year = float(year[:4])
-            if "post" in year:
-                dnn_year += 0.5
+            dnn_year += 0.5
+            logger.warning(f"Mapped year to dnn_year: {dnn_year}")
         else:
             dnn_year = float(year)
         logger.debug(f"dnn_year: {dnn_year}")
