@@ -25,6 +25,16 @@ Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting, 
 bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
 ```
 
+### Get the validation plots:
+
+Before running the below code make sure to update the input and output paths and several other parameters in the [run_plotter.py](run_plotter.py) file.
+
+The main code for plotting is in the [plotter/validation_plotter_unified.py](plotter/validation_plotter_unified.py) file. In this file you may need to update the list of datasets to be considered for different processes. You can see them here [validation_plotter_unified.py#L28-L83](https://github.com/ram1123/copperheadV2/blob/2cdaf09321000a8eb4a5eb8faf06e22f5e9ec560/plotter/validation_plotter_unified.py#L28-L83)
+
+```bash
+python run_plotter.py
+```
+
 ## Per-event mass calibration
 
 ```bash
