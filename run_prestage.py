@@ -26,6 +26,85 @@ from collections.abc import Sequence
 
 import logging
 from modules.utils import logger
+from modules.xrootd_utils import AAA_REDIRECTORS, AAA_ERROR_FRAGMENTS, normalize_paths
+
+def nanoevents_from_root_with_redirectors(
+    file_input, schemaclass, uproot_options, metadata=None
+):
+    """
+    Try NanoEventsFactory.from_root with multiple redirectors if AAA/TLS issues occur.
+    file_input can be dict{url: meta} or a list of urls; we normalize keys each attempt.
+    """
+    if metadata is None:
+        metadata = {}
+
+    last_err = None
+    for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+        try:
+            fi_norm = normalize_paths(file_input, host_prefix)
+            logger.info(f"[prestage] attempt {attempt} using redirector {host_prefix}")
+            events = NanoEventsFactory.from_root(
+                fi_norm,
+                metadata=metadata,
+                schemaclass=schemaclass,
+                uproot_options=uproot_options,
+            ).events()
+            logger.info(f"[prestage] attempt {attempt} succeeded with {host_prefix}")
+            return events  # success
+        except Exception as e:
+            msg = str(e)
+            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+            logger.warning(
+                f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e}"
+            )
+            if tls_bad and attempt < len(AAA_REDIRECTORS):
+                logger.warning("[prestage] retrying with next redirector...")
+                last_err = e
+                continue
+            # non-AAA error or no more redirectors
+            raise
+
+
+def preprocess_with_redirectors(
+    final_output, step_size: int, align_clusters: bool, skip_bad_files: bool
+):
+    """
+    Run coffea.dataset_tools.preprocess, retrying with different AAA redirectors
+    if we hit typical XRootD / LZMA issues.
+    """
+    last_err = None
+    for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+        try:
+            # Normalize file URLs inside "files" dicts
+            norm_final_output = {}
+            for sname, sinfo in final_output.items():
+                norm_final_output[sname] = {
+                    "files": normalize_paths(sinfo["files"], host_prefix)
+                }
+
+            logger.info(
+                f"[prestage] preprocess attempt {attempt} with redirector {host_prefix}"
+            )
+            return preprocess(
+                norm_final_output,
+                step_size=step_size,
+                align_clusters=align_clusters,
+                skip_bad_files=skip_bad_files,
+            )
+
+        except Exception as e:
+            msg = str(e)
+            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+            logger.warning(
+                f"[prestage] preprocess attempt {attempt} failed "
+                f"with {host_prefix}: {type(e).__name__}: {e}"
+            )
+            if tls_bad and attempt < len(AAA_REDIRECTORS):
+                logger.warning("[prestage] retrying preprocess with next redirector...")
+                last_err = e
+                continue
+            # Non-AAA error or no more redirectors
+            raise
 
 
 def getBadFile(fname):
@@ -387,9 +466,17 @@ if __name__ == "__main__":
 
             logger.debug(f"type(sample_cfg): {type(sample_cfg)}")
 
+            skip_sample = False
             # extract list of DAS paths or local files
             if OmegaConf.is_dict(sample_cfg) and "datasets" in sample_cfg:
                 ds_list = OmegaConf.to_container(sample_cfg["datasets"], resolve=True)
+                if "skip_sample" in sample_cfg:
+                    skip_sample = sample_cfg["skip_sample"]
+                    logger.debug(f"Sample {sample_name} has skip_sample = {skip_sample}")
+                    if skip_sample:
+                        logger.warning(f"Skipping sample {sample_name} as per skip_sample flag.")
+                        continue
+
             elif OmegaConf.is_list(sample_cfg):
                 ds_list = OmegaConf.to_container(sample_cfg, resolve=True)
             elif isinstance(sample_cfg, str):
@@ -400,6 +487,9 @@ if __name__ == "__main__":
             # resolve files
             fnames = []
             for single_dataset_name in ds_list:
+                if "None" in single_dataset_name:
+                    logger.warning(f"Sample {sample_name} has 'None' dataset; skipping.")
+                    continue
                 fnames += getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
             if len(fnames) == 0:
@@ -418,11 +508,9 @@ if __name__ == "__main__":
             if args.xcache:
                 fnames = get_Xcache_filelist(fnames)
 
-            logger.debug(f"file names: {fnames}")
             logger.debug(f"sample_name: {sample_name}")
-            logger.debug(f"len(fnames): {len(fnames)}")
             logger.debug(f"file names: {fnames}")
-
+            logger.debug(f"len(fnames): {len(fnames)}")
 
             """
             run through each file and collect total number of
@@ -432,41 +520,68 @@ if __name__ == "__main__":
                 "nGenEvts" : None,
                 "data_entries" : None,
             }
-            if is_data: # data sample
-                file_input = {fname : {"object_path": "Events"} for fname in fnames}
-                events = NanoEventsFactory.from_root(
-                        file_input,
-                        metadata={},
-                        schemaclass=NanoAODSchema,
-                        uproot_options={"timeout":4*2400},
-                ).events()
-                logger.debug(f"file_input: {file_input}")
-                logger.debug(f"events.fields: {events.fields}")
-                preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                total_events += preprocess_metadata["data_entries"]
+            if is_data:  # data sample
+                base_file_input = {fname: {"object_path": "Events"} for fname in fnames}
+                last_err = None
+
+                for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+                    try:
+                        file_input = normalize_paths(base_file_input, host_prefix)
+                        logger.info(
+                            f"[prestage] data sample {sample_name}: attempt {attempt} using {host_prefix}"
+                        )
+
+                        events = NanoEventsFactory.from_root(
+                            file_input,
+                            metadata={},
+                            schemaclass=NanoAODSchema,
+                            uproot_options={"timeout": 4 * 2400},
+                        ).events()
+                        logger.debug(f"file_input: {file_input}")
+                        logger.debug(f"events.fields: {events.fields}")
+                        preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                        total_events += preprocess_metadata["data_entries"]
+
+                        logger.info(
+                            f"[prestage] data sample {sample_name}: success on attempt {attempt} "
+                            f"with {host_prefix}, entries = {preprocess_metadata['data_entries']}"
+                        )
+                        break  # success → stop trying redirectors
+
+                    except Exception as e:
+                        msg = str(e)
+                        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+                        logger.warning(
+                            f"[prestage] data sample {sample_name}: attempt {attempt} failed "
+                            f"with {host_prefix}: {type(e).__name__}: {e}"
+                        )
+                        if tls_bad and attempt < len(AAA_REDIRECTORS):
+                            logger.warning("[prestage] retrying data sample with next redirector...")
+                            last_err = e
+                            continue
+                        # Non-AAA error or last redirector → propagate
+                        raise
             else: # if MC
                 if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
                     file_input = {fname : {"object_path": "Events"} for fname in fnames}
-                    events = NanoEventsFactory.from_root(
-                            file_input,
-                            metadata={},
-                            schemaclass=BaseSchema,
-                            uproot_options={"timeout":4*2400},
-                    ).events()
+                    events = nanoevents_from_root_with_redirectors(
+                        file_input=file_input,
+                        schemaclass=BaseSchema,
+                        metadata={},
+                        uproot_options={"timeout":4*2400},
+                    )
                     gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
                     preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
                     preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
                 else:
-                    file_input = {fname : {"object_path": "Runs"} for fname in fnames}
+                    file_input = {fname: {"object_path": "Runs"} for fname in fnames}
                     logger.debug(f"file_input: {file_input}")
-                    # print(f"file_input: {file_input}")
-                    runs = NanoEventsFactory.from_root(
-                            file_input,
-                            metadata={},
-                            schemaclass=BaseSchema,
-                            uproot_options={"timeout":4*2400},
-                    ).events()
-
+                    runs = nanoevents_from_root_with_redirectors(
+                        file_input=file_input,
+                        schemaclass=BaseSchema,
+                        metadata={},
+                        uproot_options={"timeout": 4 * 2400},
+                    )
 
                     # print(f"runs.fields: {runs.fields}")
                     # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
@@ -531,7 +646,7 @@ if __name__ == "__main__":
                 }
                 # print(f"final_output: {final_output}")
                 step_size = int(args.chunksize)
-                files_available, files_total = preprocess(
+                files_available, files_total = preprocess_with_redirectors(
                     final_output,
                     step_size=step_size,
                     align_clusters=False,
@@ -554,7 +669,7 @@ if __name__ == "__main__":
             pre_stage_data[sample_name]['metadata']["dataset"] = sample_name
             big_sample_info.update(pre_stage_data)
 
-        #save the sample info
+        # save the sample info
         directory = args.prestage_output
         filename = directory+"/processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         if not os.path.exists(directory):
@@ -618,7 +733,7 @@ if __name__ == "__main__":
                         end_idx = len(file_dict["steps"])-1
                         event_counter += file_dict["steps"][end_idx][1]
 
-        #save the sample info
+        # save the sample info
         filename = directory+"/fraction_processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(filename, "w") as file:
             json.dump(new_samples, file)

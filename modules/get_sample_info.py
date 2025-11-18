@@ -66,6 +66,58 @@ def get_sample_info(yaml_file, sample_name, year_key="2022preEE"):
     return None
 
 
+def list_all_datasets(yaml_file):
+    """
+    Print all dataset names for all years, with basic info.
+
+    For MC: prints cross_section_pb.
+    For Data: prints lumi_pb.
+    """
+    with open(yaml_file, "r") as f:
+        data = yaml.safe_load(f)
+
+    years = data.get("years", {})
+
+    header = (
+        f"{'Year':10} {'Group':10} {'Sample':29} {'Dataset':150} {'XS_pb/Lumi_pb':>9}"
+    )
+    print(header)
+    print("-" * len(header))
+
+    count = 0
+    for year_key, year_block in years.items():
+        if not isinstance(year_block, dict):
+            continue
+        if "2023" not in year_key:
+            continue
+        for process_group, samples in year_block.items():
+            if not isinstance(samples, dict):
+                continue
+
+            for sample_name, info in samples.items():
+                if not isinstance(info, dict):
+                    continue
+
+                datasets = info.get("datasets", [])
+                if isinstance(datasets, str):
+                    datasets = [datasets]
+
+                # Decide what to print in the last column
+                if process_group.lower() == "data":
+                    value = info.get("lumi_pb", "")
+                else:
+                    value = info.get("cross_section_pb", "")
+                for ds in datasets:
+                    if "None" in ds:
+                        continue
+                    count += 1
+                    # print(f"{year_key:10} {process_group:10} {sample_name:29} {ds:150} {str(value):>9}")
+
+                    # For the RUCIO requests
+                    print(f'dy{count}=( $(dasgoclient --query="dataset = {ds}"))')
+                    print('dy1+=(${dy' + str(count) + '[@]})')
+
+
 # # Example usage:
 # result = get_sample_info("./configs/datasets/dataset_nanoAODv12_run3.yaml", "dyTo2L_M-50_0j", "2022preEE")
 # if result:
@@ -85,3 +137,7 @@ def get_sample_info(yaml_file, sample_name, year_key="2022preEE"):
 #     print(f"Process: {result['process_group']}")
 #     print(f"Sample: {result['sample']}")
 #     print(f"Total lumi: {result['total_lumi_pb']} pb")
+
+# print("\n-----------------------\n")
+# List all datasets
+# list_all_datasets("./configs/datasets/dataset_nanoAODv12_run3.yaml")

@@ -29,8 +29,9 @@ from coffea.nanoevents.methods import vector
 from rich import print
 
 from pathlib import Path
-import subprocess, time
-import traceback, time as _time
+import subprocess
+import time
+import traceback
 import re
 
 
@@ -38,6 +39,7 @@ import re
 import logging
 from modules.utils import logger
 from modules.utils import get_git_info
+from modules.xrootd_utils import AAA_REDIRECTORS, AAA_ERROR_FRAGMENTS, normalize_paths
 
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -212,18 +214,18 @@ class JobStatus:
 
     def mark_running(self, dataset: str, idx: int):
         running, _, _ = self._paths(dataset, idx)
-        running.write_text(str(_time.time()))
+        running.write_text(str(time.time()))
         self._append_ledger(
-            {"ts": _time.time(), "dataset": dataset, "idx": idx, "status": "running"}
+            {"ts": time.time(), "dataset": dataset, "idx": idx, "status": "running"}
         )
 
     def mark_done(self, dataset: str, idx: int, meta=None):
         running, done, _ = self._paths(dataset, idx)
-        done.write_text(str(_time.time()))
+        done.write_text(str(time.time()))
         running.unlink(missing_ok=True)
         self._append_ledger(
             {
-                "ts": _time.time(),
+                "ts": time.time(),
                 "dataset": dataset,
                 "idx": idx,
                 "status": "done",
@@ -233,11 +235,11 @@ class JobStatus:
 
     def mark_failed(self, dataset: str, idx: int, err: Exception):
         running, _, fail = self._paths(dataset, idx)
-        fail.write_text(str(_time.time()))
+        fail.write_text(str(time.time()))
         running.unlink(missing_ok=True)
         self._append_ledger(
             {
-                "ts": _time.time(),
+                "ts": time.time(),
                 "dataset": dataset,
                 "idx": idx,
                 "status": "failed",
@@ -253,62 +255,6 @@ def _parquet_dir_has_files(p: str) -> bool:
         return any(fn.endswith(".parquet") for fn in os.listdir(p))
     except Exception:
         return False
-
-
-AAA_REDIRECTORS = [
-    "root://xcache.cms.rcac.purdue.edu//",
-    "root://cms-xrd-global.cern.ch//",
-    "root://xrootd-cms.infn.it//",
-    "root://cmsxrootd.fnal.gov//",
-    "root://xcache.cms.rcac.purdue.edu//",
-]
-
-# Accept prefixes like:
-#   "root://xcache.cms.rcac.purdue.edu:1094//"
-#   "root://cms-xrd-global.cern.ch//"
-#   "root://xrootd-cms.infn.it//"
-_ROOT_URL_RE = re.compile(r"^root://([^/]+)/+(.+)$")   # host[:port], tail after the first // (usually 'store/...')
-_IP_RE        = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
-
-def _sanitize_prefix(prefix: str) -> str:
-    """Ensure prefix looks like 'root://host[:port]//'."""
-    if not prefix.startswith("root://"):
-        raise ValueError(f"Bad AAA redirector prefix: {prefix}")
-    if not prefix.endswith("//"):
-        prefix = prefix if prefix.endswith("/") else prefix + "/"
-        prefix += "/"
-    return prefix
-
-def _replace_host(url: str, host_prefix: str) -> str:
-    """Replace any ROOT URL host (or /store path) with host_prefix. Preserve the tail path."""
-    host_prefix = _sanitize_prefix(host_prefix)
-
-    # /store/... plain path -> just add prefix
-    if url.startswith("/store/"):
-        return f"{host_prefix}{url.lstrip('/')}"
-
-    # root://HOST[:PORT]//store/...
-    m = _ROOT_URL_RE.match(url)
-    if m:
-        _hostport, tail = m.groups()
-        # Always force through the chosen redirector (avoids IPs & bad SAN)
-        return f"{host_prefix}{tail.lstrip('/')}"
-    # Not a ROOT/STORE path; leave unchanged
-    return url
-
-def normalize_paths(files, host_prefix: str):
-    """Normalize input 'files' (str | list | tuple | dict) to use host_prefix."""
-    host_prefix = _sanitize_prefix(host_prefix)
-
-    if isinstance(files, dict):
-        # Preserve per-file metadata dicts
-        return { _replace_host(u, host_prefix): meta for u, meta in files.items() }
-    if isinstance(files, (list, tuple)):
-        return [ _replace_host(u, host_prefix) for u in files ]
-    if isinstance(files, str):
-        return _replace_host(files, host_prefix)
-    # Unknown type: return as-is
-    return files
 
 
 if __name__ == "__main__":
@@ -502,6 +448,12 @@ if __name__ == "__main__":
                 logger.info(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     logger.info(f"Processing {dataset} file index {idx}")
+
+                    # Skip if already done (unless user wants a full rerun)
+                    if not args.rerun and not jobstat.should_run(dataset, idx):
+                        logger.info(f"[resume] skip {dataset}[{idx}] (done marker present)")
+                        continue
+
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
@@ -521,11 +473,11 @@ if __name__ == "__main__":
                             # rebuild the events/out collections for this attempt
                             to_persist = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
 
+                            jobstat.mark_running(dataset, idx)
+
                             # clean partial output from previous tries
                             os.system(f"rm -rf '{save_path}'")
                             eos_mkdirs(save_path)
-
-                            jobstat.mark_running(dataset, idx)
 
                             to_persist = to_persist.persist()
                             # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
@@ -542,13 +494,7 @@ if __name__ == "__main__":
 
                         except Exception as e:
                             msg = str(e)
-                            tls_bad = (
-                                "TLS error" in msg
-                                or "hostname not in SAN" in msg
-                                or "File did not open properly" in msg
-                                or "File did not vector_read properly" in msg
-                                or "lzma data error" in msg
-                            )
+                            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
                             logger.warning(
                                 f"[resume] attempt {attempt} failed for {dataset}[{idx}] "
                                 f"({type(e).__name__}: {e})"

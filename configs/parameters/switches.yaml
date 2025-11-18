@@ -1,5 +1,32 @@
 switches:
+    do_nnlops:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+    do_pdf:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
     do_trigger_match:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+    do_pu_wgt:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
@@ -44,42 +71,6 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
-    do_nnlops:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-    do_pdf:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-    do_pu_wgt:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-    do_HemVeto:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': true
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
     do_remove_dy_M100to200: # Remove 100 to 200 mll region from inclusive DY.
         '2016preVFP': true
         '2016postVFP': true
@@ -93,6 +84,24 @@ switches:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+    do_jet_PUID_wgt:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+    do_HemVeto:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
         '2018': true
         '2022preEE': false
         '2022postEE': false

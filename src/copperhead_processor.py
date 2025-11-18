@@ -300,8 +300,12 @@ class EventProcessor(processor.ProcessorABC):
             extractor_instance.add_weight_sets([calib_str])
 
         # PU ID weights
-        jetpuid_filename = self.config["jetpuid_sf_file"]
-        extractor_instance.add_weight_sets([f"* * {jetpuid_filename}"])
+        do_jet_PUID_wgt = self.config["switches"]["do_jet_PUID_wgt"]
+        if do_jet_PUID_wgt:
+            jetpuid_filename = self.config["jetpuid_sf_file"]
+            extractor_instance.add_weight_sets([f"* * {jetpuid_filename}"])
+        else:
+            logger.warning(f"Skipping jet PUID weights for year {year} as per configuration.")
 
         extractor_instance.finalize()
         self.evaluator = extractor_instance.make_evaluator()
@@ -407,11 +411,7 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
 
         do_pu_wgt = self.config["switches"]["do_pu_wgt"]
-        if self.test_mode is True: # this override should prob be replaced with something more robust in the future, or just be removed
-            do_pu_wgt = False # basic override bc PU due to slight differences in implementation copperheadV1 and copperheadV2 implementation
-
         if do_pu_wgt:
-
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
             logger.debug(f"year: {year}")
             if ("22" in year) or ("23" in year) or ("24" in year):

@@ -238,10 +238,10 @@ new_zpt_weights_file_aMCatNLO:
   '2017': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
   '2016preVFP': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
   '2016postVFP': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
-  '2022preEE': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
-  '2022postEE': data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
-  "2023": data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
-  "2023BPix": data/zpt_rewgt/fitting/zpt_rewgt_params_aMCatNLO.yaml
+  '2022preEE': None
+  '2022postEE': None
+  "2023": None
+  "2023BPix": None
 new_zpt_weights_file_MiNNLO:
   2016preVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml
   2016postVFP: data/zpt_rewgt/fitting/zpt_rewgt_params_minnlo.yaml
@@ -250,10 +250,10 @@ new_zpt_weights_file_MiNNLO:
   2016_RERECO: data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   '2017_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
   '2018_RERECO': data/zpt_rewgt/fitting/zpt_rewgt_params.yaml
-  2022preEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
-  2022postEE: data/reweight_zpt_2018_nJetBinned_new.histo.root
-  "2023": data/reweight_zpt_2018_nJetBinned_new.histo.root
-  "2023BPix": data/reweight_zpt_2018_nJetBinned_new.histo.root
+  2022preEE: None
+  2022postEE: None
+  "2023": None
+  "2023BPix": None
 jetpuid_sf_file: # old method as of Dec 16 2024,
   2016preVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
   2016postVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
@@ -262,10 +262,10 @@ jetpuid_sf_file: # old method as of Dec 16 2024,
   2016_RERECO: data/PUIDMaps.root
   '2017_RERECO': data/PUIDMaps.root
   '2018_RERECO': data/PUIDMaps.root
-  2022preEE: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
-  2022postEE: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
-  "2023": data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root # FIXME
-  "2023BPix": data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root # FIXME
+  2022preEE: None
+  2022postEE: None
+  "2023": None
+  "2023BPix": None
 jmar_sf_file:
   2016preVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jmar.json.gz
   2016postVFP: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016postVFP_UL/jmar.json.gz
@@ -282,3 +282,12 @@ jmar_sf_file:
   2022postEE: dummy
   "2023": dummy
   "2023BPix": dummy
+jet_veto_maps:
+  2016preVFP: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016preVFP-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
+  2016postVFP: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016postVFP-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
+  2017: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2017-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
+  2018: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2018-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
+  2022preEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/2025-09-23/jetvetomaps.json.gz
+  2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-10-07/jetvetomaps.json.gz
+  "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jetvetomaps.json.gz
+  2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jetvetomaps.json.gz
