@@ -314,6 +314,102 @@ class EventProcessor(processor.ProcessorABC):
         self.selection = {}
         self.cutflow = {}
 
+    def compute_jet_veto_eventfilter(self, events, jets):
+        """ apply the jet veto maps. the .gz file should be read using correctionlib and the file
+        # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
+        # application is in "do_jet_veto_maps_filterEvents" field in config.
+        # If any jet in the event falls into the veto map region, the whole event is vetoed.
+        """
+        year = self.config["year"]
+        jet_veto_maps_path = self.config.get("jet_veto_maps", None)
+        logger.debug(f"jet_veto_maps_path: {jet_veto_maps_path}")
+        if jet_veto_maps_path is None:
+            logger.error("Jet veto maps path is not specified in the config!")
+            raise ValueError("Jet veto maps path is not specified in the config!")
+
+        # Load correction set
+        cset = correctionlib.CorrectionSet.from_file(jet_veto_maps_path)
+        logger.debug(f"jet_veto_maps_cset: {cset}")
+        logger.debug(f"jet_veto_maps_cset keys: {list(cset.keys())}")
+
+        input_dict = {
+            "type": "jetvetomap",
+            "eta": jets.eta,
+            "phi": jets.phi,
+        }
+        key_map = {
+            "2022preEE": "Summer22_23Sep2023_RunCD_V1",
+            "2022postEE": "Summer22EE_23Sep2023_RunEFG_V1",
+            "2023": "Summer23Prompt23_RunC_V1",
+            "2023BPix": "Summer23BPixPrompt23_RunD_V1",
+        }
+        jet_veto_map = cset[key_map[year]]
+        inputs = [input_dict[input.name] for input in cset[key_map[year]].inputs]
+
+        # logger.debug(f"eta: {ak.to_list(jets.eta[50:56].compute())}")
+        # logger.debug(f"phi: {ak.to_list(jets.phi[50:56].compute())}")
+
+        jet_veto_mask = jet_veto_map.evaluate(*(inputs))
+
+        # logger.debug(f"jet_veto_mask: {ak.to_list(jet_veto_mask[50:56].compute())}")
+
+        jet_veto_eventFilter = ak.any(jet_veto_mask, axis=1)
+        # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[50:56].compute())}")
+
+        return jet_veto_eventFilter
+
+    def compute_jet_veto_jetfilter(self, events, jets, met):
+        """apply the jet veto maps. the .gz file should be read using correctionlib and the file
+        # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
+        # application is in "do_jet_veto_maps_filterJets" field in config.
+        # If any jet in the event falls into the veto map region, the whole event is vetoed.
+        """
+        year = self.config["year"]
+        jet_veto_maps_path = self.config.get("jet_veto_maps", None)
+        logger.debug(f"jet_veto_maps_path: {jet_veto_maps_path}")
+        if jet_veto_maps_path is None:
+            logger.error("Jet veto maps path is not specified in the config!")
+            raise ValueError("Jet veto maps path is not specified in the config!")
+
+        # Load correction set
+        cset = correctionlib.CorrectionSet.from_file(jet_veto_maps_path)
+        logger.debug(f"jet_veto_maps_cset: {cset}")
+        logger.debug(f"jet_veto_maps_cset keys: {list(cset.keys())}")
+
+        input_dict = {
+            "type": "jetvetomap",
+            "eta": jets.eta,
+            "phi": jets.phi,
+        }
+        key_map = {
+            "2022preEE": "Summer22_23Sep2023_RunCD_V1",
+            "2022postEE": "Summer22EE_23Sep2023_RunEFG_V1",
+            "2023": "Summer23Prompt23_RunC_V1",
+            "2023BPix": "Summer23BPixPrompt23_RunD_V1",
+        }
+        jet_veto_map = cset[key_map[year]]
+        inputs = [input_dict[input.name] for input in cset[key_map[year]].inputs]
+
+        # logger.debug(f"eta: {ak.to_list(jets.eta[40:47].compute())}")
+        # logger.debug(f"phi: {ak.to_list(jets.phi[40:47].compute())}")
+
+        jet_veto_mask = jet_veto_map.evaluate(*(inputs))
+        # logger.debug(f"jet_veto_mask: {ak.to_list(jet_veto_mask[40:47].compute())}")
+
+        jet_veto_eventFilter = ak.any(jet_veto_mask, axis=1)
+        # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[40:47].compute())}")
+
+        jets = jets[jet_veto_mask != 100.0]
+
+        # logger.debug(f"eta: {ak.to_list(jets.eta[40:47].compute())}")
+
+        # sys.exit()
+
+        # FIXME: when jet_veto_eventFilter is True, set met pt to zero:
+        # met = met.with_fields(pt=ak.where(jet_veto_eventFilter, 0, met.pt))
+
+        return jets, met
+
     def process(self, events: coffea_nanoevent):
         t0 = time.perf_counter()
         year = self.config["year"]
@@ -760,6 +856,11 @@ class EventProcessor(processor.ProcessorABC):
             else:
                 sumWeights = events.metadata['sumGenWgts']
                 logger.debug(f"sumWeights: {(sumWeights)}")
+        if self.config["switches"].get("do_jet_veto_maps_filterEvents", False):
+            logger.info("Applying jet veto maps!")
+            jets_for_veto = events.Jet
+            jet_veto_eventFilter = self.compute_jet_veto_eventfilter(events, jets_for_veto)
+            event_filter = event_filter & ~jet_veto_eventFilter
 
         events = events[event_filter==True]
         muons = muons[event_filter==True]
@@ -890,6 +991,11 @@ class EventProcessor(processor.ProcessorABC):
 
         year = self.config["year"]
         jets = events.Jet
+        met = events.MET
+        if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
+            logger.info("Applying jet veto maps!")
+            jets, met = self.compute_jet_veto_jetfilter(events, jets, met)
+
         fatJets = events.FatJet
         nfatJets = ak.num(fatJets, axis=1)
 
@@ -1209,9 +1315,9 @@ class EventProcessor(processor.ProcessorABC):
             "event": events.event,
             "PV_npvs": events.PV.npvs,
             "PV_npvsGood": events.PV.npvsGood,
-            "MET_pt": events.MET.pt, # As we are using CHS jets, so use MET not PuppiMET
-            "MET_phi": events.MET.phi,
-            "MET_sumEt": events.MET.sumEt,
+            "MET_pt": met.pt, # As we are using CHS jets, so use MET not PuppiMET
+            "MET_phi": met.phi,
+            "MET_sumEt": met.sumEt,
             "mu1_pt": mu1.pt,
             "mu1_ptErr": mu1.ptErr,
             "mu2_pt": mu2.pt,
@@ -1252,7 +1358,7 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_phi_cs": dimuon_phi_cs,
             "dimuon_cos_theta_eta": dimuon_cos_theta_eta,
             "dimuon_phi_eta": dimuon_phi_eta,
-            "dimuon_pt_over_MET_pt": dimuon.pt / events.MET.pt,
+            # "dimuon_pt_over_MET_pt": dimuon.pt / events.MET.pt,
             "dimuon_pt_over_jet1_pt": dimuon.pt / jet1_default.pt,
             "dimuon_pt_over_jet2_pt": dimuon.pt / jet2_default.pt,
             "mu1_pt_raw": mu1.pt_raw,
@@ -1761,6 +1867,23 @@ class EventProcessor(processor.ProcessorABC):
         else:
             jetHorn_PUID_cut = ak.ones_like(pass_jet_puid, dtype="bool") # default value is True
 
+        do_jet_horn_ptcut = self.config["switches"].get("do_jet_horn_ptcut", False)
+        if do_jet_horn_ptcut:
+            """ Remove jets in the jet horn region with pT < 50 GeV
+                 horn region: 3.0 > abs(eta) > 2.5
+            """
+            logger.info("Applying additional jet pT cut of 50 GeV for forward region (jet horn region)!")
+            jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) < 3.0)
+            jetHorn_pt_cut = (jets.pt > 50.0) # https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetMET#Run3_recommendations
+
+            jetHorn_ptcut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+            jetHorn_region, jetHorn_ptcut = ak.broadcast_arrays(
+                jetHorn_region, jetHorn_ptcut
+            )
+            jetHorn_ptcut = ak.where(jetHorn_region, jetHorn_pt_cut, jetHorn_ptcut)
+        else:
+            jetHorn_ptcut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+
         # add additonal pT cut for the forward regions  ----------------------------------------------
         jet_selection = (
             jet_pt_cut
@@ -1768,6 +1891,7 @@ class EventProcessor(processor.ProcessorABC):
             & pass_jet_puid
             & clean
             & jetHorn_PUID_cut
+            & jetHorn_ptcut
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
 

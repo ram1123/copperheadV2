@@ -1,31 +1,32 @@
 import subprocess
 import itertools
 import logging
-from modules.utils import logger
 from pathlib import Path
 import sys
+
+from modules.utils import logger
+from modules.trials import get_stage1_path
 
 logger.setLevel(logging.INFO)
 
 DRY_RUN = len(sys.argv) > 1 and sys.argv[1] == "--dry-run"
 
 base_script = ["python", "plotter/validation_plotter_unified.py"]
-# base_script = ["python", "validation_plotter_unified.py"]
 
+stage1_dir = get_stage1_path()  # default = "current"
+LOAD_PATH = str(Path(stage1_dir) / "{year}" / "f1_0")
+logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
-# SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_DYto2L_2Jets_MLL50/"
-# SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_DYto2L_2Jets_MLL50_10Nov_NoEWK/"
-# SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_dy_M50_aMCatNLO_10Nov/"
-SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_dy_M50_aMCatNLO_11Nov_NoEWK/"
-# SAVE_PATH = "./validation/figs/Run3_nanoAODv12_23October/FirstCheck_NoVHveto_dy_012jetbinned_10Nov_NoEWK/"
-
-
-LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23October/stage1_output/{year}/f1_0/"
-
+SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/{LOAD_PATH.split('/')[-4]}/"
+logger.info(f"Using SAVE_PATH: {SAVE_PATH}")
 
 # years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016", "*"]
+# years = ["2022preEE"]
 # years = ["2022postEE"]
-years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
+# years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
+# years = ["2022postEE", "2023", "2023BPix"]
+# years = ["2023", "2023BPix"]
+years = ["2023"]
 # years = ["*"]
 
 # categories = ["vbf", "ggh", "nocat"]
@@ -38,13 +39,13 @@ categories = ["nocat"]
 vbf_filter_study_options = [False]  # True to apply VBF filter study, False to skip it
 remove_zpt_weights_options = [False]  # True to remove zpt weights, False to keep them
 debug_options = False
-min_set_of_vars = True  # If True, only use a minimal set of variables  to plot
+min_set_of_vars = False  # If True, only use a minimal set of variables  to plot
 
 region_options = [
     # ["h-sidebands", "z-peak", "signal", "h-peak"]
     # ["h-sidebands", "signal", "h-peak"]
-    # ["h-sidebands", "z-peak"]
-    ["z-peak"]
+    ["h-sidebands", "z-peak"]
+    # ["z-peak"]
     # ["h-sidebands"]
 ]
 # njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets

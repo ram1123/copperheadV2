@@ -1,108 +1,117 @@
 jet_pt_cut:
-  2016preVFP: 25.0
-  2016postVFP: 25.0
-  '2017': 25.0
-  '2018': 25.0
-  2016_RERECO: 25.0
-  '2017_RERECO': 25.0
-  '2018_RERECO': 25.0
-  '2022preEE': 25.0
-  '2022postEE': 25.0
-  "2023": 25.0
-  "2023BPix": 25.0
+    2016preVFP: 25.0
+    2016postVFP: 25.0
+    "2017": 25.0
+    "2018": 25.0
+    2016_RERECO: 25.0
+    "2017_RERECO": 25.0
+    "2018_RERECO": 25.0
+    "2022preEE": 25.0
+    "2022postEE": 25.0
+    "2023": 25.0
+    "2023BPix": 25.0
 jet_eta_cut:
-  2016preVFP: 4.7
-  2016postVFP: 4.7
-  '2017': 4.7
-  '2018': 4.7
-  2016_RERECO: 4.7
-  '2017_RERECO': 4.7
-  '2018_RERECO': 4.7
-  '2022preEE': 4.7
-  '2022postEE': 4.7
-  "2023": 4.7
-  "2023BPix": 4.7
+    2016preVFP: 4.7
+    2016postVFP: 4.7
+    "2017": 4.7
+    "2018": 4.7
+    2016_RERECO: 4.7
+    "2017_RERECO": 4.7
+    "2018_RERECO": 4.7
+    "2022preEE": 4.7
+    "2022postEE": 4.7
+    "2023": 4.7
+    "2023BPix": 4.7
 jet_id:
-  2016preVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
-  2016postVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
-  '2017': tight
-  '2018': tight
-  2016_RERECO: loose
-  '2017_RERECO': tight
-  '2018_RERECO': tight
-  '2022preEE': tight
-  '2022postEE': tight
-  "2023": tight
-  "2023BPix": tight
+    2016preVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
+    2016postVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
+    "2017": tight
+    "2018": tight
+    2016_RERECO: loose
+    "2017_RERECO": tight
+    "2018_RERECO": tight
+    "2022preEE": tight
+    "2022postEE": tight
+    "2023": tight
+    "2023BPix": tight
 jet_puid:
-  2016preVFP: loose
-  2016postVFP: loose
-  '2017': loose
-  '2018': loose
-  2016_RERECO: loose
-  '2017_RERECO': loose
-  '2018_RERECO': loose
-  '2022preEE': loose
-  '2022postEE': loose
-  "2023": loose
-  "2023BPix": loose
+    2016preVFP: loose
+    2016postVFP: loose
+    "2017": loose
+    "2018": loose
+    2016_RERECO: loose
+    "2017_RERECO": loose
+    "2018_RERECO": loose
+    "2022preEE": loose
+    "2022postEE": loose
+    "2023": loose
+    "2023BPix": loose
 min_dr_mu_jet:
-  2016preVFP: 0.4
-  2016postVFP: 0.4
-  '2017': 0.4
-  '2018': 0.4
-  2016_RERECO: 0.4
-  '2017_RERECO': 0.4
-  '2018_RERECO': 0.4
-  '2022preEE': 0.4
-  '2022postEE': 0.4
-  "2023": 0.4
-  "2023BPix": 0.4
+    2016preVFP: 0.4
+    2016postVFP: 0.4
+    "2017": 0.4
+    "2018": 0.4
+    2016_RERECO: 0.4
+    "2017_RERECO": 0.4
+    "2018_RERECO": 0.4
+    "2022preEE": 0.4
+    "2022postEE": 0.4
+    "2023": 0.4
+    "2023BPix": 0.4
 btag_loose_wp: # for DeepCSV, DeepJet is different
-  2016preVFP: 0.2027
-  2016postVFP: 0.1918
-  '2017': 0.1355
-  '2018': 0.1208 # central sources for UL https://btv-wiki.docs.cern.ch/ScaleFactors/UL2018/#ak4-b-tagging
-  2016_RERECO: 0.2217  #central sources for RERECO https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
-  '2017_RERECO': 0.1522
-  '2018_RERECO': 0.1241
-  '2022preEE': 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-  '2022postEE': 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-  "2023": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-  "2023BPix": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    2016preVFP: 0.2027
+    2016postVFP: 0.1918
+    "2017": 0.1355
+    "2018": 0.1208 # central sources for UL https://btv-wiki.docs.cern.ch/ScaleFactors/UL2018/#ak4-b-tagging
+    2016_RERECO: 0.2217 #central sources for RERECO https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
+    "2017_RERECO": 0.1522
+    "2018_RERECO": 0.1241
+    "2022preEE": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2022postEE": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2023": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2023BPix": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
 btag_medium_wp: # for DeepCSV, DeepJet is different
-  2016preVFP: 0.6001
-  2016postVFP: 0.5847
-  '2017': 0.4506
-  '2018': 0.4168
-  2016_RERECO: 0.6321
-  '2017_RERECO': 0.4941
-  '2018_RERECO': 0.4184
-  '2022preEE': 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-  '2022postEE': 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-  "2023": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-  "2023BPix": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    2016preVFP: 0.6001
+    2016postVFP: 0.5847
+    "2017": 0.4506
+    "2018": 0.4168
+    2016_RERECO: 0.6321
+    "2017_RERECO": 0.4941
+    "2018_RERECO": 0.4184
+    "2022preEE": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2022postEE": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2023": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2023BPix": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
 softjet_dr2:
-  2016preVFP: 0.16
-  2016postVFP: 0.16
-  '2017': 0.16
-  '2018': 0.16
-  2016_RERECO: 0.16
-  '2017_RERECO': 0.16
-  '2018_RERECO': 0.16
-  '2022preEE': 0.16
-  '2022postEE': 0.16
-  "2023": 0.16
-  "2023BPix": 0.16
+    2016preVFP: 0.16
+    2016postVFP: 0.16
+    "2017": 0.16
+    "2018": 0.16
+    2016_RERECO: 0.16
+    "2017_RERECO": 0.16
+    "2018_RERECO": 0.16
+    "2022preEE": 0.16
+    "2022postEE": 0.16
+    "2023": 0.16
+    "2023BPix": 0.16
 HemVeto_ratio: # ratio of HemVeto applicable run / total nevents for 2018UL
-  2016preVFP: 0.0
-  2016postVFP: 0.0
-  '2017': 0.0
-  '2018': 0.633396491
-  2016_RERECO: 0.0
-  '2017_RERECO': 0.0
-  '2018_RERECO': 0.0
-  '2022preEE': 0.0
-  '2022postEE': 0.0
-  "2023": 0.0
-  "2023BPix": 0.0
+    2016preVFP: 0.0
+    2016postVFP: 0.0
+    "2017": 0.0
+    "2018": 0.633396491
+    2016_RERECO: 0.0
+    "2017_RERECO": 0.0
+    "2018_RERECO": 0.0
+    "2022preEE": 0.0
+    "2022postEE": 0.0
+    "2023": 0.0
+    "2023BPix": 0.0
+jet_veto_maps:
+    2016preVFP: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016preVFP-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
+    2016postVFP: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016postVFP-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
+    2017: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2017-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
+    2018: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2018-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
+    2022preEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/2025-09-23/jetvetomaps.json.gz
+    2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-10-07/jetvetomaps.json.gz
+    "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jetvetomaps.json.gz
+    2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jetvetomaps.json.gz

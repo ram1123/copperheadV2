@@ -85,11 +85,12 @@ def applyRegionCatCuts(
     jet1_pt = varcol("jet1_pt")
     njets = varcol("njets")  # if you cut on it anywhere
 
+    prod_cat_cut = ak.ones_like(region, dtype="bool")
+
     # do category cut
     if category == "nocat":
-        prod_cat_cut = ak.ones_like(region, dtype="bool")
+        prod_cat_cut = prod_cat_cut  # no additional cut
     else:  # VBF or ggH
-        prod_cat_cut = ak.ones_like(region, dtype="bool")
         if do_VH_veto:
             print("Applying VH veto!")
             # NOTE: fatjet and MET veto for VH: nfatJets_drmuon == 0 and MET_pt < 150 GeV

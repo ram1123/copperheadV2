@@ -4,6 +4,9 @@ from random import random
 import awkward as ak
 import correctionlib.schemav2 as cs
 
+import logging
+from modules.utils import logger
+
 """
 This file is taken from https://gitlab.cern.ch/cms-muonPOG/muonscarekit/-/blob/master/scripts/MuonScaRe.py?ref_type=heads
 
@@ -11,7 +14,6 @@ Full credits go to KIT and the authors of the script
 
 This script has been altered to match dask-awkward workflow
 """
-
 
 
 class CrystallBall:
@@ -49,7 +51,7 @@ class CrystallBall:
     def cdf(self, x):
         d = (x - self.m)/self.s
         result = ak.full_like(d, 1.0)
-        
+
         # define different conditions
         c1a = (d<-self.a) & (self.F - self.s * d / self.G > 0)
         c1b = (d<-self.a) & (self.F - self.s * d / self.G <= 0)
@@ -58,24 +60,24 @@ class CrystallBall:
 
         c3 = ~c1a & ~c1b & ~c2a & ~c2b
         # For d < -a
-        result = ak.where(c1a, 
-                        self.NC / np.power(self.F - self.s * d / self.G, self.n - 1), 
+        result = ak.where(c1a,
+                        self.NC / np.power(self.F - self.s * d / self.G, self.n - 1),
                         result)
-        result = ak.where(c1b, 
-                        self.NC, 
+        result = ak.where(c1b,
+                        self.NC,
                         result)
 
         # For d > a
-        result = ak.where(c2a, 
-                        self.NC * (self.C - np.power(self.F + self.s * d / self.G, 1 - self.n)), 
+        result = ak.where(c2a,
+                        self.NC * (self.C - np.power(self.F + self.s * d / self.G, 1 - self.n)),
                         result)
-        result = ak.where(c2b, 
-                        self.NC * self.C, 
+        result = ak.where(c2b,
+                        self.NC * self.C,
                         result)
 
         # For -a <= d <= a
-        result = ak.where(c3, 
-                        self.Ns * (self.D - self.sqrtPiOver2 * erf(-d / self.sqrt2)), 
+        result = ak.where(c3,
+                        self.Ns * (self.D - self.sqrtPiOver2 * erf(-d / self.sqrt2)),
                         result)
 
         return result
@@ -91,24 +93,24 @@ class CrystallBall:
         c3 = ~c1a & ~c1b & ~c2a & ~c2b
 
         # For u < cdfMa
-        result = ak.where(c1a, 
-                        self.m + self.G * (self.F - (self.NC / u) ** self.k), 
+        result = ak.where(c1a,
+                        self.m + self.G * (self.F - (self.NC / u) ** self.k),
                         result)
-        result = ak.where(c1b, 
-                        self.m + self.G * self.F, 
+        result = ak.where(c1b,
+                        self.m + self.G * self.F,
                         result)
 
         # For u > cdfPa
-        result = ak.where(c2a, 
-                        self.m - self.G * (self.F - (self.C - u / self.NC) ** (-self.k)), 
+        result = ak.where(c2a,
+                        self.m - self.G * (self.F - (self.C - u / self.NC) ** (-self.k)),
                         result)
-        result = ak.where(c2b, 
-                        self.m - self.G * self.F, 
+        result = ak.where(c2b,
+                        self.m - self.G * self.F,
                         result)
 
         # For cdfMa <= u <= cdfPa
-        result = ak.where(c3, 
-                        self.m - self.sqrt2 * self.s * erfinv((self.D - u / self.Ns) / self.sqrtPiOver2), 
+        result = ak.where(c3,
+                        self.m - self.sqrt2 * self.s * erfinv((self.D - u / self.Ns) / self.sqrtPiOver2),
                         result)
 
         return result
@@ -163,7 +165,7 @@ def get_rndm(eta, nL, cset, events, nested=False):
     # else:
     #     eta_f, nL_f, nmuons = eta, nL, np.ones_like(eta)
     eta_f, nL_f, nmuons = eta, nL, ak.ones_like(eta)
-    
+
     mean_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 0)
     sigma_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 1)
     n_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 2)
@@ -195,7 +197,7 @@ def get_std(pt, eta, nL, cset, nested=False):
     #     eta_f, nL_f, pt_f, nmuons = eta, nL, pt, 1
     eta_f, nL_f, pt_f, nmuons = eta, nL, pt, 1
 
-    # obtain parameters from correctionlib    
+    # obtain parameters from correctionlib
     param0_f = cset.get("poly_params").evaluate(abs(eta_f), nL_f, 0)
     param1_f = cset.get("poly_params").evaluate(abs(eta_f), nL_f, 1)
     param2_f = cset.get("poly_params").evaluate(abs(eta_f), nL_f, 2)
@@ -224,14 +226,14 @@ def get_k(eta, var, cset, nested=False):
     k_data_f = cset.get("k_data").evaluate(abs(eta_f), var)
     k_mc_f = cset.get("k_mc").evaluate(abs(eta_f), var)
 
-    # calculate residual smearing factor 
+    # calculate residual smearing factor
     # return 0 if smearing in MC already larger than in data
     k_f = ak.zeros_like(k_data_f)
     condition = k_mc_f<k_data_f
     # k_f[condition] = (k_data_f[condition]**2 - k_mc_f[condition]**2)**.5
     k_f_condition = (k_data_f**2 - k_mc_f**2)**.5
     k_f = ak.where(condition, k_f_condition, k_f)
-    
+
 
     # if nested:
     #     result = ak.unflatten(k_f, nmuons)
@@ -256,7 +258,7 @@ def filter_boundaries(pt_corr, pt, nested):
         n_pt_outside = np.sum(outside_bounds)
 
     if n_pt_outside > 0:
-        print(
+        logger.warning(
             f"There are {n_pt_outside} events with muon pt outside of [26,200] GeV. "
             "Setting those entries to their initial value."
         )
@@ -273,7 +275,7 @@ def filter_boundaries(pt_corr, pt, nested):
         n_nan = np.sum(nan_entries)
 
     if n_nan > 0:
-        print(
+        logger.warning(
             f"There are {n_nan} nan entries in the corrected pt. "
             "This might be due to the number of tracker layers hitting boundaries. "
             "Setting those entries to their initial value."
@@ -287,7 +289,7 @@ def filter_boundaries(pt_corr, pt, nested):
 def pt_resol(pt, eta, nL, cset, events, nested=False):
     """"
     Function for the calculation of the resolution correction
-    Input: 
+    Input:
     pt - muon transverse momentum
     eta - muon pseudorapidity
     nL - muon number of tracker layers
@@ -318,10 +320,10 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
     eta - muon pseudorapidity
     updn - uncertainty variation (up or dn)
     cset - correctionlib object
-    
+
     This function should only be applied to reco muons in MC!
     """
-    
+
     # if nested:
     #     eta_f, nmuons = ak.flatten(eta), ak.num(eta)
     #     pt_wresol_f, pt_woresol_f = ak.flatten(pt_wresol), ak.flatten(pt_woresol)
@@ -354,7 +356,7 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
             pt_var_f,
         )
     else:
-        print("ERROR: updn must be 'up' or 'dn'")
+        logger.error("ERROR: updn must be 'up' or 'dn'")
 
     # if nested:
     #     pt_var = ak.unflatten(pt_var_f, nmuons)
@@ -376,7 +378,7 @@ def pt_scale(is_data, pt, eta, phi, charge, cset, nested=False):
     charge - muon charge
     var - variation (standard is "nom")
     cset - correctionlib object
-    
+
     This function should be applied to reco muons in data and MC
     """
     if is_data:
@@ -389,13 +391,13 @@ def pt_scale(is_data, pt, eta, phi, charge, cset, nested=False):
     # else:
     #     eta_f, phi_f, nmuons = eta, phi, 1
     eta_f, phi_f, nmuons = eta, phi, 1
-    
+
     a_f = cset.get("a_"+dtmc).evaluate(eta_f, phi_f, "nom")
     m_f = cset.get("m_"+dtmc).evaluate(eta_f, phi_f, "nom")
 
     # if nested:
     #     a, m = ak.unflatten(a_f, nmuons), ak.unflatten(m_f, nmuons)
-    # else: 
+    # else:
     #     a, m = a_f, m_f
     a, m = a_f, m_f
 

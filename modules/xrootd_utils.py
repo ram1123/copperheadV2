@@ -65,5 +65,6 @@ AAA_ERROR_FRAGMENTS = (
     "File did not open properly",
     "File did not vector_read properly",
     "lzma data error",
+    "File stat request failed",
 )
 
