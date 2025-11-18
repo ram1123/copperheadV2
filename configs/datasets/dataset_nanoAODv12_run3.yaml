@@ -399,7 +399,7 @@ years:
 
         Top:
             tt_inclusive:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 923.6
@@ -676,7 +676,7 @@ years:
                     - "MG5_aMC@NLO FxFx"
 
             dy_M-50_aMCatNLO:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 5558.0
@@ -718,7 +718,7 @@ years:
 
         Top:
             tt_inclusive:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 923.6
@@ -910,7 +910,7 @@ years:
                     - "POWHEG"
 
             vbf_powheg_dipole:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 0.00105742
@@ -953,7 +953,6 @@ years:
                 br_source: "pdg"
                 references:
                     - "POWHEG (with dipole recoil)"
-
 
     "2023BPix":
         Data:
