@@ -716,6 +716,62 @@ years:
                 references:
                     - "MadGraph5_aMC"
 
+            dyTo2Mu_MLL_105To160:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 49.21
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "aMCatNLOFxFx"
+
+            dyTo2Mu_MLL_10To50:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 6744.00 # 1997.0*3 = 5991.0
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_50To120:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 2219.00
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_120To200:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 21.65
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
         Top:
             tt_inclusive:
                 skip_sample: True
@@ -828,7 +884,7 @@ years:
                     - NONE
 
             zz:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - /ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
                 cross_section_pb: 12.75

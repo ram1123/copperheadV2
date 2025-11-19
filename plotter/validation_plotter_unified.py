@@ -29,11 +29,13 @@ bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMC
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
 # DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
-DY_aMCatNLO = ["dyTo2L_M-50_incl"]
+# DY_aMCatNLO = ["dyTo2L_M-50_incl"]
+DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"]
 
 DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
 
 DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
+DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
 
 
 DY_HTBinned = [
@@ -57,6 +59,7 @@ group_dict = {
     ],
     "DY": DY_aMCatNLO,
     # "DY": DY_jet_binned,
+    # "DY": DY_MLL_binned,
     # "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
@@ -79,7 +82,8 @@ group_dict = {
     "OTHER": ["www", "wwz", "wzz", "zzz"],
     "GGH": ["ggh_powhegPS"],
     # "VBF": ["vbf_powheg_dipole"]
-    "VBF": ["vbf_powheg_amcatnlo"],
+    # "VBF": ["vbf_powheg_amcatnlo"],
+    "VBF": ["vbf_powheg"],
 }
 
 def find_group_name(process_name, group_dict_param):
@@ -419,6 +423,9 @@ if __name__ == "__main__":
             variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
             variables2plot.append(f"{particle}_eta")
+            variables2plot.append(f"PuppiMET_pt")
+            variables2plot.append(f"PuppiMET_phi")
+            variables2plot.append(f"PuppiMET_sumEt")
             if args.minimum_set: # if minimum set is requested, only plot pt and mass
                 continue
             variables2plot.append(f"{particle}_phi")
@@ -508,7 +515,7 @@ if __name__ == "__main__":
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
     else:
-        client = Client(n_workers=64, threads_per_worker=1, processes=True, memory_limit='10 GiB')
+        client = Client(n_workers=12, threads_per_worker=1, processes=True, memory_limit='10 GiB')
         logger.info("Local scale Client created")
     # record time
     time_step = time.time()

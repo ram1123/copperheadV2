@@ -458,6 +458,42 @@
         "xlabel": "$sumEt(MET)$ [GeV]",
         "color": "royalblue"
     },
+    "PuppiMET_pt": {
+        "variable": "PuppiMET_pt",
+        "binning_linspace": [
+            0,
+            200,
+            51
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$p_{T}(PuppiMET)$ [GeV]",
+        "color": "royalblue"
+    },
+    "PuppiMET_phi": {
+        "variable": "PuppiMET_phi",
+        "binning_linspace": [
+            -3.2,
+            3.2,
+            51
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$\\phi(PuppiMET)$",
+        "color": "royalblue"
+    },
+    "PuppiMET_sumEt": {
+        "variable": "PuppiMET_sumEt",
+        "binning_linspace": [
+            0,
+            500,
+            51
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$sumEt(PuppiMET)$ [GeV]",
+        "color": "royalblue"
+    },
     "acoplanarity": {
         "variable": "acoplanarity",
         "binning_linspace": [0, 1, 51],
