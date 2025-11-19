@@ -413,26 +413,22 @@ class EventProcessor(processor.ProcessorABC):
         met_cond = (jet_veto_eventFilter == True)
 
         # fetch original  met pt, phi, sumEt
+        # NOTE: Don't reset met.phi otherwise we will see a peak at zero in met.phi distribution
         met_pt, puppi_met_pt = met.pt, PuppiMET.pt
-        met_phi, puppi_met_phi = met.phi, PuppiMET.phi
         met_sumEt, puppi_met_sumEt = met.sumEt, PuppiMET.sumEt
 
         # Obtain new met pt, phi, sumEt - set to zero when met_cond is True
         met_pt_new = ak.where(met_cond, ak.zeros_like(met_pt), met_pt)
-        met_phi_new = ak.where(met_cond, ak.zeros_like(met_phi), met_phi)
         met_sumEt_new = ak.where(met_cond, ak.zeros_like(met_sumEt), met_sumEt)
 
         puppi_met_pt_new = ak.where(met_cond, ak.zeros_like(puppi_met_pt), puppi_met_pt)
-        puppi_met_phi_new = ak.where(met_cond, ak.zeros_like(puppi_met_phi), puppi_met_phi)
         puppi_met_sumEt_new = ak.where(met_cond, ak.zeros_like(puppi_met_sumEt), puppi_met_sumEt)
 
         # overwrite the met variables
         met["pt"] = met_pt_new
-        met["phi"] = met_phi_new
         met["sumEt"] = met_sumEt_new
 
         PuppiMET["pt"] = puppi_met_pt_new
-        PuppiMET["phi"] = puppi_met_phi_new
         PuppiMET["sumEt"] = puppi_met_sumEt_new
 
         # logger.debug(f"met.pt after jet veto jet filter: {ak.to_list(met.pt[30:35].compute())}")
