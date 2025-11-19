@@ -358,11 +358,12 @@ class EventProcessor(processor.ProcessorABC):
 
         return jet_veto_eventFilter
 
-    def compute_jet_veto_jetfilter(self, events, jets, met):
+    def compute_jet_veto_jetfilter(self, events, jets, met, PuppiMET):
         """apply the jet veto maps. the .gz file should be read using correctionlib and the file
         # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
         # application is in "do_jet_veto_maps_filterJets" field in config.
-        # If any jet in the event falls into the veto map region, the whole event is vetoed.
+        # If any jet in the event falls into the veto map region, then just remove that jet from the jet collection.
+        # and set the MET pt to zero.
         """
         year = self.config["year"]
         jet_veto_maps_path = self.config.get("jet_veto_maps", None)
@@ -397,7 +398,10 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"jet_veto_mask: {ak.to_list(jet_veto_mask[40:47].compute())}")
 
         jet_veto_eventFilter = ak.any(jet_veto_mask, axis=1)
-        # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[40:47].compute())}")
+        # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[30:35].compute())}")
+
+        # logger.debug(f"met.pt after jet veto jet filter: {ak.to_list(met.pt[30:35].compute())}")
+        # logger.debug(f"PuppiMET.pt after jet veto jet filter: {ak.to_list(PuppiMET.pt[30:35].compute())}")
 
         jets = jets[jet_veto_mask != 100.0]
 
@@ -405,10 +409,37 @@ class EventProcessor(processor.ProcessorABC):
 
         # sys.exit()
 
-        # FIXME: when jet_veto_eventFilter is True, set met pt to zero:
-        # met = met.with_fields(pt=ak.where(jet_veto_eventFilter, 0, met.pt))
+        # when jet_veto_eventFilter is True, set met pt to zero:
+        met_cond = (jet_veto_eventFilter == True)
 
-        return jets, met
+        # fetch original  met pt, phi, sumEt
+        met_pt, puppi_met_pt = met.pt, PuppiMET.pt
+        met_phi, puppi_met_phi = met.phi, PuppiMET.phi
+        met_sumEt, puppi_met_sumEt = met.sumEt, PuppiMET.sumEt
+
+        # Obtain new met pt, phi, sumEt - set to zero when met_cond is True
+        met_pt_new = ak.where(met_cond, ak.zeros_like(met_pt), met_pt)
+        met_phi_new = ak.where(met_cond, ak.zeros_like(met_phi), met_phi)
+        met_sumEt_new = ak.where(met_cond, ak.zeros_like(met_sumEt), met_sumEt)
+
+        puppi_met_pt_new = ak.where(met_cond, ak.zeros_like(puppi_met_pt), puppi_met_pt)
+        puppi_met_phi_new = ak.where(met_cond, ak.zeros_like(puppi_met_phi), puppi_met_phi)
+        puppi_met_sumEt_new = ak.where(met_cond, ak.zeros_like(puppi_met_sumEt), puppi_met_sumEt)
+
+        # overwrite the met variables
+        met["pt"] = met_pt_new
+        met["phi"] = met_phi_new
+        met["sumEt"] = met_sumEt_new
+
+        PuppiMET["pt"] = puppi_met_pt_new
+        PuppiMET["phi"] = puppi_met_phi_new
+        PuppiMET["sumEt"] = puppi_met_sumEt_new
+
+        # logger.debug(f"met.pt after jet veto jet filter: {ak.to_list(met.pt[30:35].compute())}")
+        # logger.debug(f"PuppiMET.pt after jet veto jet filter: {ak.to_list(PuppiMET.pt[30:35].compute())}")
+        # sys.exit()
+
+        return jets, met, PuppiMET
 
     def process(self, events: coffea_nanoevent):
         t0 = time.perf_counter()
@@ -992,9 +1023,10 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         jets = events.Jet
         met = events.MET
+        PuppiMET = events.PuppiMET
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
             logger.info("Applying jet veto maps!")
-            jets, met = self.compute_jet_veto_jetfilter(events, jets, met)
+            jets, met, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, met, PuppiMET)
 
         fatJets = events.FatJet
         nfatJets = ak.num(fatJets, axis=1)
@@ -1318,6 +1350,9 @@ class EventProcessor(processor.ProcessorABC):
             "MET_pt": met.pt, # As we are using CHS jets, so use MET not PuppiMET
             "MET_phi": met.phi,
             "MET_sumEt": met.sumEt,
+            "PuppiMET_pt": PuppiMET.pt,
+            "PuppiMET_phi": PuppiMET.phi,
+            "PuppiMET_sumEt": PuppiMET.sumEt,
             "mu1_pt": mu1.pt,
             "mu1_ptErr": mu1.ptErr,
             "mu2_pt": mu2.pt,

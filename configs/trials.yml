@@ -2,7 +2,7 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
   current:
-    stage1: "{base_dir}/Run3_nanoAODv12_23October/stage1_output/"
+    stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly/stage1_output/"
     comment: "What plotter should use by default"
 
   Run3_noJetVetoMap:
@@ -20,3 +20,11 @@ trials:
   Run3_JetVeto_jetfilter:
     stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoFilterJetsOnly_HornpT50GeV/stage1_output/"
     comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+
+  Run3_JetVeto_jetfilter_v2:
+    stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly/stage1_output/"
+    comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO."
+
+  Run3_JetVeto_jetfilter_v3:
+    stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV/stage1_output/"
+    comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
