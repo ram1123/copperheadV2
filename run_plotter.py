@@ -18,6 +18,8 @@ LOAD_PATH = str(Path(stage1_dir) / "{year}" / "f1_0")
 logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
 SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/{LOAD_PATH.split('/')[-4]}/"
+# SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/DY_jet_binned/{LOAD_PATH.split('/')[-4]}/"
+# SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/DY_MLL_binned/{LOAD_PATH.split('/')[-4]}/"
 logger.info(f"Using SAVE_PATH: {SAVE_PATH}")
 
 # years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016", "*"]

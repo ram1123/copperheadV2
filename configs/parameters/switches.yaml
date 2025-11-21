@@ -121,19 +121,19 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': true
-        '2022postEE': true
+        '2022preEE': false
+        '2022postEE': false
         "2023": true
-        "2023BPix": true
+        "2023BPix": false
     do_jet_horn_ptcut:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': true
-        '2022postEE': true
+        '2022preEE': false
+        '2022postEE': false
         "2023": true
-        "2023BPix": true
+        "2023BPix": false
     do_jec:
         '2016preVFP': true
         '2016postVFP': true

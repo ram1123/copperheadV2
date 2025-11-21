@@ -88,8 +88,8 @@ def list_all_datasets(yaml_file):
     for year_key, year_block in years.items():
         if not isinstance(year_block, dict):
             continue
-        if "2023" not in year_key:
-            continue
+        # if "2017" not in year_key:
+            # continue
         for process_group, samples in year_block.items():
             if not isinstance(samples, dict):
                 continue
@@ -140,4 +140,4 @@ def list_all_datasets(yaml_file):
 
 # print("\n-----------------------\n")
 # List all datasets
-# list_all_datasets("./configs/datasets/dataset_nanoAODv12_run3.yaml")
+# list_all_datasets("./configs/datasets/dataset_nanoAODv15_run2.yaml")

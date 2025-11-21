@@ -222,6 +222,8 @@ def jet_id(jets, config):
     else: # 2017RERECO, 2018RERECO, all UL and Run3
         if "loose" in config["jet_id"]:
             pass_jet_id = jets.jetId >= 1 # NOTE: for Run2 UL, loose is not specified in https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format
+        # elif "tightlep" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
+        #     pass_jet_id = (jets.jetId == 6)
         elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
             pass_jet_id = jets.jetId >= 2
 
