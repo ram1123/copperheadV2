@@ -323,7 +323,7 @@ if __name__ == "__main__":
     type=int,
     dest="NanoAODv",
     default=9,
-    choices = [9, 12],
+    choices = [9, 12, 15],
     help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
     )
     parser.add_argument( # temp flag to test the 2 percent data discrepancy in ggH cat between mine and official workspace

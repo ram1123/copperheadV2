@@ -289,7 +289,7 @@ if __name__ == "__main__":
     dest="NanoAODv",
     type=int,
     default=9,
-    choices = [9, 12],
+    choices = [9, 12, 15],
     help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
     )
     parser.add_argument(

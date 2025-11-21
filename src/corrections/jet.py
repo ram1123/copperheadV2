@@ -726,7 +726,7 @@ def apply_jer_unc(jets):
     return jets
 
 
-def do_jer_smear(jets, config, event_id, year="2018", syst_l=["nom", "up", "down"]):
+def do_jer_smear(jets, config, event_id, year="2018", syst_l=["nom", "up", "down"], nanoAOD_version=12):
     """
     we assume that jec has been applied (we need pt_jec and pt_raw)
 
@@ -811,7 +811,10 @@ def do_jer_smear(jets, config, event_id, year="2018", syst_l=["nom", "up", "down
         # jer_smearing = applyStrat1(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
         # jer_smearing = applyStrat2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
         # jer_smearing = applyStrat1n2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
-        jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta, year)
+        if nanoAOD_version==12:
+            jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta, year)
+        elif nanoAOD_version==15:
+            jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, jets.puIdDisc, pt_jec, jets.eta, year)
 
         # jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
         jets[f"pt_jer_{syst}"] = jer_smearing * pt_jec  # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111

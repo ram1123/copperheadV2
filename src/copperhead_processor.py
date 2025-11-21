@@ -1156,7 +1156,7 @@ class EventProcessor(processor.ProcessorABC):
                     # jer_variations = [] # temporarily disable JER variations for 2022
                     pass
                 else:
-                    jets = do_jer_smear(jets, self.config, events.event, year=year)
+                    jets = do_jer_smear(jets, self.config, events.event, year=year, nanoAOD_version=NanoAODv)
             sorted_args = ak.argsort(jets.pt, ascending=False)
             jets = (jets[sorted_args])
 
