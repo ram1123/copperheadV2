@@ -1,3 +1,11 @@
+# 20 November 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 12 -l Run2_nanoAODv15_20Nov -y "2017" -m 0 -k -d 1)
+
+```
+
+
 # 18 November 2025
 
 ```bash

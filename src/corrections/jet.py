@@ -209,28 +209,84 @@ def get_jec_factories(jec_parameters: dict, year):
 
     return jec_factories, jec_factories_data
 
+def custom_jet_id(jets):
+    """
+    Reference: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
+
+    FIXME: Check these values for individual years if they differ
+    if (abs(Jet_eta) <= 2.6)
+      Jet_passJetIdTight = (Jet_neHEF < 0.99) && (Jet_neEmEF < 0.9) && (Jet_chMultiplicity+Jet_neMultiplicity > 1) && (Jet_chHEF > 0.01) && (Jet_chMultiplicity > 0);
+    else if (abs(Jet_eta) > 2.6 && abs(Jet_eta) <= 2.7)
+      Jet_passJetIdTight = (Jet_neHEF < 0.90) && (Jet_neEmEF < 0.99);
+    else if (abs(Jet_eta) > 2.7 && abs(Jet_eta) <= 3.0)
+      Jet_passJetIdTight = (Jet_neHEF < 0.99);
+    else if (abs(Jet_eta) > 3.0)
+      Jet_passJetIdTight = (Jet_neMultiplicity >= 2) && (Jet_neEmEF < 0.4);
+
+    bool Jet_passJetIdTightLepVeto = false;
+    if (abs(Jet_eta) <= 2.7) Jet_passJetIdTightLepVeto = Jet_passJetIdTight && (Jet_muEF < 0.8) && (Jet_chEmEF < 0.8);
+    else Jet_passJetIdTightLepVeto = Jet_passJetIdTight;
+    """
+    eta = jets.eta
+    aeta = abs(eta)
+
+    neHEF = jets.neHEF
+    neEmEF = jets.neEmEF
+    chHEF = jets.chHEF
+    chEmEF = jets.chEmEF
+    muEF = jets.muEF
+
+    chMult = jets.chMultiplicity
+    neMult = jets.neMultiplicity
+
+    # tight ID definition
+    barrel_tight = ((aeta <= 2.6)
+        & (neHEF < 0.99) & (neEmEF < 0.90)
+        & ((chMult + neMult) > 1)
+        & (chHEF > 0.01) & (chMult > 0)
+    )
+
+    transition_tight = ((aeta > 2.6) & (aeta <= 2.7) & (neHEF < 0.90) & (neEmEF < 0.99))
+    endcap_tight = ((aeta > 2.7) & (aeta <= 3.0) & (neHEF < 0.99))
+    forward_tight = ((aeta > 3.0) & (neMult >= 2) & (neEmEF < 0.4))
+
+    pass_tight = barrel_tight | transition_tight | endcap_tight | forward_tight
+
+    # tightLepVeto
+    pass_tight_lepveto = ak.where(
+        aeta <= 2.7,
+        pass_tight & (muEF < 0.8) & (chEmEF < 0.8),
+        pass_tight,
+    )
+
+    return pass_tight, pass_tight_lepveto
+
 
 def jet_id(jets, config):
-    # logger.debug(f"jets parameters: {parameters}")
-    pass_jet_id = ak.ones_like(jets.jetId, dtype=bool)
-    year = config["year"]
-    if ("2016" in year) and ("RERECO" in year):  # 2016RERECO
-        if "loose" in config["jet_id"]:
-            pass_jet_id = jets.jetId >= 1
-        elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
-            pass_jet_id = jets.jetId >= 3
-    else: # 2017RERECO, 2018RERECO, all UL and Run3
-        if "loose" in config["jet_id"]:
-            pass_jet_id = jets.jetId >= 1 # NOTE: for Run2 UL, loose is not specified in https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format
-        # elif "tightlep" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
-        #     pass_jet_id = (jets.jetId == 6)
-        elif "tight" in config["jet_id"]: # according to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
-            pass_jet_id = jets.jetId >= 2
+    """https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
 
-    # logger.debug(f"pass_jet_id: {pass_jet_id[:10].compute()}")
-    # test_pass_jet_id = jets.jetId >= 2
-    # logger.debug(f"test_pass_jet_id: {test_pass_jet_id[:10].compute()}")
-    # raise ValueError
+    If "jetId" is in the fields of jets, use that. Else, use custom_jet_id function as mentioned in the link:
+    https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
+    """
+    pass_jet_id = ak.ones_like(jets.pt, dtype=bool)
+    jet_id2use = config["jet_id"]
+    if hasattr(jets, "jetId"):
+        jet_id_wps = {
+            "tight": jets.jetId >= 2,
+            "tightFailLepVeto": jets.jetId == 2,
+            "tightPassLepVeto": jets.jetId == 6,
+        }
+        pass_jet_id = jet_id_wps[jet_id2use]
+    else:
+        logger.warning("jets has no jetId attribute! Calling custom_jet_id...")
+        tight_id, tight_lepveto_id = custom_jet_id(jets)
+        jet_id_wps = {
+            "tight": tight_id,
+            "tightFailLepVeto": tight_id & (~tight_lepveto_id),
+            "tightPassLepVeto": tight_lepveto_id,
+        }
+        pass_jet_id = jet_id_wps[jet_id2use]
+
     return pass_jet_id
 
 

@@ -9,7 +9,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor, apply_roccorRun3
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, fill_softjets_HIG19006, applyHemVeto, do_jec_scale, do_jer_smear, get_jet_variation, applyUpDown, applyJetUncertaintyKinematics
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, fill_softjets_HIG19006, applyHemVeto, do_jec_scale, do_jer_smear, get_jet_variation, applyUpDown, applyJetUncertaintyKinematics, custom_jet_id
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old, get_jetpuid_weights_eta_dependent
 import json
@@ -442,6 +442,15 @@ class EventProcessor(processor.ProcessorABC):
 
         return jets, met, PuppiMET
 
+    def met_fill_zeroes(self, events):
+        # logger.debug(f"Before Puppi: pt = {events.PuppiMET.pt[0:5].compute()}, phi = {events.PuppiMET.phi[0:5].compute()}, sumEt = {events.PuppiMET.sumEt[0:5].compute()}")
+        met = events.PuppiMET
+        met["pt"] = 0.0
+        met["phi"] = 0.0
+        met["sumEt"] = 0.0
+        # logger.debug(f"After Puppi: pt = {events.PuppiMET.pt[0:5].compute()}, phi = {events.PuppiMET.phi[0:5].compute()}, sumEt = {events.PuppiMET.sumEt[0:5].compute()}")
+        return met
+
     def process(self, events: coffea_nanoevent):
         t0 = time.perf_counter()
         year = self.config["year"]
@@ -475,6 +484,21 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"NanoAODv: {NanoAODv}")
         t1 = time.perf_counter()
         logger.info(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
+
+        # if hasattr(events, "FatJet"):
+        #     if hasattr(events.FatJet, "jetId") == False:
+        #         # add new attribute to events.FatJet which is "jetId" if it does not exists
+        #         events = self.add_jetId_to_Jets(events, jet_collection_name="FatJet")
+        # if hasattr(events, "Jet"):
+        #     if hasattr(events.Jet, "jetId") == False:
+        #         # add new attribute to events.Jet which is "jetId" if it does not exists
+        #         events = self.add_jetId_to_Jets(events, jet_collection_name="Jet")
+
+        if hasattr(events.Jet, "jetId") == False:
+            logger.warning("events.Jet does not have jetID attribute!")
+        else:
+            logger.warning("events.Jet has jetID attribute.")
+        # sys.exit()
         # LHE cut original start -----------------------------------------------------------------------------
         do_remove_dy_M100to200 = self.config["switches"]["do_remove_dy_M100to200"]
         if "dy_M-50" in dataset and do_remove_dy_M100to200:  # if dy_M-50, apply LHE cut
@@ -1023,7 +1047,8 @@ class EventProcessor(processor.ProcessorABC):
 
         year = self.config["year"]
         jets = events.Jet
-        met = events.MET
+
+        met = events.MET if hasattr(events, "MET") else self.met_fill_zeroes(events)
         PuppiMET = events.PuppiMET
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
             logger.info("Applying jet veto maps!")
@@ -1061,9 +1086,15 @@ class EventProcessor(processor.ProcessorABC):
         fatjet_selection = (
             (fatJets.pt > 150)
             & (abs(fatJets.eta) < 2.4)
-            & (fatJets.jetId >= 2) # tight jet ID
             & (fatJets.particleNetWithMass_WvsQCD > 0.75) # W vs QCD discriminator
         )
+        if hasattr(fatJets, "jetId"):
+            fatjet_selection = fatjet_selection & (fatJets.jetId >= 2)
+        else:
+            logger.warning("FatJets have no jetId field!")
+            tight_id, _ = custom_jet_id(fatJets)
+            fatjet_selection = fatjet_selection & tight_id
+
         fatJets = fatJets[fatjet_selection]
         nfatJets_pre = ak.num(fatJets, axis=1)
         # logger.warning(f"Number of fatjets (after selection): {nfatJets_pre[:25].compute()}")
@@ -1436,7 +1467,6 @@ class EventProcessor(processor.ProcessorABC):
             "fatJet1_default_eta_nominal": fatJet1_default.eta,
             "fatJet1_default_phi_nominal": fatJet1_default.phi,
             "fatJet1_default_mass_nominal": fatJet1_default.mass,
-            "fatJet1_default_jetId_nominal": fatJet1_default.jetId,
             "fatJet1_default_msoftdrop_nominal": fatJet1_default.msoftdrop,
             "fatJet1_default_electronIdx3SJ_nominal": fatJet1_default.electronIdx3SJ,
             "fatJet1_default_nConstituents_nominal": fatJet1_default.nConstituents,
@@ -1444,11 +1474,6 @@ class EventProcessor(processor.ProcessorABC):
             "fatJet1_default_tau2_nominal": fatJet1_default.tau2,
             "fatJet1_default_tau3_nominal": fatJet1_default.tau3,
             "fatJet1_default_tau4_nominal": fatJet1_default.tau4,
-            "fatJet1_default_btagDDBvLV2_nominal": fatJet1_default.btagDDBvLV2,
-            "fatJet1_default_btagDDCvBV2_nominal": fatJet1_default.btagDDCvBV2,
-            "fatJet1_default_btagDDCvLV2_nominal": fatJet1_default.btagDDCvLV2,
-            "fatJet1_default_btagDeepB_nominal": fatJet1_default.btagDeepB,
-            "fatJet1_default_btagHbb_nominal": fatJet1_default.btagHbb,
             "fatJet1_default_particleNetWithMass_QCD_nominal": fatJet1_default.particleNetWithMass_QCD,
             "fatJet1_default_particleNetWithMass_WvsQCD_nominal": fatJet1_default.particleNetWithMass_WvsQCD,
             "fatJet1_default_particleNetWithMass_ZvsQCD_nominal": fatJet1_default.particleNetWithMass_ZvsQCD,
@@ -2089,9 +2114,10 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         is_2017 = "2017" in year
         logger.debug(f"dnn_year: {dnn_year}")
-        if (NanoAODv == 9  or NanoAODv == 12) and dnn_year < 2022.0: # Run3 (year: 2022-2026) doesn't have puid, yet
+        if self.config["switches"]["do_jet_PUID_wgt"]:
+            logger.info("Applying jet PUID!")
             pass_jet_puid = jet_puid(jets, self.config)
-        else: # NanoAODv12 doesn't have Jet_PuID yet
+        else:
             pass_jet_puid = ak.ones_like(pass_jet_id, dtype="bool")
         # ------------------------------------------------------------#
         # Select jets
@@ -2100,9 +2126,10 @@ class EventProcessor(processor.ProcessorABC):
         if NanoAODv == 9 :
             jets["qgl"] = jets.qgl
         elif ((NanoAODv == 12 or NanoAODv == 15) and year in ["2016preVFP", "2016postVFP", "2017", "2018"]): # NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2
-            jets["qgl"] = jets.qgl
-            jets["btagPNetQvG"] = jets.qgl
-            jets["btagDeepFlavQG"] = jets.qgl
+            # if qgl is not present, set it to -1.0
+            jets["qgl"] = jets.qgl if hasattr(jets, "qgl") else ak.zeros_like(jets.pt) - 1.0
+            jets["btagPNetQvG"] = jets.btagPNetQvG if hasattr(jets, "btagPNetQvG") else ak.zeros_like(jets.pt) - 1.0
+            jets["btagDeepFlavQG"] = jets.btagDeepFlavQG if hasattr(jets, "btagDeepFlavQG") else ak.zeros_like(jets.pt) - 1.0
         else: # NanoAODv12
             jets["btagPNetQvG"] = jets.btagPNetQvG
             jets["btagDeepFlavQG"] = jets.btagDeepFlavQG
@@ -2179,7 +2206,6 @@ class EventProcessor(processor.ProcessorABC):
         # jj_eta      = (jj_pairs.j1 + jj_pairs.j2).eta
         # jj_phi      = (jj_pairs.j1 + jj_pairs.j2).phi
 
-
         # # index of pair with max |Δη|
         # idx_max_dEta = ak.argmax(jj_dEta, axis=1, keepdims=True)
         # jj_pairs_max_dEta = jj_pairs[idx_max_dEta]
@@ -2195,7 +2221,6 @@ class EventProcessor(processor.ProcessorABC):
         # jj_max_dEta_pt    = ak.firsts(jj_max_dEta_p4.pt)
         # jj_max_dEta_eta   = ak.firsts(jj_max_dEta_p4.eta)
         # jj_max_dEta_phi   = ak.firsts(jj_max_dEta_p4.phi)
-
 
         # apply jetpuid if not have done already
         if is_mc and (variation=="nominal") and dnn_year < 2022.0: # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
@@ -2303,7 +2328,6 @@ class EventProcessor(processor.ProcessorABC):
             f"jet1_phi_{variation}": jet1.phi,
             f"jet1_btagPNetQvG_{variation}": jet1.btagPNetQvG,
             f"jet1_btagDeepFlavQG_{variation}": jet1.btagDeepFlavQG,
-            f"jet1_jetId_{variation}": jet1.jetId,
             f"jet1_mass_{variation}": jet1.mass,
             f"jet1_area_{variation}": jet1.area,
             # -------------------------
@@ -2313,7 +2337,6 @@ class EventProcessor(processor.ProcessorABC):
             f"jet2_phi_{variation}": jet2.phi,
             f"jet2_btagPNetQvG_{variation}": jet2.btagPNetQvG,
             f"jet2_btagDeepFlavQG_{variation}": jet2.btagDeepFlavQG,
-            f"jet2_jetId_{variation}": jet2.jetId,
             f"jet2_mass_{variation}": jet2.mass,
             f"jet2_area_{variation}": jet2.area,
             # -------------------------
@@ -2323,7 +2346,6 @@ class EventProcessor(processor.ProcessorABC):
             f"jet3_phi_{variation}": jet3.phi,
             f"jet3_btagPNetQvG_{variation}": jet3.btagPNetQvG,
             f"jet3_btagDeepFlavQG_{variation}": jet3.btagDeepFlavQG,
-            f"jet3_jetId_{variation}": jet3.jetId,
             f"jet3_mass_{variation}": jet3.mass,
             f"jet3_area_{variation}": jet3.area,
             # -------------------------
@@ -2333,9 +2355,9 @@ class EventProcessor(processor.ProcessorABC):
             f"jet4_phi_{variation}": jet4.phi,
             f"jet4_btagPNetQvG_{variation}": jet4.btagPNetQvG,
             f"jet4_btagDeepFlavQG_{variation}": jet4.btagDeepFlavQG,
-            f"jet4_jetId_{variation}": jet4.jetId,
             f"jet4_mass_{variation}": jet4.mass,
             f"jet4_area_{variation}": jet4.area,
+
             # -------------------------
             f"jj_mass_{variation}": dijet.mass,
             # f"jj_mass_{variation}" : p4_sum_mass(jet1,jet2),
@@ -2363,14 +2385,24 @@ class EventProcessor(processor.ProcessorABC):
             f"ll_zstar_log_{variation}": np.log(np.abs(zeppenfeld)),
             f"njets_{variation}": njets,
         }
-        if dnn_year < 2022.0:
-            """Additional jet variables only for Run2"""
+
+        if hasattr(jets, "jetId"):
+            jet_loop_out_dict.update({
+                f"jet1_jetId_{variation}": jet1.jetId,
+                f"jet2_jetId_{variation}": jet2.jetId,
+                f"jet3_jetId_{variation}": jet3.jetId,
+                f"jet4_jetId_{variation}": jet4.jetId,
+            })
+        if hasattr(jets, "puId"):
             jet_loop_out_dict.update({
                 f"jet1_puId_{variation}": jet1.puId,
                 f"jet2_puId_{variation}": jet2.puId,
                 f"jet3_puId_{variation}": jet3.puId,
                 f"jet4_puId_{variation}": jet4.puId,
-
+            })
+        if dnn_year < 2022.0:
+            """Additional jet variables only for Run2"""
+            jet_loop_out_dict.update({
                 f"jet1_qgl_{variation}": jet1.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
                 f"jet2_qgl_{variation}": jet2.qgl,
                 f"jet3_qgl_{variation}": jet3.qgl,
@@ -2766,8 +2798,13 @@ class EventProcessor(processor.ProcessorABC):
             # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
             # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            if hasattr(jets, "btagDeepB"):
+                btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+                btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            elif hasattr(jets, "btagDeepFlavB"):
+                # FIXME: Currently the working point is used what was defined for DeepB, should be updated for DeepFlavB
+                btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+                btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
 
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)
