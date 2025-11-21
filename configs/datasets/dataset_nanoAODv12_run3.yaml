@@ -296,7 +296,7 @@ years:
 
     "2022postEE":
         Data:
-            total_lumi_pb: 7980.4
+            total_lumi_pb: 26671.7
             data_E:
                 skip_sample: False
                 datasets:
