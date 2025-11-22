@@ -8,6 +8,9 @@ import dask_awkward as dak
 from omegaconf import OmegaConf
 import correctionlib
 
+import logging
+from modules.utils import logger
+
 def get_corr_inputs(input_dict, corr_obj):
     """
     Helper function for getting values of input variables
@@ -1307,14 +1310,18 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
     jets = ak.to_packed(jets[btag_jet_selection])
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
 
+    if hasattr(jets, "btagDeepB"):
+        btag_score = jets.btagDeepB
+    else:
+        logger.warning("jets has no attribute btagDeepB, using btagDeepFlavB instead")
+        btag_score = jets.btagDeepFlavB
 
     correctionlib_out = btag_json.evaluate( # UL
         "central",
         jets.hadronFlavour,
         abs(jets.eta),
         jets.pt,
-        # jets.btagDeepFlavB,
-        jets.btagDeepB,
+        btag_score,
     )
 
     # correctionlib_out = btag_json.eval( # RERECO
@@ -1364,7 +1371,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # sys_wgts =  btag_json.eval( # RERECO
                 #     f"up_{sys}",
@@ -1382,7 +1389,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # sys_wgts =  btag_json.eval( # RERECO
                 #     f"down_{sys}",
@@ -1424,7 +1431,7 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
         abs(jets.eta),
         jets.pt,
         # jets.btagDeepFlavB,
-        jets.btagDeepB,
+        btag_score,
     )
     # print(f"correctionlib_out: {correctionlib_out.compute()}")
     # correctionlib_out = ak.pad_none(correctionlib_out, target=1)
@@ -1467,7 +1474,7 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # print(f"sys_wgts up: {sys_wgts.compute()}")
                 btag_wgt_up = ak.where(btag_mask, sys_wgts, btag_wgt_up)
@@ -1484,7 +1491,7 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # print(f"sys_wgts down: {sys_wgts.compute()}")
                 btag_wgt_down = ak.where(btag_mask, sys_wgts, btag_wgt_down)

@@ -76,7 +76,7 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
 
-def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None, isCutflow=False):
+def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml"):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
         save_path = f"/depot/cms/users/{username}/results/stage1/test/" # default
@@ -113,7 +113,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         },
     ).events()
 
-    out_collections = processor.process(events)
+    out_collections = processor.process(events, dataset_yaml_file=dataset_yaml_file)
 
     # Save the cutflow
     if hasattr(processor, "cutflow") and isCutflow:
@@ -291,6 +291,12 @@ if __name__ == "__main__":
     default=9,
     choices = [9, 12, 15],
     help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
+    )
+    parser.add_argument(
+        "--yaml",
+        dest="dataset_yaml_file",
+        default="configs/datasets/dataset.yaml",
+        help="path of yaml file containing the dataset names"
     )
     parser.add_argument(
         "-maxfile",
@@ -471,7 +477,7 @@ if __name__ == "__main__":
                             logger.debug(f"alt_sample['files']: {alt_sample['files']}")
 
                             # rebuild the events/out collections for this attempt
-                            to_persist = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
+                            to_persist = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=start_save_path, dataset_yaml_file=args.dataset_yaml_file)
 
                             jobstat.mark_running(dataset, idx)
 
@@ -568,7 +574,7 @@ if __name__ == "__main__":
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
                 logger.debug(f"dataset: {dataset}")
-                to_persist = dataset_loop(coffea_processor, sample, test=test_mode, save_path=start_save_path)
+                to_persist = dataset_loop(coffea_processor, sample, test=test_mode, save_path=start_save_path, dataset_yaml_file=args.dataset_yaml_file)
 
                 save_path = getSavePath(start_save_path, sample, 0)
                 logger.info(f"save_path: {save_path}")

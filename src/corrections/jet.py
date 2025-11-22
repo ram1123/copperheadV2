@@ -227,6 +227,7 @@ def custom_jet_id(jets):
     if (abs(Jet_eta) <= 2.7) Jet_passJetIdTightLepVeto = Jet_passJetIdTight && (Jet_muEF < 0.8) && (Jet_chEmEF < 0.8);
     else Jet_passJetIdTightLepVeto = Jet_passJetIdTight;
     """
+    logger.info(f"fields in jets: {jets.fields}")
     eta = jets.eta
     aeta = abs(eta)
 
@@ -853,7 +854,16 @@ def get_jet_variation(jets_orig, variation, fields2add):
         behavior=candidate.behavior,
     ) # NOTE: if you use pt, eta, phi, or t variables to initialize, it doesn't work. It's quite finnicky in that way.
     for field in fields2add:
-        new_jets[field] = getattr(jets_orig, field)
+        if hasattr(jets_orig, field):
+            new_jets[field] = getattr(jets_orig, field)
+        else:
+            logger.warning(f"jets_orig has no field {field}!")
+            if field == "puId":
+                # try puIdDisc for nanoAODv15
+                if hasattr(jets_orig, "puIdDisc"):
+                    new_jets["puId"] = getattr(jets_orig, "puIdDisc")
+                else:
+                    logger.warning(f"jets_orig has no field puIdDisc either!")
 
 
     return new_jets

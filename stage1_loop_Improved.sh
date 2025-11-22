@@ -151,12 +151,12 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2023"]=""
     data_l_dict["2023BPix"]=""
 
-    # bkg_l="VV"
-    bkg_l=""
+    bkg_l="DY"
+    # bkg_l="DY Top VV EWK VVV"
     # bkg_l="Top"
 
-    sig_l="Higgs"
-    # sig_l=""
+    # sig_l="Higgs"
+    sig_l=""
 fi
 
 chunksize=300000
@@ -178,6 +178,7 @@ echo "  Output append: $outAppend"
 echo "  Region: $region"
 echo "  Category: $category"
 
+
 # ----------- Main loop -----------
 for year in "${years[@]}"; do
     data_l="${data_l_dict[$year]}"
@@ -193,9 +194,9 @@ for year in "${years[@]}"; do
     command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len  --rerun --isCutflow "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --rerun  --skipSamples "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --rerun --isCutflow "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML --rerun  --skipSamples "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML "
 
     ### DNN training parameters
     training_fold=3

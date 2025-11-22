@@ -451,7 +451,7 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"After Puppi: pt = {events.PuppiMET.pt[0:5].compute()}, phi = {events.PuppiMET.phi[0:5].compute()}, sumEt = {events.PuppiMET.sumEt[0:5].compute()}")
         return met
 
-    def process(self, events: coffea_nanoevent):
+    def process(self, events: coffea_nanoevent, dataset_yaml_file: str) -> dict:
         t0 = time.perf_counter()
         year = self.config["year"]
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
@@ -799,8 +799,14 @@ class EventProcessor(processor.ProcessorABC):
         t7 = time.perf_counter()
         logger.info(f"[timing] diMuon selection time: {t7 - t6:.2f} seconds")
         # --------------------------------------------------------#
-
-        electron_id = self.config[f"electron_id_v{NanoAODv}"]
+        if NanoAODv == 9:
+            electron_id = self.config["electron_id_v9"]
+        elif NanoAODv == 12 or NanoAODv == 15:
+            # for electron_id NanoAODv should be 12 for both 12 and 15.
+            electron_id = self.config["electron_id_v12"]
+        else:
+            logger.error(f"Unsupported NanoAODv: {NanoAODv}")
+            raise ValueError(f"Unsupported NanoAODv: {NanoAODv}")
         logger.debug(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
         ecal_gap = (1.44 < abs(events.Electron.eta)) & (1.57 > abs(events.Electron.eta)) # Source: line 460 of https://cms.cern.ch/iCMS/analysisadmin/cadilines?id=1973&ancode=EGM-17-001&tp=an&line=EGM-17-001
@@ -1198,9 +1204,9 @@ class EventProcessor(processor.ProcessorABC):
             # original initial weight start ----------------
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights) # temporary commenting out
 
-            if "2022" in str(year) or "2023" in str(year) or "2024" in str(year):
+            if "2022" in str(year) or "2023" in str(year) or "2024" in str(year) or NanoAODv == 15:
                 # FIXME: Remove this if condition later when we update the yaml file for run2 too.
-                sample_info = get_sample_info("./configs/datasets/dataset_nanoAODv12_run3.yaml", dataset, year) # FIXME: hardcoded filename
+                sample_info = get_sample_info(dataset_yaml_file, dataset, year) # FIXME: hardcoded filename
                 integrated_lumi = sample_info["total_lumi_pb"]
 
                 cross_section = sample_info["cross_section_pb"]
