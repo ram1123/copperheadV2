@@ -2062,6 +2062,14 @@ class EventProcessor(processor.ProcessorABC):
                 "btagDeepB",
                 "btagDeepFlavB",
                 "btagRobustParTAK4B",
+                "eta",
+                "neHEF",
+                "neEmEF",
+                "chHEF",
+                "chEmEF",
+                "muEF",
+                "chMultiplicity",
+                "neMultiplicity",
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
 
@@ -2443,21 +2451,21 @@ class EventProcessor(processor.ProcessorABC):
         if "btagDeepFlavB" in jets.fields:
             extra_jet_loop_dict.update({
                 f"jet1_btagDeepFlavB_{variation}":   jet1.btagDeepFlavB,
-                f"jet1_btagDeepFlavCvB_{variation}": jet1.btagDeepFlavCvB,
-                f"jet1_btagDeepFlavCvL_{variation}": jet1.btagDeepFlavCvL,
-                f"jet1_btagDeepFlavQG_{variation}":  jet1.btagDeepFlavQG,
+                # f"jet1_btagDeepFlavCvB_{variation}": jet1.btagDeepFlavCvB,
+                # f"jet1_btagDeepFlavCvL_{variation}": jet1.btagDeepFlavCvL,
+                # f"jet1_btagDeepFlavQG_{variation}":  jet1.btagDeepFlavQG,
                 f"jet2_btagDeepFlavB_{variation}":   jet2.btagDeepFlavB,
-                f"jet2_btagDeepFlavCvB_{variation}": jet2.btagDeepFlavCvB,
-                f"jet2_btagDeepFlavCvL_{variation}": jet2.btagDeepFlavCvL,
-                f"jet2_btagDeepFlavQG_{variation}":  jet2.btagDeepFlavQG,
+                # f"jet2_btagDeepFlavCvB_{variation}": jet2.btagDeepFlavCvB,
+                # f"jet2_btagDeepFlavCvL_{variation}": jet2.btagDeepFlavCvL,
+                # f"jet2_btagDeepFlavQG_{variation}":  jet2.btagDeepFlavQG,
                 f"jet3_btagDeepFlavB_{variation}":   jet3.btagDeepFlavB,
-                f"jet3_btagDeepFlavCvB_{variation}": jet3.btagDeepFlavCvB,
-                f"jet3_btagDeepFlavCvL_{variation}": jet3.btagDeepFlavCvL,
-                f"jet3_btagDeepFlavQG_{variation}":  jet3.btagDeepFlavQG,
+                # f"jet3_btagDeepFlavCvB_{variation}": jet3.btagDeepFlavCvB,
+                # f"jet3_btagDeepFlavCvL_{variation}": jet3.btagDeepFlavCvL,
+                # f"jet3_btagDeepFlavQG_{variation}":  jet3.btagDeepFlavQG,
                 f"jet4_btagDeepFlavB_{variation}":   jet4.btagDeepFlavB,
-                f"jet4_btagDeepFlavCvB_{variation}": jet4.btagDeepFlavCvB,
-                f"jet4_btagDeepFlavCvL_{variation}": jet4.btagDeepFlavCvL,
-                f"jet4_btagDeepFlavQG_{variation}":  jet4.btagDeepFlavQG,
+                # f"jet4_btagDeepFlavCvB_{variation}": jet4.btagDeepFlavCvB,
+                # f"jet4_btagDeepFlavCvL_{variation}": jet4.btagDeepFlavCvL,
+                # f"jet4_btagDeepFlavQG_{variation}":  jet4.btagDeepFlavQG,
             })
 
         # --- ParticleNet b-tag family ---
