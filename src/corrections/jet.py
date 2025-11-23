@@ -7,10 +7,12 @@ import os
 import correctionlib.schemav2 as cs
 import correctionlib
 
-import logging
-from modules.utils import logger
 import coffea.nanoevents.methods.candidate as candidate
 import random
+
+import logging
+from modules.utils import logger
+
 
 # def jec_names_and_sources_yaml(jec_pars, year):
 #     localdir = os.path.dirname(os.path.abspath("__file__"))
@@ -291,14 +293,34 @@ def jet_id(jets, config):
     return pass_jet_id
 
 
+def get_puId(jets):
+    """
+    Return the correct PUID field from a Jet or FatJet collection.
+    Priority:
+      1) puId17   (NanoAODv15 Run3)
+      2) puId     (Run2/NanoAODv12)
+      3) puIdDisc (fallback)
+    """
+    if hasattr(jets, "puId17"):
+        logger.info("Using puId17 for PUID")
+        return jets.puId17
+
+    if hasattr(jets, "puId"):
+        logger.info("Using puId for PUID")
+        return jets.puId
+
+    if hasattr(jets, "puIdDisc"):
+        logger.info("Using puIdDisc for PUID")
+        return jets.puIdDisc
+
+    raise AttributeError(
+        "Jet collection has no PUID branch: expected one of puId17, puId, puIdDisc"
+    )
+
 def jet_puid(jets, config):
     jet_puid2use = config["jet_puid"]
     year = config["year"]
-    if year=="2017_RERECO":
-        logger.debug("using puId 17!")
-        puId = jets.puId17
-    else:
-        puId = jets.puId
+    puId = get_puId(jets)
     # jet puid for standard wps are different for 2016 vs 2017,2018 as shown in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL#Working_Points
     # only apply jet puid to jets with pt < 50, else, pass
     # as stated in https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJetIDUL
@@ -315,7 +337,7 @@ def jet_puid(jets, config):
             "medium": (puId >= 6) | (jets.pt >= 50),
             "tight": (puId >= 7) | (jets.pt >= 50),
         }
-    pass_jet_puid = ak.ones_like(jets.jetId, dtype=bool)
+    pass_jet_puid = ak.ones_like(jets.pt, dtype=bool)
 
     if "2017" in year: # for misreco due ot ECAL endcap noise
         eta_window = (abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0)
@@ -481,7 +503,16 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
     """
     Apply HEM veto for 2018 UL as recommended on https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/5
     """
-    puId = jets.puId
+    if hasattr(jets, "jetId"):
+        jetId_bits = jets.jetId
+    else:
+        # synthesize bit-coded jetId from custom_jet_id
+        tight, tightLepVeto = custom_jet_id(jets)
+        jetId_bits = ak.zeros_like(jets.pt, dtype=np.int8)
+        jetId_bits = ak.where(tight, jetId_bits | 2, jetId_bits)
+        jetId_bits = ak.where(tightLepVeto, jetId_bits | 4, jetId_bits)
+
+    puId = get_puId(jets)
     # jet puid selection
     jet_puid_wps = {
             "loose": (puId >= 4) | (jets.pt >= 50),
@@ -496,16 +527,16 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
     # jets that don’t overlap with PF muon (dR < 0.2)
     jet_muon_iso_cut = (jets.muonIdx1 == -1) & (jets.muonIdx2 == -1) # Source: https://cms-talk.web.cern.ch/t/jetvetomaps-usage-for-2018ul/61981/2
     jet_em_frac_cut  = (jets.chEmEF + jets.neEmEF) < 0.9 # EM fraction cut
-    pass_jet_tightID = (jets.jetId >= 2) & jet_em_frac_cut & jet_muon_iso_cut
+    pass_jet_tightID = (jetId_bits >= 2) & jet_em_frac_cut & jet_muon_iso_cut
 
-    pass_jet_tightLepVetoID = jets.jetId ==6 # Source: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13TeVUL
+    pass_jet_tightLepVetoID = jetId_bits ==6 # Source: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13TeVUL
 
     pass_jet_id_total = pass_jet_tightLepVetoID | pass_jet_tightID # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/2
 
 
 
     loose_jet_selection =( # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/2
-        jets.pt > 15
+        (jets.pt > 15) # FIXME: Check if there is some change if I add () or not.
         & pass_jet_id_total
         & pass_jet_puid
     )
@@ -812,10 +843,7 @@ def do_jer_smear(jets, config, event_id, year="2018", syst_l=["nom", "up", "down
         # jer_smearing = applyStrat1(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
         # jer_smearing = applyStrat2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
         # jer_smearing = applyStrat1n2(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta)
-        if nanoAOD_version==12:
-            jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, jets.puId, pt_jec, jets.eta, year)
-        elif nanoAOD_version==15:
-            jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, jets.puIdDisc, pt_jec, jets.eta, year)
+        jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, get_puId(jets), pt_jec, jets.eta, year)
 
         # jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
         jets[f"pt_jer_{syst}"] = jer_smearing * pt_jec  # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
@@ -859,11 +887,8 @@ def get_jet_variation(jets_orig, variation, fields2add):
         else:
             logger.warning(f"jets_orig has no field {field}!")
             if field == "puId":
-                # try puIdDisc for nanoAODv15
-                if hasattr(jets_orig, "puIdDisc"):
-                    new_jets["puId"] = getattr(jets_orig, "puIdDisc")
-                else:
-                    logger.warning(f"jets_orig has no field puIdDisc either!")
+                puId = get_puId(jets_orig)
+                new_jets["puId"] = puId
 
 
     return new_jets

@@ -451,7 +451,7 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"After Puppi: pt = {events.PuppiMET.pt[0:5].compute()}, phi = {events.PuppiMET.phi[0:5].compute()}, sumEt = {events.PuppiMET.sumEt[0:5].compute()}")
         return met
 
-    def process(self, events: coffea_nanoevent, dataset_yaml_file: str) -> dict:
+    def process(self, events: coffea_nanoevent, dataset_yaml_file: str):
         t0 = time.perf_counter()
         year = self.config["year"]
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
@@ -484,15 +484,6 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"NanoAODv: {NanoAODv}")
         t1 = time.perf_counter()
         logger.info(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
-
-        # if hasattr(events, "FatJet"):
-        #     if hasattr(events.FatJet, "jetId") == False:
-        #         # add new attribute to events.FatJet which is "jetId" if it does not exists
-        #         events = self.add_jetId_to_Jets(events, jet_collection_name="FatJet")
-        # if hasattr(events, "Jet"):
-        #     if hasattr(events.Jet, "jetId") == False:
-        #         # add new attribute to events.Jet which is "jetId" if it does not exists
-        #         events = self.add_jetId_to_Jets(events, jet_collection_name="Jet")
 
         if hasattr(events.Jet, "jetId") == False:
             logger.warning("events.Jet does not have jetID attribute!")
@@ -1376,13 +1367,20 @@ class EventProcessor(processor.ProcessorABC):
             """
             logger.warning(f"Year format contains more than 4 characters: {year}")
             dnn_year = float(year[:4])
-            dnn_year += 0.5
+            if "pre" in year:
+                dnn_year += 0.0
+            else:
+                dnn_year += 0.5
             logger.warning(f"Mapped year to dnn_year: {dnn_year}")
         else:
             dnn_year = float(year)
         logger.debug(f"dnn_year: {dnn_year}")
         out_dict = {
             "event": events.event,
+            "run": events.run,
+            "luminosityBlock": events.luminosityBlock,
+            "fraction": ak.ones_like(events.event) * events.metadata["fraction"],
+            "year": ak.ones_like(nmuons) * dnn_year,
             "PV_npvs": events.PV.npvs,
             "PV_npvsGood": events.PV.npvsGood,
             "MET_pt": met.pt, # As we are using CHS jets, so use MET not PuppiMET
@@ -1439,11 +1437,6 @@ class EventProcessor(processor.ProcessorABC):
             "mu1_pt_fsr": mu1.pt_fsr,
             "mu2_pt_fsr": mu2.pt_fsr,
             # "pass_leading_pt" : pass_leading_pt,
-            "year": ak.ones_like(nmuons) * dnn_year,
-            "run": events.run,
-            "event": events.event,
-            "luminosityBlock": events.luminosityBlock,
-            "fraction": ak.ones_like(events.event) * events.metadata["fraction"],
             # add jet default kinematics here
             "jet1_default_pt_nominal": jet1_default.pt,
             "jet1_default_eta_nominal": jet1_default.eta,
