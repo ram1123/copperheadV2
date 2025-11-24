@@ -1,0 +1,5 @@
+Muon_pt: [50, 20, 80, "Muon p_{T} [GeV]", 0.9, 1.1]
+Muon_eta: [50, -4.7, 4.7, "Muon #eta", 0.95, 1.05]
+
+
+default: [50, 0, 300, "variable", 0.0, 2.0]

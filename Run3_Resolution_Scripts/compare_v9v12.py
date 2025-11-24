@@ -1,7 +1,15 @@
 import yaml
+import os
+import sys
+
 from modules.DistributionCompare import DistributionCompare
 
-with open("config/plot_config_nanoV12vsV9.yaml") as f:
+config_path = "config/plot_config_nanoV12vsV9.yaml"
+
+base = os.path.dirname(os.path.abspath(__file__))
+config_full_path = os.path.join(base, config_path)
+
+with open(config_full_path, "r") as f:
     config = yaml.safe_load(f)
 
 year = config["year"]
@@ -11,14 +19,17 @@ fields_to_load = config["fields_to_load"]
 control_region = config["control_region"]
 
 muons = config["variables"]["muon"]
-all_vars = muons
+all_vars = muons[0]
+
+print(f"variables to compare: {all_vars}")
+print(f"variables to compare: {type(all_vars)}")
 
 comparer = DistributionCompare(
     year = year,
     input_paths_labels = input_paths_labels,
     fields = fields_to_load,
     directoryTag = directoryTag,
-    varlist_file = "config/varlist_nano.yaml"
+    varlist = all_vars
 )
 comparer.load_data()
 

@@ -1,6 +1,6 @@
 year: 2018C
 control_region: None
-directoryTag: Nov24_NanoCompare_DY
+directoryTag: Nov24_NanoCompare_DY_TRatioPlot_v2
 
 input_paths_labels_data:
     # "v9": "/depot/cms/hmm/shar1172/OfficialNanoAODv9/Data/Run2018C/*.root"
@@ -28,6 +28,7 @@ fields_to_load:
     - Muon_phi
 
 NormalizeToUnity: True
+LowerPadMode: "ratio"   # "diff" or "ratio"
 
 variables:
     muon:
