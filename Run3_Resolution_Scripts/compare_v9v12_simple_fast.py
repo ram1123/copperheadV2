@@ -5,55 +5,34 @@ import os
 rt.gROOT.SetBatch(True)
 rt.ROOT.EnableImplicitMT()   # Multi-threading ON
 rt.gStyle.SetOptStat(0)
-# rt.gErrorIgnoreLevel = rt.kWarning
 rt.gErrorIgnoreLevel = rt.kError
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 
-def load_and_plot(path, label, var_name, binning):
-    """
-    Load ROOT file using ROOT's RDataFrame and plot the muon pT distribution.
-    """
-    # check if path is a text file containing list of files
+def resolve_path(path):
+    """Return list of ROOT files from either a .txt list or a direct path/pattern."""
     if path.endswith(".txt"):
         path = os.path.join(BASE, path)
         with open(path, "r") as f:
             files = [line.strip() for line in f if line.strip()]
-        path = files
-
-    rdf = rt.RDataFrame("Events", path, [var_name])
-
-    n_entries = rdf.Count().GetValue()
-    print(f"Number of entries for {label}: {n_entries}")
-
-    nb, xmin, xmax = binning
-    h = rdf.Histo1D(
-        (f"h_{var_name}_{label}", f"{var_name}", nb, xmin, xmax),
-        var_name
-    )
-
-    hist = h.GetPtr()
-    hist.GetXaxis().SetTitle(var_name)
-    hist.GetYaxis().SetTitle("Entries")
-
-    return hist
+        return files
+    else:
+        return path  # string or pattern; ROOT can handle list or string
 
 
 def main():
     config_full_path = os.path.join(BASE, "config/plot_config_nanoV12vsV9.yaml")
-
     with open(config_full_path, "r") as f:
         config = yaml.safe_load(f)
 
     input_paths_labels = config["input_paths_labels"]
 
     electrons_var = config["variables"]["electron"]
-    muons_var = config["variables"]["muon"]
-    jets_var = config["variables"]["jet"]
+    muons_var     = config["variables"]["muon"]
+    jets_var      = config["variables"]["jet"]
     variables_to_plot = electrons_var + muons_var + jets_var
     # variables_to_plot = jets_var
-
 
     directoryTag = config["directoryTag"]
     NormalizeToUnity = config.get("NormalizeToUnity", False)
@@ -65,27 +44,61 @@ def main():
         output_dir += "_Normalized"
     os.makedirs(output_dir, exist_ok=True)
 
-    # -------- Loop over variables to plot --------
+    # ------------------------------------------------
+    # 1) Build one RDataFrame per sample, reuse later
+    # ------------------------------------------------
+    # we can load all branches we might need; ROOT only reads what is used
+    # but if you want, you can also build the union of var names automatically
+    fields_to_load = config["fields_to_load"]  # or build from variables_to_plot
+
+    rdf_map = {}
+    for label, path in input_paths_labels.items():
+        files = resolve_path(path)
+        # print(f"\nBuilding RDataFrame for {label} from: {files}")
+        rdf = rt.RDataFrame("Events", files, fields_to_load)
+        # optional: count once here
+        n_entries = rdf.Count()
+        rdf_map[label] = (rdf, n_entries)
+
+    # trigger all Counts in one go (optional but nice)
+    print("\nComputing event counts...")
+    for label, (rdf, n_entries) in rdf_map.items():
+        print(f"{label}: {n_entries.GetValue()} events")
+
+    # ------------------------------------------------
+    # 2) Loop over variables; reuse RDFs
+    # ------------------------------------------------
     for vblock in variables_to_plot:
         var_name = list(vblock.keys())[0]
         cfg = vblock[var_name]
 
-        # unpack YAML
         binning = cfg[0]["Range"]
-        title = cfg[1]["Title"]
+        title   = cfg[1]["Title"]
         rmin, rmax = cfg[2]["RatioPlot"]
+
+        nb, xmin, xmax = binning
 
         print(f"\n === Plotting variable: {var_name} ===\n")
 
-        # Load histograms
+        # Build histograms from existing RDFs
         hist = {}
-        for label, path in input_paths_labels.items():
-            # print(f"Loading {label}: {path}")
-            hist[label] = load_and_plot(path, label, var_name, binning)
+        for label, (rdf, _) in rdf_map.items():
+            print(f"  -> {label}")
+            h = rdf.Histo1D(
+                (f"h_{var_name}_{label}", title, nb, xmin, xmax),
+                var_name
+            )
+            hist[label] = h  # keep the RResultPtr for now
 
+        # Force computation once we actually need the TH1
+        # (ROOT will run one event loop per sample and reuse branches internally)
+        for label in hist:
+            hist[label] = hist[label].GetPtr()
+            hist[label].GetXaxis().SetTitle(title)
+            hist[label].GetYaxis().SetTitle("Entries")
+
+        # Canvas and colors
         canvas = rt.TCanvas("canvas", var_name, 800, 600)
-
-        # Colors
         hist["v9"].SetLineColor(rt.kRed)
         hist["v12"].SetLineColor(rt.kBlue)
         if "v15" in hist:
@@ -105,10 +118,6 @@ def main():
         ratio_plot.GetLowerRefYaxis().SetTitle("Ratio")
         ratio_plot.GetLowerRefYaxis().SetRangeUser(rmin, rmax)
 
-        # log-scale upper pad
-        ratio_plot.GetUpperPad().cd()
-        # ratio_plot.GetUpperPad().SetLogy()
-
         # v15 overlay
         if "v15" in hist:
             h15 = hist["v15"].Clone(f"h_ratio15_{var_name}")
@@ -126,6 +135,7 @@ def main():
             legend.AddEntry(hist["v15"], "v15", "l")
         legend.Draw()
 
+        # Linear and log-y versions
         canvas.SaveAs(f"{output_dir}/{var_name}.pdf")
         ratio_plot.GetUpperPad().SetLogy(True)
         canvas.SaveAs(f"{output_dir}/{var_name}_log.pdf")

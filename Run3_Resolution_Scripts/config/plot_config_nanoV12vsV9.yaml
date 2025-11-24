@@ -21,17 +21,19 @@ fields_to_load:
     - Muon_eta
     - Muon_phi
 
+NormalizeToUnity: False
+
 variables:
     muon:
         - Muon_pt:
-            - Range: [50, 20, 80]
+            - Range: [50, 20, 200]
             - Title: "Muon p_{T} [GeV]"
             - RatioPlot: [0.995, 1.005]
 
-        - Muon_bsConstrainedPt:
-            - Range: [50, 20, 80]
-            - Title: "BS Constrained Muon p_{T} [GeV]"
-            - RatioPlot: [0.995, 1.005]
+        # - Muon_bsConstrainedPt:
+        #     - Range: [50, 20, 200]
+        #     - Title: "BS Constrained Muon p_{T} [GeV]"
+        #     - RatioPlot: [0.995, 1.005]
 
         - Muon_eta:
             - Range: [50, -4.7, 4.7]
@@ -46,19 +48,19 @@ variables:
 
     electron:
         - Electron_pt:
-            - Range: [50, 20, 80]
+            - Range: [50, 10, 200]
             - Title: "Electron p_{T} [GeV]"
             - RatioPlot: [0.9, 1.1]
 
-        - Electron_eta:
-            - Range: [50, -4.7, 4.7]
-            - Title: "Electron #eta"
-            - RatioPlot: [0.98, 1.02]
+        # - Electron_eta:
+        #     - Range: [50, -4.7, 4.7]
+        #     - Title: "Electron #eta"
+        #     - RatioPlot: [0.98, 1.02]
 
-        - Electron_phi:
-            - Range: [50, -3.14, 3.14]
-            - Title: "Electron #phi"
-            - RatioPlot: [0.995, 1.005]
+        # - Electron_phi:
+        #     - Range: [50, -3.14, 3.14]
+        #     - Title: "Electron #phi"
+        #     - RatioPlot: [0.995, 1.005]
 
 
     jet:
