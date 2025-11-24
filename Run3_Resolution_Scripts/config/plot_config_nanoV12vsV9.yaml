@@ -1,6 +1,6 @@
 year: 2018C
 control_region: None
-directoryTag: Nov24_NanoCompare_DY_TRatioPlot_v2
+directoryTag: Nov24_NanoCompare_DY_TRatioPlot_v4
 
 input_paths_labels_data:
     # "v9": "/depot/cms/hmm/shar1172/OfficialNanoAODv9/Data/Run2018C/*.root"

@@ -113,13 +113,20 @@ def main():
             h.SetMaximum(1.3 * max_y)
 
         if "v9" in hist:
-            hist["v9"].SetLineColor(rt.kRed)
+            hist["v9"].SetLineColor(rt.kBlack)
+            hist["v9"].SetMarkerColor(rt.kBlack)
+            hist["v9"].SetLineWidth(2)
+            hist["v9"].SetLineStyle(1)
         if "v12" in hist:
             hist["v12"].SetLineColor(rt.kBlue)
+            hist["v12"].SetMarkerColor(rt.kBlue)
+            hist["v12"].SetLineWidth(2)
             hist["v12"].SetLineStyle(9)
         if "v15" in hist:
-            hist["v15"].SetLineColor(rt.kGreen + 2)
-            hist["v15"].SetLineStyle(10)
+            hist["v15"].SetLineColor(rt.kRed)
+            hist["v15"].SetMarkerColor(rt.kRed)
+            hist["v15"].SetLineWidth(2)
+            hist["v15"].SetLineStyle(2)
 
         # ------------------------------
         #  Build custom two-pad canvas
@@ -132,17 +139,21 @@ def main():
         ratio_plot.GetLowerRefYaxis().SetTitle("Ratio")
         ratio_plot.GetLowerRefYaxis().SetRangeUser(rmin, rmax)
 
+        rp_lower = ratio_plot.GetLowerRefGraph()   # This is the ratio
+        rp_pad = ratio_plot.GetLowerPad()
+        rp_pad.cd()
         # v15 overlay
         if "v15" in hist:
             h15 = hist["v15"].Clone(f"h_ratio15_{var_name}")
             h15.Divide(hist["v9"])
-            h15.SetLineColor(rt.kGreen+2)
+            h15.SetLineColor(rt.kRed)
             h15.SetLineStyle(10)
             ratio_plot.GetLowerPad().cd()
-            h15.Draw("HIST SAME")
+            h15.Draw("L SAME")
 
         # Legend
         ratio_plot.GetUpperPad().cd()
+        hist["v15"].Draw("HIST SAME")
         legend = rt.TLegend(0.7, 0.7, 0.9, 0.9)
         legend.AddEntry(hist["v9"], "v9", "l")
         legend.AddEntry(hist["v12"], "v12", "l")
