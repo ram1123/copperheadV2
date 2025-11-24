@@ -1,10 +1,10 @@
 year: 2018C
 control_region: None
-directoryTag: Nov24_NanoV12SanityCheck
+directoryTag: Nov24_NanoCompare_DY
 
-input_paths_labels:
+input_paths_labels_data:
     # "v9": "/depot/cms/hmm/shar1172/OfficialNanoAODv9/Data/Run2018C/*.root"
-    "v9": "config/v9_files.txt"
+    # "v9": "config/v9_files.txt"
     "v12": "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017C/*.root"
     "v15": "config/v15_files.txt"
     # "v12": "/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018C/*.root"
@@ -12,6 +12,12 @@ input_paths_labels:
     # "v12": "/depot/cms/hmm/shar1172/test2/*.root"
     # "v15": "root://xcache.cms.rcac.purdue.edu//store/data/Run2017C/SingleMuon/NANOAOD/UL2017_NanoAODv15-v1/2810000/57700297-283e-442c-8473-7e91a229ffc7.root"
     # "v15": "config/v15_files_test.txt"
+
+input_paths_labels:
+    "v9": "samples_txt_file/dy_M-50_aMCatNLO_v9.txt"
+    "v12": "/eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9/*.root"
+    "v15": "samples_txt_file/dy_M-50_aMCatNLO_v15.txt"
+
 
 plot_types:
     plot_1D: true
@@ -21,7 +27,7 @@ fields_to_load:
     - Muon_eta
     - Muon_phi
 
-NormalizeToUnity: False
+NormalizeToUnity: True
 
 variables:
     muon:
@@ -52,15 +58,15 @@ variables:
             - Title: "Electron p_{T} [GeV]"
             - RatioPlot: [0.9, 1.1]
 
-        # - Electron_eta:
-        #     - Range: [50, -4.7, 4.7]
-        #     - Title: "Electron #eta"
-        #     - RatioPlot: [0.98, 1.02]
+        - Electron_eta:
+            - Range: [50, -4.7, 4.7]
+            - Title: "Electron #eta"
+            - RatioPlot: [0.98, 1.02]
 
-        # - Electron_phi:
-        #     - Range: [50, -3.14, 3.14]
-        #     - Title: "Electron #phi"
-        #     - RatioPlot: [0.995, 1.005]
+        - Electron_phi:
+            - Range: [50, -3.14, 3.14]
+            - Title: "Electron #phi"
+            - RatioPlot: [0.995, 1.005]
 
 
     jet:
