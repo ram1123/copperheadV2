@@ -1,12 +1,17 @@
 year: 2018C
 control_region: None
-directoryTag: March24_NanoV12SanityCheck
+directoryTag: Nov23_NanoV12SanityCheck
 
 input_paths_labels:
     # "v9": "/depot/cms/hmm/shar1172/OfficialNanoAODv9/Data/Run2018C/*.root"
+    "v9": "config/v9_files.txt"
+    "v12": "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017C/*.root"
+    "v15": "config/v15_files.txt"
     # "v12": "/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018C/*.root"
-    "v9": "/depot/cms/hmm/shar1172/test/*.root"
-    "v12": "/depot/cms/hmm/shar1172/test2/*.root"
+    # "v9": "/depot/cms/hmm/shar1172/test/*.root"
+    # "v12": "/depot/cms/hmm/shar1172/test2/*.root"
+    # "v15": "root://xcache.cms.rcac.purdue.edu//store/data/Run2017C/SingleMuon/NANOAOD/UL2017_NanoAODv15-v1/2810000/57700297-283e-442c-8473-7e91a229ffc7.root"
+    # "v15": "config/v15_files_test.txt"
 
 plot_types:
     plot_1D: true
@@ -26,5 +31,10 @@ variables:
             - Range: [50, -4.7, 4.7]
             - Title: "Muon #eta"
             - RatioPlot: [0.01, -0.1]
+        - Muon_phi:
+            - Range: [50, -3.14, 3.14]
+            - Title: "Muon #phi"
+            - RatioPlot: [0.01, -0.1]
+
 
 
