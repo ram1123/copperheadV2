@@ -1,6 +1,6 @@
 year: 2018C
 control_region: None
-directoryTag: Nov23_NanoV12SanityCheck
+directoryTag: Nov24_NanoV12SanityCheck
 
 input_paths_labels:
     # "v9": "/depot/cms/hmm/shar1172/OfficialNanoAODv9/Data/Run2018C/*.root"
@@ -26,15 +26,58 @@ variables:
         - Muon_pt:
             - Range: [50, 20, 80]
             - Title: "Muon p_{T} [GeV]"
-            - RatioPlot: [0.01, -0.01]
+            - RatioPlot: [0.995, 1.005]
+
+        - Muon_bsConstrainedPt:
+            - Range: [50, 20, 80]
+            - Title: "BS Constrained Muon p_{T} [GeV]"
+            - RatioPlot: [0.995, 1.005]
+
         - Muon_eta:
             - Range: [50, -4.7, 4.7]
             - Title: "Muon #eta"
-            - RatioPlot: [0.01, -0.1]
+            - RatioPlot: [0.98, 1.02]
+
         - Muon_phi:
             - Range: [50, -3.14, 3.14]
             - Title: "Muon #phi"
-            - RatioPlot: [0.01, -0.1]
+            - RatioPlot: [0.995, 1.005]
 
 
+    electron:
+        - Electron_pt:
+            - Range: [50, 20, 80]
+            - Title: "Electron p_{T} [GeV]"
+            - RatioPlot: [0.9, 1.1]
 
+        - Electron_eta:
+            - Range: [50, -4.7, 4.7]
+            - Title: "Electron #eta"
+            - RatioPlot: [0.98, 1.02]
+
+        - Electron_phi:
+            - Range: [50, -3.14, 3.14]
+            - Title: "Electron #phi"
+            - RatioPlot: [0.995, 1.005]
+
+
+    jet:
+        - Jet_pt:
+            - Range: [60, 0, 300]
+            - Title: "Jet p_{T} [GeV]"
+            - RatioPlot: [0.9, 1.1]
+
+        - Jet_eta:
+            - Range: [50, -4.7, 4.7]
+            - Title: "Jet #eta"
+            - RatioPlot: [0.95, 1.05]
+
+        - Jet_phi:
+            - Range: [50, -3.14, 3.14]
+            - Title: "Jet #phi"
+            - RatioPlot: [0.98, 1.02]
+
+        - Jet_mass:
+            - Range: [60, 0, 50]
+            - Title: "Jet mass [GeV]"
+            - RatioPlot: [0.9, 1.1]

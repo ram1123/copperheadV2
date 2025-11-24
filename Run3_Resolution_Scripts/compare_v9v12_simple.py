@@ -5,11 +5,13 @@ import os
 rt.gROOT.SetBatch(True)
 rt.ROOT.EnableImplicitMT()   # Multi-threading ON
 rt.gStyle.SetOptStat(0)
+# rt.gErrorIgnoreLevel = rt.kWarning
+rt.gErrorIgnoreLevel = rt.kError
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 
-def load_and_plot(path, fields_to_load):
+def load_and_plot(path, label, var_name, binning):
     """
     Load ROOT file using ROOT's RDataFrame and plot the muon pT distribution.
     """
@@ -19,21 +21,20 @@ def load_and_plot(path, fields_to_load):
         with open(path, "r") as f:
             files = [line.strip() for line in f if line.strip()]
         path = files
-    # print(f"Loading files: {path}")
-    rdf = rt.RDataFrame("Events", path, fields_to_load)
 
-    # Number of entries
+    rdf = rt.RDataFrame("Events", path, [var_name])
+
     n_entries = rdf.Count().GetValue()
-    print(f"Number of entries in {path}: {n_entries}")
+    print(f"Number of entries for {label}: {n_entries}")
 
-    # Directly histogram Muon_pt (Define not needed)
+    nb, xmin, xmax = binning
     h = rdf.Histo1D(
-        ("h_muon_pt", "Muon pT Distribution", 100, 0, 500),
-        "Muon_pt"
+        (f"h_{var_name}_{label}", f"{var_name}", nb, xmin, xmax),
+        var_name
     )
 
-    hist = h.GetPtr()   # Extract TH1D*
-    hist.GetXaxis().SetTitle("Muon pT (GeV)")
+    hist = h.GetPtr()
+    hist.GetXaxis().SetTitle(var_name)
     hist.GetYaxis().SetTitle("Entries")
 
     return hist
@@ -46,73 +47,84 @@ def main():
         config = yaml.safe_load(f)
 
     input_paths_labels = config["input_paths_labels"]
-    fields_to_load = config["fields_to_load"]
+
+    electrons_var = config["variables"]["electron"]
+    muons_var = config["variables"]["muon"]
+    jets_var = config["variables"]["jet"]
+    variables_to_plot = electrons_var + muons_var + jets_var
+
+
     directoryTag = config["directoryTag"]
+
+    print(f"variables to plot: {variables_to_plot}")
 
     output_dir = f"plots/NanoAODv9vsV12/{directoryTag}"
     os.makedirs(output_dir, exist_ok=True)
 
-    # Load histograms
-    hist = {}
-    for label, path in input_paths_labels.items():
-        print(f"\nLoading data for {label}: {path}")
-        hist[label] = load_and_plot(path, fields_to_load)
+    # -------- Loop over variables to plot --------
+    for vblock in variables_to_plot:
+        var_name = list(vblock.keys())[0]
+        cfg = vblock[var_name]
 
-    print(f"\nCreating comparison plot...")
-    print(f"histograms loaded: {list(hist.keys())}")
+        # unpack YAML
+        binning = cfg[0]["Range"]
+        title = cfg[1]["Title"]
+        rmin, rmax = cfg[2]["RatioPlot"]
 
-    canvas = rt.TCanvas("canvas", "Muon pT Distribution", 800, 600)
+        print(f"\n === Plotting variable: {var_name} ===\n")
 
-    # Colors
-    hist["v9"].SetLineColor(rt.kRed)
-    hist["v12"].SetLineColor(rt.kBlue)
-    if "v15" in hist:
-        hist["v15"].SetLineColor(rt.kGreen+2)
+        # Load histograms
+        hist = {}
+        for label, path in input_paths_labels.items():
+            # print(f"Loading {label}: {path}")
+            hist[label] = load_and_plot(path, label, var_name, binning)
 
-    # Normalize
-    for key in ["v9", "v12", "v15"]:
-        if key in hist:
-            I = hist[key].Integral()
-            if I > 0:
-                hist[key].Scale(1.0 / I)
+        canvas = rt.TCanvas("canvas", var_name, 800, 600)
 
-    print(type(hist["v9"]))
-    print(type(hist["v12"]))
+        # Colors
+        hist["v9"].SetLineColor(rt.kRed)
+        hist["v12"].SetLineColor(rt.kBlue)
+        if "v15" in hist:
+            hist["v15"].SetLineColor(rt.kGreen+2)
 
-    # Main ratio plot (v9 / v12)
-    # --- main ratio plot: v9 / v12 ---
-    ratio_plot = rt.TRatioPlot(hist["v9"], hist["v12"])
-    ratio_plot.Draw()
-    ratio_plot.GetLowerRefYaxis().SetTitle("Ratio")
-    ratio_plot.GetLowerRefYaxis().SetRangeUser(0.85, 1.25)
-    ratio_plot.GetLowerRefGraph().SetMinimum(0.85)
-    ratio_plot.GetLowerRefGraph().SetMaximum(1.25)
+        # Normalize
+        for key in ["v9", "v12", "v15"]:
+            if key in hist:
+                I = hist[key].Integral()
+                if I > 0:
+                    hist[key].Scale(1.0 / I)
 
-    # --- add v15 / v12 ratio as an extra curve, if present ---
-    if "v15" in hist:
-        # Clone v15 and divide by v12 to get the ratio histogram
-        h_ratio_15 = hist["v15"].Clone("h_ratio_15_over_v12")
-        h_ratio_15.Divide(hist["v12"])
-        h_ratio_15.SetLineColor(rt.kGreen + 2)
-        h_ratio_15.SetLineWidth(2)
+        # Ratio plot
+        ratio_plot = rt.TRatioPlot(hist["v9"], hist["v12"])
+        ratio_plot.Draw()
+        ratio_plot.GetLowerRefYaxis().SetTitle("Ratio")
+        ratio_plot.GetLowerRefYaxis().SetRangeUser(rmin, rmax)
 
-        # Draw on the lower pad on top of the existing ratio
-        ratio_plot.GetLowerPad().cd()
-        h_ratio_15.Draw("HIST SAME")
+        # log-scale upper pad
+        ratio_plot.GetUpperPad().cd()
+        # ratio_plot.GetUpperPad().SetLogy()
 
-    # back to upper pad for legend
-    ratio_plot.GetUpperPad().cd()
-    legend = rt.TLegend(0.7, 0.7, 0.9, 0.9)
-    legend.AddEntry(hist["v9"], "v9", "l")
-    legend.AddEntry(hist["v12"], "v12", "l")
-    if "v15" in hist:
-        legend.AddEntry(hist["v15"], "v15", "l")
-    legend.Draw()
-    # set logy
-    canvas.SetLogy()
+        # v15 overlay
+        if "v15" in hist:
+            h15 = hist["v15"].Clone(f"h_ratio15_{var_name}")
+            h15.Divide(hist["v12"])
+            h15.SetLineColor(rt.kGreen+2)
+            ratio_plot.GetLowerPad().cd()
+            h15.Draw("HIST SAME")
 
-    canvas.SaveAs(f"{output_dir}/muon_pt_distribution_comparison.pdf")
+        # Legend
+        ratio_plot.GetUpperPad().cd()
+        legend = rt.TLegend(0.7, 0.7, 0.9, 0.9)
+        legend.AddEntry(hist["v9"], "v9", "l")
+        legend.AddEntry(hist["v12"], "v12", "l")
+        if "v15" in hist:
+            legend.AddEntry(hist["v15"], "v15", "l")
+        legend.Draw()
 
+        canvas.SaveAs(f"{output_dir}/{var_name}.pdf")
+        ratio_plot.GetUpperPad().SetLogy(True)
+        canvas.SaveAs(f"{output_dir}/{var_name}_log.pdf")
+        ratio_plot.GetUpperPad().SetLogy(False)
 
 if __name__ == "__main__":
     main()
