@@ -33,6 +33,9 @@ class DistributionCompare:
             "z-peak": (90, 70, 110)
         }
 
+    def all_vars(self):
+        return list(self.varlist.keys())
+
     def filter_region(self, events, region="h-peak"):
         dimuon_mass = events.dimuon_mass
         if region == "h-peak":
@@ -198,9 +201,23 @@ class DistributionCompare:
         else:
             params = self.varlist["default"]
 
-        bins, xmin, xmax = params[0]["Range"]
-        xtitle = params[1]["Title"]
-        ratio_min, ratio_max = params[2]["RatioPlot"]
+        print(f"Histogram params for {var_name}: {params}")
+
+        # Case A: YAML-style with dictionaries
+        if isinstance(params[0], dict) and "Range" in params[0]:
+            bins, xmin, xmax = params[0]["Range"]
+            xtitle = params[1]["Title"]
+            ratio_min, ratio_max = params[2]["RatioPlot"]
+
+        # Case B: Simple list format
+        else:
+            if len(params) < 6:
+                raise ValueError(
+                    f"Invalid parameter format for variable {var_name}: {params}"
+                )
+            bins, xmin, xmax = params[0], params[1], params[2]
+            xtitle = params[3]
+            ratio_min, ratio_max = params[4], params[5]
 
         return bins, xmin, xmax, xtitle, ratio_min, ratio_max
 

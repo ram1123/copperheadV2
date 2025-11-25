@@ -1,6 +1,7 @@
 year: 2018C
 control_region: None
-directoryTag: Nov24_NanoCompare_DY_TRatioPlot_v4
+# directoryTag: Nov24_NanoCompare_DY_TRatioPlot_v4
+directoryTag: Nov24_ParquetCompare_Data
 
 input_paths_labels_data:
     # "v9": "/depot/cms/hmm/shar1172/OfficialNanoAODv9/Data/Run2018C/*.root"
@@ -13,19 +14,23 @@ input_paths_labels_data:
     # "v15": "root://xcache.cms.rcac.purdue.edu//store/data/Run2017C/SingleMuon/NANOAOD/UL2017_NanoAODv15-v1/2810000/57700297-283e-442c-8473-7e91a229ffc7.root"
     # "v15": "config/v15_files_test.txt"
 
+
 input_paths_labels:
     "v9": "samples_txt_file/dy_M-50_aMCatNLO_v9.txt"
     "v12": "/eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9/*.root"
     "v15": "samples_txt_file/dy_M-50_aMCatNLO_v15.txt"
+
+input_parquet_paths_labels:
+    "v12": "/depot/cms/users/yun79/hmm/copperheadV1clean/nanoV12_Nov24_2025/stage1_output/2017/f1_0/data_B/0/*.parquet"
+    "v15": "/depot/cms/users/yun79/hmm/copperheadV1clean/nanoV15_Nov24_2025//stage1_output/2017/f1_0/data_B/0/*.parquet"
 
 
 plot_types:
     plot_1D: true
 
 fields_to_load:
-    - Muon_pt
-    - Muon_eta
-    - Muon_phi
+    - mu1_pt
+    - mu1_ptErr
 
 NormalizeToUnity: True
 LowerPadMode: "ratio"   # "diff" or "ratio"
