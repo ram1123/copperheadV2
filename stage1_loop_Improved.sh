@@ -144,14 +144,14 @@ if [[ "$debug" -ge 1 ]]; then
     # years=("2016preVFP")
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
-    data_l_dict["2017"]=""
+    # data_l_dict["2017"]=""
     data_l_dict["2018"]=""
     data_l_dict["2022preEE"]=""
     data_l_dict["2022postEE"]=""
     data_l_dict["2023"]=""
     data_l_dict["2023BPix"]=""
 
-    bkg_l="DY"
+    bkg_l=""
     # bkg_l="DY Top VV EWK VVV"
     # bkg_l="Top"
 
@@ -195,7 +195,8 @@ for year in "${years[@]}"; do
 
     # INFO: If running with JES variation use the max file length = 350, else 2500
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --rerun --isCutflow "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML --rerun  --skipSamples "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML --rerun  --skipSamples "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --isCutflow "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML "
 
     ### DNN training parameters

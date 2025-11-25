@@ -536,7 +536,7 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
 
 
     loose_jet_selection =( # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/2
-        (jets.pt > 15) # FIXME: Check if there is some change if I add () or not.
+        (jets.pt > 15) 
         & pass_jet_id_total
         & pass_jet_puid
     )

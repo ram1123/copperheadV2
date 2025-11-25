@@ -1195,9 +1195,11 @@ class EventProcessor(processor.ProcessorABC):
             # original initial weight start ----------------
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights) # temporary commenting out
 
-            if "2022" in str(year) or "2023" in str(year) or "2024" in str(year) or NanoAODv == 15:
+            if "2018" in str(year) or "2022" in str(year) or "2023" in str(year) or "2024" in str(year) or NanoAODv == 15:
+                logger.info(f"year: {year}, dataset_yaml_file: {dataset_yaml_file}")
                 # FIXME: Remove this if condition later when we update the yaml file for run2 too.
                 sample_info = get_sample_info(dataset_yaml_file, dataset, year) # FIXME: hardcoded filename
+                logger.info(f"sample_info: {sample_info}")
                 integrated_lumi = sample_info["total_lumi_pb"]
 
                 cross_section = sample_info["cross_section_pb"]
@@ -2486,21 +2488,9 @@ class EventProcessor(processor.ProcessorABC):
         if "btagRobustParTAK4B" in jets.fields:
             extra_jet_loop_dict.update({
                 f"jet1_btagRobustParTAK4B_{variation}":  jet1.btagRobustParTAK4B,
-                f"jet1_btagRobustParTAK4CvB_{variation}": jet1.btagRobustParTAK4CvB,
-                f"jet1_btagRobustParTAK4CvL_{variation}": jet1.btagRobustParTAK4CvL,
-                f"jet1_btagRobustParTAK4QG_{variation}":  jet1.btagRobustParTAK4QG,
                 f"jet2_btagRobustParTAK4B_{variation}":  jet2.btagRobustParTAK4B,
-                f"jet2_btagRobustParTAK4CvB_{variation}": jet2.btagRobustParTAK4CvB,
-                f"jet2_btagRobustParTAK4CvL_{variation}": jet2.btagRobustParTAK4CvL,
-                f"jet2_btagRobustParTAK4QG_{variation}":  jet2.btagRobustParTAK4QG,
                 f"jet3_btagRobustParTAK4B_{variation}":  jet3.btagRobustParTAK4B,
-                f"jet3_btagRobustParTAK4CvB_{variation}": jet3.btagRobustParTAK4CvB,
-                f"jet3_btagRobustParTAK4CvL_{variation}": jet3.btagRobustParTAK4CvL,
-                f"jet3_btagRobustParTAK4QG_{variation}":  jet3.btagRobustParTAK4QG,
                 f"jet4_btagRobustParTAK4B_{variation}":  jet4.btagRobustParTAK4B,
-                f"jet4_btagRobustParTAK4CvB_{variation}": jet4.btagRobustParTAK4CvB,
-                f"jet4_btagRobustParTAK4CvL_{variation}": jet4.btagRobustParTAK4CvL,
-                f"jet4_btagRobustParTAK4QG_{variation}":  jet4.btagRobustParTAK4QG,
             })
 
         # --- Energy fractions ---
