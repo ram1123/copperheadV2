@@ -1,12 +1,12 @@
 mu1_pt:                 [50, 20, 200,  "Leading Muon p_{T} [GeV]",                    0.9,  1.1]
 mu1_ptErr:              [50, 0,  2.0,  "Leading Muon p_{T} Error [GeV]",              0.0,  2.0]
-ratio_pTErr_pt_mu1:     [50, 0,  0.03, "Leading Muon p_{T} Error / p_{T}",           0.0,  2.0]
+# ratio_pTErr_pt_mu1:     [50, 0,  0.03, "Leading Muon p_{T} Error / p_{T}",           0.0,  2.0]
 mu1_eta:                [50, -2.4, 2.4, "Leading Muon #eta",                          0.95, 1.05]
 mu1_phi:                [25, -3.14,3.14,"Leading Muon #phi",                          0.95, 1.05]
 
 mu2_pt:                 [50, 20, 200,  "Sub-leading Muon p_{T} [GeV]",                0.85, 1.15]
 mu2_ptErr:              [50, 0,  2.0,  "Sub-leading Muon p_{T} Error [GeV]",          0.0,  2.0]
-ratio_pTErr_pt_mu2:     [50, 0,  0.03, "Sub-leading Muon p_{T} Error / p_{T}",       0.0,  2.0]
+# ratio_pTErr_pt_mu2:     [50, 0,  0.03, "Sub-leading Muon p_{T} Error / p_{T}",       0.0,  2.0]
 mu2_eta:                [50, -2.4, 2.4, "Sub-leading Muon #eta",                      0.8,  1.2]
 mu2_phi:                [25, -3.14,3.14,"Sub-leading Muon #phi",                      0.8,  1.2]
 

@@ -277,7 +277,7 @@ class DistributionCompare:
             canvas.Update()
 
         canvas.SaveAs(filename)
-        canvas.SaveAs(filename.replace(".pdf", ".root"))
+        # canvas.SaveAs(filename.replace(".pdf", ".root"))
 
         # Save the log version of the plot
         ratio_plot.GetUpperPad().SetLogy()
@@ -285,7 +285,7 @@ class DistributionCompare:
         histograms[0].SetMaximum(max(histograms[0].GetMaximum(), histograms[1].GetMaximum())*100)
 
         canvas.SaveAs(filename.replace(".pdf", "_log.pdf"))
-        canvas.SaveAs(filename.replace(".pdf", "_log.root"))
+        # canvas.SaveAs(filename.replace(".pdf", "_log.root"))
 
         # clear memory
         for hist in histograms:
