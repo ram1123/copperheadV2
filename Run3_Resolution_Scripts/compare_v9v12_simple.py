@@ -13,7 +13,16 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 
 def load_and_plot(path, label, var_name, binning):
     """
-    Load ROOT file using ROOT's RDataFrame and plot the muon pT distribution.
+    Load a ROOT file using ROOT's RDataFrame and plot the distribution of the specified variable.
+
+    Args:
+        path (str): Path to the ROOT file or a text file containing a list of ROOT files.
+        label (str): Label for the histogram.
+        var_name (str): Name of the variable to plot.
+        binning (tuple): Binning for the histogram (nbins, xmin, xmax).
+
+    Returns:
+        ROOT.TH1: The histogram of the specified variable.
     """
     # check if path is a text file containing list of files
     if path.endswith(".txt"):
