@@ -11,7 +11,7 @@ mu2_eta:                [50, -2.4, 2.4, "Sub-leading Muon #eta",                
 mu2_phi:                [25, -3.14,3.14,"Sub-leading Muon #phi",                      0.8,  1.2]
 
 dimuon_pt:              [50, 0,  200,  "p_{T} (#mu#mu) [GeV]",                        0.95, 1.05]
-dimuon_eta:             [50, -4.7, 4.7, "#eta_{#mu#mu}",                              0.95, 1.05]
+dimuon_eta:             [50, 0.0, 4.7, "#eta_{#mu#mu}",                              0.95, 1.05]
 dimuon_phi:             [25, -3.14,3.14,"#phi_{#mu#mu}",                              0.95, 1.05]
 
 # event:                  [50, 0,  5.0e7,   "Event number",                             0.9,  1.1]
@@ -35,7 +35,7 @@ nmuons:                 [6,  0,  6,        "N_{muons}",                         
 
 dimuon_mass:            [60, 70, 150,      "m_{#mu#mu} [GeV]",                        0.95, 1.05]
 dimuon_pt_log:          [50, -1.0, 3.0,    "log_{10}(p_{T} (#mu#mu) / GeV)",          0.95, 1.05]
-dimuon_rapidity:        [50, -4.7, 4.7,    "y_{#mu#mu}",                              0.95, 1.05]
+dimuon_rapidity:        [50, -2.4, 2.4,    "y_{#mu#mu}",                              0.95, 1.05]
 
 dimuon_dEta:            [50, -5.0, 5.0,    "#Delta#eta(#mu,#mu)",                     0.95, 1.05]
 dimuon_dPhi:            [32, 0.0, 3.2,     "#Delta#phi(#mu,#mu)",                     0.95, 1.05]
@@ -56,10 +56,6 @@ mu2_pt_raw:             [50, 20, 200,     "Sub-leading Muon p_{T}^{raw} [GeV]", 
 mu1_pt_fsr:             [50, 20, 200,     "Leading Muon p_{T}^{FSR} [GeV]",           0.9,  1.1]
 mu2_pt_fsr:             [50, 20, 200,     "Sub-leading Muon p_{T}^{FSR} [GeV]",       0.9,  1.1]
 
-year:                   [10, 2015.5, 2025.5, "Year",                                  0.9,  1.1]
-run:                    [100, 0, 5.0e6,    "Run",                                     0.9,  1.1]
-luminosityBlock:        [100, 0, 3000,     "Luminosity block",                        0.9,  1.1]
-fraction:               [50, 0.0, 1.0,     "Event fraction",                          0.9,  1.1]
 
 jet1_default_pt_nominal: [60, 0, 400,     "Jet1 default p_{T} [GeV]",                 0.9,  1.1]
 jet1_default_eta_nominal: [50, -5, 5,      "Jet1 default #eta",                        0.95, 1.05]
@@ -127,11 +123,8 @@ htsoft5_nominal:        [50, 0,  200,     "H_{T}^{soft}(p_{T}>5 GeV) [GeV]",    
 nBtagLoose_nominal:     [8,  0,  8,       "N_{b-tags}^{loose}",                       0.9,  1.1]
 nBtagMedium_nominal:    [8,  0,  8,       "N_{b-tags}^{medium}",                      0.9,  1.1]
 
-z_peak:                 [2,  -0.5, 1.5,   "Z-peak region flag",                       0.9,  1.1]
-h_sidebands:            [2,  -0.5, 1.5,   "H sidebands flag",                         0.9,  1.1]
-h_peak:                 [2,  -0.5, 1.5,   "H-peak region flag",                       0.9,  1.1]
+
 
 wgt_nominal:            [60, 0.0, 2.0,    "Event weight",                             0.8,  1.2]
 separate_wgt_ones:      [2,  -0.5, 1.5,   "Weight==1 flag",                           0.9,  1.1]
 
-default:                [50, 0,  300,     "variable",                                 0.0,  2.0]
