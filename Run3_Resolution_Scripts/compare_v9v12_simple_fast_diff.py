@@ -33,8 +33,6 @@ def main():
     muons_var     = config["variables"]["muon"]
     jets_var      = config["variables"]["jet"]
     variables_to_plot = electrons_var + muons_var + jets_var
-    # variables_to_plot = muons_var
-
     directoryTag = config["directoryTag"]
     NormalizeToUnity = config.get("NormalizeToUnity", False)
 
