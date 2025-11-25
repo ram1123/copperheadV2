@@ -1,6 +1,5 @@
 import yaml
 import os
-import sys
 
 from modules.DistributionCompare import DistributionCompare
 
@@ -19,10 +18,6 @@ input_paths_labels = config["input_parquet_paths_labels"]
 fields_to_load = config["fields_to_load"]
 control_region = config["control_region"]
 
-muons = config["variables"]["muon"]
-all_vars = muons[0]
-
-print(f"variables to compare: {all_vars}")
 
 comparer = DistributionCompare(
     year = year,

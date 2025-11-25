@@ -254,6 +254,7 @@ class DistributionCompare:
             histograms.append(hist)
             legend.AddEntry(hist, label, "l")
 
+
         # First explicitly draw the histograms otherwise TRatioPlot will not work
         histograms[0].Draw("HIST")
         histograms[0].GetXaxis().SetTitle(xlabel)
@@ -267,9 +268,9 @@ class DistributionCompare:
             ratio_plot = rt.TRatioPlot(histograms[0], histograms[1])
             ratio_plot.Draw()
             ratio_plot.GetLowerRefYaxis().SetTitle("Ratio")
-            ratio_plot.GetLowerRefYaxis().SetRangeUser(ratio_range_min, ratio_range_max)
-            ratio_plot.GetLowerRefGraph().SetMinimum(ratio_range_min)
-            ratio_plot.GetLowerRefGraph().SetMaximum(ratio_range_max)
+            # ratio_plot.GetLowerRefYaxis().SetRangeUser(ratio_range_min, ratio_range_max)
+            # ratio_plot.GetLowerRefGraph().SetMinimum(ratio_range_min)
+            # ratio_plot.GetLowerRefGraph().SetMaximum(ratio_range_max)
 
             ratio_plot.GetUpperPad().cd()
             legend.Draw()
