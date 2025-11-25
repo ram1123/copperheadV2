@@ -23,7 +23,6 @@ muons = config["variables"]["muon"]
 all_vars = muons[0]
 
 print(f"variables to compare: {all_vars}")
-print(f"variables to compare: {type(all_vars)}")
 
 comparer = DistributionCompare(
     year = year,
