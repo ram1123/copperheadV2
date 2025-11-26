@@ -117,6 +117,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # Save the cutflow
     if hasattr(processor, "cutflow") and isCutflow:
+        logger.info("Saving cutflow information")
         fraction = round(dataset_dict["metadata"]["fraction"], 3)
         fraction_str = str(fraction).replace('.', '_')
         cutflow_save_path = f"{save_path}/f{fraction_str}"
@@ -477,7 +478,7 @@ if __name__ == "__main__":
                             logger.debug(f"alt_sample['files']: {alt_sample['files']}")
 
                             # rebuild the events/out collections for this attempt
-                            to_persist = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=start_save_path, dataset_yaml_file=args.dataset_yaml_file)
+                            to_persist = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=start_save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
 
                             jobstat.mark_running(dataset, idx)
 
