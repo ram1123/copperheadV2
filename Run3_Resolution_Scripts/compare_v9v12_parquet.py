@@ -25,6 +25,7 @@ comparer = DistributionCompare(
     fields = fields_to_load,
     directoryTag = directoryTag,
     varlist = f"{base}/{varlist_path}",
+    control_region = control_region,
 )
 comparer.load_data()
 
