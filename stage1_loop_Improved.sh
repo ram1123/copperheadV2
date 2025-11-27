@@ -76,21 +76,16 @@ if [[ -z "${CONDA_PREFIX:-}" ]]; then
     exit 1
 fi
 
-# if DNN training is enabled, check if the conda environment is `pfn_env` else it should be `yun_coffea_latest`
+# if DNN training is enabled, check if the conda environment is `pfn_env` else it should be `coffea_latest`
 # if [[ "$mode" == "dnn" || "$mode" == "dnn_pre" || "$mode" == "dnn_train" || "$mode" == "dnn_var_rank" ]]; then
 if [[ "$mode" == "dnn" || "$mode" == "dnn_train" || "$mode" == "dnn_var_rank" ]]; then
     if [[ "$CONDA_PREFIX" != *"pfn_env"* ]]; then
         echo "Please run this script in the pfn_env conda environment for DNN training"
         exit 1
     fi
-elif [[ "$mode" == "zpt_fit" || "$mode" == "zpt_fit0" || "$mode" == "zpt_fit1" || "$mode" == "zpt_fit2" || "$mode" == "zpt_fit12" ]]; then
-    if [[ "$CONDA_PREFIX" != *"coffea_latest"* ]]; then
-        echo "Please run this script in the coffea_latest conda environment for ZpT fitting"
-        exit 1
-    fi
 else
-    if [[ "$CONDA_PREFIX" != *"yun_coffea_latest"* ]]; then
-        echo "Please run this script in the yun_coffea_latest conda environment"
+    if [[ "$CONDA_PREFIX" != *"coffea_latest"* ]]; then
+        echo "Please run this script in the coffea_latest conda environment"
         exit 1
     fi
 fi
@@ -144,7 +139,7 @@ if [[ "$debug" -ge 1 ]]; then
     # years=("2016preVFP")
     data_l_dict["2016preVFP"]=""
     data_l_dict["2016postVFP"]=""
-    # data_l_dict["2017"]=""
+    data_l_dict["2017"]=""
     data_l_dict["2018"]=""
     data_l_dict["2022preEE"]=""
     data_l_dict["2022postEE"]=""
