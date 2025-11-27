@@ -539,7 +539,15 @@ if __name__ == "__main__":
                         ).events()
                         logger.debug(f"file_input: {file_input}")
                         logger.debug(f"events.fields: {events.fields}")
-                        preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                        # preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                        # With coffea version 2025.3.0 above line is not working so, count the entries directly from ROOT files
+                        n_events_total = 0
+                        for fname in fnames:  # or: for fname in base_file_input.keys():
+                            with uproot.open(f"{fname}:Events") as tree:
+                                # or: tree = uproot.open(fname)["Events"]
+                                n_events_total += tree.num_entries
+
+                        preprocess_metadata["data_entries"] = int(n_events_total)
                         total_events += preprocess_metadata["data_entries"]
 
                         logger.info(
