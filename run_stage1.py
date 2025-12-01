@@ -89,7 +89,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # dict to hold the max_num_elements info per sample
     dict_max_num_elements = {
         "data_": 500, # None means no limit (use uproot's default behavior)
-        "dy_": 500,
+        "dy_": 151,
         "ttjets_dl": 500,
         "ttjets_sl": 500,
         }
@@ -420,7 +420,8 @@ if __name__ == "__main__":
             f.write(f"Diff:\n{diff}\n")
         logger.info(f"git_info_path: {git_info_path}")
 
-        with performance_report(filename="dask-report.html"):
+        # with performance_report(filename="dask-report.html"):
+        if True:
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 from configs.skip_stage1_run import samples_to_skip
                 if dataset in samples_to_skip and args.skipSamples:
@@ -430,7 +431,7 @@ if __name__ == "__main__":
                 # dict to hold file lenght info per sample
                 dict_file_length = {
                     "data_": 500,
-                    "dy_": 500,
+                    "dy_": 151,
                     "ttjets_dl": 500,
                     "ttjets_sl": 500,
                     }

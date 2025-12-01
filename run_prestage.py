@@ -1,4 +1,5 @@
 import awkward as ak
+import coffea
 from coffea.dataset_tools import rucio_utils
 from coffea.dataset_tools.preprocess import preprocess
 from coffea.nanoevents import NanoEventsFactory, NanoAODSchema, BaseSchema
@@ -539,15 +540,20 @@ if __name__ == "__main__":
                         ).events()
                         logger.debug(f"file_input: {file_input}")
                         logger.debug(f"events.fields: {events.fields}")
-                        # preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                        # With coffea version 2025.3.0 above line is not working so, count the entries directly from ROOT files
-                        n_events_total = 0
-                        for fname_normalized in file_input.keys():
-                            with uproot.open(f"{fname_normalized}:Events") as tree:
-                                # or: tree = uproot.open(fname_normalized)["Events"]
-                                n_events_total += tree.num_entries
+                        # if coffea version < 2025.3.0 then use the line below
+                        if coffea.__version__ == "2024.11.0":
+                            preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                        elif coffea.__version__ == "2025.3.0":
+                            # For coffea version 2025.3.0, count the entries directly from ROOT files
+                            n_events_total = 0
+                            for fname_normalized in file_input.keys():
+                                with uproot.open(f"{fname_normalized}:Events") as tree:
+                                    # or: tree = uproot.open(fname_normalized)["Events"]
+                                    n_events_total += tree.num_entries
 
-                        preprocess_metadata["data_entries"] = int(n_events_total)
+                            preprocess_metadata["data_entries"] = int(n_events_total)
+                        else:
+                            raise RuntimeError(f"Unsupported coffea version: {coffea.__version__}")
                         total_events += preprocess_metadata["data_entries"]
 
                         logger.info(

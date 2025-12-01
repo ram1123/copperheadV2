@@ -1,7 +1,14 @@
+# 28 November 2025
+
+```bash
+# time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l Run2_nanoAODv15_28Nov -y "2017" -m 0 -k -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix -y "2018" -m 0 -k)
+```
+
 # 20 November 2025
 
 ```bash
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 12 -l Run2_nanoAODv15_20Nov -y "2017" -m 0 -k -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 12 -l Run2_nanoAODv15_25Nov_SwitchOffJec -y "2017" -m 1 -k -d 1)
 
 ```
 

@@ -2,11 +2,13 @@ import re
 
 
 AAA_REDIRECTORS = [
-    "root://xcache.cms.rcac.purdue.edu//",
-    "root://cms-xrd-global.cern.ch//",
-    "root://xrootd-cms.infn.it//",
-    "root://cmsxrootd.fnal.gov//",
-    "root://xcache.cms.rcac.purdue.edu//",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://eos.cms.rcac.purdue.edu/",
+    "root://cms-xrd-global.cern.ch/",
+    "root://xrootd-cms.infn.it/",
+    "root://cmsxrootd.fnal.gov/",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://xcache.cms.rcac.purdue.edu/",
 ]
 
 # Accept prefixes like:
@@ -67,4 +69,3 @@ AAA_ERROR_FRAGMENTS = (
     "lzma data error",
     "File stat request failed",
 )
-

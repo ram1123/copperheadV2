@@ -7,22 +7,1458 @@ years:
         datasets:
           - /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/SingleMuon_Run2018A
         lumi_pb: null
-        das_request: null
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
         golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
         references:
-          ppd_summary_table: null
-          golden_json_official: null
+          - null
 
     DY:
-        dy_M-100To200_aMCatNLO:
-            skip_sample: False
-            datasets:
-                - /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
-            cross_section_pb: 233.8592627
-            cross_section_source: None
-            kfactor:
-                value: 1.0
-                source: NONE
-            filter_efficiency: 1.0
-            references:
-                - "MG5_aMC@NLO FxFx"
+      dy_M-100To200_aMCatNLO:
+        skip_sample: False
+        datasets:
+          - /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 233.8592627
+        cross_section_source: None
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    Higgs:
+      vbf_powheg_dipole:
+        skip_sample: False
+        datasets:
+          - /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8
+        cross_section_pb: null
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      ggh_powhegPS:
+        skip_sample: False
+        datasets:
+          - /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: null
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+  "2018":
+    Data:
+      total_lumi_pb: 59830.0
+      data_A:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018A
+        lumi_pb: 14030
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
+        references:
+          - null
+
+      data_B:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018B
+        lumi_pb: 7070
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
+        references:
+          - null
+
+      data_C:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018C
+        lumi_pb: 6900
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
+        references:
+          - null
+
+
+      data_D:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018D
+        lumi_pb: 31840
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
+        references:
+          - null
+
+    DY:
+      dy_M-50_aMCatNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL18NanoAODv9
+        cross_section_pb: 6077.22
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-100To200_aMCatNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 233.8592627
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_VBF_filter:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 2.01
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-50_MiNNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/DYJetsToMuMu_M-50_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
+        cross_section_pb: 1976
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-100To200_MiNNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
+        cross_section_pb: 77.95
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    Top:
+      ttjets_dl:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 86.65
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      ttjets_sl:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 358.57
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_tw_top:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 32.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_tw_antitop:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 32.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_t_top:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/ST_t-channel_top_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 136.02
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_t_antitop:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/ST_t-channel_antitop_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 80.95
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    VV:
+      ww_2l2nu:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8_RunIISummer20UL18NanoAODv9
+        cross_section_pb: 11.09
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_3lnu:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/WZTo3LNu_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 5.22
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_2l2q:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 6.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_1l1nu2q:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/WZTo1L1Nu2Q_4f_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 9.12
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      zz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/ZZ_TuneCP5_13TeV-pythia8
+        cross_section_pb: 12.17
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    VVV:
+      www:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/WWW_4F_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.2086
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wwz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/WWZ_4F_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.1651
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wzz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/WZZ_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.05565
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      zzz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/ZZZ_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.01398
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    EWK:
+      ewk_lljj_mll50_mjj120:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/EWK_LLJJ_MLL-50_MJJ-120_TuneCP5_13TeV-madgraph-pythia8_dipole
+        cross_section_pb: 1.719
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    Higgs:
+      vbf_powheg_dipole:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8
+        cross_section_pb: 0.0008228
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      ggh_powhegPS:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 0.012652906
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+  "2017":
+    Data:
+      total_lumi_pb: 41480.0
+      data_B:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017B
+        lumi_pb: 4800
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
+        references:
+          - null
+
+      data_C:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017C
+        lumi_pb: 9570
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
+        references:
+          - null
+
+      data_D:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017D
+        lumi_pb: 4250
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
+        references:
+          - null
+
+      data_E:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017E
+        lumi_pb: 9310
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
+        references:
+          - null
+
+      data_F:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017F
+        lumi_pb: 13540
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: None
+        references:
+          - null
+
+    DY:
+      dy_M-50_aMCatNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9
+        cross_section_pb: 6077.22
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-100To200_aMCatNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 233.8592627
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_VBF_filter:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 2.01
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-50_MiNNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/DYJetsToMuMu_M-50_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
+        cross_section_pb: 1976
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-100To200_MiNNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
+        cross_section_pb: 77.95
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    Top:
+      ttjets_dl:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 86.65
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      ttjets_sl:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 358.57
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_tw_top:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 32.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_tw_antitop:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 32.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_t_top:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/ST_t-channel_top_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 136.02
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_t_antitop:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 80.95
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    VV:
+      ww_2l2nu:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 11.09
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_3lnu:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/WZTo3LNu_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 5.22
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_2l2q:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 6.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_1l1nu2q:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/WZTo1L1Nu2Q_4f_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 9.12
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      zz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/ZZ_TuneCP5_13TeV-pythia8
+        cross_section_pb: 12.17
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    VVV:
+      www:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/WWW_4F_TuneCP5_13TeV-amcatnlo-pythia8
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/WWW_4F_TuneCP5_13TeV-amcatnlo-pythia8_RunIISummer20UL17NanoAODv9
+        cross_section_pb: 0.2086
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wwz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/WWZ_4F_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.1651
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wzz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/WZZ_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.05565
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      zzz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/ZZZ_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.01398
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    EWK:
+      ewk_lljj_mll50_mjj120:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/EWK_LLJJ_MLL-50_MJJ-120_TuneCP5_13TeV-madgraph-pythia8_dipole
+        cross_section_pb: 1.719
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    Higgs:
+      ggh_powhegPS:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 0.012652906
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      vbf_powheg_dipole:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8
+        cross_section_pb: 0.0008228
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+  "2016postVFP":
+    Data:
+      total_lumi_pb: 16810.0
+      data_F:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/SingleMuon_Run2016F
+        lumi_pb: 420
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: None
+        references:
+          - null
+
+      data_G:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/SingleMuon_Run2016G
+        lumi_pb: 7650
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: None
+        references:
+          - null
+
+      data_H:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/SingleMuon_Run2016H
+        lumi_pb: 8740
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: None
+        references:
+          - null
+
+    DY:
+      dy_VBF_filter:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 2.01
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-50_MiNNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToMuMu_M-50_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
+        cross_section_pb: 1976
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-100To200_MiNNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
+        cross_section_pb: 77.95
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    Top:
+      ttjets_dl:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 86.65
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      ttjets_sl:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 358.57
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_tw_top:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 32.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_tw_antitop:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 32.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_t_top:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/ST_t-channel_top_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 136.02
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_t_antitop:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/ST_t-channel_antitop_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 80.95
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    VV:
+      ww_2l2nu:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 11.09
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_3lnu:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/WZTo3LNu_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 5.22
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_2l2q:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 6.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_1l1nu2q:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/WZTo1L1Nu2Q_4f_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 9.12
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      zz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/ZZ_TuneCP5_13TeV-pythia8
+        cross_section_pb: 12.17
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    VVV:
+      www:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/WWW_4F_TuneCP5_13TeV-amcatnlo-pythia8
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/WWW_4F_TuneCP5_13TeV-amcatnlo-pythia8_RunIISummer20UL16NanoAODv9
+        cross_section_pb: 0.2086
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wwz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/WWZ_4F_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.1651
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wzz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/WZZ_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.05565
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      zzz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/ZZZ_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.01398
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    EWK:
+      ewk_lljj_mll50_mjj120:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/EWK_LLJJ_MLL-50_MJJ-120_TuneCP5_13TeV-madgraph-pythia8_dipole
+        cross_section_pb: 1.719
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    Higgs:
+      ggh_powhegPS:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 0.012652906
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      ggh_amcPS:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/GluGluHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnloFXFX_pythia8
+        cross_section_pb: null
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      vbf_powheg_dipole:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8
+        cross_section_pb: 0.0008228
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+  "2016preVFP":
+    Data:
+      total_lumi_pb: 19500.0
+      data_B:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/SingleMuon_Run2016B
+        lumi_pb: 5830
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: None
+        references:
+          - null
+
+      data_C:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/SingleMuon_Run2016C
+        lumi_pb: 2620
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: None
+        references:
+          - null
+
+      data_D:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/SingleMuon_Run2016D
+        lumi_pb: 4290
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: None
+        references:
+          - null
+
+      data_E:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/SingleMuon_Run2016E
+        lumi_pb: 4070
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: None
+        references:
+          - null
+
+      data_F:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/SingleMuon_Run2016F
+        lumi_pb: 2720
+        das_request: "local customNanoAOD, no DAS"
+        parent_das: todo
+        golden_json: None
+        references:
+          - null
+
+    DY:
+      dy_M-50_aMCatNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODAPVv9
+        cross_section_pb: 6077.22
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-100To200_aMCatNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 233.8592627
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_VBF_filter:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 2.01
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-50_MiNNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/DYJetsToMuMu_M-50_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
+        cross_section_pb: 1976
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      dy_M-100To200_MiNNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos
+        cross_section_pb: 77.95
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    Top:
+      ttjets_dl:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 86.65
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      ttjets_sl:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 358.57
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_tw_top:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 32.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_tw_antitop:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 32.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_t_top:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/ST_t-channel_top_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 136.02
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      st_t_antitop:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/ST_t-channel_antitop_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 80.95
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    VV:
+      ww_2l2nu:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 11.09
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_3lnu:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/WZTo3LNu_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 5.22
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_2l2q:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 6.45
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wz_1l1nu2q:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/WZTo1L1Nu2Q_4f_TuneCP5_13TeV-amcatnloFXFX-pythia8
+        cross_section_pb: 9.12
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      zz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/ZZ_TuneCP5_13TeV-pythia8
+        cross_section_pb: 12.17
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    VVV:
+      www:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/WWW_4F_TuneCP5_13TeV-amcatnlo-pythia8
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/WWW_4F_TuneCP5_13TeV-amcatnlo-pythia8_RunIISummer20UL16NanoAODAPVv9
+        cross_section_pb: 0.2086
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wwz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/WWZ_4F_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.1651
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      wzz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/WZZ_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.05565
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      zzz:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/ZZZ_TuneCP5_13TeV-amcatnlo-pythia8
+        cross_section_pb: 0.01398
+        cross_section_source: AN-19-124 table 2.8
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    EWK:
+      ewk_lljj_mll50_mjj120:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/EWK_LLJJ_MLL-50_MJJ-120_TuneCP5_13TeV-madgraph-pythia8_dipole
+        cross_section_pb: 1.719
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+    Higgs:
+      ggh_powhegPS:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
+        cross_section_pb: 0.012652906
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
+      vbf_powheg_dipole:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8
+        cross_section_pb: 0.0008228
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null

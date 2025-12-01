@@ -229,7 +229,7 @@ def custom_jet_id(jets):
     if (abs(Jet_eta) <= 2.7) Jet_passJetIdTightLepVeto = Jet_passJetIdTight && (Jet_muEF < 0.8) && (Jet_chEmEF < 0.8);
     else Jet_passJetIdTightLepVeto = Jet_passJetIdTight;
     """
-    logger.info(f"fields in jets: {jets.fields}")
+    logger.debug(f"fields in jets: {jets.fields}")
     eta = jets.eta
     aeta = abs(eta)
 
@@ -536,7 +536,7 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
 
 
     loose_jet_selection =( # Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/2
-        (jets.pt > 15) 
+        (jets.pt > 15)
         & pass_jet_id_total
         & pass_jet_puid
     )
