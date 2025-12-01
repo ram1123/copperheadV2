@@ -1,4 +1,24 @@
 switches:
+    do_additional_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_additional_jet_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_nnlops:
         '2016preVFP': true
         '2016postVFP': true
@@ -99,16 +119,6 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_additional_jets:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
     do_jet_PUID_wgt:
         '2016preVFP': true
         '2016postVFP': true
@@ -173,7 +183,7 @@ switches:
         '2016preVFP': true
         '2016postVFP': true
         '2017': false
-        '2018': false
+        '2018': true
         '2022preEE': false
         '2022postEE': false
         "2023": false
