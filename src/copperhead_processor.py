@@ -1770,7 +1770,7 @@ class EventProcessor(processor.ProcessorABC):
                 do_jerunc = do_jerunc,
                 # event_match=event_match # debugging
                 dnn_year=dnn_year,
-                do_jet_horn_puid = True # FIXME: hardcoded. Also, define it in config later
+                do_jet_horn_puid = self.config["switches"]["do_jet_horn_puid"]
             )
 
             out_dict.update(jet_loop_dict)

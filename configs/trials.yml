@@ -2,12 +2,27 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_JetIDTightLepVetoPass/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_23October/stage1_output/"
         comment: "What plotter should use by default"
 
     Run3_noJetVetoMap:
         stage1: "{base_dir}/Run3_nanoAODv12_23October/stage1_output/"
         comment: "Run-3 without using any Jet veto map"
+        date: November 11, 2025
+        gitSHA: 86c12ed4e3b428b06e4f2af9a0916dc3ba1f1595
+
+    Run3_noJetVetoMap_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_NoJVM/stage1_output/"
+        comment: "Run-3 without using any Jet veto map"
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_noJetVetoMap_v1_2024:
+        stage1: "{base_dir}/Run3_nanoAODv15_01Dec/stage1_output/"
+        comment: "Run-3 year 2024, without any Jet veto map."
+        years: 2024 only
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
 
     Run3_WithJetVetoMap:
         stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap/stage1_output/"

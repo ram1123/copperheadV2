@@ -156,17 +156,27 @@ switches:
         '2018': false
         '2022preEE': false
         '2022postEE': false
-        "2023": true
+        "2023": false
         "2023BPix": false
         "2024": false
-    do_jet_horn_ptcut:
+    do_jet_horn_ptcut: # For run-3 where the JME recommendation is to add pT > 50 GeV cut in the horn region
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
         '2018': false
         '2022preEE': false
         '2022postEE': false
-        "2023": true
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_jet_horn_puid: # For run-2 samples where we added strict PUID cut for the horn region
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
         "2023BPix": false
         "2024": false
     do_jec:

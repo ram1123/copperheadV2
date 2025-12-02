@@ -9,8 +9,8 @@ integrated_lumis: # source: https://github.com/TopEFT/topeft/blob/252c6454e06e49
   '2022preEE': 7980.4
   '2022postEE': 26671.70
   "2023": 17794.0 # https://docs.google.com/presentation/d/1TjPem5jX0fzqvTGl271_nQFoVBabsrdrO0i8Qo1uD5E/edit?slide=id.g289f499aa6b_2_58#slide=id.g289f499aa6b_2_58
-  "2024": 108960.0 # https://docs.google.com/presentation/d/1TjPem5jX0fzqvTGl271_nQFoVBabsrdrO0i8Qo1uD5E/edit?slide=id.g289f499aa6b_2_58#slide=id.g289f499aa6b_2_58
   '2023BPix': 9451.0
+  "2024": 108960.0 # https://docs.google.com/presentation/d/1TjPem5jX0fzqvTGl271_nQFoVBabsrdrO0i8Qo1uD5E/edit?slide=id.g289f499aa6b_2_58#slide=id.g289f499aa6b_2_58
 lumimask:
   2016preVFP: data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt
   2016postVFP: data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt

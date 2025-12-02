@@ -1,3 +1,9 @@
+# 02 December 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_NoJVM -p HPScan_03Sep_17bins -y "2023" -m 0 -k  -d 1)
+```
+
 # 01 December 2025
 
 ## To Rerun stage 1 with nanoAODv12 for 2018 after HEM veto fix
