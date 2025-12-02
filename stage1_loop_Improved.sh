@@ -146,13 +146,14 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2022postEE"]=""
     data_l_dict["2023"]=""
     data_l_dict["2023BPix"]=""
+    data_l_dict["2024"]=""
 
-    bkg_l=""
+    # bkg_l=""
     # bkg_l="DY Top VV EWK VVV"
     # bkg_l="Top"
 
     # sig_l="Higgs"
-    sig_l=""
+    # sig_l=""
 fi
 
 chunksize=300000
