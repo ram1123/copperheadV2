@@ -469,6 +469,7 @@ if __name__ == "__main__":
                     # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                         try:
+                            logger.info("{}{}".format("\n" * 2, "=" * 20))
                             logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
                             # build fresh file list with this redirector
                             alt_sample = copy.deepcopy(smaller_sample)

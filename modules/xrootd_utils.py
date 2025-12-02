@@ -68,4 +68,6 @@ AAA_ERROR_FRAGMENTS = (
     "File did not vector_read properly",
     "lzma data error",
     "File stat request failed",
+    "OSError: Bytes failed to read from open file",
+    "OSError: Failed to close file: [ERROR] Operation expired",
 )
