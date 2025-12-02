@@ -437,27 +437,27 @@ jec_parameters:
             - RelativeSample2018_down
             - FlavorQCD_up
             - FlavorQCD_down
-        2024:
+        "2024":
             - Absolute_up
             - Absolute_down
-            - Absolute2018_up
-            - Absolute2018_down
+            - Absolute2024_up
+            - Absolute2024_down
             - BBEC1_up
             - BBEC1_down
-            - BBEC12018_up
-            - BBEC12018_down
+            - BBEC12024_up
+            - BBEC12024_down
             - EC2_up
             - EC2_down
-            - EC22018_up
-            - EC22018_down
+            - EC22024_up
+            - EC22024_down
             - HF_up
             - HF_down
-            - HF2018_up
-            - HF2018_down
+            - HF2024_up
+            - HF2024_down
             - RelativeBal_up
             - RelativeBal_down
-            - RelativeSample2018_up
-            - RelativeSample2018_down
+            - RelativeSample2024_up
+            - RelativeSample2024_down
             - FlavorQCD_up
             - FlavorQCD_down
     runs:

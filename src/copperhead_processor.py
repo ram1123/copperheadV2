@@ -9,7 +9,7 @@ import correctionlib
 from src.corrections.rochester import apply_roccor, apply_roccorRun3
 from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, fill_softjets_HIG19006, applyHemVeto, do_jec_scale, do_jer_smear, get_jet_variation, applyUpDown, applyJetUncertaintyKinematics, custom_jet_id
+from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, fill_softjets_HIG19006, applyHemVeto, do_jec_scale, do_jer_smear, get_jet_variation, applyUpDown, applyJetUncertaintyKinematics, custom_jet_id, get_puId
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old, get_jetpuid_weights_eta_dependent
 import json
@@ -291,8 +291,8 @@ class EventProcessor(processor.ProcessorABC):
         for mode in ["Data", "MC"]:
             if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
                 yearUL = "2016"
-            # elif ("22" in year) or ("23" in year):# FIXME: temporary solution until I can generate my own dimuon mass resolution
-            #     yearUL = "2018"
+            elif ("22" in year) or ("23" in year) or ("24" in year):# FIXME: temporary solution until I can generate my own dimuon mass resolution
+                yearUL = "2018"
             elif "RERECO" in year: # 2017_RERECO. 2018_RERECO
                 yearUL=year.replace("_RERECO","")
             else:
@@ -604,7 +604,7 @@ class EventProcessor(processor.ProcessorABC):
         # apply Beam constraint b4 Rochester. We need Rochester b4 trigger matching
         # # --------------------------------------------------------
 
-        doing_BS_correction = False # boolean that will be used for picking the correct ebe mass calibration factor
+        doing_BS_correction = self.config["switches"]["do_beamConstraint"]  # boolean that will be used for picking the correct ebe mass calibration factor
         if self.config["switches"]["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
             logger.debug(f"doing beam constraint!")
             doing_BS_correction = True
@@ -2015,7 +2015,7 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
             yearUL = "2016"
-        elif ("22" in year) or ("23" in year):# temporary solution until I can generate my own dimuon mass resolution
+        elif ("22" in year) or ("23" in year) or ("24" in year):# FIXME: temporary solution until I can generate my own dimuon mass resolution
             yearUL = "2018"
         elif "RERECO" in year: # 2017_RERECO. 2018_RERECO
             yearUL=year.replace("_RERECO","")
@@ -2260,7 +2260,9 @@ class EventProcessor(processor.ProcessorABC):
         jetHorn_region = abs(jets.eta) > 2.5
         jetHorn_pt_cut = (jets.pt > self.config["jet_pt_cut"]) # pt cut on jethorn doesn't change
         if do_jet_horn_puid:
-            jetHorn_puid_cut = (jets.puId >= 7) | (jets.pt >= 50) # tight pu Id #FIXME: hardcoded puID
+            jetHorn_puid_cut = (get_puId(jets) >= 7) | (
+                jets.pt >= 50
+            )  # tight pu Id #FIXME: hardcoded puID
             jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
             jetHorn_PUID_cut = ak.ones_like(pass_jet_puid, dtype="bool") # default value is True
             # jetHorn_PUID_cut = ak.where(jetHorn_region, jetHorn_cut, jetHorn_PUID_cut)
@@ -2511,6 +2513,7 @@ class EventProcessor(processor.ProcessorABC):
                 f"jet4_area_{variation}": jet4.area,
             })
 
+        do_additional_vars = self.config["switches"]["do_additional_vars"]
         if do_additional_vars:
             if hasattr(jets, "jetId"):
                 jet_loop_out_dict.update({
