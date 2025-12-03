@@ -2,7 +2,7 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_NoJVM/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets/stage1_output/"
         comment: "What plotter should use by default"
 
     Run3_noJetVetoMap:
@@ -29,26 +29,54 @@ trials:
         stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap/stage1_output/"
         comment: "Run-3 using the official JET veto map"
 
+    Run3_WithJetVetoMap_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVM/stage1_output/"
+        comment: "Run-3 using the official JET veto map"
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
     Run3_WithJetVetoMap_Horn50GeV:
         stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap_HornpT50GeV/stage1_output/"
         comment: "Run-3 using the official JET veto map and adding the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+
+    Run3_WithJetVetoMap_Horn50GeV_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVM_Horn50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map and adding the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
 
     Run3_JetVeto_jetfilter:
         stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly/stage1_output/"
         comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO."
 
+    Run3_JetVeto_jetfilter_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. "
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
     Run3_JetVeto_jetfilter_Horn50GeV:
         stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoFilterJetsOnly_HornpT50GeV/stage1_output/"
         comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
 
-    Run3_JetVeto_jetfilter_Horn50GeV_v2:
+    Run3_JetVeto_jetfilter_Horn50GeV_v1:
         stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV/stage1_output/"
         comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
 
-    Run3_JetVeto_jetfilter_Horn50GeV_v3:
+    Run3_JetVeto_jetfilter_Horn50GeV_v2:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets_Horn50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_JetVeto_jetfilter_Horn50GeV_tightMuon:
         stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_TightMuon/stage1_output/"
         comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5). Also, changed the muon ID to tight"
 
-    Run3_JetVeto_jetfilter_Horn50GeV_v4:
+    Run3_JetVeto_jetfilter_Horn50GeV_JetIDTightLepVetoPass:
         stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_JetIDTightLepVetoPass/stage1_output/"
         comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5). Used jetID ==6 which is pass jet ID and tightlepton veto"
