@@ -17,7 +17,12 @@ stage1_dir = get_stage1_path()  # default = "current"
 LOAD_PATH = str(Path(stage1_dir) / "{year}" / "f1_0")
 logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
-SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/{LOAD_PATH.split('/')[-4]}/"
+
+LOAD_PATH = "/depot/cms/users/yun79/hmm/copperheadV1clean/Run3ONov03_2025_KITMuScaleSmearOn_mediumMuId/stage1_output/2024/f1_0"
+
+
+SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/Hyeon_AllSamples_DYWgted_{LOAD_PATH.split('/')[-4]}/"
+# SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_01December/{LOAD_PATH.split('/')[-4]}/"
 # SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/DY_jet_binned/{LOAD_PATH.split('/')[-4]}/"
 # SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/DY_MLL_binned/{LOAD_PATH.split('/')[-4]}/"
 logger.info(f"Using SAVE_PATH: {SAVE_PATH}")
@@ -28,7 +33,7 @@ logger.info(f"Using SAVE_PATH: {SAVE_PATH}")
 # years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years = ["2022postEE", "2023", "2023BPix"]
 # years = ["2023", "2023BPix"]
-years = ["2023"]
+years = ["2024"]
 # years = ["*"]
 
 # categories = ["vbf", "ggh", "nocat"]

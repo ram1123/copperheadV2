@@ -2,7 +2,7 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets_Horn50GeV/stage1_output/"
         comment: "What plotter should use by default"
 
     Run3_noJetVetoMap:

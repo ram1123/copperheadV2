@@ -2,11 +2,11 @@
 
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_NoJVM -p HPScan_03Sep_17bins -y "2023" -m 0 -k  -d 1)
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_NoJVM -p HPScan_03Sep_17bins -y "2023" -m 1 -k  -d 1)
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_JVM -p HPScan_03Sep_17bins -y "2023" -m 1 -k  -d 1)
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_JVM_Horn50GeV -p HPScan_03Sep_17bins -y "2023" -m 1 -k  -d 1)
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_JVMFilterJets -p HPScan_03Sep_17bins -y "2023" -m 1 -k  -d 1)
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_JVMFilterJets_Horn50GeV -p HPScan_03Sep_17bins -y "2023" -m 1 -k  -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_NoJVM -p HPScan_03Sep_17bins -y "2023" -m compact -k  -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_JVM -p HPScan_03Sep_17bins -y "2023" -m compact -k  -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_JVM_Horn50GeV -p HPScan_03Sep_17bins -y "2023" -m compact -k  -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_JVMFilterJets -p HPScan_03Sep_17bins -y "2023" -m compact -k  -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Dec_JVMFilterJets_Horn50GeV -p HPScan_03Sep_17bins -y "2023" -m compact -k  -d 1)
 ```
 
 # 01 December 2025

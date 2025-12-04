@@ -27,11 +27,13 @@ bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMC
 
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dyTo2L_M-50_incl"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
-# DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
+DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
 # DY_aMCatNLO = ["dyTo2L_M-50_incl"]
-DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"]
-
+# DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"]
+# DY_aMCatNLO = ["dy_M-50_madgraph"]  # 2024
+DY_To2MU_MassBinned = ["dyTo2Mu_M-10To50", "dyTo2Mu_M-50To120", "dyTo2Mu_M-120To200"] # 2024
+DY_To2MU_inclusive = ["dyTo2Mu_M-50"]
 DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
 
 DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
@@ -56,8 +58,13 @@ group_dict = {
         "data_F",
         "data_G",
         "data_H",
+        "data_I",
+        "data_J",
     ],
     "DY": DY_aMCatNLO,
+    # "DY": DY_To2MU_MassBinned,
+    # "DY": DY_To2MU_inclusive,
+    # "DY": ["dy_M-50_aMCatNLO"],
     # "DY": DY_jet_binned,
     # "DY": DY_MLL_binned,
     # "DY": DY_MiNNLO,
@@ -77,7 +84,7 @@ group_dict = {
     # "EWK": ["ewk_lljj_mll50_mjj120",  "ewk_lljj"],
 
     # "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
-    "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz_2l2q", "zz_2l2nu", "zz_4l"],
+    "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz_2l2q", "zz_2l2u", "zz_2l2nu", "zz_4l"],
     # "VVContinuum": ["GluGluContin_ZZ2e2mu", "GluGluContin_ZZ2mu2nu", "GluGluContin_ZZ2mu2tau", "GluGluContin_ZZ4mu", "GluGluContin_ZZ4tau"],
     "OTHER": ["www", "wwz", "wzz", "zzz"],
     "GGH": ["ggh_powhegPS"],
@@ -134,7 +141,7 @@ if __name__ == "__main__":
     "-data",
     "--data",
     dest="data_samples",
-    default=["A", "B", "C", "D", "E", "F", "G", "H"],
+    default=["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"],
     # default=["A"],
     nargs="*",
     type=str,
@@ -142,21 +149,22 @@ if __name__ == "__main__":
     help="list of data samples represented by alphabetical letters A-H",
     )
     parser.add_argument(
-    "-bkg",
-    "--background",
-    dest="bkg_samples",
-    # default=["DY", "TOP", "EWK", "VV", "OTHER"],
-    # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"],
-    # default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
-    # default = ["OTHER", "EWK", "VV", "DY", "DYVBF"],
-    # default = ["OTHER", "EWK", "VV",  "TOP", "DY", "DY_MiNNLO", "DY_aMCatNLO"],
-    default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
-    # default = ["OTHER", "EWK", "VV", "TOP", "DY" ],
-    # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
+        "-bkg",
+        "--background",
+        dest="bkg_samples",
+        # default=["DY", "TOP", "EWK", "VV", "OTHER"],
+        # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"],
+        # default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
+        # default = ["OTHER", "EWK", "VV", "DY", "DYVBF"],
+        # default = ["OTHER", "EWK", "VV",  "TOP", "DY", "DY_MiNNLO", "DY_aMCatNLO"],
+        default=["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
+        # default=["OTHER",  "DY", "DYVBF", "DYJ01", "DYJ2"],
+        # default = ["OTHER", "EWK", "VV", "TOP", "DY" ],
+        # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
+        nargs="*",
+        type=str,
+        action="store",
+        help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
     )
     parser.add_argument(
     "-sig",
@@ -325,6 +333,9 @@ if __name__ == "__main__":
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
 
+    if ("22" in args.year) or ("23" in args.year) or ("24" in args.year):
+        CM_energy = 13.6  # TeV
+
     if args.lumi == "":
         # read lumi value from configs/parameters/lumi.yaml
         infile_lumi = os.path.join("configs", "parameters", "lumi.yaml")
@@ -423,9 +434,9 @@ if __name__ == "__main__":
             variables2plot.append(f"{particle}_mass")
             variables2plot.append(f"{particle}_pt")
             variables2plot.append(f"{particle}_eta")
-            variables2plot.append(f"PuppiMET_pt")
-            variables2plot.append(f"PuppiMET_phi")
-            variables2plot.append(f"PuppiMET_sumEt")
+            # variables2plot.append(f"PuppiMET_pt")
+            # variables2plot.append(f"PuppiMET_phi")
+            # variables2plot.append(f"PuppiMET_sumEt")
             if args.minimum_set: # if minimum set is requested, only plot pt and mass
                 continue
             variables2plot.append(f"{particle}_phi")
@@ -580,6 +591,11 @@ if __name__ == "__main__":
         if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
             logger.warning("removing separate_wgt_zpt_wgt!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
+
+        # if "dy" in process.lower():
+        #     # scale the weights for DY samples by 3.0
+        #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
+        #     events["wgt_nominal"] = events["wgt_nominal"] * (1997.0/2124.08)
 
         loaded_events[process] = events
     logger.info("finished loading parquet files!")
@@ -912,6 +928,7 @@ if __name__ == "__main__":
                 lumi = args.lumi,
                 status = status,
                 log_scale = do_logscale,
+                CenterOfMass = CM_energy,
             )
             plotDataMC_compare(
                 binning,
@@ -925,6 +942,7 @@ if __name__ == "__main__":
                 lumi = args.lumi,
                 status = status,
                 log_scale = False,
+                CenterOfMass=CM_energy,
             )
     time_elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished in {time_elapsed} s.")

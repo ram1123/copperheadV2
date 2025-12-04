@@ -238,10 +238,11 @@ def main() -> None:
             "data*",
             "vbf_powheg",
             "ggh_powhegPS",
-            "dyTo2L_M-50_incl",
+            # "dyTo2L_M-50_incl",
+            "dyTo2L_M-50_incl_XSDYTurbo",
             "ttjets_*",
-            "w*_*",
-            "zz_*",
+            # "w*_*",
+            # "zz_*",
             "ewk_lljj",
         ]
 
