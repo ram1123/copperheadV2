@@ -111,6 +111,7 @@ save_path="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
 # save_path="/store/user/rasharma/hmm/copperheadV1clean/$label/" # EOS path
 
 trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
+log "Program started on $(date)"
 
 declare -A data_l_dict=(
     [2018PR]="A"
@@ -144,19 +145,19 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2018"]=""
     data_l_dict["2022preEE"]=""
     data_l_dict["2022postEE"]=""
-    data_l_dict["2023"]=""
+    # data_l_dict["2023"]=""
     data_l_dict["2023BPix"]=""
     data_l_dict["2024"]=""
 
     # bkg_l=""
-    # bkg_l="DY Top VV EWK VVV"
+    bkg_l="Top"
     # bkg_l="Top"
 
-    # sig_l="Higgs"
+    sig_l="Higgs"
     # sig_l=""
 fi
 
-chunksize=300000
+chunksize=600000
 max_file_len=900 # 2500 for data, 5 for MC
 
 echo "Running with the following parameters:"
@@ -194,7 +195,7 @@ for year in "${years[@]}"; do
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --rerun --isCutflow "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML --rerun  --skipSamples "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --isCutflow "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML   "
 
     ### DNN training parameters
     training_fold=3
@@ -332,7 +333,7 @@ for year in "${years[@]}"; do
             ;;
         dnn|dnn_pre|dnn_train|dnn_var_rank)
             log "Running DNN step(s) for year $year..."
-            cmd_preproc="python MVA_training/VBF/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level INFO "
+            cmd_preproc="python MVA_training/VBF/run2_legacyModel/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level INFO "
             # Alternative cmd_train configurations (uncomment and adjust as needed):
             # -- Bayesian Optimization:
             # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 75 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
@@ -341,7 +342,7 @@ for year in "${years[@]}"; do
             # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 3 --bo-epochs 5 --bo-fold 0 --n-epochs 5 --batch-size 15536 --log-level INFO "
             # cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 5 --batch-size 15536 --log-level INFO "
             # Active configuration:
-            cmd_train="python MVA_training/VBF/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 100 --log-level INFO "
+            cmd_train="python MVA_training/VBF/run2_legacyModel/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 100 --log-level INFO "
             cmd_var_rank="python MVA_training/VBF/variable_ranking.py "
 
             if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then

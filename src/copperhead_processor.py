@@ -485,14 +485,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"NanoAODv: {NanoAODv}")
         t1 = time.perf_counter()
         logger.info(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
-
-        if hasattr(events.Jet, "jetId") == False:
-            logger.warning("events.Jet does not have jetID attribute!")
-        else:
-            logger.warning("events.Jet has jetID attribute.")
-        # sys.exit()
         # LHE cut original start -----------------------------------------------------------------------------
-        LHE_filter = ak.ones_like(event_filter, dtype="bool")  # start with 1D of Trues
         do_remove_dy_M100to200 = self.config["switches"]["do_remove_dy_M100to200"]
         if "dy_M-50" in dataset and do_remove_dy_M100to200:  # if dy_M-50, apply LHE cut
             logger.debug("doing dy_M-50 LHE cut!")
@@ -520,7 +513,8 @@ class EventProcessor(processor.ProcessorABC):
             # self.selection.add("LHE_cut", LHE_filter)
             event_filter = event_filter & LHE_filter
 
-        self.selection.add("LHE_cut", LHE_filter)
+            self.selection.add("LHE_cut", LHE_filter)
+
         # LHE cut original end -----------------------------------------------------------------------------
 
         t3 = time.perf_counter()
@@ -1066,9 +1060,6 @@ class EventProcessor(processor.ProcessorABC):
             logger.info("Applying jet veto maps!")
             jets, met, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, met, PuppiMET)
 
-        fatJets = events.FatJet
-        nfatJets = ak.num(fatJets, axis=1)
-
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
@@ -1096,44 +1087,47 @@ class EventProcessor(processor.ProcessorABC):
         # print first 5 events, fatjet pT
         # logger.warning(f"Number of fatjets (before selection): {nfatJets[:25].compute()}")
         # logger.warning(f"FatJet pT (before selection): {fatJets.pt[:25].compute()}")
+        do_getFatJet_vars = self.config["switches"].get("do_getFatJet_vars", False)
+        if do_getFatJet_vars:
+            fatJets = events.FatJet
+            nfatJets = ak.num(fatJets, axis=1)
+            fatjet_selection = (
+                (fatJets.pt > 150)
+                & (abs(fatJets.eta) < 2.4)
+                & (fatJets.particleNetWithMass_WvsQCD > 0.75) # W vs QCD discriminator
+            )
+            if hasattr(fatJets, "jetId"):
+                fatjet_selection = fatjet_selection & (fatJets.jetId >= 2)
+            else:
+                logger.warning("FatJets have no jetId field!")
+                tight_id, _ = custom_jet_id(fatJets)
+                fatjet_selection = fatjet_selection & tight_id
 
-        fatjet_selection = (
-            (fatJets.pt > 150)
-            & (abs(fatJets.eta) < 2.4)
-            & (fatJets.particleNetWithMass_WvsQCD > 0.75) # W vs QCD discriminator
-        )
-        if hasattr(fatJets, "jetId"):
-            fatjet_selection = fatjet_selection & (fatJets.jetId >= 2)
-        else:
-            logger.warning("FatJets have no jetId field!")
-            tight_id, _ = custom_jet_id(fatJets)
-            fatjet_selection = fatjet_selection & tight_id
+            fatJets = fatJets[fatjet_selection]
+            nfatJets_pre = ak.num(fatJets, axis=1)
+            # logger.warning(f"Number of fatjets (after selection): {nfatJets_pre[:25].compute()}")
+            # logger.warning(f"FatJet pT (after pre-selection): {fatJets.pt[:25].compute()}")
 
-        fatJets = fatJets[fatjet_selection]
-        nfatJets_pre = ak.num(fatJets, axis=1)
-        # logger.warning(f"Number of fatjets (after selection): {nfatJets_pre[:25].compute()}")
-        # logger.warning(f"FatJet pT (after pre-selection): {fatJets.pt[:25].compute()}")
+            # if nfatJets_pre > 0, we apply the dR(jet, muon) > 0.8 cut and save the number of fatjets that passes this
+            # here muons are mu1 and mu2, as defined above
+            fatJets_dRmu1 = fatJets.delta_r(mu1)
+            fatJets_dRmu2 = fatJets.delta_r(mu2)
+            fatJets_dRmu1 = ak.fill_none(fatJets_dRmu1, 999) # if there's no fatjet, set dR to a large number, set it to +999 as later I am checking min of the two numbers. So, set it to large +ve number
+            fatJets_dRmu2 = ak.fill_none(fatJets_dRmu2, 999)
+            fatJets_dRmu = np.minimum(fatJets_dRmu1, fatJets_dRmu2)
 
-        # if nfatJets_pre > 0, we apply the dR(jet, muon) > 0.8 cut and save the number of fatjets that passes this
-        # here muons are mu1 and mu2, as defined above
-        fatJets_dRmu1 = fatJets.delta_r(mu1)
-        fatJets_dRmu2 = fatJets.delta_r(mu2)
-        fatJets_dRmu1 = ak.fill_none(fatJets_dRmu1, 999) # if there's no fatjet, set dR to a large number, set it to +999 as later I am checking min of the two numbers. So, set it to large +ve number
-        fatJets_dRmu2 = ak.fill_none(fatJets_dRmu2, 999)
-        fatJets_dRmu = np.minimum(fatJets_dRmu1, fatJets_dRmu2)
+            # logger.warning(f"dR(jet, mu1) (before dR cut): {fatJets_dRmu1[:25].compute()}")
+            # logger.warning(f"dR(jet, mu2) (before dR cut): {fatJets_dRmu2[:25].compute()}")
+            # logger.warning(f"mininum dR(jet, muon) (before dR cut): {fatJets_dRmu[:25].compute()}")
 
-        # logger.warning(f"dR(jet, mu1) (before dR cut): {fatJets_dRmu1[:25].compute()}")
-        # logger.warning(f"dR(jet, mu2) (before dR cut): {fatJets_dRmu2[:25].compute()}")
-        # logger.warning(f"mininum dR(jet, muon) (before dR cut): {fatJets_dRmu[:25].compute()}")
+            fatJets = fatJets[fatJets_dRmu > 0.8]
+            nfatJets_drmuon = ak.num(fatJets, axis=1)
+            # logger.warning(f"FatJet pT (after dR(jet, muon) > 0.8 cut): {fatJets.pt[:25].compute()}")
+            # logger.warning(f"Number of fatjets (after dR(jet, muon) > 0.8 cut): {nfatJets_drmuon[:25].compute()}")
 
-        fatJets = fatJets[fatJets_dRmu > 0.8]
-        nfatJets_drmuon = ak.num(fatJets, axis=1)
-        # logger.warning(f"FatJet pT (after dR(jet, muon) > 0.8 cut): {fatJets.pt[:25].compute()}")
-        # logger.warning(f"Number of fatjets (after dR(jet, muon) > 0.8 cut): {nfatJets_drmuon[:25].compute()}")
-
-        # keep only the leading fatjet after all the selections above
-        fatJets_default = ak.pad_none(fatJets, target=1)
-        fatJet1_default = fatJets_default[:, 0]
+            # keep only the leading fatjet after all the selections above
+            fatJets_default = ak.pad_none(fatJets, target=1)
+            fatJet1_default = fatJets_default[:, 0]
 
         if do_jec: # old method
             logger.warning("Doing JEC and JER corrections!")
@@ -1208,29 +1202,23 @@ class EventProcessor(processor.ProcessorABC):
             # original initial weight start ----------------
             weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights) # temporary commenting out
 
-            if "2018" in str(year) or "2022" in str(year) or "2023" in str(year) or "2024" in str(year) or NanoAODv == 15:
-                logger.info(f"year: {year}, dataset_yaml_file: {dataset_yaml_file}")
-                # FIXME: Remove this if condition later when we update the yaml file for run2 too.
-                sample_info = get_sample_info(dataset_yaml_file, dataset, year) # FIXME: hardcoded filename
-                logger.info(f"sample_info: {sample_info}")
-                integrated_lumi = sample_info["total_lumi_pb"]
+            logger.info(f"year: {year}, dataset_yaml_file: {dataset_yaml_file}")
+            # FIXME: Remove this if condition later when we update the yaml file for run2 too.
+            sample_info = get_sample_info(dataset_yaml_file, dataset, year) # FIXME: hardcoded filename
+            logger.debug(f"sample_info: {sample_info}")
 
-                cross_section = sample_info["cross_section_pb"]
-                logger.info(f"cross_section: {cross_section}")
-
-                kfactor = sample_info["kfactor_value"]
-                cross_section = cross_section * kfactor
-                logger.debug(f"kfactor: {kfactor}")
-            else:
-                # check if there's a year-wise different cross section
-                try:
-                    cross_section = cross_section[year] # we assume cross_section is a map (Omegaconf)
-                except:
-                    cross_section = cross_section # we assume this is a number
-                integrated_lumi = self.config["integrated_lumis"]
-
-            logger.debug(f"cross_section: {cross_section}")
+            integrated_lumi = sample_info["total_lumi_pb"]
             logger.debug(f"integrated_lumi: {integrated_lumi}")
+
+            cross_section = sample_info["cross_section_pb"]
+            logger.debug(f"cross_section (before k-factor): {cross_section}")
+
+            kfactor = sample_info["kfactor_value"]
+            cross_section = cross_section * kfactor
+
+            logger.debug(f"kfactor: {kfactor}")
+            logger.info(f"cross_section (after k-factor): {cross_section}")
+
             weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
             weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
             # original initial weight end ----------------
@@ -1396,6 +1384,62 @@ class EventProcessor(processor.ProcessorABC):
             "luminosityBlock": events.luminosityBlock,
             "fraction": ak.ones_like(events.event) * events.metadata["fraction"],
             "year": ak.ones_like(nmuons) * dnn_year,
+            "dimuon_mass": dimuon.mass,
+            "dimuon_pt": dimuon.pt,
+            "dimuon_pt_log": np.log(dimuon.pt),
+            "dimuon_eta": dimuon.eta,
+            "dimuon_rapidity": getRapidity(dimuon),
+
+            "dimuon_ebe_mass_res": dimuon_ebe_mass_res,
+            "dimuon_ebe_mass_res_rel": dimuon_ebe_mass_res_rel,
+            "dimuon_cos_theta_cs": dimuon_cos_theta_cs,
+            "dimuon_phi_cs": dimuon_phi_cs,
+
+        }
+        if do_getFatJet_vars:
+            out_dict.update({
+                "nfatJets": nfatJets,
+                "nfatJets_pre": nfatJets_pre,
+                "nfatJets_drmuon": nfatJets_drmuon,
+                # "fatjets_dRmu_gt0p8": fatJets_dRmu,
+
+
+                # add fatjet1 default kinematics
+                "fatJet1_default_pt_nominal": fatJet1_default.pt,
+                "fatJet1_default_eta_nominal": fatJet1_default.eta,
+                "fatJet1_default_phi_nominal": fatJet1_default.phi,
+                "fatJet1_default_mass_nominal": fatJet1_default.mass,
+                "fatJet1_default_msoftdrop_nominal": fatJet1_default.msoftdrop,
+                # "fatJet1_default_electronIdx3SJ_nominal": fatJet1_default.electronIdx3SJ,
+                # "fatJet1_default_nConstituents_nominal": fatJet1_default.nConstituents,
+                # "fatJet1_default_tau1_nominal": fatJet1_default.tau1,
+                # "fatJet1_default_tau2_nominal": fatJet1_default.tau2,
+                # "fatJet1_default_tau3_nominal": fatJet1_default.tau3,
+                # "fatJet1_default_tau4_nominal": fatJet1_default.tau4,
+                # "fatJet1_default_particleNetWithMass_QCD_nominal": fatJet1_default.particleNetWithMass_QCD,
+                "fatJet1_default_particleNetWithMass_WvsQCD_nominal": fatJet1_default.particleNetWithMass_WvsQCD,
+                # "fatJet1_default_particleNetWithMass_ZvsQCD_nominal": fatJet1_default.particleNetWithMass_ZvsQCD,
+                # "fatJet1_default_particleNet_QCD_nominal": fatJet1_default.particleNet_QCD,
+                # "fatJet1_default_particleNet_XbbVsQCD_nominal": fatJet1_default.particleNet_XbbVsQCD,
+                # "fatJet1_default_particleNet_XccVsQCD_nominal": fatJet1_default.particleNet_XccVsQCD,
+                # "fatJet1_default_particleNet_XggVsQCD_nominal": fatJet1_default.particleNet_XggVsQCD,
+                # "fatJet1_default_particleNet_XqqVsQCD_nominal": fatJet1_default.particleNet_XqqVsQCD,
+                # "fatJet1_default_particleNet_massCorr_nominal": fatJet1_default.particleNet_massCorr
+            })
+        if do_additional_jet_vars:
+            out_dict.update({
+                "jet3_default_pt_nominal": jet3_default.pt,
+                "jet3_default_eta_nominal": jet3_default.eta,
+                "jet3_default_phi_nominal": jet3_default.phi,
+                "jet3_default_mass_nominal": jet3_default.mass,
+
+                "jet4_default_pt_nominal": jet4_default.pt,
+                "jet4_default_eta_nominal": jet4_default.eta,
+                "jet4_default_phi_nominal": jet4_default.phi,
+                "jet4_default_mass_nominal": jet4_default.mass,
+            })
+        # --- Extra muon variables  ----------------------
+        muon_extra_dict = {
             "PV_npvs": events.PV.npvs,
             "PV_npvsGood": events.PV.npvsGood,
             "MET_pt": met.pt, # As we are using CHS jets, so use MET not PuppiMET
@@ -1420,31 +1464,24 @@ class EventProcessor(processor.ProcessorABC):
             "mu2_iso": mu2.pfRelIso04_all,
             "mu1_pt_over_mu2_pt": mu1.pt / mu2.pt,
             "mu1_eta_over_mu2_eta": abs(mu1.eta) / abs(mu2.eta),
-            # "mu1_pt_roch" : mu1.pt_roch,
-            # "mu1_pt_fsr" : mu1.pt_fsr,
+            "mu1_pt_roch" : mu1.pt_roch,
+            "mu1_pt_fsr" : mu1.pt_fsr,
             # "mu1_pt_gf" : mu1.pt_gf,
-            # "mu2_pt_roch" : mu2.pt_roch,
-            # "mu2_pt_fsr" : mu2.pt_fsr,
+            "mu2_pt_roch" : mu2.pt_roch,
+            "mu2_pt_fsr" : mu2.pt_fsr,
             # "mu2_pt_gf" : mu2.pt_gf,
             "nmuons": nmuons,
-            "dimuon_mass": dimuon.mass,
-            "dimuon_pt": dimuon.pt,
-            "dimuon_pt_log": np.log(dimuon.pt),
-            "dimuon_eta": dimuon.eta,
-            "dimuon_rapidity": getRapidity(dimuon),
+
             "dimuon_phi": dimuon.phi,
             "dimuon_dEta": dimuon_dEta,
             "dimuon_dPhi": dimuon_dPhi,
             "dimuon_dR": dimuon_dR,
             "acoplanarity": acoplanarity,
-            "dimuon_ebe_mass_res": dimuon_ebe_mass_res,
-            "dimuon_ebe_mass_res_rel": dimuon_ebe_mass_res_rel,
+
             "uncalibrated_dimuon_ebe_mass_res": uncalibrated_dimuon_ebe_mass_res,
-            "dimuon_cos_theta_cs": dimuon_cos_theta_cs,
-            "dimuon_phi_cs": dimuon_phi_cs,
             "dimuon_cos_theta_eta": dimuon_cos_theta_eta,
             "dimuon_phi_eta": dimuon_phi_eta,
-            # "dimuon_pt_over_MET_pt": dimuon.pt / events.MET.pt,
+            "dimuon_pt_over_MET_pt": dimuon.pt / events.MET.pt,
             "dimuon_pt_over_jet1_pt": dimuon.pt / jet1_default.pt,
             "dimuon_pt_over_jet2_pt": dimuon.pt / jet2_default.pt,
             "mu1_pt_raw": mu1.pt_raw,
@@ -1452,6 +1489,7 @@ class EventProcessor(processor.ProcessorABC):
             "mu1_pt_fsr": mu1.pt_fsr,
             "mu2_pt_fsr": mu2.pt_fsr,
             # "pass_leading_pt" : pass_leading_pt,
+
             # add jet default kinematics here
             "jet1_default_pt_nominal": jet1_default.pt,
             "jet1_default_eta_nominal": jet1_default.eta,
@@ -1462,48 +1500,6 @@ class EventProcessor(processor.ProcessorABC):
             "jet2_default_phi_nominal": jet2_default.phi,
             "jet2_default_mass_nominal": jet2_default.mass,
 
-            "nfatJets": nfatJets,
-            "nfatJets_pre": nfatJets_pre,
-            "nfatJets_drmuon": nfatJets_drmuon,
-            # "fatjets_dRmu_gt0p8": fatJets_dRmu,
-
-
-            # add fatjet1 default kinematics
-            "fatJet1_default_pt_nominal": fatJet1_default.pt,
-            "fatJet1_default_eta_nominal": fatJet1_default.eta,
-            "fatJet1_default_phi_nominal": fatJet1_default.phi,
-            "fatJet1_default_mass_nominal": fatJet1_default.mass,
-            "fatJet1_default_msoftdrop_nominal": fatJet1_default.msoftdrop,
-            # "fatJet1_default_electronIdx3SJ_nominal": fatJet1_default.electronIdx3SJ,
-            # "fatJet1_default_nConstituents_nominal": fatJet1_default.nConstituents,
-            # "fatJet1_default_tau1_nominal": fatJet1_default.tau1,
-            # "fatJet1_default_tau2_nominal": fatJet1_default.tau2,
-            # "fatJet1_default_tau3_nominal": fatJet1_default.tau3,
-            # "fatJet1_default_tau4_nominal": fatJet1_default.tau4,
-            # "fatJet1_default_particleNetWithMass_QCD_nominal": fatJet1_default.particleNetWithMass_QCD,
-            "fatJet1_default_particleNetWithMass_WvsQCD_nominal": fatJet1_default.particleNetWithMass_WvsQCD,
-            # "fatJet1_default_particleNetWithMass_ZvsQCD_nominal": fatJet1_default.particleNetWithMass_ZvsQCD,
-            # "fatJet1_default_particleNet_QCD_nominal": fatJet1_default.particleNet_QCD,
-            # "fatJet1_default_particleNet_XbbVsQCD_nominal": fatJet1_default.particleNet_XbbVsQCD,
-            # "fatJet1_default_particleNet_XccVsQCD_nominal": fatJet1_default.particleNet_XccVsQCD,
-            # "fatJet1_default_particleNet_XggVsQCD_nominal": fatJet1_default.particleNet_XggVsQCD,
-            # "fatJet1_default_particleNet_XqqVsQCD_nominal": fatJet1_default.particleNet_XqqVsQCD,
-            # "fatJet1_default_particleNet_massCorr_nominal": fatJet1_default.particleNet_massCorr
-        }
-        if do_additional_jet_vars:
-            out_dict.update({
-                "jet3_default_pt_nominal": jet3_default.pt,
-                "jet3_default_eta_nominal": jet3_default.eta,
-                "jet3_default_phi_nominal": jet3_default.phi,
-                "jet3_default_mass_nominal": jet3_default.mass,
-
-                "jet4_default_pt_nominal": jet4_default.pt,
-                "jet4_default_eta_nominal": jet4_default.eta,
-                "jet4_default_phi_nominal": jet4_default.phi,
-                "jet4_default_mass_nominal": jet4_default.mass,
-            })
-        # --- Extra muon variables  ----------------------
-        muon_extra_dict = {
             # Impact parameters / beamspot / PV
             "mu1_dxy":        mu1.dxy,
             "mu2_dxy":        mu2.dxy,
@@ -1729,6 +1725,11 @@ class EventProcessor(processor.ProcessorABC):
 
         if is_mc:
             mc_dict = {
+                "gjj_mass": gjj.mass,
+            }
+            out_dict.update(mc_dict)
+
+            mc_dict_additional = {
                 # "HTXS_Higgs_pt" : events.HTXS.Higgs_pt, # for nnlops weight for ggH signal sample
                 # "HTXS_njets30" : events.HTXS.njets30, # for nnlops weight for ggH signal sample
                 "gjet1_pt" : gjet1.pt,
@@ -1742,12 +1743,12 @@ class EventProcessor(processor.ProcessorABC):
                 "gjj_pt" : gjj.pt,
                 "gjj_eta" : gjj.eta,
                 "gjj_phi" : gjj.phi,
-                "gjj_mass": gjj.mass,
                 "gjj_dEta" : gjj_dEta,
                 "gjj_dPhi" : gjj_dPhi,
                 "gjj_dR" : gjj_dR,
             }
-            out_dict.update(mc_dict)
+            if do_additional_jet_vars:
+                out_dict.update(mc_dict_additional)
 
         t16 = time.perf_counter()
         logger.info(f"[timing] Fill muon and gjet variables time: {t16 - t15:.2f} seconds")
@@ -2248,8 +2249,8 @@ class EventProcessor(processor.ProcessorABC):
         elif ((NanoAODv == 12 or NanoAODv == 15) and year in ["2016preVFP", "2016postVFP", "2017", "2018"]): # NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2
             # if qgl is not present, set it to -1.0
             jets["qgl"] = jets.qgl if hasattr(jets, "qgl") else ak.zeros_like(jets.pt) - 1.0
-            jets["btagPNetQvG"] = jets.btagPNetQvG if hasattr(jets, "btagPNetQvG") else ak.zeros_like(jets.pt) - 1.0
-            jets["btagDeepFlavQG"] = jets.btagDeepFlavQG if hasattr(jets, "btagDeepFlavQG") else ak.zeros_like(jets.pt) - 1.0
+            # jets["btagPNetQvG"] = jets.btagPNetQvG if hasattr(jets, "btagPNetQvG") else ak.zeros_like(jets.pt) - 1.0
+            # jets["btagDeepFlavQG"] = jets.btagDeepFlavQG if hasattr(jets, "btagDeepFlavQG") else ak.zeros_like(jets.pt) - 1.0
         else: # NanoAODv12
             jets["btagPNetQvG"] = jets.btagPNetQvG
             jets["btagDeepFlavQG"] = jets.btagDeepFlavQG
@@ -2389,8 +2390,10 @@ class EventProcessor(processor.ProcessorABC):
         padded_jets = ak.pad_none(jets, target=4) # padd jets
         jet1 = padded_jets[:,0]
         jet2 = padded_jets[:,1]
-        jet3 = padded_jets[:,2]
-        jet4 = padded_jets[:,3]
+        do_additional_jet_vars = self.config["switches"]["do_additional_jet_vars"]
+        if do_additional_jet_vars:
+            jet3 = padded_jets[:,2]
+            jet4 = padded_jets[:,3]
 
         dijet = jet1+jet2
 
@@ -2448,70 +2451,72 @@ class EventProcessor(processor.ProcessorABC):
         jet_loop_out_dict = {
             f"jet1_pt_{variation}": jet1.pt,
             f"jet1_eta_{variation}": jet1.eta,
-            f"jet1_rapidity_{variation}": jet1_rapidity,  # max rel err: 0.7394
             f"jet1_phi_{variation}": jet1.phi,
-            f"jet1_btagPNetQvG_{variation}": jet1.btagPNetQvG,
-            f"jet1_btagDeepFlavQG_{variation}": jet1.btagDeepFlavQG,
-            f"jet1_mass_{variation}": jet1.mass,
-            f"jet1_area_{variation}": jet1.area,
             # -------------------------
             f"jet2_pt_{variation}": jet2.pt,
             f"jet2_eta_{variation}": jet2.eta,
-            f"jet2_rapidity_{variation}": jet2_rapidity,  # max rel err: 0.781
             f"jet2_phi_{variation}": jet2.phi,
-            f"jet2_btagPNetQvG_{variation}": jet2.btagPNetQvG,
-            f"jet2_btagDeepFlavQG_{variation}": jet2.btagDeepFlavQG,
-            f"jet2_mass_{variation}": jet2.mass,
-            f"jet2_area_{variation}": jet2.area,
             # -------------------------
-
             # -------------------------
             f"jj_mass_{variation}": dijet.mass,
-            # f"jj_mass_{variation}" : p4_sum_mass(jet1,jet2),
             f"jj_mass_log_{variation}": np.log(dijet.mass),
-            f"jj_pt_{variation}": dijet.pt,
-            f"jj_eta_{variation}": dijet.eta,
-            f"jj_phi_{variation}": dijet.phi,
             f"jj_dEta_{variation}": jj_dEta,
-            f"jj_dPhi_{variation}": jj_dPhi,
-            f"mmj1_dEta_{variation}": mmj1_dEta,
-            f"mmj1_dPhi_{variation}": mmj1_dPhi,
-            f"mmj1_dR_{variation}": mmj1_dR,
-            f"mmj2_dEta_{variation}": mmj2_dEta,
-            f"mmj2_dPhi_{variation}": mmj2_dPhi,
-            f"mmj2_dR_{variation}": mmj2_dR,
             f"mmj_min_dEta_{variation}": mmj_min_dEta,
-            f"mmj_min_dPhi_{variation}": mmj_min_dPhi,
-            f"mmjj_pt_{variation}": mmjj.pt,
-            f"mmjj_eta_{variation}": mmjj.eta,
-            f"mmjj_phi_{variation}": mmjj.phi,
-            f"mmjj_mass_{variation}": mmjj.mass,
             f"rpt_{variation}": rpt,
             f"pt_centrality_{variation}": pt_centrality,
-            f"zeppenfeld_{variation}": zeppenfeld,
             f"ll_zstar_log_{variation}": np.log(np.abs(zeppenfeld)),
             f"njets_{variation}": njets,
         }
         if do_additional_jet_vars:
-            jet_loop_out_dict.update({
-                f"jet3_pt_{variation}": jet3.pt,
-                f"jet3_eta_{variation}": jet3.eta,
-                f"jet3_rapidity_{variation}": jet3_rapidity,
-                f"jet3_phi_{variation}": jet3.phi,
-                f"jet3_btagPNetQvG_{variation}": jet3.btagPNetQvG,
-                f"jet3_btagDeepFlavQG_{variation}": jet3.btagDeepFlavQG,
-                f"jet3_mass_{variation}": jet3.mass,
-                f"jet3_area_{variation}": jet3.area,
-                # -------------------------
-                f"jet4_pt_{variation}": jet4.pt,
-                f"jet4_eta_{variation}": jet4.eta,
-                f"jet4_rapidity_{variation}": jet4_rapidity,
-                f"jet4_phi_{variation}": jet4.phi,
-                f"jet4_btagPNetQvG_{variation}": jet4.btagPNetQvG,
-                f"jet4_btagDeepFlavQG_{variation}": jet4.btagDeepFlavQG,
-                f"jet4_mass_{variation}": jet4.mass,
-                f"jet4_area_{variation}": jet4.area,
-            })
+            jet_loop_out_dict.update(
+                {
+                    f"jet1_rapidity_{variation}": jet1_rapidity,  # max rel err: 0.7394
+                    f"jet1_btagPNetQvG_{variation}": jet1.btagPNetQvG,
+                    f"jet1_btagDeepFlavQG_{variation}": jet1.btagDeepFlavQG,
+                    f"jet1_mass_{variation}": jet1.mass,
+                    f"jet1_area_{variation}": jet1.area,
+                    f"jj_pt_{variation}": dijet.pt,
+                    f"jj_eta_{variation}": dijet.eta,
+                    f"jj_phi_{variation}": dijet.phi,
+                    f"jj_dPhi_{variation}": jj_dPhi,
+                    f"mmj1_dEta_{variation}": mmj1_dEta,
+                    f"mmj1_dPhi_{variation}": mmj1_dPhi,
+                    f"mmj1_dR_{variation}": mmj1_dR,
+                    f"mmj2_dEta_{variation}": mmj2_dEta,
+                    f"mmj2_dPhi_{variation}": mmj2_dPhi,
+                    f"mmj2_dR_{variation}": mmj2_dR,
+                    f"mmj_min_dPhi_{variation}": mmj_min_dPhi,
+                    f"mmjj_pt_{variation}": mmjj.pt,
+                    f"mmjj_eta_{variation}": mmjj.eta,
+                    f"mmjj_phi_{variation}": mmjj.phi,
+                    f"mmjj_mass_{variation}": mmjj.mass,
+                    f"zeppenfeld_{variation}": zeppenfeld,
+                    f"jet2_rapidity_{variation}": jet2_rapidity,  # max rel err: 0.781
+                    # f"jet2_btagPNetQvG_{variation}": jet2.btagPNetQvG,
+                    f"jet2_btagDeepFlavQG_{variation}": jet2.btagDeepFlavQG,
+                    f"jet2_mass_{variation}": jet2.mass,
+                    f"jet2_area_{variation}": jet2.area,
+
+
+                    f"jet3_pt_{variation}": jet3.pt,
+                    f"jet3_eta_{variation}": jet3.eta,
+                    f"jet3_rapidity_{variation}": jet3_rapidity,
+                    f"jet3_phi_{variation}": jet3.phi,
+                    f"jet3_btagPNetQvG_{variation}": jet3.btagPNetQvG,
+                    f"jet3_btagDeepFlavQG_{variation}": jet3.btagDeepFlavQG,
+                    f"jet3_mass_{variation}": jet3.mass,
+                    f"jet3_area_{variation}": jet3.area,
+                    # -------------------------
+                    f"jet4_pt_{variation}": jet4.pt,
+                    f"jet4_eta_{variation}": jet4.eta,
+                    f"jet4_rapidity_{variation}": jet4_rapidity,
+                    f"jet4_phi_{variation}": jet4.phi,
+                    f"jet4_btagPNetQvG_{variation}": jet4.btagPNetQvG,
+                    f"jet4_btagDeepFlavQG_{variation}": jet4.btagDeepFlavQG,
+                    f"jet4_mass_{variation}": jet4.mass,
+                    f"jet4_area_{variation}": jet4.area,
+                }
+            )
 
         do_additional_vars = self.config["switches"]["do_additional_vars"]
         if do_additional_vars:
@@ -2773,27 +2778,27 @@ class EventProcessor(processor.ProcessorABC):
         #     })
 
         # Merge into main jet_loop_out_dict
-        jet_loop_out_dict.update(extra_jet_loop_dict)
+        # jet_loop_out_dict.update(extra_jet_loop_dict)
 
-        if is_mc and (variation == "nominal"):
-            nominal_dict = {
-                f"jet1_pt_gen_{variation}" : jet1.pt_gen,
-                f"jet2_pt_gen_{variation}" : jet2.pt_gen,
-            }
-            jet_loop_out_dict.update(nominal_dict)
+        # if is_mc and (variation == "nominal"):
+        #     nominal_dict = {
+        #         f"jet1_pt_gen_{variation}" : jet1.pt_gen,
+        #         f"jet2_pt_gen_{variation}" : jet2.pt_gen,
+        #     }
+        #     jet_loop_out_dict.update(nominal_dict)
 
-        if (variation == "nominal"):
-            nominal_dict = {
-                f"jet1_pt_raw_{variation}" : jet1.pt_raw,
-                f"jet2_pt_raw_{variation}" : jet2.pt_raw,
-                f"jet1_mass_raw_{variation}" : jet1.mass_raw,
-                f"jet2_mass_raw_{variation}" : jet2.mass_raw,
-                f"jet1_mass_jec_{variation}" : jet1.mass_jec,
-                f"jet2_mass_jec_{variation}" : jet2.mass_jec,
-                f"jet1_pt_jec_{variation}" : jet1.pt_jec,
-                f"jet2_pt_jec_{variation}" : jet2.pt_jec,
-            }
-            jet_loop_out_dict.update(nominal_dict)
+        # if (variation == "nominal"):
+        #     nominal_dict = {
+        #         f"jet1_pt_raw_{variation}" : jet1.pt_raw,
+        #         f"jet2_pt_raw_{variation}" : jet2.pt_raw,
+        #         f"jet1_mass_raw_{variation}" : jet1.mass_raw,
+        #         f"jet2_mass_raw_{variation}" : jet2.mass_raw,
+        #         f"jet1_mass_jec_{variation}" : jet1.mass_jec,
+        #         f"jet2_mass_jec_{variation}" : jet2.mass_jec,
+        #         f"jet1_pt_jec_{variation}" : jet1.pt_jec,
+        #         f"jet2_pt_jec_{variation}" : jet2.pt_jec,
+        #     }
+        # jet_loop_out_dict.update(nominal_dict)
 
         # ------------------------------------------------------------#
         # Fill soft activity jet variables
@@ -2802,18 +2807,18 @@ class EventProcessor(processor.ProcessorABC):
         # Effect of changes in jet acceptance should be negligible,
         # no need to calcluate this for each jet pT variation
 
-        sj_dict = {}
+        # sj_dict = {}
         sj_dict_HIG19006 = {}
         cutouts = [2,5]
         nmuons = ak.num(events.Muon, axis=1) # FIXME (I think it should be selected muons)
         # PLEASE NOTE: SoftJET variables are all from Nominal variation despite variation names
         for cutout in cutouts:
-            sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout) # obtain nominal softjet values
-            sj_out = { # add variation even thought it's always nominal
-                key+"_"+variation : val \
-                for key, val in sj_out.items()
-            }
-            sj_dict.update(sj_out)
+            # sj_out = fill_softjets(events, jets, mu1, mu2, nmuons, cutout) # obtain nominal softjet values
+            # sj_out = { # add variation even thought it's always nominal
+            #     key+"_"+variation : val \
+            #     for key, val in sj_out.items()
+            # }
+            # sj_dict.update(sj_out)
 
             sj_out_HIG19006 = fill_softjets_HIG19006(events, jets, mu1, mu2, nmuons, cutout) # obtain nominal softjet values
             sj_out_HIG19006 = { # add variation even thought it's always nominal
@@ -2822,8 +2827,8 @@ class EventProcessor(processor.ProcessorABC):
             }
             sj_dict_HIG19006.update(sj_out_HIG19006)
 
-        logger.debug(f"sj_dict.keys(): {sj_dict.keys()}")
-        jet_loop_out_dict.update(sj_dict)
+        # logger.debug(f"sj_dict.keys(): {sj_dict.keys()}")
+        # jet_loop_out_dict.update(sj_dict)
         jet_loop_out_dict.update(sj_dict_HIG19006)
 
         # ------------------------------------------------------------#

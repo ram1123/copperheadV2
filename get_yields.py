@@ -9,6 +9,8 @@ import itertools
 from pathlib import Path
 from typing import List, Tuple
 
+import argparse
+
 import dask_awkward as dak
 import awkward as ak
 
@@ -185,7 +187,7 @@ def main() -> None:
 
     # Physics / config toggles
     do_VH_veto = False
-    do_vbf_filter_study = False
+    do_vbf_filter_study = True
 
     regions = ["z-peak", "h-sidebands"]
     categories = ["ggh", "vbf"]
@@ -193,7 +195,27 @@ def main() -> None:
     # Choose which years you actually run on
     # years = ["2018", "2017", "2016preVFP", "2016postVFP"]
     # years = ["2018PR"]
-    years = ["2023"]
+    # years = ["2018"]
+
+    args = parse_args()
+
+    # Define all possible years you want to support
+    ALL_YEARS = [
+        "2018",
+        "2017",
+        "2016preVFP",
+        "2016postVFP",
+        "2022preEE",
+        "2022postEE",
+        "2023",
+        "2023BPix",
+        "2024",
+    ]
+
+    if args.years == ["all"]:
+        years = ALL_YEARS
+    else:
+        years = args.years
 
     info = []
 
@@ -235,15 +257,28 @@ def main() -> None:
         )
 
         processes = [
+            # "data_A",
+            # "data_B",
+            # "data_C",
+            # "data_D",
             "data*",
-            "vbf_powheg",
+            # "vbf_powheg",
+            "vbf_powheg_dipole",
             "ggh_powhegPS",
             # "dyTo2L_M-50_incl",
-            "dyTo2L_M-50_incl_XSDYTurbo",
+            # "dyTo2L_M-50_incl_XSDYTurbo",
+            "dy_VBF_filter",
+            "dy_M-50_aMCatNLO",
+            "dy_M-100To200_aMCatNLO",
+            "dy_M-50_MiNNLO",
+            "dy_M-100To200_MiNNLO",
             "ttjets_*",
-            # "w*_*",
-            # "zz_*",
-            "ewk_lljj",
+            "st_t_*",
+            "st_tW_*",
+            "w*_*",
+            "zz_*",
+            # "ewk_lljj",
+            "ewk_lljj_mll50_mjj120",
         ]
 
         for proc in processes:
@@ -256,6 +291,27 @@ def main() -> None:
         writer.writerows(info)
 
     print(f"\nWrote {len(info)} rows to {outfile}")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Compute yields for H→μμ stage1 outputs for one or more trials."
+    )
+
+    parser.add_argument(
+        "--years",
+        nargs="+",
+        default=["2018"],
+        help=(
+            "Years to run over. Examples:\n"
+            "  --years 2018\n"
+            "  --years 2018 2017 2016preVFP\n"
+            "  --years all\n"
+            "If not provided, defaults to ['2018']."
+        ),
+    )
+
+    return parser.parse_args()
 
 
 if __name__ == "__main__":

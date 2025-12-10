@@ -1,3 +1,36 @@
+
+# 09 December 2025
+
+<!--
+/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2016preVFP/compacted
+/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2016postVFP/compacted
+/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2017/compacted
+/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2/stage1_output/2018/compacted -->
+
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "2018" -m dnn_pre -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l dnn_train_softlink_HEMVetoFix -y "run2" -m dnn_pre -k)
+```
+
+
+
+# 08 December 2025
+
+## Done
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "2018" -m dnn_pre  -k)
+```
+
+## To do
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "2016preVFP 2016postVFP 2017" -m 0  -k)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "2018" -m compact  -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "run2" -m 1  -k)
+```
+
 # 02 December 2025
 
 ```bash

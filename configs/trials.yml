@@ -2,8 +2,26 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets_Horn50GeV/stage1_output/"
+        stage1: "{base_dir}/Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2/stage1_output/"
         comment: "What plotter should use by default"
+
+    Run2_HEMVetoFix:
+        stage1: "{base_dir}/Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2/stage1_output/"
+        comment: Rerun 2018 after HEM veto fix
+        date: December 07, 2025
+        gitSHA: 001b85faee5c7c6b97ba0fc3c9027d7e2f7d7e78
+
+    Run2_legacy_NoSyst:
+        stage1: "{base_dir}/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/"
+        comment: For September 25, 2025 HMuMu report
+        gitTab: V1.0
+        Reference: https://github.com/ram1123/copperheadV2/discussions/61
+
+    Run2_legacy:
+        stage1: "{base_dir}/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/"
+        comment: For September 25, 2025 HMuMu report
+        gitTab: V1.0
+        Reference: https://github.com/ram1123/copperheadV2/discussions/61
 
     Run3_noJetVetoMap:
         stage1: "{base_dir}/Run3_nanoAODv12_23October/stage1_output/"
