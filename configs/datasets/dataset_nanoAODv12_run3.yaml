@@ -301,7 +301,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022E-16Dec2023-v1/NANOAOD
-                lumi_pb: 5.8070
+                lumi_pb: 5807.0
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -312,7 +312,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022F-16Dec2023-v1/NANOAOD
-                lumi_pb: 17.7819
+                lumi_pb: 17781.9
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -322,7 +322,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022G-16Dec2023-v1/NANOAOD
-                lumi_pb: 3.0828
+                lumi_pb: 3082.8
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
