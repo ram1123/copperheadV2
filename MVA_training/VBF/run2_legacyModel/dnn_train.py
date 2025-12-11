@@ -7,7 +7,20 @@ import awkward as ak
 import glob
 import pandas as pd
 import itertools
+
+import os
+
+# Put this at the VERY TOP, before importing torch, numpy, etc.
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import torch
+
+torch.set_num_threads(1)
+torch.set_num_interop_threads(1)
+
 from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 import torch.optim as optim
@@ -86,7 +99,7 @@ def _safe_auc(y, p, w=None):
 
 def transformDnnScore(dnn_scores):
     s = np.clip(dnn_scores, 1e-6, 1-1e-6) # protection from atanh(0) or atanh(1 or -1) whose value is +/- inf
-    return np.atanh(s)
+    return np.arctanh(s)
 
 
 class FocalLoss(nn.Module):
@@ -1367,6 +1380,12 @@ def main():
         default=0,
         help="Which fold to use for Bayesian optimization"
     )
+    parser.add_argument(
+        "--n-procs",
+        type=int,
+        default=1,
+        help="Number of parallel processes"
+    )
     args = parser.parse_args()
     logger.setLevel(args.log_level)
     for handler in logger.handlers:
@@ -1408,7 +1427,7 @@ def main():
         "optimizer": "adamw", #"adam",
         "lr": 0.011339465927284355, #1e-3,
         "weight_decay": 1.9522171123020773e-06, #0.0,
-        "batch_size": 2048, #args.batch_size,
+        "batch_size": 50048, #args.batch_size,
         "loss_name": "bce",
     }
     # # Best hyperparameters (from 03 Sep 2025 training) except hidden layers. Here hidden layers are set to (128, 64, 32) similar as last training
@@ -1583,10 +1602,26 @@ def main():
     opt_name_l = [best_hp["optimizer"]] * nfolds
     wd_l = [best_hp["weight_decay"]] * nfolds
     loss_name_l = [best_hp["loss_name"]] * nfolds
-    with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
-        # Submit each file check to the executor
-        result_l = list(executor.map(
-            dnn_train,
+
+    n_procs = args.n_procs
+    logger.info(f"n_procs set to: {n_procs}")
+    if n_procs is None or n_procs <= 1:
+        logger.info("Running fold training serially (no ProcessPoolExecutor).")
+        result_l = []
+        for (
+            model,
+            data_dict,
+            fold,
+            trf,
+            batch_size,
+            nepochs,
+            save_path_i,
+            callback,
+            lr,
+            opt_name,
+            wd,
+            loss_name,
+        ) in zip(
             model_l,
             data_dict_l,
             fold_l,
@@ -1598,10 +1633,47 @@ def main():
             lr_l,
             opt_name_l,
             wd_l,
-            loss_name_l
-        ))
-        logger.debug(f"result_l: {result_l}")
-        logger.info("done!")
+            loss_name_l,
+        ):
+            r = dnn_train(
+                model,
+                data_dict,
+                fold,
+                trf,
+                batch_size,
+                nepochs,
+                save_path_i,
+                callback,
+                lr,
+                opt_name,
+                wd,
+                loss_name,
+            )
+            result_l.append(r)
+        logger.debug(f"result_l (serial): {result_l}")
+        logger.info("done (serial)!")
+    else:
+        logger.info(f"Running fold training with ProcessPoolExecutor, n_procs={n_procs}")
+        with concurrent.futures.ProcessPoolExecutor(max_workers=n_procs) as executor:
+            result_l = list(
+                executor.map(
+                    dnn_train,
+                    model_l,
+                    data_dict_l,
+                    fold_l,
+                    training_features_l,
+                    batch_size_l,
+                    nepochs_l,
+                    save_path_l,
+                    callback_l,
+                    lr_l,
+                    opt_name_l,
+                    wd_l,
+                    loss_name_l,
+                )
+            )
+        logger.debug(f"result_l (parallel): {result_l}")
+        logger.info("done (parallel)!")
 
     # After training all folds
     fold_dirs = [f"{save_path}/fold{i}" for i in range(nfolds)]

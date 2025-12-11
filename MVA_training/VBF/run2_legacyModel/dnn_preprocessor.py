@@ -15,6 +15,7 @@ import random
 
 import logging
 from modules.utils import logger
+from modules.selection import applyRegionCatCuts
 
 from dnn_helper import DIR_TAG
 
@@ -26,53 +27,12 @@ def fillEventNans(events):
     checked that this function is unnecssary for vbf category, but have it for robustness
     """
     for field in events.fields:
+        if field not in events.fields:
+            continue
         if "phi" in field:
             events[field] = ak.fill_none(events[field], value=-10) # we're working on a DNN, so significant deviation may be warranted
         else: # for all other fields (this may need to be changed)
             events[field] = ak.fill_none(events[field], value=0)
-    return events
-
-
-def applyCatAndFeatFilter(events, features: list, region="h-peak", category="vbf"):
-    """
-
-    """
-    # apply category filter
-    dimuon_mass = events.dimuon_mass
-    if region =="h-peak":
-        region = (dimuon_mass > 115.03) & (dimuon_mass < 135.03)
-    elif region =="h-sidebands":
-        region = ((dimuon_mass > 110) & (dimuon_mass < 115.03)) | ((dimuon_mass > 135.03) & (dimuon_mass < 150))
-    elif region =="signal":
-        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
-
-    if category.lower() == "vbf":
-        btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        # btag_loose = ak.fill_none(events.nBtagLoose_nominal, 0)
-        # btag_medium = ak.fill_none(events.nBtagMedium_nominal, 0)
-        # cut_loose = btag_loose >= 2
-        # cut_medium = btag_medium >= 1
-        # btag_cut = cut_loose | cut_medium
-        # btag_cut = ak.fill_none(btag_cut, False)
-        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
-        cat_cut = vbf_cut & (~btag_cut) # btag cut is for VH and ttH categories
-    elif category.lower()== "ggh":
-        btag_cut =ak.fill_none((events.nBtagLoose_nominal >= 2), value=False) | ak.fill_none((events.nBtagMedium_nominal >= 1), value=False)
-        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5)
-        cat_cut = (~vbf_cut) & (~btag_cut) # btag cut is for VH and ttH categories
-    else: # no category cut is applied
-        cat_cut = ak.ones_like(dimuon_mass, dtype="bool")
-
-    cat_cut = ak.fill_none(cat_cut, value=False)
-    cat_filter = (
-        cat_cut &
-        region
-    )
-    events = events[cat_filter] # apply the category filter
-    # logger.info(f"events dimuon_mass: {events.dimuon_mass.compute()}")
-    # apply the feature filter (so the ak zip only contains features we are interested)
-    logger.debug(f"features: {features}")
-    events = ak.zip({field : events[field] for field in features})
     return events
 
 
@@ -92,15 +52,49 @@ def prepare_features(events, features, variation="nominal"):
             logger.info(f"Variable {trf} not found in training dataframe!")
     return features_var
 
-def preprocess_loop(events, features2load, region="h-peak", category="vbf", label=""):
-    features2load = prepare_features(events, features2load) # add variation to features
+def preprocess_loop(events, features2load, region="h-peak", category="vbf", process = "", label=""):
+    # features2load = prepare_features(events, features2load) # add variation to features
     logger.info(f"features2load: {features2load}")
     # features2load = training_features + ["event"]
-    events = applyCatAndFeatFilter(events, features2load, region=region, category=category)
+    events = applyRegionCatCuts(events, category=category, region_name=region, process=process, variation="nominal", do_vbf_filter_study=True, do_VH_veto=False)
     events = fillEventNans(events)
 
+    # *** keep only the columns we actually want ***
+    keep_cols = [f for f in features2load if f in events.fields]
+    logger.debug(f"Keeping columns (after cuts): {keep_cols}")
+    events = events[keep_cols]
+
+    logger.debug(f"Events fields after cuts: {events.fields}")
+
+    # # Debug: try one partition only
+    # debug_events = events.partitions[0]
+    # logger.info("Debug: converting first partition only")
+    # df = ak.to_dataframe(debug_events.compute())
+    # logger.info(f"Debug df shape: {df.shape}")
+
     # turn to pandas df add label (signal=1, bkg=0)
-    df = ak.to_dataframe(events.compute())
+    # df = ak.to_dataframe(events.compute())
+
+    # --- compute to an Awkward Array and drop None records ---
+    arr = events.compute()  # Awkward Array
+    # Drop top-level None entries (type ?{...} -> {...})
+    mask = ~ak.is_none(arr)
+    arr = arr[mask]
+    logger.info("arr num events after cuts")
+
+    # --- build pandas DataFrame column by column ---
+    data = {}
+    for field in keep_cols:
+        col = arr[field]
+        # fill NaNs per field here (instead of earlier fillEventNans)
+        if "phi" in field:
+            col = ak.fill_none(col, -10)
+        else:
+            col = ak.fill_none(col, 0)
+        data[field] = ak.to_numpy(col)
+
+    df = pd.DataFrame(data)
+
     if label== "signal":
         df["label"] = 1.0
     elif label== "background":
@@ -468,15 +462,15 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
          'rpt',
          'll_zstar_log',
          'jj_dEta',
-        #  'nsoftjets5',
-         'nsoftjets5_new',
+         'nsoftjets5',
+        #  'nsoftjets5_new',
          'mmj_min_dEta',
         'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
          'jet1_pt', 'jet1_eta', 'jet1_phi',  'jet2_pt', 'jet2_eta', 'jet2_phi',
          'jet1_qgl', 'jet2_qgl',
          'dimuon_cos_theta_cs', 'dimuon_phi_cs',
-        #  'htsoft2',
-         'htsoft2_new',
+         'htsoft2',
+        #  'htsoft2_new',
          'pt_centrality',
          'year'
     ]
@@ -512,6 +506,9 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     # sig_processes = ["ggh_powhegPS"] # testing
     # bkg_processes = ["ewk_lljj_mll105_160_ptj0"] # testing
 
+    logger.debug(f"sig_processes: {sig_processes}")
+    logger.debug(f"bkg_processes: {bkg_processes}")
+
     sig_events_dict = {}
     for process in sig_processes:
         filenames = glob.glob(f"{base_path}/{process}/*/*.parquet")
@@ -543,10 +540,9 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     if not sig_events_dict:
         raise ValueError(f"No signal events loaded; please check base_path: {base_path} and signal processes.")
     # # Use the first available signal events as template for feature names
-    # sample_events = next(iter(sig_events_dict.values()))
-    # training_features = prepare_features(sample_events, training_features)
-    training_features = prepare_features(sig_events, training_features)
-    # logger.info(f"training_features: {training_features}")
+    sample_events = next(iter(sig_events_dict.values()))
+    training_features = prepare_features(sample_events, training_features)
+    logger.info(f"training_features: {training_features}")
     logger.info(f"len training_features: {len(training_features)}")
     features2load = training_features + ["event","wgt_nominal"]
 
@@ -558,7 +554,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     for label, events_dict in loop_dict.items():
         logger.info(f"{label} events dict: {events_dict}")
         for process, events in events_dict.items(): # lopp through each process's events
-            df = preprocess_loop(events, features2load, region=region, category=category, label=label)
+            df = preprocess_loop(events, features2load, region=region, category=category, process=process, label=label)
             if "dy_" in process.lower():
                 df["process"] = "dy" # add in process type
             elif "ttjet" in process.lower():
@@ -619,7 +615,6 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         np.save(f"{save_path}/scalers_{i}", [x_mean, x_std])
 
         # logger.info(f"df_train b4 mixup: {df_train}")
-        do_mixup = False
         if do_mixup:
             addToOriginalData = True
             logger.info(f"df_train b4: {df_train.process}")
@@ -744,28 +739,25 @@ if __name__ == "__main__":
     else: # use local cluster
         from distributed import Client
         client = Client(
-            n_workers=64, threads_per_worker=1, processes=True, memory_limit="10 GiB"
+            n_workers=60, threads_per_worker=1, processes=True, memory_limit="2 GiB"
         )
         logger.info("Local scale Client created")
 
     if args.year == "run2":
         base_path_f1_0 = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
         base_path_compact = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/*/compacted"
+
     else:
-        base_path_f1_0 = (
-            f"/depot/cms/hmm/shar1172/hmm_ntuples/skimmed_for_dnn_AK8jets/2017/"
-        )
+        base_path_f1_0 = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
         base_path_compact      = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
-    if not os.path.exists(base_path_compact) or not args.year == "run2":
-        base_path = base_path_f1_0
+    if not os.path.exists(base_path_compact) or args.year == "run2":
+        base_path = base_path_compact
     else:
         base_path = base_path_compact
-    # base_path = base_path_compact
 
-    # if base_path does not exist, raise error
+    logger.info(f"Base path: {base_path}")
     # if not os.path.exists(base_path):
     #     raise ValueError(f"Base path {base_path} does not exist. Please check the path and try again.")
 
-    logger.info(f"Base path: {base_path}")
     preprocess(base_path, run_label=args.label, category=args.category, region=args.region, year=args.year)
     logger.info("Success!")

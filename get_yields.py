@@ -39,15 +39,15 @@ V1_FIELDS_2COMPUTE: List[str] = [
     "wgt_nominal",
     "nBtagLoose_nominal",
     "nBtagMedium_nominal",
-    "mu1_pt",
-    "mu2_pt",
-    "mu1_eta",
-    "mu2_eta",
-    "mu1_phi",
-    "mu2_phi",
+    # "mu1_pt",
+    # "mu2_pt",
+    # "mu1_eta",
+    # "mu2_eta",
+    # "mu1_phi",
+    # "mu2_phi",
     "dimuon_pt",
     "dimuon_eta",
-    "dimuon_phi",
+    # "dimuon_phi",
     "dimuon_mass",
     "jet1_phi_nominal",
     "jet1_pt_nominal",
@@ -59,8 +59,8 @@ V1_FIELDS_2COMPUTE: List[str] = [
     "jj_dEta_nominal",
     "event",
     "njets_nominal",
-    "nfatJets_drmuon",
-    "MET_pt",
+    # "nfatJets_drmuon",
+    # "MET_pt",
 ]
 
 
@@ -70,7 +70,7 @@ V1_FIELDS_2COMPUTE: List[str] = [
 def get_dask_client(
     n_workers: int = 12,
     threads_per_worker: int = 1,
-    memory_limit: str = "2 GiB",
+    memory_limit: str = "10 GiB",
 ) -> Client:
     """Create or reuse a local Dask client."""
     try:
@@ -191,6 +191,8 @@ def main() -> None:
 
     regions = ["z-peak", "h-sidebands"]
     categories = ["ggh", "vbf"]
+    # regions = ["h-sidebands"]
+    # categories = ["vbf"]
 
     # Choose which years you actually run on
     # years = ["2018", "2017", "2016preVFP", "2016postVFP"]
@@ -223,7 +225,8 @@ def main() -> None:
 
     # Use parent of stage1_output as tag (e.g. CrossCheckCutFlow_BR_fatjet)
     dataset_tag = Path(stage1_dir).parent.name
-    outfile = f"yield_{dataset_tag}{suffix}.csv"
+    tagYear = "_".join(years)
+    outfile = f"yield_{dataset_tag}{suffix}_{tagYear}.csv"
     print(f"Will write yields to: {outfile}")
 
     # Start Dask client

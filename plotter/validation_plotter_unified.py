@@ -26,8 +26,8 @@ bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMC
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dyTo2L_M-50_incl"]
-# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
-DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
+DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
+# DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
 # DY_aMCatNLO = ["dyTo2L_M-50_incl"]
 # DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"]
@@ -70,7 +70,7 @@ group_dict = {
     # "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
-    # "DYVBF": ["dy_VBF_filter"],
+    "DYVBF": ["dy_VBF_filter"],
     # "DYJ01": ["DYJ01"],
     # "DYJ2": ["DYJ2"],
     "TOP": [
@@ -81,7 +81,7 @@ group_dict = {
         # "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"
     ],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
-    # "EWK": ["ewk_lljj_mll50_mjj120",  "ewk_lljj"],
+    "EWK": ["ewk_lljj_mll50_mjj120",  "ewk_lljj"],
 
     # "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
     "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz_2l2q", "zz_2l2u", "zz_2l2nu", "zz_4l"],
@@ -335,6 +335,8 @@ if __name__ == "__main__":
 
     if ("22" in args.year) or ("23" in args.year) or ("24" in args.year):
         CM_energy = 13.6  # TeV
+    else:
+        CM_energy = 13.0  # TeV
 
     if args.lumi == "":
         # read lumi value from configs/parameters/lumi.yaml
@@ -583,6 +585,12 @@ if __name__ == "__main__":
         # filter out redundant fields by using the set object
         fields2load = list(set(fields2load))
         logger.info(f"fields2load: {fields2load}")
+
+        # check if all fields to load are in the events
+        # fields_in_events = events.fields
+        # for field in fields2load:
+        #     if field not in fields_in_events:
+        #         logger.warning(f"field {field} not in events, removing from fields2load!")
 
         # # TOREMOVE
         # if "separate_wgt_qgl_wgt" in events.fields:

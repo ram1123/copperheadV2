@@ -18,7 +18,7 @@ trials:
         Reference: https://github.com/ram1123/copperheadV2/discussions/61
 
     Run2_legacy:
-        stage1: "{base_dir}/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/"
+        stage1: "{base_dir}/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage1_output/"
         comment: For September 25, 2025 HMuMu report
         gitTab: V1.0
         Reference: https://github.com/ram1123/copperheadV2/discussions/61
