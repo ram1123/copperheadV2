@@ -105,7 +105,7 @@ def get_yield(
     """
     print(f"{'=' * 5} {process} {'=' * 5}")
 
-    # Make a fresh copy of the fields list to avoid in-place modification across calls
+    # Fresh copy of the fields list
     fields = list(V1_FIELDS_2COMPUTE)
 
     # Dynamically include/exclude gjj_mass
@@ -118,58 +118,44 @@ def get_yield(
         if "gjj_mass" not in fields:
             fields.append("gjj_mass")
 
-    # Find sample directories for this process
-    filelist = glob.glob(os.path.join(load_path, process))
-    if not filelist:
-        logger.warning("No samples found for pattern '%s' under '%s'", process, load_path)
+    # glob over all matching sample dirs
+    parquet_pattern = os.path.join(load_path, process, "*", "*.parquet")
+    parquet_files = glob.glob(parquet_pattern)
+
+    if not parquet_files:
+        logger.warning("No parquet files found for '%s' under '%s'", process, load_path)
         return process, category, region, year, 0.0
 
-    total_integral = 0.0
+    # dask_awkward read per process
+    events_lazy = dak.from_parquet(parquet_pattern, columns=fields)
 
-    for sample_dir in sorted(filelist):
-        parquet_pattern = os.path.join(sample_dir, "*", "*.parquet")
-        parquet_files = glob.glob(parquet_pattern)
+    # Materialize into awkward.Array
+    events = events_lazy.compute()
 
-        if not parquet_files:
-            logger.warning("No parquet files under '%s'", sample_dir)
-            continue
+    # Apply region / category cuts
+    events = selection.applyRegionCatCuts(
+        events,
+        category=category,
+        region_name=region,
+        process=process,
+        variation="nominal",
+        do_vbf_filter_study=do_vbf_filter_study,
+        do_VH_veto=do_VH_veto,
+    )
 
-        # Load with dask-awkward
-        events_lazy = dak.from_parquet(parquet_pattern)
-
-        # Keep only needed fields
-        events_lazy = events_lazy[fields]
-
-        # Materialize into awkward.Array
-        events = events_lazy.compute()
-
-        # Apply region / category cuts
-        events = selection.applyRegionCatCuts(
-            events,
-            category=category,
-            region_name=region,
-            process=process,
-            variation="nominal",
-            do_vbf_filter_study=do_vbf_filter_study,
-            do_VH_veto=do_VH_veto,
-        )
-
-        # Sum nominal weights
-        wgts = ak.fill_none(events["wgt_nominal"], value=1.0)
-        data_yield = float(ak.sum(wgts))
-
-        print(f"\tdata_yield for {os.path.basename(sample_dir)}: {data_yield}")
-        total_integral += data_yield
+    # Sum nominal weights
+    wgts = ak.fill_none(events["wgt_nominal"], value=1.0)
+    total_integral = float(ak.sum(wgts))
 
     print(f"\t==> Total Yield: {total_integral:.3f}")
-    return process, category, region, year, float(total_integral)
+    return process, category, region, year, total_integral
 
 
 # ----------------------------------------------------------------------
 # Main driver
 # ----------------------------------------------------------------------
 def main() -> None:
-    # Environment setup (as in notebook)
+    # Environment setup
     cwd = str(Path.cwd())
     print(f"PWD: {cwd}")
 
@@ -180,8 +166,7 @@ def main() -> None:
     print(f"PYTHONPATH: {os.environ['PYTHONPATH']}")
 
     # Get base stage1 directory from your trials helper
-    stage1_dir = get_stage1_path()  # default = "current" in your comment
-    # stage1_dir example: /.../CrossCheckCutFlow_BR_fatjet/stage1_output
+    stage1_dir = get_stage1_path()  # default = "current"
     load_path_template = str(Path(stage1_dir) / "{year}" / "f1_0")
     print(f"Using LOAD_PATH template: {load_path_template}")
 
@@ -189,29 +174,25 @@ def main() -> None:
     do_VH_veto = False
     do_vbf_filter_study = True
 
-    regions = ["z-peak", "h-sidebands"]
-    categories = ["ggh", "vbf"]
-    # regions = ["h-sidebands"]
-    # categories = ["vbf"]
+    # regions = ["z-peak", "h-sidebands"]
+    # categories = ["ggh", "vbf"]
+    regions = ["h-sidebands"]
+    categories = ["vbf"]
 
-    # Choose which years you actually run on
-    # years = ["2018", "2017", "2016preVFP", "2016postVFP"]
-    # years = ["2018PR"]
-    # years = ["2018"]
 
     args = parse_args()
 
-    # Define all possible years you want to support
+    # Define all possible years we want to support
     ALL_YEARS = [
         "2018",
         "2017",
         "2016preVFP",
         "2016postVFP",
-        "2022preEE",
-        "2022postEE",
-        "2023",
-        "2023BPix",
-        "2024",
+        # "2022preEE",
+        # "2022postEE",
+        # "2023",
+        # "2023BPix",
+        # "2024",
     ]
 
     if args.years == ["all"]:
@@ -223,26 +204,14 @@ def main() -> None:
 
     suffix = "_VHVeto" if do_VH_veto else ""
 
-    # Use parent of stage1_output as tag (e.g. CrossCheckCutFlow_BR_fatjet)
+    # Use parent of stage1_output as tag for output file name
     dataset_tag = Path(stage1_dir).parent.name
     tagYear = "_".join(years)
-    outfile = f"yield_{dataset_tag}{suffix}_{tagYear}.csv"
+    outfile = f"yield_{dataset_tag}{suffix}_{tagYear}_New.csv"
     print(f"Will write yields to: {outfile}")
 
     # Start Dask client
     get_dask_client()
-    # from dask_gateway import Gateway
-    # gateway = Gateway(
-    #     "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-    #     proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-    # )
-    # # gateway = Gateway()
-    # logger.info("Connecting to Dask Gateway")
-    # logger.info(f"gateway: {gateway}")
-    # logger.info(f"gateway list clusters: {gateway.list_clusters()}")
-
-    # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-    # client = gateway.connect(cluster_info.name).get_client()
 
     # Loop over (category, year, region)
     for category, year, region in itertools.product(categories, years, regions):
@@ -264,24 +233,24 @@ def main() -> None:
             # "data_B",
             # "data_C",
             # "data_D",
-            "data*",
+            # "data*",
             # "vbf_powheg",
             "vbf_powheg_dipole",
-            "ggh_powhegPS",
-            # "dyTo2L_M-50_incl",
-            # "dyTo2L_M-50_incl_XSDYTurbo",
-            "dy_VBF_filter",
-            "dy_M-50_aMCatNLO",
-            "dy_M-100To200_aMCatNLO",
-            "dy_M-50_MiNNLO",
-            "dy_M-100To200_MiNNLO",
-            "ttjets_*",
-            "st_t_*",
-            "st_tW_*",
-            "w*_*",
-            "zz_*",
-            # "ewk_lljj",
-            "ewk_lljj_mll50_mjj120",
+            # "ggh_powhegPS",
+            # # "dyTo2L_M-50_incl",
+            # # "dyTo2L_M-50_incl_XSDYTurbo",
+            # "dy_VBF_filter",
+            # "dy_M-50_aMCatNLO",
+            # "dy_M-100To200_aMCatNLO",
+            # "dy_M-50_MiNNLO",
+            # "dy_M-100To200_MiNNLO",
+            # "ttjets_*",
+            # "st_t_*",
+            # "st_tW_*",
+            # "w*_*",
+            # "zz_*",
+            # # "ewk_lljj",
+            # "ewk_lljj_mll50_mjj120",
         ]
 
         for proc in processes:

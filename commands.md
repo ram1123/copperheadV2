@@ -1,10 +1,34 @@
+# 12 December 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix -y "2018" -m 1  -k)
+/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_28Nov_HEMVetoFix/stage1_output/2018/f1_0/dy_M-50_aMCatNLO/0/part106.parquet
+```
+
 # 11 December 2025
 
 ```python
 time python ./sync_parquet_dimuon.py  /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2017/f1_0/vbf_powheg_dipole/0 /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2/stage1_output/2017/f1_0/vbf_powheg_dipole/0
 
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "run2" -m dnn_pre -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nan
+oAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "2017" -m 1  -k)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix -y "2018" -m 2 -k -p "Dec11_oldDNN17bins")
 ```
+
+## DNN related
+
+```bash
+
+# time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "run2" -m dnn_pre -k)
+# THe above command failed when I run them together so, I am running year wise and then will merge the preprocessor files
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "2016preVFP 2016postVFP 2017 2018" -m dnn_pre -k -d 2)
+
+python MVA_training/VBF/run2_legacyModel/merge_individual_preprocessor.py
+
+```
+
 
 # 10 December 2025
 

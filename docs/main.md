@@ -62,6 +62,22 @@ Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting, 
 bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
 ```
 
+### Get the yields and compare with previous results
+
+
+1. To get the yields from the reduced ntuples, use the script [get_yields.py](get_yields.py).
+
+    ```bash
+    python get_yields.py --years 2018
+    ```
+    Note that this file reads ntuples from the YAML file [configs/trials.yml](configs/trials.yml). Update the path under the key `current` to point the label with with the reduced ntuples are created.
+
+2. To compare the yields with previous results, use the script [sync_parquet_dimuon.py](sync_parquet_dimuon.py).
+
+    ```bash
+    python sync_parquet_dimuon.py --years 2018 --ref_label previous_label --curr_label current_label
+    ```
+
 ### Control Plots
 
 Before running the below code make sure to update the input and output paths and several other parameters in the [run_plotter.py](run_plotter.py) file.
