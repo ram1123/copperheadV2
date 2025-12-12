@@ -1316,14 +1316,14 @@ class EventProcessor(processor.ProcessorABC):
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             dataset = events.metadata["dataset"]
             do_thu = (
-                ("vbf" in dataset)
-                and ("dy" not in dataset)
+                self.config["switches"]["do_THU"]
                 and ("nominal" in pt_variations)
+                and ("vbf" in dataset)
+                and ("dy" not in dataset)
                 and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
             )
-            # do_thu = False
             if do_thu:
-                logger.info("doing THU!")
+                logger.info("doing THU weights!")
                 add_stxs_variations(
                     events,
                     weights,
@@ -2846,64 +2846,60 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         # # Calculate QGL weights, btag SF and apply btag veto
         # # ------------------------------------------------------------#
-        if is_mc and (variation == "nominal"):
+        if is_mc and (variation == "nominal") and (self.config["switches"]["do_qgl_wgt"]):
             # --- QGL weights  start --- #
             isHerwig = "herwig" in dataset
             logger.debug("adding QGL weights!")
 
             # keep dims start -------------------------------------
-            # # qgl_wgts = qgl_weights_keepDim(jet1, jet2, njets, isHerwig)
-            # qgl_wgts = qgl_weights_V2(jets, self.config, isHerwig, dnn_year)
-            # # keep dims end -------------------------------------
-            # weights.add("qgl_wgt",
-            #             weight=qgl_wgts["nom"],
-            #             weightUp=qgl_wgts["up"],
-            #             weightDown=qgl_wgts["down"]
-            # )
+            # qgl_wgts = qgl_weights_keepDim(jet1, jet2, njets, isHerwig)
+            qgl_wgts = qgl_weights_V2(jets, self.config, isHerwig, dnn_year)
+            # keep dims end -------------------------------------
+            weights.add("qgl_wgt",
+                        weight=qgl_wgts["nom"],
+                        weightUp=qgl_wgts["up"],
+                        weightDown=qgl_wgts["down"]
+            )
+            # --- QGL weights  end --- #
 
-            #     # --- QGL weights  end --- #
+        if is_mc and (variation == "nominal") and (self.config["switches"]["do_btag_wgt"]):
+            # --- Btag weights  start--- #
+            logger.info("doing btag wgt!")
+            bjet_sel_mask = ak.ones_like(njets) #& two_jets & vbf_cut
+            btag_systs = self.config["btag_systs"] #if do_btag_syst else []
+            if "RERECO" in year:
+                # if True:
+                btag_json = BTagScaleFactor(
+                self.config["btag_sf_csv"],
+                BTagScaleFactor.RESHAPE,
+                "iterativefit,iterativefit,iterativefit",
+            )
+            else:
+                btag_file =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
+                # btag_json=btag_file["deepJet_shape"]
+                btag_json=btag_file["deepCSV_shape"]
 
-            #     # # --- Btag weights  start--- #
-            do_btag_wgt = self.config["switches"]["do_btag_wgt"]
-            # if NanoAODv ==12:
-            # do_btag_wgt = False # FIXME: temporary condition
-            if do_btag_wgt:
-                logger.info("doing btag wgt!")
-                bjet_sel_mask = ak.ones_like(njets) #& two_jets & vbf_cut
-                btag_systs = self.config["btag_systs"] #if do_btag_syst else []
-                if "RERECO" in year:
-                    # if True:
-                    btag_json = BTagScaleFactor(
-                    self.config["btag_sf_csv"],
-                    BTagScaleFactor.RESHAPE,
-                    "iterativefit,iterativefit,iterativefit",
+            # keep dims start -------------------------------------
+            btag_wgt, btag_syst = btag_weights_jsonKeepDim(
+                        self, btag_systs, jets, weights, bjet_sel_mask, btag_json
+            )
+            weights.add("btag_wgt",
+                    weight=btag_wgt,
+            )
+            # --- Btag weights variations --- #
+            for name, bs in btag_syst.items():
+                logger.info(f"{name} value: {bs}")
+                weights.add(f"btag_wgt_{name}",
+                    weight=ak.ones_like(btag_wgt),
+                    weightUp=bs["up"],
+                    weightDown=bs["down"]
                 )
-                else:
-                    btag_file =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
-                    # btag_json=btag_file["deepJet_shape"]
-                    btag_json=btag_file["deepCSV_shape"]
-
-                # keep dims start -------------------------------------
-                btag_wgt, btag_syst = btag_weights_jsonKeepDim(
-                            self, btag_systs, jets, weights, bjet_sel_mask, btag_json
-                )
-                weights.add("btag_wgt",
-                        weight=btag_wgt,
-                )
-                # --- Btag weights variations --- #
-                for name, bs in btag_syst.items():
-                    logger.info(f"{name} value: {bs}")
-                    weights.add(f"btag_wgt_{name}",
-                        weight=ak.ones_like(btag_wgt),
-                        weightUp=bs["up"],
-                        weightDown=bs["down"]
-                    )
-                # TODO: add btag systematics by adding seperate wgts
-                # keep dims end -------------------------------------
-                # logger.info(f"btag_wgt: {ak.to_numpy(btag_wgt.compute())}")
-                # logger.info(f"btag_syst['jes_up']: {ak.to_numpy(btag_syst['jes']['up'].compute())}")
-                # logger.info(f"btag_syst['jes_down']: {ak.to_numpy(btag_syst['jes']['down'].compute())}")
-            # # --- Btag weights end --- #
+            # TODO: add btag systematics by adding seperate wgts
+            # keep dims end -------------------------------------
+            # logger.info(f"btag_wgt: {ak.to_numpy(btag_wgt.compute())}")
+            # logger.info(f"btag_syst['jes_up']: {ak.to_numpy(btag_syst['jes']['up'].compute())}")
+            # logger.info(f"btag_syst['jes_down']: {ak.to_numpy(btag_syst['jes']['down'].compute())}")
+            # --- Btag weights end --- #
 
             # logger.info(f"weight nom b4 adding btag: {ak.to_numpy(weights.weight().compute())}")
             # adding btag wgt directly to weights doesn't work, this may
