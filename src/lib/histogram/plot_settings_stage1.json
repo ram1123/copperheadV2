@@ -85,7 +85,7 @@
         "binning_linspace": [-1, 1, 30],
         "density": false,
         "ylabel": "Events / 1 GeV",
-        "xlabel": "$cos(\\theta_{CS})$",
+        "xlabel": "$cos(\\theta_{\\eta})$",
         "color": "royalblue"
     },
     "dimuon_phi_eta": {
@@ -794,7 +794,7 @@
     },
     "mu1_iso": {
         "variable": "mu1_iso",
-        "binning_linspace": [0, 0.5, 51],
+        "binning_linspace": [0, 0.25, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\mathrm{Iso}(\\mu_1)$",
@@ -802,7 +802,7 @@
     },
     "mu2_iso": {
         "variable": "mu2_iso",
-        "binning_linspace": [0, 0.5, 51],
+        "binning_linspace": [0, 0.25, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\mathrm{Iso}(\\mu_2)$",
@@ -810,7 +810,7 @@
     },
     "mu1_pt_over_mu2_pt": {
         "variable": "mu1_pt_over_mu2_pt",
-        "binning_linspace": [0, 5, 51],
+        "binning_linspace": [1, 7, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T(\\mu_1)/p_T(\\mu_2)$",
@@ -818,7 +818,7 @@
     },
     "mu1_eta_over_mu2_eta": {
         "variable": "mu1_eta_over_mu2_eta",
-        "binning_linspace": [-5, 5, 51],
+        "binning_linspace": [0, 10, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta(\\mu_1)/\\eta(\\mu_2)$",
@@ -866,7 +866,7 @@
     },
     "dimuon_dEta": {
         "variable": "dimuon_dEta",
-        "binning_linspace": [-5, 5, 51],
+        "binning_linspace": [0, 5, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\Delta\\eta_{\\mu\\mu}$",
@@ -906,7 +906,7 @@
     },
     "dimuon_pt_over_jet1_pt": {
         "variable": "dimuon_pt_over_jet1_pt",
-        "binning_linspace": [0, 5, 51],
+        "binning_linspace": [0, 2, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T(\\mu\\mu)/p_T(\\mathrm{jet1})$",
@@ -1340,7 +1340,7 @@
     },
     "mu1_pfRelIso04_all": {
         "variable": "mu1_pfRelIso04_all",
-        "binning_linspace": [0, 0.5, 51],
+        "binning_linspace": [0, 0.25, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "pfRelIso04$_\\mathrm{all}(\\mu_1)$",
@@ -1348,7 +1348,7 @@
     },
     "mu2_pfRelIso04_all": {
         "variable": "mu2_pfRelIso04_all",
-        "binning_linspace": [0, 0.5, 51],
+        "binning_linspace": [0, 0.25, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "pfRelIso04$_\\mathrm{all}(\\mu_2)$",
@@ -1469,7 +1469,7 @@
     },
     "mu1_jetNDauCharged": {
         "variable": "mu1_jetNDauCharged",
-        "binning_linspace": [-0.5, 30.5, 32],
+        "binning_linspace": [-0.5, 15.5, 17],
         "density": false,
         "ylabel": "Events",
         "xlabel": "jetNDauCharged$(\\mu_1)$",
@@ -1477,7 +1477,7 @@
     },
     "mu2_jetNDauCharged": {
         "variable": "mu2_jetNDauCharged",
-        "binning_linspace": [-0.5, 30.5, 32],
+        "binning_linspace": [-0.5, 15.5, 17],
         "density": false,
         "ylabel": "Events",
         "xlabel": "jetNDauCharged$(\\mu_2)$",
@@ -1541,7 +1541,7 @@
     },
     "mu12_pt_diff": {
         "variable": "mu12_pt_diff",
-        "binning_linspace": [-300, 300, 61],
+        "binning_linspace": [0, 300, 61],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T(\\mu_1)-p_T(\\mu_2)$ [GeV]",
@@ -1565,7 +1565,7 @@
     },
     "mu12_pt_ratio12": {
         "variable": "mu12_pt_ratio12",
-        "binning_linspace": [0, 5, 51],
+        "binning_linspace": [1, 5, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T(\\mu_1)/p_T(\\mu_2)$",
@@ -1573,7 +1573,7 @@
     },
     "mu12_pt_ratio21": {
         "variable": "mu12_pt_ratio21",
-        "binning_linspace": [0, 5, 51],
+        "binning_linspace": [0, 1, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T(\\mu_2)/p_T(\\mu_1)$",
@@ -1597,7 +1597,7 @@
     },
     "mu12_pt_asym": {
         "variable": "mu12_pt_asym",
-        "binning_linspace": [-1, 1, 51],
+        "binning_linspace": [0, 1, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\frac{p_T(\\mu_1)-p_T(\\mu_2)}{p_T(\\mu_1)+p_T(\\mu_2)}$",
@@ -1645,7 +1645,7 @@
     },
     "mu12_absEta_diff": {
         "variable": "mu12_absEta_diff",
-        "binning_linspace": [-5, 5, 51],
+        "binning_linspace": [0, 3, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$|\\eta(\\mu_1)|-|\\eta(\\mu_2)|$",
@@ -1669,7 +1669,7 @@
     },
     "mu12_iso04_sum": {
         "variable": "mu12_iso04_sum",
-        "binning_linspace": [0, 1, 51],
+        "binning_linspace": [0, 0.6, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "Iso04$(\\mu_1)+$Iso04$(\\mu_2)$",
@@ -1685,7 +1685,7 @@
     },
     "mu12_iso04_absdiff": {
         "variable": "mu12_iso04_absdiff",
-        "binning_linspace": [0, 1, 51],
+        "binning_linspace": [0, 0.6, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$|\\mathrm{Iso04}(\\mu_1)-\\mathrm{Iso04}(\\mu_2)|$",
@@ -1693,7 +1693,7 @@
     },
     "mu12_iso04_prod": {
         "variable": "mu12_iso04_prod",
-        "binning_linspace": [0, 0.25, 51],
+        "binning_linspace": [0, 0.1, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "Iso04$(\\mu_1)\\,\\mathrm{Iso04}(\\mu_2)$",
@@ -1701,7 +1701,7 @@
     },
     "mu12_iso04_min": {
         "variable": "mu12_iso04_min",
-        "binning_linspace": [0, 0.5, 51],
+        "binning_linspace": [0, 0.25, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\min[\\mathrm{Iso04}(\\mu_1),\\mathrm{Iso04}(\\mu_2)]$",
@@ -1709,7 +1709,7 @@
     },
     "mu12_iso04_max": {
         "variable": "mu12_iso04_max",
-        "binning_linspace": [0, 0.5, 51],
+        "binning_linspace": [0, 0.25, 51],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\max[\\mathrm{Iso04}(\\mu_1),\\mathrm{Iso04}(\\mu_2)]$",

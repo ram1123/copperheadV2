@@ -1,9 +1,9 @@
 switches:
     do_additional_vars:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -50,8 +50,8 @@ switches:
         "2023BPix": true
         "2024": true
     do_THU:
-        '2016preVFP': false
-        '2016postVFP': false
+        '2016preVFP': true
+        '2016postVFP': true
         '2017': true
         '2018': true
         '2022preEE': true
@@ -213,7 +213,7 @@ switches:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
-        '2018': true
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -230,9 +230,9 @@ switches:
         "2023BPix": false
         "2024": false
     do_btag_wgt:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
         '2018': true
         '2022preEE': false
         '2022postEE': false
