@@ -926,8 +926,6 @@ class EventProcessor(processor.ProcessorABC):
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
-        HemVeto_filter = ak.to_packed(HemVeto_filter[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
-        is_HemRegion = ak.to_packed(is_HemRegion[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
@@ -1758,6 +1756,8 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         if (self.config["switches"]["do_HemVeto"] and self.config["switches"]["do_HemVetoStudy"]):
             logger.info("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
+            HemVeto_filter = ak.to_packed(HemVeto_filter[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
+            is_HemRegion = ak.to_packed(is_HemRegion[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
             hemveto_dict = {
                 "HemVeto_filter" : HemVeto_filter,
                 "is_HemRegion" : is_HemRegion,
