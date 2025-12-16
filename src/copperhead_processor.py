@@ -831,6 +831,9 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("electron_veto", electron_veto)
         if self.config["switches"]["do_HemVeto"]:
             HemVeto_filter, is_HemRegion = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
+            if (not self.config["switches"]["do_HemVetoStudy"]): # when we are calculating HemVeto fraction for MC, we shouldn't filter out hem veto events
+                logger.info("adding HemVeto!")
+                event_filter = event_filter & HemVeto_filter
         else:
             HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
             is_HemRegion = ak.ones_like(event_filter, dtype="bool")
@@ -842,12 +845,9 @@ class EventProcessor(processor.ProcessorABC):
                 & (evnt_qual_flg_selection > 0)
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
         )
-        if (not self.config["switches"]["do_HemVetoStudy"]):
-            logger.info("adding HemVeto!")
-            event_filter = event_filter & HemVeto_filter
+        
         pv_good = (events.PV.npvsGood > 0)
         self.selection.add("PV_npvsGood", pv_good)
-
         event_filter = event_filter & (nmuons == 2)
         self.selection.add("nmuons", nmuons==2)
 
