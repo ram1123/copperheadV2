@@ -159,6 +159,16 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+    do_HemVetoStudy: # this should be true for obtaining the HemVeto_ratio value below. See documenation
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false # this should be false in normal copperheadV2 run
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_jet_veto_maps_filterEvents: # do_jet_veto_maps_filterEvents
         '2016preVFP': false
         '2016postVFP': false

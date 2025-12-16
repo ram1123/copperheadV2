@@ -216,8 +216,7 @@ if __name__ == "__main__":
         "jet1_phi_nominal",
         "jet2_phi_nominal",
     ]
-    label = "HemVetoStudy_04Apr2025"
-    # label = "test_test"
+    label = "HemVetoStudy_Dec16_2025" # nanoAODv12
     year="2018"
     load_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
 
@@ -235,13 +234,14 @@ if __name__ == "__main__":
     }
     compute_dict = dask.compute(compute_dict)[0]
 
-    # save_fname = "validation_data"
-    # plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=True)
-    # plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=False)
-    # print("Plot Success!")
+    save_fname = "validation_data"
+    plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=True)
+    plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=False)
+    print("Plot Success!")
 
 
-    data2load = ['dy_M-100To200',]
+    # data2load = ['dy_M-100To200',]
+    data2load = ['dy_M-100To200_aMCatNLO',]
     
     filelist = []
     for data_name in data2load:
