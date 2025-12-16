@@ -830,22 +830,21 @@ class EventProcessor(processor.ProcessorABC):
         electron_veto = (nelectrons == 0)
         self.selection.add("electron_veto", electron_veto)
         if self.config["switches"]["do_HemVeto"]:
-            HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
+            HemVeto_filter, is_HemRegion = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
         else:
             HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
+            is_HemRegion = ak.ones_like(event_filter, dtype="bool")
 
         self.selection.add("HemVeto", HemVeto_filter == True)
         event_filter = (
                 event_filter
                 & lumi_mask
                 & (evnt_qual_flg_selection > 0)
-                # & (nmuons == 2)
-                # & (mm_charge == -1)
-                # & electron_veto
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
-                & HemVeto_filter
-
         )
+        if (not self.config["switches"]["do_HemVetoStudy"]):
+            logger.info("adding HemVeto!")
+            event_filter = event_filter & HemVeto_filter
         pv_good = (events.PV.npvsGood > 0)
         self.selection.add("PV_npvsGood", pv_good)
 
@@ -927,6 +926,8 @@ class EventProcessor(processor.ProcessorABC):
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
+        HemVeto_filter = ak.to_packed(HemVeto_filter[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
+        is_HemRegion = ak.to_packed(is_HemRegion[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
@@ -1752,6 +1753,16 @@ class EventProcessor(processor.ProcessorABC):
 
         t16 = time.perf_counter()
         logger.info(f"[timing] Fill muon and gjet variables time: {t16 - t15:.2f} seconds")
+        # ------------------------------------------------------------#
+        # HEMVeto study
+        # ------------------------------------------------------------#
+        if (self.config["switches"]["do_HemVeto"] and self.config["switches"]["do_HemVetoStudy"]):
+            logger.info("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
+            hemveto_dict = {
+                "HemVeto_filter" : HemVeto_filter,
+                "is_HemRegion" : is_HemRegion,
+            }
+            out_dict.update(hemveto_dict)
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#

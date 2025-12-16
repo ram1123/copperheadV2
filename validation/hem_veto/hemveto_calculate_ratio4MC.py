@@ -69,10 +69,10 @@ def getHemVetoDataRatio(compute_dict):
     HemVeto_filter = compute_dict["HemVeto_filter"] # here, True means no Veto
     nevents = ak.ones_like(HemVeto_filter, dtype="bool")
     nevents = ak.sum(nevents)
-    # is_HemRegion = compute_dict["is_HemRegion"]
-    # is_HemRegionAndHemVeto = is_HemRegion & HemVeto_filter
-    # veto_ratio = ak.sum(is_HemRegionAndHemVeto) / ak.sum(is_HemRegion)
-    veto_ratio = ak.sum(HemVeto_filter) / nevents
+    is_HemRegion = compute_dict["is_HemRegion"]
+    is_HemRegionAndHemVeto = is_HemRegion & HemVeto_filter
+    veto_ratio = ak.sum(is_HemRegionAndHemVeto) / ak.sum(is_HemRegion)
+    # veto_ratio = ak.sum(HemVeto_filter) / nevents
     return (1-veto_ratio)
     
 
@@ -226,9 +226,11 @@ if __name__ == "__main__":
         # "jet2_eta_nominal",
         # "jet1_phi_nominal",
         # "jet2_phi_nominal",
-        # "is_HemRegion",
+        "is_HemRegion",
     ]
-    label = "HemVetoStudy_04Apr2025"
+    # label = "HemVetoStudy_04Apr2025"
+    label = "HemVetoStudy_Dec16_2025" # nanoAODv12
+    
     year="2018"
     load_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
 
@@ -240,9 +242,10 @@ if __name__ == "__main__":
     #     events_l.append(events)
         
     # events = ak.concatenate(events_l)
-    year = "*"
-    events = dak.from_parquet(f"{load_path}/{year}/*/*.parquet")
-    print(events)
+    # sample = "dy*"
+    sample = "data_*"
+    print(f"{load_path}/{sample}/*/*.parquet")
+    events = dak.from_parquet(f"{load_path}/{sample}/*/*.parquet")
     compute_dict = {
         field: ak.fill_none(events[field], value=False) for field in fields2load
     }
