@@ -37,7 +37,7 @@ electron_id_v9:
   "2023": mvaFall17V2Iso_WP90
   "2023BPix": mvaFall17V2Iso_WP90
   "2024": mvaFall17V2Iso_WP90
-electron_id_v12:
+electron_id_v12: # The keys are same for v12 and v15
   2016preVFP: mvaIso_WP90
   2016postVFP: mvaIso_WP90
   '2017': mvaIso_WP90

@@ -343,14 +343,12 @@ class EventProcessor(processor.ProcessorABC):
             "eta": jets.eta,
             "phi": jets.phi,
         }
-        key_map = {
-            "2022preEE": "Summer22_23Sep2023_RunCD_V1",
-            "2022postEE": "Summer22EE_23Sep2023_RunEFG_V1",
-            "2023": "Summer23Prompt23_RunC_V1",
-            "2023BPix": "Summer23BPixPrompt23_RunD_V1",
-        }
-        jet_veto_map = cset[key_map[year]]
-        inputs = [input_dict[input.name] for input in cset[key_map[year]].inputs]
+
+        jetVetoMapTag = self.config.get("jet_veto_maps_tag", None)
+        logger.debug(f"Jet veto map tag from config: {jetVetoMapTag}")
+
+        jet_veto_map = cset[jetVetoMapTag]
+        inputs = [input_dict[input.name] for input in cset[jetVetoMapTag].inputs]
 
         # logger.debug(f"eta: {ak.to_list(jets.eta[50:56].compute())}")
         # logger.debug(f"phi: {ak.to_list(jets.phi[50:56].compute())}")
@@ -388,14 +386,12 @@ class EventProcessor(processor.ProcessorABC):
             "eta": jets.eta,
             "phi": jets.phi,
         }
-        key_map = {
-            "2022preEE": "Summer22_23Sep2023_RunCD_V1",
-            "2022postEE": "Summer22EE_23Sep2023_RunEFG_V1",
-            "2023": "Summer23Prompt23_RunC_V1",
-            "2023BPix": "Summer23BPixPrompt23_RunD_V1",
-        }
-        jet_veto_map = cset[key_map[year]]
-        inputs = [input_dict[input.name] for input in cset[key_map[year]].inputs]
+
+        jetVetoMapTag = self.config.get("jet_veto_maps_tag", None)
+        logger.debug(f"Jet veto map tag from config: {jetVetoMapTag}")
+
+        jet_veto_map = cset[jetVetoMapTag]
+        inputs = [input_dict[input.name] for input in cset[jetVetoMapTag].inputs]
 
         # logger.debug(f"eta: {ak.to_list(jets.eta[40:47].compute())}")
         # logger.debug(f"phi: {ak.to_list(jets.phi[40:47].compute())}")
@@ -631,9 +627,11 @@ class EventProcessor(processor.ProcessorABC):
                 apply_roccorRun3(events, self.config["roccor_file"], is_mc)
             events["Muon", "pt"] = events.Muon.pt_roch
             # logger.info(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
+        else:
+            events["Muon", "pt_roch"] = events.Muon.pt
 
         muon_selection = (
-            (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester
+            (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester #FIXME: Why pt_raw
             & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
@@ -1227,7 +1225,7 @@ class EventProcessor(processor.ProcessorABC):
                 weights.add("pu_wgt", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
                 # logger.info(f"pu_wgts['nom']: {ak.to_numpy(pu_wgts['nom'].compute())}")
             # L1 prefiring weights
-            if self.config["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
+            if self.config["switches"]["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
                 logger.debug("adding L1 prefiring wgts!")
                 L1_nom = events.L1PreFiringWeight.Nom
                 L1_up = events.L1PreFiringWeight.Up

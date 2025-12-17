@@ -126,3 +126,13 @@ jet_veto_maps:
     "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jetvetomaps.json.gz
     2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jetvetomaps.json.gz
     "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-07-17/jetvetomaps.json.gz
+jet_veto_maps_tag:
+    "2016preVFP": None
+    "2016postVFP": None
+    "2017": None
+    "2018": None
+    "2022preEE": Summer22_23Sep2023_RunCD_V1
+    "2022postEE": Summer22EE_23Sep2023_RunEFG_V1
+    "2023": Summer23Prompt23_RunC_V1
+    "2023BPix": Summer23BPixPrompt23_RunD_V1
+    "2024": Summer24Prompt24_RunBCDEFGHI_V1

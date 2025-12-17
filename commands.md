@@ -1,8 +1,42 @@
+# 16 December 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_16Dec -y "2024" -m 1 -k -d 1)
+
+# configs/datasets/dataset_nanoAODv12_run3_sync.yaml
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3_sync.yaml -v 15 -l Run3_nanoAODv12_Peking_sync -y "2022preEE" -m 1)
+time python ./scripts/sync_parquet_dimuon.py  /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_Peking_sync/stage1_output/2022preEE/f1_0/data_C/0/
+
+# Run2_nanoAODv12_16Dec_HEMVetoFix_NoSyst/stage1_output/2017/f1_0/data_C/0
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l Run2_nanoAODv12_16Dec_HEMVetoFix_NoSyst -y "2018" -m 1  -k)
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_16Dec_NoJVM -y "2024" -m 1 -k )
+
+```
+
+# 15 December 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_SyncHyeon -y "2024" -m 0 -k  -d 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l Run2_nanoAODv15_15Dec -y "2017" -m 0 -k  -d 1)
+```
+
 # 12 December 2025
 
 ```bash
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_Dec13_NoSyst -y "2017" -m 1  -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_Dec13_NoSyst -y "2017" -m compact  -k)
+
+
+
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix -y "2018" -m 1  -k)
 /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_28Nov_HEMVetoFix/stage1_output/2018/f1_0/dy_M-50_aMCatNLO/0/part106.parquet
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2_hadded_newFormat.yaml -v 12 -l Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2 -y "2017" -m dnn_pre -k )
 ```
 
 # 11 December 2025

@@ -7,6 +7,9 @@ Usage:
 
 Example:
     time python ./sync_parquet_dimuon.py  /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2017/f1_0/data_D/0 /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2/stage1_output/2017/f1_0/data_D/0
+
+    time python ./scripts/sync_parquet_dimuon.py  /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_Peking_sync/stage1_output/2022preEE/f1_0/data_C/0/
+
 """
 
 import argparse
@@ -65,7 +68,40 @@ V1_FIELDS_2COMPUTE: List[str] = [
     # "MET_pt",
 ]
 
-DIMUON_VARS = list(V1_FIELDS_2COMPUTE)
+SyncVariablesList: List[str] = [
+    # event id
+    "run",
+    "luminosityBlock",
+    "event",
+    # leptons
+    "mu1_pt",
+    "mu1_eta",
+    "mu1_phi",
+    "mu2_pt",
+    "mu2_eta",
+    "mu2_phi",
+    # dimuon
+    "dimuon_mass",
+    "dimuon_pt",
+    "dimuon_eta",
+    "dimuon_phi",
+    # jets
+    "jet1_pt_nominal",
+    "jet1_eta_nominal",
+    "jet1_phi_nominal",
+    "jet2_pt_nominal",
+    "jet2_eta_nominal",
+    "jet2_phi_nominal",
+    "jj_mass_nominal",
+    "jj_dEta_nominal",
+    # optional weights (keep if you need selection to work)
+    "wgt_nominal",
+    "nBtagLoose_nominal",
+    "nBtagMedium_nominal",
+]
+
+# DIMUON_VARS = list(V1_FIELDS_2COMPUTE)
+DIMUON_VARS = list(SyncVariablesList)
 
 # ----------------------------------------------------------------------
 # Dask client helper
@@ -105,7 +141,8 @@ def find_parquet_pattern(directory: str) -> str:
     Returns the first pattern that matches at least one file.
     Raises if nothing is found.
     """
-    directory = str(directory)
+    directory = Path(directory).resolve().as_posix()
+
     patterns = [
         f"{directory}/*/*.parquet",
         f"{directory}/*.parquet",
@@ -139,7 +176,7 @@ def load_dir_to_df(
 
     # Combine and de-duplicate column list (keep order: keys → dimuon → extra)
     cols = []
-    for c in KEY_VARS + DIMUON_VARS + V1_FIELDS_2COMPUTE:
+    for c in KEY_VARS + DIMUON_VARS:
         if c not in cols:
             cols.append(c)
 
@@ -158,23 +195,23 @@ def load_dir_to_df(
     # Materialize to awkward Array
     events = events_lazy.compute()
 
-    # Optional selection
-    if category is not None and region is not None:
-        print(
-            f"[INFO] Applying selection: category={category}, "
-            f"region={region}, process={process}"
-        )
-        events = selection.applyRegionCatCuts(
-            events,
-            category=category,
-            region_name=region,
-            process=process,
-            variation="nominal",
-            do_vbf_filter_study=False,
-            do_VH_veto=False,
-        )
-    else:
-        print("[INFO] No selection applied (category/region not both provided).")
+    # # Optional selection
+    # if category is not None and region is not None:
+    #     print(
+    #         f"[INFO] Applying selection: category={category}, "
+    #         f"region={region}, process={process}"
+    #     )
+    #     events = selection.applyRegionCatCuts(
+    #         events,
+    #         category=category,
+    #         region_name=region,
+    #         process=process,
+    #         variation="nominal",
+    #         do_vbf_filter_study=False,
+    #         do_VH_veto=False,
+    #     )
+    # else:
+    #     print("[INFO] No selection applied (category/region not both provided).")
 
     # Convert to pandas (awkward v2: no ak.to_pandas)
     df = pd.DataFrame(ak.to_list(events))
@@ -190,7 +227,7 @@ def load_dir_to_df(
 # ----------------------------------------------------------------------
 # Single-dir dump
 # ----------------------------------------------------------------------
-def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
+def dump_single_dir_sync_old(df: pd.DataFrame, out_path: Path) -> None:
     """
     Save a text file with:
     event,run,luminosityBlock,dimuon_pt,dimuon_mass,dimuon_eta
@@ -210,6 +247,67 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     df_out.to_csv(out_path, index=False)
     print(f"[INFO] Wrote {len(df_out)} rows to {out_path}")
 
+
+def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
+    """
+    Save a text file with one event per line in format:
+
+    run:lumi:event:pTL1:etaL1:phiL1:pTL2:etaL2:phiL2:mLL:pTLL:EtaLL:phiLL:
+    pTj1:etaj1:phij1:pTj2:etaj2:phij2:mjj:dEtajj
+
+    All floats formatted with .2f
+    """
+    required = [
+        "run",
+        "luminosityBlock",
+        "event",
+        "mu1_pt",
+        "mu1_eta",
+        "mu1_phi",
+        "mu2_pt",
+        "mu2_eta",
+        "mu2_phi",
+        "dimuon_mass",
+        "dimuon_pt",
+        "dimuon_eta",
+        "dimuon_phi",
+        "jet1_pt_nominal",
+        "jet1_eta_nominal",
+        "jet1_phi_nominal",
+        "jet2_pt_nominal",
+        "jet2_eta_nominal",
+        "jet2_phi_nominal",
+        "jj_mass_nominal",
+        "jj_dEta_nominal",
+    ]
+
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"Missing required columns for txt dump: {missing}")
+
+    # Fill NaNs (if any) to avoid formatting errors
+    df2 = df[required].copy()
+
+    # Write fast without pandas to_csv (custom format)
+    n = 0
+    with open(out_path, "w") as f:
+        for r in df2.itertuples(index=False):
+            # r is in the exact column order in `required`
+            line = (
+                f"{int(r.run)}:{int(r.luminosityBlock)}:{int(r.event)}:"
+                f"{float(r.mu1_pt):.2f}:{float(r.mu1_eta):.2f}:{float(r.mu1_phi):.2f}:"
+                f"{float(r.mu2_pt):.2f}:{float(r.mu2_eta):.2f}:{float(r.mu2_phi):.2f}:"
+                f"{float(r.dimuon_mass):.2f}:{float(r.dimuon_pt):.2f}:{float(r.dimuon_eta):.2f}:"
+                f"{float(r.dimuon_phi):.2f}:"
+                f"{float(r.jet1_pt_nominal):.2f}:{float(r.jet1_eta_nominal):.2f}:"
+                f"{float(r.jet1_phi_nominal):.2f}:{float(r.jet2_pt_nominal):.2f}:"
+                f"{float(r.jet2_eta_nominal):.2f}:{float(r.jet2_phi_nominal):.2f}:"
+                f"{float(r.jj_mass_nominal):.2f}:{float(r.jj_dEta_nominal):.2f}\n"
+            )
+            f.write(line)
+            n += 1
+
+    print(f"[INFO] Wrote {n} lines to {out_path}")
 
 # ----------------------------------------------------------------------
 # Two-dir comparison
@@ -361,13 +459,16 @@ def main():
     get_dask_client()
 
     if len(dirs) == 1:
+        print("[INFO] Single directory provided: dumping sync txt file.")
         directory = dirs[0]
+        print(f"[INFO] Loading directory: {directory}")
         if args.out is None:
             out_path = Path(directory.rstrip("/")).name + "_sync.txt"
             out_path = Path(out_path)
         else:
             out_path = Path(args.out)
 
+        print(f"[INFO] Output path: {out_path}")
         df = load_dir_to_df(
             directory,
             category=args.category,
