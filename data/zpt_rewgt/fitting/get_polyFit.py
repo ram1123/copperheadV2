@@ -357,14 +357,19 @@ def main():
 
             params_dict["horizontal_mx"] = f_flat.GetParameter(0)
             params_dict["horizontal_c0"] = f_flat.GetParameter(1)
-            params_dict["polynomial_range"] = {"xmin1": xmin1, "xmax1": xmax1}
+            params_dict["polynomial_range"] = {"xlow": 0.0, "xmin1": xmin1, "xmax1": xmax1, "xhigh": global_fit_xmax}
+            params_dict["total_bins"] = nbins_new
+            params_dict["fit_orders"] = {"f0_order": order0, "f1_order": order1}
+            bin_array = array.array("d", edges)
+            params_dict["bin_edges"] = bin_array.tolist()
 
-            year_dict[f"njet_{njet}"] = {nbins_new: params_dict}
+            year_dict[f"njet_{njet}"] = {"function": params_dict}
             print(f"Using custom binning with {nbins_new} bins: {edges}")
 
         save_dict[year] = year_dict
 
     # Merge with existing YAML or create fresh
+    # print(f"Saving fit parameters to YAML: \n{save_dict}")
     in_dir_yaml = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
     os.makedirs(in_dir_yaml, exist_ok=True)
     yaml_path = f"{in_dir_yaml}/zpt_rewgt_params_{args.dy_sample}.yaml"
