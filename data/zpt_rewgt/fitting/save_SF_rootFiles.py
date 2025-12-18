@@ -12,7 +12,7 @@ from array import array
 from ROOT import RooFit
 import argparse
 
-from modules.selection import filterRegion
+from modules import selection
 
 
 def zipAndCompute(events, fields2load):
@@ -114,7 +114,7 @@ if __name__ == "__main__":
             print("Error: USER environment variable is not set.")
             sys.exit(1)
 
-        base_path = f"{args.input_path}/stage1_output/{year}/f1_0"  # define the save path of stage1 outputs
+        base_path = f"{args.input_path}/stage1_output/{year}/compacted"  # define the save path of stage1 outputs
 
         # load the data and dy samples
         print(f"base path data : {base_path}/data_*/*/*.parquet")
@@ -131,8 +131,8 @@ if __name__ == "__main__":
             raise ValueError(f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, or VBF_filter.")
 
         # apply z-peak region filter and nothing else
-        data_events = filterRegion(data_events, region="z-peak")
-        dy_events = filterRegion(dy_events, region="z-peak")
+        _, data_events = selection.filterRegion(data_events, region="z-peak")
+        _, dy_events = selection.filterRegion(dy_events, region="z-peak")
         print(f"dy_events: {dy_events}")
         # print(f"dy_events.dimuon_mass.compute(): {dy_events.dimuon_mass.compute()}")
 

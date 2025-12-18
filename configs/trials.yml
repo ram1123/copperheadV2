@@ -2,7 +2,7 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv15_16Dec/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv15_16Dec_NoJVM/stage1_output/"
         comment: "What plotter should use by default"
 
     Run2_HEMVetoFix:
@@ -32,6 +32,13 @@ trials:
 
     Run3_nanoAODv15_JVMjetfilter:
         stage1: "{base_dir}/Run3_nanoAODv15_16Dec/stage1_output/"
+        comment: used JVM to filter jets
+        gitSHA: 281cf4a385fe3a9fe99b9522333733795470fba0
+        date: December 16, 2025
+        years: 2024
+
+    Run3_nanoAODv15_NoJVM:
+        stage1: "{base_dir}/Run3_nanoAODv15_16Dec_NoJVM/stage1_output/"
         comment: used JVM to filter jets
         gitSHA: 281cf4a385fe3a9fe99b9522333733795470fba0
         date: December 16, 2025
