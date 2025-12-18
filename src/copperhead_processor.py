@@ -41,28 +41,22 @@ def safe_ratio(num, den, default=0.0):
 
 
 def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
-    # config_path = "./data/zpt_rewgt/fitting/zpt_rewgt_params.yaml"
-    # config_path = config["new_zpt_wgt"]
     logger.info(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
     max_order = 5 #9
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
-    # logger.info(f"zpt_wgt: {zpt_wgt}")
 
     for jet_multiplicity in jet_multiplicies:
 
         zpt_wgt_by_jet = ak.zeros_like(dimuon_pt)
-        # zpt_wgt_by_jet = ak.ones_like(dimuon_pt) * -1 # debugging
+
         # first polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(max_order + 1):  # Dynamically use max_order from the configuration
             coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
-            # logger.info(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
             polynomial_term = coeff*dimuon_pt**order
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
-            # logger.info(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
-            # logger.info(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
         poly_fit_cutoff_min = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_min >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
 
@@ -70,11 +64,8 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(max_order+1): # p goes from 0 to max_order
             coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
-            # logger.info(f"njet{jet_multiplicity} order {order} coeff: {coeff}")
             polynomial_term = coeff*dimuon_pt**order
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
-            # logger.info(f"njet{jet_multiplicity} order {order} polynomial_term: {polynomial_term}")
-            # logger.info(f"njet{jet_multiplicity} order {order} zpt_wgt_by_jet_poly: {zpt_wgt_by_jet_poly}")
         poly_fit_cutoff_max = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmax1"]
         zpt_wgt_by_jet = ak.where(((poly_fit_cutoff_min < dimuon_pt) & (poly_fit_cutoff_max >= dimuon_pt)), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
 
@@ -82,16 +73,12 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"horizontal_c0"]
         zpt_wgt_by_jet_horizontal = ak.ones_like(dimuon_pt) * coeff
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_max < dimuon_pt), zpt_wgt_by_jet_horizontal, zpt_wgt_by_jet)
-        # logger.info(f"zpt_wgt_by_jet testing: {ak.all(zpt_wgt_by_jet != -1).compute()}")
-        # raise ValueError
 
         if jet_multiplicity != 2:
             njet_mask = njets == jet_multiplicity
         else:
             njet_mask = njets >= 2 # njet 2 is inclusive
-        # logger.info(f"njet{jet_multiplicity} order  zpt_wgt_by_jet: {zpt_wgt_by_jet}")
         zpt_wgt = ak.where(njet_mask, zpt_wgt_by_jet, zpt_wgt) # if matching jet multiplicity, apply the values
-        # logger.info(f"zpt_wgt after njet {jet_multiplicity}: {zpt_wgt}")
 
     cutOff_mask = dimuon_pt < 200 # ignore wgts from dimuon pT > 200
     zpt_wgt = ak.where(cutOff_mask, zpt_wgt, ak.ones_like(dimuon_pt))
@@ -467,6 +454,23 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"event_filter length: {len(event_filter)}")
         logger.debug(f"events length: {len(events)}")
 
+        # For debug: if run, lumi, and event :
+        # 355870,33,39923308
+        # 356074,20,26000957
+        # 356316,180,105019006
+        # 356323,357,464776964
+        # 356323,570,747442032
+        # 356371,72,61849995
+        # 356375,103,118643455
+        # debug_run = 356371
+        # debug_lumi = 72
+        # debug_event = 61849995
+        # debug_mask = ~((events.run == debug_run) & (events.luminosityBlock == debug_lumi) & (events.event == debug_event))
+        # event_filter = event_filter & debug_mask
+
+        # # just print muon pT for run, lumi, and event : 355870,33,39923308
+        # debug_mask_2 = (events.run == debug_run) & (events.luminosityBlock == debug_lumi) & (events.event == debug_event)
+
         # Ensure event_filter matches the structure of events
         if len(event_filter) != len(events):
             raise ValueError("event_filter length does not match events length!")
@@ -636,6 +640,17 @@ class EventProcessor(processor.ProcessorABC):
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
+
+        # logger.info(f"Debug event muon pt after roccor: {events.Muon.pt[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon pt_raw after roccor: {events.Muon.pt_raw[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon pt_roch after roccor: {events.Muon.pt_roch[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon eta after roccor: {events.Muon.eta[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon eta after roccor: {events.Muon.eta_raw[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon phi after roccor: {events.Muon.phi[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon id after roccor: {events.Muon[self.config['muon_id']][debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon isGlobal after roccor: {events.Muon.isGlobal[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon isTracker after roccor: {events.Muon.isTracker[debug_mask_2].compute()}")
+
         self.selection.add("muon_pT_roch", ak.any(events.Muon.pt_roch >= self.config["muon_pt_cut"], axis=1))
         self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
         self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
@@ -655,6 +670,16 @@ class EventProcessor(processor.ProcessorABC):
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
         self.selection.add("muon_iso", ak.any(events.Muon.pfRelIso04_all < self.config["muon_iso_cut"], axis=1))
         # logger.info(f"muon_selectiont: {ak.to_dataframe(muon_selection.compute())}")
+
+        # logger.info(f"Debug event muon pt after roccor: {events.Muon.pt[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon pt_raw after roccor: {events.Muon.pt_raw[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon pt_roch after roccor: {events.Muon.pt_roch[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon eta after roccor: {events.Muon.eta[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon eta after roccor: {events.Muon.eta_raw[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon phi after roccor: {events.Muon.phi[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon id after roccor: {events.Muon[self.config['muon_id']][debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon isGlobal after roccor: {events.Muon.isGlobal[debug_mask_2].compute()}")
+        # logger.info(f"Debug event muon isTracker after roccor: {events.Muon.isTracker[debug_mask_2].compute()}")
 
         t5 = time.perf_counter()
         logger.info(f"[timing] Muon selection time: {t5 - t4:.2f} seconds")
@@ -733,6 +758,20 @@ class EventProcessor(processor.ProcessorABC):
         t6 = time.perf_counter()
         logger.info(f"[timing] Trigger match time: {t6 - t5:.2f} seconds")
         # --------------------------------------------------------
+
+        # # print the mask debug_mask_2 and trigger_match for the debug event
+        # logger.info(f"After Trigger match event trigger_match: {trigger_match[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon pt after roccor: {events.Muon.pt[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon pt_raw after roccor: {events.Muon.pt_raw[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon pt_roch after roccor: {events.Muon.pt_roch[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon eta after roccor: {events.Muon.eta[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon eta after roccor: {events.Muon.eta_raw[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon phi after roccor: {events.Muon.phi[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon id after roccor: {events.Muon[self.config['muon_id']][debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon isGlobal after roccor: {events.Muon.isGlobal[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon isTracker after roccor: {events.Muon.isTracker[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon pfRelIso04_all after roccor: {events.Muon.pfRelIso04_all[debug_mask_2].compute()}")
+        # logger.info(f"After Trigger match event muon_selection: {muon_selection[debug_mask_2].compute()}")
 
         # apply FSR correction, since trigger match is calculated
         if do_fsr:
@@ -826,6 +865,8 @@ class EventProcessor(processor.ProcessorABC):
 
         nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0)
+        # logger.debug(f"nelectrons: {nelectrons[debug_mask_2].compute()}")
+        # logger.debug(f"electron_veto: {electron_veto[debug_mask_2].compute()}")
         self.selection.add("electron_veto", electron_veto)
         if self.config["switches"]["do_HemVeto"]:
             HemVeto_filter, is_HemRegion = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
@@ -843,7 +884,7 @@ class EventProcessor(processor.ProcessorABC):
                 & (evnt_qual_flg_selection > 0)
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
         )
-        
+
         pv_good = (events.PV.npvsGood > 0)
         self.selection.add("PV_npvsGood", pv_good)
         event_filter = event_filter & (nmuons == 2)
@@ -1034,6 +1075,14 @@ class EventProcessor(processor.ProcessorABC):
             gjj_dEta = abs(gjet1.eta - gjet2.eta)
             gjj_dPhi = abs(gjet1.delta_phi(gjet2))
             gjj_dR = gjet1.delta_r(gjet2)
+
+            # number of gen jets
+            n_genjets = ak.num(gjets, axis=1)
+            # number of gen jets with pT > 25 GeV and |eta| < 4.7
+            n_genjets_pt25_eta47 = ak.sum((gjets.pt > 25) & (abs(gjets.eta) < 4.7), axis=1)
+            # number of gen jets with pT > 30 GeV and |eta| < 4.7
+            n_genjets_pt30_eta47 = ak.sum((gjets.pt > 30) & (abs(gjets.eta) < 4.7), axis=1)
+
 
         t11 = time.perf_counter()
         logger.info(f"[timing] GenJet variables time: {t11 - t10:.2f} seconds")
@@ -1724,6 +1773,9 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc:
             mc_dict = {
                 "gjj_mass": gjj.mass,
+                "n_genjets": n_genjets,
+                "n_genjets_pt25_eta47": n_genjets_pt25_eta47,
+                "n_genjets_pt30_eta47": n_genjets_pt30_eta47,
             }
             out_dict.update(mc_dict)
 
@@ -1826,28 +1878,9 @@ class EventProcessor(processor.ProcessorABC):
         if do_zpt:
             logger.info("=======================  apply zpt weights =======================")
             if "MiNNLO" in dataset: # FIXME: temporary fix for MiNNLO samples
-                zpt_weight_mine_nbins100 = getZptWgts_3region(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file_MiNNLO"])
+                zpt_weight_mine_nbins100 = getZptWgts_3region(dimuon.pt, njets, "function", year, self.config["new_zpt_weights_file_MiNNLO"])
             else:
-                zpt_weight_mine_nbins100 = getZptWgts_3region(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file_aMCatNLO"])
-
-            # logger.info("========================= zpt weights using mu1 and mu2 pT =========================")
-            # sf_dict = load_sf_dict("/depot/cms/users/shar1172/copperheadV2_CheckSetup/data/zpt_rewgt/fitting_mu1mu2pt/sf_data_flat.json")
-            # logger.info(f"sf_dict: {sf_dict}")
-            # zpt_weight_mine_nbins100 = getZptWgts_new(mu1.pt, mu2.pt, acoplanarity, njets, sf_dict)
-            # logger.info(f"zpt_weight_mine_nbins100: {type(zpt_weight_mine_nbins100)}")
-            # logger.info(f"zpt_weight_mine_nbins100: {(zpt_weight_mine_nbins100)}")
-
-            # calibration = correction.evaluate(mu1.pt, abs(mu1.eta), abs(mu2.eta))
-            #
-            # correction_set = correctionlib.CorrectionSet.from_file("/depot/cms/private/users/shar1172/copperheadV2_CheckSetup/data/zpt_rewgt/fitting_mu1mu2pt/sf_data_correctionlib.json")
-            # correction_set = correctionlib.CorrectionSet.from_file("/depot/cms/private/users/shar1172/copperheadV2_CheckSetup/data/zpt_rewgt/fitting_mu1mu2pt/sf_data_correctionlib_variable_acop.json")
-            # correction = correction_set["acoplanaritySF"]
-            # logger.info(f"correction_set: {correction_set}")
-            # logger.info(f"correction: {correction}")
-            # zpt_weight = correction.evaluate(mu1.pt, mu2.pt, njets, acoplanarity)
-            # logger.info(f"zpt_weight: {zpt_weight}")
-
-            # logger.info( f"zpt_weight_mine_nbins100 after new sf_dict: {zpt_weight_mine_nbins100.compute()}")
+                zpt_weight_mine_nbins100 = getZptWgts_3region(dimuon.pt, njets, "function", year, self.config["new_zpt_weights_file_aMCatNLO"])
 
             zpt_weight = zpt_weight_mine_nbins100
             weights.add("zpt_wgt",

@@ -4,8 +4,8 @@ import numpy as np
 poly_fit_ranges = {
     "2018" : {
         "njet0" : [10, 110],
-        "njet1" : [12, 80],
-        "njet2" : [17, 100],
+        "njet1" : [11, 100],
+        "njet2" : [10, 120],
     },
     "2017" : {
         "njet0" : [9.5, 110],
@@ -34,22 +34,22 @@ def define_custom_binning():
     x = 0.0
     while x <= 30.0:
         edges.append(x)
-        x += 1.0
+        x += 0.4
     while x < 50.0:
         edges.append(x)
-        x += 2.5
+        x += 0.4
     while x < 60.0:
         edges.append(x)
-        x += 5.0
+        x += 0.5
     while x < 80.0:
         edges.append(x)
-        x += 5.0
+        x += 1.0
     while x < 100.0:
         edges.append(x)
-        x += 10.0
+        x += 1.5
     while x <= 200.0:
         edges.append(x)
-        x += 25.0
+        x += 5.0
     # Ensure the last edge is exactly 200
     if edges[-1] < 200.0:
         edges.append(200.0)

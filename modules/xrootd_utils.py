@@ -70,4 +70,5 @@ AAA_ERROR_FRAGMENTS = (
     "File stat request failed",
     "OSError: Bytes failed to read from open file",
     "OSError: Failed to close file: [ERROR] Operation expired",
+    "Operation expired",
 )

@@ -287,6 +287,8 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
 
     # Fill NaNs (if any) to avoid formatting errors
     df2 = df[required].copy()
+    # replace any none with -100.0
+    df2 = df2.fillna(-100.0)
 
     # Write fast without pandas to_csv (custom format)
     n = 0
@@ -403,6 +405,137 @@ def compare_two_dirs(
     print(f"[INFO] Wrote {len(df_out)} mismatching events to {out_path}")
 
 
+def parse_sync_txt(path: str) -> pd.DataFrame:
+    """
+    Parse the dumped sync format lines:
+
+    run:lumi:event:mu1_pt:mu1_eta:mu1_phi:mu2_pt:mu2_eta:mu2_phi:
+    dimuon_mass:dimuon_pt:dimuon_eta:dimuon_phi:
+    jet1_pt:jet1_eta:jet1_phi:jet2_pt:jet2_eta:jet2_phi:
+    jj_mass:jj_dEta
+
+    Returns DataFrame indexed by (run, luminosityBlock, event).
+    """
+    cols = [
+        "run", "luminosityBlock", "event",
+        "mu1_pt", "mu1_eta", "mu1_phi",
+        "mu2_pt", "mu2_eta", "mu2_phi",
+        "dimuon_mass", "dimuon_pt", "dimuon_eta", "dimuon_phi",
+        "jet1_pt_nominal", "jet1_eta_nominal", "jet1_phi_nominal",
+        "jet2_pt_nominal", "jet2_eta_nominal", "jet2_phi_nominal",
+        "jj_mass_nominal", "jj_dEta_nominal",
+    ]
+
+    rows = []
+    bad = 0
+    with open(path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split(":")
+            if len(parts) != len(cols):
+                bad += 1
+                continue
+
+            # first 3 are ints, rest floats
+            try:
+                run = int(parts[0])
+                lumi = int(parts[1])
+                evt = int(parts[2])
+                floats = [float(x) for x in parts[3:]]
+            except Exception:
+                bad += 1
+                continue
+
+            row = {"run": run, "luminosityBlock": lumi, "event": evt}
+            for c, v in zip(cols[3:], floats):
+                row[c] = v
+            rows.append(row)
+
+    if bad:
+        print(f"[WARNING] {bad} malformed lines skipped in {path}")
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        raise RuntimeError(f"No valid rows parsed from {path}")
+
+    df = df.set_index(KEY_VARS).sort_index()
+    return df
+
+
+def compare_two_sync_txt(
+    txt1: str,
+    txt2: str,
+    out_path: Path,
+    tolerance: float = 0.0,
+) -> None:
+    """
+    Compare two sync txt dumps by (run,luminosityBlock,event).
+    Writes mismatches to out_path as CSV with *_1, *_2, delta_* columns.
+    """
+    print(f"[INFO] Loading sync txt 1: {txt1}")
+    df1 = parse_sync_txt(txt1)
+
+    print(f"[INFO] Loading sync txt 2: {txt2}")
+    df2 = parse_sync_txt(txt2)
+
+    common_idx = df1.index.intersection(df2.index)
+    only1 = df1.index.difference(df2.index)
+    only2 = df2.index.difference(df1.index)
+
+    print(f"[INFO] Common events: {len(common_idx)}")
+    print(f"[INFO] Events only in txt1: {len(only1)}")
+    print(f"[INFO] Events only in txt2: {len(only2)}")
+
+    # write only1 and only2 to separate files
+    if len(only1) > 0:
+        only1_path = out_path.parent / f"only_in_{Path(txt1).stem}.csv"
+        df1.loc[only1].reset_index().to_csv(only1_path, index=False)
+        print(f"[INFO] Wrote {len(only1)} events only in txt1 to {only1_path}")
+    if len(only2) > 0:
+        only2_path = out_path.parent / f"only_in_{Path(txt2).stem}.csv"
+        df2.loc[only2].reset_index().to_csv(only2_path, index=False)
+        print(f"[INFO] Wrote {len(only2)} events only in txt2 to {only2_path}")
+
+    if len(common_idx) == 0:
+        print("[WARNING] No common events found; nothing to compare.")
+        return
+
+    c1 = df1.loc[common_idx]
+    c2 = df2.loc[common_idx]
+
+    # Variables to compare (everything except keys)
+    vars_to_check = [c for c in c1.columns if c in c2.columns]
+
+    rows = []
+    for idx in common_idx:
+        r1 = c1.loc[idx]
+        r2 = c2.loc[idx]
+
+        mismatch = False
+        rec = {"run": idx[0], "luminosityBlock": idx[1], "event": idx[2]}
+
+        for v in vars_to_check:
+            v1 = float(r1[v])
+            v2 = float(r2[v])
+            d = v2 - v1
+            rec[f"{v}_1"] = v1
+            rec[f"{v}_2"] = v2
+            rec[f"delta_{v}"] = d
+            if abs(d) > tolerance:
+                mismatch = True
+
+        if mismatch:
+            rows.append(rec)
+
+    if not rows:
+        print("[INFO] No mismatches found (within tolerance).")
+        return
+
+    pd.DataFrame(rows).to_csv(out_path, index=False)
+    print(f"[INFO] Wrote {len(rows)} mismatching events to {out_path}")
+
 # ----------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------
@@ -478,16 +611,22 @@ def main():
         dump_single_dir_sync(df, out_path)
 
     elif len(dirs) == 2:
-        dir1, dir2 = dirs
+        file1, file2 = dirs
 
-        if args.out is None:
-            name1 = Path(dir1.rstrip("/")).name
-            name2 = Path(dir2.rstrip("/")).name
-            out_name = f"sync_{name1}_vs_{name2}_dimuon_diff.txt"
-            out_path = Path(out_name)
-        else:
-            out_path = Path(args.out)
+        out_path = Path(args.out) if args.out else Path("sync_txt_diff.csv")
 
+        # If both are text dumps -> compare text files
+        if (str(file1).endswith(".txt") ) and (str(file2).endswith(".txt")):
+            compare_two_sync_txt(
+                txt1=file1,
+                txt2=file2,
+                out_path=out_path,
+                tolerance=args.tolerance,
+            )
+            return
+
+        # Otherwise treat as directories (existing behavior)
+        dir1, dir2 = a, b
         compare_two_dirs(
             dir1=dir1,
             dir2=dir2,

@@ -1,3 +1,39 @@
+# Label name scheme
+- Run2_nanoAODv<version>/<date>_<additional_info>
+- or Run3_nanoAODv<version>_<date>_<additional_info>
+
+# 18 December 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3_sync.yaml -v 12 -l Run3_nanoAODv12_Peking_sync -y "2022preE
+E" -m 1)
+time python ./scripts/sync_parquet_dimuon.py  /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_Peking_sync/stage1_output/2022preEE/f1_0/data_C/0/ -o Purdue_event_info_2022Cv1.txt
+
+time python ./scripts/sync_parquet_dimuon.py docs/sync/sync_Peking/peking.txt Purdue_event_info_2022Cv1.txt  -o compare_Peking_vs_Purduev1.txt
+time python ./scripts/sync_parquet_dimuon.py docs/sync/sync_Peking/peking.txt Purdue_event_info_2022C.txt  -o compare_Peking_vs_Purdue.txt
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l Run2_nanoAODv12_HEMVetoFix_NoSyst -y "2018" -m compact  -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l Run2_nanoAODv12_HEMVetoFix_NoSyst -y "2018" -m zpt_fit0 )
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l Run2_nanoAODv15_18Dec_NoSyst -y "2017" -m 1  -k)
+
+```
+
+# 17 December 2025
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 12 -l Run2_nanoAODv15_25Nov_SwitchOffJec -y "2017" -m 1 -k -d 1)
+time python ./scripts/sync_parquet_dimuon.py  sync_0_vs_3_dimuon_diff.txt docs/sync/sync_Peking/peking.txt
+time python ./scripts/sync_parquet_dimuon.py Purdue_event_info_2022C.txt event_info_2022C_v2.txt  -o compare_old_vs_new.txt
+time python ./scripts/sync_parquet_dimuon.py docs/sync/sync_Peking/peking.txt event_info_2022C_v2.txt  -o compare_Peking_vs_myNew.txt
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l Run2_nanoAODv12_HEMVetoFix_NoSyst -y "2018" -m 1  -k)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_16Dec_JVMjetFilter -y "2022preEE" -m 1 -k)
+```
+
 # 16 December 2025
 
 ```bash
