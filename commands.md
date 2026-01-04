@@ -1,6 +1,10 @@
 # Label name scheme
-- Run2_nanoAODv<version>/<date>_<additional_info>
 - or Run3_nanoAODv<version>_<date>_<additional_info>
+
+# 21 December 2025
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_21Dec_JVMfilterjets -y "2022preEE" -m 1 -k )
+
 
 # 18 December 2025
 
@@ -15,9 +19,12 @@ time python ./scripts/sync_parquet_dimuon.py docs/sync/sync_Peking/peking.txt Pu
 
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l Run2_nanoAODv12_HEMVetoFix_NoSyst -y "2018" -m compact  -k)
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l Run2_nanoAODv12_HEMVetoFix_NoSyst -y "2018" -m zpt_fit0 )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l Run2_nanoAODv12_18Dec_HEMVetoFix -y "2018" -m 1  -k)
 
 
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l Run2_nanoAODv15_18Dec_NoSyst -y "2017" -m 1  -k)
+
+time(python src/lib/ebeMassResCalibration/getCalibrationFactor.py  --years "2018" --extraString "_HEMVetoFix")
 
 ```
 

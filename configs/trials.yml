@@ -2,8 +2,15 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv15_16Dec_NoJVM/stage1_output/"
+        stage1: "{base_dir}/Run2_nanoAODv12_HEMVetoFix_NoSyst/stage1_output/"
         comment: "What plotter should use by default"
+
+    Run2_HEMVetoFix_v1:
+        stage1: "{base_dir}/Run2_nanoAODv12_HEMVetoFix_NoSyst/stage1_output/"
+        comment: Rerun 2018 after HEM veto fix
+        date: December 07, 2025
+        years: all 4 run-2 era
+        gitSHA: 001b85faee5c7c6b97ba0fc3c9027d7e2f7d7e78
 
     Run2_HEMVetoFix:
         stage1: "{base_dir}/Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2/stage1_output/"

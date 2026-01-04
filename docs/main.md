@@ -6,10 +6,10 @@
     2. [Running the code](#running-the-code)
         1. [Obtain the reduced ntuples](#obtain-the-reduced-ntuples)
         2. [Control Plots](#control-plots)
-        3. [DY pt mismodelling correction](#dy-pt-mismodelling-correction)
-            1. [Z-pT reweighting - validation](#z-pt-reweighting---validation)
-        4. [Improving dimuon mass resolution](#improving-dimuon-mass-resolution)
-        5. [Update](#update)
+    3. [DY pt mismodelling correction](#dy-pt-mismodelling-correction)
+        1. [Z-pT reweighting - validation](#z-pt-reweighting---validation)
+    4. [Improving dimuon mass resolution](#improving-dimuon-mass-resolution)
+        1. [Update](#update)
 
 
 
@@ -89,25 +89,29 @@ python run_plotter.py
 ```
 
 
-### DY pt mismodelling correction
+## DY pt mismodelling correction
 
 Seveal steps are needed to get the Z-pT weights.
 
 **Step-1**: Obtain the histograms of Z-pT in data and MC.
 ```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt_fit0"
+bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m "zpt_fit0" -n 0
 ```
 
 **Step-2**: After several checks we decided that to fit the ratio of Z-pT distribution in data and MC using the three functions in low, medium and high pT range. So, in this step we fit the ratio histograms and find the polynomial degrees that fits best in each range.
 
 ```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt_fit1"
+bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m "zpt_fit1" -n 0
 ```
+
+Where the option:
+- `-n`: specifies which jet bin to consider for fitting. `0` for zero jet bin, `1` for one jet bin and `2` for greater than equal to two jet bin.
+
 
 **Step-3**: Now we calculate the Z-pT weights using the fit functions obtained in the previous step.
 
 ```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt_fit2"
+bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018  -m "zpt_fit2" -n 0
 ```
 
 For details check the detailed documentation: [Z-pT reweighting](ZpT_reweight.md)
@@ -139,6 +143,12 @@ bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -
 ```
 
 - To adjust the fitting one can change the parameters in the script `src/lib/ebeMassResCalibration/ebeMassResPlotter.py`
+
+### Dec 2025 Updated commands
+
+```bash
+time(python src/lib/ebeMassResCalibration/getCalibrationFactor.py  --years "2018")
+```
 
 ### Update
 

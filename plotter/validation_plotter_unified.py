@@ -25,27 +25,50 @@ from modules import selection
 bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 
-# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dyTo2L_M-50_incl"]
+# Run2 DY samples
+DYVBF = ["dy_VBF_filter"]
+
 DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
+DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
+
+# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dyTo2L_M-50_incl"]
 # DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
+# DY_aMCatNLO = ["dyTo2Mu_M-50_aMCatNLO"]
+# DY_madgraph = ["dy_M-50_madgraph"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
 # DY_aMCatNLO = ["dyTo2L_M-50_incl"]
 # DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"]
 # DY_aMCatNLO = ["dy_M-50_madgraph"]  # 2024
-DY_To2MU_MassBinned = ["dyTo2Mu_M-10To50", "dyTo2Mu_M-50To120", "dyTo2Mu_M-120To200"] # 2024
+DY_To2MU_MassBinned = [
+    "dyTo2Mu_M-10To50",
+    "dyTo2Mu_M-50To120",
+    "dyTo2Mu_M-120To200",
+]  # 2024
 DY_To2MU_inclusive = ["dyTo2Mu_M-50"]
-DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
 
 DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
-DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
+# DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
+DY_MLL_binned = ["dyTo2Mu_M-10To50", "dyTo2Mu_M-50To120", "dyTo2Mu_M-120To200"]
 
 
 DY_HTBinned = [
-    "dy_M-4to50_HT-70to100", "dy_M-4to50_HT-100to200", "dy_M-4to50_HT-200to400", "dy_M-4to50_HT-400to600", "dy_M-4to50_HT-600toInf",
-    "dy_M-50_HT-70to100", "dy_M-50_HT-100to200", "dy_M-50_HT-200to400", "dy_M-50_HT-400to600", "dy_M-50_HT-600to800", "dy_M-50_HT-800to1200", "dy_M-50_HT-1200to2500", "dy_M-50_HT-2500toInf"
+    "dy_M-4to50_HT-70to100",
+    "dy_M-4to50_HT-100to200",
+    "dy_M-4to50_HT-200to400",
+    "dy_M-4to50_HT-400to600",
+    "dy_M-4to50_HT-600toInf",
+    "dy_M-50_HT-70to100",
+    "dy_M-50_HT-100to200",
+    "dy_M-50_HT-200to400",
+    "dy_M-50_HT-400to600",
+    "dy_M-50_HT-600to800",
+    "dy_M-50_HT-800to1200",
+    "dy_M-50_HT-1200to2500",
+    "dy_M-50_HT-2500toInf",
 ]
 
-DYVBF = ["dy_VBF_filter"]
+
+# Run3 DY samples
 
 
 group_dict = {
@@ -61,16 +84,20 @@ group_dict = {
         "data_I",
         "data_J",
     ],
+    # Run2 DY samples
     "DY": DY_aMCatNLO,
+
+    # Run3 DY samples
     # "DY": DY_To2MU_MassBinned,
     # "DY": DY_To2MU_inclusive,
     # "DY": ["dy_M-50_aMCatNLO"],
     # "DY": DY_jet_binned,
     # "DY": DY_MLL_binned,
+    # "DY": DY_madgraph,
     # "DY": DY_MiNNLO,
     # "DY_MINNLO": DY_MiNNLO ,
     # "DY_AMCATNLO":   DY_aMCatNLO,
-    "DYVBF": ["dy_VBF_filter"],
+    # "DYVBF": ["dy_VBF_filter"],
     # "DYJ01": ["DYJ01"],
     # "DYJ2": ["DYJ2"],
     "TOP": [
@@ -78,19 +105,20 @@ group_dict = {
         "ttjets_dl",
         "ttjets_sl",
         "ttjets_fh",
-        # "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"
+        "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"
     ],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
-    "EWK": ["ewk_lljj_mll50_mjj120",  "ewk_lljj"],
+    # "EWK": ["ewk_lljj_mll50_mjj120",  "ewk_lljj"],
 
     # "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
     "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz_2l2q", "zz_2l2u", "zz_2l2nu", "zz_4l"],
     # "VVContinuum": ["GluGluContin_ZZ2e2mu", "GluGluContin_ZZ2mu2nu", "GluGluContin_ZZ2mu2tau", "GluGluContin_ZZ4mu", "GluGluContin_ZZ4tau"],
     "OTHER": ["www", "wwz", "wzz", "zzz"],
     "GGH": ["ggh_powhegPS"],
-    # "VBF": ["vbf_powheg_dipole"]
+    "VBF": ["vbf_powheg_dipole"]
     # "VBF": ["vbf_powheg_amcatnlo"],
-    "VBF": ["vbf_powheg"],
+    # "VBF": ["vbf_powheg"],
+    # "VBF": ["vbf_aMCatNLO"],
 }
 
 def find_group_name(process_name, group_dict_param):
@@ -706,7 +734,7 @@ if __name__ == "__main__":
         # variables2plot.append(f"nBtagLoose_nominal")
         # variables2plot.append(f"nBtagMedium_nominal")
 
-    if args.minimum_set: args.variables = ["dimuon", "mu"] # if minimum set is requested, only plot dimuon, and mu variables
+    if args.minimum_set: args.variables = ["dimuon"] # if minimum set is requested, only plot dimuon, and mu variables
     for particle in args.variables:
         if "dimuon" in particle:
             variables2plot.append(f"{particle}_mass")

@@ -40,30 +40,29 @@ def nanoevents_from_root_with_redirectors(
         metadata = {}
 
     last_err = None
-    for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
-        try:
-            fi_norm = normalize_paths(file_input, host_prefix)
-            logger.info(f"[prestage] attempt {attempt} using redirector {host_prefix}")
-            events = NanoEventsFactory.from_root(
-                fi_norm,
-                metadata=metadata,
-                schemaclass=schemaclass,
-                uproot_options=uproot_options,
-            ).events()
-            logger.info(f"[prestage] attempt {attempt} succeeded with {host_prefix}")
-            return events  # success
-        except Exception as e:
-            msg = str(e)
-            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
-            logger.warning(
-                f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e}"
-            )
-            if tls_bad and attempt < len(AAA_REDIRECTORS):
-                logger.warning("[prestage] retrying with next redirector...")
-                last_err = e
-                continue
-            # non-AAA error or no more redirectors
-            raise
+    try:
+        fi_norm = normalize_paths(file_input, host_prefix)
+        logger.info(f"[prestage] attempt {attempt} using redirector {host_prefix}")
+        events = NanoEventsFactory.from_root(
+            fi_norm,
+            metadata=metadata,
+            schemaclass=schemaclass,
+            uproot_options=uproot_options,
+        ).events()
+        logger.info(f"[prestage] attempt {attempt} succeeded with {host_prefix}")
+        logger.info(f"Successfully read the files in attempt {attempt} with redirector {host_prefix}")
+
+        return events  # success
+    except Exception as e:
+        msg = str(e)
+        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+        logger.warning(
+            f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e}"
+        )
+        if tls_bad and attempt < len(AAA_REDIRECTORS):
+            logger.warning("[prestage] retrying with next redirector...")
+            last_err = e
+        raise
 
 
 def preprocess_with_redirectors(
@@ -576,42 +575,60 @@ if __name__ == "__main__":
                         # Non-AAA error or last redirector → propagate
                         raise
             else: # if MC
-                if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
-                    file_input = {fname : {"object_path": "Events"} for fname in fnames}
-                    events = nanoevents_from_root_with_redirectors(
-                        file_input=file_input,
-                        schemaclass=BaseSchema,
-                        metadata={},
-                        uproot_options={"timeout":4*2400},
-                    )
-                    gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
-                    preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
-                    preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
-                else:
-                    file_input = {fname: {"object_path": "Runs"} for fname in fnames}
-                    logger.debug(f"file_input: {file_input}")
-                    runs = nanoevents_from_root_with_redirectors(
-                        file_input=file_input,
-                        schemaclass=BaseSchema,
-                        metadata={},
-                        uproot_options={"timeout": 4 * 2400},
-                    )
+                last_err = None
+                for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+                    try:
+                        if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
+                            file_input = {fname : {"object_path": "Events"} for fname in fnames}
+                            file_input = normalize_paths(file_input, host_prefix)
+                            events = nanoevents_from_root_with_redirectors(
+                                file_input=file_input,
+                                schemaclass=BaseSchema,
+                                metadata={},
+                                uproot_options={"timeout": 4 * 2400},
+                            )
+                            gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
+                            preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
+                            preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
+                        else:
+                            file_input = {fname: {"object_path": "Runs"} for fname in fnames}
+                            file_input = normalize_paths(file_input, host_prefix)
+                            logger.debug(f"file_input: {file_input}")
+                            runs = nanoevents_from_root_with_redirectors(
+                                file_input=file_input,
+                                schemaclass=BaseSchema,
+                                metadata={},
+                                uproot_options={"timeout": 4 * 2400},
+                            )
 
-                    # print(f"runs.fields: {runs.fields}")
-                    # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
-                    if "genEventSumw" in runs.fields:
-                        # sumGenwgts = ak.sum(runs.genEventSumw).compute()
-                        # sumGenwgts_v2 = ak.sum(events.genWeight).compute()
-                        # gen_wgt_max = ak.max(events.genWeight).compute()
-                        # big_gen_wgt = events.genWeight > 3000
-                        # print(f"big_gen_wgt num: {ak.sum(big_gen_wgt).compute()}")
-                        # print(f"gen_wgt_max: {gen_wgt_max}")
-                        # print(f"nevents: {nevents}")
-                        preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                        preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    else: # nanoAODv6
-                        preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                        preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                            # print(f"runs.fields: {runs.fields}")
+                            # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
+                            if "genEventSumw" in runs.fields:
+                                # sumGenwgts = ak.sum(runs.genEventSumw).compute()
+                                # sumGenwgts_v2 = ak.sum(events.genWeight).compute()
+                                # gen_wgt_max = ak.max(events.genWeight).compute()
+                                # big_gen_wgt = events.genWeight > 3000
+                                # print(f"big_gen_wgt num: {ak.sum(big_gen_wgt).compute()}")
+                                # print(f"gen_wgt_max: {gen_wgt_max}")
+                                # print(f"nevents: {nevents}")
+                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                            else: # nanoAODv6
+                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                    except Exception as e:
+                        msg = str(e)
+                        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+                        logger.warning(
+                            f"[prestage] data sample {sample_name}: attempt {attempt} failed "
+                            f"with {host_prefix}: {type(e).__name__}: {e}"
+                        )
+                        if tls_bad and attempt < len(AAA_REDIRECTORS):
+                            logger.warning("[prestage] retrying data sample with next redirector...")
+                            last_err = e
+                            continue
+                        # Non-AAA error or last redirector → propagate
+                        raise
 
                 total_events += preprocess_metadata["nGenEvts"]
 

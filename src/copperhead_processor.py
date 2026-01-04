@@ -1869,13 +1869,14 @@ class EventProcessor(processor.ProcessorABC):
         # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
 
         # logger.info(f"out_dict.compute 3: {ak.zip(out_dict).to_parquet(save_path)}")
-        njets = out_dict[f"njets_nominal"]
         # logger.info(f"njets: {ak.to_numpy(njets.compute())}")
 
         # do zpt weight at the very end
         dataset = events.metadata["dataset"]
         do_zpt = ('dy' in dataset) and is_mc and self.config["switches"]["do_zpt"]
         if do_zpt:
+            njets = out_dict[f"njets_nominal"]
+            # njets = out_dict["n_genjets"]
             logger.info("=======================  apply zpt weights =======================")
             if "MiNNLO" in dataset: # FIXME: temporary fix for MiNNLO samples
                 zpt_weight_mine_nbins100 = getZptWgts_3region(dimuon.pt, njets, "function", year, self.config["new_zpt_weights_file_MiNNLO"])
