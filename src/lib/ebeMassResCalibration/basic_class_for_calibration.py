@@ -17,7 +17,10 @@ from modules.utils import logger
 rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
 
 import ROOT
-ROOT.gSystem.Load("PDFs/RooCMSShape_cc.so")
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT.gSystem.Load(f"{CURRENT_DIR}/PDFs/RooCMSShape_cc.so")
+
 from ROOT import RooCMSShape
 
 def filter_region(events, region="h-peak"):
@@ -122,12 +125,13 @@ def get_calib_categories(events):
         "62-200_EE": mask_62_200 & EE,
     }
 
-    # categories = {
-    #     "30-45_BB_OB_EB": cat_30_45_1,
-    #     "30-45_BO_OO_EO": cat_30_45_2,
-    #     "30-45_BE_OE_EE": cat_30_45_3
-    # }
-    categories = cats_30_45
+    categories = {
+        "30-45_BB_OB_EB": cat_30_45_1,
+        "30-45_BO_OO_EO": cat_30_45_2,
+        "30-45_BE_OE_EE": cat_30_45_3
+    }
+    # categories = cats_30_45
+    categories.update(cats_30_45)
     categories.update(cats_45_52)
     categories.update(cats_52_62)
     categories.update(cats_62_200)
@@ -179,7 +183,7 @@ def save_fit_params_to_json(fit_result, cat_idx, json_path, model_name="BWxDCB",
         json.dump(all_fits, f, indent=2)
 
 
-def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="CalibrationLog.txt", out_string=""):
+def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="CalibrationLog.txt", output_dir=""):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -296,17 +300,17 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     df_fit = pd.concat([df_fit, new_row], ignore_index=True)
 
     # Save the cat_idx and sigma value to a log file
-    with open(f"plots/{out_string}/{logfile}", "a") as f:
+    with open(f"{output_dir}/{logfile}", "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
     # save plot
-    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}.pdf")
+    canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.pdf")
     del canvas
     # # consider script to wait a second for stability?
     # time.sleep(1)
     return df_fit
 
-def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="CalibrationLog.txt", out_string="", ifbinned=True, pdfFile_ExtraText=""):
+def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="CalibrationLog.txt", output_dir="", ifbinned=True, pdfFile_ExtraText=""):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -525,7 +529,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # getattr(w, 'import')(fit_result, rt.RooFit.RecycleConflictNodes())
 
     # # Save to file
-    # model_dir = f"plots/{out_string}/final_models"
+    # model_dir = f"{output_dir}/final_models"
     # os.makedirs(model_dir, exist_ok=True)
     # ws_output_path = f"{model_dir}/workspace_cat{cat_idx}.root"
     # w.writeToFile(ws_output_path)
@@ -551,7 +555,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     logger.info(f"chi2: {chi2}")
 
     # store the fit result in a json file
-    save_fit_params_to_json(fit_result, cat_idx, f"plots/{out_string}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2)
+    save_fit_params_to_json(fit_result, cat_idx, f"{output_dir}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2)
 
     latex = rt.TLatex()
     latex.SetNDC()
@@ -618,10 +622,10 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
 
 
     # Save the cat_idx and sigma value to a log file
-    with open(f"plots/{out_string}/{logfile}", "a") as f:
+    with open(f"{output_dir}/{logfile}", "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
-    full_path = f"plots/{out_string}/calibration_fitCat{cat_idx}.pdf"
+    full_path = f"{output_dir}/calibration_fitCat{cat_idx}.pdf"
     if pdfFile_ExtraText:
         full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
     canvas.SaveAs(full_path)
@@ -630,7 +634,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     time.sleep(1)
     return df_fit
 
-def generateBWxDCB_plot_bkgErfxExp(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="CalibrationLog.txt", out_string=""):
+def generateBWxDCB_plot_bkgErfxExp(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="CalibrationLog.txt", output_dir=""):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -824,10 +828,10 @@ def generateBWxDCB_plot_bkgErfxExp(mass_arr, cat_idx: int, nbins, df_fit = "", l
 
 
     # Save the cat_idx and sigma value to a log file
-    with open(f"plots/{out_string}/{logfile}", "a") as f:
+    with open(f"{output_dir}/{logfile}", "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
-    canvas.SaveAs(f"plots/{out_string}/calibration_fitCat{cat_idx}.pdf")
+    canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.pdf")
     del canvas
     # consider script to wait a second for stability?
     time.sleep(1)
@@ -1046,7 +1050,12 @@ def closure_test_from_df_BothBeforeAndAfter_OnSameCanvas(df, additional_string, 
     return df
 
 
-def plot_closure_comparison_calibrated_uncalibrated(df, additional_string, output_plot="closure_test_combined_UpdatedClosure.pdf", pdfFile_ExtraText=""):
+def plot_closure_comparison_calibrated_uncalibrated(
+    df,
+    output_dir,
+    output_plot="closure_test_combined_UpdatedClosure.pdf",
+    pdfFile_ExtraText="",
+):
     """
     Generate a closure test plot comparing:
       - fit_val vs median_val (after calibration), if available
@@ -1056,7 +1065,7 @@ def plot_closure_comparison_calibrated_uncalibrated(df, additional_string, outpu
 
     Parameters:
       df                 : DataFrame with required columns.
-      additional_string  : Used for output directory naming.
+      output_dir         : Output directory for saving the plot.
       output_plot        : PDF filename.
       pdfFile_ExtraText  : Extra string to append to output PDF filename.
     """
@@ -1149,4 +1158,3 @@ def closure_test_from_calibrated_df(df_fit, df_calibrated, additional_string, ou
 
     logger.info(f"Closure test plot saved as {output_plot}")
     # return df_merged
-
