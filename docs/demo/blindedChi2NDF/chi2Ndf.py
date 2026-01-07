@@ -126,7 +126,8 @@ Conclusion: When calculating over one continuous region, all methods work fine
 # ------------------------------
 # Step2: Test different chi2/ndf methods over
 # smoothely decaying distribution defined by
-# sumExponential function
+# sumExponential function + do it over two 
+# separate regions where possible (hiHalf and loHalf)
 # ------------------------------
 # define new x
 x_name = "mh_ggh"
@@ -134,6 +135,8 @@ x = ROOT.RooRealVar(x_name, x_name, 120, 110, 150)
 nbins = 800
 x.setBins(nbins)
 x.setRange("full", 110, 150 )
+x.setRange("hiHalf", 125, 150 )
+x.setRange("loHalf", 110, 125 )
 
 # define new pdf
 name = f"RooSumTwoExpPdf_a1_coeff"
@@ -156,8 +159,6 @@ datahist = ROOT.RooDataHist(
 )
 
 # Divide binned dataset over hiHalf and loHalf
-x.setRange("hiHalf", 125, 150 )
-x.setRange("loHalf", 110, 125 )
 data_hiHalf = data.reduce(RooFit.CutRange("hiHalf"))
 datahist_hiHalf = ROOT.RooDataHist(
     "datahist_hiHalf",
@@ -173,7 +174,7 @@ datahist_loHalf = ROOT.RooDataHist(
     data_loHalf
 )
 
-# Verify the result
+# Verify the binned data separation hiHalf and loHalf
 # ------------------------------
 # print(f"data_hiHalf.numEntries(): {data_hiHalf.numEntries()}")
 # print(f"Original dataset entries: {datahist.sumEntries()}")
@@ -202,8 +203,25 @@ print(f"step2 method 2 chi2ndf = {chi2ndf}")
 # step2 method 2 NDF = 797
 # step2 method 2 chi2ndf = 0.9404146879870623
 
+
 # ------------------------------
 # method 3
+# extract chi2NDF by manually caluculating chi2 bin by bin
+# comparing histogram and fit value
+# ------------------------------
+regions = [(110,125), (125,150)]
+chi2, NDF = chi2_ndf_manual(pdf, datahist, x, regions, nFit_params)
+print(f"step2 method 3 chi2 = {chi2}")
+print(f"step2 method 3 NDF = {NDF}")
+print(f"step2 method 3 chi2ndf = {chi2/NDF}")
+# print output:
+# step2 method 3 chi2 = 750.1401664386382
+# step2 method 3 ndf = 797
+# step2 method 3 chi2ndf = 0.941204725769935
+
+
+# ------------------------------
+# method 4
 # extract chi2 individually from loHalf and hiHalf, add them up
 # and divide them by ndf
 # ------------------------------
@@ -218,20 +236,19 @@ chi2_loHalf_obj = pdf.createChi2( # createChi2 demo: https://root.cern/doc/v638/
 chi2 = chi2_hiHalf_obj.getVal() + chi2_loHalf_obj.getVal()
 NDF = nbins - nFit_params
 chi2ndf = chi2/NDF
-print(f"step2 method 3 chi2_hiHalf_obj.getVal() = {chi2_hiHalf_obj.getVal()}")
-print(f"step2 method 3 chi2_loHalf_obj.getVal() = {chi2_loHalf_obj.getVal()}")
-print(f"step2 method 3 chi2 = {chi2}")
-print(f"step2 method 3 NDF = {NDF}")
-print(f"step2 method 3 chi2ndf = {chi2ndf}")
+print(f"step2 method 4 chi2_hiHalf_obj.getVal() = {chi2_hiHalf_obj.getVal()}")
+print(f"step2 method 4 chi2_loHalf_obj.getVal() = {chi2_loHalf_obj.getVal()}")
+print(f"step2 method 4 chi2 = {chi2}")
+print(f"step2 method 4 NDF = {NDF}")
+print(f"step2 method 4 chi2ndf = {chi2ndf}")
 # print output:
-# step2 method 3 chi2_hiHalf_obj.getVal() = 6280176.725606403
-# step2 method 3 chi2_loHalf_obj.getVal() = 3721066.8016281947
-# step2 method 3 chi2 = 10001243.527234599
-# step2 method 3 NDF = 797
-# step2 method 3 chi2ndf = 12548.611702929233
+# step2 method 4 chi2_hiHalf_obj.getVal() = 6280176.725606403
+# step2 method 4 chi2_loHalf_obj.getVal() = 3721066.8016281947
+# step2 method 4 chi2 = 10001243.527234599
+# step2 method 4 NDF = 797
+# step2 method 4 chi2ndf = 12548.611702929233
 
-
-# visualizing method 3 to help understanding the crazy values
+# visualizing method 4 to help understanding the crazy values
 # ------------------------------
 # frame = x.frame()
 # datahist_hiHalf.plotOn(frame, Name="datahist_hiHalf", MarkerColor=ROOT.kGreen)
@@ -241,24 +258,12 @@ print(f"step2 method 3 chi2ndf = {chi2ndf}")
 # c.SaveAs("step2_method3Visualization.png")
 # ------------------------------
 
-
-regions = [(110,125), (125,150)]
-chi2, NDF = chi2_ndf_manual(pdf, datahist, x, regions, nFit_params)
-print(f"step2 method 4 chi2 = {chi2}")
-print(f"step2 method 4 NDF = {NDF}")
-print(f"step2 method 4 chi2ndf = {chi2/NDF}")
-# print output:
-# step2 method 4 chi2 = 750.1401664386382
-# step2 method 4 ndf = 797
-# step2 method 4 chi2ndf = 0.941204725769935
-
 """
-# NOTE: we verify that chi2 obtained from chi2_ndf matches with method2. However, method3 doesn't work when it comes to combining two regions. This is an implementation issue, but I couldn't find a workaround.
-thus we don't
+# NOTE: we verify that chi2/ndf from method2 matches with method3. However, method4 doesn't work when it comes to combining two regions. This is an implementation issue, but I couldn't find a workaround. Thus, we abandon the use of method4.
 """
 
 # ------------------------------
-# Step3: We use method 4 to obtain the chi2/ndf from sideband region only,
+# Step3: We use method 3 to obtain the chi2/ndf from sideband region only,
 # which is what is needed for blinded analysis. We expect the chi2/ndf to be
 # similar to chi2/ndf over full signal region
 # ------------------------------
@@ -282,17 +287,17 @@ fitresult.Print("v")
 
 regions = [(110,115), (135,150)]
 chi2, NDF = chi2_ndf_manual(pdf, datahist, x, regions, nFit_params)
-print(f"step3 method 4 chi2 = {chi2}")
-print(f"step3 method 4 NDF = {NDF}")
-print(f"step3 method 4 chi2ndf = {chi2/NDF}")
-# step3 method 4 chi2 = 336.65461935533114
-# step3 method 4 ndf = 397
-# step3 method 4 chi2ndf = 0.84799652230562
+print(f"step3 method 3 chi2 = {chi2}")
+print(f"step3 method 3 NDF = {NDF}")
+print(f"step3 method 3 chi2ndf = {chi2/NDF}")
+# step3 method 3 chi2 = 336.65461935533114
+# step3 method 3 ndf = 397
+# step3 method 3 chi2ndf = 0.84799652230562
 """
-# NOTE: we observer that chi2 obtained from chi2_ndf over the blinded region
-(sideband region)(chi2ndf=0.848) and is comparable to to that over the full
-signal region (chi2ndf=0.941) (about 10% difference).
-Conclusion: chi2_ndf_manual() can be used to calculate the chi2ndf for fit 
+# NOTE: for method4, we observe that chi2 obtained from chi2_ndf over the blinded region
+(sideband region)(chi2/ndf=0.848) and is comparable to to that over the full
+signal region (chi2/ndf=0.941) (about 10% difference).
+Conclusion: chi2_ndf_manual() should be used to calculate the chi2/ndf for fit 
 functions over sideband regions.
 """
 
