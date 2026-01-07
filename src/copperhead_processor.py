@@ -30,10 +30,19 @@ import logging
 from modules.utils import logger
 
 from modules.get_sample_info import get_sample_info
+from modules.classify_year import is_run2, is_run3
+from modules.selection import filterRegion
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
 ak_array = TypeVar('ak_array')
 
+def sf_backend_from_path(sf_path: str) -> str:
+    p = sf_path.lower()
+    if p.endswith(".root"):
+        return "extractor"
+    if p.endswith(".json") or p.endswith(".json.gz"):
+        return "correctionlib"
+    raise ValueError(f"Unknown SF file type: {sf_path}")
 
 def safe_ratio(num, den, default=0.0):
     """Element-wise safe division for awkward arrays."""
@@ -278,7 +287,7 @@ class EventProcessor(processor.ProcessorABC):
         for mode in ["Data", "MC"]:
             if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
                 yearUL = "2016"
-            elif ("22" in year) or ("23" in year) or ("24" in year):# FIXME: temporary solution until I can generate my own dimuon mass resolution
+            elif is_run3(year):# FIXME: temporary solution until I can generate my own dimuon mass resolution
                 yearUL = "2018"
             elif "RERECO" in year: # 2017_RERECO. 2018_RERECO
                 yearUL=year.replace("_RERECO","")
@@ -296,6 +305,18 @@ class EventProcessor(processor.ProcessorABC):
         if do_jet_PUID_wgt:
             jetpuid_filename = self.config["jetpuid_sf_file"]
             extractor_instance.add_weight_sets([f"* * {jetpuid_filename}"])
+            # logger.debug("Adding jet PUID weights to extractor")
+            # logger.debug(f"jetpuid_sf_file: {self.config['jetpuid_sf_file']}")
+            # backend = sf_backend_from_path(jetpuid_filename)
+            # if backend == "extractor":
+            #     extractor_instance.add_weight_sets([f"* * {jetpuid_filename}"])
+            # elif backend == "correctionlib":
+            #     logger.debug(f"jetpuid cset file: {jetpuid_filename}")
+            #     # Load correction set
+            #     self.jetpuid_cset = correctionlib.CorrectionSet.from_file(jetpuid_filename)
+            #     self.jetpuid_tag = self.config.get("jetpuid_sf_tag", None)
+            #     logger.debug(f"jetpuid cset: {self.jetpuid_cset}")
+            #     logger.debug(f"jetpuid cset keys: {list(self.jetpuid_cset.keys())}")
         else:
             logger.warning(f"Skipping jet PUID weights for year {year} as per configuration.")
 
@@ -1849,9 +1870,9 @@ class EventProcessor(processor.ProcessorABC):
 
         # # fill in the regions
         mass = dimuon.mass
-        z_peak = ((mass > 76) & (mass < 106))
-        h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
-        h_peak = ((mass > 115.03) & (mass < 135.03))
+        z_peak = ((mass >= 70.0) & (mass < 110.0))
+        h_sidebands =  ((mass >= 110.0) & (mass < 115.0)) | ((mass >= 135.0) & (mass < 150.0))
+        h_peak = ((mass >= 115.0) & (mass < 135.0))
         region_dict = {
             "z_peak" : ak.fill_none(z_peak, value=False),
             "h_sidebands" : ak.fill_none(h_sidebands, value=False),
@@ -2060,7 +2081,7 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
             yearUL = "2016"
-        elif ("22" in year) or ("23" in year) or ("24" in year):# FIXME: temporary solution until I can generate my own dimuon mass resolution
+        elif is_run3(year):# FIXME: temporary solution until I can generate my own dimuon mass resolution
             yearUL = "2018"
         elif "RERECO" in year: # 2017_RERECO. 2018_RERECO
             yearUL=year.replace("_RERECO","")
@@ -2277,7 +2298,6 @@ class EventProcessor(processor.ProcessorABC):
         pass_jet_id = jet_id(jets, self.config)
 
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
-        is_2017 = "2017" in year
         logger.debug(f"dnn_year: {dnn_year}")
         if self.config["switches"]["do_jet_PUID_wgt"]:
             logger.info("Applying jet PUID!")
@@ -2290,7 +2310,7 @@ class EventProcessor(processor.ProcessorABC):
         # get QGL cut
         if NanoAODv == 9 :
             jets["qgl"] = jets.qgl
-        elif ((NanoAODv == 12 or NanoAODv == 15) and year in ["2016preVFP", "2016postVFP", "2017", "2018"]): # NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2
+        elif ((NanoAODv == 12 or NanoAODv == 15) and is_run2(year)): # NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2
             # if qgl is not present, set it to -1.0
             jets["qgl"] = jets.qgl if hasattr(jets, "qgl") else ak.zeros_like(jets.pt) - 1.0
             # jets["btagPNetQvG"] = jets.btagPNetQvG if hasattr(jets, "btagPNetQvG") else ak.zeros_like(jets.pt) - 1.0
@@ -2390,7 +2410,7 @@ class EventProcessor(processor.ProcessorABC):
         # jj_max_dEta_phi   = ak.firsts(jj_max_dEta_p4.phi)
 
         # apply jetpuid if not have done already
-        if is_mc and (variation=="nominal") and dnn_year < 2022.0: # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
+        if is_mc and (variation=="nominal") and is_run2(year): # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
             logger.debug("Applying jet PUID scale factors and adding jetpuid_wgt!")
             jetpuid_weight = get_jetpuid_weights_eta_dependent(year, jets, self.config) # FIXME
             # now we add jetpuid_wgt
@@ -2584,7 +2604,7 @@ class EventProcessor(processor.ProcessorABC):
                         f"jet3_puId_{variation}": jet3.puId,
                         f"jet4_puId_{variation}": jet4.puId,
                     })
-        if dnn_year < 2022.0:
+        if is_run2(year):
             """Additional jet variables only for Run2"""
             jet_loop_out_dict.update({
                 f"jet1_qgl_{variation}": jet1.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
@@ -2965,7 +2985,7 @@ class EventProcessor(processor.ProcessorABC):
         if "RERECO" in year:
             btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
             btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-        if dnn_year >= 2022.0: # Run3: Different btagging taggers and WPs
+        if is_run3(year): # Run3: Different btagging taggers and WPs
             btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
         else: # UL

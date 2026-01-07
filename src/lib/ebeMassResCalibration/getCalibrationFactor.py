@@ -17,7 +17,6 @@ dask.config.set(scheduler="threads")  # or "single-threaded", "processes"
 from dask import delayed
 import dask.dataframe as dd
 import awkward as ak
-from distributed import Client
 
 from datetime import datetime
 
@@ -26,6 +25,9 @@ import correctionlib
 import logging
 from modules.utils import logger
 from modules.trials import get_stage1_path
+from modules.daskHelper import get_dask_client
+from modules.daskHelper import close_dask_client
+from modules.daskHelper import get_dask_gateway_client
 
 from basic_class_for_calibration import (
     get_calib_categories,
@@ -74,7 +76,7 @@ def plot_histogram(data, bins, range, xlabel, ylabel, title, output_path, median
     plt.close()
     logger.info(f"Saved plot to {output_path}")
 
-def step1_mass_fitting_zcr(data_events, output_dir="", fix_fitting_one_cat=None, ifbinned=False):
+def step1_mass_fitting_zcr(data_events, output_dir="", fix_fitting_one_cat=None, ifbinned=False, inputFilePath=""):
     logger.info("=== Step 1: Mass fitting in ZCR ===")
     tstart = time.time()
 
@@ -100,13 +102,14 @@ def step1_mass_fitting_zcr(data_events, output_dir="", fix_fitting_one_cat=None,
             df_fit=df_fit,
             output_dir=output_dir,
             logfile="CalibrationLog.txt",
-            ifbinned=False,
+            ifbinned=ifbinned,
+            inputFilePath=inputFilePath,
         )
 
     logger.info("Step 1 completed in {:.2f} s".format(time.time() - tstart))
     return df_fit
 
-def step2_mass_resolution(df, out_string="", output_dir="tmp", CalibrationFactorJSONFile=None, pdfFile_ExtraText="", UseFullSampleForCalibration=False):
+def step2_mass_resolution(df, out_string="", output_dir="tmp", CalibrationFactorJSONFile=None, pdfFile_ExtraText="", UseFullSampleForCalibration=False, ifbinned=False, inputFilePath=""):
     logger.info("=== Step 2: Mass resolution calculation ===")
     tstart = time.time()
 
@@ -175,7 +178,7 @@ def step2_mass_resolution(df, out_string="", output_dir="tmp", CalibrationFactor
 
             # fit it
             mass = ak.to_numpy(result["dimuon_mass"][mask])
-            df_fit = generateBWxDCB_plot(mass, cat_name, nbins=CONFIG["nbins"], df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog_{pdfFile_ExtraText}.txt", pdfFile_ExtraText=pdfFile_ExtraText)
+            df_fit = generateBWxDCB_plot(mass, cat_name, nbins=CONFIG["nbins"], df_fit=df_fit, out_string=out_string, logfile=f"CalibrationLog_{pdfFile_ExtraText}.txt", pdfFile_ExtraText=pdfFile_ExtraText, ifbinned=False, inputFilePath="", output_dir=output_dir)
             logger.debug("------"*20)
             logger.debug(df_fit)
             logger.debug("------"*20)
@@ -200,6 +203,13 @@ def main():
     parser.add_argument("--years", nargs="+", default=["2018", "2017", "2016postVFP", "2016preVFP"], help="List of years to process")
     parser.add_argument("--backup", action="store_true", help="Enable backup before overwrite")
     parser.add_argument("--extraString", type=str, default="", help="Additional string to add to the output directory name")
+    parser.add_argument(
+        "--use_gateway",
+        dest="use_gateway",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="If true, uses dask gateway client instead of local",
+    )
     args = parser.parse_args()
 
     years = args.years
@@ -217,10 +227,35 @@ def main():
     LOAD_PATH = str(Path(stage1_dir) / "{year}" / "compacted")
     logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
+    dir_tag = LOAD_PATH.split("/")[-4] # Fetch the label from the path
+    logger.info(f"output dir_tag: {dir_tag}")
+
+    # Initialize Dask client
+    if args.use_gateway:
+        logger.info("Using Dask Gateway client")
+        # client = get_dask_gateway_client()
+        from dask_gateway import Gateway
+
+        gateway = Gateway(
+            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+        )
+        cluster_info = gateway.list_clusters()[0]  # get the first cluster by default. There only should be one anyways
+        client = gateway.connect(cluster_info.name).get_client()
+        logger.info("Gateway Client created")
+    else:
+        logger.info("Using local Dask client")
+        client = get_dask_client(
+            n_workers=CONFIG["n_workers"],
+            threads_per_worker=CONFIG["threads_per_worker"],
+            memory_limit=CONFIG["memory_limit"],
+        )
+
     for year in years:
         logger.info(f"Processing year: {year}")
         # output directory format: validation/ebeMassResCalibration/<binned/unbinned>/<isMCString>_<year>_<extraString>
-        output_dir = f"validation/ebeMassResCalibration/{'binned' if ifbinned else 'unbinned'}/{isMCString}_{year}_{args.extraString}"
+        # output_dir = f"validation/ebeMassResCalibration/{dir_tag}/{'binned' if ifbinned else 'unbinned'}/{year}/{isMCString}_{year}_{args.extraString}"
+        output_dir = f"validation/ebeMassResCalibration/{dir_tag}/{'binned' if ifbinned else 'unbinned'}/{isMCString}_{year}_{args.extraString}"
         print(f"Output directory: {output_dir}")
         # sys.exit(0)
 
@@ -272,6 +307,7 @@ def main():
                 output_dir,
                 fix_fitting_one_cat=fix_fitting_one_cat,
                 ifbinned=ifbinned,
+                inputFilePath=LOAD_PATH.format(year=year),
             )
             if fix_fitting_one_cat:
                 df_fit = pd.read_csv(f"{output_dir}/fit_results.csv")
@@ -290,7 +326,13 @@ def main():
                 save_dataframe_to_csv(df_fit, f"{output_dir}/fit_results.csv", "fit results")
 
                 if not UseFullSampleForCalibration: ddf = dd.from_pandas(df_train)
-                df_res = step2_mass_resolution(ddf, output_dir=output_dir, UseFullSampleForCalibration=UseFullSampleForCalibration)
+                df_res = step2_mass_resolution(
+                    ddf,
+                    output_dir=output_dir,
+                    UseFullSampleForCalibration=UseFullSampleForCalibration,
+                    ifbinned=ifbinned,
+                    inputFilePath=LOAD_PATH.format(year=year),
+                )
                 save_dataframe_to_csv(df_res, f"{output_dir}/resolution_results.csv", "resolution results")
 
             df_merged = step3_compute_calibration(df_fit, df_res)
@@ -310,13 +352,25 @@ def main():
 
         else:
             if not UseFullSampleForCalibration: ddf = dd.from_pandas(df_valid)
-            df_res_calibrated = step2_mass_resolution(ddf, output_dir=output_dir,
-                                                      CalibrationFactorJSONFile=f"{output_dir}/{CalibrationJSONFile}",
-                                                      UseFullSampleForCalibration=UseFullSampleForCalibration)
-            df_res_calibrated.to_csv(f"{output_dir}/calibration_results_calibrated.csv", index=False)
+            # if calibration_results_calibrated.csv exists, skip calibration
+            if os.path.exists(f"{output_dir}/calibration_results_calibrated.csv"):
+                logger.info(f"{output_dir}/calibration_results_calibrated.csv exists, skipping calibration step.")
+                df_res_calibrated = pd.read_csv(f"{output_dir}/calibration_results_calibrated.csv")
+            else:
+                df_res_calibrated = step2_mass_resolution(
+                    ddf,
+                    output_dir=output_dir,
+                    CalibrationFactorJSONFile=f"{output_dir}/{CalibrationJSONFile}",
+                    UseFullSampleForCalibration=UseFullSampleForCalibration,
+                    ifbinned=ifbinned,
+                    inputFilePath=LOAD_PATH.format(year=year),
+                )
+                df_res_calibrated.to_csv(f"{output_dir}/calibration_results_calibrated.csv", index=False)
+            print("plot closure comparison calibrated vs uncalibrated...")
             plot_closure_comparison_calibrated_uncalibrated(
                 df_res_calibrated, output_dir
             )
+    close_dask_client()
 
 if __name__ == "__main__":
     main()

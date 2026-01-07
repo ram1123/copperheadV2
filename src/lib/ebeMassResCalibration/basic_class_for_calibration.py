@@ -138,7 +138,7 @@ def get_calib_categories(events):
 
     return categories
 
-def save_fit_params_to_json(fit_result, cat_idx, json_path, model_name="BWxDCB", chi2_val=None):
+def save_fit_params_to_json( inputFilePath, ifbinned, fit_result, cat_idx, json_path, model_name="BWxDCB", chi2_val=None):
     import time, json, os
 
     param_dict = {}
@@ -177,8 +177,11 @@ def save_fit_params_to_json(fit_result, cat_idx, json_path, model_name="BWxDCB",
     else:
         all_fits = {}
 
+    all_fits.setdefault("inputFilePath", inputFilePath)
+    all_fits.setdefault("ifbinned", ifbinned)
     all_fits[cat_idx] = fit_metadata
 
+    print(f"===> json_path : {json_path}")
     with open(json_path, "w") as f:
         json.dump(all_fits, f, indent=2)
 
@@ -216,7 +219,6 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     bwWidth.setConstant(True)
     model1 = rt.RooVoigtian("signal" , "signal", mass, bwmZ, bwWidth, sigma)
 
-
     # # Exp x Erfc Background --------------------------------------------------------------------------
     # # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want
     # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", -0.1, -1, -0.00000001) # negative coeff to get the peak shape we want
@@ -236,13 +238,11 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 2, 0.5, 8.5)
     model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg
 
-
     sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0, 1.0)
     final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
 
-
     time_step = time.time()
-    #fitting directly to unbinned dataset is slow, so first make a histogram
+    # fitting directly to unbinned dataset is slow, so first make a histogram
     roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
     # do fitting
     rt.EnableImplicitMT()
@@ -250,7 +250,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     logger.info(f"fitting elapsed time: {time.time() - time_step}")
     time.sleep(1) # rest a second for stability
-    #do plotting
+    # do plotting
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
     # roo_hist.plotOn(frame, Name="data_hist")
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
@@ -260,7 +260,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     frame.GetYaxis().SetTitle("Events")
     frame.Draw()
 
-    #calculate chi2 and add to plot
+    # calculate chi2 and add to plot
     n_free_params = fit_result.floatParsFinal().getSize()
     logger.info(f"n_free_params: {n_free_params}")
     chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
@@ -310,7 +310,19 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     # time.sleep(1)
     return df_fit
 
-def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="CalibrationLog.txt", output_dir="", ifbinned=True, pdfFile_ExtraText=""):
+
+def generateBWxDCB_plot(
+    mass_arr,
+    cat_idx: str,
+    nbins,
+    df_fit=None,
+    out_string="",
+    logfile="CalibrationLog.txt",
+    output_dir="",
+    ifbinned=True,
+    pdfFile_ExtraText="",
+    inputFilePath="",
+):
     """
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
@@ -360,7 +372,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
         bwmZ.setConstant(True)
         bwWidth.setConstant(True)
 
-
     model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
 
     """
@@ -398,7 +409,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # merge BW with DCB via convolution
     model1 = rt.RooFFTConvPdf("signal", "signal", mass, model1_1, model1_2) # BWxDCB
 
-
     mass.setBins(10000,"cache") # This nbins has nothing to do with actual nbins of mass. cache bins is representation of the variable only used in FFT
     mass.setMin("cache",50.5)
     mass.setMax("cache",130.5)
@@ -412,7 +422,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     #     or cat_idx == "30-45_EE"
     #     ):
     #     # exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 5.0)
-        # exp_gamma.setRange(0.0, 5.0)
+    # exp_gamma.setRange(0.0, 5.0)
 
     exp_gamma.setRange(0.0, 5.0)
     exp_peak.setConstant(True)
@@ -426,20 +436,20 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # shift = rt.RooRealVar("shift", "Offset", 85, 75, 105)
     # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
     # model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
-    #--------------------------------------------------
+    # --------------------------------------------------
 
     # Landau Background --------------------------------------------------------------------------
     # mean_landau = rt.RooRealVar("mean_landau" , "mean_landau", 90, 70, 200)
     # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 0.5, 8.5)
     # model2 = rt.RooLandau("bkg", "bkg", mass, mean_landau, sigma_landau) # generate Landau bkg
-    #-----------------------------------------------------
+    # -----------------------------------------------------
 
     # neg Exp Background --------------------------------------------------------------------------
     # coeff = rt.RooRealVar("coeff", "coeff", -0.01, -1,  -0.00000001)
     # shift = rt.RooRealVar("shift", "Offset", 70, 40, 105)
     # shifted_mass = rt.RooFormulaVar("shifted_mass", "@0-@1", rt.RooArgList(mass, shift))
     # model2 = rt.RooExponential("bkg", "bkg", shifted_mass, coeff)
-    #--------------------------------------------------
+    # --------------------------------------------------
 
     ## NEW VERSION
     # # # Reverse Landau Background test--------------------------------------------------------------------------
@@ -448,9 +458,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # sigma_landau = rt.RooRealVar("sigma_landau" , "sigma_landau", 7, 0.5, 8.5)
     # model2 = rt.RooLandau("bkg", "bkg", mass_neg, mean_landau, sigma_landau) # generate Landau bkg
     # # #-----------------------------------------------------
-
-
-
 
     # Exp x Erf Background --------------------------------------------------------------------------
     # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want
@@ -465,7 +472,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # model2_2 = rt.RooWrapperPdf("erf","erf", model2_2a) # turn bound function to pdf
     # # model2 = rt.RooProdPdf("bkg", "bkg", [model2_1, model2_2]) # generate Expxerf bkg
 
-    #-----------------------------------------------------
+    # -----------------------------------------------------
 
     # # Exp x Erf Background V2--------------------------------------------------------------------------
     # # exp_coeff = rt.RooRealVar("exp_coeff", "exp_coeff", 0.01, 0.00000001, 1) # positve coeff to get the peak shape we want
@@ -479,27 +486,22 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # # model2_2 = rt.RooFit.bindPdf("erfc", rt.TMath.Erfc, erfc_in)
     # model2_2 = rt.RooGenericPdf("erfc", "TMath::Erf(@0)+1", erfc_in)
     # model2 = rt.RooProdPdf("bkg", "bkg", rt.RooArgList(model2_1, model2_2))
-    #-----------------------------------------------------
-
-
+    # -----------------------------------------------------
 
     sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0.000001, 0.99999999)
     final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
     # final_model = model1_2
 
-
-
     time_step = time.time()
 
     if ifbinned:
-        #fitting directly to unbinned dataset is slow, so first make a histogram
+        # fitting directly to unbinned dataset is slow, so first make a histogram
         roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
         if roo_hist.numEntries() == 0:
-                logger.error(f"No entries in RooDataHist for category {cat_idx}. Skipping.")
-                return df_fit
+            logger.error(f"No entries in RooDataHist for category {cat_idx}. Skipping.")
+            return df_fit
     else:
         roo_hist = roo_dataset
-
 
     # do fitting
     rt.EnableImplicitMT()
@@ -515,7 +517,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     #         param.setConstant(True)
     #     else:
     #         logger.warning(f"Parameter '{param.GetName()}' is not fixed and will be optimized during the fit.")
-
 
     # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu", Minos=True, Extended=True, NumCPU=25, Strategy=2)
     fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
@@ -537,7 +538,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
 
     logger.info(f"fitting elapsed time: {time.time() - time_step}")
     time.sleep(1) # rest a second for stability
-    #do plotting
+    # do plotting
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
     # roo_hist.plotOn(frame, Name="data_hist") # name is explicitly defined so chiSquare can find it
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
@@ -547,15 +548,16 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     frame.GetYaxis().SetTitle("Events")
     frame.Draw()
 
-    #calculate chi2 and add to plot
+    # calculate chi2 and add to plot
     n_free_params = fit_result.floatParsFinal().getSize()
     logger.info(f"n_free_params: {n_free_params}")
     chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
     chi2 = float('%.3g' % chi2) # get upt to 3 sig fig
     logger.info(f"chi2: {chi2}")
 
+    print(f"===> output dir: {output_dir}/fit_params.json")
     # store the fit result in a json file
-    save_fit_params_to_json(fit_result, cat_idx, f"{output_dir}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2)
+    save_fit_params_to_json(inputFilePath, ifbinned, fit_result, cat_idx, f"{output_dir}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2)
 
     latex = rt.TLatex()
     latex.SetNDC()
@@ -599,11 +601,9 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     line3.SetLineStyle(2)
     line3.Draw("same")
 
-
     # canvas.Modified()
     canvas.Update()
     # canvas.Draw()
-
 
     # logger.info(f"mean_landau: {mean_landau.getVal()}")
     # logger.info(f"sigma_landau: {sigma_landau.getVal()}")
@@ -620,7 +620,6 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     else:
         df_fit = pd.DataFrame([{"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}])
 
-
     # Save the cat_idx and sigma value to a log file
     with open(f"{output_dir}/{logfile}", "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
@@ -633,6 +632,7 @@ def generateBWxDCB_plot(mass_arr, cat_idx: str, nbins, df_fit = None, logfile="C
     # consider script to wait a second for stability?
     time.sleep(1)
     return df_fit
+
 
 def generateBWxDCB_plot_bkgErfxExp(mass_arr, cat_idx: int, nbins, df_fit = "", logfile="CalibrationLog.txt", output_dir=""):
     """
@@ -1055,6 +1055,7 @@ def plot_closure_comparison_calibrated_uncalibrated(
     output_dir,
     output_plot="closure_test_combined_UpdatedClosure.pdf",
     pdfFile_ExtraText="",
+    additional_string="",
 ):
     """
     Generate a closure test plot comparing:
@@ -1107,9 +1108,8 @@ def plot_closure_comparison_calibrated_uncalibrated(
     plt.grid(True)
     plt.tight_layout()
 
-    output_plot_dir = f"plots/{additional_string}/"
-    os.makedirs(output_plot_dir, exist_ok=True)
-    full_path = os.path.join(output_plot_dir, output_plot)
+    os.makedirs(output_dir, exist_ok=True)
+    full_path = os.path.join(output_dir, output_plot)
     if pdfFile_ExtraText:
         full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
     plt.savefig(full_path)
