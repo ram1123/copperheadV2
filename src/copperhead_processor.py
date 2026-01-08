@@ -506,6 +506,17 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"NanoAODv: {NanoAODv}")
         t1 = time.perf_counter()
         logger.info(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
+
+        if is_mc:
+            lumi_mask = ak.ones_like(event_filter, dtype="bool")
+            self.selection.add("lumi_mask", lumi_mask)
+
+        else:
+            logger.debug(f'self.config["lumimask"]: {self.config["lumimask"]}')
+            lumi_info = LumiMask(self.config["lumimask"])
+            lumi_mask = lumi_info(events.run, events.luminosityBlock)
+            self.selection.add("lumi_mask", lumi_mask)
+
         # LHE cut original start -----------------------------------------------------------------------------
         do_remove_dy_M100to200 = self.config["switches"]["do_remove_dy_M100to200"]
         if "dy_M-50" in dataset and do_remove_dy_M100to200:  # if dy_M-50, apply LHE cut
@@ -557,16 +568,6 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # events = events[event_filter]
         # event_filter = ak.ones_like(events.HLT.IsoMu24)
-
-        if is_mc:
-            lumi_mask = ak.ones_like(event_filter, dtype="bool")
-            self.selection.add("lumi_mask", lumi_mask)
-
-        else:
-            logger.debug(f'self.config["lumimask"]: {self.config["lumimask"]}')
-            lumi_info = LumiMask(self.config["lumimask"])
-            lumi_mask = lumi_info(events.run, events.luminosityBlock)
-            self.selection.add("lumi_mask", lumi_mask)
 
         t4 = time.perf_counter()
         logger.info(f"[timing] HLT and lumi mask time: {t4 - t3:.2f} seconds")
@@ -1961,9 +1962,9 @@ class EventProcessor(processor.ProcessorABC):
             logger.info(f"selection: {self.selection}")
             all_required_selections = [
                 "TotalEntries",
+                "lumi_mask",
                 "LHE_cut",
                 "HLT_filter",
-                "lumi_mask",
                 "event_quality_flags",
                 "PV_npvsGood",
                 "muon_pT_roch",
