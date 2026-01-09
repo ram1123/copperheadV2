@@ -1,6 +1,26 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
+# 08 January 2026
+
+```bash
+python scripts/create_basic_info_stage1_files.py -p /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage1_output -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar_DEPOT -w 64
+python scripts/create_basic_info_stage1_files.py -p /eos/purdue/store/user/rasharma/hmm/reducedNtuples/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage1_output -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar_EOS -w 32
+
+time python scripts/create_basic_info_stage1_files.py -p /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output -l Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DEPOT -w 64
+time python scripts/create_basic_info_stage1_files.py -p /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_AK8jets/stage1_output -l Run2_nanoAODv12_AK8jets_DEPOT -w 64
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_16Dec_NoJVM -y "2022postEE" -m 0 -k )
+
+```
+
+# 05 January 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_16Dec_NoJVM -y "2024" -m calib)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_16Dec_NoJVM -y "2022preEE" -m 1 -k )
+```
+
 # 21 December 2025
 
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_21Dec_JVMfilterjets -y "2022preEE" -m 1 -k )
@@ -9,8 +29,7 @@ time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.ya
 # 18 December 2025
 
 ```bash
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3_sync.yaml -v 12 -l Run3_nanoAODv12_Peking_sync -y "2022preE
-E" -m 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3_sync.yaml -v 12 -l Run3_nanoAODv12_Peking_sync -y "2022preEE" -m 1)
 time python ./scripts/sync_parquet_dimuon.py  /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_Peking_sync/stage1_output/2022preEE/f1_0/data_C/0/ -o Purdue_event_info_2022Cv1.txt
 
 time python ./scripts/sync_parquet_dimuon.py docs/sync/sync_Peking/peking.txt Purdue_event_info_2022Cv1.txt  -o compare_Peking_vs_Purduev1.txt

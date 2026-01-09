@@ -984,6 +984,27 @@ class EventProcessor(processor.ProcessorABC):
             keep_after_jet_veto = ~jet_veto_eventFilter
             self.selection.add("jet_veto_maps", keep_after_jet_veto)
 
+        # Below patch is to define dimuon mass for the cutflow before we filter out bad events
+        # ------------------- Cutflow dimuon mass window: START -----------------------
+        muons_padded_for_mass = ak.pad_none(muons, target=2)
+        sorted_args_for_mass = ak.argsort(muons_padded_for_mass.pt, ascending=False)
+        muons_sorted_for_mass = (muons_padded_for_mass[sorted_args_for_mass])
+        mu1_for_mass = muons_sorted_for_mass[:,0]
+        mu2_for_mass = muons_sorted_for_mass[:,1]
+        dimuon_for_mass = mu1_for_mass + mu2_for_mass
+        dimuon_mass_for_cutflow = ak.fill_none(dimuon_for_mass.mass, 0.0)
+        dimuon_mass_window_cut = ( (dimuon_mass_for_cutflow > 76.0) & (dimuon_mass_for_cutflow < 106.0) )
+        self.selection.add("dimuon_mass_window_76_106", dimuon_mass_window_cut)
+
+        h_peak = ((dimuon_mass_for_cutflow >= 115.0) & (dimuon_mass_for_cutflow < 135.0))
+        h_sidebands1 =  ((dimuon_mass_for_cutflow >= 110.0) & (dimuon_mass_for_cutflow < 115.0)) | ((dimuon_mass_for_cutflow >= 135.0) & (dimuon_mass_for_cutflow < 150.0))
+        h_sidebands2 =  ((dimuon_mass_for_cutflow >= 106.0) & (dimuon_mass_for_cutflow < 115.0)) | ((dimuon_mass_for_cutflow >= 135.0) & (dimuon_mass_for_cutflow < 150.0))
+
+        self.selection.add("h_peak_115_135", h_peak)
+        self.selection.add("h_sidebands_110_115_135_150", h_sidebands1)
+        self.selection.add("h_sidebands_106_115_135_150", h_sidebands2)
+        # ------------------- Cutflow dimuon mass window: END -----------------------
+
         events = events[event_filter==True]
         muons = muons[event_filter==True]
         nmuons = ak.to_packed(nmuons[event_filter==True])
@@ -1104,7 +1125,6 @@ class EventProcessor(processor.ProcessorABC):
             n_genjets_pt25_eta47 = ak.sum((gjets.pt > 25) & (abs(gjets.eta) < 4.7), axis=1)
             # number of gen jets with pT > 30 GeV and |eta| < 4.7
             n_genjets_pt30_eta47 = ak.sum((gjets.pt > 30) & (abs(gjets.eta) < 4.7), axis=1)
-
 
         t11 = time.perf_counter()
         logger.info(f"[timing] GenJet variables time: {t11 - t10:.2f} seconds")
@@ -1881,9 +1901,6 @@ class EventProcessor(processor.ProcessorABC):
         }
         t18 = time.perf_counter()
         logger.info(f"[timing] various region (z-peak) fill time: {t18 - t17:.2f} seconds")
-        # self.selection.add("z_peak", z_peak == True)
-        # self.selection.add("h_sidebands", h_sidebands == True)
-        # self.selection.add("h_peak", h_peak == True)
 
         out_dict.update(region_dict)
 
@@ -1980,6 +1997,10 @@ class EventProcessor(processor.ProcessorABC):
                 "trigger_match",
                 "leading_muon_pt",
                 "jet_veto_maps",
+                "dimuon_mass_window_76_106",
+                "h_peak_115_135",
+                "h_sidebands_110_115_135_150",
+                "h_sidebands_106_115_135_150",
             ]
             # Available cuts inside PackedSelection
             try:
