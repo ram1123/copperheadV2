@@ -14,10 +14,12 @@ import mplhep as hep
 plt.style.use(hep.style.CMS)
 
 # Setup
-FOLD = 3
+FOLD = 1
 # LABEL = "Run2_nanoAODv12_08June" # With Jet QGL bug
 LABEL = "Run2_nanoAODv12_UpdatedQGL_17July"  # With Jet QGL bug fixed
 LABEL = "Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"  # With Jet QGL bug fixed
+LABEL = "Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2"  # After HEM Veto Fix
+# LABEL = "Run2_nanoAODv12_Dec13_NoSyst"  # After HEM Veto Fix
 # TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June_MiNNLO/fold{FOLD}"
 # DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/{LABEL}"
 # TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf/fold{FOLD}"
@@ -35,18 +37,24 @@ TRAINED_MODEL_DIR = (
     # f"{LABEL}/2018_h-peak_vbf_AllYear_16July/fold{FOLD}"
     # f"{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/fold{FOLD}"
     # f"{LABEL}/2018_h-peak_vbf_ScanHyperParamV2/fold{FOLD}"
-    f"{LABEL}/run2_h-peak_vbf_ScanHyperParamV1/fold{FOLD}"
+    # f"{LABEL}/run2_h-peak_vbf_ScanHyperParamV1/fold{FOLD}"  # legacy tag V1.0
+    # f"{LABEL}/run2_h-peak_vbf_8Dec25V2/fold{FOLD}"  # With HEM Veto Fix
+    # f"{LABEL}/2017_h-peak_vbf_13Dec25_BothSigGGHVBF_OnlyMuVarsV2/fold{FOLD}"  # With HEM Veto Fix
+    f"{LABEL}/run2_h-peak_vbf_8Dec25V2_BothSigGGHVBF/fold{FOLD}"  # With HEM Veto Fix
 )
 DATA_PATH = (
     f"/depot/cms/users/shar1172/"
     # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_AllYear_16July"
     # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test"
     # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_ScanHyperParamV2"
-    f"copperheadV2_main/dnn/trained_models/{LABEL}/run2_h-peak_vbf_ScanHyperParamV1"
+    # f"copperheadV2_main/dnn/trained_models/{LABEL}/run2_h-peak_vbf_ScanHyperParamV1"  # legacy tag V1.0
+    # f"copperheadV2_main/dnn/trained_models/{LABEL}/run2_h-peak_vbf_8Dec25V2"  # With HEM Veto Fix
+    # f"copperheadV2_main/dnn/trained_models/{LABEL}/2017_h-peak_vbf_13Dec25_BothSigGGHVBF_OnlyMuVarsV2"  # With HEM Veto Fix
+    f"copperheadV2_main/dnn/trained_models/{LABEL}/run2_h-peak_vbf_8Dec25V2_BothSigGGHVBF"  # With HEM Veto Fix
 )
 FEATURES_PKL = f"{DATA_PATH}/training_features.pkl"
 
-training_features = [
+training_features_legacy = [
         'dimuon_mass',
         "dimuon_ebe_mass_res", "dimuon_ebe_mass_res_rel",
          'jj_mass_nominal', 'jj_mass_log_nominal',
@@ -63,6 +71,75 @@ training_features = [
          'pt_centrality_nominal',
          'year'
 ]
+
+training_features_muon_varsonly = [
+    "year",
+    "dimuon_mass",
+    "dimuon_ebe_mass_res",
+    "dimuon_ebe_mass_res_rel",
+    "dimuon_pt",
+    "dimuon_pt_log",
+    "dimuon_rapidity",
+    "dimuon_cos_theta_cs",
+    "dimuon_phi_cs",
+    "dimuon_dEta",
+    "dimuon_dPhi",
+    "dimuon_dR",
+    "dimuon_pt_over_MET_pt",
+    "mu1_pfRelIso03_all",
+    "mu2_pfRelIso03_all",
+    "mu1_pfRelIso03_chg",
+    "mu2_pfRelIso03_chg",
+    "mu1_pfRelIso04_all",
+    "mu2_pfRelIso04_all",
+    "mu1_miniPFRelIso_all",
+    "mu2_miniPFRelIso_all",
+    "mu1_miniPFRelIso_chg",
+    "mu2_miniPFRelIso_chg",
+    "mu1_tkRelIso",
+    "mu2_tkRelIso",
+    "mu1_sip3d",
+    "mu2_sip3d",
+    "mu1_isGlobal",
+    "mu2_isGlobal",
+    "mu1_svIdx",
+    "mu2_svIdx",
+    "mu12_q1q2",
+    "mu12_pt_sum",
+    "mu12_pt_diff",
+    "mu12_pt_absdiff",
+    "mu12_pt_prod",
+    "mu12_pt_ratio12",
+    "mu12_pt_ratio21",
+    "mu12_pt_min",
+    "mu12_pt_max",
+    "mu12_pt_asym",
+    "mu12_eta_sum",
+    "mu12_eta_diff",
+    "mu12_eta_absdiff",
+    "mu12_eta_prod",
+    "mu12_absEta_sum",
+    "mu12_absEta_diff",
+    "mu12_absEta_min",
+    "mu12_absEta_max",
+    "mu12_iso04_sum",
+    "mu12_iso04_diff",
+    "mu12_iso04_absdiff",
+    "mu12_iso04_prod",
+    "mu12_iso04_min",
+    "mu12_iso04_max",
+    "mu12_iso04_asym",
+    "mu12_sip3d_sum",
+    "mu12_sip3d_diff",
+    "mu12_sip3d_absdiff",
+    "mu12_sip3d_prod",
+    "mu12_sip3d_min",
+    "mu12_sip3d_max",
+]
+
+# training_features = training_features_muon_varsonly
+training_features = training_features_legacy
+
 
 # 1) load feature names
 with open(FEATURES_PKL, "rb") as f:
@@ -212,3 +289,5 @@ roc.GetXaxis().SetLimits(0, 1.1)
 roc.GetYaxis().SetRangeUser(0.001, 1.)
 auc_text.Draw()
 c2.SaveAs(f"{TRAINED_MODEL_DIR}/reconstructed_ROC_best_UCSD_log.pdf")
+print(f"AUC (valid+eval) reconstructed: {auc:.4f}")
+print(f"ROC plots saved to {TRAINED_MODEL_DIR}/reconstructed_ROC_best_UCSD[ _log].pdf")

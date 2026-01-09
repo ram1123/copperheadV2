@@ -474,6 +474,82 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
          'pt_centrality',
          'year'
     ]
+    training_features_for_muonVarsOnly = [
+        "dimuon_mass",
+        "dimuon_ebe_mass_res",
+        "dimuon_ebe_mass_res_rel",
+        #  'jj_mass', 'jj_mass_log',
+        #  'rpt',
+        #  'll_zstar_log',
+        #  'jj_dEta',
+        #  'nsoftjets5',
+        # #  'nsoftjets5_new',
+        #  'mmj_min_dEta',
+        "dimuon_pt",
+        "dimuon_pt_log",
+        "dimuon_rapidity",
+        #  'jet1_pt', 'jet1_eta', 'jet1_phi',  'jet2_pt', 'jet2_eta', 'jet2_phi',
+        #  'jet1_qgl', 'jet2_qgl',
+        "dimuon_cos_theta_cs",
+        "dimuon_phi_cs",
+        #  'htsoft2',
+        # #  'htsoft2_new',
+        #  'pt_centrality',
+        "year",
+        "dimuon_dEta",
+        "dimuon_dPhi",
+        "dimuon_dR",
+        "dimuon_pt_over_MET_pt",
+        "mu1_pfRelIso03_all",
+        "mu2_pfRelIso03_all",
+        "mu1_pfRelIso03_chg",
+        "mu2_pfRelIso03_chg",
+        "mu1_pfRelIso04_all",
+        "mu2_pfRelIso04_all",
+        "mu1_miniPFRelIso_all",
+        "mu2_miniPFRelIso_all",
+        "mu1_miniPFRelIso_chg",
+        "mu2_miniPFRelIso_chg",
+        "mu1_tkRelIso",
+        "mu2_tkRelIso",
+        "mu1_sip3d",
+        "mu2_sip3d",
+        "mu1_isGlobal",
+        "mu2_isGlobal",
+        "mu1_svIdx",
+        "mu2_svIdx",
+        "mu12_q1q2",
+        "mu12_pt_sum",
+        "mu12_pt_diff",
+        "mu12_pt_absdiff",
+        "mu12_pt_prod",
+        "mu12_pt_ratio12",
+        "mu12_pt_ratio21",
+        "mu12_pt_min",
+        "mu12_pt_max",
+        "mu12_pt_asym",
+        "mu12_eta_sum",
+        "mu12_eta_diff",
+        "mu12_eta_absdiff",
+        "mu12_eta_prod",
+        "mu12_absEta_sum",
+        "mu12_absEta_diff",
+        "mu12_absEta_min",
+        "mu12_absEta_max",
+        "mu12_iso04_sum",
+        "mu12_iso04_diff",
+        "mu12_iso04_absdiff",
+        "mu12_iso04_prod",
+        "mu12_iso04_min",
+        "mu12_iso04_max",
+        "mu12_iso04_asym",
+        "mu12_sip3d_sum",
+        "mu12_sip3d_diff",
+        "mu12_sip3d_absdiff",
+        "mu12_sip3d_prod",
+        "mu12_sip3d_min",
+        "mu12_sip3d_max",
+    ]
     # generate directory to save training_features
     save_path = f"dnn/trained_models/{run_label}/{year}_{region}_{category}{DIR_TAG}"
     os.makedirs(save_path, exist_ok=True)
@@ -485,8 +561,8 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
 
     # TODO: add mixup
     # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
-    # sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
-    sig_processes = ["vbf_powheg_dipole"]
+    sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
+    # sig_processes = ["vbf_powheg_dipole"]
     # bkg_processes = ["dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     # bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     bkg_processes = [
