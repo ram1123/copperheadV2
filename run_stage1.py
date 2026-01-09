@@ -119,10 +119,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         logger.info("Saving cutflow information")
         fraction = round(dataset_dict["metadata"]["fraction"], 3)
         fraction_str = str(fraction).replace('.', '_')
-        cutflow_save_path = f"{save_path}/f{fraction_str}"
+        cutflow_save_path = f"{save_path}"
         if not os.path.exists(cutflow_save_path):
             os.makedirs(cutflow_save_path)
-        cutflow_save_path = f"{save_path}/f{fraction_str}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
+        cutflow_save_path = f"{save_path}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
 
         processor.cutflow.to_npz(cutflow_save_path).compute()
         logger.info(f"Cutflow saved to {cutflow_save_path}")
@@ -425,8 +425,8 @@ if __name__ == "__main__":
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
 
-                # if dataset != "data_B":
-                #     logger.info(f"Skipping dataset {dataset} as it's not data_B")
+                # if "data_"  in dataset:
+                #     logger.info(f"Skipping dataset {dataset} ")
                 #     continue
 
                 from configs.skip_stage1_run import samples_to_skip
