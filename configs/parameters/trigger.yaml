@@ -1,28 +1,30 @@
 hlt:
-  2016preVFP:
-  - IsoMu24
-  - IsoTkMu24
-  2016postVFP:
-  - IsoMu24
-  - IsoTkMu24
-  '2017':
-  - IsoMu27
-  # - IsoMu24
-  '2018':
-  - IsoMu24
-  # - IsoMu27
-  2016_RERECO:
-  - IsoMu24
-  - IsoTkMu24
-  '2017_RERECO':
-  - IsoMu27
-  '2018_RERECO':
-  - IsoMu24
-  2022preEE:
-  - IsoMu24
-  2022postEE:
-  - IsoMu24
-  "2023":
-  - IsoMu24
-  "2023BPix":
-  - IsoMu24
+    2016preVFP:
+        - IsoMu24
+        - IsoTkMu24
+    2016postVFP:
+        - IsoMu24
+        - IsoTkMu24
+    "2017":
+        - IsoMu27
+    # - IsoMu24
+    "2018":
+        - IsoMu24
+    # - IsoMu27
+    2016_RERECO:
+        - IsoMu24
+        - IsoTkMu24
+    "2017_RERECO":
+        - IsoMu27
+    "2018_RERECO":
+        - IsoMu24
+    2022preEE:
+        - IsoMu24
+    2022postEE:
+        - IsoMu24
+    "2023":
+        - IsoMu24
+    "2023BPix":
+        - IsoMu24
+    "2024":
+        - IsoMu24

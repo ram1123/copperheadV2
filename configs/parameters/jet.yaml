@@ -10,6 +10,7 @@ jet_pt_cut:
     "2022postEE": 25.0
     "2023": 25.0
     "2023BPix": 25.0
+    "2024": 25.0
 jet_eta_cut:
     2016preVFP: 4.7
     2016postVFP: 4.7
@@ -22,6 +23,7 @@ jet_eta_cut:
     "2022postEE": 4.7
     "2023": 4.7
     "2023BPix": 4.7
+    "2024": 4.7
 jet_id:
     2016preVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
     2016postVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
@@ -35,6 +37,7 @@ jet_id:
     "2023": tight
     # "2023": tightlep
     "2023BPix": tight
+    "2024": tight
 jet_puid:
     2016preVFP: loose
     2016postVFP: loose
@@ -47,6 +50,7 @@ jet_puid:
     "2022postEE": loose
     "2023": loose
     "2023BPix": loose
+    "2024": loose
 min_dr_mu_jet:
     2016preVFP: 0.4
     2016postVFP: 0.4
@@ -59,6 +63,7 @@ min_dr_mu_jet:
     "2022postEE": 0.4
     "2023": 0.4
     "2023BPix": 0.4
+    "2024": 0.4
 btag_loose_wp: # for DeepCSV, DeepJet is different
     2016preVFP: 0.2027
     2016postVFP: 0.1918
@@ -71,6 +76,7 @@ btag_loose_wp: # for DeepCSV, DeepJet is different
     "2022postEE": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2023": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2023BPix": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2024": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
 btag_medium_wp: # for DeepCSV, DeepJet is different
     2016preVFP: 0.6001
     2016postVFP: 0.5847
@@ -83,6 +89,7 @@ btag_medium_wp: # for DeepCSV, DeepJet is different
     "2022postEE": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2023": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2023BPix": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2024": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
 softjet_dr2:
     2016preVFP: 0.16
     2016postVFP: 0.16
@@ -95,11 +102,12 @@ softjet_dr2:
     "2022postEE": 0.16
     "2023": 0.16
     "2023BPix": 0.16
+    "2024": 0.16
 HemVeto_ratio: # ratio of HemVeto applicable run / total nevents for 2018UL
     2016preVFP: 0.0
     2016postVFP: 0.0
     "2017": 0.0
-    "2018": 0.633396491
+    "2018": 0.2032434833227702
     2016_RERECO: 0.0
     "2017_RERECO": 0.0
     "2018_RERECO": 0.0
@@ -107,12 +115,24 @@ HemVeto_ratio: # ratio of HemVeto applicable run / total nevents for 2018UL
     "2022postEE": 0.0
     "2023": 0.0
     "2023BPix": 0.0
+    "2024": 0.0
 jet_veto_maps:
     2016preVFP: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016preVFP-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
     2016postVFP: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016postVFP-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
     "2017": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2017-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
-    2018: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2018-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
+    "2018": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2018-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
     2022preEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/2025-09-23/jetvetomaps.json.gz
     2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-10-07/jetvetomaps.json.gz
     "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jetvetomaps.json.gz
     2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jetvetomaps.json.gz
+    "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-07-17/jetvetomaps.json.gz
+jet_veto_maps_tag:
+    "2016preVFP": None
+    "2016postVFP": None
+    "2017": None
+    "2018": None
+    "2022preEE": Summer22_23Sep2023_RunCD_V1
+    "2022postEE": Summer22EE_23Sep2023_RunEFG_V1
+    "2023": Summer23Prompt23_RunC_V1
+    "2023BPix": Summer23BPixPrompt23_RunD_V1
+    "2024": Summer24Prompt24_RunBCDEFGHI_V1

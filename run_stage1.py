@@ -1,6 +1,5 @@
 from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
 from src.copperhead_processor import EventProcessor
-# from src.copperhead_processor_cutflow import EventProcessor
 # NanoAODSchema.warn_missing_crossrefs = False
 import awkward as ak
 import matplotlib.pyplot as plt
@@ -76,7 +75,7 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
 
-def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None, isCutflow=False):
+def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml"):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
         save_path = f"/depot/cms/users/{username}/results/stage1/test/" # default
@@ -88,10 +87,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # dict to hold the max_num_elements info per sample
     dict_max_num_elements = {
-        "data_": 500, # None means no limit (use uproot's default behavior)
+        "data_": 900, # None means no limit (use uproot's default behavior)
         "dy_": 500,
-        "ttjets_dl": 500,
-        "ttjets_sl": 500,
+        "ttjets_dl": 250,
+        "ttjets_sl": 250,
         }
     max_num_elements = 800 # default
     if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
@@ -113,16 +112,17 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         },
     ).events()
 
-    out_collections = processor.process(events)
+    out_collections = processor.process(events, dataset_yaml_file=dataset_yaml_file)
 
     # Save the cutflow
     if hasattr(processor, "cutflow") and isCutflow:
+        logger.info("Saving cutflow information")
         fraction = round(dataset_dict["metadata"]["fraction"], 3)
         fraction_str = str(fraction).replace('.', '_')
-        cutflow_save_path = f"{save_path}/f{fraction_str}"
+        cutflow_save_path = f"{save_path}"
         if not os.path.exists(cutflow_save_path):
             os.makedirs(cutflow_save_path)
-        cutflow_save_path = f"{save_path}/f{fraction_str}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
+        cutflow_save_path = f"{save_path}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
 
         processor.cutflow.to_npz(cutflow_save_path).compute()
         logger.info(f"Cutflow saved to {cutflow_save_path}")
@@ -131,14 +131,16 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     logger.debug(f"out_collections keys: {out_collections.keys()}")
 
-    skim_dict = out_collections
-    skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
-    #----------------------------------
-    skim_zip = ak.zip(skim_dict, depth_limit=1)
+    out_collections["fraction"] = dataset_fraction * (ak.ones_like(out_collections["event"]))
+    # ----------------------------------
+    skim_zip = ak.zip(out_collections, depth_limit=1)
     logger.debug(f"skim_zip: {skim_zip}")
     # skim_zip.persist().to_parquet(save_path)
+    to_persist = skim_zip.persist()
+    to_persist.to_parquet(save_path)
     # raise ValueError
-    return skim_zip
+    return None
+    # return skim_zip
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -289,8 +291,14 @@ if __name__ == "__main__":
     dest="NanoAODv",
     type=int,
     default=9,
-    choices = [9, 12],
+    choices = [9, 12, 15],
     help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
+    )
+    parser.add_argument(
+        "--yaml",
+        dest="dataset_yaml_file",
+        default="configs/datasets/dataset.yaml",
+        help="path of yaml file containing the dataset names"
     )
     parser.add_argument(
         "-maxfile",
@@ -413,8 +421,14 @@ if __name__ == "__main__":
             f.write(f"Diff:\n{diff}\n")
         logger.info(f"git_info_path: {git_info_path}")
 
+        # if True:
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
+
+                # if "data_"  in dataset:
+                #     logger.info(f"Skipping dataset {dataset} ")
+                #     continue
+
                 from configs.skip_stage1_run import samples_to_skip
                 if dataset in samples_to_skip and args.skipSamples:
                     logger.warning(f"Skipping dataset as per configs/skip_stage1_run.py: {dataset}")
@@ -422,10 +436,10 @@ if __name__ == "__main__":
                 sample_step = time.time()
                 # dict to hold file lenght info per sample
                 dict_file_length = {
-                    "data_": 500,
+                    "data_": 900,
                     "dy_": 500,
-                    "ttjets_dl": 500,
-                    "ttjets_sl": 500,
+                    "ttjets_dl": 250,
+                    "ttjets_sl": 250,
                     }
                 if any(key in dataset for key in dict_file_length.keys()):
                     args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
@@ -461,6 +475,7 @@ if __name__ == "__main__":
                     # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                         try:
+                            logger.info("{}{}".format("\n" * 2, "=" * 20))
                             logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
                             # build fresh file list with this redirector
                             alt_sample = copy.deepcopy(smaller_sample)
@@ -470,18 +485,18 @@ if __name__ == "__main__":
 
                             logger.debug(f"alt_sample['files']: {alt_sample['files']}")
 
-                            # rebuild the events/out collections for this attempt
-                            to_persist = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
-
                             jobstat.mark_running(dataset, idx)
 
                             # clean partial output from previous tries
                             os.system(f"rm -rf '{save_path}'")
                             eos_mkdirs(save_path)
 
-                            to_persist = to_persist.persist()
+                            # rebuild the events/out collections for this attempt
+                            dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
+
+                            # to_persist = to_persist.persist()
                             # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
-                            to_persist.to_parquet(save_path)
+                            # to_persist.to_parquet(save_path)
 
                             if not _parquet_dir_has_files(save_path):
                                 raise RuntimeError("Parquet write produced no files.")
@@ -568,9 +583,8 @@ if __name__ == "__main__":
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
                 logger.debug(f"dataset: {dataset}")
-                to_persist = dataset_loop(coffea_processor, sample, test=test_mode, save_path=start_save_path)
-
                 save_path = getSavePath(start_save_path, sample, 0)
+
                 logger.info(f"save_path: {save_path}")
                 if not os.path.exists(save_path):
                     logger.debug(f"Path: {save_path} is going to be created")
@@ -582,6 +596,7 @@ if __name__ == "__main__":
                     for file in filelist:
                         os.remove(file)
                 logger.debug("Directory created or cleaned")
-                to_persist.persist().to_parquet(save_path)
+                dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file)
+
     elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished everything in {elapsed} s.")

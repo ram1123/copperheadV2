@@ -1,38 +1,128 @@
 base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
-  current:
-    stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_JetIDTightLepVetoPass/stage1_output/"
-    comment: "What plotter should use by default"
+    current:
+        stage1: "{base_dir}/Run2_nanoAODv12_HEMVetoFix_NoSyst/stage1_output/"
+        comment: "What plotter should use by default"
 
-  Run3_noJetVetoMap:
-    stage1: "{base_dir}/Run3_nanoAODv12_23October/stage1_output/"
-    comment: "Run-3 without using any Jet veto map"
+    Run2_HEMVetoFix_v1:
+        stage1: "{base_dir}/Run2_nanoAODv12_HEMVetoFix_NoSyst/stage1_output/"
+        comment: Rerun 2018 after HEM veto fix
+        date: December 07, 2025
+        years: all 4 run-2 era
+        gitSHA: 001b85faee5c7c6b97ba0fc3c9027d7e2f7d7e78
 
-  Run3_WithJetVetoMap:
-    stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap/stage1_output/"
-    comment: "Run-3 using the official JET veto map"
+    Run2_HEMVetoFix:
+        stage1: "{base_dir}/Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2/stage1_output/"
+        comment: Rerun 2018 after HEM veto fix
+        date: December 07, 2025
+        years: all 4 run-2 era
+        gitSHA: 001b85faee5c7c6b97ba0fc3c9027d7e2f7d7e78
 
-  Run3_JetVeto_v2:
-    stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap_HornpT50GeV/stage1_output/"
-    comment: "Run-3 using the official JET veto map and adding the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+    Run2_HEMVetoFix_WithSyst:
+        stage1: "{base_dir}/Run2_nanoAODv12_28Nov_HEMVetoFix/stage1_output/"
+        comment: Rerun 2018 after HEM veto fix
+        date: December 12, 2025
+        gitSHA: bbb80648733e28155430d221f7f552615896535b
 
-  Run3_JetVeto_jetfilter:
-    stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoFilterJetsOnly_HornpT50GeV/stage1_output/"
-    comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+    Run2_legacy_NoSyst:
+        stage1: "{base_dir}/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/"
+        comment: For September 25, 2025 HMuMu report
+        gitTab: V1.0
+        Reference: https://github.com/ram1123/copperheadV2/discussions/61
 
-  Run3_JetVeto_jetfilter_v2:
-    stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly/stage1_output/"
-    comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO."
+    Run2_legacy:
+        stage1: "{base_dir}/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage1_output/"
+        comment: For September 25, 2025 HMuMu report
+        gitTab: V1.0
+        Reference: https://github.com/ram1123/copperheadV2/discussions/61
 
-  Run3_JetVeto_jetfilter_v3:
-    stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV/stage1_output/"
-    comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+    Run3_nanoAODv15_JVMjetfilter:
+        stage1: "{base_dir}/Run3_nanoAODv15_16Dec/stage1_output/"
+        comment: used JVM to filter jets
+        gitSHA: 281cf4a385fe3a9fe99b9522333733795470fba0
+        date: December 16, 2025
+        years: 2024
 
-  Run3_JetVeto_jetfilter_v4:
-    stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_TightMuon/stage1_output/"
-    comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5). Also, changed the muon ID to tight"
+    Run3_nanoAODv15_NoJVM:
+        stage1: "{base_dir}/Run3_nanoAODv15_16Dec_NoJVM/stage1_output/"
+        comment: used JVM to filter jets
+        gitSHA: 281cf4a385fe3a9fe99b9522333733795470fba0
+        date: December 16, 2025
+        years: 2024
 
-  Run3_JetVeto_jetfilter_v5:
-    stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_JetIDTightLepVetoPass/stage1_output/"
-    comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5). Used jetID ==6 which is pass jet ID and tightlepton veto"
+    Run3_noJetVetoMap:
+        stage1: "{base_dir}/Run3_nanoAODv12_23October/stage1_output/"
+        comment: "Run-3 without using any Jet veto map"
+        date: November 11, 2025
+        gitSHA: 86c12ed4e3b428b06e4f2af9a0916dc3ba1f1595
+
+    Run3_noJetVetoMap_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_NoJVM/stage1_output/"
+        comment: "Run-3 without using any Jet veto map"
+        year: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_noJetVetoMap_v1_2024:
+        stage1: "{base_dir}/Run3_nanoAODv15_01Dec/stage1_output/"
+        comment: "Run-3 year 2024, without any Jet veto map."
+        years: 2024 only
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_WithJetVetoMap:
+        stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap/stage1_output/"
+        comment: "Run-3 using the official JET veto map"
+
+    Run3_WithJetVetoMap_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVM/stage1_output/"
+        comment: "Run-3 using the official JET veto map"
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_WithJetVetoMap_Horn50GeV:
+        stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap_HornpT50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map and adding the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+
+    Run3_WithJetVetoMap_Horn50GeV_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVM_Horn50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map and adding the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_JetVeto_jetfilter:
+        stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO."
+
+    Run3_JetVeto_jetfilter_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. "
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_JetVeto_jetfilter_Horn50GeV:
+        stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoFilterJetsOnly_HornpT50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+
+    Run3_JetVeto_jetfilter_Horn50GeV_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+
+    Run3_JetVeto_jetfilter_Horn50GeV_v2:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets_Horn50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_JetVeto_jetfilter_Horn50GeV_tightMuon:
+        stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_TightMuon/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5). Also, changed the muon ID to tight"
+
+    Run3_JetVeto_jetfilter_Horn50GeV_JetIDTightLepVetoPass:
+        stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_JetIDTightLepVetoPass/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5). Used jetID ==6 which is pass jet ID and tightlepton veto"

@@ -10,6 +10,7 @@ electron_pt_cut:
   2022postEE: 20.0
   "2023": 20.0
   "2023BPix": 20.0
+  "2024": 20.0
 electron_eta_cut:
   2016preVFP: 2.5
   2016postVFP: 2.5
@@ -19,6 +20,7 @@ electron_eta_cut:
   2022postEE: 2.5
   "2023": 2.5
   "2023BPix": 2.5
+  "2024": 2.5
   2016_RERECO: 2.5
   '2017_RERECO': 2.5
   '2018_RERECO': 2.5
@@ -34,7 +36,8 @@ electron_id_v9:
   2022postEE: mvaFall17V2Iso_WP90
   "2023": mvaFall17V2Iso_WP90
   "2023BPix": mvaFall17V2Iso_WP90
-electron_id_v12:
+  "2024": mvaFall17V2Iso_WP90
+electron_id_v12: # The keys are same for v12 and v15
   2016preVFP: mvaIso_WP90
   2016postVFP: mvaIso_WP90
   '2017': mvaIso_WP90
@@ -46,3 +49,4 @@ electron_id_v12:
   2022postEE: mvaIso_WP90
   "2023": mvaIso_WP90
   "2023BPix": mvaIso_WP90
+  "2024": mvaIso_WP90

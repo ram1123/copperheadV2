@@ -2,11 +2,21 @@ import re
 
 
 AAA_REDIRECTORS = [
-    "root://xcache.cms.rcac.purdue.edu//",
-    "root://cms-xrd-global.cern.ch//",
-    "root://xrootd-cms.infn.it//",
-    "root://cmsxrootd.fnal.gov//",
-    "root://xcache.cms.rcac.purdue.edu//",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://eos.cms.rcac.purdue.edu/",
+    "root://cmsxrootd.fnal.gov/",
+    "root://xrootd-cms.infn.it/",
+    "root://cms-xrd-global.cern.ch/",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://cmsxrootd.fnal.gov/",
+    "root://cms-xrd-global.cern.ch/",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://xcache.cms.rcac.purdue.edu/",
+    "root://xcache.cms.rcac.purdue.edu/",
 ]
 
 # Accept prefixes like:
@@ -66,5 +76,11 @@ AAA_ERROR_FRAGMENTS = (
     "File did not vector_read properly",
     "lzma data error",
     "File stat request failed",
+    "OSError: Bytes failed to read from open file",
+    "OSError: Failed to close file: [ERROR] Operation expired",
+    "Operation expired",
+    "Unable to open file",
+    "No servers have access to the file",
+    "[ERROR] Socket timeout",
+    "[ERROR] Server responded with an error",
 )
-

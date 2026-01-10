@@ -8,6 +8,9 @@ import dask_awkward as dak
 from omegaconf import OmegaConf
 import correctionlib
 
+import logging
+from modules.utils import logger
+
 def get_corr_inputs(input_dict, corr_obj):
     """
     Helper function for getting values of input variables
@@ -997,12 +1000,14 @@ def qgl_weights_V2(jets, config, isHerwig, dnn_year):
     # print(f"isHerwig: {isHerwig}")
     # print(f"jets.qgl: {jets.qgl.compute()}")
 
-    if dnn_year < 2022.0: # INFO: The b-tag discriminator is different in Run2 and Run3
+    # --- choose score and weight mask depending on year ---
+    score_field = "qgl"
+    if dnn_year < 2022.0:  # Run 2: use QGL
         wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)
-        qgl = jets.qgl
-    else:
+        score_field = "qgl"
+    else:  # Run 3: use PNet QvG
         wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2.5) & (jets.btagPNetQvG > 0)
-        qgl = jets.btagPNetQvG
+        score_field = "btagPNetQvG"
     lightOrGluon = (abs(jets.partonFlavour) < 4) | (jets.partonFlavour == 21)
     jets = jets[wgt_mask & lightOrGluon]
     njets = ak.num(jets, axis=1)
@@ -1015,6 +1020,7 @@ def qgl_weights_V2(jets, config, isHerwig, dnn_year):
     light = (abs(jets.partonFlavour) < 4)
     gluon = (jets.partonFlavour == 21)
 
+    qgl = getattr(jets, score_field)
     qgl_weights = ak.ones_like(jets.pt)
 
     if isHerwig:
@@ -1307,14 +1313,19 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
     jets = ak.to_packed(jets[btag_jet_selection])
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
 
+    if hasattr(jets, "btagDeepB"):
+        score_field = "btagDeepB"
+    else:
+        logger.warning("jets has no attribute btagDeepB, using btagDeepFlavB instead")
+        score_field = "btagDeepFlavB"
 
+    btag_score = getattr(jets, score_field)
     correctionlib_out = btag_json.evaluate( # UL
         "central",
         jets.hadronFlavour,
         abs(jets.eta),
         jets.pt,
-        # jets.btagDeepFlavB,
-        jets.btagDeepB,
+        btag_score,
     )
 
     # correctionlib_out = btag_json.eval( # RERECO
@@ -1364,7 +1375,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # sys_wgts =  btag_json.eval( # RERECO
                 #     f"up_{sys}",
@@ -1382,7 +1393,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # sys_wgts =  btag_json.eval( # RERECO
                 #     f"down_{sys}",
@@ -1424,7 +1435,7 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
         abs(jets.eta),
         jets.pt,
         # jets.btagDeepFlavB,
-        jets.btagDeepB,
+        btag_score,
     )
     # print(f"correctionlib_out: {correctionlib_out.compute()}")
     # correctionlib_out = ak.pad_none(correctionlib_out, target=1)
@@ -1467,7 +1478,7 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # print(f"sys_wgts up: {sys_wgts.compute()}")
                 btag_wgt_up = ak.where(btag_mask, sys_wgts, btag_wgt_up)
@@ -1484,7 +1495,7 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # print(f"sys_wgts down: {sys_wgts.compute()}")
                 btag_wgt_down = ak.where(btag_mask, sys_wgts, btag_wgt_down)

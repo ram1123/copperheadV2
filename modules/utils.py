@@ -4,6 +4,7 @@ from rich.console import Console
 from typing import Optional
 import os
 import sys
+import numpy as np
 import awkward as ak
 
 LOGGER_NAME = "CopperHead"
@@ -115,16 +116,15 @@ def fillEventNans(events, category="vbf"):
         raise ValueError
     return events
 
-def filterRegion(events, region="h-peak"):
-    dimuon_mass = events.dimuon_mass
-    if region =="h-peak":
-        region = (dimuon_mass > 115) & (dimuon_mass < 135)
-    elif region =="h-sidebands":
-        region = ((dimuon_mass > 110) & (dimuon_mass < 115)) | ((dimuon_mass > 135) & (dimuon_mass < 150))
-    elif region =="signal":
-        region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0)
-    elif region =="z-peak":
-        region = (dimuon_mass >= 70) & (dimuon_mass <= 110.0)
-
-    events = events[region]
-    return events
+def convertVectorType4D(vector, vector_name):
+    new_vector = ak.zip(
+        {
+            "pt": vector.pt,
+            "eta": vector.eta,
+            "phi": vector.phi,
+            "mass": vector.mass,
+            "charge": vector.charge,
+        },
+        with_name=vector_name,
+        behavior=vector.behavior,
+    )

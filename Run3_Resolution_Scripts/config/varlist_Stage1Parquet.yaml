@@ -1,0 +1,193 @@
+mu1_pt:                 [50, 20, 200,  "Leading Muon p_{T} [GeV]",                    0.9,  1.1]
+mu1_ptErr:              [50, 0,  2.0,  "Leading Muon p_{T} Error [GeV]",              0.0,  2.0]
+# ratio_pTErr_pt_mu1:     [50, 0,  0.03, "Leading Muon p_{T} Error / p_{T}",           0.0,  2.0]
+mu1_eta:                [50, -2.4, 2.4, "Leading Muon #eta",                          0.95, 1.05]
+mu1_phi:                [25, -3.14,3.14,"Leading Muon #phi",                          0.95, 1.05]
+
+mu2_pt:                 [50, 20, 200,  "Sub-leading Muon p_{T} [GeV]",                0.85, 1.15]
+mu2_ptErr:              [50, 0,  2.0,  "Sub-leading Muon p_{T} Error [GeV]",          0.0,  2.0]
+# ratio_pTErr_pt_mu2:     [50, 0,  0.03, "Sub-leading Muon p_{T} Error / p_{T}",       0.0,  2.0]
+mu2_eta:                [50, -2.4, 2.4, "Sub-leading Muon #eta",                      0.8,  1.2]
+mu2_phi:                [25, -3.14,3.14,"Sub-leading Muon #phi",                      0.8,  1.2]
+
+dimuon_pt:              [50, 0,  200,  "p_{T} (#mu#mu) [GeV]",                        0.95, 1.05]
+dimuon_eta:             [50, 0.0, 4.7, "#eta_{#mu#mu}",                              0.95, 1.05]
+dimuon_phi:             [25, -3.14,3.14,"#phi_{#mu#mu}",                              0.95, 1.05]
+
+# event:                  [50, 0,  5.0e7,   "Event number",                             0.9,  1.1]
+PV_npvs:                [50, 0,  80,       "N_{PV}",                                  0.9,  1.1]
+PV_npvsGood:            [50, 0,  80,       "N_{PV}^{good}",                           0.9,  1.1]
+
+MET_pt:                 [50, 0,  200,      "p_{T}^{miss} [GeV]",                      0.9,  1.1]
+MET_phi:                [25, -3.14, 3.14,  "#phi(p_{T}^{miss})",                      0.95, 1.05]
+MET_sumEt:              [60, 0,  3000,     "sumE_{T} [GeV]",                          0.9,  1.1]
+
+mu1_pt_over_mass:       [50, 0,  2.0,      "Leading #mu p_{T}/m_{#mu#mu}",            0.9,  1.1]
+mu2_pt_over_mass:       [50, 0,  2.0,      "Sub-leading #mu p_{T}/m_{#mu#mu}",        0.9,  1.1]
+
+mu1_charge:             [4,  -2,  2,       "Leading Muon charge",                     0.9,  1.1]
+mu2_charge:             [4,  -2,  2,       "Sub-leading Muon charge",                 0.9,  1.1]
+
+mu1_iso:                [50, 0,  0.5,      "Leading Muon isolation",                  0.9,  1.1]
+mu2_iso:                [50, 0,  0.5,      "Sub-leading Muon isolation",              0.9,  1.1]
+
+nmuons:                 [6,  0,  6,        "N_{muons}",                               0.9,  1.1]
+
+dimuon_mass:            [60, 70, 150,      "m_{#mu#mu} [GeV]",                        0.95, 1.05]
+dimuon_pt_log:          [50, -1.0, 3.0,    "log_{10}(p_{T} (#mu#mu) / GeV)",          0.95, 1.05]
+dimuon_rapidity:        [50, -2.4, 2.4,    "y_{#mu#mu}",                              0.95, 1.05]
+
+dimuon_dEta:            [50, 0, 5.0,    "#Delta#eta(#mu,#mu)",                     0.95, 1.05]
+dimuon_dPhi:            [32, 0.0, 3.2,     "#Delta#phi(#mu,#mu)",                     0.95, 1.05]
+dimuon_dR:              [50, 0.0, 5.0,     "#DeltaR(#mu,#mu)",                         0.95, 1.05]
+acoplanarity:           [50, 0.0, 0.5,     "Acoplanarity",                            0.98, 1.02]
+
+dimuon_ebe_mass_res:        [50, 0.0, 5.0,     "EBE mass resolution [GeV]",          0.9,  1.1]
+dimuon_ebe_mass_res_rel:    [50, 0.0, 0.1,     "EBE mass resolution / m_{#mu#mu}",   0.9,  1.1]
+uncalibrated_dimuon_ebe_mass_res: [50, 0.0, 5.0, "Uncalibrated EBE mass res [GeV]",  0.9,  1.1]
+
+dimuon_cos_theta_cs:    [50, -1.0, 1.0,   "cos#theta^{CS}",                           0.95, 1.05]
+dimuon_phi_cs:          [32, -3.14, 3.14, "#phi^{CS}",                                0.95, 1.05]
+dimuon_cos_theta_eta:   [50, -1.0, 1.0,   "cos#theta^{#eta}",                         0.95, 1.05]
+dimuon_phi_eta:         [32, -3.14, 3.14, "#phi^{#eta}",                              0.95, 1.05]
+
+mu1_pt_raw:             [50, 20, 200,     "Leading Muon p_{T}^{raw} [GeV]",           0.9,  1.1]
+mu2_pt_raw:             [50, 20, 200,     "Sub-leading Muon p_{T}^{raw} [GeV]",       0.9,  1.1]
+mu1_pt_fsr:             [50, 20, 200,     "Leading Muon p_{T}^{FSR} [GeV]",           0.9,  1.1]
+mu2_pt_fsr:             [50, 20, 200,     "Sub-leading Muon p_{T}^{FSR} [GeV]",       0.9,  1.1]
+
+
+jet1_default_pt_nominal: [60, 0, 400,     "Jet1 default p_{T} [GeV]",                 0.9,  1.1]
+jet1_default_eta_nominal: [50, -5, 5,      "Jet1 default #eta",                        0.95, 1.05]
+jet2_default_pt_nominal: [60, 0, 400,     "Jet2 default p_{T} [GeV]",                 0.9,  1.1]
+jet2_default_eta_nominal: [50, -5, 5,      "Jet2 default #eta",                        0.95, 1.05]
+
+jet1_pt_nominal:        [60, 0, 400,      "Jet1 p_{T} [GeV]",                         0.9,  1.1]
+jet1_eta_nominal:       [50, -5, 5,       "Jet1 #eta",                                0.95, 1.05]
+jet1_rapidity_nominal:  [50, -5, 5,       "Jet1 rapidity",                            0.95, 1.05]
+jet1_phi_nominal:       [32, -3.14, 3.14, "Jet1 #phi",                                0.95, 1.05]
+
+jet1_pass_jetId_nominal: [2,  -0.5, 1.5,   "Jet1 passes jetID",                        0.9,  1.1]
+jet1_pass_puId_nominal: [2,  -0.5, 1.5,   "Jet1 passes PU ID",                        0.9,  1.1]
+
+jet2_pt_nominal:        [60, 0, 400,      "Jet2 p_{T} [GeV]",                         0.9,  1.1]
+jet2_eta_nominal:       [50, -5, 5,       "Jet2 #eta",                                0.95, 1.05]
+jet1_mass_nominal:      [60, 0, 200,      "Jet1 mass [GeV]",                          0.9,  1.1]
+jet2_mass_nominal:      [60, 0, 200,      "Jet2 mass [GeV]",                          0.9,  1.1]
+jet1_area_nominal:      [50, 0.0, 1.0,    "Jet1 area",                                0.9,  1.1]
+jet2_area_nominal:      [50, 0.0, 1.0,    "Jet2 area",                                0.9,  1.1]
+
+jet2_rapidity_nominal:  [50, -5, 5,       "Jet2 rapidity",                            0.95, 1.05]
+jet2_phi_nominal:       [32, -3.14, 3.14, "Jet2 #phi",                                0.95, 1.05]
+
+jet2_pass_jetId_nominal: [2,  -0.5, 1.5,   "Jet2 passes jetID",                        0.9,  1.1]
+jet2_pass_puId_nominal: [2,  -0.5, 1.5,   "Jet2 passes PU ID",                        0.9,  1.1]
+
+jj_mass_nominal:        [80, 0, 4000,     "m_{jj} [GeV]",                             0.9,  1.1]
+jj_mass_log_nominal:    [60, 0.0, 8.0,    "log(m_{jj}/GeV)",                          0.9,  1.1]
+
+jj_pt_nominal:          [60, 0, 400,      "p_{T}^{jj} [GeV]",                         0.9,  1.1]
+jj_eta_nominal:         [50, -5, 5,       "#eta_{jj}",                                0.95, 1.05]
+jj_phi_nominal:         [32, -3.14, 3.14, "#phi_{jj}",                                0.95, 1.05]
+
+jj_dEta_nominal:        [50, 0, 15,       "#Delta#eta_{jj}",                          0.95, 1.05]
+jj_dPhi_nominal:        [32, 0,  3.2,     "#Delta#phi_{jj}",                          0.95, 1.05]
+
+mmj1_dEta_nominal:      [50, 0, 15,       "#Delta#eta(#mu#mu,j_{1})",                 0.95, 1.05]
+mmj1_dPhi_nominal:      [32, 0,  3.2,     "#Delta#phi(#mu#mu,j_{1})",                 0.95, 1.05]
+mmj1_dR_nominal:        [50, 0,  8,       "#DeltaR(#mu#mu,j_{1})",                    0.95, 1.05]
+
+mmj2_dEta_nominal:      [50, 0, 15,       "#Delta#eta(#mu#mu,j_{2})",                 0.95, 1.05]
+mmj2_dPhi_nominal:      [32, 0,  3.2,     "#Delta#phi(#mu#mu,j_{2})",                 0.95, 1.05]
+mmj2_dR_nominal:        [50, 0,  8,       "#DeltaR(#mu#mu,j_{2})",                    0.95, 1.05]
+
+mmj_min_dEta_nominal:   [50, 0, 15,       "min #Delta#eta(#mu#mu,j)",                 0.95, 1.05]
+mmj_min_dPhi_nominal:   [32, 0,  3.2,     "min #Delta#phi(#mu#mu,j)",                 0.95, 1.05]
+
+mmjj_pt_nominal:        [60, 0, 400,      "p_{T}^{#mu#mu jj} [GeV]",                  0.9,  1.1]
+mmjj_eta_nominal:       [50, -5, 5,       "#eta_{#mu#mu jj}",                         0.95, 1.05]
+mmjj_phi_nominal:       [32, -3.14, 3.14, "#phi_{#mu#mu jj}",                         0.95, 1.05]
+mmjj_mass_nominal:      [80, 0, 4000,     "m_{#mu#mu jj} [GeV]",                      0.9,  1.1]
+
+rpt_nominal:            [50, 0.0, 1.5,    "R_{pT}",                                   0.95, 1.05]
+pt_centrality_nominal:  [50, 0.0, 1.0,    "p_{T} centrality",                         0.95, 1.05]
+zeppenfeld_nominal:     [50, -5.0, 5.0,   "Zeppenfeld variable",                      0.95, 1.05]
+ll_zstar_log_nominal:   [60, -3.0, 3.0,   "log z^{*}_{ll}",                           0.95, 1.05]
+
+njets_nominal:          [8,  0,  8,       "N_{jets}",                                 0.9,  1.1]
+nsoftjets2_nominal:     [25,  0,  25,       "N_{soft jets}(p_{T}>2 GeV)",               0.9,  1.1]
+htsoft2_nominal:        [50, 0,  200,     "H_{T}^{soft}(p_{T}>2 GeV) [GeV]",          0.9,  1.1]
+nsoftjets5_nominal:     [25,  0,  25,       "N_{soft jets}(p_{T}>5 GeV)",               0.9,  1.1]
+htsoft5_nominal:        [50, 0,  200,     "H_{T}^{soft}(p_{T}>5 GeV) [GeV]",          0.9,  1.1]
+
+nBtagLoose_nominal:     [8,  0,  8,       "N_{b-tags}^{loose}",                       0.9,  1.1]
+nBtagMedium_nominal:    [8,  0,  8,       "N_{b-tags}^{medium}",                      0.9,  1.1]
+
+
+
+wgt_nominal:            [60, 0.0, 2.0,    "Event weight",                             0.8,  1.2]
+# separate_wgt_ones:      [2,  -0.5, 1.5,   "Weight==1 flag",                           0.9,  1.1]
+
+wgt_pu_wgt_down:          [60, 0.0, 2.0,  "PU weight (down)",                         0.8, 1.2]
+wgt_THU_VBF_Mjj350_up:    [60, 0.0, 2.0,  "THU VBF M_{jj}>350 (up)",                  0.8, 1.2]
+wgt_muIso_up:             [60, 0.0, 2.0,  "Muon isolation SF (up)",                   0.8, 1.2]
+wgt_muIso_down:           [60, 0.0, 2.0,  "Muon isolation SF (down)",                 0.8, 1.2]
+wgt_THU_VBF_Yield_up:     [60, 0.0, 2.0,  "THU VBF Yield (up)",                       0.8, 1.2]
+wgt_LHERen_up:            [60, 0.0, 2.0,  "LHE renorm scale (up)",                    0.8, 1.2]
+wgt_THU_VBF_Mjj700_up:    [60, 0.0, 2.0,  "THU VBF M_{jj}>700 (up)",                  0.8, 1.2]
+wgt_l1prefiring_down:     [60, 0.0, 2.0,  "L1 prefiring (down)",                      0.8, 1.2]
+wgt_THU_VBF_JET01_down:   [60, 0.0, 2.0,  "THU VBF JET01 (down)",                     0.8, 1.2]
+wgt_THU_VBF_Mjj1500_up:   [60, 0.0, 2.0,  "THU VBF M_{jj}>1500 (up)",                 0.8, 1.2]
+wgt_pdf_2rms_up:          [60, 0.0, 2.0,  "PDF 2rms (up)",                             0.8, 1.2]
+wgt_THU_VBF_Mjj350_down:  [60, 0.0, 2.0,  "THU VBF M_{jj}>350 (down)",                0.8, 1.2]
+wgt_pdf_2rms_down:        [60, 0.0, 2.0,  "PDF 2rms (down)",                           0.8, 1.2]
+wgt_muTrig_down:          [60, 0.0, 2.0,  "Muon trigger SF (down)",                   0.8, 1.2]
+wgt_pu_wgt_up:            [60, 0.0, 2.0,  "PU weight (up)",                           0.8, 1.2]
+wgt_THU_VBF_Mjj120_up:    [60, 0.0, 2.0,  "THU VBF M_{jj}>120 (up)",                  0.8, 1.2]
+wgt_THU_VBF_PTH25_up:     [60, 0.0, 2.0,  "THU VBF p_{T}^{H}>25 (up)",                0.8, 1.2]
+wgt_l1prefiring_up:       [60, 0.0, 2.0,  "L1 prefiring (up)",                        0.8, 1.2]
+wgt_THU_VBF_PTH200_up:    [60, 0.0, 2.0,  "THU VBF p_{T}^{H}>200 (up)",               0.8, 1.2]
+wgt_LHERen_down:          [60, 0.0, 2.0,  "LHE renorm scale (down)",                  0.8, 1.2]
+wgt_muTrig_up:            [60, 0.0, 2.0,  "Muon trigger SF (up)",                     0.8, 1.2]
+wgt_THU_VBF_Mjj1500_down: [60, 0.0, 2.0,  "THU VBF M_{jj}>1500 (down)",               0.8, 1.2]
+wgt_THU_VBF_Mjj60_down:   [60, 0.0, 2.0,  "THU VBF M_{jj}>60 (down)",                 0.8, 1.2]
+wgt_THU_VBF_Mjj120_down:  [60, 0.0, 2.0,  "THU VBF M_{jj}>120 (down)",                0.8, 1.2]
+wgt_THU_VBF_Mjj1000_up:   [60, 0.0, 2.0,  "THU VBF M_{jj}>1000 (up)",                 0.8, 1.2]
+wgt_THU_VBF_Mjj1000_down: [60, 0.0, 2.0,  "THU VBF M_{jj}>1000 (down)",               0.8, 1.2]
+wgt_LHEFac_up:            [60, 0.0, 2.0,  "LHE fact scale (up)",                      0.8, 1.2]
+wgt_THU_VBF_Mjj60_up:     [60, 0.0, 2.0,  "THU VBF M_{jj}>60 (up)",                   0.8, 1.2]
+wgt_muID_down:            [60, 0.0, 2.0,  "Muon ID SF (down)",                        0.8, 1.2]
+wgt_THU_VBF_JET01_up:     [60, 0.0, 2.0,  "THU VBF JET01 (up)",                       0.8, 1.2]
+wgt_THU_VBF_PTH25_down:   [60, 0.0, 2.0,  "THU VBF p_{T}^{H}>25 (down)",             0.8, 1.2]
+wgt_LHEFac_down:          [60, 0.0, 2.0,  "LHE fact scale (down)",                    0.8, 1.2]
+wgt_muID_up:              [60, 0.0, 2.0,  "Muon ID SF (up)",                          0.8, 1.2]
+wgt_THU_VBF_Mjj700_down:  [60, 0.0, 2.0,  "THU VBF M_{jj}>700 (down)",                0.8, 1.2]
+wgt_THU_VBF_Yield_down:   [60, 0.0, 2.0,  "THU VBF Yield (down)",                     0.8, 1.2]
+wgt_THU_VBF_PTH200_down:  [60, 0.0, 2.0,  "THU VBF p_{T}^{H}>200 (down)",            0.8, 1.2]
+
+separate_wgt_genWeight:               [60, -2.0, 2.0, "Generator weight factor",      0.8, 1.2]
+separate_wgt_genWeight_normalization: [60,  0.0, 2.0, "GenWeight normalization",      0.8, 1.2]
+separate_wgt_xsec:                    [60,  0.0, 2.0, "Cross-section weight",         0.8, 1.2]
+separate_wgt_lumi:                    [60,  0.0, 2.0, "Luminosity weight",           0.8, 1.2]
+separate_wgt_pu_wgt:                  [60,  0.0, 2.0, "PU weight component",         0.8, 1.2]
+separate_wgt_l1prefiring:             [60,  0.0, 2.0, "L1 prefiring weight",         0.8, 1.2]
+separate_wgt_muID:                    [60,  0.0, 2.0, "Muon ID SF component",        0.8, 1.2]
+separate_wgt_muIso:                   [60,  0.0, 2.0, "Muon isolation SF component",  0.8, 1.2]
+separate_wgt_muTrig:                  [60,  0.0, 2.0, "Muon trigger SF component",    0.8, 1.2]
+separate_wgt_LHERen:                  [60,  0.0, 2.0, "LHE renorm scale component",   0.8, 1.2]
+separate_wgt_LHEFac:                  [60,  0.0, 2.0, "LHE fact scale component",     0.8, 1.2]
+
+separate_wgt_THU_VBF_Yield:           [60, 0.0, 2.0,  "THU VBF Yield component",      0.8, 1.2]
+separate_wgt_THU_VBF_PTH200:          [60, 0.0, 2.0,  "THU VBF p_{T}^{H}>200 comp.",  0.8, 1.2]
+separate_wgt_THU_VBF_Mjj60:           [60, 0.0, 2.0,  "THU VBF M_{jj}>60 comp.",      0.8, 1.2]
+separate_wgt_THU_VBF_Mjj120:          [60, 0.0, 2.0,  "THU VBF M_{jj}>120 comp.",     0.8, 1.2]
+separate_wgt_THU_VBF_Mjj350:          [60, 0.0, 2.0,  "THU VBF M_{jj}>350 comp.",     0.8, 1.2]
+separate_wgt_THU_VBF_Mjj700:          [60, 0.0, 2.0,  "THU VBF M_{jj}>700 comp.",     0.8, 1.2]
+separate_wgt_THU_VBF_Mjj1000:         [60, 0.0, 2.0,  "THU VBF M_{jj}>1000 comp.",    0.8, 1.2]
+separate_wgt_THU_VBF_Mjj1500:         [60, 0.0, 2.0,  "THU VBF M_{jj}>1500 comp.",    0.8, 1.2]
+separate_wgt_THU_VBF_PTH25:           [60, 0.0, 2.0,  "THU VBF p_{T}^{H}>25 comp.",   0.8, 1.2]
+separate_wgt_THU_VBF_JET01:           [60, 0.0, 2.0,  "THU VBF JET01 comp.",          0.8, 1.2]
+
+separate_wgt_pdf_2rms:                [60, 0.0, 2.0,  "PDF 2rms component",          0.8, 1.2]
+separate_wgt_jetpuid_wgt:             [60, 0.0, 2.0,  "Jet PU ID weight",             0.8, 1.2]
+separate_wgt_zpt_wgt:                 [60, 0.0, 2.0,  "Z p_{T} reweighting",          0.8, 1.2]

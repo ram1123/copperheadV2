@@ -1,4 +1,34 @@
 switches:
+    do_additional_vars:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": true
+    do_additional_jet_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': true
+        '2018': false
+        '2022preEE': true
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": true
+    do_getFatJet_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': true
+        '2018': false
+        '2022preEE': true
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_nnlops:
         '2016preVFP': true
         '2016postVFP': true
@@ -8,6 +38,7 @@ switches:
         '2022postEE': true
         "2023": true
         "2023BPix": true
+        "2024": true
     do_pdf:
         '2016preVFP': true
         '2016postVFP': true
@@ -17,6 +48,17 @@ switches:
         '2022postEE': true
         "2023": true
         "2023BPix": true
+        "2024": true
+    do_THU:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
     do_trigger_match:
         '2016preVFP': true
         '2016postVFP': true
@@ -26,6 +68,7 @@ switches:
         '2022postEE': true
         "2023": true
         "2023BPix": true
+        "2024": true
     do_pu_wgt:
         '2016preVFP': true
         '2016postVFP': true
@@ -35,6 +78,7 @@ switches:
         '2022postEE': true
         "2023": true
         "2023BPix": true
+        "2024": true
     do_roccor:
         '2016preVFP': true
         '2016postVFP': true
@@ -44,6 +88,7 @@ switches:
         '2022postEE': true
         "2023": true
         "2023BPix": true
+        "2024": true
     do_fsr:
         '2016preVFP': true
         '2016postVFP': true
@@ -53,6 +98,7 @@ switches:
         '2022postEE': true
         "2023": true
         "2023BPix": true
+        "2024": true
     do_geofit:
         '2016preVFP': false
         '2016postVFP': false
@@ -62,15 +108,30 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
+        "2024": false
     do_beamConstraint:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
-        '2022preEE': false
-        '2022postEE': false
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+    do_l1prefiring_wgts:
+        2016preVFP: true
+        2016postVFP: true
+        "2017": true
+        "2018": false
+        2016_RERECO: true
+        "2017_RERECO": true
+        "2018_RERECO": false
+        2022preEE: false
+        2022postEE: false
         "2023": false
         "2023BPix": false
+        "2024": false
     do_remove_dy_M100to200: # Remove 100 to 200 mll region from inclusive DY.
         '2016preVFP': true
         '2016postVFP': true
@@ -80,6 +141,7 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
+        "2024": false
     do_zpt:
         '2016preVFP': true
         '2016postVFP': true
@@ -89,6 +151,7 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
+        "2024": false
     do_jet_PUID_wgt:
         '2016preVFP': true
         '2016postVFP': true
@@ -98,6 +161,7 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
+        "2024": false
     do_HemVeto:
         '2016preVFP': false
         '2016postVFP': false
@@ -107,6 +171,17 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
+        "2024": false
+    do_HemVetoStudy: # this should be true for obtaining the HemVeto_ratio value below. See documenation
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false # this should be false in normal copperheadV2 run
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_jet_veto_maps_filterEvents: # do_jet_veto_maps_filterEvents
         '2016preVFP': false
         '2016postVFP': false
@@ -116,24 +191,37 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
+        "2024": false
     do_jet_veto_maps_filterJets:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
         '2018': false
         '2022preEE': false
-        '2022postEE': false
+        '2022postEE': true
         "2023": true
-        "2023BPix": false
-    do_jet_horn_ptcut:
+        "2023BPix": true
+        "2024": false
+    do_jet_horn_ptcut: # For run-3 where the JME recommendation is to add pT > 50 GeV cut in the horn region
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
         '2018': false
         '2022preEE': false
         '2022postEE': false
-        "2023": true
+        "2023": false
         "2023BPix": false
+        "2024": false
+    do_jet_horn_puid: # For run-2 samples where we added strict PUID cut for the horn region
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_jec:
         '2016preVFP': true
         '2016postVFP': true
@@ -143,7 +231,18 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
+        "2024": false
     do_jec_unc:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_qgl_wgt:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
@@ -152,6 +251,7 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
+        "2024": false
     do_btag_wgt:
         '2016preVFP': true
         '2016postVFP': true
@@ -161,3 +261,4 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
+        "2024": false

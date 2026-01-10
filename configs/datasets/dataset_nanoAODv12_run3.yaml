@@ -82,8 +82,8 @@ years:
                 datasets:
                     - /DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
                 cross_section_pb: 5991.00
-                notes: cross-section on webpage 2124.08 for ee. So, 1997.0*3 = 5991.0
-                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                notes:  "DY Turbo (Filipo, Pisa)"
+                cross_section_source:  "DY Turbo (Filipo, Pisa)"
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -296,12 +296,12 @@ years:
 
     "2022postEE":
         Data:
-            total_lumi_pb: 7980.4
+            total_lumi_pb: 26671.7
             data_E:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022E-16Dec2023-v1/NANOAOD
-                lumi_pb: 5.8070
+                lumi_pb: 5807.0
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -312,7 +312,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022F-16Dec2023-v1/NANOAOD
-                lumi_pb: 17.7819
+                lumi_pb: 17781.9
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -322,7 +322,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022G-16Dec2023-v1/NANOAOD
-                lumi_pb: 3.0828
+                lumi_pb: 3082.8
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -637,7 +637,7 @@ years:
 
         DY:
             dyTo2L_M-50_0j:
-                skip_sample: False
+                skip_sample: true
                 datasets:
                     - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
                 cross_section_pb: 5034.65
@@ -650,7 +650,7 @@ years:
                     - "MG5_aMC@NLO FxFx"
 
             dyTo2L_M-50_1j:
-                skip_sample: False
+                skip_sample: true
                 datasets:
                     - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
                 cross_section_pb: 952.29
@@ -663,7 +663,7 @@ years:
                     - "MG5_aMC@NLO FxFx"
 
             dyTo2L_M-50_2j:
-                skip_sample: False
+                skip_sample: true
                 datasets:
                     - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v4/NANOAODSIM
                 cross_section_pb: 359.05
@@ -676,7 +676,7 @@ years:
                     - "MG5_aMC@NLO FxFx"
 
             dy_M-50_aMCatNLO:
-                skip_sample: True
+                skip_sample: true
                 datasets:
                     - None
                 cross_section_pb: 5558.0
@@ -689,7 +689,7 @@ years:
                     - "MadGraph5_aMC"
 
             dyTo2L_M-50_incl:
-                skip_sample: False
+                skip_sample: true
                 datasets:
                     - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
                 notes: njets <= 2, not njets==2
@@ -717,7 +717,7 @@ years:
                     - "MadGraph5_aMC"
 
             dyTo2Mu_MLL_105To160:
-                skip_sample: False
+                skip_sample: true
                 datasets:
                     - /DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
                 notes: njets <= 2, not njets==2
@@ -731,7 +731,7 @@ years:
                     - "aMCatNLOFxFx"
 
             dyTo2Mu_MLL_10To50:
-                skip_sample: False
+                skip_sample: true
                 datasets:
                     - /DYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
                 notes: njets <= 2, not njets==2
@@ -745,7 +745,7 @@ years:
                     - "Powheg"
 
             dyTo2Mu_MLL_50To120:
-                skip_sample: False
+                skip_sample: true
                 datasets:
                     - /DYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
                 notes: njets <= 2, not njets==2
@@ -759,7 +759,7 @@ years:
                     - "Powheg"
 
             dyTo2Mu_MLL_120To200:
-                skip_sample: False
+                skip_sample: true
                 datasets:
                     - /DYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
                 notes: njets <= 2, not njets==2

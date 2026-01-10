@@ -3,6 +3,8 @@ import awkward as ak
 
 
 def filterRegion(events, region="h-peak"):
+    if "dimuon_mass" not in events.fields:
+        raise ValueError("dimuon_mass not found in events fields for region selection.")
     dimuon_mass = events.dimuon_mass
     z_peak = (dimuon_mass >= 70.0) & (dimuon_mass < 110.0)
     h_peak = (dimuon_mass >= 115.0) & (dimuon_mass < 135.0)

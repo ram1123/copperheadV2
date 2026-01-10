@@ -17,10 +17,26 @@ stage1_dir = get_stage1_path()  # default = "current"
 LOAD_PATH = str(Path(stage1_dir) / "{year}" / "f1_0")
 logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
-SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/{LOAD_PATH.split('/')[-4]}/"
+# LOAD_PATH = "/depot/cms/users/yun79/hmm/copperheadV1clean/Run3ONov03_2025_KITMuScaleSmearOn_mediumMuId/stage1_output/2024/f1_0"
+
+outputDir = "_".join(LOAD_PATH.split("/")[-4].split("_")[:2]) # Format: Run<n>_nanoAODv<version>
+logger.info(f"outputDir: {outputDir}")
+
+# SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/Hyeon_AllSamples_DYWgted_{LOAD_PATH.split('/')[-4]}/"
+# SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_01December/{LOAD_PATH.split('/')[-4]}/"
 # SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/DY_jet_binned/{LOAD_PATH.split('/')[-4]}/"
 # SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/DY_MLL_binned/{LOAD_PATH.split('/')[-4]}/"
+# SAVE_PATH = f"./validation/figs/Run2_nanoAODv12_HEMVetoFix_10Dec_AllAdditionalVars/{LOAD_PATH.split('/')[-4]}/"
+# SAVE_PATH = f"./validation/figs/Run3_nanoAODv15/{LOAD_PATH.split('/')[-4]}_DYMLLBinned/"
+# SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_DYmadgraph/"
+SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}/"
 logger.info(f"Using SAVE_PATH: {SAVE_PATH}")
+
+# check if  SAVE_PATH exists then throw error and exit. This is just to prevent overwriting existing plots
+if Path(SAVE_PATH).exists():
+    logger.error(f"SAVE_PATH: {SAVE_PATH} exists.")
+    sys.exit(1)
+
 
 # years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016", "*"]
 # years = ["2022preEE"]
@@ -28,20 +44,20 @@ logger.info(f"Using SAVE_PATH: {SAVE_PATH}")
 # years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years = ["2022postEE", "2023", "2023BPix"]
 # years = ["2023", "2023BPix"]
-years = ["2023"]
+years = ["2018"]
 # years = ["*"]
 
-# categories = ["vbf", "ggh", "nocat"]
+# categories = ["nocat", "vbf", "ggh"]
 # categories = ["nocat", "ggh"]
 # categories = ["vbf", "ggh"]
 # categories = ["vbf"]
 categories = ["nocat"]
 
 # Boolean flags
-vbf_filter_study_options = [False]  # True to apply VBF filter study, False to skip it
-remove_zpt_weights_options = [False]  # True to remove zpt weights, False to keep them
+vbf_filter_study_options = [True, False]  # True to apply VBF filter study, False to skip it
+remove_zpt_weights_options = [True, False]  # True to remove zpt weights, False to keep them
 debug_options = False
-min_set_of_vars = False  # If True, only use a minimal set of variables  to plot
+min_set_of_vars = True  # If True, only use a minimal set of variables  to plot
 
 region_options = [
     # ["h-sidebands", "z-peak", "signal", "h-peak"]
@@ -50,10 +66,10 @@ region_options = [
     # ["z-peak"]
     # ["h-sidebands"]
 ]
-# njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets
+njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets
 # njets_options = ["0", "1", "2"]  # inclusive = No cut on nJets
 # njets_options = [ "0", "1"]  # inclusive = No cut on nJets
-njets_options = ["inclusive"]  # inclusive = No cut on nJets
+# njets_options = ["inclusive"]  # inclusive = No cut on nJets
 # njets_options = ["2"]  # inclusive = No cut on nJets
 
 def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_weights, region, njets):
@@ -63,9 +79,11 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
          "--save_path", save_path,
          "--load", load_path,
          "-cat", cat,
+         "--njets", njets,
          "--use-compacted", "compacted",  # options: "", "compacted", "compacted_WithDNNScore"
-         "--use_gateway",
+        #  "--use_gateway",
         #  "--dnn-score"
+        # "--addVars"
          ]
     )
 
