@@ -2,6 +2,7 @@ years:
     "2024":
         Data:
             total_lumi_pb: 108960.0
+            pdmv_twiki: "https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#Year_2024"
             data_C:
                 skip_sample: False
                 datasets:
@@ -11,7 +12,7 @@ years:
                 das_request: NONE
                 golden_json: NONE
                 references:
-                    ppd_summary_table: NONE
+                    ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: NONE
 
             data_D:
@@ -23,7 +24,7 @@ years:
                 das_request: NONE
                 golden_json: NONE
                 references:
-                    ppd_summary_table: NONE
+                    ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: NONE
 
             data_E:
@@ -35,7 +36,7 @@ years:
                 das_request: NONE
                 golden_json: NONE
                 references:
-                    ppd_summary_table: NONE
+                    ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: NONE
 
             data_F:
@@ -47,7 +48,7 @@ years:
                 das_request: NONE
                 golden_json: NONE
                 references:
-                    ppd_summary_table: NONE
+                    ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: NONE
 
             data_G:
@@ -59,7 +60,7 @@ years:
                 das_request: NONE
                 golden_json: NONE
                 references:
-                    ppd_summary_table: NONE
+                    ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: NONE
 
             data_H:
@@ -71,7 +72,7 @@ years:
                 das_request: NONE
                 golden_json: NONE
                 references:
-                    ppd_summary_table: NONE
+                    ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: NONE
 
             data_I:
@@ -83,7 +84,7 @@ years:
                 das_request: NONE
                 golden_json: NONE
                 references:
-                    ppd_summary_table: NONE
+                    ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: NONE
 
         DY:
