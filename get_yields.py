@@ -207,7 +207,7 @@ def main() -> None:
     # Use parent of stage1_output as tag for output file name
     dataset_tag = Path(stage1_dir).parent.name
     tagYear = "_".join(years)
-    outfile = f"yield_{dataset_tag}{suffix}_{tagYear}_New.csv"
+    outfile = f"yield_{dataset_tag}{suffix}_{tagYear}.csv"
     print(f"Will write yields to: {outfile}")
 
     # Start Dask client
