@@ -208,6 +208,11 @@ def main():
     parser.add_argument("--backup", action="store_true", help="Enable backup before overwrite")
     parser.add_argument("--extraString", type=str, default="", help="Additional string to add to the output directory name")
     parser.add_argument(
+        "--no-dask-client",
+        action="store_true",
+        help="Run without creating a Dask client (use default scheduler)",
+    )
+    parser.add_argument(
         "--use_gateway",
         dest="use_gateway",
         default=False,
@@ -246,25 +251,25 @@ def main():
     dir_tag = LOAD_PATH.split("/")[-4] # Fetch the label from the path
     logger.info(f"output dir_tag: {dir_tag}")
 
-    # Initialize Dask client
-    if args.use_gateway:
+    client = None  # IMPORTANT
+
+    if args.no_dask_client:
+        logger.warning("Running WITHOUT a Dask client (default scheduler)")
+        # Nothing to do
+    elif args.use_gateway:
         logger.info("Using Dask Gateway client")
-        # client = get_dask_gateway_client()
         from dask_gateway import Gateway
 
         gateway = Gateway(
             "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
             proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
         )
-        cluster_info = gateway.list_clusters()[0]  # get the first cluster by default. There only should be one anyways
+        cluster_info = gateway.list_clusters()[0]
         client = gateway.connect(cluster_info.name).get_client()
         logger.info("Gateway Client created")
-
         client.run(_setup_path)
-
-        # sanity check
         client.run(lambda: __import__("basic_class_for_calibration"))
-    elif fix_fitting_one_cat is None:
+    else:
         logger.info("Using local Dask client")
         client = get_dask_client(
             n_workers=CONFIG["n_workers"],
@@ -438,7 +443,8 @@ def main():
             plot_closure_comparison_calibrated_uncalibrated(
                 df_closure, output_dir
             )
-    close_dask_client()
+    if client is not None:
+        close_dask_client()
 
 if __name__ == "__main__":
     main()
