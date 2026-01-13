@@ -585,6 +585,11 @@ def generateBWxDCB_plot(
     """
     mean = rt.RooRealVar("mean" , "mean", 0, -10,10) # mean is mean relative to BW
     # mean = rt.RooRealVar("mean" , "mean", 100, 95,110) # test
+    # NOTE: The lower bound on sigma was intentionally loosened from 0.1 to 0.001
+    # to allow very narrow resolution values in some categories / years where the
+    # fit would otherwise hit the boundary and fail to converge. This increases the
+    # risk of unphysically small sigmas, so fitted results should be monitored and,
+    # if needed, additional validation or tighter bounds should be applied downstream.
     sigma = rt.RooRealVar("sigma" , "sigma", 2, .001, 4.0)
     alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
     n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 185)
