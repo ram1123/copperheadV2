@@ -800,7 +800,7 @@ def generateBWxDCB_plot(
     # NOTE: compute chi2 after all plotOn calls to ensure correct components are drawn
     # calculate chi2 and add to plot
     chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
-    chi2 = float("%.3g" % chi2)  # get upt to 3 sig fig
+    chi2 = float("%.3g" % chi2)  # get up to 3 sig fig
     logger.info(f"chi2: {chi2}")
     print(f"===> output dir: {output_dir}/fit_params.json")
     # store the fit result in a json file
