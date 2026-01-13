@@ -10,6 +10,10 @@ import json
 import os
 import sys
 
+import dask
+
+import correctionlib
+
 import logging
 from modules.utils import logger
 
@@ -22,6 +26,17 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT.gSystem.Load(f"{CURRENT_DIR}/PDFs/RooCMSShape_cc.so")
 
 from ROOT import RooCMSShape
+
+# Configuration constants
+CONFIG = {
+    "n_workers": 16,
+    "threads_per_worker": 1,
+    "memory_limit": "8 GiB",
+    "zcr_filter_range": (75, 105),
+    "nbins": 120,
+    "fields_of_interest": ["mu1_pt", "mu1_eta", "mu2_eta", "dimuon_mass"],
+    "fields_with_errors": ["mu1_pt", "mu1_ptErr", "mu2_pt", "mu2_ptErr", "mu1_eta", "mu2_eta", "dimuon_mass"],
+}
 
 def filter_region(events, region="h-peak"):
     dimuon_mass = events.dimuon_mass
@@ -73,9 +88,9 @@ def get_calib_categories(events):
     mask_62_200 = (events["mu1_pt"] > 62) & (events["mu1_pt"] <= 200)
 
     # For pT bin 30-45, group the eta combinations into three categories.
-    cat_30_45_1 = mask_30_45 & (BB | OB | EB)
-    cat_30_45_2 = mask_30_45 & (BO | OO | EO)
-    cat_30_45_3 = mask_30_45 & (BE | OE | EE)
+    # cat_30_45_1 = mask_30_45 & (BB | OB | EB)
+    # cat_30_45_2 = mask_30_45 & (BO | OO | EO)
+    # cat_30_45_3 = mask_30_45 & (BE | OE | EE)
     cats_30_45 = {
         "30-45_BB": mask_30_45 & BB,
         "30-45_BO": mask_30_45 & BO,
@@ -125,18 +140,182 @@ def get_calib_categories(events):
         "62-200_EE": mask_62_200 & EE,
     }
 
-    categories = {
-        "30-45_BB_OB_EB": cat_30_45_1,
-        "30-45_BO_OO_EO": cat_30_45_2,
-        "30-45_BE_OE_EE": cat_30_45_3
-    }
-    # categories = cats_30_45
-    categories.update(cats_30_45)
+    # categories = {
+    #     "30-45_BB_OB_EB": cat_30_45_1,
+    #     "30-45_BO_OO_EO": cat_30_45_2,
+    #     "30-45_BE_OE_EE": cat_30_45_3
+    # }
+    categories = cats_30_45
+    # categories.update(cats_30_45)
     categories.update(cats_45_52)
     categories.update(cats_52_62)
     categories.update(cats_62_200)
 
     return categories
+
+CLOSURE_BINS = [
+    (0.6, 0.7),
+    (0.7, 0.8),
+    (0.8, 0.9),
+    (0.9, 1.0),
+    (1.0, 1.1),
+    (1.1, 1.2),
+    (1.3, 1.4),
+    (1.4, 1.5),
+    (1.5, 1.7),
+    (1.7, 2.0),
+    (2.0, 2.5),
+    (2.5, 3.5),
+]
+
+# Plotting range for each closure bin
+RANGE = {
+    1: (0.5, 1.0),
+    2: (0.5, 1.0),
+    3: (0.5, 1.0),
+    4: (0.5, 1.3),
+    5: (0.5, 1.3),
+    6: (0.5, 1.5),
+    7: (0.5, 1.8),
+    8: (0.5, 2.0),
+    9: (0.5, 2.0),
+    10: (1.0, 2.5),
+    11: (1.0, 3.0),
+    12: (1.5, 4.0),
+}
+
+
+def plot_histogram(data, bins, range, xlabel, ylabel, title, output_path, median=None):
+    plt.figure()
+    plt.hist(data, bins=bins, range=range, color="C0", alpha=0.7)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    if median is not None:
+        plt.axvline(
+            median,
+            color="red",
+            linestyle="dashed",
+            linewidth=2,
+            label=f"Median: {median:.4f}",
+        )
+        plt.legend()
+    plt.savefig(output_path)
+    plt.close()
+    logger.info(f"Saved plot to {output_path}")
+
+
+def _add_calibration_column(df, correction):
+    cal = correction.evaluate(
+        df["mu1_pt"].values,
+        np.abs(df["mu1_eta"].values),
+        np.abs(df["mu2_eta"].values),
+    )
+
+    df = df.assign(calibration=cal)
+    return df
+
+def closure_test_resolution_binning(
+    ddf,
+    output_dir,
+    CalibrationFactorJSONFile,
+    pdfFile_ExtraText="",
+    ifbinned=True,
+):
+    """
+    Validate calibration using bins in predicted per-event resolution (Table-32 style).
+    For each resolution bin:
+      - fit Z mass -> sigma_fit
+      - compute median predicted resolution (before/after)
+    """
+    logger.info("Starting closure test in resolution binning...")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # load correction
+    cset = correctionlib.CorrectionSet.from_file(CalibrationFactorJSONFile)
+    corr = cset["BS_ebe_mass_res_calibration"]
+
+    # build predicted resolutions in a single compute
+    logger.info("Computing predicted resolutions...")
+    ddf2 = ddf.map_partitions(_add_calibration_column, correction=corr)
+
+    ddf2 = ddf2.assign(
+        dpt1=(ddf2["mu1_ptErr"] / ddf2["mu1_pt"]) * (ddf2["dimuon_mass"] / 2.0),
+        dpt2=(ddf2["mu2_ptErr"] / ddf2["mu2_pt"]) * (ddf2["dimuon_mass"] / 2.0),
+    ).assign(
+        sigma_pred_noncal=lambda x: np.sqrt(x["dpt1"] ** 2 + x["dpt2"] ** 2),
+        sigma_pred_cal=lambda x: x["sigma_pred_noncal"] * x["calibration"],
+    )
+
+    logger.info("Computing dataframe for closure test...")
+    # FIXME: for some reason ddf2.compute() is not running on gateway.
+    with dask.config.set(scheduler="threads"):
+        df = ddf2.compute()
+    # df = ddf2.compute()
+
+    logger.info("Dataframe computed.")
+    rows = []
+    for i, (lo, hi) in enumerate(CLOSURE_BINS, start=1):
+        mask = (df["sigma_pred_cal"] >= lo) & (df["sigma_pred_cal"] < hi)
+        df_bin = df[mask]
+        if df_bin.empty:
+            logger.warning(f"Closure bin {i} [{lo},{hi}) empty, skipping.")
+            continue
+
+        # predicted medians
+        med_noncal = df_bin["sigma_pred_noncal"].median()
+        med_cal = df_bin["sigma_pred_cal"].median()
+
+        # plot mass resolution distribution both calibrated and non-calibrated
+        plt.figure(figsize=(8, 6))
+        plt.hist(df_bin["sigma_pred_cal"], bins=CONFIG["nbins"], range=RANGE[i], color='C0', alpha=0.7, label="Calibrated")
+        plt.hist(df_bin["sigma_pred_noncal"], bins=CONFIG["nbins"], range=RANGE[i], color='C1', alpha=0.7, label="Non-Calibrated")
+        plt.xlabel("Dimuon mass resolution (GeV)")
+        plt.ylabel("Events")
+        plt.title(f"Category {i}\n Median Cal = {med_cal:.4f} GeV, Median NonCal = {med_noncal:.4f} GeV")
+        plt.legend()
+
+        plt.axvline(med_cal, color="red", linestyle="dashed", linewidth=2, label=f"Median Cal: {med_cal:.4f}")
+        plt.axvline(med_noncal, color="blue", linestyle="dashed", linewidth=2, label=f"Median NonCal: {med_noncal:.4f}")
+        plt.legend()
+        plt.savefig(f"{output_dir}/mass_resolution_resBin{i}_Calibrated_{pdfFile_ExtraText}.pdf")
+        plt.close()
+
+        # measured sigma from Z-mass fit in THIS bin
+        mass = df_bin["dimuon_mass"].to_numpy()
+        df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
+        cat_name = f"resBin{i}"
+        df_fit = generateBWxDCB_plot(
+            mass,
+            cat_name,
+            nbins=CONFIG["nbins"],
+            df_fit=df_fit,
+            output_dir=output_dir,
+            logfile=f"ClosureLog_{pdfFile_ExtraText}.txt",
+            ifbinned=ifbinned,
+            pdfFile_ExtraText=pdfFile_ExtraText,
+        )
+        sigma_fit = float(df_fit.loc[df_fit["cat_name"] == cat_name, "fit_val"].iloc[0])
+        sigma_err = float(df_fit.loc[df_fit["cat_name"] == cat_name, "fit_err"].iloc[0])
+
+        rows.append(
+            {
+                "cat_name": i,
+                "bin_low": lo,
+                "bin_high": hi,
+                "nEvents": len(df_bin),
+                "fit_val": sigma_fit,
+                "fit_err": sigma_err,
+                "median_val_NonCal": med_noncal,
+                "median_val": med_cal,  # after-cal prediction
+            }
+        )
+
+    logger.info("Creating output dataframe for closure test...")
+    df_out = pd.DataFrame(rows)
+    # df_out.to_csv(f"{output_dir}/closure_results_resolutionBinning.csv", index=False)
+    return df_out
+
 
 def save_fit_params_to_json( inputFilePath, ifbinned, fit_result, cat_idx, json_path, model_name="BWxDCB", chi2_val=None):
     import time, json, os
@@ -327,6 +506,12 @@ def generateBWxDCB_plot(
     params
     mass_arr: numpy arrary of dimuon mass value to do calibration fit on
     cat_idx: str name of specific calibration category the mass_arr is from
+
+    Returns:
+        - The df_fit with columns ["cat_name", "fit_val", "fit_err"]
+        - Saves the fit plot as a PDF in output_dir
+        - Appends fit results to logfile in output_dir
+        - Saves fit parameters to a JSON file in output_dir
     """
     if df_fit is None:
         df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
@@ -358,17 +543,27 @@ def generateBWxDCB_plot(
     bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
     # bwmZ.setConstant(True) # Stated in HIG-19-006
     bwWidth.setConstant(True) # Stated in HIG-19-006
-    if (cat_idx == "30-45_BB_OB_EB" or cat_idx == "30-45_BO_OO_EO" or cat_idx == "30-45_BE_OE_EE"
-        or cat_idx == "30-45_BB"
+
+    print(f"cat_idx: {cat_idx}")
+
+    if (
+        cat_idx == "30-45_BB_OB_EB"
+        or cat_idx == "30-45_BO_OO_EO"
+        or cat_idx == "30-45_BE_OE_EE"
         or cat_idx == "30-45_BO"
-        # or cat_idx == "30-45_EE"
-        ):
+        or cat_idx == "30-45_EE"
+    ):
         """
         FIXME: Added this condition for 2018 data, because the fit was not converging
         """
         bwWidth.setConstant(False)
         bwmZ.setConstant(False)
-    if (cat_idx == "30-45_EE"):
+    if (
+        cat_idx == "30-45_EE"
+        or cat_idx == "30-45_BB"
+        or cat_idx == "resBin1"
+    ):
+        print("=====> Setting both bwmZ and bwWidth to constant for stability")
         bwmZ.setConstant(True)
         bwWidth.setConstant(True)
 
@@ -390,7 +585,9 @@ def generateBWxDCB_plot(
     # n2 = rt.RooRealVar("n2" , "n2", 114, 0.01, 385) #test 114
     n1.setConstant(True)
     n2.setConstant(True)
-    if "EE" in cat_idx:
+    if ("EE" in cat_idx
+        or cat_idx == "resBin1"
+    ):
         n1.setConstant(False)
         n2.setConstant(False)
         alpha1.setRange(0.2, 10)  # don't fix it too low
@@ -539,12 +736,16 @@ def generateBWxDCB_plot(
     logger.info(f"fitting elapsed time: {time.time() - time_step}")
     time.sleep(1) # rest a second for stability
     # do plotting
+    # NOTE: Remember to provide "Name" argument to plotOn so that legend and chi2 can find the correct objects
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
     # roo_hist.plotOn(frame, Name="data_hist") # name is explicitly defined so chiSquare can find it
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
-    final_model.plotOn(frame, Components="signal", LineColor=rt.kBlue)
-    final_model.plotOn(frame, Components="bkg", LineColor=rt.kRed)
-    model1.paramOn(frame, Parameters=[sigma], Layout=[0.55,0.94, 0.8])
+    final_model.plotOn(frame, Components="signal", Name="signal", LineColor=rt.kBlue)
+    final_model.plotOn(frame, Components="bkg", Name="bkg", LineColor=rt.kRed)
+    model1.paramOn(frame, Parameters=[sigma], Layout=[0.55,0.94, 0.8],
+                                # Label="Fit Result",
+                                # Format="NEU", AutoPrecision=1
+                                )
     frame.GetYaxis().SetTitle("Events")
     frame.Draw()
 
@@ -565,6 +766,18 @@ def generateBWxDCB_plot(
     latex.SetTextFont(42)
     latex.SetTextSize(0.04)
     latex.DrawLatex(0.7,0.8,f"#chi^2 = {chi2}")
+
+    # Add legend for components
+    legend = rt.TLegend(0.1, 0.75, 0.45, 0.90)
+    legend.SetBorderSize(0)
+    legend.SetFillStyle(0)
+    legend.SetTextFont(42)
+    legend.AddEntry(frame.findObject("data_hist"), "Data", "lep")
+    legend.AddEntry(frame.findObject("final_model"), "Total Fit", "l")
+    legend.AddEntry(frame.findObject("signal"), "Signal (BWxDCB)", "l")
+    legend.AddEntry(frame.findObject("bkg"), "Background (RooCMSShape)", "l")
+    legend.Draw("same")
+
     # canvas.Update()
 
     # obtain pull plot
@@ -1053,7 +1266,7 @@ def closure_test_from_df_BothBeforeAndAfter_OnSameCanvas(df, additional_string, 
 def plot_closure_comparison_calibrated_uncalibrated(
     df,
     output_dir,
-    output_plot="closure_test_combined_UpdatedClosure.pdf",
+    output_plot="closure_01122025.pdf",
     pdfFile_ExtraText="",
     additional_string="",
 ):
