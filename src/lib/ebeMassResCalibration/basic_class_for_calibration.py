@@ -1316,7 +1316,7 @@ def closure_test_from_df_BothBeforeAndAfter_OnSameCanvas(df, additional_string, 
 def plot_closure_comparison_calibrated_uncalibrated(
     df,
     output_dir,
-    output_plot="closure_01122025.pdf",
+    output_plot="closure_test_comparison.pdf",
     pdfFile_ExtraText="",
     additional_string="",
 ):
