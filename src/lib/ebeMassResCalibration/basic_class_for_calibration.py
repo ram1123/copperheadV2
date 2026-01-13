@@ -21,6 +21,8 @@ from modules.utils import logger
 rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
 
 import ROOT
+# ROOT.gErrorIgnoreLevel = ROOT.kWarning
+ROOT.gErrorIgnoreLevel = ROOT.kFatal
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT.gSystem.Load(f"{CURRENT_DIR}/PDFs/RooCMSShape_cc.so")
@@ -533,7 +535,7 @@ def generateBWxDCB_plot(
     mass.setBins(nbins)
 
     # pick the preferred fit window
-    mass.setRange("fitRange", 80, 98)
+    mass.setRange("fitRange", 80, 100)
     mass.setRange("fullRange", 80,100)
 
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
@@ -631,6 +633,10 @@ def generateBWxDCB_plot(
     # exp_peak.setConstant(True)
     exp_beta.setVal(0.45)
     exp_beta.setConstant(True)
+    exp_alpha.setVal(80.6)
+    exp_alpha.setConstant(True)
+    exp_gamma.setVal(0.34)
+    exp_gamma.setConstant(True)
 
     model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
 
@@ -741,9 +747,9 @@ def generateBWxDCB_plot(
         Save=True,
         EvalBackend="cpu",
         # Extended=True,
-        # Minos=True,
+        Minos=True,
         # Hesse=True,
-        # Strategy=2,
+        Strategy=2,
         Range="fitRange",
         PrintLevel=-1,
     )
@@ -751,12 +757,8 @@ def generateBWxDCB_plot(
     logger.info(f"Fit results for category {cat_idx}:")
     fit_result.Print("v")
 
-    # calculate chi2 and add to plot
     n_free_params = fit_result.floatParsFinal().getSize()
     logger.info(f"n_free_params: {n_free_params}")
-    chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
-    chi2 = float("%.3g" % chi2)  # get upt to 3 sig fig
-    logger.info(f"chi2: {chi2}")
     # logger.info("Fit status:", fit_result.status())
     # logger.info("CovQual:", fit_result.covQual())
     logger.info("------------------------------")
@@ -790,6 +792,11 @@ def generateBWxDCB_plot(
     frame.GetYaxis().SetTitle("Events")
     frame.Draw()
 
+    # NOTE: compute chi2 after all plotOn calls to ensure correct components are drawn
+    # calculate chi2 and add to plot
+    chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
+    chi2 = float("%.3g" % chi2)  # get upt to 3 sig fig
+    logger.info(f"chi2: {chi2}")
     print(f"===> output dir: {output_dir}/fit_params.json")
     # store the fit result in a json file
     save_fit_params_to_json(inputFilePath, ifbinned, fit_result, cat_idx, f"{output_dir}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2)
