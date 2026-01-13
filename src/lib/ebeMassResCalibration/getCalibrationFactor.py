@@ -344,6 +344,20 @@ def main():
                     # keep only the new row for the category under consideration
                     df_fit_new = df_fit_new[df_fit_new["cat_name"] == fix_fitting_one_cat]
                     if df_fit_new.empty:
+                        # Critical: refit did not produce any row for the requested category.
+                        # Log detailed context to aid debugging before raising.
+                        available_cats = (
+                            df_fit["cat_name"].unique().tolist()
+                            if isinstance(df_fit, pd.DataFrame) and "cat_name" in df_fit.columns
+                            else None
+                        )
+                        logger.critical(
+                            "Refit produced no row for category '%s'. "
+                            "Refit dataframe shape: %s. Available categories in refit results: %s",
+                            fix_fitting_one_cat,
+                            getattr(df_fit, "shape", None),
+                            available_cats,
+                        )
                         raise RuntimeError(f"Refit produced no row for category {fix_fitting_one_cat}")
 
                     # append + overwrite the category with the new values
