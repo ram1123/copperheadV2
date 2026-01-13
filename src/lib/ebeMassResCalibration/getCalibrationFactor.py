@@ -19,7 +19,6 @@ import dask.dataframe as dd
 import awkward as ak
 
 from datetime import datetime
-from contextlib import contextmanager
 
 import correctionlib
 
@@ -42,14 +41,7 @@ from basic_class_for_calibration import (
     plot_histogram,
 )
 
-
-@contextmanager
-def timed(msg):
-    t0 = time.perf_counter()
-    yield
-    dt = time.perf_counter() - t0
-    logger.info(f"[TIMER] {msg}: {dt:.3f} s")
-
+from basic_class_for_calibration import timed
 
 def _setup_path():
     current_dir = Path(__file__).resolve().parent
@@ -77,14 +69,14 @@ def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=
 
     data_categories = get_calib_categories(ddf)
 
-    print("Data categories for fitting:")
-    for cat_name in data_categories.keys():
-        print(f" - {cat_name}")
+    # logger.debug("Data categories for fitting:")
+    # for cat_name in data_categories.keys():
+    #     logger.debug(f" - {cat_name}")
 
     df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
     for cat_name, mask in data_categories.items():
         if fix_fitting_one_cat and cat_name != fix_fitting_one_cat:
-            logger.debug(f"Skipping category {cat_name}, as no re-fitting required.")
+            # logger.debug(f"Skipping category {cat_name}, as no re-fitting required.")
             continue
 
         if os.path.exists(f"{skim_dir}/mass_{cat_name}.npy"):
@@ -272,7 +264,7 @@ def main():
 
         # sanity check
         client.run(lambda: __import__("basic_class_for_calibration"))
-    else:
+    elif fix_fitting_one_cat is None:
         logger.info("Using local Dask client")
         client = get_dask_client(
             n_workers=CONFIG["n_workers"],
@@ -420,7 +412,7 @@ def main():
             closure_csv = f"{output_dir}/closure_results_resolutionBinning.csv"
 
             # if calibration_results_calibrated.csv exists, skip calibration
-            if os.path.exists(closure_csv):
+            if os.path.exists(closure_csv) and False:
                 logger.info(f"{closure_csv} exists, skipping calibration step.")
                 df_closure = pd.read_csv(closure_csv)
             else:
@@ -430,7 +422,17 @@ def main():
                     CalibrationFactorJSONFile=f"{output_dir}/{CalibrationJSONFile}",
                     ifbinned=ifbinned,
                     pdfFile_ExtraText="",
+                    fix_bin=fix_fitting_one_cat,
                 )
+                # if fix_fitting_one_cat is not None, then update the existing closure_csv
+                if fix_fitting_one_cat is not None and os.path.exists(closure_csv):
+                    df_existing = pd.read_csv(closure_csv)
+                    # remove the row corresponding to fix_fitting_one_cat
+                    df_existing = df_existing[
+                        df_existing["cat_name"] != int(fix_fitting_one_cat)
+                    ]
+                    # append the new row
+                    df_closure = pd.concat([df_existing, df_closure], ignore_index=True)
                 df_closure.to_csv(closure_csv, index=False)
             print("plot closure comparison calibrated vs uncalibrated...")
             plot_closure_comparison_calibrated_uncalibrated(

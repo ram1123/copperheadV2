@@ -12,6 +12,8 @@ import sys
 
 import dask
 
+from contextlib import contextmanager
+
 import correctionlib
 
 import logging
@@ -39,6 +41,15 @@ CONFIG = {
     "fields_of_interest": ["mu1_pt", "mu1_eta", "mu2_eta", "dimuon_mass"],
     "fields_with_errors": ["mu1_pt", "mu1_ptErr", "mu2_pt", "mu2_ptErr", "mu1_eta", "mu2_eta", "dimuon_mass"],
 }
+
+
+@contextmanager
+def timed(msg):
+    t0 = time.perf_counter()
+    yield
+    dt = time.perf_counter() - t0
+    logger.info(f"[TIMER] {msg}: {dt:.3f} s")
+
 
 def filter_region(events, region="h-peak"):
     dimuon_mass = events.dimuon_mass
@@ -223,6 +234,7 @@ def closure_test_resolution_binning(
     CalibrationFactorJSONFile,
     pdfFile_ExtraText="",
     ifbinned=True,
+    fix_bin=None,
 ):
     """
     Validate calibration using bins in predicted per-event resolution (Table-32 style).
@@ -251,13 +263,21 @@ def closure_test_resolution_binning(
 
     logger.info("Computing dataframe for closure test...")
     # FIXME: for some reason ddf2.compute() is not running on gateway.
-    with dask.config.set(scheduler="threads"):
-        df = ddf2.compute()
-    # df = ddf2.compute()
+    with timed("Computing Dask dataframe"):
+        with dask.config.set(scheduler="threads"):
+            if fix_bin is not None:
+                logger.info(f"Computing only for fixed bin {fix_bin}...")
+                lo, hi = CLOSURE_BINS[int(fix_bin)-1]
+                logger.debug(f"Fixed bin range: [{lo}, {hi})")
+                ddf2 = ddf2[(ddf2["sigma_pred_cal"] >= lo) & (ddf2["sigma_pred_cal"] < hi)]
+            df = ddf2.compute()
 
     logger.info("Dataframe computed.")
     rows = []
     for i, (lo, hi) in enumerate(CLOSURE_BINS, start=1):
+        if fix_bin is not None and i != int(fix_bin):
+            logger.warning(f"Skipping bin {i} as per fix_bin={fix_bin}")
+            continue
         mask = (df["sigma_pred_cal"] >= lo) & (df["sigma_pred_cal"] < hi)
         df_bin = df[mask]
         if df_bin.empty:
@@ -287,16 +307,17 @@ def closure_test_resolution_binning(
         mass = df_bin["dimuon_mass"].to_numpy()
         df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
         cat_name = f"resBin{i}"
-        df_fit = generateBWxDCB_plot(
-            mass,
-            cat_name,
-            nbins=CONFIG["nbins"],
-            df_fit=df_fit,
-            output_dir=output_dir,
-            logfile=f"ClosureLog_{pdfFile_ExtraText}.txt",
-            ifbinned=ifbinned,
-            pdfFile_ExtraText=pdfFile_ExtraText,
-        )
+        with timed(f"Fitting Z mass for closure bin {i}..."):
+            df_fit = generateBWxDCB_plot(
+                mass,
+                cat_name,
+                nbins=CONFIG["nbins"],
+                df_fit=df_fit,
+                output_dir=output_dir,
+                logfile=f"ClosureLog_{pdfFile_ExtraText}.txt",
+                ifbinned=ifbinned,
+                pdfFile_ExtraText=pdfFile_ExtraText,
+            )
         sigma_fit = float(df_fit.loc[df_fit["cat_name"] == cat_name, "fit_val"].iloc[0])
         sigma_err = float(df_fit.loc[df_fit["cat_name"] == cat_name, "fit_err"].iloc[0])
 
@@ -515,6 +536,8 @@ def generateBWxDCB_plot(
         - Appends fit results to logfile in output_dir
         - Saves fit parameters to a JSON file in output_dir
     """
+    logger.info("Starting BWxDCB fit...")
+    logger.info(f"cat_idx: {cat_idx}")
     if df_fit is None:
         df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
 
@@ -528,6 +551,7 @@ def generateBWxDCB_plot(
     upper_pad.Draw()
     lower_pad.Draw()
     upper_pad.cd()
+
     # workspace = rt.RooWorkspace("w", "w")
     mass_name = "dimuon_mass"
     # mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
@@ -535,15 +559,15 @@ def generateBWxDCB_plot(
     mass.setBins(nbins)
 
     # pick the preferred fit window
-    mass.setRange("fitRange", 80, 100)
+    mass.setRange("fitRange", 82, 100)
     mass.setRange("fullRange", 80,100)
 
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     if roo_dataset.numEntries() == 0:
         logger.error(f"No entries in RooDataSet for category {cat_idx}. Skipping.")
         return df_fit
-    # workspace.Import(mass)
-    frame = mass.frame(Title=f"ZCR Dimuon Mass BWxDCB calibration fit for category {cat_idx}")
+
+    frame = mass.frame(Title=f"ZCR Dimuon Mass BWxDCB + RooCMSShape calibration fit for category {cat_idx}")
 
     # BWxDCB --------------------------------------------------------------------------
     bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
@@ -551,29 +575,27 @@ def generateBWxDCB_plot(
     # bwmZ.setConstant(True) # Stated in HIG-19-006
     bwWidth.setConstant(True) # Stated in HIG-19-006
 
-    print(f"cat_idx: {cat_idx}")
-
-    if (
-        cat_idx == "30-45_BB_OB_EB"
-        or cat_idx == "30-45_BO_OO_EO"
-        or cat_idx == "30-45_BE_OE_EE"
-        or cat_idx == "30-45_BO"
-        # or cat_idx == "30-45_EE"
-        # or cat_idx == "30-45_BB"
-    ):
-        """
-        FIXME: Added this condition for 2018 data, because the fit was not converging
-        """
-        bwWidth.setConstant(False)
-        bwmZ.setConstant(False)
-    if (
-        cat_idx == "30-45_EE"
-        # or cat_idx == "30-45_BB"
-        or cat_idx == "resBin1"
-    ):
-        print("=====> Setting both bwmZ and bwWidth to constant for stability")
-        bwmZ.setConstant(True)
-        bwWidth.setConstant(True)
+    # if (
+    #     cat_idx == "30-45_BB_OB_EB"
+    #     or cat_idx == "30-45_BO_OO_EO"
+    #     or cat_idx == "30-45_BE_OE_EE"
+    #     or cat_idx == "30-45_BO"
+    #     # or cat_idx == "30-45_EE"
+    #     # or cat_idx == "30-45_BB"
+    # ):
+    #     """
+    #     FIXME: Added this condition for 2018 data, because the fit was not converging
+    #     """
+    #     bwWidth.setConstant(False)
+    #     bwmZ.setConstant(False)
+    # if (
+    #     cat_idx == "30-45_EE"
+    #     # or cat_idx == "30-45_BB"
+    #     or cat_idx == "resBin1"
+    # ):
+    #     print("=====> Setting both bwmZ and bwWidth to constant for stability")
+    #     bwmZ.setConstant(True)
+    #     bwWidth.setConstant(True)
 
     model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
 
@@ -596,15 +618,15 @@ def generateBWxDCB_plot(
     alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
     n2 = rt.RooRealVar("n2" , "n2", 25, 0.01, 385)
     # n2 = rt.RooRealVar("n2" , "n2", 114, 0.01, 385) #test 114
-    n1.setConstant(True)
-    n2.setConstant(True)
-    if ("EE" in cat_idx
-        or cat_idx == "resBin1"
-    ):
-        n1.setConstant(False)
-        n2.setConstant(False)
-        alpha1.setRange(0.2, 10)  # don't fix it too low
-        alpha2.setRange(0.2, 10)
+    # n1.setConstant(True)
+    # n2.setConstant(True)
+    # if ("EE" in cat_idx
+    #     or cat_idx == "resBin1"
+    # ):
+    #     n1.setConstant(False)
+    #     n2.setConstant(False)
+    #     alpha1.setRange(0.2, 5)  # don't fix it too low
+    #     alpha2.setRange(0.2, 5)
     # mean.setRange(-2, 2)  # instead of full -10 to 10
     # # alpha1.setRange(0.1, 10)
     # alpha1.setVal(6.11551)
@@ -626,7 +648,7 @@ def generateBWxDCB_plot(
     # Add RooCMSShape Background --------------------------------------------------------------------------
     exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 101.0, 0.0, 300.0)
     exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.15, 0.0, 2.0)
-    exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 1.0)
+    exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 10.0)
     exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
     # if (cat_idx == "30-45_BO"
     #     or cat_idx == "30-45_EE"
@@ -634,14 +656,13 @@ def generateBWxDCB_plot(
     #     ):
     #     exp_gamma.setRange(0.0, 5.0)
 
-    exp_gamma.setRange(0.0, 5.0)
     # exp_peak.setConstant(True)
     exp_beta.setVal(0.45)
     exp_beta.setConstant(True)
-    exp_alpha.setVal(80.6)
+    exp_alpha.setVal(66.6)
     exp_alpha.setConstant(True)
-    exp_gamma.setVal(0.34)
-    exp_gamma.setConstant(True)
+    exp_gamma.setVal(0.45)
+    # exp_gamma.setConstant(True)
 
     model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
 
@@ -702,7 +723,7 @@ def generateBWxDCB_plot(
     # model2 = rt.RooProdPdf("bkg", "bkg", rt.RooArgList(model2_1, model2_2))
     # -----------------------------------------------------
 
-    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0.5, 0.99999999)
+    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.95, 0.05, 0.99999999)
     final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
     # final_model = model1_2
 
@@ -722,20 +743,21 @@ def generateBWxDCB_plot(
     _ = final_model.fitTo(
         roo_hist,
         Save=True,
-        EvalBackend ="cpu",
-        # Extended=True,
-        # Range="fitRange",
-        # PrintLevel=-1,
-    )
-    _ = final_model.fitTo(
-        roo_hist,
-        Save=True,
+        # SumW2Error=True,
         EvalBackend="cpu",
         # Extended=True,
-        # Range="fitRange",
+        Range="fitRange",
         # PrintLevel=-1,
     )
-    # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    # _ = final_model.fitTo(
+    #     roo_hist,
+    #     Save=True,
+    #     SumW2Error=True,
+    #     EvalBackend="cpu",
+    #     # Extended=True,
+    #     Range="fitRange",
+    #     # PrintLevel=-1,
+    # )
     # Fix all parameters of the signal model but the mean and  sigma of the DSCB
     # for param in rt.RooArgList(model1.getParameters(roo_hist)):
     #     # if param.GetName() != "sigma" and param.GetName() != "mean" and param.GetName() != "sigfrac":
@@ -746,17 +768,18 @@ def generateBWxDCB_plot(
     #     else:
     #         logger.warning(f"Parameter '{param.GetName()}' is not fixed and will be optimized during the fit.")
 
-    # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu", Minos=True, Extended=True, NumCPU=25, Strategy=2)
     fit_result = final_model.fitTo(
         roo_hist,
         Save=True,
+        # SumW2Error=True,
         EvalBackend="cpu",
-        # Extended=True,
-        Minos=True,
+        # Extended=True,  # For binned fit, Extended isn't always helpful
+        # Minos=True,
         # Hesse=True,
-        Strategy=2,
+        # Strategy=2,
         Range="fitRange",
         PrintLevel=-1,
+        # NumCPU=25,
     )
 
     logger.info(f"Fit results for category {cat_idx}:")

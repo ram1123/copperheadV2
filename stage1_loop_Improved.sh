@@ -240,10 +240,12 @@ for year in "${years[@]}"; do
     # ~18mins for step1+step2+step3 for 2024 data
     # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps all "
 
-    category="30-45_BB"
-    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps step1  --fixCat ${category} "
+    category="30-45_OB"
+    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps step1  --fixCat ${category} "
 
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V2 --ifbinned --closure_test "
+    category=2
+    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --closure_test "
+    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --closure_test  --fixCat ${category} "
     # ########## Calibration commands ##########
 
     # Logging/debug options
