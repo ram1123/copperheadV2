@@ -308,7 +308,7 @@ def closure_test_resolution_binning(
         df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
         cat_name = f"resBin{i}"
         with timed(f"Fitting Z mass for closure bin {i}..."):
-            df_fit = generateBWxDCB_plot(
+            df_fit = generateBWxDCB_RooCMSShape_plot(
                 mass,
                 cat_name,
                 nbins=CONFIG["nbins"],
@@ -513,6 +513,358 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
     return df_fit
 
 
+def generateBWxDCB_RooCMSShape_plot(
+    mass_arr,
+    cat_idx: str,
+    nbins,
+    df_fit=None,
+    out_string="",
+    logfile="CalibrationLog.txt",
+    output_dir="",
+    ifbinned=True,
+    pdfFile_ExtraText="",
+    inputFilePath="",
+):
+    """
+    params
+    mass_arr: numpy arrary of dimuon mass value to do calibration fit on
+    cat_idx: str name of specific calibration category the mass_arr is from
+
+    Returns:
+        - The df_fit with columns ["cat_name", "fit_val", "fit_err"]
+        - Saves the fit plot as a PDF in output_dir
+        - Appends fit results to logfile in output_dir
+        - Saves fit parameters to a JSON file in output_dir
+    """
+    logger.info("Starting BWxDCB fit...")
+    logger.info(f"cat_idx: {cat_idx}")
+    if df_fit is None:
+        df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
+
+    # if you want TCanvas to not crash, separate fitting and drawing
+    canvas = rt.TCanvas(str(cat_idx),str(cat_idx),800, 800) # giving a specific name for each canvas prevents segfault?
+    upper_pad = rt.TPad("upper_pad", "upper_pad", 0, 0.25, 1, 1)
+    lower_pad = rt.TPad("lower_pad", "lower_pad", 0, 0, 1, 0.35)
+    upper_pad.SetBottomMargin(0.14)
+    lower_pad.SetTopMargin(0.00001)
+    lower_pad.SetBottomMargin(0.25)
+    upper_pad.Draw()
+    lower_pad.Draw()
+    upper_pad.cd()
+
+    # workspace = rt.RooWorkspace("w", "w")
+    mass_name = "dimuon_mass"
+    # mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
+    mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,80,100)
+    mass.setBins(nbins)
+
+    # pick the preferred fit window
+    mass.setRange("fitRange", 82, 100)
+    mass.setRange("fullRange", 80,100)
+
+    roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
+    if roo_dataset.numEntries() == 0:
+        logger.error(f"No entries in RooDataSet for category {cat_idx}. Skipping.")
+        return df_fit
+
+    frame = mass.frame(Title=f"ZCR Dimuon Mass BWxDCB + RooCMSShape calibration fit for category {cat_idx}")
+
+    # BWxDCB --------------------------------------------------------------------------
+    bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
+    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
+    # bwmZ.setConstant(True) # Stated in HIG-19-006
+    bwWidth.setConstant(True) # Stated in HIG-19-006
+
+    # if (
+    #     cat_idx == "30-45_BB_OB_EB"
+    #     or cat_idx == "30-45_BO_OO_EO"
+    #     or cat_idx == "30-45_BE_OE_EE"
+    #     or cat_idx == "30-45_BO"
+    #     # or cat_idx == "30-45_EE"
+    #     # or cat_idx == "30-45_BB"
+    # ):
+    #     """
+    #     FIXME: Added this condition for 2018 data, because the fit was not converging
+    #     """
+    #     bwWidth.setConstant(False)
+    #     bwmZ.setConstant(False)
+    # if (
+    #     cat_idx == "30-45_EE"
+    #     # or cat_idx == "30-45_BB"
+    #     or cat_idx == "resBin1"
+    # ):
+    #     print("=====> Setting both bwmZ and bwWidth to constant for stability")
+    #     bwmZ.setConstant(True)
+    #     bwWidth.setConstant(True)
+
+    model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
+
+    """
+    Note from Jan: sometimes freeze n values in DCB to be frozen (ie 1, but could be other values)
+    This is because alpha and n are highly correlated, so roofit can be really confused.
+    Also, given that we care about the resolution, not the actual parameter values alpha and n, we can
+    put whatevere restrictions we want.
+    """
+    mean = rt.RooRealVar("mean" , "mean", 0, -10,10) # mean is mean relative to BW
+    # mean = rt.RooRealVar("mean" , "mean", 100, 95,110) # test
+    # NOTE: The lower bound on sigma was intentionally loosened from 0.1 to 0.001
+    # to allow very narrow resolution values in some categories / years where the
+    # fit would otherwise hit the boundary and fail to converge. This increases the
+    # risk of unphysically small sigmas, so fitted results should be monitored and,
+    # if needed, additional validation or tighter bounds should be applied downstream.
+    sigma = rt.RooRealVar("sigma" , "sigma", 2, .001, 4.0)
+    alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
+    n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 185)
+    alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
+    n2 = rt.RooRealVar("n2" , "n2", 25, 0.01, 385)
+    # n2 = rt.RooRealVar("n2" , "n2", 114, 0.01, 385) #test 114
+    # n1.setConstant(True)
+    # n2.setConstant(True)
+    # if ("EE" in cat_idx
+    #     or cat_idx == "resBin1"
+    # ):
+    #     n1.setConstant(False)
+    #     n2.setConstant(False)
+    #     alpha1.setRange(0.2, 5)  # don't fix it too low
+    #     alpha2.setRange(0.2, 5)
+    # mean.setRange(-2, 2)  # instead of full -10 to 10
+    # # alpha1.setRange(0.1, 10)
+    # alpha1.setVal(6.11551)
+    # alpha1.setConstant(True)
+
+    # # alpha2.setRange(0.1, 10)
+    # alpha2.setVal(6.78)
+    # alpha2.setConstant(True)
+    model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
+
+    # merge BW with DCB via convolution
+    model1 = rt.RooFFTConvPdf("signal", "signal", mass, model1_1, model1_2) # BWxDCB
+
+    mass.setBins(10000,"cache") # This nbins has nothing to do with actual nbins of mass. cache bins is representation of the variable only used in FFT
+    mass.setMin("cache",50.5)
+    mass.setMax("cache",130.5)
+
+    # Add RooCMSShape Background --------------------------------------------------------------------------
+    exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 101.0, 0.0, 300.0)
+    exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.15, 0.0, 2.0)
+    exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 10.0)
+    exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876,89.0, 93.0)  # 91.1876
+    # if (cat_idx == "30-45_BO"
+    #     or cat_idx == "30-45_EE"
+    #     or cat_idx == "30-45_BB"
+    #     ):
+    #     exp_gamma.setRange(0.0, 5.0)
+
+    # exp_peak.setConstant(True)
+    exp_beta.setVal(0.45)
+    # exp_beta.setConstant(True)
+
+    exp_alpha.setVal(66.6)
+    exp_alpha.setConstant(True)
+
+    exp_gamma.setVal(0.45)
+    exp_gamma.setConstant(True)
+
+    model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
+
+
+    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.95, 0.05, 0.99999999)
+    final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
+    # final_model = model1_2
+
+    time_step = time.time()
+
+    if ifbinned:
+        # fitting directly to unbinned dataset is slow, so first make a histogram
+        roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
+        if roo_hist.numEntries() == 0:
+            logger.error(f"No entries in RooDataHist for category {cat_idx}. Skipping.")
+            return df_fit
+    else:
+        roo_hist = roo_dataset
+
+    # do fitting
+    rt.EnableImplicitMT()
+    _ = final_model.fitTo(
+        roo_hist,
+        Save=True,
+        # SumW2Error=True,
+        EvalBackend="cpu",
+        # Extended=True,
+        Range="fitRange",
+        # PrintLevel=-1,
+    )
+    # _ = final_model.fitTo(
+    #     roo_hist,
+    #     Save=True,
+    #     SumW2Error=True,
+    #     EvalBackend="cpu",
+    #     # Extended=True,
+    #     Range="fitRange",
+    #     # PrintLevel=-1,
+    # )
+    # Fix all parameters of the signal model but the mean and  sigma of the DSCB
+    # for param in rt.RooArgList(model1.getParameters(roo_hist)):
+    #     # if param.GetName() != "sigma" and param.GetName() != "mean" and param.GetName() != "sigfrac":
+    #     FixPars = ["bwz_Width", "bwz_mZ", "alpha1", "n1", "alpha2", "n2"]
+    #     # if param.GetName() != "sigma" and param.GetName() != "mean" and param.GetName() != "bwz_Width" and param.GetName() != "bwz_mZ":
+    #     if param.GetName() in FixPars:
+    #         param.setConstant(True)
+    #     else:
+    #         logger.warning(f"Parameter '{param.GetName()}' is not fixed and will be optimized during the fit.")
+
+    fit_result = final_model.fitTo(
+        roo_hist,
+        Save=True,
+        # SumW2Error=True,
+        EvalBackend="cpu",
+        # Extended=True,  # For binned fit, Extended isn't always helpful
+        # Minos=True,
+        # Hesse=True,
+        # Strategy=2,
+        Range="fitRange",
+        PrintLevel=-1,
+        # NumCPU=25,
+    )
+
+    logger.info(f"Fit results for category {cat_idx}:")
+    fit_result.Print("v")
+
+    n_free_params = fit_result.floatParsFinal().getSize()
+    logger.info(f"n_free_params: {n_free_params}")
+    # logger.info("Fit status:", fit_result.status())
+    # logger.info("CovQual:", fit_result.covQual())
+    logger.info("------------------------------")
+
+    # # Save model and variables into RooWorkspace
+    # w = rt.RooWorkspace("w", "workspace")
+    # getattr(w, 'import')(mass, rt.RooFit.RecycleConflictNodes())
+    # getattr(w, 'import')(final_model, rt.RooFit.RecycleConflictNodes())
+    # getattr(w, 'import')(fit_result, rt.RooFit.RecycleConflictNodes())
+
+    # # Save to file
+    # model_dir = f"{output_dir}/final_models"
+    # os.makedirs(model_dir, exist_ok=True)
+    # ws_output_path = f"{model_dir}/workspace_cat{cat_idx}.root"
+    # w.writeToFile(ws_output_path)
+    # logger.info(f"Workspace saved to {ws_output_path}")
+
+    logger.info(f"fitting elapsed time: {time.time() - time_step}")
+    time.sleep(1) # rest a second for stability
+    # do plotting
+    # NOTE: Remember to provide "Name" argument to plotOn so that legend and chi2 can find the correct objects
+    roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
+    # roo_hist.plotOn(frame, Name="data_hist") # name is explicitly defined so chiSquare can find it
+    final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
+    final_model.plotOn(frame, Components="signal", Name="signal", LineColor=rt.kBlue)
+    final_model.plotOn(frame, Components="bkg", Name="bkg", LineColor=rt.kRed)
+    model1.paramOn(frame, Parameters=[sigma], Layout=[0.55,0.94, 0.8],
+                                # Label="Fit Result",
+                                # Format="NEU", AutoPrecision=1
+                                )
+    frame.GetYaxis().SetTitle("Events")
+    frame.Draw()
+
+    # NOTE: compute chi2 after all plotOn calls to ensure correct components are drawn
+    # calculate chi2 and add to plot
+    chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
+    chi2 = float("%.3g" % chi2)  # get up to 3 sig fig
+    logger.info(f"chi2: {chi2}")
+    print(f"===> output dir: {output_dir}/fit_params.json")
+    # store the fit result in a json file
+    save_fit_params_to_json(inputFilePath, ifbinned, fit_result, cat_idx, f"{output_dir}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2)
+
+    latex = rt.TLatex()
+    latex.SetNDC()
+    latex.SetTextAlign(11)
+    latex.SetTextFont(42)
+    latex.SetTextSize(0.04)
+    latex.DrawLatex(0.7,0.8,f"#chi^2 = {chi2}")
+
+    # Add legend for components
+    legend = rt.TLegend(0.1, 0.75, 0.45, 0.90)
+    legend.SetBorderSize(0)
+    legend.SetFillStyle(0)
+    legend.SetTextFont(42)
+    legend.AddEntry(frame.findObject("data_hist"), "Data", "lep")
+    legend.AddEntry(frame.findObject("final_model"), "Total Fit", "l")
+    legend.AddEntry(frame.findObject("signal"), "Signal (BWxDCB)", "l")
+    legend.AddEntry(frame.findObject("bkg"), "Background (RooCMSShape)", "l")
+    legend.Draw("same")
+
+    # canvas.Update()
+
+    # obtain pull plot
+    hpull = frame.pullHist("data_hist", "final_model")
+    lower_pad.cd()
+    frame2 = mass.frame(Title=" ")
+    frame2.addPlotable(hpull, "P")
+    frame2.GetYaxis().SetTitle("(Data-Fit)/ #sigma")
+    frame2.GetYaxis().SetRangeUser(-5, 5)
+    frame2.GetYaxis().SetTitleOffset(0.3)
+    frame2.GetYaxis().SetTitleSize(0.08)
+    frame2.GetYaxis().SetLabelSize(0.08)
+    frame2.GetXaxis().SetLabelSize(0.08)
+    frame2.GetXaxis().SetTitle("m_{#mu#mu} (GeV)")
+    frame2.Draw()
+    # add referecne line at 0
+    line = rt.TLine(75, 0, 105, 0)
+    # line.SetNDC()
+    line.SetLineColor(rt.kBlack)
+    line.SetLineWidth(2)
+    line.SetLineStyle(2)
+    line.Draw("same")
+    # add reference line at +/-2
+    line2 = rt.TLine(75, 2, 105, 2)
+    # line.SetNDC()
+    line2.SetLineColor(rt.kBlack)
+    line2.SetLineWidth(2)
+    line2.SetLineStyle(2)
+    line2.Draw("same")
+    line3 = rt.TLine(75, -2, 105, -2)
+    # line.SetNDC()
+    line3.SetLineColor(rt.kBlack)
+    line3.SetLineWidth(2)
+    line3.SetLineStyle(2)
+    line3.Draw("same")
+
+    # canvas.Modified()
+    canvas.Update()
+    # canvas.Draw()
+
+    # logger.info(f"mean_landau: {mean_landau.getVal()}")
+    # logger.info(f"sigma_landau: {sigma_landau.getVal()}")
+    logger.info(f"n1: {n1.getVal()}")
+    logger.info(f"n2: {n2.getVal()}")
+    logger.info(f"alpha1: {alpha1.getVal()}")
+    logger.info(f"alpha2: {alpha2.getVal()}")
+    logger.info(f"sigma result for cat {cat_idx}: {sigma.getVal()} +- {sigma.getError()}")
+
+    # save cat_idx and sigma value to a pandas dataframe
+    if not df_fit.empty:
+        new_row = pd.DataFrame([{"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}])
+        df_fit = pd.concat([df_fit, new_row], ignore_index=True)
+    else:
+        df_fit = pd.DataFrame([{"cat_name": cat_idx, "fit_val": sigma.getVal(), "fit_err": sigma.getError()}])
+
+    # Save the cat_idx and sigma value to a log file
+    with open(f"{output_dir}/{logfile}", "a") as f:
+        f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
+
+    full_path = f"{output_dir}/calibration_fitCat{cat_idx}.pdf"
+    if pdfFile_ExtraText:
+        full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
+    canvas.SaveAs(full_path)
+
+    os.makedirs(f"{output_dir}/fits_root", exist_ok=True)
+    canvas.SaveAs(f"{output_dir}/fits_root/calibration_fitCat{cat_idx}.root")
+
+    del canvas
+    # consider script to wait a second for stability?
+    time.sleep(1)
+    return df_fit
+
+
 def generateBWxDCB_plot(
     mass_arr,
     cat_idx: str,
@@ -649,7 +1001,7 @@ def generateBWxDCB_plot(
     exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 101.0, 0.0, 300.0)
     exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.15, 0.0, 2.0)
     exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 10.0)
-    exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
+    exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876,89.0, 93.0)  # 91.1876
     # if (cat_idx == "30-45_BO"
     #     or cat_idx == "30-45_EE"
     #     or cat_idx == "30-45_BB"
@@ -658,11 +1010,13 @@ def generateBWxDCB_plot(
 
     # exp_peak.setConstant(True)
     exp_beta.setVal(0.45)
-    exp_beta.setConstant(True)
+    # exp_beta.setConstant(True)
+
     exp_alpha.setVal(66.6)
     exp_alpha.setConstant(True)
+
     exp_gamma.setVal(0.45)
-    # exp_gamma.setConstant(True)
+    exp_gamma.setConstant(True)
 
     model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
 

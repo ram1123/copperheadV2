@@ -31,7 +31,7 @@ from modules.daskHelper import get_dask_gateway_client
 
 from basic_class_for_calibration import (
     get_calib_categories,
-    generateBWxDCB_plot,
+    generateBWxDCB_RooCMSShape_plot,
     closure_test_from_df,
     plot_closure_comparison_calibrated_uncalibrated,
     save_calibration_json,
@@ -94,7 +94,7 @@ def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=
         if mass.size == 0:
             logger.debug(f"Category {cat_name} has no events, skipping.")
             continue
-        df_fit = generateBWxDCB_plot(
+        df_fit = generateBWxDCB_RooCMSShape_plot(
             mass,
             cat_name,
             nbins=CONFIG["nbins"],
