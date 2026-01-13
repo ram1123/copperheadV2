@@ -531,6 +531,11 @@ def generateBWxDCB_plot(
     # mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
     mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,80,100)
     mass.setBins(nbins)
+
+    # pick the preferred fit window
+    mass.setRange("fitRange", 80, 98)
+    mass.setRange("fullRange", 80,100)
+
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     if roo_dataset.numEntries() == 0:
         logger.error(f"No entries in RooDataSet for category {cat_idx}. Skipping.")
@@ -551,7 +556,8 @@ def generateBWxDCB_plot(
         or cat_idx == "30-45_BO_OO_EO"
         or cat_idx == "30-45_BE_OE_EE"
         or cat_idx == "30-45_BO"
-        or cat_idx == "30-45_EE"
+        # or cat_idx == "30-45_EE"
+        # or cat_idx == "30-45_BB"
     ):
         """
         FIXME: Added this condition for 2018 data, because the fit was not converging
@@ -560,7 +566,7 @@ def generateBWxDCB_plot(
         bwmZ.setConstant(False)
     if (
         cat_idx == "30-45_EE"
-        or cat_idx == "30-45_BB"
+        # or cat_idx == "30-45_BB"
         or cat_idx == "resBin1"
     ):
         print("=====> Setting both bwmZ and bwWidth to constant for stability")
@@ -577,7 +583,7 @@ def generateBWxDCB_plot(
     """
     mean = rt.RooRealVar("mean" , "mean", 0, -10,10) # mean is mean relative to BW
     # mean = rt.RooRealVar("mean" , "mean", 100, 95,110) # test
-    sigma = rt.RooRealVar("sigma" , "sigma", 2, .1, 4.0)
+    sigma = rt.RooRealVar("sigma" , "sigma", 2, .001, 4.0)
     alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
     n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 185)
     alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
@@ -592,14 +598,14 @@ def generateBWxDCB_plot(
         n2.setConstant(False)
         alpha1.setRange(0.2, 10)  # don't fix it too low
         alpha2.setRange(0.2, 10)
-        # mean.setRange(-2, 2)  # instead of full -10 to 10
-        # # alpha1.setRange(0.1, 10)
-        # alpha1.setVal(6.11551)
-        # alpha1.setConstant(True)
+    # mean.setRange(-2, 2)  # instead of full -10 to 10
+    # # alpha1.setRange(0.1, 10)
+    # alpha1.setVal(6.11551)
+    # alpha1.setConstant(True)
 
-        # # alpha2.setRange(0.1, 10)
-        # alpha2.setVal(6.78)
-        # alpha2.setConstant(True)
+    # # alpha2.setRange(0.1, 10)
+    # alpha2.setVal(6.78)
+    # alpha2.setConstant(True)
 
     model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
 
@@ -617,12 +623,12 @@ def generateBWxDCB_plot(
     exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
     # if (cat_idx == "30-45_BO"
     #     or cat_idx == "30-45_EE"
+    #     or cat_idx == "30-45_BB"
     #     ):
-    #     # exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 5.0)
-    # exp_gamma.setRange(0.0, 5.0)
+    #     exp_gamma.setRange(0.0, 5.0)
 
     exp_gamma.setRange(0.0, 5.0)
-    exp_peak.setConstant(True)
+    # exp_peak.setConstant(True)
     exp_beta.setVal(0.45)
     exp_beta.setConstant(True)
 
@@ -685,7 +691,7 @@ def generateBWxDCB_plot(
     # model2 = rt.RooProdPdf("bkg", "bkg", rt.RooArgList(model2_1, model2_2))
     # -----------------------------------------------------
 
-    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0.000001, 0.99999999)
+    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.9, 0.5, 0.99999999)
     final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
     # final_model = model1_2
 
@@ -702,8 +708,22 @@ def generateBWxDCB_plot(
 
     # do fitting
     rt.EnableImplicitMT()
-    _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
-    _ = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    _ = final_model.fitTo(
+        roo_hist,
+        Save=True,
+        EvalBackend ="cpu",
+        # Extended=True,
+        # Range="fitRange",
+        # PrintLevel=-1,
+    )
+    _ = final_model.fitTo(
+        roo_hist,
+        Save=True,
+        EvalBackend="cpu",
+        # Extended=True,
+        # Range="fitRange",
+        # PrintLevel=-1,
+    )
     # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
     # Fix all parameters of the signal model but the mean and  sigma of the DSCB
     # for param in rt.RooArgList(model1.getParameters(roo_hist)):
@@ -716,9 +736,30 @@ def generateBWxDCB_plot(
     #         logger.warning(f"Parameter '{param.GetName()}' is not fixed and will be optimized during the fit.")
 
     # fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu", Minos=True, Extended=True, NumCPU=25, Strategy=2)
-    fit_result = final_model.fitTo(roo_hist, Save=True,  EvalBackend ="cpu")
+    fit_result = final_model.fitTo(
+        roo_hist,
+        Save=True,
+        EvalBackend="cpu",
+        # Extended=True,
+        # Minos=True,
+        # Hesse=True,
+        # Strategy=2,
+        Range="fitRange",
+        PrintLevel=-1,
+    )
 
-    fit_result.Print()
+    logger.info(f"Fit results for category {cat_idx}:")
+    fit_result.Print("v")
+
+    # calculate chi2 and add to plot
+    n_free_params = fit_result.floatParsFinal().getSize()
+    logger.info(f"n_free_params: {n_free_params}")
+    chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
+    chi2 = float("%.3g" % chi2)  # get upt to 3 sig fig
+    logger.info(f"chi2: {chi2}")
+    # logger.info("Fit status:", fit_result.status())
+    # logger.info("CovQual:", fit_result.covQual())
+    logger.info("------------------------------")
 
     # # Save model and variables into RooWorkspace
     # w = rt.RooWorkspace("w", "workspace")
@@ -748,13 +789,6 @@ def generateBWxDCB_plot(
                                 )
     frame.GetYaxis().SetTitle("Events")
     frame.Draw()
-
-    # calculate chi2 and add to plot
-    n_free_params = fit_result.floatParsFinal().getSize()
-    logger.info(f"n_free_params: {n_free_params}")
-    chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
-    chi2 = float('%.3g' % chi2) # get upt to 3 sig fig
-    logger.info(f"chi2: {chi2}")
 
     print(f"===> output dir: {output_dir}/fit_params.json")
     # store the fit result in a json file
@@ -841,6 +875,10 @@ def generateBWxDCB_plot(
     if pdfFile_ExtraText:
         full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
     canvas.SaveAs(full_path)
+
+    os.makedirs(f"{output_dir}/fits_root", exist_ok=True)
+    canvas.SaveAs(f"{output_dir}/fits_root/calibration_fitCat{cat_idx}.root")
+
     del canvas
     # consider script to wait a second for stability?
     time.sleep(1)
