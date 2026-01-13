@@ -19,6 +19,7 @@ import dask.dataframe as dd
 import awkward as ak
 
 from datetime import datetime
+from contextlib import contextmanager
 
 import correctionlib
 
@@ -41,6 +42,15 @@ from basic_class_for_calibration import (
     plot_histogram,
 )
 
+
+@contextmanager
+def timed(msg):
+    t0 = time.perf_counter()
+    yield
+    dt = time.perf_counter() - t0
+    logger.info(f"[TIMER] {msg}: {dt:.3f} s")
+
+
 def _setup_path():
     current_dir = Path(__file__).resolve().parent
     if str(current_dir) not in sys.path:
@@ -61,11 +71,14 @@ def save_dataframe_to_csv(df, path, description="DataFrame"):
     logger.info(f"Saved {description} to {path}")
 
 
-def step1_mass_fitting_zcr(data_events, output_dir="", fix_fitting_one_cat=None, ifbinned=False, inputFilePath=""):
+def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=None, ifbinned=False, inputFilePath=""):
     logger.info("=== Step 1: Mass fitting in ZCR ===")
     tstart = time.time()
 
-    data_categories = get_calib_categories(data_events)
+    data_categories = get_calib_categories(ddf)
+
+    if fix_fitting_one_cat:
+        data_categories = data_categories[fix_fitting_one_cat]
 
     print("Data categories for fitting:")
     for cat_name in data_categories.keys():
@@ -76,7 +89,19 @@ def step1_mass_fitting_zcr(data_events, output_dir="", fix_fitting_one_cat=None,
         if fix_fitting_one_cat and cat_name != fix_fitting_one_cat:
             logger.debug(f"Skipping category {cat_name}, as no re-fitting required.")
             continue
-        mass = ak.to_numpy(data_events["dimuon_mass"][mask])
+
+        if os.path.exists(f"{skim_dir}/mass_{cat_name}.npy"):
+            logger.info(f"Loading cached mass for category {cat_name} from {skim_dir}/mass_{cat_name}.npy")
+            mass = np.load(f"{skim_dir}/mass_{cat_name}.npy")
+        else:
+            logger.info(f"Extracting mass for category {cat_name}...")
+            with timed(f"extract mass for category {cat_name}"):
+                mass = ddf.loc[mask, "dimuon_mass"].compute().to_numpy()
+            # save to numpy array
+            with timed(f"save mass numpy for category {cat_name}"):
+                if fix_fitting_one_cat is not None:
+                    np.save(f"{skim_dir}/mass_{cat_name}.npy", mass)
+
         if mass.size == 0:
             logger.debug(f"Category {cat_name} has no events, skipping.")
             continue
@@ -127,7 +152,8 @@ def step2_mass_resolution(df, output_dir="tmp", pdfFile_ExtraText="", n_boot=300
     )
 
     logger.info("Computing dask dataframe...")
-    df = df2.compute()
+    with timed("compute dask df for step2"):
+        df = df2.compute()
 
     logger.info("Dask dataframe computed.")
     # Category masks (your function works with pandas too)
@@ -207,7 +233,6 @@ def main():
     # which steps to run
     parser.add_argument(
         "--steps",
-        nargs="+",
         choices=["step1", "step2", "step3", "all"],
         default="all",
         help="Steps to run (default: all)",
@@ -274,6 +299,9 @@ def main():
             INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/data_*/*/*.parquet"
 
         logger.info(f"Input dataset: {INPUT_DATASET}")
+
+        logger.info(f"Steps to run: {args.steps}")
+
         if args.backup:
             backup_file(f"{output_dir}/fit_results.csv")
             backup_file(f"{output_dir}/resolution_results.csv")
@@ -288,23 +316,22 @@ def main():
         skim_path = f"{skim_dir}/zpeak_skim.parquet"
         if os.path.exists(skim_path):
             logger.info(f"Using cached skim: {skim_path}")
-            ddf = dd.read_parquet(skim_path)
+            with timed("read cached skim"):
+                ddf = dd.read_parquet(skim_path)
         else:
             logger.info("Building Z-peak skim...")
-            ddf = dd.read_parquet(INPUT_DATASET)[CONFIG["fields_with_errors"]]
-            ddf = ddf[(ddf["dimuon_mass"] > CONFIG["zcr_filter_range"][0]) & (ddf["dimuon_mass"] < CONFIG["zcr_filter_range"][1])]
-            ddf.to_parquet(skim_path, write_index=False, overwrite=True)
-            ddf = dd.read_parquet(skim_path)
-        # Use all events
-        df_computed = ddf.compute()
-        data_events = ak.Array(df_computed.to_dict(orient="list"))
-        ######### Use all events: END
+            with timed("compute df_computed for step1"):
+                ddf = dd.read_parquet(INPUT_DATASET)[CONFIG["fields_with_errors"]]
+                ddf = ddf[(ddf["dimuon_mass"] > CONFIG["zcr_filter_range"][0]) & (ddf["dimuon_mass"] < CONFIG["zcr_filter_range"][1])]
+                ddf.to_parquet(skim_path, write_index=False, overwrite=True)
+                ddf = dd.read_parquet(skim_path)
 
         if not args.closure_test:
             if args.steps == "step1" or args.steps == "all":
                 df_fit = step1_mass_fitting_zcr(
-                    data_events,
+                    ddf,
                     output_dir,
+                    skim_dir=skim_dir,
                     fix_fitting_one_cat=fix_fitting_one_cat,
                     ifbinned=ifbinned,
                     inputFilePath=LOAD_PATH.format(year=year),
@@ -360,7 +387,15 @@ def main():
                 for fmt, rounding in [(f"calibration_factors.tex", None),
                                     (f"calibration_factors_rounded.tex", 4),
                                     (f"calibration_factors_precision.tex", 3)]:
-                    df_tmp = df_merged[["cat_name", "fit_val", "fit_err", "median_val_NonCal", "calibration_factor"]]
+                    df_tmp = df_merged[
+                        [
+                            "cat_name",
+                            "fit_val",
+                            "fit_err",
+                            "median_val_NonCal",
+                            "calibration_factor",
+                        ]
+                    ].copy()
                     if rounding is not None:
                         for col in ["fit_val", "fit_err", "median_val_NonCal", "calibration_factor"]:
                             df_tmp[col] = df_tmp[col].map(lambda x: f"{x:.{rounding}f}")
