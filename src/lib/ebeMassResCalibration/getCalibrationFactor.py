@@ -209,7 +209,7 @@ def main():
     parser.add_argument(
         "--closure_test",
         action="store_true",
-        help="Run validation instead of computing calibration (default: False)",
+        help="Run closure test instead of computing calibration (default: False)",
     )
     parser.add_argument("--fixCat", type=str, default=None, help="Fit only one category")
     parser.add_argument("--years", nargs="+", default=["2018", "2017", "2016postVFP", "2016preVFP"], help="List of years to process")
