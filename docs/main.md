@@ -171,7 +171,5 @@ CLOSURE_BINS = [
 - To run the closure test use the following command:
 
 ```bash
-python src/lib/ebeMassResCalibration/getCalibrationFactor.py --years "2018" --closure_test
+python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv 12 --years "2018" --ifbinned  --closure_test
 ```
-
-
