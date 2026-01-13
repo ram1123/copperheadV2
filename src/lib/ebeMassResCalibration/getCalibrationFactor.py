@@ -225,7 +225,9 @@ def main():
     parser.add_argument(
         "--nanoAODv",
         dest="nanoAODv",
-        default="12"
+        type=int,
+        default=12,
+        help="NanoAOD version as an integer (e.g. 12)",
     )
     # which steps to run
     parser.add_argument(
