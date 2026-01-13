@@ -1,6 +1,12 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
+# 12 January 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_16Dec_NoJVM -y "2024" -m calib -k -d 2)
+```
+
 # 08 January 2026
 
 ```bash

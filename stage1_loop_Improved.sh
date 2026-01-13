@@ -236,12 +236,15 @@ for year in "${years[@]}"; do
 
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
 
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py  --years $year --extraString V1 --ifbinned --isMC --validate --fixCat --backup "
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py  --years $year --extraString V1 --ifbinned --isMC "
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py  --years $year --extraString V1 --ifbinned "
-    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py  --years $year --extraString V1 --ifbinned --validate "
+    # ########## Calibration commands ##########
+    # ~18mins for step1+step2+step3 for 2024 data
+    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps all "
 
-    command6="python src/lib/ebeMassResCalibration/calibration_factor.py --path $save_path"
+    category="30-45_BB"
+    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps step1  --fixCat ${category} "
+
+    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V2 --ifbinned --closure_test "
+    # ########## Calibration commands ##########
 
     # Logging/debug options
     if [[ "$debug" -ge 2 ]]; then
@@ -249,6 +252,7 @@ for year in "${years[@]}"; do
         command1+=" --log-level DEBUG "
         # command3+=" --log-level DEBUG "
         command4+=" --log-level DEBUG --debug "
+        # command5+=" --log-level DEBUG "
     else
         command0+=" --log-level INFO "
         command1+=" --log-level INFO "
@@ -267,7 +271,6 @@ for year in "${years[@]}"; do
         command2+=" --use_gateway "
         command4+=" --use_gateway "
         command5+=" --use_gateway "
-        command6+=" --use_gateway "
         command_compact+=" --use_gateway "
     fi
 

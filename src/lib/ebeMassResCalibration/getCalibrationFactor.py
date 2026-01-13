@@ -77,9 +77,6 @@ def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=
 
     data_categories = get_calib_categories(ddf)
 
-    if fix_fitting_one_cat:
-        data_categories = data_categories[fix_fitting_one_cat]
-
     print("Data categories for fitting:")
     for cat_name in data_categories.keys():
         print(f" - {cat_name}")

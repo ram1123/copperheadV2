@@ -2,16 +2,15 @@
 =================
 
 1. [Running the framework](#running-the-framework)
-    1. [Framework setup](#framework-setup)
-    2. [Running the code](#running-the-code)
-        1. [Obtain the reduced ntuples](#obtain-the-reduced-ntuples)
-        2. [Control Plots](#control-plots)
-    3. [DY pt mismodelling correction](#dy-pt-mismodelling-correction)
-        1. [Z-pT reweighting - validation](#z-pt-reweighting---validation)
-    4. [Improving dimuon mass resolution](#improving-dimuon-mass-resolution)
-        1. [Update](#update)
-
-
+   1. [Framework setup](#framework-setup)
+   2. [Running the code](#running-the-code)
+      1. [Obtain the reduced ntuples](#obtain-the-reduced-ntuples)
+      2. [Get the yields and compare with previous results](#get-the-yields-and-compare-with-previous-results)
+      3. [Control Plots](#control-plots)
+   3. [DY pt mismodelling correction](#dy-pt-mismodelling-correction)
+   4. [Event by Event (EBE) mass resolution calibration](#event-by-event-ebe-mass-resolution-calibration)
+        1. [How to run](#how-to-run)
+        2. [Closure test](#closure-test)
 
 
 --------------
@@ -30,11 +29,14 @@ Everytime you open a new terminal session, run the following command to setup th
 
 ```bash
 source setup_env.sh
+# default conda environment is `coffea_latest`.
+source setup_env.sh yun
+# yun is for `yun_coffea_latest`
 ```
 
 To create the dask client, open the jupyter notebook [DaskGatewaySLURM.ipynb](DaskGatewaySLURM.ipynb) and run cells upto section "Create the gateway" to create the dask client.
 
-**NOTE**: Make sure when you don't need the dask client, you close it from the notebook to free up the resources. For this run the cells under section "Delete the gateway".
+**NOTE**: *Make sure when you don't need the dask client, you close it from the notebook to free up the resources. For this run the cells under section "Delete the gateway".*
 
 ## Running the code
 
@@ -117,55 +119,59 @@ bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -
 For details check the detailed documentation: [Z-pT reweighting](ZpT_reweight.md)
 
 
-### Improving dimuon mass resolution
+## Event by Event (EBE) mass resolution calibration
 
 
 - Run the script [`getCalibrationFactor.py`](../src/lib/ebeMassResCalibration/getCalibrationFactor.py) to get the calibration factor for the EBE mass resolution.
 - The script will generate a JSON file with the calibration factors for different categories.
 - Copy the generated JSON file to the path `data/res_calib/` and update the path and name of this JSON file in the config file: `configs/parameters/correction_filelist.yaml`.
 
-#### How to run
+### How to run
 
 **NOTE:** Need to update the path of the input parquet files in the code [src/lib/ebeMassResCalibration/getCalibrationFactor.py](../src/lib/ebeMassResCalibration/getCalibrationFactor.py) before running.
 
-```bash
-cd src/lib/ebeMassResCalibration
-python getCalibrationFactor.py --years "2018"
-python getCalibrationFactor.py --years "2018" --fixCat "30-45_EE" --backup
-# python getCalibrationFactor.py --years "2018" --isMC
-# time(python getCalibrationFactor.py --isMC  --years "2016preVFP")
-# time(python getCalibrationFactor.py --isMC --validate --years "2016preVFP")
+<!-- ```bash
+python src/lib/ebeMassResCalibration/getCalibrationFactor.py --years "2018"
+python src/lib/ebeMassResCalibration/getCalibrationFactor.py --years "2018" --fixCat "30-45_EE" --backup
+# python src/lib/ebeMassResCalibration/getCalibrationFactor.py --years "2018" --isMC
+# time(python src/lib/ebeMassResCalibration/getCalibrationFactor.py --isMC  --years "2016preVFP")
+# time(python src/lib/ebeMassResCalibration/getCalibrationFactor.py --isMC --validate --years "2016preVFP")
 # time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l April19_NanoV12_UpdatedMassCalib -y 2018 -m all)
-```
+``` -->
 
 ```bash
 bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "calib"
 ```
 
-- To adjust the fitting one can change the parameters in the script `src/lib/ebeMassResCalibration/ebeMassResPlotter.py`
+- To adjust the fitting one can change the parameters in the script `src/lib/ebeMassResCalibration/getCalibrationFactor.py`
+- Once we get the json file, copy it to the path `data/res_calib/` and update the path and name of this json file in the config file: `configs/parameters/correction_filelist.yaml`
+- Then re-run stage-1 to get the updated mass calibration. **REMEMBER TO SWITCH ON THE BSC OPTION**.
 
-### Dec 2025 Updated commands
+#### Closure test
 
-```bash
-time(python src/lib/ebeMassResCalibration/getCalibrationFactor.py  --years "2018")
+For the closure test, to avoid the bias introduced by the original binning scheme, we use an alternative binning scheme. The bin edges are defined as
+
+```python
+CLOSURE_BINS = [
+    (0.6, 0.7),
+    (0.7, 0.8),
+    (0.8, 0.9),
+    (0.9, 1.0),
+    (1.0, 1.1),
+    (1.1, 1.2),
+    (1.3, 1.4),
+    (1.4, 1.5),
+    (1.5, 1.7),
+    (1.7, 2.0),
+    (2.0, 2.5),
+    (2.5, 3.5),
+]
 ```
 
-### Update
+- To run the closure test use the following command:
 
-- New code: `src/lib/ebeMassResCalibration/getCalibrationFactor_Improved.py`
-   - Just need to update the path of the input files and it should work.
-   - Once we get the json file, copy it to the path `data/res_calib/` and update the path and name of this json file in the config file: `configs/parameters/correction_filelist.yaml`
-   - Then re-run stage-1 to get the updated mass calibration. **REMEMBER TO SWITCH ON THE BSC OPTION**.
-- For validation use the jupyter notebook: `src/lib/ebeMassResCalibration/closure_test.ipynb`
+```bash
+python src/lib/ebeMassResCalibration/getCalibrationFactor.py --years "2018" --closure_test
+```
 
-# Other details
 
-1. [Custom nanoAOD production](NanoAODv12_v9.md)
-1. [Check files for LZMA compression errors or corrupted files (from nanoAOD production)](FailedJobsCheck.md)
-1. [Z-pT weight calculation](ZpT_reweight.md)
-1. [Event by event mass resolution: Basic idea](eventbyeventMassResolution.md)
-    1. [Technical details](EBE_technicalDetails.md)
-1. [Plotting codes](PlottingCodes.md)
-1. [Main framework - Basic idea](mainFramework.md)
-    1. [Technical details](mainFramework_technicalDetails.md)
-1. [Get yield](GetYields.md)
