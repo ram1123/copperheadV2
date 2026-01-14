@@ -733,6 +733,7 @@ def generateBWxDCB_RooCMSShape_plot(
     def roo_fit_opts(block):
         opts = [rt.RooFit.Save(True), rt.RooFit.EvalBackend("cpu")]
         if "Strategy" in block:   opts.append(rt.RooFit.Strategy(int(block["Strategy"])))
+        if "Minos" in block:     opts.append(rt.RooFit.Minos(bool(block["Minos"])))
         if "Hesse" in block:      opts.append(rt.RooFit.Hesse(bool(block["Hesse"])))
         if "Offset" in block:     opts.append(rt.RooFit.Offset(bool(block["Offset"])))
         if "Range" in block:      opts.append(rt.RooFit.Range(str(block["Range"])))
@@ -774,9 +775,9 @@ def generateBWxDCB_RooCMSShape_plot(
     # NOTE: Remember to provide "Name" argument to plotOn so that legend and chi2 can find the correct objects
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
     # roo_hist.plotOn(frame, Name="data_hist") # name is explicitly defined so chiSquare can find it
-    final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     final_model.plotOn(frame, Components="signal", Name="signal", LineColor=rt.kBlue)
     final_model.plotOn(frame, Components="bkg", Name="bkg", LineColor=rt.kRed)
+    final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     model1.paramOn(frame, Parameters=[sigma], Layout=[0.55,0.94, 0.8],
                                 # Label="Fit Result",
                                 # Format="NEU", AutoPrecision=1
@@ -838,20 +839,20 @@ def generateBWxDCB_RooCMSShape_plot(
     frame2.GetXaxis().SetTitle("m_{#mu#mu} (GeV)")
     frame2.Draw()
     # add referecne line at 0
-    line = rt.TLine(75, 0, 105, 0)
+    line = rt.TLine(80, 0, 100, 0)
     # line.SetNDC()
     line.SetLineColor(rt.kBlack)
     line.SetLineWidth(2)
     line.SetLineStyle(2)
     line.Draw("same")
     # add reference line at +/-2
-    line2 = rt.TLine(75, 2, 105, 2)
+    line2 = rt.TLine(80, 2, 100, 2)
     # line.SetNDC()
     line2.SetLineColor(rt.kBlack)
     line2.SetLineWidth(2)
     line2.SetLineStyle(2)
     line2.Draw("same")
-    line3 = rt.TLine(75, -2, 105, -2)
+    line3 = rt.TLine(80, -2, 100, -2)
     # line.SetNDC()
     line3.SetLineColor(rt.kBlack)
     line3.SetLineWidth(2)
