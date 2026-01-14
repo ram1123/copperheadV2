@@ -231,12 +231,41 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
         else:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+    elif year == "2022preEE":
+        if njet == 2 or njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+    elif year == "2022postEE":
+        if njet == 2 or njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+    elif year == "2023":
+        if njet == 2 or njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+    elif year == "2023BPix":
+        if njet == 2 or njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     else:
         leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+        txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     leg.AddEntry(hist_sf, "Data / DY MC SF", "l")
-    #leg.AddEntry(f0, f"Poly(order={len(f0.GetParameters())-1})", "l")
-    #leg.AddEntry(f1, f"Poly(order={len(f1.GetParameters())-1})", "l")
-    #leg.AddEntry(f_flat, "Flat Above xmax", "l")
+    # leg.AddEntry(f0, f"Poly(order={len(f0.GetParameters())-1})", "l")
+    # leg.AddEntry(f1, f"Poly(order={len(f1.GetParameters())-1})", "l")
+    # leg.AddEntry(f_flat, "Flat Above xmax", "l")
     leg.AddEntry(f_combined, "Combined Fit", "l")
     leg.Draw()
 

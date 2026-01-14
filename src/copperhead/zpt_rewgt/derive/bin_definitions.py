@@ -2,25 +2,51 @@ import numpy as np
 
 # define cut ranges to do polynomial fits. pt ranges beyond that point we fit with a constant
 poly_fit_ranges = {
-    "2018" : {
-        "njet0" : [10, 110],
-        "njet1" : [11, 100],
-        "njet2" : [10, 120],
+    "2016preVFP": {
+        "njet0": [30, 80],
+        "njet1": [13, 90],
+        "njet2": [15, 100],
     },
-    "2017" : {
-        "njet0" : [9.5, 110],
-        "njet1" : [10, 100],
-        "njet2" : [13, 115],
+    "2016postVFP": {
+        "njet0": [10, 100],
+        "njet1": [12, 80],
+        "njet2": [10, 90],
     },
-    "2016postVFP" : {
-        "njet0" : [10, 100],
-        "njet1" : [12, 80],
-        "njet2" : [10, 90],
+    "2017": {
+        "njet0": [9.5, 110],
+        "njet1": [10, 100],
+        "njet2": [13, 115],
     },
-    "2016preVFP" : {
-        "njet0" : [30, 80],
-        "njet1" : [13, 90],
-        "njet2" : [15, 100],
+    "2018": {
+        "njet0": [10, 110],
+        "njet1": [11, 100],
+        "njet2": [10, 120],
+    },
+
+    "2022preEE": {
+        "njet0": [15, 80],
+        "njet1": [21, 80],
+        "njet2": [10, 120],
+    },
+    "2022postEE": {
+        "njet0": [13, 100],
+        "njet1": [23, 80],
+        "njet2": [10, 120],
+    },
+    "2023": {
+        "njet0": [12, 80],
+        "njet1": [18, 80],
+        "njet2": [10, 120],
+    },
+    "2023BPix": {
+        "njet0": [10, 80],
+        "njet1": [18, 80],
+        "njet2": [10, 120],
+    },
+    "2024": {
+        "njet0": [10, 110],
+        "njet1": [11, 100],
+        "njet2": [10, 120],
     },
 }
 
@@ -40,16 +66,16 @@ def define_custom_binning():
         x += 0.4
     while x < 60.0:
         edges.append(x)
-        x += 0.5
+        x += 2.5
     while x < 80.0:
         edges.append(x)
-        x += 1.0
-    while x < 100.0:
-        edges.append(x)
-        x += 1.5
+        x += 5.0
+    # while x < 100.0:
+    #     edges.append(x)
+    #     x += 5
     while x <= 200.0:
         edges.append(x)
-        x += 5.0
+        x += 25.0
     # Ensure the last edge is exactly 200
     if edges[-1] < 200.0:
         edges.append(200.0)

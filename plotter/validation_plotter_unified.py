@@ -28,16 +28,13 @@ bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMC
 # Run2 DY samples
 DYVBF = ["dy_VBF_filter"]
 
-DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
+# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
 DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
 
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dyTo2L_M-50_incl"]
 # DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
-# DY_aMCatNLO = ["dyTo2Mu_M-50_aMCatNLO"]
 # DY_madgraph = ["dy_M-50_madgraph"]
 # DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
-# DY_aMCatNLO = ["dyTo2L_M-50_incl"]
-# DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"]
 # DY_aMCatNLO = ["dy_M-50_madgraph"]  # 2024
 DY_To2MU_MassBinned = [
     "dyTo2Mu_M-10To50",
@@ -46,7 +43,6 @@ DY_To2MU_MassBinned = [
 ]  # 2024
 DY_To2MU_inclusive = ["dyTo2Mu_M-50"]
 
-DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
 # DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
 DY_MLL_binned = ["dyTo2Mu_M-10To50", "dyTo2Mu_M-50To120", "dyTo2Mu_M-120To200"]
 
@@ -69,6 +65,11 @@ DY_HTBinned = [
 
 
 # Run3 DY samples
+# DY_aMCatNLO = ["dyTo2Mu_M-50_aMCatNLO"] # 2024
+# DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"] # 2022preEE
+DY_aMCatNLO = ["dyTo2L_M-50_incl"] # 2022postEE, 2023, 2023BPix
+
+# DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
 
 
 group_dict = {

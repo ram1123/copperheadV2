@@ -5,6 +5,15 @@
 
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_16Dec_NoJVM -y "2024" -m calib -k -d 2)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23October -y "2022preEE 2022postEE 2023 2023BPix" -m zpt_fit )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv12_23October -y "2022preEE 2022postEE 2023 2023BPix" -m calib -k )
+
+
+# sync dy 2024 hyeon
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3_sync.yaml -v 15 -l Run3_nanoAODv15_14Jan_SyncHyeon -y "2024" -m 1)
+time python scripts/sync_parquet_dimuon.py  /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_14Jan_SyncHyeon//stage1_output/2024/f1_0/dyTo2Mu_M-50_aMCatNLO/0  /depot/cms/users/yun79/hmm/copperheadV1clean/Run3OJan14_2026_20224Test//stage1_output/2024/f1_0/dy_M-50_aMCatNLO/0
+
+time python scripts/sync_parquet_dimuon.py  /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_14Jan_SyncHyeon//stage1_output/2024/f1_0/dyTo2Mu_M-50_aMCatNLO/0  /depot/cms/users/shar1172/hmm/copperheadV1clean/Run3OJan14_2026_20224Test//stage1_output/2024/f1_0/dy_M-50_aMCatNLO/0 -o hyeon_2024_sync_both_I_ran.csv
 ```
 
 # 08 January 2026
