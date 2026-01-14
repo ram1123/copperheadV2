@@ -421,14 +421,15 @@ def main():
                 logger.info(f"{closure_csv} exists, skipping calibration step.")
                 df_closure = pd.read_csv(closure_csv)
             else:
-                df_closure = closure_test_resolution_binning(
-                    ddf,
-                    output_dir=f"{output_dir}/closure_test",
-                    CalibrationFactorJSONFile=f"{output_dir}/{CalibrationJSONFile}",
-                    ifbinned=ifbinned,
-                    pdfFile_ExtraText="",
-                    fix_bin=fix_fitting_one_cat,
-                )
+                with timed("Total closure test time:"):
+                    df_closure = closure_test_resolution_binning(
+                        ddf,
+                        output_dir=f"{output_dir}/closure_test",
+                        CalibrationFactorJSONFile=f"{output_dir}/{CalibrationJSONFile}",
+                        ifbinned=ifbinned,
+                        pdfFile_ExtraText="",
+                        fix_bin=fix_fitting_one_cat,
+                    )
                 # if fix_fitting_one_cat is not None, then update the existing closure_csv
                 if fix_fitting_one_cat is not None and os.path.exists(closure_csv):
                     df_existing = pd.read_csv(closure_csv)
