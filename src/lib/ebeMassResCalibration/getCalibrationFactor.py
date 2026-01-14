@@ -43,10 +43,12 @@ from basic_class_for_calibration import (
 
 from basic_class_for_calibration import timed
 
+CURRENT_DIR = Path(__file__).resolve().parent
+
 def _setup_path():
-    current_dir = Path(__file__).resolve().parent
-    if str(current_dir) not in sys.path:
-        sys.path.insert(0, str(current_dir))
+    CURRENT_DIR = Path(__file__).resolve().parent
+    if str(CURRENT_DIR) not in sys.path:
+        sys.path.insert(0, str(CURRENT_DIR))
 
 def backup_file(filepath):
     if os.path.exists(filepath):
@@ -103,6 +105,7 @@ def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=
             logfile="CalibrationLog.txt",
             ifbinned=ifbinned,
             inputFilePath=inputFilePath,
+            fit_cfg_path=f"{CURRENT_DIR}/fit_config.yml",
         )
 
     logger.info("Step 1 completed in {:.2f} s".format(time.time() - tstart))
@@ -290,7 +293,8 @@ def main():
         CalibrationJSONFile = f"res_calib_BS_correction_{year}_{isMCString}_nanoAODv{args.nanoAODv}.json"
 
         if isMC:
-            INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/dy*MiNNLO/*/*.parquet"
+            # INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/dy*MiNNLO/*/*.parquet"
+            INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/dyTo2Mu_M-50_aMCatNLO/*/*.parquet"
         else:
             INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/data_*/*/*.parquet"
 

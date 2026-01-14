@@ -12,6 +12,10 @@ import sys
 
 import dask
 
+import yaml
+import fnmatch
+from copy import deepcopy
+
 from contextlib import contextmanager
 
 import correctionlib
@@ -198,6 +202,57 @@ RANGE = {
 }
 
 
+def load_fit_config(path: str) -> dict:
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
+def resolve_cat_config(cfg: dict, cat_idx: str) -> dict:
+    """
+    Merge global + best-matching overrides into one dict.
+    Precedence:
+      global < wildcard overrides (in file order) < exact override
+    """
+    base = deepcopy(cfg.get("global", {}))
+    overrides = cfg.get("overrides", {}) or {}
+
+    # apply wildcard overrides in insertion order
+    for key, block in overrides.items():
+        logger.info(f"Checking override key: {key} for cat_idx: {cat_idx}")
+        if "*" in key or "?" in key or "[" in key:
+            if fnmatch.fnmatch(cat_idx, key):
+                base = deep_merge(base, block)
+
+    # exact override wins last
+    if cat_idx in overrides:
+        base = deep_merge(base, overrides[cat_idx])
+
+    return base
+
+def deep_merge(a: dict, b: dict) -> dict:
+    out = deepcopy(a)
+    for k, v in (b or {}).items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = deep_merge(out[k], v)
+        else:
+            out[k] = deepcopy(v)
+    return out
+
+def apply_roorealvar_cfg(var, pcfg: dict):
+    """
+    pcfg supports: val, min, max, const
+    Only apply keys that exist.
+    """
+    if pcfg is None:
+        return var
+    if "min" in pcfg and "max" in pcfg:
+        var.setRange(float(pcfg["min"]), float(pcfg["max"]))
+    if "val" in pcfg:
+        var.setVal(float(pcfg["val"]))
+    if "const" in pcfg:
+        var.setConstant(bool(pcfg["const"]))
+    return var
+
+
 def plot_histogram(data, bins, range, xlabel, ylabel, title, output_path, median=None):
     plt.figure()
     plt.hist(data, bins=bins, range=range, color="C0", alpha=0.7)
@@ -317,6 +372,7 @@ def closure_test_resolution_binning(
                 logfile=f"ClosureLog_{pdfFile_ExtraText}.txt",
                 ifbinned=ifbinned,
                 pdfFile_ExtraText=pdfFile_ExtraText,
+                fit_cfg_path=f"{CURRENT_DIR}/fit_config.yml",
             )
         sigma_fit = float(df_fit.loc[df_fit["cat_name"] == cat_name, "fit_val"].iloc[0])
         sigma_err = float(df_fit.loc[df_fit["cat_name"] == cat_name, "fit_err"].iloc[0])
@@ -524,6 +580,7 @@ def generateBWxDCB_RooCMSShape_plot(
     ifbinned=True,
     pdfFile_ExtraText="",
     inputFilePath="",
+    fit_cfg_path="", fit_cfg=None
 ):
     """
     params
@@ -541,6 +598,27 @@ def generateBWxDCB_RooCMSShape_plot(
     if df_fit is None:
         df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
 
+    if fit_cfg is None:
+        if not fit_cfg_path:
+            raise ValueError("Provide fit_cfg_path or fit_cfg dict")
+        logger.info(f"Loading fit config from {fit_cfg_path}")
+        fit_cfg = load_fit_config(fit_cfg_path)
+
+    logger.info(f"Resolving category config for cat_idx={cat_idx}")
+    cat_cfg = resolve_cat_config(fit_cfg, str(cat_idx))
+
+    logger.info(f"Using category config: {cat_cfg}")
+    obs = cat_cfg.get("observable", {})
+    lo, hi = obs.get("range", [80.0, 100.0])
+    fit_lo, fit_hi = obs.get("fit_range", [82.0, 96.0])
+    full_lo, full_hi = obs.get("full_range", [lo, hi])
+    nbins = int(obs.get("nbins", nbins))
+
+    logger.info(f"Mass range: [{lo}, {hi}], fit_range: [{fit_lo}, {fit_hi}], full_range: [{full_lo}, {full_hi}], nbins: {nbins}")
+
+    mass_name = obs.get("name", "dimuon_mass")
+    mass_title = obs.get("title", "mass (GeV)")
+
     # if you want TCanvas to not crash, separate fitting and drawing
     canvas = rt.TCanvas(str(cat_idx),str(cat_idx),800, 800) # giving a specific name for each canvas prevents segfault?
     upper_pad = rt.TPad("upper_pad", "upper_pad", 0, 0.25, 1, 1)
@@ -552,15 +630,19 @@ def generateBWxDCB_RooCMSShape_plot(
     lower_pad.Draw()
     upper_pad.cd()
 
-    # workspace = rt.RooWorkspace("w", "w")
-    mass_name = "dimuon_mass"
-    # mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,np.min(mass_arr),np.max(mass_arr))
-    mass =  rt.RooRealVar(mass_name,"mass (GeV)",100,80,100)
+    mass =  rt.RooRealVar(mass_name, mass_title, 100, float(lo), float(hi))
     mass.setBins(nbins)
 
     # pick the preferred fit window
-    mass.setRange("fitRange", 82, 100)
-    mass.setRange("fullRange", 80,100)
+    mass.setRange("fitRange", float(fit_lo), float(fit_hi))
+    mass.setRange("fullRange", float(full_lo), float(full_hi))
+
+    # FFT cache settings
+    cache_bins = int(obs.get("fft_cache_bins", 1000))
+    cache_lo, cache_hi = obs.get("fft_cache_range", [float(lo), float(hi)])
+    mass.setBins(cache_bins,"cache") # This nbins has nothing to do with actual nbins of mass. cache bins is representation of the variable only used in FFT
+    mass.setMin("cache",cache_lo)
+    mass.setMax("cache",cache_hi)
 
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     if roo_dataset.numEntries() == 0:
@@ -569,33 +651,13 @@ def generateBWxDCB_RooCMSShape_plot(
 
     frame = mass.frame(Title=f"ZCR Dimuon Mass BWxDCB + RooCMSShape calibration fit for category {cat_idx}")
 
+    pc = cat_cfg.get("params", {})
     # BWxDCB --------------------------------------------------------------------------
     bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
-    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
-    # bwmZ.setConstant(True) # Stated in HIG-19-006
-    bwWidth.setConstant(True) # Stated in HIG-19-006
+    apply_roorealvar_cfg(bwmZ, pc.get("bwz_mZ"))
 
-    # if (
-    #     cat_idx == "30-45_BB_OB_EB"
-    #     or cat_idx == "30-45_BO_OO_EO"
-    #     or cat_idx == "30-45_BE_OE_EE"
-    #     or cat_idx == "30-45_BO"
-    #     # or cat_idx == "30-45_EE"
-    #     # or cat_idx == "30-45_BB"
-    # ):
-    #     """
-    #     FIXME: Added this condition for 2018 data, because the fit was not converging
-    #     """
-    #     bwWidth.setConstant(False)
-    #     bwmZ.setConstant(False)
-    # if (
-    #     cat_idx == "30-45_EE"
-    #     # or cat_idx == "30-45_BB"
-    #     or cat_idx == "resBin1"
-    # ):
-    #     print("=====> Setting both bwmZ and bwWidth to constant for stability")
-    #     bwmZ.setConstant(True)
-    #     bwWidth.setConstant(True)
+    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
+    apply_roorealvar_cfg(bwWidth, pc.get("bwz_Width"))
 
     model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
 
@@ -605,70 +667,51 @@ def generateBWxDCB_RooCMSShape_plot(
     Also, given that we care about the resolution, not the actual parameter values alpha and n, we can
     put whatevere restrictions we want.
     """
-    mean = rt.RooRealVar("mean" , "mean", 0, -10,10) # mean is mean relative to BW
-    # mean = rt.RooRealVar("mean" , "mean", 100, 95,110) # test
-    # NOTE: The lower bound on sigma was intentionally loosened from 0.1 to 0.001
-    # to allow very narrow resolution values in some categories / years where the
-    # fit would otherwise hit the boundary and fail to converge. This increases the
-    # risk of unphysically small sigmas, so fitted results should be monitored and,
-    # if needed, additional validation or tighter bounds should be applied downstream.
-    sigma = rt.RooRealVar("sigma" , "sigma", 2, .001, 4.0)
-    alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
-    n1 = rt.RooRealVar("n1" , "n1", 10, 0.01, 185)
-    alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
-    n2 = rt.RooRealVar("n2" , "n2", 25, 0.01, 385)
-    # n2 = rt.RooRealVar("n2" , "n2", 114, 0.01, 385) #test 114
-    # n1.setConstant(True)
-    # n2.setConstant(True)
-    # if ("EE" in cat_idx
-    #     or cat_idx == "resBin1"
-    # ):
-    #     n1.setConstant(False)
-    #     n2.setConstant(False)
-    #     alpha1.setRange(0.2, 5)  # don't fix it too low
-    #     alpha2.setRange(0.2, 5)
-    # mean.setRange(-2, 2)  # instead of full -10 to 10
-    # # alpha1.setRange(0.1, 10)
-    # alpha1.setVal(6.11551)
-    # alpha1.setConstant(True)
+    mean = rt.RooRealVar("mean" , "mean", 0, -10, 10) # mean is mean relative to BW
+    apply_roorealvar_cfg(mean, pc.get("mean"))
 
-    # # alpha2.setRange(0.1, 10)
-    # alpha2.setVal(6.78)
-    # alpha2.setConstant(True)
+    sigma = rt.RooRealVar("sigma" , "sigma", 2, .001, 4.0)
+    apply_roorealvar_cfg(sigma, pc.get("sigma"))
+
+    alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
+    apply_roorealvar_cfg(alpha1, pc.get("alpha1"))
+
+    n1 = rt.RooRealVar("n1" , "n1", 137, 1, 185)
+    apply_roorealvar_cfg(n1, pc.get("n1"))
+
+    alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
+    apply_roorealvar_cfg(alpha2, pc.get("alpha2"))
+
+    n2 = rt.RooRealVar("n2" , "n2",   2, 1, 20)
+    apply_roorealvar_cfg(n2, pc.get("n2"))
+
     model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
 
     # merge BW with DCB via convolution
     model1 = rt.RooFFTConvPdf("signal", "signal", mass, model1_1, model1_2) # BWxDCB
 
-    mass.setBins(10000,"cache") # This nbins has nothing to do with actual nbins of mass. cache bins is representation of the variable only used in FFT
-    mass.setMin("cache",50.5)
-    mass.setMax("cache",130.5)
+    logger.info("Configured BWxDCB model.")
+
 
     # Add RooCMSShape Background --------------------------------------------------------------------------
     exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 101.0, 0.0, 300.0)
+    apply_roorealvar_cfg(exp_alpha, pc.get("exp_alpha"))
+
     exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.15, 0.0, 2.0)
+    apply_roorealvar_cfg(exp_beta, pc.get("exp_beta"))
+
     exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 10.0)
-    exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876,89.0, 93.0)  # 91.1876
-    # if (cat_idx == "30-45_BO"
-    #     or cat_idx == "30-45_EE"
-    #     or cat_idx == "30-45_BB"
-    #     ):
-    #     exp_gamma.setRange(0.0, 5.0)
+    apply_roorealvar_cfg(exp_gamma, pc.get("exp_gamma"))
 
-    # exp_peak.setConstant(True)
-    exp_beta.setVal(0.45)
-    # exp_beta.setConstant(True)
-
-    exp_alpha.setVal(66.6)
-    exp_alpha.setConstant(True)
-
-    exp_gamma.setVal(0.45)
-    exp_gamma.setConstant(True)
+    exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
+    apply_roorealvar_cfg(exp_peak, pc.get("exp_peak"))
 
     model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
 
 
-    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.95, 0.05, 0.99999999)
+    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.999, 0.5, 0.99999999)
+    apply_roorealvar_cfg(sigfrac, pc.get("sigfrac"))
+
     final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
     # final_model = model1_2
 
@@ -683,49 +726,25 @@ def generateBWxDCB_RooCMSShape_plot(
     else:
         roo_hist = roo_dataset
 
+    fit_cfg_block = cat_cfg.get("fit", {})
+    stage1 = fit_cfg_block.get("stage1", {})
+    stage2 = fit_cfg_block.get("stage2", {})
+
+    def roo_fit_opts(block):
+        opts = [rt.RooFit.Save(True), rt.RooFit.EvalBackend("cpu")]
+        if "Strategy" in block:   opts.append(rt.RooFit.Strategy(int(block["Strategy"])))
+        if "Hesse" in block:      opts.append(rt.RooFit.Hesse(bool(block["Hesse"])))
+        if "Offset" in block:     opts.append(rt.RooFit.Offset(bool(block["Offset"])))
+        if "Range" in block:      opts.append(rt.RooFit.Range(str(block["Range"])))
+        if "PrintLevel" in block: opts.append(rt.RooFit.PrintLevel(int(block["PrintLevel"])))
+        # add Minos, SumW2Error, Extended, NumCPU similarly if you want
+        return opts
+
     # do fitting
     rt.EnableImplicitMT()
-    _ = final_model.fitTo(
-        roo_hist,
-        Save=True,
-        # SumW2Error=True,
-        EvalBackend="cpu",
-        # Extended=True,
-        Range="fitRange",
-        # PrintLevel=-1,
-    )
-    # _ = final_model.fitTo(
-    #     roo_hist,
-    #     Save=True,
-    #     SumW2Error=True,
-    #     EvalBackend="cpu",
-    #     # Extended=True,
-    #     Range="fitRange",
-    #     # PrintLevel=-1,
-    # )
-    # Fix all parameters of the signal model but the mean and  sigma of the DSCB
-    # for param in rt.RooArgList(model1.getParameters(roo_hist)):
-    #     # if param.GetName() != "sigma" and param.GetName() != "mean" and param.GetName() != "sigfrac":
-    #     FixPars = ["bwz_Width", "bwz_mZ", "alpha1", "n1", "alpha2", "n2"]
-    #     # if param.GetName() != "sigma" and param.GetName() != "mean" and param.GetName() != "bwz_Width" and param.GetName() != "bwz_mZ":
-    #     if param.GetName() in FixPars:
-    #         param.setConstant(True)
-    #     else:
-    #         logger.warning(f"Parameter '{param.GetName()}' is not fixed and will be optimized during the fit.")
 
-    fit_result = final_model.fitTo(
-        roo_hist,
-        Save=True,
-        # SumW2Error=True,
-        EvalBackend="cpu",
-        # Extended=True,  # For binned fit, Extended isn't always helpful
-        # Minos=True,
-        # Hesse=True,
-        # Strategy=2,
-        Range="fitRange",
-        PrintLevel=-1,
-        # NumCPU=25,
-    )
+    _ = final_model.fitTo(roo_hist, *roo_fit_opts(stage1))
+    fit_result = final_model.fitTo(roo_hist, *roo_fit_opts(stage2))
 
     logger.info(f"Fit results for category {cat_idx}:")
     fit_result.Print("v")
@@ -767,9 +786,20 @@ def generateBWxDCB_RooCMSShape_plot(
 
     # NOTE: compute chi2 after all plotOn calls to ensure correct components are drawn
     # calculate chi2 and add to plot
-    chi2 = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
-    chi2 = float("%.3g" % chi2)  # get up to 3 sig fig
-    logger.info(f"chi2: {chi2}")
+    # chiSquare(pdfName, histName, nFreeParams) returns chi2/ndf
+    chi2_per_ndf = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
+    chi2_per_ndf = float("%.3g" % chi2_per_ndf)  # get up to 3 sig fig
+    logger.info(f"chi2_per_ndf: {chi2_per_ndf}")
+
+    n_points = frame.getHist("data_hist").GetN()
+    ndf = n_points - n_free_params
+
+    logger.info(f"chi2/ndf = {chi2_per_ndf:.4g}  (n_points={n_points}, n_free={n_free_params}, ndf~{ndf})")
+
+    # If you want an approximate chi2 (not always super meaningful in RooFit, but ok for monitoring):
+    chi2 = chi2_per_ndf * ndf if ndf > 0 else float("nan")
+    logger.info(f"chi2 ~ {chi2:.4g}")
+
     print(f"===> output dir: {output_dir}/fit_params.json")
     # store the fit result in a json file
     save_fit_params_to_json(inputFilePath, ifbinned, fit_result, cat_idx, f"{output_dir}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2)
@@ -779,7 +809,7 @@ def generateBWxDCB_RooCMSShape_plot(
     latex.SetTextAlign(11)
     latex.SetTextFont(42)
     latex.SetTextSize(0.04)
-    latex.DrawLatex(0.7,0.8,f"#chi^2 = {chi2}")
+    latex.DrawLatex(0.7,0.8,f"#chi^2 = {chi2_per_ndf}")
 
     # Add legend for components
     legend = rt.TLegend(0.1, 0.75, 0.45, 0.90)

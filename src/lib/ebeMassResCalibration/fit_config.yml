@@ -1,0 +1,68 @@
+global:
+  observable:
+    name: dimuon_mass
+    title: "mass (GeV)"
+    nbins: 120
+    range: [80.0, 100.0]
+    fit_range: [80.0, 100.0]
+    full_range: [80.0, 100.0]
+    fft_cache_bins: 10000
+    fft_cache_range: [80.0, 100.0]
+
+  fit:
+    use_binned: true
+    stage1:
+      Strategy: 1
+      Hesse: false
+      Offset: true
+      Range: fitRange
+      PrintLevel: -1
+    stage2:
+      Strategy: 1
+      Hesse: true
+      Offset: true
+      Range: fitRange
+      PrintLevel: 1
+
+  params:
+    # --- Signal (BW) ---
+    bwz_mZ:     { val: 91.1876, min: 91.0,  max: 92.0,  const: false }
+    bwz_Width:  { val: 2.4952,  min: 1.0,   max: 3.0,   const: false }
+
+    # --- Signal (DCB) ---
+    mean:   { val: 0.0,  min: -10.0, max: 10.0, const: false }
+    sigma:  { val: 2.0,  min: 0.001, max: 4.0,  const: false }
+    alpha1: { val: 2.0,  min: 0.01,  max: 65.0, const: false }
+    n1:     { val: 137.0,min: 1.0,   max: 185.0,const: false }
+    alpha2: { val: 2.0,  min: 0.01,  max: 65.0, const: false }
+    n2:     { val: 2.0,  min: 1.0,   max: 20.0, const: false }
+
+    # --- Background (RooCMSShape) ---
+    exp_alpha: { val: 66.6,  min: 0.0,  max: 300.0, const: true }
+    exp_beta:  { val: 0.45,  min: 0.0,  max: 2.0,   const: true }
+    exp_gamma: { val: 0.45,  min: 0.0,  max: 10.0,  const: true }
+    exp_peak:  { val: 91.1876, min: 88.0, max: 94.0, const: false }
+
+    sigfrac:   { val: 0.999, min: 0.5, max: 0.99999999, const: false }
+
+overrides:
+  # exact category override
+  resBin1:
+    params:
+      bwz_mZ:    { const: true }
+      bwz_Width: { const: true }
+      exp_beta:  { const: false, val: 0.2, min: 0.0, max: 2.0 }
+
+  resBin8:
+    params:
+      bwz_mZ:    { const: true }
+      bwz_Width: { const: false }
+      exp_beta:  { const: false, val: 0.2, min: 0.0, max: 2.0 }
+
+  # pattern override (fnmatch style)
+  "30-45_*":
+    observable:
+      fit_range: [83.0, 95.0]
+    params:
+      sigma: { val: 2.5, min: 0.2, max: 4.0 }
+      exp_peak: { const: true }
