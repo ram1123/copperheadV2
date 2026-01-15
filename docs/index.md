@@ -3,4 +3,4 @@ layout: default
 title: Home
 ---
 
-{% include_relative main.md %}
+{% include_relative Introduction.md %}
