@@ -29,8 +29,6 @@ Where the option:
 bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018  -m "zpt_fit2" -n 0
 ```
 
-For details check the detailed documentation: [Z-pT reweighting](ZpT_reweight.md)
-
 
 # OLD Notes
 
@@ -39,8 +37,9 @@ For details check the detailed documentation: [Z-pT reweighting](ZpT_reweight.md
 There are three steps to run:
 1. `step-1`: get the root file with the histogram that contains the ratio of data and MC (DY) in the z-peak region.
 2. `step-2`: Use the f-test to determine the best polynomial order for the fit.
-   1. **NOTE** : Before running this step, make sure to update bins and ranges in [bin_definitions.py](../data/zpt_rewgt/fitting/bin_definitions.py)
+   1. **NOTE** : Before running this step, make sure to update bins and ranges in [bin_definitions.py](../src/copperhead/zpt_rewgt/derive/bin_definitions.py)
 3. `step-3`: Use the best polynomial order to fit the data and get the reweighting factors.
+
 
 ## Technical Details
 
@@ -85,14 +84,13 @@ Where
 
 ## Details of step-1
 
-- Code location: [save_SF_rootFiles.py](../data/zpt_rewgt/fitting/save_SF_rootFiles.py)
+- Code location: [save_SF_rootFiles.py](../src/copperhead/zpt_rewgt/derive/save_SF_rootFiles.py)
 
 
 ## Details of step-2
-- Code location: [do_f_test.py](../data/zpt_rewgt/fitting/do_f_test.py)
-
+- Code location: [do_f_test.py](../src/copperhead/zpt_rewgt/derive/do_f_test.py)
 ## Details of step-3
-- Code location: [get_polyFit.py](../data/zpt_rewgt/fitting/get_polyFit.py)
+- Code location: [get_polyFit.py](../src/copperhead/zpt_rewgt/derive/get_polyFit.py)
 
 
 **At the end don't forgot to commit the two YAML files. First file contains the details of the fit and the second file contains the reweighting factors.**
