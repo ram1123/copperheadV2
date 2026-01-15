@@ -1,0 +1,7 @@
+title: CopperheadV2 Documentation
+description: Documentation for H→μμ Purdue analysis framework
+theme: minima   # or just remove if you don’t want a theme
+
+# IMPORTANT
+source: docs
+markdown: kramdown
