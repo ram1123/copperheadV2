@@ -102,3 +102,5 @@ source /cvmfs/cms.cern.ch/cmsset_default.sh
 
 # Load from the current working directory (copperheadV2)
 export PYTHONPATH="$WORKDIR:$PYTHONPATH"
+
+echo "$CONDA_DEFAULT_ENV" > .conda_env_name.txt
