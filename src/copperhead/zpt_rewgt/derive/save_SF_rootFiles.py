@@ -13,6 +13,7 @@ from ROOT import RooFit
 import argparse
 
 from modules import selection
+from modules import classify_year
 
 
 def zipAndCompute(events, fields2load):
@@ -121,14 +122,20 @@ if __name__ == "__main__":
         print(f"base path dy: {base_path}/dy*{args.dy_sample}/*/*.parquet")
         data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
 
-        if args.dy_sample == "MiNNLO":
-            dy_events = dak.from_parquet(f"{base_path}/dy*MiNNLO/*/*.parquet")
-        elif args.dy_sample == "aMCatNLO":
-            dy_events = dak.from_parquet(f"{base_path}/dy*_aMCatNLO/*/*.parquet")
-        elif args.dy_sample == "VBF_filter":
-            dy_events = dak.from_parquet(f"{base_path}/dy_VBF_filter/*/*.parquet")
-        else:
-            raise ValueError(f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, or VBF_filter.")
+        if classify_year.is_run2(year):
+            if args.dy_sample == "MiNNLO":
+                dy_events = dak.from_parquet(f"{base_path}/dy*MiNNLO/*/*.parquet")
+            elif args.dy_sample == "aMCatNLO":
+                dy_events = dak.from_parquet(f"{base_path}/dy*_aMCatNLO/*/*.parquet")
+            elif args.dy_sample == "VBF_filter":
+                dy_events = dak.from_parquet(f"{base_path}/dy_VBF_filter/*/*.parquet")
+            else:
+                raise ValueError(f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, or VBF_filter.")
+        else: # run3
+            if year == "2022preEE":
+                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl_XSDYTurbo/*/*.parquet")
+            else: # 2022postEE, 2023, 2023BPix
+                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl/*/*.parquet")
 
         # apply z-peak region filter and nothing else
         _, data_events = selection.filterRegion(data_events, region="z-peak")

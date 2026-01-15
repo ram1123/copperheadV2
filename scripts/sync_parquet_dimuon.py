@@ -564,8 +564,8 @@ def parse_args():
     parser.add_argument(
         "--category",
         type=str,
-        default="vbf",
-        help="Category label for selection.applyRegionCatCuts (default: 'vbf').",
+        default="nocat",
+        help="Category label for selection.applyRegionCatCuts (default: 'nocat').",
     )
     parser.add_argument(
         "--region",
@@ -626,7 +626,8 @@ def main():
             return
 
         # Otherwise treat as directories (existing behavior)
-        dir1, dir2 = a, b
+        dir1, dir2 = file1, file2
+
         compare_two_dirs(
             dir1=dir1,
             dir2=dir2,
