@@ -1,9 +1,7 @@
 ---
-title: Home
+title: Introduction
 ---
 
-
-# Running the framework
 
 ## Framework setup
 
@@ -79,85 +77,3 @@ python run_plotter.py
 ```
 
 
-## DY pt mismodelling correction
-
-Seveal steps are needed to get the Z-pT weights.
-
-**Step-1**: Obtain the histograms of Z-pT in data and MC.
-```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m "zpt_fit0" -n 0
-```
-
-**Step-2**: After several checks we decided that to fit the ratio of Z-pT distribution in data and MC using the three functions in low, medium and high pT range. So, in this step we fit the ratio histograms and find the polynomial degrees that fits best in each range.
-
-```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m "zpt_fit1" -n 0
-```
-
-Where the option:
-- `-n`: specifies which jet bin to consider for fitting. `0` for zero jet bin, `1` for one jet bin and `2` for greater than equal to two jet bin.
-
-
-**Step-3**: Now we calculate the Z-pT weights using the fit functions obtained in the previous step.
-
-```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018  -m "zpt_fit2" -n 0
-```
-
-For details check the detailed documentation: [Z-pT reweighting](ZpT_reweight.md)
-
-
-## Event by Event (EBE) mass resolution calibration
-
-
-- Run the script [`getCalibrationFactor.py`](../src/lib/ebeMassResCalibration/getCalibrationFactor.py) to get the calibration factor for the EBE mass resolution.
-- The script will generate a JSON file with the calibration factors for different categories.
-- Copy the generated JSON file to the path `data/res_calib/` and update the path and name of this JSON file in the config file: `configs/parameters/correction_filelist.yaml`.
-
-### How to run
-
-**NOTE:** Need to update the path of the input parquet files in the code [src/lib/ebeMassResCalibration/getCalibrationFactor.py](../src/lib/ebeMassResCalibration/getCalibrationFactor.py) before running.
-
-<!-- ```bash
-python src/lib/ebeMassResCalibration/getCalibrationFactor.py --years "2018"
-python src/lib/ebeMassResCalibration/getCalibrationFactor.py --years "2018" --fixCat "30-45_EE" --backup
-# python src/lib/ebeMassResCalibration/getCalibrationFactor.py --years "2018" --isMC
-# time(python src/lib/ebeMassResCalibration/getCalibrationFactor.py --isMC  --years "2016preVFP")
-# time(python src/lib/ebeMassResCalibration/getCalibrationFactor.py --isMC --validate --years "2016preVFP")
-# time(bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv12.yaml -v 12 -l April19_NanoV12_UpdatedMassCalib -y 2018 -m all)
-``` -->
-
-```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "calib"
-```
-
-- To adjust the fitting one can change the parameters in the script `src/lib/ebeMassResCalibration/getCalibrationFactor.py`
-- Once we get the json file, copy it to the path `data/res_calib/` and update the path and name of this json file in the config file: `configs/parameters/correction_filelist.yaml`
-- Then re-run stage-1 to get the updated mass calibration. **REMEMBER TO SWITCH ON THE BSC OPTION**.
-
-#### Closure test
-
-For the closure test, to avoid the bias introduced by the original binning scheme, we use an alternative binning scheme. The bin edges are defined as
-
-```python
-CLOSURE_BINS = [
-    (0.6, 0.7),
-    (0.7, 0.8),
-    (0.8, 0.9),
-    (0.9, 1.0),
-    (1.0, 1.1),
-    (1.1, 1.2),
-    (1.3, 1.4),
-    (1.4, 1.5),
-    (1.5, 1.7),
-    (1.7, 2.0),
-    (2.0, 2.5),
-    (2.5, 3.5),
-]
-```
-
-- To run the closure test use the following command:
-
-```bash
-python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv 12 --years "2018" --ifbinned  --closure_test
-```

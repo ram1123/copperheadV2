@@ -117,8 +117,8 @@ print(f"step1 method 3 chi2ndf = {chi2/NDF}")
 # step1 method 3 chi2ndf = 1.1889835681131808
 
 """
-# NOTE: the difference chi2ndf values between method1 and method2 is about 3%, 
-the difference chi2ndf values between method2 and method3 is about 0.1%. 
+# NOTE: the difference chi2ndf values between method1 and method2 is about 3%,
+the difference chi2ndf values between method2 and method3 is about 0.1%.
 Conclusion: When calculating over one continuous region, all methods work fine
 """
 
@@ -126,7 +126,7 @@ Conclusion: When calculating over one continuous region, all methods work fine
 # ------------------------------
 # Step2: Test different chi2/ndf methods over
 # smoothely decaying distribution defined by
-# sumExponential function + do it over two 
+# sumExponential function + do it over two
 # separate regions where possible (hiHalf and loHalf)
 # ------------------------------
 # define new x
@@ -145,7 +145,7 @@ name = f"RooSumTwoExpPdf_a2_coeff"
 a2_coeff = ROOT.RooRealVar(name,name, -3.4552e-02,-2.0,1)
 name = f"RooSumTwoExpPdf_f_coeff"
 f_coeff = ROOT.RooRealVar(name,name,  2.4864e-01,0.0,1.0)
-pdf = ROOT.RooSumTwoExpPdf("RooSumTwoExpPdf", "RooSumTwoExpPdf", x, a1_coeff, a2_coeff, f_coeff) 
+pdf = ROOT.RooSumTwoExpPdf("RooSumTwoExpPdf", "RooSumTwoExpPdf", x, a1_coeff, a2_coeff, f_coeff)
 nFit_params = 3
 
 # Generate unbinned data
@@ -280,7 +280,7 @@ name = f"RooSumTwoExpPdf_a2_coeff"
 a2_coeff = ROOT.RooRealVar(name,name, -3.4552e-02,-2.0,1)
 name = f"RooSumTwoExpPdf_f_coeff"
 f_coeff = ROOT.RooRealVar(name,name,  2.4864e-01,0.0,1.0)
-pdf = ROOT.RooSumTwoExpPdf("RooSumTwoExpPdf", "RooSumTwoExpPdf", x, a1_coeff, a2_coeff, f_coeff) 
+pdf = ROOT.RooSumTwoExpPdf("RooSumTwoExpPdf", "RooSumTwoExpPdf", x, a1_coeff, a2_coeff, f_coeff)
 # fit
 fitresult = pdf.chi2FitTo(datahist, RooFit.Range(fit_range), ROOT.RooFit.PrintLevel(-1), Save=True)
 fitresult.Print("v")
@@ -297,7 +297,7 @@ print(f"step3 method 3 chi2ndf = {chi2/NDF}")
 # NOTE: for method4, we observe that chi2 obtained from chi2_ndf over the blinded region
 (sideband region)(chi2/ndf=0.848) and is comparable to to that over the full
 signal region (chi2/ndf=0.941) (about 10% difference).
-Conclusion: chi2_ndf_manual() should be used to calculate the chi2/ndf for fit 
+Conclusion: chi2_ndf_manual() should be used to calculate the chi2/ndf for fit
 functions over sideband regions.
 """
 

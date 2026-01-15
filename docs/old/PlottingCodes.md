@@ -1,3 +1,7 @@
+---
+title: Plotting Codes
+---
+
 # Data/MC comparison plots
 
 - Available code:  [validation_plotter_unified.py](../plotter/validation_plotter_unified.py)
