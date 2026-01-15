@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from datetime import datetime
 
-DEFAULT_TAGS = ["TODO", "FIXME", "XXX", "HACK", "BUG", "OPTIMIZE", "DEPRECATED", "NOTE"]
+DEFAULT_TAGS = ["TODO:", "FIXME:", "XXX:", "HACK:", "BUG:", "OPTIMIZE:", "DEPRECATED:", "NOTE:"]
 
 DEFAULT_IGNORE_DIRS = {
     ".git", ".github", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
