@@ -14,6 +14,8 @@ ROOT.gStyle.SetOptStat(0)
 # from do_f_test import define_custom_binning
 from bin_definitions import define_custom_binning
 
+# TODO: Add option to choose different binning schemes
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Perform goodness-of-fit for Z pT SFs")
     parser.add_argument(
