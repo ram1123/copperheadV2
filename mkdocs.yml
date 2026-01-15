@@ -1,0 +1,29 @@
+site_name: CopperheadV2 Documentation
+repo_url: https://github.com/ram1123/copperheadV2
+edit_uri: edit/dev_docs/
+
+docs_dir: docs
+site_dir: _site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Introduction: Introduction.md
+  - Running:
+      - Get Yields: GetYields.md
+      - Failed Jobs Check: FailedJobsCheck.md
+  - Corrections:
+      - Z-pT Reweighting: ZpT_reweight.md
+      - EBE Mass Resolution: eventbyeventMassResolution.md
+  - DNN:
+      - DNN for VBF: DNN_VBF.md
+  - Notes:
+      - Datasets Info: datasets_info.md
+      - NanoAOD v12 vs v9: NanoAODv12_v9.md
