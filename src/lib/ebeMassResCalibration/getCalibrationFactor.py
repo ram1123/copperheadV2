@@ -71,9 +71,9 @@ def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=
 
     data_categories = get_calib_categories(ddf)
 
-    # logger.debug("Data categories for fitting:")
-    # for cat_name in data_categories.keys():
-    #     logger.debug(f" - {cat_name}")
+    logger.debug("Data categories for fitting:")
+    for cat_name in data_categories.keys():
+        logger.debug(f" - {cat_name}")
 
     df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
     for cat_name, mask in data_categories.items():
@@ -91,6 +91,7 @@ def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=
             # save to numpy array
             with timed(f"save mass numpy for category {cat_name}"):
                 if fix_fitting_one_cat is not None:
+                    logger.debug("Save to numpy when refitting only one category")
                     np.save(f"{skim_dir}/mass_{cat_name}.npy", mass)
 
         if mass.size == 0:
@@ -140,7 +141,7 @@ def step2_mass_resolution(df, output_dir="tmp", pdfFile_ExtraText="", n_boot=300
     df2 = df.assign(
         dpt1 = (df["mu1_ptErr"] / df["mu1_pt"]) * (df["dimuon_mass"] / 2),
         dpt2 = (df["mu2_ptErr"] / df["mu2_pt"]) * (df["dimuon_mass"] / 2),
-        dimuon_ebe_mass_res_NonCalc = lambda x: np.sqrt(x["dpt1"]**2 + x["dpt2"]**2),
+        dimuon_ebe_mass_res_NonCal = lambda x: np.sqrt(x["dpt1"]**2 + x["dpt2"]**2),
     )
 
     logger.info("Computing dask dataframe...")
@@ -158,7 +159,7 @@ def step2_mass_resolution(df, output_dir="tmp", pdfFile_ExtraText="", n_boot=300
             logger.warning(f"Category {cat_name} empty, skipping.")
             continue
 
-        vals = cat_df["dimuon_ebe_mass_res_NonCalc"].to_numpy()
+        vals = cat_df["dimuon_ebe_mass_res_NonCal"].to_numpy()
         med = float(np.median(vals))
         med_err = float(
             median_bootstrap_err(vals, n_boot=n_boot, seed=hash(cat_name) % (2**32))
@@ -421,7 +422,7 @@ def main():
             closure_csv = f"{output_dir}/closure_results_resolutionBinning.csv"
 
             # if calibration_results_calibrated.csv exists, skip calibration
-            if os.path.exists(closure_csv) and False:
+            if os.path.exists(closure_csv):
                 logger.info(f"{closure_csv} exists, skipping calibration step.")
                 df_closure = pd.read_csv(closure_csv)
             else:

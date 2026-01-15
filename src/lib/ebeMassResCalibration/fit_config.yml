@@ -63,7 +63,7 @@ overrides:
             sigfrac: { val: 1.0, const: true }
             n1: { val: 132, const: true }
             # n2: { val: 3.8, const: true }
-            # mean: { val: 0.22, min: -2.0, max: 2.0, const: false }
+            mean: { val: 0.22, min: -2.0, max: 2.0, const: false }
             # exp_alpha: { const: false }
             # exp_beta: { const: false }
             # exp_gamma: { const: false }
