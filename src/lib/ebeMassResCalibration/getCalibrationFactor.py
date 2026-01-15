@@ -46,7 +46,6 @@ from basic_class_for_calibration import timed
 CURRENT_DIR = Path(__file__).resolve().parent
 
 def _setup_path():
-    CURRENT_DIR = Path(__file__).resolve().parent
     if str(CURRENT_DIR) not in sys.path:
         sys.path.insert(0, str(CURRENT_DIR))
 
