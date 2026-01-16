@@ -1,6 +1,5 @@
----
-layout: default
-title: Home
----
+# Home
 
-{% include_relative Introduction.md %}
+## Introduction
+
+--8<-- "Introduction.md"

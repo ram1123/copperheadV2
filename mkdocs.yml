@@ -22,6 +22,10 @@ plugins:
           options:
             show_source: true
 
+markdown_extensions:
+  - pymdownx.snippets:
+      base_path: docs
+
 nav:
   - Home: index.md
   - Introduction: Introduction.md
