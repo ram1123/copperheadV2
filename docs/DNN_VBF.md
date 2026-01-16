@@ -1,7 +1,3 @@
-# Basic Information
-
-## Training
-
-
-## Stage - 2
-
+---
+title: DNN for VBF
+---

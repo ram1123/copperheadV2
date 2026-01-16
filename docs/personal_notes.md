@@ -1,0 +1,57 @@
+---
+title: Some Notes
+---
+
+The framework pipeline:
+
+setup your env and voms proxy by:
+
+    <source setup_proxy.sh>
+
+this should activate copperheadV2 conda env
+
+generate your config by:
+
+    <python make_parameters.py --year {year} >
+
+this would save configs in ./config/parameters.json
+
+generate the list of samples and their meta_data by iteracitvely running through prestage_tester.ipynb (not a python file) on copperheadV2 conda env
+this would save the info in ./config/processor_samples.json
+
+
+with the neccessary configs and sample info, we run stage1 on ./stage1_runner.ipynb on copperheadV2 conda env
+
+
+
+combine Commands that work:
+
+    combine -M Significance -d combine_test_datacard.txt -m 125 -n _signif_cat0_ggh -t -1  --expectSignal 1  --setParameters pdf_index=0 --setParameterRanges r=-10,10 --cminDefaultMinimizerTolerance 0.1
+
+
+
+    combine -M Significance -d combine_test_datacard_long.txt -m 125 -n _signif_cat0_ggh --cminDefaultMinimizerStrategy 1 -t -1 --toysFrequentist --expectSignal 1 --X-rtd FITTER_NEWER_GIVE_UP --X-rtd FITTER_BOUND --setParameters pdf_index=0 --cminRunAllDiscreteCombinations --setParameterRanges r=-10,10 --X-rtd MINIMIZER_freezeDisassociatedParams --cminDefaultMinimizerTolerance 0.01 --X-rtd MINIMIZER_MaxCalls=9999999 --X-rtd FAST_VERTICAL_MORPH --verbose 3  &> output.log
+
+
+This gives reasonable significance:
+
+    combine -M Significance -d combine_test_datacard_long.txt -m 125 -n _signif_cat0_ggh --cminDefaultMinimizerStrategy 1 -t -1 --toysFrequentist --expectSignal 1 --X-rtd FITTER_NEWER_GIVE_UP --X-rtd FITTER_BOUND --setParameters pdf_index=0 --setParameterRanges r=-10,10 --X-rtd MINIMIZER_freezeDisassociatedParams --cminDefaultMinimizerTolerance 0.01 --X-rtd MINIMIZER_MaxCalls=9999999 --X-rtd FAST_VERTICAL_MORPH --verbose 3 --freezeParameters pdf_index  &> output_pdfIndexFrozen.log
+
+
+This does not:
+
+    combine -M Significance -d combine_test_datacard_long.txt -m 125 -n _signif_cat0_ggh --cminDefaultMinimizerStrategy=0 -t -1 --toysFrequentist --expectSignal 1 --X-rtd FITTER_NEWER_GIVE_UP --X-rtd FITTER_BOUND --setParameters pdf_index=0 --cminRunAllDiscreteCombinations --setParameterRanges r=-10,10 --X-rtd MINIMIZER_freezeDisassociatedParams --cminDefaultMinimizerTolerance=0.1 --X-rtd MINIMIZER_MaxCalls=9999999 --X-rtd FAST_VERTICAL_MORPH --verbose 3  &> output_fail.log
+
+
+my previous tries:
+
+    combine -M Significance -d datacard_cat0_multi.root -m 125 -n _signif_cat0_ggh -t -1  --expectSignal 1  --setParameters pdf_index=0 --setParameterRanges r=-10,10 --cminDefaultMinimizerTolerance 0.1
+
+
+
+    combine -M Significance -d combine_test_datacard_long.txt -m 125 -n _signif_cat0_ggh  --cminRunAllDiscreteCombinations --cminDefaultMinimizerStrategy=0 --expectSignal 1  --setParameters pdf_index=0  --setParameterRanges r=-10,10 --X-rtd MINIMIZER_freezeDisassociatedParams  --X-rtd MINIMIZER_MaxCalls=9999999 --verbose 3 --toysFrequentist -t -1  &> output_Asimov.log
+
+
+
+
+    combine -M Significance -d combine_test_datacard_long.txt -m 125 -n _signif_cat0_ggh  --cminDefaultMinimizerStrategy=0 --expectSignal 1  --X-rtd FITTER_NEVER_GIVE_UP --X-rtd FITTER_BOUND --cminRunAllDiscreteCombinations --setParameterRanges r=-10,10 --X-rtd MINIMIZER_freezeDisassociatedParam --cminDefaultMinimizerTolerance 0.01 --X-rtd MINIMIZER_MaxCalls=9999999 --X-rtd FAST_VERTICAL_MORPH --X-rtd MINIMIZER_MaxCalls=9999999 --verbose 3 --toysFrequentist -t -1  &> output_Asimov2.log

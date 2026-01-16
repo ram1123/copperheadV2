@@ -1,0 +1,16 @@
+Cutflow stats:
+Cut TotalEntries        :pass = 2800000             cumulative pass = 2800000             all = 2800000             -- eff = 100.0 %                    -- cumulative eff = 100.0 %
+Cut HLT_filter          :pass = 2447164             cumulative pass = 2447164             all = 2800000             -- eff = 87.4 %                    -- cumulative eff = 87.4 %
+Cut lumi_mask           :pass = 2800000             cumulative pass = 2447164             all = 2800000             -- eff = 100.0 %                    -- cumulative eff = 87.4 %
+Cut event_quality_flags :pass = 2799168             cumulative pass = 2446493             all = 2800000             -- eff = 100.0 %                    -- cumulative eff = 87.4 %
+Cut PV_npvsGood         :pass = 2800000             cumulative pass = 2446493             all = 2800000             -- eff = 100.0 %                    -- cumulative eff = 87.4 %
+Cut muon_pT_roch        :pass = 2607475             cumulative pass = 2445715             all = 2800000             -- eff = 93.1 %                    -- cumulative eff = 87.3 %
+Cut muon_eta            :pass = 2694152             cumulative pass = 2444845             all = 2800000             -- eff = 96.2 %                    -- cumulative eff = 87.3 %
+Cut muon_id             :pass = 2684515             cumulative pass = 2442539             all = 2800000             -- eff = 95.9 %                    -- cumulative eff = 87.2 %
+Cut muon_isGlobal_or_Tracker:pass = 2701739             cumulative pass = 2442539             all = 2800000             -- eff = 96.5 %                    -- cumulative eff = 87.2 %
+Cut muon_selection      :pass = 2581737             cumulative pass = 2441749             all = 2800000             -- eff = 92.2 %                    -- cumulative eff = 87.2 %
+Cut muon_iso            :pass = 2670491             cumulative pass = 2439000             all = 2800000             -- eff = 95.4 %                    -- cumulative eff = 87.1 %
+Cut nmuons              :pass = 1778748             cumulative pass = 1759550             all = 2800000             -- eff = 63.5 %                    -- cumulative eff = 62.8 %
+Cut mm_charge           :pass = 2172691             cumulative pass = 1759436             all = 2800000             -- eff = 77.6 %                    -- cumulative eff = 62.8 %
+Cut electron_veto       :pass = 2798878             cumulative pass = 1759035             all = 2800000             -- eff = 100.0 %                    -- cumulative eff = 62.8 %
+Cut HemVeto             :pass = 2800000             cumulative pass = 1759035             all = 2800000             -- eff = 100.0 %                    -- cumulative eff = 62.8 %
