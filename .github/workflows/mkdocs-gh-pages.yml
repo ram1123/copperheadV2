@@ -36,6 +36,8 @@ jobs:
           python scripts/collect_todos.py
 
       - name: Build site
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           mkdocs build
 
