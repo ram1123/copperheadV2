@@ -47,7 +47,8 @@ def main():
 
     # Match lines like: TODO:, TODO(...):, FIXME - ..., etc. (case-insensitive)
     tag_re = r"|".join(re.escape(t) for t in tags)
-    pattern = re.compile(rf"(?P<tag>{tag_re})\b\s*(?:\([^)]+\))?\s*[:\-]?\s*(?P<msg>.*)$", re.IGNORECASE)
+    # pattern = re.compile(rf"(?P<tag>{tag_re})\b\s*(?:\([^)]+\))?\s*[:\-]?\s*(?P<msg>.*)$", re.IGNORECASE)
+    pattern = re.compile(rf"(?P<tag>{tag_re})\b\s*(?:\([^)]+\))?\s*[:\-]?\s*(?P<msg>.*)$")
 
     results = {}  # file -> list of (lineno, tag, msg, line)
     total = 0
