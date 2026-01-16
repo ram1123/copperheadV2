@@ -16,7 +16,6 @@ theme:
 
 plugins:
   - search
-  - gen-files
   - mkdocstrings:
       handlers:
         python:
@@ -43,5 +42,5 @@ nav:
       - NanoAOD v12 vs v9: NanoAODv12_v9.md
   - Maintenance:
       - TODO Summary: TODO_SUMMARY.md
-  - API:
-      - API: API.md
+  - References:
+      - References: API.md
