@@ -5,6 +5,7 @@ import os
 import re
 from pathlib import Path
 from datetime import datetime
+from collections import defaultdict
 
 DEFAULT_TAGS = ["TODO", "FIXME", "XXX", "HACK", "BUG", "OPTIMIZE", "DEPRECATED", "NOTE"]
 
@@ -50,7 +51,10 @@ def main():
     # pattern = re.compile(rf"(?P<tag>{tag_re})\b\s*(?:\([^)]+\))?\s*[:\-]?\s*(?P<msg>.*)$", re.IGNORECASE)
     pattern = re.compile(rf"(?P<tag>{tag_re})\b\s*(?:\([^)]+\))?\s*[:\-]?\s*(?P<msg>.*)$")
 
-    results = {}  # file -> list of (lineno, tag, msg, line)
+    # results = {}  # file -> list of (lineno, tag, msg, line)
+    results = defaultdict(lambda: defaultdict(list))
+    # results[tag][file] -> list of (lineno, msg)
+
     total = 0
 
     for p in iter_files(root, exts, ignore_dirs):
@@ -77,14 +81,16 @@ def main():
             if not m:
                 continue
 
-            tag = m.group("tag").upper()
+            tag = m.group("tag")  # case-sensitive, already uppercase
             msg = (m.group("msg") or "").strip()
 
-            hits.append((i, tag, msg, line_no_nl))
+            results[tag][str(rel)].append((i, msg))
             total += 1
 
-            if len(hits) >= args.max_per_file:
-                hits.append((i, "NOTE", "Truncated after max-per-file matches.", ""))
+            if len(results[tag][str(rel)]) >= args.max_per_file:
+                results[tag][str(rel)].append(
+                    (i, f"Truncated after {args.max_per_file} matches.")
+                )
                 break
 
         if hits:
@@ -95,28 +101,29 @@ def main():
     now = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
     lines = []
-    lines.append(f"# TODO Summary\n")
+    lines.append("# TODO Summary\n")
     lines.append(f"_Generated: {now}_\n")
-    lines.append(f"Found **{total}** annotations across **{len(results)}** files.\n")
+    lines.append(f"Found **{total}** annotations.\n")
 
     if not results:
         lines.append("No TODO/FIXME/etc markers found.\n")
     else:
-        # sort by file name
-        for fname in sorted(results.keys()):
-            lines.append(f"## `{fname}`\n")
-            lines.append("| Line | Tag | Message |")
-            lines.append("|---:|:---:|---|")
-            for lineno, tag, msg, raw in results[fname]:
-                msg_show = msg if msg else raw.strip()
-                msg_show = msg_show.replace("|", "\\|")
-                github_base = "https://github.com/ram1123/copperheadV2/blob/dev_docs"
-                src_link = f"{github_base}/{fname}#L{lineno}"
+        for tag in tags:
+            if tag not in results:
+                continue
 
-                lines.append(
-                    f"| [{lineno}]({src_link}) | `{tag}` | {msg_show} |"
-                )
-            lines.append("")
+            lines.append(f"## {tag}\n")
+
+            for fname in sorted(results[tag].keys()):
+                lines.append(f"### `{fname}`\n")
+                lines.append("| Line | Message |")
+                lines.append("|---:|---|")
+
+                for lineno, msg in results[tag][fname]:
+                    msg_show = msg.replace("|", "\\|")
+                    lines.append(f"| {lineno} | {msg_show} |")
+
+                lines.append("")
 
     out.write_text("\n".join(lines), encoding="utf-8")
     print(f"Wrote: {out} (items={total})")
