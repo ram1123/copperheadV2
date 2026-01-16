@@ -121,7 +121,11 @@ def main():
 
                 for lineno, msg in results[tag][fname]:
                     msg_show = msg.replace("|", "\\|")
-                    lines.append(f"| {lineno} | {msg_show} |")
+                    github_base = (
+                        "https://github.com/ram1123/copperheadV2/blob/dev_docs"
+                    )
+                    src_link = f"{github_base}/{fname}#L{lineno}"
+                    lines.append(f"| [{lineno}]({src_link}) | {msg_show} |")
 
                 lines.append("")
 
