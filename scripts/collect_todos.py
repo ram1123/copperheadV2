@@ -63,17 +63,27 @@ def main():
 
         hits = []
         for i, line in enumerate(text, start=1):
-            m = pattern.search(line)
+            line_no_nl = line.rstrip()
+
+            if "#" not in line_no_nl:
+                continue
+
+            comment = line_no_nl.split("#", 1)[1].strip()
+            if not comment:
+                continue
+
+            m = pattern.search(comment)
             if not m:
                 continue
 
             tag = m.group("tag").upper()
             msg = (m.group("msg") or "").strip()
-            hits.append((i, tag, msg, line.rstrip()))
+
+            hits.append((i, tag, msg, line_no_nl))
             total += 1
 
             if len(hits) >= args.max_per_file:
-                hits.append((i, "NOTE", f"Truncated after {args.max_per_file} matches in this file.", ""))
+                hits.append((i, "NOTE", "Truncated after max-per-file matches.", ""))
                 break
 
         if hits:
@@ -99,7 +109,12 @@ def main():
             for lineno, tag, msg, raw in results[fname]:
                 msg_show = msg if msg else raw.strip()
                 msg_show = msg_show.replace("|", "\\|")
-                lines.append(f"| {lineno} | `{tag}` | {msg_show} |")
+                github_base = "https://github.com/ram1123/copperheadV2/blob/dev_docs"
+                src_link = f"{github_base}/{fname}#L{lineno}"
+
+                lines.append(
+                    f"| [{lineno}]({src_link}) | `{tag}` | {msg_show} |"
+                )
             lines.append("")
 
     out.write_text("\n".join(lines), encoding="utf-8")
