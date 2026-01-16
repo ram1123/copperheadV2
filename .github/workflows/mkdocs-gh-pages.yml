@@ -37,7 +37,7 @@ jobs:
 
       - name: Build site
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}/src
         run: |
           mkdocs build
 
