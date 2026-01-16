@@ -20,11 +20,7 @@ plugins:
       handlers:
         python:
           options:
-            docstring_style: google
             show_source: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            members_order: source
 
 nav:
   - Home: index.md
