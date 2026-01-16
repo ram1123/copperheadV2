@@ -1,3 +1,3 @@
 # Workflow module
 
-::: my-package.workflow
+::: src.copperhead_processor
