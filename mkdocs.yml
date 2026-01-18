@@ -7,41 +7,43 @@ docs_dir: docs
 site_dir: _site
 
 theme:
-  name: material
-  features:
-    - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - search.highlight
+    name: material
+    features:
+        - navigation.sections
+        - navigation.expand
+        - navigation.top
+        - search.highlight
 
 plugins:
-  - search
-  - mkdocstrings:
-      handlers:
-        python:
-          options:
-            show_source: true
+    - search
+    - mkdocstrings:
+          handlers:
+              python:
+                  options:
+                      show_source: true
 
 markdown_extensions:
-  - pymdownx.snippets:
-      base_path: docs
+    - pymdownx.snippets:
+          base_path: docs
 
 nav:
-  - Home: index.md
-  - Introduction: Introduction.md
-  - Running:
-      - Get Yields: GetYields.md
-      - Failed Jobs Check: FailedJobsCheck.md
-  - Corrections:
-      - Z-pT Reweighting: ZpT_reweight.md
-      - EBE Mass Resolution: eventbyeventMassResolution.md
-  - DNN:
-      - DNN for VBF: DNN_VBF.md
-  - Notes:
-      - Datasets Info: datasets_info.md
-      - NanoAOD v12 vs v9: NanoAODv12_v9.md
-  - Maintenance:
-      - TODO Summary: TODO_SUMMARY.md
-  - References:
-      - References: copperhead_processor-reference.md
+    - Home: index.md
+    - Introduction:
+          - Introduction: Introduction.md
+          - Basic Information: Run3_all_basic_Information.md
 
+    - Running:
+          - Get Yields: GetYields.md
+          - Failed Jobs Check: FailedJobsCheck.md
+    - Corrections:
+          - Z-pT Reweighting: ZpT_reweight.md
+          - EBE Mass Resolution: eventbyeventMassResolution.md
+    - DNN:
+          - DNN for VBF: DNN_VBF.md
+    - Notes:
+          - Datasets Info: datasets_info.md
+          - NanoAOD v12 vs v9: NanoAODv12_v9.md
+    - Maintenance:
+          - TODO Summary: TODO_SUMMARY.md
+    - References:
+          - References: copperhead_processor-reference.md
