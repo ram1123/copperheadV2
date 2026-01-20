@@ -611,3 +611,30 @@ years:
                 filter_efficiency: null
                 references:
                     - null
+
+        Higgs:
+            ggh_powhegPS:
+                skip_sample: False
+                datasets:
+                    - /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv15-150X_mc2017_realistic_v1-v1/NANOAODSIM
+                cross_section_pb: 0.012652906
+                cross_section_source: null
+                kfactor:
+                value: 1.0
+                source: null
+                filter_efficiency: 1.0
+                references:
+                - null
+
+            vbf_powheg_dipole:
+                skip_sample: False
+                datasets:
+                - /VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv15-150X_mc2017_realistic_v1-v1/NANOAODSIM
+                cross_section_pb: 0.0008228
+                cross_section_source: null
+                kfactor:
+                value: 1.0
+                source: null
+                filter_efficiency: 1.0
+                references:
+                - null

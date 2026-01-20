@@ -372,9 +372,10 @@ years:
                 skip_sample: False
                 datasets:
                     - /DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v5-v2/NANOAODSIM
-                notes: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
-                cross_section_pb: 6372.24
-                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                notes: cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
+                cross_section_pb: 5991.0
+                cross_section_source: "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                cross_section_source_FEWS_NotUsed: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/, 2124.08*3 = 6372.24
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -387,9 +388,10 @@ years:
                 datasets:
                     - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
                     - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v1/NANOAODSIM
-                notes: njets <= 2, not njets==2; cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
-                cross_section_pb: 6372.24
-                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                notes: cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
+                cross_section_pb: 5991.00
+                cross_section_source: "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                cross_section_source_FEWS_NotUsed: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/, 2124.08*3 = 6372.24
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -884,7 +886,7 @@ years:
                     - NONE
 
             zz:
-                skip_sample: True
+                skip_sample: False
                 datasets:
                     - /ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
                 cross_section_pb: 12.75

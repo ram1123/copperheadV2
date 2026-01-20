@@ -30,8 +30,8 @@ poly_fit_ranges = {
     },
     "2022postEE": {
         "njet0": [13, 100],
-        "njet1": [23, 80],
-        "njet2": [10, 120],
+        "njet1": [21, 90],
+        "njet2": [15, 110],
     },
     "2023": {
         "njet0": [12, 80],
@@ -58,9 +58,15 @@ def define_custom_binning():
     """
     edges = []
     x = 0.0
+    while x <= 10.0:
+        edges.append(x)
+        x += 0.1
+    while x <= 20.0:
+        edges.append(x)
+        x += 0.2
     while x <= 30.0:
         edges.append(x)
-        x += 0.4
+        x += 0.3
     while x < 50.0:
         edges.append(x)
         x += 0.4
@@ -69,16 +75,21 @@ def define_custom_binning():
         x += 2.5
     while x < 80.0:
         edges.append(x)
-        x += 5.0
-    # while x < 100.0:
-    #     edges.append(x)
-    #     x += 5
+        x += 2.5
+    while x < 120.0:
+        edges.append(x)
+        x += 10.0
     while x <= 200.0:
         edges.append(x)
         x += 25.0
     # Ensure the last edge is exactly 200
     if edges[-1] < 200.0:
         edges.append(200.0)
+
+    # NOTE: if last bin width is smaller than the previous one, merge the last two bins
+    if (edges[-1] - edges[-2]) < (edges[-2] - edges[-3]):
+        edges[-2] = edges[-1]
+        edges.pop()
     # round the edges to avoid floating point issues
     edges = np.round(edges, 2)
     return np.unique(edges).tolist()

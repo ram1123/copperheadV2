@@ -2,7 +2,7 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run2_nanoAODv12_HEMVetoFix_NoSyst/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv15_16Dec_NoJVM/stage1_output/"
         comment: "What plotter should use by default"
 
     Run2_HEMVetoFix_v1:
@@ -37,18 +37,27 @@ trials:
         gitTab: V1.0
         Reference: https://github.com/ram1123/copperheadV2/discussions/61
 
-    Run3_nanoAODv15_JVMjetfilter:
-        stage1: "{base_dir}/Run3_nanoAODv15_16Dec/stage1_output/"
+    Run3_nanoAODv12_JVMjetfilter:
+        stage1: "{base_dir}/Run3_nanoAODv12_20Jan_JVMFilterJets/stage1_output/"
         comment: used JVM to filter jets
-        gitSHA: 281cf4a385fe3a9fe99b9522333733795470fba0
-        date: December 16, 2025
-        years: 2024
+        gitSHA: 53f92bbd93bcd6c4aa0ae76c859b210cc5cbcaef
+        date: January 20, 2026
+        years: 2022postEE
 
     Run3_nanoAODv15_NoJVM:
         stage1: "{base_dir}/Run3_nanoAODv15_16Dec_NoJVM/stage1_output/"
-        comment: used JVM to filter jets
-        gitSHA: 281cf4a385fe3a9fe99b9522333733795470fba0
+        comment: "DEPRECATED: DO NOT USE. NO JVM used and pileup weights are wrong (uses 2023 PU for 2024). Superseded by Run3_nanoAODv15_NoJVM_v2."
+        gitSHA: 684106663a2537928230ef5374c0fad04195867b
         date: December 16, 2025
+        years: 2024
+        deprecated: true
+        NOTE: OLD should be removed after checking `Run3_nanoAODv15_NoJVM_v2`.
+
+    Run3_nanoAODv15_NoJVM_v2:
+        stage1: "{base_dir}/Run3_nanoAODv15_15Jan_NoJVM/stage1_output/"
+        comment: No JVM used. Rerunning to cross-check if it is generated with official PU json file or not
+        gitSHA: d0e9a00c133c6e9eff3322e8f26b5e401bf5f4f5
+        date: January 15, 2026
         years: 2024
 
     Run3_noJetVetoMap:
@@ -56,20 +65,14 @@ trials:
         comment: "Run-3 without using any Jet veto map"
         date: November 11, 2025
         gitSHA: 86c12ed4e3b428b06e4f2af9a0916dc3ba1f1595
+        years: 2022preEE, 2022postEE, 2023, 2023BPix
 
     Run3_noJetVetoMap_v1:
         stage1: "{base_dir}/Run3_nanoAODv12_01Dec_NoJVM/stage1_output/"
         comment: "Run-3 without using any Jet veto map"
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
         year: 2023
-        date: December 02, 2025
-        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
-
-    Run3_noJetVetoMap_v1_2024:
-        stage1: "{base_dir}/Run3_nanoAODv15_01Dec/stage1_output/"
-        comment: "Run-3 year 2024, without any Jet veto map."
-        years: 2024 only
-        date: December 02, 2025
-        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
 
     Run3_WithJetVetoMap:
         stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap/stage1_output/"

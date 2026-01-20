@@ -1,10 +1,7 @@
 import logging
 from rich.logging import RichHandler
-from rich.console import Console
-from typing import Optional
 import os
 import sys
-import numpy as np
 import awkward as ak
 
 LOGGER_NAME = "CopperHead"
@@ -115,16 +112,3 @@ def fillEventNans(events, category="vbf"):
         logger.info("ERROR: unsupported category!")
         raise ValueError
     return events
-
-def convertVectorType4D(vector, vector_name):
-    new_vector = ak.zip(
-        {
-            "pt": vector.pt,
-            "eta": vector.eta,
-            "phi": vector.phi,
-            "mass": vector.mass,
-            "charge": vector.charge,
-        },
-        with_name=vector_name,
-        behavior=vector.behavior,
-    )

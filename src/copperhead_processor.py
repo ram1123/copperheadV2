@@ -1,37 +1,50 @@
-import coffea.processor as processor
-from coffea.lookup_tools import extractor
-from coffea.btag_tools import BTagScaleFactor
-from coffea.analysis_tools import PackedSelection
-import awkward as ak
-import numpy as np
-from typing import Union, TypeVar, Tuple
-import correctionlib
-from src.corrections.rochester import apply_roccor, apply_roccorRun3
-from src.corrections.fsr_recovery import fsr_recovery, fsr_recoveryV1
-from src.corrections.geofit import apply_geofit
-from src.corrections.jet import get_jec_factories, jet_id, jet_puid, fill_softjets, fill_softjets_HIG19006, applyHemVeto, do_jec_scale, do_jer_smear, get_jet_variation, applyUpDown, applyJetUncertaintyKinematics, custom_jet_id, get_puId
-# from src.corrections.weight import Weights
-from src.corrections.evaluator import pu_evaluator, nnlops_weights, musf_evaluator, get_musf_lookup, lhe_weights, stxs_lookups, add_stxs_variations, add_pdf_variations,  qgl_weights_keepDim, qgl_weights_V2, btag_weights_json, btag_weights_jsonKeepDim, get_jetpuid_weights, get_jetpuid_weights_old, get_jetpuid_weights_eta_dependent
-import json
-from coffea.lumi_tools import LumiMask
-import pandas as pd # just for debugging
-import dask_awkward as dak
-import dask
-from coffea.analysis_tools import Weights
-import copy
-from coffea.nanoevents.methods import vector
-import sys
-from src.corrections.custom_jec import ApplyJetCorrections
-from omegaconf import OmegaConf
-from coffea.analysis_tools import PackedSelection
-
 import time
-import logging
-from modules.utils import logger
+from typing import Tuple, TypeVar
 
-from modules.get_sample_info import get_sample_info
+import awkward as ak
+import coffea.processor as processor
+import correctionlib
+import numpy as np
+from coffea.analysis_tools import PackedSelection, Weights
+from coffea.btag_tools import BTagScaleFactor
+from coffea.lookup_tools import extractor
+from coffea.lumi_tools import LumiMask
+from coffea.nanoevents.methods import vector
 from modules.classify_year import is_run2, is_run3
-from modules.selection import filterRegion
+from modules.get_sample_info import get_sample_info
+from modules.utils import logger
+from omegaconf import OmegaConf
+
+# from src.corrections.weight import Weights
+from src.corrections.evaluator import (
+    add_pdf_variations,
+    add_stxs_variations,
+    btag_weights_jsonKeepDim,
+    get_jetpuid_weights_eta_dependent,
+    get_musf_lookup,
+    lhe_weights,
+    musf_evaluator,
+    nnlops_weights,
+    pu_evaluator,
+    qgl_weights_V2,
+)
+from src.corrections.fsr_recovery import fsr_recoveryV1
+from src.corrections.geofit import apply_geofit
+from src.corrections.jet import (
+    applyHemVeto,
+    applyJetUncertaintyKinematics,
+    applyUpDown,
+    custom_jet_id,
+    do_jec_scale,
+    do_jer_smear,
+    fill_softjets_HIG19006,
+    get_jec_factories,
+    get_jet_variation,
+    get_puId,
+    jet_id,
+    jet_puid,
+)
+from src.corrections.rochester import apply_roccor, apply_roccorRun3
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
 ak_array = TypeVar('ak_array')
@@ -79,7 +92,7 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         zpt_wgt_by_jet = ak.where(((poly_fit_cutoff_min < dimuon_pt) & (poly_fit_cutoff_max >= dimuon_pt)), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
 
         # horizontal line beyond poly_fit_cutoff_max
-        coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"horizontal_c0"]
+        coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["horizontal_c0"]
         zpt_wgt_by_jet_horizontal = ak.ones_like(dimuon_pt) * coeff
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_max < dimuon_pt), zpt_wgt_by_jet_horizontal, zpt_wgt_by_jet)
 
@@ -128,7 +141,6 @@ def p4_sum_mass(obj1, obj2):
     result_mass = np.sqrt(
         result_e**2 - result_px**2 - result_py**2 - result_pz**2
     )
-    result_rap = 0.5 * np.log((result_e + result_pz) / (result_e - result_pz))
     return result_mass
 
 def p4_subtract_pt(obj1, obj2):
@@ -138,7 +150,6 @@ def p4_subtract_pt(obj1, obj2):
     result_px = ak.zeros_like(obj1.pt)
     result_py = ak.zeros_like(obj1.pt)
     result_pz = ak.zeros_like(obj1.pt)
-    result_e = ak.zeros_like(obj1.pt)
     coeff = 1.0
     for obj in [obj1, obj2]:
         # px_ = obj.pt * np.cos(obj.phi)
@@ -334,7 +345,6 @@ class EventProcessor(processor.ProcessorABC):
         # application is in "do_jet_veto_maps_filterEvents" field in config.
         # If any jet in the event falls into the veto map region, the whole event is vetoed.
         """
-        year = self.config["year"]
         jet_veto_maps_path = self.config.get("jet_veto_maps", None)
         logger.debug(f"jet_veto_maps_path: {jet_veto_maps_path}")
         if jet_veto_maps_path is None:
@@ -377,7 +387,6 @@ class EventProcessor(processor.ProcessorABC):
         # If any jet in the event falls into the veto map region, then just remove that jet from the jet collection.
         # and set the MET pt to zero.
         """
-        year = self.config["year"]
         jet_veto_maps_path = self.config.get("jet_veto_maps", None)
         logger.debug(f"jet_veto_maps_path: {jet_veto_maps_path}")
         if jet_veto_maps_path is None:
@@ -622,7 +631,7 @@ class EventProcessor(processor.ProcessorABC):
 
         doing_BS_correction = self.config["switches"]["do_beamConstraint"]  # boolean that will be used for picking the correct ebe mass calibration factor
         if self.config["switches"]["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
-            logger.debug(f"doing beam constraint!")
+            logger.debug("doing beam constraint!")
             doing_BS_correction = True
             """
             TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
@@ -683,7 +692,7 @@ class EventProcessor(processor.ProcessorABC):
         # but apply muon iso overwrite, so base muon selection could be done
         do_fsr = self.config["switches"]["do_fsr"]
         if do_fsr:
-            logger.debug(f"doing fsr!")
+            logger.debug("doing fsr!")
             # applied_fsr = fsr_recovery(events)
             applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
@@ -811,11 +820,11 @@ class EventProcessor(processor.ProcessorABC):
 
         if not doing_BS_correction: # apply geofit
             if self.config["switches"]["do_geofit"] and ("dxybs" in events.Muon.fields):
-                logger.info(f"doing geofit!")
+                logger.info("doing geofit!")
                 gf_filter, gf_pt_corr = apply_geofit(events, self.config["year"], ~applied_fsr)
                 events["Muon", "pt"] = events.Muon.pt_gf # original
             else:
-                logger.warning(f"doing neither beam constraint nor geofit!")
+                logger.warning("doing neither beam constraint nor geofit!")
 
         t6b = time.perf_counter()
         logger.info(f"[timing] Geofit correction time: {t6b - t6a:.2f} seconds")
@@ -1159,7 +1168,6 @@ class EventProcessor(processor.ProcessorABC):
         do_jerunc = False
         # cache = events.caches[0]
         factory = None
-        useclib = False
         jet_default = ak.pad_none(jets, target=4) # save pre jec and jer Jet for comparison
         jet1_default = jet_default[:, 0]
         jet2_default = jet_default[:, 1]
@@ -1231,7 +1239,7 @@ class EventProcessor(processor.ProcessorABC):
                     logger.debug(f"dataset: {dataset}")
                     if run in dataset:
                         factory = self.jec_factories_data[run]
-                if factory == None:
+                if factory is None:
                     logger.debug("JEC factory not recognized!")
                     raise ValueError
 
@@ -1575,8 +1583,6 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_pt_over_jet2_pt": dimuon.pt / jet2_default.pt,
             "mu1_pt_raw": mu1.pt_raw,
             "mu2_pt_raw": mu2.pt_raw,
-            "mu1_pt_fsr": mu1.pt_fsr,
-            "mu2_pt_fsr": mu2.pt_fsr,
             # "pass_leading_pt" : pass_leading_pt,
 
             # add jet default kinematics here
@@ -1914,7 +1920,7 @@ class EventProcessor(processor.ProcessorABC):
         dataset = events.metadata["dataset"]
         do_zpt = ('dy' in dataset) and is_mc and self.config["switches"]["do_zpt"]
         if do_zpt:
-            njets = out_dict[f"njets_nominal"]
+            njets = out_dict["njets_nominal"]
             # njets = out_dict["n_genjets"]
             logger.info("=======================  apply zpt weights =======================")
             if "MiNNLO" in dataset: # FIXME: temporary fix for MiNNLO samples
@@ -2192,10 +2198,10 @@ class EventProcessor(processor.ProcessorABC):
         # Find jets that have selected muons within dR<0.4 from them -> line 465 of AN-19-124
 
         # matched_mu_pt = jets.matched_muons.pt_fsr if "pt_fsr" in jets.matched_muons.fields else jets.matched_muons.pt
-        matched_mu_pt = jets.matched_muons.pt_raw # afaik, matched muons are muons that are within dr < 0.4 to jets
-        matched_mu_eta = jets.matched_muons.eta_raw
-        matched_mu_iso = jets.matched_muons.pfRelIso04_all
-        matched_mu_id = jets.matched_muons[self.config["muon_id"]]
+        # matched_mu_pt = jets.matched_muons.pt_raw # afaik, matched muons are muons that are within dr < 0.4 to jets
+        # matched_mu_eta = jets.matched_muons.eta_raw
+        # matched_mu_iso = jets.matched_muons.pfRelIso04_all
+        # matched_mu_id = jets.matched_muons[self.config["muon_id"]]
         # logger.info(f'self.config["muon_id": {self.config["muon_id"]}')
         # logger.info(f"matched_mu_id: {matched_mu_id.compute()}")
         # logger.info(f"jets.matched_muons: {jets.matched_muons.compute()}")

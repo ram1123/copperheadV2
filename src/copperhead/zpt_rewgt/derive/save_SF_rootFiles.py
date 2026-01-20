@@ -4,13 +4,9 @@ import dask_awkward as dak
 import awkward as ak
 import argparse
 import sys
-from distributed import LocalCluster, Client, progress
+from distributed import Client
 import os
-from omegaconf import OmegaConf
-import copy
 from array import array
-from ROOT import RooFit
-import argparse
 
 from modules import selection
 from modules import classify_year

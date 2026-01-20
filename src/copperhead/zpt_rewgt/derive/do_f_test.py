@@ -4,11 +4,9 @@ from scipy.stats import f
 import os
 import argparse
 import logging
-import yaml
 from collections import defaultdict
 from modules.utils import logger
 from omegaconf import OmegaConf
-import numpy as np
 
 from bin_definitions import poly_fit_ranges, define_custom_binning
 

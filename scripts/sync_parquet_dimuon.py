@@ -23,7 +23,6 @@ import pandas as pd
 
 from distributed import Client
 
-from modules import selection
 
 # ----------------------------------------------------------------------
 # Columns

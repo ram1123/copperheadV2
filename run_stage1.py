@@ -1,53 +1,37 @@
-from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
-from src.copperhead_processor import EventProcessor
-# NanoAODSchema.warn_missing_crossrefs = False
+import argparse
+import copy
+import ctypes
+import glob
+import json
+import logging
+import os
+import subprocess
+import sys
+import time
+import traceback
+import warnings
+from itertools import islice
+from pathlib import Path
+
 import awkward as ak
-import matplotlib.pyplot as plt
-import numpy as np
 import dask
+import numpy as np
+import tqdm
+from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
+from dask.distributed import performance_report
+from distributed import Client
+from modules.utils import get_git_info, logger
+from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+from src.copperhead_processor import EventProcessor
+from src.lib.get_parameters import getParametersForYr
+
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
 dask.config.set({"distributed.scheduler.worker-saturation": 1.0})
-# from dask.distributed import Client
-import sys
-import json
-from distributed import LocalCluster, Client, progress
-import pandas as pd
-import os
-import tqdm
-import warnings
-import dask_awkward as dak
-import glob
-from itertools import islice
-import copy
-import argparse
-from dask.distributed import performance_report
-import os
-from omegaconf import OmegaConf
-from coffea.nanoevents.methods import vector
-from rich import print
 
-from pathlib import Path
-import subprocess
-import time
-import traceback
-import re
-
-
-# dask.config.set({'logging.distributed': 'error'})
-import logging
-from modules.utils import logger
-from modules.utils import get_git_info
-from modules.xrootd_utils import AAA_REDIRECTORS, AAA_ERROR_FRAGMENTS, normalize_paths
-
-import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-# test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
-import gc
-import ctypes
-from src.lib.get_parameters import getParametersForYr
 
 def trim_memory() -> int:
      libc = ctypes.CDLL("libc.so.6")
@@ -71,7 +55,6 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     """
     fraction = round(dataset_dict["metadata"]["fraction"], 3)
     fraction_str = str(fraction).replace('.', '_')
-    sample_name = dataset_dict['metadata']['dataset']
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
 
@@ -117,8 +100,6 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # Save the cutflow
     if hasattr(processor, "cutflow") and isCutflow:
         logger.info("Saving cutflow information")
-        fraction = round(dataset_dict["metadata"]["fraction"], 3)
-        fraction_str = str(fraction).replace('.', '_')
         cutflow_save_path = f"{save_path}"
         if not os.path.exists(cutflow_save_path):
             os.makedirs(cutflow_save_path)

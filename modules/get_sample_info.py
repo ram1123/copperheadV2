@@ -1,4 +1,5 @@
 import yaml
+from modules.utils import logger
 
 def get_sample_info(yaml_file, sample_name, year_key="2022preEE"):
     """
@@ -111,7 +112,7 @@ def list_all_datasets(yaml_file):
                     if "None" in ds:
                         continue
                     count += 1
-                    # print(f"{year_key:10} {process_group:10} {sample_name:29} {ds:150} {str(value):>9}")
+                    logger.debug(f"{year_key:10} {process_group:10} {sample_name:29} {ds:150} {str(value):>9}")
 
                     # For the RUCIO requests
                     print(f'dy{count}=( $(dasgoclient --query="dataset = {ds}"))')
@@ -141,3 +142,4 @@ def list_all_datasets(yaml_file):
 # print("\n-----------------------\n")
 # List all datasets
 # list_all_datasets("./configs/datasets/dataset_nanoAODv15_run2.yaml")
+# list_all_datasets("./configs/datasets/dataset_nanoAODv12_run3.yaml")
