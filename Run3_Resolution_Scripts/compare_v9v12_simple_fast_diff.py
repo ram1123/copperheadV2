@@ -38,7 +38,7 @@ def main():
 
     print(f"variables to plot: {variables_to_plot}")
 
-    output_dir = f"plots/NanoAODv9vsV12/{directoryTag}"
+    output_dir = f"plots/NanoAODv9vsV12vsV15/{directoryTag}"
     if NormalizeToUnity:
         output_dir += "_Normalized"
     os.makedirs(output_dir, exist_ok=True)

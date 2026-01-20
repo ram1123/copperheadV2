@@ -6,6 +6,8 @@ import ROOT
 from omegaconf import OmegaConf
 from bin_definitions import define_custom_binning
 
+from modules.utils import logger
+
 # Run in batch mode and disable statistics box
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
@@ -56,6 +58,7 @@ def make_combined_function(order0, order, xmin, xmax):
     - Polynomial of degree 'order' from xmin to xmax, shifted to ensure continuity
     - Linear function y = m·x + c beyond xmax, matched to the value and slope at xmax
     """
+    logger.debug(f"Creating combined function with orders {order0} and {order}, xmin={xmin}, xmax={xmax}")
     def func(x, par):
         xx = x[0]
         # if xx <= 0:
@@ -123,19 +126,29 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     3) flat line on [xmax1, global_xmax]. Then creates and fits the combined TF1 over [0, global_xmax].
     Returns all TF1s: (f0, f1, f_flat, f_combined).
     """
+    logger.info(f"Performing piecewise fits with orders {order0} and {order1}")
+
     # 1) Low-range fit
+    logger.debug(f"Fitting low range: 0 to {xmax0} with order {order0}")
     f0 = fit_polynomial(hist_sf, order0, 0.0, xmax0, fit_opts="L S Q")
 
     # 2) Mid-range fit
+    logger.debug(f"Fitting mid range: {xmin1} to {xmax1} with order {order1}")
     f1 = fit_polynomial(hist_sf, order1, xmin1, xmax1, fit_opts="L I S Q")
 
     # 3) High-range flat fit
+    logger.debug(f"Fitting high range: {xmax1} to {global_xmax} with flat line")
     f_flat = fit_flat_line(hist_sf, xmax1, global_xmax, fit_opts="L I S R")
     # f_flat = fit_polynomial(hist_sf, order1, xmax1, global_xmax, fit_opts="L I S R")
 
     # Build combined TF1
     npar = (order0 + 1) + (order1 + 1) + 2  # coefficients: f0, f1, flat_c
+    logger.debug(f"Creating combined function with {npar} parameters")
+
     comb_func = make_combined_function(order0, order1, xmin1, xmax1)
+    logger.debug("Prepared combined function for fitting")
+
+
     f_combined = ROOT.TF1("f_combined", comb_func, 0.0, global_xmax, npar)
 
     # Gather initial parameters from f0, f1, f_flat
@@ -145,7 +158,12 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     for i in range(order1 + 1):
         params.append(f1.GetParameter(i))
     params.append(f_flat.GetParameter(0))
-    f_combined.SetParameters(*params)
+
+    logger.debug(f"All initial parameters collected: {params}")
+
+    # f_combined.SetParameters(*params) # INFO: If more than 11 parameters then it hit the limit of TF1.SetParameters and overload it. When we have more than 11 parameters we need to set them one by one, as below:
+    for i, p in enumerate(params):
+        f_combined.SetParameter(i, p)
 
     # Ensure the function is zero below x=0
     # (the user-defined func handles this internally)

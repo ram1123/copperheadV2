@@ -1,11 +1,12 @@
-year: 2018C
+year: 2017C
 control_region: None # None, h-peak, h-sidebands, signal, z-peak
 # directoryTag: Nov24_NanoCompare_DY_TRatioPlot_v4
-directoryTag: Nov24_ParquetCompare_DY
+# directoryTag: Nov24_ParquetCompare_DY
+directoryTag: FromNanoAODRooTFiles/Data
 
-input_paths_labels_data:
+input_paths_labels:
     # "v9": "/depot/cms/hmm/shar1172/OfficialNanoAODv9/Data/Run2018C/*.root"
-    # "v9": "config/v9_files.txt"
+    "v9": "config/v9_files.txt"
     "v12": "/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017C/*.root"
     "v15": "config/v15_files.txt"
     # "v12": "/eos/purdue/store/user/rasharma/customNanoAOD_Others/UL2018/SingleMuon_Run2018C/*.root"
@@ -15,7 +16,7 @@ input_paths_labels_data:
     # "v15": "config/v15_files_test.txt"
 
 
-input_paths_labels:
+input_paths_labels_MC:
     "v9": "samples_txt_file/dy_M-50_aMCatNLO_v9.txt"
     "v12": "/eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9/*.root"
     "v15": "samples_txt_file/dy_M-50_aMCatNLO_v15.txt"
