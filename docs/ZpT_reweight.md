@@ -16,7 +16,7 @@ In our framework, we have implemented a systematic approach to derive the Z-pT r
 
 # DY pt mismodelling correction: Technical details
 
-Seveal steps are needed to get the Z-pT weights.
+Several steps are needed to get the Z-pT weights.
 
 **Step-1**: Obtain the histograms of Z-pT in data and MC, in `.root` format.
 ```bash
