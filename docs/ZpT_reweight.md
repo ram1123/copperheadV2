@@ -7,11 +7,14 @@ title: Z pT Reweighting
 In DY production, the transverse momentum (pT) of the Z boson is not perfectly modelled in Monte Carlo (MC) simulations. This mismodelling can lead to discrepancies between data and MC in analyses that rely on accurate Z boson kinematics. To address this issue, we apply a reweighting procedure to correct the Z-pT distribution in DY MC to better match the observed data.
 
 In our framework, we have implemented a systematic approach to derive the Z-pT reweighting factors. This involves three steps, they are:
+
 1. Extract the Z-pT distributions from both data and DY MC in the Z-peak region.
 2. Fit the ratio of data to MC Z-pT distributions using polynomial functions in three different pT ranges as the behavior of the ratio varies across these ranges. The rough boundaries are:
+
    - Low pT: 0 - 10 GeV
    - Medium pT: 10 - 100 GeV
    - High pT: 100 - 200 GeV
+
 3. Once we get the three fit functions, we then sum them up to get the final reweighting function, its order and coefficients are stored in a YAML file. Finally, we apply these reweighting factors to the DY MC events based on their Z boson pT.
 
 # DY pt mismodelling correction: Technical details
