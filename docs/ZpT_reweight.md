@@ -62,7 +62,7 @@ Arguments:
 
 Some important notes:
 1. If the fit quality in step-3 is not good enough, you may need to go back to step-2 and readjust the boundaries of the three functions, or the bin widths in [bin_definitions.py](../src/copperhead/zpt_rewgt/derive/bin_definitions.py).
-1. If the boundaries and bin widths looks fine, but not the fit quality, you may need to manually set the polynomial orders (to one higher order, generally it works) in the the `zpt_fit_config.yaml` file generated in step-2, and then rerun step-3.
+1. If the boundaries and bin widths look fine, but not the fit quality, you may need to manually set the polynomial orders (to one higher order, generally it works) in the the `zpt_fit_config.yaml` file generated in step-2, and then rerun step-3.
 
 
 **Step-4**: Finally, commit the YAML files having the Z-pT reweighting function parameters to the repository for future use in analysis. This YAML file saves the polynomial orders and coefficients for each pT range, for each year and jet bin. Furthermore, it also contains the number of bins and ranges used in the derivation of the Z-pT weights.
