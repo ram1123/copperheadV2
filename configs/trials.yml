@@ -46,10 +46,11 @@ trials:
 
     Run3_nanoAODv15_NoJVM:
         stage1: "{base_dir}/Run3_nanoAODv15_16Dec_NoJVM/stage1_output/"
-        comment: NO JVM used => For this the Pileup weights are wrong. By mistake, it picks the 2023 pileup information.
+        comment: "DEPRECATED: DO NOT USE. NO JVM used and pileup weights are wrong (uses 2023 PU for 2024). Superseded by Run3_nanoAODv15_NoJVM_v2."
         gitSHA: 684106663a2537928230ef5374c0fad04195867b
         date: December 16, 2025
         years: 2024
+        deprecated: true
         NOTE: OLD should be removed after checking `Run3_nanoAODv15_NoJVM_v2`.
 
     Run3_nanoAODv15_NoJVM_v2:
