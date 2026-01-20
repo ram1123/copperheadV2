@@ -2,28 +2,24 @@ import re
 
 
 AAA_REDIRECTORS = [
-    "root://xcache.cms.rcac.purdue.edu/",
-    "root://xcache.cms.rcac.purdue.edu/",
-    "root://xcache.cms.rcac.purdue.edu/",
-    "root://eos.cms.rcac.purdue.edu/",
-    "root://cmsxrootd.fnal.gov/",
-    "root://xrootd-cms.infn.it/",
-    "root://cms-xrd-global.cern.ch/",
-    "root://xcache.cms.rcac.purdue.edu/",
-    "root://xcache.cms.rcac.purdue.edu/",
-    "root://xcache.cms.rcac.purdue.edu/",
-    "root://cmsxrootd.fnal.gov/",
-    "root://cms-xrd-global.cern.ch/",
-    "root://xcache.cms.rcac.purdue.edu/",
-    "root://xcache.cms.rcac.purdue.edu/",
-    "root://xcache.cms.rcac.purdue.edu/",
+    # "root://xcache.cms.rcac.purdue.edu/", # 1
+    # "root://xcache.cms.rcac.purdue.edu/", # 2
+    "root://cms-xrd-global.cern.ch/", # 3
+    "root://xrootd-cms.infn.it/", # 4
+    "root://cmsxrootd.fnal.gov/", # 5
+    "root://xcache.cms.rcac.purdue.edu/", # 6
+    "root://xcache.cms.rcac.purdue.edu/", # 7
+    "root://eos.cms.rcac.purdue.edu/", # 8
+    "root://cms-xrd-global.cern.ch/", # 9
 ]
 
 # Accept prefixes like:
 #   "root://xcache.cms.rcac.purdue.edu:1094//"
 #   "root://cms-xrd-global.cern.ch//"
 #   "root://xrootd-cms.infn.it//"
-_ROOT_URL_RE = re.compile(r"^root://([^/]+)/+(.+)$")   # host[:port], tail after the first // (usually 'store/...')
+_ROOT_URL_RE = re.compile(
+    r"^root://([^/]+)/+(.+)$"
+)  # host[:port], tail after the first // (usually 'store/...')
 
 
 def _sanitize_prefix(prefix: str) -> str:

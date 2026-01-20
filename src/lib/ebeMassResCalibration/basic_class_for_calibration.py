@@ -8,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import json
 import os
-import sys
+
 
 import dask
 
@@ -19,21 +19,19 @@ from copy import deepcopy
 from contextlib import contextmanager
 
 import correctionlib
+import ROOT
 
-import logging
 from modules.utils import logger
 
 # surpress RooFit printout
 rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
 
-import ROOT
 # ROOT.gErrorIgnoreLevel = ROOT.kWarning
 ROOT.gErrorIgnoreLevel = ROOT.kFatal
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT.gSystem.Load(f"{CURRENT_DIR}/PDFs/RooCMSShape_cc.so")
 
-from ROOT import RooCMSShape
 
 # Configuration constants
 CONFIG = {
@@ -217,9 +215,9 @@ def resolve_cat_config(cfg: dict, cat_idx: str) -> dict:
 
     # apply wildcard overrides in insertion order
     for key, block in overrides.items():
-        logger.info(f"Checking override key: {key} for cat_idx: {cat_idx}")
         if "*" in key or "?" in key or "[" in key:
             if fnmatch.fnmatch(cat_idx, key):
+                logger.debug(f"Checking override key: {key} for cat_idx: {cat_idx}")
                 base = deep_merge(base, block)
 
     # exact override wins last
@@ -397,8 +395,6 @@ def closure_test_resolution_binning(
 
 
 def save_fit_params_to_json( inputFilePath, ifbinned, fit_result, cat_idx, json_path, model_name="BWxDCB", chi2_val=None):
-    import time, json, os
-
     param_dict = {}
     sigma_val = None
     sigma_err = None
@@ -732,12 +728,18 @@ def generateBWxDCB_RooCMSShape_plot(
 
     def roo_fit_opts(block):
         opts = [rt.RooFit.Save(True), rt.RooFit.EvalBackend("cpu")]
-        if "Strategy" in block:   opts.append(rt.RooFit.Strategy(int(block["Strategy"])))
-        if "Minos" in block:     opts.append(rt.RooFit.Minos(bool(block["Minos"])))
-        if "Hesse" in block:      opts.append(rt.RooFit.Hesse(bool(block["Hesse"])))
-        if "Offset" in block:     opts.append(rt.RooFit.Offset(bool(block["Offset"])))
-        if "Range" in block:      opts.append(rt.RooFit.Range(str(block["Range"])))
-        if "PrintLevel" in block: opts.append(rt.RooFit.PrintLevel(int(block["PrintLevel"])))
+        if "Strategy" in block:
+            opts.append(rt.RooFit.Strategy(int(block["Strategy"])))
+        if "Minos" in block:
+            opts.append(rt.RooFit.Minos(bool(block["Minos"])))
+        if "Hesse" in block:
+            opts.append(rt.RooFit.Hesse(bool(block["Hesse"])))
+        if "Offset" in block:
+            opts.append(rt.RooFit.Offset(bool(block["Offset"])))
+        if "Range" in block:
+            opts.append(rt.RooFit.Range(str(block["Range"])))
+        if "PrintLevel" in block:
+            opts.append(rt.RooFit.PrintLevel(int(block["PrintLevel"])))
         # add Minos, SumW2Error, Extended, NumCPU similarly if you want
         return opts
 
@@ -1613,7 +1615,7 @@ def save_calibration_json(df_merged, json_filename="calibration_factors.json"):
     logger.info(f"Calibration JSON saved to {json_filename}")
 
 
-def closure_test_from_df(df, additional_string, output_plot=f"closure_test_beforeCalibration.pdf"):
+def closure_test_from_df(df, additional_string, output_plot="closure_test_beforeCalibration.pdf"):
     """
     Given a DataFrame with columns:
          cat_name, fit_val, fit_err, median_val, calibration_factor,

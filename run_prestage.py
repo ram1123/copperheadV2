@@ -1,33 +1,33 @@
-import awkward as ak
-import coffea
-from coffea.dataset_tools import rucio_utils
-from coffea.dataset_tools.preprocess import preprocess
-from coffea.nanoevents import NanoEventsFactory, NanoAODSchema, BaseSchema
+import argparse
 import json
 import os
-import argparse
+
+import awkward as ak
+import coffea
 import dask
+from coffea.dataset_tools import rucio_utils
+from coffea.dataset_tools.preprocess import preprocess
+from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
+from distributed import Client
+
 dask.config.set({'logging.distributed': 'error'})
-from distributed import LocalCluster, Client
-import time
 import copy
+import glob
+import logging
+import re
+import time
+import uuid
+
+import numpy as np
 import tqdm
 import uproot
-import random
-import re
-import glob
+from modules.utils import logger
+from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")
 from omegaconf import OmegaConf
-import numpy as np
-import uuid
 
-import sys
-from collections.abc import Sequence
-
-import logging
-from modules.utils import logger
-from modules.xrootd_utils import AAA_REDIRECTORS, AAA_ERROR_FRAGMENTS, normalize_paths
 
 def nanoevents_from_root_with_redirectors(
     file_input, schemaclass, uproot_options, metadata=None
@@ -129,7 +129,7 @@ def getBadFile(fname):
             return "" # if no problem, return empty string
         else:
             return fname # bad file
-    except Exception as e:
+    except Exception:
         # return f"An error occurred with file {fname}: {e}"
         # print(f"An error occurred with file {fname}: {e}")
         return fname # bad fileclient
