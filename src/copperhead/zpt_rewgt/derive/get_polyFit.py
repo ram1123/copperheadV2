@@ -2,17 +2,15 @@ import os
 import argparse
 import yaml
 import array
-import numpy as np
 import ROOT
-from scipy.stats import f
 from omegaconf import OmegaConf
+from bin_definitions import define_custom_binning
 
 # Run in batch mode and disable statistics box
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
 
 # from do_f_test import define_custom_binning
-from bin_definitions import define_custom_binning
 
 # TODO: Add option to choose different binning schemes
 
@@ -107,7 +105,7 @@ def fit_polynomial(hist_sf, order, xmin, xmax, fit_opts="L S Q"):
     func = ROOT.TF1(f"poly{order}", expr, xmin, xmax)
     hist_sf.Fit(func, fit_opts, "", xmin, xmax)
     hist_sf.Fit(func, fit_opts, "", xmin, xmax)
-    result = hist_sf.Fit(func, "L S R", "", xmin, xmax)
+    # result = hist_sf.Fit(func, "L S R", "", xmin, xmax)
     return func
 
 def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
@@ -116,7 +114,7 @@ def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
     Returns the TF1 object for that line.
     """
     func = ROOT.TF1("flat_line", "[0]*x + [1]", xmin, xmax)
-    result = hist_sf.Fit(func, fit_opts, "", xmin, xmax)
+    # result = hist_sf.Fit(func, fit_opts, "", xmin, xmax)
     return func
 
 def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xmax):
@@ -307,7 +305,6 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
 def main():
     args = parse_arguments()
     run_label = args.label
-    plot_base = args.plot_path
     out_append = args.outAppend
 
     # Determine which years to process
