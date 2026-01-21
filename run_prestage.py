@@ -30,16 +30,11 @@ from omegaconf import OmegaConf
 
 
 def nanoevents_from_root_with_redirectors(
-    file_input, schemaclass, uproot_options, metadata=None
+    file_input, host_prefix, attempt, schemaclass, uproot_options, metadata=None
 ):
-    """
-    Try NanoEventsFactory.from_root with multiple redirectors if AAA/TLS issues occur.
-    file_input can be dict{url: meta} or a list of urls; we normalize keys each attempt.
-    """
     if metadata is None:
         metadata = {}
 
-    last_err = None
     try:
         fi_norm = normalize_paths(file_input, host_prefix)
         logger.info(f"[prestage] attempt {attempt} using redirector {host_prefix}")
@@ -49,19 +44,15 @@ def nanoevents_from_root_with_redirectors(
             schemaclass=schemaclass,
             uproot_options=uproot_options,
         ).events()
-        logger.info(f"[prestage] attempt {attempt} succeeded with {host_prefix}")
-        logger.info(f"Successfully read the files in attempt {attempt} with redirector {host_prefix}")
+        logger.info(f"[prestage] attempt {attempt} succeeded to read metadata with {host_prefix}")
+        return events
 
-        return events  # success
     except Exception as e:
         msg = str(e)
         tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
         logger.warning(
-            f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e}"
+            f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e} (tls_bad={tls_bad})"
         )
-        if tls_bad and attempt < len(AAA_REDIRECTORS):
-            logger.warning("[prestage] retrying with next redirector...")
-            last_err = e
         raise
 
 
@@ -211,7 +202,7 @@ def get_Xcache_filelist(fnames: list):
         root_file = re.findall(r"/store.*", fname)[0]
         x_cache_fname = "root://xcache.cms.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
-    print(f"new_fnames: {new_fnames}")
+    # logger.debug(f"new_fnames: {new_fnames}")
     return new_fnames
 
 def find_keys_in_yaml(yaml_data, keys_to_find):
@@ -583,6 +574,8 @@ if __name__ == "__main__":
                             file_input = normalize_paths(file_input, host_prefix)
                             events = nanoevents_from_root_with_redirectors(
                                 file_input=file_input,
+                                host_prefix=host_prefix,
+                                attempt=attempt,
                                 schemaclass=BaseSchema,
                                 metadata={},
                                 uproot_options={"timeout": 4 * 2400},
@@ -596,6 +589,8 @@ if __name__ == "__main__":
                             logger.debug(f"file_input: {file_input}")
                             runs = nanoevents_from_root_with_redirectors(
                                 file_input=file_input,
+                                host_prefix=host_prefix,
+                                attempt=attempt,
                                 schemaclass=BaseSchema,
                                 metadata={},
                                 uproot_options={"timeout": 4 * 2400},
@@ -604,6 +599,7 @@ if __name__ == "__main__":
                             # print(f"runs.fields: {runs.fields}")
                             # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
                             if "genEventSumw" in runs.fields:
+                                logger.debug("genEventSumw found: nanoAODv9 or v12")
                                 # sumGenwgts = ak.sum(runs.genEventSumw).compute()
                                 # sumGenwgts_v2 = ak.sum(events.genWeight).compute()
                                 # gen_wgt_max = ak.max(events.genWeight).compute()
@@ -614,8 +610,11 @@ if __name__ == "__main__":
                                 preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                                 preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                             else: # nanoAODv6
+                                logger.debug("genEventSumw_ found: nanoAODv6")
                                 preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                                 preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                            logger.info(f"[prestage] data sample {sample_name}: success on attempt {attempt} ")
+                            break  # stop trying once successful
                     except Exception as e:
                         msg = str(e)
                         tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)

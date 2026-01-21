@@ -2,15 +2,15 @@ import re
 
 
 AAA_REDIRECTORS = [
-    # "root://xcache.cms.rcac.purdue.edu/", # 1
+    # "root://xcache.cms.rcac.purdue.edu/", # 1.        # 1
     # "root://xcache.cms.rcac.purdue.edu/", # 2
-    "root://cms-xrd-global.cern.ch/", # 3
-    "root://xrootd-cms.infn.it/", # 4
-    "root://cmsxrootd.fnal.gov/", # 5
-    "root://xcache.cms.rcac.purdue.edu/", # 6
-    "root://xcache.cms.rcac.purdue.edu/", # 7
-    "root://eos.cms.rcac.purdue.edu/", # 8
-    "root://cms-xrd-global.cern.ch/", # 9
+    "root://eos.cms.rcac.purdue.edu/",  # 3                # 2
+    "root://cms-xrd-global.cern.ch/",  # 4                  # 3
+    "root://xrootd-cms.infn.it/",  # 5                         # 4
+    "root://cmsxrootd.fnal.gov/",  # 6                        # 5
+    "root://cms-xrd-global.cern.ch/",  # 8
+    "root://eos.cms.rcac.purdue.edu/",  # 7
+    "root://xcache.cms.rcac.purdue.edu/",  # 9
 ]
 
 # Accept prefixes like:
