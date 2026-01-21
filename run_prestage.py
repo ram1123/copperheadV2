@@ -1,33 +1,31 @@
 import argparse
-import json
-import os
-
-import awkward as ak
-import coffea
-import dask
-from coffea.dataset_tools import rucio_utils
-from coffea.dataset_tools.preprocess import preprocess
-from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
-from distributed import Client
-
-dask.config.set({'logging.distributed': 'error'})
 import copy
 import glob
+import json
 import logging
+import os
 import re
 import time
 import uuid
 
+import awkward as ak
+import coffea
+import dask
 import numpy as np
 import tqdm
 import uproot
+from coffea.dataset_tools import rucio_utils
+from coffea.dataset_tools.preprocess import preprocess
+from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
+from distributed import Client
 from modules.utils import logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+from omegaconf import OmegaConf
 
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")
-from omegaconf import OmegaConf
 
+dask.config.set({'logging.distributed': 'error'})
 
 def nanoevents_from_root_with_redirectors(
     file_input, host_prefix, attempt, schemaclass, uproot_options, metadata=None
@@ -63,7 +61,6 @@ def preprocess_with_redirectors(
     Run coffea.dataset_tools.preprocess, retrying with different AAA redirectors
     if we hit typical XRootD / LZMA issues.
     """
-    last_err = None
     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
         try:
             # Normalize file URLs inside "files" dicts
@@ -74,7 +71,7 @@ def preprocess_with_redirectors(
                 }
 
             logger.info(
-                f"[prestage] preprocess attempt {attempt} with redirector {host_prefix}"
+                f"[prestage] preparing files: attempt {attempt} with redirector {host_prefix}"
             )
             return preprocess(
                 norm_final_output,
@@ -92,7 +89,6 @@ def preprocess_with_redirectors(
             )
             if tls_bad and attempt < len(AAA_REDIRECTORS):
                 logger.warning("[prestage] retrying preprocess with next redirector...")
-                last_err = e
                 continue
             # Non-AAA error or no more redirectors
             raise
@@ -499,6 +495,9 @@ if __name__ == "__main__":
             if args.xcache:
                 fnames = get_Xcache_filelist(fnames)
 
+            # # if fnames contains `/eos/vbc/experiments/cms` remove it.
+            # fnames = [f.replace("/eos/vbc/experiments/cms", "") if "/eos/vbc/experiments/cms" in f else f for f in fnames]
+
             logger.debug(f"sample_name: {sample_name}")
             logger.debug(f"file names: {fnames}")
             logger.debug(f"len(fnames): {len(fnames)}")
@@ -513,7 +512,6 @@ if __name__ == "__main__":
             }
             if is_data:  # data sample
                 base_file_input = {fname: {"object_path": "Events"} for fname in fnames}
-                last_err = None
 
                 for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                     try:
@@ -561,12 +559,10 @@ if __name__ == "__main__":
                         )
                         if tls_bad and attempt < len(AAA_REDIRECTORS):
                             logger.warning("[prestage] retrying data sample with next redirector...")
-                            last_err = e
                             continue
                         # Non-AAA error or last redirector → propagate
                         raise
             else: # if MC
-                last_err = None
                 for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                     try:
                         if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
@@ -624,7 +620,6 @@ if __name__ == "__main__":
                         )
                         if tls_bad and attempt < len(AAA_REDIRECTORS):
                             logger.warning("[prestage] retrying data sample with next redirector...")
-                            last_err = e
                             continue
                         # Non-AAA error or last redirector → propagate
                         raise
