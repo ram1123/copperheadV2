@@ -4,7 +4,6 @@ import yaml
 import array
 import ROOT
 from omegaconf import OmegaConf
-from bin_definitions import define_custom_binning
 
 from modules.utils import logger
 
@@ -12,7 +11,6 @@ from modules.utils import logger
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
 
-# from do_f_test import define_custom_binning
 
 # TODO: Add option to choose different binning schemes
 
@@ -353,6 +351,7 @@ def main():
             xmin0, xmax0 = cfg["f0"]["fit_range"]
             order1 = cfg["f1"]["order"]
             xmin1, xmax1 = cfg["f1"]["fit_range"]
+            edges = cfg["f0"]["bin_edges"]
 
             # Open the ROOT file and retrieve histograms
             in_file = ROOT.TFile(os.path.join(in_dir, f"{year}_njet{njet}.root"), "READ")
@@ -363,7 +362,6 @@ def main():
             h_dy   = workspace.obj("hist_dy").Clone("h_dy_clone")
 
             # Rebin both histograms with custom edges
-            edges = define_custom_binning()
             h_data_rebinned = rebin_histogram(h_data, edges)
             h_dy_rebinned   = rebin_histogram(h_dy, edges)
             nbins_new = h_data_rebinned.GetNbinsX()
@@ -416,15 +414,22 @@ def main():
 
     # Merge with existing YAML or create fresh
     # print(f"Saving fit parameters to YAML: \n{save_dict}")
+    # ------------------------------------------------------------------
+    # Save YAML with top-level keys = years
+    # ------------------------------------------------------------------
     in_dir_yaml = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
     os.makedirs(in_dir_yaml, exist_ok=True)
     yaml_path = f"{in_dir_yaml}/zpt_rewgt_params_{args.dy_sample}.yaml"
+
+    new_cfg = OmegaConf.create(save_dict)  # top-level: "2018", "2017"
+
     if os.path.isfile(yaml_path):
         existing = OmegaConf.load(yaml_path)
-        merged = OmegaConf.merge(existing, {"gof_results": save_dict})
+        merged = OmegaConf.merge(existing, new_cfg)  # merge year-by-year (and njet-by-njet)
     else:
-        merged = OmegaConf.create({"gof_results": save_dict})
-    OmegaConf.save(merged, yaml_path)
+        merged = new_cfg
+
+    OmegaConf.save(config=merged, f=yaml_path)
     print(f"Saved fit parameters to {yaml_path}")
 
 if __name__ == "__main__":
