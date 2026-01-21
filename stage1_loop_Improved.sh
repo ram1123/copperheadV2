@@ -144,14 +144,14 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
     # data_l_dict["2022preEE"]=""
-    # data_l_dict["2022postEE"]=""
+    data_l_dict["2022postEE"]=""
     # data_l_dict["2023"]=""
     # data_l_dict["2023BPix"]=""
     # data_l_dict["2024"]=""
 
     # bkg_l=""
-    # bkg_l="DY Top VV EWK VVV"
-    bkg_l="DY"
+    bkg_l="DY Top VV EWK VVV"
+    # bkg_l=""
 
     # sig_l="Higgs"
     sig_l=""
@@ -238,14 +238,14 @@ for year in "${years[@]}"; do
 
     # ########## Calibration commands ##########
     # ~18mins for step1+step2+step3 for 2024 data
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps all "
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps all --isMC "
+    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --steps all "
+    command6="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --steps all --isMC "
 
     # category="30-45_OB"
     # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps step1  --fixCat ${category} "
 
     # category=10
-    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --closure_test "
+    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --closure_test "
     # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --closure_test  --fixCat ${category} --no-dask-client "
     # ########## Calibration commands ##########
 
@@ -274,6 +274,7 @@ for year in "${years[@]}"; do
         command2+=" --use_gateway "
         command4+=" --use_gateway "
         command5+=" --use_gateway "
+        command6+=" --use_gateway "
         command_compact+=" --use_gateway "
     fi
 
@@ -338,6 +339,11 @@ for year in "${years[@]}"; do
             log "Running mass calibration..."
             log "Command: $command5"
             eval "$command5"
+            # if command6 is defined, run it
+            if [[ -n "${command6-}" ]]; then
+                log "Command: $command6"
+                eval "$command6"
+            fi
             ;;
         compact)
             log "Compacting parquet data for year $year..."

@@ -1,11 +1,37 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
+# 20 January 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022postEE" -m 0 -k )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022postEE" -m compact -k )
+
+time python scripts/sync_parquet_dimuon.py /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_15Jan_NoJVM/stage1_output/2024/compacted/dyTo2Mu_M-50_aMCatNLO/0 -o dyTo2Mu_M-50_aMCatNLO_2024_sync_NoJVM.csv
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23October -y "2022postEE" -m calib -k -d 2)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m 0 -k)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m calib -k)
+
+ruff check --select I ./run_prestage.py
+```
+
+
+# 16 January 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23October -y "2022postEE" -m zpt_fit12 -n 0)
+```
+
 
 # 15 January 2026
 
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_15Jan_NoJVM -y "2024" -m 1 -k -d 1)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_15Jan_JVMFilterJets -y "2022postEE" -m 0 -k )
 ```
 
 # 12 January 2026
