@@ -276,7 +276,7 @@ if __name__ == "__main__":
                 "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
                 proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
             )
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+            cluster_info = gateway.list_clusters()[1]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug("Gateway Client created")
         else: # use local cluster
@@ -505,6 +505,7 @@ if __name__ == "__main__":
                             gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
                             preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
                             preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
+                            break  # stop trying once successful
                         else:
                             file_input = {fname: {"object_path": "Runs"} for fname in fnames}
                             file_input = normalize_paths(file_input, host_prefix)
