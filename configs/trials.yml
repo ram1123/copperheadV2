@@ -44,6 +44,13 @@ trials:
         date: January 20, 2026
         years: 2022postEE, 2022preEE, 2023, 2023BPix
 
+    Run3_nanoAODv12_JVMjetfilter_v2:
+        stage1: "{base_dir}/Run3_nanoAODv12_21Jan_JVMFilterJets/stage1_output/"
+        comment: used JVM to filter jets, it has latest version of zpt weights and EBE mass calibration. ZpT weights for 2022preEE and 2022postEE are the final ones. EBE is only derived for data, and applied to both data and MC. Also, for EBE, I still need to fix few fits.
+        gitSHA: 62adcc8b32ad841ca3a4b3942544311ef65681e6
+        date: January 21, 2026
+        years: 2022postEE, 2022preEE, 2023, 2023BPix
+
     Run3_nanoAODv15_NoJVM:
         stage1: "{base_dir}/Run3_nanoAODv15_16Dec_NoJVM/stage1_output/"
         comment: "DEPRECATED: DO NOT USE. NO JVM used and pileup weights are wrong (uses 2023 PU for 2024). Superseded by Run3_nanoAODv15_NoJVM_v2."

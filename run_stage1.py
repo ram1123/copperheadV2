@@ -503,7 +503,6 @@ if __name__ == "__main__":
                                 logger.exception(
                                     f"[resume] write failed after {attempt} attempts for {dataset}[{idx}]"
                                 )
-                                raise
 
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
