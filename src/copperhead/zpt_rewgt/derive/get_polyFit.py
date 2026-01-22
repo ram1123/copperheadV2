@@ -198,7 +198,6 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
     hist_sf.GetXaxis().SetRangeUser(0.0, global_xmax)
     hist_sf.SetTitle(f"Year {year}, njet={njet}, bins={nbins}")
     hist_sf.SetLineColor(ROOT.kBlue)
-
     # Draw only the axis first to fix the range
     hist_sf.Draw("axis")
 
@@ -304,7 +303,11 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
     xmin_hist = hist_sf.GetXaxis().GetXmin()
     xmax_hist = hist_sf.GetXaxis().GetXmax()
 
-    pull_hist = ROOT.TH1D("pull", "Pull;Bin Center;(Data-Fit)/Error", nbins_hist, xmin_hist, xmax_hist)
+    # Generate pull histogram with same binning as hist_sf
+    pull_hist = hist_sf.Clone("pull") # clone for copying binning
+    pull_hist.SetTitle("Pull;Bin Center;(Data-Fit)/Error")
+    pull_hist.Reset("ICES") # reset
+    pull_hist.GetListOfFunctions().Clear() # remove the red line
     for i in range(1, nbins_hist + 1):
         data_val = hist_sf.GetBinContent(i)
         err = hist_sf.GetBinError(i)
@@ -324,7 +327,6 @@ def main():
     args = parse_arguments()
     run_label = args.label
     out_append = args.outAppend
-
     # Determine which years to process
     if args.year.lower() == "all":
         years = ["2018", "2017", "2016postVFP", "2016preVFP"]
