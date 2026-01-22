@@ -20,10 +20,13 @@ import tqdm
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
 from distributed import Client
-from modules.utils import get_git_info, logger
-from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
+
+from modules.utils import get_git_info, logger
+from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+from modules.job_status import JobStatus, write_stage1_summary
 
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
@@ -166,72 +169,6 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
     logger.error(f"Failed to create EOS directory after {retries} attempts: {eos_path}")
     raise RuntimeError(f"Failed to create EOS directory: {eos_path}")
 
-
-# ---- resumable job markers ---------------------------------------------------
-class JobStatus:
-    def __init__(self, status_dir: str):
-        self.dir = Path(status_dir)
-        self.dir.mkdir(parents=True, exist_ok=True)
-        self.ledger = self.dir / "job_status.jsonl"
-
-    def _paths(self, dataset: str, idx: int):
-        base = f"{dataset}__{idx}"
-        return (
-            self.dir / f"{base}.running",
-            self.dir / f"{base}.done",
-            self.dir / f"{base}.fail",
-        )
-
-    def should_run(self, dataset: str, idx: int) -> bool:
-        running, done, fail = self._paths(dataset, idx)
-        if done.exists():
-            # if it was later marked failed, allow rerun
-            if fail.exists() and fail.stat().st_mtime > done.stat().st_mtime:
-                return True
-            return False
-        return True
-
-    def _append_ledger(self, rec: dict):
-        with self.ledger.open("a") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-
-    def mark_running(self, dataset: str, idx: int):
-        running, _, _ = self._paths(dataset, idx)
-        running.write_text(str(time.time()))
-        self._append_ledger(
-            {"ts": time.time(), "dataset": dataset, "idx": idx, "status": "running"}
-        )
-
-    def mark_done(self, dataset: str, idx: int, meta=None):
-        running, done, _ = self._paths(dataset, idx)
-        done.write_text(str(time.time()))
-        running.unlink(missing_ok=True)
-        self._append_ledger(
-            {
-                "ts": time.time(),
-                "dataset": dataset,
-                "idx": idx,
-                "status": "done",
-                "meta": meta or {},
-            }
-        )
-
-    def mark_failed(self, dataset: str, idx: int, err: Exception):
-        running, _, fail = self._paths(dataset, idx)
-        fail.write_text(str(time.time()))
-        running.unlink(missing_ok=True)
-        self._append_ledger(
-            {
-                "ts": time.time(),
-                "dataset": dataset,
-                "idx": idx,
-                "status": "failed",
-                "error": "".join(
-                    traceback.format_exception_only(type(err), err)
-                ).strip(),
-            }
-        )
-# ------------------------------------------------------------------------------
 
 def _parquet_dir_has_files(p: str) -> bool:
     try:
@@ -453,7 +390,9 @@ if __name__ == "__main__":
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
+
                     # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
+                    jobstat.mark_running(dataset, idx)
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                         try:
                             logger.info("{}{}".format("\n" * 2, "=" * 20))
@@ -465,8 +404,6 @@ if __name__ == "__main__":
                             alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
 
                             logger.debug(f"alt_sample['files']: {alt_sample['files']}")
-
-                            jobstat.mark_running(dataset, idx)
 
                             # clean partial output from previous tries
                             os.system(f"rm -rf '{save_path}'")
@@ -579,4 +516,11 @@ if __name__ == "__main__":
                 dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file)
 
     elapsed = round(time.time() - time_step, 3)
+
+    write_stage1_summary(
+        status_dir=os.path.join(start_save_path, "_status"),
+        out_json_path=os.path.join(start_save_path, "_status", "stage1_summary.json"),
+        logger=logger,
+    )
+
     logger.info(f"Finished everything in {elapsed} s.")

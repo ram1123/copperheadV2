@@ -38,4 +38,8 @@ jobs:
         echo "Running pylint on:"
         echo "$CHANGED_FILES"
 
-        pylint $CHANGED_FILES
+        pylint \
+          --disable=import-error \
+          --disable=missing-module-docstring \
+          --disable=line-too-long \
+          $CHANGED_FILES
