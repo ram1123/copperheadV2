@@ -1,34 +1,27 @@
-import argparse
 import copy
 import ctypes
 import glob
 import json
-import logging
 import os
 import subprocess
 import sys
 import time
-import traceback
 import warnings
 from itertools import islice
-from pathlib import Path
 
 import awkward as ak
 import dask
 import numpy as np
 import tqdm
+from cli.common_argparser import build_common_parser
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
 from distributed import Client
-
-from src.copperhead_processor import EventProcessor
-from src.lib.get_parameters import getParametersForYr
-
+from modules.job_status import JobStatus, write_stage1_summary
 from modules.utils import get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
-from modules.job_status import JobStatus, write_stage1_summary
-
-from cli.common_argparser import build_common_parser
+from src.copperhead_processor import EventProcessor
+from src.lib.get_parameters import getParametersForYr
 
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
@@ -182,14 +175,6 @@ def _parquet_dir_has_files(p: str) -> bool:
 if __name__ == "__main__":
     t0 = time.perf_counter()
     parser = build_common_parser()
-    parser.add_argument(
-    "-save",
-    "--save_path",
-    dest="save_path",
-    default=None,
-    action="store",
-    help="save path to store stage1 output files",
-    )
     parser.add_argument(
         "-maxfile",
         "--max_file_len",

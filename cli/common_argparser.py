@@ -19,7 +19,12 @@ def build_common_parser() -> argparse.ArgumentParser:
         action="store",
         help="year value. The options are: 2016preVFP, 2016postVFP, 2017, 2018",
     )
-
+    parser.add_argument(
+        "-l",
+        "--label",
+        dest="label",
+        help="Run label: directory under plot_path to find inputs",
+    )
     parser.add_argument(
         "--yaml",
         dest="dataset_yaml_file",
@@ -76,11 +81,13 @@ def build_common_parser() -> argparse.ArgumentParser:
         "-save",
         "--save_path",
         dest="save_path",
-        default=None,
+        default="validation",
         action="store",
         help="save path to store stage1 output files",
     )
-
+    parser.add_argument(
+        "--outAppend", type=str, default="", help="String to append to output filenames"
+    )
     parser.add_argument(
         "-aod_v",
         "--NanoAODv",

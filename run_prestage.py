@@ -2,7 +2,6 @@ import argparse
 import copy
 import glob
 import json
-import logging
 import os
 import re
 import time
@@ -14,14 +13,13 @@ import dask
 import numpy as np
 import tqdm
 import uproot
+from cli.common_argparser import build_common_parser
 from coffea.dataset_tools import rucio_utils
 from coffea.dataset_tools.preprocess import preprocess
 from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
 from distributed import Client
 from modules.utils import logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
-from cli.common_argparser import build_common_parser
-
 from omegaconf import OmegaConf
 
 # import warnings

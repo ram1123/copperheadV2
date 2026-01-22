@@ -1,11 +1,11 @@
-import os
-import argparse
-import yaml
 import array
-import ROOT
-from omegaconf import OmegaConf
+import os
 
+import ROOT
+import yaml
+from cli.common_argparser import build_common_parser
 from modules.utils import logger
+from omegaconf import OmegaConf
 
 # Run in batch mode and disable statistics box
 ROOT.gROOT.SetBatch(True)
@@ -15,19 +15,7 @@ ROOT.gStyle.SetOptStat(0)
 # TODO: Add option to choose different binning schemes
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Perform goodness-of-fit for Z pT SFs")
-    parser.add_argument(
-        "-l", "--label", dest="label", required=True,
-        help="Run label: directory under plot_path to find inputs"
-    )
-    parser.add_argument(
-        "-y", "--year", dest="year", default="all",
-        help="Year to process (or 'all' for 2016preVFP, 2016postVFP, 2017, 2018)"
-    )
-    parser.add_argument(
-        "-save", "--plot_path", dest="plot_path", default="plots",
-        help="Base directory where plots and inputs live"
-    )
+    parser = build_common_parser()
     parser.add_argument(
         "--nbins", type=str, default="CustomBins",
         help="Binning key (only 'CustomBins' is handled)"
@@ -35,10 +23,6 @@ def parse_arguments():
     parser.add_argument(
         "--njet", type=int, nargs="+", default=[0, 1, 2],
         help="Jet multiplicities to loop over"
-    )
-    parser.add_argument(
-        "--outAppend", type=str, default="",
-        help="String to append to output filenames"
     )
     parser.add_argument(
         "-dy_sample", "--dy_sample", dest="dy_sample",
@@ -333,7 +317,7 @@ def main():
     global_fit_xmax = 200.0
 
     for year in years:
-        in_dir = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
+        in_dir = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
         save_dir = f"{in_dir}/gof_{out_append}"
         os.makedirs(save_dir, exist_ok=True)
 
@@ -417,7 +401,7 @@ def main():
     # ------------------------------------------------------------------
     # Save YAML with top-level keys = years
     # ------------------------------------------------------------------
-    in_dir_yaml = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
+    in_dir_yaml = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
     os.makedirs(in_dir_yaml, exist_ok=True)
     yaml_path = f"{in_dir_yaml}/zpt_rewgt_params_{args.dy_sample}.yaml"
 
