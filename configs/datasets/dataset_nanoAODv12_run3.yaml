@@ -214,6 +214,34 @@ years:
                 references:
                     - "POWHEG "
 
+            st_tw_top:
+                skip_sample: False
+                datasets:
+                    - None
+                cross_section_pb: 35.99
+                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop:
+                skip_sample: False
+                datasets:
+                    - None
+                cross_section_pb: 36.05
+                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
         VV:
             ww_2l2nu:
                 skip_sample: False
@@ -385,6 +413,21 @@ years:
                 references:
                     - "POWHEG (with dipole recoil)"
 
+            vbf_aMCatNLO:
+                skip_sample: False
+                datasets:
+                    - None
+                cross_section_pb: 0.00105742
+                notes: NONE
+                cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: NONE
+                br_source: NONE
+                references:
+                    - "aMC@NLO"
+
     "2022postEE":
         Data:
             total_lumi_pb: 26671.7
@@ -452,6 +495,19 @@ years:
                     - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
                 cross_section_pb: 359.05
                 cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2Mu_M-105To160:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 49.21
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -592,6 +648,34 @@ years:
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG "
+
+            st_tw_top:
+                skip_sample: False
+                datasets:
+                    - None
+                cross_section_pb: 35.99
+                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop:
+                skip_sample: False
+                datasets:
+                    - None
+                cross_section_pb: 36.05
+                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
 
         VV:
             ww_2l2nu:
@@ -968,6 +1052,34 @@ years:
                 references:
                     - "POWHEG "
 
+            st_tw_top:
+                skip_sample: False
+                datasets:
+                    - None
+                cross_section_pb: 35.99
+                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop:
+                skip_sample: False
+                datasets:
+                    - None
+                cross_section_pb: 36.05
+                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
         VV:
             ww_2l2nu:
                 skip_sample: False
@@ -1148,7 +1260,7 @@ years:
                 references:
                     - "POWHEG (with dipole recoil)"
 
-            vbf_powheg_amcatnlo:
+            vbf_aMCatNLO:
                 skip_sample: False
                 datasets:
                     - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
@@ -1361,6 +1473,34 @@ years:
                 references:
                     - "POWHEG "
 
+            st_tw_top:
+                skip_sample: False
+                datasets:
+                    - None
+                cross_section_pb: 35.99
+                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop:
+                skip_sample: False
+                datasets:
+                    - None
+                cross_section_pb: 36.05
+                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
         VV:
             ww_2l2nu:
                 skip_sample: False
@@ -1557,7 +1697,7 @@ years:
                 references:
                     - "POWHEG (with dipole recoil)"
 
-            vbf_powheg_amcatnlo:
+            vbf_aMCatNLO:
                 skip_sample: False
                 datasets:
                     - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
