@@ -1,6 +1,5 @@
 import dask_awkward as dak
 import awkward as ak
-import numpy as np
 import matplotlib.pyplot as plt
 
 inPath = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_20Jan_JVMFilterJets/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/*.parquet"
