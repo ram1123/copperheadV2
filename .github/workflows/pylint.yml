@@ -1,34 +1,39 @@
-name: Pylint
+name: Pylint (PR only)
 
-on: [push]
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
-  build:
+  pylint:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11"]
+
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0   # REQUIRED for git diff
+        fetch-depth: 0  # needed for diff against base
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.11"
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pylint
-    - name: Analysing the changed python code with pylint
+
+    - name: Run pylint on changed Python files in this PR
       run: |
-        CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.py$' || true)
+        BASE_SHA="${{ github.event.pull_request.base.sha }}"
+        HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+        CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep '\.py$' || true)
 
         if [ -z "$CHANGED_FILES" ]; then
-            echo "No Python files changed. Skipping pylint."
-            exit 0
-          fi
+          echo "No Python files changed in this PR. Skipping pylint."
+          exit 0
+        fi
 
         echo "Running pylint on:"
         echo "$CHANGED_FILES"
