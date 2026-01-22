@@ -28,6 +28,8 @@ from modules.utils import get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from modules.job_status import JobStatus, write_stage1_summary
 
+from cli.common_argparser import build_common_parser
+
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
 dask.config.set({"distributed.scheduler.worker-saturation": 1.0})
@@ -179,7 +181,7 @@ def _parquet_dir_has_files(p: str) -> bool:
 
 if __name__ == "__main__":
     t0 = time.perf_counter()
-    parser = argparse.ArgumentParser()
+    parser = build_common_parser()
     parser.add_argument(
     "-save",
     "--save_path",
@@ -189,36 +191,6 @@ if __name__ == "__main__":
     help="save path to store stage1 output files",
     )
     parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="string value of year we are calculating",
-    )
-    parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
-    )
-    parser.add_argument(
-    "-aod_v",
-    "--NanoAODv",
-    dest="NanoAODv",
-    type=int,
-    default=9,
-    choices = [9, 12, 15],
-    help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
-    )
-    parser.add_argument(
-        "--yaml",
-        dest="dataset_yaml_file",
-        default="configs/datasets/dataset.yaml",
-        help="path of yaml file containing the dataset names"
-    )
-    parser.add_argument(
         "-maxfile",
         "--max_file_len",
         dest="max_file_len",
@@ -226,12 +198,6 @@ if __name__ == "__main__":
         default = 3000,
         help = "How many maximum files to process simultaneously.",
     )
-    parser.add_argument(
-     "--log-level",
-     default=logging.ERROR,
-     type=lambda x: getattr(logging, x),
-     help="Configure the logging level."
-     )
     parser.add_argument(
         "--test_mode",
         action="store_true",

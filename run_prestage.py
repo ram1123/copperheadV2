@@ -20,6 +20,8 @@ from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
 from distributed import Client
 from modules.utils import logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+from cli.common_argparser import build_common_parser
+
 from omegaconf import OmegaConf
 
 # import warnings
@@ -222,15 +224,7 @@ def find_keys_in_yaml(yaml_data, keys_to_find):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="year value. The options are: 2016preVFP, 2016postVFP, 2017, 2018",
-    )
+    parser = build_common_parser()
     parser.add_argument(
     "-ch",
     "--chunksize",
@@ -238,57 +232,6 @@ if __name__ == "__main__":
     default="10000",
     action="store",
     help="chunksize",
-    )
-    parser.add_argument(
-        "--yaml",
-        dest="dataset_yaml_file",
-        default="configs/datasets/dataset.yaml",
-        help="path of yaml file containing the dataset names"
-    )
-    parser.add_argument(
-    "-frac",
-    "--change_fraction",
-    dest="fraction",
-    default=None,
-    action="store",
-    help="change fraction of steps of the data",
-    )
-    parser.add_argument(
-    "-data",
-    "--data",
-    dest="data_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of data samples represented by alphabetical letters A-H",
-    )
-    parser.add_argument(
-    "-bkg",
-    "--background",
-    dest="bkg_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
-    )
-    parser.add_argument(
-    "-sig",
-    "--signal",
-    dest="sig_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of sig samples represented by shorthands: ggH, VBF",
-    )
-    parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
     )
     parser.add_argument(
     "--xcache",
@@ -304,15 +247,6 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, uses skips bad files when calling preprocessing",
     )
-    parser.add_argument(
-    "-aod_v",
-    "--NanoAODv",
-    type=int,
-    dest="NanoAODv",
-    default=9,
-    choices = [9, 12, 15],
-    help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
-    )
     parser.add_argument( # temp flag to test the 2 percent data discrepancy in ggH cat between mine and official workspace
     "--run2_rereco",
     dest="run2_rereco",
@@ -321,13 +255,6 @@ if __name__ == "__main__":
     help="If true, uses skips bad files when calling preprocessing",
     )
     parser.add_argument(
-     "--log-level",
-     default=logging.ERROR,
-     type=lambda x: getattr(logging, x),
-     help="Configure the logging level."
-    )
-    # argument for prestage output and output file
-    parser.add_argument(
         "--prestage_output",
         dest="prestage_output",
         default="./prestage_output",
@@ -335,6 +262,7 @@ if __name__ == "__main__":
         help="path to prestage output directory",
     )
     args = parser.parse_args()
+
     time_step = time.time()
     logger.setLevel(args.log_level)
     os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
