@@ -266,7 +266,7 @@ new_zpt_weights_file_aMCatNLO:
     "2022postEE": None
     "2023": None
     "2023BPix": None
-    "2024": None
+    "2024": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
 new_zpt_weights_file_MiNNLO:
     2016preVFP: data/zpt_rewgt/zpt_rewgt_params_minnlo.yaml
     2016postVFP: data/zpt_rewgt/zpt_rewgt_params_minnlo.yaml
