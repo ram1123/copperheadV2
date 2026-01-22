@@ -17,7 +17,11 @@ def build_common_parser() -> argparse.ArgumentParser:
         dest="year",
         default="2018",
         action="store",
-        help="year value. The options are: 2016preVFP, 2016postVFP, 2017, 2018",
+        help=(
+            "year value. The options are: "
+            "2016preVFP, 2016postVFP, 2017, 2018, "
+            "2022preEE, 2022postEE, 2023, 2023BPix, 2024"
+        ),
     )
     parser.add_argument(
         "-l",
@@ -95,7 +99,7 @@ def build_common_parser() -> argparse.ArgumentParser:
         dest="NanoAODv",
         default=9,
         choices=[9, 12, 15],
-        help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
+        help="version number of NanoAOD samples we're working with. Currently, 9, 12, and 15 are supported",
     )
 
     parser.add_argument(
