@@ -33,7 +33,7 @@ class JobStatus:
         )
 
     def should_run(self, dataset: str, idx: int) -> bool:
-        running, done, fail = self._paths(dataset, idx)
+        _, done, fail = self._paths(dataset, idx)
         if done.exists():
             # if it was later marked failed, allow rerun
             if fail.exists() and fail.stat().st_mtime > done.stat().st_mtime:

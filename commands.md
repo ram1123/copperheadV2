@@ -12,8 +12,17 @@ time python scripts/sync_parquet_dimuon.py /depot/cms/hmm/shar1172/hmm_ntuples/c
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23October -y "2022postEE" -m calib -k -d 2)
 
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m 0 -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2023BPix" -m 0 -k)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m 1 -k)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_21Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m 1 -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_21Jan_JVMFilterJets -y "2024" -m 1 -k)
 
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m calib -k)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "run3" -m dnn_pre -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022preEE" -m dnn_pre -k)
 
 ruff check --select I ./run_prestage.py
 ```
