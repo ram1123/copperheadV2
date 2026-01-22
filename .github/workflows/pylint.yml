@@ -42,4 +42,5 @@ jobs:
           --disable=import-error \
           --disable=missing-module-docstring \
           --disable=line-too-long \
+          --disable=logging-fstring-interpolation \
           $CHANGED_FILES
