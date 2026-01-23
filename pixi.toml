@@ -1,6 +1,6 @@
 [workspace]
 authors = ["ram1123 <ramkrishna.sharma71@gmail.com>"]
-channels = ["conda-forge"]
+channels = ["conda-forge", "pytorch", "nvidia"]
 name = "coffea_latest_ml"
 platforms = ["linux-64"]
 version = "0.1.0"
@@ -31,7 +31,8 @@ ipykernel = "*"
 omegaconf = "*"
 seaborn = "*"
 libnvjitlink-dev = "*"
-pytorch = "*"
+pytorch = "2.5.*"
+pytorch-cuda = "12.4.*"
 scikit-learn = "*"
 numpy = "*"
 matplotlib = "*"
