@@ -1,14 +1,14 @@
 [workspace]
 authors = ["ram1123 <ramkrishna.sharma71@gmail.com>"]
 channels = ["conda-forge"]
-name = "coffea_latest"
+name = "coffea_latest_ml"
 platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks]
 
 [dependencies]
-python = "*"
+python = "==3.12.9"
 pip = "*"
 coffea = "==2025.3.0"
 awkward = "*"
@@ -31,6 +31,11 @@ ipykernel = "*"
 omegaconf = "*"
 seaborn = "*"
 libnvjitlink-dev = "*"
+pytorch = "*"
+scikit-learn = "*"
+numpy = "*"
+matplotlib = "*"
+plotly = "*"
 
 [pypi-dependencies]
 rucio-clients = "*"
@@ -39,3 +44,8 @@ torch = "*"
 cmsstyle = "*"
 scikit-hep-testdata = "*"
 graphviz = "*"
+ax-platform = ">=1.2.1, <2"
+shap = ">=0.50.0, <0.51"
+
+[activation]
+scripts = ["scripts/pixi_activate.sh"]

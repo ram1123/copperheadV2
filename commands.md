@@ -23,6 +23,7 @@ time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.ya
 
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "run3" -m dnn_pre -k)
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022preEE" -m dnn_pre -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_20Jan_JVMFilterJets -y "2022preEE" -m dnn_train -k)
 
 ruff check --select I ./run_prestage.py
 ```
