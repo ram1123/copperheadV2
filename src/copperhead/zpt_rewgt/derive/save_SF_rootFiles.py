@@ -130,6 +130,8 @@ if __name__ == "__main__":
         else: # run3
             if year == "2022preEE":
                 dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl_XSDYTurbo/*/*.parquet")
+            elif year == "2024":
+                dy_events = dak.from_parquet(f"{base_path}/dyTo2Mu_M-50_aMCatNLO/*/*.parquet")
             else: # 2022postEE, 2023, 2023BPix
                 dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl/*/*.parquet")
 
