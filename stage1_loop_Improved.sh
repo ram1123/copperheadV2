@@ -31,7 +31,7 @@ EOF
 # ---------- Default values ----------
 datasetYAML="configs/datasets/dataset_nanoAODv12.yaml"
 NanoAODv="12"
-declare -a years=("2018PR" "2018" "2017" "2016postVFP" "2016preVFP" "2016" "run2")
+declare -a years=("2018PR" "2018" "2017" "2016postVFP" "2016preVFP" "2016" "run2" "run3")
 label="Default_nanoAODv9"
 debug="0"
 mode="all"
@@ -126,6 +126,7 @@ declare -A data_l_dict=(
     [2023BPix]="D"
     [2024]="C D E F G H I"
     [run2]="A B C D E F G H"
+    [run3]="C D E F G H I"
 )
 
 # bkg_l="DY TT ST VV EWK VVV"
@@ -144,14 +145,14 @@ if [[ "$debug" -ge 1 ]]; then
     data_l_dict["2017"]=""
     data_l_dict["2018"]=""
     # data_l_dict["2022preEE"]=""
-    # data_l_dict["2022postEE"]=""
+    data_l_dict["2022postEE"]=""
     # data_l_dict["2023"]=""
     # data_l_dict["2023BPix"]=""
     # data_l_dict["2024"]=""
 
     # bkg_l=""
-    # bkg_l="DY Top VV EWK VVV"
-    bkg_l="DY"
+    bkg_l="DY Top VV EWK VVV"
+    # bkg_l=""
 
     # sig_l="Higgs"
     sig_l=""
@@ -238,14 +239,14 @@ for year in "${years[@]}"; do
 
     # ########## Calibration commands ##########
     # ~18mins for step1+step2+step3 for 2024 data
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps all "
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps all --isMC "
+    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --steps all "
+    # command6="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --steps all --isMC "
 
     # category="30-45_OB"
     # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --steps step1  --fixCat ${category} "
 
     # category=10
-    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --closure_test "
+    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --closure_test "
     # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V3 --ifbinned --closure_test  --fixCat ${category} --no-dask-client "
     # ########## Calibration commands ##########
 
@@ -274,6 +275,7 @@ for year in "${years[@]}"; do
         command2+=" --use_gateway "
         command4+=" --use_gateway "
         command5+=" --use_gateway "
+        command6+=" --use_gateway "
         command_compact+=" --use_gateway "
     fi
 
@@ -338,6 +340,11 @@ for year in "${years[@]}"; do
             log "Running mass calibration..."
             log "Command: $command5"
             eval "$command5"
+            # if command6 is defined, run it
+            if [[ -n "${command6-}" ]]; then
+                log "Command: $command6"
+                eval "$command6"
+            fi
             ;;
         compact)
             log "Compacting parquet data for year $year..."
@@ -348,12 +355,14 @@ for year in "${years[@]}"; do
             log "Running DNN step(s) for year $year..."
             cmd_preproc="python MVA_training/VBF/run2_legacyModel/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level DEBUG "
             # Alternative cmd_train configurations (uncomment and adjust as needed):
+
             # -- Bayesian Optimization:
-            cmd_train="python MVA_training/VBF/run2_legacyModel/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 55 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
+            # cmd_train="python MVA_training/VBF/run2_legacyModel/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 55 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
             # cmd_train="python MVA_training/VBF/run2_legacyModel/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 21 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
+
             # -- Quick test:
             # cmd_train="python MVA_training/VBF/run2_legacyModel/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 3 --bo-epochs 5 --bo-fold 0 --n-epochs 5 --batch-size 15536 --log-level INFO "
-            # cmd_train="python MVA_training/VBF/run2_legacyModel/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 5 --batch-size 15536 --log-level INFO "
+            cmd_train="python MVA_training/VBF/run2_legacyModel/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 5 --batch-size 15536 --log-level INFO "
 
             # Active configuration:
             # cmd_train="python MVA_training/VBF/run2_legacyModel/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 100 --log-level INFO "

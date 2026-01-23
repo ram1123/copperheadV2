@@ -26,3 +26,6 @@ log*.txt
 *.d
 *.bak
 *.tsv
+# pixi environments
+.pixi/*
+!.pixi/config.toml

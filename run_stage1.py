@@ -1,25 +1,23 @@
-import argparse
 import copy
 import ctypes
 import glob
 import json
-import logging
 import os
 import subprocess
 import sys
 import time
-import traceback
 import warnings
 from itertools import islice
-from pathlib import Path
 
 import awkward as ak
 import dask
 import numpy as np
 import tqdm
+from cli.common_argparser import build_common_parser
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
 from distributed import Client
+from modules.job_status import JobStatus, write_stage1_summary
 from modules.utils import get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from src.copperhead_processor import EventProcessor
@@ -167,72 +165,6 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
     raise RuntimeError(f"Failed to create EOS directory: {eos_path}")
 
 
-# ---- resumable job markers ---------------------------------------------------
-class JobStatus:
-    def __init__(self, status_dir: str):
-        self.dir = Path(status_dir)
-        self.dir.mkdir(parents=True, exist_ok=True)
-        self.ledger = self.dir / "job_status.jsonl"
-
-    def _paths(self, dataset: str, idx: int):
-        base = f"{dataset}__{idx}"
-        return (
-            self.dir / f"{base}.running",
-            self.dir / f"{base}.done",
-            self.dir / f"{base}.fail",
-        )
-
-    def should_run(self, dataset: str, idx: int) -> bool:
-        running, done, fail = self._paths(dataset, idx)
-        if done.exists():
-            # if it was later marked failed, allow rerun
-            if fail.exists() and fail.stat().st_mtime > done.stat().st_mtime:
-                return True
-            return False
-        return True
-
-    def _append_ledger(self, rec: dict):
-        with self.ledger.open("a") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-
-    def mark_running(self, dataset: str, idx: int):
-        running, _, _ = self._paths(dataset, idx)
-        running.write_text(str(time.time()))
-        self._append_ledger(
-            {"ts": time.time(), "dataset": dataset, "idx": idx, "status": "running"}
-        )
-
-    def mark_done(self, dataset: str, idx: int, meta=None):
-        running, done, _ = self._paths(dataset, idx)
-        done.write_text(str(time.time()))
-        running.unlink(missing_ok=True)
-        self._append_ledger(
-            {
-                "ts": time.time(),
-                "dataset": dataset,
-                "idx": idx,
-                "status": "done",
-                "meta": meta or {},
-            }
-        )
-
-    def mark_failed(self, dataset: str, idx: int, err: Exception):
-        running, _, fail = self._paths(dataset, idx)
-        fail.write_text(str(time.time()))
-        running.unlink(missing_ok=True)
-        self._append_ledger(
-            {
-                "ts": time.time(),
-                "dataset": dataset,
-                "idx": idx,
-                "status": "failed",
-                "error": "".join(
-                    traceback.format_exception_only(type(err), err)
-                ).strip(),
-            }
-        )
-# ------------------------------------------------------------------------------
-
 def _parquet_dir_has_files(p: str) -> bool:
     try:
         return any(fn.endswith(".parquet") for fn in os.listdir(p))
@@ -242,45 +174,7 @@ def _parquet_dir_has_files(p: str) -> bool:
 
 if __name__ == "__main__":
     t0 = time.perf_counter()
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-    "-save",
-    "--save_path",
-    dest="save_path",
-    default=None,
-    action="store",
-    help="save path to store stage1 output files",
-    )
-    parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="string value of year we are calculating",
-    )
-    parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
-    )
-    parser.add_argument(
-    "-aod_v",
-    "--NanoAODv",
-    dest="NanoAODv",
-    type=int,
-    default=9,
-    choices = [9, 12, 15],
-    help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
-    )
-    parser.add_argument(
-        "--yaml",
-        dest="dataset_yaml_file",
-        default="configs/datasets/dataset.yaml",
-        help="path of yaml file containing the dataset names"
-    )
+    parser = build_common_parser()
     parser.add_argument(
         "-maxfile",
         "--max_file_len",
@@ -289,12 +183,6 @@ if __name__ == "__main__":
         default = 3000,
         help = "How many maximum files to process simultaneously.",
     )
-    parser.add_argument(
-     "--log-level",
-     default=logging.ERROR,
-     type=lambda x: getattr(logging, x),
-     help="Configure the logging level."
-     )
     parser.add_argument(
         "--test_mode",
         action="store_true",
@@ -453,7 +341,9 @@ if __name__ == "__main__":
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
+
                     # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
+                    jobstat.mark_running(dataset, idx)
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                         try:
                             logger.info("{}{}".format("\n" * 2, "=" * 20))
@@ -465,8 +355,6 @@ if __name__ == "__main__":
                             alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
 
                             logger.debug(f"alt_sample['files']: {alt_sample['files']}")
-
-                            jobstat.mark_running(dataset, idx)
 
                             # clean partial output from previous tries
                             os.system(f"rm -rf '{save_path}'")
@@ -503,7 +391,6 @@ if __name__ == "__main__":
                                 logger.exception(
                                     f"[resume] write failed after {attempt} attempts for {dataset}[{idx}]"
                                 )
-                                raise
 
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
@@ -580,4 +467,11 @@ if __name__ == "__main__":
                 dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file)
 
     elapsed = round(time.time() - time_step, 3)
+
+    write_stage1_summary(
+        status_dir=os.path.join(start_save_path, "_status"),
+        out_json_path=os.path.join(start_save_path, "_status", "stage1_summary.json"),
+        logger=logger,
+    )
+
     logger.info(f"Finished everything in {elapsed} s.")

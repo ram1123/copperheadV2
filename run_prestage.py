@@ -1,45 +1,38 @@
 import argparse
-import json
-import os
-
-import awkward as ak
-import coffea
-import dask
-from coffea.dataset_tools import rucio_utils
-from coffea.dataset_tools.preprocess import preprocess
-from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
-from distributed import Client
-
-dask.config.set({'logging.distributed': 'error'})
 import copy
 import glob
-import logging
+import json
+import os
 import re
 import time
 import uuid
 
+import awkward as ak
+import coffea
+import dask
 import numpy as np
 import tqdm
 import uproot
+from cli.common_argparser import build_common_parser
+from coffea.dataset_tools import rucio_utils
+from coffea.dataset_tools.preprocess import preprocess
+from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
+from distributed import Client
 from modules.utils import logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+from omegaconf import OmegaConf
 
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")
-from omegaconf import OmegaConf
 
+dask.config.set({'logging.distributed': 'error'})
 
 def nanoevents_from_root_with_redirectors(
-    file_input, schemaclass, uproot_options, metadata=None
+    file_input, host_prefix, attempt, schemaclass, uproot_options, metadata=None
 ):
-    """
-    Try NanoEventsFactory.from_root with multiple redirectors if AAA/TLS issues occur.
-    file_input can be dict{url: meta} or a list of urls; we normalize keys each attempt.
-    """
     if metadata is None:
         metadata = {}
 
-    last_err = None
     try:
         fi_norm = normalize_paths(file_input, host_prefix)
         logger.info(f"[prestage] attempt {attempt} using redirector {host_prefix}")
@@ -49,19 +42,15 @@ def nanoevents_from_root_with_redirectors(
             schemaclass=schemaclass,
             uproot_options=uproot_options,
         ).events()
-        logger.info(f"[prestage] attempt {attempt} succeeded with {host_prefix}")
-        logger.info(f"Successfully read the files in attempt {attempt} with redirector {host_prefix}")
+        logger.info(f"[prestage] attempt {attempt} succeeded to read metadata with {host_prefix}")
+        return events
 
-        return events  # success
     except Exception as e:
         msg = str(e)
         tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
         logger.warning(
-            f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e}"
+            f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e} (tls_bad={tls_bad})"
         )
-        if tls_bad and attempt < len(AAA_REDIRECTORS):
-            logger.warning("[prestage] retrying with next redirector...")
-            last_err = e
         raise
 
 
@@ -72,7 +61,6 @@ def preprocess_with_redirectors(
     Run coffea.dataset_tools.preprocess, retrying with different AAA redirectors
     if we hit typical XRootD / LZMA issues.
     """
-    last_err = None
     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
         try:
             # Normalize file URLs inside "files" dicts
@@ -83,7 +71,7 @@ def preprocess_with_redirectors(
                 }
 
             logger.info(
-                f"[prestage] preprocess attempt {attempt} with redirector {host_prefix}"
+                f"[prestage] preparing files: attempt {attempt} with redirector {host_prefix}"
             )
             return preprocess(
                 norm_final_output,
@@ -101,7 +89,6 @@ def preprocess_with_redirectors(
             )
             if tls_bad and attempt < len(AAA_REDIRECTORS):
                 logger.warning("[prestage] retrying preprocess with next redirector...")
-                last_err = e
                 continue
             # Non-AAA error or no more redirectors
             raise
@@ -211,7 +198,7 @@ def get_Xcache_filelist(fnames: list):
         root_file = re.findall(r"/store.*", fname)[0]
         x_cache_fname = "root://xcache.cms.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
-    print(f"new_fnames: {new_fnames}")
+    # logger.debug(f"new_fnames: {new_fnames}")
     return new_fnames
 
 def find_keys_in_yaml(yaml_data, keys_to_find):
@@ -235,15 +222,7 @@ def find_keys_in_yaml(yaml_data, keys_to_find):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="year value. The options are: 2016preVFP, 2016postVFP, 2017, 2018",
-    )
+    parser = build_common_parser()
     parser.add_argument(
     "-ch",
     "--chunksize",
@@ -251,57 +230,6 @@ if __name__ == "__main__":
     default="10000",
     action="store",
     help="chunksize",
-    )
-    parser.add_argument(
-        "--yaml",
-        dest="dataset_yaml_file",
-        default="configs/datasets/dataset.yaml",
-        help="path of yaml file containing the dataset names"
-    )
-    parser.add_argument(
-    "-frac",
-    "--change_fraction",
-    dest="fraction",
-    default=None,
-    action="store",
-    help="change fraction of steps of the data",
-    )
-    parser.add_argument(
-    "-data",
-    "--data",
-    dest="data_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of data samples represented by alphabetical letters A-H",
-    )
-    parser.add_argument(
-    "-bkg",
-    "--background",
-    dest="bkg_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
-    )
-    parser.add_argument(
-    "-sig",
-    "--signal",
-    dest="sig_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of sig samples represented by shorthands: ggH, VBF",
-    )
-    parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
     )
     parser.add_argument(
     "--xcache",
@@ -317,15 +245,6 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, uses skips bad files when calling preprocessing",
     )
-    parser.add_argument(
-    "-aod_v",
-    "--NanoAODv",
-    type=int,
-    dest="NanoAODv",
-    default=9,
-    choices = [9, 12, 15],
-    help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
-    )
     parser.add_argument( # temp flag to test the 2 percent data discrepancy in ggH cat between mine and official workspace
     "--run2_rereco",
     dest="run2_rereco",
@@ -334,13 +253,6 @@ if __name__ == "__main__":
     help="If true, uses skips bad files when calling preprocessing",
     )
     parser.add_argument(
-     "--log-level",
-     default=logging.ERROR,
-     type=lambda x: getattr(logging, x),
-     help="Configure the logging level."
-    )
-    # argument for prestage output and output file
-    parser.add_argument(
         "--prestage_output",
         dest="prestage_output",
         default="./prestage_output",
@@ -348,6 +260,7 @@ if __name__ == "__main__":
         help="path to prestage output directory",
     )
     args = parser.parse_args()
+
     time_step = time.time()
     logger.setLevel(args.log_level)
     os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
@@ -363,7 +276,7 @@ if __name__ == "__main__":
                 "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
                 proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
             )
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
+            cluster_info = gateway.list_clusters()[1]# get the first cluster by default. There only should be one anyways
             client = gateway.connect(cluster_info.name).get_client()
             logger.debug("Gateway Client created")
         else: # use local cluster
@@ -508,6 +421,9 @@ if __name__ == "__main__":
             if args.xcache:
                 fnames = get_Xcache_filelist(fnames)
 
+            # # if fnames contains `/eos/vbc/experiments/cms` remove it.
+            # fnames = [f.replace("/eos/vbc/experiments/cms", "") if "/eos/vbc/experiments/cms" in f else f for f in fnames]
+
             logger.debug(f"sample_name: {sample_name}")
             logger.debug(f"file names: {fnames}")
             logger.debug(f"len(fnames): {len(fnames)}")
@@ -522,7 +438,6 @@ if __name__ == "__main__":
             }
             if is_data:  # data sample
                 base_file_input = {fname: {"object_path": "Events"} for fname in fnames}
-                last_err = None
 
                 for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                     try:
@@ -570,12 +485,10 @@ if __name__ == "__main__":
                         )
                         if tls_bad and attempt < len(AAA_REDIRECTORS):
                             logger.warning("[prestage] retrying data sample with next redirector...")
-                            last_err = e
                             continue
                         # Non-AAA error or last redirector → propagate
                         raise
             else: # if MC
-                last_err = None
                 for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                     try:
                         if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
@@ -583,6 +496,8 @@ if __name__ == "__main__":
                             file_input = normalize_paths(file_input, host_prefix)
                             events = nanoevents_from_root_with_redirectors(
                                 file_input=file_input,
+                                host_prefix=host_prefix,
+                                attempt=attempt,
                                 schemaclass=BaseSchema,
                                 metadata={},
                                 uproot_options={"timeout": 4 * 2400},
@@ -590,12 +505,15 @@ if __name__ == "__main__":
                             gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
                             preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
                             preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
+                            break  # stop trying once successful
                         else:
                             file_input = {fname: {"object_path": "Runs"} for fname in fnames}
                             file_input = normalize_paths(file_input, host_prefix)
                             logger.debug(f"file_input: {file_input}")
                             runs = nanoevents_from_root_with_redirectors(
                                 file_input=file_input,
+                                host_prefix=host_prefix,
+                                attempt=attempt,
                                 schemaclass=BaseSchema,
                                 metadata={},
                                 uproot_options={"timeout": 4 * 2400},
@@ -604,6 +522,7 @@ if __name__ == "__main__":
                             # print(f"runs.fields: {runs.fields}")
                             # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
                             if "genEventSumw" in runs.fields:
+                                logger.debug("genEventSumw found: nanoAODv9 or v12")
                                 # sumGenwgts = ak.sum(runs.genEventSumw).compute()
                                 # sumGenwgts_v2 = ak.sum(events.genWeight).compute()
                                 # gen_wgt_max = ak.max(events.genWeight).compute()
@@ -614,8 +533,11 @@ if __name__ == "__main__":
                                 preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                                 preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                             else: # nanoAODv6
+                                logger.debug("genEventSumw_ found: nanoAODv6")
                                 preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
                                 preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                            logger.info(f"[prestage] data sample {sample_name}: success on attempt {attempt} ")
+                            break  # stop trying once successful
                     except Exception as e:
                         msg = str(e)
                         tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
@@ -625,7 +547,6 @@ if __name__ == "__main__":
                         )
                         if tls_bad and attempt < len(AAA_REDIRECTORS):
                             logger.warning("[prestage] retrying data sample with next redirector...")
-                            last_err = e
                             continue
                         # Non-AAA error or last redirector → propagate
                         raise

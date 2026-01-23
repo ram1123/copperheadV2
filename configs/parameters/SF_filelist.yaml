@@ -262,10 +262,10 @@ new_zpt_weights_file_aMCatNLO:
     "2017": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2016preVFP": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2016postVFP": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
-    "2022preEE": None
-    "2022postEE": None
-    "2023": None
-    "2023BPix": None
+    "2022preEE": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
+    "2022postEE": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
+    "2023": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
+    "2023BPix": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2024": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
 new_zpt_weights_file_MiNNLO:
     2016preVFP: data/zpt_rewgt/zpt_rewgt_params_minnlo.yaml

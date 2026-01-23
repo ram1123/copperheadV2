@@ -1,0 +1,41 @@
+[workspace]
+authors = ["ram1123 <ramkrishna.sharma71@gmail.com>"]
+channels = ["conda-forge"]
+name = "coffea_latest"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = "*"
+pip = "*"
+coffea = "==2025.3.0"
+awkward = "*"
+uproot = "*"
+hist = "*"
+mplhep = "*"
+uncertainties = "*"
+lmfit = "*"
+correctionlib = "==2.6.4"
+hepconvert = "*"
+root = "==6.32.2"
+root_base = "==6.32.2"
+xgboost = "*"
+dask = "*"
+dask-gateway = "*"
+dask-awkward = "==2025.5.0"
+xrootd = "*"
+ipywidgets = "*"
+ipykernel = "*"
+omegaconf = "*"
+seaborn = "*"
+libnvjitlink-dev = "*"
+
+[pypi-dependencies]
+rucio-clients = "*"
+fsspec-xrootd = "*"
+torch = "*"
+cmsstyle = "*"
+scikit-hep-testdata = "*"
+graphviz = "*"

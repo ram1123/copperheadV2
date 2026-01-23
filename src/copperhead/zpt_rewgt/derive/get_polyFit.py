@@ -1,35 +1,21 @@
-import os
-import argparse
-import yaml
 import array
-import ROOT
-from omegaconf import OmegaConf
-from bin_definitions import define_custom_binning
+import os
 
+import ROOT
+import yaml
+from cli.common_argparser import build_common_parser
 from modules.utils import logger
+from omegaconf import OmegaConf
 
 # Run in batch mode and disable statistics box
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
 
-# from do_f_test import define_custom_binning
 
 # TODO: Add option to choose different binning schemes
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Perform goodness-of-fit for Z pT SFs")
-    parser.add_argument(
-        "-l", "--label", dest="label", required=True,
-        help="Run label: directory under plot_path to find inputs"
-    )
-    parser.add_argument(
-        "-y", "--year", dest="year", default="all",
-        help="Year to process (or 'all' for 2016preVFP, 2016postVFP, 2017, 2018)"
-    )
-    parser.add_argument(
-        "-save", "--plot_path", dest="plot_path", default="plots",
-        help="Base directory where plots and inputs live"
-    )
+    parser = build_common_parser()
     parser.add_argument(
         "--nbins", type=str, default="CustomBins",
         help="Binning key (only 'CustomBins' is handled)"
@@ -37,10 +23,6 @@ def parse_arguments():
     parser.add_argument(
         "--njet", type=int, nargs="+", default=[0, 1, 2],
         help="Jet multiplicities to loop over"
-    )
-    parser.add_argument(
-        "--outAppend", type=str, default="",
-        help="String to append to output filenames"
     )
     parser.add_argument(
         "-dy_sample", "--dy_sample", dest="dy_sample",
@@ -337,7 +319,7 @@ def main():
     global_fit_xmax = 200.0
 
     for year in years:
-        in_dir = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
+        in_dir = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
         save_dir = f"{in_dir}/gof_{out_append}"
         os.makedirs(save_dir, exist_ok=True)
 
@@ -355,6 +337,7 @@ def main():
             xmin0, xmax0 = cfg["f0"]["fit_range"]
             order1 = cfg["f1"]["order"]
             xmin1, xmax1 = cfg["f1"]["fit_range"]
+            edges = cfg["f0"]["bin_edges"]
 
             # Open the ROOT file and retrieve histograms
             in_file = ROOT.TFile(os.path.join(in_dir, f"{year}_njet{njet}.root"), "READ")
@@ -365,7 +348,6 @@ def main():
             h_dy   = workspace.obj("hist_dy").Clone("h_dy_clone")
 
             # Rebin both histograms with custom edges
-            edges = define_custom_binning()
             h_data_rebinned = rebin_histogram(h_data, edges)
             h_dy_rebinned   = rebin_histogram(h_dy, edges)
             nbins_new = h_data_rebinned.GetNbinsX()
@@ -418,15 +400,22 @@ def main():
 
     # Merge with existing YAML or create fresh
     # print(f"Saving fit parameters to YAML: \n{save_dict}")
-    in_dir_yaml = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
+    # ------------------------------------------------------------------
+    # Save YAML with top-level keys = years
+    # ------------------------------------------------------------------
+    in_dir_yaml = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
     os.makedirs(in_dir_yaml, exist_ok=True)
     yaml_path = f"{in_dir_yaml}/zpt_rewgt_params_{args.dy_sample}.yaml"
+
+    new_cfg = OmegaConf.create(save_dict)  # top-level: "2018", "2017"
+
     if os.path.isfile(yaml_path):
         existing = OmegaConf.load(yaml_path)
-        merged = OmegaConf.merge(existing, {"gof_results": save_dict})
+        merged = OmegaConf.merge(existing, new_cfg)  # merge year-by-year (and njet-by-njet)
     else:
-        merged = OmegaConf.create({"gof_results": save_dict})
-    OmegaConf.save(merged, yaml_path)
+        merged = new_cfg
+
+    OmegaConf.save(config=merged, f=yaml_path)
     print(f"Saved fit parameters to {yaml_path}")
 
 if __name__ == "__main__":
