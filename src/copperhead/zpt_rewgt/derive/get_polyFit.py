@@ -90,7 +90,7 @@ def fit_polynomial(hist_sf, order, xmin, xmax, fit_opts="L S Q"):
     func = ROOT.TF1(f"poly{order}", expr, xmin, xmax)
     hist_sf.Fit(func, fit_opts, "", xmin, xmax)
     hist_sf.Fit(func, fit_opts, "", xmin, xmax)
-    # result = hist_sf.Fit(func, "L S R", "", xmin, xmax)
+    result = hist_sf.Fit(func, "L S R", "", xmin, xmax)
     return func
 
 def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
@@ -99,7 +99,7 @@ def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
     Returns the TF1 object for that line.
     """
     func = ROOT.TF1("flat_line", "[0]*x + [1]", xmin, xmax)
-    # result = hist_sf.Fit(func, fit_opts, "", xmin, xmax)
+    result = hist_sf.Fit(func, fit_opts, "", xmin, xmax)
     return func
 
 def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xmax):
