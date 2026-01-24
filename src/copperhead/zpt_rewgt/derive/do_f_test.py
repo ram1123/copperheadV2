@@ -5,29 +5,37 @@ import os
 import argparse
 import logging
 from collections import defaultdict
-from modules.utils import logger
 from omegaconf import OmegaConf
 
+from cli.common_argparser import build_common_parser
+from modules.utils import logger
 from bin_definitions import poly_fit_ranges, define_custom_binning
 
 # Argument parsing
-parser = argparse.ArgumentParser()
-parser.add_argument("-l", "--run_label", type=str, help="Run label", required=True)
-parser.add_argument("-y", "--years", type=str, nargs="+", help="Year", required=True)
-parser.add_argument("--njet", type=int, nargs="+", default=[0, 1, 2], help="Number of jets")
+parser = build_common_parser()
 parser.add_argument("--debug", action="store_true", help="Enable debug mode")
-parser.add_argument("--outAppend", type=str, default="", help="Append to output file name")
-parser.add_argument("--nbins", type=str, default="CustomBins", help="Number of bins")
-parser.add_argument("-save", "--plot_path", dest="plot_path", default="plots", action="store", help="save path to store plots")
-parser.add_argument("--dy_sample", type=str, default="MiNNLO", choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
-                    help="DY sample to use for reweighting")
+parser.add_argument(
+    "--nbins", type=str, default="CustomBins",
+    help="Binning key (only 'CustomBins' is handled)"
+)
+parser.add_argument(
+    "--njet", type=int, nargs="+", default=[0, 1, 2],
+    help="Jet multiplicities to loop over"
+)
+parser.add_argument(
+    "-dy_sample", "--dy_sample", dest="dy_sample",
+    default="MiNNLO",
+    choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
+    action="store",
+    help="choose the type of DY samples to use for Zpt reweighting",
+)
 args = parser.parse_args()
 
 logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
 
-year = args.years[0]
-run_label = args.run_label
-inPath = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
+year = args.year
+run_label = args.label
+inPath = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
 save_path = f"{inPath}/fTest_{args.outAppend}"
 os.makedirs(save_path, exist_ok=True)
 
