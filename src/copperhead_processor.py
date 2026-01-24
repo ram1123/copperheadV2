@@ -65,7 +65,7 @@ def safe_ratio(num, den, default=0.0):
 def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
     logger.info(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
-    max_order = 5 #9
+    max_order = 5 # FIXME: Hardcoded max order of the function, should be read from config instead
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
 
@@ -274,6 +274,22 @@ def getPhiCS(
     delta_Q_term = delta_Q_term / dimuon_pt # normalize since Q_T should techincally be a unit vector
     phi_cs = np.arctan2(Q_coeff*delta_R_term, delta_Q_term)
     return phi_cs
+
+
+def _add_block(out, block):
+    """This function is to update the output dictionary with another dictionary block,
+    that will be in the output parquet file.
+    Arguments:
+        out: dict
+            The output dictionary to be updated.
+        block: dict
+            The dictionary block to add to the output.
+    Returns:
+        out: dict
+            The updated output dictionary.
+    """
+    out.update(block)
+    return out
 
 
 class EventProcessor(processor.ProcessorABC):
@@ -1474,56 +1490,90 @@ class EventProcessor(processor.ProcessorABC):
         else:
             dnn_year = float(year)
         logger.debug(f"dnn_year: {dnn_year}")
-        out_dict = {
+
+        # output dict for the output parquet file
+        out_dict = {}
+
+        # Event identifiers
+        _add_block(out_dict, {
             "event": events.event,
             "run": events.run,
             "luminosityBlock": events.luminosityBlock,
             "fraction": ak.ones_like(events.event) * events.metadata["fraction"],
             "year": ak.ones_like(nmuons) * dnn_year,
-            "dimuon_mass": dimuon.mass,
-            "dimuon_pt": dimuon.pt,
-            "dimuon_pt_log": np.log(dimuon.pt),
-            "dimuon_eta": dimuon.eta,
-            "dimuon_rapidity": getRapidity(dimuon),
+        })
 
+        # Leading and sub-leading muon kinematics
+        _add_block(out_dict, {
+            "mu1_pt": mu1.pt,
+            "mu1_ptErr": mu1.ptErr,
+            "mu1_eta": mu1.eta,
+            "mu1_phi": mu1.phi,
+
+            "mu2_pt": mu2.pt,
+            "mu2_ptErr": mu2.ptErr,
+            "mu2_eta": mu2.eta,
+            "mu2_phi": mu2.phi,
+
+            "mu1_pt_over_mass": safe_ratio(mu1.pt, dimuon.mass, default=0.0),
+            "mu2_pt_over_mass": safe_ratio(mu2.pt, dimuon.mass, default=0.0),
+        })
+
+        # Dimuon kinematics
+        _add_block(
+            out_dict,
+            {
+                "dimuon_mass": dimuon.mass,
+                "dimuon_pt": dimuon.pt,
+                "dimuon_pt_log": np.log(dimuon.pt),
+                "dimuon_eta": dimuon.eta,
+                "dimuon_rapidity": getRapidity(dimuon),
+                "dimuon_phi": dimuon.phi,
+
+                "dimuon_dEta": dimuon_dEta,
+                "dimuon_dPhi": dimuon_dPhi,
+                "dimuon_dR": dimuon_dR,
+            },
+        )
+
+        # Mass resolution and angular variables
+        _add_block(out_dict, {
+            "uncalibrated_dimuon_ebe_mass_res": uncalibrated_dimuon_ebe_mass_res,
             "dimuon_ebe_mass_res": dimuon_ebe_mass_res,
             "dimuon_ebe_mass_res_rel": dimuon_ebe_mass_res_rel,
             "dimuon_cos_theta_cs": dimuon_cos_theta_cs,
             "dimuon_phi_cs": dimuon_phi_cs,
+        })
 
-        }
+        # FatJet block
         if do_getFatJet_vars:
-            out_dict.update({
+            _add_block(out_dict, {
                 "nfatJets": nfatJets,
                 "nfatJets_pre": nfatJets_pre,
                 "nfatJets_drmuon": nfatJets_drmuon,
-                # "fatjets_dRmu_gt0p8": fatJets_dRmu,
 
-
-                # add fatjet1 default kinematics
                 "fatJet1_default_pt_nominal": fatJet1_default.pt,
                 "fatJet1_default_eta_nominal": fatJet1_default.eta,
                 "fatJet1_default_phi_nominal": fatJet1_default.phi,
                 "fatJet1_default_mass_nominal": fatJet1_default.mass,
                 "fatJet1_default_msoftdrop_nominal": fatJet1_default.msoftdrop,
-                # "fatJet1_default_electronIdx3SJ_nominal": fatJet1_default.electronIdx3SJ,
-                # "fatJet1_default_nConstituents_nominal": fatJet1_default.nConstituents,
-                # "fatJet1_default_tau1_nominal": fatJet1_default.tau1,
-                # "fatJet1_default_tau2_nominal": fatJet1_default.tau2,
-                # "fatJet1_default_tau3_nominal": fatJet1_default.tau3,
-                # "fatJet1_default_tau4_nominal": fatJet1_default.tau4,
-                # "fatJet1_default_particleNetWithMass_QCD_nominal": fatJet1_default.particleNetWithMass_QCD,
                 "fatJet1_default_particleNetWithMass_WvsQCD_nominal": fatJet1_default.particleNetWithMass_WvsQCD,
-                # "fatJet1_default_particleNetWithMass_ZvsQCD_nominal": fatJet1_default.particleNetWithMass_ZvsQCD,
-                # "fatJet1_default_particleNet_QCD_nominal": fatJet1_default.particleNet_QCD,
-                # "fatJet1_default_particleNet_XbbVsQCD_nominal": fatJet1_default.particleNet_XbbVsQCD,
-                # "fatJet1_default_particleNet_XccVsQCD_nominal": fatJet1_default.particleNet_XccVsQCD,
-                # "fatJet1_default_particleNet_XggVsQCD_nominal": fatJet1_default.particleNet_XggVsQCD,
-                # "fatJet1_default_particleNet_XqqVsQCD_nominal": fatJet1_default.particleNet_XqqVsQCD,
-                # "fatJet1_default_particleNet_massCorr_nominal": fatJet1_default.particleNet_massCorr
             })
+
+        # Additional jet block
         if do_additional_jet_vars:
-            out_dict.update({
+            # Default jet kinematics (nominal, pre-JEC/JER snapshot)
+            _add_block(out_dict, {
+                "jet1_default_pt_nominal": jet1_default.pt,
+                "jet1_default_eta_nominal": jet1_default.eta,
+                "jet1_default_phi_nominal": jet1_default.phi,
+                "jet1_default_mass_nominal": jet1_default.mass,
+
+                "jet2_default_pt_nominal": jet2_default.pt,
+                "jet2_default_eta_nominal": jet2_default.eta,
+                "jet2_default_phi_nominal": jet2_default.phi,
+                "jet2_default_mass_nominal": jet2_default.mass,
+
                 "jet3_default_pt_nominal": jet3_default.pt,
                 "jet3_default_eta_nominal": jet3_default.eta,
                 "jet3_default_phi_nominal": jet3_default.phi,
@@ -1534,162 +1584,137 @@ class EventProcessor(processor.ProcessorABC):
                 "jet4_default_phi_nominal": jet4_default.phi,
                 "jet4_default_mass_nominal": jet4_default.mass,
             })
+
         # --- Extra muon variables  ----------------------
-        muon_extra_dict = {
-            "PV_npvs": events.PV.npvs,
-            "PV_npvsGood": events.PV.npvsGood,
-            "MET_pt": met.pt, # As we are using CHS jets, so use MET not PuppiMET
-            "MET_phi": met.phi,
-            "MET_sumEt": met.sumEt,
-            "PuppiMET_pt": PuppiMET.pt,
-            "PuppiMET_phi": PuppiMET.phi,
-            "PuppiMET_sumEt": PuppiMET.sumEt,
-            "mu1_pt": mu1.pt,
-            "mu1_ptErr": mu1.ptErr,
-            "mu2_pt": mu2.pt,
-            "mu2_ptErr": mu2.ptErr,
-            "mu1_pt_over_mass": mu1.pt / dimuon.mass,
-            "mu2_pt_over_mass": mu2.pt / dimuon.mass,
-            "mu1_eta": mu1.eta,
-            "mu2_eta": mu2.eta,
-            "mu1_phi": mu1.phi,
-            "mu2_phi": mu2.phi,
-            "mu1_charge": mu1.charge,
-            "mu2_charge": mu2.charge,
-            "mu1_iso": mu1.pfRelIso04_all,
-            "mu2_iso": mu2.pfRelIso04_all,
-            "mu1_pt_over_mu2_pt": mu1.pt / mu2.pt,
-            "mu1_eta_over_mu2_eta": abs(mu1.eta) / abs(mu2.eta),
-            "mu1_pt_roch" : mu1.pt_roch,
-            "mu1_pt_fsr" : mu1.pt_fsr,
-            # "mu1_pt_gf" : mu1.pt_gf,
-            "mu2_pt_roch" : mu2.pt_roch,
-            "mu2_pt_fsr" : mu2.pt_fsr,
-            # "mu2_pt_gf" : mu2.pt_gf,
-            "nmuons": nmuons,
-
-            "dimuon_phi": dimuon.phi,
-            "dimuon_dEta": dimuon_dEta,
-            "dimuon_dPhi": dimuon_dPhi,
-            "dimuon_dR": dimuon_dR,
-            "acoplanarity": acoplanarity,
-
-            "uncalibrated_dimuon_ebe_mass_res": uncalibrated_dimuon_ebe_mass_res,
-            "dimuon_cos_theta_eta": dimuon_cos_theta_eta,
-            "dimuon_phi_eta": dimuon_phi_eta,
-            "dimuon_pt_over_MET_pt": dimuon.pt / met.pt,
-            "dimuon_pt_over_PuppiMET_pt": dimuon.pt / PuppiMET.pt,
-            "dimuon_pt_over_jet1_pt": dimuon.pt / jet1_default.pt,
-            "dimuon_pt_over_jet2_pt": dimuon.pt / jet2_default.pt,
-            "mu1_pt_raw": mu1.pt_raw,
-            "mu2_pt_raw": mu2.pt_raw,
-            # "pass_leading_pt" : pass_leading_pt,
-
-            # add jet default kinematics here
-            "jet1_default_pt_nominal": jet1_default.pt,
-            "jet1_default_eta_nominal": jet1_default.eta,
-            "jet1_default_phi_nominal": jet1_default.phi,
-            "jet1_default_mass_nominal": jet1_default.mass,
-            "jet2_default_pt_nominal": jet2_default.pt,
-            "jet2_default_eta_nominal": jet2_default.eta,
-            "jet2_default_phi_nominal": jet2_default.phi,
-            "jet2_default_mass_nominal": jet2_default.mass,
-
-            # Impact parameters / beamspot / PV
-            "mu1_dxy":        mu1.dxy,
-            "mu2_dxy":        mu2.dxy,
-            "mu1_dxyErr":     mu1.dxyErr,
-            "mu2_dxyErr":     mu2.dxyErr,
-            "mu1_dxybs":      mu1.dxybs,
-            "mu2_dxybs":      mu2.dxybs,
-            "mu1_dz":         mu1.dz,
-            "mu2_dz":         mu2.dz,
-            "mu1_dzErr":      mu1.dzErr,
-            "mu2_dzErr":      mu2.dzErr,
-            "mu1_ip3d":       mu1.ip3d,
-            "mu2_ip3d":       mu2.ip3d,
-            "mu1_sip3d":      mu1.sip3d,
-            "mu2_sip3d":      mu2.sip3d,
-
-            # IDs / quality flags
-            "mu1_highPurity":     mu1.highPurity,
-            "mu2_highPurity":     mu2.highPurity,
-            "mu1_inTimeMuon":     mu1.inTimeMuon,
-            "mu2_inTimeMuon":     mu2.inTimeMuon,
-            "mu1_isGlobal":       mu1.isGlobal,
-            "mu2_isGlobal":       mu2.isGlobal,
-            "mu1_isPFcand":       mu1.isPFcand,
-            "mu2_isPFcand":       mu2.isPFcand,
-            "mu1_isStandalone":   mu1.isStandalone,
-            "mu2_isStandalone":   mu2.isStandalone,
-            "mu1_isTracker":      mu1.isTracker,
-            "mu2_isTracker":      mu2.isTracker,
-            "mu1_looseId":        mu1.looseId,
-            "mu2_looseId":        mu2.looseId,
-            "mu1_mediumId":       mu1.mediumId,
-            "mu2_mediumId":       mu2.mediumId,
-            "mu1_mediumPromptId": mu1.mediumPromptId,
-            "mu2_mediumPromptId": mu2.mediumPromptId,
-            "mu1_tightCharge":    mu1.tightCharge,
-            "mu2_tightCharge":    mu2.tightCharge,
-            "mu1_pdgId":          mu1.pdgId,
-            "mu2_pdgId":          mu2.pdgId,
-
-            # Isolation IDs / working points
-            "mu1_miniIsoId":        mu1.miniIsoId,
-            "mu2_miniIsoId":        mu2.miniIsoId,
-            "mu1_miniPFRelIso_all": mu1.miniPFRelIso_all,
-            "mu2_miniPFRelIso_all": mu2.miniPFRelIso_all,
-            "mu1_miniPFRelIso_chg": mu1.miniPFRelIso_chg,
-            "mu2_miniPFRelIso_chg": mu2.miniPFRelIso_chg,
-            "mu1_multiIsoId":       mu1.multiIsoId,
-            "mu2_multiIsoId":       mu2.multiIsoId,
-            "mu1_pfIsoId":          mu1.pfIsoId,
-            "mu2_pfIsoId":          mu2.pfIsoId,
-            "mu1_pfRelIso03_all":    mu1.pfRelIso03_all,
-            "mu2_pfRelIso03_all":    mu2.pfRelIso03_all,
-            "mu1_pfRelIso03_chg":   mu1.pfRelIso03_chg,
-            "mu2_pfRelIso03_chg":   mu2.pfRelIso03_chg,
-            "mu1_pfRelIso04_all":   mu1.pfRelIso04_all,
-            "mu2_pfRelIso04_all":   mu2.pfRelIso04_all,
-            "mu1_puppiIsoId":       mu1.puppiIsoId,
-            "mu2_puppiIsoId":       mu2.puppiIsoId,
-            "mu1_tkIsoId":          mu1.tkIsoId,
-            "mu2_tkIsoId":          mu2.tkIsoId,
-            "mu1_tkRelIso":         mu1.tkRelIso,
-            "mu2_tkRelIso":         mu2.tkRelIso,
-
-            # Track / stations info
-            "mu1_nStations":       mu1.nStations,
-            "mu2_nStations":       mu2.nStations,
-            "mu1_nTrackerLayers":  mu1.nTrackerLayers,
-            "mu2_nTrackerLayers":  mu2.nTrackerLayers,
-            "mu1_segmentComp":     mu1.segmentComp,
-            "mu2_segmentComp":     mu2.segmentComp,
-
-            # Jet matching
-            "mu1_jetIdx":          mu1.jetIdx,
-            "mu2_jetIdx":          mu2.jetIdx,
-            "mu1_jetNDauCharged":  mu1.jetNDauCharged,
-            "mu2_jetNDauCharged":  mu2.jetNDauCharged,
-            "mu1_jetPtRelv2":      mu1.jetPtRelv2,
-            "mu2_jetPtRelv2":      mu2.jetPtRelv2,
-            "mu1_jetRelIso":       mu1.jetRelIso,
-            "mu2_jetRelIso":       mu2.jetRelIso,
-
-            # SV matching
-            "mu1_svIdx":           mu1.svIdx,
-            "mu2_svIdx":           mu2.svIdx,
-        }
-
         do_additional_vars = self.config["switches"]["do_additional_vars"]
         if do_additional_vars:
-            out_dict.update(muon_extra_dict)
+            _add_block(out_dict, {
+                "PV_npvs": events.PV.npvs,
+                "PV_npvsGood": events.PV.npvsGood,
+
+                "MET_pt": met.pt, # As we are using CHS jets, so use MET not PuppiMET
+                "MET_phi": met.phi,
+                "MET_sumEt": met.sumEt,
+                "PuppiMET_pt": PuppiMET.pt,
+                "PuppiMET_phi": PuppiMET.phi,
+                "PuppiMET_sumEt": PuppiMET.sumEt,
+                "mu1_charge": mu1.charge,
+                "mu2_charge": mu2.charge,
+                "mu1_iso": mu1.pfRelIso04_all,
+                "mu2_iso": mu2.pfRelIso04_all,
+                "mu1_pt_over_mu2_pt": mu1.pt / mu2.pt,
+                "mu1_eta_over_mu2_eta": abs(mu1.eta) / abs(mu2.eta),
+                "mu1_pt_roch" : mu1.pt_roch,
+                "mu1_pt_fsr" : mu1.pt_fsr,
+                # "mu1_pt_gf" : mu1.pt_gf,
+                "mu2_pt_roch" : mu2.pt_roch,
+                "mu2_pt_fsr" : mu2.pt_fsr,
+                # "mu2_pt_gf" : mu2.pt_gf,
+
+                # Impact parameters / beamspot / PV
+                "mu1_dxy":        mu1.dxy,
+                "mu2_dxy":        mu2.dxy,
+                "mu1_dxyErr":     mu1.dxyErr,
+                "mu2_dxyErr":     mu2.dxyErr,
+                "mu1_dxybs":      mu1.dxybs,
+                "mu2_dxybs":      mu2.dxybs,
+                "mu1_dz":         mu1.dz,
+                "mu2_dz":         mu2.dz,
+                "mu1_dzErr":      mu1.dzErr,
+                "mu2_dzErr":      mu2.dzErr,
+                "mu1_ip3d":       mu1.ip3d,
+                "mu2_ip3d":       mu2.ip3d,
+                "mu1_sip3d":      mu1.sip3d,
+                "mu2_sip3d":      mu2.sip3d,
+
+                # IDs / quality flags
+                "mu1_highPurity":     mu1.highPurity,
+                "mu2_highPurity":     mu2.highPurity,
+                "mu1_inTimeMuon":     mu1.inTimeMuon,
+                "mu2_inTimeMuon":     mu2.inTimeMuon,
+                "mu1_isGlobal":       mu1.isGlobal,
+                "mu2_isGlobal":       mu2.isGlobal,
+                "mu1_isPFcand":       mu1.isPFcand,
+                "mu2_isPFcand":       mu2.isPFcand,
+                "mu1_isStandalone":   mu1.isStandalone,
+                "mu2_isStandalone":   mu2.isStandalone,
+                "mu1_isTracker":      mu1.isTracker,
+                "mu2_isTracker":      mu2.isTracker,
+                "mu1_looseId":        mu1.looseId,
+                "mu2_looseId":        mu2.looseId,
+                "mu1_mediumId":       mu1.mediumId,
+                "mu2_mediumId":       mu2.mediumId,
+                "mu1_mediumPromptId": mu1.mediumPromptId,
+                "mu2_mediumPromptId": mu2.mediumPromptId,
+                "mu1_tightCharge":    mu1.tightCharge,
+                "mu2_tightCharge":    mu2.tightCharge,
+                "mu1_pdgId":          mu1.pdgId,
+                "mu2_pdgId":          mu2.pdgId,
+
+                # Isolation IDs / working points
+                "mu1_miniIsoId":        mu1.miniIsoId,
+                "mu2_miniIsoId":        mu2.miniIsoId,
+                "mu1_miniPFRelIso_all": mu1.miniPFRelIso_all,
+                "mu2_miniPFRelIso_all": mu2.miniPFRelIso_all,
+                "mu1_miniPFRelIso_chg": mu1.miniPFRelIso_chg,
+                "mu2_miniPFRelIso_chg": mu2.miniPFRelIso_chg,
+                "mu1_multiIsoId":       mu1.multiIsoId,
+                "mu2_multiIsoId":       mu2.multiIsoId,
+                "mu1_pfIsoId":          mu1.pfIsoId,
+                "mu2_pfIsoId":          mu2.pfIsoId,
+                "mu1_pfRelIso03_all":    mu1.pfRelIso03_all,
+                "mu2_pfRelIso03_all":    mu2.pfRelIso03_all,
+                "mu1_pfRelIso03_chg":   mu1.pfRelIso03_chg,
+                "mu2_pfRelIso03_chg":   mu2.pfRelIso03_chg,
+                "mu1_pfRelIso04_all":   mu1.pfRelIso04_all,
+                "mu2_pfRelIso04_all":   mu2.pfRelIso04_all,
+                "mu1_puppiIsoId":       mu1.puppiIsoId,
+                "mu2_puppiIsoId":       mu2.puppiIsoId,
+                "mu1_tkIsoId":          mu1.tkIsoId,
+                "mu2_tkIsoId":          mu2.tkIsoId,
+                "mu1_tkRelIso":         mu1.tkRelIso,
+                "mu2_tkRelIso":         mu2.tkRelIso,
+
+                # Track / stations info
+                "mu1_nStations":       mu1.nStations,
+                "mu2_nStations":       mu2.nStations,
+                "mu1_nTrackerLayers":  mu1.nTrackerLayers,
+                "mu2_nTrackerLayers":  mu2.nTrackerLayers,
+                "mu1_segmentComp":     mu1.segmentComp,
+                "mu2_segmentComp":     mu2.segmentComp,
+
+                # Jet matching
+                "mu1_jetIdx":          mu1.jetIdx,
+                "mu2_jetIdx":          mu2.jetIdx,
+                "mu1_jetNDauCharged":  mu1.jetNDauCharged,
+                "mu2_jetNDauCharged":  mu2.jetNDauCharged,
+                "mu1_jetPtRelv2":      mu1.jetPtRelv2,
+                "mu2_jetPtRelv2":      mu2.jetPtRelv2,
+                "mu1_jetRelIso":       mu1.jetRelIso,
+                "mu2_jetRelIso":       mu2.jetRelIso,
+
+                # SV matching
+                "mu1_svIdx":           mu1.svIdx,
+                "mu2_svIdx":           mu2.svIdx,
+
+                "nmuons": nmuons,
+
+                "acoplanarity": acoplanarity,
+
+                "dimuon_cos_theta_eta": dimuon_cos_theta_eta,
+                "dimuon_phi_eta": dimuon_phi_eta,
+                "dimuon_pt_over_MET_pt": safe_ratio(dimuon.pt, met.pt, default=0.0),
+                "dimuon_pt_over_PuppiMET_pt": safe_ratio(dimuon.pt, PuppiMET.pt, default=0.0),
+                "dimuon_pt_over_jet1_pt": safe_ratio(dimuon.pt, jet1_default.pt, default=0.0),
+                "dimuon_pt_over_jet2_pt": safe_ratio(dimuon.pt, jet2_default.pt, default=0.0),
+                "mu1_pt_raw": mu1.pt_raw,
+                "mu2_pt_raw": mu2.pt_raw,
+                # "pass_leading_pt" : pass_leading_pt,
+            })
 
         # ------------------------------------------------------------#
         # Correlations between the two muons
         # ------------------------------------------------------------#
-
         # Basic kinematic correlations
         pt_sum      = mu1.pt + mu2.pt
         pt_diff     = mu1.pt - mu2.pt
@@ -1758,76 +1783,70 @@ class EventProcessor(processor.ProcessorABC):
         # Charge correlation
         q1q2 = mu1.charge * mu2.charge   # should be -1 for selected OS events
 
-        muon_corr_dict = {
-            # pt correlations
-            "mu12_pt_sum":      pt_sum,
-            "mu12_pt_diff":     pt_diff,
-            "mu12_pt_absdiff":  pt_absdiff,
-            "mu12_pt_prod":     pt_prod,
-            "mu12_pt_ratio12":  pt_ratio12,
-            "mu12_pt_ratio21":  pt_ratio21,
-            "mu12_pt_min":      pt_min,
-            "mu12_pt_max":      pt_max,
-            "mu12_pt_asym":     pt_asym,
-
-            # eta / |eta| correlations
-            "mu12_eta_sum":      eta_sum,
-            "mu12_eta_diff":     eta_diff,
-            "mu12_eta_absdiff":  eta_absdiff,
-            "mu12_eta_prod":     eta_prod,
-            "mu12_absEta_sum":   abs_eta_sum,
-            "mu12_absEta_diff":  abs_eta_diff,
-            "mu12_absEta_min":   abs_eta_min,
-            "mu12_absEta_max":   abs_eta_max,
-
-            # isolation correlations
-            "mu12_iso04_sum":      iso_sum,
-            "mu12_iso04_diff":     iso_diff,
-            "mu12_iso04_absdiff":  iso_absdiff,
-            "mu12_iso04_prod":     iso_prod,
-            "mu12_iso04_min":      iso_min,
-            "mu12_iso04_max":      iso_max,
-            "mu12_iso04_asym":     iso_asym,
-
-            # impact parameters
-            "mu12_dxy_sum":       dxy_sum,
-            "mu12_dxy_diff":      dxy_diff,
-            "mu12_dxy_absdiff":   dxy_absdiff,
-            "mu12_dz_sum":        dz_sum,
-            "mu12_dz_diff":       dz_diff,
-            "mu12_dz_absdiff":    dz_absdiff,
-            "mu12_sip3d_sum":     sip_sum,
-            "mu12_sip3d_diff":    sip_diff,
-            "mu12_sip3d_absdiff": sip_absdiff,
-            "mu12_sip3d_prod":    sip_prod,
-            "mu12_sip3d_min":     sip_min,
-            "mu12_sip3d_max":     sip_max,
-
-            # track-quality correlations
-            "mu12_nStations_min":      nStations_min,
-            "mu12_nStations_max":      nStations_max,
-            "mu12_nStations_sum":      nStations_sum,
-            "mu12_nTrackerLayers_min": nTrkLayers_min,
-            "mu12_nTrackerLayers_max": nTrkLayers_max,
-            "mu12_nTrackerLayers_sum": nTrkLayers_sum,
-
-            # charge correlation
-            "mu12_q1q2": q1q2,
-        }
-
         if do_additional_vars:
-            out_dict.update(muon_corr_dict)
+            _add_block(out_dict, {
+                # pt correlations
+                "mu12_pt_sum":      pt_sum,
+                "mu12_pt_diff":     pt_diff,
+                "mu12_pt_absdiff":  pt_absdiff,
+                "mu12_pt_prod":     pt_prod,
+                "mu12_pt_ratio12":  pt_ratio12,
+                "mu12_pt_ratio21":  pt_ratio21,
+                "mu12_pt_min":      pt_min,
+                "mu12_pt_max":      pt_max,
+                "mu12_pt_asym":     pt_asym,
+
+                # eta / |eta| correlations
+                "mu12_eta_sum":      eta_sum,
+                "mu12_eta_diff":     eta_diff,
+                "mu12_eta_absdiff":  eta_absdiff,
+                "mu12_eta_prod":     eta_prod,
+                "mu12_absEta_sum":   abs_eta_sum,
+                "mu12_absEta_diff":  abs_eta_diff,
+                "mu12_absEta_min":   abs_eta_min,
+                "mu12_absEta_max":   abs_eta_max,
+
+                # isolation correlations
+                "mu12_iso04_sum":      iso_sum,
+                "mu12_iso04_diff":     iso_diff,
+                "mu12_iso04_absdiff":  iso_absdiff,
+                "mu12_iso04_prod":     iso_prod,
+                "mu12_iso04_min":      iso_min,
+                "mu12_iso04_max":      iso_max,
+                "mu12_iso04_asym":     iso_asym,
+
+                # impact parameters
+                "mu12_dxy_sum":       dxy_sum,
+                "mu12_dxy_diff":      dxy_diff,
+                "mu12_dxy_absdiff":   dxy_absdiff,
+                "mu12_dz_sum":        dz_sum,
+                "mu12_dz_diff":       dz_diff,
+                "mu12_dz_absdiff":    dz_absdiff,
+                "mu12_sip3d_sum":     sip_sum,
+                "mu12_sip3d_diff":    sip_diff,
+                "mu12_sip3d_absdiff": sip_absdiff,
+                "mu12_sip3d_prod":    sip_prod,
+                "mu12_sip3d_min":     sip_min,
+                "mu12_sip3d_max":     sip_max,
+
+                # track-quality correlations
+                "mu12_nStations_min":      nStations_min,
+                "mu12_nStations_max":      nStations_max,
+                "mu12_nStations_sum":      nStations_sum,
+                "mu12_nTrackerLayers_min": nTrkLayers_min,
+                "mu12_nTrackerLayers_max": nTrkLayers_max,
+                "mu12_nTrackerLayers_sum": nTrkLayers_sum,
+
+                # charge correlation
+                "mu12_q1q2": q1q2,
+            })
 
         if is_mc:
-            mc_dict = {
+            _add_block(out_dict, {
                 "gjj_mass": gjj.mass,
                 "n_genjets": n_genjets,
                 "n_genjets_pt25_eta47": n_genjets_pt25_eta47,
                 "n_genjets_pt30_eta47": n_genjets_pt30_eta47,
-            }
-            out_dict.update(mc_dict)
-
-            mc_dict_additional = {
                 # "HTXS_Higgs_pt" : events.HTXS.Higgs_pt, # for nnlops weight for ggH signal sample
                 # "HTXS_njets30" : events.HTXS.njets30, # for nnlops weight for ggH signal sample
                 "gjet1_pt" : gjet1.pt,
@@ -1844,9 +1863,7 @@ class EventProcessor(processor.ProcessorABC):
                 "gjj_dEta" : gjj_dEta,
                 "gjj_dPhi" : gjj_dPhi,
                 "gjj_dR" : gjj_dR,
-            }
-            if do_additional_jet_vars:
-                out_dict.update(mc_dict_additional)
+            })
 
         t16 = time.perf_counter()
         logger.info(f"[timing] Fill muon and gjet variables time: {t16 - t15:.2f} seconds")
@@ -1857,11 +1874,11 @@ class EventProcessor(processor.ProcessorABC):
             logger.info("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
             HemVeto_filter = ak.to_packed(HemVeto_filter[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
             is_HemRegion = ak.to_packed(is_HemRegion[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
-            hemveto_dict = {
+
+            _add_block(out_dict, {
                 "HemVeto_filter" : HemVeto_filter,
                 "is_HemRegion" : is_HemRegion,
-            }
-            out_dict.update(hemveto_dict)
+            })
         # ------------------------------------------------------------#
         # Loop over JEC variations and fill jet variables
         # ------------------------------------------------------------#
@@ -1884,7 +1901,7 @@ class EventProcessor(processor.ProcessorABC):
                 do_jet_horn_puid = self.config["switches"]["do_jet_horn_puid"]
             )
 
-            out_dict.update(jet_loop_dict)
+            _add_block(out_dict, jet_loop_dict)
 
         logger.debug(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
@@ -1900,15 +1917,14 @@ class EventProcessor(processor.ProcessorABC):
         z_peak = ((mass >= 70.0) & (mass < 110.0))
         h_sidebands =  ((mass >= 110.0) & (mass < 115.0)) | ((mass >= 135.0) & (mass < 150.0))
         h_peak = ((mass >= 115.0) & (mass < 135.0))
-        region_dict = {
+        _add_block(out_dict, {
             "z_peak" : ak.fill_none(z_peak, value=False),
             "h_sidebands" : ak.fill_none(h_sidebands, value=False),
             "h_peak" : ak.fill_none(h_peak, value=False),
-        }
+        })
         t18 = time.perf_counter()
         logger.info(f"[timing] various region (z-peak) fill time: {t18 - t17:.2f} seconds")
 
-        out_dict.update(region_dict)
 
         # b4 we do any filtering, we obtain the sum of gen weights for normalization
         # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up
@@ -1974,7 +1990,7 @@ class EventProcessor(processor.ProcessorABC):
 
         # logger.info(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # logger.info(f"out_dict.compute 5: {ak.zip(out_dict).to_parquet(save_path)}")
-        out_dict.update(weight_dict)
+        _add_block(out_dict, weight_dict)
 
         # ------------------------------------------------------------#
         # Cutflow
@@ -2553,10 +2569,13 @@ class EventProcessor(processor.ProcessorABC):
             f"jj_mass_{variation}": dijet.mass,
             f"jj_mass_log_{variation}": np.log(dijet.mass),
             f"jj_dEta_{variation}": jj_dEta,
+            f"jj_dPhi_{variation}": jj_dPhi,
             f"mmj_min_dEta_{variation}": mmj_min_dEta,
+            f"mmj_min_dPhi_{variation}": mmj_min_dPhi,
             f"rpt_{variation}": rpt,
             f"pt_centrality_{variation}": pt_centrality,
             f"ll_zstar_log_{variation}": np.log(np.abs(zeppenfeld)),
+            f"zeppenfeld_{variation}": zeppenfeld,
             f"njets_{variation}": njets,
         }
         if do_additional_jet_vars:
@@ -2570,19 +2589,16 @@ class EventProcessor(processor.ProcessorABC):
                     f"jj_pt_{variation}": dijet.pt,
                     f"jj_eta_{variation}": dijet.eta,
                     f"jj_phi_{variation}": dijet.phi,
-                    f"jj_dPhi_{variation}": jj_dPhi,
                     f"mmj1_dEta_{variation}": mmj1_dEta,
                     f"mmj1_dPhi_{variation}": mmj1_dPhi,
                     f"mmj1_dR_{variation}": mmj1_dR,
                     f"mmj2_dEta_{variation}": mmj2_dEta,
                     f"mmj2_dPhi_{variation}": mmj2_dPhi,
                     f"mmj2_dR_{variation}": mmj2_dR,
-                    f"mmj_min_dPhi_{variation}": mmj_min_dPhi,
                     f"mmjj_pt_{variation}": mmjj.pt,
                     f"mmjj_eta_{variation}": mmjj.eta,
                     f"mmjj_phi_{variation}": mmjj.phi,
                     f"mmjj_mass_{variation}": mmjj.mass,
-                    f"zeppenfeld_{variation}": zeppenfeld,
                     f"jet2_rapidity_{variation}": jet2_rapidity,  # max rel err: 0.781
                     # f"jet2_btagPNetQvG_{variation}": jet2.btagPNetQvG,
                     f"jet2_btagDeepFlavQG_{variation}": jet2.btagDeepFlavQG,
