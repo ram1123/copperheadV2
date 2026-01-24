@@ -90,7 +90,7 @@ def list_all_datasets(yaml_file):
         if not isinstance(year_block, dict):
             continue
         # if "2017" not in year_key:
-            # continue
+        # continue
         for process_group, samples in year_block.items():
             if not isinstance(samples, dict):
                 continue
@@ -112,7 +112,7 @@ def list_all_datasets(yaml_file):
                     if "None" in ds:
                         continue
                     count += 1
-                    logger.debug(f"{year_key:10} {process_group:10} {sample_name:29} {ds:150} {str(value):>9}")
+                    # logger.debug(f"{year_key:10} {process_group:10} {sample_name:29} {ds:150} {str(value):>9}")
 
                     # For the RUCIO requests
                     print(f'dy{count}=( $(dasgoclient --query="dataset = {ds}"))')
@@ -143,3 +143,4 @@ def list_all_datasets(yaml_file):
 # List all datasets
 # list_all_datasets("./configs/datasets/dataset_nanoAODv15_run2.yaml")
 # list_all_datasets("./configs/datasets/dataset_nanoAODv12_run3.yaml")
+# list_all_datasets("./configs/datasets/dataset_nanoAODv15_run3.yaml")

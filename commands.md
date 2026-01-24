@@ -1,6 +1,18 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
+# 22 January 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_21Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m compact -k)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_21Jan_JVMFilterJets -y "run3" -m dnn_pre -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_21Jan_JVMFilterJets -y "run3" -m dnn_train -k)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_21Jan_JVMFilterJets -y "2022preEE" -m 2 -p "Jan22_test" )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_21Jan_JVMFilterJets -y "2022preEE 2022postEE" -m 2 -p "Jan22_test_Syst" )
+```
+
 # 20 January 2026
 
 ```bash
