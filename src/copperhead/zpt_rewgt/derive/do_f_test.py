@@ -23,9 +23,11 @@ parser.add_argument(
     help="Jet multiplicities to loop over"
 )
 parser.add_argument(
-    "-dy_sample", "--dy_sample", dest="dy_sample",
+    "-dy_sample",
+    "--dy_sample",
+    dest="dy_sample",
     default="MiNNLO",
-    choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
+    choices=["MiNNLO", "aMCatNLO", "VBF_filter", "powheg", "amcatnloFXFX"],
     action="store",
     help="choose the type of DY samples to use for Zpt reweighting",
 )

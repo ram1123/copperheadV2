@@ -8,6 +8,7 @@ from distributed import Client
 import os
 from array import array
 
+from cli.common_argparser import build_common_parser
 from modules import selection
 from modules import classify_year
 
@@ -26,23 +27,7 @@ if __name__ == "__main__":
     """
     This file is meant to define the Zpt histogram binning for zpt fitting
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-    "-l",
-    "--label",
-    dest="label",
-    default=None,
-    action="store",
-    help="save path to store stage1 output files",
-    )
-    parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="all",
-    action="store",
-    help="string value of year we are calculating",
-    )
+    parser = build_common_parser()
     parser.add_argument(
     "-i",
     "--input_path",
@@ -51,30 +36,15 @@ if __name__ == "__main__":
     action="store",
     help="input parquet files path",
     )
-    parser.add_argument(
-    "-save",
-    "--plot_path",
-    dest="plot_path",
-    default="plots",
-    action="store",
-    help="save path to store plots, not SF root files. That's saved locally",
-    )
-    parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
-    )
     # option for dy samples: aMCatNLO, MiNNLO, or VBF_filter
     parser.add_argument(
-    "-dy_sample",
-    "--dy_sample",
-    dest="dy_sample",
-    default="MiNNLO",
-    choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
-    action="store",
-    help="choose the type of DY samples to use for Zpt reweighting",
+        "-dy_sample",
+        "--dy_sample",
+        dest="dy_sample",
+        default="MiNNLO",
+        choices=["MiNNLO", "aMCatNLO", "VBF_filter", "powheg", "amcatnloFXFX"],
+        action="store",
+        help="choose the type of DY samples to use for Zpt reweighting",
     )
     args = parser.parse_args()
 
@@ -101,7 +71,7 @@ if __name__ == "__main__":
         years = [args.year]
 
     for year in years:
-        plot_path = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
+        plot_path = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
         os.makedirs(plot_path, exist_ok=True)
         print(f"years: {years}")
 
@@ -128,13 +98,16 @@ if __name__ == "__main__":
             else:
                 raise ValueError(f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, or VBF_filter.")
         else: # run3
-            if year == "2022preEE":
-                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl_XSDYTurbo/*/*.parquet")
-            elif year == "2024":
+            if year == "2024":
                 dy_events = dak.from_parquet(f"{base_path}/dyTo2Mu_M-50_aMCatNLO/*/*.parquet")
-            else: # 2022postEE, 2023, 2023BPix
-                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl/*/*.parquet")
-
+            elif args.dy_sample == "powheg":
+                dy_events = dak.from_parquet(f"{base_path}/dyTo2Mu_MLL_*/*/*.parquet")
+            elif args.dy_sample == "amcatnloFXFX":
+                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_*j/*/*.parquet")
+            else:
+                raise ValueError(
+                    f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, VBF_filter, powheg, or amcatnloFXFX."
+                )
         # apply z-peak region filter and nothing else
         _, data_events = selection.filterRegion(data_events, region="z-peak")
         _, dy_events = selection.filterRegion(dy_events, region="z-peak")

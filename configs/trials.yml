@@ -2,7 +2,7 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv12_20Jan_JVMFilterJets/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/"
         comment: "What plotter should use by default"
 
     Run2_HEMVetoFix_v1:
@@ -37,18 +37,13 @@ trials:
         gitTab: V1.0
         Reference: https://github.com/ram1123/copperheadV2/discussions/61
 
-    Run3_nanoAODv12_JVMjetfilter_v1:
-        stage1: "{base_dir}/Run3_nanoAODv12_21Jan_JVMFilterJets/stage1_output/"
-        comment: used JVM to filter jets, it has latest version of zpt weights and EBE mass calibration. ZpT weights for 2022preEE and 2022postEE are the final ones. EBE is only derived for data, and applied to both data and MC. Also, for EBE, I still need to fix few fits.
-        gitSHA: 62adcc8b32ad841ca3a4b3942544311ef65681e6
-        date: January 21, 2026
-        years: 2022postEE, 2022preEE, 2023, 2023BPix
-
     Run3_nanoAODv12_JVMjetfilter_v2:
         stage1: "{base_dir}/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/"
-        comment: ZpT bug fixed, updated the var list so that by default it should have all input features that we need for BDT or DNN.
-        TODO: I still need to run the step-2 of zpt on 2022 to fix the zpt weights.
-        gitSHA: xxx
+        comment:
+            - used JVM to filter jets. EBE is only derived for data, and applied to both data and MC. Also, for EBE, I still need to fix few fits.
+            - ZpT bug fixed, updated the var list so that by default it should have all input features that we need for BDT or DNN.
+            - Finally I decided to use 0j, 1j and 2j sample for the further study. the zpt weights are old ones.
+        gitSHA: 862f5884e0a33eb35fa41fdaa680ffb9f0e9dfcd
         date: January 23, 2026
         years: 2022postEE, 2022preEE, 2023, 2023BPix
 
