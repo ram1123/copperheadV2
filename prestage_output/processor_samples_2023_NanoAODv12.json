@@ -34521,7 +34521,7 @@
   },
   "dyTo2Mu_M-105To160": {
     "files": {
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/00205492-a95c-4460-bf05-289e0217e83b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/00205492-a95c-4460-bf05-289e0217e83b.root": {
         "num_entries": 53373,
         "object_path": "Events",
         "steps": [
@@ -34532,7 +34532,7 @@
         ],
         "uuid": "2273f424-2847-11ef-b642-75bee183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/07ba204f-43be-4d8a-bab5-044d8e258026.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/07ba204f-43be-4d8a-bab5-044d8e258026.root": {
         "num_entries": 312075,
         "object_path": "Events",
         "steps": [
@@ -34543,7 +34543,7 @@
         ],
         "uuid": "767d58ca-27bc-11ef-ad12-69e36880beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/0c29381c-775c-4a8e-913f-75515fcfd163.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/0c29381c-775c-4a8e-913f-75515fcfd163.root": {
         "num_entries": 340333,
         "object_path": "Events",
         "steps": [
@@ -34554,7 +34554,7 @@
         ],
         "uuid": "1adeb5d2-275c-11ef-a90f-eb246c8dbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/0d5bc976-0dbd-43ca-85b3-f480c4f642ca.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/0d5bc976-0dbd-43ca-85b3-f480c4f642ca.root": {
         "num_entries": 152033,
         "object_path": "Events",
         "steps": [
@@ -34565,7 +34565,7 @@
         ],
         "uuid": "26281228-27d7-11ef-864f-108ed380beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/0f91c430-2ef2-49d2-affb-19299d0584fb.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/0f91c430-2ef2-49d2-affb-19299d0584fb.root": {
         "num_entries": 312314,
         "object_path": "Events",
         "steps": [
@@ -34576,7 +34576,7 @@
         ],
         "uuid": "99e58504-279d-11ef-b8b0-3ebfe183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/1354158b-453c-465a-81d6-54437c175778.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/1354158b-453c-465a-81d6-54437c175778.root": {
         "num_entries": 372881,
         "object_path": "Events",
         "steps": [
@@ -34587,7 +34587,7 @@
         ],
         "uuid": "01ae25b4-27a4-11ef-a5de-efa2a983beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/19892dde-66c1-4b4d-a44a-0aaab13fdd85.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/19892dde-66c1-4b4d-a44a-0aaab13fdd85.root": {
         "num_entries": 324823,
         "object_path": "Events",
         "steps": [
@@ -34598,7 +34598,7 @@
         ],
         "uuid": "5c4aebe8-27d0-11ef-8696-dbcce183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/1c0e0e2c-6f90-43df-be47-eda7a24caf80.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/1c0e0e2c-6f90-43df-be47-eda7a24caf80.root": {
         "num_entries": 127197,
         "object_path": "Events",
         "steps": [
@@ -34609,7 +34609,7 @@
         ],
         "uuid": "396c082e-2847-11ef-8b72-a1319e86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/1c6ef81f-f469-4d86-8d90-b3d781ddc423.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/1c6ef81f-f469-4d86-8d90-b3d781ddc423.root": {
         "num_entries": 332202,
         "object_path": "Events",
         "steps": [
@@ -34620,7 +34620,7 @@
         ],
         "uuid": "1e04bd24-27a2-11ef-88df-7f246c8dbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/27fa0958-6dc2-44b7-ab0e-da45f1a77392.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/27fa0958-6dc2-44b7-ab0e-da45f1a77392.root": {
         "num_entries": 262338,
         "object_path": "Events",
         "steps": [
@@ -34631,7 +34631,7 @@
         ],
         "uuid": "528deffc-2847-11ef-9bc1-41eab392beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/2c13347c-0976-4d71-81ca-bfdf00498854.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/2c13347c-0976-4d71-81ca-bfdf00498854.root": {
         "num_entries": 103052,
         "object_path": "Events",
         "steps": [
@@ -34642,7 +34642,7 @@
         ],
         "uuid": "47db20f2-2847-11ef-a8c1-a8e36880beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/34a38ef4-ab07-4311-bff0-ea24e41ae8b2.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/34a38ef4-ab07-4311-bff0-ea24e41ae8b2.root": {
         "num_entries": 290892,
         "object_path": "Events",
         "steps": [
@@ -34653,7 +34653,7 @@
         ],
         "uuid": "1d815326-2847-11ef-b31b-850b010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/3b731ed7-1222-4d03-9716-040b802295ac.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/3b731ed7-1222-4d03-9716-040b802295ac.root": {
         "num_entries": 20704,
         "object_path": "Events",
         "steps": [
@@ -34664,7 +34664,7 @@
         ],
         "uuid": "59842dd2-284a-11ef-ac06-9b4614acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/48543873-f737-4412-a5e1-0c127665ed71.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/48543873-f737-4412-a5e1-0c127665ed71.root": {
         "num_entries": 274525,
         "object_path": "Events",
         "steps": [
@@ -34675,7 +34675,7 @@
         ],
         "uuid": "33555224-2847-11ef-974e-62a4a983beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/4fdea2cd-a33b-4552-b4ec-52f40e84276b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/4fdea2cd-a33b-4552-b4ec-52f40e84276b.root": {
         "num_entries": 4146,
         "object_path": "Events",
         "steps": [
@@ -34686,7 +34686,7 @@
         ],
         "uuid": "2fcd026e-2847-11ef-904e-1f64010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/5a36f3fc-e7d7-4f7c-a210-9a2d1f5063f5.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/5a36f3fc-e7d7-4f7c-a210-9a2d1f5063f5.root": {
         "num_entries": 311749,
         "object_path": "Events",
         "steps": [
@@ -34697,7 +34697,7 @@
         ],
         "uuid": "96c2c874-27dd-11ef-bcdd-051ba8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/5ce3be1f-8977-4570-8a6b-93ba1bea297f.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/5ce3be1f-8977-4570-8a6b-93ba1bea297f.root": {
         "num_entries": 20693,
         "object_path": "Events",
         "steps": [
@@ -34708,7 +34708,7 @@
         ],
         "uuid": "2398283e-2847-11ef-beed-19041cacbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/61917a10-bc74-4406-a532-82ad66e59230.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/61917a10-bc74-4406-a532-82ad66e59230.root": {
         "num_entries": 16168,
         "object_path": "Events",
         "steps": [
@@ -34719,7 +34719,7 @@
         ],
         "uuid": "2decbeda-2847-11ef-83c5-0425a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/6f5159b5-a0c5-47f5-9821-29973831607b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/6f5159b5-a0c5-47f5-9821-29973831607b.root": {
         "num_entries": 33052,
         "object_path": "Events",
         "steps": [
@@ -34730,7 +34730,7 @@
         ],
         "uuid": "454e8630-2847-11ef-96b6-bb6018acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/7a3b181d-6826-45de-ba38-520a7faaa329.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/7a3b181d-6826-45de-ba38-520a7faaa329.root": {
         "num_entries": 311537,
         "object_path": "Events",
         "steps": [
@@ -34741,7 +34741,7 @@
         ],
         "uuid": "60bcf262-27a7-11ef-8224-0205010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/7a5d2fe7-04c9-46c7-889f-09aa245af8f7.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/7a5d2fe7-04c9-46c7-889f-09aa245af8f7.root": {
         "num_entries": 106480,
         "object_path": "Events",
         "steps": [
@@ -34752,7 +34752,7 @@
         ],
         "uuid": "33ac0844-2847-11ef-a202-af013c0abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/8843fa96-90dd-43ab-bba3-5e3637ccf8d6.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/8843fa96-90dd-43ab-bba3-5e3637ccf8d6.root": {
         "num_entries": 324299,
         "object_path": "Events",
         "steps": [
@@ -34763,7 +34763,7 @@
         ],
         "uuid": "c911d312-27a4-11ef-a401-301b3d86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/8c39eb40-e9a1-44f9-bb45-58de688bc4b4.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/8c39eb40-e9a1-44f9-bb45-58de688bc4b4.root": {
         "num_entries": 49355,
         "object_path": "Events",
         "steps": [
@@ -34774,7 +34774,7 @@
         ],
         "uuid": "25fd5162-2847-11ef-880c-1c64a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/8c9e105f-d995-4713-a960-9ef47f17bd2d.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/8c9e105f-d995-4713-a960-9ef47f17bd2d.root": {
         "num_entries": 28665,
         "object_path": "Events",
         "steps": [
@@ -34785,7 +34785,7 @@
         ],
         "uuid": "2d7f6f6a-2847-11ef-974e-9e2df682beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/9e9d5b19-5b96-4520-ac78-426651dd2b20.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/9e9d5b19-5b96-4520-ac78-426651dd2b20.root": {
         "num_entries": 16541,
         "object_path": "Events",
         "steps": [
@@ -34796,7 +34796,7 @@
         ],
         "uuid": "1c663fe6-2848-11ef-bb10-7604a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/aca9901c-fa77-4649-a469-3a8bb1748986.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/aca9901c-fa77-4649-a469-3a8bb1748986.root": {
         "num_entries": 184397,
         "object_path": "Events",
         "steps": [
@@ -34807,7 +34807,7 @@
         ],
         "uuid": "39842a94-2847-11ef-b6de-1a1fa8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/acdaf20b-57c0-4632-a200-e882cefe8368.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/acdaf20b-57c0-4632-a200-e882cefe8368.root": {
         "num_entries": 20530,
         "object_path": "Events",
         "steps": [
@@ -34818,7 +34818,7 @@
         ],
         "uuid": "3fc0bfb2-2847-11ef-a72d-bf7c4b86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b16eef55-7dfc-4c36-9ad1-076854923e0e.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b16eef55-7dfc-4c36-9ad1-076854923e0e.root": {
         "num_entries": 135355,
         "object_path": "Events",
         "steps": [
@@ -34829,7 +34829,7 @@
         ],
         "uuid": "41d20586-2847-11ef-b549-44246c8dbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b238fe15-e599-4451-b893-70c37d8762b9.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b238fe15-e599-4451-b893-70c37d8762b9.root": {
         "num_entries": 119040,
         "object_path": "Events",
         "steps": [
@@ -34840,7 +34840,7 @@
         ],
         "uuid": "54308bb2-2847-11ef-b1d1-020013acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b44571af-a7d9-452b-82a6-0ab174d5a16f.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b44571af-a7d9-452b-82a6-0ab174d5a16f.root": {
         "num_entries": 151900,
         "object_path": "Events",
         "steps": [
@@ -34851,7 +34851,7 @@
         ],
         "uuid": "629a62fe-2847-11ef-a6e0-dccd36c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b5a461b2-3a35-483f-a18b-21d78f11ef83.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b5a461b2-3a35-483f-a18b-21d78f11ef83.root": {
         "num_entries": 311606,
         "object_path": "Events",
         "steps": [
@@ -34862,7 +34862,7 @@
         ],
         "uuid": "449a0d9a-27a2-11ef-85f5-4bbee183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b99dd4ad-f299-4da3-b213-ff4297b1caab.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/b99dd4ad-f299-4da3-b213-ff4297b1caab.root": {
         "num_entries": 4133,
         "object_path": "Events",
         "steps": [
@@ -34873,7 +34873,7 @@
         ],
         "uuid": "3ffbde76-2847-11ef-a8c1-6984e4a9beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/bc581fb8-4114-4093-8993-151acc6f072c.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/bc581fb8-4114-4093-8993-151acc6f072c.root": {
         "num_entries": 316322,
         "object_path": "Events",
         "steps": [
@@ -34884,7 +34884,7 @@
         ],
         "uuid": "2a24b7a6-27a9-11ef-b74b-0320a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/bff8f8c2-4f20-433f-b6e0-ce967a523e2c.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/bff8f8c2-4f20-433f-b6e0-ce967a523e2c.root": {
         "num_entries": 312294,
         "object_path": "Events",
         "steps": [
@@ -34895,7 +34895,7 @@
         ],
         "uuid": "602a6b28-27d8-11ef-99b2-5e2df682beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/c2daec55-2787-4ea2-a83a-62e9dabaca2c.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/c2daec55-2787-4ea2-a83a-62e9dabaca2c.root": {
         "num_entries": 78184,
         "object_path": "Events",
         "steps": [
@@ -34906,7 +34906,7 @@
         ],
         "uuid": "b172fb02-2847-11ef-9878-13080d0abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/c67ada3c-d474-4164-917e-54587ee1850c.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/c67ada3c-d474-4164-917e-54587ee1850c.root": {
         "num_entries": 106827,
         "object_path": "Events",
         "steps": [
@@ -34917,7 +34917,7 @@
         ],
         "uuid": "81375eda-2845-11ef-bb35-760b030abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/cbd6afad-72ba-4132-aa30-9b83f2c867b1.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/cbd6afad-72ba-4132-aa30-9b83f2c867b1.root": {
         "num_entries": 328191,
         "object_path": "Events",
         "steps": [
@@ -34928,7 +34928,7 @@
         ],
         "uuid": "605694a6-27c3-11ef-af41-74090d0abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/d0733a77-39c3-49e6-8f01-5a337379871b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/d0733a77-39c3-49e6-8f01-5a337379871b.root": {
         "num_entries": 28588,
         "object_path": "Events",
         "steps": [
@@ -34939,7 +34939,7 @@
         ],
         "uuid": "403ae31e-2847-11ef-a72d-c826bb94beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/d1b2dd0f-d286-4a27-aa35-c03ee88cedfc.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/d1b2dd0f-d286-4a27-aa35-c03ee88cedfc.root": {
         "num_entries": 241462,
         "object_path": "Events",
         "steps": [
@@ -34950,7 +34950,7 @@
         ],
         "uuid": "2de2b5a2-2847-11ef-baa5-191b3d86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/d617ca61-0cf4-4e45-bbca-a09d59a814d7.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/d617ca61-0cf4-4e45-bbca-a09d59a814d7.root": {
         "num_entries": 74029,
         "object_path": "Events",
         "steps": [
@@ -34961,7 +34961,7 @@
         ],
         "uuid": "2c264242-2847-11ef-9775-af2411acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/d7c82282-8d9e-428f-b891-3b17cf601677.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/d7c82282-8d9e-428f-b891-3b17cf601677.root": {
         "num_entries": 32840,
         "object_path": "Events",
         "steps": [
@@ -34972,7 +34972,7 @@
         ],
         "uuid": "44add0c8-2847-11ef-9bb4-e206c10abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/e3bd4d02-5c7a-4db1-868c-f2f2733af5f2.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/e3bd4d02-5c7a-4db1-868c-f2f2733af5f2.root": {
         "num_entries": 16312,
         "object_path": "Events",
         "steps": [
@@ -34983,7 +34983,7 @@
         ],
         "uuid": "ae6fe604-2847-11ef-9c0f-11dca8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/e88699e1-2107-45cd-9784-cdb5bbacb3da.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/e88699e1-2107-45cd-9784-cdb5bbacb3da.root": {
         "num_entries": 361599,
         "object_path": "Events",
         "steps": [
@@ -34994,7 +34994,7 @@
         ],
         "uuid": "15c51f96-27a7-11ef-b6a4-84cfe183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/ebb42b3f-cc53-4c0b-b846-57ba9189cbdb.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/ebb42b3f-cc53-4c0b-b846-57ba9189cbdb.root": {
         "num_entries": 188356,
         "object_path": "Events",
         "steps": [
@@ -35005,7 +35005,7 @@
         ],
         "uuid": "3c3f9db8-2847-11ef-bdb5-0e05010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/f0ad284e-c69c-45e0-a275-b325d30dc1f1.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/f0ad284e-c69c-45e0-a275-b325d30dc1f1.root": {
         "num_entries": 16447,
         "object_path": "Events",
         "steps": [
@@ -35016,7 +35016,7 @@
         ],
         "uuid": "464cbbd8-2847-11ef-92cd-14d29a83beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/fb3b6095-a857-4336-9e10-dddaf3bc99a4.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2820000/fb3b6095-a857-4336-9e10-dddaf3bc99a4.root": {
         "num_entries": 325004,
         "object_path": "Events",
         "steps": [
@@ -35027,7 +35027,7 @@
         ],
         "uuid": "4bf23662-278e-11ef-a5f6-7c246c8dbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/03130d1f-2c53-455c-a2f4-b6ef30976604.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/03130d1f-2c53-455c-a2f4-b6ef30976604.root": {
         "num_entries": 12288,
         "object_path": "Events",
         "steps": [
@@ -35038,7 +35038,7 @@
         ],
         "uuid": "efd4995c-295d-11ef-b6a2-e306c10abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/1c7cce39-e40a-4b78-97b2-5a32f37b3b19.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/1c7cce39-e40a-4b78-97b2-5a32f37b3b19.root": {
         "num_entries": 8087,
         "object_path": "Events",
         "steps": [
@@ -35049,7 +35049,7 @@
         ],
         "uuid": "0ced0dd2-2966-11ef-b203-1d64010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/1e8ad398-560f-40df-af37-95ca0089ec88.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/1e8ad398-560f-40df-af37-95ca0089ec88.root": {
         "num_entries": 20598,
         "object_path": "Events",
         "steps": [
@@ -35060,7 +35060,7 @@
         ],
         "uuid": "ec170020-295d-11ef-a1f1-d72411acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/2155ccbc-efe4-402a-b034-05185fdbdc07.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/2155ccbc-efe4-402a-b034-05185fdbdc07.root": {
         "num_entries": 65482,
         "object_path": "Events",
         "steps": [
@@ -35071,7 +35071,7 @@
         ],
         "uuid": "8770f150-2910-11ef-ab07-a82df682beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/232ff410-3a13-41a8-a24e-77a6f63017ac.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/232ff410-3a13-41a8-a24e-77a6f63017ac.root": {
         "num_entries": 336710,
         "object_path": "Events",
         "steps": [
@@ -35082,7 +35082,7 @@
         ],
         "uuid": "befeb81a-28e7-11ef-9919-63a0a983beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/29946480-a5e5-4af4-97b9-0a4c7e4914b6.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/29946480-a5e5-4af4-97b9-0a4c7e4914b6.root": {
         "num_entries": 369804,
         "object_path": "Events",
         "steps": [
@@ -35093,7 +35093,7 @@
         ],
         "uuid": "15483a34-28de-11ef-a008-25cee183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/2bee730c-6fde-4485-96a5-a792d5cd170b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/2bee730c-6fde-4485-96a5-a792d5cd170b.root": {
         "num_entries": 16564,
         "object_path": "Events",
         "steps": [
@@ -35104,7 +35104,7 @@
         ],
         "uuid": "ef234968-295d-11ef-a3e2-0a24a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/30dbeced-a07c-4604-b42e-7dbf3cd947c5.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/30dbeced-a07c-4604-b42e-7dbf3cd947c5.root": {
         "num_entries": 4058,
         "object_path": "Events",
         "steps": [
@@ -35115,7 +35115,7 @@
         ],
         "uuid": "ef74c900-295d-11ef-9c2b-24c210acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/31193633-dae6-4d39-afaa-5574809942b0.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/31193633-dae6-4d39-afaa-5574809942b0.root": {
         "num_entries": 365137,
         "object_path": "Events",
         "steps": [
@@ -35126,7 +35126,7 @@
         ],
         "uuid": "48172922-28d2-11ef-aa22-6ebee183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/31ecd682-b3b1-409a-b673-39fe209de855.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/31ecd682-b3b1-409a-b673-39fe209de855.root": {
         "num_entries": 238418,
         "object_path": "Events",
         "steps": [
@@ -35137,7 +35137,7 @@
         ],
         "uuid": "6be23768-290c-11ef-b084-020013acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/371645f0-adc0-456f-a502-52e611aad62e.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/371645f0-adc0-456f-a502-52e611aad62e.root": {
         "num_entries": 77874,
         "object_path": "Events",
         "steps": [
@@ -35148,7 +35148,7 @@
         ],
         "uuid": "d8b7c996-290e-11ef-9ede-d56018acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/3c4d6fcf-3a6e-48a6-886f-12ccaef3b472.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/3c4d6fcf-3a6e-48a6-886f-12ccaef3b472.root": {
         "num_entries": 16341,
         "object_path": "Events",
         "steps": [
@@ -35159,7 +35159,7 @@
         ],
         "uuid": "ec73dba6-295d-11ef-b987-0c041cacbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/3c61c122-d602-4933-a486-89a9d47b487d.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/3c61c122-d602-4933-a486-89a9d47b487d.root": {
         "num_entries": 8148,
         "object_path": "Events",
         "steps": [
@@ -35170,7 +35170,7 @@
         ],
         "uuid": "911f9afa-295e-11ef-bc53-f3246c8dbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/468ac19a-42d5-45cf-85d8-5d01fef442f1.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/468ac19a-42d5-45cf-85d8-5d01fef442f1.root": {
         "num_entries": 255317,
         "object_path": "Events",
         "steps": [
@@ -35181,7 +35181,7 @@
         ],
         "uuid": "cdb70102-295d-11ef-a443-51bee183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/4c3187ef-b4c4-45ce-9b95-4a8d7295f9c9.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/4c3187ef-b4c4-45ce-9b95-4a8d7295f9c9.root": {
         "num_entries": 131613,
         "object_path": "Events",
         "steps": [
@@ -35192,7 +35192,7 @@
         ],
         "uuid": "2387bb32-2902-11ef-a6a0-0f1ea8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/611996f8-3727-46fe-b0d1-f0b90de673e1.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/611996f8-3727-46fe-b0d1-f0b90de673e1.root": {
         "num_entries": 311981,
         "object_path": "Events",
         "steps": [
@@ -35203,7 +35203,7 @@
         ],
         "uuid": "365f4a16-28eb-11ef-8219-94e36880beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/6206d3e2-4b48-4e87-a09b-05cc9177f4ca.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/6206d3e2-4b48-4e87-a09b-05cc9177f4ca.root": {
         "num_entries": 20522,
         "object_path": "Events",
         "steps": [
@@ -35214,7 +35214,7 @@
         ],
         "uuid": "1d3a2d26-295e-11ef-86bd-501a3d86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/728688d6-7869-4a04-8d70-6f712eb9ac20.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/728688d6-7869-4a04-8d70-6f712eb9ac20.root": {
         "num_entries": 143856,
         "object_path": "Events",
         "steps": [
@@ -35225,7 +35225,7 @@
         ],
         "uuid": "9b05b118-291c-11ef-b233-46eab392beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/74d41f9b-d9a8-4f8e-8e45-6adc20d027a3.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/74d41f9b-d9a8-4f8e-8e45-6adc20d027a3.root": {
         "num_entries": 86242,
         "object_path": "Events",
         "steps": [
@@ -35236,7 +35236,7 @@
         ],
         "uuid": "c85baf8e-291f-11ef-9e3c-3012030abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/761e4ce7-8da7-43c9-b072-77828d2deedc.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/761e4ce7-8da7-43c9-b072-77828d2deedc.root": {
         "num_entries": 315996,
         "object_path": "Events",
         "steps": [
@@ -35247,7 +35247,7 @@
         ],
         "uuid": "aed2f22c-28f5-11ef-93c0-188ed380beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/7a3d10fc-52cb-4a95-a1cc-a41b172e800b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/7a3d10fc-52cb-4a95-a1cc-a41b172e800b.root": {
         "num_entries": 4018,
         "object_path": "Events",
         "steps": [
@@ -35258,7 +35258,7 @@
         ],
         "uuid": "e1c73b1c-295d-11ef-8850-020013acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/7bccfe7d-e42d-4f8b-9e06-c799f0adf5e3.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/7bccfe7d-e42d-4f8b-9e06-c799f0adf5e3.root": {
         "num_entries": 316126,
         "object_path": "Events",
         "steps": [
@@ -35269,7 +35269,7 @@
         ],
         "uuid": "33e9dc30-2899-11ef-8dc5-9ebce183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/7c57d936-0c89-4a98-9dea-40544de99b4e.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/7c57d936-0c89-4a98-9dea-40544de99b4e.root": {
         "num_entries": 36747,
         "object_path": "Events",
         "steps": [
@@ -35280,7 +35280,7 @@
         ],
         "uuid": "e94f2f5c-295d-11ef-8634-0566210abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/7f08e610-fc17-40a7-954d-009266aab26f.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/7f08e610-fc17-40a7-954d-009266aab26f.root": {
         "num_entries": 195414,
         "object_path": "Events",
         "steps": [
@@ -35291,7 +35291,7 @@
         ],
         "uuid": "04d5b5c0-28e6-11ef-89f4-850e010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/81715c5b-911d-4b69-9c30-7078493bcb72.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/81715c5b-911d-4b69-9c30-7078493bcb72.root": {
         "num_entries": 316444,
         "object_path": "Events",
         "steps": [
@@ -35302,7 +35302,7 @@
         ],
         "uuid": "4319fdc6-28e8-11ef-bb3a-54bee183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/82195b7e-8e22-4808-bd19-7eeecaa62481.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/82195b7e-8e22-4808-bd19-7eeecaa62481.root": {
         "num_entries": 49095,
         "object_path": "Events",
         "steps": [
@@ -35313,7 +35313,7 @@
         ],
         "uuid": "da1f8252-295d-11ef-97ae-0f64a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/8548ffd1-aefc-4a70-9881-fb3026f2139c.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/8548ffd1-aefc-4a70-9881-fb3026f2139c.root": {
         "num_entries": 312763,
         "object_path": "Events",
         "steps": [
@@ -35324,7 +35324,7 @@
         ],
         "uuid": "d264949e-28ae-11ef-9185-79a1a983beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/897a2c8a-c56d-4ad9-8bed-a6970b458db2.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/897a2c8a-c56d-4ad9-8bed-a6970b458db2.root": {
         "num_entries": 28809,
         "object_path": "Events",
         "steps": [
@@ -35335,7 +35335,7 @@
         ],
         "uuid": "f6518a2e-295d-11ef-8e84-1305010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/8edc26c2-b5df-46a0-878e-d73ad947e881.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/8edc26c2-b5df-46a0-878e-d73ad947e881.root": {
         "num_entries": 4127,
         "object_path": "Events",
         "steps": [
@@ -35346,7 +35346,7 @@
         ],
         "uuid": "a61261e0-29a4-11ef-a338-5803a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/94925b6a-27da-4b0e-800a-71b46f2836b0.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/94925b6a-27da-4b0e-800a-71b46f2836b0.root": {
         "num_entries": 246050,
         "object_path": "Events",
         "steps": [
@@ -35357,7 +35357,7 @@
         ],
         "uuid": "2b69e7ce-290e-11ef-9205-48246c8dbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/a23ec61e-9577-4cfa-90ae-1c028fe1fc52.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/a23ec61e-9577-4cfa-90ae-1c028fe1fc52.root": {
         "num_entries": 28738,
         "object_path": "Events",
         "steps": [
@@ -35368,7 +35368,7 @@
         ],
         "uuid": "cfd6dbd0-292e-11ef-ab44-687f4b86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/a3bb09ed-9e48-48b7-a5c5-21af76c4593b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/a3bb09ed-9e48-48b7-a5c5-21af76c4593b.root": {
         "num_entries": 8169,
         "object_path": "Events",
         "steps": [
@@ -35379,7 +35379,7 @@
         ],
         "uuid": "fe8037ea-295d-11ef-9eef-1b18000abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/a4949cf6-1237-4374-b4ad-6a6cab8c699f.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/a4949cf6-1237-4374-b4ad-6a6cab8c699f.root": {
         "num_entries": 119038,
         "object_path": "Events",
         "steps": [
@@ -35390,7 +35390,7 @@
         ],
         "uuid": "e6ea89fa-295d-11ef-bedb-0de36880beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/a6c79b62-6685-4644-aaf2-c9234e9a28b5.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/a6c79b62-6685-4644-aaf2-c9234e9a28b5.root": {
         "num_entries": 20479,
         "object_path": "Events",
         "steps": [
@@ -35401,7 +35401,7 @@
         ],
         "uuid": "07bba9e6-2965-11ef-94b1-1fdca8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/b2b96e0c-b423-4ede-9b80-36dbda77f980.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/b2b96e0c-b423-4ede-9b80-36dbda77f980.root": {
         "num_entries": 130875,
         "object_path": "Events",
         "steps": [
@@ -35412,7 +35412,7 @@
         ],
         "uuid": "a18d684a-2963-11ef-b045-83c49a83beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/bb187400-298a-494e-9395-7380837967fe.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/bb187400-298a-494e-9395-7380837967fe.root": {
         "num_entries": 28569,
         "object_path": "Events",
         "steps": [
@@ -35423,7 +35423,7 @@
         ],
         "uuid": "f7278908-295d-11ef-ba10-a6013c0abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/c24a9f3d-d31f-4aef-8d6c-b6cba7b25de6.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/c24a9f3d-d31f-4aef-8d6c-b6cba7b25de6.root": {
         "num_entries": 323754,
         "object_path": "Events",
         "steps": [
@@ -35434,7 +35434,7 @@
         ],
         "uuid": "c9f40190-28b9-11ef-b8b5-34bee183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/c9bf6cb2-edf1-483f-879d-b25a9a13d32c.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/c9bf6cb2-edf1-483f-879d-b25a9a13d32c.root": {
         "num_entries": 8278,
         "object_path": "Events",
         "steps": [
@@ -35445,7 +35445,7 @@
         ],
         "uuid": "e316ae30-295d-11ef-ac7b-7a319e86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/d3d7491a-9651-4c34-b748-75636d3b07c1.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/d3d7491a-9651-4c34-b748-75636d3b07c1.root": {
         "num_entries": 20357,
         "object_path": "Events",
         "steps": [
@@ -35456,7 +35456,7 @@
         ],
         "uuid": "dcdac150-295d-11ef-a9a1-8d84e4a9beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/d7c06c8d-e67c-44fe-8327-9d26c9e1487b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/d7c06c8d-e67c-44fe-8327-9d26c9e1487b.root": {
         "num_entries": 20652,
         "object_path": "Events",
         "steps": [
@@ -35467,7 +35467,7 @@
         ],
         "uuid": "66119fc0-2936-11ef-a9b6-3020a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/d915c49c-cd21-47e7-868e-af37a9f6ddcd.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/d915c49c-cd21-47e7-868e-af37a9f6ddcd.root": {
         "num_entries": 61267,
         "object_path": "Events",
         "steps": [
@@ -35478,7 +35478,7 @@
         ],
         "uuid": "44f09d88-291c-11ef-8948-5c060d0abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/dbc2d584-9351-4def-8cc3-de736f43eb17.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/dbc2d584-9351-4def-8cc3-de736f43eb17.root": {
         "num_entries": 40970,
         "object_path": "Events",
         "steps": [
@@ -35489,7 +35489,7 @@
         ],
         "uuid": "0a5a44f8-29ad-11ef-bc9d-7d0e010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/de3ee012-5edc-4424-9eef-0882c621d997.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/de3ee012-5edc-4424-9eef-0882c621d997.root": {
         "num_entries": 163774,
         "object_path": "Events",
         "steps": [
@@ -35500,7 +35500,7 @@
         ],
         "uuid": "88466f8c-290c-11ef-b001-13cd36c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/de4ec479-b0d9-4b01-aef1-c47d5bae7227.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/de4ec479-b0d9-4b01-aef1-c47d5bae7227.root": {
         "num_entries": 352238,
         "object_path": "Events",
         "steps": [
@@ -35511,7 +35511,7 @@
         ],
         "uuid": "0de79a24-28d8-11ef-b20d-26bee183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/e3cf075b-d6f5-41ad-bd1e-b4be9a59ede3.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/e3cf075b-d6f5-41ad-bd1e-b4be9a59ede3.root": {
         "num_entries": 282099,
         "object_path": "Events",
         "steps": [
@@ -35522,7 +35522,7 @@
         ],
         "uuid": "0a3681cc-2902-11ef-aed7-b9319e86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/f767a110-34b7-4731-9ef4-1634d1c4dc66.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/f767a110-34b7-4731-9ef4-1634d1c4dc66.root": {
         "num_entries": 45159,
         "object_path": "Events",
         "steps": [
@@ -35533,7 +35533,7 @@
         ],
         "uuid": "0d1d5ba2-295e-11ef-a708-dc26bb94beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/f9753fdc-025d-46da-905f-8d46751b0736.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/f9753fdc-025d-46da-905f-8d46751b0736.root": {
         "num_entries": 85898,
         "object_path": "Events",
         "steps": [
@@ -35544,7 +35544,7 @@
         ],
         "uuid": "f1b22f06-2a8d-11ef-bb91-fea9935abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/fa505906-3c5a-40cd-a98e-b985ab6fe5d9.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/fa505906-3c5a-40cd-a98e-b985ab6fe5d9.root": {
         "num_entries": 16249,
         "object_path": "Events",
         "steps": [
@@ -35555,7 +35555,7 @@
         ],
         "uuid": "def27df2-295d-11ef-bf57-188ed380beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/fe78b385-aac0-4a30-bf1f-3bfc54ea4ab0.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/70000/fe78b385-aac0-4a30-bf1f-3bfc54ea4ab0.root": {
         "num_entries": 4122,
         "object_path": "Events",
         "steps": [
@@ -35566,7 +35566,7 @@
         ],
         "uuid": "eb8f52b0-295d-11ef-bd47-dccd36c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/03a47683-caaa-4bd7-98b8-585e9f23f9ec.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/03a47683-caaa-4bd7-98b8-585e9f23f9ec.root": {
         "num_entries": 135378,
         "object_path": "Events",
         "steps": [
@@ -35577,7 +35577,7 @@
         ],
         "uuid": "8df2e60c-28d2-11ef-9601-1720a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/047f0ba4-c638-47e5-b0e2-5c18a44cd85a.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/047f0ba4-c638-47e5-b0e2-5c18a44cd85a.root": {
         "num_entries": 49101,
         "object_path": "Events",
         "steps": [
@@ -35588,7 +35588,7 @@
         ],
         "uuid": "7e4b7d22-28d2-11ef-8d9f-e0cd36c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/1324a1d7-15bd-4a5e-9625-72df6a6f9102.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/1324a1d7-15bd-4a5e-9625-72df6a6f9102.root": {
         "num_entries": 389657,
         "object_path": "Events",
         "steps": [
@@ -35599,7 +35599,7 @@
         ],
         "uuid": "f84220a6-2844-11ef-b654-7f246c8dbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/1a744d22-18bf-42fc-a8aa-9bc7ea42b8ba.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/1a744d22-18bf-42fc-a8aa-9bc7ea42b8ba.root": {
         "num_entries": 131363,
         "object_path": "Events",
         "steps": [
@@ -35610,7 +35610,7 @@
         ],
         "uuid": "90d1bde4-28d7-11ef-aa59-45246c8dbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/2b9e5f29-3eeb-42b9-959e-4c327878c6fc.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/2b9e5f29-3eeb-42b9-959e-4c327878c6fc.root": {
         "num_entries": 45033,
         "object_path": "Events",
         "steps": [
@@ -35621,7 +35621,7 @@
         ],
         "uuid": "206a8df6-28d2-11ef-9307-b1013c0abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/30313ee2-d409-4bf7-98d2-275aea67c58a.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/30313ee2-d409-4bf7-98d2-275aea67c58a.root": {
         "num_entries": 4198,
         "object_path": "Events",
         "steps": [
@@ -35632,7 +35632,7 @@
         ],
         "uuid": "84024faa-28d4-11ef-a487-9004a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/3177cdc4-6d3d-4d88-8e46-b31b484fbba4.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/3177cdc4-6d3d-4d88-8e46-b31b484fbba4.root": {
         "num_entries": 16467,
         "object_path": "Events",
         "steps": [
@@ -35643,7 +35643,7 @@
         ],
         "uuid": "b35b2b48-28d2-11ef-946b-0ed19a83beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/39f863ff-86ee-409f-9ae7-43979aee5aff.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/39f863ff-86ee-409f-9ae7-43979aee5aff.root": {
         "num_entries": 139634,
         "object_path": "Events",
         "steps": [
@@ -35654,7 +35654,7 @@
         ],
         "uuid": "b320ac68-28d0-11ef-a2f6-88cde183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/3bd4af33-831a-4ab8-902c-14d17c9366b3.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/3bd4af33-831a-4ab8-902c-14d17c9366b3.root": {
         "num_entries": 81963,
         "object_path": "Events",
         "steps": [
@@ -35665,7 +35665,7 @@
         ],
         "uuid": "3323277e-28d1-11ef-b436-54e9b392beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/44df882c-df02-4e28-8a3f-35526d6fb87d.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/44df882c-df02-4e28-8a3f-35526d6fb87d.root": {
         "num_entries": 307871,
         "object_path": "Events",
         "steps": [
@@ -35676,7 +35676,7 @@
         ],
         "uuid": "9ad0a0dc-28d0-11ef-a1a1-0b8ed380beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/4854931e-ab44-44a4-9a3f-0832a5fddbae.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/4854931e-ab44-44a4-9a3f-0832a5fddbae.root": {
         "num_entries": 106693,
         "object_path": "Events",
         "steps": [
@@ -35687,7 +35687,7 @@
         ],
         "uuid": "79cd61fe-28d0-11ef-9aae-87339e86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/49e3c576-d1cd-4f1e-ae9c-4696ae628a60.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/49e3c576-d1cd-4f1e-ae9c-4696ae628a60.root": {
         "num_entries": 20588,
         "object_path": "Events",
         "steps": [
@@ -35698,7 +35698,7 @@
         ],
         "uuid": "596f289e-28cf-11ef-9375-850d010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/4a4d0735-1c1f-4572-b72e-37f0dc3038bf.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/4a4d0735-1c1f-4572-b72e-37f0dc3038bf.root": {
         "num_entries": 8292,
         "object_path": "Events",
         "steps": [
@@ -35709,7 +35709,7 @@
         ],
         "uuid": "a1236d8a-2d43-11ef-83ed-11dca8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/53c3a905-6ab4-4f69-ae42-e05064399983.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/53c3a905-6ab4-4f69-ae42-e05064399983.root": {
         "num_entries": 8151,
         "object_path": "Events",
         "steps": [
@@ -35720,7 +35720,7 @@
         ],
         "uuid": "0e84181e-28d2-11ef-8299-0c64010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/699496a2-aaa8-4555-9aa2-04b651b35ce5.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/699496a2-aaa8-4555-9aa2-04b651b35ce5.root": {
         "num_entries": 16364,
         "object_path": "Events",
         "steps": [
@@ -35731,7 +35731,7 @@
         ],
         "uuid": "023265fc-28d2-11ef-bd89-271b3d86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/6d5863c1-e98c-4a09-b816-aae20d9d95da.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/6d5863c1-e98c-4a09-b816-aae20d9d95da.root": {
         "num_entries": 4030,
         "object_path": "Events",
         "steps": [
@@ -35742,7 +35742,7 @@
         ],
         "uuid": "48b20962-30f0-11ef-9bc8-b7d0b9bcbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/6f93c2f4-7c92-4e12-bdb2-d4815a49451b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/6f93c2f4-7c92-4e12-bdb2-d4815a49451b.root": {
         "num_entries": 24789,
         "object_path": "Events",
         "steps": [
@@ -35753,7 +35753,7 @@
         ],
         "uuid": "89e27bea-28d2-11ef-9eff-0c66210abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/727524fb-1446-435d-a4c6-67e9c462ce2a.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/727524fb-1446-435d-a4c6-67e9c462ce2a.root": {
         "num_entries": 16422,
         "object_path": "Events",
         "steps": [
@@ -35764,7 +35764,7 @@
         ],
         "uuid": "b14b50e6-28d0-11ef-9d8a-2ac110acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/72ad9101-753b-41a1-ba05-51b7cc2ae3b7.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/72ad9101-753b-41a1-ba05-51b7cc2ae3b7.root": {
         "num_entries": 16385,
         "object_path": "Events",
         "steps": [
@@ -35775,7 +35775,7 @@
         ],
         "uuid": "605001f6-28cf-11ef-80ec-0f041cacbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/7e30f0d3-fd9e-46cf-9ce9-05b1239b17c2.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/7e30f0d3-fd9e-46cf-9ce9-05b1239b17c2.root": {
         "num_entries": 4098,
         "object_path": "Events",
         "steps": [
@@ -35786,7 +35786,7 @@
         ],
         "uuid": "90db93da-2d43-11ef-8623-d7a8935abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/7f9f09ba-e175-452a-8946-579872932264.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/7f9f09ba-e175-452a-8946-579872932264.root": {
         "num_entries": 320102,
         "object_path": "Events",
         "steps": [
@@ -35797,7 +35797,7 @@
         ],
         "uuid": "cbd63018-285b-11ef-886f-3dbde183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/8c4f61e8-e3fd-4349-92a7-9e1de14508b1.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/8c4f61e8-e3fd-4349-92a7-9e1de14508b1.root": {
         "num_entries": 4076,
         "object_path": "Events",
         "steps": [
@@ -35808,7 +35808,7 @@
         ],
         "uuid": "7a209500-2d43-11ef-bb8e-2bbde183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/8ea22b4f-11ee-4c48-b67e-b8beea826c17.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/8ea22b4f-11ee-4c48-b67e-b8beea826c17.root": {
         "num_entries": 316196,
         "object_path": "Events",
         "steps": [
@@ -35819,7 +35819,7 @@
         ],
         "uuid": "55a4a082-286f-11ef-bbba-92cce183beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/9970483f-3a43-4649-8477-74d4e1341780.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/9970483f-3a43-4649-8477-74d4e1341780.root": {
         "num_entries": 12371,
         "object_path": "Events",
         "steps": [
@@ -35830,7 +35830,7 @@
         ],
         "uuid": "dc913214-28d2-11ef-bfbe-e50b030abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/9ab9bcd6-f530-48e9-b0ae-ccfd137c2311.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/9ab9bcd6-f530-48e9-b0ae-ccfd137c2311.root": {
         "num_entries": 245993,
         "object_path": "Events",
         "steps": [
@@ -35841,7 +35841,7 @@
         ],
         "uuid": "229a75f0-28d2-11ef-9b5b-101ba8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/9f7ba002-52a7-4459-bb92-cb93f09adcaf.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/9f7ba002-52a7-4459-bb92-cb93f09adcaf.root": {
         "num_entries": 8231,
         "object_path": "Events",
         "steps": [
@@ -35852,7 +35852,7 @@
         ],
         "uuid": "7f2eb970-28d2-11ef-a1a6-ef6018acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/a166011f-937e-47f7-b7de-13ad78689b8e.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/a166011f-937e-47f7-b7de-13ad78689b8e.root": {
         "num_entries": 4068,
         "object_path": "Events",
         "steps": [
@@ -35863,7 +35863,7 @@
         ],
         "uuid": "b0473e80-28d0-11ef-88e8-0364a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/a4f91ff9-e6c5-4363-8635-6fd7f8b97e0d.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/a4f91ff9-e6c5-4363-8635-6fd7f8b97e0d.root": {
         "num_entries": 168074,
         "object_path": "Events",
         "steps": [
@@ -35874,7 +35874,7 @@
         ],
         "uuid": "a96811ca-28d0-11ef-9242-9db45c90beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/aba893ea-6fdf-41e2-ac1b-f8d895468112.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/aba893ea-6fdf-41e2-ac1b-f8d895468112.root": {
         "num_entries": 45106,
         "object_path": "Events",
         "steps": [
@@ -35885,7 +35885,7 @@
         ],
         "uuid": "9defbb0e-28d0-11ef-a93d-9e060d0abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/af14178a-8ff1-4e3e-91d6-134a50900e93.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/af14178a-8ff1-4e3e-91d6-134a50900e93.root": {
         "num_entries": 16435,
         "object_path": "Events",
         "steps": [
@@ -35896,7 +35896,7 @@
         ],
         "uuid": "7d39ff4c-2d43-11ef-b503-6776010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/bce27204-858f-41e3-8282-a94d847bcb7c.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/bce27204-858f-41e3-8282-a94d847bcb7c.root": {
         "num_entries": 28654,
         "object_path": "Events",
         "steps": [
@@ -35907,7 +35907,7 @@
         ],
         "uuid": "90d3497a-28d2-11ef-887e-b62411acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/c41d2588-3078-4994-9e79-a348a4d36f27.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/c41d2588-3078-4994-9e79-a348a4d36f27.root": {
         "num_entries": 4025,
         "object_path": "Events",
         "steps": [
@@ -35918,7 +35918,7 @@
         ],
         "uuid": "8779eefe-2d43-11ef-bb8e-03cd36c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/c84b1253-f9a4-442d-9e0a-a07b3867aafe.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/c84b1253-f9a4-442d-9e0a-a07b3867aafe.root": {
         "num_entries": 316076,
         "object_path": "Events",
         "steps": [
@@ -35929,7 +35929,7 @@
         ],
         "uuid": "c1b51a4a-2842-11ef-8ed4-0720a8c0beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/ce338288-4db1-45ed-b493-64c8c7537277.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/ce338288-4db1-45ed-b493-64c8c7537277.root": {
         "num_entries": 33027,
         "object_path": "Events",
         "steps": [
@@ -35940,7 +35940,7 @@
         ],
         "uuid": "97a6828c-28d0-11ef-b25b-020013acbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/ddfd0a89-78c1-4963-aaeb-a09d9b5b912a.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/ddfd0a89-78c1-4963-aaeb-a09d9b5b912a.root": {
         "num_entries": 49071,
         "object_path": "Events",
         "steps": [
@@ -35951,7 +35951,7 @@
         ],
         "uuid": "31a001aa-28d2-11ef-90ed-63a8935abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/e25972b2-3357-4459-9e5b-9a1fc8a58a52.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/e25972b2-3357-4459-9e5b-9a1fc8a58a52.root": {
         "num_entries": 20504,
         "object_path": "Events",
         "steps": [
@@ -35962,7 +35962,7 @@
         ],
         "uuid": "74a98c14-28d2-11ef-b057-912df682beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/ec5eaeae-a2fe-4e7b-9ecd-d78ab9923529.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/ec5eaeae-a2fe-4e7b-9ecd-d78ab9923529.root": {
         "num_entries": 328637,
         "object_path": "Events",
         "steps": [
@@ -35973,7 +35973,7 @@
         ],
         "uuid": "063641ac-2862-11ef-822a-2e246c8dbeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/f0d0407e-4994-4a79-bdab-60bcedaa0b23.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/f0d0407e-4994-4a79-bdab-60bcedaa0b23.root": {
         "num_entries": 4043,
         "object_path": "Events",
         "steps": [
@@ -35984,7 +35984,7 @@
         ],
         "uuid": "4f82a6b2-2d43-11ef-9823-0206010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/f174af1f-fdb6-48e0-8803-e9c8aa033cdd.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/f174af1f-fdb6-48e0-8803-e9c8aa033cdd.root": {
         "num_entries": 311826,
         "object_path": "Events",
         "steps": [
@@ -35995,7 +35995,7 @@
         ],
         "uuid": "234a72d4-28d2-11ef-b5e1-0f05010abeef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/f457201f-5789-4e46-b42d-9f9facc0c12e.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/f457201f-5789-4e46-b42d-9f9facc0c12e.root": {
         "num_entries": 57654,
         "object_path": "Events",
         "steps": [
@@ -36006,7 +36006,7 @@
         ],
         "uuid": "9a9c26d6-28d0-11ef-a789-8b26bb94beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/f63cac01-b25b-4575-9256-03bab57f7278.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/f63cac01-b25b-4575-9256-03bab57f7278.root": {
         "num_entries": 4032,
         "object_path": "Events",
         "steps": [
@@ -36017,7 +36017,7 @@
         ],
         "uuid": "09e547e0-2d43-11ef-b669-82339e86beef"
       },
-      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/fb2070c4-02ed-4339-bf57-5f8bc464df9b.root": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/80000/fb2070c4-02ed-4339-bf57-5f8bc464df9b.root": {
         "num_entries": 8207,
         "object_path": "Events",
         "steps": [
@@ -54492,6 +54492,295 @@
       "sumGenWgts": 51082709849.38801
     }
   },
+  "vbf_aMCatNLO": {
+    "files": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/017f06bc-77e5-4714-9a61-3dd0af9472c8.root": {
+        "num_entries": 20000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            20000
+          ]
+        ],
+        "uuid": "896ac7dc-b637-11f0-ae4d-cda0a983beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/1107a0a0-62d7-4ac6-9371-b2a6fdae3925.root": {
+        "num_entries": 15000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            15000
+          ]
+        ],
+        "uuid": "dc540868-b62e-11f0-8bf5-c8890d0abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/13c67e65-f43a-4ae6-8409-ca0db66f7101.root": {
+        "num_entries": 5000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            5000
+          ]
+        ],
+        "uuid": "6071606e-b62f-11f0-bf38-6b68210abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/1daeb906-bfc7-4246-87e9-ab15fe9632ab.root": {
+        "num_entries": 5000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            5000
+          ]
+        ],
+        "uuid": "65521e84-b62f-11f0-b597-b4803c0abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/30928c1c-6eb4-4729-b708-0f41d7a16b3c.root": {
+        "num_entries": 55000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            55000
+          ]
+        ],
+        "uuid": "4f23d634-b62f-11f0-9ab7-82e25d9fbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/328969bb-f7a2-4869-9c67-74b8537bdea3.root": {
+        "num_entries": 45000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            45000
+          ]
+        ],
+        "uuid": "96099eec-b681-11f0-8331-48e36880beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/4a582b87-2a8c-4a60-844f-656ce689748b.root": {
+        "num_entries": 15000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            15000
+          ]
+        ],
+        "uuid": "6501c40a-b820-11f0-bd4f-cd2411acbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/6f0c0735-91ce-476d-9dad-a76e1467167e.root": {
+        "num_entries": 5000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            5000
+          ]
+        ],
+        "uuid": "fc917dc2-b62e-11f0-8aa4-22c08e80beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/70479203-7436-42d3-906e-cff4deadb27f.root": {
+        "num_entries": 30000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            30000
+          ]
+        ],
+        "uuid": "5426722e-b812-11f0-80cf-d16018acbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/7614e5bf-a095-42dd-83ee-38c617bf1224.root": {
+        "num_entries": 40000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            40000
+          ]
+        ],
+        "uuid": "e81f2812-b62e-11f0-8ebe-0d8ed380beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/7696f71a-fe1c-4302-a947-e33733079b76.root": {
+        "num_entries": 60000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            60000
+          ]
+        ],
+        "uuid": "4e1a0466-b62f-11f0-b63f-0525a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/77281488-1fc1-4123-8d6b-350926057bc1.root": {
+        "num_entries": 30000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            30000
+          ]
+        ],
+        "uuid": "8fa5f516-b62f-11f0-a123-e1e9b392beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/7d971851-6a98-422a-b102-2cbf735147f8.root": {
+        "num_entries": 35000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            35000
+          ]
+        ],
+        "uuid": "4fe6180c-b62f-11f0-8deb-88090d0abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/85199b3d-4d2f-4f57-b412-34ab51fbeed3.root": {
+        "num_entries": 65000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            65000
+          ]
+        ],
+        "uuid": "f4131d2c-b62e-11f0-94bc-7eb75d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/89e3491f-c4a9-4fbf-86de-2a3fef017e92.root": {
+        "num_entries": 290000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            290000
+          ]
+        ],
+        "uuid": "032131c8-b62f-11f0-9e86-82e45d9fbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/9c77ee75-725d-4bd1-b452-436a37b62508.root": {
+        "num_entries": 20000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            20000
+          ]
+        ],
+        "uuid": "b2d84c44-b811-11f0-9186-08e5b49dbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/aceda806-c37a-432c-93c2-594a9ffd0c9c.root": {
+        "num_entries": 10000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            10000
+          ]
+        ],
+        "uuid": "55be4a60-b62f-11f0-bdde-2a03a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/b68071da-5fc0-4337-942a-d01bb9eae783.root": {
+        "num_entries": 5000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            5000
+          ]
+        ],
+        "uuid": "36fcae56-b69c-11f0-9174-1d1b3d86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/b90686e1-3328-40b8-81b7-5f26cd5c1556.root": {
+        "num_entries": 50000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            50000
+          ]
+        ],
+        "uuid": "e1067f02-b62f-11f0-a2c5-82246c8dbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/bf5f3378-2160-4ac1-9447-501510a1f431.root": {
+        "num_entries": 40000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            40000
+          ]
+        ],
+        "uuid": "af9d214c-b6a6-11f0-b0a4-ad329e86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/c8ce4fea-609e-4950-9efc-3da257df5309.root": {
+        "num_entries": 10000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            10000
+          ]
+        ],
+        "uuid": "7ed1b8ec-b62f-11f0-9754-47cd36c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/e38de1da-f602-49f4-ad4b-630993e4a692.root": {
+        "num_entries": 55000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            55000
+          ]
+        ],
+        "uuid": "26ecd1ca-b62f-11f0-9230-d865a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/e5f4fa70-36b7-4712-8d1b-e7519b8eafd0.root": {
+        "num_entries": 60000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            60000
+          ]
+        ],
+        "uuid": "fcc3507c-b62e-11f0-8964-04041cacbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/fe06e886-2849-4a2f-b3d9-b95d4273ce3c.root": {
+        "num_entries": 40000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            40000
+          ]
+        ],
+        "uuid": "f24cf670-b62e-11f0-8cbd-c583e4a9beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/ff3abaf5-d1eb-4f43-a601-30e6fe373343.root": {
+        "num_entries": 195000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            195000
+          ]
+        ],
+        "uuid": "dac19554-b63f-11f0-bf52-8cbee183beef"
+      }
+    },
+    "form": null,
+    "metadata": {
+      "data_entries": null,
+      "dataset": "vbf_aMCatNLO",
+      "fraction": 1.0,
+      "is_mc": true,
+      "nGenEvts": 1200000,
+      "original_fraction": 1.0,
+      "sumGenWgts": 5244584.385420001
+    }
+  },
   "vbf_powheg": {
     "files": {
       "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/130000/75d87616-9e7a-4821-9077-db396e7fc447.root": {
@@ -54834,295 +55123,6 @@
       "nGenEvts": 1200000,
       "original_fraction": 1.0,
       "sumGenWgts": 5015011.348920001
-    }
-  },
-  "vbf_powheg_amcatnlo": {
-    "files": {
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/017f06bc-77e5-4714-9a61-3dd0af9472c8.root": {
-        "num_entries": 20000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            20000
-          ]
-        ],
-        "uuid": "896ac7dc-b637-11f0-ae4d-cda0a983beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/1107a0a0-62d7-4ac6-9371-b2a6fdae3925.root": {
-        "num_entries": 15000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            15000
-          ]
-        ],
-        "uuid": "dc540868-b62e-11f0-8bf5-c8890d0abeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/13c67e65-f43a-4ae6-8409-ca0db66f7101.root": {
-        "num_entries": 5000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            5000
-          ]
-        ],
-        "uuid": "6071606e-b62f-11f0-bf38-6b68210abeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/1daeb906-bfc7-4246-87e9-ab15fe9632ab.root": {
-        "num_entries": 5000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            5000
-          ]
-        ],
-        "uuid": "65521e84-b62f-11f0-b597-b4803c0abeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/30928c1c-6eb4-4729-b708-0f41d7a16b3c.root": {
-        "num_entries": 55000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            55000
-          ]
-        ],
-        "uuid": "4f23d634-b62f-11f0-9ab7-82e25d9fbeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/328969bb-f7a2-4869-9c67-74b8537bdea3.root": {
-        "num_entries": 45000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            45000
-          ]
-        ],
-        "uuid": "96099eec-b681-11f0-8331-48e36880beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/4a582b87-2a8c-4a60-844f-656ce689748b.root": {
-        "num_entries": 15000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            15000
-          ]
-        ],
-        "uuid": "6501c40a-b820-11f0-bd4f-cd2411acbeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/6f0c0735-91ce-476d-9dad-a76e1467167e.root": {
-        "num_entries": 5000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            5000
-          ]
-        ],
-        "uuid": "fc917dc2-b62e-11f0-8aa4-22c08e80beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/70479203-7436-42d3-906e-cff4deadb27f.root": {
-        "num_entries": 30000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            30000
-          ]
-        ],
-        "uuid": "5426722e-b812-11f0-80cf-d16018acbeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/7614e5bf-a095-42dd-83ee-38c617bf1224.root": {
-        "num_entries": 40000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            40000
-          ]
-        ],
-        "uuid": "e81f2812-b62e-11f0-8ebe-0d8ed380beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/7696f71a-fe1c-4302-a947-e33733079b76.root": {
-        "num_entries": 60000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            60000
-          ]
-        ],
-        "uuid": "4e1a0466-b62f-11f0-b63f-0525a8c0beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/77281488-1fc1-4123-8d6b-350926057bc1.root": {
-        "num_entries": 30000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            30000
-          ]
-        ],
-        "uuid": "8fa5f516-b62f-11f0-a123-e1e9b392beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/7d971851-6a98-422a-b102-2cbf735147f8.root": {
-        "num_entries": 35000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            35000
-          ]
-        ],
-        "uuid": "4fe6180c-b62f-11f0-8deb-88090d0abeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/85199b3d-4d2f-4f57-b412-34ab51fbeed3.root": {
-        "num_entries": 65000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            65000
-          ]
-        ],
-        "uuid": "f4131d2c-b62e-11f0-94bc-7eb75d81beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/89e3491f-c4a9-4fbf-86de-2a3fef017e92.root": {
-        "num_entries": 290000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            290000
-          ]
-        ],
-        "uuid": "032131c8-b62f-11f0-9e86-82e45d9fbeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/9c77ee75-725d-4bd1-b452-436a37b62508.root": {
-        "num_entries": 20000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            20000
-          ]
-        ],
-        "uuid": "b2d84c44-b811-11f0-9186-08e5b49dbeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/aceda806-c37a-432c-93c2-594a9ffd0c9c.root": {
-        "num_entries": 10000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            10000
-          ]
-        ],
-        "uuid": "55be4a60-b62f-11f0-bdde-2a03a8c0beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/b68071da-5fc0-4337-942a-d01bb9eae783.root": {
-        "num_entries": 5000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            5000
-          ]
-        ],
-        "uuid": "36fcae56-b69c-11f0-9174-1d1b3d86beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/b90686e1-3328-40b8-81b7-5f26cd5c1556.root": {
-        "num_entries": 50000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            50000
-          ]
-        ],
-        "uuid": "e1067f02-b62f-11f0-a2c5-82246c8dbeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/bf5f3378-2160-4ac1-9447-501510a1f431.root": {
-        "num_entries": 40000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            40000
-          ]
-        ],
-        "uuid": "af9d214c-b6a6-11f0-b0a4-ad329e86beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/c8ce4fea-609e-4950-9efc-3da257df5309.root": {
-        "num_entries": 10000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            10000
-          ]
-        ],
-        "uuid": "7ed1b8ec-b62f-11f0-9754-47cd36c0beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/e38de1da-f602-49f4-ad4b-630993e4a692.root": {
-        "num_entries": 55000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            55000
-          ]
-        ],
-        "uuid": "26ecd1ca-b62f-11f0-9230-d865a8c0beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/e5f4fa70-36b7-4712-8d1b-e7519b8eafd0.root": {
-        "num_entries": 60000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            60000
-          ]
-        ],
-        "uuid": "fcc3507c-b62e-11f0-8964-04041cacbeef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/fe06e886-2849-4a2f-b3d9-b95d4273ce3c.root": {
-        "num_entries": 40000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            40000
-          ]
-        ],
-        "uuid": "f24cf670-b62e-11f0-8cbd-c583e4a9beef"
-      },
-      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23NanoAODv12/VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_v15-v2/2810000/ff3abaf5-d1eb-4f43-a601-30e6fe373343.root": {
-        "num_entries": 195000,
-        "object_path": "Events",
-        "steps": [
-          [
-            0,
-            195000
-          ]
-        ],
-        "uuid": "dac19554-b63f-11f0-bf52-8cbee183beef"
-      }
-    },
-    "form": null,
-    "metadata": {
-      "data_entries": null,
-      "dataset": "vbf_powheg_amcatnlo",
-      "fraction": 1.0,
-      "is_mc": true,
-      "nGenEvts": 1200000,
-      "original_fraction": 1.0,
-      "sumGenWgts": 5244584.385420001
     }
   },
   "ww_2l2nu": {
