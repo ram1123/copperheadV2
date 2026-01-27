@@ -1,14 +1,17 @@
 [workspace]
 authors = ["ram1123 <ramkrishna.sharma71@gmail.com>"]
 channels = ["conda-forge"]
-name = "coffea_latest"
+name = "coffea_latest_ml"
 platforms = ["linux-64"]
 version = "0.1.0"
+
+[system-requirements]
+cuda = "12.4"
 
 [tasks]
 
 [dependencies]
-python = "*"
+python = "==3.12.9"
 pip = "*"
 coffea = "==2025.3.0"
 awkward = "*"
@@ -20,7 +23,6 @@ lmfit = "*"
 correctionlib = "==2.6.4"
 hepconvert = "*"
 root = "==6.32.2"
-root_base = "==6.32.2"
 xgboost = "*"
 dask = "*"
 dask-gateway = "*"
@@ -31,11 +33,20 @@ ipykernel = "*"
 omegaconf = "*"
 seaborn = "*"
 libnvjitlink-dev = "*"
-
-[pypi-dependencies]
+pytorch = "2.5.*"
+scikit-learn = "*"
+numpy = "*"
+matplotlib = "*"
+plotly = "*"
 rucio-clients = "*"
 fsspec-xrootd = "*"
-torch = "*"
+
+[pypi-dependencies]
 cmsstyle = "*"
 scikit-hep-testdata = "*"
 graphviz = "*"
+ax-platform = ">=1.2.1, <2"
+shap = ">=0.50.0, <0.51"
+
+[activation]
+scripts = ["scripts/pixi_activate.sh"]

@@ -627,7 +627,7 @@ if __name__ == "__main__":
         if not os.path.exists(directory):
             os.makedirs(directory)
         with open(filename, "w") as file:
-            json.dump(big_sample_info, file)
+            json.dump(big_sample_info, file, indent=2, sort_keys=True)
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")
@@ -688,7 +688,7 @@ if __name__ == "__main__":
         # save the sample info
         filename = directory+"/fraction_processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(filename, "w") as file:
-            json.dump(new_samples, file)
+            json.dump(new_samples, file, indent=2, sort_keys=True)
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")

@@ -12,24 +12,11 @@ ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
 
 
-# TODO: Add option to choose different binning schemes
-
 def parse_arguments():
     parser = build_common_parser()
     parser.add_argument(
-        "--nbins", type=str, default="CustomBins",
-        help="Binning key (only 'CustomBins' is handled)"
-    )
-    parser.add_argument(
         "--njet", type=int, nargs="+", default=[0, 1, 2],
         help="Jet multiplicities to loop over"
-    )
-    parser.add_argument(
-        "-dy_sample", "--dy_sample", dest="dy_sample",
-        default="MiNNLO",
-        choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
-        action="store",
-        help="choose the type of DY samples to use for Zpt reweighting",
     )
     return parser.parse_args()
 
@@ -90,7 +77,7 @@ def fit_polynomial(hist_sf, order, xmin, xmax, fit_opts="L S Q"):
     func = ROOT.TF1(f"poly{order}", expr, xmin, xmax)
     hist_sf.Fit(func, fit_opts, "", xmin, xmax)
     hist_sf.Fit(func, fit_opts, "", xmin, xmax)
-    result = hist_sf.Fit(func, "L S R", "", xmin, xmax)
+    hist_sf.Fit(func, "L S R", "", xmin, xmax)
     return func
 
 def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
@@ -99,7 +86,7 @@ def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
     Returns the TF1 object for that line.
     """
     func = ROOT.TF1("flat_line", "[0]*x + [1]", xmin, xmax)
-    result = hist_sf.Fit(func, fit_opts, "", xmin, xmax)
+    hist_sf.Fit(func, fit_opts, "", xmin, xmax)
     return func
 
 def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xmax):
@@ -303,7 +290,7 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
 
     # Save the canvas
     for ext in ("pdf", "png", "root"):
-        canv.SaveAs(f"{save_dir}/{year}_njet{njet}_{nbins}_goodnessOfFit.{ext}")
+        canv.SaveAs(f"{save_dir}/{year}_njet{njet}_goodnessOfFit.{ext}")
 
 def main():
     args = parse_arguments()

@@ -214,7 +214,7 @@ def normalize_unity(h):
 # ------------------------
 # Main
 # ------------------------
-from modules.daskHelper import get_dask_client
+from modules.dask_utils import get_dask_client
 def main():
     # ---- Dask client (scale here) ----
     client = get_dask_client()

@@ -1,16 +1,15 @@
-import ROOT
-import numpy as np
-import dask_awkward as dak
-import awkward as ak
-import argparse
-import sys
-from distributed import Client
 import os
+import sys
 from array import array
 
-from modules import selection
-from modules import classify_year
-
+import awkward as ak
+import dask_awkward as dak
+import numpy as np
+import ROOT
+from cli.common_argparser import build_common_parser
+from modules import classify_year, selection
+from modules.dask_utils import get_dask_client
+from modules.dask_utils import close_dask_client
 
 def zipAndCompute(events, fields2load):
     zpt_wgt_name = "separate_wgt_zpt_wgt"
@@ -26,23 +25,7 @@ if __name__ == "__main__":
     """
     This file is meant to define the Zpt histogram binning for zpt fitting
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-    "-l",
-    "--label",
-    dest="label",
-    default=None,
-    action="store",
-    help="save path to store stage1 output files",
-    )
-    parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="all",
-    action="store",
-    help="string value of year we are calculating",
-    )
+    parser = build_common_parser()
     parser.add_argument(
     "-i",
     "--input_path",
@@ -51,46 +34,10 @@ if __name__ == "__main__":
     action="store",
     help="input parquet files path",
     )
-    parser.add_argument(
-    "-save",
-    "--plot_path",
-    dest="plot_path",
-    default="plots",
-    action="store",
-    help="save path to store plots, not SF root files. That's saved locally",
-    )
-    parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
-    )
-    # option for dy samples: aMCatNLO, MiNNLO, or VBF_filter
-    parser.add_argument(
-    "-dy_sample",
-    "--dy_sample",
-    dest="dy_sample",
-    default="MiNNLO",
-    choices=["MiNNLO", "aMCatNLO", "VBF_filter"],
-    action="store",
-    help="choose the type of DY samples to use for Zpt reweighting",
-    )
     args = parser.parse_args()
 
     # intialize dask client
-    if args.use_gateway:
-        from dask_gateway import Gateway
-        gateway = Gateway(
-            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-        )
-        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-        client = gateway.connect(cluster_info.name).get_client()
-        print("Gateway Client created")
-    else: # use local cluster
-        client = Client(n_workers=63,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
-        print("Local scale Client created")
+    client = get_dask_client(args.use_gateway)
 
     # specify stage1 output label
     run_label = args.label
@@ -101,7 +48,7 @@ if __name__ == "__main__":
         years = [args.year]
 
     for year in years:
-        plot_path = f"{args.plot_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
+        plot_path = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
         os.makedirs(plot_path, exist_ok=True)
         print(f"years: {years}")
 
@@ -128,13 +75,18 @@ if __name__ == "__main__":
             else:
                 raise ValueError(f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, or VBF_filter.")
         else: # run3
-            if year == "2022preEE":
-                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl_XSDYTurbo/*/*.parquet")
-            elif year == "2024":
+            if year == "2024":
                 dy_events = dak.from_parquet(f"{base_path}/dyTo2Mu_M-50_aMCatNLO/*/*.parquet")
-            else: # 2022postEE, 2023, 2023BPix
+            elif args.dy_sample == "powheg":
+                dy_events = dak.from_parquet(f"{base_path}/dyTo2Mu_MLL_*/*/*.parquet")
+            elif args.dy_sample == "INCamcatnloFXFX":
                 dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl/*/*.parquet")
-
+            elif args.dy_sample == "amcatnloFXFX":
+                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_*j/*/*.parquet")
+            else:
+                raise ValueError(
+                    f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, VBF_filter, powheg, or amcatnloFXFX."
+                )
         # apply z-peak region filter and nothing else
         _, data_events = selection.filterRegion(data_events, region="z-peak")
         _, dy_events = selection.filterRegion(dy_events, region="z-peak")
@@ -270,3 +222,6 @@ if __name__ == "__main__":
 
             # Save the canvas as an image
             canvas.SaveAs(f"{plot_path}/SF_{year}_njet{njet}.pdf")
+
+    if client is not None:
+        close_dask_client()

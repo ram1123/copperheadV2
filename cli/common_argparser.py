@@ -109,4 +109,13 @@ def build_common_parser() -> argparse.ArgumentParser:
         help="Configure the logging level.",
     )
 
+    parser.add_argument(
+        "-dy_sample",
+        "--dy_sample",
+        dest="dy_sample",
+        default="MiNNLO",
+        choices=["MiNNLO", "aMCatNLO", "VBF_filter", "powheg", "amcatnloFXFX", "INCamcatnloFXFX"],
+        action="store",
+        help="For zpt reweighting, choose the type of DY samples to use",
+    )
     return parser
