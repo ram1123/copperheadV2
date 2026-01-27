@@ -9,7 +9,7 @@ def get_dask_client(
     threads_per_worker: int = 1,
     memory_limit: str = "10 GiB",
     cluster_index: int = 0,
-) -> Client:
+):
     """
     Create or reuse a Dask client (local or gateway).
     """
@@ -49,6 +49,7 @@ def get_dask_client(
 
 def close_dask_client():
     """Close the current Dask client if it exists."""
+    from distributed import Client
     try:
         client = Client.current()
         client.close()
