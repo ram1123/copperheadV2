@@ -7,9 +7,9 @@ import dask_awkward as dak
 import numpy as np
 import ROOT
 from cli.common_argparser import build_common_parser
-from distributed import Client
 from modules import classify_year, selection
-
+from modules.dask_utils import get_dask_client
+from modules.dask_utils import close_dask_client
 
 def zipAndCompute(events, fields2load):
     zpt_wgt_name = "separate_wgt_zpt_wgt"
@@ -34,31 +34,10 @@ if __name__ == "__main__":
     action="store",
     help="input parquet files path",
     )
-    # option for dy samples: aMCatNLO, MiNNLO, or VBF_filter
-    parser.add_argument(
-        "-dy_sample",
-        "--dy_sample",
-        dest="dy_sample",
-        default="MiNNLO",
-        choices=["MiNNLO", "aMCatNLO", "VBF_filter", "powheg", "amcatnloFXFX", "INCamcatnloFXFX"],
-        action="store",
-        help="choose the type of DY samples to use for Zpt reweighting",
-    )
     args = parser.parse_args()
 
     # intialize dask client
-    if args.use_gateway:
-        from dask_gateway import Gateway
-        gateway = Gateway(
-            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-        )
-        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-        client = gateway.connect(cluster_info.name).get_client()
-        print("Gateway Client created")
-    else: # use local cluster
-        client = Client(n_workers=63,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
-        print("Local scale Client created")
+    client = get_dask_client(args.use_gateway)
 
     # specify stage1 output label
     run_label = args.label
@@ -243,3 +222,6 @@ if __name__ == "__main__":
 
             # Save the canvas as an image
             canvas.SaveAs(f"{plot_path}/SF_{year}_njet{njet}.pdf")
+
+    if client is not None:
+        close_dask_client()

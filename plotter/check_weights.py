@@ -10,13 +10,21 @@ import sys
 # years = ["2016","2017","2018"]
 years = ["2018"]
 # sample = "dy_VBF_filter"
-sample = "dy_VBF_filter_NewZWgt"
+sample = "new_dy_check"
 # sample = "dy_M-100To200_MiNNLO"
 # sample = "dy_M-50_MiNNLO"
 # adjust to wherever your DYVBF parquet folders live
 LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/" \
             "Run2_nanoAODv12_08June/stage1_output/{year}/f1_0/" \
             f"{sample}/*/*.parquet"
+
+
+LOAD_PATH = (
+    "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/"
+    "Run3_nanoAODv12_20Jan_JVMFilterJets/stage1_output/"
+    # "2022preEE/compacted/dyTo2L_M-50_incl/0/*.parquet"
+    "2022postEE/compacted/dyTo2L_M-50_incl/0/*.parquet"
+)
 
 # fraction to sample (so we don't accidentally pull 10s of GB into memory)
 SAMPLE_FRAC = 1.0

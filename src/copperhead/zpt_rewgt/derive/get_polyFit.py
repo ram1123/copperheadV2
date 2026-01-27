@@ -18,15 +18,6 @@ def parse_arguments():
         "--njet", type=int, nargs="+", default=[0, 1, 2],
         help="Jet multiplicities to loop over"
     )
-    parser.add_argument(
-        "-dy_sample",
-        "--dy_sample",
-        dest="dy_sample",
-        default="MiNNLO",
-        choices=["MiNNLO", "aMCatNLO", "VBF_filter", "powheg", "amcatnloFXFX", "INCamcatnloFXFX"],
-        action="store",
-        help="choose the type of DY samples to use for Zpt reweighting",
-    )
     return parser.parse_args()
 
 def make_combined_function(order0, order, xmin, xmax):

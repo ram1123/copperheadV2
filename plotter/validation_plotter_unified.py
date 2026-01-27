@@ -1,21 +1,21 @@
-import awkward as ak
-import dask_awkward as dak
-import numpy as np
-import json
 import argparse
-import os
-from src.lib.histogram.plotting import plotDataMC_compare
-from distributed import Client
-import time
-import tqdm
-import glob
 import copy
-import hist.dask as hda
-import dask
+import glob
+import json
 import logging
-from modules.utils import logger
-from modules import selection
+import os
+import time
 
+import awkward as ak
+import dask
+import dask_awkward as dak
+import hist.dask as hda
+import numpy as np
+import tqdm
+from distributed import Client
+from modules import selection
+from modules.utils import logger
+from src.lib.histogram.plotting import plotDataMC_compare
 
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
@@ -43,8 +43,7 @@ DY_To2MU_MassBinned = [
 ]  # 2024
 DY_To2MU_inclusive = ["dyTo2Mu_M-50"]
 
-# DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
-DY_MLL_binned = ["dyTo2Mu_M-10To50", "dyTo2Mu_M-50To120", "dyTo2Mu_M-120To200"]
+DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
 
 
 DY_HTBinned = [
@@ -69,8 +68,9 @@ DY_HTBinned = [
 # DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"] # 2022preEE
 DY_aMCatNLO = ["dyTo2L_M-50_incl"] # 2022postEE, 2023, 2023BPix
 
-# DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
+# DY_aMCatNLO = ["dy_M-50_aMCatNLO"] # 2022postEE
 
+# DY_aMCatNLO = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
 
 group_dict = {
     "DATA": [
@@ -87,11 +87,11 @@ group_dict = {
     ],
     # Run2 DY samples
     "DY": DY_aMCatNLO,
+    # "DY": DY_MLL_binned,
 
     # Run3 DY samples
     # "DY": DY_To2MU_MassBinned,
     # "DY": DY_To2MU_inclusive,
-    # "DY": ["dy_M-50_aMCatNLO"],
     # "DY": DY_jet_binned,
     # "DY": DY_MLL_binned,
     # "DY": DY_madgraph,
@@ -914,9 +914,9 @@ if __name__ == "__main__":
     logger.info("finished loading parquet files!")
     # mplhep style starts here --------------------------------------
     logger.info("Using mplhep style for plotting!")
-    import mplhep as hep
-    import matplotlib.pyplot as plt
     import matplotlib
+    import matplotlib.pyplot as plt
+    import mplhep as hep
     # hep.style.use("CMS")
     # Load CMS style including color-scheme (it's an editable dict)
     plt.style.use(hep.style.CMS)
