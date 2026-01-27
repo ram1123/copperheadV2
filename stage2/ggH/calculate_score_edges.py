@@ -37,6 +37,13 @@ if __name__ == "__main__":
     action="store",
     help="path were stage2 output is saved",
     )
+    parser.add_argument(
+    "--edge_cfg_path",
+    dest="edge_cfg_path",
+    default=None,
+    action="store",
+    help="path were stage2 output is saved",
+    )
     sysargs = parser.parse_args()
 
 
@@ -107,7 +114,10 @@ if __name__ == "__main__":
 
 
     # save the new bin edges
-    config_path = f"/work/users/yun79/valerie/fork/copperheadV2/configs/MVA/ggH/BDT_edges.yaml"
+    if sysargs.edge_cfg_path is None:
+        config_path = f"/work/users/yun79/Run3/copperheadV2/configs/MVA/ggH/BDT_edges.yaml"
+    else:
+        config_path = sysargs.edge_cfg_path
     # Load the config file
     config = OmegaConf.load(config_path)
     print(f"old config: {config}")

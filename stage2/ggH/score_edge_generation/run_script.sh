@@ -1,23 +1,22 @@
 #!/bin/bash
 set -e
 
-# label="V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix"
-# label="DYMiNNLO_30Mar2025"
-# label="DYamcNLO_11Apr2025"
-label="DYMiNNLO_11Apr2025"
 
-sample_l="data ggh vbf" 
+label="Run3_nanoAODv15_24Jan2025"
 
 category="ggh"
-# model="V2_UL_Apr09_2025_DyMinnloTtStVvEwkGghVbf_hyperParamOnScaleWgt0_75"
-# model="V2_UL_Apr11_2025_DyTtStVvEwkGghVbf"
-model="V2_UL_Apr11_2025_DyMinnloTtStVvEwkGghVbf"
+
+model="Run3PrelimResultsJan25_2026_NoAnnhilateWgts"
 
 
-# stage2_save_path="/depot/cms/users/yun79/hmm/copperheadV1clean/$label/$category/stage2_output" 
-stage2_save_path="/depot/cms/users/yun79/hmm/copperheadV1clean/$label/${model}_${category}/stage2_output"  # I like to specify the category in the save path
+
+# stage2_save_path="/depot/cms/users/yun79/hmm/copperheadV1clean/$label/${model}_${category}_recreate1_87SigOct31_2025_newEdgeTarget/stage2_output" 
+stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/$label/${model}_${category}/stage2_output" 
 
 
-years="2016preVFP 2016postVFP 2017 2018"
-# years="2017"
+# years="2016preVFP 2016postVFP 2017 2018"
+years="2022preEE 2022postEE 2023 2023BPix 2024"
 python determine_score_edge.py -load $stage2_save_path --years ${years}
+
+# despite its name, this plots the AMS values from saved .csv output to pngs
+python validation.py
