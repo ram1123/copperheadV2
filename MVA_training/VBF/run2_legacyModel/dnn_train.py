@@ -1,14 +1,16 @@
+import argparse
+import json
 import multiprocessing as mp
-mp.set_start_method('spawn', force=True)
-
-import dask_awkward as dak
-import numpy as np
-import awkward as ak
-import glob
-import pandas as pd
-import itertools
-
 import os
+import pickle
+import threading
+from pathlib import Path
+from time import time as _time
+
+import matplotlib.pyplot as plt
+import mplhep as hep
+import pandas as pd
+import plotly.io as pio
 
 # Put this at the VERY TOP, before importing torch, numpy, etc.
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -16,74 +18,58 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
+import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from ax.plot.trace import optimization_trace_single_method
+from ax.service.managed_loop import optimize
+from ax.service.utils.report_utils import get_standard_plots
+from ax.storage.json_store.save import save_experiment
+from ax.utils.notebook.plotting import render
+from sklearn.metrics import roc_auc_score
+from torch.utils.data import DataLoader, Dataset
 
+mp.set_start_method('spawn', force=True)
 torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
 
-from torch.utils.data import Dataset, DataLoader
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-import pickle
-import os
-import argparse
-from sklearn.metrics import roc_auc_score
-import matplotlib.pyplot as plt
-import mplhep as hep
-from sklearn.metrics import confusion_matrix
-
-# #### Libraries for scan HYPERPARAMETERS
-from ax.service.managed_loop import optimize
-from ax.storage.json_store.save import save_experiment
-from ax.service.utils.report_utils import exp_to_df, get_standard_plots
-from ax.plot.trace import optimization_trace_single_method
-from ax.plot.contour import plot_contour
-from ax.utils.notebook.plotting import render
-import plotly.io as pio
-
-from pathlib import Path
-import json
-import threading
-
-from time import time
-from time import time as _time
 
 # #### END: Libraries for scan HYPERPARAMETERS
 
 
 plt.style.use(hep.style.CMS)
 import concurrent
-# torch.multiprocessing.set_sharing_strategy('file_descriptor') # reason: https://discuss.pytorch.org/t/training-crashes-due-to-insufficient-shared-memory-shm-nn-dataparallel/26396/44
 
+# torch.multiprocessing.set_sharing_strategy('file_descriptor') # reason: https://discuss.pytorch.org/t/training-crashes-due-to-insufficient-shared-memory-shm-nn-dataparallel/26396/44
 import logging
-from modules.utils import logger
-from modules import selection
 
 from dnn_helper import *
-
-from MVA_training.VBF.dnn_plotting import plot_loss_curves
-from MVA_training.VBF.dnn_plotting import plotPrecisionRecall
-from MVA_training.VBF.dnn_plotting import plotConfusionMatrix
-from MVA_training.VBF.dnn_plotting import plot_auc_and_loss
-from MVA_training.VBF.dnn_plotting import plot_significance
-from MVA_training.VBF.dnn_plotting import plot_lr
-from MVA_training.VBF.dnn_plotting import plot_overtraining_KS_ROOT
-from MVA_training.VBF.dnn_plotting import plot_calibration_ROOT
-from MVA_training.VBF.dnn_plotting import plot_threshold_scan_ROOT
-from MVA_training.VBF.dnn_plotting import plot_score_feature_corr_ROOT_heatmap
-from MVA_training.VBF.dnn_plotting import plot_score_feature_corr_ROOT_bar
-from MVA_training.VBF.dnn_plotting import plot_score_shapes_and_roc_by_category_ROOT
-from MVA_training.VBF.dnn_plotting import plot_cumulative_SSB_per_process_ROOT
-from MVA_training.VBF.dnn_plotting import permutation_importance_auc
-from MVA_training.VBF.dnn_plotting import plot_perm_importance_ROOT
-from MVA_training.VBF.dnn_plotting import partial_dependence_curve
-from MVA_training.VBF.dnn_plotting import plot_pdp_ROOT
-from MVA_training.VBF.dnn_plotting import plot_weight_distribution_ROOT
-from MVA_training.VBF.dnn_plotting import yield_table_after_cut
-from MVA_training.VBF.dnn_plotting import _roc_weighted
-from MVA_training.VBF.dnn_plotting import cv_consistency_plots_ROOT
-from MVA_training.VBF.dnn_plotting import safe_weighted_auc
+from modules import selection
+from modules.utils import logger
+from MVA_training.VBF.dnn_plotting import (
+    _roc_weighted,
+    cv_consistency_plots_ROOT,
+    partial_dependence_curve,
+    permutation_importance_auc,
+    plot_auc_and_loss,
+    plot_calibration_ROOT,
+    plot_loss_curves,
+    plot_lr,
+    plot_overtraining_KS_ROOT,
+    plot_pdp_ROOT,
+    plot_perm_importance_ROOT,
+    plot_score_feature_corr_ROOT_bar,
+    plot_score_feature_corr_ROOT_heatmap,
+    plot_significance,
+    plot_threshold_scan_ROOT,
+    plot_weight_distribution_ROOT,
+    plotConfusionMatrix,
+    plotPrecisionRecall,
+    safe_weighted_auc,
+    yield_table_after_cut,
+)
 
 if not torch.cuda.is_available():
     logger.warning("CUDA is not available. Using CPU for training.")
@@ -140,11 +126,11 @@ class TrainingLogger:
         self.log_interval = log_interval
 
     def on_epoch_begin(self, epoch):
-        self.epoch_start_time = time()
+        self.epoch_start_time = _time()
         logger.debug(f"Epoch {epoch + 1} starting.")
 
     def on_epoch_end(self, epoch, logs=None):
-        elapsed_time = time() - self.epoch_start_time
+        elapsed_time = _time() - self.epoch_start_time
         logger.info(f"Epoch {epoch + 1} finished in {elapsed_time:.2f} seconds.")
         logs['epoch_time'] = elapsed_time  # Add epoch time to logs
         training_logs.append(logs)  # Collect training logs
@@ -310,14 +296,18 @@ class Net(nn.Module):
 
 # Custom Dataset class
 class NumpyDataset(Dataset):
-    def __init__(self, input_arr, label_arr):
+    def __init__(self, input_arr, label_arr, row_index=None):
         """
         Args:
             input_arr (numpy.ndarray): Input features array.
             label_arr (numpy.ndarray): Labels array.
+            row_index (numpy.ndarray, optional): Row indices for tracking. Defaults to None.
         """
         self.input_arr = torch.tensor(input_arr, dtype=torch.float32)
         self.label_arr = torch.tensor(label_arr, dtype=torch.float32)
+        if row_index is None:
+            row_index = np.arange(len(input_arr))
+        self.row_index = torch.tensor(np.asarray(row_index), dtype=torch.int64)
 
     def __len__(self):
         # Returns the total number of samples
@@ -325,7 +315,7 @@ class NumpyDataset(Dataset):
 
     def __getitem__(self, idx):
         # Retrieve a sample and its corresponding label
-        return self.input_arr[idx], self.label_arr[idx]
+        return self.input_arr[idx], self.label_arr[idx], self.row_index[idx]
 
 
 def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False, normalize=True, log_scale=False):
@@ -501,7 +491,7 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
     pred_l = []
     label_l = []
     with torch.no_grad():
-        for batch_idx, (inputs, labels) in enumerate(dataloader):
+        for batch_idx, (inputs, labels, ridx) in enumerate(dataloader):
             inputs = inputs.to(device)
             labels = labels.to(device).reshape((-1,1))
             pred = model(inputs)
@@ -792,11 +782,11 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     else:
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    dataset_train = NumpyDataset(input_arr_train, label_arr_train)
+    dataset_train = NumpyDataset(input_arr_train, label_arr_train, row_index=df_train.index.to_numpy())
     dataloader_train_ordered = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY) # for plotting
-    dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid)
+    dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid, row_index=df_valid.index.to_numpy())
     dataloader_valid = DataLoader(dataset_valid, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY)
-    dataset_eval = NumpyDataset(input_arr_eval, label_arr_eval)
+    dataset_eval = NumpyDataset(input_arr_eval, label_arr_eval, row_index=df_eval.index.to_numpy())
     dataloader_eval = DataLoader(dataset_eval, batch_size=batch_size, shuffle=True, num_workers=NWORKERS, pin_memory=PIN_MEMORY)
     best_significance = 0
     mode = "max" # max: maximize the auc, min: minimize the loss
@@ -815,7 +805,7 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
 
         epoch_loss = 0
         batch_losses = []
-        for batch_idx, (inputs, labels) in enumerate(dataloader_train):
+        for batch_idx, (inputs, labels, ridx) in enumerate(dataloader_train):
             inputs = inputs.to(DEVICE)
             labels = labels.to(DEVICE).reshape((-1,1))
 
@@ -951,7 +941,7 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
 
     # Build the list once:
     abs_rhos = []
-    from MVA_training.VBF.dnn_plotting import _wstd, _wcov
+    from MVA_training.VBF.dnn_plotting import _wcov, _wstd
 
     pred = np.asarray(valid_loop_dict["prediction"], dtype=float)
     w = np.asarray(df_valid.wgt_nominal.values, dtype=float)
@@ -1158,8 +1148,8 @@ def bo_evaluate(params, *, save_path, training_features, bo_fold=0, bo_epochs=30
     best, bad, patience = -1.0, 0, 5
     for _ in range(int(bo_epochs)):
         model.train()
-        for xb, yb in dl_tr:
-            xb, yb = xb.to(device), yb.to(device).reshape((-1, 1))
+        for batch in dl_tr:
+            xb, yb = batch[0].to(device), batch[1].to(device).reshape((-1, 1))
             opt.zero_grad()
             loss = loss_fn(model(xb), yb)
             loss.backward()

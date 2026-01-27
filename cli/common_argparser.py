@@ -104,7 +104,7 @@ def build_common_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--log-level",
-        default=logging.ERROR,
+        default=logging.INFO,
         type=lambda x: getattr(logging, x),
         help="Configure the logging level.",
     )

@@ -1,25 +1,34 @@
+import glob
+import os
+import pickle
+import random
+import sys
+from pathlib import Path
+
+import awkward as ak
 import dask_awkward as dak
 import numpy as np
-import awkward as ak
-import glob
 import pandas as pd
-import itertools
-import argparse
-
-import os
-import copy
-import pickle
-
-import sys
-import random
-
-import logging
-from modules.utils import logger
-from modules.selection import applyRegionCatCuts
-
+import yaml
+from cli.common_argparser import build_common_parser
 from dnn_helper import DIR_TAG
-from modules.dask_utils import get_dask_client
-from modules.dask_utils import close_dask_client
+from modules.dask_utils import close_dask_client, get_dask_client
+from modules.selection import applyRegionCatCuts
+from modules.trials import get_stage1_path
+from modules.utils import logger
+from MVA_training.VBF.pre_scale_cleaning import pre_scaling_clean
+from MVA_training.VBF.scaling_helper import (
+    plot_before_after_scaling,
+    plot_corr_before_after,
+    plot_scaled_mean_std,
+    plot_scaled_outliers,
+)
+
+with open("MVA_training/VBF/run2_legacyModel/features.yaml", "r") as f:
+    features_config = yaml.safe_load(f)
+TRAINING_FEATURES = features_config["training"]["features"]
+NFOLDS = 4
+
 
 # def getParquetFiles(path):
 # return glob.glob(path)
@@ -37,27 +46,8 @@ def fillEventNans(events):
             events[field] = ak.fill_none(events[field], value=0)
     return events
 
-
-def prepare_features(events, features, variation="nominal"):
-    features_var = []
-    for trf in features:
-        if "soft" in trf:
-            variation_current = "nominal"
-        else:
-            variation_current = variation
-
-        if f"{trf}_{variation_current}" in events.fields:
-            features_var.append(f"{trf}_{variation_current}")
-        elif trf in events.fields:
-            features_var.append(trf)
-        else:
-            logger.info(f"Variable {trf} not found in training dataframe!")
-    return features_var
-
 def preprocess_loop(events, features2load, region="h-peak", category="vbf", process = "", label=""):
-    # features2load = prepare_features(events, features2load) # add variation to features
     logger.info(f"features2load: {features2load}")
-    # features2load = training_features + ["event"]
     events = applyRegionCatCuts(events, category=category, region_name=region, process=process, variation="nominal", do_vbf_filter_study=True, do_VH_veto=False)
     events = fillEventNans(events)
 
@@ -458,101 +448,7 @@ def _check_params(alpha, concat, batch_size):
 
 
 def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_label="test", year="2018"):
-    training_features = [
-        'dimuon_mass', "dimuon_ebe_mass_res", "dimuon_ebe_mass_res_rel",
-         'jj_mass',
-        #  'jj_mass_log', # FIXME: this branch has some bug while stage-1 processing
-         'rpt',
-         'll_zstar_log',
-         'jj_dEta',
-         'nsoftjets5',
-         'mmj_min_dEta',
-        'dimuon_pt',
-        # 'dimuon_pt_log', # FIXME: this branch has some bug while stage-1 processing
-        'dimuon_rapidity',
-         'jet1_pt', 'jet1_eta', 'jet1_phi',  'jet2_pt', 'jet2_eta', 'jet2_phi',
-        #  'jet1_qgl', 'jet2_qgl', # FIXME: this branch has some bug while stage-1 processing
-         'dimuon_cos_theta_cs', 'dimuon_phi_cs',
-         'htsoft2',
-         'pt_centrality',
-         'year'
-    ]
-    training_features_for_muonVarsOnly = [
-        "dimuon_mass",
-        "dimuon_ebe_mass_res",
-        "dimuon_ebe_mass_res_rel",
-        #  'jj_mass', 'jj_mass_log',
-        #  'rpt',
-        #  'll_zstar_log',
-        #  'jj_dEta',
-        #  'nsoftjets5',
-        # #  'nsoftjets5_new',
-        #  'mmj_min_dEta',
-        "dimuon_pt",
-        "dimuon_pt_log",
-        "dimuon_rapidity",
-        #  'jet1_pt', 'jet1_eta', 'jet1_phi',  'jet2_pt', 'jet2_eta', 'jet2_phi',
-        #  'jet1_qgl', 'jet2_qgl',
-        "dimuon_cos_theta_cs",
-        "dimuon_phi_cs",
-        #  'htsoft2',
-        # #  'htsoft2_new',
-        #  'pt_centrality',
-        "year",
-        "dimuon_dEta",
-        "dimuon_dPhi",
-        "dimuon_dR",
-        "dimuon_pt_over_MET_pt",
-        "mu1_pfRelIso03_all",
-        "mu2_pfRelIso03_all",
-        "mu1_pfRelIso03_chg",
-        "mu2_pfRelIso03_chg",
-        "mu1_pfRelIso04_all",
-        "mu2_pfRelIso04_all",
-        "mu1_miniPFRelIso_all",
-        "mu2_miniPFRelIso_all",
-        "mu1_miniPFRelIso_chg",
-        "mu2_miniPFRelIso_chg",
-        "mu1_tkRelIso",
-        "mu2_tkRelIso",
-        "mu1_sip3d",
-        "mu2_sip3d",
-        "mu1_isGlobal",
-        "mu2_isGlobal",
-        "mu1_svIdx",
-        "mu2_svIdx",
-        "mu12_q1q2",
-        "mu12_pt_sum",
-        "mu12_pt_diff",
-        "mu12_pt_absdiff",
-        "mu12_pt_prod",
-        "mu12_pt_ratio12",
-        "mu12_pt_ratio21",
-        "mu12_pt_min",
-        "mu12_pt_max",
-        "mu12_pt_asym",
-        "mu12_eta_sum",
-        "mu12_eta_diff",
-        "mu12_eta_absdiff",
-        "mu12_eta_prod",
-        "mu12_absEta_sum",
-        "mu12_absEta_diff",
-        "mu12_absEta_min",
-        "mu12_absEta_max",
-        "mu12_iso04_sum",
-        "mu12_iso04_diff",
-        "mu12_iso04_absdiff",
-        "mu12_iso04_prod",
-        "mu12_iso04_min",
-        "mu12_iso04_max",
-        "mu12_iso04_asym",
-        "mu12_sip3d_sum",
-        "mu12_sip3d_diff",
-        "mu12_sip3d_absdiff",
-        "mu12_sip3d_prod",
-        "mu12_sip3d_min",
-        "mu12_sip3d_max",
-    ]
+    training_features = TRAINING_FEATURES
     # generate directory to save training_features
     save_path = f"dnn/trained_models/{run_label}/{year}_{region}_{category}{DIR_TAG}"
     os.makedirs(save_path, exist_ok=True)
@@ -561,39 +457,30 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     # Pickle the training_features list into a file
     with open(f'{save_path}/training_features.pkl', 'wb') as f:
         pickle.dump(training_features, f)
+    # also save as json file
+    with open(f'{save_path}/training_features.json', 'w') as f:
+        import json
+        json.dump(training_features, f, indent=4)
 
-    # TODO: add mixup
-    # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
+    # FIXME: sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
     # sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
+    # sig_processes = ["vbf_aMCatNLO"]
     sig_processes = ["vbf_powheg_dipole"]
-    # bkg_processes = ["dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
-    # bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     bkg_processes = [
         # "dy_VBF_filter",
-        # "dy_M-50_aMCatNLO",
-        # "dy_M-100To200_aMCatNLO",
-        # "dy_M-50_MiNNLO",
-        # "dy_M-100To200_MiNNLO",
-        # "dyTo2L_M-50_0j",
-        # "dyTo2L_M-50_1j",
-        # "dyTo2L_M-50_2j",
-        # "dyTo2L_M-50_incl_XSDYTurbo",
-
-        # "dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200",
-        "dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j",
-
-        # "ewk_lljj_mll50_mjj120",
-        "ewk_lljj",
-
-        "ttjets_dl", "ttjets_sl",
-        # "tt_inclusive",
+        # "dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO",
+        # "dy_M-50_MiNNLO", "dy_M-100To200_MiNNLO",
+        # "dyTo2L_M-50_incl",
+        # Run-3
+        # "dyTo2Mu_MLL_10To50",
+        # "dyTo2Mu_MLL_50To120",
+        "dyTo2Mu_MLL_120To200",  # available for all years
+        # "dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j", # not available for 2024
+        # # "ewk_lljj_mll50_mjj120",
+        # "ewk_lljj",
+        # "ttjets_dl", "ttjets_sl",
+        # # "tt_inclusive",
     ]
-    # bkg_processes = [
-    #     "dy_VBF_filter",
-    # ]
-    # bkg_processes = ["dy_VBF_filter_NewZWgt", "dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
-    # sig_processes = ["ggh_powhegPS"] # testing
-    # bkg_processes = ["ewk_lljj_mll105_160_ptj0"] # testing
 
     logger.debug(f"sig_processes: {sig_processes}")
     logger.debug(f"bkg_processes: {bkg_processes}")
@@ -630,10 +517,9 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         raise ValueError(f"No signal events loaded; please check base_path: {base_path} and signal processes.")
     # # Use the first available signal events as template for feature names
     sample_events = next(iter(sig_events_dict.values()))
-    training_features = prepare_features(sample_events, training_features)
     logger.info(f"training_features: {training_features}")
     logger.info(f"len training_features: {len(training_features)}")
-    features2load = training_features + ["event","wgt_nominal"]
+    features2load = training_features + ["event", "wgt_nominal", "njets_nominal"]
 
     loop_dict = {
         "signal" : sig_events_dict,
@@ -644,7 +530,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         logger.info(f"{label} events dict: {events_dict}")
         for process, events in events_dict.items(): # lopp through each process's events
             df = preprocess_loop(events, features2load, region=region, category=category, process=process, label=label)
-            if "dy_" in process.lower() or "dyto2l_" in process.lower():
+            if "dy_" in process.lower() or "dyto2l_" in process.lower() or "dyto2mu" in process.lower():
                 df["process"] = "dy" # add in process type
             elif "ttjet" in process.lower() or "tt_" in process.lower():
                 df["process"] = "top" # add in process type
@@ -663,97 +549,108 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
     df_total = pd.concat(df_l)
     logger.info(df_total.head())
     logger.info(f"df_total.isnull().values.any(): {df_total.isnull().values.any()}")
+    if df_total.isnull().values.any():
+        logger.info("Error: NaN values found in the total dataframe after preprocessing!")
+
+    # ###### Pre-scaling cleaning ######
+    logger.info("Starting pre-scaling cleaning...")
+    df_total = pre_scaling_clean(df_total) # clean before scaling
+
+    # cross-check that no NaN or +/-inf present after pre-scaling cleaning
+    for feature in training_features:
+        if df_total[feature].isnull().any():
+            logger.error(f"Error: NaN values found in feature {feature}!")
+        if np.isinf(df_total[feature]).any():
+            logger.error(f"Error: Inf values found in feature {feature}!")
+
+    logger.info("Completed pre-scaling cleaning.")
+    ###################################
+
     # sanity check
     logger.info(f"signal weight sum: {np.sum(df_total.wgt_nominal[df_total.label==1])}")
     logger.info(f"bkg weight sum: {np.sum(df_total.wgt_nominal[df_total.label==0])}")
 
-    # divide our data into 4 folds
-    nfolds = 4
-    for i in range(nfolds):
-        train_folds = [(i+f)%nfolds for f in [0,1]]
-        val_folds = [(i+f)%nfolds for f in [2]]
-        eval_folds = [(i+f)%nfolds for f in [3]]
+    # divide our data into N-folds
+    for i in range(NFOLDS):
+        train_folds = [(i+f)%NFOLDS for f in [0,1]]
+        val_folds = [(i+f)%NFOLDS for f in [2]]
+        eval_folds = [(i+f)%NFOLDS for f in [3]]
 
-        logger.info(f"Classifier #{i+1} out of {nfolds}")
+        logger.info(f"Classifier #{i+1} out of {NFOLDS}")
         logger.info(f"Training folds: {train_folds}")
         logger.info(f"Validation folds: {val_folds}")
         logger.info(f"Evaluation folds: {eval_folds}")
 
-        train_filter = df_total.event.mod(nfolds).isin(train_folds)
-        val_filter = df_total.event.mod(nfolds).isin(val_folds)
-        eval_filter = df_total.event.mod(nfolds).isin(eval_folds)
+        train_filter = df_total.event.mod(NFOLDS).isin(train_folds)
+        val_filter = df_total.event.mod(NFOLDS).isin(val_folds)
+        eval_filter = df_total.event.mod(NFOLDS).isin(eval_folds)
 
         df_train = df_total[train_filter]
         df_val = df_total[val_filter]
         df_eval = df_total[eval_filter]
 
-        # scale data, save the mean and std. This has to be done b4 mixup
-        x_train = df_train[training_features].values
-        logger.info(f"x_train shape b4 mixup: {x_train.shape}")
-        label_train = df_train.label.values
-        wgt_train = df_train.wgt_nominal.values
-        x_mean = np.average(x_train,axis=0, weights=wgt_train)
-        x_std = weighted_std(x_train, wgt_train)
-        # replace zero std dev with one, since we will divide input by x_std)
-        where_cond = np.isclose(np.zeros_like(x_std), x_std)
-        x_std = np.where(where_cond, np.ones_like(x_std), x_std)
-        logger.info(f"x_mean: {x_mean}")
-        logger.info(f"x_std: {x_std}")
-        # np.save(f"output/trained_models/{model}/scalers_{fold_idx}", [x_mean, x_std])
+        # scale data, save the mean and std. This has to be done before mixup
+        # -----------------------------
+        # Ensure numeric types (IMPORTANT)
+        # -----------------------------
+        # year should be numeric; nsoftjets5_nominal should be numeric
+        if "year" in df_total.columns:
+            df_total["year"] = pd.to_numeric(df_total["year"], errors="coerce").fillna(-1).astype(np.float32)
 
-        np.save(f"{save_path}/scalers_{i}", [x_mean, x_std])
+        if "nsoftjets5_nominal" in df_total.columns:
+            df_total["nsoftjets5_nominal"] = pd.to_numeric(df_total["nsoftjets5_nominal"], errors="coerce").fillna(0).astype(np.int32)
 
-        # logger.info(f"df_train b4 mixup: {df_train}")
-        if do_mixup:
-            addToOriginalData = True
-            logger.info(f"df_train b4: {df_train.process}")
-            df_mixup = copy.deepcopy(df_train)
-            processes2keep = ["ggh", "vbf"]
-            proc_filter = np.full(len(df_mixup), False, dtype=bool)
-            for process in processes2keep:
-                proc_filter = proc_filter | (df_mixup.process == process)
-            df_mixup = df_mixup[proc_filter]
-            logger.info(f"df_mixup process: {df_mixup.process}")
-            logger.info(f"df_mixup label: {np.all(df_mixup.label==1)}")
+        # -----------------------------
+        # Scaling (do NOT scale year / nsoftjets5_nominal)
+        # -----------------------------
+        DO_NOT_SCALE = {"year", "nsoftjets5_nominal"}  # <-- FIX
 
-            # drop process column. can't have non-numeric value for mixup, We don't need it for training anyways
-            df_mixup = df_mixup.drop("process", axis=1)
-            df_train = df_train.drop("process", axis=1)
+        SCALE_FEATURES = [f for f in training_features if f not in DO_NOT_SCALE]
+        FINAL_FEATURES = SCALE_FEATURES + [f for f in training_features if f in DO_NOT_SCALE]
 
-            multiplier = 1
+        assert set(FINAL_FEATURES) == set(training_features)
+        assert len(FINAL_FEATURES) == len(training_features)
 
-            # df_mixup = mixup(df_train, batch_size = int(len(df_train)*multiplier)) # batch size is subject to change ofc
-            df_mixup = mixup(df_mixup, batch_size = int(len(df_mixup)*multiplier)) # batch size is subject to change ofc
+        x_train = df_train[FINAL_FEATURES].to_numpy(dtype=np.float32, copy=True)
+        x_val   = df_val[FINAL_FEATURES].to_numpy(dtype=np.float32, copy=True)
+        x_eval  = df_eval[FINAL_FEATURES].to_numpy(dtype=np.float32, copy=True)
 
-            # logger.info("non zero mixup labels: ",np.sum((df_mixup.label == 1) |(df_mixup.label == 0)))
-            logger.info(f"df_mixup label after mixup: {np.all(df_mixup.label==1)}")
+        w_train = df_train["wgt_nominal"].to_numpy(dtype=np.float64, copy=False)
 
-            if addToOriginalData:
-                df_train = pd.concat([df_train, df_mixup])
-            else:
-                df_train = df_mixup
+        x_scale_train = df_train[SCALE_FEATURES].to_numpy(dtype=np.float64, copy=False)
+        x_mean = np.average(x_scale_train, axis=0, weights=w_train)
+        x_std  = weighted_std(x_scale_train, w_train)
 
-            logger.info(f"df_train after mixup: {df_train}")
-            # once mixup is done, recalculate the x, label and wgt for train
-            x_train = df_train[training_features].values
-            label_train = df_train.label.values
-            wgt_train = df_train.wgt_nominal.values # idk if this is needed
-            logger.info(f"x_train shape after mixup: {x_train.shape}")
+        eps = 1e-6
+        x_std = np.where(x_std < eps, 1.0, x_std)
 
-        # apply scaling to data, and save the data for training
-        x_train = (x_train-x_mean)/x_std
+        n_scale = len(SCALE_FEATURES)
+        x_train[:, :n_scale] = (x_train[:, :n_scale] - x_mean) / x_std
+        x_val[:,   :n_scale] = (x_val[:,   :n_scale] - x_mean) / x_std
+        x_eval[:,  :n_scale] = (x_eval[:,  :n_scale] - x_mean) / x_std
 
-        x_val = df_val[training_features].values
-        x_val = (x_val-x_mean)/x_std
-        label_val = df_val.label.values
-        x_eval = df_eval[training_features].values
-        x_eval = (x_eval-x_mean)/x_std
-        label_eval = df_eval.label.values
+        x_train[:, :n_scale] = np.clip(x_train[:, :n_scale], -50.0, 50.0)
+        x_val[:,   :n_scale] = np.clip(x_val[:,   :n_scale], -50.0, 50.0)
+        x_eval[:,  :n_scale] = np.clip(x_eval[:,  :n_scale], -50.0, 50.0)
 
-        # update the values on df and save that bc we need "process" column for analysis
-        df_train[training_features] = x_train
-        df_val[training_features] = x_val
-        df_eval[training_features] = x_eval
+        # plots (matched)
+        plot_before_after_scaling(x_scale_train, w_train, x_mean, x_std, SCALE_FEATURES, save_path)
+        plot_scaled_mean_std(x_train[:, :n_scale], w_train, SCALE_FEATURES, save_path)
+        plot_corr_before_after(x_scale_train, x_train[:, :n_scale], save_path)
+        plot_scaled_outliers(x_train[:, :n_scale], SCALE_FEATURES, save_path)
+
+        np.savez(
+            f"{save_path}/scalers_{i}.npz",
+            features=np.array(SCALE_FEATURES, dtype=object),
+            mean=x_mean,
+            std=x_std,
+            final_features=np.array(FINAL_FEATURES, dtype=object),
+        )
+
+        # write back
+        df_train[FINAL_FEATURES] = x_train
+        df_val[FINAL_FEATURES]   = x_val
+        df_eval[FINAL_FEATURES]  = x_eval
 
         # save the df
         data_dict = {
@@ -766,15 +663,7 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-l",
-        "--label",
-        dest="label",
-        default="test",
-        action="store",
-        help="Unique run label (to create output path)",
-    )
+    parser = build_common_parser()
     parser.add_argument(
         "-cat",
         "--category",
@@ -791,48 +680,31 @@ if __name__ == "__main__":
         action="store",
         help="region of the data. Options: h-peak, h-sidebands, signal",
     )
-    parser.add_argument(
-        "-y",
-        "--year",
-        dest="year",
-        default="2018",
-        action="store",
-        help="year of the data. Options: 2016, 2017, 2018",
-    )
-    parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
-    )
-    parser.add_argument(
-        "--log-level",
-        default=logging.DEBUG,
-        type=lambda x: getattr(logging, x),
-        help="Configure the logging level."
-        )
 
     args = parser.parse_args()
     logger.setLevel(args.log_level)
 
     client = get_dask_client(args.use_gateway)
 
+    stage1_dir = get_stage1_path()  # default = "current"
+    LOAD_PATH = str(Path(stage1_dir) / "{year}" / "f1_0")
+    logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
+
     if args.year == "run2" or args.year == "run3":
-        base_path_f1_0 = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
-        base_path_compact = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/*/compacted"
+        base_path_f1_0 = str(Path(stage1_dir) / "*" / "f1_0")
+        base_path_compact = str(Path(stage1_dir) / "*" / "compacted")
 
     else:
-        base_path_f1_0 = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
-        base_path_compact      = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
-    # Run3_nanoAODv12_21Jan_JVMFilterJets
-    # in base_path, in the lable string (Run3_nanoAODv12_21Jan_JVMFilterJets), replace "v12" with "v*" to accomodate v12 and v15 both. So, that I can combine 2024 with other years' data.
+        base_path_f1_0 = str(Path(stage1_dir) / args.year / "f1_0")
+        base_path_compact      = str(Path(stage1_dir) / args.year / "compacted")
+
+    # FIXME: Temporay fix to fetch both 2024 and others - replace "v12" with "v*" to accomodate v12 and v15 both. So, that I can combine 2024 with other years' data.
     base_path_compact = base_path_compact.replace("v12", "v*")
 
     if not os.path.exists(base_path_compact) or args.year == "run2":
-        base_path = base_path_compact
+        base_path = base_path_f1_0
     else:
-        base_path = base_path_compact
+        base_path = base_path_f1_0
 
     logger.info(f"Base path: {base_path}")
     # if not os.path.exists(base_path):
