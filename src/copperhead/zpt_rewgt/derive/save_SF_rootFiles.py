@@ -40,7 +40,7 @@ if __name__ == "__main__":
         "--dy_sample",
         dest="dy_sample",
         default="MiNNLO",
-        choices=["MiNNLO", "aMCatNLO", "VBF_filter", "powheg", "amcatnloFXFX"],
+        choices=["MiNNLO", "aMCatNLO", "VBF_filter", "powheg", "amcatnloFXFX", "INCamcatnloFXFX"],
         action="store",
         help="choose the type of DY samples to use for Zpt reweighting",
     )
@@ -100,6 +100,8 @@ if __name__ == "__main__":
                 dy_events = dak.from_parquet(f"{base_path}/dyTo2Mu_M-50_aMCatNLO/*/*.parquet")
             elif args.dy_sample == "powheg":
                 dy_events = dak.from_parquet(f"{base_path}/dyTo2Mu_MLL_*/*/*.parquet")
+            elif args.dy_sample == "INCamcatnloFXFX":
+                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl/*/*.parquet")
             elif args.dy_sample == "amcatnloFXFX":
                 dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_*j/*/*.parquet")
             else:

@@ -26,7 +26,7 @@ parser.add_argument(
     "--dy_sample",
     dest="dy_sample",
     default="MiNNLO",
-    choices=["MiNNLO", "aMCatNLO", "VBF_filter", "powheg", "amcatnloFXFX"],
+    choices=["MiNNLO", "aMCatNLO", "VBF_filter", "powheg", "amcatnloFXFX", "INCamcatnloFXFX"],
     action="store",
     help="choose the type of DY samples to use for Zpt reweighting",
 )
