@@ -1,16 +1,14 @@
-import ROOT
-import numpy as np
-import dask_awkward as dak
-import awkward as ak
-import argparse
-import sys
-from distributed import Client
 import os
+import sys
 from array import array
 
+import awkward as ak
+import dask_awkward as dak
+import numpy as np
+import ROOT
 from cli.common_argparser import build_common_parser
-from modules import selection
-from modules import classify_year
+from distributed import Client
+from modules import classify_year, selection
 
 
 def zipAndCompute(events, fields2load):

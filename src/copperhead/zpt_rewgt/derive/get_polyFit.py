@@ -299,7 +299,7 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
 
     # Save the canvas
     for ext in ("pdf", "png", "root"):
-        canv.SaveAs(f"{save_dir}/{year}_njet{njet}_{nbins}_goodnessOfFit.{ext}")
+        canv.SaveAs(f"{save_dir}/{year}_njet{njet}_goodnessOfFit.{ext}")
 
 def main():
     args = parse_arguments()

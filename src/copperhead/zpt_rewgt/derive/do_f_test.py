@@ -1,15 +1,14 @@
-import ROOT
 import array
-from scipy.stats import f
-import os
-import argparse
 import logging
+import os
 from collections import defaultdict
-from omegaconf import OmegaConf
 
+import ROOT
+from bin_definitions import define_custom_binning, poly_fit_ranges
 from cli.common_argparser import build_common_parser
 from modules.utils import logger
-from bin_definitions import poly_fit_ranges, define_custom_binning
+from omegaconf import OmegaConf
+from scipy.stats import f
 
 # Argument parsing
 parser = build_common_parser()

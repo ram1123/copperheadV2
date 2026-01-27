@@ -5,7 +5,17 @@
 
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m 1 -k)
+
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23October -y "2022postEE" -m zpt_fit12 -n 0)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m zpt_fit0 -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23Jan_JVMFilterJets -y "2022preEE" -m zpt_fit12 -n 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23Jan_JVMFilterJets -y "2022postEE" -m zpt_fit12 -n 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23Jan_JVMFilterJets -y "2023" -m zpt_fit12 -n 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23Jan_JVMFilterJets -y "2023BPix" -m zpt_fit12 -n 0)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23Jan_JVMFilterJets -y "2022preEE 2022postEE 2023 2023BPix" -m calib -k )
+
 ```
 
 
