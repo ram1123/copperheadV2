@@ -18,6 +18,8 @@ from modules.utils import logger
 from modules.selection import applyRegionCatCuts
 
 from dnn_helper import DIR_TAG
+from modules.dask_utils import get_dask_client
+from modules.dask_utils import close_dask_client
 
 # def getParquetFiles(path):
 # return glob.glob(path)
@@ -458,19 +460,20 @@ def _check_params(alpha, concat, batch_size):
 def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_label="test", year="2018"):
     training_features = [
         'dimuon_mass', "dimuon_ebe_mass_res", "dimuon_ebe_mass_res_rel",
-         'jj_mass', 'jj_mass_log',
+         'jj_mass',
+        #  'jj_mass_log', # FIXME: this branch has some bug while stage-1 processing
          'rpt',
          'll_zstar_log',
          'jj_dEta',
          'nsoftjets5',
-        #  'nsoftjets5_new',
          'mmj_min_dEta',
-        'dimuon_pt', 'dimuon_pt_log', 'dimuon_rapidity',
+        'dimuon_pt',
+        # 'dimuon_pt_log', # FIXME: this branch has some bug while stage-1 processing
+        'dimuon_rapidity',
          'jet1_pt', 'jet1_eta', 'jet1_phi',  'jet2_pt', 'jet2_eta', 'jet2_phi',
-         'jet1_qgl', 'jet2_qgl',
+        #  'jet1_qgl', 'jet2_qgl', # FIXME: this branch has some bug while stage-1 processing
          'dimuon_cos_theta_cs', 'dimuon_phi_cs',
          'htsoft2',
-        #  'htsoft2_new',
          'pt_centrality',
          'year'
     ]
@@ -561,19 +564,29 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
 
     # TODO: add mixup
     # sig and bkg processes defined at line 1976 of AN-19-124. IDK why ggH is not included here
-    sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
-    # sig_processes = ["vbf_powheg_dipole"]
+    # sig_processes = ["vbf_powheg_dipole", "ggh_powhegPS"]
+    sig_processes = ["vbf_powheg_dipole"]
     # bkg_processes = ["dy_M-100To200_aMCatNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     # bkg_processes = ["dy_M-100To200_MiNNLO", "ewk_lljj_mll50_mjj120","ttjets_dl","ttjets_sl"]
     bkg_processes = [
-        "dy_VBF_filter",
-        "dy_M-50_aMCatNLO",
-        "dy_M-100To200_aMCatNLO",
+        # "dy_VBF_filter",
+        # "dy_M-50_aMCatNLO",
+        # "dy_M-100To200_aMCatNLO",
         # "dy_M-50_MiNNLO",
         # "dy_M-100To200_MiNNLO",
-        "ewk_lljj_mll50_mjj120",
-        "ttjets_dl",
-        "ttjets_sl",
+        # "dyTo2L_M-50_0j",
+        # "dyTo2L_M-50_1j",
+        # "dyTo2L_M-50_2j",
+        # "dyTo2L_M-50_incl_XSDYTurbo",
+
+        # "dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200",
+        "dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j",
+
+        # "ewk_lljj_mll50_mjj120",
+        "ewk_lljj",
+
+        "ttjets_dl", "ttjets_sl",
+        # "tt_inclusive",
     ]
     # bkg_processes = [
     #     "dy_VBF_filter",
@@ -631,9 +644,9 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         logger.info(f"{label} events dict: {events_dict}")
         for process, events in events_dict.items(): # lopp through each process's events
             df = preprocess_loop(events, features2load, region=region, category=category, process=process, label=label)
-            if "dy_" in process.lower():
+            if "dy_" in process.lower() or "dyto2l_" in process.lower():
                 df["process"] = "dy" # add in process type
-            elif "ttjet" in process.lower():
+            elif "ttjet" in process.lower() or "tt_" in process.lower():
                 df["process"] = "top" # add in process type
             elif "ewk" in process.lower():
                 df["process"] = "ewk" # add in process type
@@ -803,29 +816,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logger.setLevel(args.log_level)
 
-    if args.use_gateway:
-        from dask_gateway import Gateway
-        gateway = Gateway(
-            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-        )
-        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-        client = gateway.connect(cluster_info.name).get_client()
-        logger.debug("Gateway Client created")
-    else: # use local cluster
-        from distributed import Client
-        client = Client(
-            n_workers=60, threads_per_worker=1, processes=True, memory_limit="2 GiB"
-        )
-        logger.info("Local scale Client created")
+    client = get_dask_client(args.use_gateway)
 
-    if args.year == "run2":
+    if args.year == "run2" or args.year == "run3":
         base_path_f1_0 = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/*/f1_0"
         base_path_compact = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/*/compacted"
 
     else:
         base_path_f1_0 = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/{args.year}/f1_0"
         base_path_compact      = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage1_output/{args.year}/compacted"
+    # Run3_nanoAODv12_21Jan_JVMFilterJets
+    # in base_path, in the lable string (Run3_nanoAODv12_21Jan_JVMFilterJets), replace "v12" with "v*" to accomodate v12 and v15 both. So, that I can combine 2024 with other years' data.
+    base_path_compact = base_path_compact.replace("v12", "v*")
+
     if not os.path.exists(base_path_compact) or args.year == "run2":
         base_path = base_path_compact
     else:
@@ -836,4 +839,8 @@ if __name__ == "__main__":
     #     raise ValueError(f"Base path {base_path} does not exist. Please check the path and try again.")
 
     preprocess(base_path, run_label=args.label, category=args.category, region=args.region, year=args.year)
+
+    if client is not None:
+        close_dask_client()
+
     logger.info("Success!")
