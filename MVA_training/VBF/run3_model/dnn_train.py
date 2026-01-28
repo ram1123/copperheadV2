@@ -1303,7 +1303,7 @@ def save_bo_artifacts(experiment, values, best_params, outdir, objective_name="a
                 ylabel=objective_name.upper(),
             )
             pio.write_html(
-                render(trace_fig),
+                trace_fig,
                 file=os.path.join(outdir, "01_optimization_trace.html"),
                 include_plotlyjs="cdn",
                 auto_open=False,
@@ -1317,7 +1317,7 @@ def save_bo_artifacts(experiment, values, best_params, outdir, objective_name="a
     try:
         for i, pc in enumerate(get_standard_plots(experiment)):
             pio.write_html(
-                render(pc),
+                pc,  # NO render(pc)
                 file=os.path.join(outdir, f"1{i+2}_standard_plot_{i:02d}.html"),
                 include_plotlyjs="cdn",
                 auto_open=False,
@@ -1486,16 +1486,35 @@ def main():
 
     if args.bo:
         search_space = [
-            {"name":"hidden0",      "type":"choice", "values":[64,128,256,512,1024]},
-            {"name":"shrink1",      "type":"range",  "bounds":[0.4, 1.0]},
-            {"name":"shrink2",      "type":"range",  "bounds":[0.4, 1.0]},
-            {"name":"dropout",      "type":"range",  "bounds":[0.0, 0.5]},
-            {"name":"activation",   "type":"choice", "values":["relu","gelu","selu","tanh"]},
-            {"name":"optimizer",    "type":"choice", "values":["adam","adamw"]},
-            {"name":"lr",           "type":"range",  "bounds":[1e-4,3e-2], "log_scale":True},
-            {"name":"weight_decay", "type":"range",  "bounds":[1e-7,3e-3], "log_scale":True},
-            {"name":"batch_size",   "type":"choice", "values":[512,1024,2048,4096,8192,15536, 30000]},
-            {"name":"loss_name",    "type":"choice", "values":["bce","focal"]},
+            {"name":"hidden0",      "type":"choice", "values":[64,128,256,512,1024],
+            "value_type":"int", "is_ordered": True, "sort_values": True},
+
+            {"name":"shrink1",      "type":"range",  "bounds":[0.4, 1.0],
+            "value_type":"float"},
+
+            {"name":"shrink2",      "type":"range",  "bounds":[0.4, 1.0],
+            "value_type":"float"},
+
+            {"name":"dropout",      "type":"range",  "bounds":[0.0, 0.5],
+            "value_type":"float"},
+
+            {"name":"activation",   "type":"choice", "values":["relu","gelu","selu","tanh"],
+            "value_type":"str", "is_ordered": False, "sort_values": False},
+
+            {"name":"optimizer",    "type":"choice", "values":["adam","adamw"],
+            "value_type":"str", "is_ordered": True, "sort_values": False},
+
+            {"name":"lr",           "type":"range",  "bounds":[1e-4,3e-2], "log_scale":True,
+            "value_type":"float"},
+
+            {"name":"weight_decay", "type":"range",  "bounds":[1e-7,3e-3], "log_scale":True,
+            "value_type":"float"},
+
+            {"name":"batch_size",   "type":"choice", "values":[512,1024,2048,4096,8192,15536,30000],
+            "value_type":"int", "is_ordered": True, "sort_values": True},
+
+            {"name":"loss_name",    "type":"choice", "values":["bce","focal"],
+            "value_type":"str", "is_ordered": True, "sort_values": False},
         ]
 
         try:
