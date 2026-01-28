@@ -402,25 +402,11 @@ years:
                     - NONE
 
         EWK:
-            ewk_lljj:
-                skip_sample: False
-                datasets:
-                    - /EWK-2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-                cross_section_pb: 1.421
-                cross_section_source: "computed using gen cross-section analyzer script"
-                kfactor:
-                    value: 1.00
-                    source: NONE
-                filter_efficiency: 1.0
-                references:
-                    - NONE
-
             ewk_mmjj:
                 skip_sample: False
                 datasets:
                     - /EWK-2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-                cross_section_pb: 1.0
-                FIXME: Update cross-section value
+                cross_section_pb: 1.421
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
                     value: 1.00
