@@ -5,6 +5,7 @@ import pickle
 import threading
 from pathlib import Path
 from time import time as _time
+import yaml
 
 import matplotlib.pyplot as plt
 import mplhep as hep
@@ -76,6 +77,7 @@ from MVA_training.VBF.dnn_plotting import (
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+logger.info(f"Using device: {DEVICE}")
 logger.info(f"using workers: {NWORKERS}")
 
 def _safe_auc(y, p, w=None):
@@ -84,9 +86,14 @@ def _safe_auc(y, p, w=None):
     except ValueError:
         return float("nan")
 
+def safe_arctanh(x, eps=1e-6):
+    x = np.asarray(x, dtype=np.float64)
+    x = np.clip(x, -1.0 + eps, 1.0 - eps)
+    return np.arctanh(x)
+
 def transformDnnScore(dnn_scores):
-    s = np.clip(dnn_scores, 1e-6, 1-1e-6) # protection from atanh(0) or atanh(1 or -1) whose value is +/- inf
-    return np.arctanh(s)
+    s = safe_arctanh(dnn_scores) # protection from atanh(0) or atanh(1 or -1) whose value is +/- inf
+    return s
 
 
 class FocalLoss(nn.Module):
@@ -122,105 +129,224 @@ class HingeLoss(nn.Module):
 
 class TrainingLogger:
     # Reference: https://www.geeksforgeeks.org/deep-learning/monitoring-model-training-in-pytorch-with-callbacks-and-logging/
-    def __init__(self, log_interval=10):
-        self.log_interval = log_interval
+    def __init__(self, log_interval: int = 10):
+        self.log_interval = int(log_interval)
         self.training_logs = []
+        self.epoch_start_time = None
 
-    def on_epoch_begin(self, epoch):
+    def on_epoch_begin(self, epoch: int):
         self.epoch_start_time = _time()
-        logger.debug(f"Epoch {epoch + 1} starting.")
+        logger.debug("Epoch %d starting.", epoch + 1)
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch: int, logs=None):
+        if self.epoch_start_time is None:
+            self.epoch_start_time = _time()
+
         elapsed_time = _time() - self.epoch_start_time
-        logger.info(f"Epoch {epoch + 1} finished in {elapsed_time:.2f} seconds.")
-        logs['epoch_time'] = elapsed_time  # Add epoch time to logs
-        self.training_logs.append(logs)  # Collect training logs
+        logger.info("Epoch %d finished in %.2f seconds.", epoch + 1, elapsed_time)
 
-    def on_batch_end(self, batch, logs=None):
-        if (batch + 1) % self.log_interval == 0:
-            logger.info(f"Batch {batch + 1}: Loss = {logs['loss']:.4f}, Accuracy = {logs['accuracy']:.4f}")
+        if logs is None:
+            logs = {}
+        logs["epoch_time"] = float(elapsed_time)
 
-    # Save the training_logs to a file
-    def save_logs(self, filepath):
-        with open(filepath, 'wb') as f:
+        # store a copy to avoid accidental mutation by caller
+        self.training_logs.append(dict(logs))
+
+    def on_batch_end(self, batch: int, logs=None):
+        if (batch + 1) % self.log_interval != 0:
+            return
+
+        logs = logs or {}
+        loss = logs.get("loss", None)
+        acc = logs.get("accuracy", None)
+
+        if loss is None and acc is None:
+            logger.info("Batch %d", batch + 1)
+        elif loss is None:
+            logger.info("Batch %d: Accuracy = %.4f", batch + 1, acc)
+        elif acc is None:
+            logger.info("Batch %d: Loss = %.4f", batch + 1, loss)
+        else:
+            logger.info("Batch %d: Loss = %.4f, Accuracy = %.4f", batch + 1, loss, acc)
+
+    def save_logs(self, filepath: str):
+        os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+        with open(filepath, "wb") as f:
             pickle.dump(self.training_logs, f)
-        logger.info(f"Training logs saved to {filepath}")
+        logger.info("Training logs saved to %s", filepath)
 
 
 class EarlyStopping:
-    def __init__(self, patience=10, delta=0.0, mode="min", nfold=0,
-                 fold_save_path=None, model=None, training_features=None, verbose=True):
-        """
-        Args:
-            patience: How many epochs to wait after last improvement.
-            delta: Minimum change to qualify as improvement.
-            mode: 'min' to minimize (e.g. loss), 'max' to maximize (e.g. AUC).
-            fold_save_path: Path to save the best model.
-            model: PyTorch model.
-            training_features: List of training features (used for JIT tracing).
-            verbose: If True, log info.
-        """
-        self.patience = patience
-        self.delta = delta
+    def __init__(
+        self,
+        patience=10,
+        delta=0.0,
+        mode="min",
+        nfold=0,
+        fold_save_path=None,
+        model=None,
+        training_features=None,
+        verbose=True,
+        trace_jit=True,
+        jit_batch=100,
+    ):
+        self.patience = int(patience)
+        self.delta = float(delta)
         self.mode = mode
-        self.nfold = nfold
+        self.nfold = int(nfold)
         self.fold_save_path = fold_save_path
         self.model = model
-        self.training_features = training_features
-        self.verbose = verbose
+        self.training_features = training_features or []
+        self.verbose = bool(verbose)
+        self.trace_jit = bool(trace_jit)
+        self.jit_batch = int(jit_batch)
 
         self.counter = 0
         self.best_score = None
         self.early_stop = False
 
-        if mode not in ['min', 'max']:
+        if self.mode not in ("min", "max"):
             raise ValueError("mode should be 'min' or 'max'")
 
-        self.monitor_op = (lambda curr, best: curr < best - delta) if mode == "min" \
-                          else (lambda curr, best: curr > best + delta)
-
-    def on_epoch_end(self, epoch, current_score):
-        if self.best_score is None or self.monitor_op(current_score, self.best_score):
-            if self.verbose:
-                logger.info(f"[EarlyStopping] Fold {self.nfold}, Epoch {epoch}: best {self.mode} improved from {self.best_score} to {current_score}")
-            self.best_score = current_score
-            self.counter = 0
-            self._save_model(model_name="best_model") # save best model
+        if self.mode == "min":
+            self.monitor_op = lambda curr, best: curr < best - self.delta
         else:
-            self.counter += 1
+            self.monitor_op = lambda curr, best: curr > best + self.delta
+
+    def on_epoch_end(
+        self, epoch, current_score, *, optimizer=None, scheduler=None, scaler=None
+    ):
+        improved = self.best_score is None or self.monitor_op(
+            current_score, self.best_score
+        )
+
+        if improved:
             if self.verbose:
-                logger.info(f"[EarlyStopping] Fold {self.nfold}, Epoch {epoch}: no improvement ({self.counter}/{self.patience})")
-            if self.counter >= self.patience:
-                logger.warning("[EarlyStopping] Triggered.")
-                self.early_stop = True
-                # self._save_model(model_name="final_model") # save final model
-                return True
+                logger.info(
+                    "[EarlyStopping] Fold %d, Epoch %d: best %s improved from %s to %s",
+                    self.nfold,
+                    epoch,
+                    self.mode,
+                    str(self.best_score),
+                    str(current_score),
+                )
+            self.best_score = float(current_score)
+            self.counter = 0
+
+            if self.model is not None and self.fold_save_path is not None:
+                save_model_artifacts(
+                    model=self.model,
+                    fold_save_path=self.fold_save_path,
+                    model_name="best_model",
+                    training_features=self.training_features,
+                    trace_jit=self.trace_jit,
+                    jit_batch=self.jit_batch,
+                    epoch=epoch,
+                    optimizer=optimizer,
+                    scheduler=scheduler,
+                    scaler=scaler,
+                    best_score=self.best_score,
+                    logger=logger,
+                )
+            return False
+
+        self.counter += 1
+        if self.verbose:
+            logger.info(
+                "[EarlyStopping] Fold %d, Epoch %d: no improvement (%d/%d)",
+                self.nfold,
+                epoch,
+                self.counter,
+                self.patience,
+            )
+
+        if self.counter >= self.patience:
+            logger.warning("[EarlyStopping] Triggered.")
+            self.early_stop = True
+            return True
+
         return False
 
-    def _save_model(self, model_name="best_model"):
-        if self.model is None or self.fold_save_path is None:
-            return
-        os.makedirs(self.fold_save_path, exist_ok=True)
-        self.model.eval()
-        torch.save(self.model.state_dict(), f"{self.fold_save_path}/{model_name}_weights.pt")
-        if self.training_features:
-            dummy_input = torch.rand(100, len(self.training_features))
-            self.model.to("cpu")
-            torch.jit.trace(self.model, dummy_input).save(f"{self.fold_save_path}/{model_name}_torchJit_ver.pt")
-            self.model.to(DEVICE)
-        self.model.train()
-        logger.info(f"[EarlyStopping] Model saved to {self.fold_save_path}")
 
-def save_model_final(model, training_features, fold_save_path):
+def save_model_artifacts(
+    *,
+    model,
+    fold_save_path: str,
+    model_name: str,
+    training_features=None,
+    trace_jit: bool = True,
+    jit_batch: int = 100,
+    epoch: int | None = None,
+    optimizer=None,
+    scheduler=None,
+    scaler=None,
+    best_score: float | None = None,
+    logger=None,
+):
+    """Save model artifacts (weights + optional checkpoint + optional torchscript)."""
+    os.makedirs(fold_save_path, exist_ok=True)
+    training_features = training_features or []
+
+    # preserve state
+    was_training = model.training
+    try:
+        orig_device = next(model.parameters()).device
+    except StopIteration:
+        orig_device = torch.device("cpu")
+
+    # --- 1) weights (always)
+    weights_path = os.path.join(fold_save_path, f"{model_name}_weights.pt")
     model.eval()
-    torch.save(model.state_dict(), f"{fold_save_path}/final_model_weights.pt")
-    if training_features:
-        dummy_input = torch.rand(100, len(training_features))
+    torch.save(model.state_dict(), weights_path)
+
+    # --- 2) checkpoint (optional)
+    if optimizer is not None:
+        ckpt = {
+            "epoch": epoch,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "best_score": best_score,
+            "training_features": training_features,
+        }
+        if scheduler is not None:
+            ckpt["scheduler_state_dict"] = scheduler.state_dict()
+        if scaler is not None:
+            ckpt["scaler_state_dict"] = scaler.state_dict()
+
+        ckpt_path = os.path.join(fold_save_path, f"{model_name}_checkpoint.pt")
+        torch.save(ckpt, ckpt_path)
+
+    # --- 3) torchscript (optional)
+    if trace_jit and training_features:
+        jit_path = os.path.join(fold_save_path, f"{model_name}_torchJit_ver.pt")
+        dummy_input = torch.rand(
+            int(jit_batch), len(training_features), dtype=torch.float32
+        )
+
         model.to("cpu")
-        torch.jit.trace(model, dummy_input).save(f"{fold_save_path}/final_model_torchJit_ver.pt")
-        model.to(DEVICE)
-    model.train()
-    logger.info(f"[FinalModel] Saved final model to {fold_save_path}")
+        with torch.inference_mode():
+            traced = torch.jit.trace(model, dummy_input)
+            traced.save(jit_path)
+        model.to(orig_device)
+
+    # restore original mode
+    model.train(was_training)
+
+    if logger is not None:
+        logger.info("Saved model artifacts (%s) to %s", model_name, fold_save_path)
+
+
+def save_model_final(model, training_features, fold_save_path, *, logger=logger):
+    save_model_artifacts(
+        model=model,
+        fold_save_path=fold_save_path,
+        model_name="final_model",
+        training_features=training_features,
+        trace_jit=True,
+        jit_batch=100,
+        optimizer=None,  # set optimizer if you want a final checkpoint too
+        logger=logger,
+    )
 
 
 def prepare_features(df, features, variation="nominal"):
@@ -321,73 +447,118 @@ class NumpyDataset(Dataset):
         return self.input_arr[idx], self.label_arr[idx], self.row_index[idx]
 
 
-def plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=False, normalize=True, log_scale=False):
+def plotSigVsBkg(
+    score_dict,
+    bins,
+    plt_save_path,
+    transformPrediction=False,
+    normalize=True,
+    log_scale=False,
+):
     """
     TODO: add weights
     """
-    fig, ax_main = plt.subplots()
+    fig, ax = plt.subplots()
+
+    # configure scale first (before setting limits)
+    if log_scale:
+        ax.set_yscale("log")
+
     for stage, output_dict in score_dict.items():
-        pred_total = output_dict["prediction"]
-        label_total = output_dict["label"]
-        wgt_total = output_dict["weight"]
+        pred_total = np.asarray(output_dict["prediction"], dtype=np.float64)
+        label_total = np.asarray(output_dict["label"], dtype=np.int64)
+        wgt_total = np.asarray(output_dict["weight"], dtype=np.float64)
+
+        # --- basic sanity: same length
+        if not (len(pred_total) == len(label_total) == len(wgt_total)):
+            logger.warning(
+                "[plotSigVsBkg] Length mismatch stage=%s: pred=%d label=%d wgt=%d. Skipping.",
+                stage,
+                len(pred_total),
+                len(label_total),
+                len(wgt_total),
+            )
+            continue
+
+        # --- drop non-finite rows (critical!)
+        m = np.isfinite(pred_total) & np.isfinite(wgt_total)
+        pred_total = pred_total[m]
+        label_total = label_total[m]
+        wgt_total = wgt_total[m]
+
+        if pred_total.size == 0:
+            logger.warning(
+                "[plotSigVsBkg] No finite entries stage=%s. Skipping.", stage
+            )
+            continue
+
         if transformPrediction:
-            pred_total = np.arctanh(pred_total)
-            if log_scale:
-                ax_main.set_ylim(0.001, 1e5)
-            else:
-                ax_main.set_ylim(0.0, 5.0)
-        dnn_scores_signal = pred_total[label_total==1]  # Simulated DNN scores for signal
-        dnn_scores_background = pred_total[label_total==0]   # Simulated DNN scores for background
-        wgt_total_signal = wgt_total[label_total==1]
-        wgt_total_background = wgt_total[label_total==0]
-        # Histogram for signal, normalized to one
-        hist_signal, bins_signal = np.histogram(dnn_scores_signal, bins=bins, weights=wgt_total_signal, density=normalize)
-        # bin_centers_signal = 0.5 * (bins_signal[:-1] + bins_signal[1:])
+            pred_total = safe_arctanh(pred_total)  # must clip internally
 
-        # Histogram for background, normalized to one
-        hist_background, bins_background = np.histogram(dnn_scores_background, bins=bins, weights=wgt_total_background, density=normalize)
-        # bin_centers_background = 0.5 * (bins_background[:-1] + bins_background[1:])
+        # split
+        sig_mask = label_total == 1
+        bkg_mask = label_total == 0
 
-        # set ylim based on maximum bin content in all histograms
-        max_bin_content = max(hist_signal.max(), hist_background.max())
-        plt.ylim((0.0, max_bin_content * 1.1))
+        dnn_sig = pred_total[sig_mask]
+        dnn_bkg = pred_total[bkg_mask]
+        w_sig = wgt_total[sig_mask]
+        w_bkg = wgt_total[bkg_mask]
 
+        # handle empty classes
+        if dnn_sig.size == 0 or dnn_bkg.size == 0:
+            logger.warning(
+                "[plotSigVsBkg] Empty sig or bkg stage=%s (sig=%d bkg=%d). Skipping.",
+                stage,
+                dnn_sig.size,
+                dnn_bkg.size,
+            )
+            continue
+
+        # histogram (density=True can produce NaN if total weight/area is zero)
+        hist_sig, _ = np.histogram(dnn_sig, bins=bins, weights=w_sig, density=normalize)
+        hist_bkg, _ = np.histogram(dnn_bkg, bins=bins, weights=w_bkg, density=normalize)
+
+        # sanitize histograms
+        hist_sig = np.nan_to_num(hist_sig, nan=0.0, posinf=0.0, neginf=0.0)
+        hist_bkg = np.nan_to_num(hist_bkg, nan=0.0, posinf=0.0, neginf=0.0)
+
+        max_bin_content = max(float(hist_sig.max()), float(hist_bkg.max()))
+
+        # if everything is zero (or was NaN -> 0), don’t set a bogus ylim
+        if max_bin_content <= 0.0 or not np.isfinite(max_bin_content):
+            logger.warning(
+                "[plotSigVsBkg] max_bin_content not finite/positive stage=%s (max=%s). Skipping ylim.",
+                stage,
+                str(max_bin_content),
+            )
+            # still plot (will just show nothing), or you can continue
+            # continue
+
+        # set limits safely
+        ymin = 1e-4
         if log_scale:
-            ax_main.set_yscale("log")
-            ax_main.set_ylim(1e-4, max_bin_content * 5)
+            ymax = max(ymin * 10.0, max_bin_content * 5.0)
         else:
-            ax_main.set_ylim(0.0, max_bin_content * 1.1)
+            ymax = max(ymin * 10.0, max_bin_content * 1.1)
+        ax.set_ylim(ymin, ymax)
 
         hep.histplot(
-            hist_signal,
-            bins=bins,
-            histtype='step',
-            label=f"Signal - {stage}",
-            ax=ax_main,
+            hist_sig, bins=bins, histtype="step", label=f"Signal - {stage}", ax=ax
         )
         hep.histplot(
-            hist_background,
-            bins=bins,
-            histtype='step',
-            label=f"Bkg - {stage}",
-            ax=ax_main,
+            hist_bkg, bins=bins, histtype="step", label=f"Bkg - {stage}", ax=ax
         )
 
     x_label_addendum = "normalized" if normalize else ""
-    if transformPrediction:
-        plt.xlabel(f'arctanh Score {x_label_addendum}')
-    else:
-        plt.xlabel(f'DNN Score {x_label_addendum}')
-    plt.ylabel('Events')
-    # plt.title('normalized DNN Score Distributions Sig vs Bkg')
-    plt.legend()
-    status = "Private Work 2018"
-    CenterOfMass = "13"
-    # hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
-    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, ax=ax_main)
-    plt.savefig(plt_save_path)
-    plt.clf()
-    plt.close(fig)  # Close the figure to free memory
+    ax.set_xlabel(
+        ("arctanh Score " if transformPrediction else "DNN Score ") + x_label_addendum
+    )
+    ax.set_ylabel("Events")
+    ax.legend()
+    hep.cms.label(data=True, loc=0, label="Private Work 2018", com="13", ax=ax)
+
+    fig.savefig(plt_save_path)
+    plt.close(fig)
 
 
 def customROC_curve_AN(label, pred, weight, ucsd_mode=False):
@@ -540,6 +711,74 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
 
     model.train()  # turn back to train mode
     return return_dict
+
+def axplot_to_plotly(obj):
+    """
+    Convert Ax plot outputs (AxPlotConfig / plotly Figure / dict) into something
+    plotly.io.write_html can consume.
+    Returns a plotly.graph_objects.Figure or a plotly-compatible dict.
+    """
+    import plotly.graph_objects as go
+
+    # Already a plotly Figure
+    if isinstance(obj, go.Figure):
+        return obj
+
+    # AxPlotConfig (newer Ax): obj.data is dict with keys {'data','layout'}
+    if hasattr(obj, "data"):
+        try:
+            return go.Figure(obj.data)
+        except Exception:
+            # Fallback: sometimes obj.data is already Figure-like dict
+            return obj.data
+
+    # Already plotly-compatible dict
+    if isinstance(obj, dict):
+        # Wrap into Figure for maximum compatibility
+        try:
+            return go.Figure(obj)
+        except Exception:
+            return obj
+
+    raise TypeError(f"Unsupported plot object type: {type(obj)}")
+
+
+def get_standard_plots_robust(experiment):
+    """
+    Works across Ax versions where get_standard_plots may or may not need `model`.
+    Returns a list of AxPlotConfig objects (or plotly figs depending on Ax version).
+    """
+    from ax.plot import diagnostic
+    from ax.modelbridge.registry import Models
+
+    data = experiment.fetch_data()
+
+    # Try the "newer signature" first: get_standard_plots(experiment=..., model=...)
+    # Build a model in a version-tolerant way (keyword or positional).
+    model = None
+    try:
+        model = Models.BOTORCH_MODULAR(experiment=experiment, data=data)
+    except TypeError:
+        try:
+            model = Models.BOTORCH_MODULAR(experiment, data)
+        except TypeError:
+            model = None
+
+    if model is not None:
+        try:
+            return diagnostic.get_standard_plots(experiment=experiment, model=model)
+        except TypeError:
+            # Some Ax versions accept only positional args here
+            try:
+                return diagnostic.get_standard_plots(experiment, model)
+            except TypeError:
+                pass
+
+    # Fallback: older signature get_standard_plots(experiment)
+    try:
+        return diagnostic.get_standard_plots(experiment=experiment)
+    except TypeError:
+        return diagnostic.get_standard_plots(experiment)
 
 
 def ValidationPlots(
@@ -1126,6 +1365,7 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     )
     plot_lr(history, save_path=f"{fold_save_path}/LearningRate_vs_Epoch_{fold_idx}.pdf")
 
+
 def calculateSignificance(sig_hist, bkg_hist):
     """
     Calculate significance using the Asimov formula.
@@ -1249,30 +1489,39 @@ def save_bo_artifacts(experiment, values, best_params, outdir, objective_name="a
     # 2) Trials table straight from Ax data
     raw = experiment.fetch_data().df.copy()
     # Expected columns include: ["arm_name","metric_name","mean","sem","trial_index", ...]
+    if "metric_name" not in raw.columns:
+        raise RuntimeError(
+            f"Ax data missing 'metric_name'. Columns: {list(raw.columns)}"
+        )
     raw = raw[raw["metric_name"] == objective_name].sort_values("trial_index")
-    # Be defensive about the mean column name
+
+    # Be defensive about metric value column name
     mean_col = next((c for c in ["mean", "value", "data"] if c in raw.columns), None)
     if mean_col is None:
         raise RuntimeError(
             f"No metric value column found in Ax data. Columns: {list(raw.columns)}"
         )
 
-    raw.rename(columns={mean_col: objective_name}, inplace=True)
-    # keep a tidy table: trial, mean, sem, and parameters per arm
+    raw = raw.rename(columns={mean_col: objective_name})
+
     # Pull parameters per trial/arm
     rows = []
     for t in experiment.trials.values():
-        arms = (
-            list(t.arms)
-            if hasattr(t, "arms")
-            else ([t.arm] if hasattr(t, "arm") else [])
-        )
+        arms = []
+        if hasattr(t, "arms"):
+            arms = list(t.arms)
+        elif hasattr(t, "arm"):
+            arms = [t.arm]
+
         for arm in arms:
             rows.append(
                 {"trial_index": t.index, "arm_name": arm.name, **arm.parameters}
             )
+
     ptab = pd.DataFrame(rows)
 
+    # Merge metric measurements with parameters
+    # (If parameters are missing for some arms, keep the metric row anyway)
     df = raw.merge(ptab, on=["trial_index", "arm_name"], how="left").reset_index(
         drop=True
     )
@@ -1289,21 +1538,22 @@ def save_bo_artifacts(experiment, values, best_params, outdir, objective_name="a
             f.write(f"  - {k}: {v}\n")
 
     # 4) Plot: optimization trace (objective vs trial index)
-    # Use df grouped by trial in case of multiple arms
-    y_by_trial = df.groupby("trial_index")[objective_name].mean().sort_index()
-    y_np = y_by_trial.to_numpy()
-
+    # Use grouped mean by trial in case of multiple arms/observations
     try:
-        if y_np.size >= 1:
-            # shape -> (1, n_trials) as expected by Ax
-            y_mat = y_np[None, :]
-            trace_fig = optimization_trace_single_method(
+        y_by_trial = df.groupby("trial_index")[objective_name].mean().sort_index()
+
+        # IMPORTANT: Ax's optimization_trace_single_method expects shape (n_trials, 1)
+        # not (1, n_trials)
+        y_mat = y_by_trial.to_numpy().reshape(-1, 1)
+
+        if y_mat.shape[0] >= 1:
+            trace_obj = optimization_trace_single_method(
                 y=y_mat,
                 title=f"Optimization Trace ({objective_name} vs. trial)",
                 ylabel=objective_name.upper(),
             )
             pio.write_html(
-                trace_fig,
+                axplot_to_plotly(trace_obj),
                 file=os.path.join(outdir, "01_optimization_trace.html"),
                 include_plotlyjs="cdn",
                 auto_open=False,
@@ -1313,12 +1563,13 @@ def save_bo_artifacts(experiment, values, best_params, outdir, objective_name="a
     except Exception as e:
         logger.warning(f"[Ax] optimization_trace_single_method failed: {e}")
 
-    # 5) Standard Ax plots (slice, contour, diagnostics) – guard with try
+    # 5) Standard Ax plots (slice, contour, diagnostics)
     try:
-        for i, pc in enumerate(get_standard_plots(experiment)):
+        plots = get_standard_plots_robust(experiment)
+        for i, p in enumerate(plots):
             pio.write_html(
-                pc,  # NO render(pc)
-                file=os.path.join(outdir, f"1{i+2}_standard_plot_{i:02d}.html"),
+                axplot_to_plotly(p),
+                file=os.path.join(outdir, f"02_standard_plot_{i:02d}.html"),
                 include_plotlyjs="cdn",
                 auto_open=False,
             )
@@ -1429,6 +1680,7 @@ def main():
         help="Number of parallel processes"
     )
     args = parser.parse_args()
+
     logger.setLevel(args.log_level)
     for handler in logger.handlers:
         handler.setLevel(args.log_level)
@@ -1437,8 +1689,6 @@ def main():
         raise ValueError(f"Save path {save_path} does not exist. Please run dnn_preprocessor.py first.")
 
     try:
-        import yaml
-
         meta = {
             "label": args.label,
             "year": args.year,
@@ -1563,13 +1813,6 @@ def main():
 
         # === Save BO logs & plots ===
         bo_dir = Path(save_path) / "bo_logs"
-        # best_params, values, experiment, model = optimize(
-        #     parameters=search_space,
-        #     evaluation_function=_eval,
-        #     total_trials=int(args.bo_trials),
-        #     minimize=False,  # we maximize AUC
-        #     objective_name="auc",
-        # )
         best_params, values, experiment, model = optimize(
             parameters=search_space,
             evaluation_function=_eval_logged,  # <— use the logging wrapper
