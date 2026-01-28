@@ -471,15 +471,19 @@ def preprocess(base_path, region="h-peak", category="vbf", do_mixup=False, run_l
         # "dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO",
         # "dy_M-50_MiNNLO", "dy_M-100To200_MiNNLO",
         # "dyTo2L_M-50_incl",
+
         # Run-3
-        # "dyTo2Mu_MLL_10To50",
-        # "dyTo2Mu_MLL_50To120",
+        "dyTo2Mu_MLL_10To50",
+        "dyTo2Mu_MLL_50To120",
         "dyTo2Mu_MLL_120To200",  # available for all years
+
         # "dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j", # not available for 2024
-        # # "ewk_lljj_mll50_mjj120",
-        # "ewk_lljj",
-        # "ttjets_dl", "ttjets_sl",
-        # # "tt_inclusive",
+
+        # "ewk_lljj_mll50_mjj120",
+        "ewk_lljj",
+
+        "ttjets_dl", "ttjets_sl",
+        # "tt_inclusive",
     ]
 
     logger.debug(f"sig_processes: {sig_processes}")
