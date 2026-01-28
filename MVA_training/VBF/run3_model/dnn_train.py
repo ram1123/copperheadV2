@@ -1,58 +1,35 @@
+import concurrent
+import csv
 import json
 import multiprocessing as mp
 import os
 import pickle
+import random
 import threading
 from pathlib import Path
 from time import time as _time
-import yaml
 
 import matplotlib.pyplot as plt
 import mplhep as hep
+import numpy as np
 import pandas as pd
 import plotly.io as pio
-
-# Put this at the VERY TOP, before importing torch, numpy, etc.
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as nnfunction
 import torch.optim as optim
+import yaml
 from ax.plot.trace import optimization_trace_single_method
 from ax.service.managed_loop import optimize
-from ax.service.utils.report_utils import get_standard_plots
 from ax.storage.json_store.save import save_experiment
-from ax.utils.notebook.plotting import render
-from sklearn.metrics import roc_auc_score
-from torch.utils.data import DataLoader, Dataset
-
-mp.set_start_method('spawn', force=True)
-torch.set_num_threads(1)
-torch.set_num_interop_threads(1)
-
-
-# #### END: Libraries for scan HYPERPARAMETERS
-
-
-plt.style.use(hep.style.CMS)
-import concurrent
-
-# torch.multiprocessing.set_sharing_strategy('file_descriptor') # reason: https://discuss.pytorch.org/t/training-crashes-due-to-insufficient-shared-memory-shm-nn-dataparallel/26396/44
-import logging
-
 from cli.common_argparser import build_common_parser
-
 from dnn_helper import *
 from modules import selection
 from modules.utils import logger
-
 from MVA_training.VBF.dnn_plotting import (
     _roc_weighted,
+    _wcov,
+    _wstd,
     cv_consistency_plots_ROOT,
     partial_dependence_curve,
     permutation_importance_auc,
@@ -72,8 +49,30 @@ from MVA_training.VBF.dnn_plotting import (
     plotPrecisionRecall,
     safe_weighted_auc,
     yield_table_after_cut,
-    _wcov, _wstd
 )
+from sklearn.metrics import roc_auc_score
+from torch.utils.data import DataLoader, Dataset
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+
+torch.set_num_threads(1)
+torch.set_num_interop_threads(1)
+
+plt.style.use(hep.style.CMS)
+
+# torch.multiprocessing.set_sharing_strategy('file_descriptor') # reason: https://discuss.pytorch.org/t/training-crashes-due-to-insufficient-shared-memory-shm-nn-dataparallel/26396/44
+
+random.seed(123)
+np.random.seed(123)
+torch.manual_seed(123)
+torch.cuda.manual_seed_all(123)
+
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -88,8 +87,12 @@ def _safe_auc(y, p, w=None):
 
 def safe_arctanh(x, eps=1e-6):
     x = np.asarray(x, dtype=np.float64)
-    x = np.clip(x, -1.0 + eps, 1.0 - eps)
-    return np.arctanh(x)
+
+    # x = np.clip(x, -1.0 + eps, 1.0 - eps)
+    # return np.arctanh(x)
+
+    x = np.clip(x, eps, 1.0 - eps)
+    return np.arctanh(2.0 * x - 1.0)
 
 def transformDnnScore(dnn_scores):
     s = safe_arctanh(dnn_scores) # protection from atanh(0) or atanh(1 or -1) whose value is +/- inf
@@ -103,7 +106,7 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
 
     def forward(self, inputs, targets):
-        BCE_loss = nn.functional.binary_cross_entropy_with_logits(
+        BCE_loss = nnfunction.binary_cross_entropy_with_logits(
             inputs, targets, reduction="none"
         )
         pt = torch.exp(-BCE_loss)  # Probabilities of correct classification
@@ -379,9 +382,13 @@ class Net(nn.Module):
         use_batchnorm=True,
     ):
         super(Net, self).__init__()
+
+        if len(hidden) != 3 or len(dropout) != 3:
+            raise ValueError("hidden and dropout must be length-3 tuples")
+
         h1, h2, h3 = hidden
         d1, d2, d3 = dropout
-        act_map = {"relu": F.relu, "gelu": F.gelu, "selu": F.selu, "tanh": torch.tanh}
+        act_map = {"relu": nnfunction.relu, "gelu": nnfunction.gelu, "selu": nnfunction.selu, "tanh": torch.tanh}
         if activation not in act_map:
             raise ValueError(f"Unknown activation {activation}")
         self.act = act_map[activation]
@@ -401,6 +408,10 @@ class Net(nn.Module):
         self.output = nn.Linear(h3, 1)
 
     def forward(self, x):
+        if x.dtype != torch.float32:
+            x = x.float()
+        if x.dim() == 1:
+            x = x.unsqueeze(0)
         x = self.fc1(x)
         x = self.bn1(x)
         x = self.act(x)
@@ -418,22 +429,24 @@ class Net(nn.Module):
 
         logits = self.output(x)
 
-        # output = F.sigmoid(logits)  # for BCEWithLogitsLoss, no need to apply sigmoid here
-
         return logits
 
 
 # Custom Dataset class
 class NumpyDataset(Dataset):
-    def __init__(self, input_arr, label_arr, row_index=None):
+    def __init__(self, input_arr, label_arr, weight_arr=None, row_index=None):
         """
         Args:
             input_arr (numpy.ndarray): Input features array.
-            label_arr (numpy.ndarray): Labels array.
+            label_arr (numpy.ndbarray): Labels array.
             row_index (numpy.ndarray, optional): Row indices for tracking. Defaults to None.
         """
         self.input_arr = torch.tensor(input_arr, dtype=torch.float32)
         self.label_arr = torch.tensor(label_arr, dtype=torch.float32)
+        if weight_arr is None:
+            weight_arr = np.ones(len(input_arr), dtype=np.float32)
+        self.weight_arr = torch.tensor(np.asarray(weight_arr), dtype=torch.float32)
+
         if row_index is None:
             row_index = np.arange(len(input_arr))
         self.row_index = torch.tensor(np.asarray(row_index), dtype=torch.int64)
@@ -444,7 +457,12 @@ class NumpyDataset(Dataset):
 
     def __getitem__(self, idx):
         # Retrieve a sample and its corresponding label
-        return self.input_arr[idx], self.label_arr[idx], self.row_index[idx]
+        return (
+            self.input_arr[idx],
+            self.label_arr[idx],
+            self.weight_arr[idx],
+            self.row_index[idx],
+        )
 
 
 def plotSigVsBkg(
@@ -669,33 +687,49 @@ def dnnEvaluateLoop(model, dataloader, loss_fn, device="cpu"):
     model.eval()
 
     total_loss_sum = 0.0  # sum of (batch_loss_mean * batch_size)
+    w_sum_total = 0.0
     n_total = 0           # total number of events
     batch_losses = []
     pred_l = []
     label_l = []
 
     with torch.no_grad():
-        for _, (inputs, labels, _ridx) in enumerate(dataloader):
+        for _, (inputs, labels, w, _ridx) in enumerate(dataloader):
             inputs = inputs.to(device)
             labels = labels.to(device).reshape((-1, 1))
+            w = w.to(device).reshape((-1, 1))
 
             logits = model(inputs)
-            loss = loss_fn(logits, labels)  # typically mean over batch
-            batch_loss = float(loss.item())
+
+            # per-event loss
+            loss_raw = nnfunction.binary_cross_entropy_with_logits(logits, labels, reduction="none")
+
+            w = w / (w.mean() + 1e-12)
+            weighted_sum = (loss_raw * w).sum()
+
+            w_sum_total += float(w.sum().item())
+
             bs = int(labels.size(0))
 
-            total_loss_sum += batch_loss * bs
-            n_total += bs
-            batch_losses.append(batch_loss)
+            total_loss_sum += float(weighted_sum.item())
+            n_total += bs  # or better: w.sum()
+
+            batch_mean = (loss_raw * w).mean().item()
+            batch_losses.append(batch_mean)
 
             probs = torch.sigmoid(logits)
+
+            p = probs.detach().cpu().numpy().ravel()
+            logger.debug(f"[pred diag] mean={p.mean():.4g} std={p.std():.4g} p01={np.quantile(p,0.01):.4g} p99={np.quantile(p,0.99):.4g}")
+
             pred_l.append(probs.detach().cpu().numpy())
             label_l.append(labels.detach().cpu().numpy())
 
     pred_total = np.concatenate(pred_l, axis=0).ravel() if pred_l else np.array([], dtype=float)
     label_total = np.concatenate(label_l, axis=0).ravel() if label_l else np.array([], dtype=float)
 
-    avg_loss = (total_loss_sum / n_total) if n_total > 0 else float("nan")
+    avg_loss = total_loss_sum / w_sum_total if w_sum_total > 0 else float("nan")
+    logger.info(f"Evaluation total loss: {total_loss_sum:.4f}, avg loss: {avg_loss:.6f} over {n_total} events")
 
     # Unweighted AUC here (weights are not provided by this dataloader)
     auc_score = safe_weighted_auc(label_total, pred_total, sample_weight=None)
@@ -748,8 +782,8 @@ def get_standard_plots_robust(experiment):
     Works across Ax versions where get_standard_plots may or may not need `model`.
     Returns a list of AxPlotConfig objects (or plotly figs depending on Ax version).
     """
-    from ax.plot import diagnostic
     from ax.modelbridge.registry import Models
+    from ax.plot import diagnostic
 
     data = experiment.fetch_data()
 
@@ -817,19 +851,23 @@ def ValidationPlots(
 
     bins_uniform = np.linspace(0, 1, 30)
     plt_save_path = f"{fold_save_path}/epoch{epoch}_DNN_combined_dist_bySigBkg.png"
+
+    for stage, out in score_dict.items():
+        _debug_stage(stage, out)
+
     plotSigVsBkg(score_dict, bins_uniform, plt_save_path, transformPrediction=False)
 
-    bins = selection.binning
+    bins_transformed = selection.binning
     plt_save_path = (
         f"{fold_save_path}/epoch{epoch}_DNN_combined_transformedDist_bySigBkg.png"
     )
-    plotSigVsBkg(score_dict, bins, plt_save_path, transformPrediction=True)
+    plotSigVsBkg(score_dict, bins_transformed, plt_save_path, transformPrediction=True)
 
     # NOTE: if you want log-scale for the transformed plot, you probably want transformPrediction=True.
     # Keeping your call style but fix the filename logic.
     plotSigVsBkg(
         score_dict,
-        bins,
+        bins_transformed,
         plt_save_path.replace(".png", "_log.png"),
         transformPrediction=True,
         log_scale=True,
@@ -898,7 +936,9 @@ def ValidationPlots(
         dnn_scores = transformDnnScore(dnn_scores)
         wgt_proc = wgt_total[proc_filter]
 
-        hist_proc, bins_proc = np.histogram(dnn_scores, bins=bins, weights=wgt_proc)
+        hist_proc, bins_proc = np.histogram(
+            dnn_scores, bins=bins_transformed, weights=wgt_proc
+        )
         bin_centers_proc = 0.5 * (bins_proc[:-1] + bins_proc[1:])
         ax.plot(bin_centers_proc, hist_proc, label=proc, drawstyle="steps-mid")
 
@@ -921,17 +961,17 @@ def ValidationPlots(
     for proc in bkg_processes:
         proc_filter = proc_total == proc
         if not np.any(proc_filter):
-            bkg_hist_l.append(np.zeros(len(bins) - 1))
+            bkg_hist_l.append(np.zeros(len(bins_transformed) - 1))
             continue
 
         dnn_scores = transformDnnScore(pred_total[proc_filter])
         wgt = wgt_total[proc_filter]
-        hist_proc, _ = np.histogram(dnn_scores, bins=bins, weights=wgt)
+        hist_proc, _ = np.histogram(dnn_scores, bins=bins_transformed, weights=wgt)
         bkg_hist_l.append(hist_proc)
 
     hep.histplot(
         bkg_hist_l,
-        bins=bins,
+        bins=bins_transformed,
         stack=True,
         histtype="fill",
         label=bkg_processes,
@@ -944,17 +984,17 @@ def ValidationPlots(
     for proc in sig_processes:
         proc_filter = proc_total == proc
         if not np.any(proc_filter):
-            sig_hist_l.append(np.zeros(len(bins) - 1))
+            sig_hist_l.append(np.zeros(len(bins_transformed) - 1))
             continue
 
         dnn_scores = transformDnnScore(pred_total[proc_filter])
         wgt = wgt_total[proc_filter]
-        hist_proc, _ = np.histogram(dnn_scores, bins=bins, weights=wgt)
+        hist_proc, _ = np.histogram(dnn_scores, bins=bins_transformed, weights=wgt)
         sig_hist_l.append(hist_proc)
 
         hep.histplot(
             hist_proc,
-            bins=bins,
+            bins=bins_transformed,
             histtype="step",
             label=proc,
             ax=ax_main,
@@ -1025,10 +1065,24 @@ def ValidationPlots(
 
     return best_significance
 
+def _debug_stage(stage, out):
+    pred = np.asarray(out["prediction"])
+    lab  = np.asarray(out["label"])
+    wgt  = np.asarray(out["weight"])
+
+    n = len(lab)
+    n_sig = int(np.sum(lab == 1))
+    n_bkg = int(np.sum(lab == 0))
+
+    w_sig = float(np.sum(wgt[lab == 1])) if n_sig else 0.0
+    w_bkg = float(np.sum(wgt[lab == 0])) if n_bkg else 0.0
+
+    print(f"[{stage}] N={n}  sig={n_sig} (sumw={w_sig:.6g})  bkg={n_bkg} (sumw={w_bkg:.6g}) "
+          f"pred[min,max]=({np.nanmin(pred):.3g},{np.nanmax(pred):.3g}) "
+          f"wgt finite={np.isfinite(wgt).mean():.3f}")
 
 def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs, save_path,
               callback=None, lr=1e-3, optimizer_name="adam", weight_decay=0.0, loss_name="bce"):
-    logger.setLevel(logging.INFO)
     if len(training_features) == 0:
         logger.error("ERROR: please define the training features the DNN will train on")
         raise ValueError
@@ -1078,11 +1132,11 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     else:
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    dataset_train = NumpyDataset(input_arr_train, label_arr_train, row_index=df_train.index.to_numpy())
+    dataset_train = NumpyDataset(input_arr_train, label_arr_train, weight_arr=df_train.wgt_nominal.values, row_index=df_train.index.to_numpy())
     dataloader_train_ordered = DataLoader(dataset_train, batch_size=batch_size, shuffle=False, num_workers=NWORKERS, pin_memory=PIN_MEMORY) # for plotting
-    dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid, row_index=df_valid.index.to_numpy())
+    dataset_valid = NumpyDataset(input_arr_valid, label_arr_valid, weight_arr=df_valid.wgt_nominal.values, row_index=df_valid.index.to_numpy())
     dataloader_valid = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False, num_workers=NWORKERS, pin_memory=PIN_MEMORY)
-    dataset_eval = NumpyDataset(input_arr_eval, label_arr_eval, row_index=df_eval.index.to_numpy())
+    dataset_eval = NumpyDataset(input_arr_eval, label_arr_eval, weight_arr=df_eval.wgt_nominal.values, row_index=df_eval.index.to_numpy())
     dataloader_eval = DataLoader(dataset_eval, batch_size=batch_size, shuffle=False, num_workers=NWORKERS, pin_memory=PIN_MEMORY)
     best_significance = 0
     mode = "max" # max: maximize the auc, min: minimize the loss
@@ -1101,21 +1155,30 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
 
         epoch_loss = 0
         batch_losses = []
-        for batch_idx, (inputs, labels, ridx) in enumerate(dataloader_train):
+        for batch_idx, (inputs, labels, w, ridx) in enumerate(dataloader_train):
             inputs = inputs.to(DEVICE)
             labels = labels.to(DEVICE).reshape((-1,1))
+            w = w.to(DEVICE).reshape((-1,1))
 
             optimizer.zero_grad()
 
             # Make predictions for this batch
             pred = model(inputs)
 
+            # per-event loss
+            loss_raw = nnfunction.binary_cross_entropy_with_logits(
+                pred, labels, reduction="none"
+            )
+
+            # Normalize weights to mean~1 per batch (prevents huge gradients)
+            w = w / (torch.mean(w) + 1e-12)
+
             logger.debug(f"inputs: {inputs}")
             logger.debug(f"labels: {labels}")
             logger.debug(f"pred: {pred}")
 
             # Compute the loss and its gradients
-            loss = loss_fn(pred, labels)
+            loss = torch.mean(loss_raw * w)
             loss.backward()
 
             # Adjust learning weights
@@ -1341,6 +1404,10 @@ def dnn_train(model, data_dict, fold_idx, training_features, batch_size, nepochs
     plotROC(score_dict, plt_save_path=f"{fold_save_path}/ROC_curve_{fold_idx}.pdf")
     # 3. Plot the Sig/Bkg distributions
     bins = np.linspace(0, 1, 30)
+
+    for stage, out in score_dict.items():
+        _debug_stage(stage, out)
+
     plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_{fold_idx}.pdf", transformPrediction=False, normalize=True)
     plotSigVsBkg(score_dict, bins, plt_save_path=f"{fold_save_path}/SigBkg_dist_{fold_idx}_log.pdf", transformPrediction=False, normalize=True, log_scale=True)
     # 4. Plot the Sig/Bkg distributions with transformed scores
@@ -1381,8 +1448,8 @@ def calculateSignificance(sig_hist, bkg_hist):
 
 
 def _make_dl(df_train, df_valid, feats, batch_size):
-    ds_tr = NumpyDataset(df_train[feats].values, df_train.label.values)
-    ds_va = NumpyDataset(df_valid[feats].values, df_valid.label.values)
+    ds_tr = NumpyDataset(df_train[feats].values, df_train.label.values, weight_arr=df_train.wgt_nominal.values)
+    ds_va = NumpyDataset(df_valid[feats].values, df_valid.label.values, weight_arr=df_valid.wgt_nominal.values)
     dl_tr = DataLoader(
         ds_tr,
         batch_size=batch_size,
@@ -1439,11 +1506,6 @@ def bo_evaluate(params, *, save_path, training_features, bo_fold=0, bo_epochs=30
     ).to(device)
 
     # loss/opt
-    loss_fn = (
-        FocalLoss(alpha=1, gamma=2)
-        if params["loss_name"] == "focal"
-        else torch.nn.BCEWithLogitsLoss()
-    )
     if params["optimizer"] == "adamw":
         opt = optim.AdamW(
             model.parameters(),
@@ -1462,10 +1524,18 @@ def bo_evaluate(params, *, save_path, training_features, bo_fold=0, bo_epochs=30
     for _ in range(int(bo_epochs)):
         model.train()
         for batch in dl_tr:
-            xb, yb = batch[0].to(device), batch[1].to(device).reshape((-1, 1))
+            xb, yb, wb, _ = batch
+            xb = xb.to(device)
+            yb = yb.to(device).reshape((-1, 1))
+            wb = wb.to(device).reshape(-1, 1)
+
             opt.zero_grad()
             logits = model(xb)
-            loss = loss_fn(logits, yb)
+
+            loss_raw = nnfunction.binary_cross_entropy_with_logits(logits, yb, reduction="none")
+            wb = wb / (wb.mean() + 1e-12)
+            loss = (loss_raw * wb).mean()
+
             loss.backward()
             opt.step()
         auc = _valid_auc(model, dl_va, device)
@@ -1530,6 +1600,7 @@ def save_bo_artifacts(experiment, values, best_params, outdir, objective_name="a
     # 3) Human-readable best summary
     means, covs = values
     best_mean = float(means.get(objective_name, float("nan")))
+
     with open(os.path.join(outdir, "ax_best.txt"), "w") as f:
         f.write(f"Objective: {objective_name}\n")
         f.write(f"Best mean {objective_name}: {best_mean:.6f}\n")
@@ -1586,12 +1657,10 @@ class BOTrialRecorder:
         self._lock = threading.Lock()
         # write CSV header if new
         if not self.csv_path.exists():
-            with open(self.csv_path, "w") as f:
-                f.write(
-                    "trial_index,duration_sec,status,"  # fixed fields first
-                    "auc,auc_sem,"  # metrics (sem kept for consistency)
-                    "params_json\n"
-                )  # keep params in a JSON column
+            with open(self.csv_path, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["trial_index","duration_sec","status",self.objective,f"{self.objective}_sem","params_json"])
+
         # JSONL is schemaless; no header
 
     def record(self, trial_index, params, auc, duration_sec, status="ok", auc_sem=""):
@@ -1603,15 +1672,18 @@ class BOTrialRecorder:
             f"{self.objective}_sem": auc_sem,
             "params": params,  # preserve types
         }
-        line_csv = (
-            f'{row["trial_index"]},{row["duration_sec"]:.3f},{row["status"]},'
-            f'{row[self.objective]:.7f},{row[f"{self.objective}_sem"]},'
-            f'{json.dumps(params, separators=(",", ":"))}\n'
-        )
         line_json = json.dumps(row, separators=(",", ":")) + "\n"
         with self._lock:
-            with open(self.csv_path, "a") as f:
-                f.write(line_csv)
+            with open(self.csv_path, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    row["trial_index"],
+                    f'{row["duration_sec"]:.3f}',
+                    row["status"],
+                    f'{row[self.objective]:.7f}',
+                    row[f"{self.objective}_sem"],
+                    json.dumps(params, separators=(",", ":")),
+                ])
             with open(self.jsonl_path, "a") as f:
                 f.write(line_json)
 
@@ -1684,9 +1756,17 @@ def main():
     logger.setLevel(args.log_level)
     for handler in logger.handlers:
         handler.setLevel(args.log_level)
+
     save_path = f"dnn/trained_models/{args.label}/{args.year}_{args.region}_{args.category}{DIR_TAG}"
-    if not os.path.exists(save_path):
-        raise ValueError(f"Save path {save_path} does not exist. Please run dnn_preprocessor.py first.")
+    required = [
+        Path(save_path) / "training_features.pkl",
+        Path(save_path) / "data_df_train_0.parquet",
+        Path(save_path) / "data_df_validation_0.parquet",
+        Path(save_path) / "data_df_evaluation_0.parquet",
+    ]
+    missing = [p for p in required if not p.exists()]
+    if missing:
+        raise FileNotFoundError(f"Missing inputs in {save_path}: {missing}")
 
     try:
         meta = {
@@ -1712,14 +1792,15 @@ def main():
 
     # best hyperparameters from the hyperparameter optimization
     #  03 Sep 2025: Best hyperparameters from the full search (45 trials)
+
     best_hp = {
-        "hidden": (1024, 1024, 409), #(128, 64, 32),
-        "dropout": (0.0, 0.0, 0.0), #(0.2, 0.2, 0.2),
-        "activation": "selu", #"tanh",
-        "optimizer": "adamw", #"adam",
-        "lr": 0.011339465927284355, #1e-3,
-        "weight_decay": 1.9522171123020773e-06, #0.0,
-        "batch_size": 50048, #args.batch_size,
+        "hidden": (256, 128, 64),
+        "dropout": (0.1, 0.1, 0.1),
+        "activation": "gelu",
+        "optimizer": "adamw",
+        "lr": 3e-4,
+        "weight_decay": 1e-4,
+        "batch_size": 2048,
         "loss_name": "bce",
     }
     # # Best hyperparameters (from 03 Sep 2025 training) except hidden layers. Here hidden layers are set to (128, 64, 32) similar as last training
@@ -1739,10 +1820,10 @@ def main():
             {"name":"hidden0",      "type":"choice", "values":[64,128,256,512,1024],
             "value_type":"int", "is_ordered": True, "sort_values": True},
 
-            {"name":"shrink1",      "type":"range",  "bounds":[0.4, 1.0],
+            {"name":"shrink1",      "type":"range",  "bounds":[0.2, 1.0],
             "value_type":"float"},
 
-            {"name":"shrink2",      "type":"range",  "bounds":[0.4, 1.0],
+            {"name":"shrink2",      "type":"range",  "bounds":[0.2, 1.0],
             "value_type":"float"},
 
             {"name":"dropout",      "type":"range",  "bounds":[0.0, 0.5],
@@ -1760,7 +1841,7 @@ def main():
             {"name":"weight_decay", "type":"range",  "bounds":[1e-7,3e-3], "log_scale":True,
             "value_type":"float"},
 
-            {"name":"batch_size",   "type":"choice", "values":[512,1024,2048,4096,8192,15536,30000],
+            {"name":"batch_size",   "type":"choice", "values":[1024,2048,4096,8192,15536,30000],
             "value_type":"int", "is_ordered": True, "sort_values": True},
 
             {"name":"loss_name",    "type":"choice", "values":["bce","focal"],
@@ -1843,6 +1924,13 @@ def main():
                 "loss_name": best_params["loss_name"],
             }
         )
+        # dump best_hp
+        try:
+            with open(Path(save_path) / "best_hp.yaml", "w") as f:
+                yaml.safe_dump(best_hp, f)
+        except Exception as _e:
+            logger.warning(f"Could not write best_hp.yaml: {_e}")
+
         logger.info(f"[Ax] Best parameters: {best_params}")
         logger.info(f"[Ax] Best values: {values}")
         # logger.info(f"[Ax] Best AUC ~ {values[0]['auc']:.5f}")
@@ -1863,13 +1951,6 @@ def main():
     nepochs_l = []
     callback_l = []
     for i in range(nfolds):
-        model = Net(
-            n_feat=len(training_features),
-            hidden=best_hp["hidden"],
-            dropout=best_hp["dropout"],
-            activation=best_hp["activation"],
-        )
-
         df_train = pd.read_parquet(f"{save_path}/data_df_train_{i}.parquet") # these have been already scaled
         df_valid = pd.read_parquet(f"{save_path}/data_df_validation_{i}.parquet") # these have been already scaled
         df_eval = pd.read_parquet(f"{save_path}/data_df_evaluation_{i}.parquet") # these have been already scaled
@@ -1880,8 +1961,6 @@ def main():
             df_valid = df_valid.sample(frac=0.1, random_state=42)
             df_eval = df_eval.sample(frac=0.1, random_state=42)
 
-        training_features = prepare_features(df_train, training_features) # add variation to the name
-        logger.info(f"fold {i} training features: {training_features}")
         logger.debug(f"df_train: {df_train}")
         data_dict = {
             "train": df_train,
@@ -1890,6 +1969,16 @@ def main():
         }
         nepochs = args.n_epochs
         batch_size = int(best_hp["batch_size"])
+
+        training_features = prepare_features(df_train, training_features) # add variation to the name
+        logger.info(f"fold {i} training features: {training_features}")
+
+        model = Net(
+            n_feat=len(training_features),
+            hidden=best_hp["hidden"],
+            dropout=best_hp["dropout"],
+            activation=best_hp["activation"],
+        )
         # dnn_train(model, data_dict, i, training_features, batch_size, nepochs, save_path, TrainingLogger(log_interval=10))
 
         # collect the input parameters
@@ -1986,4 +2075,5 @@ def main():
     logger.info("Success!")
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn', force=True)
     main()
