@@ -10,31 +10,34 @@ label="Run3_nanoAODv15_24Jan2025"
 
 model_name="Run3PrelimResultsJan25_2026_NoAnnhilateWgts"
 category="ggh"
-stage2_save_path="${model_name}_${category}/" 
+# stage2_save_path="${model_name}_${category}/" 
+stage2_save_path="${model_name}_${category}_memoryRefactor/" 
 
-year="all"
+# year="all"
 
-region="z-peak"
-python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region}
+# region="z-peak"
+# python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region}
 
+
+year="2024"
 region="h-sidebands"
 python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region}
 
-region="signal"
-python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region}
+# region="signal"
+# python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region}
 
 
-# # plot Fig 6.13 from AN-19-124
-region="signal"
-python plot_6_8.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
-python plot_6_13.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
-python plot_6_19.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
-python getTable_6_2And6_12.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
-# # -----------------------------------------------------
-# plot 6.7 
-# # -----------------------------------------------------
+# # # plot Fig 6.13 from AN-19-124
+# region="signal"
+# python plot_6_8.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
+# python plot_6_13.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
+# python plot_6_19.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
+# python getTable_6_2And6_12.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
+# # # -----------------------------------------------------
+# # plot 6.7 
+# # # -----------------------------------------------------
 
-python plot_6_7.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
+# python plot_6_7.py -label $label -cat $stage2_save_path -y ${year} --region ${region}
 
 
 # # # # -----------------------------------------------------

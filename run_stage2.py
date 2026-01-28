@@ -15,6 +15,11 @@ import sys, inspect
 import configs.categories.category_cuts as category_cuts
 import json
 # from modules.utils import removeForwardJets, fromPdDftoAkZip
+from modules.selection import filterRegion
+
+
+def split_into_n_parts(lst, n_parts):
+    return [lst[i::n_parts] for i in range(n_parts)]
 
 def prepare_features(events, features, variation="nominal"):
     features_var = []
@@ -246,8 +251,10 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
     # # original end -------------------------------
 
     # filter events for ggH category
-    dimuon_mass = events.dimuon_mass
-    region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0) # signal region
+    # dimuon_mass = events.dimuon_mass
+    # region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0) # signal region
+    # region = (dimuon_mass >= 70) & (dimuon_mass <= 150.0) # signal region
+    region, _ = filterRegion(events, region="full")
     category_str = "ggh"
     cut_names = getCategoryCutNames(category_str)
     gghCat_selection = (
@@ -733,7 +740,8 @@ if __name__ == "__main__":
             is_signal_MC = True
         elif sample.lower() == "vbf":
             # full_load_path = load_path+f"/vbf_powheg_dipole/*/*.parquet"
-            full_load_path = load_path+f"/vbf_*/*/*.parquet"
+            # full_load_path = load_path+f"/vbf_*/*/*.parquet"
+            full_load_path = load_path+f"/vbf_*NLO/*/*.parquet"
             is_signal_MC = True
         elif sample.lower() == "dy":
             # full_load_path = load_path+f"/dy_*/*/*.parquet"
@@ -748,7 +756,7 @@ if __name__ == "__main__":
             print(f"DY full_load_path: {full_load_path}")
         elif sample.lower() == "ewk":
             # full_load_path = load_path+f"/ewk_lljj_mll50_mjj120/*/*.parquet"
-            full_load_path = load_path+f"/ewk_lljj/*/*.parquet"
+            full_load_path = load_path+f"/ewk_*/*/*.parquet"
             
         elif sample.lower() == "tt":
             full_load_path = load_path+f"/ttjets*/*/*.parquet"
@@ -774,108 +782,128 @@ if __name__ == "__main__":
         #     sig_MC_filelist.append(full_load_path)
         # else:
         #     bkg_MC_filelist.append(full_load_path)
-        
-        events = dak.from_parquet(full_load_path)
-        # print(f"events.fields: {events.fields}")
-        target_chunksize = 150_000
-        # events = events.repartition(rows_per_partition=target_chunksize) # FIXME
-
-        wgt_unc_fields = []
-        for field in events.fields:
-            if (("wgt" in field) and not ("separate" in field)) and not ("nominal" in field):
-                wgt_unc_fields.append(field)
-        if args.do_6p7:
-            print("processing for figure 6.7 production, skipping weight uncertainty!")
-            wgt_unc_fields = [] 
-        
-        if args.do_jecUnc:
-            from src.corrections.jet import getJecJerUncertainties
-            jec_yml_path = "/work/users/yun79/Run3/copperheadV2/configs/parameters/jec.yaml"
-            jec_unc_fields = getJecJerUncertainties(jec_yml_path, year=args.year) # jec_unc_fields = ["Absolute", etc]
-            jec_unc_fields = applyUpDown(jec_unc_fields) # jec_unc_fields = ["Absolute_up", "Absolute_down", etc]
+        # print(f"full_load_path: {full_load_path}")
+        if not isinstance(full_load_path, list):
+            filelist_big = glob.glob(full_load_path)
         else:
-            jec_unc_fields =[] 
-        
-        # extra_fields = wgt_unc_fields + jec_unc_fields
-        print(f"wgt_unc_fields: {wgt_unc_fields}")
-        print(f"jec_unc_fields: {jec_unc_fields}")
-        print(f"args.do_6p7: {args.do_6p7}")
-        print(f"category: {category}")
-        print(f"is_signal_MC: {is_signal_MC}")
-        # raise ValueError
-        # print(f"wgt_unc_fields: {len(wgt_unc_fields)}")
-        
-        print("done loading events!")
-        if category == "ggh":
-            if is_signal_MC: # add extra fields for uncertainties in datacard
-                # processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, jec_unc_fields=jec_unc_fields)
-                
-                processed_events_l = []
-                # test on only wgts first
-                processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7)
-                processed_events_l.append(processed_events)
+            filelist_big = full_load_path
 
-                smaller_jec_unc_field_l = split_maxlen(jec_unc_fields, 4)
-                for small_jec_unc_fields in smaller_jec_unc_field_l:
-                    print(f"small_jec_unc_fields: {small_jec_unc_fields}")
-                    
-                    processed_events = process4gghCategory(events, args.year, args.model_name, jec_unc_fields=small_jec_unc_fields)
-                    processed_events_l.append(processed_events)
-
-                processed_events = mergeAkZips(processed_events_l)
-                del processed_events_l
-            else:
-                processed_events = process4gghCategory(events, args.year, args.model_name, do_6p7=args.do_6p7)
-        elif category == "vbf":
-            processed_events = process4vbfCategory(events) 
-        else: 
-            print ("unsupported category given!")
-            raise ValueError
-        # define save path and save
-        if args.do_6p7:
-            save_path = f"{args.save_path}ForFig6_7/{args.year}"
-        else:
-            save_path = f"{args.save_path}/{args.year}"
-        print(f"save_path: {save_path}")
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
             
-        if sample.lower() == "data":
-            save_filename = f"{save_path}/processed_events_data.parquet"  
-        elif sample.lower() == "ggh": # signal
-            save_filename = f"{save_path}/processed_events_sigMC_ggh.parquet" 
-        elif sample.lower() == "ggh_amcps": # signal
-            save_filename = f"{save_path}/processed_events_sigMC_ggh_amcPS.parquet" 
-        elif sample.lower() == "vbf": # signal
-            save_filename = f"{save_path}/processed_events_sigMC_vbf.parquet" 
-        elif sample.lower() == "dy":
-            save_filename = f"{save_path}/processed_events_bkgMC_dy.parquet" 
-        elif sample.lower() == "ewk":
-            save_filename = f"{save_path}/processed_events_bkgMC_ewk.parquet" 
-        elif sample.lower() == "tt":
-            save_filename = f"{save_path}/processed_events_bkgMC_tt.parquet" 
-        elif sample.lower() == "st":
-            save_filename = f"{save_path}/processed_events_bkgMC_st.parquet" 
-        elif sample.lower() == "ww":
-            save_filename = f"{save_path}/processed_events_bkgMC_ww.parquet" 
-        elif sample.lower() == "wz":
-            save_filename = f"{save_path}/processed_events_bkgMC_wz.parquet" 
-        elif sample.lower() == "zz":
-            save_filename = f"{save_path}/processed_events_bkgMC_zz.parquet" 
-        elif sample.lower() == "other":
-            save_filename = f"{save_path}/processed_events_bkgMC_other.parquet" 
+        if sample.lower() == "dy": # high n parts bc DY is very big
+            n_part_target = 3
+        elif sample.lower() == "data":
+            n_part_target = 2
         else:
-            print ("unsupported sample given!")
-            raise ValueError
-        print(f"save_filename: {save_filename}")
+            n_part_target = 1
+        filelist_l = split_into_n_parts(filelist_big, n_part_target)
+        print(f"sample: {sample}")
+        print(f"len(filelist_l): {len(filelist_l)}")
+        n_partitions = len(filelist_l)
+        for partition_idx in range(n_partitions):
+        # for partition_idx in range(len(filelist_l)):
+            filelist = filelist_l[partition_idx]
+            # events = dak.from_parquet(full_load_path)
+            events = dak.from_parquet(filelist)
+            # print(f"events.fields: {events.fields}")
+            target_chunksize = 150_000
+            # events = events.repartition(rows_per_partition=target_chunksize) # FIXME
     
-        # delete the file if there's already same save_filename
-        try:
-            os.remove(save_filename)
-        except:
-            pass
+            wgt_unc_fields = []
+            for field in events.fields:
+                if (("wgt" in field) and not ("separate" in field)) and not ("nominal" in field):
+                    wgt_unc_fields.append(field)
+            if args.do_6p7:
+                print("processing for figure 6.7 production, skipping weight uncertainty!")
+                wgt_unc_fields = [] 
+            
+            if args.do_jecUnc:
+                from src.corrections.jet import getJecJerUncertainties
+                jec_yml_path = "/work/users/yun79/Run3/copperheadV2/configs/parameters/jec.yaml"
+                jec_unc_fields = getJecJerUncertainties(jec_yml_path, year=args.year) # jec_unc_fields = ["Absolute", etc]
+                jec_unc_fields = applyUpDown(jec_unc_fields) # jec_unc_fields = ["Absolute_up", "Absolute_down", etc]
+            else:
+                jec_unc_fields =[] 
+            
+            # extra_fields = wgt_unc_fields + jec_unc_fields
+            print(f"wgt_unc_fields: {wgt_unc_fields}")
+            print(f"jec_unc_fields: {jec_unc_fields}")
+            print(f"args.do_6p7: {args.do_6p7}")
+            print(f"category: {category}")
+            print(f"is_signal_MC: {is_signal_MC}")
+            print(f"sample: {sample}")
+            # print(f"wgt_unc_fields: {len(wgt_unc_fields)}")
+            
+            print("done loading events!")
+            if category == "ggh":
+                if is_signal_MC: # add extra fields for uncertainties in datacard
+                    # processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, jec_unc_fields=jec_unc_fields)
+                    
+                    processed_events_l = []
+                    # test on only wgts first
+                    processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7)
+                    processed_events_l.append(processed_events)
+    
+                    smaller_jec_unc_field_l = split_maxlen(jec_unc_fields, 4)
+                    for small_jec_unc_fields in smaller_jec_unc_field_l:
+                        print(f"small_jec_unc_fields: {small_jec_unc_fields}")
+                        
+                        processed_events = process4gghCategory(events, args.year, args.model_name, jec_unc_fields=small_jec_unc_fields)
+                        processed_events_l.append(processed_events)
+    
+                    processed_events = mergeAkZips(processed_events_l)
+                    del processed_events_l
+                else:
+                    processed_events = process4gghCategory(events, args.year, args.model_name, do_6p7=args.do_6p7)
+            elif category == "vbf":
+                processed_events = process4vbfCategory(events) 
+            else: 
+                print ("unsupported category given!")
+                raise ValueError
+            # define save path and save
+            if args.do_6p7:
+                save_path = f"{args.save_path}ForFig6_7/{args.year}"
+            else:
+                save_path = f"{args.save_path}/{args.year}"
+            print(f"save_path: {save_path}")
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+                
+            if sample.lower() == "data":
+                save_filename = f"{save_path}/processed_events_data_{partition_idx}.parquet"  
+            elif sample.lower() == "ggh": # signal
+                save_filename = f"{save_path}/processed_events_sigMC_ggh_{partition_idx}.parquet" 
+            elif sample.lower() == "ggh_amcps": # signal
+                save_filename = f"{save_path}/processed_events_sigMC_ggh_amcPS_{partition_idx}.parquet" 
+            elif sample.lower() == "vbf": # signal
+                save_filename = f"{save_path}/processed_events_sigMC_vbf_{partition_idx}.parquet" 
+            elif sample.lower() == "dy":
+                save_filename = f"{save_path}/processed_events_bkgMC_dy_{partition_idx}.parquet" 
+            elif sample.lower() == "ewk":
+                save_filename = f"{save_path}/processed_events_bkgMC_ewk_{partition_idx}.parquet" 
+            elif sample.lower() == "tt":
+                save_filename = f"{save_path}/processed_events_bkgMC_tt_{partition_idx}.parquet" 
+            elif sample.lower() == "st":
+                save_filename = f"{save_path}/processed_events_bkgMC_st_{partition_idx}.parquet" 
+            elif sample.lower() == "ww":
+                save_filename = f"{save_path}/processed_events_bkgMC_ww_{partition_idx}.parquet" 
+            elif sample.lower() == "wz":
+                save_filename = f"{save_path}/processed_events_bkgMC_wz_{partition_idx}.parquet" 
+            elif sample.lower() == "zz":
+                save_filename = f"{save_path}/processed_events_bkgMC_zz_{partition_idx}.parquet" 
+            elif sample.lower() == "other":
+                save_filename = f"{save_path}/processed_events_bkgMC_other_{partition_idx}.parquet" 
+            else:
+                print ("unsupported sample given!")
+                raise ValueError
+            print(f"save_filename: {save_filename}")
         
-        ak.to_parquet(processed_events, save_filename)
+            # delete the file if there's already same save_filename
+            try:
+                os.remove(save_filename)
+            except:
+                pass
+            
+            ak.to_parquet(processed_events, save_filename)
 
         
         # This is ineligant, but also save the bdt edges that was presumably used

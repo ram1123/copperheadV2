@@ -294,11 +294,11 @@ if __name__ == "__main__":
 
     # remove category we assume that the load_path already has category specified
     if args.year=="all":
-        load_path = f"{args.load_path}/*/processed_events_data.parquet"
+        load_path = f"{args.load_path}/*/processed_events_data*.parquet"
     elif args.year=="2016only":
-        load_path = f"{args.load_path}/2016*/processed_events_data.parquet"
+        load_path = f"{args.load_path}/2016*/processed_events_data*.parquet"
     else:
-        load_path = f"{args.load_path}/{args.year}/processed_events_data.parquet"
+        load_path = f"{args.load_path}/{args.year}/processed_events_data*.parquet"
     print(f"load_path: {load_path}")
     # processed_eventsData = ak.from_parquet(load_path)
     processed_eventsData = dak.from_parquet(load_path).compute()
@@ -1630,22 +1630,22 @@ if __name__ == "__main__":
     # Obtain signal MC events
     # ---------------------------------------------------
 
-    # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
+    # # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC*.parquet"
+    # if args.year=="all":
+    #     load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_*.parquet"
+    #     # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_amcPS*.parquet"
+    # elif args.year=="2016only":
+    #     load_path = f"{args.load_path}/{category}/2016*/processed_events_sigMC_ggh_*.parquet"
+    # else:
+    #     load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_ggh_*.parquet" # Fig 6.15 was only with ggH process, though with all 2016, 2017 and 2018
+    # # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC*.parquet"
     if args.year=="all":
-        load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh.parquet"
-        # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_amcPS.parquet"
+        load_path = f"{args.load_path}/*/processed_events_sigMC_ggh_*.parquet"
+        # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_amcPS*.parquet"
     elif args.year=="2016only":
-        load_path = f"{args.load_path}/{category}/2016*/processed_events_sigMC_ggh.parquet"
+        load_path = f"{args.load_path}/2016*/processed_events_sigMC_ggh_*.parquet"
     else:
-        load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_ggh.parquet" # Fig 6.15 was only with ggH process, though with all 2016, 2017 and 2018
-    # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC*.parquet"
-    if args.year=="all":
-        load_path = f"{args.load_path}/*/processed_events_sigMC_ggh.parquet"
-        # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_amcPS.parquet"
-    elif args.year=="2016only":
-        load_path = f"{args.load_path}/2016*/processed_events_sigMC_ggh.parquet"
-    else:
-        load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_ggh.parquet"
+        load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_ggh_*.parquet"
     # processed_eventsSignalMC = ak.from_parquet(load_path)
     processed_eventsSignalMC = dak.from_parquet(load_path).compute()
     print(f"ggH yield: {np.sum(processed_eventsSignalMC.wgt_nominal)}")
@@ -2118,14 +2118,13 @@ if __name__ == "__main__":
     # Obtain signal MC events for VBF
     # ---------------------------------------------------
 
-    # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
+    # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC*.parquet"
     if args.year=="all":
-        load_path = f"{args.load_path}/*/processed_events_sigMC_vbf.parquet"
-        # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_qqh_amcPS.parquet"
+        load_path = f"{args.load_path}/*/processed_events_sigMC_vbf_*.parquet"
     elif args.year=="2016only":
-        load_path = f"{args.load_path}/2016*/processed_events_sigMC_vbf.parquet"
+        load_path = f"{args.load_path}/2016*/processed_events_sigMC_vbf_*.parquet"
     else:
-        load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_vbf.parquet" # Fig 6.15 was only with qqH process, though with all 2016, 2017 and 2018
+        load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_vbf_*.parquet" # Fig 6.15 was only with qqH process, though with all 2016, 2017 and 2018
 
     # processed_eventsSignalMC_vbf = ak.from_parquet(load_path)
     processed_eventsSignalMC_vbf = dak.from_parquet(load_path).compute()

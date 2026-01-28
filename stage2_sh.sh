@@ -13,7 +13,8 @@ category="ggh"
 
 model="Run3PrelimResultsJan25_2026_NoAnnhilateWgts"
 
-stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model}_${category}/stage2_output" 
+# stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model}_${category}/stage2_output" 
+stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model}_${category}_memoryRefactor/stage2_output" 
 
 
 bdt_edge_config_path="/work/users/yun79/sideHustle2/copperheadV2/configs/MVA/ggH/BDT_edges.yaml"
@@ -47,12 +48,12 @@ bdt_edge_config_path="/work/users/yun79/sideHustle2/copperheadV2/configs/MVA/ggH
 # python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
 # #------------------------------------------------------
 
-year="2024"
-sample_l="ggh vbf" 
-python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
-python stage2/ggH/calculate_score_edges.py -load $stage2_save_path --year $year --edge_cfg_path ${bdt_edge_config_path}
-sample_l="data ggh vbf dy ewk tt ww wz zz other" 
-python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
+# year="2024"
+# sample_l="ggh vbf" 
+# python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
+# python stage2/ggH/calculate_score_edges.py -load $stage2_save_path --year $year --edge_cfg_path ${bdt_edge_config_path}
+# sample_l="data ggh vbf dy ewk tt ww wz zz other" 
+# python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model
 
 # year="2023BPix"
 # sample_l="ggh vbf" 
@@ -121,10 +122,12 @@ python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $
 # stage3_label="${label}_X_${model}_recreate2_00SigNov11_2015"
 # stage3_label="${label}_X_${model}"
 # stage3_label="${label}_X_${model}_diffTargetYield"
-stage3_label="${label}_X_${model}_repeat"
+# stage3_label="${label}_X_${model}_repeat"
+stage3_label="${label}_X_${model}_memoryRefactor"
 
 echo "stage2 path: ${stage2_save_path}"
-year="all"
+# year="all"
+year="2024"
 python run_stage3.py -load $stage2_save_path -cat $category --year $year --label $stage3_label
 
 # year="2018"
