@@ -23,14 +23,14 @@ FEATURES = {
     },
     "dimuon_pt": {
         "column": "dimuon_pt",
-        "range": (0, 500),
+        "range": (0, 200),
         "bins": 60,
         "title": r"$p_T^{\mu\mu}$ [GeV]",
     },
     "dimuon_pt_log": {
         "column": "dimuon_pt_log",
-        "range": (0, 500),
-        "bins": 60,
+        "range": (0, 8),
+        "bins": 80,
         "title": r"$\log(p_T^{\mu\mu})$",
     },
     "dimuon_rapidity": {
@@ -57,14 +57,14 @@ FEATURES = {
     # -----------------------
     "jj_mass_nominal": {
         "column": "jj_mass_nominal",
-        "range": (0, 3000),
+        "range": (0, 1500),
         "bins": 60,
         "title": r"$m_{jj}$ [GeV]",
     },
     "jj_mass_log_nominal": {
         "column": "jj_mass_log_nominal",
-        "range": (0, 3000),
-        "bins": 60,
+        "range": (2, 10),
+        "bins": 80,
         "title": r"$\log(m_{jj})$",
     },
     "jj_dEta_nominal": {

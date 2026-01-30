@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+import argparse
+import glob
 
-import dask.dataframe as dd
-import matplotlib.pyplot as plt
+import awkward as ak
+import dask_awkward as dak
 import numpy as np
+import matplotlib.pyplot as plt
 import mplhep as hep
 from rich import print
 
 from configs.dnn_features import FEATURES
 from modules.dask_utils import close_dask_client, get_dask_client
+from modules.selection import applyRegionCatCuts
 
 plt.style.use(hep.style.CMS)
 
@@ -28,42 +32,67 @@ PROCESSES = {
 # -------------------------
 def _required_columns() -> list[str]:
     cols = []
-    for _feat, cfg in FEATURES.items():
+    for _, cfg in FEATURES.items():
         cols.append(cfg["column"])
-    # unique, stable order
     return list(dict.fromkeys(cols))
 
 
-def _read_all(file_map: dict[str, Path], columns: list[str]) -> dict[str, dd.DataFrame]:
-    """
-    Read each process parquet set once, with only the needed columns.
-    If a dataset is missing some columns, we re-read without 'columns'
-    and handle missing columns per-feature (more robust).
-    """
-    dfs = {}
-    for proc, p in file_map.items():
+def _glob_nonempty(path_pattern: str) -> bool:
+    return len(glob.glob(path_pattern)) > 0
+
+
+def _has_field(arr: dak.Array, name: str) -> bool:
+    # safest for dak: check typetracer fields when available
+    try:
+        return name in ak.fields(arr._meta)  # noqa: SLF001
+    except Exception:
         try:
-            dfs[proc] = dd.read_parquet(str(p), columns=columns, engine="pyarrow")
-        except Exception as e:
-            print(
-                f"[yellow][WARN][/yellow] dd.read_parquet(columns=...) failed for {proc}: {e}"
-            )
-            print(f"[yellow][WARN][/yellow] Re-reading {proc} without column filter.")
-            dfs[proc] = dd.read_parquet(str(p), engine="pyarrow")
-    return dfs
+            _ = arr[name]
+            return True
+        except Exception:
+            return False
 
 
-def _compute_array(dfp: dd.DataFrame, col: str, lo: float, hi: float) -> np.ndarray:
+def _safe_flatten(x: dak.Array) -> dak.Array:
     """
-    Compute one column to a NumPy array after dropna + range cut.
+    Flatten if jagged; if already flat scalar, ak.flatten may throw.
+    Try/except is the most robust across awkward v2 + dask-awkward typetracer.
     """
-    # Dask series
-    s = dfp[col].dropna()
-    s = s[(s >= lo) & (s <= hi)]
-    arr = s.compute()  # pandas Series
-    if arr is None:
-        return np.array([], dtype=float)
-    return arr.to_numpy(dtype=np.float64, copy=False)
+    try:
+        return ak.flatten(x, axis=None)
+    except Exception:
+        return x
+
+
+def _compute_array(arr: dak.Array, col: str, lo: float, hi: float) -> np.ndarray:
+    if not _has_field(arr, col):
+        return np.array([], dtype=np.float64)
+
+    x = arr[col]
+
+    # Drop None at dask/awkward level
+    x = x[~ak.is_none(x)]
+
+    # Flatten if jagged (safe)
+    x = _safe_flatten(x)
+
+    # Compute to awkward
+    x_ak = x.compute()
+    if x_ak is None:
+        return np.array([], dtype=np.float64)
+
+    # Ensure flat
+    try:
+        x_ak = ak.flatten(x_ak, axis=None)
+    except Exception:
+        pass
+
+    # Convert to numpy
+    out = ak.to_numpy(x_ak).astype(np.float64, copy=False)
+
+    # Finite + range cuts (numpy, always available)
+    m = np.isfinite(out) & (out >= lo) & (out <= hi)
+    return out[m]
 
 
 def _plot_overlay_hist(ax, arr: np.ndarray, bins: np.ndarray, label: str, color: str):
@@ -84,15 +113,67 @@ def _finalize_axis(ax, title: str, lo: float, hi: float, logy: bool = True):
     ax.set_ylabel("Normalized entries")
     if logy:
         ax.set_yscale("log")
-        # safe lower bound for density plots
         ax.set_ylim(1e-5, None)
 
 
+def _read_all(
+    file_map: dict[str, str],
+    columns: list[str],
+    *,
+    category: str,
+    region_name: str,
+    variation: str,
+    persist: bool = True,
+) -> dict[str, dak.Array]:
+    """
+    Read each process parquet set once using dask_awkward,
+    apply selection once, then (optionally) persist to cluster memory.
+
+    persist=True is important: it prevents repeating IO/cuts for every feature.
+    """
+    out: dict[str, dak.Array] = {}
+
+    for proc, pattern in file_map.items():
+        if not _glob_nonempty(pattern):
+            print(f"[yellow][SKIP][/yellow] {proc}: no files for {pattern}")
+            continue
+
+        print(f"[INFO] Reading {proc}: {pattern}")
+
+        # read only needed columns when possible
+        try:
+            arr = dak.from_parquet(pattern, columns=columns)
+        except Exception as e:
+            print(
+                f"[yellow][WARN][/yellow] from_parquet(columns=...) failed for {proc}: {e}"
+            )
+            print(f"[yellow][WARN][/yellow] Re-reading {proc} without column filter.")
+            arr = dak.from_parquet(pattern)
+
+        # apply selection (must be dak-compatible)
+        arr = applyRegionCatCuts(
+            arr,
+            category=category,
+            region_name=region_name,
+            process=proc,
+            variation=variation,
+        )
+
+        # persist to keep results cached across many feature plots
+        if persist:
+            print(f"[INFO] Persisting {proc} after cuts...")
+            arr = arr.persist()
+
+        out[proc] = arr
+
+    return out
+
+
 # -------------------------
-# Plot: individual PDFs
+# Plotting
 # -------------------------
 def plot_features_individual(
-    dfs: dict[str, dd.DataFrame],
+    dfs: dict[str, dak.Array],
     output_dir: Path,
     *,
     logy: bool = True,
@@ -109,33 +190,27 @@ def plot_features_individual(
 
         any_drawn = False
         for proc, meta in PROCESSES.items():
-            dfp = dfs.get(proc)
-            if dfp is None:
+            arr = dfs.get(proc)
+            if arr is None:
+                continue
+            if not _has_field(arr, col):
+                # common if some processes miss certain branches
                 continue
 
-            if col not in dfp.columns:
-                print(f"[yellow][WARN][/yellow] {proc} missing column: {col} (skip)")
+            vals = _compute_array(arr, col, lo, hi)
+            if vals.size == 0:
                 continue
 
-            arr = _compute_array(dfp, col, lo, hi)
-            if arr.size == 0:
-                continue
-
-            _plot_overlay_hist(ax, arr, bins, meta["label"], meta["color"])
+            _plot_overlay_hist(ax, vals, bins, meta["label"], meta["color"])
             any_drawn = True
 
         _finalize_axis(ax, cfg.get("title", feat), lo, hi, logy=logy)
 
         if any_drawn:
-            ax.legend(fontsize=16, frameon=True)
+            ax.legend(fontsize=12, frameon=True)
         else:
             ax.text(
-                0.5,
-                0.5,
-                "No entries",
-                ha="center",
-                va="center",
-                transform=ax.transAxes,
+                0.5, 0.5, "No entries", ha="center", va="center", transform=ax.transAxes
             )
 
         out_path = output_dir / f"{feat.replace(' ', '_')}.pdf"
@@ -143,11 +218,8 @@ def plot_features_individual(
         plt.close(fig)
 
 
-# -------------------------
-# Plot: overview pages (fixed grid; multiple pages if needed)
-# -------------------------
 def plot_features_overview_pages(
-    dfs: dict[str, dd.DataFrame],
+    dfs: dict[str, dak.Array],
     output_dir: Path,
     *,
     nrows: int = 7,
@@ -174,7 +246,6 @@ def plot_features_overview_pages(
         )
         axes = np.array(axes).reshape(-1)
 
-        # Turn off unused pads
         for ax in axes[len(page_feats) :]:
             ax.axis("off")
 
@@ -186,23 +257,17 @@ def plot_features_overview_pages(
 
             any_drawn = False
             for proc, meta in PROCESSES.items():
-                dfp = dfs.get(proc)
-                if dfp is None:
+                arr = dfs.get(proc)
+                if arr is None or not _has_field(arr, col):
                     continue
-
-                if col not in dfp.columns:
+                vals = _compute_array(arr, col, lo, hi)
+                if vals.size == 0:
                     continue
-
-                arr = _compute_array(dfp, col, lo, hi)
-                if arr.size == 0:
-                    continue
-
-                _plot_overlay_hist(ax, arr, bins, meta["label"], meta["color"])
+                _plot_overlay_hist(ax, vals, bins, meta["label"], meta["color"])
                 any_drawn = True
 
             _finalize_axis(ax, cfg.get("title", feat), lo, hi, logy=logy)
 
-            # No per-pad legend (too busy). Mark empties.
             if not any_drawn:
                 ax.text(
                     0.5,
@@ -214,13 +279,13 @@ def plot_features_overview_pages(
                     fontsize=10,
                 )
 
-        # One global legend
+        # global legend
         handles, labels = [], []
-        for proc, meta in PROCESSES.items():
+        for _, meta in PROCESSES.items():
             handles.append(plt.Line2D([], [], color=meta["color"], lw=2))
             labels.append(meta["label"])
-        fig.legend(handles, labels, loc="upper right", frameon=True, fontsize=16)
-        # Global label/title
+        fig.legend(handles, labels, loc="upper right", frameon=True, fontsize=12)
+
         fig.suptitle(f"{tag} — page {ipage+1}/{n_pages}", fontsize=16)
         hep.cms.label(
             data=False,
@@ -236,53 +301,95 @@ def plot_features_overview_pages(
         plt.close(fig)
 
 
+# -------------------------
+# Main
+# -------------------------
+def parse_args():
+    p = argparse.ArgumentParser()
+    p.add_argument("--year", default="2022postEE")
+    p.add_argument("--tag", default="run3_h-peak_vbf_28JanV2")
+    p.add_argument("--category", default="vbf")
+    p.add_argument("--region", default="h-peak")
+    p.add_argument("--variation", default="nominal")
+    p.add_argument(
+        "--no-persist", action="store_true", help="Disable dask persist (debug)"
+    )
+    return p.parse_args()
+
+
 def main():
+    args = parse_args()
+
+    # IMPORTANT: this should create a dask-gateway client in your environment
     client = get_dask_client(True)
     print("[INFO] Dask client:", client)
 
+    # (Optional) helps when gateway starts with 0 workers
+    try:
+        client.wait_for_workers(1)
+    except Exception:
+        pass
+
+    base = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output"
+
     file_map = {
-        "signal": Path(
-            "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/2022postEE/compacted/vbf_powheg_dipole/0/*.parquet"
-        ),
-        "dy": Path(
-            "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/*.parquet"
-        ),
-        "tt_sl": Path(
-            "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/2022postEE/compacted/ttjets_sl/0/*.parquet"
-        ),
-        "tt_dl": Path(
-            "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/2022postEE/compacted/ttjets_dl/0/*.parquet"
-        ),
-        "ewk_lljj": Path(
-            "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/2022postEE/compacted/ewk_lljj/0/*.parquet"
-        ),
+        "signal": f"{base}/{args.year}/compacted/vbf_powheg_dipole/0/*.parquet",
+        "dy": f"{base}/{args.year}/compacted/dyTo2L_M-50_incl/0/*.parquet",
+        "tt_sl": f"{base}/{args.year}/compacted/ttjets_sl/0/*.parquet",
+        "tt_dl": f"{base}/{args.year}/compacted/ttjets_dl/0/*.parquet",
+        "ewk_lljj": f"{base}/{args.year}/compacted/ewk_lljj/0/*.parquet",
     }
 
-    out_dir = (
-        Path(
-            "dnn/trained_models/Run3_nanoAODv12_23Jan_JVMFilterJets/run3_h-peak_vbf_28JanV2"
-        )
-        / "input_features_comparison"
+    cols = _required_columns()
+
+    # columns needed by applyRegionCatCuts
+    extra_cols = [
+        "nBtagLoose_nominal",
+        "nBtagMedium_nominal",
+        "jj_mass_nominal",
+        "jj_dEta_nominal",
+        "njets_nominal",
+    ]
+
+    read_cols = list(dict.fromkeys(cols + extra_cols))
+    print(
+        f"[INFO] Will read {len(read_cols)} columns total (features + selection deps)."
     )
 
-    cols = _required_columns()
-    print(f"[INFO] Will read {len(cols)} columns (unique) across FEATURES.")
-    dfs = _read_all(file_map, columns=cols)
+    dfs = _read_all(
+        file_map,
+        columns=read_cols,
+        category=args.category,
+        region_name=args.region,
+        variation=args.variation,
+        persist=(not args.no_persist),
+    )
+
+    out_dir = (
+        Path("dnn/trained_models/Run3_nanoAODv12_23Jan_JVMFilterJets")
+        / args.tag
+        / "input_features_comparison"
+        / f"{args.category}_selection_{args.region}"
+    )
 
     print("[INFO] Plotting individual feature PDFs...")
-    plot_features_individual(dfs, output_dir=out_dir / "individual", logy=True)
-    print("[INFO] Saved individual feature plots:", out_dir / "individual")
+    plot_features_individual(
+        dfs,
+        output_dir=out_dir / "individual",
+        logy=True,
+    )
+    print("[INFO] Saved:", out_dir / "individual")
 
-    print("[INFO] Plotting overview pages (fixed grid, auto-multipage)...")
+    print("[INFO] Plotting overview pages...")
     plot_features_overview_pages(
         dfs,
         output_dir=out_dir / "overview_pages",
-        nrows=6,
+        nrows=7,
         ncols=4,
         logy=True,
         tag="VBF DNN input features: signal vs backgrounds",
     )
-    print("[INFO] Saved overview PDFs:", out_dir / "overview_pages")
+    print("[INFO] Saved:", out_dir / "overview_pages")
 
     close_dask_client()
 
