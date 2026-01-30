@@ -72,6 +72,8 @@ class PreprocessConfig:
     weight_col: str
 
     n_folds: int
+    strategy: str
+    shuffle: bool
 
     glob_template: str
 
@@ -83,8 +85,6 @@ class PreprocessConfig:
 
     training_features: List[str]
 
-    missing_strategy: str  # "median" supported here
-    add_missing_flags: bool
 
     do_not_scale_default: Tuple[str, ...] = ("nsoftjets5_nominal",)
 
@@ -134,6 +134,9 @@ def load_config(cfg_path: str) -> PreprocessConfig:
     weight_col = str(cfg["data"]["weights"]["weight_col"])
 
     n_folds = int(cfg["data"]["cv"]["n_folds"])
+    strategy = str(cfg["data"]["cv"]["strategy"])
+    shuffle = bool(cfg["data"]["cv"]["shuffle"])
+
     glob_template = str(cfg["samples"]["glob_template"])
 
     signal_label = int(cfg["samples"]["signal"]["label"])
@@ -148,18 +151,6 @@ def load_config(cfg_path: str) -> PreprocessConfig:
     training_features = list(cfg["features"]["training"])
 
     missing = cfg.get("preprocessing", {}).get("missing", {})
-    missing_strategy = str(missing.get("strategy", "median"))
-    add_missing_flags = bool(missing.get("add_missing_flags", False))
-
-    if add_missing_flags:
-        logger.warning(
-            "[config] add_missing_flags=true is not implemented in this preprocessor; ignoring."
-        )
-
-    if missing_strategy != "median":
-        raise ValueError(
-            f"Unsupported missing.strategy: {missing_strategy} (supported: median)"
-        )
 
     return PreprocessConfig(
         seed=seed,
@@ -172,14 +163,14 @@ def load_config(cfg_path: str) -> PreprocessConfig:
         allow_missing_columns=allow_missing_columns,
         weight_col=weight_col,
         n_folds=n_folds,
+        strategy=strategy,
+        shuffle=shuffle,
         glob_template=glob_template,
         signal_label=signal_label,
         signal_processes=signal_processes,
         background_label=background_label,
         background_groups=background_groups,
         training_features=training_features,
-        missing_strategy=missing_strategy,
-        add_missing_flags=add_missing_flags,
     )
 
 
@@ -335,8 +326,6 @@ def preprocess(
     year: str,
     make_plots: bool,
 ) -> None:
-    rng = np.random.default_rng(cfg.seed)
-
     # columns to load from parquet
     features2load = list(cfg.training_features) + ["event", cfg.weight_col]
     logger.debug("[preprocess] Features to load: %s", features2load)
@@ -432,10 +421,42 @@ def preprocess(
     n_folds = cfg.n_folds
     if n_folds < 2:
         raise ValueError("n_folds must be >= 2")
-    logger.info("[preprocess] Using deterministic folds: event %% %d", n_folds)
+
+    # --- compute fold ids once ---
+    rng = np.random.default_rng(cfg.seed)
+
+    if cfg.shuffle:
+        # deterministic, random-looking fold assignment based on event (stable)
+        ev = df_total["event"].to_numpy(dtype=np.uint64, copy=False)
+
+        seed_u = np.uint64(cfg.seed)
+
+        x = ev ^ seed_u
+        x ^= (x >> np.uint64(33))
+        x *= np.uint64(0xFF51AFD7ED558CCD)
+        x ^= (x >> np.uint64(33))
+        x *= np.uint64(0xC4CEB9FE1A85EC53)
+        x ^= (x >> np.uint64(33))
+
+        df_total["_fold_id"] = (x % np.uint64(n_folds)).astype(np.int64)
+        logger.info(
+            "[preprocess] Using hashed-shuffle folds (seed=%d, n_folds=%d)",
+            cfg.seed,
+            n_folds,
+        )
+    else:
+        df_total["_fold_id"] = (df_total["event"].astype(np.int64) % n_folds).astype(
+            np.int64
+        )
+        logger.info("[preprocess] Using event%%n_folds folds (n_folds=%d)", n_folds)
 
     # Make fold outputs
     for i in range(n_folds):
+        m = df_total["_fold_id"] == i
+        n = int(m.sum())
+        sw = float(np.abs(df_total.loc[m, cfg.weight_col]).sum())
+        logger.info("[fold_id check] fold=%d  N=%d  sum|w|=%.6e", i, n, sw)
+
         # Same scheme as your script:
         train_folds = [(i + f) % n_folds for f in (0, 1)]
         val_folds = [(i + 2) % n_folds]
@@ -446,7 +467,7 @@ def preprocess(
             "[fold %d] train=%s val=%s eval=%s", i, train_folds, val_folds, eval_folds
         )
 
-        fold_id = (df_total["event"] % n_folds).astype(np.int64)
+        fold_id = df_total["_fold_id"]  # pandas Series
 
         train_mask = fold_id.isin(train_folds)
         val_mask = fold_id.isin(val_folds)
@@ -561,6 +582,12 @@ def preprocess(
         "region": cfg.region,
         "year": year,
         "n_folds": cfg.n_folds,
+        "cv": {
+            "type": cfg.strategy,
+            "shuffle": cfg.shuffle,
+            "seed": cfg.seed,
+            "n_folds": cfg.n_folds,
+        },
         "weight_col": cfg.weight_col,
         "training_features": cfg.training_features,
         "scale_features": scale_features,
