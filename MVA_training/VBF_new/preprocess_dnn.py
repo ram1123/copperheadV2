@@ -432,6 +432,8 @@ def preprocess(
         seed_u = np.uint64(cfg.seed)
 
         x = ev ^ seed_u
+
+        # 64-bit mix (splitmix64-ish / murmur finalizer style)
         x ^= (x >> np.uint64(33))
         x *= np.uint64(0xFF51AFD7ED558CCD)
         x ^= (x >> np.uint64(33))
@@ -441,10 +443,10 @@ def preprocess(
         df_total["_fold_id"] = (x % np.uint64(n_folds)).astype(np.int64)
         logger.info(
             "[preprocess] Using hashed-shuffle folds (seed=%d, n_folds=%d)",
-            cfg.seed,
-            n_folds,
+            cfg.seed, n_folds
         )
     else:
+        # sequential split
         df_total["_fold_id"] = (df_total["event"].astype(np.int64) % n_folds).astype(
             np.int64
         )

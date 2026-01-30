@@ -23,7 +23,7 @@ data:
 
   cv:
     n_folds: 4
-    strategy: "stratified"
+    strategy: "simple" # TODO: Implement the "stratified" option from scikit
     shuffle: true
 
 samples:
@@ -78,9 +78,9 @@ preprocessing:
 
 model:
   kind: "mlp"
-  hidden: [512, 154, 72]
-  activation: "gelu"
-  dropout: [0.28745, 0.28745, 0.28745]
+  hidden: [384, 192, 96]
+  activation: "relu"
+  dropout: [0.4806533680364107,0.004194148970776745,0.05322218834885967]
   batch_norm: true
   output:
     returns_logits: true
@@ -96,8 +96,8 @@ training:
 
   optimizer:
     name: "adamw"
-    lr: 0.0012674497884
-    weight_decay: 3.9122e-06
+    lr: 0.0005967947149499895
+    weight_decay: 0.0002679447652129827
     betas: [0.9, 0.999]
     eps: 1.0e-08
 
@@ -114,17 +114,17 @@ training:
     name: "bce_logits"
     bce_logits:
       pos_weight: null
-      label_smoothing: 0.0
+      label_smoothing: 0.04049062762704674
 
   regularization:
-    gradient_clip_norm: 5.0
+    gradient_clip_norm: 4.3608795686214155
     amp:
-      enable: true
+      enable: false
 
 early_stopping:
   enable: true
-  monitor: "val_loss" # "val_auc_weighted"
-  mode: "min"
+  monitor: "val_auc_weighted" # "val_auc_weighted" or "val_loss"
+  mode: "max" # when auc then max, with loss min
   patience: 5
   min_delta: 1.0e-4
   warmup_epochs: 3

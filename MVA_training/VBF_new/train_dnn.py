@@ -38,6 +38,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
 import torch
 import torch.nn as nn
 import yaml
@@ -49,6 +50,9 @@ from sklearn.metrics import (
 )
 from torch.utils.data import DataLoader, Dataset
 
+import optuna
+
+from modules.git_utils import get_git_commit, get_git_state
 from modules.utils import logger
 
 
@@ -870,7 +874,9 @@ def train_one_fold(
     cfg: TrainConfig,
     data_dir: str,
     out_dir: str,
-) -> None:
+    trial: "optuna.trial.Trial | None" = None,
+    trial_step_offset: int = 0,
+) -> float:
     fold_dir = Path(out_dir) / f"fold{fold_idx}"
     plots_dir = fold_dir / cfg.plots_subdir
     fold_dir.mkdir(parents=True, exist_ok=True)
@@ -1090,6 +1096,23 @@ def train_one_fold(
         else:
             monitor_val = val_loss
 
+        # ---------------------------
+        # Optuna report + prune (NEW)
+        # ---------------------------
+        if trial is not None:
+            # Optuna maximizes by default if we set direction="maximize" in study
+            # So we report a "score" where larger is better.
+            if cfg.es_monitor == "val_loss":
+                score = -float(monitor_val)  # smaller loss => larger score
+            else:
+                score = float(monitor_val)  # auc => larger better
+
+            # Make step unique across folds to avoid "already reported step warning"
+            step = trial_step_offset + epoch
+            trial.report(score, step=step)
+            if trial.should_prune():
+                raise optuna.TrialPruned(f"Pruned at fold = {fold_idx}, epoch = {epoch}, value = {score:.6f}")
+
         # save best
         improved = False
         if best_metric is None:
@@ -1183,6 +1206,11 @@ def train_one_fold(
         )
         pred_df.to_parquet(fold_dir / "val_predictions.parquet", index=False)
 
+    # ---------------------------
+    # Return fold objective (NEW)
+    # ---------------------------
+    return float(best_metric) if best_metric is not None else float("nan")
+
 
 def train_all_folds(cfg: TrainConfig, data_dir: str, out_dir: str, folds: Optional[List[int]]) -> None:
     if folds is None:
@@ -1209,7 +1237,6 @@ def build_argparser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_argparser().parse_args()
-    set_seed(12345)
 
     cfg = load_config(args.config)
     set_seed(cfg.seed)
@@ -1225,6 +1252,70 @@ def main() -> None:
         logger.info("CUDA device: %s", torch.cuda.get_device_name(0))
 
     train_all_folds(cfg, data_dir=args.data_dir, out_dir=args.out_dir, folds=folds)
+
+    # Save manifest for reproducibility
+    manifest = {
+        # -------------------------
+        # Run identity
+        # -------------------------
+        "run": {
+            "timestamp": pd.Timestamp.utcnow().isoformat(),
+            "command": " ".join(sys.argv),
+        },
+
+        # -------------------------
+        # Configuration
+        # -------------------------
+        "config": cfg.__dict__,
+        "features": {
+            "training_features": cfg.training_features,
+            "label_col": cfg.label_col,
+            "weight_col": cfg.weight_col,
+        },
+        "cv": {
+            "n_folds": cfg.n_folds,
+            "folds_run": folds if folds is not None else "all",
+        },
+
+        # -------------------------
+        # Data
+        # -------------------------
+        "data": {
+            "data_dir": str(args.data_dir),
+        },
+
+        # -------------------------
+        # Training behavior (critical!)
+        # -------------------------
+        "training_behavior": {
+            "loss_name": cfg.loss_name,
+            "use_weight_in_loss": cfg.use_weight_in_loss,
+            "normalize_weights_in_batch": cfg.normalize_in_batch,
+            "pos_weight": cfg.pos_weight,
+            "label_smoothing": cfg.label_smoothing,
+            "grad_clip_norm": cfg.grad_clip_norm,
+            "amp_enabled": cfg.amp_enable,
+            "optimizer": cfg.optimizer_name,
+            "scheduler": cfg.scheduler_name,
+            "early_stopping": {
+                "enabled": cfg.es_enable,
+                "monitor": cfg.es_monitor,
+                "mode": cfg.es_mode,
+                "patience": cfg.es_patience,
+                "min_delta": cfg.es_min_delta,
+            },
+        },
+
+        "pipeline": {
+            "preprocessor_version": "v1.0",
+            "git_commit": get_git_commit(),
+            "git_dirty": get_git_state(args.out_dir),
+        },
+    }
+
+    with open(Path(args.out_dir) / "manifest.json", "w") as f:
+        json.dump(manifest, f, indent=2)
+
     logger.info("Done. Success.")
 
 
