@@ -1,11 +1,15 @@
 import numpy as np
 import awkward as ak
-
+import pandas as pd
 
 def filterRegion(events, region="h-peak"):
-    if "dimuon_mass" not in events.fields:
+    if isinstance(events, pd.DataFrame):
+        fields = events.columns
+    else: # awkward zip
+        fields = events.fields  
+    if "dimuon_mass" not in fields:
         raise ValueError("dimuon_mass not found in events fields for region selection.")
-    dimuon_mass = events.dimuon_mass
+    dimuon_mass = events["dimuon_mass"]
     z_peak = (dimuon_mass >= 70.0) & (dimuon_mass < 110.0)
     h_peak = (dimuon_mass >= 115.0) & (dimuon_mass < 135.0)
     h_sidebands = ((dimuon_mass >= 110.0) & (dimuon_mass < 115.0)) | (

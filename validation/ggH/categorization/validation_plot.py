@@ -160,6 +160,14 @@ if __name__ == "__main__":
     action="store",
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
     )
+    parser.add_argument(
+    "-base",
+    "--base_path",
+    dest="base_path",
+    default="/depot/cms/users/yun79/hmm/copperheadV1clean",
+    action="store",
+    help="",
+    )
     args = parser.parse_args()
     if len(args.samples) == 0:
         print("samples list is zero!")
@@ -172,7 +180,8 @@ if __name__ == "__main__":
     else:
         year_param = year
     # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
-    load_path =f"/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
+    # load_path =f"/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
+    load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_output/{year_param}/"
     # events = dak.from_parquet(f"{load_path}/*data.parquet")
     # print(events.fields)
     print(f"load_path : {load_path}")
@@ -184,7 +193,13 @@ if __name__ == "__main__":
         "2016postVFP": 19.50,
         "2016preVFP": 16.81,
         "2016": 36.3,
-        "all" : 137,
+        # "all" : 137, # Run2
+        "2022preEE": "7.9804",
+        "2022postEE": "26.6717",
+        "2023": "17.7940",
+        "2023BPix": "9.4510",
+        "2024": "108.9600",
+        "all": "170.8571", # 2022 - 2024
     }
     lumi_val = lumi_dict[year]
 
@@ -224,30 +239,27 @@ if __name__ == "__main__":
             # bkg_MC_dict = {}
             for sample in args.samples:
                 if sample.lower() == "data":
-                    full_load_path = load_path+f"*data.parquet" 
-                    # full_load_path = glob.glob(full_load_path)
+                    full_load_path = load_path+f"*data*.parquet" 
                 elif sample.lower() == "ggh":
-                    full_load_path = load_path+f"*sigMC_ggh.parquet" 
-                # elif sample.lower() == "ggh_amcps":
-                    # full_load_path = load_path+f"/ggh_amcPS/*/*.parquet"
+                    full_load_path = load_path+f"*sigMC_ggh*.parquet" 
                 elif sample.lower() == "vbf":
-                    full_load_path = load_path+f"*sigMC_vbf.parquet" 
+                    full_load_path = load_path+f"*sigMC_vbf*.parquet" 
                 elif sample.lower() == "dy":
-                    full_load_path = load_path+f"*bkgMC_dy.parquet" 
+                    full_load_path = load_path+f"*bkgMC_dy*.parquet" 
                 elif sample.lower() == "ewk":
-                    full_load_path = load_path+f"*bkgMC_ewk.parquet" 
+                    full_load_path = load_path+f"*bkgMC_ewk*.parquet" 
                 elif sample.lower() == "tt":
-                    full_load_path = load_path+f"*bkgMC_tt.parquet" 
+                    full_load_path = load_path+f"*bkgMC_tt*.parquet" 
                 elif sample.lower() == "st":
-                    full_load_path = load_path+f"*bkgMC_st.parquet" 
+                    full_load_path = load_path+f"*bkgMC_st*.parquet" 
                 elif sample.lower() == "ww":
-                    full_load_path = load_path+f"*bkgMC_ww.parquet" 
+                    full_load_path = load_path+f"*bkgMC_ww*.parquet" 
                 elif sample.lower() == "wz":
-                    full_load_path = load_path+f"*bkgMC_wz.parquet" 
+                    full_load_path = load_path+f"*bkgMC_wz*.parquet" 
                 elif sample.lower() == "zz":
-                    full_load_path = load_path+f"*bkgMC_zz.parquet" 
+                    full_load_path = load_path+f"*bkgMC_zz*.parquet" 
                 elif sample.lower() == "other":
-                    full_load_path = load_path+f"*bkgMC_other.parquet" 
+                    full_load_path = load_path+f"*bkgMC_other*.parquet" 
                 else:
                     print(f"unsupported sample!")
                     raise ValueError
@@ -259,6 +271,8 @@ if __name__ == "__main__":
                 
                 events = dak.from_parquet(full_load_path)
                 _, events = filterRegion(events, region=args.region)
+                # print(f"events number: {ak.num(events.dimuon_mass).compute()}")
+                # raise ValueError
                 if sub_cat != "all":
                     events = events[events.subCategory_idx == sub_cat] # filter subcat
                 print(f"events field from {sample}:", events)
@@ -387,4 +401,5 @@ if __name__ == "__main__":
                 lumi = lumi_val,
                 status = status,
                 log_scale = do_logscale,
+                CenterOfMass = 13.6
             )

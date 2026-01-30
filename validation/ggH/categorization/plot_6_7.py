@@ -19,8 +19,9 @@ from array import array
 ROOT.gStyle.SetOptStat(0) # remove stats box
 import dask.dataframe as dd
 import matplotlib.cm as cm
-from modules.utils import pair_and_remove, plotScatter, plot2D, hist_stddev_with_unc, getSqrtSOverB
-from modules.selection _, import filterRegion
+from modules.utils import pair_and_remove, getSqrtSOverB
+from modules.RooWorkspaceUtils import hist_stddev_with_unc
+from modules.selection import filterRegion
 import pandas as pd
 
 # Get the parent directory
@@ -28,6 +29,8 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")
 # Add it to sys.path
 sys.path.insert(0, parent_dir)
 # Now you can import your module
+
+from src.lib.histogram.plotting import plotScatter, plot2D
 
 def plotWgtAnnhilation(parq_path, save_dir):
     """
@@ -616,16 +619,6 @@ if __name__ == "__main__":
     action="store",
     help="string value production category we're working on",
     )
-    # parser.add_argument(
-    # "-samp",
-    # "--samples",
-    # dest="samples",
-    # default=[],
-    # nargs="*",
-    # type=str,
-    # action="store",
-    # help="list of samples to process for stage2. Current valid inputs are data, signal and DY",
-    # )
     parser.add_argument(
     "-y",
     "--year",
@@ -642,7 +635,14 @@ if __name__ == "__main__":
     action="store",
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
     )
-    
+    parser.add_argument(
+    "-base",
+    "--base_path",
+    dest="base_path",
+    default="/depot/cms/users/yun79/hmm/copperheadV1clean",
+    action="store",
+    help="",
+    )
     args = parser.parse_args()
     # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/*/"
     year = args.year
@@ -653,7 +653,8 @@ if __name__ == "__main__":
     else:
         year_param = year
     # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
-    load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_outputForFig6_7/{year_param}/"
+    # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_outputForFig6_7/{year_param}/"
+    load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_outputForFig6_7/{year_param}/"
     # events = dak.from_parquet(f"{load_path}/*data.parquet")
     # print(events.fields)
     bdt_edges = [0.0, 0.15, 0.30, 0.45, 0.60, 0.75, 1.0]
@@ -725,8 +726,8 @@ if __name__ == "__main__":
         'mu2_pt_over_mass', 
         'zeppenfeld_nominal',
         'njets_nominal',
-        'mmj1_dEta_nominal', 
-        'mmj1_dPhi_nominal',  
+        # 'mmj1_dEta_nominal', 
+        # 'mmj1_dPhi_nominal',  
         'BDT_score',  
     ]
     variables = bdt_inputs + ["dimuon_mass", "dimuon_ebe_mass_res", "jet2_eta_nominal", "rpt_nominal"]

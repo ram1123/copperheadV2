@@ -12,7 +12,9 @@ import matplotlib.pyplot as plt
 import matplotlib
 plt.style.use(hep.style.CMS)
 from omegaconf import OmegaConf
-from modules.utils import fillSampleValues, getDimuMassBySubCat, rebinRooDataHist, getGOF_KS
+from modules.utils import fillSampleValues, getDimuMassBySubCat
+from modules.RooWorkspaceUtils import rebinRooDataHist
+from modules.GoF_utils import getGOF_KS
 from modules.selection import filterRegion
 from modules.fit_functions import getFEWZ_roospline, getPowerLaw
 import ROOT
@@ -653,16 +655,6 @@ if __name__ == "__main__":
     action="store",
     help="string value production category we're working on",
     )
-    # parser.add_argument(
-    # "-samp",
-    # "--samples",
-    # dest="samples",
-    # default=[],
-    # nargs="*",
-    # type=str,
-    # action="store",
-    # help="list of samples to process for stage2. Current valid inputs are data, signal and DY",
-    # )
     parser.add_argument(
     "-y",
     "--year",
@@ -686,6 +678,14 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, unblind data",
     )
+    parser.add_argument(
+    "-base",
+    "--base_path",
+    dest="base_path",
+    default="/depot/cms/users/yun79/hmm/copperheadV1clean",
+    action="store",
+    help="",
+    )
     nSubCats = 5
     
     args = parser.parse_args()
@@ -697,7 +697,8 @@ if __name__ == "__main__":
         year_param = "2016*"
     else:
         year_param = year
-    load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
+    # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
+    load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_output/{year_param}/"
     # events = dak.from_parquet(f"{load_path}/*data.parquet")
     # print(events.fields)
     print(f"load_path : {load_path}")
@@ -726,7 +727,7 @@ if __name__ == "__main__":
     for group, group_fname in sample_groups.items():
         full_load_path = load_path+f"*{group_fname}.parquet" 
         events = dak.from_parquet(full_load_path)
-        events = filterRegion(events, region=args.region)
+        _, events = filterRegion(events, region=args.region)
         sample_dict = fillSampleValues(events, sample_dict, group)
 
 

@@ -156,16 +156,6 @@ if __name__ == "__main__":
     action="store",
     help="string value production category we're working on",
     )
-    # parser.add_argument(
-    # "-samp",
-    # "--samples",
-    # dest="samples",
-    # default=[],
-    # nargs="*",
-    # type=str,
-    # action="store",
-    # help="list of samples to process for stage2. Current valid inputs are data, signal and DY",
-    # )
     parser.add_argument(
     "-y",
     "--year",
@@ -182,6 +172,14 @@ if __name__ == "__main__":
     action="store",
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
     )
+    parser.add_argument(
+    "-base",
+    "--base_path",
+    dest="base_path",
+    default="/depot/cms/users/yun79/hmm/copperheadV1clean",
+    action="store",
+    help="",
+    )
     args = parser.parse_args()
     # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/*/"
     year = args.year
@@ -191,9 +189,8 @@ if __name__ == "__main__":
         year_param = "2016*"
     else:
         year_param = year
-    load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
-    # events = dak.from_parquet(f"{load_path}/*data.parquet")
-    # print(events.fields)
+    # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
+    load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_output/{year_param}/"
     print(f"load_path : {load_path}")
     lumi_dict = {
         "2018" : 59.83,
@@ -222,7 +219,7 @@ if __name__ == "__main__":
     for group, group_fname in sample_groups.items():
         full_load_path = load_path+f"*{group_fname}.parquet" 
         events = dak.from_parquet(full_load_path)
-        events = filterRegion(events, region=args.region)
+        _, events = filterRegion(events, region=args.region)
         sample_dict = fillSampleValues(events, sample_dict, group)
         print(f"sample_dict: {sample_dict}")
 
@@ -248,12 +245,13 @@ if __name__ == "__main__":
     # status = "Private"
     status = "Simulation"
     if year =="all": # temporarily overwrite load paths and year to get 2018 bdt edges
-        year="2018"
-        load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/2018/"
+        # year="2018" # Run2
+        year="2024"
     elif year == "2016":
         year="2016preVFP"
-        load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/2016preVFP/"
-
+    else:
+        year="2024"
+    load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_output/{year}/"
     
     bdt_edges = OmegaConf.load(f"{load_path}/BDT_edges.yaml")[year]
     print(f"bdt_edges b4 transform: {bdt_edges}")

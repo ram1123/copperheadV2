@@ -257,16 +257,6 @@ if __name__ == "__main__":
     action="store",
     help="string value production category we're working on",
     )
-    # parser.add_argument(
-    # "-samp",
-    # "--samples",
-    # dest="samples",
-    # default=[],
-    # nargs="*",
-    # type=str,
-    # action="store",
-    # help="list of samples to process for stage2. Current valid inputs are data, signal and DY",
-    # )
     parser.add_argument(
     "-y",
     "--year",
@@ -283,6 +273,14 @@ if __name__ == "__main__":
     action="store",
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
     )
+    parser.add_argument(
+    "-base",
+    "--base_path",
+    dest="base_path",
+    default="/depot/cms/users/yun79/hmm/copperheadV1clean",
+    action="store",
+    help="",
+    )
     client =  Client(n_workers=30,  threads_per_worker=1, processes=True, memory_limit='10 GiB') 
     
     args = parser.parse_args()
@@ -295,7 +293,8 @@ if __name__ == "__main__":
     else:
         year_param = year
     # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
-    load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_outputForFig6_7/{year_param}/"
+    # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_outputForFig6_7/{year_param}/"
+    load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_outputForFig6_7/{year_param}/"
     
     # events = dak.from_parquet(f"{load_path}/*data.parquet")
     # print(events.fields)

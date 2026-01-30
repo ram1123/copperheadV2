@@ -47,11 +47,8 @@ if __name__ == "__main__":
     sysargs = parser.parse_args()
 
 
-    # full_load_path = "/depot/cms/users/yun79/hmm/copperheadV1clean/V2_Jan17_JecDefault_valerieZpt/ggh/stage2_output/ggh/2018/processed_events_sig*.parquet"
     # extract only the signal samples (VBF and ggH)
-    # full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sig*.parquet"
-    full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sigMC_ggh.parquet" # ignore VBF signal sample
-    # full_load_path = f"{sysargs.load_path}/ggh/{sysargs.year}/processed_events_sig*.parquet"
+    full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sigMC_ggh_*.parquet" # ignore VBF signal sample
     events = dak.from_parquet(full_load_path)
     events = filterRegion(events, region="signal")
     

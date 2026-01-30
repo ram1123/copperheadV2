@@ -380,8 +380,11 @@ def getYieldTable(sample_dict, samples2list, nSubCats=5):
         sample_zip = sample_dict[sample]
         sample_wgt = sample_zip["wgt_nominal"]
         sample_bdt_cat = sample_zip["subCategory_idx"]
+        print(f"sample_wgt: {sample_wgt}")
+        if len(sample_wgt) ==0: continue
         # print(np.max(sample_bdt_cat))
         for cat in range(nSubCats):
+            # print(f"{sample} cat: {cat}")
             cat_filter = sample_bdt_cat == cat
             cat_sample_wgt = sample_wgt[cat_filter]
             cat_sample_yield = np.sum(cat_sample_wgt)
@@ -441,6 +444,14 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, unblind data",
     )
+    parser.add_argument(
+    "-base",
+    "--base_path",
+    dest="base_path",
+    default="/depot/cms/users/yun79/hmm/copperheadV1clean",
+    action="store",
+    help="",
+    )
     nSubCats = 5
     
     args = parser.parse_args()
@@ -452,7 +463,8 @@ if __name__ == "__main__":
         year_param = "2016*"
     else:
         year_param = year
-    load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
+    # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
+    load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_output/{year_param}/"
     # events = dak.from_parquet(f"{load_path}/*data.parquet")
     # print(events.fields)
     print(f"load_path : {load_path}")
@@ -498,8 +510,9 @@ if __name__ == "__main__":
         # print(f"{group} filelist len: {len(filelist)}")
         
         # events = dak.from_parquet(full_load_path)
+        if len(filelist) == 0: continue # empty list, then skip
         events = dak.from_parquet(filelist)
-        events = filterRegion(events, region=args.region)
+        _, events = filterRegion(events, region=args.region)
         sample_dict = fillSampleValues(events, sample_dict, group)
 
     # print(f"sample_dict: {sample_dict}")
