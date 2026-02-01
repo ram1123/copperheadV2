@@ -4,15 +4,20 @@
 
 # 31 January 2026
 
+## DNN
 ```bash
-python MVA_training/VBF_new/preprocess_dnn.py --config configs/dnn_run3_vbf.yaml --base-path /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output --tag Run3_01Feb --year 2022preEE,2022postEE,2023,2023BPix,2024
+time python MVA_training/VBF_new/preprocess_dnn.py --config configs/dnn_run3_vbf.yaml --base-path /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output --tag Run3_01Feb_v1 --year 2022preEE,2022postEE,2023,2023BPix,2024 --use-dask-gateway  --cluster-index 0
 
 time python MVA_training/VBF_new/hpo_optuna.py --config configs/dnn_run3_vbf.yaml --data-dir dnn/trained_models/kfold_shuffleTrue/2022postEE_h-peak_vbf/ --out-dir dnn/trained_models/kfold_shuffleTrue/2022postEE_h-peak_vbf/hpo_optuna/v1 --n-trials 51 --folds 0
 
 python MVA_training/VBF_new/train_dnn.py --config configs/dnn_run3_vbf.yaml --data-dir dnn/trained_models/kfold_shuffleTrue/2022postEE_h-peak_vbf/ --out-dir dnn/trained_models/kfold_shuffleTrue/2022postEE_h-peak_vbf/trained_best_optuna_51trail
 ```
 
+## stage-1 with JEC JER
 
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_01Feb_test -y "2024" -m 1 -k -d 2)
+```
 
 # 29 January 2026
 

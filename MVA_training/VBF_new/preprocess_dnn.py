@@ -748,6 +748,11 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument(
         "--category", default=None, help="Override analysis.category from YAML"
     )
+    # dask_gateway and cluster index for Dask
+    p.add_argument(
+        "--cluster-index", type=int, default=0, help="Dask cluster index (default: 0)"
+    )
+    p.add_argument("--use-dask-gateway", action="store_true", help="Use Dask Gateway")
     p.add_argument("--region", default=None, help="Override analysis.region from YAML")
     return p
 
@@ -756,7 +761,7 @@ def main() -> None:
     args = build_argparser().parse_args()
     logger.setLevel(args.log_level)
 
-    client = get_dask_client(True, cluster_index=1)
+    client = get_dask_client(args.use_dask_gateway, cluster_index=args.cluster_index)
     cfg = load_config(args.config)
     if args.category is not None:
         object.__setattr__(
