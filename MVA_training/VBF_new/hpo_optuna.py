@@ -11,12 +11,23 @@ import argparse
 import json
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
+import matplotlib
 import numpy as np
+import optuna
 import yaml
 
-import optuna
+matplotlib.use("Agg")  # important on batch nodes
+import matplotlib.pyplot as plt
+from modules.utils import logger
+from optuna.visualization.matplotlib import (
+    plot_edf,
+    plot_optimization_history,
+    plot_parallel_coordinate,
+    plot_param_importances,
+    plot_slice,
+)
 
 # Import your functions/classes from train_dnn.py
 from train_dnn import (
@@ -25,7 +36,128 @@ from train_dnn import (
     set_seed,
     train_one_fold,
 )
-from modules.utils import logger
+
+
+def _to_figure(obj: Any):
+    """
+    Optuna matplotlib plots may return:
+      - matplotlib.figure.Figure
+      - matplotlib.axes.Axes
+      - ndarray/list/tuple of Axes
+    Convert any of these into a (fig, axes_list).
+    """
+    # Figure
+    if hasattr(obj, "savefig") and hasattr(obj, "get_axes"):
+        fig = obj
+        axes = list(fig.get_axes())
+        return fig, axes
+
+    # Single Axes
+    if hasattr(obj, "figure") and hasattr(obj, "plot"):
+        ax = obj
+        fig = ax.figure
+        return fig, [ax]
+
+    # Array/list of Axes (or nested)
+    if isinstance(obj, (list, tuple, np.ndarray)):
+        flat: list[Any] = []
+        if isinstance(obj, np.ndarray):
+            flat = list(obj.ravel())
+        else:
+            # flatten one level
+            for x in obj:
+                if isinstance(x, (list, tuple, np.ndarray)):
+                    flat.extend(list(np.array(x).ravel()))
+                else:
+                    flat.append(x)
+
+        axes = [a for a in flat if hasattr(a, "figure")]
+        if axes:
+            fig = axes[0].figure
+            return fig, axes
+
+    raise TypeError(f"Don't know how to convert object to Figure: type={type(obj)}")
+
+
+def _safe_save_plot(obj: Any, outpath: Path) -> None:
+    """
+    Save a matplotlib object returned by Optuna plotting utilities.
+    """
+    fig, _axes = _to_figure(obj)
+    try:
+        fig.tight_layout()
+    except Exception:
+        # some axes layouts are weird; don't die
+        pass
+    fig.savefig(outpath, dpi=150)
+    plt.close(fig)
+
+
+def save_study_plots(study, out_dir: str) -> None:
+    """
+    Save Optuna study summary plots robustly.
+    Important: some plots need >=2 completed trials.
+    """
+
+    out = Path(out_dir) / "optuna_plots"
+    out.mkdir(parents=True, exist_ok=True)
+
+    n_complete = sum(t.state.name == "COMPLETE" for t in study.trials)
+    if n_complete < 1:
+        logger.warning("[optuna] No COMPLETE trials. Skipping plots.")
+        return
+
+    # Always safe with 1 trial
+    try:
+        _safe_save_plot(plot_optimization_history(study), out / "opt_history.png")
+    except Exception as e:
+        logger.warning("[optuna] opt_history failed: %s", e)
+
+    # These are much more meaningful with >=2 trials
+    if n_complete < 2:
+        logger.warning(
+            "[optuna] Only %d complete trial(s). Skipping importance/slice/parallel/edf.",
+            n_complete,
+        )
+        return
+
+    try:
+        _safe_save_plot(plot_param_importances(study), out / "param_importance.png")
+    except Exception as e:
+        logger.warning("[optuna] param_importance failed: %s", e)
+
+    try:
+        _safe_save_plot(plot_slice(study), out / "slice.png")
+    except Exception as e:
+        logger.warning("[optuna] slice failed: %s", e)
+
+    try:
+        _safe_save_plot(
+            plot_parallel_coordinate(study), out / "parallel_coordinate.png"
+        )
+    except Exception as e:
+        logger.warning("[optuna] parallel_coordinate failed: %s", e)
+
+    try:
+        _safe_save_plot(plot_edf(study), out / "edf.png")
+    except Exception as e:
+        logger.warning("[optuna] edf failed: %s", e)
+
+    logger.info("[optuna] Saved plots to: %s", str(out))
+
+
+def suggest_hidden(trial: optuna.Trial) -> list[int]:
+    n_layers = trial.suggest_int("n_layers", 2, 7)
+    first_width = trial.suggest_categorical("first_width", (128, 256, 384, 512, 768, 1024, 1280, 1536, 2048))
+    shrink = trial.suggest_float("shrink_factor", 0.4, 0.75)
+
+    hidden: list[int] = []
+    w = float(first_width)
+    for _ in range(n_layers):
+        hidden.append(int(round(w)))
+        w = max(16.0, w * shrink)
+
+    return hidden
 
 
 def suggest_hparams(trial: optuna.Trial, cfg: TrainConfig) -> Dict[str, Any]:
@@ -39,17 +171,10 @@ def suggest_hparams(trial: optuna.Trial, cfg: TrainConfig) -> Dict[str, Any]:
     activation = trial.suggest_categorical("activation", ["relu", "gelu", "silu"])
     batch_norm = trial.suggest_categorical("batch_norm", [False, True])
 
-    # hidden layer patterns
-    hidden_key = trial.suggest_categorical(
-        "hidden_key",
-        [
-            "256_128_64",
-            "384_192_96",
-            "512_256_128",
-            "512_256_128_64",
-        ],
-    )
-    hidden = [int(x) for x in hidden_key.split("_")]
+    hidden = suggest_hidden(trial)
+    trial.set_user_attr("hidden", hidden)
+    hidden_key = "_".join(str(x) for x in hidden)
+    trial.set_user_attr("hidden_key", hidden_key)
 
     # dropout: either one value broadcasted, or per-layer
     drop_mode = trial.suggest_categorical("drop_mode", ["one", "per_layer"])
@@ -70,19 +195,18 @@ def suggest_hparams(trial: optuna.Trial, cfg: TrainConfig) -> Dict[str, Any]:
 
     # (optional) training dynamics
     # keep batch size fixed unless you want to benchmark GPU memory/time carefully
-    # batch_size = trial.suggest_categorical("batch_size", [1024, 2048, 4096])
+    batch_size = trial.suggest_categorical("batch_size", [1024, 2048, 4096])
 
     return dict(
         activation=activation,
         batch_norm=batch_norm,
         hidden=hidden,
-        hidden_key=hidden_key,
         dropout=dropout,
         lr=lr,
         weight_decay=weight_decay,
         label_smoothing=label_smoothing,
         grad_clip_norm=grad_clip_norm,
-        # batch_size=batch_size,
+        batch_size=batch_size,
     )
 
 
@@ -100,7 +224,7 @@ def apply_hparams(cfg: TrainConfig, hp: Dict[str, Any]) -> TrainConfig:
         grad_clip_norm=float(hp["grad_clip_norm"]),
         es_monitor="val_auc_weighted",  # always monitor AUC for HPO
         es_mode="max",  # max if auc, min if loss
-        # batch_size=int(hp.get("batch_size", cfg.batch_size)),
+        batch_size=int(hp.get("batch_size", cfg.batch_size)),
         # Speed-ups for HPO:
         plots_enable=False,
         save_predictions=False,
@@ -149,43 +273,59 @@ def objective_factory(
     return objective
 
 
-def write_yaml_override(path: Path, best_params: Dict[str, Any]) -> None:
-    # Hidden
-    hidden_key = best_params["hidden_key"]
-    hidden = [int(x) for x in hidden_key.split("_")]
+def _reconstruct_hidden_from_params(params: dict) -> list[int]:
+    n_layers = int(params["n_layers"])
+    first_width = int(params["first_width"])
+    shrink = float(params["shrink_factor"])
+
+    hidden: list[int] = []
+    w = float(first_width)
+    for _ in range(n_layers):
+        hidden.append(int(round(w)))
+        w = max(16.0, w * shrink)
+    return hidden
+
+
+def write_yaml_override(path: Path, best_trial: optuna.trial.FrozenTrial) -> None:
+    best_params = best_trial.params
+
+    # ---- hidden ----
+    # Prefer user_attrs (exact list used during training), fallback to reconstruction
+    hidden = best_trial.user_attrs.get("hidden", None)
+    if hidden is None:
+        hidden = _reconstruct_hidden_from_params(params)
+
     n_layers = len(hidden)
 
-    # Dropout reconstruction
-    if "dropout" in best_params:
-        # drop_mode == "one": stored as scalar
-        p = float(best_params["dropout"])
+    # ---- dropout ----
+    if "dropout" in params:
+        # drop_mode == "one"
+        p = float(params["dropout"])
         dropout = [p] * n_layers
     else:
-        # drop_mode == "per_layer": stored as dropout_l0, dropout_l1, ...
-        dropout = []
-        for i in range(n_layers):
-            k = f"dropout_l{i}"
-            dropout.append(float(best_params.get(k, 0.0)))
+        # drop_mode == "per_layer"
+        dropout = [float(params.get(f"dropout_l{i}", 0.0)) for i in range(n_layers)]
 
     override = {
         "model": {
-            "hidden": hidden,
-            "activation": best_params["activation"],
+            "hidden": [int(x) for x in hidden],
+            "activation": str(params["activation"]),
             "dropout": dropout,
-            "batch_norm": bool(best_params["batch_norm"]),
+            "batch_norm": bool(params["batch_norm"]),
         },
         "training": {
+            "batch_size": int(params.get("batch_size", 2048)),
             "optimizer": {
-                "lr": float(best_params["lr"]),
-                "weight_decay": float(best_params["weight_decay"]),
+                "lr": float(params["lr"]),
+                "weight_decay": float(params["weight_decay"]),
             },
             "loss": {
                 "bce_logits": {
-                    "label_smoothing": float(best_params["label_smoothing"]),
+                    "label_smoothing": float(params["label_smoothing"]),
                 }
             },
             "regularization": {
-                "gradient_clip_norm": float(best_params["grad_clip_norm"]),
+                "gradient_clip_norm": float(params["grad_clip_norm"]),
             },
         },
     }
@@ -256,6 +396,11 @@ def main() -> None:
         objective, n_trials=args.n_trials, timeout=timeout, gc_after_trial=True
     )
 
+    save_study_plots(study, out_dir)
+
+    df_trials = study.trials_dataframe(attrs=("number", "value", "params", "state"))
+    df_trials.to_csv(out_dir / "optuna_trials.csv", index=False)
+
     best = {
         "best_value": study.best_value,
         "best_params": study.best_params,
@@ -265,7 +410,7 @@ def main() -> None:
     with open(out_dir / "optuna_best.json", "w") as f:
         json.dump(best, f, indent=2)
 
-    write_yaml_override(out_dir / "optuna_best_override.yaml", study.best_params)
+    write_yaml_override(out_dir / "optuna_best_override.yaml", study.best_trial)
 
     logger.info("Best value: %.6f", study.best_value)
     logger.info("Best params saved to optuna_best.json and optuna_best_override.yaml")

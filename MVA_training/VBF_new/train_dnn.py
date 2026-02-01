@@ -31,17 +31,20 @@ import argparse
 import json
 import os
 import random
-from dataclasses import dataclass
+import sys
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
+import optuna
 import pandas as pd
-import sys
 import torch
 import torch.nn as nn
 import yaml
+from modules.git_utils import get_git_commit, get_git_state
+from modules.utils import logger
 from sklearn.metrics import (
     average_precision_score,
     precision_recall_curve,
@@ -49,11 +52,6 @@ from sklearn.metrics import (
     roc_curve,
 )
 from torch.utils.data import DataLoader, Dataset
-
-import optuna
-
-from modules.git_utils import get_git_commit, get_git_state
-from modules.utils import logger
 
 
 # --------------------------------------------------------------------------------
@@ -1223,6 +1221,107 @@ def train_all_folds(cfg: TrainConfig, data_dir: str, out_dir: str, folds: Option
 
 
 # --------------------------------------------------------------------------------------
+# Oputuna best hyperparameter integration
+# --------------------------------------------------------------------------------------
+def _reconstruct_hidden_from_optuna_params(params: Dict[str, Any]) -> List[int]:
+    """Rebuild hidden list from (n_layers, first_width, shrink_factor)."""
+    n_layers = int(params["n_layers"])
+    first_width = int(params["first_width"])
+    shrink = float(params["shrink_factor"])
+
+    hidden: List[int] = []
+    w = float(first_width)
+    for _ in range(n_layers):
+        hidden.append(int(round(w)))
+        w = max(16.0, w * shrink)
+    return hidden
+
+
+def _build_dropout_from_optuna_params(
+    params: Dict[str, Any], n_layers: int
+) -> List[float]:
+    """Rebuild dropout list for either drop_mode=one or per_layer."""
+    # drop_mode is present in your study params, but we can infer from keys too.
+    if "dropout" in params:
+        p = float(params["dropout"])
+        return [p] * n_layers
+
+    # per-layer: dropout_l0, dropout_l1, ...
+    out = []
+    for i in range(n_layers):
+        out.append(float(params.get(f"dropout_l{i}", 0.0)))
+    return out
+
+
+def load_optuna_best_json(path: str) -> Dict[str, Any]:
+    """
+    Reads optuna_best.json created by hpo_optuna.py:
+      {
+        "best_value": ...,
+        "best_params": {...},
+        "n_trials": ...
+      }
+    Returns dict with keys: best_value, best_params, n_trials.
+    """
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"optuna_best.json not found: {path}")
+    with open(p, "r") as f:
+        d = json.load(f)
+    if "best_params" not in d:
+        raise KeyError(f"Missing 'best_params' in {path}")
+    return d
+
+
+def apply_optuna_best(
+    cfg: TrainConfig, optuna_blob: Dict[str, Any]
+) -> Tuple[TrainConfig, Dict[str, Any]]:
+    """
+    Override TrainConfig using Optuna best params.
+    Returns (new_cfg, applied_params_summary).
+    """
+    params = optuna_blob["best_params"]
+
+    # hidden (prefer exact list if present in user_attrs-export, else reconstruct)
+    # Your current optuna_best.json probably does NOT contain user_attrs,
+    # so reconstruction is the default.
+    hidden = params.get("hidden", None)
+    if hidden is None:
+        hidden = _reconstruct_hidden_from_optuna_params(params)
+    hidden = [int(x) for x in hidden]
+    dropout = _build_dropout_from_optuna_params(params, n_layers=len(hidden))
+
+    # basic overrides (only if present)
+    new_cfg = replace(
+        cfg,
+        hidden=hidden,
+        dropout=[float(x) for x in dropout],
+        activation=str(params.get("activation", cfg.activation)),
+        batch_norm=bool(params.get("batch_norm", cfg.batch_norm)),
+        lr=float(params.get("lr", cfg.lr)),
+        weight_decay=float(params.get("weight_decay", cfg.weight_decay)),
+        label_smoothing=float(params.get("label_smoothing", cfg.label_smoothing)),
+        grad_clip_norm=float(params.get("grad_clip_norm", cfg.grad_clip_norm)),
+        batch_size=int(params.get("batch_size", cfg.batch_size)),
+    )
+
+    applied = {
+        "hidden": hidden,
+        "dropout": dropout,
+        "activation": new_cfg.activation,
+        "batch_norm": new_cfg.batch_norm,
+        "lr": new_cfg.lr,
+        "weight_decay": new_cfg.weight_decay,
+        "label_smoothing": new_cfg.label_smoothing,
+        "grad_clip_norm": new_cfg.grad_clip_norm,
+        "batch_size": new_cfg.batch_size,
+        "best_value": optuna_blob.get("best_value", None),
+        "n_trials": optuna_blob.get("n_trials", None),
+    }
+    return new_cfg, applied
+
+
+# --------------------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------------------
 def build_argparser() -> argparse.ArgumentParser:
@@ -1231,6 +1330,7 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--data-dir", required=True, help="Directory with data_df_train_i.parquet etc.")
     p.add_argument("--out-dir", required=True, help="Output directory for trained_models/<tag>/<year_region_cat> (or any).")
     p.add_argument("--folds", default=None, help="Comma list of folds to train (e.g. 0,1,2,3). Default: all.")
+    p.add_argument("--optuna-best-json",default=None,help="Path to optuna_best.json (will override config hyperparameters).")
     p.add_argument("--log-level", default="INFO", help="Logging level (INFO/DEBUG/...)")
     return p
 
@@ -1240,6 +1340,22 @@ def main() -> None:
 
     cfg = load_config(args.config)
     set_seed(cfg.seed)
+
+    optuna_info = None
+    optuna_applied = None
+
+    if args.optuna_best_json is not None:
+        optuna_info = load_optuna_best_json(args.optuna_best_json)
+        cfg, optuna_applied = apply_optuna_best(cfg, optuna_info)
+
+        logger.info("[optuna] Loaded best params from: %s", args.optuna_best_json)
+        logger.info("[optuna] Applied: hidden=%s activation=%s batch_norm=%s dropout=%s",
+                    optuna_applied["hidden"], optuna_applied["activation"],
+                    optuna_applied["batch_norm"], optuna_applied["dropout"])
+        logger.info("[optuna] Applied: lr=%.3e wd=%.3e bs=%d label_smoothing=%.4f grad_clip=%.3f",
+                    optuna_applied["lr"], optuna_applied["weight_decay"],
+                    optuna_applied["batch_size"], optuna_applied["label_smoothing"],
+                    optuna_applied["grad_clip_norm"])
 
     folds = None
     if args.folds is not None:
@@ -1276,14 +1392,23 @@ def main() -> None:
             "n_folds": cfg.n_folds,
             "folds_run": folds if folds is not None else "all",
         },
+        "optuna": {
+            "best_json": str(args.optuna_best_json) if args.optuna_best_json else None,
+            "best_value": (optuna_info.get("best_value") if optuna_info else None),
+            "n_trials": (optuna_info.get("n_trials") if optuna_info else None),
+            "applied_params": optuna_applied,
+        },
 
         # -------------------------
         # Data
         # -------------------------
         "data": {
             "data_dir": str(args.data_dir),
+            "years": cfg.years,
+            "regions": cfg.regions,
+            "categories": cfg.categories,
+            "combined_training": len(cfg.years) > 1,
         },
-
         # -------------------------
         # Training behavior (critical!)
         # -------------------------
