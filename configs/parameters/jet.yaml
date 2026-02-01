@@ -64,32 +64,32 @@ min_dr_mu_jet:
     "2023": 0.4
     "2023BPix": 0.4
     "2024": 0.4
-btag_loose_wp: # for DeepCSV, DeepJet is different
-    2016preVFP: 0.2027
-    2016postVFP: 0.1918
-    "2017": 0.1355
-    "2018": 0.1208 # central sources for UL https://btv-wiki.docs.cern.ch/ScaleFactors/UL2018/#ak4-b-tagging
-    2016_RERECO: 0.2217 #central sources for RERECO https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
-    "2017_RERECO": 0.1522
-    "2018_RERECO": 0.1241
+btag_loose_wp: 
+    2016preVFP: 0.2027 # DeepCSV
+    2016postVFP: 0.1918 # DeepCSV
+    "2017": 0.1355 # DeepCSV
+    "2018": 0.1208 # DeepCSV central sources for UL https://btv-wiki.docs.cern.ch/ScaleFactors/UL2018/#ak4-b-tagging
+    2016_RERECO: 0.2217 # DeepCSV central sources for RERECO https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
+    "2017_RERECO": 0.1522 # DeepCSV
+    "2018_RERECO": 0.1241 # DeepCSV
     "2022preEE": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2022postEE": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2023": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2023BPix": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-    "2024": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-btag_medium_wp: # for DeepCSV, DeepJet is different
-    2016preVFP: 0.6001
-    2016postVFP: 0.5847
-    "2017": 0.4506
-    "2018": 0.4168
-    2016_RERECO: 0.6321
-    "2017_RERECO": 0.4941
-    "2018_RERECO": 0.4184
+    "2024": 0.0246 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer24/#ak4-b-tagging for UParTAK4
+btag_medium_wp: 
+    2016preVFP: 0.6001 # DeepCSV
+    2016postVFP: 0.5847 # DeepCSV
+    "2017": 0.4506 # DeepCSV
+    "2018": 0.4168 # DeepCSV
+    2016_RERECO: 0.6321 # DeepCSV
+    "2017_RERECO": 0.4941 # DeepCSV
+    "2018_RERECO": 0.4184 # DeepCSV
     "2022preEE": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2022postEE": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2023": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
     "2023BPix": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-    "2024": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2024": 0.1272 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer24/#ak4-b-tagging for UParTAK4
 softjet_dr2:
     2016preVFP: 0.16
     2016postVFP: 0.16

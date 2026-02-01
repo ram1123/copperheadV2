@@ -1241,26 +1241,8 @@ class EventProcessor(processor.ProcessorABC):
             fatJets_default = ak.pad_none(fatJets, target=1)
             fatJet1_default = fatJets_default[:, 0]
 
-        if do_jec: # old method
-            logger.warning("Doing JEC and JER corrections!")
-            self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
-                self.config["jec_parameters"],
-                year
-            )
-            if is_mc:
-                factory = self.jec_factories_mc["jec"]
-            else:
-                for run in self.config["jec_parameters"]["runs"]:
-                    logger.debug(f"run: {run}")
-                    logger.debug(f"dataset: {dataset}")
-                    if run in dataset:
-                        factory = self.jec_factories_data[run]
-                if factory is None:
-                    logger.debug("JEC factory not recognized!")
-                    raise ValueError
-
-            # -------------------------------------
-            logger.debug("doing JEC + SMEARing!")
+        if do_jec: 
+            logger.info("doing JEC + SMEARing!")
             if do_jec_unc:
                 variation_l = ["nominal"] + self.config["jec_parameters"]["jec_unc_to_consider"]
             else:
@@ -1270,9 +1252,9 @@ class EventProcessor(processor.ProcessorABC):
             # print(f"jets test: {jets.pt_Absolute_up.compute()}")
             jets["mass_jec"] = jets.mass
             jets["pt_jec"] = jets.pt
-
+            logger.info(f"year: {year}")
             if is_mc: # JER smearing
-                jets = do_jer_smear(jets, self.config, events.event, year=year, nanoAOD_version=NanoAODv)
+                jets = do_jer_smear(jets, self.config, events.event, nanoAOD_version=NanoAODv)
             sorted_args = ak.argsort(jets.pt, ascending=False)
             jets = (jets[sorted_args])
 
@@ -1280,17 +1262,6 @@ class EventProcessor(processor.ProcessorABC):
             variation_l.remove("nominal")
             if is_mc:
                 jets = applyJetUncertaintyKinematics(jets, variation_l)
-
-            # -------------------------------------
-
-            # testJetVector(jets)
-            # logger.info(f"jets pt b4 jec: {jets.pt.compute()}")
-            # -------------------------------------
-            # logger.info("do old jec!")
-            # jets = factory.build(jets)
-            # -------------------------------------
-            # logger.info(f"jets pt after jec: {jets.pt.compute()}")
-            # testJetVector(jets)
 
         else:
             jets["mass_jec"] = jets.mass

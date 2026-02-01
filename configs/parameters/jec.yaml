@@ -643,7 +643,7 @@ jec_parameters:
         2022postEE: Summer19UL18_V5_MC # these are wrong
         "2023": Summer19UL18_V5_MC # placeholder (update with correct 2023 tag)
         2023BPix: Summer19UL18_V5_MC # placeholder
-        "2024": Summer19UL18_V5_MC # placeholder (update with correct 2023 tag)
+        "2024": Summer24Prompt24_V1_MC
     jer_tags:
         2016preVFP: Summer20UL16APV_JRV3_MC
         2016postVFP: Summer20UL16_JRV3_MC
@@ -656,7 +656,8 @@ jec_parameters:
         2022postEE: Summer19UL18_JRV2_MC
         "2023": Summer23Prompt23_V2_MC
         2023BPix: Summer23BPixPrompt23_V3_MC
-        "2024": Summer24Prompt24_V1_MC
+        # "2024": Summer24Prompt24_V1_MC
+        "2024": Summer23BPixPrompt23_RunD_JRV1_MC
     jec_data_tags:
         2016preVFP:
             Summer19UL16APV_RunBCD_V7_DATA:
@@ -751,21 +752,14 @@ jec_parameters:
             Summer19UL18_RunC_V5_DATA:
                 - C
         "2024":
-            Summer19UL18_RunB_V5_DATA:
+            Summer24Prompt24_V1_DATA:
                 - B
-            Summer19UL18_RunC_V5_DATA:
                 - C
-            Summer19UL18_RunD_V5_DATA:
                 - D
-            Summer19UL18_RunE_V5_DATA:
                 - E
-            Summer19UL18_RunF_V5_DATA:
                 - F
-            Summer19UL18_RunG_V5_DATA:
                 - G
-            Summer19UL18_RunH_V5_DATA:
                 - H
-            Summer19UL18_RunI_V5_DATA:
                 - I
     jer_variations:
         2016preVFP:
