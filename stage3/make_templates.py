@@ -328,7 +328,8 @@ def make_templates(args, parameters={}):
                     variation_dataset = "vbf_powheg_herwig"
                 elif ("EWK" in variation):
                     # ewk_lljj_mll50_mjj120_hist.pkl
-                    baseline_dataset = "ewk_lljj_mll50_mjj120"
+                    # baseline_dataset = "ewk_lljj_mll50_mjj120"
+                    baseline_dataset = "ewk_lljj"
                     variation_dataset = "ewk_lljj_mll105_160_py_dipole"
                 else:
                     logger.warning("no parton shower exists for this sample!")

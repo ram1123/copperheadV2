@@ -9,7 +9,7 @@ from stage3.make_datacards import build_datacards
 import time
 import logging
 from modules.utils import logger
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 __all__ = ["dask"]
 
@@ -69,7 +69,7 @@ parameters = {
     "plot_vars": [],  # "dimuon_mass"],
     # "variables_lookup": variables_lookup,
     "dnn_models": {
-         "vbf": ["Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"],
+        "vbf": ["Run3_nanoAODv12_21Jan_JVMFilterJets"],
         #  "vbf": ["Run2_nanoAODv12_07Sep2025"],
     },
     "bdt_models": {},
@@ -93,16 +93,16 @@ parameters["grouping"] = {
     # "dy_M-50_MiNNLO": "DY_LowMjj",
     # "dy_M-100To200_MiNNLO": "DY_LowMjj",
     # "dy_VBF_filter": "DY_HighMjj",
-
     # "dy_M-50_MiNNLO_NoDYVBF": "DY",
     # "dy_M-100To200_MiNNLO_NoDYVBF": "DY",
-
     # "dy_M-50_aMCatNLO_NoDYVBF": "DY",
     # "dy_M-100To200_aMCatNLO_NoDYVBF": "DY",
-
-    "dy_M-50_MiNNLO": "DY",
-    "dy_M-100To200_MiNNLO": "DY",
-    "dy_VBF_filter": "DY",
+    # "dy_M-50_MiNNLO": "DY",
+    # "dy_M-100To200_MiNNLO": "DY",
+    # "dy_VBF_filter": "DY",
+    "dyTo2Mu_MLL_10To50": "DY",
+    "dyTo2Mu_MLL_50To120": "DY",
+    "dyTo2Mu_MLL_120To200": "DY",
     # "dy_M-50_aMCatNLO": "DY",
     # "dy_M-100To200_aMCatNLO": "DY",
     # "DYJ01": "DYJ01",
@@ -117,22 +117,24 @@ parameters["grouping"] = {
     # "dy_M-50_MiNNLO": "DYJ01",
     # "ewk_lljj_mll105_160_py_dipole": "EWK",
     # "ewk_lljj_mll105_160_ptj0": "EWK",
-    "ewk_lljj_mll50_mjj120": "EWK",
+    # "ewk_lljj_mll50_mjj120": "EWK",
+    "ewk_lljj": "EWK",
+
     "ttjets_dl": "TT+ST",
     "ttjets_sl": "TT+ST",
     # "ttw": "TT+ST",
     # "ttz": "TT+ST",
-    "st_tw_top": "TT+ST",
-    "st_tw_antitop": "TT+ST",
+    # "st_tw_top": "TT+ST",
+    # "st_tw_antitop": "TT+ST",
     "ww_2l2nu": "VV",
     "wz_2l2q": "VV",
     "wz_1l1nu2q": "VV",  # bad for 2016
     "wz_3lnu": "VV",
     "zz": "VV",
-    "www": "VVV",
-    "wwz": "VVV",
-    "wzz": "VVV",
-    "zzz": "VVV",
+    # "www": "VVV",
+    # "wwz": "VVV",
+    # "wzz": "VVV",
+    # "zzz": "VVV",
     "ggh_powhegPS": "ggH_hmm",
     "vbf_powheg_dipole": "qqH_hmm",
 }

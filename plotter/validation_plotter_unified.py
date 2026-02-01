@@ -43,8 +43,6 @@ DY_To2MU_MassBinned = [
 ]  # 2024
 DY_To2MU_inclusive = ["dyTo2Mu_M-50"]
 
-DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
-
 
 DY_HTBinned = [
     "dy_M-4to50_HT-70to100",
@@ -64,13 +62,14 @@ DY_HTBinned = [
 
 
 # Run3 DY samples
-# DY_aMCatNLO = ["dyTo2Mu_M-50_aMCatNLO"] # 2024
 # DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"] # 2022preEE
-DY_aMCatNLO = ["dyTo2L_M-50_incl"] # 2022postEE, 2023, 2023BPix
 
 # DY_aMCatNLO = ["dy_M-50_aMCatNLO"] # 2022postEE
 
-# DY_aMCatNLO = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
+DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
+DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
+DY_aMCatNLO_inc = ["dyTo2L_M-50_incl"]  # 2022postEE, 2023, 2023BPix
+# DY_aMCatNLO_inc = ["dyTo2Mu_M-50_aMCatNLO"] # 2024
 
 group_dict = {
     "DATA": [
@@ -86,13 +85,14 @@ group_dict = {
         "data_J",
     ],
     # Run2 DY samples
-    "DY": DY_aMCatNLO,
+    # "DY": DY_aMCatNLO,
+    # "DY": DY_jet_binned,
     # "DY": DY_MLL_binned,
+    "DY": DY_aMCatNLO_inc,
 
     # Run3 DY samples
     # "DY": DY_To2MU_MassBinned,
     # "DY": DY_To2MU_inclusive,
-    # "DY": DY_jet_binned,
     # "DY": DY_MLL_binned,
     # "DY": DY_madgraph,
     # "DY": DY_MiNNLO,
@@ -212,7 +212,8 @@ if __name__ == "__main__":
     dest="variables",
     # default=["dimuon", "mu"],
     # default=["dijet", "jet"],
-    default=["dimuon", "dijet", "jet", "mu"],
+    # default=["dimuon", "dijet", "jet", "mu"],
+    default=["dimuon", "dijet", "jet"],
     nargs="*",
     type=str,
     action="store",
@@ -511,13 +512,13 @@ if __name__ == "__main__":
         variables2plot.append(f"dimuon_dR")
         variables2plot.append(f"acoplanarity")
         variables2plot.append(f"uncalibrated_dimuon_ebe_mass_res")
-        variables2plot.append(f"dimuon_cos_theta_eta")
+        # variables2plot.append(f"dimuon_cos_theta_eta")
         variables2plot.append(f"dimuon_phi_eta")
-        variables2plot.append(f"dimuon_pt_over_MET_pt")
-        variables2plot.append(f"dimuon_pt_over_jet1_pt")
-        variables2plot.append(f"dimuon_pt_over_jet2_pt")
-        variables2plot.append(f"mu1_pt_raw")
-        variables2plot.append(f"mu2_pt_raw")
+        # variables2plot.append(f"dimuon_pt_over_MET_pt")
+        # variables2plot.append(f"dimuon_pt_over_jet1_pt")
+        # variables2plot.append(f"dimuon_pt_over_jet2_pt")
+        # variables2plot.append(f"mu1_pt_raw")
+        # variables2plot.append(f"mu2_pt_raw")
         # variables2plot.append(f"jet1_default_pt_nominal")
         # variables2plot.append(f"jet1_default_eta_nominal")
         # variables2plot.append(f"jet1_default_phi_nominal")
@@ -526,123 +527,123 @@ if __name__ == "__main__":
         # variables2plot.append(f"jet2_default_eta_nominal")
         # variables2plot.append(f"jet2_default_phi_nominal")
         # variables2plot.append(f"jet2_default_mass_nominal")
-        variables2plot.append(f"mu1_dxy")
-        variables2plot.append(f"mu2_dxy")
-        variables2plot.append(f"mu1_dxyErr")
-        variables2plot.append(f"mu2_dxyErr")
-        variables2plot.append(f"mu1_dxybs")
-        variables2plot.append(f"mu2_dxybs")
-        variables2plot.append(f"mu1_dz")
-        variables2plot.append(f"mu2_dz")
-        variables2plot.append(f"mu1_dzErr")
-        variables2plot.append(f"mu2_dzErr")
-        variables2plot.append(f"mu1_ip3d")
-        variables2plot.append(f"mu2_ip3d")
-        variables2plot.append(f"mu1_sip3d")
-        variables2plot.append(f"mu2_sip3d")
-        variables2plot.append(f"mu1_highPurity")
-        variables2plot.append(f"mu2_highPurity")
-        variables2plot.append(f"mu1_inTimeMuon")
-        variables2plot.append(f"mu2_inTimeMuon")
-        variables2plot.append(f"mu1_isGlobal")
-        variables2plot.append(f"mu2_isGlobal")
-        variables2plot.append(f"mu1_isPFcand")
-        variables2plot.append(f"mu2_isPFcand")
-        variables2plot.append(f"mu1_isStandalone")
-        variables2plot.append(f"mu2_isStandalone")
-        variables2plot.append(f"mu1_isTracker")
-        variables2plot.append(f"mu2_isTracker")
-        variables2plot.append(f"mu1_looseId")
-        variables2plot.append(f"mu2_looseId")
-        variables2plot.append(f"mu1_mediumId")
-        variables2plot.append(f"mu2_mediumId")
-        variables2plot.append(f"mu1_mediumPromptId")
-        variables2plot.append(f"mu2_mediumPromptId")
-        variables2plot.append(f"mu1_tightCharge")
-        variables2plot.append(f"mu2_tightCharge")
-        variables2plot.append(f"mu1_pdgId")
-        variables2plot.append(f"mu2_pdgId")
-        variables2plot.append(f"mu1_miniIsoId")
-        variables2plot.append(f"mu2_miniIsoId")
-        variables2plot.append(f"mu1_miniPFRelIso_all")
-        variables2plot.append(f"mu2_miniPFRelIso_all")
-        variables2plot.append(f"mu1_miniPFRelIso_chg")
-        variables2plot.append(f"mu2_miniPFRelIso_chg")
-        variables2plot.append(f"mu1_multiIsoId")
-        variables2plot.append(f"mu2_multiIsoId")
-        variables2plot.append(f"mu1_pfIsoId")
-        variables2plot.append(f"mu2_pfIsoId")
-        variables2plot.append(f"mu1_pfRelIso03_all")
-        variables2plot.append(f"mu2_pfRelIso03_all")
-        variables2plot.append(f"mu1_pfRelIso03_chg")
-        variables2plot.append(f"mu2_pfRelIso03_chg")
-        variables2plot.append(f"mu1_pfRelIso04_all")
-        variables2plot.append(f"mu2_pfRelIso04_all")
-        variables2plot.append(f"mu1_puppiIsoId")
-        variables2plot.append(f"mu2_puppiIsoId")
-        variables2plot.append(f"mu1_tkIsoId")
-        variables2plot.append(f"mu2_tkIsoId")
-        variables2plot.append(f"mu1_tkRelIso")
-        variables2plot.append(f"mu2_tkRelIso")
-        variables2plot.append(f"mu1_nStations")
-        variables2plot.append(f"mu2_nStations")
-        variables2plot.append(f"mu1_nTrackerLayers")
-        variables2plot.append(f"mu2_nTrackerLayers")
-        variables2plot.append(f"mu1_segmentComp")
-        variables2plot.append(f"mu2_segmentComp")
-        variables2plot.append(f"mu1_jetIdx")
-        variables2plot.append(f"mu2_jetIdx")
-        variables2plot.append(f"mu1_jetNDauCharged")
-        variables2plot.append(f"mu2_jetNDauCharged")
-        variables2plot.append(f"mu1_jetPtRelv2")
-        variables2plot.append(f"mu2_jetPtRelv2")
-        variables2plot.append(f"mu1_jetRelIso")
-        variables2plot.append(f"mu2_jetRelIso")
-        variables2plot.append(f"mu1_svIdx")
-        variables2plot.append(f"mu2_svIdx")
-        variables2plot.append(f"mu12_pt_sum")
-        variables2plot.append(f"mu12_pt_diff")
-        variables2plot.append(f"mu12_pt_absdiff")
-        variables2plot.append(f"mu12_pt_prod")
-        variables2plot.append(f"mu12_pt_ratio12")
-        variables2plot.append(f"mu12_pt_ratio21")
-        variables2plot.append(f"mu12_pt_min")
-        variables2plot.append(f"mu12_pt_max")
-        variables2plot.append(f"mu12_pt_asym")
-        variables2plot.append(f"mu12_eta_sum")
-        variables2plot.append(f"mu12_eta_diff")
-        variables2plot.append(f"mu12_eta_absdiff")
-        variables2plot.append(f"mu12_eta_prod")
-        variables2plot.append(f"mu12_absEta_sum")
-        variables2plot.append(f"mu12_absEta_diff")
-        variables2plot.append(f"mu12_absEta_min")
-        variables2plot.append(f"mu12_absEta_max")
-        variables2plot.append(f"mu12_iso04_sum")
-        variables2plot.append(f"mu12_iso04_diff")
-        variables2plot.append(f"mu12_iso04_absdiff")
-        variables2plot.append(f"mu12_iso04_prod")
-        variables2plot.append(f"mu12_iso04_min")
-        variables2plot.append(f"mu12_iso04_max")
-        variables2plot.append(f"mu12_iso04_asym")
-        variables2plot.append(f"mu12_dxy_sum")
-        variables2plot.append(f"mu12_dxy_diff")
-        variables2plot.append(f"mu12_dxy_absdiff")
-        variables2plot.append(f"mu12_dz_sum")
-        variables2plot.append(f"mu12_dz_diff")
-        variables2plot.append(f"mu12_dz_absdiff")
-        variables2plot.append(f"mu12_sip3d_sum")
-        variables2plot.append(f"mu12_sip3d_diff")
-        variables2plot.append(f"mu12_sip3d_absdiff")
-        variables2plot.append(f"mu12_sip3d_prod")
-        variables2plot.append(f"mu12_sip3d_min")
-        variables2plot.append(f"mu12_sip3d_max")
-        variables2plot.append(f"mu12_nStations_min")
-        variables2plot.append(f"mu12_nStations_max")
-        variables2plot.append(f"mu12_nStations_sum")
-        variables2plot.append(f"mu12_nTrackerLayers_min")
-        variables2plot.append(f"mu12_nTrackerLayers_max")
-        variables2plot.append(f"mu12_nTrackerLayers_sum")
-        variables2plot.append(f"mu12_q1q2")
+        # variables2plot.append(f"mu1_dxy")
+        # variables2plot.append(f"mu2_dxy")
+        # variables2plot.append(f"mu1_dxyErr")
+        # variables2plot.append(f"mu2_dxyErr")
+        # variables2plot.append(f"mu1_dxybs")
+        # variables2plot.append(f"mu2_dxybs")
+        # variables2plot.append(f"mu1_dz")
+        # variables2plot.append(f"mu2_dz")
+        # variables2plot.append(f"mu1_dzErr")
+        # variables2plot.append(f"mu2_dzErr")
+        # variables2plot.append(f"mu1_ip3d")
+        # variables2plot.append(f"mu2_ip3d")
+        # variables2plot.append(f"mu1_sip3d")
+        # variables2plot.append(f"mu2_sip3d")
+        # variables2plot.append(f"mu1_highPurity")
+        # variables2plot.append(f"mu2_highPurity")
+        # variables2plot.append(f"mu1_inTimeMuon")
+        # variables2plot.append(f"mu2_inTimeMuon")
+        # variables2plot.append(f"mu1_isGlobal")
+        # variables2plot.append(f"mu2_isGlobal")
+        # variables2plot.append(f"mu1_isPFcand")
+        # variables2plot.append(f"mu2_isPFcand")
+        # variables2plot.append(f"mu1_isStandalone")
+        # variables2plot.append(f"mu2_isStandalone")
+        # variables2plot.append(f"mu1_isTracker")
+        # variables2plot.append(f"mu2_isTracker")
+        # variables2plot.append(f"mu1_looseId")
+        # variables2plot.append(f"mu2_looseId")
+        # variables2plot.append(f"mu1_mediumId")
+        # variables2plot.append(f"mu2_mediumId")
+        # variables2plot.append(f"mu1_mediumPromptId")
+        # variables2plot.append(f"mu2_mediumPromptId")
+        # variables2plot.append(f"mu1_tightCharge")
+        # variables2plot.append(f"mu2_tightCharge")
+        # variables2plot.append(f"mu1_pdgId")
+        # variables2plot.append(f"mu2_pdgId")
+        # variables2plot.append(f"mu1_miniIsoId")
+        # variables2plot.append(f"mu2_miniIsoId")
+        # variables2plot.append(f"mu1_miniPFRelIso_all")
+        # variables2plot.append(f"mu2_miniPFRelIso_all")
+        # variables2plot.append(f"mu1_miniPFRelIso_chg")
+        # variables2plot.append(f"mu2_miniPFRelIso_chg")
+        # variables2plot.append(f"mu1_multiIsoId")
+        # variables2plot.append(f"mu2_multiIsoId")
+        # variables2plot.append(f"mu1_pfIsoId")
+        # variables2plot.append(f"mu2_pfIsoId")
+        # variables2plot.append(f"mu1_pfRelIso03_all")
+        # variables2plot.append(f"mu2_pfRelIso03_all")
+        # variables2plot.append(f"mu1_pfRelIso03_chg")
+        # variables2plot.append(f"mu2_pfRelIso03_chg")
+        # variables2plot.append(f"mu1_pfRelIso04_all")
+        # variables2plot.append(f"mu2_pfRelIso04_all")
+        # variables2plot.append(f"mu1_puppiIsoId")
+        # variables2plot.append(f"mu2_puppiIsoId")
+        # variables2plot.append(f"mu1_tkIsoId")
+        # variables2plot.append(f"mu2_tkIsoId")
+        # variables2plot.append(f"mu1_tkRelIso")
+        # variables2plot.append(f"mu2_tkRelIso")
+        # variables2plot.append(f"mu1_nStations")
+        # variables2plot.append(f"mu2_nStations")
+        # variables2plot.append(f"mu1_nTrackerLayers")
+        # variables2plot.append(f"mu2_nTrackerLayers")
+        # variables2plot.append(f"mu1_segmentComp")
+        # variables2plot.append(f"mu2_segmentComp")
+        # variables2plot.append(f"mu1_jetIdx")
+        # variables2plot.append(f"mu2_jetIdx")
+        # variables2plot.append(f"mu1_jetNDauCharged")
+        # variables2plot.append(f"mu2_jetNDauCharged")
+        # variables2plot.append(f"mu1_jetPtRelv2")
+        # variables2plot.append(f"mu2_jetPtRelv2")
+        # variables2plot.append(f"mu1_jetRelIso")
+        # variables2plot.append(f"mu2_jetRelIso")
+        # variables2plot.append(f"mu1_svIdx")
+        # variables2plot.append(f"mu2_svIdx")
+        # variables2plot.append(f"mu12_pt_sum")
+        # variables2plot.append(f"mu12_pt_diff")
+        # variables2plot.append(f"mu12_pt_absdiff")
+        # variables2plot.append(f"mu12_pt_prod")
+        # variables2plot.append(f"mu12_pt_ratio12")
+        # variables2plot.append(f"mu12_pt_ratio21")
+        # variables2plot.append(f"mu12_pt_min")
+        # variables2plot.append(f"mu12_pt_max")
+        # variables2plot.append(f"mu12_pt_asym")
+        # variables2plot.append(f"mu12_eta_sum")
+        # variables2plot.append(f"mu12_eta_diff")
+        # variables2plot.append(f"mu12_eta_absdiff")
+        # variables2plot.append(f"mu12_eta_prod")
+        # variables2plot.append(f"mu12_absEta_sum")
+        # variables2plot.append(f"mu12_absEta_diff")
+        # variables2plot.append(f"mu12_absEta_min")
+        # variables2plot.append(f"mu12_absEta_max")
+        # variables2plot.append(f"mu12_iso04_sum")
+        # variables2plot.append(f"mu12_iso04_diff")
+        # variables2plot.append(f"mu12_iso04_absdiff")
+        # variables2plot.append(f"mu12_iso04_prod")
+        # variables2plot.append(f"mu12_iso04_min")
+        # variables2plot.append(f"mu12_iso04_max")
+        # variables2plot.append(f"mu12_iso04_asym")
+        # variables2plot.append(f"mu12_dxy_sum")
+        # variables2plot.append(f"mu12_dxy_diff")
+        # variables2plot.append(f"mu12_dxy_absdiff")
+        # variables2plot.append(f"mu12_dz_sum")
+        # variables2plot.append(f"mu12_dz_diff")
+        # variables2plot.append(f"mu12_dz_absdiff")
+        # variables2plot.append(f"mu12_sip3d_sum")
+        # variables2plot.append(f"mu12_sip3d_diff")
+        # variables2plot.append(f"mu12_sip3d_absdiff")
+        # variables2plot.append(f"mu12_sip3d_prod")
+        # variables2plot.append(f"mu12_sip3d_min")
+        # variables2plot.append(f"mu12_sip3d_max")
+        # variables2plot.append(f"mu12_nStations_min")
+        # variables2plot.append(f"mu12_nStations_max")
+        # variables2plot.append(f"mu12_nStations_sum")
+        # variables2plot.append(f"mu12_nTrackerLayers_min")
+        # variables2plot.append(f"mu12_nTrackerLayers_max")
+        # variables2plot.append(f"mu12_nTrackerLayers_sum")
+        # variables2plot.append(f"mu12_q1q2")
 
         # variables2plot.append(f"nfatJets")
         # variables2plot.append(f"nfatJets_pre")
@@ -749,26 +750,27 @@ if __name__ == "__main__":
             variables2plot.append(f"{particle}_phi")
             variables2plot.append(f"{particle}_cos_theta_cs")
             variables2plot.append(f"{particle}_phi_cs")
-            variables2plot.append(f"{particle}_cos_theta_eta")
-            variables2plot.append(f"{particle}_phi_eta")
-            variables2plot.append(f"mmj_min_dPhi_nominal")
+            # variables2plot.append(f"{particle}_cos_theta_eta")
+            # variables2plot.append(f"{particle}_phi_eta")
+            # variables2plot.append(f"mmj_min_dPhi_nominal")
             variables2plot.append(f"mmj_min_dEta_nominal")
             variables2plot.append(f"ll_zstar_log_nominal")
             variables2plot.append(f"dimuon_ebe_mass_res")
             variables2plot.append(f"dimuon_ebe_mass_res_rel")
             variables2plot.append(f"{particle}_rapidity")
-            variables2plot.append("MET_pt")
-            variables2plot.append("MET_phi")
-            variables2plot.append("MET_sumEt")
-            variables2plot.append("acoplanarity")
-            variables2plot.append("PV_npvs")
-            variables2plot.append("PV_npvsGood")
+            # variables2plot.append("MET_pt")
+            # variables2plot.append("MET_phi")
+            # variables2plot.append("MET_sumEt")
+            # variables2plot.append("acoplanarity")
+            # variables2plot.append("PV_npvs")
+            # variables2plot.append("PV_npvsGood")
+            logger.debug(f"variables2plot: {variables2plot}")
         elif "dijet" in particle:
             variables2plot.append(f"jj_dEta_nominal")
             variables2plot.append(f"jj_mass_nominal")
-            variables2plot.append(f"jj_pt_nominal")
-            variables2plot.append(f"jj_dPhi_nominal")
-            variables2plot.append(f"zeppenfeld_nominal")
+            # variables2plot.append(f"jj_pt_nominal")
+            # variables2plot.append(f"jj_dPhi_nominal")
+            # variables2plot.append(f"zeppenfeld_nominal")
             variables2plot.append(f"rpt_nominal")
             variables2plot.append(f"pt_centrality_nominal")
             variables2plot.append(f"nsoftjets2_nominal")
@@ -783,7 +785,8 @@ if __name__ == "__main__":
             # --------------------------------------------------
             # variables2plot.append(f"gjj_mass")
 
-        elif ("mu" in particle) :
+            logger.debug(f"variables2plot: {variables2plot}")
+        elif "mu" in particle:
             for kinematic in kinematic_vars:
                 # plot both leading and subleading muons/jets
                 variables2plot.append(f"{particle}1_{kinematic}")
@@ -791,7 +794,8 @@ if __name__ == "__main__":
             if not args.minimum_set: # if minimum set is requested, only plot pt and mass
                 variables2plot.append(f"{particle}1_pt_over_mass")
                 variables2plot.append(f"{particle}2_pt_over_mass")
-        elif ("jet" in particle):
+            logger.debug(f"variables2plot: {variables2plot}")
+        elif "jet" in particle:
             variables2plot.append(f"njets_nominal")
             for kinematic in kinematic_vars:
                 # plot both leading and subleading muons/jets
@@ -799,6 +803,7 @@ if __name__ == "__main__":
                 variables2plot.append(f"{particle}2_{kinematic}_nominal")
             # variables2plot.append(f"jet1_qgl_nominal")
             # variables2plot.append(f"jet2_qgl_nominal")
+            logger.debug(f"variables2plot: {variables2plot}")
 
         else:
             logger.warning(f"Unsupported variable: {particle} is given!")
@@ -809,6 +814,7 @@ if __name__ == "__main__":
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
     logger.info(f"variables2plot: {variables2plot}")
+    # sys.exit()
     # obtain plot settings from config file
 
     if args.category == "ggh":
@@ -1059,7 +1065,7 @@ if __name__ == "__main__":
                     # temporary over write
                     # logger.info(f"events.fields: {events.fields}")
                     if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                        logger.info("removing Zpt rewgt!")
+                        logger.debug("removing Zpt rewgt!")
                         weights = weights/events["separate_wgt_zpt_wgt"]
 
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem

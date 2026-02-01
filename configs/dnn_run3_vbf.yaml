@@ -49,14 +49,19 @@ samples:
           2022postEE: ["dyTo2L_M-50_incl"]
           2023: ["dyTo2L_M-50_incl"]
           2023BPix: ["dyTo2L_M-50_incl"]
-          '2024': ["dyTo2Mu_M-50_aMCatNLO"]
+          2024: ["dyTo2Mu_M-50_aMCatNLO"]
       TOP:
         processes: ["ttjets_dl", "ttjets_sl"]
         processes_per_year: {}
 
       EWK:
         processes: ["ewk_lljj"]
-        processes_per_year: {}
+        processes_per_year:
+          2022preEE: ["ewk_lljj"]
+          2022postEE: ["ewk_lljj"]
+          2023: ["ewk_lljj"]
+          2023BPix: ["ewk_lljj"]
+          2024: ["ewk_mmjj"]
 
 features:
   training:

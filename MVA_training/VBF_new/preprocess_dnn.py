@@ -36,6 +36,7 @@ import dask_awkward as dak
 import numpy as np
 import pandas as pd
 import yaml
+from modules.dask_utils import close_dask_client, get_dask_client
 from modules.git_utils import get_git_commit, get_git_state
 from modules.selection import applyRegionCatCuts
 from modules.utils import logger
@@ -360,7 +361,7 @@ def preprocess(
                 )
                 continue
             logger.info("[year %s] Reading %d files: %s", year, len(files), proc)
-            events = dak.from_parquet(files)
+            events = dak.from_parquet(files, columns=features2load + cfg.required_columns)
 
             # required columns check (best effort)
             if cfg.required_columns:
@@ -395,7 +396,7 @@ def preprocess(
                 )
                 continue
             logger.info("[year %s] Reading %d files: %s", year, len(files), proc)
-            events = dak.from_parquet(files)
+            events = dak.from_parquet(files, columns=features2load + cfg.required_columns)
 
             if cfg.required_columns:
                 missing_req = [
@@ -583,49 +584,6 @@ def preprocess(
                 )
                 logger.info("[fold %d] Scaling plots done.", i)
 
-
-                # Compare folds for TRAIN background (most stable)
-                plot_feature_hists_compare_folds(
-                    fold_parquet_dir=out_dir,
-                    features=final_features,
-                    label_col="label",
-                    weight_col=cfg.weight_col,
-                    outdir=sanity_dir,
-                    n_folds=cfg.n_folds,
-                    split="train",
-                    cls=0,              # 0=bkg
-                    bins=60,
-                    logy=False,
-                )
-
-                # Compare folds for VAL background
-                plot_feature_hists_compare_folds(
-                    fold_parquet_dir=out_dir,
-                    features=final_features,
-                    label_col="label",
-                    weight_col=cfg.weight_col,
-                    outdir=sanity_dir,
-                    n_folds=cfg.n_folds,
-                    split="validation",
-                    cls=0,
-                    bins=60,
-                    logy=False,
-                )
-
-                # Optional: signal overlays too (can be noisy if low stats)
-                plot_feature_hists_compare_folds(
-                    fold_parquet_dir=out_dir,
-                    features=final_features,
-                    label_col="label",
-                    weight_col=cfg.weight_col,
-                    outdir=sanity_dir,
-                    n_folds=cfg.n_folds,
-                    split="train",
-                    cls=1,              # 1=sig
-                    bins=60,
-                    logy=False,
-                )
-
             except Exception as exc:
                 logger.warning(
                     "[fold %d] Scaling plots failed (continuing): %s", i, str(exc)
@@ -649,6 +607,52 @@ def preprocess(
             len(df_val),
             len(df_eval),
         )
+
+    # ---- cross-fold feature distribution comparisons ----
+    logger.info("------------------------------------------------------------")
+    logger.info("[preprocess] Generating cross-fold feature distribution comparisons...")
+    sanity_dir = os.path.join(out_dir, "sanity_feature_plots")
+    # Compare folds for TRAIN background (most stable)
+    plot_feature_hists_compare_folds(
+        fold_parquet_dir=out_dir,
+        features=final_features,
+        label_col="label",
+        weight_col=cfg.weight_col,
+        outdir=sanity_dir,
+        n_folds=cfg.n_folds,
+        split="train",
+        cls=0,  # 0=bkg
+        bins=60,
+        logy=False,
+    )
+
+    # Compare folds for VAL background
+    plot_feature_hists_compare_folds(
+        fold_parquet_dir=out_dir,
+        features=final_features,
+        label_col="label",
+        weight_col=cfg.weight_col,
+        outdir=sanity_dir,
+        n_folds=cfg.n_folds,
+        split="validation",
+        cls=0,
+        bins=60,
+        logy=False,
+    )
+
+    # Optional: signal overlays too (can be noisy if low stats)
+    plot_feature_hists_compare_folds(
+        fold_parquet_dir=out_dir,
+        features=final_features,
+        label_col="label",
+        weight_col=cfg.weight_col,
+        outdir=sanity_dir,
+        n_folds=cfg.n_folds,
+        split="train",
+        cls=1,  # 1=sig
+        bins=60,
+        logy=False,
+    )
 
     # ---- manifest for reproducibility ----
     manifest = {
@@ -752,6 +756,7 @@ def main() -> None:
     args = build_argparser().parse_args()
     logger.setLevel(args.log_level)
 
+    client = get_dask_client(True, cluster_index=1)
     cfg = load_config(args.config)
     if args.category is not None:
         object.__setattr__(
@@ -784,6 +789,7 @@ def main() -> None:
     )
 
     logger.info("[main] Done. Success.")
+    close_dask_client()
 
 
 if __name__ == "__main__":

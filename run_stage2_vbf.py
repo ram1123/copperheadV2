@@ -247,41 +247,44 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
     # sample_dict["signal"] = sig_filelist
 
-
     # ------------------------------------
     # work on bkg MC
     # ------------------------------------
     bkg_sample_dict = {
-        "DY" : [
+        "DY": [
             # NOTE: If we want to results with only aMCatNLO or MiNNLO samples then in
             #            the function `selection.applyRegionCatCuts` set `do_vbf_filter_study=False`.
             # "dy_M-100To200",
             # "dy_m105_160_vbf_amc",
             # "dy_M-50",
-            "dy_M-100To200_MiNNLO",
-            "dy_M-50_MiNNLO",
+            # "dy_M-100To200_MiNNLO",
+            # "dy_M-50_MiNNLO",
             # "dy_M-100To200_aMCatNLO",
             # "dy_M-50_aMCatNLO",
-            "dy_VBF_filter"
+            # "dy_VBF_filter"
             # "DYJ01",
             # "DYJ2"
+            "dyTo2Mu_MLL_10To50",
+            "dyTo2Mu_MLL_50To120",
+            "dyTo2Mu_MLL_120To200",
         ],
-        "TT" : [
+        "TT": [
             "ttjets_dl",
             "ttjets_sl",
         ],
-        "ST" : [
+        "ST": [
             "st_tw_top",
             "st_tw_antitop",
             "st_t_top",
             "st_t_antitop",
         ],
-        "EWK" : [
-            "ewk_lljj_mll105_160_ptj0", # herwig
-            "ewk_lljj_mll105_160_py_dipole", # pythia dipole
+        "EWK": [
+            "ewk_lljj_mll105_160_ptj0",  # herwig
+            "ewk_lljj_mll105_160_py_dipole",  # pythia dipole
             "ewk_lljj_mll50_mjj120",
+            "ewk_lljj",
         ],
-        "VV" : [
+        "VV": [
             "ww_2l2nu",
             "wz_3lnu",
             "wz_2l2q",
@@ -300,7 +303,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     for bkg_sample in bkg_samples:
         bkg_sample = bkg_sample.upper()
         if bkg_sample in bkg_sample_dict.keys():
-           bkg_sample_l += bkg_sample_dict[bkg_sample]
+            bkg_sample_l += bkg_sample_dict[bkg_sample]
     logger.info(f"bkg_sample_l: {bkg_sample_l}")
 
     bkg_filelist = []
@@ -513,7 +516,7 @@ if __name__ == "__main__":
         # # Load and Cache models for each fold
         # model_cache = {}
         # for fold in range(nfolds):
-        #     model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
+        #     model_load_path = f"{model_trained_path}/fold{fold}/final_model_torchJit_ver.pt"
         #     model_cache[fold] = DNNWrapper(model_load_path)
         #     logger.info(f"Loaded model for fold {fold} from {model_load_path}")
 
@@ -695,7 +698,7 @@ if __name__ == "__main__":
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
-                model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
+                model_load_path = f"{model_trained_path}/fold{fold}/final_model_torchJit_ver.pt"
                 logger.debug(f"model_load_path: {model_load_path}")
                 # dnnWrap = model_cache[fold]
                 dnnWrap = DNNWrapper(model_load_path)

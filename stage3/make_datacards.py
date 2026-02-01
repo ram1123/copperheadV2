@@ -36,6 +36,22 @@ rate_syst_lookup = {
         "XsecAndNormVV": {"VV": 1.05615},
         "XsecAndNormggH": {"ggH": 1.38313},
     },
+    "2022preEE": {
+        # "XsecAndNorm2018DYJ2": {"DY_2J": 1.12320},
+        "XsecAndNorm2018DYJ2": {"DYJ2": 1.12320},
+        "XsecAndNorm2018EWK": {"EWK": 1.05779},
+        "XsecAndNormTT+ST": {"TT+ST": 1.18582},
+        "XsecAndNormVV": {"VV": 1.05615},
+        "XsecAndNormggH": {"ggH": 1.38313},
+    },
+    "2022postEE": {
+        # "XsecAndNorm2018DYJ2": {"DY_2J": 1.12320},
+        "XsecAndNorm2018DYJ2": {"DYJ2": 1.12320},
+        "XsecAndNorm2018EWK": {"EWK": 1.05779},
+        "XsecAndNormTT+ST": {"TT+ST": 1.18582},
+        "XsecAndNormVV": {"VV": 1.05615},
+        "XsecAndNormggH": {"ggH": 1.38313},
+    },
 }
 lumi_syst = {
     "2016": {
@@ -67,6 +83,26 @@ lumi_syst = {
         # "calib": 0.2,
         # "ghost": 0.0,
         "lumi2018": 2.5,
+    },
+    "2022preEE": {
+        # "uncor2018": 1.5,
+        # "xyfac": 2.0,
+        # "len": 0.2,
+        # "bb": 0.0,
+        # "beta": 0.0,
+        # "calib": 0.2,
+        # "ghost": 0.0,
+        "lumi2022preEE": 2.5,
+    },
+    "2022postEE": {
+        # "uncor2018": 1.5,
+        # "xyfac": 2.0,
+        # "len": 0.2,
+        # "bb": 0.0,
+        # "beta": 0.0,
+        # "calib": 0.2,
+        # "ghost": 0.0,
+        "lumi2022postEE": 2.5,
     },
 }
 

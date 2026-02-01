@@ -31,8 +31,8 @@ logger.info(f"outputDir: {outputDir}")
 # SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_DYmadgraph/"
 # SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_aMCatNLO/"
 # SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_MLL_binned/"
-# SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_jet_binned/"
-SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_inclusive/"
+SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_inclusive_30Jan/"
+# SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_inclusive/"
 logger.info(f"Using SAVE_PATH: {SAVE_PATH}")
 
 # check if  SAVE_PATH exists then throw error and exit. This is just to prevent overwriting existing plots
@@ -45,23 +45,24 @@ if Path(SAVE_PATH).exists():
 # years = ["2022preEE"]
 # years = ["2022postEE"]
 # years = ["2023BPix"]
+# years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years = ["2022postEE", "2023", "2023BPix"]
 # years = ["2023", "2023BPix"]
 # years = ["2024"]
 # years = ["*"]
 
-# categories = ["nocat", "vbf", "ggh"]
+categories = ["nocat", "vbf", "ggh"]
 # categories = ["nocat", "ggh"]
 # categories = ["vbf", "ggh"]
 # categories = ["vbf"]
-categories = ["nocat"]
+# categories = ["nocat"]
 
 # Boolean flags
 vbf_filter_study_options = [False]  # True to apply VBF filter study, False to skip it
-remove_zpt_weights_options = [True, False]  # True to remove zpt weights, False to keep them
-debug_options = False
-min_set_of_vars = True  # If True, only use a minimal set of variables  to plot
+remove_zpt_weights_options = [False, True]  # True to remove zpt weights, False to keep them
+debug_options = False  # If True, set log level to DEBUG
+min_set_of_vars = False  # If True, only use a minimal set of variables  to plot
 
 region_options = [
     # ["h-sidebands", "z-peak", "signal", "h-peak"]
@@ -85,7 +86,7 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
          "-cat", cat,
          "--njets", njets,
          "--use-compacted", "compacted",  # options: "", "compacted", "compacted_WithDNNScore"
-        #  "--use_gateway",
+         "--use_gateway",
         #  "--dnn-score"
         # "--addVars"
          ]

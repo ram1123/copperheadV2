@@ -182,17 +182,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_jet_veto_maps_filterEvents: # do_jet_veto_maps_filterEvents
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
-    do_jet_veto_maps_filterJets:
+    do_jet_veto_maps_filterEvents: # remove the events
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -202,6 +192,16 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+    do_jet_veto_maps_filterJets: # remove the jets not events
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_jet_horn_ptcut: # For run-3 where the JME recommendation is to add pT > 50 GeV cut in the horn region
         '2016preVFP': false
         '2016postVFP': false
