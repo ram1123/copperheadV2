@@ -9,13 +9,21 @@ per-fold parquet files (train/validation/evaluation) + scaler artifacts.
 Design goals:
 - Config-driven (YAML) for features/samples/behavior
 - Base path comes from CLI (NOT from config)
-- Deterministic CV split (event % n_folds)
-- Pylint-friendly naming and structure
+- Deterministic CV split based on event number (optionally hashed shuffle)
+- Supports per-year process names (DY etc)
+- Produces ONE combined dataset across requested years
+
+Example:
+python preprocess_dnn.py \
+  --config configs/dnn_run3_vbf.yaml \
+  --base-path /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output \
+  --tag kfold_shuffleTrue \
+  --years 2022preEE,2022postEE,2023BPix \
+  --out-root dnn/trained_models \
+  --log-level INFO
 """
-
-from __future__ import annotations
-
 import argparse
+import glob as _glob
 import json
 import os
 import pickle
@@ -31,8 +39,6 @@ import yaml
 from modules.git_utils import get_git_commit, get_git_state
 from modules.selection import applyRegionCatCuts
 from modules.utils import logger
-
-# Your existing cleaning helper (keeps current behavior)
 from MVA_training.VBF_new.utils.pre_scale_cleaning import pre_scaling_clean
 
 # Optional: keep your existing diagnostic plots (safe to disable from CLI)
@@ -42,6 +48,8 @@ try:
         plot_corr_before_after,
         plot_scaled_mean_std,
         plot_scaled_outliers,
+        plot_feature_hists_from_fold_dfs,
+        plot_feature_hists_compare_folds,
     )
 
     HAVE_SCALING_PLOTS = True
@@ -63,8 +71,6 @@ class PreprocessConfig:
 
     category: str
     region: str
-    year_mode: str
-    year_feature_name: str
 
     required_columns: List[str]
     allow_missing_columns: bool
@@ -77,43 +83,34 @@ class PreprocessConfig:
 
     glob_template: str
 
-    signal_label: int
-    signal_processes: List[str]
-
+    # Samples are stored as dicts so we can resolve per-year.
+    # signal_spec: {"label": int, "processes": [...], "processes_per_year": {year: [...]}}
+    signal_spec: Dict[str, Any]
+    # background_groups_spec: {group: {"processes": [...], "processes_per_year": {year: [...]}}}
+    background_groups_spec: Dict[str, Dict[str, Any]]
     background_label: int
-    background_groups: Dict[str, List[str]]  # group -> processes
 
     training_features: List[str]
-
-
-    do_not_scale_default: Tuple[str, ...] = ("nsoftjets5_nominal",)
-
-    def do_not_scale_features(self) -> Tuple[str, ...]:
-        do_not_scale = list(self.do_not_scale_default)
-        if self.year_mode == "feature" and self.year_feature_name:
-            do_not_scale.append(self.year_feature_name)
-        return tuple(dict.fromkeys(do_not_scale))  # unique, keep order
-
-
-@dataclass(frozen=True)
-class SampleMap:
-    """Derived mappings from config samples."""
-
-    process_to_label: Dict[str, int]
-    process_to_group: Dict[str, str]
-    signal_group_name: str = "signal"
-    other_group_name: str = "OTHER"
-
+    do_not_scale_features: List[str]
 
 # --------------------------------------------------------------------------------------
-# Helpers
+# YAML + sample resolution helpers
 # --------------------------------------------------------------------------------------
-
-
 def _load_yaml(path: str) -> Dict[str, Any]:
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
+
+def procs_for_year(spec: Dict[str, Any], year: str) -> List[str]:
+    """
+    Resolve processes for a given year with clear precedence:
+      - if processes_per_year exists and contains `year` => use that
+      - else use `processes` (default)
+    """
+    per = spec.get("processes_per_year") or {}
+    if year in per:
+        return list(per[year])
+    return list(spec.get("processes", []))
 
 def load_config(cfg_path: str) -> PreprocessConfig:
     cfg = _load_yaml(cfg_path)
@@ -123,8 +120,6 @@ def load_config(cfg_path: str) -> PreprocessConfig:
 
     category = str(cfg["analysis"]["category"])
     region = str(cfg["analysis"]["region"])
-    year_mode = str(cfg["analysis"].get("year_mode", "feature"))
-    year_feature_name = str(cfg["analysis"].get("year_feature_name", "year"))
 
     required_columns = list(cfg["data"]["parquet"].get("required_columns", []))
     allow_missing_columns = bool(
@@ -139,26 +134,18 @@ def load_config(cfg_path: str) -> PreprocessConfig:
 
     glob_template = str(cfg["samples"]["glob_template"])
 
-    signal_label = int(cfg["samples"]["signal"]["label"])
-    signal_processes = list(cfg["samples"]["signal"]["processes"])
-
+    signal_spec = dict(cfg["samples"]["signal"])  # includes label, processes, processes_per_year
     background_label = int(cfg["samples"]["background"]["label"])
-    bkg_groups_raw = cfg["samples"]["background"]["groups"]
-    background_groups = {
-        str(g): list(v["processes"]) for g, v in bkg_groups_raw.items()
-    }
+    background_groups_spec = dict(cfg["samples"]["background"]["groups"])  # group -> spec dict
 
     training_features = list(cfg["features"]["training"])
-
-    missing = cfg.get("preprocessing", {}).get("missing", {})
+    do_not_scale_features = list(cfg["features"].get("do_not_scale_features", []))
 
     return PreprocessConfig(
         seed=seed,
         dtype=dtype,
         category=category,
         region=region,
-        year_mode=year_mode,
-        year_feature_name=year_feature_name,
         required_columns=required_columns,
         allow_missing_columns=allow_missing_columns,
         weight_col=weight_col,
@@ -166,39 +153,21 @@ def load_config(cfg_path: str) -> PreprocessConfig:
         strategy=strategy,
         shuffle=shuffle,
         glob_template=glob_template,
-        signal_label=signal_label,
-        signal_processes=signal_processes,
+        signal_spec=signal_spec,
+        background_groups_spec=background_groups_spec,
         background_label=background_label,
-        background_groups=background_groups,
         training_features=training_features,
+        do_not_scale_features=do_not_scale_features,
     )
 
-
-def build_sample_map(cfg: PreprocessConfig) -> SampleMap:
-    proc_to_label: Dict[str, int] = {}
-    proc_to_group: Dict[str, str] = {}
-
-    # signal
-    for p in cfg.signal_processes:
-        proc_to_label[p] = cfg.signal_label
-        proc_to_group[p] = "vbf"  # your signal is VBF; keep group name stable
-
-    # backgrounds (group names from config: DY/TOP/EWK)
-    for group_name, procs in cfg.background_groups.items():
-        group_lower = group_name.lower()
-        for p in procs:
-            proc_to_label[p] = cfg.background_label
-            proc_to_group[p] = group_lower
-
-    return SampleMap(process_to_label=proc_to_label, process_to_group=proc_to_group)
-
-
-def resolve_glob(base_path: str, glob_template: str, process: str) -> List[str]:
-    # tokens: {BASE}, {PROCESS}
-    patt = glob_template.replace("{BASE}", base_path).replace("{PROCESS}", process)
-    # use python glob via Path().glob? template contains **? keep simplest:
-    import glob as _glob
-
+def resolve_glob(base_path: str, year: str, glob_template: str, process: str) -> List[str]:
+    # tokens: {BASE}, {YEAR}, {PROCESS}
+    patt = (
+        glob_template.replace("{BASE}", base_path)
+        .replace("{YEAR}", year)
+        .replace("{PROCESS}", process)
+    )
+    patt = Path(patt).as_posix() # ensure no // issues in the path
     files = sorted(_glob.glob(patt))
     return files
 
@@ -210,11 +179,11 @@ def events_to_dataframe(
     process: str,
     label_int: int,
     group: str,
+    year: str,
 ) -> pd.DataFrame:
     """
-    Apply selection, convert to pandas, attach label + group + process.
+    Apply selection, convert to pandas, attach label + group + process (+ year if requested).
     """
-    # apply your selection (same signature you use)
     events = applyRegionCatCuts(
         events,
         category=cfg.category,
@@ -225,15 +194,13 @@ def events_to_dataframe(
         do_VH_veto=False,
     )
 
-    # Compute to Awkward and sanitize None records
     arr = events.compute()
     arr = arr[~ak.is_none(arr)]
 
-    # Keep only columns that exist
     present_cols = [c for c in keep_cols if c in arr.fields]
-    if (not cfg.allow_missing_columns) and (set(keep_cols) - set(present_cols)):
-        missing = sorted(list(set(keep_cols) - set(present_cols)))
-        raise KeyError(f"Missing columns in '{process}': {missing}")
+    missing_cols = sorted(list(set(keep_cols) - set(present_cols)))
+    if missing_cols and (not cfg.allow_missing_columns):
+        raise KeyError(f"Missing columns in '{process}': {missing_cols}")
 
     data: Dict[str, np.ndarray] = {}
     for c in present_cols:
@@ -279,12 +246,36 @@ def weighted_std(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
     var = np.sum(w[:, None] * (x - mean) ** 2, axis=0) / wsum
     return np.sqrt(np.maximum(var, 0.0))
 
+# --------------------------------------------------------------------------------------
+# IO helpers
+# --------------------------------------------------------------------------------------
+def _compute_fold_ids(
+    df: pd.DataFrame, n_folds: int, seed: int, shuffle: bool
+) -> np.ndarray:
+    ev = df["event"].to_numpy(dtype=np.uint64, copy=False)
+
+    if not shuffle:
+        logger.debug("[_compute_fold_ids] shuffle=False: using event %% n_folds")
+        return (ev.astype(np.int64) % int(n_folds)).astype(np.int64)
+
+    logger.debug("[_compute_fold_ids] shuffle=True: using hashed shuffle with seed=%d", seed)
+
+    # deterministic hashed shuffle based on event and seed (stable across years)
+    seed_u = np.uint64(seed)
+    x = ev ^ seed_u
+    x ^= x >> np.uint64(33)
+    x *= np.uint64(0xFF51AFD7ED558CCD)
+    x ^= x >> np.uint64(33)
+    x *= np.uint64(0xC4CEB9FE1A85EC53)
+    x ^= x >> np.uint64(33)
+    return (x % np.uint64(n_folds)).astype(np.int64)
+
 
 def make_output_dir(
-    out_root: str, tag: str, year: str, region: str, category: str
+    out_root: str, tag: str, years: str, region: str, category: str
 ) -> str:
-    # Keep it stable and readable
-    out = Path(out_root) / tag / f"{year}_{region}_{category}"
+    years_slug = years.replace(",", "-").replace(" ", "")
+    out = Path(out_root) / tag / f"{years_slug}_{region}_{category}"
     out.mkdir(parents=True, exist_ok=True)
     return str(out)
 
@@ -316,65 +307,115 @@ def save_scaler_npz(
 
 
 # --------------------------------------------------------------------------------------
-# Main preprocessor
+# Core logic
 # --------------------------------------------------------------------------------------
 def preprocess(
     cfg: PreprocessConfig,
-    sample_map: SampleMap,
     base_path: str,
     out_dir: str,
-    year: str,
+    years: str,
     make_plots: bool,
 ) -> None:
-    # columns to load from parquet
-    features2load = list(cfg.training_features) + ["event", cfg.weight_col]
-    logger.debug("[preprocess] Features to load: %s", features2load)
+    years_list = [y.strip() for y in years.split(",") if y.strip()]
+    if not years_list:
+        raise ValueError("No years provided.")
 
-    # Read and convert all processes -> one big dataframe
+    # columns to load
+    features2load = list(cfg.training_features) + ["event", cfg.weight_col]
+
+    logger.info("[preprocess] years: %s", years_list)
+    logger.info("[preprocess] base_path: %s", base_path)
+    logger.info("[preprocess] category=%s region=%s", cfg.category, cfg.region)
+    logger.info("[preprocess] features2load: %s", features2load)
+
+    # ---- build combined dataframe across years ----
     dfs: List[pd.DataFrame] = []
 
-    all_processes = list(cfg.signal_processes)
-    for _, procs in cfg.background_groups.items():
-        all_processes.extend(procs)
+    for year in years_list:
+        # resolve processes per year
+        sig_label = int(cfg.signal_spec["label"])
+        sig_procs = procs_for_year(cfg.signal_spec, year)
 
-    logger.info("[preprocess] Base path: %s", base_path)
-    logger.info("[preprocess] Total processes: %d", len(all_processes))
+        bkg_groups = cfg.background_groups_spec
+        all_bkg_procs: List[Tuple[str, str]] = []  # (group, proc)
+        for group_name, gspec in bkg_groups.items():
+            procs = procs_for_year(gspec, year)
+            for p in procs:
+                all_bkg_procs.append((group_name, p))
 
-    for process in all_processes:
-        files = resolve_glob(base_path, cfg.glob_template, process)
-        if not files:
-            logger.warning(
-                "[preprocess] No parquets for process=%s (pattern from template). Skipping.",
-                process,
-            )
-            continue
-
+        logger.info("------------------------------------------------------------")
+        logger.info("[year %s] signal procs: %s", year, sig_procs)
         logger.info(
-            "[preprocess] Reading %d parquet files for process=%s", len(files), process
+            "[year %s] background groups: %s",
+            year,
+            {g: procs_for_year(s, year) for g, s in bkg_groups.items()},
         )
 
-        events = dak.from_parquet(files)
-
-        # quick required-column validation (best-effort)
-        if cfg.required_columns:
-            missing_req = [c for c in cfg.required_columns if c not in events.fields]
-            if missing_req and (not cfg.allow_missing_columns):
-                raise KeyError(
-                    f"Process '{process}' missing required columns: {missing_req}"
+        # signal
+        for proc in sig_procs:
+            files = resolve_glob(base_path, year, cfg.glob_template, proc)
+            if not files:
+                logger.warning(
+                    "[year %s] Missing files for signal proc=%s. Skipping.", year, proc
                 )
+                continue
+            logger.info("[year %s] Reading %d files: %s", year, len(files), proc)
+            events = dak.from_parquet(files)
 
-        label_int = sample_map.process_to_label.get(process, cfg.background_label)
-        group = sample_map.process_to_group.get(process, sample_map.other_group_name)
+            # required columns check (best effort)
+            if cfg.required_columns:
+                missing_req = [
+                    c for c in cfg.required_columns if c not in events.fields
+                ]
+                if missing_req and (not cfg.allow_missing_columns):
+                    raise KeyError(
+                        f"[year {year}] Process '{proc}' missing required columns: {missing_req}"
+                    )
 
-        df = events_to_dataframe(
-            events=events,
-            keep_cols=features2load + cfg.required_columns,
-            cfg=cfg,
-            process=process,
-            label_int=label_int,
-            group=group,
-        )
-        dfs.append(df)
+            df = events_to_dataframe(
+                events=events,
+                keep_cols=features2load + cfg.required_columns,
+                cfg=cfg,
+                process=proc,
+                label_int=sig_label,
+                group="vbf",
+                year=year,
+            )
+            dfs.append(df)
+
+        # backgrounds
+        for group_name, proc in all_bkg_procs:
+            files = resolve_glob(base_path, year, cfg.glob_template, proc)
+            if not files:
+                logger.warning(
+                    "[year %s] Missing files for bkg group=%s proc=%s. Skipping.",
+                    year,
+                    group_name,
+                    proc,
+                )
+                continue
+            logger.info("[year %s] Reading %d files: %s", year, len(files), proc)
+            events = dak.from_parquet(files)
+
+            if cfg.required_columns:
+                missing_req = [
+                    c for c in cfg.required_columns if c not in events.fields
+                ]
+                if missing_req and (not cfg.allow_missing_columns):
+                    raise KeyError(
+                        f"[year {year}] Process '{proc}' missing required columns: {missing_req}"
+                    )
+
+            df = events_to_dataframe(
+                events=events,
+                keep_cols=features2load + cfg.required_columns,
+                cfg=cfg,
+                process=proc,
+                label_int=cfg.background_label,
+                group=str(group_name).lower(),
+                year=year,
+            )
+            dfs.append(df)
 
     if not dfs:
         raise RuntimeError(
@@ -382,84 +423,64 @@ def preprocess(
         )
 
     df_total = pd.concat(dfs, axis=0, ignore_index=True)
+    logger.info("[preprocess] Combined dataframe: N=%d", len(df_total))
 
-    # Basic weight sanitization
+    # ---- basic checks / cleaning ----
     if cfg.weight_col not in df_total.columns:
         raise KeyError(
-            f"Weight column '{cfg.weight_col}' not found in the merged dataframe."
+            f"Weight column '{cfg.weight_col}' not found in merged dataframe."
         )
 
-    # Sanity check if there are any features with any non-numeric values
+    # numeric coercion check (training features only)
+    # print("df_total[year].head():")
+    # print(df_total["year"].head())
     for f in cfg.training_features:
+        if f not in df_total.columns:
+            raise KeyError(
+                f"Training feature '{f}' missing from merged dataframe. (Check year feature or parquet columns.)"
+            )
         non_numeric = pd.to_numeric(df_total[f], errors="coerce").isna().any()
         if non_numeric:
             raise ValueError(f"Non-numeric values found in feature column '{f}'.")
 
-    logger.debug("[preprocess] All training feature values are numeric.")
-
-    # Clean before scaling (your existing behavior)
     logger.info("[preprocess] Running pre_scaling_clean...")
     df_total = pre_scaling_clean(df_total)
 
     # Save training feature list
     save_feature_list(out_dir, cfg.training_features)
 
-    # Determine scaling feature order
-    do_not_scale = set(cfg.do_not_scale_features())
-    logger.debug("[preprocess] do_not_scale features: %s", sorted(list(do_not_scale)))
+    # ---- scaling plan ----
+    do_not_scale_features = set(cfg.do_not_scale_features)
+    scale_features = [f for f in cfg.training_features if f not in do_not_scale_features]
+    passthrough_features = [f for f in cfg.training_features if f in do_not_scale_features]
 
-    scale_features = [f for f in cfg.training_features if f not in do_not_scale]
-    passthrough_features = [f for f in cfg.training_features if f in do_not_scale]
-    logger.info("[preprocess] Scaling %d features, passing through %d features",
-        len(scale_features), len(passthrough_features)
+    logger.info(
+        "[preprocess] Scaling %d features, passing through %d features",
+        len(scale_features),
+        len(passthrough_features),
     )
-
+    logger.debug("[preprocess] scale_features: %s", scale_features)
+    logger.debug("[preprocess] passthrough_features: %s", passthrough_features)
     final_features = scale_features + passthrough_features
-    logger.debug("[preprocess] Final feature order: %s", final_features)
 
-    # Deterministic 4-fold split (matches your current code)
-    n_folds = cfg.n_folds
+    # ---- folds ----
+    n_folds = int(cfg.n_folds)
     if n_folds < 2:
         raise ValueError("n_folds must be >= 2")
 
-    # --- compute fold ids once ---
-    rng = np.random.default_rng(cfg.seed)
+    fold_ids = _compute_fold_ids(
+        df_total, n_folds=n_folds, seed=cfg.seed, shuffle=cfg.shuffle
+    )
+    df_total["_fold_id"] = fold_ids
 
-    if cfg.shuffle:
-        # deterministic, random-looking fold assignment based on event (stable)
-        ev = df_total["event"].to_numpy(dtype=np.uint64, copy=False)
-
-        seed_u = np.uint64(cfg.seed)
-
-        x = ev ^ seed_u
-
-        # 64-bit mix (splitmix64-ish / murmur finalizer style)
-        x ^= (x >> np.uint64(33))
-        x *= np.uint64(0xFF51AFD7ED558CCD)
-        x ^= (x >> np.uint64(33))
-        x *= np.uint64(0xC4CEB9FE1A85EC53)
-        x ^= (x >> np.uint64(33))
-
-        df_total["_fold_id"] = (x % np.uint64(n_folds)).astype(np.int64)
-        logger.info(
-            "[preprocess] Using hashed-shuffle folds (seed=%d, n_folds=%d)",
-            cfg.seed, n_folds
-        )
-    else:
-        # sequential split
-        df_total["_fold_id"] = (df_total["event"].astype(np.int64) % n_folds).astype(
-            np.int64
-        )
-        logger.info("[preprocess] Using event%%n_folds folds (n_folds=%d)", n_folds)
-
-    # Make fold outputs
+    # ---- write fold parquet outputs ----
     for i in range(n_folds):
         m = df_total["_fold_id"] == i
         n = int(m.sum())
         sw = float(np.abs(df_total.loc[m, cfg.weight_col]).sum())
         logger.info("[fold_id check] fold=%d  N=%d  sum|w|=%.6e", i, n, sw)
 
-        # Same scheme as your script:
+        # scheme: train=[i,i+1], val=[i+2], eval=[i+3]
         train_folds = [(i + f) % n_folds for f in (0, 1)]
         val_folds = [(i + 2) % n_folds]
         eval_folds = [(i + 3) % n_folds]
@@ -505,21 +526,19 @@ def preprocess(
         _apply_scale(df_val)
         _apply_scale(df_eval)
 
-        # Keep final feature column order stable for training
-        df_train = df_train[
-            final_features
-            + ["label", cfg.weight_col, "event", "process", "process_group"]
+        # stable column order for training
+        keep_cols = final_features + [
+            "label",
+            cfg.weight_col,
+            "event",
+            "process",
+            "process_group",
         ]
-        df_val = df_val[
-            final_features
-            + ["label", cfg.weight_col, "event", "process", "process_group"]
-        ]
-        df_eval = df_eval[
-            final_features
-            + ["label", cfg.weight_col, "event", "process", "process_group"]
-        ]
+        # If you created a year feature, ensure it remains (only if it is in training_features).
+        df_train = df_train[keep_cols]
+        df_val = df_val[keep_cols]
+        df_eval = df_eval[keep_cols]
 
-        # Save scaler artifact
         scaler_path = save_scaler_npz(
             save_dir=out_dir,
             fold_idx=i,
@@ -530,30 +549,89 @@ def preprocess(
         )
         logger.info("[fold %d] Saved scaler: %s", i, scaler_path)
 
-        # Optional diagnostic plots
+        logger.debug("[preprocess] scaling plots enabled: %s", make_plots and HAVE_SCALING_PLOTS)
         if make_plots and HAVE_SCALING_PLOTS:
             try:
+                sanity_dir = os.path.join(out_dir, "sanity_feature_plots")
                 plot_before_after_scaling(
-                    x_scale_train, w_train, mean, std, scale_features, out_dir
+                    x_scale_train, w_train, mean, std, scale_features, sanity_dir
                 )
                 plot_scaled_mean_std(
                     df_train[scale_features].to_numpy(),
                     w_train,
                     scale_features,
-                    out_dir,
+                    sanity_dir,
                 )
                 plot_corr_before_after(
-                    x_scale_train, df_train[scale_features].to_numpy(), out_dir
+                    x_scale_train, df_train[scale_features].to_numpy(), sanity_dir
                 )
                 plot_scaled_outliers(
-                    df_train[scale_features].to_numpy(), scale_features, out_dir
+                    df_train[scale_features].to_numpy(), scale_features, sanity_dir
                 )
+
+                plot_feature_hists_from_fold_dfs(
+                    df_train=df_train,
+                    df_val=df_val,
+                    df_eval=df_eval,
+                    features=final_features,   # scaled + passthrough in stable order
+                    label_col="label",
+                    weight_col=cfg.weight_col,
+                    outdir=os.path.join(sanity_dir, "sanity_feature_plots"),
+                    fold_idx=i,
+                    bins=60,
+                    logy=False,  # set True for logy PDFs
+                )
+                logger.info("[fold %d] Scaling plots done.", i)
+
+
+                # Compare folds for TRAIN background (most stable)
+                plot_feature_hists_compare_folds(
+                    fold_parquet_dir=out_dir,
+                    features=final_features,
+                    label_col="label",
+                    weight_col=cfg.weight_col,
+                    outdir=sanity_dir,
+                    n_folds=cfg.n_folds,
+                    split="train",
+                    cls=0,              # 0=bkg
+                    bins=60,
+                    logy=False,
+                )
+
+                # Compare folds for VAL background
+                plot_feature_hists_compare_folds(
+                    fold_parquet_dir=out_dir,
+                    features=final_features,
+                    label_col="label",
+                    weight_col=cfg.weight_col,
+                    outdir=sanity_dir,
+                    n_folds=cfg.n_folds,
+                    split="validation",
+                    cls=0,
+                    bins=60,
+                    logy=False,
+                )
+
+                # Optional: signal overlays too (can be noisy if low stats)
+                plot_feature_hists_compare_folds(
+                    fold_parquet_dir=out_dir,
+                    features=final_features,
+                    label_col="label",
+                    weight_col=cfg.weight_col,
+                    outdir=sanity_dir,
+                    n_folds=cfg.n_folds,
+                    split="train",
+                    cls=1,              # 1=sig
+                    bins=60,
+                    logy=False,
+                )
+
             except Exception as exc:
                 logger.warning(
                     "[fold %d] Scaling plots failed (continuing): %s", i, str(exc)
                 )
 
-        # Write fold parquet files (small enough → keep separate, as you want)
+        # Write fold parquet files
         df_train.to_parquet(
             os.path.join(out_dir, f"data_df_train_{i}.parquet"), index=False
         )
@@ -572,17 +650,17 @@ def preprocess(
             len(df_eval),
         )
 
-    # Save a small manifest for reproducibility
+    # ---- manifest for reproducibility ----
     manifest = {
         "pipeline": {
-            "preprocessor_version": "v1.0",
+            "preprocessor_version": "v1.1",
             "git_commit": get_git_commit(),
             "git_state": get_git_state(out_dir),
         },
-        "base_path": base_path,
+        "base_path": str(base_path),
         "category": cfg.category,
         "region": cfg.region,
-        "year": year,
+        "years": years_list,
         "n_folds": cfg.n_folds,
         "cv": {
             "type": cfg.strategy,
@@ -593,65 +671,66 @@ def preprocess(
         "weight_col": cfg.weight_col,
         "training_features": cfg.training_features,
         "scale_features": scale_features,
-        "do_not_scale": sorted(list(do_not_scale)),
-        "signal_processes": cfg.signal_processes,
-        "background_groups": cfg.background_groups,
-        "seed": cfg.seed,
+        "do_not_scale_features": sorted(list(do_not_scale_features)),
+        "samples": {
+            "signal": {
+                "label": int(cfg.signal_spec["label"]),
+                "processes": cfg.signal_spec.get("processes", []),
+                "processes_per_year": cfg.signal_spec.get("processes_per_year", {}),
+            },
+            "background": {
+                "label": int(cfg.background_label),
+                "groups": cfg.background_groups_spec,
+            },
+        },
         "yields": {
             "total": {
                 "n_events": int(len(df_total)),
                 "sumw": float(df_total[cfg.weight_col].sum()),
             },
             "signal": {
-                "n_events": int((df_total.label == 1).sum()),
-                "sumw": float(df_total.loc[df_total.label == 1, cfg.weight_col].sum()),
+                "n_events": int((df_total["label"] == 1).sum()),
+                "sumw": float(
+                    df_total.loc[df_total["label"] == 1, cfg.weight_col].sum()
+                ),
             },
             "background": {
-                "n_events": int((df_total.label == 0).sum()),
-                "sumw": float(df_total.loc[df_total.label == 0, cfg.weight_col].sum()),
+                "n_events": int((df_total["label"] == 0).sum()),
+                "sumw": float(
+                    df_total.loc[df_total["label"] == 0, cfg.weight_col].sum()
+                ),
             },
         },
     }
-    with open(os.path.join(out_dir, "preprocess_manifest.json"), "w") as f:
+
+    out_manifest = os.path.join(out_dir, "preprocess_manifest.json")
+    with open(out_manifest, "w") as f:
         json.dump(manifest, f, indent=2)
-    logger.info(
-        "[preprocess] Saved manifest: %s",
-        os.path.join(out_dir, "preprocess_manifest.json"),
-    )
+    logger.info("[preprocess] Saved manifest: %s", out_manifest)
 
 
 # --------------------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------------------
-
-
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="DNN preprocessing: cuts -> cleaning -> folds -> scaling -> fold-parquets"
+        description="DNN preprocessing: cuts -> cleaning -> folds -> scaling -> fold-parquets (multi-year combined)"
     )
-
     p.add_argument(
         "--config", required=True, help="YAML config file (features/samples/etc.)"
     )
 
-    # base path comes from CLI (your requirement)
+    # base path comes from CLI
     p.add_argument(
         "--base-path",
         required=True,
-        help="Base path containing process subdirs (e.g. .../YEAR/compacted or .../YEAR/f1_0).",
+        help="Base path containing YEAR subdirs (e.g. .../stage1_output).",
     )
-
-    # tag comes from CLI (your requirement)
+    p.add_argument("--tag", required=True, help="Run tag (used under --out-root).")
     p.add_argument(
-        "--tag",
+        "--years",
         required=True,
-        help="Run tag (used to create output directory under --out-root).",
-    )
-
-    p.add_argument(
-        "--year",
-        default="unknown",
-        help="Year string for output naming (e.g. 2022postEE, run3, etc.)",
+        help="Comma-separated list of years to process (e.g. '2022preEE,2022postEE,2023BPix').",
     )
     p.add_argument(
         "--out-root", default="dnn/trained_models", help="Output root directory"
@@ -659,14 +738,13 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument(
         "--no-plots", action="store_true", help="Disable scaling diagnostic plots"
     )
-    p.add_argument("--log-level", default="DEBUG", help="Logging level")
+    p.add_argument("--log-level", default="INFO", help="Logging level")
 
-    # Allow quick override without editing YAML
+    # quick overrides (without editing YAML)
     p.add_argument(
         "--category", default=None, help="Override analysis.category from YAML"
     )
     p.add_argument("--region", default=None, help="Override analysis.region from YAML")
-
     return p
 
 
@@ -684,29 +762,24 @@ def main() -> None:
             cfg, "region", str(args.region)
         )  # pylint: disable=protected-access
 
-    np.random.seed(cfg.seed)
-
-    sample_map = build_sample_map(cfg)
-
     out_dir = make_output_dir(
         out_root=args.out_root,
         tag=args.tag,
-        year=args.year,
+        years=args.years,
         region=cfg.region,
         category=cfg.category,
     )
 
     logger.info("[main] Output directory: %s", out_dir)
     logger.info(
-        "[main] category=%s region=%s year=%s", cfg.category, cfg.region, args.year
+        "[main] category=%s region=%s years=%s", cfg.category, cfg.region, args.years
     )
 
     preprocess(
         cfg=cfg,
-        sample_map=sample_map,
         base_path=args.base_path,
         out_dir=out_dir,
-        year=args.year,
+        years=args.years,
         make_plots=(not args.no_plots),
     )
 

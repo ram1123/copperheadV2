@@ -6,8 +6,6 @@ meta:
 analysis:
   category: "vbf"
   region: "h-peak"
-  year_mode: "feature"
-  year_feature_name: "year"
 
 data:
   mode: "glob"
@@ -24,26 +22,41 @@ data:
   cv:
     n_folds: 4
     strategy: "simple" # TODO: Implement the "stratified" option from scikit
-    shuffle: true
+    shuffle: false
 
 samples:
   # base path comes from CLI. This is only the template.
-  # available tokens: {BASE}, {PROCESS}
-  glob_template: "{BASE}/{PROCESS}/*/*.parquet"
+  # available tokens: {BASE}, {YEAR}, {PROCESS}
+  glob_template: "{BASE}/{YEAR}/compacted/{PROCESS}/*/*.parquet"
 
   signal:
     label: 1
     processes: ["vbf_powheg_dipole"]
+    processes_per_year:
+      2022preEE: ["vbf_powheg_dipole"]
+      2022postEE: ["vbf_powheg_dipole"]
+      2023: ["vbf_powheg"]
+      2023BPix: ["vbf_powheg"]
+      2024: ["vbf_powheg"]
 
   background:
     label: 0
     groups:
       DY:
         processes: ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
+        processes_per_year:
+          2022preEE: ["dyTo2L_M-50_incl"]
+          2022postEE: ["dyTo2L_M-50_incl"]
+          2023: ["dyTo2L_M-50_incl"]
+          2023BPix: ["dyTo2L_M-50_incl"]
+          '2024': ["dyTo2Mu_M-50_aMCatNLO"]
       TOP:
         processes: ["ttjets_dl", "ttjets_sl"]
+        processes_per_year: {}
+
       EWK:
         processes: ["ewk_lljj"]
+        processes_per_year: {}
 
 features:
   training:
@@ -71,6 +84,7 @@ features:
     - "mmj_min_dEta_nominal"
     - "pt_centrality_nominal"
     - "year"
+  do_not_scale_features: ["year", "nsoftjets5_nominal"]
 
 preprocessing:
   scaler:
