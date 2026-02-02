@@ -12,10 +12,11 @@ import random
 
 import logging
 from modules.utils import logger
+from modules.classify_year import is_run3
 
 def printCorrObjInputs(corr_obj):
     input_names = [inp.name for inp in corr_obj.inputs]
-    logger.info(f"printCorrObjInputs names: \n {input_names}")
+    logger.debug(f"printCorrObjInputs names: \n {input_names}")
 
 def jec_names_and_sources(jec_pars):
     # logger.debug(f"jec_pars: {jec_pars}")
@@ -552,11 +553,12 @@ def get_baseVariations(variation_shifts : list):
     # print(f"variation_base_l: {variation_base_l}")
     return variation_base_l
 
-def do_jec_scale(jets, config, is_mc, dataset, uncs=["nominal"]):
-# def do_jec_scale(jets, config, is_mc, dataset):
+def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
     jec_parameters = config["jec_parameters"]
 
     jerc_load_path = jec_parameters["jerc_load_path"]
+    logger.debug(f"jerc_load_path: {jerc_load_path}")
+
     cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
 
 
@@ -565,18 +567,28 @@ def do_jec_scale(jets, config, is_mc, dataset, uncs=["nominal"]):
     else: # data
         jec_tag = None
         for run in jec_parameters["runs"]:
-            logger.debug(f"run: {run}")
-            logger.debug(f"dataset: {dataset}")
+            logger.debug(f"run: {run}, dataset: {dataset}")
             if run in dataset:
                 jec_tag = getJecDataTag(run, jec_parameters["jec_data_tags"])
     logger.debug(f"jec_tag: {jec_tag}")
     if jec_tag is None:
-        logger.debug("ERROR! JEC tag not found!")
-        raise ValueError
-
+        raise ValueError("JEC tag not found!")
 
 
     algo = jec_parameters["jet_algorithm"]
+
+    if (not is_mc) and ("run" not in jets.fields):
+        jets["run"] = ak.ones_like(jets.pt_raw, dtype=np.int64) * events.run
+
+    input_map = {
+        "JetA": jets.area,
+        "JetEta": jets.eta,
+        "JetPt": jets.pt_raw,
+        "Rho": jets.PU_rho,
+        "JetPhi": jets.phi,
+        "run": jets.run if "run" in jets.fields else None,
+    }
+
     for unc in uncs: # NOTE: we assume that "nominal" is the first element list
         if (not is_mc) and "nominal" not in unc:
             continue
@@ -585,38 +597,27 @@ def do_jec_scale(jets, config, is_mc, dataset, uncs=["nominal"]):
         else:
             lvl_compound = f"Regrouped_{unc}"
 
-        key = "{}_{}_{}".format(jec_tag, lvl_compound, algo)
+        logger.info(f"[MC: {is_mc}]: Applying JEC: {unc} with level: {lvl_compound}")
+
+        key = f"{jec_tag}_{lvl_compound}_{algo}"
         logger.debug(f"jec key: {key}")
         if unc == "nominal":
             sf = cset.compound[key]
         else:
             sf = cset[key]
 
-        sf_input_names = [inp.name for inp in sf.inputs]
-        logger.debug(f"{unc} JEC input: {sf_input_names}") # use this a reference to add inputs
+        inputs = []
+        for inp in sf.inputs:
+            if inp.name not in input_map:
+                raise ValueError(f"JEC input {inp.name} not found in input_map!")
+            arr = input_map.get(inp.name, None)
+            if arr is None:
+                raise ValueError(f"Missing required JEC input: {inp.name} for key: {key}")
+            inputs.append(arr)
+            logger.debug(f"JEC input {inp.name}")
+            # logger.debug(f"JEC input {inp.name}: {arr[:2].compute()}")
+        logger.debug(f"{unc} JEC input: {inputs}") # use this a reference to add inputs
 
-        if unc == "nominal":
-            year = config["year"]
-            if year == "2024":
-                inputs = (
-                    jets.area, # == JetA
-                    jets.eta, # == JetEta
-                    jets.pt_raw, # == JetPt
-                    jets.PU_rho, # == Rho
-                    jets.phi, # == JetPhi
-                )
-            else:
-                inputs = (
-                    jets.area, # == JetA
-                    jets.eta, # == JetEta
-                    jets.pt_raw, # == JetPt
-                    jets.PU_rho, # == Rho
-                )
-        else:
-            inputs = ( # raw pt is used in JEC unc. Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L50-L52
-                jets.eta, # == JetEta
-                jets.pt_raw, # == JetPt
-            )
         # inputs = get_corr_inputs(example_value_dict, sf)
         printCorrObjInputs(sf) # for debugging
         new_jec_scale = sf.evaluate(*inputs)
@@ -634,15 +635,12 @@ def do_jec_scale(jets, config, is_mc, dataset, uncs=["nominal"]):
             jets["mass_jec"] = jet_mass_jec
         else:
             # up
-            # jet_pt_jec = (1+new_jec_scale)*jets.pt_jec
-            # jet_mass_jec = (1+new_jec_scale)*jets.mass_jec
             jet_pt_jec = (1+new_jec_scale) # apply these corrections fully after JER
             jet_mass_jec = (1+new_jec_scale) # apply these corrections fully after JER
             jets[f"pt_{unc}_up"] = jet_pt_jec
             jets[f"mass_{unc}_up"] = jet_mass_jec
+
             # down
-            # jet_pt_jec = (1-new_jec_scale)*jets.pt_jec
-            # jet_mass_jec = (1-new_jec_scale)*jets.mass_jec
             jet_pt_jec = (1-new_jec_scale) # apply these corrections fully after JER
             jet_mass_jec = (1-new_jec_scale) # apply these corrections fully after JER
             jets[f"pt_{unc}_down"] = jet_pt_jec
@@ -740,18 +738,12 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
     syst: nom, up and down
     """
     year = config["year"]
-    # Skip JER smearing for 2022 (use JEC-corrected pt directly)
-    if "2022" in str(year):
-        for syst in syst_l:
-            jets[f"pt_jer_{syst}"] = jets.pt_jec
-        jets["pt"] = jets[f"pt_jer_nom"]
-        jets = apply_jer_unc(jets)
-        return jets
 
     jec_parameters = config["jec_parameters"]
     jerc_load_path = jec_parameters["jerc_load_path"]
-    cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
+    logger.debug(f"jerc_load_path: {jerc_load_path}")
 
+    cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
 
     jersmear_load_path = jec_parameters["jersmear_load_path"]
     cset_jersmear = correctionlib.CorrectionSet.from_file(jersmear_load_path)
@@ -762,13 +754,20 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
     jer_tag = jec_parameters["jer_tags"]
     # algo = "AK4PFchs"
     algo = jec_parameters["jet_algorithm"]
-    
-    # First, jet JER SF
+
+    #  JER scale factor key
     key = "{}_{}_{}".format(jer_tag, "ScaleFactor", algo)
     logger.info(f"key: {key}")
     sf = cset[key]
+    logger.debug(f"JER SF name: {sf}")
+    logger.debug(f"JER SF name: {sf.name}")
+    logger.debug(f"JER SF inputs: {sf.inputs}")
+    for inp in sf.inputs:
+        logger.debug(f"JER SF input name: {inp.name}, type: {inp.type}, description: {inp.description}")
     sf_input_names = [inp.name for inp in sf.inputs]
     logger.debug(f"JER SF input: {sf_input_names}")
+
+    #  JER pT resolution key
     key = "{}_{}_{}".format(jer_tag, "PtResolution", algo)
     sf_ptres = cset[key]
 
@@ -777,7 +776,7 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
 
     for syst in syst_l:
         # Second, get JER resolution
-        if year == "2024":
+        if is_run3(year):
             inputs = (
                 jets.eta, # == JetEta
                 jets.pt_raw, # == JetPt

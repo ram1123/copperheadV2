@@ -24,7 +24,7 @@ jec_parameters:
         2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-10-07/jet_jerc.json.gz
         "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jet_jerc.json.gz
         2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jet_jerc.json.gz
-        "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-07-17/jet_jerc.json.gz
+        "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-12-02/jet_jerc.json.gz
     jersmear_load_path:
         2016_RERECO: /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
         "2017_RERECO": /cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
@@ -639,11 +639,11 @@ jec_parameters:
         2016_RERECO: Summer19UL16_V7_MC
         "2017_RERECO": Summer19UL17_V5_MC
         "2018_RERECO": Summer19UL18_V5_MC
-        2022preEE: Summer19UL18_V5_MC # these are wrong
-        2022postEE: Summer19UL18_V5_MC # these are wrong
-        "2023": Summer19UL18_V5_MC # placeholder (update with correct 2023 tag)
-        2023BPix: Summer19UL18_V5_MC # placeholder
-        "2024": Summer24Prompt24_V1_MC
+        2022preEE: Summer22_22Sep2023_V3_MC
+        2022postEE: Summer22EE_22Sep2023_V3_MC
+        "2023": Summer23Prompt23_V2_MC
+        2023BPix: Summer23BPixPrompt23_V3_MC
+        "2024": Summer24Prompt24_V2_MC
     jer_tags:
         2016preVFP: Summer20UL16APV_JRV3_MC
         2016postVFP: Summer20UL16_JRV3_MC
@@ -652,10 +652,10 @@ jec_parameters:
         2016_RERECO: Summer20UL16_JRV3_MC
         "2017_RERECO": Summer19UL17_JRV2_MC
         "2018_RERECO": Summer19UL18_JRV2_MC
-        2022preEE: Summer19UL18_JRV2_MC
-        2022postEE: Summer19UL18_JRV2_MC
-        "2023": Summer23Prompt23_V2_MC
-        2023BPix: Summer23BPixPrompt23_V3_MC
+        2022preEE: Summer22_22Sep2023_JRV1_MC
+        2022postEE: Summer22EE_22Sep2023_JRV1_MC
+        "2023": Summer23Prompt23_RunCv1234_JRV1_MC
+        2023BPix: Summer23BPixPrompt23_RunD_JRV1_MC
         # "2024": Summer24Prompt24_V1_MC
         "2024": Summer23BPixPrompt23_RunD_JRV1_MC
     jec_data_tags:
@@ -714,7 +714,7 @@ jec_parameters:
                 - E
             Summer19UL17_RunF_V5_DATA:
                 - F
-        "2018_RERECO": # temporary values
+        "2018_RERECO":
             Summer19UL18_RunA_V5_DATA:
                 - A
             Summer19UL18_RunB_V5_DATA:
@@ -724,35 +724,31 @@ jec_parameters:
             Summer19UL18_RunD_V5_DATA:
                 - D
         2022preEE:
-            Summer19UL18_RunC_V5_DATA:
+            Summer22_22Sep2023_RunCD_V3_DATA:
                 - C
-            Summer19UL18_RunD_V5_DATA:
                 - D
         2022postEE:
-            Summer19UL18_RunE_V5_DATA:
+            Summer22EE_22Sep2023_RunE_V3_DATA:
                 - E
-            Summer19UL18_RunF_V5_DATA:
+            Summer22EE_22Sep2023_RunF_V3_DATA:
                 - F
-            Summer19UL18_RunG_V5_DATA:
+            Summer22EE_22Sep2023_RunG_V3_DATA:
                 - G
+        # For 2023, the correct era is chosen based on the run the event is in.
+        # Details: https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/merge_requests/118
         "2023":
-            Summer19UL18_RunA_V5_DATA:
+            Summer23Prompt23_V2_DATA:
                 - A
-            Summer19UL18_RunB_V5_DATA:
                 - B
-            Summer19UL18_RunC_V5_DATA:
                 - C
-            Summer19UL18_RunD_V5_DATA:
                 - D
-            Summer19UL18_RunE_V5_DATA:
                 - E
         2023BPix:
-            Summer19UL18_RunB_V5_DATA:
+            Summer23BPixPrompt23_V3_DATA:
                 - B
-            Summer19UL18_RunC_V5_DATA:
                 - C
         "2024":
-            Summer24Prompt24_V1_DATA:
+            Summer24Prompt24_V2_DATA:
                 - B
                 - C
                 - D
