@@ -829,14 +829,20 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
             jet_puId = ak.ones_like(jets.pt)
         # logger.debug("JER smearing : {}".format(jer_smearing[:20].compute()))
         # logger.debug(f"jets.pt b4 JER smear: {jets.pt[:20].compute()}")
-        # jer_smearing = applyStrat1(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
-        jer_smearing = applyStrat2(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
-        # jer_smearing = applyStrat1n2(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
-        # jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, get_puId(jets), pt_jec, jets.eta, year)
-
+        jer_strat = config["switches"]["jer_strat"]
+        print(f"jer_strat: {jer_strat}")
+        print(f"type jer_strat: {type(jer_strat)}")
+        if jer_strat == 1:
+            jer_smearing = applyStrat1(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
+        elif jer_strat == 2:
+            jer_smearing = applyStrat2(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
+            print("strat2 is being used!")
+        elif jer_strat == 3:
+            jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, get_puId(jets), pt_jec, jets.eta, year)
+        else:
+            raise ValueError(f"jer strategy {jer_strat} is not yet supported!")
         # jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
         jets[f"pt_jer_{syst}"] = jer_smearing * pt_jec  # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
-
     jets["pt"] = jets[f"pt_jer_nom"]
     # print(f"jet pt: {jets.pt[:100].compute()}")
     # print(f"jet pt_jer_up: {jets.pt_jer_up[:100].compute()}")
