@@ -293,7 +293,6 @@ def _add_block(out, block):
 
 
 class EventProcessor(processor.ProcessorABC):
-    # def __init__(self, config_path: str,**kwargs):
     def __init__(self, config: dict, test_mode=False, isCutflow=False, **kwargs):
         """
         TODO: replace all of these with self.config dict variable which is taken from a
@@ -486,7 +485,6 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
         self.selection = PackedSelection()
-        do_jec_unc = self.config["switches"]["do_jec_unc"]
         """
         TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
 
@@ -1176,13 +1174,7 @@ class EventProcessor(processor.ProcessorABC):
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
-        do_jec = self.config["switches"]["do_jec"]
-        # do_jecunc = self.config["do_jecunc"]
-        # do_jerunc = self.config["do_jerunc"]
         # testing
-        do_jecunc = False
-        do_jerunc = False
-        # cache = events.caches[0]
         factory = None
         jet_default = ak.pad_none(jets, target=4) # save pre jec and jer Jet for comparison
         jet1_default = jet_default[:, 0]
@@ -1241,38 +1233,33 @@ class EventProcessor(processor.ProcessorABC):
             fatJets_default = ak.pad_none(fatJets, target=1)
             fatJet1_default = fatJets_default[:, 0]
 
-        if do_jec: # old method
-            logger.warning("Doing JEC and JER corrections!")
-            self.jec_factories_mc, self.jec_factories_data = get_jec_factories(
-                self.config["jec_parameters"],
-                year
-            )
-            if is_mc:
-                factory = self.jec_factories_mc["jec"]
-            else:
-                for run in self.config["jec_parameters"]["runs"]:
-                    logger.debug(f"run: {run}")
-                    logger.debug(f"dataset: {dataset}")
-                    if run in dataset:
-                        factory = self.jec_factories_data[run]
-                if factory is None:
-                    logger.debug("JEC factory not recognized!")
-                    raise ValueError
+        do_jec = self.config["switches"]["do_jec"]
+        do_jec_unc = self.config["switches"]["do_jec_unc"]
+        do_jer_unc = self.config["switches"]["do_jer_unc"]
+        if do_jec:
+            logger.info("doing JEC  (+ JER for MC)!")
 
-            # -------------------------------------
-            logger.debug("doing JEC + SMEARing!")
+            # 1) JES/JER variation labels you want to carry
             if do_jec_unc:
                 variation_l = ["nominal"] + self.config["jec_parameters"]["jec_unc_to_consider"]
             else:
                 variation_l = ["nominal"]
-            jets = do_jec_scale(jets, self.config, is_mc, dataset, uncs=variation_l)
-            # jets = do_jec_scale(jets, self.config, is_mc, dataset)
-            # print(f"jets test: {jets.pt_Absolute_up.compute()}")
+
+            # 2) Apply JES to jets (nominal + uncertainty sources)
+            jets = do_jec_scale(jets, events, self.config, is_mc, dataset, uncs=variation_l)
+
+            # store nominal snapshot names
             jets["mass_jec"] = jets.mass
             jets["pt_jec"] = jets.pt
 
-            if is_mc: # JER smearing
-                jets = do_jer_smear(jets, self.config, events.event, year=year, nanoAOD_version=NanoAODv)
+            logger.debug(f"year: {year}, is_mc: {is_mc}, dataset: {dataset}")
+
+            # 3) Apply JER smearing on MC
+            if is_mc:
+                logger.debug("Applying JER smearing!")
+                jets = do_jer_smear(jets, self.config, events.event, nanoAOD_version=NanoAODv)
+
+            # 4) Sort jets *after* final pt is set
             sorted_args = ak.argsort(jets.pt, ascending=False)
             jets = (jets[sorted_args])
 
@@ -1280,17 +1267,6 @@ class EventProcessor(processor.ProcessorABC):
             variation_l.remove("nominal")
             if is_mc:
                 jets = applyJetUncertaintyKinematics(jets, variation_l)
-
-            # -------------------------------------
-
-            # testJetVector(jets)
-            # logger.info(f"jets pt b4 jec: {jets.pt.compute()}")
-            # -------------------------------------
-            # logger.info("do old jec!")
-            # jets = factory.build(jets)
-            # -------------------------------------
-            # logger.info(f"jets pt after jec: {jets.pt.compute()}")
-            # testJetVector(jets)
 
         else:
             jets["mass_jec"] = jets.mass
@@ -1894,8 +1870,8 @@ class EventProcessor(processor.ProcessorABC):
                 weights,
                 NanoAODv = NanoAODv,
                 do_jec = do_jec,
-                do_jecunc = do_jecunc,
-                do_jerunc = do_jerunc,
+                do_jecunc = do_jec_unc,
+                do_jerunc = do_jer_unc,
                 # event_match=event_match # debugging
                 dnn_year=dnn_year,
                 do_jet_horn_puid = self.config["switches"]["do_jet_horn_puid"]
@@ -1924,7 +1900,6 @@ class EventProcessor(processor.ProcessorABC):
         })
         t18 = time.perf_counter()
         logger.info(f"[timing] various region (z-peak) fill time: {t18 - t17:.2f} seconds")
-
 
         # b4 we do any filtering, we obtain the sum of gen weights for normalization
         # events["genWeight"] = ak.values_astype(events.genWeight, "float64") # increase precision or it gives you slightly different value for summing them up

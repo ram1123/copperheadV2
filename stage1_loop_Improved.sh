@@ -45,9 +45,10 @@ region="h-peak" # h-peak, h-sideband, signal
 category="vbf"
 postfix=""
 dask="0"
+cluster_index="0"
 
 # ----------- Parse options -----------
-while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:sfk" option; do
+while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:k:sf" option; do
     case "$option" in
         h) usage ;;
         c) datasetYAML="$OPTARG" ;;
@@ -62,9 +63,10 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:sfk" option; do
         r) region="$OPTARG" ;;
         t) category="$OPTARG" ;;
         p) postfix="$OPTARG" ;;
+        i) cluster_index="$OPTARG" ;;
+        k) dask="$OPTARG" ;;
         s) skipBadFiles="1" ;;
         f) frac="1" ;;
-        k) dask="1" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
@@ -197,7 +199,7 @@ for year in "${years[@]}"; do
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML --rerun  --skipSamples "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --isCutflow "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML  --skipSamples "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML  "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML "
 
     ### DNN training parameters
     training_fold=3
@@ -273,7 +275,7 @@ for year in "${years[@]}"; do
     fi
     [[ "$skipBadFiles" == "1" ]] && command0+=" --skipBadFiles"
 
-    if [[ "$dask" == "1" ]]; then
+    if [[ "$dask" -ge 1 ]]; then
         command0+=" --use_gateway "
         command1+=" --use_gateway "
         command2+=" --use_gateway "
@@ -281,6 +283,15 @@ for year in "${years[@]}"; do
         command5+=" --use_gateway "
         command6+=" --use_gateway "
         command_compact+=" --use_gateway "
+    fi
+    if [[ "$dask" == "2" ]]; then
+        command0+=" --cluster_index $cluster_index "
+        command1+=" --cluster_index $cluster_index "
+        command2+=" --cluster_index $cluster_index "
+        command4+=" --cluster_index $cluster_index "
+        command5+=" --cluster_index $cluster_index "
+        command6+=" --cluster_index $cluster_index "
+        command_compact+=" --cluster_index $cluster_index "
     fi
 
     # ---- Mode switch ----

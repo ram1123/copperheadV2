@@ -80,6 +80,13 @@ def build_common_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         help="If true, uses dask gateway client instead of local",
     )
+    parser.add_argument(
+        "--cluster_index",
+        dest="cluster_index",
+        default=0,
+        type=int,
+        help="Index of the Dask Gateway cluster to connect to",
+    )
 
     parser.add_argument(
         "-save",

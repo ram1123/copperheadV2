@@ -17,6 +17,8 @@ from cli.common_argparser import build_common_parser
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
 from distributed import Client
+
+from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary
 from modules.utils import get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
@@ -233,34 +235,8 @@ if __name__ == "__main__":
     logger.debug(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
+    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
     if not test_mode: # full scale implementation
-        if args.use_gateway:
-            from dask_gateway import Gateway
-            gateway = Gateway(
-                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-            )
-            # gateway = Gateway()
-            logger.info("Connecting to Dask Gateway")
-            logger.info(f"gateway: {gateway}")
-            logger.info(f"gateway list clusters: {gateway.list_clusters()}")
-
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-            client = gateway.connect(cluster_info.name).get_client()
-            logger.debug(f"client: {client}")
-            logger.info("Gateway Client created")
-            xrd_env = {
-                "XRD_REQUESTTIMEOUT": "900",
-                "XRD_STREAMTIMEOUT": "900",
-                "XRD_CONNECTIONRETRY": "16",
-                "XRD_REDIRECTLIMIT": "16",
-                "XRD_CONNECTIONWINDOW": "120",
-                "XRD_TIMEOUTRESOLUTION": "5",
-            }
-            client.run(lambda env=xrd_env: __import__("os").environ.update(env))
-        else:
-            client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
-            logger.info("Local scale Client created")
         t2 = time.perf_counter()
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
         # -------------------------------------------------------------------------------------
@@ -401,42 +377,6 @@ if __name__ == "__main__":
 
     else:
         # FIXME: update this for /store usage
-        if args.use_gateway:
-            from dask_gateway import Gateway
-
-            gateway = Gateway(
-                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-            )
-            # gateway = Gateway()
-            logger.info("Connecting to Dask Gateway")
-            logger.info(f"gateway: {gateway}")
-            logger.info(f"gateway list clusters: {gateway.list_clusters()}")
-
-            cluster_info = gateway.list_clusters()[
-                0
-            ]  # get the first cluster by default. There only should be one anyways
-            client = gateway.connect(cluster_info.name).get_client()
-            logger.debug(f"client: {client}")
-            logger.info("Gateway Client created")
-            xrd_env = {
-                "XRD_REQUESTTIMEOUT": "900",
-                "XRD_STREAMTIMEOUT": "900",
-                "XRD_CONNECTIONRETRY": "16",
-                "XRD_REDIRECTLIMIT": "16",
-                "XRD_CONNECTIONWINDOW": "120",
-                "XRD_TIMEOUTRESOLUTION": "5",
-            }
-            client.run(lambda env=xrd_env: __import__("os").environ.update(env))
-        else:
-            client = Client(
-                n_workers=64,
-                threads_per_worker=1,
-                processes=True,
-                memory_limit="10 GiB",
-            )
-            logger.info("Local scale Client created")
-
         sample_path = "./prestage_output/fraction_processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(sample_path) as file:
             samples = json.loads(file.read())
@@ -474,4 +414,5 @@ if __name__ == "__main__":
         logger=logger,
     )
 
+    close_dask_client()
     logger.info(f"Finished everything in {elapsed} s.")
