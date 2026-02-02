@@ -2,7 +2,7 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv15_01Feb_JecJerFilterJets/stage1_output/"
         comment: "What plotter should use by default"
 
     Run2_HEMVetoFix_v1:
@@ -36,6 +36,34 @@ trials:
         comment: For September 25, 2025 HMuMu report
         gitTab: V1.0
         Reference: https://github.com/ram1123/copperheadV2/discussions/61
+
+    Run3_nanoAODv12_JVM_EventFilter_WithJecJer:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Feb_JecJer/stage1_output/"
+        comment:
+            - used JVM to filter events. Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+        gitSHA: 386a3e431dcdde442b9a2960656497904b3e6def
+        date: February 01, 2026
+        years: 2022postEE, 2022preEE, 2023, 2023BPix
+
+    Run3_nanoAODv15_JVM_EventFilter_WithJecJer:
+        stage1: "{base_dir}/Run3_nanoAODv15_01Feb_JecJer/stage1_output/"
+        comment:
+            - used JVM to filter events. Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+        gitSHA: 386a3e431dcdde442b9a2960656497904b3e6def
+        date: February 01, 2026
+        years: 2024
+
+    Run3_nanoAODv15_JVM_JetFilter_WithJecJer:
+        stage1: "{base_dir}/Run3_nanoAODv15_01Feb_JecJerFilterJets/stage1_output/"
+        comment:
+            - used JVM to filter jets.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+        gitSHA: 73ee37144f2f57cf218658d67e12dedb6666d329
+        date: February 02, 2026
+        years: 2024
 
     Run3_nanoAODv12_JVMjetfilter_v2:
         stage1: "{base_dir}/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/"

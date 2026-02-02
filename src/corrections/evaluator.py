@@ -174,7 +174,7 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
             # print(f"pu_weights[{var}]: {pu_weights[var].compute()}")
     elif Run==3:
         jsonGz_path = parameters["pu_file_mc"]
-        print(f"jsonGz_path: {jsonGz_path}")
+        logger.info(f"jsonGz_path: {jsonGz_path}")
         ceval = correctionlib.CorrectionSet.from_file(jsonGz_path)
         key = list(ceval.keys())[0]
         pu_lookup = ceval[key]

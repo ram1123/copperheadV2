@@ -16,7 +16,6 @@ import tqdm
 from cli.common_argparser import build_common_parser
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
-from distributed import Client
 
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary

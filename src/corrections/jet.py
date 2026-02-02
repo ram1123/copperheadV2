@@ -304,19 +304,16 @@ def jet_puid(jets, config):
     pass_jet_puid = ak.ones_like(jets.pt, dtype=bool)
 
     if "2017" in year: # for misreco due ot ECAL endcap noise
+        # NOTE: PUID for 2017 is tight in horn region but not for other eras in Run2
         eta_window = (abs(jets.eta) > 2.6) & (abs(jets.eta) < 3.0)
-        # pass_jet_puid = (eta_window & jet_puid_wps["tight"]) | ( # tight puid in the noisy eta window, else loose
-        #     (~eta_window) & jet_puid_wps[jet_puid2use]
-        # )
+
+        # tight puid in the noisy eta window, else loose
         pass_jet_puid = (eta_window & (puId >= 7)) | (
                 (~eta_window) & jet_puid_wps["loose"]
         )
     else:
         pass_jet_puid = jet_puid_wps[jet_puid2use]
-        # logger.debug("else case!")
-        # logger.debug(f"pass_jet_puid: {pass_jet_puid[:10].compute()}")
-        # logger.debug(f"jet_puid_wps['loose']: {jet_puid_wps['loose'][:10].compute()}")
-        # raise ValueError
+
     return pass_jet_puid
 
 
@@ -852,8 +849,8 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
 def get_jet_variation(jets_orig, variation, fields2add):
     logger.debug(f"get_jet_variation variation: {variation}")
     new_jets_pt = jets_orig[f"pt_{variation}"]
-    # print(f"{variation} jets_orig.fields: {jets_orig.fields}")
-    # print(f"{variation} new_jets_pt: {new_jets_pt.compute()}")
+    logger.debug(f"{variation} jets_orig.fields: {jets_orig.fields}")
+    # logger.debug(f"{variation} new_jets_pt: {new_jets_pt.compute()}")
     if "jer" in variation:
         new_jets_mass = jets_orig.mass
     else: # jec unc impacts mass, but jer uncs do not
@@ -878,6 +875,5 @@ def get_jet_variation(jets_orig, variation, fields2add):
             if field == "puId":
                 puId = get_puId(jets_orig)
                 new_jets["puId"] = puId
-
 
     return new_jets

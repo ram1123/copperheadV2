@@ -738,18 +738,12 @@ jec_parameters:
         # Details: https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/merge_requests/118
         "2023":
             Summer23Prompt23_V2_DATA:
-                - A
-                - B
                 - C
-                - D
-                - E
         2023BPix:
             Summer23BPixPrompt23_V3_DATA:
-                - B
-                - C
+                - D
         "2024":
             Summer24Prompt24_V2_DATA:
-                - B
                 - C
                 - D
                 - E
