@@ -48,7 +48,7 @@ dask="0"
 cluster_index="0"
 
 # ----------- Parse options -----------
-while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:k:sf" option; do
+while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:ksf" option; do
     case "$option" in
         h) usage ;;
         c) datasetYAML="$OPTARG" ;;
@@ -64,7 +64,7 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:k:sf" option; do
         t) category="$OPTARG" ;;
         p) postfix="$OPTARG" ;;
         i) cluster_index="$OPTARG" ;;
-        k) dask="$OPTARG" ;;
+        k) dask="1" ;;
         s) skipBadFiles="1" ;;
         f) frac="1" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
@@ -271,7 +271,7 @@ for year in "${years[@]}"; do
     fi
     [[ "$skipBadFiles" == "1" ]] && command0+=" --skipBadFiles"
 
-    if [[ "$dask" -ge 1 ]]; then
+    if [[ "$dask" == "1" ]]; then
         command0+=" --use_gateway "
         command1+=" --use_gateway "
         command2+=" --use_gateway "
@@ -280,7 +280,7 @@ for year in "${years[@]}"; do
         command6+=" --use_gateway "
         command_compact+=" --use_gateway "
     fi
-    if [[ "$dask" == "2" ]]; then
+    if [[ "$cluster_index" != "0" ]]; then
         command0+=" --cluster_index $cluster_index "
         command1+=" --cluster_index $cluster_index "
         command2+=" --cluster_index $cluster_index "

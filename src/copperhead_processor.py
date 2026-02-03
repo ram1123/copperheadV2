@@ -2535,10 +2535,14 @@ class EventProcessor(processor.ProcessorABC):
             f"jet1_pt_{variation}": jet1.pt,
             f"jet1_eta_{variation}": jet1.eta,
             f"jet1_phi_{variation}": jet1.phi,
+            f"jet1_puId_{variation}": get_puId(jet1),
+            f"jet1_hasMatchedGenJet_{variation}": jet1.genJetIdx != -1,
             # -------------------------
             f"jet2_pt_{variation}": jet2.pt,
             f"jet2_eta_{variation}": jet2.eta,
             f"jet2_phi_{variation}": jet2.phi,
+            f"jet2_puId_{variation}": get_puId(jet2),
+            f"jet2_hasMatchedGenJet_{variation}": jet2.genJetIdx != -1,
             # -------------------------
             # -------------------------
             f"jj_mass_{variation}": dijet.mass,
@@ -2613,16 +2617,11 @@ class EventProcessor(processor.ProcessorABC):
                         f"jet3_jetId_{variation}": jet3.jetId,
                         f"jet4_jetId_{variation}": jet4.jetId,
                     })
-            if hasattr(jets, "puId"):
+            if do_additional_jet_vars:
                 jet_loop_out_dict.update({
-                    f"jet1_puId_{variation}": jet1.puId,
-                    f"jet2_puId_{variation}": jet2.puId,
+                    f"jet3_puId_{variation}": get_puId(jet3),
+                    f"jet4_puId_{variation}": get_puId(jet4),
                 })
-                if do_additional_jet_vars:
-                    jet_loop_out_dict.update({
-                        f"jet3_puId_{variation}": jet3.puId,
-                        f"jet4_puId_{variation}": jet4.puId,
-                    })
         if is_run2(year):
             """Additional jet variables only for Run2"""
             jet_loop_out_dict.update({
