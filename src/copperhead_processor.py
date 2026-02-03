@@ -126,6 +126,67 @@ def _add_block(out, block):
     return out
 
 
+def pick_vbf_pairs(jets):
+    """
+    Returns a dict of jet1/jet2 for different pairing criteria.
+    jets is the already-selected, pt-sorted Array of jets per event.
+    """
+    # need at least 2 jets to form a pair; combinations() will give empty for <2
+    pairs = ak.combinations(jets, 2, fields=["j1", "j2"])
+
+    # pair metrics
+    mjj = (pairs.j1 + pairs.j2).mass
+    deta = np.abs(pairs.j1.eta - pairs.j2.eta)
+
+    # indices of best pairs (per event)
+    idx_max_mjj = ak.argmax(mjj, axis=1, keepdims=True)
+    idx_max_deta = ak.argmax(deta, axis=1, keepdims=True)
+
+    # criterion 4: max mjj with deta > 2.5
+    deta_cut = 2.5
+    mjj_masked = ak.where(deta > deta_cut, mjj, -np.inf)
+    idx_max_mjj_deta = ak.argmax(mjj_masked, axis=1, keepdims=True)
+
+    # extract pairs (these are still "length-1 lists" per event because keepdims=True)
+    pair_max_mjj = pairs[idx_max_mjj]
+    pair_max_deta = pairs[idx_max_deta]
+    pair_max_mjj_deta = pairs[idx_max_mjj_deta]
+
+    # fallback for criterion 4 when no pair passes deta>2.5:
+    # detect "all masked" events -> max is -inf
+    has_pair_deta = ak.any(deta > deta_cut, axis=1)
+    # flatten the chosen pair objects to scalars per event
+    j1_mjj_deta = ak.firsts(pair_max_mjj_deta.j1)
+    j2_mjj_deta = ak.firsts(pair_max_mjj_deta.j2)
+
+    j1_mjj = ak.firsts(pair_max_mjj.j1)
+    j2_mjj = ak.firsts(pair_max_mjj.j2)
+
+    j1_mjj_deta = ak.where(has_pair_deta, j1_mjj_deta, j1_mjj)
+    j2_mjj_deta = ak.where(has_pair_deta, j2_mjj_deta, j2_mjj)
+
+    # criterion 1: leading-pt jets (your current method)
+    padded = ak.pad_none(jets, 2)
+    j1_lead = padded[:, 0]
+    j2_lead = padded[:, 1]
+
+    # criterion 2: max mjj
+    j1_max_mjj = j1_mjj
+    j2_max_mjj = j2_mjj
+
+    # criterion 3: max deta
+    j1_max_deta = ak.firsts(pair_max_deta.j1)
+    j2_max_deta = ak.firsts(pair_max_deta.j2)
+
+    return {
+        "lead": (j1_lead, j2_lead),
+        "max_mjj": (j1_max_mjj, j2_max_mjj),
+        "max_deta": (j1_max_deta, j2_max_deta),
+        "mjj_deta": (j1_mjj_deta, j2_mjj_deta),
+        "has_mjj_deta": has_pair_deta,
+    }
+
+
 class EventProcessor(processor.ProcessorABC):
     def __init__(self, config: dict, test_mode=False, isCutflow=False, **kwargs):
         self.config = config
@@ -379,13 +440,6 @@ class EventProcessor(processor.ProcessorABC):
                             is_rereco = ("RERECO" in year),
                     )
 
-        # Save raw variables before computing any corrections
-        # rochester corrects pt only, but fsr_recovery changes all vals below
-        events["Muon", "pt_raw"] = ak.ones_like(events.Muon.pt) * events.Muon.pt
-        events["Muon", "eta_raw"] = ak.ones_like(events.Muon.eta) * events.Muon.eta
-        events["Muon", "phi_raw"] = ak.ones_like(events.Muon.phi) * events.Muon.phi
-        events["Muon", "pfRelIso04_all_raw"] = ak.ones_like(events.Muon.pfRelIso04_all) * events.Muon.pfRelIso04_all
-
         # --------------------------------------------------------#
         # INFO: Select muons that pass pT, eta, isolation cuts,
         #            muon ID and quality flags
@@ -417,6 +471,13 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
         # logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
+
+        # Save raw variables before computing any corrections
+        # rochester corrects pt only, but fsr_recovery changes all vals below
+        events["Muon", "pt_raw"] = ak.ones_like(events.Muon.pt) * events.Muon.pt
+        events["Muon", "eta_raw"] = ak.ones_like(events.Muon.eta) * events.Muon.eta
+        events["Muon", "phi_raw"] = ak.ones_like(events.Muon.phi) * events.Muon.phi
+        events["Muon", "pfRelIso04_all_raw"] = ak.ones_like(events.Muon.pfRelIso04_all) * events.Muon.pfRelIso04_all
 
         # --------------------------------------------------------
         # Step-7: Apply Rochester correction to muon pT
@@ -1988,9 +2049,9 @@ class EventProcessor(processor.ProcessorABC):
             """ Remove jets in the jet horn region with pT < 50 GeV
                  horn region: 3.0 > abs(eta) > 2.5
             """
-            logger.info("Applying additional jet pT cut of 50 GeV for forward region (jet horn region)!")
+            logger.info(f"Applying additional jet pT cut of {do_jet_horn_ptcut} GeV for forward region (jet horn region)!")
             jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) < 3.0)
-            jetHorn_pt_cut = (jets.pt > 50.0) # https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetMET#Run3_recommendations
+            jetHorn_pt_cut = (jets.pt > do_jet_horn_ptcut) # https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetMET#Run3_recommendations
 
             jetHorn_ptcut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
             jetHorn_region, jetHorn_ptcut = ak.broadcast_arrays(
@@ -2014,51 +2075,6 @@ class EventProcessor(processor.ProcessorABC):
         jets = jets[jet_selection] # INFO: this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
         jets = ak.to_packed(jets)
 
-        # ------------------------------------------------------------#
-        # Pick VBF jet pair with different criteria
-        # 1. Pick two leading jets (as we are doing it)
-        # 2. Pick the two jets with highest di-jet invariant mass
-        # 3. Pick the two jets with highes pseudo-rapidity gap
-        # 4. Pick thw two jets wich highest di-jet invariant mass that passes the critera dEta(j, j) > 2.5
-        # ------------------------------------------------------------#
-        # jets_p4 = ak.zip(
-        #     {
-        #         "pt":  jets.pt,
-        #         "eta": jets.eta,
-        #         "phi": jets.phi,
-        #         "mass": jets.mass,
-        #     },
-        #     with_name="PtEtaPhiM4D",
-        # )
-
-        # # All unique jet pairs per event
-        # jj_pairs = ak.combinations(jets_p4, 2, fields=["j1", "j2"])
-
-        # # Pair-level variables
-        # jj_mjj      = (jj_pairs.j1 + jj_pairs.j2).mass
-        # jj_dEta     = ak.abs(jj_pairs.j1.eta - jj_pairs.j2.eta)
-        # jj_dPhi     = jj_pairs.j1.delta_phi(jj_pairs.j2)
-        # jj_dR       = jj_pairs.j1.delta_r(jj_pairs.j2)
-        # jj_pt       = (jj_pairs.j1 + jj_pairs.j2).pt
-        # jj_eta      = (jj_pairs.j1 + jj_pairs.j2).eta
-        # jj_phi      = (jj_pairs.j1 + jj_pairs.j2).phi
-
-        # # index of pair with max |Δη|
-        # idx_max_dEta = ak.argmax(jj_dEta, axis=1, keepdims=True)
-        # jj_pairs_max_dEta = jj_pairs[idx_max_dEta]
-
-        # # corresponding dijet 4-vector
-        # jj_max_dEta_p4 = jj_pairs_max_dEta.j1 + jj_pairs_max_dEta.j2
-
-        # # scalar per-event features (use firsts() since we kept axis=1)
-        # jj_max_dEta_mjj   = ak.firsts(jj_max_dEta_p4.mass)
-        # jj_max_dEta_dEta  = ak.firsts(ak.abs(jj_pairs_max_dEta.j1.eta - jj_pairs_max_dEta.j2.eta))
-        # jj_max_dEta_dPhi  = ak.firsts(jj_pairs_max_dEta.j1.delta_phi(jj_pairs_max_dEta.j2))
-        # jj_max_dEta_dR    = ak.firsts(jj_pairs_max_dEta.j1.delta_r(jj_pairs_max_dEta.j2))
-        # jj_max_dEta_pt    = ak.firsts(jj_max_dEta_p4.pt)
-        # jj_max_dEta_eta   = ak.firsts(jj_max_dEta_p4.eta)
-        # jj_max_dEta_phi   = ak.firsts(jj_max_dEta_p4.phi)
-
         # apply jetpuid if not have done already
         if is_mc and (variation=="nominal") and is_run2(year): # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
             logger.debug("Applying jet PUID scale factors and adding jetpuid_wgt!")
@@ -2075,40 +2091,46 @@ class EventProcessor(processor.ProcessorABC):
         # muons = events.Muon
         njets = ak.num(jets, axis=1)
 
-        # # FIXME: Out of all jets get the two jets with maximum di-jet rapidity gap
-        # # if there are at least two jets
-        # print the pt, eta and phi of the first 3 events for debugging
-        # logger.info(f"Before: jets[:3].pt: {jets[:3].pt.compute()}")
-        # logger.info(f"Before: jets[:3].eta: {jets[:3].eta.compute()}")
-        # logger.info(f"Before: jets[:3].phi: {jets[:3].phi.compute()}")
-
-        # gl_pair = ak.cartesian({"jet1": jets, "jet2": jets}, axis=1, nested=True)
-        # dr_j12 = gl_pair["jet1"].delta_r(gl_pair["jet2"])
-        # # print out the dr_j12 for the first 3 events for debugging
-        # logger.info(f"dr_j12[:3]: {dr_j12[:3].compute()}")
-
-        # # get pair with max dr and then sort them in pt. After that print out the pt, eta and phi of the first 3 events for debugging
-        # gl_pair = gl_pair[dr_j12.argmax(axis=2)]
-        # gl_pair = gl_pair[gl_pair.jet1.pt > gl_pair.jet2.pt]
-        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet1.pt: {gl_pair[:3].jet1.pt.compute()}")
-        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet1.eta: {gl_pair[:3].jet1.eta.compute()}")
-        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet1.phi: {gl_pair[:3].jet1.phi.compute()}")
-        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet2.pt: {gl_pair[:3].jet2.pt.compute()}")
-        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet2.eta: {gl_pair[:3].jet2.eta.compute()}")
-        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].jet2.phi: {gl_pair[:3].jet2.phi.compute()}")
-        # # print dr of jet1 and jet2 for the first 3 events for debugging
-        # logger.info(f"After dr_j12.argmax and pt sort: gl_pair[:3].dr: {gl_pair[:3].jet1.delta_r(gl_pair[:3].jet2).compute()}")
+        # ------------------------------------------------------------#
+        # Pick VBF jet pair with different criteria
+        # 1. Pick two leading jets (as we are doing it)
+        # 2. Pick the two jets with highest di-jet invariant mass
+        # 3. Pick the two jets with highes pseudo-rapidity gap
+        # 4. Pick thw two jets wich highest di-jet invariant mass that passes the critera dEta(j, j) > 2.5
+        # ------------------------------------------------------------#
+        pair_dict = pick_vbf_pairs(jets)
 
         # ------------------------------------------------------------#
         # Fill jet-related variables
         # ------------------------------------------------------------#
         padded_jets = ak.pad_none(jets, target=4) # padd jets
-        jet1 = padded_jets[:,0]
-        jet2 = padded_jets[:,1]
+        jet1, jet2 = pair_dict["lead"]
         do_additional_jet_vars = self.config["switches"]["do_additional_jet_vars"]
         if do_additional_jet_vars:
             jet3 = padded_jets[:,2]
             jet4 = padded_jets[:,3]
+
+        jet_loop_out_dict = {}
+        if variation == "nominal":
+            for tag, (j1, j2) in [
+                ("lead", pair_dict["lead"]),
+                ("maxmjj", pair_dict["max_mjj"]),
+                ("maxdeta", pair_dict["max_deta"]),
+                ("maxmjj_deta25", pair_dict["mjj_deta"]),
+            ]:
+                jj = j1 + j2
+                jet_loop_out_dict.update({
+                    f"vbf_{tag}_jet1_pt_{variation}":   j1.pt,
+                    f"vbf_{tag}_jet1_eta_{variation}":  j1.eta,
+                    f"vbf_{tag}_jet1_phi_{variation}":  j1.phi,
+                    f"vbf_{tag}_jet2_pt_{variation}":   j2.pt,
+                    f"vbf_{tag}_jet2_eta_{variation}":  j2.eta,
+                    f"vbf_{tag}_jet2_phi_{variation}":  j2.phi,
+                    f"vbf_{tag}_mjj_{variation}":       jj.mass,
+                    f"vbf_{tag}_deta_{variation}":      np.abs(j1.eta - j2.eta),
+                })
+
+            jet_loop_out_dict[f"vbf_maxmjj_deta25_hasPair_{variation}"] = pair_dict["has_mjj_deta"]
 
         dijet = jet1+jet2
 
@@ -2158,7 +2180,7 @@ class EventProcessor(processor.ProcessorABC):
         pt_centrality = dimuon.pt - abs(jet1.pt + jet2.pt)/2
         pt_centrality = pt_centrality / abs(jet1.pt - jet2.pt)
 
-        jet_loop_out_dict = {
+        jet_loop_out_dict.update({
             f"jet1_pt_{variation}": jet1.pt,
             f"jet1_eta_{variation}": jet1.eta,
             f"jet1_phi_{variation}": jet1.phi,
@@ -2183,7 +2205,7 @@ class EventProcessor(processor.ProcessorABC):
             f"ll_zstar_log_{variation}": np.log(np.abs(zeppenfeld)),
             f"zeppenfeld_{variation}": zeppenfeld,
             f"njets_{variation}": njets,
-        }
+        })
         if is_run2(year):
             """Additional jet variables only for Run2"""
             jet_loop_out_dict.update({
@@ -2501,7 +2523,7 @@ class EventProcessor(processor.ProcessorABC):
         #     })
 
         # Merge into main jet_loop_out_dict
-        # jet_loop_out_dict.update(extra_jet_loop_dict)
+        jet_loop_out_dict.update(extra_jet_loop_dict)
 
         # if is_mc and (variation == "nominal"):
         #     nominal_dict = {

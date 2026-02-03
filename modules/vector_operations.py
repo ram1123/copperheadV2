@@ -1,4 +1,11 @@
+from typing import Tuple, TypeVar
+
 import awkward as ak
+import numpy as np
+from coffea.nanoevents.methods import vector
+
+coffea_nanoevent = TypeVar("coffea_nanoevent")
+ak_array = TypeVar("ak_array")
 
 def convert_vector_type_4d(vector, vector_name):
     """Convert an Awkward Vector of any type to a specified 4D vector type.
