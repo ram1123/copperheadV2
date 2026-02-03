@@ -2,7 +2,7 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv15_01Feb_JecJerFilterJets/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJets/stage1_output/"
         comment: "What plotter should use by default"
 
     Run2_HEMVetoFix_v1:
@@ -40,7 +40,8 @@ trials:
     Run3_nanoAODv12_JVM_EventFilter_WithJecJer:
         stage1: "{base_dir}/Run3_nanoAODv12_01Feb_JecJer/stage1_output/"
         comment:
-            - used JVM to filter events. Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - used JVM to filter events.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
             - Updated ZpT weights should be used with aMCatNLO inclusive samples only
         gitSHA: 386a3e431dcdde442b9a2960656497904b3e6def
         date: February 01, 2026
@@ -49,7 +50,8 @@ trials:
     Run3_nanoAODv15_JVM_EventFilter_WithJecJer:
         stage1: "{base_dir}/Run3_nanoAODv15_01Feb_JecJer/stage1_output/"
         comment:
-            - used JVM to filter events. Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - used JVM to filter events.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
             - Updated ZpT weights should be used with aMCatNLO inclusive samples only
         gitSHA: 386a3e431dcdde442b9a2960656497904b3e6def
         date: February 01, 2026
@@ -106,7 +108,7 @@ trials:
         year: 2023
 
     Run3_WithJetVetoMap:
-        stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/"
         comment: "Run-3 using the official JET veto map"
 
     Run3_WithJetVetoMap_v1:

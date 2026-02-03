@@ -8,8 +8,8 @@ AAA_REDIRECTORS = [
     "root://cms-xrd-global.cern.ch/",  # 5                  # 4
     # "/eos/purdue",  # 6, if files are present on purdue EOS  # 5
     "root://eos.cms.rcac.purdue.edu/",  # 7
-    "root://cms-xrd-global.cern.ch/",  # 8
-    "root://xcache.cms.rcac.purdue.edu/",  # 9
+    # "root://cms-xrd-global.cern.ch/",  # 8
+    # "root://xcache.cms.rcac.purdue.edu/",  # 9
 ]
 
 # Accept prefixes like:
