@@ -12,43 +12,6 @@ roccor_file:
   2023BPix: data/roch_corr/2023_Summer23BPix.json
   # "2024":  /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-11-27/muon_scalesmearing.json.gz
   "2024": /work/users/yun79/sideHustle/copperheadV2/data/roch_corr/2024_Summer24.json # From Hyeon (Copied from GitLab)
-res_calib_path: # FIXME: If BS is false then it grabs the calibration from this file.
-  2016preVFP:
-    MC: data/res_calib/res_calib_MC_2016.root
-    Data: data/res_calib/res_calib_Data_2016.root
-  2016postVFP:
-    MC: data/res_calib/res_calib_MC_2016.root
-    Data: data/res_calib/res_calib_Data_2016.root
-  '2017':
-    MC: data/res_calib/res_calib_MC_2017.root
-    Data: data/res_calib/res_calib_Data_2017.root
-  '2018':
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
-  2016_RERECO:
-    MC: data/res_calib/res_calib_MC_2016.root
-    Data: data/res_calib/res_calib_Data_2016.root
-  '2017_RERECO':
-    MC: data/res_calib/res_calib_MC_2017.root
-    Data: data/res_calib/res_calib_Data_2017.root
-  '2018_RERECO':
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
-  2022preEE: # FIXME: Update
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
-  2022postEE: # FIXME: Update
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
-  "2023": # FIXME: Update
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
-  "2023BPix": # FIXME: Update
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
-  "2024": # FIXME: Update
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
 BS_res_calib_path:
   2016preVFP:
     MC: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12_MC.json
@@ -80,4 +43,3 @@ BS_res_calib_path:
   "2024": # EBE/BS calibration derived from data; same JSON used for MC and Data
     MC: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
     Data: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
-
