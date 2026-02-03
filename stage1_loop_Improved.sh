@@ -339,7 +339,7 @@ for year in "${years[@]}"; do
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             log "Running ZpT fitting step(s)..."
             dy_sample="INCamcatnloFXFX" # FIXME: Hardcoded DY sample name: aMCatNLO or MiNNLO or amcatnloFXFX or powheg or INCamcatnloFXFX
-            cmd0="python src/copperhead/zpt_rewgt/derive/save_SF_rootFiles.py -l $label -y $year --input_path $save_path -dy_sample $dy_sample --use_gateway "
+            cmd0="python src/copperhead/zpt_rewgt/derive/save_SF_rootFiles.py -l $label -y $year --input_path $save_path -dy_sample $dy_sample --use_gateway --cluster_index $cluster_index"
             cmd1="python src/copperhead/zpt_rewgt/derive/do_f_test.py               -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend --debug"
             cmd2="python src/copperhead/zpt_rewgt/derive/get_polyFit.py             -l $label -y $year --dy_sample $dy_sample  --njet $njet --outAppend $outAppend"
             [[ "$mode" =~ ^(zpt_fit0|zpt_fit)$ ]] && { log "Command0: $cmd0"; eval "$cmd0"; }
