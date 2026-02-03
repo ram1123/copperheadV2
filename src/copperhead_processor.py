@@ -1634,18 +1634,29 @@ class EventProcessor(processor.ProcessorABC):
         dataset = events.metadata["dataset"]
         do_zpt = ('dy' in dataset) and is_mc and self.config["switches"]["do_zpt"]
         if do_zpt:
-            njets = out_dict["njets_nominal"]
-            # njets = out_dict["n_genjets"]
-            logger.info("=======================  apply zpt weights =======================")
-            if "MiNNLO" in dataset: # FIXME: temporary fix for MiNNLO samples
-                zpt_weight_mine_nbins100 = getZptWgts_3region(dimuon.pt, njets, "function", year, self.config["new_zpt_weights_file_MiNNLO"])
-            else:
-                zpt_weight_mine_nbins100 = getZptWgts_3region(dimuon.pt, njets, "function", year, self.config["new_zpt_weights_file_aMCatNLO"])
+            njets_reco = out_dict["njets_nominal"]
+            njets_gen = n_genjets_pt30_eta47
 
-            zpt_weight = zpt_weight_mine_nbins100
-            weights.add("zpt_wgt",
-                    weight=zpt_weight,
-            )
+            logger.info("=======================  apply zpt weights =======================")
+            # choose the config file
+            if "MiNNLO" in dataset:
+                zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
+            else:
+                zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
+
+            zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg)
+            zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg)
+
+            # --- save both to parquet
+            _add_block(out_dict, {
+                "zpt_wgt_reco": zpt_wgt_reco,
+                "zpt_wgt_gen":  zpt_wgt_gen,
+                "njets_reco_for_zpt": njets_reco,
+                "njets_gen_for_zpt":  njets_gen,
+            })
+
+            # apply reco zpt weight to event weight
+            weights.add("zpt_wgt", weight=zpt_wgt_reco)
 
         t19 = time.perf_counter()
         logger.info(f"[timing] Zpt weights time: {t19 - t18:.2f} seconds")
