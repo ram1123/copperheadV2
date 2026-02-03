@@ -46,16 +46,16 @@ from src.corrections.jet import (
 )
 from src.corrections.rochester import apply_roccor, apply_roccorRun3
 
+from modules.vector_operations import (
+    getRapidity,
+    delta_r_V1,
+    etaFrame_variables,
+    cs_variables,
+)
+
 coffea_nanoevent = TypeVar('coffea_nanoevent')
 ak_array = TypeVar('ak_array')
 
-def sf_backend_from_path(sf_path: str) -> str:
-    p = sf_path.lower()
-    if p.endswith(".root"):
-        return "extractor"
-    if p.endswith(".json") or p.endswith(".json.gz"):
-        return "correctionlib"
-    raise ValueError(f"Unknown SF file type: {sf_path}")
 
 def safe_ratio(num, den, default=0.0):
     """Element-wise safe division for awkward arrays."""
@@ -63,6 +63,10 @@ def safe_ratio(num, den, default=0.0):
 
 
 def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
+    """
+    Get Z pT weights based on polynomial fits in 3 regions.
+    TODO: Implement the possibility to apply the zpt weights w.r.t. number of generated jets instead of reco jets.
+    """
     logger.info(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
     max_order = 5 # FIXME: Hardcoded max order of the function, should be read from config instead
@@ -82,7 +86,7 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         poly_fit_cutoff_min = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_min >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
 
-        # polynomial fit
+        # 2nd polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(max_order+1): # p goes from 0 to max_order
             coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
@@ -106,176 +110,6 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
     zpt_wgt = ak.where(cutOff_mask, zpt_wgt, ak.ones_like(dimuon_pt))
     return zpt_wgt
 
-
-def getRapidity(obj):
-    px = obj.pt * np.cos(obj.phi)
-    py = obj.pt * np.sin(obj.phi)
-    pz = obj.pt * np.sinh(obj.eta)
-    e = np.sqrt(px**2 + py**2 + pz**2 + obj.mass**2)
-    rap = 0.5 * np.log((e + pz) / (e - pz))
-    return rap
-
-def _mass2_kernel(t, x, y, z):
-    return t * t - x * x - y * y - z * z
-
-def p4_sum_mass(obj1, obj2):
-    result_px = ak.zeros_like(obj1.pt)
-    result_py = ak.zeros_like(obj1.pt)
-    result_pz = ak.zeros_like(obj1.pt)
-    result_e = ak.zeros_like(obj1.pt)
-    for obj in [obj1, obj2]:
-        # px_ = obj.pt * np.cos(obj.phi)
-        # py_ = obj.pt * np.sin(obj.phi)
-        # pz_ = obj.pt * np.sinh(obj.eta)
-        px_ = obj.px
-        py_ = obj.py
-        pz_ = obj.pz
-        e_ = np.sqrt(px_**2 + py_**2 + pz_**2 + obj.mass**2)
-        result_px = result_px + px_
-        result_py = result_py + py_
-        result_pz = result_pz + pz_
-        result_e = result_e + e_
-    # result_pt = np.sqrt(result_px**2 + result_py**2)
-    # result_eta = np.arcsinh(result_pz / result_pt)
-    # result_phi = np.arctan2(result_py, result_px)
-    result_mass = np.sqrt(
-        result_e**2 - result_px**2 - result_py**2 - result_pz**2
-    )
-    return result_mass
-
-def p4_subtract_pt(obj1, obj2):
-    """
-    obtain the pt vector subtraction of two variables
-    """
-    result_px = ak.zeros_like(obj1.pt)
-    result_py = ak.zeros_like(obj1.pt)
-    result_pz = ak.zeros_like(obj1.pt)
-    coeff = 1.0
-    for obj in [obj1, obj2]:
-        # px_ = obj.pt * np.cos(obj.phi)
-        # py_ = obj.pt * np.sin(obj.phi)
-        # pz_ = obj.pt * np.sinh(obj.eta)
-        px_ = obj.px
-        py_ = obj.py
-        pz_ = obj.pz
-        result_px = result_px + coeff*px_
-        result_py = result_py + coeff*py_
-        result_pz = result_pz + coeff*pz_
-        coeff = -1*coeff # switch coeff
-    result_pt = np.sqrt(result_px**2 + result_py**2)
-    return result_pt
-
-
-# Dmitry's implementation of delta_r
-def delta_r_V1(eta1, eta2, phi1, phi2):
-    deta = abs(eta1 - eta2)
-    dphi = abs(np.mod(phi1 - phi2 + np.pi, 2 * np.pi) - np.pi)
-    dr = np.sqrt(deta**2 + dphi**2)
-    return deta, dphi, dr
-
-
-def etaFrame_variables(
-        mu1: coffea_nanoevent,
-        mu2: coffea_nanoevent
-    ) -> Tuple[ak_array]:
-    """
-    Obtain eta frame cos(theta) and phi as specified in:
-    https://link.springer.com/article/10.1140/epjc/s10052-011-1600-y and
-    This Eta frame values supposedly plays a similar role to CS frame in terms of physics
-    sensitivity, but with better resolution. Not nocessarily believe this claim
-    however.
-    """
-    # divide muons in terms of negative and positive charges instead of leading pT
-    mu_neg = ak.where((mu1.charge<0), mu1,mu2)
-    mu_pos = ak.where((mu1.charge>0), mu1,mu2)
-    dphi = abs(mu_neg.delta_phi(mu_pos))
-    theta_eta = np.arccos(np.tanh((mu_neg.eta - mu_pos.eta) / 2))
-    phi_eta = np.tan((np.pi - np.abs(dphi)) / 2) * np.sin(theta_eta)
-    return np.cos(theta_eta), phi_eta
-
-def cs_variables(
-        mu1: coffea_nanoevent,
-        mu2: coffea_nanoevent
-    ) -> Tuple[ak_array]:
-    """
-    return cos(theta) and phi in collins-soper frame
-    """
-    dimuon = mu1 + mu2
-    cos_theta_cs = getCosThetaCS(mu1, mu2, dimuon)
-    phi_cs = getPhiCS(mu1, mu2, dimuon)
-    return cos_theta_cs, phi_cs
-
-def getCosThetaCS(
-    mu1: coffea_nanoevent,
-    mu2: coffea_nanoevent,
-    dimuon: coffea_nanoevent,
-    ) -> ak_array :
-    """
-    return cos(theta) in collins-soper frame
-    the formula for cos(theta) is given in Eqn 1. of https://www.ciemat.es/portal.do?TR=A&IDR=1&identificador=813
-    """
-    dimuon_pt = dimuon.pt
-    dimuon_mass = dimuon.mass
-    nominator = 2*(mu1.pz*mu2.energy - mu2.pz*mu1.energy)
-    demoninator = dimuon_mass * (dimuon_mass**2 + dimuon_pt**2)**(0.5)
-    cos_theta_cs = -(nominator/demoninator) # add negative sign to match the sign on pisa implementation at https://github.com/green-cabbage/copperhead_fork2/blob/Run3/python/math_tools.py#L152-L223
-    return cos_theta_cs
-
-def getPhiCS(
-    mu1: coffea_nanoevent,
-    mu2: coffea_nanoevent,
-    dimuon: coffea_nanoevent,
-    ) -> ak_array :
-    """
-    return phi in collins-soper frame
-    the formula for phi is given in Eqn F.8 of https://people.na.infn.it/~elly/TesiAtlas/SpinCP/TestIpotesi/CollinSoperDefinition.pdf
-    the implementation is heavily inspired from https://github.com/JanFSchulte/SUSYBSMAnalysis-Zprime2muAnalysis/blob/mini-AOD-2018/src/AsymFunctions.C#L1549-L1603
-    """
-    mu_neg = ak.where((mu1.charge<0), mu1,mu2)
-    mu_pos = ak.where((mu1.charge>0), mu1,mu2)
-    dimuon_pz = dimuon.pz
-    dimuon_pt = dimuon.pt
-    dimuon_mass = dimuon.mass
-    beam_vec_z = ak.where((dimuon_pz>0), ak.ones_like(dimuon_pz), -ak.ones_like(dimuon_pz))
-    # intialize beam vector as threevector to do cross product
-    # beam_vec =  ak.zip(
-    #     {
-    #         "x": ak.zeros_like(dimuon_pz),
-    #         "y": ak.zeros_like(dimuon_pz),
-    #         "z": beam_vec_z,
-    #     },
-    #     with_name="ThreeVector",
-    #     behavior=vector.behavior,
-    # )
-    # logger.info(f"vector.__file__: {vector.__file__}")
-    beam_vec =  ak.zip(
-        {
-            "x": ak.zeros_like(dimuon_pz),
-            "y": ak.zeros_like(dimuon_pz),
-            "z": beam_vec_z,
-        },
-        with_name="Momentum3D",
-        behavior=vector.behavior
-    )
-    # apply cross product. note x,y,z of dimuon refers to its momentum, NOT its location
-    # mu.px == mu.x, mu.py == mu.y and so on
-    dimuon3D_vec = ak.zip({"x":dimuon.x, "y":dimuon.y, "z":dimuon.z}, with_name="Momentum3D", behavior=vector.behavior)
-    R_T = beam_vec.cross(dimuon3D_vec) # direct cross product with dimuon doesn't work bc it's a 5D vector with x,y,z,t and charge
-
-    R_T = R_T.unit() # make it a unit vector
-    Q_T = dimuon
-    Q_coeff = ( ((dimuon_mass*dimuon_mass + (dimuon_pt*dimuon_pt)))**(0.5) )/dimuon_mass
-    delta_T_dot_R_T = (mu_neg.px-mu_pos.px)*R_T.x + (mu_neg.py-mu_pos.py)*R_T.y
-    delta_R_term = delta_T_dot_R_T
-    delta_R_term = -delta_R_term # add negative sign to match the sign on pisa implementation at https://github.com/green-cabbage/copperhead_fork2/blob/Run3/python/math_tools.py#L152-L223
-    delta_T_dot_Q_T = (mu_neg.px-mu_pos.px)*Q_T.px + (mu_neg.py-mu_pos.py)*Q_T.py
-    delta_T_dot_Q_T = -delta_T_dot_Q_T # add negative sign to match the sign on pisa implementation at https://github.com/green-cabbage/copperhead_fork2/blob/Run3/python/math_tools.py#L152-L223
-    delta_Q_term = delta_T_dot_Q_T
-    delta_Q_term = delta_Q_term / dimuon_pt # normalize since Q_T should techincally be a unit vector
-    phi_cs = np.arctan2(Q_coeff*delta_R_term, delta_Q_term)
-    return phi_cs
-
-
 def _add_block(out, block):
     """This function is to update the output dictionary with another dictionary block,
     that will be in the output parquet file.
@@ -294,58 +128,11 @@ def _add_block(out, block):
 
 class EventProcessor(processor.ProcessorABC):
     def __init__(self, config: dict, test_mode=False, isCutflow=False, **kwargs):
-        """
-        TODO: replace all of these with self.config dict variable which is taken from a
-        pre-made json file
-        """
         self.config = config
         self.isCutflow = isCutflow
-
         self.test_mode = test_mode
 
-        # logger.info(f"self.config: {self.config}")
-
-        # --- Evaluator
-        extractor_instance = extractor()
         year = self.config["year"]
-
-        # Rochester corrections
-        for mode in ["Data", "MC"]:
-            if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
-                yearUL = "2016"
-            elif "RERECO" in year: # 2017_RERECO. 2018_RERECO
-                yearUL=year.replace("_RERECO","")
-            else: # any other run2 and run3
-                yearUL=year #Work around before there are seperate new files for pre and postVFP
-            label = f"res_calib_{mode}_{yearUL}"
-            file_path = self.config["res_calib_path"][mode]
-            calib_str = f"{label} {label} {file_path}"
-            logger.debug(f"file_path: {file_path}")
-            logger.debug(f"calib_str: {calib_str}")
-            extractor_instance.add_weight_sets([calib_str])
-
-        # PU ID weights
-        do_jet_PUID_wgt = self.config["switches"]["do_jet_PUID_wgt"]
-        if do_jet_PUID_wgt:
-            jetpuid_filename = self.config["jetpuid_sf_file"]
-            extractor_instance.add_weight_sets([f"* * {jetpuid_filename}"])
-            # logger.debug("Adding jet PUID weights to extractor")
-            # logger.debug(f"jetpuid_sf_file: {self.config['jetpuid_sf_file']}")
-            # backend = sf_backend_from_path(jetpuid_filename)
-            # if backend == "extractor":
-            #     extractor_instance.add_weight_sets([f"* * {jetpuid_filename}"])
-            # elif backend == "correctionlib":
-            #     logger.debug(f"jetpuid cset file: {jetpuid_filename}")
-            #     # Load correction set
-            #     self.jetpuid_cset = correctionlib.CorrectionSet.from_file(jetpuid_filename)
-            #     self.jetpuid_tag = self.config.get("jetpuid_sf_tag", None)
-            #     logger.debug(f"jetpuid cset: {self.jetpuid_cset}")
-            #     logger.debug(f"jetpuid cset keys: {list(self.jetpuid_cset.keys())}")
-        else:
-            logger.warning(f"Skipping jet PUID weights for year {year} as per configuration.")
-
-        extractor_instance.finalize()
-        self.evaluator = extractor_instance.make_evaluator()
 
         # Initialize PackedSelection
         # Reference: https://nbviewer.org/github/scikit-hep/coffea/blob/master/binder/packedselection.ipynb
@@ -393,7 +180,7 @@ class EventProcessor(processor.ProcessorABC):
 
         return jet_veto_eventFilter
 
-    def compute_jet_veto_jetfilter(self, events, jets, met, PuppiMET):
+    def compute_jet_veto_jetfilter(self, events, jets, PuppiMET):
         """apply the jet veto maps. the .gz file should be read using correctionlib and the file
         # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
         # application is in "do_jet_veto_maps_filterJets" field in config.
@@ -432,63 +219,39 @@ class EventProcessor(processor.ProcessorABC):
         jet_veto_eventFilter = ak.any(jet_veto_mask, axis=1)
         # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[30:35].compute())}")
 
-        # logger.debug(f"met.pt after jet veto jet filter: {ak.to_list(met.pt[30:35].compute())}")
         # logger.debug(f"PuppiMET.pt after jet veto jet filter: {ak.to_list(PuppiMET.pt[30:35].compute())}")
 
         jets = jets[jet_veto_mask != 100.0]
 
         # logger.debug(f"eta: {ak.to_list(jets.eta[40:47].compute())}")
 
-        # sys.exit()
-
-        # when jet_veto_eventFilter is True, set met pt to zero:
+        # when jet_veto_eventFilter is True, set PuppiMET pt to zero:
         met_cond = (jet_veto_eventFilter == True)
 
-        # fetch original  met pt, phi, sumEt
-        # NOTE: Don't reset met.phi otherwise we will see a peak at zero in met.phi distribution
-        met_pt, puppi_met_pt = met.pt, PuppiMET.pt
-        met_sumEt, puppi_met_sumEt = met.sumEt, PuppiMET.sumEt
+        # fetch original  PuppiMET pt, phi, sumEt
+        # NOTE: Don't reset PuppiMET.phi otherwise we will see a peak at zero in PuppiMET.phi distribution
+        puppi_met_pt = PuppiMET.pt
+        puppi_met_sumEt = PuppiMET.sumEt
 
-        # Obtain new met pt, phi, sumEt - set to zero when met_cond is True
-        met_pt_new = ak.where(met_cond, ak.zeros_like(met_pt), met_pt)
-        met_sumEt_new = ak.where(met_cond, ak.zeros_like(met_sumEt), met_sumEt)
-
+        # Obtain new PuppiMET pt, phi, sumEt - set to zero when met_cond is True
         puppi_met_pt_new = ak.where(met_cond, ak.zeros_like(puppi_met_pt), puppi_met_pt)
         puppi_met_sumEt_new = ak.where(met_cond, ak.zeros_like(puppi_met_sumEt), puppi_met_sumEt)
 
-        # overwrite the met variables
-        met["pt"] = met_pt_new
-        met["sumEt"] = met_sumEt_new
-
+        # overwrite the PuppiMET variables
         PuppiMET["pt"] = puppi_met_pt_new
         PuppiMET["sumEt"] = puppi_met_sumEt_new
 
-        # logger.debug(f"met.pt after jet veto jet filter: {ak.to_list(met.pt[30:35].compute())}")
         # logger.debug(f"PuppiMET.pt after jet veto jet filter: {ak.to_list(PuppiMET.pt[30:35].compute())}")
-        # sys.exit()
 
-        return jets, met, PuppiMET
-
-    def met_fill_zeroes(self, events):
-        # logger.debug(f"Before Puppi: pt = {events.PuppiMET.pt[0:5].compute()}, phi = {events.PuppiMET.phi[0:5].compute()}, sumEt = {events.PuppiMET.sumEt[0:5].compute()}")
-        met = events.PuppiMET
-        met["pt"] = 0.0
-        met["phi"] = 0.0
-        met["sumEt"] = 0.0
-        # logger.debug(f"After Puppi: pt = {events.PuppiMET.pt[0:5].compute()}, phi = {events.PuppiMET.phi[0:5].compute()}, sumEt = {events.PuppiMET.sumEt[0:5].compute()}")
-        return met
+        return jets, PuppiMET
 
     def process(self, events: coffea_nanoevent, dataset_yaml_file: str):
         t0 = time.perf_counter()
         year = self.config["year"]
+        logger.info(f"Processing year: {year}")
+
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
         self.selection = PackedSelection()
-        """
-        TODO: Once you're done with testing and validation, do LHE cut after HLT and trigger match event filtering to save computation
-
-        Apply LHE cuts for DY sample stitching
-        Basically remove events that has dilepton mass between 100 and 200 GeV
-        """
 
         event_filter = ak.ones_like(events.event, dtype="bool") # 1D boolean array to be used to filter out bad events
         # Debugging: Check structure of event_filter
@@ -497,13 +260,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"events length: {len(events)}")
 
         # For debug: if run, lumi, and event :
-        # 355870,33,39923308
-        # 356074,20,26000957
-        # 356316,180,105019006
-        # 356323,357,464776964
-        # 356323,570,747442032
         # 356371,72,61849995
-        # 356375,103,118643455
         # debug_run = 356371
         # debug_lumi = 72
         # debug_event = 61849995
@@ -525,22 +282,29 @@ class EventProcessor(processor.ProcessorABC):
         NanoAODv = events.metadata['NanoAODv']
         is_mc = events.metadata['is_mc']
         logger.debug(f"NanoAODv: {NanoAODv}")
+
         t1 = time.perf_counter()
         logger.info(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
 
-        if is_mc:
-            lumi_mask = ak.ones_like(event_filter, dtype="bool")
-            self.selection.add("lumi_mask", lumi_mask)
-
-        else:
+        # ------------------------------------------------------------#
+        # Step-1: Apply the lumi mask for data only
+        # ------------------------------------------------------------#
+        lumi_mask = ak.ones_like(event_filter, dtype="bool")
+        if not is_mc:
             logger.debug(f'self.config["lumimask"]: {self.config["lumimask"]}')
             lumi_info = LumiMask(self.config["lumimask"])
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
-            self.selection.add("lumi_mask", lumi_mask)
+        self.selection.add("lumi_mask", lumi_mask)
 
-        # LHE cut original start -----------------------------------------------------------------------------
-        do_remove_dy_M100to200 = self.config["switches"]["do_remove_dy_M100to200"]
-        if "dy_M-50" in dataset and do_remove_dy_M100to200:  # if dy_M-50, apply LHE cut
+        # ------------------------------------------------------------#
+        # Step-2: Apply LHE cut to remove events with dilepton mass between 100 and 200 GeV for DY_M-50 sample
+        # ------------------------------------------------------------#
+        if "dy_M-50" in dataset and self.config["switches"]["do_remove_dy_M100to200"]:
+            # INFO: For run-2, for higher statistics, we are stiching DY_M-50 and DY_M-100to200 samples together.
+            #            As the DY_M-50 sample is the inclusive sample, we need to remove the events in DY_M-50 that have
+            #            dilepton mass between 100 and 200 GeV, to avoid double counting with DY_M-100to200 sample.
+            # FIXME: currently, `dy_M-50` is hardcoded
+
             logger.debug("doing dy_M-50 LHE cut!")
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
@@ -574,7 +338,11 @@ class EventProcessor(processor.ProcessorABC):
         logger.info(f"[timing] LHE cut time: {t3 - t1:.2f} seconds")
         # ------------------------------------------------------------#
 
-        # Apply HLT to both Data and MC. NOTE: this would probably be superfluous if you already do trigger matching
+        # ------------------------------------------------------------#
+        # Step-3: Apply HLT
+        # ------------------------------------------------------------#
+        # Apply HLT to both Data and MC.
+        # NOTE: this would probably be superfluous if you already do trigger matching
         HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
         for HLT_str in self.config["hlt"]:
             logger.debug(f"HLT_str: {HLT_str}")
@@ -583,17 +351,13 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("HLT_filter", HLT_filter)
         event_filter = event_filter & HLT_filter
 
-        # ------------------------------------------------------------#
-        # Skimming end, filter out events and prepare for pre-selection
-        # Edit: NVM; doing it this stage breaks fsr recovery
-        # ------------------------------------------------------------#
-        # events = events[event_filter]
-        # event_filter = ak.ones_like(events.HLT.IsoMu24)
-
         t4 = time.perf_counter()
         logger.info(f"[timing] HLT and lumi mask time: {t4 - t3:.2f} seconds")
         # ------------------------------------------------------------#
 
+        # --------------------------------------------------------#
+        # Step-4: Obtain the pileup weights
+        # --------------------------------------------------------#
         do_pu_wgt = self.config["switches"]["do_pu_wgt"]
         if do_pu_wgt:
             # obtain PU reweighting b4 event filtering, and apply it after we finalize event_filter
@@ -615,23 +379,23 @@ class EventProcessor(processor.ProcessorABC):
                             is_rereco = ("RERECO" in year),
                     )
 
-        # # Save raw variables before computing any corrections
-        # # rochester and geofit corrects pt only, but fsr_recovery changes all vals below
-        # attempt at fixing fsr issue start -------------------------------------------------------------------
+        # Save raw variables before computing any corrections
+        # rochester corrects pt only, but fsr_recovery changes all vals below
         events["Muon", "pt_raw"] = ak.ones_like(events.Muon.pt) * events.Muon.pt
         events["Muon", "eta_raw"] = ak.ones_like(events.Muon.eta) * events.Muon.eta
         events["Muon", "phi_raw"] = ak.ones_like(events.Muon.phi) * events.Muon.phi
         events["Muon", "pfRelIso04_all_raw"] = ak.ones_like(events.Muon.pfRelIso04_all) * events.Muon.pfRelIso04_all
-        # attempt at fixing fsr issue end ---------------------------------------------------------------
 
         # --------------------------------------------------------#
-        # Select muons that pass pT, eta, isolation cuts,
-        # muon ID and quality flags
-        # Select events with 2 good muons, no electrons,
-        # passing quality cuts and at least one good PV
+        # INFO: Select muons that pass pT, eta, isolation cuts,
+        #            muon ID and quality flags
+        #           Select events with 2 good muons, no electrons,
+        #           passing quality cuts and at least one good PV
         # --------------------------------------------------------#
 
-        # Apply event quality flags MET filter
+        # --------------------------------------------------------#
+        # Step-5: Apply the event quality flags (also known as MET filters)
+        # --------------------------------------------------------#
         evnt_qual_flg_selection = ak.ones_like(event_filter, dtype="bool")
         logger.debug("Applying event quality (MET-filter) flags")
         for evt_qual_flg in self.config["event_flags"]:
@@ -639,41 +403,34 @@ class EventProcessor(processor.ProcessorABC):
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
         self.selection.add("event_quality_flags", evnt_qual_flg_selection)
 
-        # # --------------------------------------------------------
-        # apply Beam constraint b4 Rochester. We need Rochester b4 trigger matching
-        # # --------------------------------------------------------
-
-        doing_BS_correction = self.config["switches"]["do_beamConstraint"]  # boolean that will be used for picking the correct ebe mass calibration factor
+        # --------------------------------------------------------
+        # Step-6: Fetch the BSC corrected muon pT and pT error.
+        #              If BS constrained muon variables are present.
+        # --------------------------------------------------------
+        doing_BS_correction = self.config["switches"]["do_beamConstraint"]
         if self.config["switches"]["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
             logger.debug("doing beam constraint!")
-            doing_BS_correction = True
-            """
-            TODO: apply dimuon mass resolution calibration factors calibrated FROM beamConstraint muons
-            """
-            # logger.info(f"events.Muon.fields: {events.Muon.fields}")
             BSConstraint_mask = (
-                (events.Muon.bsConstrainedChi2 <30)
+                (events.Muon.bsConstrainedChi2 <30) # NOTE: Hardcoded chi2 cut for beam constraint
             )
             BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
-            # comment off (~applied_fsr) cut for now
-            # BSConstraint_mask = BSConstraint_mask & (~applied_fsr) # apply BSContraint on non FSR muons
             events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
-
         # logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
 
-        # logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
-
-        # # --------------------------------------------------------
-        # # # Apply Rochester correction
+        # --------------------------------------------------------
+        # Step-7: Apply Rochester correction to muon pT
+        # --------------------------------------------------------
         if self.config["switches"]["do_roccor"]:
             # TODO make more elegant distinction between Run2 and Run3
-            if "16" in year or "17" in year or "18" in year:# Run2 roccor
+            if is_run2(year):
                 logger.debug("doing Run2 rochester!")
                 apply_roccor(events, self.config["roccor_file"], is_mc)
-            else:
+            elif is_run3(year):
                 logger.debug("doing Run3 rochester!")
                 apply_roccorRun3(events, self.config["roccor_file"], is_mc)
+            else:
+                raise ValueError(f"Year {year} is neither Run2 nor Run3!")
             events["Muon", "pt"] = events.Muon.pt_roch
             # logger.info(f"df.Muon.pt after roccor: {events.Muon.pt.compute()}")
         else:
@@ -832,21 +589,9 @@ class EventProcessor(processor.ProcessorABC):
         logger.info(f"[timing] FSR correction time: {t6a - t6:.2f} seconds")
         # -----------------------------------------------------------------
 
-        if not doing_BS_correction: # apply geofit
-            if self.config["switches"]["do_geofit"] and ("dxybs" in events.Muon.fields):
-                logger.info("doing geofit!")
-                gf_filter, gf_pt_corr = apply_geofit(events, self.config["year"], ~applied_fsr)
-                events["Muon", "pt"] = events.Muon.pt_gf # original
-            else:
-                logger.warning("doing neither beam constraint nor geofit!")
-
-        t6b = time.perf_counter()
-        logger.info(f"[timing] Geofit correction time: {t6b - t6a:.2f} seconds")
-        # --------------------------------------------------------#
-
         muons = events.Muon[muon_selection]
         t6c = time.perf_counter()
-        logger.info(f"[timing] Muon selection time: {t6c - t6b:.2f} seconds")
+        logger.info(f"[timing] Muon selection time: {t6c - t6a:.2f} seconds")
 
         # muons = ak.to_packed(events.Muon[muon_selection])
 
@@ -1070,13 +815,8 @@ class EventProcessor(processor.ProcessorABC):
 
         t10 = time.perf_counter()
         logger.info(f"[timing] Dimuon variables time: {t10 - t9:.2f} seconds")
-        # skip validation for genjets for now -----------------------------------------------
-        # test:
-        # logger.info(dimuon_cos_theta_cs.compute())
-        # logger.info(dimuon_phi_cs.compute())
 
-        # #fill genjets
-
+        # fill genjets
         if is_mc:
             # fill gen jets for VBF filter on postprocess
             gjets = events.GenJet
@@ -1163,16 +903,14 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         jets = events.Jet
 
-        met = events.MET if hasattr(events, "MET") else self.met_fill_zeroes(events)
         PuppiMET = events.PuppiMET
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
             logger.info("Applying jet veto maps!")
-            jets, met, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, met, PuppiMET)
+            jets, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, PuppiMET)
 
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
-        # testing
         factory = None
         jet_default = ak.pad_none(jets, target=4) # save pre jec and jer Jet for comparison
         jet1_default = jet_default[:, 0]
@@ -1567,9 +1305,6 @@ class EventProcessor(processor.ProcessorABC):
                 "PV_npvs": events.PV.npvs,
                 "PV_npvsGood": events.PV.npvsGood,
 
-                "MET_pt": met.pt, # As we are using CHS jets, so use MET not PuppiMET
-                "MET_phi": met.phi,
-                "MET_sumEt": met.sumEt,
                 "PuppiMET_pt": PuppiMET.pt,
                 "PuppiMET_phi": PuppiMET.phi,
                 "PuppiMET_sumEt": PuppiMET.sumEt,
@@ -1678,7 +1413,6 @@ class EventProcessor(processor.ProcessorABC):
 
                 "dimuon_cos_theta_eta": dimuon_cos_theta_eta,
                 "dimuon_phi_eta": dimuon_phi_eta,
-                "dimuon_pt_over_MET_pt": safe_ratio(dimuon.pt, met.pt, default=0.0),
                 "dimuon_pt_over_PuppiMET_pt": safe_ratio(dimuon.pt, PuppiMET.pt, default=0.0),
                 "dimuon_pt_over_jet1_pt": safe_ratio(dimuon.pt, jet1_default.pt, default=0.0),
                 "dimuon_pt_over_jet2_pt": safe_ratio(dimuon.pt, jet2_default.pt, default=0.0),
@@ -2080,22 +1814,24 @@ class EventProcessor(processor.ProcessorABC):
         return accumulator
 
     def get_mass_resolution(self, dimuon, mu1,mu2, is_mc:bool, doing_BS_correction=False, test_mode=False):
-        # Returns absolute mass resolution!
-        muon_E = dimuon.mass /2
+        """
+        - Calculate the dimuon mass resolution based on muon pt uncertainties.
+        - If `doing_BS_correction` is True, apply additional calibration from BeamSpot constraint correction
+           based on the provided correction JSON file.
+
+        Returns:
+        - mass_resolution: The calculated mass resolution.
+        - calibration: The calibration factor applied (1.0 if no BS correction).
+        """
+        muon_E = dimuon.mass / 2.0
         dpt1 = (mu1.ptErr / mu1.pt) * muon_E
         dpt2 = (mu2.ptErr / mu2.pt) * muon_E
-        logger.debug(f"muons mass_resolution dpt1: {dpt1}")
+        sigma = (dpt1 * dpt1 + dpt2 * dpt2)**0.5
 
-        year = self.config["year"]
-        if "2016" in year: # 2016PreVFP, 2016PostVFP, 2016_RERECO
-            yearUL = "2016"
-        elif "RERECO" in year: # 2017_RERECO. 2018_RERECO
-            yearUL=year.replace("_RERECO","")
-        else:
-            yearUL = year
+        calibration = 1.0 # default: no calibration applied
+
         if doing_BS_correction: # apply resolution calibration from BeamSpot constraint correction
-            # TODO: add 2016pre and 2016post versions too
-            logger.debug("Doing BS constraint correction mass calibration!")
+            logger.debug("Applying BeamSpot resolution calibration")
 
             # Load the correction set
             json_path = self.config["BS_res_calib_path"]["MC"] if is_mc else self.config["BS_res_calib_path"]["Data"]
@@ -2107,19 +1843,8 @@ class EventProcessor(processor.ProcessorABC):
             logger.debug(f"correction: {correction}")
 
             calibration = correction.evaluate(mu1.pt, abs(mu1.eta), abs(mu2.eta))
-        else:
-            if is_mc:
-                label = f"res_calib_MC_{yearUL}"
-            else:
-                label = f"res_calib_Data_{yearUL}"
-            logger.debug(f"yearUL: {yearUL}")
-            calibration =  self.evaluator[label]( # this is a coffea.dense_lookup instance
-                mu1.pt,
-                abs(mu1.eta),
-                abs(mu2.eta) # calibration depends on year, data/mc, pt, and eta region for each muon (ie, BB, BO, OB, etc)
-            )
 
-        return ((dpt1 * dpt1 + dpt2 * dpt2)**0.5), calibration
+        return sigma, calibration
 
     def prepare_jets(self, events, NanoAODv=9): # analogous to add_jec_variables function in boosted higgs
         # Initialize missing fields (needed for JEC)
@@ -2159,8 +1884,7 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
 
         # print raw pt, jec pt and jer pt
-        logger.warning(f"jets.pt_raw: {jets.pt_raw[:1].compute()}, jets.pt: {jets.pt[:1].compute()}")
-
+        # logger.warning(f"jets.pt_raw: {jets.pt_raw[:1].compute()}, jets.pt: {jets.pt[:1].compute()}")
 
         if (not is_mc) and variation != "nominal":
             return {}
