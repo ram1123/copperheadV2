@@ -69,7 +69,7 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
     """
     logger.info(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
-    max_order = 5 # FIXME: Hardcoded max order of the function, should be read from config instead
+    max_order = 10 # FIXME: Hardcoded max order of the function, should be read from config instead
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
 
