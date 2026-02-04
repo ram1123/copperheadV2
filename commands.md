@@ -11,13 +11,14 @@ time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.ya
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_02Feb_FilterJetsHorn30GeV -y "2024" -m 1 -k 2 -i 1)
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE 2022preEE" -m compact -k 2 -i 2)
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_02Feb_FilterJetsHorn30GeV -y "2024" -m compact -k 2 -i 2)
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJets -y "2022postEE" -m compact -k 2 -i 2)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJets -y "2022postEE" -m 1 -k 2 -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE" -m 1 -k 2 -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE" -m compact -k 2 -i 2)
 
 
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE" -m zpt_fit0 -k 2 -i 2)
 
 ```
-
 
 # 31 January 2026
 
