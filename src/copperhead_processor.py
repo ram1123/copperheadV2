@@ -69,7 +69,6 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
     """
     logger.info(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
-    max_order = 10 # FIXME: Hardcoded max order of the function, should be read from config instead
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
 
@@ -77,27 +76,59 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
 
         zpt_wgt_by_jet = ak.zeros_like(dimuon_pt)
 
+        # Get cut-off regions between the polynomial fits
+        poly_fit_cutoff_min = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
+        poly_fit_cutoff_max = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmax1"]
+
+        # Get the function order
+        f0_order = int(wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f0_order"])
+        f1_order = int(wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f1_order"])
+
         # first polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
-        for order in range(max_order + 1):  # Dynamically use max_order from the configuration
+        for order in range(f0_order + 1):  # Dynamically use max_order from the configuration
             coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
-            polynomial_term = coeff*dimuon_pt**order
+            polynomial_term = coeff*(dimuon_pt**order) # a * x^n
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
-        poly_fit_cutoff_min = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
+
+        # compute the value of the first polynomial at the cutoff min
+        f0_xmin = 0.0
+        for order in range(f0_order + 1):
+            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
+            f0_xmin += coeff * (poly_fit_cutoff_min ** order)
+
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_min >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
 
         # 2nd polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
-        for order in range(max_order+1): # p goes from 0 to max_order
+        for order in range(f1_order + 1):  # p goes from 0 to max_order
             coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
-            polynomial_term = coeff*dimuon_pt**order
+            polynomial_term = coeff * (dimuon_pt**order)  # a * x^n
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
-        poly_fit_cutoff_max = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmax1"]
-        zpt_wgt_by_jet = ak.where(((poly_fit_cutoff_min < dimuon_pt) & (poly_fit_cutoff_max >= dimuon_pt)), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
 
-        # horizontal line beyond poly_fit_cutoff_max
-        coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["horizontal_c0"]
-        zpt_wgt_by_jet_horizontal = ak.ones_like(dimuon_pt) * coeff
+        # compute the value of the 2nd polynomial at the cutoff min
+        f1_xmin = 0.0
+        f1_xmax = 0.0
+        for order in range(f1_order + 1):
+            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
+            f1_xmin += coeff * (poly_fit_cutoff_min ** order)
+            f1_xmax += coeff * (poly_fit_cutoff_max ** order)
+
+        # continuity offset so that f1(xmin)+offset == f0(xmin)
+        offset = f0_xmin - f1_xmin
+
+        zpt_wgt_by_jet = ak.where(
+            ((poly_fit_cutoff_min < dimuon_pt) & (poly_fit_cutoff_max >= dimuon_pt)),
+            zpt_wgt_by_jet_poly + offset,
+            zpt_wgt_by_jet)
+
+        # horizontal line beyond poly_fit_cutoff_max horizontal_c0 and horizontal_mx
+        # coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["horizontal_c0"]
+        mx = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["horizontal_mx"]
+        y_at_xmax = f1_xmax + offset
+        coeff = y_at_xmax - mx*poly_fit_cutoff_max
+
+        zpt_wgt_by_jet_horizontal = mx*dimuon_pt + coeff # y=mx*x + c0
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_max < dimuon_pt), zpt_wgt_by_jet_horizontal, zpt_wgt_by_jet)
 
         if jet_multiplicity != 2:
@@ -2184,14 +2215,14 @@ class EventProcessor(processor.ProcessorABC):
             f"jet1_pt_{variation}": jet1.pt,
             f"jet1_eta_{variation}": jet1.eta,
             f"jet1_phi_{variation}": jet1.phi,
-            f"jet1_puId_{variation}": get_puId(jet1),
-            f"jet1_hasMatchedGenJet_{variation}": jet1.genJetIdx != -1,
+            # f"jet1_puId_{variation}": get_puId(jet1),
+            # f"jet1_hasMatchedGenJet_{variation}": jet1.genJetIdx != -1,
             # -------------------------
             f"jet2_pt_{variation}": jet2.pt,
             f"jet2_eta_{variation}": jet2.eta,
             f"jet2_phi_{variation}": jet2.phi,
-            f"jet2_puId_{variation}": get_puId(jet2),
-            f"jet2_hasMatchedGenJet_{variation}": jet2.genJetIdx != -1,
+            # f"jet2_puId_{variation}": get_puId(jet2),
+            # f"jet2_hasMatchedGenJet_{variation}": jet2.genJetIdx != -1,
             # -------------------------
             # -------------------------
             f"jj_mass_{variation}": dijet.mass,
