@@ -37,6 +37,7 @@ logging.basicConfig(
 V1_FIELDS_2COMPUTE: List[str] = [
     # "gjj_mass",  # handled dynamically
     "wgt_nominal",
+    "separate_wgt_zpt_wgt",
     "nBtagLoose_nominal",
     "nBtagMedium_nominal",
     # "mu1_pt",
@@ -99,12 +100,10 @@ def get_yield(
     do_VH_veto: bool,
     category: str,
     region: str,
-) -> Tuple[str, str, str, str, float]:
+) -> Tuple[str, str, str, str, int, float]:
     """
     Compute total yield for a given process (glob pattern) and configuration.
     """
-    print(f"{'=' * 5} {process} {'=' * 5}")
-
     # Fresh copy of the fields list
     fields = list(V1_FIELDS_2COMPUTE)
 
@@ -124,7 +123,7 @@ def get_yield(
 
     if not parquet_files:
         logger.warning("No parquet files found for '%s' under '%s'", process, load_path)
-        return process, category, region, year, 0.0
+        return process, category, region, year, 0, 0.0
 
     # dask_awkward read per process
     events_lazy = dak.from_parquet(parquet_pattern, columns=fields)
@@ -143,12 +142,26 @@ def get_yield(
         do_VH_veto=do_VH_veto,
     )
 
-    # Sum nominal weights
-    wgts = ak.fill_none(events["wgt_nominal"], value=1.0)
-    total_integral = float(ak.sum(wgts))
+    n_raw = int(ak.num(events, axis=0))
 
-    print(f"\t==> Total Yield: {total_integral:.3f}")
-    return process, category, region, year, total_integral
+    yield_ = 0.0 # yield
+    # weights
+    if "data" in process.lower():
+        # data: yield is raw count
+        yield_ = float(ak.num(events, axis=0))
+    else:
+        # MC: expected yield
+        wgts = ak.fill_none(events["wgt_nominal"], 0.0)
+
+        # remove Zpt weight if you want "no-zpt"
+        if "separate_wgt_zpt_wgt" in events.fields:
+            wgts = wgts / ak.fill_none(events["separate_wgt_zpt_wgt"], 1.0)
+
+        yield_ = float(ak.sum(wgts))
+
+    print(f"{process:30}    {n_raw:10}  {yield_:10.3f}")
+
+    return process, category, region, year, n_raw, yield_
 
 
 # ----------------------------------------------------------------------
@@ -172,26 +185,29 @@ def main() -> None:
 
     # Physics / config toggles
     do_VH_veto = False
-    do_vbf_filter_study = True
+    do_vbf_filter_study = False
 
-    # regions = ["z-peak", "h-sidebands"]
-    # categories = ["ggh", "vbf"]
+    # regions = ["signal", "h-sidebands"]  # "z-peak",
+    # regions = ["signal"]  # "z-peak",
+    # regions = ["h-sidebands", "z-peak"]
     regions = ["h-sidebands"]
-    categories = ["vbf"]
 
+    # categories = ["ggh", "vbf"]
+    categories = ["nocat", "vbf", "ggh"]
+    # categories = ["nocat"]
 
     args = parse_args()
 
     # Define all possible years we want to support
     ALL_YEARS = [
-        "2018",
-        "2017",
-        "2016preVFP",
-        "2016postVFP",
+        # "2018",
+        # "2017",
+        # "2016preVFP",
+        # "2016postVFP",
         # "2022preEE",
         # "2022postEE",
-        # "2023",
-        # "2023BPix",
+        "2023",
+        "2023BPix",
         # "2024",
     ]
 
@@ -215,7 +231,8 @@ def main() -> None:
 
     # Loop over (category, year, region)
     for category, year, region in itertools.product(categories, years, regions):
-        print(f"\n\n***** {year} *****")
+        print("-" * 60)
+        print(f"\n\nCategory: {category} | Year: {year} | Region: {region}")
         load_path = load_path_template.format(year=year)
 
         # Common kwargs for all processes
@@ -235,7 +252,7 @@ def main() -> None:
             # "data_D",
             # "data*",
             # "vbf_powheg",
-            "vbf_powheg_dipole",
+            # "vbf_powheg_dipole",
             # "ggh_powhegPS",
             # # "dyTo2L_M-50_incl",
             # # "dyTo2L_M-50_incl_XSDYTurbo",
@@ -251,15 +268,27 @@ def main() -> None:
             # "zz_*",
             # # "ewk_lljj",
             # "ewk_lljj_mll50_mjj120",
+            "data*",
+            "ggh_powhegPS",
+            "vbf_powheg",
+            "vbf_powheg_dipole",
+            "dyTo2L_M-50_incl",
+            "dyTo2Mu_M-50_aMCatNLO",
+            "ttjets_*",
+            "ewk_*",
         ]
 
+        # print(f"{process:30} | Raw events: {n_raw:10} | Yield: {yield:10.3f}")
+        print("-" * 60)
+        print(f"{'Process':30}    {'Raw events':10}  {'Yield':10}")
+        print("-" * 60)
         for proc in processes:
             info.append(get_yield(proc, **common_kwargs))
 
     # Write CSV
     with open(outfile, "w", newline="") as out_f:
         writer = csv.writer(out_f)
-        writer.writerow(["sample", "category", "region", "year", "yield"])
+        writer.writerow(["sample", "category", "region", "year", "raw_events", "yield"])
         writer.writerows(info)
 
     print(f"\nWrote {len(info)} rows to {outfile}")
