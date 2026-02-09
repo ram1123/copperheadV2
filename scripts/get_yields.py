@@ -1,26 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
+import argparse
 import glob
 import itertools
+import os
 from pathlib import Path
-from typing import List, Tuple, Dict, Any
+from typing import Any, Dict, List
 
-import argparse
-
-import dask_awkward as dak
 import awkward as ak
+import dask_awkward as dak
 import pandas as pd
-
-from distributed import Client
 
 # Your modules
 from modules import selection
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.trials import get_stage1_path
 from modules.utils import logger
-
 
 # ----------------------------------------------------------------------
 # Fields to read
@@ -119,7 +115,6 @@ def get_yield(
 
     n_raw = int(ak.num(events, axis=0))
 
-    yield_ = 0.0 # yield
     # weights
     if "data" in process.lower():
         # data: yield is raw count
@@ -288,6 +283,7 @@ def main() -> None:
     summary_outfile = f"yield_summary_{dataset_tag}{suffix}_{tagYear}.csv"
     summary.to_csv(summary_outfile, index=False)
     print(f"\nWrote summary to {summary_outfile}")
+    close_dask_client()
 
 
 def parse_args():

@@ -2419,7 +2419,7 @@ class EventProcessor(processor.ProcessorABC):
                 # f"jet4_neHEF_{variation}":  jet4.neHEF,
                 # f"jet4_muEF_{variation}":   jet4.muEF,
             })
-        if "Multiplicity" in jets.fields:
+        if "chMultiplicity" in jets.fields:
             extra_jet_loop_dict.update({
                 f"jet1_chMultiplicity_{variation}": jet1.chMultiplicity,
                 f"jet2_chMultiplicity_{variation}": jet2.chMultiplicity,
