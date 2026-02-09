@@ -20,6 +20,7 @@ from modules.utils import logger
 from src.lib.histogram.plotting import plotDataMC_compare
 from modules.classify_year import is_run2, is_run3
 from configs.variables.variable_lists import get_all_vars
+from scripts.compact_parquet_data import ensure_compacted
 
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
@@ -29,51 +30,21 @@ from configs.variables.variable_lists import get_all_vars
 bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
 # bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
 
-# Run2 DY samples
-DYVBF = ["dy_VBF_filter"]
 
-# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
-DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
-
-# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dyTo2L_M-50_incl"]
-# DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
-# DY_madgraph = ["dy_M-50_madgraph"]
-# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
-# DY_aMCatNLO = ["dy_M-50_madgraph"]  # 2024
-DY_To2MU_MassBinned = [
-    "dyTo2Mu_M-10To50",
-    "dyTo2Mu_M-50To120",
-    "dyTo2Mu_M-120To200",
-]  # 2024
-DY_To2MU_inclusive = ["dyTo2Mu_M-50"]
-
-
-DY_HTBinned = [
-    "dy_M-4to50_HT-70to100",
-    "dy_M-4to50_HT-100to200",
-    "dy_M-4to50_HT-200to400",
-    "dy_M-4to50_HT-400to600",
-    "dy_M-4to50_HT-600toInf",
-    "dy_M-50_HT-70to100",
-    "dy_M-50_HT-100to200",
-    "dy_M-50_HT-200to400",
-    "dy_M-50_HT-400to600",
-    "dy_M-50_HT-600to800",
-    "dy_M-50_HT-800to1200",
-    "dy_M-50_HT-1200to2500",
-    "dy_M-50_HT-2500toInf",
-]
-
-
-# Run3 DY samples
-# DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"] # 2022preEE
-
-# DY_aMCatNLO = ["dy_M-50_aMCatNLO"] # 2022postEE
-
-DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
-DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
-DY_aMCatNLO_inc_202223 = ["dyTo2L_M-50_incl"]  # 2022postEE, 2023, 2023BPix
-DY_aMCatNLO_inc_2024 = ["dyTo2Mu_M-50_aMCatNLO"] # 2024
+DY_aMCatNLO_inc = {
+    "2022preEE": ["dyTo2L_M-50_incl"],
+    "2022postEE": ["dyTo2L_M-50_incl"],
+    "2023": ["dyTo2L_M-50_incl"],
+    "2023BPix": ["dyTo2L_M-50_incl"],
+    "2024": ["dyTo2Mu_M-50_aMCatNLO"],
+}
+EWK_l = {
+    "2022preEE": ["ewk_mmjj"],
+    "2022postEE": ["ewk_lljj"],
+    "2023": ["ewk_mmjj"],
+    "2023BPix": ["ewk_mmjj"],
+    "2024": ["ewk_mmjj"],
+}
 
 group_dict = {
     "DATA": [
@@ -88,24 +59,7 @@ group_dict = {
         "data_I",
         "data_J",
     ],
-    # Run2 DY samples
-    # "DY": DY_aMCatNLO,
-    # "DY": DY_jet_binned,
-    # "DY": DY_MLL_binned,
-    # "DY": DY_aMCatNLO_inc_2024,
-    "DY": DY_aMCatNLO_inc_202223,
 
-    # Run3 DY samples
-    # "DY": DY_To2MU_MassBinned,
-    # "DY": DY_To2MU_inclusive,
-    # "DY": DY_MLL_binned,
-    # "DY": DY_madgraph,
-    # "DY": DY_MiNNLO,
-    # "DY_MINNLO": DY_MiNNLO ,
-    # "DY_AMCATNLO":   DY_aMCatNLO,
-    # "DYVBF": ["dy_VBF_filter"],
-    # "DYJ01": ["DYJ01"],
-    # "DYJ2": ["DYJ2"],
     "TOP": [
         # "tt_inclusive",
         "ttjets_dl",
@@ -117,7 +71,6 @@ group_dict = {
         "st_t_antitop",
     ],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
-    # "EWK": ["ewk_lljj_mll50_mjj120",  "ewk_lljj"],
     # "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
     "VV": [
         "ww_2l2nu",
@@ -137,6 +90,18 @@ group_dict = {
     # "VBF": ["vbf_powheg"],
     # "VBF": ["vbf_aMCatNLO"],
 }
+
+def parseGroupProcesses(group_dict, year: str):
+    """
+    helper function that simplifies group_dict to be
+    specific to one year.
+    """
+    year_specific_group_dict = {}
+    for group_name, processes in group_dict.items():
+        if type(processes) is dict:
+            processes = processes[year]
+        year_specific_group_dict[group_name] = processes
+    return year_specific_group_dict
 
 def find_group_name(process_name, group_dict_param):
     # Avoid redefining group_dict from outer scope
@@ -320,6 +285,8 @@ if __name__ == "__main__":
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
 
+    group_dict = parseGroupProcesses(group_dict, args.year)
+
     if is_run3(args.year):
         CM_energy = 13.6  # TeV
     elif is_run2(args.year):
@@ -372,13 +339,6 @@ if __name__ == "__main__":
         logger.error("No regions specified! Exiting the program.")
         raise ValueError("No regions specified!")
 
-    # if args.remove_zpt_weights, then update the args.label
-    if args.remove_zpt_weights:
-        if args.label == "":
-            args.label = "no_zpt_weights"
-        else:
-            args.label += "_no_zpt_weights"
-
     available_processes = []
 
     logger.info("group_dict: {group_dict}".format(group_dict=group_dict))
@@ -412,7 +372,7 @@ if __name__ == "__main__":
     # gather variables to plot:
     kinematic_vars = ['pt', 'eta', 'phi']
     if args.minimum_set: kinematic_vars = ['pt', 'eta']
-    variables2plot = get_all_vars()
+    variables2plot = get_all_vars(args.minimum_set)  # get the full list of variables from the config file
 
     variables2plot_orig = copy.deepcopy(variables2plot)
     if "jj_mass_nominal" in variables2plot:
@@ -443,6 +403,15 @@ if __name__ == "__main__":
 
     # check if the compacted path exists
     if args.use_compacted != "":
+        # path name should contain the string "f1_0" which is the default load path, otherwise throw error
+        if "f1_0" not in args.load_path:
+            raise ValueError("The load path should contain the string 'f1_0' to use the compacted path! Exiting the program.")
+
+        # run compact script for each process
+        for process in available_processes:
+            compacted_path_DNN = os.path.join(args.load_path, process, "0")
+            ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
+
         args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
 
     logger.info(f"Using parquet files from {args.load_path}")
@@ -809,10 +778,16 @@ if __name__ == "__main__":
             # ---------------------------------------------------
             # All data are prepped, now plot Data/MC histogram
             # -------------------------------------------------------
+            # if args.remove_zpt_weights, then update the args.label
+            remove_zpt_str = ""
+            if args.remove_zpt_weights:
+                logger.warning("Removing zpt weights from the events!")
+                remove_zpt_str = "no_zpt_weights"
+
             if args.year == "*":
-                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
+                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{remove_zpt_str}"
             else:
-                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
+                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{remove_zpt_str}"
             logger.debug(f"full_save_path: {full_save_path}")
 
             if not os.path.exists(full_save_path):

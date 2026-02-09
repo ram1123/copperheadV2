@@ -89,7 +89,7 @@ years:
 
         DY:
             dyTo2L_M-50_0j:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 5034.65
@@ -154,7 +154,7 @@ years:
                     - "MadGraph5_aMC"
 
             dy_M-50_aMCatNLO:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 5991.00
@@ -170,7 +170,7 @@ years:
                     - "MadGraph5_aMC"
 
             dyTo2L_M-50_incl:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 notes: njets <= 2, not njets==2;
@@ -227,7 +227,7 @@ years:
 
         Top:
             tt_inclusive:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 923.6
@@ -269,7 +269,7 @@ years:
                     - "POWHEG"
 
             st_tw_top:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 35.99
@@ -283,7 +283,7 @@ years:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 36.05
@@ -471,7 +471,7 @@ years:
                     - "POWHEG"
 
             vbf_powheg_dipole:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 0.00105742

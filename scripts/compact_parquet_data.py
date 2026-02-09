@@ -15,11 +15,11 @@ def ensure_compacted(year, sample, input_path, compacted_path):
     logger.debug(f"Checking compacted dataset: {compacted_path}")
 
     if not os.path.exists(compacted_path):
-        logger.info(f"Compacted dataset not found. Creating at {compacted_path}")
+        logger.info(f"Compacted dataset not found: {compacted_path}")
 
         orig_path = os.path.join(input_path, sample)
         if not os.path.exists(orig_path):
-            logger.debug(f"Original data not found at {orig_path}. Skipping.")
+            logger.info(f"Original data not found at {orig_path}. Skipping.")
             return
 
         logger.debug(f"Reading data from {orig_path}")

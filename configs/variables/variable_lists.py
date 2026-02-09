@@ -143,11 +143,15 @@ def unique_preserve_order(seq: List[str]) -> List[str]:
     unique_vars = list(dict.fromkeys(seq))
     return unique_vars
 
-def get_all_vars() -> List[str]:
+def get_all_vars(test = False) -> List[str]:
     """Get full list of unique vars from all sets."""
     all_vars = []
     for var_list in VAR_SETS.values():
         all_vars.extend(var_list)
+
+    if test:  # just fetch the first 5 vars for testing
+        all_vars = all_vars[:5]
+
     return unique_preserve_order(all_vars)
 
 if __name__ == "__main__":
