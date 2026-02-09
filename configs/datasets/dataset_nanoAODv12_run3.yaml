@@ -368,11 +368,37 @@ years:
                 references:
                     - NONE
 
-            ewk_mmjj:
+            ewk_lljj_mll50_mjj120:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: None
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160:
                 skip_sample: False
                 datasets:
                     - /EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
                 cross_section_pb: 0.06445
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160_mjj120:
+                skip_sample: False
+                datasets:
+                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 0.06447
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
                     value: 1.00
@@ -802,11 +828,37 @@ years:
                 references:
                     - NONE
 
-            ewk_mmjj:
+            ewk_lljj_mll50_mjj120:
                 skip_sample: True
                 datasets:
                     - None
+                cross_section_pb: None
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160:
+                skip_sample: False
+                datasets:
+                    - /EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
                 cross_section_pb: 0.06445
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160_mjj120:
+                skip_sample: False
+                datasets:
+                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 0.06447
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
                     value: 1.00
@@ -1198,11 +1250,37 @@ years:
                 references:
                     - NONE
 
-            ewk_mmjj:
+            ewk_lljj_mll50_mjj120:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: None
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160:
                 skip_sample: False
                 datasets:
                     - /EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
                 cross_section_pb: 0.06445
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160_mjj120:
+                skip_sample: False
+                datasets:
+                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: 0.06447
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
                     value: 1.00
@@ -1360,9 +1438,13 @@ years:
                 skip_sample: False
                 datasets:
                     - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v4/NANOAODSIM
-                notes: njets <= 2, not njets==2; cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
-                cross_section_pb: 6372.24 # 2091.7 * 3
-                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                notes: njets <= 2, not njets==2;
+                cross_section_pb: 5991.00
+                notes2:  cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
+                cross_section_source:   "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                notes3: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_source3: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                cross_section_source4: https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -1618,12 +1700,37 @@ years:
                 references:
                     - NONE
 
+            ewk_lljj_mll50_mjj120:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: None
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
 
-            ewk_mmjj:
+            ewk_mmjj_mll_105_160:
                 skip_sample: False
                 datasets:
                     - /EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
                 cross_section_pb: 0.06445
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160_mjj120:
+                skip_sample: True
+                datasets:
+                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v3/NANOAODSIM
+                cross_section_pb: 0.06447
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
                     value: 1.00
