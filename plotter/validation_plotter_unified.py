@@ -78,8 +78,20 @@ DY_aMCatNLO = ["dyTo2L_M-50_incl"] # 2022postEE, 2023, 2023BPix
 
 DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
 DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
-DY_aMCatNLO_inc_202223 = ["dyTo2L_M-50_incl"]  # 2022postEE, 2023, 2023BPix
-DY_aMCatNLO_inc_2024 = ["dyTo2Mu_M-50_aMCatNLO"] # 2024
+DY_aMCatNLO_inc = {
+    "2022preEE": ["dyTo2L_M-50_incl"],
+    "2022postEE": ["dyTo2L_M-50_incl"],
+    "2023": ["dyTo2L_M-50_incl"],
+    "2023BPix": ["dyTo2L_M-50_incl"],
+    "2024": ["dyTo2Mu_M-50_aMCatNLO"],
+}
+EWK_l = {
+    "2022preEE": ["ewk_mmjj"],
+    "2022postEE": ["ewk_lljj"],
+    "2023": ["ewk_mmjj"],
+    "2023BPix": ["ewk_mmjj"],
+    "2024": ["ewk_mmjj"],
+}
 
 group_dict = {
     "DATA": [
@@ -98,7 +110,7 @@ group_dict = {
     # "DY": DY_aMCatNLO,
     # "DY": DY_MLL_binned,
     # "DY": DY_aMCatNLO_inc_2024,
-    "DY": DY_aMCatNLO_inc_202223,
+    "DY": DY_aMCatNLO_inc,
     # Run3 DY samples
     # "DY": DY_To2MU_MassBinned,
     # "DY": DY_To2MU_inclusive,
@@ -122,8 +134,7 @@ group_dict = {
         "st_t_antitop",
     ],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
-    # "EWK": ["ewk_lljj_mll50_mjj120", "ewk_lljj"],
-    # "EWK": ["ewk_lljj"],
+    "EWK": EWK_l,
     # "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
     "VV": [
         "ww_2l2nu",
@@ -143,6 +154,18 @@ group_dict = {
     # "VBF": ["vbf_powheg"],
     # "VBF": ["vbf_aMCatNLO"],
 }
+
+def parseGroupProcesses(group_dict, year: str):
+    """
+    helper function that simplifies group_dict to be
+    specific to one year.
+    """
+    year_specific_group_dict = {}
+    for group_name, processes in group_dict.items():
+        if type(processes) is dict:
+            processes = processes[year]
+        year_specific_group_dict[group_name] = processes
+    return year_specific_group_dict
 
 def find_group_name(process_name, group_dict_param):
     # Avoid redefining group_dict from outer scope
@@ -324,7 +347,8 @@ if __name__ == "__main__":
     logger.setLevel(args.log_level)
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
-
+    group_dict = parseGroupProcesses(group_dict, args.year)
+    
     if is_run3(args.year):
         CM_energy = 13.6  # TeV
     elif is_run2(args.year):
