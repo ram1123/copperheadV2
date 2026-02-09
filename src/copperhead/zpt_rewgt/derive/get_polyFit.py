@@ -46,7 +46,7 @@ def make_combined_function(order0, order, xmin, xmax):
 
         if xx < 0.0:
             return 0.0
-        elif 0 <= xx <= xmin:
+        elif xx <= xmin:
             return sum(par[i] * (xx**i) for i in range(order0 + 1))
         elif xx < xmax:
             return sum(f1_coeffs[i] * (xx**i) for i in range(order + 1)) + (f0_xmin - f1_xmin)
