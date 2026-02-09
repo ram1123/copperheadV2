@@ -47,7 +47,7 @@ def build_common_parser() -> argparse.ArgumentParser:
         "-data",
         "--data",
         dest="data_samples",
-        default=[],
+        default=["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"],
         nargs="*",
         type=str,
         action="store",
@@ -67,7 +67,7 @@ def build_common_parser() -> argparse.ArgumentParser:
         "-sig",
         "--signal",
         dest="sig_samples",
-        default=[],
+        default=["VBF","ggH"],
         nargs="*",
         type=str,
         action="store",
@@ -111,7 +111,7 @@ def build_common_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--log-level",
-        default=logging.ERROR,
+        default=logging.INFO,
         type=lambda x: getattr(logging, x),
         help="Configure the logging level.",
     )

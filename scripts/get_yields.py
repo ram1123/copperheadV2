@@ -1,35 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-import glob
-import csv
-import logging
-import itertools
-from pathlib import Path
-from typing import List, Tuple
-
 import argparse
+import glob
+import itertools
+import os
+from pathlib import Path
+from typing import Any, Dict, List
 
-import dask_awkward as dak
 import awkward as ak
-
-from distributed import Client
+import dask_awkward as dak
+import pandas as pd
 
 # Your modules
 from modules import selection
+from modules.dask_utils import close_dask_client, get_dask_client
 from modules.trials import get_stage1_path
-
-
-# ----------------------------------------------------------------------
-# Logging
-# ----------------------------------------------------------------------
-logger = logging.getLogger("get_yields")
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-)
-
+from modules.utils import logger
 
 # ----------------------------------------------------------------------
 # Fields to read
@@ -37,6 +24,7 @@ logging.basicConfig(
 V1_FIELDS_2COMPUTE: List[str] = [
     # "gjj_mass",  # handled dynamically
     "wgt_nominal",
+    "separate_wgt_zpt_wgt",
     "nBtagLoose_nominal",
     "nBtagMedium_nominal",
     # "mu1_pt",
@@ -65,30 +53,6 @@ V1_FIELDS_2COMPUTE: List[str] = [
 
 
 # ----------------------------------------------------------------------
-# Dask client helper
-# ----------------------------------------------------------------------
-def get_dask_client(
-    n_workers: int = 12,
-    threads_per_worker: int = 1,
-    memory_limit: str = "10 GiB",
-) -> Client:
-    """Create or reuse a local Dask client."""
-    try:
-        client = Client.current()
-        logger.info("Reusing existing Dask client: %s", client)
-        return client
-    except ValueError:
-        client = Client(
-            n_workers=n_workers,
-            threads_per_worker=threads_per_worker,
-            processes=True,
-            memory_limit=memory_limit,
-        )
-        logger.info("Created new Dask client: %s", client)
-        return client
-
-
-# ----------------------------------------------------------------------
 # Core yield function
 # ----------------------------------------------------------------------
 def get_yield(
@@ -99,12 +63,11 @@ def get_yield(
     do_VH_veto: bool,
     category: str,
     region: str,
-) -> Tuple[str, str, str, str, float]:
+) -> Dict[str, Any]:
     """
     Compute total yield for a given process (glob pattern) and configuration.
+    Returns a dict row for pandas DataFrame.
     """
-    print(f"{'=' * 5} {process} {'=' * 5}")
-
     # Fresh copy of the fields list
     fields = list(V1_FIELDS_2COMPUTE)
 
@@ -124,7 +87,14 @@ def get_yield(
 
     if not parquet_files:
         logger.warning("No parquet files found for '%s' under '%s'", process, load_path)
-        return process, category, region, year, 0.0
+        return {
+            "sample": process,
+            "category": category,
+            "region": region,
+            "year": year,
+            "raw_events": 0,
+            "yield": 0.0,
+        }
 
     # dask_awkward read per process
     events_lazy = dak.from_parquet(parquet_pattern, columns=fields)
@@ -143,12 +113,32 @@ def get_yield(
         do_VH_veto=do_VH_veto,
     )
 
-    # Sum nominal weights
-    wgts = ak.fill_none(events["wgt_nominal"], value=1.0)
-    total_integral = float(ak.sum(wgts))
+    n_raw = int(ak.num(events, axis=0))
 
-    print(f"\t==> Total Yield: {total_integral:.3f}")
-    return process, category, region, year, total_integral
+    # weights
+    if "data" in process.lower():
+        # data: yield is raw count
+        yield_ = float(n_raw)
+    else:
+        # MC: expected yield
+        wgts = ak.fill_none(events["wgt_nominal"], 0.0)
+
+        # remove Zpt weight if you want "no-zpt"
+        if "separate_wgt_zpt_wgt" in events.fields:
+            wgts = wgts / ak.fill_none(events["separate_wgt_zpt_wgt"], 1.0)
+
+        yield_ = float(ak.sum(wgts))
+
+    print(f"{process:30}    {n_raw:10}  {yield_:10.3f}")
+
+    return {
+        "sample": process,
+        "category": category,
+        "region": region,
+        "year": year,
+        "raw_events": n_raw,
+        "yield": yield_,
+    }
 
 
 # ----------------------------------------------------------------------
@@ -172,35 +162,37 @@ def main() -> None:
 
     # Physics / config toggles
     do_VH_veto = False
-    do_vbf_filter_study = True
+    do_vbf_filter_study = False
 
-    # regions = ["z-peak", "h-sidebands"]
+    # regions = ["signal", "h-sidebands"]  # "z-peak",
+    # regions = ["signal"]  # "z-peak",
+    # regions = ["h-sidebands", "z-peak"]
+    regions = [
+        "h-sidebands",
+        "h-peak"
+        # "signal",
+    ]
+
     # categories = ["ggh", "vbf"]
-    regions = ["h-sidebands"]
-    categories = ["vbf"]
-
+    categories = ["nocat", "vbf", "ggh"]
+    # categories = ["nocat"]
 
     args = parse_args()
 
     # Define all possible years we want to support
     ALL_YEARS = [
-        "2018",
-        "2017",
-        "2016preVFP",
-        "2016postVFP",
-        # "2022preEE",
-        # "2022postEE",
-        # "2023",
-        # "2023BPix",
-        # "2024",
+        # "2018",
+        # "2017",
+        # "2016preVFP",
+        # "2016postVFP",
+        "2022preEE",
+        "2022postEE",
+        "2023",
+        "2023BPix",
+        "2024",
     ]
 
-    if args.years == ["all"]:
-        years = ALL_YEARS
-    else:
-        years = args.years
-
-    info = []
+    years = ALL_YEARS if args.years == ["all"] else args.years
 
     suffix = "_VHVeto" if do_VH_veto else ""
 
@@ -213,9 +205,12 @@ def main() -> None:
     # Start Dask client
     get_dask_client()
 
+    rows: List[Dict[str, Any]] = []
+
     # Loop over (category, year, region)
     for category, year, region in itertools.product(categories, years, regions):
-        print(f"\n\n***** {year} *****")
+        print("-" * 60)
+        print(f"\n\nCategory: {category} | Year: {year} | Region: {region}")
         load_path = load_path_template.format(year=year)
 
         # Common kwargs for all processes
@@ -233,43 +228,68 @@ def main() -> None:
             # "data_B",
             # "data_C",
             # "data_D",
-            # "data*",
-            # "vbf_powheg",
-            "vbf_powheg_dipole",
-            # "ggh_powhegPS",
-            # # "dyTo2L_M-50_incl",
-            # # "dyTo2L_M-50_incl_XSDYTurbo",
             # "dy_VBF_filter",
-            # "dy_M-50_aMCatNLO",
-            # "dy_M-100To200_aMCatNLO",
-            # "dy_M-50_MiNNLO",
-            # "dy_M-100To200_MiNNLO",
-            # "ttjets_*",
-            # "st_t_*",
-            # "st_tW_*",
-            # "w*_*",
-            # "zz_*",
-            # # "ewk_lljj",
-            # "ewk_lljj_mll50_mjj120",
+            "data*",
+            "ggh_powhegPS",
+            "vbf_powheg",
+            "vbf_powheg_dipole",
+            "dyTo2L_M-50_incl",
+            "dyTo2Mu_M-50_aMCatNLO",
+            "ttjets_*",
+            "st_*",
+            "ewk_*",
+            "w*_*",
+            "zz_*",
         ]
 
+        print("-" * 60)
+        print(f"{'Process':30}    {'Raw events':10}  {'Yield':10}")
+        print("-" * 60)
+
         for proc in processes:
-            info.append(get_yield(proc, **common_kwargs))
+            if "data" in proc and region == "h-peak":
+                continue
+            rows.append(get_yield(proc, **common_kwargs))
+
+    df = pd.DataFrame(rows)
 
     # Write CSV
-    with open(outfile, "w", newline="") as out_f:
-        writer = csv.writer(out_f)
-        writer.writerow(["sample", "category", "region", "year", "yield"])
-        writer.writerows(info)
+    df.to_csv(outfile, index=False)
+    print(f"\nWrote {len(df)} rows to {outfile}")
 
-    print(f"\nWrote {len(info)} rows to {outfile}")
+    # Print sum of MC vs data per (year,cat,region)
+    df2 = df.copy()
+    df2["is_data"] = df2["sample"].str.contains("data", case=False, regex=False)
+    summary = (
+        df2.groupby(["year", "category", "region"], as_index=False)
+        .apply(
+            lambda g: pd.Series({
+                "data_yield": g.loc[g["is_data"], "yield"].sum(),
+                "mc_yield": g.loc[~g["is_data"], "yield"].sum(),
+                "ratio": (
+                    g.loc[g["is_data"], "yield"].sum()
+                    / g.loc[~g["is_data"], "yield"].sum()
+                    if g.loc[~g["is_data"], "yield"].sum() > 0
+                    else float("inf")
+                ),
+            })
+        )
+        .reset_index(drop=True)
+    )
+    print("\n=== Data vs MC yield summary ===")
+    print(summary.to_string(index=False))
+
+    # add  summary to the output CSV as well
+    summary_outfile = f"yield_summary_{dataset_tag}{suffix}_{tagYear}.csv"
+    summary.to_csv(summary_outfile, index=False)
+    print(f"\nWrote summary to {summary_outfile}")
+    close_dask_client()
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Compute yields for H→μμ stage1 outputs for one or more trials."
     )
-
     parser.add_argument(
         "--years",
         nargs="+",
@@ -282,7 +302,6 @@ def parse_args():
             "If not provided, defaults to ['2018']."
         ),
     )
-
     return parser.parse_args()
 
 

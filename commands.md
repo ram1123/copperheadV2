@@ -1,6 +1,86 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
+# 04 February 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE" -m 1 -k -i 1)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJets -y "2022postEE 2022preEE 2023 2023BPix" -m 1 -k 1)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJets -y "2023" -m 1 -k -i 1)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_02Feb_FilterJets -y "2024" -m 1 -k -i 0)
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_04Feb_FilterJets -y "2022postEE" -m 1 -k -i 0)
+
+#TODO
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_04Feb_FilterJetsHorn30GeV -y "2022postEE" -m 1 -k -i 0)
+
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2023BPix" -m 1 -k 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_02Feb_FilterJetsHorn30GeV -y "2024" -m 1 -k -i 0)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022preEE 2022postEE 2023 2023BPix 2024" -m compact -k )
+
+
+```
+
+
+# 02 February 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_01Feb_JecJerFilterJets -y "2024" -m 1 -k 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJets -y "2022postEE" -m 1 -k 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE 2022preEE 2023 2023BPix" -m 1 -k 2 -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_02Feb_FilterJetsHorn30GeV -y "2024" -m 1 -k 2 -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE 2022preEE" -m compact -k 2 -i 2)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_02Feb_FilterJetsHorn30GeV -y "2024" -m compact -k 2 -i 2)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJets -y "2022postEE" -m 1 -k 2 -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE" -m 1 -k 2 -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE" -m compact -k 2 -i 2)
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE" -m zpt_fit0 -k 2 -i 2)
+
+```
+
+# 31 January 2026
+
+```bash
+time python MVA_training/VBF_new/preprocess_dnn.py --config configs/dnn_run3_vbf.yaml --base-path /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output --tag Run3_01Feb_v1 --year 2022preEE,2022postEE,2023,2023BPix,2024 --use-dask-gateway  --cluster-index 0
+
+time python MVA_training/VBF_new/hpo_optuna.py --config configs/dnn_run3_vbf.yaml --data-dir dnn/trained_models/Run3_01Feb_v1/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/ --out-dir dnn/trained_models/Run3_01Feb_v1/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/hpo_optuna/v1 --n-trials 108 --folds 0,1,2,3
+
+python MVA_training/VBF_new/train_dnn.py --config configs/dnn_run3_vbf.yaml --data-dir dnn/trained_models/Run3_01Feb_v1/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/ --out-dir dnn/trained_models/Run3_01Feb_v1/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/trained_best_optuna_51trail
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_01Feb_test -y "2024" -m 1 -k -d 2)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Feb_test -y "2022preEE 2022postEE 2023 2023BPix" -m 1 -k -d 2)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_01Feb_JecJer -y "2022preEE 2022postEE 2023 2023BPix" -m 1 -k 2 -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_01Feb_JecJer -y "2024" -m 1 -k 2 -i 1)
+```
+
+
+
+# 29 January 2026
+
+```bash
+python MVA_training/VBF_new/preprocess_dnn.py --config configs/dnn_run3_vbf.yaml --base-path /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/2022postEE/compacted/ --tag kfold_shuffleTrue --year 2022postEE
+
+time python MVA_training/VBF_new/hpo_optuna.py --config configs/dnn_run3_vbf.yaml --data-dir dnn/trained_models/kfold_shuffleTrue/2022postEE_h-peak_vbf/ --out-dir dnn/trained_models/kfold_shuffleTrue/2022postEE_h-peak_vbf/hpo_optuna/v1 --n-trials 51 --folds 0
+
+python MVA_training/VBF_new/train_dnn.py --config configs/dnn_run3_vbf.yaml --data-dir dnn/trained_models/kfold_shuffleTrue/2022postEE_h-peak_vbf/ --out-dir dnn/trained_models/kfold_shuffleTrue/2022postEE_h-peak_vbf/trained_best_optuna_51trail
+```
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23Jan_JVMFilterJets -y "run3" -m dnn_pre -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_23Jan_JVMFilterEvents -y "2022preEE 2022postEE 2023 2023BPix 2024" -m 1 -k)
+```
+
 # 23 January 2026
 
 ```bash

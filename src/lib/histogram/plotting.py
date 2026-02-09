@@ -7,6 +7,8 @@ import mplhep as hep
 from hist.intervals import poisson_interval
 from matplotlib.colors import ListedColormap
 
+from modules.utils import logger
+
 stat_err_opts = {
     "step": "post",
     "label": "Stat. unc.",
@@ -163,12 +165,18 @@ def plotDataMC_compare(
         data_hist = ak.to_numpy(data_hist)
         ratio_hist = np.zeros_like(data_hist)
         bkg_mc_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
-        inf_filter = bkg_mc_sum>0
-        ratio_hist[inf_filter] = data_hist[inf_filter]/  bkg_mc_sum[inf_filter]
+        inf_filter1 = bkg_mc_sum>0
+        inf_filter2 = data_hist>0
+        inf_filter = inf_filter1 & inf_filter2
+        ratio_hist[inf_filter1] = data_hist[inf_filter1]/  bkg_mc_sum[inf_filter1]
         # add relative uncertainty of data and bkg_mc by adding by quadrature
-        rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2)
-        ratio_err = rel_unc_ratio*ratio_hist
-        # print(f"plotDataMC compare ratio_err: {ratio_err}")
+        rel_unc_ratio = np.zeros_like(bkg_mc_err)
+        rel_unc_ratio[inf_filter] = np.sqrt((bkg_mc_err[inf_filter]/bkg_mc_sum[inf_filter])**2 + (data_hist_err[inf_filter]/data_hist[inf_filter])**2)
+
+        ratio_err = np.zeros_like(rel_unc_ratio)
+        ratio_err[inf_filter] = rel_unc_ratio[inf_filter]*ratio_hist[inf_filter]
+
+        # logger.debug(f"plotDataMC compare ratio_err: {ratio_err}")
 
         hep.histplot(ratio_hist,
                      bins=binning, histtype='errorbar', yerr=ratio_err,
@@ -215,6 +223,7 @@ def plotDataMC_compare(
         widths = np.diff(binning)
         # sum background histograms and normalize to density
         bkg_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
+        # bkg_density[bkg_sum > 0] = bkg_sum[bkg_sum > 0] / np.sum(bkg_sum[bkg_sum > 0] * widths)
         bkg_density = bkg_sum / np.sum(bkg_sum * widths)
         # loop over each signal sample and place text in upper-right, offset per sample
         for idx, sig_name in enumerate(sig_MC_dict.keys()):
@@ -260,7 +269,7 @@ def plotDataMC_compare(
             f.write(
                 f"Data/MC ratio (Sum ratio_hist then divide by number of bins): {np.sum(ratio_hist) / len(binning):.2f}\n"
             )
-    print(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
+    # logger.debug(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
 
 
 def plotDataMC_compare_normalized(
@@ -295,7 +304,7 @@ def plotDataMC_compare_normalized(
     values = data["values"]
     weights = data["weights"]
     weights = weights/ np.sum(weights) # temp overwrite
-    print(f"data weights sum: {np.sum(weights)}")
+    logger.debug(f"data weights sum: {np.sum(weights)}")
     data_hist, data_hist_err = getHistAndErrs(binning, values, weights)
     data_hist = data_hist /np.sum(data_hist)
     hep.histplot(
@@ -322,7 +331,7 @@ def plotDataMC_compare_normalized(
         values = bkg_mc_sample_arrs["values"]
         weights = bkg_mc_sample_arrs["weights"]
         # weights = weights/np.sum(weights) # temp overwrite
-        print(f"bkg weights sum: {np.sum(weights)}")
+        logger.debug(f"bkg weights sum: {np.sum(weights)}")
         np_hist, _ = np.histogram(values, bins=binning, weights = weights)
         np_hist = np_hist / np.sum(np_hist)
         np_hist_w2, _ = np.histogram(values, bins=binning, weights = weights*weights)
@@ -402,8 +411,8 @@ def plotDataMC_compare_normalized(
         values = np.concatenate(val_l, axis=0)
         weights = np.concatenate(wgt_l, axis=0)
         # weights = weights/np.sum(weights)
-        print(f"sig values: {values}")
-        print(f"sig weights sum : {np.sum(weights)}")
+        logger.debug(f"sig values: {values}")
+        logger.debug(f"sig weights sum : {np.sum(weights)}")
 
         sig_MC_hist, _ = getHistAndErrs(binning, values, weights)
         sig_MC_hist = sig_MC_hist / np.sum(sig_MC_hist)
@@ -434,7 +443,7 @@ def plotDataMC_compare_normalized(
         # add relative uncertainty of data and bkg_mc by adding by quadrature
         rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2)
         ratio_err = rel_unc_ratio*ratio_hist
-        # print(f"plotDataMC_compare_normalized ratio_err: {ratio_err}")
+        # logger.debug(f"plotDataMC_compare_normalized ratio_err: {ratio_err}")
 
 
         hep.histplot(ratio_hist,
@@ -500,4 +509,4 @@ def plotDataMC_compare_normalized(
                 f.write(f"{sig_mc_sample}: {np.sum(sig_mc_hist)}\n")
         if plot_ratio:
             f.write(f"Data/MC ratio: {ratio_hist}\n")
-    print(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
+    # logger.debug(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")

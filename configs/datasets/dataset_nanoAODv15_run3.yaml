@@ -89,7 +89,7 @@ years:
 
         DY:
             dyTo2L_M-50_0j:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 5034.65
@@ -154,7 +154,7 @@ years:
                     - "MadGraph5_aMC"
 
             dy_M-50_aMCatNLO:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 5991.00
@@ -170,7 +170,7 @@ years:
                     - "MadGraph5_aMC"
 
             dyTo2L_M-50_incl:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 notes: njets <= 2, not njets==2;
@@ -227,7 +227,7 @@ years:
 
         Top:
             tt_inclusive:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 923.6
@@ -269,7 +269,7 @@ years:
                     - "POWHEG"
 
             st_tw_top:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 35.99
@@ -283,7 +283,7 @@ years:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 36.05
@@ -403,9 +403,9 @@ years:
 
         EWK:
             ewk_lljj:
-                skip_sample: False
+                skip_sample: True
                 datasets:
-                    - /EWK-2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - None
                 cross_section_pb: 1.421
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
@@ -415,12 +415,37 @@ years:
                 references:
                     - NONE
 
-            ewk_mmjj:
+            ewk_lljj_mll50_mjj120:
+                skip_sample: True
+                datasets:
+                    - /EWK-2L2J_Bin-MLL-50-MJJ-120_TuneCH3_13p6TeV_madgraph-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: None
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160:
                 skip_sample: False
                 datasets:
                     - /EWK-2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-                cross_section_pb: 1.0
-                FIXME: Update cross-section value
+                cross_section_pb: 0.06445
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160_mjj120:
+                skip_sample: False
+                datasets:
+                    - /EWK-2Mu2J_Bin-M2Mu-105to160-M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.06447
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
                     value: 1.00
@@ -446,7 +471,7 @@ years:
                     - "POWHEG"
 
             vbf_powheg_dipole:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 0.00105742

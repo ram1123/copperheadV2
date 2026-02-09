@@ -44,13 +44,16 @@ def make_combined_function(order0, order, xmin, xmax):
         # Evaluate derivative of f1 at xmax to compute slope for linear extension
         df1_xmax = sum(i * f1_coeffs[i] * (xmax**(i - 1)) for i in range(1, order + 1))
 
-        if 0 <= xx <= xmin:
+        if xx < 0.0:
+            return 0.0
+        elif xx <= xmin:
             return sum(par[i] * (xx**i) for i in range(order0 + 1))
         elif xx < xmax:
             return sum(f1_coeffs[i] * (xx**i) for i in range(order + 1)) + (f0_xmin - f1_xmin)
         else:
-            # Straight line y = m·x + c, passing through (xmax, f_combined(xmax))
-            m = df1_xmax  # slope from derivative
+            # Straight line y = m·x + c
+            # m = df1_xmax  # slope from derivative
+            m = par[order0 + order + 2] # In this case slope is a parameter
             y_at_xmax = f1_xmax + (f0_xmin - f1_xmin)
             c = y_at_xmax - m * xmax
             return m * xx + c
@@ -126,7 +129,12 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
         params.append(f0.GetParameter(i))
     for i in range(order1 + 1):
         params.append(f1.GetParameter(i))
-    params.append(f_flat.GetParameter(0))
+    params.append(f_flat.GetParameter(0))  # mx
+    params.append(f_flat.GetParameter(1))  # c0
+
+    # print all initial parameters
+    for i, p in enumerate(params):
+        logger.debug(f"Parameter {i}: {p}")
 
     logger.debug(f"All initial parameters collected: {params}")
 
@@ -138,9 +146,10 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     # (the user-defined func handles this internally)
 
     # Perform final fit
-    hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
-    hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
-    hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
+    final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
+    final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
+    final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
+    logger.debug(f"Final fit result: {final_fit}")
 
     return f0, f1, f_flat, f_combined
 
@@ -172,11 +181,16 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
 
     # Draw the fit function across the full x-range
     f_combined.SetRange(0.0, global_xmax)
+    f_combined.SetNpx(5000)   # or 10000 if you want it super smooth
     f_combined.SetLineColor(ROOT.kRed)
-    f_combined.Draw("SAME")
 
-    # Finally draw the histogram itself (with error bars)
+    # Finally draw the histogram and the combined fit
+    hist_sf.GetListOfFunctions().Clear()  # remove attached
+    hist_sf.Draw("axis")
     hist_sf.Draw("same E")
+    f_combined.Draw("SAME")
+    ROOT.gPad.Update()
+
 
     txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
     # Legend
@@ -359,21 +373,33 @@ def main():
 
 
             # Collect fit parameters for output
-            max_order = 5
+            max_order = 10
             params_dict = {f"f0_p{i}": 0.0 for i in range(max_order+1)}
             params_dict.update({f"f0_p{i}_err": 0.0 for i in range(max_order+1)})
             params_dict.update({f"f1_p{i}": 0.0 for i in range(max_order+1)})
             params_dict.update({f"f1_p{i}_err": 0.0 for i in range(max_order+1)})
 
-            for i in range(order0+1):
-                params_dict[f"f0_p{i}"] = f0.GetParameter(i)
-                params_dict[f"f0_p{i}_err"] = f0.GetParError(i)
-            for i in range(order1+1):
-                params_dict[f"f1_p{i}"] = f1.GetParameter(i)
-                params_dict[f"f1_p{i}_err"] = f1.GetParError(i)
+            logger.debug(f"order0: {order0}, order1: {order1}")
+            # get the order of function f_comb and fetch its all parameters
+            for i in range(f_comb.GetNpar()):
+                logger.debug(f"f_comb parameter {i}: {f_comb.GetParameter(i)} +/- {f_comb.GetParError(i)}")
 
-            params_dict["horizontal_mx"] = f_flat.GetParameter(0)
-            params_dict["horizontal_c0"] = f_flat.GetParameter(1)
+            for i in range(order0+1):
+                params_dict[f"f0_p{i}"] = f_comb.GetParameter(i)
+                params_dict[f"f0_p{i}_err"] = f_comb.GetParError(i)
+                logger.debug(f"f0 parameter {i} ({i}): {f_comb.GetParameter(i)} ({f0.GetParameter(i)}) +/- {f_comb.GetParError(i)}")
+
+            for i in range(order1+1):
+                params_dict[f"f1_p{i}"] = f_comb.GetParameter(order0 + 1 + i)
+                params_dict[f"f1_p{i}_err"] = f_comb.GetParError(order0 + 1 + i)
+                logger.debug(f"f1 parameter {i} ({order0 + 1 + i}): {f_comb.GetParameter(order0 + 1 + i)}  ({f1.GetParameter(i)}) +/- {f_comb.GetParError(order0 + 1 + i)}")
+
+            logger.debug(f"order value: {order0 + order1 + 2}")
+            logger.debug(f"horizontal_mx ({order0 + order1 + 2}): {f_comb.GetParameter(order0 + order1 + 2)} ({f_flat.GetParameter(0)})  +/- {f_comb.GetParError(order0 + order1 + 2)}")
+            logger.debug(f"horizontal_c0 ({order0 + order1 + 3}): {f_comb.GetParameter(order0 + order1 + 3)} ({f_flat.GetParameter(1)})  +/- {f_comb.GetParError(order0 + order1 + 3)}")
+
+            params_dict["horizontal_mx"] = f_comb.GetParameter(order0 + order1 + 2)
+            params_dict["horizontal_c0"] = f_comb.GetParameter(order0 + order1 + 3)
             params_dict["polynomial_range"] = {"xlow": 0.0, "xmin1": xmin1, "xmax1": xmax1, "xhigh": global_fit_xmax}
             params_dict["total_bins"] = nbins_new
             params_dict["fit_orders"] = {"f0_order": order0, "f1_order": order1}

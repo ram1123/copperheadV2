@@ -37,7 +37,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # intialize dask client
-    client = get_dask_client(args.use_gateway)
+    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
 
     # specify stage1 output label
     run_label = args.label
@@ -62,31 +62,32 @@ if __name__ == "__main__":
 
         # load the data and dy samples
         print(f"base path data : {base_path}/data_*/*/*.parquet")
-        print(f"base path dy: {base_path}/dy*{args.dy_sample}/*/*.parquet")
         data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
 
+        DY_BASE_PATH = ""
         if classify_year.is_run2(year):
             if args.dy_sample == "MiNNLO":
-                dy_events = dak.from_parquet(f"{base_path}/dy*MiNNLO/*/*.parquet")
+                DY_BASE_PATH = f"{base_path}/dy*MiNNLO/*/*.parquet"
             elif args.dy_sample == "aMCatNLO":
-                dy_events = dak.from_parquet(f"{base_path}/dy*_aMCatNLO/*/*.parquet")
-            elif args.dy_sample == "VBF_filter":
-                dy_events = dak.from_parquet(f"{base_path}/dy_VBF_filter/*/*.parquet")
+                DY_BASE_PATH = f"{base_path}/dy*_aMCatNLO/*/*.parquet"
             else:
                 raise ValueError(f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, or VBF_filter.")
         else: # run3
             if year == "2024":
-                dy_events = dak.from_parquet(f"{base_path}/dyTo2Mu_M-50_aMCatNLO/*/*.parquet")
+                DY_BASE_PATH = f"{base_path}/dyTo2Mu_M-50_aMCatNLO/*/*.parquet"
             elif args.dy_sample == "powheg":
-                dy_events = dak.from_parquet(f"{base_path}/dyTo2Mu_MLL_*/*/*.parquet")
+                DY_BASE_PATH = f"{base_path}/dyTo2Mu_MLL_*/*/*.parquet"
             elif args.dy_sample == "INCamcatnloFXFX":
-                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_incl/*/*.parquet")
+                DY_BASE_PATH = f"{base_path}/dyTo2L_M-50_incl/*/*.parquet"
             elif args.dy_sample == "amcatnloFXFX":
-                dy_events = dak.from_parquet(f"{base_path}/dyTo2L_M-50_*j/*/*.parquet")
+                DY_BASE_PATH = f"{base_path}/dyTo2L_M-50_*j/*/*.parquet"
             else:
                 raise ValueError(
                     f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, VBF_filter, powheg, or amcatnloFXFX."
                 )
+
+        print(f"base path dy: {DY_BASE_PATH}")
+        dy_events = dak.from_parquet(DY_BASE_PATH)
         # apply z-peak region filter and nothing else
         _, data_events = selection.filterRegion(data_events, region="z-peak")
         _, dy_events = selection.filterRegion(dy_events, region="z-peak")
