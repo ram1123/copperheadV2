@@ -46,7 +46,7 @@ def make_combined_function(order0, order, xmin, xmax):
 
         if xx < 0.0:
             return 0.0
-        elif 0 <= xx <= xmin:
+        elif xx <= xmin:
             return sum(par[i] * (xx**i) for i in range(order0 + 1))
         elif xx < xmax:
             return sum(f1_coeffs[i] * (xx**i) for i in range(order + 1)) + (f0_xmin - f1_xmin)
@@ -149,6 +149,7 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
     final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
     final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
+    logger.debug(f"Final fit result: {final_fit}")
 
     return f0, f1, f_flat, f_combined
 
