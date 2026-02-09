@@ -2,6 +2,18 @@
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
 
+# 08 February 2026
+
+```python
+python MVA_training/VBF_new/preprocess_dnn.py --config configs/dnn_run3_vbf.yaml --base-path /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/ --tag Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV --year 2022preEE,2022postEE,2023,2023BPix,2024 --use-dask-gateway --cluster-index 0
+
+time python MVA_training/VBF_new/hpo_optuna.py --config configs/dnn_run3_vbf.yaml --data-dir dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/ --out-dir dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/hpo_optuna/v1 --n-trials 25 --folds 0,1,2,3
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJets -y "2022postEE 2022preEE 2023 2023BPix 2024" -m compact -k )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2023BPix" -m 1 -k 1)
+```
+
 # 02 February 2026
 
 ```bash

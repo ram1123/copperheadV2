@@ -30,6 +30,7 @@ import pickle
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from typing import Iterator
 
 import awkward as ak
 import dask_awkward as dak
@@ -169,6 +170,7 @@ def resolve_glob(base_path: str, year: str, glob_template: str, process: str) ->
         .replace("{PROCESS}", process)
     )
     patt = Path(patt).as_posix() # ensure no // issues in the path
+    # logger.info(f"reading: {patt}")
     files = sorted(_glob.glob(patt))
     return files
 
@@ -310,6 +312,12 @@ def save_scaler_npz(
 # --------------------------------------------------------------------------------------
 # Core logic
 # --------------------------------------------------------------------------------------
+def chunk_list(items: List[str], chunk_size: int) -> Iterator[List[str]]:
+    """Yield successive chunks from a list."""
+    for i in range(0, len(items), chunk_size):
+        yield items[i : i + chunk_size]
+
+
 def preprocess(
     cfg: PreprocessConfig,
     base_path: str,
@@ -384,39 +392,42 @@ def preprocess(
             )
             dfs.append(df)
 
-        # backgrounds
-        for group_name, proc in all_bkg_procs:
-            files = resolve_glob(base_path, year, cfg.glob_template, proc)
-            if not files:
-                logger.warning(
-                    "[year %s] Missing files for bkg group=%s proc=%s. Skipping.",
-                    year,
-                    group_name,
-                    proc,
-                )
-                continue
-            logger.info("[year %s] Reading %d files: %s", year, len(files), proc)
-            events = dak.from_parquet(files, columns=features2load + cfg.required_columns)
-
-            if cfg.required_columns:
-                missing_req = [
-                    c for c in cfg.required_columns if c not in events.fields
-                ]
-                if missing_req and (not cfg.allow_missing_columns):
-                    raise KeyError(
-                        f"[year {year}] Process '{proc}' missing required columns: {missing_req}"
+            # backgrounds
+            for group_name, proc in all_bkg_procs:
+                files = resolve_glob(base_path, year, cfg.glob_template, proc)
+                if not files:
+                    logger.warning(
+                        "[year %s] Missing files for bkg group=%s proc=%s. Skipping.",
+                        year,
+                        group_name,
+                        proc,
                     )
+                    continue
 
-            df = events_to_dataframe(
-                events=events,
-                keep_cols=features2load + cfg.required_columns,
-                cfg=cfg,
-                process=proc,
-                label_int=cfg.background_label,
-                group=str(group_name).lower(),
-                year=year,
-            )
-            dfs.append(df)
+                chunk_size = 50
+                for ichunk, files_chunk in enumerate(chunk_list(files, chunk_size=chunk_size)):
+                    logger.info("[year %s] proc=%s chunk %d/%d (nfiles=%d)", year, proc, ichunk + 1, (len(files) - 1) // chunk_size + 1, len(files_chunk))
+                    events = dak.from_parquet(files_chunk, columns=features2load + cfg.required_columns)
+
+                    if cfg.required_columns:
+                        missing_req = [
+                            c for c in cfg.required_columns if c not in events.fields
+                        ]
+                        if missing_req and (not cfg.allow_missing_columns):
+                            raise KeyError(
+                                f"[year {year}] Process '{proc}' missing required columns: {missing_req}"
+                            )
+
+                    df = events_to_dataframe(
+                        events=events,
+                        keep_cols=features2load + cfg.required_columns,
+                        cfg=cfg,
+                        process=proc,
+                        label_int=cfg.background_label,
+                        group=str(group_name).lower(),
+                        year=year,
+                    )
+                    dfs.append(df)
 
     if not dfs:
         raise RuntimeError(

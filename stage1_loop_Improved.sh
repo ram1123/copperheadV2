@@ -369,7 +369,7 @@ for year in "${years[@]}"; do
         dnn|dnn_pre|dnn_train|dnn_var_rank)
             log "Running DNN step(s) for year $year..."
             # cmd_preproc="python MVA_training/VBF/run3_model/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level DEBUG "
-            cmd_preproc="python MVA_training/VBF_new/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level DEBUG "
+            cmd_preproc="python MVA_training/VBF_new/preprocess_dnn.py --label $label --region $region --category $category --year $year --log-level DEBUG "
             # Alternative cmd_train configurations (uncomment and adjust as needed):
 
             # -- Bayesian Optimization:
