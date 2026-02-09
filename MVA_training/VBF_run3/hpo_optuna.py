@@ -287,28 +287,41 @@ def _reconstruct_hidden_from_params(params: dict) -> list[int]:
 
 
 def write_yaml_override(path: Path, best_trial: optuna.trial.FrozenTrial) -> None:
-    best_params = best_trial.params
+    params = best_trial.params
 
-    # ---- hidden ----
-    # Prefer user_attrs (exact list used during training), fallback to reconstruction
-    hidden = best_trial.user_attrs.get("hidden", None)
+    # ------------------
+    # Hidden layers
+    # ------------------
+    hidden = best_trial.user_attrs.get("hidden")
     if hidden is None:
         hidden = _reconstruct_hidden_from_params(params)
 
+    hidden = [int(x) for x in hidden]
     n_layers = len(hidden)
 
-    # ---- dropout ----
-    if "dropout" in params:
-        # drop_mode == "one"
-        p = float(params["dropout"])
-        dropout = [p] * n_layers
-    else:
-        # drop_mode == "per_layer"
-        dropout = [float(params.get(f"dropout_l{i}", 0.0)) for i in range(n_layers)]
+    # ------------------
+    # Dropout
+    # ------------------
+    drop_mode = params.get("drop_mode", "one")
 
+    if drop_mode == "one":
+        p = float(params.get("dropout", 0.0))
+        dropout = [p] * n_layers
+    elif drop_mode == "per_layer":
+        dropout = [float(params.get(f"dropout_l{i}", 0.0)) for i in range(n_layers)]
+    else:
+        raise ValueError(f"Unknown drop_mode: {drop_mode}")
+
+    # ------------------
+    # YAML structure
+    # ------------------
     override = {
+        "meta": {
+            "optuna_trial": int(best_trial.number),
+            "objective_value": float(best_trial.value),
+        },
         "model": {
-            "hidden": [int(x) for x in hidden],
+            "hidden": hidden,
             "activation": str(params["activation"]),
             "dropout": dropout,
             "batch_norm": bool(params["batch_norm"]),
@@ -330,6 +343,7 @@ def write_yaml_override(path: Path, best_trial: optuna.trial.FrozenTrial) -> Non
         },
     }
 
+    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         yaml.safe_dump(override, f, sort_keys=False)
 
