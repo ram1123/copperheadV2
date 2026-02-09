@@ -165,11 +165,17 @@ def plotDataMC_compare(
         data_hist = ak.to_numpy(data_hist)
         ratio_hist = np.zeros_like(data_hist)
         bkg_mc_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
-        inf_filter = bkg_mc_sum>0
-        ratio_hist[inf_filter] = data_hist[inf_filter]/  bkg_mc_sum[inf_filter]
+        inf_filter1 = bkg_mc_sum>0
+        inf_filter2 = data_hist>0
+        inf_filter = inf_filter1 & inf_filter2
+        ratio_hist[inf_filter1] = data_hist[inf_filter1]/  bkg_mc_sum[inf_filter1]
         # add relative uncertainty of data and bkg_mc by adding by quadrature
-        rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2)
-        ratio_err = rel_unc_ratio*ratio_hist
+        rel_unc_ratio = np.zeros_like(bkg_mc_err)
+        rel_unc_ratio[inf_filter] = np.sqrt((bkg_mc_err[inf_filter]/bkg_mc_sum[inf_filter])**2 + (data_hist_err[inf_filter]/data_hist[inf_filter])**2)
+
+        ratio_err = np.zeros_like(rel_unc_ratio)
+        ratio_err[inf_filter] = rel_unc_ratio[inf_filter]*ratio_hist[inf_filter]
+
         # logger.debug(f"plotDataMC compare ratio_err: {ratio_err}")
 
         hep.histplot(ratio_hist,
@@ -217,6 +223,7 @@ def plotDataMC_compare(
         widths = np.diff(binning)
         # sum background histograms and normalize to density
         bkg_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
+        # bkg_density[bkg_sum > 0] = bkg_sum[bkg_sum > 0] / np.sum(bkg_sum[bkg_sum > 0] * widths)
         bkg_density = bkg_sum / np.sum(bkg_sum * widths)
         # loop over each signal sample and place text in upper-right, offset per sample
         for idx, sig_name in enumerate(sig_MC_dict.keys()):

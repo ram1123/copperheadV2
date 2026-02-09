@@ -215,7 +215,7 @@ years:
                     - "POWHEG "
 
             st_tw_top:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 35.99
@@ -229,7 +229,7 @@ years:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 36.05
@@ -413,7 +413,7 @@ years:
                     - "POWHEG (with dipole recoil)"
 
             vbf_aMCatNLO:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 0.00105742
@@ -590,7 +590,7 @@ years:
 
         Top:
             tt_inclusive:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 923.6
@@ -649,7 +649,7 @@ years:
                     - "POWHEG "
 
             st_tw_top:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 35.99
@@ -663,7 +663,7 @@ years:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 36.05
@@ -803,7 +803,7 @@ years:
                     - NONE
 
             ewk_mmjj:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 0.06445
@@ -921,7 +921,7 @@ years:
                     - "MG5_aMC@NLO FxFx"
 
             dy_M-50_aMCatNLO:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 5558.0
@@ -995,7 +995,7 @@ years:
 
         Top:
             tt_inclusive:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 923.6
@@ -1051,7 +1051,7 @@ years:
                     - "POWHEG "
 
             st_tw_top:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 35.99
@@ -1065,7 +1065,7 @@ years:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 36.05
@@ -1228,7 +1228,7 @@ years:
                     - "POWHEG"
 
             vbf_powheg_dipole:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 0.00105742
@@ -1343,7 +1343,7 @@ years:
                     - "MG5_aMC@NLO FxFx"
 
             dy_M-50_aMCatNLO:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 notes: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
@@ -1415,7 +1415,7 @@ years:
 
         Top:
             tt_inclusive:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 923.6
@@ -1471,7 +1471,7 @@ years:
                     - "POWHEG "
 
             st_tw_top:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 35.99
@@ -1485,7 +1485,7 @@ years:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 36.05
@@ -1664,7 +1664,7 @@ years:
                     - "POWHEG"
 
             vbf_powheg_dipole:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 0.00105742

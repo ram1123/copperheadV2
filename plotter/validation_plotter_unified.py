@@ -21,6 +21,8 @@ from src.lib.histogram.plotting import plotDataMC_compare
 from modules.classify_year import is_run2, is_run3
 from configs.variables.variable_lists import get_all_vars
 
+from scripts.compact_parquet_data import ensure_compacted
+
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
 # bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
@@ -93,11 +95,10 @@ group_dict = {
         "data_J",
     ],
     # Run2 DY samples
-    "DY": DY_aMCatNLO,
+    # "DY": DY_aMCatNLO,
     # "DY": DY_MLL_binned,
     # "DY": DY_aMCatNLO_inc_2024,
     "DY": DY_aMCatNLO_inc_202223,
-
     # Run3 DY samples
     # "DY": DY_To2MU_MassBinned,
     # "DY": DY_To2MU_inclusive,
@@ -121,7 +122,8 @@ group_dict = {
         "st_t_antitop",
     ],
     # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
-    # "EWK": ["ewk_lljj_mll50_mjj120",  "ewk_lljj"],
+    # "EWK": ["ewk_lljj_mll50_mjj120", "ewk_lljj"],
+    # "EWK": ["ewk_lljj"],
     # "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
     "VV": [
         "ww_2l2nu",
@@ -375,13 +377,6 @@ if __name__ == "__main__":
         logger.error("No regions specified! Exiting the program.")
         raise ValueError("No regions specified!")
 
-    # if args.remove_zpt_weights, then update the args.label
-    if args.remove_zpt_weights:
-        if args.label == "":
-            args.label = "no_zpt_weights"
-        else:
-            args.label += "_no_zpt_weights"
-
     available_processes = []
 
     logger.info("group_dict: {group_dict}".format(group_dict=group_dict))
@@ -415,7 +410,7 @@ if __name__ == "__main__":
     # gather variables to plot:
     kinematic_vars = ['pt', 'eta', 'phi']
     if args.minimum_set: kinematic_vars = ['pt', 'eta']
-    variables2plot = get_all_vars()
+    variables2plot = get_all_vars(args.minimum_set)  # get the full list of variables from the config file
 
     variables2plot_orig = copy.deepcopy(variables2plot)
     if "jj_mass_nominal" in variables2plot:
@@ -445,6 +440,15 @@ if __name__ == "__main__":
 
     # check if the compacted path exists
     if args.use_compacted != "":
+        # path name should contain the string "f1_0" which is the default load path, otherwise throw error
+        if "f1_0" not in args.load_path:
+            raise ValueError("The load path should contain the string 'f1_0' to use the compacted path! Exiting the program.")
+
+        # run compact script for each process
+        for process in available_processes:
+            compacted_path_DNN = os.path.join(args.load_path, process, "0")
+            ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
+
         args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
 
     logger.info(f"Using parquet files from {args.load_path}")
@@ -811,10 +815,16 @@ if __name__ == "__main__":
             # ---------------------------------------------------
             # All data are prepped, now plot Data/MC histogram
             # -------------------------------------------------------
+            # if args.remove_zpt_weights, then update the args.label
+            remove_zpt_str = ""
+            if args.remove_zpt_weights:
+                logger.warning("Removing zpt weights from the events!")
+                remove_zpt_str = "no_zpt_weights"
+
             if args.year == "*":
-                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
+                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{remove_zpt_str}"
             else:
-                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
+                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{remove_zpt_str}"
             logger.debug(f"full_save_path: {full_save_path}")
 
             if not os.path.exists(full_save_path):
