@@ -149,6 +149,7 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
     final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
     final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
+    logger.debug(f"Final fit result: {final_fit}")
 
     return f0, f1, f_flat, f_combined
 
