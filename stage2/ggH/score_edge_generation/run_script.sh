@@ -2,16 +2,19 @@
 set -e
 
 
-label="Run3_nanoAODv15_24Jan2025"
+# label="Run3_nanoAODv15_24Jan2025"
+label="Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV"
 
 category="ggh"
 
-model="Run3PrelimResultsJan25_2026_NoAnnhilateWgts"
+# model_name="Run3PrelimResultsJan25_2026_NoAnnhilateWgts"
+# model_name="Run3PrelimResultsJan29_2026_reducedInput2"
+model_name="Run3PrelimResultsFeb09_2026_jecjer"
 
 
 
-# stage2_save_path="/depot/cms/users/yun79/hmm/copperheadV1clean/$label/${model}_${category}_recreate1_87SigOct31_2025_newEdgeTarget/stage2_output" 
-stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/$label/${model}_${category}/stage2_output" 
+# stage2_save_path="/depot/cms/users/yun79/hmm/copperheadV1clean/$label/${model_name}_${category}_recreate1_87SigOct31_2025_newEdgeTarget/stage2_output" 
+stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model_name}_${category}/stage2_output" 
 
 
 # years="2016preVFP 2016postVFP 2017 2018"
