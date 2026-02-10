@@ -16,7 +16,7 @@ Options:
   -l <label>    Label (default: Default_nanoAODv9)
   -n <njet>     nJet value (optional, default: 0)
   -b <bins>     Number of bins (optional, default: 100)
-  -o <outAppend>  String to append to output files (default: today's date)
+  -o <save_postfix>  String to append to output files (default: today's date)
   -r <region>   DNN training region (default: h-peak)
   -t <category> DNN training category (default: vbf)
   -p <postfix>  Postfix string to append to output directory for stage2 and 3 (default: "")
@@ -40,7 +40,7 @@ frac="0"
 njet="0"
 nbin="100"
 PWD="$(pwd)"
-outAppend="$(date +%b%d_%Y)"   # Default: today's date, e.g. Jun24_2025
+save_postfix="$(date +%b%d_%Y)"   # Default: today's date, e.g. Jun24_2025
 region="h-peak" # h-peak, h-sideband, signal
 category="vbf"
 postfix=""
@@ -59,7 +59,7 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:ksf" option; do
         n) njet="$OPTARG" ;;
         b) nbin="$OPTARG" ;;
         d) debug="$OPTARG" ;;
-        o) outAppend="$OPTARG" ;;
+        o) save_postfix="$OPTARG" ;;
         r) region="$OPTARG" ;;
         t) category="$OPTARG" ;;
         p) postfix="$OPTARG" ;;
@@ -175,7 +175,7 @@ echo "  Skip bad files: $skipBadFiles"
 echo "  Fraction: $frac"
 echo "  nJet: $njet"
 echo "  Number of bins: $nbin"
-echo "  Output append: $outAppend"
+echo "  Output append: $save_postfix"
 echo "  Region: $region"
 echo "  Category: $category"
 
@@ -199,7 +199,7 @@ for year in "${years[@]}"; do
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML --rerun  --skipSamples "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --isCutflow "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML  --skipSamples "
-    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML "
+    command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML  --skipSamples "
 
     ### DNN training parameters
     training_fold=3
@@ -211,9 +211,10 @@ for year in "${years[@]}"; do
     # model_label_forCompact="2018_${region}_${category}_2018_UpdatedQGL_17July_Test" # August training
     # model_label_forCompact="run2_${region}_${category}_ScanHyperParamV1" # Latest training; 03 Sep 2025
     # model_label_forCompact="run2_${region}_${category}_8Dec25V2" # Trained with HEM veto fixed samples; 11 Dec 2025
-    model_label_forCompact="run3_${region}_${category}_v1" # 22 Jan 2026 training for Run3
+    # model_label_forCompact="run3_${region}_${category}_v1" # 22 Jan 2026 training for Run3
     # model_label_forCompact="run2_h-peak_vbf_BestHPButSmallHidden_128_64_32_maxAUC" # 10 Sep 2025: Same as training on 03 Sep 2025, except with old hidden layers
     # model_label_forCompact="run2_h-peak_vbf_BestHPOld_NewSoftJetVarV0" # 12 Sep 2025 training: Trained with same architecture as 03 Sep 2025, Just added new soft jet variables
+    model_label_forCompact="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
 
     # compact_tag="03September"
     compact_tag="19September"
@@ -227,13 +228,20 @@ for year in "${years[@]}"; do
     if [[ "$bkg_l_stage2" == *"Top"* ]]; then
         bkg_l_stage2="${bkg_l_stage2/Top/TT ST}"
     fi
+    model_trained_path="./dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
+    training_tag="trained_best_optuna_03trail_v3"
+
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    command2="python run_stage2_vbf.py --model_path $model_path/${label}/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
+    # command2="python run_stage2_vbf.py --model_path $model_path/${label}/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
     # command2="python run_stage2_vbf.py --model_path $model_path/${label}/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
-    # command2="python run_stage2_vbf.py --model_path $model_path/$model_label/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
+    # command2="python run_stage2_vbf.py -l  --model_path $model_trained_path --model_tag $training_tag   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
+
+    command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --no_variations --save_postfix ${postfix}_noVar  "
+    command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${postfix}_noVar --no_variations "
+
 
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO "
-    command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO "
+    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix} "
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_DY012 "
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLOSplitMjj "
     # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO_NoDYVBF "
@@ -260,7 +268,8 @@ for year in "${years[@]}"; do
     if [[ "$debug" -ge 2 ]]; then
         command0+=" --log-level DEBUG "
         command1+=" --log-level DEBUG "
-        # command3+=" --log-level DEBUG "
+        command2+=" --log-level DEBUG "
+        command3+=" --log-level DEBUG "
         command4+=" --log-level DEBUG --debug "
         # command5+=" --log-level DEBUG "
     else
@@ -340,8 +349,8 @@ for year in "${years[@]}"; do
             log "Running ZpT fitting step(s)..."
             dy_sample="INCamcatnloFXFX" # FIXME: Hardcoded DY sample name: aMCatNLO or MiNNLO or amcatnloFXFX or powheg or INCamcatnloFXFX
             cmd0="python src/copperhead/zpt_rewgt/derive/save_SF_rootFiles.py -l $label -y $year --input_path $save_path -dy_sample $dy_sample --use_gateway --cluster_index $cluster_index"
-            cmd1="python src/copperhead/zpt_rewgt/derive/do_f_test.py               -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --outAppend $outAppend --debug"
-            cmd2="python src/copperhead/zpt_rewgt/derive/get_polyFit.py             -l $label -y $year --dy_sample $dy_sample  --njet $njet --outAppend $outAppend"
+            cmd1="python src/copperhead/zpt_rewgt/derive/do_f_test.py               -l $label -y $year --dy_sample $dy_sample --nbins $nbin --njet $njet --save_postfix $save_postfix --debug"
+            cmd2="python src/copperhead/zpt_rewgt/derive/get_polyFit.py             -l $label -y $year --dy_sample $dy_sample  --njet $njet --save_postfix $save_postfix"
             [[ "$mode" =~ ^(zpt_fit0|zpt_fit)$ ]] && { log "Command0: $cmd0"; eval "$cmd0"; }
             [[ "$mode" =~ ^(zpt_fit1|zpt_fit|zpt_fit12)$ ]] && { log "Command1: $cmd1"; eval "$cmd1"; }
             [[ "$mode" =~ ^(zpt_fit2|zpt_fit|zpt_fit12)$ ]] && { log "Command2: $cmd2"; eval "$cmd2"; }

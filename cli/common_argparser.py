@@ -24,10 +24,45 @@ def build_common_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--years",
+        dest="years",
+        default=["2018"],
+        nargs="*",
+        type=str,
+        action="store",
+        help=(
+            "list of year values. The options are: "
+            "2016preVFP, 2016postVFP, 2017, 2018, "
+            "2022preEE, 2022postEE, 2023, 2023BPix, 2024"
+        ),
+    )
+    parser.add_argument(
         "-l",
         "--label",
         dest="label",
         help="Run label: directory under plot_path to find inputs",
+    )
+    parser.add_argument(
+        "-input",
+        "--input_path",
+        dest="input_path",
+        default="validation",
+        action="store",
+        help="input path to read stage1 output files",
+    )
+    parser.add_argument(
+        "-save",
+        "--save_path",
+        dest="save_path",
+        default="validation",
+        action="store",
+        help="save path to store stage1 output files",
+    )
+    parser.add_argument(
+        "--save_postfix",
+        type=str,
+        default="",
+        help="String to append to output filenames",
     )
     parser.add_argument(
         "--yaml",
@@ -86,18 +121,6 @@ def build_common_parser() -> argparse.ArgumentParser:
         default=0,
         type=int,
         help="Index of the Dask Gateway cluster to connect to",
-    )
-
-    parser.add_argument(
-        "-save",
-        "--save_path",
-        dest="save_path",
-        default="validation",
-        action="store",
-        help="save path to store stage1 output files",
-    )
-    parser.add_argument(
-        "--outAppend", type=str, default="", help="String to append to output filenames"
     )
     parser.add_argument(
         "-aod_v",

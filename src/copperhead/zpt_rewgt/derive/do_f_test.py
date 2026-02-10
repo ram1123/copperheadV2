@@ -28,7 +28,7 @@ logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
 year = args.year
 run_label = args.label
 inPath = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
-save_path = f"{inPath}/fTest_{args.outAppend}"
+save_path = f"{inPath}/fTest_{args.save_postfix}"
 os.makedirs(save_path, exist_ok=True)
 
 optimized_orders = {}
