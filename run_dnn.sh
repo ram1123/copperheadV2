@@ -6,9 +6,10 @@ python MVA_training/VBF_run3/preprocess_dnn.py --config configs/dnn_run3_vbf.yam
 
 time python MVA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run3_vbf.yaml \
 --data-dir dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/ \
---out-dir dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/hpo_optuna/v1 \
---n-trials 25 --folds 0,1,2,3
+--out-dir dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/hpo_optuna/v2_108Trials \
+--n-trials 108 --folds 0
 
-python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run3_vbf.yaml \
+time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run3_vbf.yaml \
 --data-dir dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/  \
---out-dir dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/trained_best_optuna_03trail
+--out-dir dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/trained_best_optuna_03trail_v3 \
+--optuna-best-json dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf/hpo_optuna/v1/optuna_best.json
