@@ -36,18 +36,42 @@ rate_syst_lookup = {
         "XsecAndNormVV": {"VV": 1.05615},
         "XsecAndNormggH": {"ggH": 1.38313},
     },
-    "2022preEE": {
-        # "XsecAndNorm2018DYJ2": {"DY_2J": 1.12320},
-        "XsecAndNorm2018DYJ2": {"DYJ2": 1.12320},
-        "XsecAndNorm2018EWK": {"EWK": 1.05779},
+    "2022preEE": {  # FIXME: update the values
+        # "XsecAndNorm2022preEEDYJ2": {"DY_2J": 1.12320},
+        "XsecAndNorm2022preEEDYJ2": {"DYJ2": 1.12320},
+        "XsecAndNorm2022preEEEWK": {"EWK": 1.05779},
         "XsecAndNormTT+ST": {"TT+ST": 1.18582},
         "XsecAndNormVV": {"VV": 1.05615},
         "XsecAndNormggH": {"ggH": 1.38313},
     },
-    "2022postEE": {
-        # "XsecAndNorm2018DYJ2": {"DY_2J": 1.12320},
-        "XsecAndNorm2018DYJ2": {"DYJ2": 1.12320},
-        "XsecAndNorm2018EWK": {"EWK": 1.05779},
+    "2022postEE": {  # FIXME: update the values
+        # "XsecAndNorm2022postEEDYJ2": {"DY_2J": 1.12320},
+        "XsecAndNorm2022postEEDYJ2": {"DYJ2": 1.12320},
+        "XsecAndNorm2022postEEEWK": {"EWK": 1.05779},
+        "XsecAndNormTT+ST": {"TT+ST": 1.18582},
+        "XsecAndNormVV": {"VV": 1.05615},
+        "XsecAndNormggH": {"ggH": 1.38313},
+    },
+    "2023": {  # FIXME: update the values
+        # "XsecAndNorm2023DYJ2": {"DY_2J": 1.12320},
+        "XsecAndNorm2023DYJ2": {"DYJ2": 1.12320},
+        "XsecAndNorm2023EWK": {"EWK": 1.05779},
+        "XsecAndNormTT+ST": {"TT+ST": 1.18582},
+        "XsecAndNormVV": {"VV": 1.05615},
+        "XsecAndNormggH": {"ggH": 1.38313},
+    },
+    "2023BPix": {  # FIXME: update the values
+        # "XsecAndNorm2023BPixDYJ2": {"DY_2J": 1.12320},
+        "XsecAndNorm2023BPixDYJ2": {"DYJ2": 1.12320},
+        "XsecAndNorm2023BPixEWK": {"EWK": 1.05779},
+        "XsecAndNormTT+ST": {"TT+ST": 1.18582},
+        "XsecAndNormVV": {"VV": 1.05615},
+        "XsecAndNormggH": {"ggH": 1.38313},
+    },
+    "2024": {  # FIXME: update the values
+        # "XsecAndNorm2024DYJ2": {"DY_2J": 1.12320},
+        "XsecAndNorm2024DYJ2": {"DYJ2": 1.12320},
+        "XsecAndNorm2024EWK": {"EWK": 1.05779},
         "XsecAndNormTT+ST": {"TT+ST": 1.18582},
         "XsecAndNormVV": {"VV": 1.05615},
         "XsecAndNormggH": {"ggH": 1.38313},
@@ -84,25 +108,22 @@ lumi_syst = {
         # "ghost": 0.0,
         "lumi2018": 2.5,
     },
+    # Updated the lumi values from here: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun3#2024
+    # FIXME: WE should send this at a centralized YAML file
     "2022preEE": {
-        # "uncor2018": 1.5,
-        # "xyfac": 2.0,
-        # "len": 0.2,
-        # "bb": 0.0,
-        # "beta": 0.0,
-        # "calib": 0.2,
-        # "ghost": 0.0,
-        "lumi2022preEE": 2.5,
+        "lumi2022preEE": 1.4,
     },
     "2022postEE": {
-        # "uncor2018": 1.5,
-        # "xyfac": 2.0,
-        # "len": 0.2,
-        # "bb": 0.0,
-        # "beta": 0.0,
-        # "calib": 0.2,
-        # "ghost": 0.0,
-        "lumi2022postEE": 2.5,
+        "lumi2022postEE": 1.4,
+    },
+    "2023": {
+        "lumi2023": 1.3,
+    },
+    "2023BPix": {
+        "lumi2023BPix": 1.3,
+    },
+    "2024": {
+        "lumi2024": 1.6,
     },
 }
 
@@ -181,16 +202,17 @@ def build_datacards(var_name, yield_df, parameters):
                 # datacard.write(
                 #     f"XSecAndNorm{year}DYJ01  rateParam {bin_name} DY_01J 1 [0.2,5]\n"
                 # )
-                datacard.write(
-                    f"XSecAndNorm{year}DYJ01  rateParam {bin_name} DYJ01 1 [0.2,5]\n"
-                )
+                # datacard.write( #FIXME: Temporarily commenting out the DYJ01 rate param since we are not using it in the datacard for now
+                #     f"XSecAndNorm{year}DYJ01  rateParam {bin_name} DYJ01 1 [0.2,5]\n"
+                # )
                 datacard.write(f"{bin_name} autoMCStats 0 1 1\n")
                 datacard.write("---------------\n")
                 # nuisnace edit start ----------------------------
                 datacard.write(
-                "nuisance edit rename"
-                " (DYJ2|DYJ01|ggH_hmm|TT+ST|VV) * "
-                "qgl_wgt  QGLweightPY \n"
+                    "nuisance edit rename"
+                    # " (DYJ2|DYJ01|ggH_hmm|TT+ST|VV) * " #FIXME: Temporarily commenting out the DYJ01 rate param since we are not using it in the datacard for now
+                    " (ggH_hmm|TT+ST|VV) * "
+                    "qgl_wgt  QGLweightPY \n"
                 )
                 datacard.write("nuisance edit rename EWK * qgl_wgt" " QGLweightHER \n")
                 datacard.write(
@@ -302,12 +324,13 @@ def print_mc(yield_df, var_name, region, channel, year, bin_name):
         for nuisance in gr_nuis:
             mc_df.loc[mc_df.group == group, nuisance] = "1.0"
 
-    for rate_unc, apply_to in rate_syst_lookup[year].items():
-        if rate_unc not in all_nuisances:
-            all_nuisances.append(rate_unc)
-            nuisance_lines[rate_unc] = "{:<20} {:<9}".format(rate_unc, "lnN")
-        for group, value in apply_to.items():
-            mc_df.loc[mc_df.group == group, rate_unc] = str(value)
+    # FIXME: Temporarily commenting out the rate systematics since we are not using them in the datacard for now
+    # for rate_unc, apply_to in rate_syst_lookup[year].items():
+    #     if rate_unc not in all_nuisances:
+    #         all_nuisances.append(rate_unc)
+    #         nuisance_lines[rate_unc] = "{:<20} {:<9}".format(rate_unc, "lnN")
+    #     for group, value in apply_to.items():
+    #         mc_df.loc[mc_df.group == group, rate_unc] = str(value)
 
     for lumi_unc, value in lumi_syst[year].items():
         if lumi_unc not in all_nuisances:
