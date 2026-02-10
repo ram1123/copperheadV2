@@ -190,36 +190,24 @@ for year in "${years[@]}"; do
     log "  NanoAODv: $NanoAODv"
     log "  Save path: $save_path"
 
-    # ---- Command templates ----
-    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv "
-    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv --xcache  "
+    # ########## PRE-STAGE command ##########
+    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  "
 
+    # ########## STAGE-1 command ##########
     # INFO: If running with JES variation use the max file length = 350, else 2500
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --rerun --isCutflow "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML --rerun  --skipSamples "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --isCutflow "
-    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML  --skipSamples "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --isCutflow --rerun "
     command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML  --skipSamples "
+    # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML  "
 
     ### DNN training parameters
-    training_fold=3
-    model_path="${PWD}/dnn/trained_models"
+    training_fold=4
     model_label="${label}"
-    # model_label="Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt" # THis name was hardcoded for older runs. # FIXME: check this for TagV1.0???
+    model_trained_path="./dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
+    training_tag="trained_best_optuna_03trail_v3"
 
-    # NOTE: This DNN is trained with all year but name contains hardcoded string "2018"
-    # model_label_forCompact="2018_${region}_${category}_2018_UpdatedQGL_17July_Test" # August training
-    # model_label_forCompact="run2_${region}_${category}_ScanHyperParamV1" # Latest training; 03 Sep 2025
-    # model_label_forCompact="run2_${region}_${category}_8Dec25V2" # Trained with HEM veto fixed samples; 11 Dec 2025
-    # model_label_forCompact="run3_${region}_${category}_v1" # 22 Jan 2026 training for Run3
-    # model_label_forCompact="run2_h-peak_vbf_BestHPButSmallHidden_128_64_32_maxAUC" # 10 Sep 2025: Same as training on 03 Sep 2025, except with old hidden layers
-    # model_label_forCompact="run2_h-peak_vbf_BestHPOld_NewSoftJetVarV0" # 12 Sep 2025 training: Trained with same architecture as 03 Sep 2025, Just added new soft jet variables
-    model_label_forCompact="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
-
-    # compact_tag="03September"
-    compact_tag="19September"
-
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_path/$model_label/$model_label_forCompact --add_dnn_score  --fix_dimuon_mass --tag $compact_tag  "
+    # ########## Compact command ##########
+    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_trained_path/$training_tag --add_dnn_score  --fix_dimuon_mass --tag $save_postfix  "
     command_compact="python scripts/compact_parquet_data.py -y $year -i $save_path  "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
@@ -228,25 +216,17 @@ for year in "${years[@]}"; do
     if [[ "$bkg_l_stage2" == *"Top"* ]]; then
         bkg_l_stage2="${bkg_l_stage2/Top/TT ST}"
     fi
-    model_trained_path="./dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
-    training_tag="trained_best_optuna_03trail_v3"
 
+    # ########## STAGE-2 command ##########
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    # command2="python run_stage2_vbf.py --model_path $model_path/${label}/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix  "
-    # command2="python run_stage2_vbf.py --model_path $model_path/${label}/$model_label_forCompact --model_label $model_label   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
-    # command2="python run_stage2_vbf.py -l  --model_path $model_trained_path --model_tag $training_tag   --base_path $save_path -y $year -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix $postfix --no_variations "
+    command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix ${save_postfix} --no_variations "
+    # command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix ${save_postfix}  "
 
-    command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --no_variations --save_postfix ${postfix}_noVar  "
-    command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${postfix}_noVar --no_variations "
+    # ########## STAGE-3 command ##########
+    command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} --no_variations "
+    # command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} "
 
-
-    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO "
-    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix} "
-    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_DY012 "
-    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLOSplitMjj "
-    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_MiNNLO_NoDYVBF "
-    # command3="python run_stage3_vbf.py --base_path $save_path -y $year  --save_postfix $postfix --out_postfix ${postfix}_aMCatNLO_NoDYVBF "
-
+    # ########## Z-PT VALIDATION command ##########
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
 
     # ########## Calibration commands ##########
@@ -271,11 +251,14 @@ for year in "${years[@]}"; do
         command2+=" --log-level DEBUG "
         command3+=" --log-level DEBUG "
         command4+=" --log-level DEBUG --debug "
-        # command5+=" --log-level DEBUG "
+        command5+=" --log-level DEBUG "
     else
         command0+=" --log-level INFO "
         command1+=" --log-level INFO "
+        command2+=" --log-level INFO "
+        command3+=" --log-level INFO "
         command4+=" --log-level INFO "
+        command5+=" --log-level INFO "
     fi
 
     if [[ "$frac" == "1" ]]; then
@@ -297,6 +280,7 @@ for year in "${years[@]}"; do
         command0+=" --cluster_index $cluster_index "
         command1+=" --cluster_index $cluster_index "
         command2+=" --cluster_index $cluster_index "
+        command3+=" --cluster_index $cluster_index "
         command4+=" --cluster_index $cluster_index "
         command5+=" --cluster_index $cluster_index "
         command6+=" --cluster_index $cluster_index "

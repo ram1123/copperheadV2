@@ -1,39 +1,26 @@
-from hist import Hist
-import dask
-import hist.dask as hda
-from coffea import processor
-from coffea.nanoevents.methods import candidate
-from coffea.dataset_tools import (
-    apply_to_fileset,
-    max_chunks,
-    preprocess,
-)
-from distributed import Client
-from coffea.nanoevents.schemas import PFNanoAODSchema
-import awkward as ak
-import dask_awkward as dak
-import numpy as np
-
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from coffea.ml_tools.torch_wrapper import torch_wrapper
 import argparse
+import copy
+import glob
+import itertools
+import os
 import pickle
 import time
-import glob
-from tqdm import tqdm
-import os
-import itertools
 from functools import reduce
-import copy
+from pathlib import Path
 
-import logging
-from modules.utils import logger
+import awkward as ak
+import dask
+import dask_awkward as dak
+import hist.dask as hda
+import numpy as np
+import torch
+from cli.common_argparser import build_common_parser
+from coffea.ml_tools.torch_wrapper import torch_wrapper
 from modules import selection
+from modules.dask_utils import get_dask_client
+from modules.utils import fillEventNans, logger
+from tqdm import tqdm
 
-from modules.utils import fillEventNans
 
 def get_variation(wgt_variation, sys_variation):
     if "nominal" in wgt_variation:
@@ -55,12 +42,12 @@ def get_compactedPath(stage1_path):
     NOTE: this is a lazy method that just looks if compacted directory exists.
     It doesn't check if all the necessary samples are in the directory.
     """
-    compacted_stage1_path = stage1_path.replace("/f1_0", "/compacted")
+    compacted_stage1_path = str(stage1_path).replace("/f1_0", "/compacted")
     logger.debug(f"compacted_stage1_path: {compacted_stage1_path}")
     if os.path.isdir(compacted_stage1_path):
-        return compacted_stage1_path
+        return Path(compacted_stage1_path)
     elif os.path.isdir(stage1_path):
-        return stage1_path
+        return Path(stage1_path)
     else:
         logger.critical(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
         raise FileNotFoundError(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
@@ -103,13 +90,15 @@ def columns_for_selection(category, variation):
         f"jj_mass_{use_var}",
         f"jj_dEta_{use_var}",
         f"jet1_pt_{use_var}",
-        f"nfatJets_drmuon",
-        f"MET_pt",
+        "nfatJets_drmuon",
+        "MET_pt",
     ]
     return base
 
 class DNNWrapper(torch_wrapper):
     def _create_model(self):
+        logger.info(f"Loading model from {self.torch_jit}")
+        logger.info(f"torch_jit type: {type(self.torch_jit)}")
         model = torch.jit.load(self.torch_jit)
         model.eval()
         return model
@@ -193,7 +182,6 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     bkg smaples: DY, TT, ST, VV, EWK
     """
     logger.info(f"stage1_path: {stage1_path}")
-    sample_dict = {}
     data_l = []
     return_filelist_dict = {}
     for data_letter in data_samples:
@@ -201,13 +189,10 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
 
     data_filelist = []
     for sample in data_l:
-        data_filelist += glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
-        # return_filelist_dict[sample] = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        data_filelist += glob.glob(str(stage1_path / sample / "*" / "*.parquet"))
 
     if len(data_filelist) != 0:
         return_filelist_dict["data"] = data_filelist # keep data as one sample list for speedup
-
-    # sample_dict["data"] = data_filelist
 
     # ------------------------------------
     # work on sig MC
@@ -237,15 +222,12 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             sig_sample_l += sig_sample_dict[sig_sample]
     logger.info(f"sig_sample_l: {sig_sample_l}")
 
-    sig_filelist = []
     for sample in sig_sample_l:
-        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        sample_filelist = glob.glob(str(stage1_path / sample / "*" / "*.parquet"))
         if len(sample_filelist) == 0:
             logger.warning(f"No {sample} files were found!")
             continue
         return_filelist_dict[sample] = sample_filelist
-
-    # sample_dict["signal"] = sig_filelist
 
     # ------------------------------------
     # work on bkg MC
@@ -264,9 +246,10 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             # "dy_VBF_filter"
             # "DYJ01",
             # "DYJ2"
-            "dyTo2Mu_MLL_10To50",
-            "dyTo2Mu_MLL_50To120",
-            "dyTo2Mu_MLL_120To200",
+            "dyTo2L_M-50_incl",
+            #  "dyTo2Mu_MLL_10To50",
+            # "dyTo2Mu_MLL_50To120",
+            # "dyTo2Mu_MLL_120To200",
         ],
         "TT": [
             "ttjets_dl",
@@ -283,6 +266,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             "ewk_lljj_mll105_160_py_dipole",  # pythia dipole
             "ewk_lljj_mll50_mjj120",
             "ewk_lljj",
+            "ewk_mmjj",
         ],
         "VV": [
             "ww_2l2nu",
@@ -306,39 +290,28 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
             bkg_sample_l += bkg_sample_dict[bkg_sample]
     logger.info(f"bkg_sample_l: {bkg_sample_l}")
 
-    bkg_filelist = []
     for sample in bkg_sample_l:
-        sample_filelist = glob.glob(f"{stage1_path}/{sample}/*/*.parquet")
+        sample_filelist = glob.glob(str(stage1_path / sample / "*" / "*.parquet"))
         logger.info(f"sample: {sample}, number of files: {len(sample_filelist)}")
-        logger.info(f"sample_filelist: {sample_filelist}")
+        logger.debug(f"sample_filelist: {sample_filelist}")
         if len(sample_filelist) == 0:
             logger.critical(f"No {sample} files were found!")
             continue
         return_filelist_dict[sample] = sample_filelist
-    # sample_dict["background"] = bkg_filelist
 
-    # logger.info(f"sample_dict: {sample_dict}")
     return return_filelist_dict
 
 
 if __name__ == "__main__":
     t0 = time.perf_counter()
-    parser = argparse.ArgumentParser()
+    parser = build_common_parser()
     parser.add_argument(
-        "-y",
-        "--year",
-        dest="year",
-        default="2018",
-        action="store",
-        help="string value of year we are calculating",
-    )
-    parser.add_argument(
-        "-m_l",
-        "--model_label",
-        dest="model_label",
+        "-m_tag",
+        "--model_tag",
+        dest="model_tag",
         default="test",
         action="store",
-        help="Unique run label (to create output path)",
+        help="Unique training label used to identify the model. Should match the label used in training.",
     )
     parser.add_argument(
         "-m_p",
@@ -346,53 +319,7 @@ if __name__ == "__main__":
         dest="model_path",
         default="test",
         action="store",
-        help="path where model label is saved on",
-    )
-    parser.add_argument(
-        "-rl",
-        "--base_path",
-        dest="base_path",
-        default="test",
-        action="store",
-        help="base path of ntuples",
-    )
-    parser.add_argument(
-        "-gate",
-        "--use_gateway",
-        dest="use_gateway",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-        help="If true, uses dask gateway client instead of local",
-        )
-    parser.add_argument(
-        "-data",
-        "--data",
-        dest="data_samples",
-        default=[],
-        nargs="*",
-        type=str,
-        action="store",
-        help="list of data samples represented by alphabetical letters A-H",
-    )
-    parser.add_argument(
-        "-bkg",
-        "--background",
-        dest="bkg_samples",
-        default=[],
-        nargs="*",
-        type=str,
-        action="store",
-        help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
-    )
-    parser.add_argument(
-        "-sig",
-        "--signal",
-        dest="sig_samples",
-        default=[],
-        nargs="*",
-        type=str,
-        action="store",
-        help="list of sig samples represented by shorthands: ggH, VBF",
+        help="path where model tag is saved on",
     )
     parser.add_argument(
         "-nv",
@@ -402,19 +329,6 @@ if __name__ == "__main__":
         action=argparse.BooleanOptionalAction,
         help="If true, runs with all variations, otherwise only nominal",
     )
-    parser.add_argument(
-        "--save_postfix",
-        default="",
-        type=str,
-        action="store",
-        help="Postfix to append to saved histogram files."
-    )
-    parser.add_argument(
-        "--log-level",
-        default=logging.INFO,
-        type=lambda x: getattr(logging, x),
-        help="Configure the logging level."
-        )
     parser.add_argument(
         "-nfolds",
         "--nfolds",
@@ -431,45 +345,32 @@ if __name__ == "__main__":
     logger.info(f"[timing] Argument parsing time: {t1 - t0:.2f} seconds")
 
     start_time = time.time()
-    if args.use_gateway:
-        from dask_gateway import Gateway
-        gateway = Gateway(
-            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-        )
-        cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-        client = gateway.connect(cluster_info.name).get_client()
-        logger.info("Gateway Client created")
-    else:
-        client =  Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='2 GiB')
-        logger.info("Local scale Client created")
+    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
 
     t2 = time.perf_counter()
     logger.info(f"[timing] Dask client creation time: {t2 - t1:.2f} seconds")
 
-    base_path = args.base_path
+    base_path = Path(args.input_path)
 
     bkg_samples = args.bkg_samples
     sig_samples = args.sig_samples
     data_samples = args.data_samples
     logger.info(f"data_samples: {data_samples}")
 
-    stage1_path = f"{base_path}/stage1_output/{args.year}/f1_0" # FIXME
-    stage1_path = stage1_path.replace("//","/")
+    stage1_path = base_path / "stage1_output" / args.year / "f1_0"
     stage1_path = get_compactedPath(stage1_path) # get compacted stage1 output if they exist
     logger.info(f"stage1 path: {stage1_path}")
     if not os.path.exists(stage1_path):
         logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
         raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
 
-    histDirName = f"score_{args.model_label}" if args.save_postfix == "" else f"score_{args.model_label}_{args.save_postfix}"
-    if args.no_variations == True:
+    histDirName = f"score_{args.label}" if args.save_postfix == "" else f"score_{args.label}_{args.save_postfix}"
+    if args.no_variations:
         histDirName = f"{histDirName}_NoSyst"
 
-    hist_save_path = f"{base_path}/stage2_histograms/{histDirName}/{args.year}/"
-
-    if not os.path.exists(hist_save_path):
-        os.makedirs(hist_save_path)
+    hist_save_path = base_path / "stage2_histograms" / histDirName / args.year
+    os.makedirs(hist_save_path, exist_ok=True)
+    logger.info(f"Histograms will be saved to: {hist_save_path}")
 
     full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
 
@@ -483,8 +384,8 @@ if __name__ == "__main__":
         t4 = time.perf_counter()
 
         # if output pkl file already exists, skip
-        output_pkl_path = f"{hist_save_path}/{sample_type}_hist.pkl"
-        if os.path.exists(output_pkl_path):
+        output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
+        if output_pkl_path.exists():
             logger.warning(f"Output pkl file {output_pkl_path} already exists. Skipping {sample_type}.")
             continue
 
@@ -505,21 +406,48 @@ if __name__ == "__main__":
         jes_systs = [sys for sys in jes_systs if not sys.startswith("log_")]
         logger.info(f"Discovered JES/JER variations: {jes_systs}")
 
-        model_trained_path = f"{args.model_path}"
+        model_trained_path = Path(args.model_path).resolve()
+        training_dir = (model_trained_path / args.model_tag).resolve()
+
+        missing = []
+        for fold in range(nfolds):
+            p = training_dir / f"fold{fold}" / "best_torchscript.pt"
+            s = model_trained_path / f"scalers_{fold}.npz"
+            if not p.is_file():
+                missing.append(f"missing model: {p}")
+            if not s.is_file():
+                missing.append(f"missing scaler: {s}")
+
+        if missing:
+            raise FileNotFoundError("\n".join(missing))
 
         # Load training features once per sample_type
-        with open(f'{model_trained_path}/training_features.pkl', 'rb') as f:
+        with open(model_trained_path / "training_features.pkl", "rb") as f:
             training_features = pickle.load(f)
         logger.info(f"training_features: {training_features}")
         logger.info(f"len training_features: {len(training_features)}")
 
-        # # Load and Cache models for each fold
-        # model_cache = {}
-        # for fold in range(nfolds):
-        #     model_load_path = f"{model_trained_path}/fold{fold}/final_model_torchJit_ver.pt"
-        #     model_cache[fold] = DNNWrapper(model_load_path)
-        #     logger.info(f"Loaded model for fold {fold} from {model_load_path}")
+        NO_SCALE_FEATURES = {
+            "year",
+            "nsoftjets5_nominal",
+        }
 
+        # cache scalers
+        scaler_cache = {}
+        for fold in range(nfolds):
+            sp = model_trained_path / f"scalers_{fold}.npz"
+            with np.load(sp, allow_pickle=True) as f:
+                scaler_cache[fold] = {
+                    "mean": f["mean"].astype(np.float64),
+                    "std":  f["std"].astype(np.float64),
+                    "features": [str(x) for x in f["features"]],
+                }
+
+        # cache models (wrapper caches torchscript model lazily inside worker)
+        model_cache = {}
+        for fold in range(nfolds):
+            mp = training_dir / f"fold{fold}" / "best_torchscript.pt"
+            model_cache[fold] = DNNWrapper(mp.as_posix())
         # ------------------------------------------
         # Initialize sample histogram to save later
         # ------------------------------------------
@@ -575,7 +503,7 @@ if __name__ == "__main__":
         score_hist = score_hist.StrCat(variations, name="variation")
         # add score category
         bins = selection.binning  # use the binning from selection module
-        score_name = f"score_{args.model_label}"
+        score_name = f"score_{args.label}"
         score_hist = score_hist.Var(bins, name=score_name)
 
         score_hist_empty = score_hist.Double()
@@ -668,6 +596,17 @@ if __name__ == "__main__":
                 logger.debug(f" eval_folds: {eval_folds}")
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
 
+                scaler_info = scaler_cache[fold]
+                scalar_means = scaler_info["mean"].astype(np.float64)
+                scalar_stds = scaler_info["std"].astype(np.float64)
+                scaler_features = scaler_info["features"]
+
+                scaler_map = {feat: (scalar_means[i], scalar_stds[i]) for i, feat in enumerate(scaler_features)}
+
+                missing_in_scaler = [f for f in training_features if (f not in scaler_map and f not in NO_SCALE_FEATURES)]
+                if missing_in_scaler:
+                    raise ValueError(f"Features {missing_in_scaler} are missing in scaler and not in NO_SCALE_FEATURES!")
+
                 for ix, base_feat in enumerate(training_features):
                     src_feat = feature_sources[base_feat]  # e.g. 'jet1_eta_jer6_down' for JES/JER
                     logger.debug(f"Processing feature: {base_feat}, source feature: {src_feat}")
@@ -675,12 +614,15 @@ if __name__ == "__main__":
 
                     # scale from the *source* column, but keep the base key + index
                     in_feat = events[src_feat]
-                    scalers_path = f"{model_trained_path}/scalers_{fold}.npy"
-                    scaler_mean, scaler_mean_std = np.load(scalers_path)
-                    scaler_mean = scaler_mean[ix]
-                    scaler_mean_std = scaler_mean_std[ix]
-                    in_feat = (in_feat - scaler_mean) / scaler_mean_std
 
+                    # Features not present in scaler_features are passthrough by construction
+                    # (in your case: nsoftjets5_nominal and year)
+                    if base_feat in scaler_map and base_feat not in NO_SCALE_FEATURES:
+                        mu, sigma = scaler_map[base_feat]
+                        in_feat = (in_feat - mu) / sigma
+                    else:
+                        logger.debug(f"Not scaling feature {base_feat} (either NO_SCALE or not in scaler_map)")
+                        in_feat = ak.values_astype(in_feat, "float32")
                     input_arr_fold = ak.where(eval_filter, in_feat, input_arr_fold)
                     input_arr_dict[base_feat] = input_arr_fold
 
@@ -698,12 +640,9 @@ if __name__ == "__main__":
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
                 eval_filter = getFoldFilter(events, eval_folds, nfolds)
-                model_load_path = f"{model_trained_path}/fold{fold}/final_model_torchJit_ver.pt"
-                logger.debug(f"model_load_path: {model_load_path}")
-                # dnnWrap = model_cache[fold]
-                dnnWrap = DNNWrapper(model_load_path)
+                dnnWrap = model_cache[fold]
                 dnn_score_fold = dnnWrap(input_arr)
-                dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)  # DNN output is 2 dimensional
+                dnn_score_fold = ak.flatten(dnn_score_fold, axis=None)
 
                 dnn_score = ak.where(eval_filter, dnn_score_fold, dnn_score)
             # transform dnn_score

@@ -2,6 +2,16 @@
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
 
+# 10 February 2026
+
+```bash
+# time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV -y "2022postEE 2022preEE 2023 2023BPix" -m 1 -k )
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJets -y "2023BPix" -m 1 -k -i 0)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -y "2022postEE" -m 2 -k -i 1 -d 2)
+```
+
 # 08 February 2026
 
 ```python
