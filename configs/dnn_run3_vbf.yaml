@@ -99,7 +99,7 @@ model:
     returns_logits: true
 
 training:
-  epochs: 50
+  epochs: 100
   batch_size: 8192
 
   dataloader:

@@ -28,6 +28,7 @@ python train_dnn.py \
 """
 
 import argparse
+import copy
 import json
 import os
 import random
@@ -465,6 +466,11 @@ class MLP(nn.Module):
         # returns logits shape [B]
         return self.net(x).squeeze(1)
 
+def export_torchscript(model: nn.Module, n_features: int, out_path: Path) -> None:
+    model_copy = copy.deepcopy(model).to("cpu").eval()
+    example = torch.zeros(1, n_features, dtype=torch.float32)
+    ts = torch.jit.trace(model_copy, example)
+    ts.save(str(out_path))
 
 # --------------------------------------------------------------------------------------
 # Loss / Metrics
@@ -1014,6 +1020,8 @@ def train_one_fold(
     best_metric = None
     best_path = fold_dir / "best.pt"
     last_path = fold_dir / "last.pt"
+    best_ts_path = fold_dir / "best_torchscript.pt"
+    last_ts_path = fold_dir / "last_torchscript.pt"
 
     # train loop
     for epoch in range(cfg.epochs):
@@ -1045,7 +1053,6 @@ def train_one_fold(
                     clip_abs_max=None,
                 )
                 loss = torch.sum(loss_raw * loss_w) / (torch.sum(torch.abs(loss_w)) + 1e-12)
-
 
             scaler.scale(loss).backward()
 
@@ -1135,6 +1142,9 @@ def train_one_fold(
                     best_path,
                 )
 
+            # export torchscript for stage-2
+            export_torchscript(model, len(cfg.training_features), best_ts_path)
+
         # early stopping
         if early is not None:
             stop = early.step(epoch, monitor_val)
@@ -1154,6 +1164,8 @@ def train_one_fold(
             },
             last_path,
         )
+        # export torchscript for stage-2
+        export_torchscript(model, len(cfg.training_features), last_ts_path)
 
     # load best for final evaluation if requested
     if cfg.es_enable and cfg.es_restore_best and cfg.save_best and best_path.exists():
@@ -1404,10 +1416,10 @@ def main() -> None:
         # -------------------------
         "data": {
             "data_dir": str(args.data_dir),
-            "years": cfg.years,
-            "regions": cfg.regions,
-            "categories": cfg.categories,
-            "combined_training": len(cfg.years) > 1,
+            # "years": cfg.years,
+            # "regions": cfg.region,
+            # "categories": cfg.category,
+            # "combined_training": len(cfg.years) > 1,
         },
         # -------------------------
         # Training behavior (critical!)
