@@ -279,7 +279,6 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
 
     # --- Lower pad: Pull distribution ---
     canv.cd(2)
-    ROOT.gPad.SetPad(0, 0, 1, 0.4)
     ROOT.gPad.SetGrid()
 
     nbins_hist = hist_sf.GetNbinsX()
