@@ -102,7 +102,7 @@ years:
                     - "MG5_aMC@NLO FxFx"
 
             dyTo2L_M-50_1j:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 952.29
@@ -115,7 +115,7 @@ years:
                     - "MG5_aMC@NLO FxFx"
 
             dyTo2L_M-50_2j:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 359.05
