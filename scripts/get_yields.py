@@ -17,6 +17,7 @@ from modules import selection
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.trials import get_stage1_path
 from modules.utils import logger
+from modules.sample_config import get_bkg_sig_dicts
 
 # ----------------------------------------------------------------------
 # Fields to read
@@ -223,24 +224,19 @@ def main() -> None:
             do_VH_veto=do_VH_veto,
         )
 
-        processes = [
-            # "data_A",
-            # "data_B",
-            # "data_C",
-            # "data_D",
-            # "dy_VBF_filter",
-            "data*",
-            "ggh_powhegPS",
-            "vbf_powheg",
-            "vbf_powheg_dipole",
-            "dyTo2L_M-50_incl",
-            "dyTo2Mu_M-50_aMCatNLO",
-            "ttjets_*",
-            "st_*",
-            "ewk_*",
-            "w*_*",
-            "zz_*",
-        ]
+        _, _, combined_sample_dict = get_bkg_sig_dicts(
+            yaml_path="configs/samples/samples.yaml",
+            year=year,
+        )
+
+        processes = set()
+        for group_samples in combined_sample_dict.values():
+            processes.update(group_samples)
+        processes = sorted(processes)
+        # add "data*" at the top of processes
+        processes = ["data*"] + [p for p in processes]
+        print(f"Processes to compute yields for (total {len(processes)}):")
+        print(processes)
 
         print("-" * 60)
         print(f"{'Process':30}    {'Raw events':10}  {'Yield':10}")

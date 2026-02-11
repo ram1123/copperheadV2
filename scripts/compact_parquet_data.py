@@ -161,9 +161,7 @@ def compact_and_add_dnn_score(year, sample, input_path, compacted_dir, model_pat
 
 if __name__ == "__main__":
     parser = build_common_parser()
-    parser.add_argument("-i", "--input_path", required=True, help="Path to the original dataset")
     parser.add_argument("-c", "--compacted_dir", default="", help="Path to store the compacted dataset")
-    parser.add_argument("-t", "--tag", default="", help="Tag for the compacted directory")
     parser.add_argument("-m", "--model_path", help="Path to the DNN model directory")
     parser.add_argument(
         "--fix_dimuon_mass",
@@ -198,6 +196,15 @@ if __name__ == "__main__":
         # continue
         # if "DY" not in sample: continue
         logger.info(f"Processing sample: {sample}")
-        compact_and_add_dnn_score(args.year, sample, args.input_path, args.compacted_dir, args.model_path, args.add_dnn_score, args.tag, args.fix_dimuon_mass)
+        compact_and_add_dnn_score(
+            args.year,
+            sample,
+            args.input_path,
+            args.compacted_dir,
+            args.model_path,
+            args.add_dnn_score,
+            args.save_postfix,
+            args.fix_dimuon_mass,
+        )
 
     close_dask_client()

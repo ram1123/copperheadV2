@@ -163,19 +163,24 @@ def plotDataMC_compare(
         bkg_mc_err = np.sqrt(bkg_mc_w2_sum)
         # initialize ratio histogram and fill in values
         data_hist = ak.to_numpy(data_hist)
-        ratio_hist = np.zeros_like(data_hist)
         bkg_mc_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
-        inf_filter1 = bkg_mc_sum>0
-        inf_filter2 = data_hist>0
-        inf_filter = inf_filter1 & inf_filter2
-        ratio_hist[inf_filter1] = data_hist[inf_filter1]/  bkg_mc_sum[inf_filter1]
-        # add relative uncertainty of data and bkg_mc by adding by quadrature
-        rel_unc_ratio = np.zeros_like(bkg_mc_err)
-        rel_unc_ratio[inf_filter] = np.sqrt((bkg_mc_err[inf_filter]/bkg_mc_sum[inf_filter])**2 + (data_hist_err[inf_filter]/data_hist[inf_filter])**2)
+        # instead of zero like we should fill it with NaNs to avoid misleading points at zero. NaNs will not be plotted
+        ratio_hist = np.full_like(data_hist, np.nan, dtype=float)
+
+        mc_pos = bkg_mc_sum > 0
+        data_pos = data_hist > 0
+        both_pos = mc_pos & data_pos
+
+        ratio_hist[mc_pos] = data_hist[mc_pos] / bkg_mc_sum[mc_pos]
+
+        rel_unc_ratio = np.zeros_like(bkg_mc_sum, dtype=float)
+        rel_unc_ratio[both_pos] = np.sqrt(
+            (bkg_mc_err[both_pos] / bkg_mc_sum[both_pos]) ** 2
+            + (data_hist_err[both_pos] / data_hist[both_pos]) ** 2
+        )
 
         ratio_err = np.zeros_like(rel_unc_ratio)
-        ratio_err[inf_filter] = rel_unc_ratio[inf_filter]*ratio_hist[inf_filter]
-
+        ratio_err[both_pos] = rel_unc_ratio[both_pos] * ratio_hist[both_pos]
         # logger.debug(f"plotDataMC compare ratio_err: {ratio_err}")
 
         hep.histplot(ratio_hist,
@@ -218,31 +223,55 @@ def plotDataMC_compare(
     # compute and display separation power
     # -----------------------------------------
     # Separation power, d=\frac{1}{2}\int{|s(x)~-~b(x)|}$, where $s(x)$ and $b(x)$ are normalized signal and background distributions.
-    if len(sig_MC_dict) > 0:
+    logger.debug("Computing separation power for signal samples...")
+    if len(sig_MC_dict) > 0 and len(bkg_MC_hist_l) > 0:
         # bin widths for integral
         widths = np.diff(binning)
+
         # sum background histograms and normalize to density
         bkg_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
-        # bkg_density[bkg_sum > 0] = bkg_sum[bkg_sum > 0] / np.sum(bkg_sum[bkg_sum > 0] * widths)
-        bkg_density = bkg_sum / np.sum(bkg_sum * widths)
+        bkg_norm = np.sum(bkg_sum * widths)
+
+        if bkg_norm > 0:
+            bkg_density = bkg_sum / bkg_norm
+        else:
+            bkg_density = None  # cannot compute separation
+
         # loop over each signal sample and place text in upper-right, offset per sample
         for idx, sig_name in enumerate(sig_MC_dict.keys()):
             sig_arr = sig_MC_dict[sig_name]["hist_arr"]
-            # normalize signal to density
-            sig_density = sig_arr / np.sum(sig_arr * widths)
+            sig_norm = np.sum(sig_arr * widths)
+
             # separation power
-            d_val = 0.5 * np.sum(np.abs(sig_density - bkg_density) * widths)
+            d_val = np.nan
+
+            if bkg_density is not None and sig_norm > 0:
+                sig_density = sig_arr / sig_norm
+                d_val = 0.5 * np.sum(np.abs(sig_density - bkg_density) * widths)
+
+            # Text placement
             if log_scale:
                 y_pos = 0.93 - idx * 0.07
                 x_pos = 0.35
             else:
                 y_pos = 0.45 - idx * 0.07
                 x_pos = 0.95
-            ax_main.text(
-                x_pos, y_pos,
-                f"{sig_name}: d = {d_val:.2f}",
-                ha="right", va="center", transform=ax_main.transAxes
+
+            text_val = (
+                f"{sig_name}: d = {d_val:.2f}"
+                if np.isfinite(d_val)
+                else f"{sig_name}: d = N/A"
             )
+
+            ax_main.text(
+                x_pos,
+                y_pos,
+                text_val,
+                ha="right",
+                va="center",
+                transform=ax_main.transAxes,
+            )
+    logger.debug("Finished computing separation power for signal samples.")
 
     # -----------------------------------------
     # Legend, title, etc +  save figure

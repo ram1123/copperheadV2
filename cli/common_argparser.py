@@ -71,6 +71,12 @@ def build_common_parser() -> argparse.ArgumentParser:
         help="Path of yaml file containing the dataset names",
     )
     parser.add_argument(
+        "--sample-config",
+        dest="sample_config",
+        default="configs/samples/samples.yaml",
+        help="Path to the sample configuration YAML file",
+    )
+    parser.add_argument(
         "-frac",
         "--change_fraction",
         dest="fraction",

@@ -26,9 +26,9 @@
     },
     "dimuon_pt_log": {
         "variable": "dimuon_pt_log",
-        "binning_linspace": [0, 200, 51],
+        "binning_linspace": [0, 10, 50],
         "density": false,
-        "ylabel": "Events / 1 GeV",
+        "ylabel": "Events / 0.2 GeV",
         "xlabel": "log($p_T(\\mu\\mu)$) [GeV]",
         "color": "royalblue"
     },
@@ -677,6 +677,14 @@
         "binning_linspace": [0, 2500, 30],
         "density": false,
         "ylabel": "Events / 1 GeV",
+        "xlabel": "$m_{jj}$ [GeV]",
+        "color": "royalblue"
+    },
+    "jj_mass_log_nominal": {
+        "variable": "jj_mass_log_nominal",
+        "binning_linspace": [0, 10, 50],
+        "density": false,
+        "ylabel": "Events / 0.2 GeV",
         "xlabel": "$m_{jj}$ [GeV]",
         "color": "royalblue"
     },

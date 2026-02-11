@@ -207,8 +207,8 @@ for year in "${years[@]}"; do
     training_tag="trained_best_optuna_03trail_v3"
 
     # ########## Compact command ##########
-    # command_compact="python scripts/compact_parquet_data.py -y $year -l $save_path -m $model_trained_path/$training_tag --add_dnn_score  --fix_dimuon_mass --tag $save_postfix  "
-    command_compact="python scripts/compact_parquet_data.py -y $year -i $save_path  "
+    # command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path/$training_tag --add_dnn_score  --fix_dimuon_mass --tag $save_postfix  "
+    command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path  "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
@@ -320,6 +320,18 @@ for year in "${years[@]}"; do
             log "Running stage3 for year $year..."
             log "Command: $command3"
             eval "$command3"
+            ;;
+        4)
+            log "Running stage4 (datacard preparation) for year $year..."
+            # ########## STAGE-4 command ##########
+            SRC_DIR="$save_path/stage3_datacards_${save_postfix}"
+            DEST_DIR="/depot/cms/private/users/shar1172/CombineSetup/CMSSW_14_1_0_pre4/src/HiggsAnalysis/CombinedLimit/HMuMu_StatisticalAnalysis/run3_prelims/"
+            echo "Copying datacards from $SRC_DIR to $DEST_DIR/stage3_datacards_${save_postfix}/"
+            mkdir -p "${DEST_DIR}"
+            rsync -av --delete "${SRC_DIR}" "${DEST_DIR}/${label}/"
+            # -a : preserve permissions, timestamps, symbolic links,
+            # -v : verbose output
+            # --delete : delete files in the destination that are not in the source
             ;;
         all)
             log "Running pre-stage for year $year..."

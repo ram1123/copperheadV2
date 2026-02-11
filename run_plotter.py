@@ -3,99 +3,98 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
+from shlex import join as shjoin
 
 from modules.trials import get_stage1_path
 from modules.utils import logger
 
 logger.setLevel(logging.INFO)
 
-DRY_RUN = len(sys.argv) > 1 and sys.argv[1] == "--dry-run"
+# -----------------------------------------------------------------------------
+# CLI flags (no argparse)
+# -----------------------------------------------------------------------------
+ARGS = set(sys.argv[1:])
+DRY_RUN = "--dry-run" in ARGS
+FORCE = "--force" in ARGS
+DEBUG = "--debug" in ARGS
 
-base_script = ["python", "plotter/validation_plotter_unified.py"]
+if DEBUG:
+    logger.setLevel(logging.DEBUG)
 
-stage1_dir = get_stage1_path()  # default = "current"
-LOAD_PATH = str(Path(stage1_dir) / "{year}" / "f1_0")
+# -----------------------------------------------------------------------------
+# User config
+# -----------------------------------------------------------------------------
+BASE_SCRIPT = ["python", "plotter/validation_plotter_unified.py"]
+
+stage1_dir = Path(get_stage1_path())  # default = "current"
+LOAD_PATH = stage1_dir / "{year}" / "f1_0"
 logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
-# LOAD_PATH = "/depot/cms/users/yun79/hmm/copperheadV1clean/Run3ONov03_2025_KITMuScaleSmearOn_mediumMuId/stage1_output/2024/f1_0"
-# LOAD_PATH = "/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_31Jan2025_JER_strat2/stage1_output/2024/f1_0"
-
-outputDir = "_".join(LOAD_PATH.split("/")[-4].split("_")[:2]) # Format: Run<n>_nanoAODv<version>
+# Get the main directory based on run2 and nanoAOD version from the load path, e.g. Run3_nanoAODv12
+# Example: Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -> Run3_nanoAODv12
+stage1_name = stage1_dir.name
+parts = stage1_name.split("_")
+outputDir = "_".join(parts[:2]) if len(parts) >= 2 else stage1_name
 logger.info(f"outputDir: {outputDir}")
 
-# SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/Hyeon_AllSamples_DYWgted_{LOAD_PATH.split('/')[-4]}/"
-# SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_01December/{LOAD_PATH.split('/')[-4]}/"
-# SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/DY_jet_binned/{LOAD_PATH.split('/')[-4]}/"
-# SAVE_PATH = f"./validation/figs/Run3_nanoAODv12_23October/DY_MLL_binned/{LOAD_PATH.split('/')[-4]}/"
-# SAVE_PATH = f"./validation/figs/Run2_nanoAODv12_HEMVetoFix_10Dec_AllAdditionalVars/{LOAD_PATH.split('/')[-4]}/"
-# SAVE_PATH = f"./validation/figs/Run3_nanoAODv15/{LOAD_PATH.split('/')[-4]}_DYMLLBinned/"
-# SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_DYmadgraph/"
-# SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_aMCatNLO/"
-# SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_MLL_binned/"
-# SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_Hyeon01Feb/"
-SAVE_PATH = f"./validation/figs/{outputDir}/{LOAD_PATH.split('/')[-4]}_inclusive_newZpT/"
-logger.info(f"Using SAVE_PATH: {SAVE_PATH}")
+SAVE_TAG = "incDY_11Feb"
+SAVE_ROOT = Path("./validation/figs") / outputDir / f"{stage1_name}_{SAVE_TAG}"
+logger.info(f"Using SAVE_ROOT: {SAVE_ROOT}")
 
-# check if  SAVE_PATH exists then throw error and exit. This is just to prevent overwriting existing plots
-if Path(SAVE_PATH).exists():
-    logger.error(f"SAVE_PATH: {SAVE_PATH} exists.")
-    # sys.exit(1)
+# Prevent overwriting
+if SAVE_ROOT.exists() and not FORCE:
+    raise RuntimeError(f"SAVE_ROOT exists: {SAVE_ROOT} (use --force to proceed)")
 
-
-# years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016", "*"]
+years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # years = ["2022preEE"]
-years = ["2022postEE"]
+# years = ["2022postEE"]
+# years = ["2023"]
 # years = ["2023BPix"]
-# years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
-# years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years = ["2024"]
-# years = ["2022postEE", "2023", "2023BPix"]
-# years = ["2023", "2023BPix"]
-# years = ["*"]
-
 categories = ["nocat", "vbf", "ggh"]
-# categories = ["nocat", "ggh"]
-# categories = ["vbf", "ggh"]
+# categories = ["ggh"]
 # categories = ["vbf"]
 # categories = ["nocat"]
 
 # Boolean flags
-vbf_filter_study_options = [False]  # True to apply VBF filter study, False to skip it
-remove_zpt_weights_options = [True]  # True to remove zpt weights, False to keep them
-debug_options = False  # If True, set log level to DEBUG
-min_set_of_vars = True  # If True, only use a minimal set of variables  to plot
+vbf_filter_study_options = [False]  # True/False list
+remove_zpt_weights_options = [False]  # True/False list
+min_set_of_vars = False  # minimal set of vars
 
 region_options = [
-    # ["h-sidebands", "z-peak", "signal", "h-peak"]
-    # ["h-sidebands", "signal", "h-peak"]
-    ["h-sidebands", "z-peak"]
-    # ["z-peak"]
-    # ["h-sidebands"]
+    ["h-sidebands", "z-peak"],
 ]
-# njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets
-# njets_options = ["0", "1", "2"]  # inclusive = No cut on nJets
-# njets_options = [ "0", "1"]  # inclusive = No cut on nJets
-njets_options = ["inclusive"]  # inclusive = No cut on nJets
-# njets_options = ["2"]  # inclusive = No cut on nJets
 
-def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_weights, region, njets):
+njets_options = ["inclusive"]
+# njets_options = ["inclusive", "0", "1", "2"]
+
+
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+def build_command(
+    year: str,
+    save_path: Path,
+    load_path: Path,
+    cat: str,
+    vbf_filter_study: bool,
+    remove_zpt_weights: bool,
+    region: list[str],
+    njets: str,
+) -> list[str]:
     cmd = (
-        base_script +
-        ["-y", year,
-         "--save_path", save_path,
-         "--load", load_path,
-         "-cat", cat,
-         "--njets", njets,
-         "--use-compacted", "compacted",  # options: "", "compacted", "compacted_WithDNNScore"
-         "--use_gateway",
-         "--cluster_index", "0",
-        #  "--dnn-score"
-        # "--addVars"
-         ]
+        BASE_SCRIPT
+        + ["-y", year]
+        + ["--save_path", str(save_path)]
+        + ["--load", str(load_path)]
+        + ["-cat", cat]
+        + ["--use-compacted", "compacted"]  # "", "compacted", "compacted_WithDNNScore"
+        + ["--use_gateway", "--cluster_index", "1"]
+        + ["--njets", str(njets)]
     )
 
-    if debug_options:
-        cmd += ["--log-level",  "DEBUG"]
+    if DEBUG:
+        cmd += ["--log-level", "DEBUG"]
 
     if min_set_of_vars:
         cmd += ["--minimum_set"]
@@ -104,50 +103,69 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
         cmd += ["--vbf_filter_study"]
 
     if region:
-        cmd += ["--region"] + region
-    if njets is not None:
-        cmd += ["--njets", str(njets)]
+        cmd += ["--region", *region]
 
     if remove_zpt_weights:
-        cmd.append("--remove_zpt_weights")
+        cmd += ["--remove_zpt_weights"]
 
     return cmd
 
+
 def run_all_combos():
-    i = 1
+    job_idx = 0
+
     for year in years:
-        # save_path = f"{SAVE_PATH}"
-        if year == "2016":
-            load_path = LOAD_PATH.format(year=str(year)+"*")
-        else:
-            load_path = LOAD_PATH.format(year=year)
+        load_path = Path(str(LOAD_PATH).format(year=year))
+
         combo_iter = itertools.product(
             categories,
             vbf_filter_study_options,
             remove_zpt_weights_options,
             region_options,
-            njets_options
+            njets_options,
         )
-        for cat, vbf_flag, zpt_flag, region, njets in combo_iter:
-            save_path = str(Path(f"{SAVE_PATH}") / f"VBFfilter_{vbf_flag}")
-            # if cat == "ggh" and vbf_flag:
-            #     logger.debug(f"Skipping ggh with vbf_filter_study: {i}")
-            #     continue  # skip --vbf_filter_study for ggh, not meaningful
 
-            if cat == "vbf" and (not (njets == "inclusive" )):
-                logger.debug(f"Skipping vbf with njets: {njets}")
-                continue  # skip njets for vbf, not meaningful
+        for cat, vbf_flag, zpt_flag, region_list, njets in combo_iter:
+            # skip meaningless combos
+            if cat == "vbf" and njets != "inclusive":
+                logger.debug(f"Skipping vbf with njets={njets} (not meaningful)")
+                continue
 
-            # skip if vbf_filter_study_options is True then remove "z-peak" from region
-            if vbf_flag and "z-peak" in region:
-                region = [r for r in region if r != "z-peak"]
-                logger.debug(f"Removing 'z-peak' from region for vbf_filter_study: {region}")
+            # if vbf_filter_study: remove z-peak from region
+            region = [r for r in region_list if not (vbf_flag and r == "z-peak")]
 
-            cmd = build_command(year, save_path, load_path, cat, vbf_flag, zpt_flag, region, njets)
-            logger.info(f"[{year}][{cat}][{i}] Running: {' '.join(cmd)}")
+            # structured save dirs (much easier to browse)
+            save_path = (
+                SAVE_ROOT
+                / f"VBFfilter_{vbf_flag}"
+                # / year
+                # / cat
+                # / f"njets_{njets}"
+                # / f"zptRemoved_{zpt_flag}"
+            )
+            save_path.mkdir(parents=True, exist_ok=True)
+
+            cmd = build_command(
+                year=year,
+                save_path=save_path,
+                load_path=load_path,
+                cat=cat,
+                vbf_filter_study=vbf_flag,
+                remove_zpt_weights=zpt_flag,
+                region=region,
+                njets=njets,
+            )
+
+            job_idx += 1
+            logger.info("\n" + "=" * 80)
+            logger.info(
+                f"[{job_idx:04d}] {year} {cat} njets={njets} vbf={vbf_flag} zptRm={zpt_flag}"
+            )
+            logger.info(shjoin(cmd))
+
             if not DRY_RUN:
                 subprocess.run(cmd, check=True)
-            i += 1
+
 
 if __name__ == "__main__":
     run_all_combos()

@@ -53,7 +53,7 @@ GGH_TRAINING_VARS: List[str] = [
 VBF_TRAINING_VARS: List[str] = [
     "dimuon_mass",
     "dimuon_pt",
-    # "dimuon_pt_log",
+    "dimuon_pt_log",
     "dimuon_rapidity",
     "dimuon_ebe_mass_res",
     "dimuon_ebe_mass_res_rel",
@@ -71,7 +71,7 @@ VBF_TRAINING_VARS: List[str] = [
     "nsoftjets5_nominal",
     "htsoft2_nominal",
     "rpt_nominal",
-    # "ll_zstar_log_nominal",
+    "ll_zstar_log_nominal",
     "mmj_min_dEta_nominal",
     "pt_centrality_nominal",
 ]
@@ -88,6 +88,26 @@ MUON_PLOT_VARS: List[str] = [
     "mu2_phi",
     "mu1_pt_over_mass",
     "mu2_pt_over_mass",
+]
+
+DIMUON_PLOT_VARS: List[str] = [
+    "dimuon_eta",
+    "dimuon_pt",
+    "dimuon_phi",
+    "dimuon_mass",
+]
+
+# ----------------------------------------------------------------------
+# Jets: additional variables
+# -----------------------------------------------------------------------
+JETS_PLOT_VARS: List[str] = [
+    "njets_nominal",
+    "jet1_pt_nominal",
+    "jet1_eta_nominal",
+    "jet1_phi_nominal",
+    "jet2_pt_nominal",
+    "jet2_eta_nominal",
+    "jet2_phi_nominal",
 ]
 
 # ----------------------------------------------------------------------
@@ -132,9 +152,10 @@ VBF_ADDITIONAL_VARS: List[str] = (
 # ----------------------------------------------------------------------
 VAR_SETS: Dict[str, List[str]] = {
     "vbf_training": VBF_TRAINING_VARS,
-    # "vbf_additional": VBF_ADDITIONAL_VARS,
     "ggh_training": GGH_TRAINING_VARS,
     "muon_plots": MUON_PLOT_VARS,
+    "dimuon_plots": DIMUON_PLOT_VARS,
+    # "vbf_additional": VBF_ADDITIONAL_VARS,
 }
 
 

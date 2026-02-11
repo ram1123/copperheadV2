@@ -11,7 +11,7 @@ roccor_file:
   "2023": data/roch_corr/2023_Summer23.json
   2023BPix: data/roch_corr/2023_Summer23BPix.json
   # "2024":  /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-11-27/muon_scalesmearing.json.gz
-  "2024": /work/users/yun79/sideHustle/copperheadV2/data/roch_corr/2024_Summer24.json # From Hyeon (Copied from GitLab)
+  "2024": data/roch_corr/2024_Summer24.json # From Hyeon (Copied from GitLab)
 BS_res_calib_path:
   2016preVFP:
     MC: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12_MC.json
