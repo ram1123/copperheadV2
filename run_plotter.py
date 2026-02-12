@@ -32,8 +32,9 @@ logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
 # Get the main directory based on run2 and nanoAOD version from the load path, e.g. Run3_nanoAODv12
 # Example: Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -> Run3_nanoAODv12
-stage1_name = stage1_dir.name
+stage1_name = stage1_dir.parent.name
 parts = stage1_name.split("_")
+logger.info(f"Parsed stage1_name: {stage1_name}, parts: {parts}")
 outputDir = "_".join(parts[:2]) if len(parts) >= 2 else stage1_name
 logger.info(f"outputDir: {outputDir}")
 
@@ -45,16 +46,17 @@ logger.info(f"Using SAVE_ROOT: {SAVE_ROOT}")
 if SAVE_ROOT.exists() and not FORCE:
     raise RuntimeError(f"SAVE_ROOT exists: {SAVE_ROOT} (use --force to proceed)")
 
-years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
-# years = ["2022preEE"]
+# years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+years = ["2022preEE"]
 # years = ["2022postEE"]
 # years = ["2023"]
 # years = ["2023BPix"]
 # years = ["2024"]
-categories = ["nocat", "vbf", "ggh"]
+
+# categories = ["nocat", "vbf", "ggh"]
 # categories = ["ggh"]
 # categories = ["vbf"]
-# categories = ["nocat"]
+categories = ["nocat"]
 
 # Boolean flags
 vbf_filter_study_options = [False]  # True/False list
@@ -67,6 +69,7 @@ region_options = [
 
 njets_options = ["inclusive"]
 # njets_options = ["inclusive", "0", "1", "2"]
+# njets_options = ["0", "1", "2"]
 
 
 # -----------------------------------------------------------------------------
@@ -89,7 +92,7 @@ def build_command(
         + ["--load", str(load_path)]
         + ["-cat", cat]
         + ["--use-compacted", "compacted"]  # "", "compacted", "compacted_WithDNNScore"
-        + ["--use_gateway", "--cluster_index", "1"]
+        + ["--use_gateway", "--cluster_index", "0"]
         + ["--njets", str(njets)]
     )
 

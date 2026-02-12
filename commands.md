@@ -6,6 +6,11 @@
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_10Feb_FilterJets -y "2022postEE 2022preEE 2023 2023BPix" -m 1 -k )
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_10Feb_FilterJets -y "2022postEE 2022preEE 2023 2023BPix 2024" -m compact -k )
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_10Feb_FilterJets -y "2024" -m 1 -k -i 0)
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_10Feb_FilterJetsHorn30GeV_JEROff -y "2024" -m 1 -k -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV_JEROff -y "2022preEE 2022postEE" -m 1 -k -i 0)
 ```
 
 # 10 February 2026
