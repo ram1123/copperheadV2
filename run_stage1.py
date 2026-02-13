@@ -23,6 +23,7 @@ from modules.utils import get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
+from configs.skip_stage1_run import samples_to_skip, samples_to_run
 
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
@@ -32,18 +33,23 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 np.set_printoptions(threshold=sys.maxsize)
 
-def trim_memory() -> int:
-     libc = ctypes.CDLL("libc.so.6")
-     return libc.malloc_trim(0)
 
-# # test code limiting memory leak -----------------------------------
-# import gc
-# client.run(gc.collect)  # collect garbage on all workers
-# import ctypes
-# def trim_memory() -> int:
-#      libc = ctypes.CDLL("libc.so.6")
-#      return libc.malloc_trim(0)
-# client.run(trim_memory)
+def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=None):
+    """
+    Decide whether a dataset should be processed.
+    Returns True if it should run, False if it should be skipped.
+    """
+
+    # If explicit run-list is provided → highest priority
+    if samples_to_run:
+        return dataset in samples_to_run
+
+    # Else, apply skip list if requested
+    if args.skipSamples and samples_to_skip:
+        return dataset not in samples_to_skip
+
+    # Default → run
+    return True
 
 # #-------------------------------------------------------------------
 
@@ -273,10 +279,10 @@ if __name__ == "__main__":
                 #     logger.info(f"Skipping dataset {dataset} ")
                 #     continue
 
-                from configs.skip_stage1_run import samples_to_skip
-                if dataset in samples_to_skip and args.skipSamples:
-                    logger.warning(f"Skipping dataset as per configs/skip_stage1_run.py: {dataset}")
+                if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
+                    logger.warning(f"Skipping dataset: {dataset}")
                     continue
+
                 sample_step = time.time()
                 # dict to hold file lenght info per sample
                 dict_file_length = {
