@@ -1,0 +1,193 @@
+configfile: "workflow/config.yaml"
+
+YEARS = config["years"]
+wildcard_constraints:
+    year="(" + "|".join(YEARS) + ")"
+
+NANOV = str(config["nanoAODv"])
+SUFFIX = config["label_suffix"]
+
+
+# Construct label automatically
+LABEL = f"Run3_nanoAODv{NANOV}_{SUFFIX}"
+
+DATASET_YAML = config["dataset_yaml_v12"] if NANOV == "12" else config["dataset_yaml_v15"]
+
+USE_GW = bool(config.get("use_gateway", False))
+CLIDX  = str(config.get("cluster_index", 0))
+
+ZPT = config["zpt"]
+ZPT_TAG   = LABEL
+ZPT_OUT   = ZPT.get("outbase", "try_zpt_dnn")
+ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
+ZPT_BATCH = int(ZPT.get("batch", 65536))
+
+
+def gw_flags():
+    return f"-k -i {CLIDX}" if USE_GW else ""
+
+rule all:
+    input:
+        # (1) stage1 for all years
+        expand("state/stage1_{year}.done", year=YEARS),
+
+        # (2) plotter (after stage1)
+        "state/plots.done",
+
+        # (3) zpt trainings (after stage1)
+        expand("state/zpt_wgt_{year}_njet0.done", year=YEARS),
+        expand("state/zpt_wgt_{year}_njet1.done", year=YEARS),
+        expand("state/zpt_wgt_{year}_njet2p.done", year=YEARS),
+
+        # (4) rerun stage1 DY-only after zpt DNNs
+        expand("state/stage1_dy_afterZwgt_{year}.done", year=YEARS),
+
+# ---------------------------------------
+# 1) Stage-1 (all samples)
+# ---------------------------------------
+rule stage1:
+    output:
+        done="state/stage1_{year}.done"
+    log:
+        "logs/stage1_{year}.log"
+    params:
+        gw=lambda wc: gw_flags()
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+          -c {DATASET_YAML} \
+          -v {NANOV} \
+          -l {LABEL} \
+          -y "{wildcards.year}" \
+          -m 1 \
+          {params.gw} \
+          | sed 's/\r/\n/g' \
+          > {log} 2>&1
+        touch {output.done}
+        """
+
+# ---------------------------------------
+# 2) Plotter (depends on stage1 outputs)
+# If your plotter needs specific years, pass them here.
+# ---------------------------------------
+rule plots:
+    input:
+        expand("state/stage1_{year}.done", year=YEARS)
+    output:
+        done="state/plots.done"
+    log:
+        "logs/plotter.log"
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        python run_plotter.py > {log} 2>&1
+        touch {output.done}
+        """
+
+# ---------------------------------------
+# 3) ZpT DNN trainings (3 bins) per year
+# Depends on stage1 because it uses stage1 outputs.
+# ---------------------------------------
+rule zpt_njet0:
+    input:
+        "state/stage1_{year}.done"
+    output:
+        done="state/zpt_wgt_{year}_njet0.done"
+    log:
+        "logs/zpt_wgt_{year}_njet0.log"
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
+          -y {wildcards.year} \
+          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet0 \
+          --njet-bin 0 \
+          --max-events {ZPT_MAXEV} \
+          --batch {ZPT_BATCH} \
+          > {log} 2>&1
+        touch {output.done}
+        """
+
+rule zpt_njet1:
+    input:
+        "state/stage1_{year}.done"
+    output:
+        done="state/zpt_wgt_{year}_njet1.done"
+    log:
+        "logs/zpt_wgt_{year}_njet1.log"
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
+          -y {wildcards.year} \
+          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet1 \
+          --njet-bin 1 \
+          --max-events {ZPT_MAXEV} \
+          --batch {ZPT_BATCH} \
+          > {log} 2>&1
+        touch {output.done}
+        """
+
+rule zpt_njet2p:
+    input:
+        "state/stage1_{year}.done"
+    output:
+        done="state/zpt_wgt_{year}_njet2p.done"
+    log:
+        "logs/zpt_wgt_{year}_njet2p.log"
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
+          -y {wildcards.year} \
+          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet2p \
+          --njet-bin 2p \
+          --max-events {ZPT_MAXEV} \
+          --batch {ZPT_BATCH} \
+          > {log} 2>&1
+        touch {output.done}
+        """
+
+# ---------------------------------------
+# 4) Stage-1 rerun DY-only, after all 3 trainings for that year
+# IMPORTANT: this requires stage1_loop_Improved.sh (or run_stage1.py)
+# to support "run only DY".
+# ---------------------------------------
+rule stage1_dy_only:
+    input:
+        z0="state/zpt_wgt_{year}_njet0.done",
+        z1="state/zpt_wgt_{year}_njet1.done",
+        z2="state/zpt_wgt_{year}_njet2p.done",
+    output:
+        done="state/stage1_dy_afterZwgt_{year}.done"
+    log:
+        "logs/stage1_dy_afterZwgt_{year}.log"
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+
+        # OPTION A (best): add an option to your bash script like: --only DY
+        # bash stage1_loop_Improved.sh ... -m 1 --only DY
+
+        # OPTION B (no script change): point to a DY-only dataset YAML
+        # (make a tiny yaml with only DY samples)
+
+        bash stage1_loop_Improved.sh \
+          -c {DATASET_YAML} \
+          -v {NANOV} \
+          -l {LABEL} \
+          -y "{wildcards.year}" \
+          -m 1 \
+          {gw_flags()} \
+          --only DY \
+          > {log} 2>&1
+
+        touch {output.done}
+        """

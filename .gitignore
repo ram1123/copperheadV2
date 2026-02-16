@@ -33,3 +33,6 @@ log*.txt
 .pixi/*
 !.pixi/config.toml
 pixi.lock
+.snakemake/
+*.pt
+*.npz

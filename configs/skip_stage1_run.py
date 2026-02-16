@@ -22,4 +22,8 @@ samples_to_skip = [
     "dyTo2L_M-50_0j",
     "dyTo2L_M-50_1j",
     "dyTo2L_M-50_2j",
+    "dyTo2Mu_MLL_10To50",
+    "dyTo2Mu_MLL_50To120",
+    "dyTo2Mu_MLL_120To200",
+    "dyTo2Mu_M-105To160",
 ]

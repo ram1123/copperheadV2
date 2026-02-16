@@ -204,7 +204,7 @@ def main() -> None:
     print(f"Will write yields to: {outfile}")
 
     # Start Dask client
-    get_dask_client()
+    get_dask_client(use_gateway = True, cluster_index = 2)
 
     rows: List[Dict[str, Any]] = []
 
