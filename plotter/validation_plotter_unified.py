@@ -242,6 +242,13 @@ if __name__ == "__main__":
     help="If true, remove z-pt weights from the events",
     )
     parser.add_argument(
+        "--use_dnn_zpt_weights",
+        dest="use_dnn_zpt_weights",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="If true, use DNN-based z-pt weights for the events",
+    )
+    parser.add_argument(
         "--njets",
         dest="njets",
         choices=["inclusive", "0", "1", "2"],
@@ -452,6 +459,14 @@ if __name__ == "__main__":
                 logger.debug("Append separate_wgt_zpt_wgt to fields2load!")
                 fields2load.append("separate_wgt_zpt_wgt")
 
+            if (
+                "zpt_wgt_reco_dnn" in events.fields
+                and "separate_wgt_zpt_wgt" in events.fields
+                and args.use_dnn_zpt_weights
+            ):
+                logger.debug("Append separate_wgt_zpt_wgt and zpt_wgt_reco_dnn to fields2load!")
+                fields2load.append("separate_wgt_zpt_wgt")
+                fields2load.append("zpt_wgt_reco_dnn")
         # filter out redundant fields by using the set object
         fields2load = list(set(fields2load))
         logger.debug(f"fields2load: {fields2load}")
@@ -470,6 +485,14 @@ if __name__ == "__main__":
             logger.warning("removing separate_wgt_zpt_wgt!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
 
+        if (
+            "separate_wgt_zpt_wgt" in events.fields
+            and "zpt_wgt_reco_dnn" in events.fields
+            and args.use_dnn_zpt_weights
+            ):
+            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
+            events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_reco_dnn"] # apply the weights obtained from the DNN
         # if "dy" in process.lower():
         #     # scale the weights for DY samples by 3.0
         #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
@@ -627,6 +650,15 @@ if __name__ == "__main__":
                         logger.debug("removing Zpt rewgt!")
                         weights = weights/events["separate_wgt_zpt_wgt"]
 
+                    if (
+                        "separate_wgt_zpt_wgt" in events.fields
+                        and "zpt_wgt_reco_dnn" in events.fields
+                        and args.use_dnn_zpt_weights
+                    ):
+                        logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+                        weights = weights / events["separate_wgt_zpt_wgt"]
+                        weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
+
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
                     # weights = np.nan_to_num(weights, nan=0.0)
@@ -772,15 +804,18 @@ if __name__ == "__main__":
             # All data are prepped, now plot Data/MC histogram
             # -------------------------------------------------------
             # if args.remove_zpt_weights, then update the args.label
-            remove_zpt_str = ""
+            zpt_postfix = "default_zpt_weights"
             if args.remove_zpt_weights:
                 logger.warning("Removing zpt weights from the events!")
-                remove_zpt_str = "no_zpt_weights"
+                zpt_postfix = "no_zpt_weights"
+            if args.use_dnn_zpt_weights:
+                logger.warning("Using DNN-based zpt weights for the events!")
+                zpt_postfix = "dnn_zpt_weights"
 
             if args.year == "*":
-                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{remove_zpt_str}"
+                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
             else:
-                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{remove_zpt_str}"
+                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
             logger.debug(f"full_save_path: {full_save_path}")
 
             if not os.path.exists(full_save_path):

@@ -45,6 +45,7 @@ from src.corrections.jet import (
     jet_puid,
 )
 from src.corrections.rochester import apply_roccor, apply_roccorRun3
+from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
 
 from modules.vector_operations import (
     getRapidity,
@@ -1340,6 +1341,7 @@ class EventProcessor(processor.ProcessorABC):
                 "dimuon_dEta": dimuon_dEta,
                 "dimuon_dPhi": dimuon_dPhi,
                 "dimuon_dR": dimuon_dR,
+                "acoplanarity": acoplanarity,
             },
         )
 
@@ -1502,8 +1504,6 @@ class EventProcessor(processor.ProcessorABC):
                 "mu2_svIdx":           mu2.svIdx,
 
                 "nmuons": nmuons,
-
-                "acoplanarity": acoplanarity,
 
                 "dimuon_cos_theta_eta": dimuon_cos_theta_eta,
                 "dimuon_phi_eta": dimuon_phi_eta,
@@ -1732,6 +1732,7 @@ class EventProcessor(processor.ProcessorABC):
             njets_gen = n_genjets_pt30_eta47
 
             logger.info("=======================  apply zpt weights =======================")
+            whichMethod = "DNN" # or function
             # choose the config file
             if "MiNNLO" in dataset:
                 zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
@@ -1741,10 +1742,47 @@ class EventProcessor(processor.ProcessorABC):
             zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg)
             zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg)
 
+            # 1) choose model family (MiNNLO vs aMCatNLO)
+            # model_paths = self.config["zpt_dnn_models_aMCatNLO"]  # dict with 0j/1j/2j
+            model_paths_by_cats = {
+                "0j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet0/model_ts.pt",
+                "1j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet1/model_ts.pt",
+                "2j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet2p/model_ts.pt",
+            }
+            scalar_paths_by_cats = {
+                "0j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet0/scaler.npz",
+                "1j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet1/scaler.npz",
+                "2j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet2p/scaler.npz",
+            }
+
+            # 2) build features
+            zpt_features_reco = {
+                "mu1_pt": mu1.pt,
+                "mu2_pt": mu2.pt,
+                "mu1_eta": mu1.eta,
+                "mu2_eta": mu2.eta,
+                "acoplanarity": acoplanarity,
+                "dimuon_pt": dimuon.pt,
+                "dimuon_rapidity": getRapidity(dimuon),
+            }
+
+            cfg_base = ZptDNNConfig(
+                model_path="DUMMY",
+                feature_names=["mu1_pt", "mu2_pt", "mu1_eta", "mu2_eta", "acoplanarity", "dimuon_pt", "dimuon_rapidity"],
+                output_mode="weight",
+                batch_size=262144,
+                device="cpu"
+            )
+
+            zpt_wgt_reco_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_reco, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
+            zpt_wgt_gen_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_gen, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
+
             # --- save both to parquet
             _add_block(out_dict, {
                 "zpt_wgt_reco": zpt_wgt_reco,
+                "zpt_wgt_reco_dnn": zpt_wgt_reco_dnn,
                 "zpt_wgt_gen":  zpt_wgt_gen,
+                "zpt_wgt_gen_dnn": zpt_wgt_gen_dnn,
                 "njets_reco_for_zpt": njets_reco,
                 "njets_gen_for_zpt":  njets_gen,
             })
