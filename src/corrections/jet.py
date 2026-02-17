@@ -12,7 +12,7 @@ import random
 
 import logging
 from modules.utils import logger
-from modules.classify_year import is_run3
+from modules.classify_year import is_run3, is_run2
 
 def printCorrObjInputs(corr_obj):
     input_names = [inp.name for inp in corr_obj.inputs]
@@ -125,7 +125,6 @@ def get_jec_factories(jec_parameters: dict, year):
         for v in vals:
             stacks[key].extend(names[v])
 
-
     jec_input_options = {}
     jet_variations = ["jec", "junc", "jer"]
 
@@ -175,25 +174,19 @@ def get_jec_factories(jec_parameters: dict, year):
 
     return jec_factories, jec_factories_data
 
-def custom_jet_id(jets):
-    """
-    Reference: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
 
-    FIXME: Check these values for individual years if they differ
-    if (abs(Jet_eta) <= 2.6)
-      Jet_passJetIdTight = (Jet_neHEF < 0.99) && (Jet_neEmEF < 0.9) && (Jet_chMultiplicity+Jet_neMultiplicity > 1) && (Jet_chHEF > 0.01) && (Jet_chMultiplicity > 0);
-    else if (abs(Jet_eta) > 2.6 && abs(Jet_eta) <= 2.7)
-      Jet_passJetIdTight = (Jet_neHEF < 0.90) && (Jet_neEmEF < 0.99);
-    else if (abs(Jet_eta) > 2.7 && abs(Jet_eta) <= 3.0)
-      Jet_passJetIdTight = (Jet_neHEF < 0.99);
-    else if (abs(Jet_eta) > 3.0)
-      Jet_passJetIdTight = (Jet_neMultiplicity >= 2) && (Jet_neEmEF < 0.4);
-
-    bool Jet_passJetIdTightLepVeto = false;
-    if (abs(Jet_eta) <= 2.7) Jet_passJetIdTightLepVeto = Jet_passJetIdTight && (Jet_muEF < 0.8) && (Jet_chEmEF < 0.8);
-    else Jet_passJetIdTightLepVeto = Jet_passJetIdTight;
+def custom_jet_id(jets, year, jet_type="AK4PUPPI"):
     """
-    logger.debug(f"fields in jets: {jets.fields}")
+    https://twiki.cern.ch/twiki/bin/view/CMS/JetID13TeVUL#Preliminary_Recommendations_for
+
+     Returns:
+       pass_tight, pass_tight_lepveto
+    """
+    if jet_type != "AK4PUPPI":
+        raise ValueError(f"Unsupported jet type: {jet_type}")
+    if not is_run2(year):
+        raise ValueError(f"Custom jet ID is only defined for Run 2 years. Unsupported year: {year}")
+
     eta = jets.eta
     aeta = abs(eta)
 
@@ -205,36 +198,76 @@ def custom_jet_id(jets):
 
     chMult = jets.chMultiplicity
     neMult = jets.neMultiplicity
+    nMult = chMult + neMult
 
-    # tight ID definition
-    barrel_tight = ((aeta <= 2.6)
-        & (neHEF < 0.99) & (neEmEF < 0.90)
-        & ((chMult + neMult) > 1)
-        & (chHEF > 0.01) & (chMult > 0)
-    )
+    # -------------------------
+    # 2016 (pre/post VFP): barrel edge is 2.4
+    # -------------------------
+    if "2016" in year:
+        barrel_tight = (
+            (aeta <= 2.4)
+            & (neHEF < 0.90)
+            & (neEmEF < 0.90)
+            & (nMult > 1)
+            & (chHEF > 0.0)
+            & (chMult > 0)
+        )
+        transition_tight = (
+            (aeta > 2.4) & (aeta <= 2.7) & (neHEF < 0.98) & (neEmEF < 0.99)
+        )
+        endcap_tight = (aeta > 2.7) & (aeta <= 3.0) & (neMult >= 1)
+        forward_tight = (aeta > 3.0) & (aeta <= 5.0) & (neEmEF < 0.9) & (neMult > 2)
 
-    transition_tight = ((aeta > 2.6) & (aeta <= 2.7) & (neHEF < 0.90) & (neEmEF < 0.99))
-    endcap_tight = ((aeta > 2.7) & (aeta <= 3.0) & (neHEF < 0.99))
-    forward_tight = ((aeta > 3.0) & (neMult >= 2) & (neEmEF < 0.4))
+        pass_tight = barrel_tight | transition_tight | endcap_tight | forward_tight
 
-    pass_tight = barrel_tight | transition_tight | endcap_tight | forward_tight
+        # LepVeto is defined only for |eta|<=2.4 in the 2016 table
+        pass_tight_lepveto = ak.where(
+            aeta <= 2.4,
+            pass_tight & (muEF < 0.8) & (chEmEF < 0.8),
+            pass_tight,
+        )
 
-    # tightLepVeto
-    pass_tight_lepveto = ak.where(
-        aeta <= 2.7,
-        pass_tight & (muEF < 0.8) & (chEmEF < 0.8),
-        pass_tight,
-    )
+    # -------------------------
+    # 2017 & 2018: barrel edge is 2.6
+    # -------------------------
+    elif ("2017" in year) or ("2018" in year):
+        barrel_tight = (
+            (aeta <= 2.6)
+            & (neHEF < 0.90)
+            & (neEmEF < 0.90)
+            & (nMult > 1)
+            & (chHEF > 0.0)
+            & (chMult > 0)
+        )
+        transition_tight = (
+            (aeta > 2.6) & (aeta <= 2.7) & (neHEF < 0.90) & (neEmEF < 0.99)
+        )
+        endcap_tight = (aeta > 2.7) & (aeta <= 3.0) & (neHEF < 0.9999)
+        forward_tight = (aeta > 3.0) & (aeta <= 5.0) & (neEmEF < 0.9) & (neMult > 2)
+
+        pass_tight = barrel_tight | transition_tight | endcap_tight | forward_tight
+
+        # LepVeto applies up to |eta|<=2.7 in 2017/2018 table
+        pass_tight_lepveto = ak.where(
+            aeta <= 2.7,
+            pass_tight & (muEF < 0.8) & (chEmEF < 0.8),
+            pass_tight,
+        )
+    else:
+        raise ValueError(f"Unsupported year: {year}")
 
     return pass_tight, pass_tight_lepveto
 
 
-def jet_id(jets, config):
+def jet_id(jets, config, year = None):
     """https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
 
     If "jetId" is in the fields of jets, use that. Else, use custom_jet_id function as mentioned in the link:
     https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
     """
+    if year is None:
+        raise ValueError("Year must be specified for jet ID determination.")
+
     pass_jet_id = ak.ones_like(jets.pt, dtype=bool)
     jet_id2use = config["jet_id"]
     if hasattr(jets, "jetId"):
@@ -244,15 +277,47 @@ def jet_id(jets, config):
             "tightPassLepVeto": jets.jetId == 6,
         }
         pass_jet_id = jet_id_wps[jet_id2use]
-    else:
-        logger.warning("jets has no jetId attribute! Calling custom_jet_id...")
-        tight_id, tight_lepveto_id = custom_jet_id(jets)
-        jet_id_wps = {
-            "tight": tight_id,
-            "tightFailLepVeto": tight_id & (~tight_lepveto_id),
-            "tightPassLepVeto": tight_lepveto_id,
+    elif is_run2(year):
+        """For Run 2, use the custom jet ID based on the official tight WP definition."""
+        logger.info("Using custom jet ID for Run 2!")
+        pass_jet_id, _ = custom_jet_id(jets, year, jet_type="AK4PUPPI")
+    elif is_run3(year):
+        """For Run 3, use the correctionlib based jetID."""
+        logger.info("Using correctionlib-based jet ID for Run 3!")
+        jet_id_json_files = config["jet_id_json_files"]
+        cset = correctionlib.CorrectionSet.from_file(jet_id_json_files)
+        eval_dict = {
+            "eta": jets.eta,
+            "chHEF": jets.chHEF,
+            "neHEF": jets.neHEF,
+            "chEmEF": jets.chEmEF,
+            "neEmEF": jets.neEmEF,
+            "muEF": jets.muEF,
+            "chMultiplicity": jets.chMultiplicity,
+            "neMultiplicity": jets.neMultiplicity,
+            "multiplicity": jets.chMultiplicity + jets.neMultiplicity
         }
+
+        # Default tight for NanoAOD version 13 and above
+        idTight = cset["AK4PUPPI_Tight"]
+        inputsTight = [eval_dict[input.name] for input in idTight.inputs]
+        idTight_value = idTight.evaluate(*inputsTight)
+
+        # Default tight lepton veto
+        idTightLepVeto = cset["AK4PUPPI_TightLeptonVeto"]
+        inputsTightLepVeto = [eval_dict[input.name] for input in idTightLepVeto.inputs]
+        idTightLepVeto_value = idTightLepVeto.evaluate(*inputsTightLepVeto)
+
+        jet_id_wps = {
+            "tight": idTight_value == 1,
+            "tightFailLepVeto": (idTight_value == 1) & (idTightLepVeto_value == 0),
+            "tightPassLepVeto": (idTight_value == 1) & (idTightLepVeto_value == 1),
+        }
+
         pass_jet_id = jet_id_wps[jet_id2use]
+
+    else:
+        raise ValueError("Jet collection has no 'jetId' branch and is not Run 3 for correctionlib-based jet ID. Cannot determine jet ID.")
 
     return pass_jet_id
 
@@ -468,6 +533,8 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
         jetId_bits = jets.jetId
     else:
         # synthesize bit-coded jetId from custom_jet_id
+        # FIXME: Do we really this this? As HEM veto is there only for 2018 UL
+        #               Even if we need it, we should fetch it from the function jet_id.
         tight, tightLepVeto = custom_jet_id(jets)
         jetId_bits = ak.zeros_like(jets.pt, dtype=np.int8)
         jetId_bits = ak.where(tight, jetId_bits | 2, jetId_bits)

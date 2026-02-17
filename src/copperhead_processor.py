@@ -1192,25 +1192,103 @@ class EventProcessor(processor.ProcessorABC):
 
             # do mu SF start -------------------------------------
             logger.debug("doing musf!")
-            musf_lookup = get_musf_lookup(self.config)
-            muID, muIso, muTrig = musf_evaluator(
-                musf_lookup, self.config["year"], mu1, mu2
-            )
-            weights.add("muID",
+            if is_run2(year):
+                musf_lookup = get_musf_lookup(self.config)
+                muID, muIso, muTrig = musf_evaluator(
+                    musf_lookup, self.config["year"], mu1, mu2
+                )
+                weights.add("muID",
+                        weight=muID["nom"],
+                        weightUp=muID["up"],
+                        weightDown=muID["down"]
+                )
+                weights.add("muIso",
+                        weight=muIso["nom"],
+                        weightUp=muIso["up"],
+                        weightDown=muIso["down"]
+                )
+                weights.add("muTrig",
+                        weight=muTrig["nom"],
+                        weightUp=muTrig["up"],
+                        weightDown=muTrig["down"]
+                )
+            elif is_run3(year):
+                """
+                Use correctionlib for muon SFs in Run 3.
+                - ID/Iso event SF = SF(mu1) * SF(mu2)
+                - Trigger event SF = SF(leading muon)  (safe fallback when only SF map is available)
+                """
+
+                mu_sf_lookup_file = self.config["muSFFileList"]
+                # allow either a string path or list/tuple with one entry
+                if isinstance(mu_sf_lookup_file, (list, tuple)):
+                    mu_sf_lookup_file = mu_sf_lookup_file[0]
+
+                logger.info(f"mu_sf_lookup_file: {mu_sf_lookup_file}")
+                mu_sf_lookup = correctionlib.CorrectionSet.from_file(mu_sf_lookup_file)
+
+                # --- pick correction names (defaults; override via config if you want) ---
+                id_name = "NUM_TightID_DEN_TrackerMuons"
+                iso_name = "NUM_LoosePFIso_DEN_TightID"
+                trig_name = "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"
+                logger.info(f"Muon ID SF correction name: {id_name}"
+                    f"\nMuon Iso SF correction name: {iso_name}"
+                    f"\nMuon Trigger SF correction name: {trig_name}"
+                )
+
+                muID_corr   = mu_sf_lookup[id_name]
+                muIso_corr  = mu_sf_lookup[iso_name]
+                muTrig_corr = mu_sf_lookup[trig_name]
+
+                sf = muID_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "nominal")
+                sf_up = muID_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "systup")
+                sf_down = muID_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "systdown")
+                logger.info(f"Muon ID SF example values (nominal, up, down): {ak.to_numpy(sf[:5].compute())}, {ak.to_numpy(sf_up[:5].compute())}, {ak.to_numpy(sf_down[:5].compute())}")
+
+                raise NotImplementedError("This is just a test snippet to check if I can evaluate the correctionlib SFs outside of the weights collection. Please implement the full muon SFs for Run 3, including Iso and Trigger, and add them to the weights collection, similar to how it's done for Run 2.")
+
+                # --- per-muon SFs ---
+                mu1_eta, mu1_pt = mu1.eta_raw, mu1.pt_raw
+                mu2_eta, mu2_pt = mu2.eta_raw, mu2.pt_raw
+
+                mu1_id  = eval_corr(muID_corr,  mu1_eta, mu1_pt)
+                mu2_id  = eval_corr(muID_corr,  mu2_eta, mu2_pt)
+                mu1_iso = eval_corr(muIso_corr, mu1_eta, mu1_pt)
+                mu2_iso = eval_corr(muIso_corr, mu2_eta, mu2_pt)
+
+                # event ID/Iso = product
+                muID  = {k: mu1_id[k]  * mu2_id[k]  for k in ("nom", "up", "down")}
+                muIso = {k: mu1_iso[k] * mu2_iso[k] for k in ("nom", "up", "down")}
+
+                # Trigger: take leading pT muon SF (minimal + stable)
+                lead_is_mu1 = (mu1_pt >= mu2_pt)
+                mu1_trg = eval_corr(muTrig_corr, mu1_eta, mu1_pt)
+                mu2_trg = eval_corr(muTrig_corr, mu2_eta, mu2_pt)
+                muTrig = {
+                    k: ak.where(lead_is_mu1, mu1_trg[k], mu2_trg[k])
+                    for k in ("nom", "up", "down")
+                }
+
+                # --- feed weights in the same format as Run-2 ---
+                weights.add("muID",
                     weight=muID["nom"],
                     weightUp=muID["up"],
                     weightDown=muID["down"]
-            )
-            weights.add("muIso",
+                )
+                weights.add("muIso",
                     weight=muIso["nom"],
                     weightUp=muIso["up"],
                     weightDown=muIso["down"]
-            )
-            weights.add("muTrig",
+                )
+                weights.add("muTrig",
                     weight=muTrig["nom"],
                     weightUp=muTrig["up"],
                     weightDown=muTrig["down"]
-            )
+                )
+
+            else:
+                raise ValueError(f"Year {year} is not recognized as Run 2 or Run 3 year for muon SFs!")
+            raise NotImplementedError("Muon SFs for Run 3 are not fully implemented yet! Please implement the rest of the variations (Iso and Trigger) and add them to the weights collection, similar to how it's done for Run 2.")
             # do mu SF end -------------------------------------
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
@@ -1732,61 +1810,72 @@ class EventProcessor(processor.ProcessorABC):
             njets_gen = n_genjets_pt30_eta47
 
             logger.info("=======================  apply zpt weights =======================")
-            whichMethod = "DNN" # or function
-            # choose the config file
-            if "MiNNLO" in dataset:
-                zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
-            else:
-                zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
+            whichMethod = "function" # DNN or function or both
+            if whichMethod == "function" or whichMethod == "both":
+                # choose the config file
+                if "MiNNLO" in dataset:
+                    zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
+                else:
+                    zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
 
-            zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg)
-            zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg)
+                zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg)
+                zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg)
 
-            # 1) choose model family (MiNNLO vs aMCatNLO)
-            # model_paths = self.config["zpt_dnn_models_aMCatNLO"]  # dict with 0j/1j/2j
-            model_paths_by_cats = {
-                "0j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet0/model_ts.pt",
-                "1j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet1/model_ts.pt",
-                "2j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet2p/model_ts.pt",
-            }
-            scalar_paths_by_cats = {
-                "0j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet0/scaler.npz",
-                "1j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet1/scaler.npz",
-                "2j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet2p/scaler.npz",
-            }
+                # --- save both to parquet
+                _add_block(out_dict, {
+                    "zpt_wgt_reco": zpt_wgt_reco,
+                    "zpt_wgt_gen":  zpt_wgt_gen,
+                })
+            if (whichMethod == "DNN" or whichMethod == "both") and str(year) == "2024": #FIXME: year is temporarily here.
+                # 1) choose model family (MiNNLO vs aMCatNLO)
+                # model_paths = self.config["zpt_dnn_models_aMCatNLO"]  # dict with 0j/1j/2j
+                model_paths_by_cats = {
+                    "0j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet0/model_ts.pt",
+                    "1j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet1/model_ts.pt",
+                    "2j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet2p/model_ts.pt",
+                }
+                scalar_paths_by_cats = {
+                    "0j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet0/scaler.npz",
+                    "1j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet1/scaler.npz",
+                    "2j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet2p/scaler.npz",
+                }
 
-            # 2) build features
-            zpt_features_reco = {
-                "mu1_pt": mu1.pt,
-                "mu2_pt": mu2.pt,
-                "mu1_eta": mu1.eta,
-                "mu2_eta": mu2.eta,
-                "acoplanarity": acoplanarity,
-                "dimuon_pt": dimuon.pt,
-                "dimuon_rapidity": getRapidity(dimuon),
-            }
+                # 2) build features
+                zpt_features_reco = {
+                    "mu1_pt": mu1.pt,
+                    "mu2_pt": mu2.pt,
+                    "mu1_eta": mu1.eta,
+                    "mu2_eta": mu2.eta,
+                    "acoplanarity": acoplanarity,
+                    "dimuon_pt": dimuon.pt,
+                    "dimuon_rapidity": getRapidity(dimuon),
+                }
 
-            cfg_base = ZptDNNConfig(
-                model_path="DUMMY",
-                feature_names=["mu1_pt", "mu2_pt", "mu1_eta", "mu2_eta", "acoplanarity", "dimuon_pt", "dimuon_rapidity"],
-                output_mode="weight",
-                batch_size=262144,
-                device="cpu"
-            )
+                cfg_base = ZptDNNConfig(
+                    model_path="DUMMY",
+                    feature_names=[
+                        "mu1_pt","mu2_pt","mu1_eta","mu2_eta",
+                        "acoplanarity","dimuon_pt","dimuon_rapidity"
+                    ],
+                    output_mode="logit_to_odds",
+                    device="cpu",
+                    clip_weight_min=0.2,
+                    clip_weight_max=5.0,
+                )
 
-            zpt_wgt_reco_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_reco, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
-            zpt_wgt_gen_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_gen, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
+                zpt_wgt_reco_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_reco, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
+                zpt_wgt_gen_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_gen, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
 
-            # --- save both to parquet
+                # --- save both to parquet
+                _add_block(out_dict, {
+                    "zpt_wgt_reco_dnn": zpt_wgt_reco_dnn,
+                    "zpt_wgt_gen_dnn": zpt_wgt_gen_dnn,
+                })
+
             _add_block(out_dict, {
-                "zpt_wgt_reco": zpt_wgt_reco,
-                "zpt_wgt_reco_dnn": zpt_wgt_reco_dnn,
-                "zpt_wgt_gen":  zpt_wgt_gen,
-                "zpt_wgt_gen_dnn": zpt_wgt_gen_dnn,
-                "njets_reco_for_zpt": njets_reco,
-                "njets_gen_for_zpt":  njets_gen,
+                "zpt_njets_reco": njets_reco,
+                "zpt_njets_gen": njets_gen,
             })
-
             # apply reco zpt weight to event weight
             weights.add("zpt_wgt", weight=zpt_wgt_reco)
 
@@ -2071,7 +2160,7 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Apply jetID and PUID
         # ------------------------------------------------------------#
-        pass_jet_id = jet_id(jets, self.config)
+        pass_jet_id = jet_id(jets, self.config, year)
 
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         logger.debug(f"dnn_year: {dnn_year}")

@@ -280,6 +280,19 @@ new_zpt_weights_file_MiNNLO:
     "2023": None
     "2023BPix": None
     "2024": None
+zpt_dnn_models_aMCatNLO:
+    "2018": dummy
+    "2017": dummy
+    "2016preVFP": dummy
+    "2016postVFP": dummy
+    "2022preEE": dummy
+    "2022postEE": dummy
+    "2023": dummy
+    "2023BPix": dummy
+    "2024":
+        0j: dummy
+        1j: dummy
+        2j: dummy
 jetpuid_sf_file: # old method as of Dec 16 2024,
     2016preVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
     2016postVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
