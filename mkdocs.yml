@@ -38,8 +38,13 @@ nav:
     - Corrections:
           - Z-pT Reweighting: ZpT_reweight.md
           - EBE Mass Resolution: eventbyeventMassResolution.md
-    - DNN:
-          - DNN for VBF: DNN_VBF.md
+    - Analysis Channels:
+        - ggH:
+              - Category Boundary Calculation: ggH_BdtCategoryEdgeCalculation.md
+              - Validation Plots: ggH_validation.md
+              - Datacard Generation: ggH_dataCardGeneration.md
+        - VBF:
+              - DNN: DNN_VBF.md
     - Workflow Management:
             - Snakemake: workflow_management.md
     - Notes:
