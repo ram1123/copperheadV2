@@ -1,9 +1,47 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
-# 11 February 2026
+
+# 17 February 2026
 
 ```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_15Feb_FilterJetsHorn30GeV -y "2023BPix" -m 1 -k -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDFix -y "2022postEE" -m 1 -k -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_FilterJetsHorn30GeV_JetIDFix -y "2024" -m 1 -k -i 1)
+
+```
+
+# 16 February 2026
+
+```bash
+snakemake -s workflow/Snakefile -j 4 --rerun-incomplete --restart-times 3 --latency-wait 60
+snakemake -s workflow/Snakefile -j 2 --resources gateway=2 --rerun-incomplete --restart-times 3 --latency-wait 60
+```
+
+
+# 15 February 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_15Feb_FilterJetsHorn30GeV -y "2024" -m 1 -k -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_15Feb_FilterJetsHorn30GeV -y "2024" -m 1 -k -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_15Feb_FilterJetsHorn30GeV -y "2024" -m 1 -k -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_15Feb_FilterJetsHorn30GeV -y "2022postEE 2022preEE 2023 2023BPix" -m 1 -k  -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_15Feb_FilterJetsHorn30GeV -y "2022postEE 2022preEE 2023 2023BPix" -m 1 -k  -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_15Feb_FilterJetsHorn30GeV -y "2022postEE 2022preEE 2023 2023BPix" -m 1 -k  -i 1)
+python run_plotter.py
+
+time python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py -y 2024 --outdir try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet0 --njet-bin 0  --max-events 3000000 --batch 65536
+time python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py -y 2024 --outdir try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet1 --njet-bin 1  --max-events 3000000 --batch 65536
+time python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py -y 2024 --outdir try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet2p --njet-bin 2p  --max-events 3000000 --batch 65536
+```
+
+# 11 February 2026
+
+
+
+```bash
+time python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py -y 2018 --outdir try_zpt_dnn_validation_plots --batch 65536 --max-events 300000 --epochs 20 --patience 3
+
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_10Feb_FilterJets -y "2022postEE 2022preEE 2023 2023BPix" -m 1 -k )
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_10Feb_FilterJets -y "2022postEE 2022preEE 2023 2023BPix 2024" -m compact -k )
 

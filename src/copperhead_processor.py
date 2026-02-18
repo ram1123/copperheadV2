@@ -10,6 +10,8 @@ from coffea.btag_tools import BTagScaleFactor
 from coffea.lookup_tools import extractor
 from coffea.lumi_tools import LumiMask
 from coffea.nanoevents.methods import vector
+import dask_awkward as dak
+
 from modules.classify_year import is_run2, is_run3
 from modules.get_sample_info import get_sample_info
 from modules.utils import logger
@@ -28,6 +30,7 @@ from src.corrections.evaluator import (
     pu_evaluator,
     qgl_weights_V2,
 )
+from src.corrections.muon_sf import add_muon_sfs_run3_correctionlib
 from src.corrections.fsr_recovery import fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
 from src.corrections.jet import (
@@ -341,7 +344,6 @@ class EventProcessor(processor.ProcessorABC):
     def process(self, events: coffea_nanoevent, dataset_yaml_file: str):
         t0 = time.perf_counter()
         year = self.config["year"]
-        logger.info(f"Processing year: {year}")
 
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
         self.selection = PackedSelection()
@@ -1089,7 +1091,7 @@ class EventProcessor(processor.ProcessorABC):
                 logger.debug("Applying JER smearing!")
                 jets = do_jer_smear(jets, self.config, events.event, nanoAOD_version=NanoAODv)
             else:
-                logger.info("==> Not applying JER smearing!")
+                logger.warning(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 
             # 4) Sort jets *after* final pt is set
             sorted_args = ak.argsort(jets.pt, ascending=False)
@@ -1197,98 +1199,28 @@ class EventProcessor(processor.ProcessorABC):
                 muID, muIso, muTrig = musf_evaluator(
                     musf_lookup, self.config["year"], mu1, mu2
                 )
-                weights.add("muID",
-                        weight=muID["nom"],
-                        weightUp=muID["up"],
-                        weightDown=muID["down"]
-                )
-                weights.add("muIso",
-                        weight=muIso["nom"],
-                        weightUp=muIso["up"],
-                        weightDown=muIso["down"]
-                )
-                weights.add("muTrig",
-                        weight=muTrig["nom"],
-                        weightUp=muTrig["up"],
-                        weightDown=muTrig["down"]
-                )
             elif is_run3(year):
-                """
-                Use correctionlib for muon SFs in Run 3.
-                - ID/Iso event SF = SF(mu1) * SF(mu2)
-                - Trigger event SF = SF(leading muon)  (safe fallback when only SF map is available)
-                """
-
-                mu_sf_lookup_file = self.config["muSFFileList"]
-                # allow either a string path or list/tuple with one entry
-                if isinstance(mu_sf_lookup_file, (list, tuple)):
-                    mu_sf_lookup_file = mu_sf_lookup_file[0]
-
-                logger.info(f"mu_sf_lookup_file: {mu_sf_lookup_file}")
-                mu_sf_lookup = correctionlib.CorrectionSet.from_file(mu_sf_lookup_file)
-
-                # --- pick correction names (defaults; override via config if you want) ---
-                id_name = "NUM_TightID_DEN_TrackerMuons"
-                iso_name = "NUM_LoosePFIso_DEN_TightID"
-                trig_name = "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"
-                logger.info(f"Muon ID SF correction name: {id_name}"
-                    f"\nMuon Iso SF correction name: {iso_name}"
-                    f"\nMuon Trigger SF correction name: {trig_name}"
-                )
-
-                muID_corr   = mu_sf_lookup[id_name]
-                muIso_corr  = mu_sf_lookup[iso_name]
-                muTrig_corr = mu_sf_lookup[trig_name]
-
-                sf = muID_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "nominal")
-                sf_up = muID_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "systup")
-                sf_down = muID_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "systdown")
-                logger.info(f"Muon ID SF example values (nominal, up, down): {ak.to_numpy(sf[:5].compute())}, {ak.to_numpy(sf_up[:5].compute())}, {ak.to_numpy(sf_down[:5].compute())}")
-
-                raise NotImplementedError("This is just a test snippet to check if I can evaluate the correctionlib SFs outside of the weights collection. Please implement the full muon SFs for Run 3, including Iso and Trigger, and add them to the weights collection, similar to how it's done for Run 2.")
-
-                # --- per-muon SFs ---
-                mu1_eta, mu1_pt = mu1.eta_raw, mu1.pt_raw
-                mu2_eta, mu2_pt = mu2.eta_raw, mu2.pt_raw
-
-                mu1_id  = eval_corr(muID_corr,  mu1_eta, mu1_pt)
-                mu2_id  = eval_corr(muID_corr,  mu2_eta, mu2_pt)
-                mu1_iso = eval_corr(muIso_corr, mu1_eta, mu1_pt)
-                mu2_iso = eval_corr(muIso_corr, mu2_eta, mu2_pt)
-
-                # event ID/Iso = product
-                muID  = {k: mu1_id[k]  * mu2_id[k]  for k in ("nom", "up", "down")}
-                muIso = {k: mu1_iso[k] * mu2_iso[k] for k in ("nom", "up", "down")}
-
-                # Trigger: take leading pT muon SF (minimal + stable)
-                lead_is_mu1 = (mu1_pt >= mu2_pt)
-                mu1_trg = eval_corr(muTrig_corr, mu1_eta, mu1_pt)
-                mu2_trg = eval_corr(muTrig_corr, mu2_eta, mu2_pt)
-                muTrig = {
-                    k: ak.where(lead_is_mu1, mu1_trg[k], mu2_trg[k])
-                    for k in ("nom", "up", "down")
-                }
-
-                # --- feed weights in the same format as Run-2 ---
-                weights.add("muID",
-                    weight=muID["nom"],
-                    weightUp=muID["up"],
-                    weightDown=muID["down"]
-                )
-                weights.add("muIso",
-                    weight=muIso["nom"],
-                    weightUp=muIso["up"],
-                    weightDown=muIso["down"]
-                )
-                weights.add("muTrig",
-                    weight=muTrig["nom"],
-                    weightUp=muTrig["up"],
-                    weightDown=muTrig["down"]
-                )
-
+                muID, muIso, muTrig = add_muon_sfs_run3_correctionlib(mu1, mu2, self.config["muSFFileList"])
             else:
                 raise ValueError(f"Year {year} is not recognized as Run 2 or Run 3 year for muon SFs!")
-            raise NotImplementedError("Muon SFs for Run 3 are not fully implemented yet! Please implement the rest of the variations (Iso and Trigger) and add them to the weights collection, similar to how it's done for Run 2.")
+            # -----------------------------
+            # push into weights (same as run2)
+            # -----------------------------
+            weights.add("muID",
+                weight=muID["nom"],
+                weightUp=muID["up"],
+                weightDown=muID["down"]
+            )
+            weights.add("muIso",
+                weight=muIso["nom"],
+                weightUp=muIso["up"],
+                weightDown=muIso["down"]
+            )
+            weights.add("muTrig",
+                weight=muTrig["nom"],
+                weightUp=muTrig["up"],
+                weightDown=muTrig["down"]
+            )
             # do mu SF end -------------------------------------
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #

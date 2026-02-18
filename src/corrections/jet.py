@@ -10,7 +10,6 @@ import correctionlib
 import coffea.nanoevents.methods.candidate as candidate
 import random
 
-import logging
 from modules.utils import logger
 from modules.classify_year import is_run3, is_run2
 
@@ -605,7 +604,7 @@ def applyUpDown(variation_base_l: list):
     variation_up_l = [f"{variation}_up" for variation in variation_base_l]
     variation_down_l = [f"{variation}_down" for variation in variation_base_l]
     combined_variation_l = variation_up_l + variation_down_l
-    # print(f"combined_variation_l: {combined_variation_l}")
+    # logger.debug(f"combined_variation_l: {combined_variation_l}")
     return combined_variation_l
 
 def get_baseVariations(variation_shifts : list):
@@ -614,7 +613,7 @@ def get_baseVariations(variation_shifts : list):
     """
     variation_base_l = [variation.replace("_up","").replace("_down","") for variation in variation_shifts]
     variation_base_l = list(set(variation_base_l)) # remove repetitions
-    # print(f"variation_base_l: {variation_base_l}")
+    # logger.debug(f"variation_base_l: {variation_base_l}")
     return variation_base_l
 
 def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
@@ -685,7 +684,7 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
         # inputs = get_corr_inputs(example_value_dict, sf)
         printCorrObjInputs(sf) # for debugging
         new_jec_scale = sf.evaluate(*inputs)
-        # print(f"new_jec_scale: {new_jec_scale}")
+        # logger.debug(f"new_jec_scale: {new_jec_scale}")
         # logger.debug(f"new_jec_scale {unc}: {new_jec_scale.compute()}")
 
         # logger.debug("JSON result AK4: {}".format(new_jec_scale[:20].compute()))
@@ -767,8 +766,8 @@ def apply_jer_unc(jets):
     source:  https://github.com/green-cabbage/copperhead_fork2/blob/97a0fcd7668927b46931e6334de4bbf25d3d2031/stage1/corrections/jec.py#L212C14-L242C69
     """
     has_matchedGenJet = jets.genJetIdx != -1
-    # print(f"has_matchedGenJet: {has_matchedGenJet.compute()}")
-    # print(f"jets.genJetIdx: {jets.genJetIdx[:100].compute()}")
+    # logger.debug(f"has_matchedGenJet: {has_matchedGenJet.compute()}")
+    # logger.debug(f"jets.genJetIdx: {jets.genJetIdx[:100].compute()}")
     jer_categories = {
        'jer1': (abs(jets.eta) < 1.93),
        'jer2': (abs(jets.eta) > 1.93) & (abs(jets.eta) < 2.5),
@@ -895,13 +894,13 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
         # logger.debug(f"jets.pt b4 JER smear: {jets.pt[:20].compute()}")
 
         jer_strat = config["switches"]["jer_strat"]
-        print(f"jer_strat: {jer_strat}")
-        print(f"type jer_strat: {type(jer_strat)}")
+        logger.debug(f"jer_strat: {jer_strat}")
+        logger.debug(f"type jer_strat: {type(jer_strat)}")
         if jer_strat == 1:
             jer_smearing = applyStrat1(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
         elif jer_strat == 2:
             jer_smearing = applyStrat2(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
-            print("strat2 is being used!")
+            logger.debug("strat2 is being used!")
         elif jer_strat == 3:
             jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, get_puId(jets), pt_jec, jets.eta, year)
         else:
@@ -909,13 +908,13 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
         # jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
         jets[f"pt_jer_{syst}"] = jer_smearing * pt_jec  # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
     jets["pt"] = jets[f"pt_jer_nom"]
-    # print(f"jet pt: {jets.pt[:100].compute()}")
-    # print(f"jet pt_jer_up: {jets.pt_jer_up[:100].compute()}")
-    # print(f"jet pt_jer_down: {jets.pt_jer_down[:100].compute()}")
+    # logger.debug(f"jet pt: {jets.pt[:100].compute()}")
+    # logger.debug(f"jet pt_jer_up: {jets.pt_jer_up[:100].compute()}")
+    # logger.debug(f"jet pt_jer_down: {jets.pt_jer_down[:100].compute()}")
     jets = apply_jer_unc(jets)
     # for i in range(1,7):
-    #     print(f"pt_jer{i}_up: {jets[f'pt_jer{i}_up'][:100].compute()}")
-    #     print(f"pt_jer{i}_down: {jets[f'pt_jer{i}_down'][:100].compute()}")
+    #     logger.debug(f"pt_jer{i}_up: {jets[f'pt_jer{i}_up'][:100].compute()}")
+    #     logger.debug(f"pt_jer{i}_down: {jets[f'pt_jer{i}_down'][:100].compute()}")
 
     return jets
 

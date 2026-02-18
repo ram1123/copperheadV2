@@ -186,77 +186,31 @@ muSFFileList:
               - IsoMu24_PtEtaBins/efficienciesDATA/abseta_pt_DATA
               - IsoMu24_PtEtaBins/efficienciesMC/abseta_pt_MC
           scale: 0.149815869
-        - id:
-              - data/muon_sf/year2018/RunABCD_SF_ID.root
-              - NUM_MediumID_DEN_genTracks_pt_abseta
-          iso:
-              - data/muon_sf/year2018/RunABCD_SF_ISO.root
-              - NUM_TightRelIso_DEN_MediumID_pt_abseta
-          trig:
-              - data/muon_sf/mu2018/EfficienciesStudies_2018_trigger_EfficienciesAndSF_2018Data_AfterMuonHLTUpdate.root
-              - IsoMu24_PtEtaBins/efficienciesDATA/abseta_pt_DATA
-              - IsoMu24_PtEtaBins/efficienciesMC/abseta_pt_MC
-          scale: 0.850184131
     "2022preEE":
-        - id:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root
-              - NUM_MediumID_DEN_TrackerMuons_abseta_pt
-          iso:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root
-              - NUM_TightRelIso_DEN_MediumID_abseta_pt
-          trig:
-              - data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root
-              - IsoMu27_PtEtaBins/efficienciesDATA/abseta_pt_DATA
-              - IsoMu27_PtEtaBins/efficienciesMC/abseta_pt_MC
-          scale: 1.0
+        - json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22CDSep23-Summer22-NanoAODv12/2025-08-14/muon_Z.json.gz
+        - id: NUM_TightID_DEN_TrackerMuons
+        - iso: NUM_LoosePFIso_DEN_TightID
+        - trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
     2022postEE:
-        - id:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root
-              - NUM_MediumID_DEN_TrackerMuons_abseta_pt
-          iso:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root
-              - NUM_TightRelIso_DEN_MediumID_abseta_pt
-          trig:
-              - data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root
-              - IsoMu27_PtEtaBins/efficienciesDATA/abseta_pt_DATA
-              - IsoMu27_PtEtaBins/efficienciesMC/abseta_pt_MC
-          scale: 1.0
+        - json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-08-14/muon_Z.json.gz
+        - id: NUM_TightID_DEN_TrackerMuons
+        - iso: NUM_LoosePFIso_DEN_TightID
+        - trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
     "2023":
-        - id:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root
-              - NUM_MediumID_DEN_TrackerMuons_abseta_pt
-          iso:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root
-              - NUM_TightRelIso_DEN_MediumID_abseta_pt
-          trig:
-              - data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root
-              - IsoMu27_PtEtaBins/efficienciesDATA/abseta_pt_DATA
-              - IsoMu27_PtEtaBins/efficienciesMC/abseta_pt_MC
-          scale: 1.0
+        - json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23CSep23-Summer23-NanoAODv12/2025-08-14/muon_Z.json.gz
+        - id: NUM_TightID_DEN_TrackerMuons
+        - iso: NUM_LoosePFIso_DEN_TightID
+        - trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
     "2023BPix":
-        - id:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root
-              - NUM_MediumID_DEN_TrackerMuons_abseta_pt
-          iso:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root
-              - NUM_TightRelIso_DEN_MediumID_abseta_pt
-          trig:
-              - data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root
-              - IsoMu27_PtEtaBins/efficienciesDATA/abseta_pt_DATA
-              - IsoMu27_PtEtaBins/efficienciesMC/abseta_pt_MC
-          scale: 1.0
+        - json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-08-14/muon_Z.json.gz
+        - id: NUM_TightID_DEN_TrackerMuons
+        - iso: NUM_LoosePFIso_DEN_TightID
+        - trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
     "2024":
-        - id:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ID.root
-              - NUM_MediumID_DEN_TrackerMuons_abseta_pt
-          iso:
-              - data/muon_sf/year2017/MuonSF_Run2017_UL_ISO.root
-              - NUM_TightRelIso_DEN_MediumID_abseta_pt
-          trig:
-              - data/muon_sf/mu2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root
-              - IsoMu27_PtEtaBins/efficienciesDATA/abseta_pt_DATA
-              - IsoMu27_PtEtaBins/efficienciesMC/abseta_pt_MC
-          scale: 1.0
+        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-11-27/muon_Z.json.gz
+        id: NUM_TightID_DEN_TrackerMuons
+        iso: NUM_LoosePFIso_DEN_TightID
+        trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
 new_zpt_weights_file_aMCatNLO:
     "2018": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2017": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
