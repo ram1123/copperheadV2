@@ -14994,7 +14994,7 @@
       "sumGenWgts": 851310.0
     }
   },
-  "ewk_mmjj": {
+  "ewk_mmjj_mll_105_160": {
     "files": {
       "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer22NanoAODv12/EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/120000/00f275d5-3360-4ded-8de4-9ca11bd5c913.root": {
         "num_entries": 3433,
@@ -15286,12 +15286,268 @@
     "form": null,
     "metadata": {
       "data_entries": null,
-      "dataset": "ewk_mmjj",
+      "dataset": "ewk_mmjj_mll_105_160",
       "fraction": 1.0,
       "is_mc": true,
       "nGenEvts": 362128,
       "original_fraction": 1.0,
       "sumGenWgts": 362128.0
+    }
+  },
+  "ewk_mmjj_mll_105_160_mjj120": {
+    "files": {
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/1fdb98c1-52b2-4ece-8fe1-918dec03b6eb.root": {
+        "num_entries": 7000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            7000
+          ]
+        ],
+        "uuid": "84af5a6a-aec0-11f0-bb7c-89246c8dbeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/2010a6a6-9ef4-4b77-93b3-348125868347.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "2bd2aa68-aec1-11f0-ab41-0b66210abeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/29136833-89de-41ac-9cca-ef1fe4b8199d.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "ca5af018-aec2-11f0-9cd4-0544010abeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/29d62d3d-53f4-4c74-9fdd-1c468890f796.root": {
+        "num_entries": 24000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            24000
+          ]
+        ],
+        "uuid": "99b3b276-aec0-11f0-97cf-8c090d0abeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/377ce265-8fb2-4818-beae-ef93f573c130.root": {
+        "num_entries": 25000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            25000
+          ]
+        ],
+        "uuid": "b3ed1100-aec0-11f0-b536-38e05d9fbeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/3ee384bb-141c-4eba-9a11-3689c1bb4368.root": {
+        "num_entries": 98000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            98000
+          ]
+        ],
+        "uuid": "691c1022-aec0-11f0-9663-a9e45d9fbeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/5cbd1648-0bdb-4570-83a3-769b10d01ccc.root": {
+        "num_entries": 13000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            13000
+          ]
+        ],
+        "uuid": "3b95858c-b03e-11f0-86de-5da0a983beef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/6afaf093-b7f2-496f-abc6-e41997369e66.root": {
+        "num_entries": 65000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            65000
+          ]
+        ],
+        "uuid": "7d861a76-aec0-11f0-9671-7bbfe183beef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/889d4fde-d1ed-4570-a86f-17d674716b54.root": {
+        "num_entries": 40000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            40000
+          ]
+        ],
+        "uuid": "f5b766d0-aecf-11f0-8f4e-053e010abeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/896aa98a-8fda-4476-811d-be50dded9563.root": {
+        "num_entries": 1000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "uuid": "6e729816-aec0-11f0-a287-01041cacbeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/90219c8f-51a0-4910-98aa-c962593c3278.root": {
+        "num_entries": 23000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            23000
+          ]
+        ],
+        "uuid": "4a30e946-b0e4-11f0-b328-7ee5b49dbeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/95ea1aa8-e468-482c-a072-58144be7c2dd.root": {
+        "num_entries": 42000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            42000
+          ]
+        ],
+        "uuid": "c9ed2aee-aec0-11f0-8502-2fe36880beef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/95fccb49-c9f1-4e49-90a8-391c30ef4d73.root": {
+        "num_entries": 4000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            4000
+          ]
+        ],
+        "uuid": "aec6c116-af34-11f0-af69-b75088c8beef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/b4e7e116-7a5e-4780-82af-adc619d104b7.root": {
+        "num_entries": 20000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            20000
+          ]
+        ],
+        "uuid": "fecf08fe-af33-11f0-b4df-0624a8c0beef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/c01b5826-9254-4840-b586-96c130206f4b.root": {
+        "num_entries": 12000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            12000
+          ]
+        ],
+        "uuid": "5e4ad160-aec0-11f0-bf94-09803c0abeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/d0e6dc02-56a8-447c-8e9c-604796e4d8cf.root": {
+        "num_entries": 14000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            14000
+          ]
+        ],
+        "uuid": "839e1b2e-af34-11f0-8bb5-b784e4a9beef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/d2f82851-885f-466e-b641-00255758cd9a.root": {
+        "num_entries": 1000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "uuid": "b3292740-aec0-11f0-beef-f5011eacbeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/d94a8ad9-4a9f-40f4-b6f3-94954145c59f.root": {
+        "num_entries": 6000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            6000
+          ]
+        ],
+        "uuid": "9053e37c-aec0-11f0-892c-752c12acbeef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/dd80c28b-ee99-4079-9e56-e2e8103f064e.root": {
+        "num_entries": 18000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            18000
+          ]
+        ],
+        "uuid": "a41cdf6c-aec0-11f0-b39e-c8b75d81beef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/dd93b1e2-f0fb-478d-a4d8-7d28893d9ebf.root": {
+        "num_entries": 7000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            7000
+          ]
+        ],
+        "uuid": "c5d1cb72-aec0-11f0-aad1-1d1fa8c0beef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/dff67f83-1dd1-4511-992a-33cf4d1c326b.root": {
+        "num_entries": 21000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            21000
+          ]
+        ],
+        "uuid": "bfc8366c-aec0-11f0-8bcf-27ce36c0beef"
+      },
+      "root://cmsxrootd.fnal.gov:1094//store/mc/Run3Summer22NanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/2810000/f2fb8cf8-1cac-449b-b025-e521b0c689c6.root": {
+        "num_entries": 5000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            5000
+          ]
+        ],
+        "uuid": "04f10808-b04d-11f0-ab1a-a92411acbeef"
+      }
+    },
+    "form": null,
+    "metadata": {
+      "data_entries": null,
+      "dataset": "ewk_mmjj_mll_105_160_mjj120",
+      "fraction": 1.0,
+      "is_mc": true,
+      "nGenEvts": 450000,
+      "original_fraction": 1.0,
+      "sumGenWgts": 28995.679433999998
     }
   },
   "ggh_powhegPS": {

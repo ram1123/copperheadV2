@@ -26,9 +26,9 @@
     },
     "dimuon_pt_log": {
         "variable": "dimuon_pt_log",
-        "binning_linspace": [0, 200, 51],
+        "binning_linspace": [0, 10, 50],
         "density": false,
-        "ylabel": "Events / 1 GeV",
+        "ylabel": "Events / 0.2 GeV",
         "xlabel": "log($p_T(\\mu\\mu)$) [GeV]",
         "color": "royalblue"
     },
@@ -624,168 +624,176 @@
         "xlabel": "DNN VBF Score",
         "color": "royalblue"
     },
-    "rpt_nominal": {
-        "variable": "rpt_nominal",
+    "rpt": {
+        "variable": "rpt",
         "binning_linspace": [0, 1, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$R_{p_T}$",
         "color": "royalblue"
     },
-    "pt_centrality_nominal": {
-        "variable": "pt_centrality_nominal",
+    "pt_centrality": {
+        "variable": "pt_centrality",
         "binning_linspace": [0, 20, 31],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T$ centrality",
         "color": "royalblue"
     },
-    "ll_zstar_log_nominal": {
-        "variable": "ll_zstar_log_nominal",
+    "ll_zstar_log": {
+        "variable": "ll_zstar_log",
         "binning_linspace": [-2.4, 2.4, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "ll_zstar_log",
         "color": "royalblue"
     },
-    "mmj_min_dEta_nominal": {
-        "variable": "mmj_min_dEta_nominal",
+    "mmj_min_dEta": {
+        "variable": "mmj_min_dEta",
         "binning_linspace": [0, 8, 30],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\min\\,\\Delta\\eta_{\\mu\\mu,j}$",
         "color": "royalblue"
     },
-    "mmj_min_dPhi_nominal": {
-        "variable": "mmj_min_dPhi_nominal",
+    "mmj_min_dPhi": {
+        "variable": "mmj_min_dPhi",
         "binning_linspace": [0, 3.15, 30],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\min\\,\\Delta\\phi_{\\mu\\mu,j}$",
         "color": "royalblue"
     },
-    "njets_nominal": {
-        "variable": "njets_nominal",
+    "njets": {
+        "variable": "njets",
         "binning_linspace": [0.001, 8.001, 9],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "N jets",
         "color": "royalblue"
     },
-    "jj_mass_nominal": {
-        "variable": "jj_mass_nominal",
+    "jj_mass": {
+        "variable": "jj_mass",
         "binning_linspace": [0, 2500, 30],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$m_{jj}$ [GeV]",
         "color": "royalblue"
     },
-    "jj_eta_nominal": {
-        "variable": "jj_eta_nominal",
+    "jj_mass_log": {
+        "variable": "jj_mass_log",
+        "binning_linspace": [0, 10, 50],
+        "density": false,
+        "ylabel": "Events / 0.2 GeV",
+        "xlabel": "$m_{jj}$ [GeV]",
+        "color": "royalblue"
+    },
+    "jj_eta": {
+        "variable": "jj_eta",
         "binning_linspace": [-4.7, 4.7, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta_{jj}$",
         "color": "royalblue"
     },
-    "jj_pt_nominal": {
-        "variable": "jj_pt_nominal",
+    "jj_pt": {
+        "variable": "jj_pt",
         "binning_linspace": [25, 250, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T(jj)$ [GeV]",
         "color": "royalblue"
     },
-    "jj_dEta_nominal": {
-        "variable": "jj_dEta_nominal",
+    "jj_dEta": {
+        "variable": "jj_dEta",
         "binning_linspace": [0, 9, 30],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\Delta\\eta_{jj}$",
         "color": "royalblue"
     },
-    "jj_dPhi_nominal": {
-        "variable": "jj_dPhi_nominal",
+    "jj_dPhi": {
+        "variable": "jj_dPhi",
         "binning_linspace": [0, 3.15, 30],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$\\Delta\\phi_{jj}$",
         "color": "royalblue"
     },
-    "jet1_pt_nominal": {
-        "variable": "jet1_pt_nominal",
+    "jet1_pt": {
+        "variable": "jet1_pt",
         "binning_linspace": [25, 250, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T(\\mathrm{jet1})$ [GeV]",
         "color": "royalblue"
     },
-    "jet1_eta_nominal": {
-        "variable": "jet1_eta_nominal",
+    "jet1_eta": {
+        "variable": "jet1_eta",
         "binning_linspace": [-4.7, 4.7, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta(\\mathrm{jet1})$",
         "color": "royalblue"
     },
-    "jet1_phi_nominal": {
-        "variable": "jet1_phi_nominal",
+    "jet1_phi": {
+        "variable": "jet1_phi",
         "binning_linspace": [-3.15, 3.15, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi(\\mathrm{jet1})$",
         "color": "royalblue"
     },
-    "jet2_pt_nominal": {
-        "variable": "jet2_pt_nominal",
+    "jet2_pt": {
+        "variable": "jet2_pt",
         "binning_linspace": [25, 250, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T(\\mathrm{jet2})$ [GeV]",
         "color": "royalblue"
     },
-    "jet2_eta_nominal": {
-        "variable": "jet2_eta_nominal",
+    "jet2_eta": {
+        "variable": "jet2_eta",
         "binning_linspace": [-4.7, 4.7, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta(\\mathrm{jet2})$",
         "color": "royalblue"
     },
-    "jet2_phi_nominal": {
-        "variable": "jet2_phi_nominal",
+    "jet2_phi": {
+        "variable": "jet2_phi",
         "binning_linspace": [-3.15, 3.15, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\phi(\\mathrm{jet2})$",
         "color": "royalblue"
     },
-    "mmjj_mass_nominal": {
-        "variable": "mmjj_mass_nominal",
+    "mmjj_mass": {
+        "variable": "mmjj_mass",
         "binning_linspace": [0, 2500, 30],
         "density": false,
         "ylabel": "Events / 1 GeV",
         "xlabel": "$m_{\\mu\\mu jj}$ [GeV]",
         "color": "royalblue"
     },
-    "mmjj_pt_nominal": {
-        "variable": "mmjj_pt_nominal",
+    "mmjj_pt": {
+        "variable": "mmjj_pt",
         "binning_linspace": [0, 300, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$p_T(\\mu\\mu jj)$ [GeV]",
         "color": "royalblue"
     },
-    "mmjj_eta_nominal": {
-        "variable": "mmjj_eta_nominal",
+    "mmjj_eta": {
+        "variable": "mmjj_eta",
         "binning_linspace": [-5, 5, 30],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta_{\\mu\\mu jj}$",
         "color": "royalblue"
     },
-    "mmjj_phi_nominal": {
-        "variable": "mmjj_phi_nominal",
+    "mmjj_phi": {
+        "variable": "mmjj_phi",
         "binning_linspace": [-3.15, 3.15, 30],
         "density": false,
         "ylabel": "Events",
@@ -1875,8 +1883,8 @@
         "xlabel": "$q_1 q_2$",
         "color": "royalblue"
     },
-    "vbf_lead_jet1_pt_nominal": {
-        "variable": "vbf_lead_jet1_pt_nominal",
+    "vbf_lead_jet1_pt": {
+        "variable": "vbf_lead_jet1_pt",
         "binning_linspace": [
             0,
             400,
@@ -1887,8 +1895,8 @@
         "xlabel": "Leading VBF jet $p_T$ [GeV]",
         "color": "royalblue"
     },
-    "vbf_lead_jet1_eta_nominal": {
-        "variable": "vbf_lead_jet1_eta_nominal",
+    "vbf_lead_jet1_eta": {
+        "variable": "vbf_lead_jet1_eta",
         "binning_linspace": [
             -5,
             5,
@@ -1899,8 +1907,8 @@
         "xlabel": "Leading VBF jet $\\eta$",
         "color": "royalblue"
     },
-    "vbf_lead_jet1_phi_nominal": {
-        "variable": "vbf_lead_jet1_phi_nominal",
+    "vbf_lead_jet1_phi": {
+        "variable": "vbf_lead_jet1_phi",
         "binning_linspace": [
             -3.1416,
             3.1416,
@@ -1911,8 +1919,8 @@
         "xlabel": "Leading VBF jet $\\phi$",
         "color": "royalblue"
     },
-    "vbf_lead_jet2_pt_nominal": {
-        "variable": "vbf_lead_jet2_pt_nominal",
+    "vbf_lead_jet2_pt": {
+        "variable": "vbf_lead_jet2_pt",
         "binning_linspace": [
             0,
             400,
@@ -1923,8 +1931,8 @@
         "xlabel": "Subleading VBF jet $p_T$ [GeV]",
         "color": "royalblue"
     },
-    "vbf_lead_jet2_eta_nominal": {
-        "variable": "vbf_lead_jet2_eta_nominal",
+    "vbf_lead_jet2_eta": {
+        "variable": "vbf_lead_jet2_eta",
         "binning_linspace": [
             -5,
             5,
@@ -1935,8 +1943,8 @@
         "xlabel": "Subleading VBF jet $\\eta$",
         "color": "royalblue"
     },
-    "vbf_lead_jet2_phi_nominal": {
-        "variable": "vbf_lead_jet2_phi_nominal",
+    "vbf_lead_jet2_phi": {
+        "variable": "vbf_lead_jet2_phi",
         "binning_linspace": [
             -3.1416,
             3.1416,
@@ -1947,8 +1955,8 @@
         "xlabel": "Subleading VBF jet $\\phi$",
         "color": "royalblue"
     },
-    "vbf_lead_mjj_nominal": {
-        "variable": "vbf_lead_mjj_nominal",
+    "vbf_lead_mjj": {
+        "variable": "vbf_lead_mjj",
         "binning_linspace": [
             0,
             3000,
@@ -1959,8 +1967,8 @@
         "xlabel": "$m_{jj}$ [GeV]",
         "color": "royalblue"
     },
-    "vbf_lead_deta_nominal": {
-        "variable": "vbf_lead_deta_nominal",
+    "vbf_lead_deta": {
+        "variable": "vbf_lead_deta",
         "binning_linspace": [
             0,
             8,
@@ -1971,8 +1979,8 @@
         "xlabel": "$|\\Delta\\eta_{jj}|$",
         "color": "royalblue"
     },
-    "vbf_maxmjj_jet1_pt_nominal": {
-        "variable": "vbf_maxmjj_jet1_pt_nominal",
+    "vbf_maxmjj_jet1_pt": {
+        "variable": "vbf_maxmjj_jet1_pt",
         "binning_linspace": [
             0,
             400,
@@ -1983,8 +1991,8 @@
         "xlabel": "Max-$m_{jj}$ jet1 $p_T$ [GeV]",
         "color": "darkorange"
     },
-    "vbf_maxmjj_jet1_eta_nominal": {
-        "variable": "vbf_maxmjj_jet1_eta_nominal",
+    "vbf_maxmjj_jet1_eta": {
+        "variable": "vbf_maxmjj_jet1_eta",
         "binning_linspace": [
             -5,
             5,
@@ -1995,8 +2003,8 @@
         "xlabel": "Max-$m_{jj}$ jet1 $\\eta$",
         "color": "darkorange"
     },
-    "vbf_maxmjj_jet1_phi_nominal": {
-        "variable": "vbf_maxmjj_jet1_phi_nominal",
+    "vbf_maxmjj_jet1_phi": {
+        "variable": "vbf_maxmjj_jet1_phi",
         "binning_linspace": [
             -3.1416,
             3.1416,
@@ -2007,8 +2015,8 @@
         "xlabel": "Max-$m_{jj}$ jet1 $\\phi$",
         "color": "darkorange"
     },
-    "vbf_maxmjj_jet2_pt_nominal": {
-        "variable": "vbf_maxmjj_jet2_pt_nominal",
+    "vbf_maxmjj_jet2_pt": {
+        "variable": "vbf_maxmjj_jet2_pt",
         "binning_linspace": [
             0,
             400,
@@ -2019,8 +2027,8 @@
         "xlabel": "Max-$m_{jj}$ jet2 $p_T$ [GeV]",
         "color": "darkorange"
     },
-    "vbf_maxmjj_jet2_eta_nominal": {
-        "variable": "vbf_maxmjj_jet2_eta_nominal",
+    "vbf_maxmjj_jet2_eta": {
+        "variable": "vbf_maxmjj_jet2_eta",
         "binning_linspace": [
             -5,
             5,
@@ -2031,8 +2039,8 @@
         "xlabel": "Max-$m_{jj}$ jet2 $\\eta$",
         "color": "darkorange"
     },
-    "vbf_maxmjj_jet2_phi_nominal": {
-        "variable": "vbf_maxmjj_jet2_phi_nominal",
+    "vbf_maxmjj_jet2_phi": {
+        "variable": "vbf_maxmjj_jet2_phi",
         "binning_linspace": [
             -3.1416,
             3.1416,
@@ -2043,8 +2051,8 @@
         "xlabel": "Max-$m_{jj}$ jet2 $\\phi$",
         "color": "darkorange"
     },
-    "vbf_maxmjj_mjj_nominal": {
-        "variable": "vbf_maxmjj_mjj_nominal",
+    "vbf_maxmjj_mjj": {
+        "variable": "vbf_maxmjj_mjj",
         "binning_linspace": [
             0,
             3000,
@@ -2055,8 +2063,8 @@
         "xlabel": "$m_{jj}^{\\mathrm{max}}$ [GeV]",
         "color": "darkorange"
     },
-    "vbf_maxmjj_deta_nominal": {
-        "variable": "vbf_maxmjj_deta_nominal",
+    "vbf_maxmjj_deta": {
+        "variable": "vbf_maxmjj_deta",
         "binning_linspace": [
             0,
             8,
@@ -2067,8 +2075,392 @@
         "xlabel": "$|\\Delta\\eta_{jj}^{\\mathrm{max}}|$",
         "color": "darkorange"
     },
-    "vbf_maxmjj_deta25_hasPair_nominal": {
-        "variable": "vbf_maxmjj_deta25_hasPair_nominal",
+    "vbf_maxdeta_jet1_pt": {
+        "variable": "vbf_maxdeta_jet1_pt",
+        "binning_linspace": [
+            0,
+            400,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events / 10 GeV",
+        "xlabel": "Leading VBF jet $p_T$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet1_eta": {
+        "variable": "vbf_maxdeta_jet1_eta",
+        "binning_linspace": [
+            -5,
+            5,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Leading VBF jet $\\eta$",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet1_phi": {
+        "variable": "vbf_maxdeta_jet1_phi",
+        "binning_linspace": [
+            -3.1416,
+            3.1416,
+            33
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Leading VBF jet $\\phi$",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet2_pt": {
+        "variable": "vbf_maxdeta_jet2_pt",
+        "binning_linspace": [
+            0,
+            400,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events / 10 GeV",
+        "xlabel": "Subleading VBF jet $p_T$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet2_eta": {
+        "variable": "vbf_maxdeta_jet2_eta",
+        "binning_linspace": [
+            -5,
+            5,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Subleading VBF jet $\\eta$",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet2_phi": {
+        "variable": "vbf_maxdeta_jet2_phi",
+        "binning_linspace": [
+            -3.1416,
+            3.1416,
+            33
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Subleading VBF jet $\\phi$",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_mjj": {
+        "variable": "vbf_maxdeta_mjj",
+        "binning_linspace": [
+            0,
+            3000,
+            61
+        ],
+        "density": false,
+        "ylabel": "Events / 50 GeV",
+        "xlabel": "$m_{jj}$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_deta": {
+        "variable": "vbf_maxdeta_deta",
+        "binning_linspace": [
+            0,
+            8,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$|\\Delta\\eta_{jj}|$",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet1_pt": {
+        "variable": "vbf_maxdeta_jet1_pt",
+        "binning_linspace": [
+            0,
+            400,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events / 10 GeV",
+        "xlabel": "Leading VBF jet $p_T$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet1_eta": {
+        "variable": "vbf_maxdeta_jet1_eta",
+        "binning_linspace": [
+            -5,
+            5,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Leading VBF jet $\\eta$",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet1_phi": {
+        "variable": "vbf_maxdeta_jet1_phi",
+        "binning_linspace": [
+            -3.1416,
+            3.1416,
+            33
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Leading VBF jet $\\phi$",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet2_pt": {
+        "variable": "vbf_maxdeta_jet2_pt",
+        "binning_linspace": [
+            0,
+            400,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events / 10 GeV",
+        "xlabel": "Subleading VBF jet $p_T$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet2_eta": {
+        "variable": "vbf_maxdeta_jet2_eta",
+        "binning_linspace": [
+            -5,
+            5,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Subleading VBF jet $\\eta$",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_jet2_phi": {
+        "variable": "vbf_maxdeta_jet2_phi",
+        "binning_linspace": [
+            -3.1416,
+            3.1416,
+            33
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Subleading VBF jet $\\phi$",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_mjj": {
+        "variable": "vbf_maxdeta_mjj",
+        "binning_linspace": [
+            0,
+            3000,
+            61
+        ],
+        "density": false,
+        "ylabel": "Events / 50 GeV",
+        "xlabel": "$m_{jj}$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxdeta_deta": {
+        "variable": "vbf_maxdeta_deta",
+        "binning_linspace": [
+            0,
+            8,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$|\\Delta\\eta_{jj}|$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet1_pt": {
+        "variable": "vbf_maxmjj_deta25_jet1_pt",
+        "binning_linspace": [
+            0,
+            400,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events / 10 GeV",
+        "xlabel": "Leading VBF jet $p_T$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet1_eta": {
+        "variable": "vbf_maxmjj_deta25_jet1_eta",
+        "binning_linspace": [
+            -5,
+            5,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Leading VBF jet $\\eta$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet1_phi": {
+        "variable": "vbf_maxmjj_deta25_jet1_phi",
+        "binning_linspace": [
+            -3.1416,
+            3.1416,
+            33
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Leading VBF jet $\\phi$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet2_pt": {
+        "variable": "vbf_maxmjj_deta25_jet2_pt",
+        "binning_linspace": [
+            0,
+            400,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events / 10 GeV",
+        "xlabel": "Subleading VBF jet $p_T$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet2_eta": {
+        "variable": "vbf_maxmjj_deta25_jet2_eta",
+        "binning_linspace": [
+            -5,
+            5,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Subleading VBF jet $\\eta$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet2_phi": {
+        "variable": "vbf_maxmjj_deta25_jet2_phi",
+        "binning_linspace": [
+            -3.1416,
+            3.1416,
+            33
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Subleading VBF jet $\\phi$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_mjj": {
+        "variable": "vbf_maxmjj_deta25_mjj",
+        "binning_linspace": [
+            0,
+            3000,
+            61
+        ],
+        "density": false,
+        "ylabel": "Events / 50 GeV",
+        "xlabel": "$m_{jj}$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_deta": {
+        "variable": "vbf_maxmjj_deta25_deta",
+        "binning_linspace": [
+            0,
+            8,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$|\\Delta\\eta_{jj}|$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet1_pt": {
+        "variable": "vbf_maxmjj_deta25_jet1_pt",
+        "binning_linspace": [
+            0,
+            400,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events / 10 GeV",
+        "xlabel": "Leading VBF jet $p_T$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet1_eta": {
+        "variable": "vbf_maxmjj_deta25_jet1_eta",
+        "binning_linspace": [
+            -5,
+            5,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Leading VBF jet $\\eta$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet1_phi": {
+        "variable": "vbf_maxmjj_deta25_jet1_phi",
+        "binning_linspace": [
+            -3.1416,
+            3.1416,
+            33
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Leading VBF jet $\\phi$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet2_pt": {
+        "variable": "vbf_maxmjj_deta25_jet2_pt",
+        "binning_linspace": [
+            0,
+            400,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events / 10 GeV",
+        "xlabel": "Subleading VBF jet $p_T$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet2_eta": {
+        "variable": "vbf_maxmjj_deta25_jet2_eta",
+        "binning_linspace": [
+            -5,
+            5,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Subleading VBF jet $\\eta$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_jet2_phi": {
+        "variable": "vbf_maxmjj_deta25_jet2_phi",
+        "binning_linspace": [
+            -3.1416,
+            3.1416,
+            33
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "Subleading VBF jet $\\phi$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_mjj": {
+        "variable": "vbf_maxmjj_deta25_mjj",
+        "binning_linspace": [
+            0,
+            3000,
+            61
+        ],
+        "density": false,
+        "ylabel": "Events / 50 GeV",
+        "xlabel": "$m_{jj}$ [GeV]",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_deta": {
+        "variable": "vbf_maxmjj_deta25_deta",
+        "binning_linspace": [
+            0,
+            8,
+            41
+        ],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "$|\\Delta\\eta_{jj}|$",
+        "color": "royalblue"
+    },
+    "vbf_maxmjj_deta25_hasPair": {
+        "variable": "vbf_maxmjj_deta25_hasPair",
         "binning_linspace": [
             0,
             2,

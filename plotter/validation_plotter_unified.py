@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import time
+import sys
 
 import awkward as ak
 import dask
@@ -20,122 +21,53 @@ from modules.utils import logger
 from src.lib.histogram.plotting import plotDataMC_compare
 from modules.classify_year import is_run2, is_run3
 from configs.variables.variable_lists import get_all_vars
-
 from scripts.compact_parquet_data import ensure_compacted
 
 # This order is for the stack plotting in the control plots
-# bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
-# bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
-# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
-# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
-bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
-# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
+# bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
+bkg_MC_order = ["VV", "EWK",  "TOP", "DY"]
 
-# Run2 DY samples
-DYVBF = ["dy_VBF_filter"]
-
-# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
-DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
-
-# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO", "dyTo2L_M-50_incl"]
-# DY_aMCatNLO = ["dy_M-50_aMCatNLO"]
-# DY_madgraph = ["dy_M-50_madgraph"]
-# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
-# DY_aMCatNLO = ["dy_M-50_madgraph"]  # 2024
-DY_To2MU_MassBinned = [
-    "dyTo2Mu_M-10To50",
-    "dyTo2Mu_M-50To120",
-    "dyTo2Mu_M-120To200",
-]  # 2024
-DY_To2MU_inclusive = ["dyTo2Mu_M-50"]
-
-DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
-
-
-DY_HTBinned = [
-    "dy_M-4to50_HT-70to100",
-    "dy_M-4to50_HT-100to200",
-    "dy_M-4to50_HT-200to400",
-    "dy_M-4to50_HT-400to600",
-    "dy_M-4to50_HT-600toInf",
-    "dy_M-50_HT-70to100",
-    "dy_M-50_HT-100to200",
-    "dy_M-50_HT-200to400",
-    "dy_M-50_HT-400to600",
-    "dy_M-50_HT-600to800",
-    "dy_M-50_HT-800to1200",
-    "dy_M-50_HT-1200to2500",
-    "dy_M-50_HT-2500toInf",
-]
-
-
-# Run3 DY samples
-# DY_aMCatNLO = ["dyTo2Mu_M-50_aMCatNLO"] # 2024
-# DY_aMCatNLO = ["dyTo2L_M-50_incl_XSDYTurbo"] # 2022preEE
-DY_aMCatNLO = ["dyTo2L_M-50_incl"] # 2022postEE, 2023, 2023BPix
-
-# DY_aMCatNLO = ["dy_M-50_aMCatNLO"] # 2022postEE
-
-DY_jet_binned = ["dyTo2L_M-50_0j", "dyTo2L_M-50_1j", "dyTo2L_M-50_2j"]
-DY_MLL_binned = ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"]
-DY_aMCatNLO_inc = {
-    "2022preEE": ["dyTo2L_M-50_incl"],
-    "2022postEE": ["dyTo2L_M-50_incl"],
-    "2023": ["dyTo2L_M-50_incl"],
-    "2023BPix": ["dyTo2L_M-50_incl"],
-    "2024": ["dyTo2Mu_M-50_aMCatNLO"],
-}
-EWK_l = {
-    "2022preEE": ["ewk_mmjj"],
-    "2022postEE": ["ewk_lljj"],
-    "2023": ["ewk_mmjj"],
-    "2023BPix": ["ewk_mmjj"],
-    "2024": ["ewk_mmjj"],
-}
 
 group_dict = {
-    "DATA": [
-        "data_A",
-        "data_B",
-        "data_C",
-        "data_D",
-        "data_E",
-        "data_F",
-        "data_G",
-        "data_H",
-        "data_I",
-        "data_J",
-    ],
-    # Run2 DY samples
-    # "DY": DY_aMCatNLO,
-    # "DY": DY_MLL_binned,
-    # "DY": DY_aMCatNLO_inc_2024,
-    "DY": DY_aMCatNLO_inc,
-    # Run3 DY samples
-    # "DY": DY_To2MU_MassBinned,
-    # "DY": DY_To2MU_inclusive,
-    # "DY": DY_jet_binned,
-    # "DY": DY_MLL_binned,
-    # "DY": DY_madgraph,
-    # "DY": DY_MiNNLO,
-    # "DY_MINNLO": DY_MiNNLO ,
-    # "DY_AMCATNLO":   DY_aMCatNLO,
-    # "DYVBF": ["dy_VBF_filter"],
-    # "DYJ01": ["DYJ01"],
-    # "DYJ2": ["DYJ2"],
+    "DATA": {
+        "2016preVFP": ["data_B", "data_C", "data_D", "data_E", "data_F"],
+        "2016postVFP": ["data_F", "data_G", "data_H"],
+        "2016": ["data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
+        "2017": ["data_B", "data_C", "data_D", "data_E", "data_F"],
+        "2018": ["data_A", "data_B", "data_C", "data_D"],
+        "run2": ["data_A", "data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
+
+        "2022preEE": ["data_C", "data_D"],
+        "2022postEE": ["data_E", "data_F", "data_G"],
+        "2023": ["data_C"],
+        "2023BPix": ["data_D"],
+        "2024": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
+        "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
+    },
+    "DY": {
+        "2022preEE": ["dyTo2L_M-50_incl"],
+        "2022postEE": ["dyTo2L_M-50_incl"],
+        "2023": ["dyTo2L_M-50_incl"],
+        "2023BPix": ["dyTo2L_M-50_incl"],
+        "2024": ["dyTo2Mu_M-50_aMCatNLO"],
+    },
+    "EWK": {
+        "2022preEE": ["ewk_mmjj_mll_105_160"],
+        "2022postEE": ["ewk_mmjj_mll_105_160"],
+        "2023": ["ewk_mmjj_mll_105_160"],
+        "2023BPix": ["ewk_mmjj_mll_105_160"],
+        "2024": ["ewk_mmjj_mll_105_160"],
+    },
     "TOP": [
         # "tt_inclusive",
         "ttjets_dl",
         "ttjets_sl",
-        "ttjets_fh",
-        "st_tw_top",
-        "st_tw_antitop",
-        "st_t_top",
-        "st_t_antitop",
+        # "ttjets_fh",
+        # "st_tw_top",
+        # "st_tw_antitop",
+        # "st_t_top",
+        # "st_t_antitop",
     ],
-    # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
-    "EWK": EWK_l,
-    # "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
     "VV": [
         "ww_2l2nu",
         "wz_3lnu",
@@ -146,13 +78,15 @@ group_dict = {
         "zz_2l2nu",
         "zz_4l",
     ],
-    # "VVContinuum": ["GluGluContin_ZZ2e2mu", "GluGluContin_ZZ2mu2nu", "GluGluContin_ZZ2mu2tau", "GluGluContin_ZZ4mu", "GluGluContin_ZZ4tau"],
-    "OTHER": ["www", "wwz", "wzz", "zzz"],
+    # "OTHER": ["www", "wwz", "wzz", "zzz"],
     "ggH": ["ggh_powhegPS"],
-    "VBF": ["vbf_powheg_dipole"],
-    # "VBF": ["vbf_powheg_amcatnlo"],
-    # "VBF": ["vbf_powheg"],
-    # "VBF": ["vbf_aMCatNLO"],
+    "VBF": {
+        "2022preEE": ["vbf_powheg_dipole"],
+        "2022postEE": ["vbf_powheg_dipole"],
+        "2023": ["vbf_powheg"],
+        "2023BPix": ["vbf_powheg"],
+        "2024": ["vbf_powheg"],
+    },
 }
 
 def parseGroupProcesses(group_dict, year: str):
@@ -162,9 +96,11 @@ def parseGroupProcesses(group_dict, year: str):
     """
     year_specific_group_dict = {}
     for group_name, processes in group_dict.items():
+        logger.debug(f"Group '{group_name}' processes (original): {processes}")
         if type(processes) is dict:
             processes = processes[year]
         year_specific_group_dict[group_name] = processes
+    logger.debug(f"Group dict specific to year {year}: {year_specific_group_dict}")
     return year_specific_group_dict
 
 def find_group_name(process_name, group_dict_param):
@@ -207,15 +143,8 @@ if __name__ == "__main__":
         "-bkgorder",
         "--background_order",
         dest="background_samples",
-        # default=["DY", "TOP", "EWK", "VV", "OTHER"],
-        # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"],
-        # default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
-        # default = ["OTHER", "EWK", "VV", "DY", "DYVBF"],
-        # default = ["OTHER", "EWK", "VV",  "TOP", "DY", "DY_MiNNLO", "DY_aMCatNLO"],
-        default=["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
-        # default=["OTHER",  "DY", "DYVBF", "DYJ01", "DYJ2"],
-        # default = ["OTHER", "EWK", "VV", "TOP", "DY" ],
-        # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
+        # default=["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
+        default=["EWK", "VV", "TOP", "DY"],
         nargs="*",
         type=str,
         action="store",
@@ -227,7 +156,8 @@ if __name__ == "__main__":
     dest="variables",
     # default=["dimuon", "mu"],
     # default=["dijet", "jet"],
-    default=["dimuon", "dijet", "jet", "mu"],
+    # default=["dimuon", "dijet", "jet", "mu"],
+    default=["dimuon", "dijet", "jet"],
     nargs="*",
     type=str,
     action="store",
@@ -312,6 +242,13 @@ if __name__ == "__main__":
     help="If true, remove z-pt weights from the events",
     )
     parser.add_argument(
+        "--use_dnn_zpt_weights",
+        dest="use_dnn_zpt_weights",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="If true, use DNN-based z-pt weights for the events",
+    )
+    parser.add_argument(
         "--njets",
         dest="njets",
         choices=["inclusive", "0", "1", "2"],
@@ -347,8 +284,9 @@ if __name__ == "__main__":
     logger.setLevel(args.log_level)
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
+
     group_dict = parseGroupProcesses(group_dict, args.year)
-    
+
     if is_run3(args.year):
         CM_energy = 13.6  # TeV
     elif is_run2(args.year):
@@ -442,6 +380,7 @@ if __name__ == "__main__":
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
     logger.info(f"variables2plot: {variables2plot}")
+    # sys.exit()
     # obtain plot settings from config file
 
     if args.category == "ggh":
@@ -520,9 +459,17 @@ if __name__ == "__main__":
                 logger.debug("Append separate_wgt_zpt_wgt to fields2load!")
                 fields2load.append("separate_wgt_zpt_wgt")
 
+            if (
+                "zpt_wgt_reco_dnn" in events.fields
+                and "separate_wgt_zpt_wgt" in events.fields
+                and args.use_dnn_zpt_weights
+            ):
+                logger.debug("Append separate_wgt_zpt_wgt and zpt_wgt_reco_dnn to fields2load!")
+                fields2load.append("separate_wgt_zpt_wgt")
+                fields2load.append("zpt_wgt_reco_dnn")
         # filter out redundant fields by using the set object
         fields2load = list(set(fields2load))
-        logger.info(f"fields2load: {fields2load}")
+        logger.debug(f"fields2load: {fields2load}")
 
         # check if all fields to load are in the events
         # fields_in_events = events.fields
@@ -538,6 +485,14 @@ if __name__ == "__main__":
             logger.warning("removing separate_wgt_zpt_wgt!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
 
+        if (
+            "separate_wgt_zpt_wgt" in events.fields
+            and "zpt_wgt_reco_dnn" in events.fields
+            and args.use_dnn_zpt_weights
+            ):
+            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
+            events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_reco_dnn"] # apply the weights obtained from the DNN
         # if "dy" in process.lower():
         #     # scale the weights for DY samples by 3.0
         #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
@@ -692,8 +647,17 @@ if __name__ == "__main__":
                     # temporary over write
                     # logger.info(f"events.fields: {events.fields}")
                     if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                        logger.info("removing Zpt rewgt!")
+                        logger.debug("removing Zpt rewgt!")
                         weights = weights/events["separate_wgt_zpt_wgt"]
+
+                    if (
+                        "separate_wgt_zpt_wgt" in events.fields
+                        and "zpt_wgt_reco_dnn" in events.fields
+                        and args.use_dnn_zpt_weights
+                    ):
+                        logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+                        weights = weights / events["separate_wgt_zpt_wgt"]
+                        weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
 
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
@@ -840,15 +804,18 @@ if __name__ == "__main__":
             # All data are prepped, now plot Data/MC histogram
             # -------------------------------------------------------
             # if args.remove_zpt_weights, then update the args.label
-            remove_zpt_str = ""
+            zpt_postfix = "default_zpt_weights"
             if args.remove_zpt_weights:
                 logger.warning("Removing zpt weights from the events!")
-                remove_zpt_str = "no_zpt_weights"
+                zpt_postfix = "no_zpt_weights"
+            if args.use_dnn_zpt_weights:
+                logger.warning("Using DNN-based zpt weights for the events!")
+                zpt_postfix = "dnn_zpt_weights"
 
             if args.year == "*":
-                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{remove_zpt_str}"
+                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
             else:
-                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{remove_zpt_str}"
+                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
             logger.debug(f"full_save_path: {full_save_path}")
 
             if not os.path.exists(full_save_path):
@@ -898,5 +865,6 @@ if __name__ == "__main__":
             )
 
     close_dask_client()
+    logger.info("Plots are saved to %s", full_save_path)
     time_elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished in {time_elapsed} s.")

@@ -53,7 +53,7 @@ GGH_TRAINING_VARS: List[str] = [
 VBF_TRAINING_VARS: List[str] = [
     "dimuon_mass",
     "dimuon_pt",
-    # "dimuon_pt_log",
+    "dimuon_pt_log",
     "dimuon_rapidity",
     "dimuon_ebe_mass_res",
     "dimuon_ebe_mass_res_rel",
@@ -71,10 +71,175 @@ VBF_TRAINING_VARS: List[str] = [
     "nsoftjets5_nominal",
     "htsoft2_nominal",
     "rpt_nominal",
-    # "ll_zstar_log_nominal",
+    "ll_zstar_log_nominal",
     "mmj_min_dEta_nominal",
     "pt_centrality_nominal",
 ]
+
+# ----------------------------------------------------------------------
+# General variables: PV, MET, muon ID/iso/detector/jet-assoc/sv vars, and muon pair-based vars (pt, eta, iso, ip, detector)
+# ----------------------------------------------------------------------
+PV_VARS: List[str] = [
+    "PV_npvs",
+    "PV_npvsGood",
+]
+
+MET_VARS: List[str] = [
+    "PuppiMET_pt",
+    "PuppiMET_phi",
+    "PuppiMET_sumEt",
+]
+
+muon_ip_vars = [
+    "mu1_dxy",
+    "mu2_dxy",
+    "mu1_dxyErr",
+    "mu2_dxyErr",
+    "mu1_dxybs",
+    "mu2_dxybs",
+    "mu1_dz",
+    "mu2_dz",
+    "mu1_dzErr",
+    "mu2_dzErr",
+    "mu1_ip3d",
+    "mu2_ip3d",
+    "mu1_sip3d",
+    "mu2_sip3d",
+]
+
+muon_id_vars = [
+    "mu1_highPurity",
+    "mu2_highPurity",
+    "mu1_inTimeMuon",
+    "mu2_inTimeMuon",
+    "mu1_isGlobal",
+    "mu2_isGlobal",
+    "mu1_isPFcand",
+    "mu2_isPFcand",
+    "mu1_isStandalone",
+    "mu2_isStandalone",
+    "mu1_isTracker",
+    "mu2_isTracker",
+    "mu1_looseId",
+    "mu2_looseId",
+    "mu1_mediumId",
+    "mu2_mediumId",
+    "mu1_mediumPromptId",
+    "mu2_mediumPromptId",
+    "mu1_tightCharge",
+    "mu2_tightCharge",
+    "mu1_pdgId",
+    "mu2_pdgId",
+]
+
+muon_iso_vars = [
+    "mu1_miniIsoId",
+    "mu2_miniIsoId",
+    "mu1_miniPFRelIso_all",
+    "mu2_miniPFRelIso_all",
+    "mu1_miniPFRelIso_chg",
+    "mu2_miniPFRelIso_chg",
+    "mu1_multiIsoId",
+    "mu2_multiIsoId",
+    "mu1_pfIsoId",
+    "mu2_pfIsoId",
+    "mu1_pfRelIso03_all",
+    "mu2_pfRelIso03_all",
+    "mu1_pfRelIso03_chg",
+    "mu2_pfRelIso03_chg",
+    "mu1_pfRelIso04_all",
+    "mu2_pfRelIso04_all",
+    "mu1_puppiIsoId",
+    "mu2_puppiIsoId",
+    "mu1_tkIsoId",
+    "mu2_tkIsoId",
+    "mu1_tkRelIso",
+    "mu2_tkRelIso",
+]
+
+muon_detector_vars = [
+    "mu1_nStations",
+    "mu2_nStations",
+    "mu1_nTrackerLayers",
+    "mu2_nTrackerLayers",
+    "mu1_segmentComp",
+    "mu2_segmentComp",
+]
+
+muon_jet_assoc_vars = [
+    "mu1_jetIdx",
+    "mu2_jetIdx",
+    "mu1_jetNDauCharged",
+    "mu2_jetNDauCharged",
+    "mu1_jetPtRelv2",
+    "mu2_jetPtRelv2",
+    "mu1_jetRelIso",
+    "mu2_jetRelIso",
+]
+
+muon_sv_vars = [
+    "mu1_svIdx",
+    "mu2_svIdx",
+]
+
+mu12_pt_comb_vars = [
+    "mu12_pt_sum",
+    "mu12_pt_diff",
+    "mu12_pt_absdiff",
+    "mu12_pt_prod",
+    "mu12_pt_ratio12",
+    "mu12_pt_ratio21",
+    "mu12_pt_min",
+    "mu12_pt_max",
+    "mu12_pt_asym",
+]
+
+mu12_eta_comb_vars = [
+    "mu12_eta_sum",
+    "mu12_eta_diff",
+    "mu12_eta_absdiff",
+    "mu12_eta_prod",
+    "mu12_absEta_sum",
+    "mu12_absEta_diff",
+    "mu12_absEta_min",
+    "mu12_absEta_max",
+]
+
+mu12_iso_comb_vars = [
+    "mu12_iso04_sum",
+    "mu12_iso04_diff",
+    "mu12_iso04_absdiff",
+    "mu12_iso04_prod",
+    "mu12_iso04_min",
+    "mu12_iso04_max",
+    "mu12_iso04_asym",
+]
+
+mu12_ip_comb_vars = [
+    "mu12_dxy_sum",
+    "mu12_dxy_diff",
+    "mu12_dxy_absdiff",
+    "mu12_dz_sum",
+    "mu12_dz_diff",
+    "mu12_dz_absdiff",
+    "mu12_sip3d_sum",
+    "mu12_sip3d_diff",
+    "mu12_sip3d_absdiff",
+    "mu12_sip3d_prod",
+    "mu12_sip3d_min",
+    "mu12_sip3d_max",
+]
+
+mu12_detector_comb_vars = [
+    "mu12_nStations_min",
+    "mu12_nStations_max",
+    "mu12_nStations_sum",
+    "mu12_nTrackerLayers_min",
+    "mu12_nTrackerLayers_max",
+    "mu12_nTrackerLayers_sum",
+    "mu12_q1q2",
+]
+
 
 # ----------------------------------------------------------------------
 # Muons: basic kinematics (plots)
@@ -88,6 +253,53 @@ MUON_PLOT_VARS: List[str] = [
     "mu2_phi",
     "mu1_pt_over_mass",
     "mu2_pt_over_mass",
+]
+
+DIMUON_PLOT_VARS: List[str] = [
+    "dimuon_eta",
+    "dimuon_pt",
+    "dimuon_phi",
+    "dimuon_mass",
+    "dimuon_cos_theta_cs",
+    "dimuon_phi_cs",
+    "dimuon_rapidity",
+]
+
+DIMUON_PLOT_VARS_EXTENDED: List[str] = [
+    "dimuon_ebe_mass_res",
+    "dimuon_ebe_mass_res_rel",
+    "uncalibrated_dimuon_ebe_mass_res",
+    "dimuon_cos_theta_cs",
+    "dimuon_phi_cs",
+    "dimuon_phi_eta",
+    "dimuon_dEta",
+    "dimuon_dPhi",
+    "dimuon_dR",
+    "acoplanarity",
+]
+
+# ----------------------------------------------------------------------
+# Jets: additional variables
+# -----------------------------------------------------------------------
+JETS_PLOT_VARS: List[str] = [
+    "njets_nominal",
+    "jet1_pt_nominal",
+    "jet1_eta_nominal",
+    "jet1_phi_nominal",
+    "jet2_pt_nominal",
+    "jet2_eta_nominal",
+    "jet2_phi_nominal",
+]
+
+DIJET_VARS: List[str] = [
+    "jj_dEta_nominal",
+    "jj_mass_nominal",
+    "nsoftjets5_nominal",
+    "htsoft2_nominal",
+    "pt_centrality_nominal",
+    "rpt_nominal",
+    "nsoftjets2_nominal",
+    "htsoft5_nominal",
 ]
 
 # ----------------------------------------------------------------------
@@ -132,9 +344,10 @@ VBF_ADDITIONAL_VARS: List[str] = (
 # ----------------------------------------------------------------------
 VAR_SETS: Dict[str, List[str]] = {
     "vbf_training": VBF_TRAINING_VARS,
-    # "vbf_additional": VBF_ADDITIONAL_VARS,
     "ggh_training": GGH_TRAINING_VARS,
     "muon_plots": MUON_PLOT_VARS,
+    "dimuon_plots": DIMUON_PLOT_VARS,
+    "vbf_additional": VBF_ADDITIONAL_VARS,
 }
 
 

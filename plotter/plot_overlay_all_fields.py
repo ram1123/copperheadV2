@@ -19,13 +19,21 @@ SAMPLES: Dict[str, str] = {
     # "stage1_output/2022postEE/f1_0/vbf_powheg_dipole/0/*.parquet",
     # "EWK": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_02Feb_FilterJets/"
     # "stage1_output/2022postEE/f1_0/ewk_lljj/0/*.parquet",
-    "DY": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_02Feb_FilterJets/"
-    "stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/*.parquet",
+    # "DY": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_02Feb_FilterJets/"
+    # "stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/*.parquet",
     # "TT": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_02Feb_FilterJets/"
     # "stage1_output/2022postEE/f1_0/ttjets_sl/0/*.parquet",
+    "new_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn30GeV_JetIDFix/stage1_output/2024/f1_0/vbf_powheg/0/*.parquet",
+    "old_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_15Feb_FilterJetsHorn30GeV/stage1_output/2024/f1_0/vbf_powheg/0/*.parquet",
+    # "new_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDFix/stage1_output/2022postEE/f1_0/vbf_powheg_dipole/0/*.parquet",
+    # "old_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_15Feb_FilterJetsHorn30GeV/stage1_output/2022postEE/f1_0/vbf_powheg_dipole/0/*.parquet",
+    # "new_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDFix/stage1_output/2023/f1_0/vbf_powheg/0/*.parquet",
+    # "old_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_15Feb_FilterJetsHorn30GeV/stage1_output/2023/f1_0/vbf_powheg/0/*.parquet",
 }
 
-OUTDIR = Path("parquet_variable_DY")
+OUTDIR = Path(
+    "validation/sanity_checks/plot_overlay_all_fields/CompareOldVsNewJetID/2024_vbf_powheg_NewJETIDandMuonID"
+)
 NBINS = 60
 
 MAX_POINTS_FOR_RANGE = 200_000
@@ -286,6 +294,11 @@ def main() -> None:
         help="Text file with variables to plot (one per line; # comments allowed).",
     )
     parser.add_argument(
+        "--use-gateway",
+        action="store_true",
+        help="Use Dask gateway for distributed execution (default: False).",
+    )
+    parser.add_argument(
         "--cluster-index",
         type=int,
         default=1,
@@ -296,7 +309,7 @@ def main() -> None:
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    client = get_dask_client(use_gateway=True, cluster_index=args.cluster_index)
+    client = get_dask_client(use_gateway=args.use_gateway, cluster_index=args.cluster_index)
     print("[INFO] Dask client:", client)
 
     # Load all samples as dask-awkward arrays

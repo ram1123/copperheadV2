@@ -20880,7 +20880,7 @@
       "sumGenWgts": 820570.0
     }
   },
-  "ewk_mmjj": {
+  "ewk_mmjj_mll_105_160": {
     "files": {
       "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23BPixNanoAODv12/EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/NANOAODSIM/130X_mcRun3_2023_realistic_postBPix_v6-v2/2530000/077945cb-5cf4-478f-818b-e2525b5518d5.root": {
         "num_entries": 15606,
@@ -20996,7 +20996,7 @@
     "form": null,
     "metadata": {
       "data_entries": null,
-      "dataset": "ewk_mmjj",
+      "dataset": "ewk_mmjj_mll_105_160",
       "fraction": 1.0,
       "is_mc": true,
       "nGenEvts": 177141,

@@ -1,0 +1,218 @@
+import os
+
+configfile: "workflow/config.yaml"
+
+YEARS = config["years"]
+SUFFIX = config["label_suffix"]
+PLOT_CATS = ["nocat", "vbf", "ggh"]
+
+wildcard_constraints:
+    year = "|".join([str(y) for y in YEARS]),
+    cat = "|".join(PLOT_CATS)
+
+
+def nano_for_year(year: str) -> str:
+    return "15" if year == "2024" else "12"
+
+def yaml_for_year(year: str) -> str:
+    return "configs/datasets/dataset_nanoAODv15_run3.yaml" if nano_for_year(year) == "15" \
+           else "configs/datasets/dataset_nanoAODv12_run3.yaml"
+
+def label_for_year(year: str) -> str:
+    return f"Run3_nanoAODv{nano_for_year(year)}_{SUFFIX}"
+
+
+USE_GW = bool(config.get("use_gateway", False))
+CLIDX  = str(config.get("cluster_index", 0))
+
+ZPT = config["zpt"]
+ZPT_TAG   = label_for_year(YEARS[0])  # Use first year's label for ZPT_TAG
+ZPT_OUT   = ZPT.get("outbase", "try_zpt_dnn")
+ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
+ZPT_BATCH = int(ZPT.get("batch", 65536))
+
+
+def gw_flags():
+    return f"-k -i {CLIDX}" if USE_GW else ""
+
+rule all:
+    input:
+        # (1) stage1 for all years
+        expand("state/stage1_{year}.done", year=YEARS),
+
+        # (2) stage1Compact for all years
+        expand("state/stage1_compact_{year}.done", year=YEARS),
+
+        # (3) plotter (after stage1)
+        expand("state/plots_{year}_{cat}.done", year=YEARS, cat=PLOT_CATS),
+
+        # # (4) zpt trainings (after stage1)
+        # expand("state/zpt_wgt_{year}_njet0.done", year=YEARS),
+        # expand("state/zpt_wgt_{year}_njet1.done", year=YEARS),
+        # expand("state/zpt_wgt_{year}_njet2p.done", year=YEARS),
+
+# ---------------------------------------
+# 1) Stage-1 (all samples)
+# ---------------------------------------
+rule stage1:
+    output:
+        done="state/stage1_{year}.done"
+    log:
+        "logs/stage1_{year}.log"
+    params:
+        nano=lambda wc: nano_for_year(wc.year),
+        yaml=lambda wc: yaml_for_year(wc.year),
+        label=lambda wc: label_for_year(wc.year),
+        gw=lambda wc: gw_flags()
+    resources:
+        gateway=1
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        {{ PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+          -c {params.yaml} \
+          -v {params.nano} \
+          -l {params.label} \
+          -y "{wildcards.year}" \
+          -m 1 \
+          {params.gw} ; }} 2>&1 \
+          | sed 's/\r/\n/g' \
+          > {log}
+        touch {output.done}
+        """
+# ---------------------------------------
+# 1) Stage-1a (compact)
+# ---------------------------------------
+rule stage1Compact:
+    input:
+        "state/stage1_{year}.done"
+    output:
+        done="state/stage1_compact_{year}.done"
+    log:
+        "logs/stage1_compact_{year}.log"
+    params:
+        nano=lambda wc: nano_for_year(wc.year),
+        yaml=lambda wc: yaml_for_year(wc.year),
+        label=lambda wc: label_for_year(wc.year),
+        gw=lambda wc: gw_flags()
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+          -c {params.yaml} \
+          -v {params.nano} \
+          -l {params.label} \
+          -y "{wildcards.year}" \
+          -m compact \
+          {params.gw} \
+          | sed 's/\r/\n/g' \
+          > {log} 2>&1
+        touch {output.done}
+        """
+
+# ---------------------------------------
+# 2) Plotter (depends on stage1 outputs)
+# If your plotter needs specific years, pass them here.
+# ---------------------------------------
+rule plots:
+    input:
+        "state/stage1_{year}.done"
+    output:
+        done="state/plots_{year}_{cat}.done"
+    log:
+        "logs/plots_{year}_{cat}.log"
+    params:
+        nano=lambda wc: nano_for_year(wc.year),
+        label=lambda wc: label_for_year(wc.year),
+        gw=lambda wc: gw_flags(),
+        # where stage1 output lives (your stage1 creates stage1_output/<year>/f1_0)
+        load_path=lambda wc: f"/depot/cms/hmm/{os.environ['USER']}/hmm_ntuples/copperheadV1clean/{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0",
+        # where to save plots (make it versioned)
+        save_path=lambda wc: f"validation/figs/Run3_nanoAODv{nano_for_year(wc.year)}/{label_for_year(wc.year)}/VBFfilter_False",
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+
+        {{ python plotter/validation_plotter_unified.py \
+            -y {wildcards.year} \
+            --save_path {params.save_path} \
+            --load {params.load_path} \
+            -cat {wildcards.cat} \
+            {params.gw} \
+            --njets inclusive \
+            --minimum_set \
+            --region h-sidebands z-peak \
+            --remove_zpt_weights ; }} 2>&1 | sed 's/\r/\n/g' > {log}
+
+        touch {output.done}
+        """
+
+# ---------------------------------------
+# 3) ZpT DNN trainings (3 bins) per year
+# Depends on stage1 because it uses stage1 outputs.
+# ---------------------------------------
+rule zpt_njet0:
+    input:
+        "state/stage1_{year}.done"
+    output:
+        done="state/zpt_wgt_{year}_njet0.done"
+    log:
+        "logs/zpt_wgt_{year}_njet0.log"
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
+          -y {wildcards.year} \
+          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet0 \
+          --njet-bin 0 \
+          --max-events {ZPT_MAXEV} \
+          --batch {ZPT_BATCH} \
+          > {log} 2>&1
+        touch {output.done}
+        """
+
+rule zpt_njet1:
+    input:
+        "state/stage1_{year}.done"
+    output:
+        done="state/zpt_wgt_{year}_njet1.done"
+    log:
+        "logs/zpt_wgt_{year}_njet1.log"
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
+          -y {wildcards.year} \
+          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet1 \
+          --njet-bin 1 \
+          --max-events {ZPT_MAXEV} \
+          --batch {ZPT_BATCH} \
+          > {log} 2>&1
+        touch {output.done}
+        """
+
+rule zpt_njet2p:
+    input:
+        "state/stage1_{year}.done"
+    output:
+        done="state/zpt_wgt_{year}_njet2p.done"
+    log:
+        "logs/zpt_wgt_{year}_njet2p.log"
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p state logs
+        python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
+          -y {wildcards.year} \
+          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet2p \
+          --njet-bin 2p \
+          --max-events {ZPT_MAXEV} \
+          --batch {ZPT_BATCH} \
+          > {log} 2>&1
+        touch {output.done}
+        """

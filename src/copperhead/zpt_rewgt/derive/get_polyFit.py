@@ -308,7 +308,7 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
 def main():
     args = parse_arguments()
     run_label = args.label
-    out_append = args.outAppend
+    out_append = args.save_postfix
     # Determine which years to process
     if args.year.lower() == "all":
         years = ["2018", "2017", "2016postVFP", "2016preVFP"]

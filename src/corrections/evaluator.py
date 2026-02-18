@@ -157,6 +157,7 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
     ntrueint = np array for making dense lookup
     distinction for run2 and run3 is not the most elegant method, but it should
     be good enough for the time being
+    FIXME: Use is_run2 and is_run3 instead of Run variable, and make the code more modular by separating run2 and run3 logic into different functions
     """
     if Run ==2:
         if onTheSpot:

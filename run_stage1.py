@@ -23,6 +23,7 @@ from modules.utils import get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
+from configs.skip_stage1_run import samples_to_skip, samples_to_run
 
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
@@ -32,18 +33,23 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 np.set_printoptions(threshold=sys.maxsize)
 
-def trim_memory() -> int:
-     libc = ctypes.CDLL("libc.so.6")
-     return libc.malloc_trim(0)
 
-# # test code limiting memory leak -----------------------------------
-# import gc
-# client.run(gc.collect)  # collect garbage on all workers
-# import ctypes
-# def trim_memory() -> int:
-#      libc = ctypes.CDLL("libc.so.6")
-#      return libc.malloc_trim(0)
-# client.run(trim_memory)
+def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=None):
+    """
+    Decide whether a dataset should be processed.
+    Returns True if it should run, False if it should be skipped.
+    """
+
+    # If explicit run-list is provided → highest priority
+    if samples_to_run:
+        return dataset in samples_to_run
+
+    # Else, apply skip list if requested
+    if args.skipSamples and samples_to_skip:
+        return dataset not in samples_to_skip
+
+    # Default → run
+    return True
 
 # #-------------------------------------------------------------------
 
@@ -268,15 +274,16 @@ if __name__ == "__main__":
         # if True:
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
+                logger.info("{}{}".format("\n" * 2, "=" * 51))
+                logger.info(f"===         Processing dataset: {dataset}       ===")
+                logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
+                logger.info(f"===         Year: {args.year}                        ===")
+                logger.info("{}{}".format("=" * 51, "\n" * 2))
 
-                # if "data_"  in dataset:
-                #     logger.info(f"Skipping dataset {dataset} ")
-                #     continue
-
-                from configs.skip_stage1_run import samples_to_skip
-                if dataset in samples_to_skip and args.skipSamples:
-                    logger.warning(f"Skipping dataset as per configs/skip_stage1_run.py: {dataset}")
+                if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
+                    logger.warning(f"Skipping dataset: {dataset}")
                     continue
+
                 sample_step = time.time()
                 # dict to hold file lenght info per sample
                 dict_file_length = {
@@ -302,11 +309,8 @@ if __name__ == "__main__":
                 #     sample["files"] = test_files
                 #     logger.info(f"Test mode: Using only 1/4 of total files for {dataset}. total_files: {total_files}, test_files used: {len(test_files)}")
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
-                logger.info(f"max_file_len: {args.max_file_len}")
                 logger.info(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    logger.info(f"Processing {dataset} file index {idx}")
-
                     # Skip if already done (unless user wants a full rerun)
                     if not args.rerun and not jobstat.should_run(dataset, idx):
                         logger.info(f"[resume] skip {dataset}[{idx}] (done marker present)")
@@ -321,7 +325,6 @@ if __name__ == "__main__":
                     jobstat.mark_running(dataset, idx)
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                         try:
-                            logger.info("{}{}".format("\n" * 2, "=" * 20))
                             logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
                             # build fresh file list with this redirector
                             alt_sample = copy.deepcopy(smaller_sample)

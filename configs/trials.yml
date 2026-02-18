@@ -2,8 +2,8 @@ base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/"
-        # stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJets/stage1_output/"
+        # stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJets/stage1_output/"
         comment: "What plotter should use by default"
 
     Run2_HEMVetoFix_v1:
@@ -37,6 +37,32 @@ trials:
         comment: For September 25, 2025 HMuMu report
         gitTab: V1.0
         Reference: https://github.com/ram1123/copperheadV2/discussions/61
+
+    Run3_nanoAODv12_JVM_JetFilter_WithJecJer_JetPt_30GeV_v2:
+        stage1: "{base_dir}/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/stage1_output/"
+        comment:
+            - Generated this version as a sanity check. It should be identical to `Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV`
+            - Used jet pT threshold of 30 GeV (Default one is 25 GeV)
+            - used JVM to filter jets only.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+            - Latest zpt after the bug fixes (SHA a03553013bfbbc836524c9cc126ab602075e2f10 and 943088ae14744834140787103af6657b48ef09c9) are available only for 2022postEE, 2023BPix and 2024.
+        gitSHA: a33728e8d6ff9b12d6844b8e9276f546ba99a8e9
+        date: February 10, 2026
+        years: 2022postEE, 2022preEE, 2023, 2023BPix
+
+    Run3_nanoAODv15_JVM_JetFilter_WithJecJer_JetPt_30GeV_v2:
+        stage1: "{base_dir}/Run3_nanoAODv15_10Feb_FilterJetsHorn30GeV/stage1_output/"
+        comment:
+            - Generated this version as a sanity check. It should be identical to `Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV`
+            - Used jet pT threshold of 30 GeV (Default one is 25 GeV)
+            - used JVM to filter jets only.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+            - Latest zpt after the bug fixes (SHA a03553013bfbbc836524c9cc126ab602075e2f10 and 943088ae14744834140787103af6657b48ef09c9) are available only for 2022postEE, 2023BPix and 2024.
+        gitSHA: a33728e8d6ff9b12d6844b8e9276f546ba99a8e9
+        date: February 15, 2026
+        years: 2024
 
     Run3_nanoAODv12_JVM_JetFilter_WithJecJer_JetPt_30GeV:
         stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/"

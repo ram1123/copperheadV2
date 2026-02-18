@@ -1,0 +1,16 @@
+# what to run
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+years: ["2022postEE", "2022preEE"]
+# years: ["2024"]
+label_suffix: "FilterJetsHorn30GeV_JetIDMuIDFix"
+
+
+# dask gateway
+use_gateway: true
+cluster_index: 0
+
+# zpt DNN
+zpt:
+  outbase: "zpt_wgt_dnn"
+  max_events: 3000000
+  batch: 65536

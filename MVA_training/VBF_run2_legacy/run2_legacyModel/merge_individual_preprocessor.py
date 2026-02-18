@@ -6,8 +6,9 @@ from pathlib import Path
 
 from dnn_helper import DIR_TAG
 
-YEARS = ["2016preVFP", "2016postVFP", "2017", "2018"]
-LABEL = "Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2"
+# YEARS = ["2016preVFP", "2016postVFP", "2017", "2018"]
+YEARS = ["2022preEE", "2022postEE", "2023", "2023BPix"]
+LABEL = "Run3_nanoAODv12_20Jan_JVMFilterJets"
 REGION = "h-peak"
 CATEGORY = "vbf"
 N_FOLDS = 4
@@ -16,7 +17,7 @@ in_dirs = [
     f"dnn/trained_models/{LABEL}/{year}_{REGION}_{CATEGORY}{DIR_TAG}"
     for year in YEARS
 ]
-out_dir = f"dnn/trained_models/{LABEL}/run2_{REGION}_{CATEGORY}{DIR_TAG}"
+out_dir = f"dnn/trained_models/{LABEL}/run3_{REGION}_{CATEGORY}{DIR_TAG}"
 Path(out_dir).mkdir(parents=True, exist_ok=True)
 
 # use training_features from the first year
@@ -44,8 +45,8 @@ training_features = [
     "jet2_pt_nominal",
     "jet2_eta_nominal",
     "jet2_phi_nominal",
-    "jet1_qgl_nominal",
-    "jet2_qgl_nominal",
+    # "jet1_qgl_nominal",
+    # "jet2_qgl_nominal",
     "dimuon_cos_theta_cs",
     "dimuon_phi_cs",
     "htsoft2_nominal",

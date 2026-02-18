@@ -1,6 +1,11 @@
 # bo_plot_root.py
-import argparse, csv, json, math, os, sys
-from collections import defaultdict, OrderedDict
+import argparse
+import csv
+import json
+import math
+import os
+import sys
+from collections import OrderedDict, defaultdict
 
 import ROOT
 

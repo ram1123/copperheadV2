@@ -10,6 +10,8 @@ from coffea.btag_tools import BTagScaleFactor
 from coffea.lookup_tools import extractor
 from coffea.lumi_tools import LumiMask
 from coffea.nanoevents.methods import vector
+import dask_awkward as dak
+
 from modules.classify_year import is_run2, is_run3
 from modules.get_sample_info import get_sample_info
 from modules.utils import logger
@@ -28,6 +30,7 @@ from src.corrections.evaluator import (
     pu_evaluator,
     qgl_weights_V2,
 )
+from src.corrections.muon_sf import add_muon_sfs_run3_correctionlib
 from src.corrections.fsr_recovery import fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
 from src.corrections.jet import (
@@ -45,6 +48,7 @@ from src.corrections.jet import (
     jet_puid,
 )
 from src.corrections.rochester import apply_roccor, apply_roccorRun3
+from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
 
 from modules.vector_operations import (
     getRapidity,
@@ -340,7 +344,6 @@ class EventProcessor(processor.ProcessorABC):
     def process(self, events: coffea_nanoevent, dataset_yaml_file: str):
         t0 = time.perf_counter()
         year = self.config["year"]
-        logger.info(f"Processing year: {year}")
 
         # ReInitialize PackedSelection, otherwise processor would merge selection from previous run
         self.selection = PackedSelection()
@@ -1084,9 +1087,11 @@ class EventProcessor(processor.ProcessorABC):
 
             # 3) Apply JER smearing on MC
             # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
-            if is_mc:
+            if is_mc and self.config["switches"]["jer_strat"]:
                 logger.debug("Applying JER smearing!")
                 jets = do_jer_smear(jets, self.config, events.event, nanoAOD_version=NanoAODv)
+            else:
+                logger.warning(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 
             # 4) Sort jets *after* final pt is set
             sorted_args = ak.argsort(jets.pt, ascending=False)
@@ -1189,24 +1194,32 @@ class EventProcessor(processor.ProcessorABC):
 
             # do mu SF start -------------------------------------
             logger.debug("doing musf!")
-            musf_lookup = get_musf_lookup(self.config)
-            muID, muIso, muTrig = musf_evaluator(
-                musf_lookup, self.config["year"], mu1, mu2
-            )
+            if is_run2(year):
+                musf_lookup = get_musf_lookup(self.config)
+                muID, muIso, muTrig = musf_evaluator(
+                    musf_lookup, self.config["year"], mu1, mu2
+                )
+            elif is_run3(year):
+                muID, muIso, muTrig = add_muon_sfs_run3_correctionlib(mu1, mu2, self.config["muSFFileList"])
+            else:
+                raise ValueError(f"Year {year} is not recognized as Run 2 or Run 3 year for muon SFs!")
+            # -----------------------------
+            # push into weights (same as run2)
+            # -----------------------------
             weights.add("muID",
-                    weight=muID["nom"],
-                    weightUp=muID["up"],
-                    weightDown=muID["down"]
+                weight=muID["nom"],
+                weightUp=muID["up"],
+                weightDown=muID["down"]
             )
             weights.add("muIso",
-                    weight=muIso["nom"],
-                    weightUp=muIso["up"],
-                    weightDown=muIso["down"]
+                weight=muIso["nom"],
+                weightUp=muIso["up"],
+                weightDown=muIso["down"]
             )
             weights.add("muTrig",
-                    weight=muTrig["nom"],
-                    weightUp=muTrig["up"],
-                    weightDown=muTrig["down"]
+                weight=muTrig["nom"],
+                weightUp=muTrig["up"],
+                weightDown=muTrig["down"]
             )
             # do mu SF end -------------------------------------
 
@@ -1338,6 +1351,7 @@ class EventProcessor(processor.ProcessorABC):
                 "dimuon_dEta": dimuon_dEta,
                 "dimuon_dPhi": dimuon_dPhi,
                 "dimuon_dR": dimuon_dR,
+                "acoplanarity": acoplanarity,
             },
         )
 
@@ -1500,8 +1514,6 @@ class EventProcessor(processor.ProcessorABC):
                 "mu2_svIdx":           mu2.svIdx,
 
                 "nmuons": nmuons,
-
-                "acoplanarity": acoplanarity,
 
                 "dimuon_cos_theta_eta": dimuon_cos_theta_eta,
                 "dimuon_phi_eta": dimuon_phi_eta,
@@ -1730,23 +1742,72 @@ class EventProcessor(processor.ProcessorABC):
             njets_gen = n_genjets_pt30_eta47
 
             logger.info("=======================  apply zpt weights =======================")
-            # choose the config file
-            if "MiNNLO" in dataset:
-                zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
-            else:
-                zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
+            whichMethod = "function" # DNN or function or both
+            if whichMethod == "function" or whichMethod == "both":
+                # choose the config file
+                if "MiNNLO" in dataset:
+                    zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
+                else:
+                    zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
 
-            zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg)
-            zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg)
+                zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg)
+                zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg)
 
-            # --- save both to parquet
+                # --- save both to parquet
+                _add_block(out_dict, {
+                    "zpt_wgt_reco": zpt_wgt_reco,
+                    "zpt_wgt_gen":  zpt_wgt_gen,
+                })
+            if (whichMethod == "DNN" or whichMethod == "both") and str(year) == "2024": #FIXME: year is temporarily here.
+                # 1) choose model family (MiNNLO vs aMCatNLO)
+                # model_paths = self.config["zpt_dnn_models_aMCatNLO"]  # dict with 0j/1j/2j
+                model_paths_by_cats = {
+                    "0j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet0/model_ts.pt",
+                    "1j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet1/model_ts.pt",
+                    "2j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet2p/model_ts.pt",
+                }
+                scalar_paths_by_cats = {
+                    "0j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet0/scaler.npz",
+                    "1j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet1/scaler.npz",
+                    "2j": "/depot/cms/private/users/shar1172/copperheadV2_main/try_zpt_dnn/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/njet2p/scaler.npz",
+                }
+
+                # 2) build features
+                zpt_features_reco = {
+                    "mu1_pt": mu1.pt,
+                    "mu2_pt": mu2.pt,
+                    "mu1_eta": mu1.eta,
+                    "mu2_eta": mu2.eta,
+                    "acoplanarity": acoplanarity,
+                    "dimuon_pt": dimuon.pt,
+                    "dimuon_rapidity": getRapidity(dimuon),
+                }
+
+                cfg_base = ZptDNNConfig(
+                    model_path="DUMMY",
+                    feature_names=[
+                        "mu1_pt","mu2_pt","mu1_eta","mu2_eta",
+                        "acoplanarity","dimuon_pt","dimuon_rapidity"
+                    ],
+                    output_mode="logit_to_odds",
+                    device="cpu",
+                    clip_weight_min=0.2,
+                    clip_weight_max=5.0,
+                )
+
+                zpt_wgt_reco_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_reco, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
+                zpt_wgt_gen_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_gen, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
+
+                # --- save both to parquet
+                _add_block(out_dict, {
+                    "zpt_wgt_reco_dnn": zpt_wgt_reco_dnn,
+                    "zpt_wgt_gen_dnn": zpt_wgt_gen_dnn,
+                })
+
             _add_block(out_dict, {
-                "zpt_wgt_reco": zpt_wgt_reco,
-                "zpt_wgt_gen":  zpt_wgt_gen,
-                "njets_reco_for_zpt": njets_reco,
-                "njets_gen_for_zpt":  njets_gen,
+                "zpt_njets_reco": njets_reco,
+                "zpt_njets_gen": njets_gen,
             })
-
             # apply reco zpt weight to event weight
             weights.add("zpt_wgt", weight=zpt_wgt_reco)
 
@@ -2031,7 +2092,7 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Apply jetID and PUID
         # ------------------------------------------------------------#
-        pass_jet_id = jet_id(jets, self.config)
+        pass_jet_id = jet_id(jets, self.config, year)
 
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         logger.debug(f"dnn_year: {dnn_year}")
@@ -2237,6 +2298,7 @@ class EventProcessor(processor.ProcessorABC):
             f"zeppenfeld_{variation}": zeppenfeld,
             f"njets_{variation}": njets,
         })
+
         if is_run2(year):
             """Additional jet variables only for Run2"""
             jet_loop_out_dict.update({
@@ -2321,18 +2383,6 @@ class EventProcessor(processor.ProcessorABC):
                 jet_loop_out_dict.update({
                     f"jet3_puId_{variation}": get_puId(jet3),
                     f"jet4_puId_{variation}": get_puId(jet4),
-                })
-        if is_run2(year):
-            """Additional jet variables only for Run2"""
-            jet_loop_out_dict.update({
-                f"jet1_qgl_{variation}": jet1.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
-                f"jet2_qgl_{variation}": jet2.qgl,
-
-            })
-            if do_additional_jet_vars:
-                jet_loop_out_dict.update({
-                    f"jet3_qgl_{variation}": jet3.qgl,
-                    f"jet4_qgl_{variation}": jet4.qgl,
                 })
 
         # ------------------------------------------------------------------
