@@ -7,13 +7,6 @@ from src.corrections.correctionlib_file_cache import get_corrset
 from modules.utils import logger
 
 
-def _is_typetracer(x):
-    try:
-        return ak.backend(x) == "typetracer"
-    except Exception:
-        return False
-
-
 def add_muon_sfs_run3_correctionlib(mu1, mu2, mu_sf_lookup_info):
     """
     Add Run-3 muon SFs using correctionlib.
@@ -48,70 +41,22 @@ def add_muon_sfs_run3_correctionlib(mu1, mu2, mu_sf_lookup_info):
     )
     logger.info(f"mu_sf_lookup_file: {mu_sf_lookup_file}")
 
-    corrset = correctionlib.CorrectionSet.from_file(mu_sf_lookup_file)
+    corrset = get_corrset(mu_sf_lookup_file)
     muID_corr = corrset[id_name]
     muIso_corr = corrset[iso_name]
     muTrig_corr = corrset[trig_name]
 
-    # -------------------------------------------------
-    # dask-safe correctionlib evaluate (partition-wise)
-    # -------------------------------------------------
-    def _eval_corr_partition(json_file, corr_name, eta, pt, syst):
-        if _is_typetracer(eta) or _is_typetracer(pt):
-            # return a float32 typetracer array with same form as pt (or eta)
-            return ak.zeros_like(pt, dtype=np.float32)
-
-        corrset = get_corrset(json_file)
-        corr = corrset[corr_name]
-
-        names = [inp.name for inp in corr.inputs]
-        argmap = {
-            "eta": eta,
-            "abseta": abs(eta),
-            "pt": pt,
-            "scale_factors": syst,
-        }
-        args = [argmap[n] for n in names]
-        out = corr.evaluate(*args)
-        return out.astype(np.float32, copy=False)
-
-
-    def eval_corr(json_file, corr_name, eta, pt, syst):
-        if isinstance(eta, dak.Array) or isinstance(pt, dak.Array):
-            meta = ak.to_backend(
-                ak.Array(np.empty((0,), dtype=np.float32)),
-                "typetracer",
-            )
-            return dak.map_partitions(
-                lambda e, p: _eval_corr_partition(json_file, corr_name, e, p, syst),
-                eta,
-                pt,
-                meta=meta,
-            )
-        return _eval_corr_partition(json_file, corr_name, eta, pt, syst)
-
-    # -----------------------------
-    # choose leading muon for trig
-    # -----------------------------
-    is_mu1_lead = mu1.pt >= mu2.pt
-    lead_eta = ak.where(is_mu1_lead, mu1.eta, mu2.eta)
-    lead_pt = ak.where(is_mu1_lead, mu1.pt, mu2.pt)
-
-    # (optional but robust) protect exact-edge issues if pt is extremely close to threshold
-    # If your selection guarantees lead_pt > 26, this does nothing in practice.
-    eps = 1e-3
-    lead_pt = ak.where(lead_pt < 26.0, 26.0 + eps, lead_pt)
 
     # -----------------------------
     # ID (event = mu1*mu2)
     # -----------------------------
-    mu1_id_nom = eval_corr(mu_sf_lookup_file, id_name, mu1.eta, mu1.pt, "nominal")
-    mu1_id_up = eval_corr(mu_sf_lookup_file, id_name, mu1.eta, mu1.pt, "systup")
-    mu1_id_down = eval_corr(mu_sf_lookup_file, id_name, mu1.eta, mu1.pt, "systdown")
+    mu1_id_nom = muID_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "nominal")
+    mu1_id_up = muID_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "systup")
+    mu1_id_down = muID_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "systdown")
 
-    mu2_id_nom = eval_corr(mu_sf_lookup_file, id_name, mu2.eta, mu2.pt, "nominal")
-    mu2_id_up = eval_corr(mu_sf_lookup_file, id_name, mu2.eta, mu2.pt, "systup")
-    mu2_id_down = eval_corr(mu_sf_lookup_file, id_name, mu2.eta, mu2.pt, "systdown")
+    mu2_id_nom = muID_corr.evaluate(mu2.eta_raw, mu2.pt_raw, "nominal")
+    mu2_id_up = muID_corr.evaluate(mu2.eta_raw, mu2.pt_raw, "systup")
+    mu2_id_down = muID_corr.evaluate(mu2.eta_raw, mu2.pt_raw, "systdown")
 
     muID = {
         "nom": mu1_id_nom * mu2_id_nom,
@@ -122,13 +67,13 @@ def add_muon_sfs_run3_correctionlib(mu1, mu2, mu_sf_lookup_info):
     # -----------------------------
     # ISO (event = mu1*mu2)
     # -----------------------------
-    mu1_iso_nom = eval_corr(mu_sf_lookup_file, iso_name, mu1.eta, mu1.pt, "nominal")
-    mu1_iso_up = eval_corr(mu_sf_lookup_file, iso_name, mu1.eta, mu1.pt, "systup")
-    mu1_iso_down = eval_corr(mu_sf_lookup_file, iso_name, mu1.eta, mu1.pt, "systdown")
+    mu1_iso_nom = muIso_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "nominal")
+    mu1_iso_up = muIso_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "systup")
+    mu1_iso_down = muIso_corr.evaluate(mu1.eta_raw, mu1.pt_raw, "systdown")
 
-    mu2_iso_nom = eval_corr(mu_sf_lookup_file, iso_name, mu2.eta, mu2.pt, "nominal")
-    mu2_iso_up = eval_corr(mu_sf_lookup_file, iso_name, mu2.eta, mu2.pt, "systup")
-    mu2_iso_down = eval_corr(mu_sf_lookup_file, iso_name, mu2.eta, mu2.pt, "systdown")
+    mu2_iso_nom = muIso_corr.evaluate(mu2.eta_raw, mu2.pt_raw, "nominal")
+    mu2_iso_up = muIso_corr.evaluate(mu2.eta_raw, mu2.pt_raw, "systup")
+    mu2_iso_down = muIso_corr.evaluate(mu2.eta_raw, mu2.pt_raw, "systdown")
 
     muIso = {
         "nom": mu1_iso_nom * mu2_iso_nom,
@@ -138,10 +83,34 @@ def add_muon_sfs_run3_correctionlib(mu1, mu2, mu_sf_lookup_info):
 
     # -----------------------------
     # TRIGGER (leading muon only)
+    # Logic: If muon is within bounds, compute SF; otherwise SF=1.0
     # -----------------------------
-    mu_trig_nom = eval_corr(mu_sf_lookup_file, trig_name, lead_eta, lead_pt, "nominal")
-    mu_trig_up = eval_corr(mu_sf_lookup_file, trig_name, lead_eta, lead_pt, "systup")
-    mu_trig_down = eval_corr(mu_sf_lookup_file, trig_name, lead_eta, lead_pt, "systdown")
+    # Define trigger SF acceptance window
+    in_bounds = (mu1.pt_raw > 26.0) & (abs(mu1.eta_raw) < 2.4)
+
+    # Clip inputs to valid range to prevent correctionlib from throwing errors
+    # (we only use the computed SF where in_bounds=True; out-of-bounds get SF=1.0)
+    pt_safe = ak.where(mu1.pt_raw > 26.0, mu1.pt_raw, 26.01)
+    eta_safe = ak.where(abs(mu1.eta_raw) < 2.4, mu1.eta_raw, 0.0)
+
+    # Evaluate trigger SFs using safe inputs
+    mu_trig_nom_eval = muTrig_corr.evaluate(eta_safe, pt_safe, "nominal")
+    mu_trig_up_eval = muTrig_corr.evaluate(eta_safe, pt_safe, "systup")
+    mu_trig_down_eval = muTrig_corr.evaluate(eta_safe, pt_safe, "systdown")
+
+    # Apply logic: use computed SF if in_bounds, otherwise use 1.0
+    mu_trig_nom = ak.where(in_bounds, mu_trig_nom_eval, 1.0)
+    mu_trig_up = ak.where(in_bounds, mu_trig_up_eval, 1.0)
+    mu_trig_down = ak.where(in_bounds, mu_trig_down_eval, 1.0)
+
+    # Log fraction of out-of-bounds events
+    n_total = ak.count(in_bounds)
+    n_out_of_bounds = ak.sum(~in_bounds)
+    if n_out_of_bounds > 0:
+        logger.debug(
+            f"Trigger SF: {n_out_of_bounds}/{n_total} events have leading muon out of bounds "
+            f"(pt<=26 or |eta|>=2.4), assigning SF=1."
+        )
 
     muTrig = {"nom": mu_trig_nom, "up": mu_trig_up, "down": mu_trig_down}
 
