@@ -208,16 +208,16 @@ def build_datacards(var_name, yield_df, parameters):
                 datacard.write(f"{bin_name} autoMCStats 0 1 1\n")
                 datacard.write("---------------\n")
                 # nuisnace edit start ----------------------------
-                datacard.write(
-                    "nuisance edit rename"
-                    # " (DYJ2|DYJ01|ggH_hmm|TT+ST|VV) * " #FIXME: Temporarily commenting out the DYJ01 rate param since we are not using it in the datacard for now
-                    " (ggH_hmm|TT+ST|VV) * "
-                    "qgl_wgt  QGLweightPY \n"
-                )
-                datacard.write("nuisance edit rename EWK * qgl_wgt" " QGLweightHER \n")
-                datacard.write(
-                "nuisance edit rename qqH_hmm * qgl_wgt" " QGLweightPYDIPOLE \n"
-                )
+                # datacard.write(
+                #     "nuisance edit rename"
+                #     # " (DYJ2|DYJ01|ggH_hmm|TT+ST|VV) * " #FIXME: Temporarily commenting out the DYJ01 rate param since we are not using it in the datacard for now
+                #     " (ggH_hmm|TT+ST|VV) * "
+                #     "qgl_wgt  QGLweightPY \n"
+                # )
+                # datacard.write("nuisance edit rename EWK * qgl_wgt" " QGLweightHER \n")
+                # datacard.write(
+                # "nuisance edit rename qqH_hmm * qgl_wgt" " QGLweightPYDIPOLE \n"
+                # )
                 datacard.write("---------------\n")
                 # nuisnace edit end ----------------------------
                 datacard.close()

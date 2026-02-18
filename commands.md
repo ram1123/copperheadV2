@@ -10,7 +10,10 @@ time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.ya
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_FilterJetsHorn30GeV_JetIDFix -y "2024" -m 1 -k -i 1)
 
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_FilterJetsHorn30GeV_JetIDMuIDFix -y "2024" -m 1 -k )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_15Feb_FilterJetsHorn30GeV -y "2024" -m zpt_fit0 -k )
 
+
+snakemake -s workflow/Snakefile -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60
 ```
 
 # 16 February 2026

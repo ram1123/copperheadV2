@@ -61,16 +61,16 @@ categories = ["nocat", "vbf", "ggh"]
 
 # Boolean flags
 vbf_filter_study_options = [False]  # True/False list
-remove_zpt_weights_options = [False]  # True/False list
+remove_zpt_weights_options = [True]  # True/False list
 add_dnn_zpt_weights_options = [False]  # True/False list
-min_set_of_vars = False  # minimal set of vars
+min_set_of_vars = True  # minimal set of vars
 
 region_options = [
     ["h-sidebands", "z-peak"],
 ]
 
-# njets_options = ["inclusive"]
-njets_options = ["inclusive", "0", "1", "2"]
+njets_options = ["inclusive"]
+# njets_options = ["inclusive", "0", "1", "2"]
 # njets_options = ["0", "1", "2"]
 
 
@@ -170,6 +170,8 @@ def run_all_combos():
                 f"[{job_idx:04d}] {year} {cat} njets={njets} vbf={vbf_flag} zptRm={zpt_flag} dnnZpt={dnn_flag}"
             )
             logger.info(shjoin(cmd))
+            # if job_idx < 3:  # only print the first few commands for sanity check
+            #     continue;
 
             if not DRY_RUN:
                 subprocess.run(cmd, check=True)

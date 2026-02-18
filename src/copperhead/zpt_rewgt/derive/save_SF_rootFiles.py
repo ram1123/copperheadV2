@@ -26,14 +26,6 @@ if __name__ == "__main__":
     This file is meant to define the Zpt histogram binning for zpt fitting
     """
     parser = build_common_parser()
-    parser.add_argument(
-    "-i",
-    "--input_path",
-    dest="input_path",
-    default=None,
-    action="store",
-    help="input parquet files path",
-    )
     args = parser.parse_args()
 
     # intialize dask client
@@ -59,6 +51,12 @@ if __name__ == "__main__":
             sys.exit(1)
 
         base_path = f"{args.input_path}/stage1_output/{year}/compacted"  # define the save path of stage1 outputs
+
+        # if base_path does not exist, check to replace "compacted" with "f1_0"
+        if not os.path.exists(base_path):
+            base_path = base_path.replace("compacted", "f1_0")
+            if not os.path.exists(base_path):
+                raise RuntimeError(f"Base path does not exist: {base_path}")
 
         # load the data and dy samples
         print(f"base path data : {base_path}/data_*/*/*.parquet")
@@ -117,7 +115,8 @@ if __name__ == "__main__":
             # binning = config["rewgt_binning"]
             # # Convert the list of bin edges to a C-style array
             # # binning_array = np.array(binning)
-            binning_array = np.linspace(0,200, 2001) # 2000 bins from 0 to 200 GeV
+            binning_array = np.linspace(0, 200, 2001)  # 2000 bins from 0 to 200 GeV
+            # binning_array = np.linspace(0, 200, 80)  # 2000 bins from 0 to 200 GeV
 
             # Step 2: Create the histogram with variable bin widths
             hist_data = ROOT.TH1F("hist_data", "Data", len(binning_array) - 1, binning_array)
@@ -223,6 +222,24 @@ if __name__ == "__main__":
 
             # Save the canvas as an image
             canvas.SaveAs(f"{plot_path}/SF_{year}_njet{njet}.pdf")
+
+            # plot data and dy histograms together using TRatioPlot
+            canvas = ROOT.TCanvas("canvas", f"Data vs DY {run_label}", 800, 800)
+            ratio_plot = ROOT.TRatioPlot(hist_data, hist_dy)
+            ratio_plot.SetH1DrawOpt("E")  # Draw data with error bars
+            ratio_plot.SetH2DrawOpt("E")  # Draw DY with error bars
+            ratio_plot.Draw()
+            ratio_plot.GetLowerRefYaxis().SetTitle("Data / DY")
+            ratio_plot.GetLowerRefXaxis().SetTitle("Dimuon pT (GeV)")
+
+            # add legend
+            legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)  # Legend coordinates (x1, y1, x2, y2)
+            legend.AddEntry(hist_data, "Data", "l")  # "l" means line style
+            legend.AddEntry(hist_dy, "DY", "l")
+            legend.Draw()
+
+            # Save the canvas as an image
+            canvas.SaveAs(f"{plot_path}/dataOverDY_{year}_njet{njet}.pdf")
 
     if client is not None:
         close_dask_client()

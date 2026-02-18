@@ -284,10 +284,10 @@ def make_templates(args, parameters={}):
         add_EWK_PartonShower = False
         for wgt_variation in wgt_variations:
             if "qqH_hmm" ==group:
-                add_VBF_PartonShower = True
+                add_VBF_PartonShower = False
                 break
             elif "EWK" ==group:
-                add_EWK_PartonShower = True
+                add_EWK_PartonShower = False
                 break
         if add_VBF_PartonShower:
             wgt_variations += ["qqH_hmm_SignalPartonShowerUp", "qqH_hmm_SignalPartonShowerDown"]
@@ -336,8 +336,7 @@ def make_templates(args, parameters={}):
                     baseline_dataset = "ewk_lljj"
                     variation_dataset = "ewk_lljj_mll105_160_py_dipole"
                 else:
-                    logger.warning("no parton shower exists for this sample!")
-                    raise ValueError
+                    raise ValueError("no parton shower exists for this sample!")
                 # vals_baseline = hist_df.loc[hist_df.dataset == baseline_dataset, "hist"].values
                 logger.debug(f'hist_df.loc[hist_df.dataset == baseline_dataset, "hist"]: {hist_df.loc[hist_df.dataset == baseline_dataset, "hist"]}')
                 # hist_baseline = hist_df.loc[hist_df.dataset == baseline_dataset, "hist"].values.sum()

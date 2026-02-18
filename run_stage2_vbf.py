@@ -19,6 +19,7 @@ from coffea.ml_tools.torch_wrapper import torch_wrapper
 from modules import selection
 from modules.dask_utils import get_dask_client
 from modules.utils import fillEventNans, logger
+from modules.sample_config import get_bkg_sig_dicts
 from tqdm import tqdm
 
 
@@ -97,8 +98,8 @@ def columns_for_selection(category, variation):
 
 class DNNWrapper(torch_wrapper):
     def _create_model(self):
-        logger.info(f"Loading model from {self.torch_jit}")
-        logger.info(f"torch_jit type: {type(self.torch_jit)}")
+        logger.debug(f"Loading model from {self.torch_jit}")
+        logger.debug(f"torch_jit type: {type(self.torch_jit)}")
         model = torch.jit.load(self.torch_jit)
         model.eval()
         return model
@@ -176,7 +177,7 @@ def getFoldFilter(events, fold_vals, nfolds):
     return fold_filter
 
 
-def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[]):
+def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samples=[], bkg_samples=[]):
     """
     sig samples: VBF, GGH
     bkg smaples: DY, TT, ST, VV, EWK
@@ -197,20 +198,10 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     # ------------------------------------
     # work on sig MC
     # ------------------------------------
-    sig_sample_dict = {
-        "VBF" : [
-            "vbf_powheg_dipole", # pythia dipole
-            "vbf_powheg_herwig", # herwig
-            "vbf_powhegPS", # pythia 8
-        ],
-        "GGH" : [
-            "ggh_powhegPS"
-        ],
-        "HIGGS" : [
-            "vbf_powheg_dipole", # pythia 8
-            "ggh_powhegPS", # pythia 8
-        ]
-    }
+    bkg_sample_dict, sig_sample_dict, combined_sample_dict = get_bkg_sig_dicts(
+        yaml_path=sample_config,
+        year=year,
+    )
 
     sig_sample_l = []
     logger.info(f"sig_sample_dict: {sig_sample_dict}")
@@ -232,57 +223,6 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
     # ------------------------------------
     # work on bkg MC
     # ------------------------------------
-    bkg_sample_dict = {
-        "DY": [
-            # NOTE: If we want to results with only aMCatNLO or MiNNLO samples then in
-            #            the function `selection.applyRegionCatCuts` set `do_vbf_filter_study=False`.
-            # "dy_M-100To200",
-            # "dy_m105_160_vbf_amc",
-            # "dy_M-50",
-            # "dy_M-100To200_MiNNLO",
-            # "dy_M-50_MiNNLO",
-            # "dy_M-100To200_aMCatNLO",
-            # "dy_M-50_aMCatNLO",
-            # "dy_VBF_filter"
-            # "DYJ01",
-            # "DYJ2"
-            "dyTo2L_M-50_incl",
-            #  "dyTo2Mu_MLL_10To50",
-            # "dyTo2Mu_MLL_50To120",
-            # "dyTo2Mu_MLL_120To200",
-        ],
-        "TT": [
-            "ttjets_dl",
-            "ttjets_sl",
-        ],
-        "ST": [
-            "st_tw_top",
-            "st_tw_antitop",
-            "st_t_top",
-            "st_t_antitop",
-        ],
-        "EWK": [
-            "ewk_lljj_mll105_160_ptj0",  # herwig
-            "ewk_lljj_mll105_160_py_dipole",  # pythia dipole
-            "ewk_lljj_mll50_mjj120",
-            "ewk_lljj",
-            "ewk_mmjj",
-        ],
-        "VV": [
-            "ww_2l2nu",
-            "wz_3lnu",
-            "wz_2l2q",
-            "wz_1l1nu2q",
-            "zz",
-        ],
-        "VVV": [
-            "www",
-            "wwz",
-            "wzz",
-            "zzz",
-        ],
-    }
-
     bkg_sample_l = []
     for bkg_sample in bkg_samples:
         bkg_sample = bkg_sample.upper()
@@ -295,7 +235,7 @@ def getStage1Samples(stage1_path, data_samples=[], sig_samples=[], bkg_samples=[
         logger.info(f"sample: {sample}, number of files: {len(sample_filelist)}")
         logger.debug(f"sample_filelist: {sample_filelist}")
         if len(sample_filelist) == 0:
-            logger.critical(f"No {sample} files were found!")
+            logger.debug(f"No {sample} files were found!")
             continue
         return_filelist_dict[sample] = sample_filelist
 
@@ -372,7 +312,7 @@ if __name__ == "__main__":
     os.makedirs(hist_save_path, exist_ok=True)
     logger.info(f"Histograms will be saved to: {hist_save_path}")
 
-    full_sample_dict = getStage1Samples(stage1_path, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
+    full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
 
     logger.debug(f"full_sample_dict: {full_sample_dict}")
     logger.info(f"full_sample_dict: {full_sample_dict.keys()}")
@@ -424,7 +364,7 @@ if __name__ == "__main__":
         # Load training features once per sample_type
         with open(model_trained_path / "training_features.pkl", "rb") as f:
             training_features = pickle.load(f)
-        logger.info(f"training_features: {training_features}")
+        logger.debug(f"training_features: {training_features}")
         logger.info(f"len training_features: {len(training_features)}")
 
         NO_SCALE_FEATURES = {
@@ -693,7 +633,7 @@ if __name__ == "__main__":
         # ---------------------------------------------------
         with open(f"{output_pkl_path}", "wb") as file:
             pickle.dump(score_hist, file)
-            logger.info(f"{sample_type} histogram on {output_pkl_path}!")
+            logger.info(f"{sample_type} histogram on {output_pkl_path}")
 
         t9 = time.perf_counter()
         logger.info(f"[timing] Histogram saving time: {t9 - t8:.2f} seconds")

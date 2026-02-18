@@ -5,7 +5,7 @@ from cli.common_argparser import build_common_parser
 from modules.utils import logger
 from stage3.make_datacards import build_datacards
 from stage3.make_templates import to_templates
-
+from modules.sample_config import get_all_dicts
 parser = build_common_parser()
 parser.add_argument(
     "-nv",
@@ -50,46 +50,10 @@ parameters = {
     "templates_vars": [],  # "dimuon_mass"],
 }
 
-
-parameters["grouping"] = {
-    "data": "Data",
-
-    # DY
-    # "dyTo2Mu_MLL_10To50": "DY",
-    # "dyTo2Mu_MLL_50To120": "DY",
-    # "dyTo2Mu_MLL_120To200": "DY",
-
-    # Inclusive DY
-    "dyTo2L_M-50_incl": "DY",
-
-    # EWK
-    "ewk_lljj": "EWK",
-
-    # Top
-    "ttjets_dl": "TT+ST",
-    "ttjets_sl": "TT+ST",
-    # "ttw": "TT+ST",
-    # "ttz": "TT+ST",
-    # "st_tw_top": "TT+ST",
-    # "st_tw_antitop": "TT+ST",
-
-    # Diboson
-    "ww_2l2nu": "VV",
-    "wz_2l2q": "VV",
-    "wz_1l1nu2q": "VV",  # bad for 2016
-    "wz_3lnu": "VV",
-    "zz": "VV",
-
-    # Triboson
-    # "www": "VVV",
-    # "wwz": "VVV",
-    # "wzz": "VVV",
-    # "zzz": "VVV",
-
-    # Signal
-    "ggh_powhegPS": "ggH_hmm",
-    "vbf_powheg_dipole": "qqH_hmm",
-}
+_, _, parameters["grouping"] = get_all_dicts(
+    yaml_path=args.sample_config,
+    year=year,
+)
 
 
 parameters["plot_groups"] = {
