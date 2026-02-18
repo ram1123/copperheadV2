@@ -133,10 +133,10 @@ switches:
         "2023BPix": false
         "2024": false
     do_remove_dy_M100to200: # Remove 100 to 200 mll region from inclusive DY.
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+        '2016preVFP': false # true
+        '2016postVFP': false # true
+        '2017': false # true
+        '2018': false # true
         '2022preEE': false
         '2022postEE': false
         "2023": false
