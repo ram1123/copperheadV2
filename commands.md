@@ -9,6 +9,8 @@ time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.ya
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDFix -y "2022postEE" -m 1 -k -i 1)
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_FilterJetsHorn30GeV_JetIDFix -y "2024" -m 1 -k -i 1)
 
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l Run3_nanoAODv15_FilterJetsHorn30GeV_JetIDMuIDFix -y "2024" -m 1 -k )
+
 ```
 
 # 16 February 2026

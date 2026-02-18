@@ -274,10 +274,11 @@ if __name__ == "__main__":
         # if True:
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
-
-                # if "data_"  in dataset:
-                #     logger.info(f"Skipping dataset {dataset} ")
-                #     continue
+                logger.info("{}{}".format("\n" * 2, "=" * 51))
+                logger.info(f"===         Processing dataset: {dataset}       ===")
+                logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
+                logger.info(f"===         Year: {args.year}                        ===")
+                logger.info("{}{}".format("=" * 51, "\n" * 2))
 
                 if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
                     logger.warning(f"Skipping dataset: {dataset}")
@@ -308,11 +309,8 @@ if __name__ == "__main__":
                 #     sample["files"] = test_files
                 #     logger.info(f"Test mode: Using only 1/4 of total files for {dataset}. total_files: {total_files}, test_files used: {len(test_files)}")
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
-                logger.info(f"max_file_len: {args.max_file_len}")
                 logger.info(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    logger.info(f"Processing {dataset} file index {idx}")
-
                     # Skip if already done (unless user wants a full rerun)
                     if not args.rerun and not jobstat.should_run(dataset, idx):
                         logger.info(f"[resume] skip {dataset}[{idx}] (done marker present)")
@@ -327,7 +325,6 @@ if __name__ == "__main__":
                     jobstat.mark_running(dataset, idx)
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                         try:
-                            logger.info("{}{}".format("\n" * 2, "=" * 20))
                             logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
                             # build fresh file list with this redirector
                             alt_sample = copy.deepcopy(smaller_sample)
