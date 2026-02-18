@@ -40,6 +40,8 @@ nav:
           - EBE Mass Resolution: eventbyeventMassResolution.md
     - DNN:
           - DNN for VBF: DNN_VBF.md
+    - Workflow Management:
+            - Snakemake: workflow_management.md
     - Notes:
           - Datasets Info: datasets_info.md
           - NanoAOD v12 vs v9: NanoAODv12_v9.md
