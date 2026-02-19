@@ -252,6 +252,7 @@ for year in "${years[@]}"; do
         command3+=" --log-level DEBUG "
         command4+=" --log-level DEBUG --debug "
         command5+=" --log-level DEBUG "
+        command_compact+=" --log-level DEBUG "
     else
         command0+=" --log-level INFO "
         command1+=" --log-level INFO "
@@ -259,6 +260,7 @@ for year in "${years[@]}"; do
         command3+=" --log-level INFO "
         command4+=" --log-level INFO "
         command5+=" --log-level INFO "
+        command_compact+=" --log-level INFO "
     fi
 
     if [[ "$frac" == "1" ]]; then

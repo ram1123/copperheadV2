@@ -35,6 +35,9 @@ ZPT_BATCH = int(ZPT.get("batch", 65536))
 def gw_flags():
     return f"-k -i {CLIDX}" if USE_GW else ""
 
+def gw_flags_plots():
+    return f" --use_gateway --cluster_index {CLIDX}" if USE_GW else ""    
+
 rule all:
     input:
         # (1) stage1 for all years
@@ -126,7 +129,7 @@ rule plots:
     params:
         nano=lambda wc: nano_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
-        gw=lambda wc: gw_flags(),
+        gw=lambda wc: gw_flags_plots(),
         # where stage1 output lives (your stage1 creates stage1_output/<year>/f1_0)
         load_path=lambda wc: f"/depot/cms/hmm/{os.environ['USER']}/hmm_ntuples/copperheadV1clean/{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0",
         # where to save plots (make it versioned)

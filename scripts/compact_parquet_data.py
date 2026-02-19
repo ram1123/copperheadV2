@@ -9,9 +9,13 @@ from modules.dask_utils import close_dask_client, get_dask_client
 from modules.utils import logger
 from run_stage2_vbf import DNNWrapper, getFoldFilter, prepare_features
 from tqdm import tqdm
+import glob
 
 
 def ensure_compacted(year, sample, input_path, compacted_path):
+    logger.debug(f"year: {year}")
+    logger.debug(f"samples: {sample}")
+    logger.debug(f"input_path: {input_path}")
     logger.debug(f"Checking compacted dataset: {compacted_path}")
 
     if not os.path.exists(compacted_path):
@@ -23,6 +27,14 @@ def ensure_compacted(year, sample, input_path, compacted_path):
             return
 
         logger.debug(f"Reading data from {orig_path}")
+        
+        # check if any parquet files exist (recursively)
+        parquet_files = glob.glob(os.path.join(orig_path, "**", "*.parquet"), recursive=True)
+
+        if len(parquet_files) == 0:
+            logger.warning(f"No parquet files found under {orig_path}. Skipping.")
+            return        
+
         inFile = dak.from_parquet(orig_path)
 
         if "vbf_powheg_dipole" in sample:
@@ -181,6 +193,7 @@ if __name__ == "__main__":
 
     # append /stage1_output/2018/f1_0 to load path
     args.input_path = os.path.join(args.input_path, f"stage1_output/{args.year}/f1_0")
+    logger.info(f"Input path: {args.input_path}")
 
     if not args.compacted_dir:
         logger.debug("No compacted directory provided, using default.")
