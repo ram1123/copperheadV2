@@ -27,6 +27,8 @@ from modules.utils import logger
 from modules.trials import get_stage1_path
 from modules.dask_utils import get_dask_client
 from modules.dask_utils import close_dask_client
+from cli.common_argparser import build_common_parser
+
 
 from basic_class_for_calibration import (
     get_calib_categories,
@@ -196,7 +198,8 @@ def step3_compute_calibration(df_fit, df_res):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mass resolution calibration workflow")
+
+    parser = build_common_parser()
     parser.add_argument("--isMC", action="store_true", help="Run on MC samples (default: False)")
     # binned or unbinned fitting
     parser.add_argument("--ifbinned", action="store_true", help="Use binned fitting (default: unbinned)")
@@ -206,27 +209,12 @@ def main():
         help="Run closure test instead of computing calibration (default: False)",
     )
     parser.add_argument("--fixCat", type=str, default=None, help="Fit only one category")
-    parser.add_argument("--years", nargs="+", default=["2018", "2017", "2016postVFP", "2016preVFP"], help="List of years to process")
     parser.add_argument("--backup", action="store_true", help="Enable backup before overwrite")
     parser.add_argument("--extraString", type=str, default="", help="Additional string to add to the output directory name")
     parser.add_argument(
         "--no-dask-client",
         action="store_true",
         help="Run without creating a Dask client (use default scheduler)",
-    )
-    parser.add_argument(
-        "--use_gateway",
-        dest="use_gateway",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-        help="If true, uses dask gateway client instead of local",
-    )
-    parser.add_argument(
-        "--nanoAODv",
-        dest="nanoAODv",
-        type=int,
-        default=12,
-        help="NanoAOD version as an integer (e.g. 12)",
     )
     # which steps to run
     parser.add_argument(
@@ -289,7 +277,7 @@ def main():
 
         create_directory(f"{output_dir}")
         create_directory(f"{skim_dir}")
-        CalibrationJSONFile = f"res_calib_BS_correction_{year}_{isMCString}_nanoAODv{args.nanoAODv}.json"
+        CalibrationJSONFile = f"res_calib_BS_correction_{year}_{isMCString}_nanoAODv{args.NanoAODv}.json"
 
         if isMC:
             # INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/dy*MiNNLO/*/*.parquet"
