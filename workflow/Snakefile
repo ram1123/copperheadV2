@@ -428,7 +428,7 @@ rule MassCalibrationDataClosure:
 # ---------------------------------------
 rule corrections_ready:
     input:
-        "state/zpt_step2_{year}.done",
+        "state/zpt_step2_{year}_{njets}.done",
         "state/mass_calibration_Data_{year}.done",
         "state/mass_calibration_MC_{year}.done"
     output:

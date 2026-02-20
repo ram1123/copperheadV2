@@ -232,7 +232,7 @@ for year in "${years[@]}"; do
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
 
     # ########## Calibration commands ##########
-    if [[ "isMC" == "0" ]]; then
+    if [[ "$isMC" == "0" ]]; then
         mcArg="--isMC"
     else
         mcArg=" "
