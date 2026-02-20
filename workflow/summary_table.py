@@ -13,8 +13,8 @@ COLS = [
     ("zpt1", "zpt1"),
     ("zpt2", "zpt2"),
     ("MassCalibrationData", "massData"),
-    ("MassCalibrationMC", "massMC"),
     ("MassCalibrationDataClosure", "massDataCl"),
+    ("MassCalibrationMC", "massMC"),
     ("MassCalibrationMCClosure", "massMCCl"),
 ]
 
