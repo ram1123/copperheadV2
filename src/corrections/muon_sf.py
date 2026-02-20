@@ -8,7 +8,7 @@ from src.corrections.correctionlib_file_cache import get_corrset
 from modules.utils import logger, get_corr_input_names
 
 
-def add_muon_sfs_correctionlib(mu1, mu2, mu_sf_lookup_info, year: str):
+def add_muon_sfs_correctionlib(mu1, mu2, config):
     """
     Add Run-3 muon SFs using correctionlib.
 
@@ -28,26 +28,28 @@ def add_muon_sfs_correctionlib(mu1, mu2, mu_sf_lookup_info, year: str):
           - "iso": correction name
           - "trig": correction name
     """
+    mu_sf_lookup_info = config["muSFFileList"]
+    
     mu_sf_lookup_file = mu_sf_lookup_info.get("json_file")
     id_name = mu_sf_lookup_info.get("id")
     iso_name = mu_sf_lookup_info.get("iso")
     trig_name = mu_sf_lookup_info.get("trig")
 
-    logger.info("Muon SF lookup info from config: %s", mu_sf_lookup_info)
-    logger.info(
+    logger.debug("Muon SF lookup info from config: %s", mu_sf_lookup_info)
+    logger.debug(
         f"Muon ID SF correction name: {id_name}\n"
         f"Muon Iso SF correction name: {iso_name}\n"
         f"Muon Trigger SF correction name: {trig_name}"
     )
-    logger.info(f"mu_sf_lookup_file: {mu_sf_lookup_file}")
+    logger.debug(f"mu_sf_lookup_file: {mu_sf_lookup_file}")
 
     corrset = get_corrset(mu_sf_lookup_file)
     muID_corr = corrset[id_name]
     muIso_corr = corrset[iso_name]
     muTrig_corr = corrset[trig_name]
-    logger.info(f"get_corr_input_names muID_corr: {get_corr_input_names(muID_corr)}")
-    logger.info(f"get_corr_input_names muIso_corr: {get_corr_input_names(muIso_corr)}")
-    logger.info(f"get_corr_input_names muTrig_corr: {get_corr_input_names(muTrig_corr)}")
+    logger.debug(f"get_corr_input_names muID_corr: {get_corr_input_names(muID_corr)}")
+    logger.debug(f"get_corr_input_names muIso_corr: {get_corr_input_names(muIso_corr)}")
+    logger.debug(f"get_corr_input_names muTrig_corr: {get_corr_input_names(muTrig_corr)}")
 
     # -----------------------------
     # ID (event = mu1*mu2)
@@ -88,15 +90,16 @@ def add_muon_sfs_correctionlib(mu1, mu2, mu_sf_lookup_info, year: str):
     # Logic: If muon is within bounds, compute SF; otherwise SF=1.0
     # -----------------------------
     # Define trigger SF acceptance window
-    in_bounds = (mu1.pt_raw > 26.0) & (abs(mu1.eta_raw) < 2.4)
+
+    trig_eta_upper_limit = config["muon_eta_cut"]
+    trig_pt_lower_limit = config["muon_leading_pt"]
+    logger.debug(f"trig_eta_upper_limit: {trig_eta_upper_limit}")
+    logger.debug(f"trig_pt_lower_limit: {trig_pt_lower_limit}")
+    in_bounds = (mu1.pt_raw > trig_pt_lower_limit) & (abs(mu1.eta_raw) < trig_eta_upper_limit)
 
     # Clip inputs to valid range to prevent correctionlib from throwing errors
     # (we only use the computed SF where in_bounds=True; out-of-bounds get SF=1.0)
-    if year == "2017":
-        min_trig_pt = 29.0
-    else:
-        min_trig_pt = 26.0
-    pt_safe = ak.where(mu1.pt_raw > min_trig_pt, mu1.pt_raw, (min_trig_pt + .01))
+    pt_safe = ak.where(mu1.pt_raw > trig_pt_lower_limit, mu1.pt_raw, (trig_pt_lower_limit + .01))
     eta_safe = ak.where(abs(mu1.eta_raw) < 2.4, mu1.eta_raw, 0.0)
 
     # Evaluate trigger SFs using safe inputs

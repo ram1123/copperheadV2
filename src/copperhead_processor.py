@@ -1195,7 +1195,7 @@ class EventProcessor(processor.ProcessorABC):
             # do mu SF start -------------------------------------
             logger.debug("doing musf!")
             if is_run2(year) or is_run3(year):
-                muID, muIso, muTrig = add_muon_sfs_correctionlib(mu1, mu2, self.config["muSFFileList"], year)
+                muID, muIso, muTrig = add_muon_sfs_correctionlib(mu1, mu2, self.config)
             else:
                 raise ValueError(f"Year {year} is not recognized as Run 2 or Run 3 year for muon SFs!")
             # -----------------------------
