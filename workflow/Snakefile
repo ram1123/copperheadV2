@@ -10,8 +10,8 @@ ZPT_JETS_CATS = ["0", "1", "2p"]
 # PLOT_CATS = ["nocat", "vbf", "ggh"]
 PLOT_CATS = ["nocat"]
 PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
-PLOT_ZPT_MODES  = ["withzpt", "nozpt"]
-PLOT_VAR_SETS   = ["minset", "fullset"]          # or "min" / "all"
+PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
+PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
 
 wildcard_constraints:
     year="|".join([str(y) for y in YEARS]),
