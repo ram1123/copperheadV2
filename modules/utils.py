@@ -112,3 +112,11 @@ def fillEventNans(events, category="vbf"):
         logger.info("ERROR: unsupported category!")
         raise ValueError
     return events
+
+def get_corr_input_names(corr_obj):
+    """
+    Helper function for getting values of input variables
+    given a dictionary and a correction object.
+    """
+    names = [inp.name for inp in corr_obj.inputs]
+    return names

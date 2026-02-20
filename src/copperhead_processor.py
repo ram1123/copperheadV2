@@ -30,7 +30,7 @@ from src.corrections.evaluator import (
     pu_evaluator,
     qgl_weights_V2,
 )
-from src.corrections.muon_sf import add_muon_sfs_run3_correctionlib
+from src.corrections.muon_sf import add_muon_sfs_correctionlib
 from src.corrections.fsr_recovery import fsr_recoveryV1
 from src.corrections.geofit import apply_geofit
 from src.corrections.jet import (
@@ -1194,13 +1194,8 @@ class EventProcessor(processor.ProcessorABC):
 
             # do mu SF start -------------------------------------
             logger.debug("doing musf!")
-            if is_run2(year):
-                musf_lookup = get_musf_lookup(self.config)
-                muID, muIso, muTrig = musf_evaluator(
-                    musf_lookup, self.config["year"], mu1, mu2
-                )
-            elif is_run3(year):
-                muID, muIso, muTrig = add_muon_sfs_run3_correctionlib(mu1, mu2, self.config["muSFFileList"])
+            if is_run2(year) or is_run3(year):
+                muID, muIso, muTrig = add_muon_sfs_correctionlib(mu1, mu2, self.config["muSFFileList"], year)
             else:
                 raise ValueError(f"Year {year} is not recognized as Run 2 or Run 3 year for muon SFs!")
             # -----------------------------

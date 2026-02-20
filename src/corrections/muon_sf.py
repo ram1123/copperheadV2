@@ -2,12 +2,13 @@ import numpy as np
 import awkward as ak
 import dask_awkward as dak
 import correctionlib
+import dask
 
 from src.corrections.correctionlib_file_cache import get_corrset
-from modules.utils import logger
+from modules.utils import logger, get_corr_input_names
 
 
-def add_muon_sfs_run3_correctionlib(mu1, mu2, mu_sf_lookup_info):
+def add_muon_sfs_correctionlib(mu1, mu2, mu_sf_lookup_info, year: str):
     """
     Add Run-3 muon SFs using correctionlib.
 
@@ -27,13 +28,12 @@ def add_muon_sfs_run3_correctionlib(mu1, mu2, mu_sf_lookup_info):
           - "iso": correction name
           - "trig": correction name
     """
-
     mu_sf_lookup_file = mu_sf_lookup_info.get("json_file")
     id_name = mu_sf_lookup_info.get("id")
     iso_name = mu_sf_lookup_info.get("iso")
     trig_name = mu_sf_lookup_info.get("trig")
 
-    logger.debug("Muon SF lookup info from config: %s", mu_sf_lookup_info)
+    logger.info("Muon SF lookup info from config: %s", mu_sf_lookup_info)
     logger.info(
         f"Muon ID SF correction name: {id_name}\n"
         f"Muon Iso SF correction name: {iso_name}\n"
@@ -45,7 +45,9 @@ def add_muon_sfs_run3_correctionlib(mu1, mu2, mu_sf_lookup_info):
     muID_corr = corrset[id_name]
     muIso_corr = corrset[iso_name]
     muTrig_corr = corrset[trig_name]
-
+    logger.info(f"get_corr_input_names muID_corr: {get_corr_input_names(muID_corr)}")
+    logger.info(f"get_corr_input_names muIso_corr: {get_corr_input_names(muIso_corr)}")
+    logger.info(f"get_corr_input_names muTrig_corr: {get_corr_input_names(muTrig_corr)}")
 
     # -----------------------------
     # ID (event = mu1*mu2)
@@ -90,7 +92,11 @@ def add_muon_sfs_run3_correctionlib(mu1, mu2, mu_sf_lookup_info):
 
     # Clip inputs to valid range to prevent correctionlib from throwing errors
     # (we only use the computed SF where in_bounds=True; out-of-bounds get SF=1.0)
-    pt_safe = ak.where(mu1.pt_raw > 26.0, mu1.pt_raw, 26.01)
+    if year == "2017":
+        min_trig_pt = 29.0
+    else:
+        min_trig_pt = 26.0
+    pt_safe = ak.where(mu1.pt_raw > min_trig_pt, mu1.pt_raw, (min_trig_pt + .01))
     eta_safe = ak.where(abs(mu1.eta_raw) < 2.4, mu1.eta_raw, 0.0)
 
     # Evaluate trigger SFs using safe inputs
