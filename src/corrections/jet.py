@@ -534,7 +534,7 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
         # synthesize bit-coded jetId from custom_jet_id
         # FIXME: Do we really this this? As HEM veto is there only for 2018 UL
         #               Even if we need it, we should fetch it from the function jet_id.
-        tight, tightLepVeto = custom_jet_id(jets)
+        tight, tightLepVeto = custom_jet_id(jets, config["year"], jet_type="AK4PUPPI")
         jetId_bits = ak.zeros_like(jets.pt, dtype=np.int8)
         jetId_bits = ak.where(tight, jetId_bits | 2, jetId_bits)
         jetId_bits = ak.where(tightLepVeto, jetId_bits | 4, jetId_bits)
