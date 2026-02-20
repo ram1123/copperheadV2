@@ -53,7 +53,7 @@ GGH_TRAINING_VARS: List[str] = [
 VBF_TRAINING_VARS: List[str] = [
     "dimuon_mass",
     "dimuon_pt",
-    "dimuon_pt_log",
+    # "dimuon_pt_log",
     "dimuon_rapidity",
     "dimuon_ebe_mass_res",
     "dimuon_ebe_mass_res_rel",

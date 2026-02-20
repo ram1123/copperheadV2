@@ -1,6 +1,9 @@
 # what to run
-years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # years: ["2022postEE", "2022preEE"]
+# years: ["2023", "2023BPix"]
+# years: ["2024", "2016preVFP", "2016postVFP", "2017"]
+years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2016preVFP", "2016postVFP", "2017"]
 # years: ["2024"]
 label_suffix: "FilterJetsHorn30GeV_JetIDMuIDFix_V2"
 

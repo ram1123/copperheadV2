@@ -12,13 +12,43 @@ wildcard_constraints:
     cat = "|".join(PLOT_CATS),
     njets = "|".join(ZPT_JETS_CATS)
 
+RUN2_YEARS = ["2016preVFP", "2016postVFP", "2017", "2018"]
+RUN3_YEARS = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025"]
+YEAR_META = {
+    "2016preVFP": ("run2", "15"),
+    "2016postVFP": ("run2", "15"),
+    "2017": ("run2", "15"),
+    "2018": ("run2", "15"),
+
+    "2022preEE": ("run3", "12"),
+    "2022postEE": ("run3", "12"),
+    "2023": ("run3", "12"),
+    "2023BPix": ("run3", "12"),
+    "2024": ("run3", "15"),
+}
+
+DATASET_YAMLS = {
+    ("run2", "15"): "configs/datasets/dataset_nanoAODv15_run2.yaml",
+    ("run3", "15"): "configs/datasets/dataset_nanoAODv15_run3.yaml",
+    ("run3", "12"): "configs/datasets/dataset_nanoAODv12_run3.yaml",
+}
 
 def nano_for_year(year: str) -> str:
-    return "15" if year == "2024" else "12"
+    try:
+        return YEAR_META[year][1]
+    except KeyError as e:
+        raise ValueError(f"nano_for_year: unknown year '{year}'") from e
 
 def yaml_for_year(year: str) -> str:
-    return "configs/datasets/dataset_nanoAODv15_run3.yaml" if nano_for_year(year) == "15" \
-           else "configs/datasets/dataset_nanoAODv12_run3.yaml"
+    try:
+        era, nano = YEAR_META[year]
+    except KeyError as e:
+        raise ValueError(f"yaml_for_year: unknown year '{year}'") from e
+
+    try:
+        return DATASET_YAMLS[(era, nano)]
+    except KeyError as e:
+        raise ValueError(f"No dataset YAML for era={era}, nano={nano} (year={year})") from e
 
 def label_for_year(year: str) -> str:
     return f"Run3_nanoAODv{nano_for_year(year)}_{SUFFIX}"
