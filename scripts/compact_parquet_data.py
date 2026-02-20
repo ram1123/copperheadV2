@@ -27,7 +27,6 @@ def ensure_compacted(year, sample, input_path, compacted_path):
             return
 
         logger.debug(f"Reading data from {orig_path}")
-        
         # check if any parquet files exist (recursively)
         parquet_files = glob.glob(os.path.join(orig_path, "**", "*.parquet"), recursive=True)
 
