@@ -22,6 +22,7 @@ title: Workflow management: Snakemake
 
     ```bash
     snakemake -s workflow/Snakefile --summary
+    snakemake -s workflow/Snakefile --summary | python workflow/summary_table.py
     ```
 
 3. Visualize the DAG
