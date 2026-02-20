@@ -1,16 +1,14 @@
 import numpy as np
 import awkward as ak
-import dask_awkward as dak
 import correctionlib
-import dask
 
-from src.corrections.correctionlib_file_cache import get_corrset
-from modules.utils import logger, get_corr_input_names
+from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
+from modules.utils import logger
 
 
 def add_muon_sfs_correctionlib(mu1, mu2, config):
     """
-    Add Run-3 muon SFs using correctionlib.
+    Add muon SFs using correctionlib (supports both Run 2 and Run 3, depending on configuration).
 
     Convention (as in your working patch):
       - ID/Iso event SF = SF(mu1) * SF(mu2)
