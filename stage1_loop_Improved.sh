@@ -180,6 +180,7 @@ echo "  Number of bins: $nbin"
 echo "  Output append: $save_postfix"
 echo "  Region: $region"
 echo "  Category: $category"
+echo "  isMC: $isMC"
 
 
 # ----------- Main loop -----------
@@ -232,11 +233,13 @@ for year in "${years[@]}"; do
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
 
     # ########## Calibration commands ##########
-    if [[ "$isMC" == "0" ]]; then
+    if [[ "$isMC" == "1" ]]; then
         mcArg="--isMC"
     else
         mcArg=" "
     fi
+
+    echo "mcArc : $mcArg"
 
     command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --NanoAODv $NanoAODv --years $year --extraString $postfix --ifbinned --steps all $mcArg  "
     command6="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --NanoAODv $NanoAODv --years $year --extraString $postfix --ifbinned --closure_test $mcArg "

@@ -95,7 +95,7 @@ fi
 # CMS defaults
 # -------------------------
 export WORKDIR=$PWD
-export XRD_REQUESTTIMEOUT=2400
+export XRD_REQUESTTIMEOUT=300
 
 # Setup CMSSW related environment
 source /cvmfs/cms.cern.ch/cmsset_default.sh
