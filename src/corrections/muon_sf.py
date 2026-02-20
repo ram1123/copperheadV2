@@ -98,7 +98,7 @@ def add_muon_sfs_correctionlib(mu1, mu2, config):
     # Clip inputs to valid range to prevent correctionlib from throwing errors
     # (we only use the computed SF where in_bounds=True; out-of-bounds get SF=1.0)
     pt_safe = ak.where(mu1.pt_raw > trig_pt_lower_limit, mu1.pt_raw, (trig_pt_lower_limit + .01))
-    eta_safe = ak.where(abs(mu1.eta_raw) < 2.4, mu1.eta_raw, 0.0)
+    eta_safe = ak.where(abs(mu1.eta_raw) < trig_eta_upper_limit, mu1.eta_raw, 0.0)
 
     # Evaluate trigger SFs using safe inputs
     mu_trig_nom_eval = muTrig_corr.evaluate(eta_safe, pt_safe, "nominal")
@@ -116,7 +116,7 @@ def add_muon_sfs_correctionlib(mu1, mu2, config):
     if n_out_of_bounds > 0:
         logger.debug(
             f"Trigger SF: {n_out_of_bounds}/{n_total} events have leading muon out of bounds "
-            f"(pt<=26 or |eta|>=2.4), assigning SF=1."
+            f"(pt<=trig_pt_lower_limit or |eta|>=trig_eta_upper_limit), assigning SF=1."
         )
 
     muTrig = {"nom": mu_trig_nom, "up": mu_trig_up, "down": mu_trig_down}
