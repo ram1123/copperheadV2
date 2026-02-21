@@ -140,7 +140,7 @@ years:
                 datasets:
                     - /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL17NanoAODv15-150X_mc2017_realistic_v1-v1/NANOAODSIM
                 cross_section_pb: 6077.22
-                cross_section_source: null
+                cross_section_source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
                 kfactor:
                     value: 1.0
                     source: null
@@ -732,7 +732,7 @@ years:
           datasets:
             - /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv15-150X_mc2018_realistic_v1-v1/NANOAODSIM
           cross_section_pb: 6077.22
-          cross_section_source: null
+          cross_section_source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
           kfactor: { value: 1.0, source: null }
           filter_efficiency: null
           references: [null]
@@ -1159,7 +1159,7 @@ years:
           datasets:
             - /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv15-150X_mcRun2_asymptotic_v1-v1/NANOAODSIM
           cross_section_pb: 6077.22
-          cross_section_source: null
+          cross_section_source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
           kfactor: { value: 1.0, source: null }
           filter_efficiency: null
           references: [null]
@@ -1424,8 +1424,8 @@ years:
       EWK:
         ewk_zlljj:
           skip_sample: False
-          datasets: []
-          note: Missing in samples.md for 2016postVFP UL
+          datasets:
+            - /EWKZ2Jets_ZToLL_M-50_TuneCP5_withDipoleRecoil_13TeV-madgraph-pythia8/RunIISummer20UL16NanoAODv15-150X_mcRun2_asymptotic_v1-v1/NANOAODSIM
           cross_section_pb: 3.998
           cross_section_source: null
           kfactor: { value: 1.0, source: null }
@@ -1539,7 +1539,7 @@ years:
           datasets:
             - /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv15-150X_mcRun2_asymptotic_preVFP_v1-v1/NANOAODSIM
           cross_section_pb: 6077.22
-          cross_section_source: null
+          cross_section_source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/StandardModelCrossSectionsat13TeV
           kfactor: { value: 1.0, source: null }
           filter_efficiency: null
           references: [null]
@@ -1803,9 +1803,9 @@ years:
 
       EWK:
         ewk_zlljj:
-          skip_sample: True
-          datasets: []
-          note: Missing in samples.md for 2016preVFP UL
+          skip_sample: False
+          datasets:
+            - /EWKZ2Jets_ZToLL_M-50_TuneCP5_withDipoleRecoil_13TeV-madgraph-pythia8/RunIISummer20UL16NanoAODAPVv15-150X_mcRun2_asymptotic_preVFP_v1-v1/NANOAODSIM
           cross_section_pb: 3.998
           cross_section_source: null
           kfactor: { value: 1.0, source: null }

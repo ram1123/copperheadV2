@@ -2193,8 +2193,8 @@ class EventProcessor(processor.ProcessorABC):
 
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         logger.debug(f"dnn_year: {dnn_year}")
-        if self.config["switches"]["do_jet_PUID_wgt"]:
-            logger.info("Applying jet PUID!")
+        if self.config["switches"]["apply_jet_PUID_wgt"]:
+            logger.info("Applying jet PUID cut!")
             pass_jet_puid = jet_puid(jets, self.config)
         else:
             pass_jet_puid = ak.ones_like(pass_jet_id, dtype="bool")
@@ -2207,6 +2207,8 @@ class EventProcessor(processor.ProcessorABC):
         elif is_run2(year):
             # if qgl is not present, set it to -1.0
             jets["qgl"] = jets.qgl if hasattr(jets, "qgl") else ak.zeros_like(jets.pt) - 1.0
+            if hasattr(jets, "btagUParTAK4B"):
+                jets["btagUParTAK4B"] = jets.btagUParTAK4B
         elif is_run3(year):
             jets["btagPNetQvG"] = jets.btagPNetQvG
             jets["btagDeepFlavQG"] = jets.btagDeepFlavQG
@@ -2214,15 +2216,15 @@ class EventProcessor(processor.ProcessorABC):
             raise ValueError(f"Year {year} not recognized for jet QGL assignment!")
 
         jet_pt_cut = (jets.pt > self.config["jet_pt_cut"])
-
         # add additonal pT cut for the forward regions to reduce jet horn  ----------------------------------------------
         # source: https://indico.cern.ch/event/1434807/contributions/6040633/attachments/2893077/5071932/JERC%20meeting%2009_07.pdf
         jetHorn_region = abs(jets.eta) > 2.5
         jetHorn_pt_cut = (jets.pt > self.config["jet_pt_cut"]) # pt cut on jethorn doesn't change
-        if do_jet_horn_puid: # For Run-2
+        if do_jet_horn_puid: # defined in switches
             jetHorn_puid_cut = (get_puId(jets) >= 7) | (
                 jets.pt >= 50
             )  # tight pu Id #FIXME: hardcoded puID
+            
             jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
             jetHorn_PUID_cut = ak.ones_like(pass_jet_puid, dtype="bool") # default value is True
             # jetHorn_PUID_cut = ak.where(jetHorn_region, jetHorn_cut, jetHorn_PUID_cut)
@@ -2251,6 +2253,7 @@ class EventProcessor(processor.ProcessorABC):
             jetHorn_ptcut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
 
         # add additonal pT cut for the forward regions  ----------------------------------------------
+        
         jet_selection = (
             jet_pt_cut
             & pass_jet_id
@@ -2263,10 +2266,11 @@ class EventProcessor(processor.ProcessorABC):
 
         jets = jets[jet_selection] # INFO: this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
         jets = ak.to_packed(jets)
-
+        # print(f"ak.any(jets.pt < 50): {ak.sum((jets.pt < 50)[:200]).compute()}")
+        
         # apply jetpuid if not have done already
-        if is_mc and (variation=="nominal") and is_run2(year): # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
-            logger.debug("Applying jet PUID scale factors and adding jetpuid_wgt!")
+        if is_mc and (variation=="nominal") and is_run2(year) and hasattr(jets, "puId"): # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
+            logger.info("Applying jet PUID scale factors and adding jetpuid_wgt!")
             jetpuid_weight = get_jetpuid_weights_eta_dependent(year, jets, self.config) # FIXME
             # now we add jetpuid_wgt
             # FIXME: we should get the weight for each jet and multiply them together.
@@ -2274,7 +2278,7 @@ class EventProcessor(processor.ProcessorABC):
                     weight=jetpuid_weight,
             )
         else:
-            logger.warning(f"Skipping jet PUID SFs for variation: {variation}, is_mc: {is_mc}, dnn_year: {dnn_year}")
+            logger.info(f"Skipping jet PUID SFs for variation: {variation}, is_mc: {is_mc}, dnn_year: {dnn_year}")
 
         # jets = ak.where(jet_selection, jets, None)
         # muons = events.Muon
@@ -2464,8 +2468,15 @@ class EventProcessor(processor.ProcessorABC):
             f"ll_zstar_log_{variation}": np.log(np.abs(zeppenfeld)),
             f"zeppenfeld_{variation}": zeppenfeld,
             f"njets_{variation}": njets,
+            
         })
 
+        if hasattr(jets, "btagUParTAK4B"):
+            jet_loop_out_dict.update({
+                f"jet1_btagUParTAK4B_{variation}": jet1.btagUParTAK4B,
+                f"jet2_btagUParTAK4B_{variation}": jet2.btagUParTAK4B,
+            })
+        
         if is_run2(year):
             """Additional jet variables only for Run2"""
             jet_loop_out_dict.update({
@@ -2918,10 +2929,11 @@ class EventProcessor(processor.ProcessorABC):
             btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
         else: # UL
-            # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
-            # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-            # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            if hasattr(jets, "btagDeepB"):
+            if hasattr(jets, "btagUParTAK4B"):
+                logger.info("Using btagUParTAK4B btag!")
+                btagLoose_filter = (jets.btagUParTAK4B > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+                btagMedium_filter = (jets.btagUParTAK4B > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            elif hasattr(jets, "btagDeepB"):
                 btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
                 btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
             elif hasattr(jets, "btagDeepFlavB"):

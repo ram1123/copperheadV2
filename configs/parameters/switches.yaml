@@ -162,11 +162,11 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
-    do_jet_PUID_wgt:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+    apply_jet_PUID_wgt:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -224,10 +224,10 @@ switches:
         "2023BPix": 30.0
         "2024": 30.0
     do_jet_horn_puid: # For run-2 samples where we added strict PUID cut for the horn region
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false
