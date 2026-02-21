@@ -7,9 +7,10 @@ configfile: "workflow/config.yaml"
 YEARS = config["years"]
 SUFFIX = config["label_suffix"]
 ZPT_JETS_CATS = ["0", "1", "2p"]
-# PLOT_CATS = ["nocat", "vbf", "ggh"]
-PLOT_CATS = ["nocat"]
+PLOT_CATS = ["nocat", "vbf", "ggh"]
+# PLOT_CATS = ["nocat"]
 PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
+# PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
 PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
 PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
 
@@ -126,7 +127,7 @@ rule all:
 rule plot_all:
     input:
         # (2) stage1Compact for all years
-        expand("state/stage1_compact_{year}.done", year=YEARS),
+        # expand("state/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
         expand(
             "state/plots_{year}_{cat}_{njets_plot}_{zpt_mode}_{var_set}.done",
@@ -226,6 +227,7 @@ rule plots:
     shell:
         r"""
         set -euo pipefail
+        set -x 
         mkdir -p state logs
         PYTHONUNBUFFERED=1 \
         python plotter/validation_plotter_unified.py \
