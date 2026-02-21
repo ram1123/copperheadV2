@@ -46,9 +46,10 @@ category="vbf"
 postfix=""
 dask="0"
 cluster_index="0"
+isMC="0"
 
 # ----------- Parse options -----------
-while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:ksf" option; do
+while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksf" option; do
     case "$option" in
         h) usage ;;
         c) datasetYAML="$OPTARG" ;;
@@ -64,6 +65,7 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:ksf" option; do
         t) category="$OPTARG" ;;
         p) postfix="$OPTARG" ;;
         i) cluster_index="$OPTARG" ;;
+        M) isMC="$OPTARG" ;;
         k) dask="1" ;;
         s) skipBadFiles="1" ;;
         f) frac="1" ;;
@@ -178,6 +180,7 @@ echo "  Number of bins: $nbin"
 echo "  Output append: $save_postfix"
 echo "  Region: $region"
 echo "  Category: $category"
+echo "  isMC: $isMC"
 
 
 # ----------- Main loop -----------
@@ -230,18 +233,22 @@ for year in "${years[@]}"; do
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
 
     # ########## Calibration commands ##########
-    # ~18mins for step1+step2+step3 for 2024 data
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --steps all "
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --steps all --isMC  "
+    if [[ "$isMC" == "1" ]]; then
+        mcArg="--isMC"
+    else
+        mcArg=" "
+    fi
+
+    echo "mcArc : $mcArg"
+
+    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --NanoAODv $NanoAODv --years $year --extraString $postfix --ifbinned --steps all $mcArg  "
+    command6="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --NanoAODv $NanoAODv --years $year --extraString $postfix --ifbinned --closure_test $mcArg "
 
     # category="30-45_OB"
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --steps step1  --fixCat ${category} "
+    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --NanoAODv $NanoAODv --years $year --extraString $postfix --ifbinned $mcArg --steps step1   --fixCat ${category} "
 
     # category=10
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --closure_test "
-    command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --closure_test --isMC "
-
-    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --closure_test  --fixCat ${category} --no-dask-client "
+    # command5="python src/lib/ebeMassResCalibration/getCalibrationFactor.py --NanoAODv $NanoAODv --years $year --extraString $postfix --ifbinned $mcArg --closure_test  --fixCat ${category} --no-dask-client "
     # ########## Calibration commands ##########
 
     # Logging/debug options
@@ -252,6 +259,7 @@ for year in "${years[@]}"; do
         command3+=" --log-level DEBUG "
         command4+=" --log-level DEBUG --debug "
         command5+=" --log-level DEBUG "
+        command_compact+=" --log-level DEBUG "
     else
         command0+=" --log-level INFO "
         command1+=" --log-level INFO "
@@ -259,6 +267,7 @@ for year in "${years[@]}"; do
         command3+=" --log-level INFO "
         command4+=" --log-level INFO "
         command5+=" --log-level INFO "
+        command_compact+=" --log-level INFO "
     fi
 
     if [[ "$frac" == "1" ]]; then
@@ -360,12 +369,12 @@ for year in "${years[@]}"; do
             log "Running mass calibration..."
             log "Command: $command5"
             eval "$command5"
-            # if command6 is defined, run it
-            # if [[ -n "${command6-}" ]]; then
-            #     log "Command: $command6"
-            #     eval "$command6"
-            # fi
             ;;
+        calib_closure)
+            log "Running mass calibration..."
+            log "Command: $command6"
+            eval "$command6"
+            ;;            
         compact)
             log "Compacting parquet data for year $year..."
             log "Command: $command_compact"

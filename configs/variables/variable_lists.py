@@ -53,7 +53,7 @@ GGH_TRAINING_VARS: List[str] = [
 VBF_TRAINING_VARS: List[str] = [
     "dimuon_mass",
     "dimuon_pt",
-    "dimuon_pt_log",
+    # "dimuon_pt_log",
     "dimuon_rapidity",
     "dimuon_ebe_mass_res",
     "dimuon_ebe_mass_res_rel",
@@ -347,7 +347,8 @@ VAR_SETS: Dict[str, List[str]] = {
     "ggh_training": GGH_TRAINING_VARS,
     "muon_plots": MUON_PLOT_VARS,
     "dimuon_plots": DIMUON_PLOT_VARS,
-    "vbf_additional": VBF_ADDITIONAL_VARS,
+    # "vbf_additional": VBF_ADDITIONAL_VARS,
+    # "met": MET_VARS,
 }
 
 

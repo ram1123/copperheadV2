@@ -78,30 +78,30 @@ muSFFileList:
         iso: NUM_LooseRelIso_DEN_MediumID
         trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
     "2022preEE":
-        - json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22CDSep23-Summer22-NanoAODv12/2025-08-14/muon_Z.json.gz
-        - id: NUM_TightID_DEN_TrackerMuons
-        - iso: NUM_LoosePFIso_DEN_TightID
-        - trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
-    2022postEE:
-        - json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-08-14/muon_Z.json.gz
-        - id: NUM_TightID_DEN_TrackerMuons
-        - iso: NUM_LoosePFIso_DEN_TightID
-        - trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
-    "2023":
-        - json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23CSep23-Summer23-NanoAODv12/2025-08-14/muon_Z.json.gz
-        - id: NUM_TightID_DEN_TrackerMuons
-        - iso: NUM_LoosePFIso_DEN_TightID
-        - trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
-    "2023BPix":
-        - json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-08-14/muon_Z.json.gz
-        - id: NUM_TightID_DEN_TrackerMuons
-        - iso: NUM_LoosePFIso_DEN_TightID
-        - trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
-    "2024":
-        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-11-27/muon_Z.json.gz
+        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22CDSep23-Summer22-NanoAODv12/2025-08-14/muon_Z.json.gz
         id: NUM_TightID_DEN_TrackerMuons
         iso: NUM_LoosePFIso_DEN_TightID
         trig: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
+    2022postEE:
+        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-08-14/muon_Z.json.gz
+        id: NUM_MediumID_DEN_TrackerMuons
+        iso: NUM_LoosePFIso_DEN_MediumID
+        trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
+    "2023":
+        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23CSep23-Summer23-NanoAODv12/2025-08-14/muon_Z.json.gz
+        id: NUM_MediumID_DEN_TrackerMuons
+        iso: NUM_LoosePFIso_DEN_MediumID
+        trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
+    2023BPix:
+        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-08-14/muon_Z.json.gz
+        id: NUM_MediumID_DEN_TrackerMuons
+        iso: NUM_LoosePFIso_DEN_MediumID
+        trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
+    "2024":
+        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-11-27/muon_Z.json.gz
+        id: NUM_MediumID_DEN_TrackerMuons
+        iso: NUM_LoosePFIso_DEN_MediumID
+        trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
 new_zpt_weights_file_aMCatNLO:
     "2018": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2017": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
