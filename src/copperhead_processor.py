@@ -55,6 +55,7 @@ from modules.vector_operations import (
     delta_r_V1,
     etaFrame_variables,
     cs_variables,
+    _delta_phi,
 )
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
@@ -222,6 +223,95 @@ def pick_vbf_pairs(jets):
     }
 
 
+def apply_puppimet_jet_horn_recipe(
+    events,
+    base_mask,
+    *,
+    is_mc: bool,
+    run_min: int = 362433,
+    run_max: int = 367144,
+    met_pt_min: float = 100.0,
+    jet_pt_min: float = 50.0,
+    eta_min: float = -0.5,
+    eta_max: float = -0.1,
+    phi_min: float = -2.1,
+    phi_max: float = -1.8,
+    emef_min: float = 0.9,
+    dphi_min: float = 2.9,
+):
+    """
+    Reference: https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2#ECal_BadCalibration_Filter_Flag
+
+    The NanoAOD does not have enough info to rerun the filter. So please apply the following recipe:
+    Reject the event if PuppiMET_pt > 100 GeV and there is at least one jet (AK4) which has
+        pT > 50 GeV,
+        eta within -0.5 to -0.1,
+        phi within -2.1 to -1.8,
+        Neutral EM energy fraction or charged EM energy fraction (branch names: Jet_neEmEF, Jet_chEmEF) > 0.9
+        Δɸ(PuppiMET _phi, jet) > 2.9
+    Apply it only for RunNumbers in the range 362433 to 367144 which belong to later part of 2022 and early 2023.
+    DO NOT apply jet ID (branch: Jet_jetId) on the jets while implementing this recipe.
+    The effect of this recipe on good events is very small (<0.2%) and it is not simulated in MC. So, the recipe is not recommended for MC.
+
+    Parameters
+    ----------
+    events : coffea NanoEvents
+    base_mask : ak.Array[bool]
+        Existing event-quality mask to be updated.
+    is_mc : bool
+        Whether the sample is MC.
+    Returns
+    -------
+    ak.Array[bool]
+        Updated mask with the additional rejection applied (data only).
+    """
+    # no-op on MC by prescription
+    if is_mc:
+        return base_mask
+
+    # defensive checks
+    if not (hasattr(events, "PuppiMET") and hasattr(events, "Jet") and hasattr(events, "run")):
+        logger.warning("Skipping PuppiMET-jet horn recipe: missing PuppiMET/Jet/run branches.")
+        return base_mask
+
+    run = events.run
+    in_run_range = (run >= run_min) & (run <= run_max)
+
+    met_pt = events.PuppiMET.pt
+    met_phi = events.PuppiMET.phi
+
+    jets = events.Jet  # NOTE: its recommended to not apply the Jet_jetId or any other correction
+    jet_pt = jets.pt
+    jet_eta = jets.eta
+    jet_phi = jets.phi
+
+    # EM fractions
+    try:
+        jet_neEmEF = jets.neEmEF
+        jet_chEmEF = jets.chEmEF
+    except Exception as e:
+        logger.warning("Skipping PuppiMET-jet horn recipe: Jet.neEmEF / Jet.chEmEF not found (%r).", e)
+        return base_mask
+
+    jet_region = (
+        (jet_pt > jet_pt_min)
+        & (jet_eta >= eta_min) & (jet_eta <= eta_max)
+        & (jet_phi >= phi_min) & (jet_phi <= phi_max)
+        & ((jet_neEmEF > emef_min) | (jet_chEmEF > emef_min))
+    )
+
+    dphi_met_jet = _delta_phi(met_phi, jet_phi)
+    jet_region = jet_region & (dphi_met_jet > dphi_min)
+
+    has_bad_jet = ak.any(jet_region, axis=1)
+    reject = in_run_range & (met_pt > met_pt_min) & has_bad_jet
+
+    # logger.info(f"base_mask: {base_mask.compute()}")
+    # logger.info(f"reject: {reject.compute()}")
+    # logger.info(f"base_mask & (~reject): {(base_mask & (~reject)).compute()}")
+
+    return base_mask & (~reject)
+
 class EventProcessor(processor.ProcessorABC):
     def __init__(self, config: dict, test_mode=False, isCutflow=False, **kwargs):
         self.config = config
@@ -353,6 +443,11 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"event_filter type: {type(event_filter)}")
         logger.debug(f"event_filter length: {len(event_filter)}")
         logger.debug(f"events length: {len(events)}")
+
+
+        # if not ((events.run >= 362433) & (events.run <= 367144)):
+            # continue
+        # debug_mask = ((events.run >= 362433) & (events.run <= 367144))
 
         # For debug: if run, lumi, and event :
         # 356371,72,61849995
@@ -489,6 +584,8 @@ class EventProcessor(processor.ProcessorABC):
         for evt_qual_flg in self.config["event_flags"]:
             logger.debug(f"evt_qual_flg: {evt_qual_flg}")
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
+
+        evnt_qual_flg_selection = apply_puppimet_jet_horn_recipe(events, evnt_qual_flg_selection, is_mc=is_mc)
         self.selection.add("event_quality_flags", evnt_qual_flg_selection)
 
         # --------------------------------------------------------
@@ -1359,6 +1456,14 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_phi_cs": dimuon_phi_cs,
         })
 
+        # MET
+        if self.config["switches"]["add_met_vars"]:
+            _add_block(out_dict, {
+                "PuppiMET_pt": PuppiMET.pt,
+                "PuppiMET_phi": PuppiMET.phi,
+                "PuppiMET_sumEt": PuppiMET.sumEt,
+        })
+
         # FatJet block
         if do_getFatJet_vars:
             _add_block(out_dict, {
@@ -1406,9 +1511,6 @@ class EventProcessor(processor.ProcessorABC):
                 "PV_npvs": events.PV.npvs,
                 "PV_npvsGood": events.PV.npvsGood,
 
-                "PuppiMET_pt": PuppiMET.pt,
-                "PuppiMET_phi": PuppiMET.phi,
-                "PuppiMET_sumEt": PuppiMET.sumEt,
                 "mu1_charge": mu1.charge,
                 "mu2_charge": mu2.charge,
                 "mu1_iso": mu1.pfRelIso04_all,

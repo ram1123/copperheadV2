@@ -1,4 +1,14 @@
 switches:
+    add_met_vars:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
     do_additional_vars:
         '2016preVFP': false
         '2016postVFP': false
