@@ -153,10 +153,10 @@ switches:
         "2023BPix": false
         "2024": false
     do_zpt:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         '2022preEE': true
         '2022postEE': true
         "2023": true
@@ -244,10 +244,10 @@ switches:
         "2023BPix": true
         "2024": true
     jer_strat: # JER strat. 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised.
-        '2016preVFP': 3
-        '2016postVFP': 3
-        '2017': 3
-        '2018': 3
+        '2016preVFP': 0
+        '2016postVFP': 0
+        '2017': 0
+        '2018': 0
         '2022preEE': 2
         '2022postEE': 2
         "2023": 2
@@ -284,10 +284,10 @@ switches:
         "2023BPix": true
         "2024": true
     do_btag_wgt:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false

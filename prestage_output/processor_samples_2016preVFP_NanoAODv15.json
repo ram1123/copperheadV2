@@ -1,7 +1,7 @@
 {
   "data_B": {
     "files": {
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15-v1/110000/59ba0d68-1608-4d82-b820-6d19cb55fd12.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15-v1/110000/59ba0d68-1608-4d82-b820-6d19cb55fd12.root": {
         "num_entries": 633436,
         "object_path": "Events",
         "steps": [
@@ -12,7 +12,7 @@
         ],
         "uuid": "870e4dde-b708-11f0-95a7-a8e36880beef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15-v1/110000/83c8fe86-3e87-4e39-9124-1106de93d78c.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15-v1/110000/83c8fe86-3e87-4e39-9124-1106de93d78c.root": {
         "num_entries": 829921,
         "object_path": "Events",
         "steps": [
@@ -23,7 +23,7 @@
         ],
         "uuid": "284208c6-b6f0-11f0-ad01-abe36880beef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15-v1/2520000/d4c4f500-32a0-4c5f-a696-a6eceae7b1b0.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15-v1/2520000/d4c4f500-32a0-4c5f-a696-a6eceae7b1b0.root": {
         "num_entries": 1041027,
         "object_path": "Events",
         "steps": [
@@ -38,7 +38,7 @@
         ],
         "uuid": "22941710-b728-11f0-956d-4be36880beef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15-v1/2520000/e925cbb3-9b71-411e-9d68-25fcfd9c6a2c.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15-v1/2520000/e925cbb3-9b71-411e-9d68-25fcfd9c6a2c.root": {
         "num_entries": 284859,
         "object_path": "Events",
         "steps": [
@@ -49,7 +49,7 @@
         ],
         "uuid": "8de55e14-b739-11f0-85c7-bfb55c90beef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/2e311f46-a2d2-4934-b2db-4208cb1b0e53.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/2e311f46-a2d2-4934-b2db-4208cb1b0e53.root": {
         "num_entries": 1600475,
         "object_path": "Events",
         "steps": [
@@ -68,7 +68,7 @@
         ],
         "uuid": "3e7d3b2a-c29d-11f0-9095-91e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/302aaaae-731a-4fa7-bca1-3edd61e93d90.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/302aaaae-731a-4fa7-bca1-3edd61e93d90.root": {
         "num_entries": 1891182,
         "object_path": "Events",
         "steps": [
@@ -87,7 +87,7 @@
         ],
         "uuid": "3d5f1f38-c29d-11f0-8856-01e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/3a645543-d7ee-4833-999c-3ee2f4900f96.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/3a645543-d7ee-4833-999c-3ee2f4900f96.root": {
         "num_entries": 493462,
         "object_path": "Events",
         "steps": [
@@ -98,7 +98,7 @@
         ],
         "uuid": "0650237c-c291-11f0-8ae5-a80a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/3d2953d6-795c-4df4-b60b-814fdd9fa929.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/3d2953d6-795c-4df4-b60b-814fdd9fa929.root": {
         "num_entries": 1923130,
         "object_path": "Events",
         "steps": [
@@ -117,7 +117,7 @@
         ],
         "uuid": "4db3896e-c29d-11f0-9f1f-d8e7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/41852679-7dff-4c75-951e-7a993f0012ba.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/41852679-7dff-4c75-951e-7a993f0012ba.root": {
         "num_entries": 1540921,
         "object_path": "Events",
         "steps": [
@@ -136,7 +136,7 @@
         ],
         "uuid": "3c1708b6-c29d-11f0-8856-9ee7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/454b9f6b-2b9e-4380-ac85-c66c2b5326c2.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/454b9f6b-2b9e-4380-ac85-c66c2b5326c2.root": {
         "num_entries": 1167215,
         "object_path": "Events",
         "steps": [
@@ -151,7 +151,7 @@
         ],
         "uuid": "d93a7454-c296-11f0-bddc-91e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/551682f2-8c9d-44c7-bc16-44f1495ae830.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/551682f2-8c9d-44c7-bc16-44f1495ae830.root": {
         "num_entries": 1896130,
         "object_path": "Events",
         "steps": [
@@ -170,7 +170,7 @@
         ],
         "uuid": "4194578a-c29d-11f0-a785-63e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/59ee62e4-756e-4731-bb71-2ad13758a506.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/59ee62e4-756e-4731-bb71-2ad13758a506.root": {
         "num_entries": 1092248,
         "object_path": "Events",
         "steps": [
@@ -185,7 +185,7 @@
         ],
         "uuid": "760c1c9e-c2a9-11f0-9855-7fe4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/60f67b3c-b2fc-49b7-9824-7acf45fb9815.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/60f67b3c-b2fc-49b7-9824-7acf45fb9815.root": {
         "num_entries": 880377,
         "object_path": "Events",
         "steps": [
@@ -196,7 +196,7 @@
         ],
         "uuid": "da9ee00a-c296-11f0-b54a-3de6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/6979a351-e6bf-489f-a7cf-c6174f278689.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/6979a351-e6bf-489f-a7cf-c6174f278689.root": {
         "num_entries": 1175903,
         "object_path": "Events",
         "steps": [
@@ -211,7 +211,7 @@
         ],
         "uuid": "e50edad6-c296-11f0-84d5-650c020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/85c214d7-5abb-4e00-8c1e-e970ad23526f.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/85c214d7-5abb-4e00-8c1e-e970ad23526f.root": {
         "num_entries": 1262203,
         "object_path": "Events",
         "steps": [
@@ -226,7 +226,7 @@
         ],
         "uuid": "0ba1a6ae-c2a3-11f0-8d04-a0e7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/8ebdf1e5-6321-4280-867c-c56d5cca6352.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/8ebdf1e5-6321-4280-867c-c56d5cca6352.root": {
         "num_entries": 865059,
         "object_path": "Events",
         "steps": [
@@ -237,7 +237,7 @@
         ],
         "uuid": "d793a6f2-c296-11f0-a1dd-a20a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/a52fe2f6-192f-45ef-a774-713beac195ba.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/a52fe2f6-192f-45ef-a774-713beac195ba.root": {
         "num_entries": 1563669,
         "object_path": "Events",
         "steps": [
@@ -256,7 +256,7 @@
         ],
         "uuid": "da6f75d6-c296-11f0-919f-02e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/acb14844-2a19-4e37-a3f5-02a6d799477c.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/acb14844-2a19-4e37-a3f5-02a6d799477c.root": {
         "num_entries": 1122880,
         "object_path": "Events",
         "steps": [
@@ -271,7 +271,7 @@
         ],
         "uuid": "14c3334c-c2a3-11f0-ac00-32e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/d248d6a6-02cb-472c-8003-286a2107648a.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/d248d6a6-02cb-472c-8003-286a2107648a.root": {
         "num_entries": 1208216,
         "object_path": "Events",
         "steps": [
@@ -286,7 +286,7 @@
         ],
         "uuid": "10cd3832-c2a3-11f0-8415-11e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/d4239b49-d293-4b8d-a028-0a7e090567a6.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/d4239b49-d293-4b8d-a028-0a7e090567a6.root": {
         "num_entries": 726900,
         "object_path": "Events",
         "steps": [
@@ -297,7 +297,7 @@
         ],
         "uuid": "e0bc8456-c2af-11f0-81a0-fce6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/d9b10bec-d6c6-4edf-892d-2fbca6823045.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/d9b10bec-d6c6-4edf-892d-2fbca6823045.root": {
         "num_entries": 1581256,
         "object_path": "Events",
         "steps": [
@@ -316,7 +316,7 @@
         ],
         "uuid": "3fdd9708-c29d-11f0-bf88-dee5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/db85f3dc-5732-4817-bfc1-08505d0cc343.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/db85f3dc-5732-4817-bfc1-08505d0cc343.root": {
         "num_entries": 1043786,
         "object_path": "Events",
         "steps": [
@@ -331,7 +331,7 @@
         ],
         "uuid": "0cefc37c-c291-11f0-839a-47e7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/df043d5d-2dcf-4446-bad1-6d3d9453dea8.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/df043d5d-2dcf-4446-bad1-6d3d9453dea8.root": {
         "num_entries": 1791101,
         "object_path": "Events",
         "steps": [
@@ -350,7 +350,7 @@
         ],
         "uuid": "3cdab3f6-c29d-11f0-b5fb-7fe4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/e7e9417f-360c-4bd4-a32d-472253ddb9e4.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/e7e9417f-360c-4bd4-a32d-472253ddb9e4.root": {
         "num_entries": 1225539,
         "object_path": "Events",
         "steps": [
@@ -365,7 +365,7 @@
         ],
         "uuid": "391b1aa8-c29d-11f0-86a8-cfe4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/ec0318d4-b0ad-4fcb-bc1e-01e617682638.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/ec0318d4-b0ad-4fcb-bc1e-01e617682638.root": {
         "num_entries": 1306102,
         "object_path": "Events",
         "steps": [
@@ -380,7 +380,7 @@
         ],
         "uuid": "d9c8a4b8-c296-11f0-99fe-46e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/eede94ed-84cc-455e-869c-4c1cb91f7d6d.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/140000/eede94ed-84cc-455e-869c-4c1cb91f7d6d.root": {
         "num_entries": 1331717,
         "object_path": "Events",
         "steps": [
@@ -395,7 +395,7 @@
         ],
         "uuid": "3ee31580-c29d-11f0-9c9f-cee4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/00bf35f0-dcf7-4ed8-8997-96683c814d9b.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/00bf35f0-dcf7-4ed8-8997-96683c814d9b.root": {
         "num_entries": 1359486,
         "object_path": "Events",
         "steps": [
@@ -410,7 +410,7 @@
         ],
         "uuid": "58cdfc52-c118-11f0-8e6f-9d05020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/021a6d1b-96fd-49c9-a714-35acef28a88b.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/021a6d1b-96fd-49c9-a714-35acef28a88b.root": {
         "num_entries": 1655625,
         "object_path": "Events",
         "steps": [
@@ -429,7 +429,7 @@
         ],
         "uuid": "3ac0b8c6-c28a-11f0-a4e6-0de7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/0433a753-ed03-4940-a8f9-15185ac11bff.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/0433a753-ed03-4940-a8f9-15185ac11bff.root": {
         "num_entries": 1047433,
         "object_path": "Events",
         "steps": [
@@ -444,7 +444,7 @@
         ],
         "uuid": "4b64fb1e-c281-11f0-98f0-a701430abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/06aba2f8-e22a-4f2f-9fe0-d9c9bf619185.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/06aba2f8-e22a-4f2f-9fe0-d9c9bf619185.root": {
         "num_entries": 1747969,
         "object_path": "Events",
         "steps": [
@@ -463,7 +463,7 @@
         ],
         "uuid": "1f340052-c188-11f0-9407-dee5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/06bc1d14-f530-41a0-8a0b-d05ddd06ae0b.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/06bc1d14-f530-41a0-8a0b-d05ddd06ae0b.root": {
         "num_entries": 1738526,
         "object_path": "Events",
         "steps": [
@@ -482,7 +482,7 @@
         ],
         "uuid": "b3954bec-c0f3-11f0-9da0-58e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/0bc322cf-3d83-46bb-a564-60995703d3f9.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/0bc322cf-3d83-46bb-a564-60995703d3f9.root": {
         "num_entries": 1132572,
         "object_path": "Events",
         "steps": [
@@ -497,7 +497,7 @@
         ],
         "uuid": "e282df82-c288-11f0-b6cd-710a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/0e8a9e09-2106-4f9e-beac-0f2743039ae7.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/0e8a9e09-2106-4f9e-beac-0f2743039ae7.root": {
         "num_entries": 1281697,
         "object_path": "Events",
         "steps": [
@@ -512,7 +512,7 @@
         ],
         "uuid": "50fab368-c10d-11f0-82cd-08e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1058ddea-9458-4c84-b719-8f404ff1853c.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1058ddea-9458-4c84-b719-8f404ff1853c.root": {
         "num_entries": 1823136,
         "object_path": "Events",
         "steps": [
@@ -531,7 +531,7 @@
         ],
         "uuid": "af1fa1d2-c113-11f0-9d82-1de7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/107e0429-ce14-4920-a7ba-f15c17a68099.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/107e0429-ce14-4920-a7ba-f15c17a68099.root": {
         "num_entries": 1386198,
         "object_path": "Events",
         "steps": [
@@ -546,7 +546,7 @@
         ],
         "uuid": "1faada22-c28e-11f0-8a06-9d05020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/11b30dcf-e0a5-4607-93f7-ba9090e22a50.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/11b30dcf-e0a5-4607-93f7-ba9090e22a50.root": {
         "num_entries": 1852271,
         "object_path": "Events",
         "steps": [
@@ -565,7 +565,7 @@
         ],
         "uuid": "68607f1e-c285-11f0-a663-63e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1333a96f-e8c6-472c-bdc8-17587aeb1ac5.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1333a96f-e8c6-472c-bdc8-17587aeb1ac5.root": {
         "num_entries": 1877205,
         "object_path": "Events",
         "steps": [
@@ -584,7 +584,7 @@
         ],
         "uuid": "28764ac6-c188-11f0-8c39-d3e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/13eab4db-e517-4d4f-96d4-de1f5733cf47.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/13eab4db-e517-4d4f-96d4-de1f5733cf47.root": {
         "num_entries": 821087,
         "object_path": "Events",
         "steps": [
@@ -595,7 +595,7 @@
         ],
         "uuid": "bf57ea12-c264-11f0-bb8b-63e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/18c9435c-46fa-4cd8-b98f-9894f8e1c186.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/18c9435c-46fa-4cd8-b98f-9894f8e1c186.root": {
         "num_entries": 1894776,
         "object_path": "Events",
         "steps": [
@@ -614,7 +614,7 @@
         ],
         "uuid": "9f5a7160-c12b-11f0-b6ef-98e7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1a29f6da-c637-473b-b075-538446fe77fa.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1a29f6da-c637-473b-b075-538446fe77fa.root": {
         "num_entries": 633226,
         "object_path": "Events",
         "steps": [
@@ -625,7 +625,7 @@
         ],
         "uuid": "ba286c18-c27a-11f0-837b-47e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1a850193-9d8d-4e9d-8978-501d7049cb92.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1a850193-9d8d-4e9d-8978-501d7049cb92.root": {
         "num_entries": 453338,
         "object_path": "Events",
         "steps": [
@@ -636,7 +636,7 @@
         ],
         "uuid": "5cffcc26-c279-11f0-947c-b6e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1b24575f-a662-4c5f-912f-802f90fe5425.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1b24575f-a662-4c5f-912f-802f90fe5425.root": {
         "num_entries": 1889861,
         "object_path": "Events",
         "steps": [
@@ -655,7 +655,7 @@
         ],
         "uuid": "a1f2f074-c184-11f0-ba3a-8ae4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1bd177f0-daf3-445c-8de1-f9b8bb980e1b.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1bd177f0-daf3-445c-8de1-f9b8bb980e1b.root": {
         "num_entries": 1765718,
         "object_path": "Events",
         "steps": [
@@ -674,7 +674,7 @@
         ],
         "uuid": "c61458fc-c284-11f0-a35a-47e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1e866880-e718-4b21-8c31-d140f1728665.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/1e866880-e718-4b21-8c31-d140f1728665.root": {
         "num_entries": 1121879,
         "object_path": "Events",
         "steps": [
@@ -689,7 +689,7 @@
         ],
         "uuid": "aaf07100-c121-11f0-8a49-4ee4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/228620a0-6bd4-4ec9-935d-c14e3a57dc56.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/228620a0-6bd4-4ec9-935d-c14e3a57dc56.root": {
         "num_entries": 1570500,
         "object_path": "Events",
         "steps": [
@@ -708,7 +708,7 @@
         ],
         "uuid": "9eb2b410-c11d-11f0-8383-a301430abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/27ac1f55-ced7-47fa-b434-43f96242c413.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/27ac1f55-ced7-47fa-b434-43f96242c413.root": {
         "num_entries": 1778651,
         "object_path": "Events",
         "steps": [
@@ -727,7 +727,7 @@
         ],
         "uuid": "b35e4ab4-c113-11f0-8cd8-a208020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/2ed7baae-3802-4a97-96b6-0633b2d54076.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/2ed7baae-3802-4a97-96b6-0633b2d54076.root": {
         "num_entries": 1258347,
         "object_path": "Events",
         "steps": [
@@ -742,7 +742,7 @@
         ],
         "uuid": "9af132f2-c11d-11f0-97f6-02e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/2f645874-eccb-4aab-9435-75210ee1debd.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/2f645874-eccb-4aab-9435-75210ee1debd.root": {
         "num_entries": 1819714,
         "object_path": "Events",
         "steps": [
@@ -761,7 +761,7 @@
         ],
         "uuid": "0d4a3c6c-c287-11f0-be6c-17e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/325ba782-ecb9-49b4-afe3-10aea5f5cda3.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/325ba782-ecb9-49b4-afe3-10aea5f5cda3.root": {
         "num_entries": 744748,
         "object_path": "Events",
         "steps": [
@@ -772,7 +772,7 @@
         ],
         "uuid": "64677474-c0e3-11f0-b60e-0de7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/33b2480f-ca19-402c-aef5-9ab8657aaabd.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/33b2480f-ca19-402c-aef5-9ab8657aaabd.root": {
         "num_entries": 1836813,
         "object_path": "Events",
         "steps": [
@@ -791,7 +791,7 @@
         ],
         "uuid": "0e75174e-c28a-11f0-a984-780a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/3d992cab-ae16-451b-8faf-abc565d44d4b.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/3d992cab-ae16-451b-8faf-abc565d44d4b.root": {
         "num_entries": 1014537,
         "object_path": "Events",
         "steps": [
@@ -806,7 +806,7 @@
         ],
         "uuid": "be406b52-c194-11f0-b5a3-46e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/3ec49d40-78db-4a98-9259-9b279d4428e6.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/3ec49d40-78db-4a98-9259-9b279d4428e6.root": {
         "num_entries": 1854474,
         "object_path": "Events",
         "steps": [
@@ -825,7 +825,7 @@
         ],
         "uuid": "eb106484-c126-11f0-b929-57e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/4200a106-4728-4f90-96c7-50d9e5f389c4.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/4200a106-4728-4f90-96c7-50d9e5f389c4.root": {
         "num_entries": 1820990,
         "object_path": "Events",
         "steps": [
@@ -844,7 +844,7 @@
         ],
         "uuid": "8ba491f6-c18e-11f0-84c6-13e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/435ae3cf-3cc7-441f-87cf-59aa5f2d34b2.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/435ae3cf-3cc7-441f-87cf-59aa5f2d34b2.root": {
         "num_entries": 1883025,
         "object_path": "Events",
         "steps": [
@@ -863,7 +863,7 @@
         ],
         "uuid": "a945785c-c287-11f0-9af4-89e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/45c0cc24-b44a-4552-ae6f-5911148a8478.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/45c0cc24-b44a-4552-ae6f-5911148a8478.root": {
         "num_entries": 1538708,
         "object_path": "Events",
         "steps": [
@@ -882,7 +882,7 @@
         ],
         "uuid": "33b71cf0-c118-11f0-a2ac-af01430abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/46e87f5c-9931-485a-97bb-0044ba7d9ecf.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/46e87f5c-9931-485a-97bb-0044ba7d9ecf.root": {
         "num_entries": 1219927,
         "object_path": "Events",
         "steps": [
@@ -897,7 +897,7 @@
         ],
         "uuid": "3236a4b2-c28b-11f0-8430-17e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/497a36d6-59e1-4fbe-896c-603bd47bed63.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/497a36d6-59e1-4fbe-896c-603bd47bed63.root": {
         "num_entries": 1207772,
         "object_path": "Events",
         "steps": [
@@ -912,7 +912,7 @@
         ],
         "uuid": "6f7fd1fe-c290-11f0-9598-b6e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/4b639cd2-f07b-4261-bbd0-29af78efeecf.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/4b639cd2-f07b-4261-bbd0-29af78efeecf.root": {
         "num_entries": 701130,
         "object_path": "Events",
         "steps": [
@@ -923,7 +923,7 @@
         ],
         "uuid": "25793c6c-c105-11f0-886c-a30a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/4ca5d787-86cb-4e0d-8756-22087f347778.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/4ca5d787-86cb-4e0d-8756-22087f347778.root": {
         "num_entries": 1284754,
         "object_path": "Events",
         "steps": [
@@ -938,7 +938,7 @@
         ],
         "uuid": "7460465c-c27e-11f0-b388-63e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/532f4d99-f224-47e8-b4b4-bbe3e4b18aa1.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/532f4d99-f224-47e8-b4b4-bbe3e4b18aa1.root": {
         "num_entries": 1534647,
         "object_path": "Events",
         "steps": [
@@ -957,7 +957,7 @@
         ],
         "uuid": "b24b14a6-c0f3-11f0-9567-b7e7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/59bfec37-6970-4068-b290-39c1a602aa02.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/59bfec37-6970-4068-b290-39c1a602aa02.root": {
         "num_entries": 970937,
         "object_path": "Events",
         "steps": [
@@ -972,7 +972,7 @@
         ],
         "uuid": "ba1e3fa4-c28e-11f0-a38d-31e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/5d1bfecb-bd66-4ef0-bb1a-54c19276a5dd.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/5d1bfecb-bd66-4ef0-bb1a-54c19276a5dd.root": {
         "num_entries": 1482710,
         "object_path": "Events",
         "steps": [
@@ -987,7 +987,7 @@
         ],
         "uuid": "1072e2f6-c280-11f0-9211-6c0a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/6031cac1-905d-473a-90b0-c72635a736a0.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/6031cac1-905d-473a-90b0-c72635a736a0.root": {
         "num_entries": 1870616,
         "object_path": "Events",
         "steps": [
@@ -1006,7 +1006,7 @@
         ],
         "uuid": "b157184a-c190-11f0-97f2-9f0a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/613e67eb-576b-435b-8e80-45b50fe5e3e3.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/613e67eb-576b-435b-8e80-45b50fe5e3e3.root": {
         "num_entries": 704222,
         "object_path": "Events",
         "steps": [
@@ -1017,7 +1017,7 @@
         ],
         "uuid": "4a2a2ac8-c17b-11f0-81f8-750a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/62eb5bee-fcc8-4e1c-bb75-4244fd21069e.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/62eb5bee-fcc8-4e1c-bb75-4244fd21069e.root": {
         "num_entries": 1848377,
         "object_path": "Events",
         "steps": [
@@ -1036,7 +1036,7 @@
         ],
         "uuid": "148c3f26-c128-11f0-b9ae-46e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/64c88e43-1da1-47df-b132-c97d8e37ce05.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/64c88e43-1da1-47df-b132-c97d8e37ce05.root": {
         "num_entries": 1553847,
         "object_path": "Events",
         "steps": [
@@ -1055,7 +1055,7 @@
         ],
         "uuid": "8575211a-c184-11f0-9656-f8e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/656331ac-4f55-4f55-8a77-ec376e47f3ba.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/656331ac-4f55-4f55-8a77-ec376e47f3ba.root": {
         "num_entries": 1859469,
         "object_path": "Events",
         "steps": [
@@ -1074,7 +1074,7 @@
         ],
         "uuid": "266d9b26-c188-11f0-94d3-8fe4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/66b0a815-06e2-411a-8537-06ef85de32a0.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/66b0a815-06e2-411a-8537-06ef85de32a0.root": {
         "num_entries": 1236203,
         "object_path": "Events",
         "steps": [
@@ -1089,7 +1089,7 @@
         ],
         "uuid": "db39a73a-c0fb-11f0-81ff-a301430abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/6ad243b0-3e2c-4798-be17-c029747cc860.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/6ad243b0-3e2c-4798-be17-c029747cc860.root": {
         "num_entries": 1783673,
         "object_path": "Events",
         "steps": [
@@ -1108,7 +1108,7 @@
         ],
         "uuid": "b01cae88-c0f3-11f0-b004-1ce6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/6ed33d66-7ba7-4b95-a01b-ef881783f3f3.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/6ed33d66-7ba7-4b95-a01b-ef881783f3f3.root": {
         "num_entries": 1637756,
         "object_path": "Events",
         "steps": [
@@ -1127,7 +1127,7 @@
         ],
         "uuid": "ae3fd7f0-c280-11f0-81f8-dce5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/708fda62-ae2d-4d84-9045-c1cb57930f59.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/708fda62-ae2d-4d84-9045-c1cb57930f59.root": {
         "num_entries": 957759,
         "object_path": "Events",
         "steps": [
@@ -1142,7 +1142,7 @@
         ],
         "uuid": "1eb5574e-c27c-11f0-a601-b7e7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/72136e16-755f-403f-a196-02e0c94efdc9.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/72136e16-755f-403f-a196-02e0c94efdc9.root": {
         "num_entries": 1910817,
         "object_path": "Events",
         "steps": [
@@ -1161,7 +1161,7 @@
         ],
         "uuid": "e7631f90-c28c-11f0-9a20-63e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/7d88450a-d90f-4106-a53c-33a5a6553eab.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/7d88450a-d90f-4106-a53c-33a5a6553eab.root": {
         "num_entries": 1884827,
         "object_path": "Events",
         "steps": [
@@ -1180,7 +1180,7 @@
         ],
         "uuid": "3d3c9e60-c129-11f0-b386-02e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/82e5f1ec-16a4-4c6c-8880-dd887d8a6292.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/82e5f1ec-16a4-4c6c-8880-dd887d8a6292.root": {
         "num_entries": 1890665,
         "object_path": "Events",
         "steps": [
@@ -1199,7 +1199,7 @@
         ],
         "uuid": "a214d548-c11d-11f0-adc1-f9e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/8b4f7614-2056-4625-af38-f8ffad082a65.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/8b4f7614-2056-4625-af38-f8ffad082a65.root": {
         "num_entries": 1187943,
         "object_path": "Events",
         "steps": [
@@ -1214,7 +1214,7 @@
         ],
         "uuid": "eebdded6-c194-11f0-a21d-710a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/91d72caa-9b91-4cef-9778-6815d5a0c195.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/91d72caa-9b91-4cef-9778-6815d5a0c195.root": {
         "num_entries": 1370235,
         "object_path": "Events",
         "steps": [
@@ -1229,7 +1229,7 @@
         ],
         "uuid": "9b9141c6-c12b-11f0-abd0-e4e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/93f7e7bd-65a1-4c6f-8f2d-fe43eed568e6.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/93f7e7bd-65a1-4c6f-8f2d-fe43eed568e6.root": {
         "num_entries": 1678596,
         "object_path": "Events",
         "steps": [
@@ -1248,7 +1248,7 @@
         ],
         "uuid": "dc41303a-c281-11f0-a1b7-58e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/94247f53-edec-44b3-85d8-078eee99f5c1.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/94247f53-edec-44b3-85d8-078eee99f5c1.root": {
         "num_entries": 1427784,
         "object_path": "Events",
         "steps": [
@@ -1263,7 +1263,7 @@
         ],
         "uuid": "9dc1351a-c184-11f0-bf77-04e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/990d3bde-06a8-4518-8c44-93460013e931.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/990d3bde-06a8-4518-8c44-93460013e931.root": {
         "num_entries": 1889126,
         "object_path": "Events",
         "steps": [
@@ -1282,7 +1282,7 @@
         ],
         "uuid": "8d6c5424-c18e-11f0-bd89-a80a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/a0025797-d108-48f8-bf72-b021767d037d.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/a0025797-d108-48f8-bf72-b021767d037d.root": {
         "num_entries": 1922180,
         "object_path": "Events",
         "steps": [
@@ -1301,7 +1301,7 @@
         ],
         "uuid": "b5a179b0-c0f3-11f0-a929-7fe4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/a0c480b7-8d25-46b5-847e-dae01127acce.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/a0c480b7-8d25-46b5-847e-dae01127acce.root": {
         "num_entries": 1876787,
         "object_path": "Events",
         "steps": [
@@ -1320,7 +1320,7 @@
         ],
         "uuid": "b02a1d9c-c121-11f0-b0a6-fbe6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/a22634f2-0ea9-4d65-b819-67475c81511c.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/a22634f2-0ea9-4d65-b819-67475c81511c.root": {
         "num_entries": 1882224,
         "object_path": "Events",
         "steps": [
@@ -1339,7 +1339,7 @@
         ],
         "uuid": "8fee7988-c12b-11f0-b8b9-a7e7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/a7ee6bf8-b0de-4506-aee6-3c5d267f01e7.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/a7ee6bf8-b0de-4506-aee6-3c5d267f01e7.root": {
         "num_entries": 1301214,
         "object_path": "Events",
         "steps": [
@@ -1354,7 +1354,7 @@
         ],
         "uuid": "27c02254-c283-11f0-ad7d-b6e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/aa6bbb1a-c721-4201-a556-cbd194926411.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/aa6bbb1a-c721-4201-a556-cbd194926411.root": {
         "num_entries": 966811,
         "object_path": "Events",
         "steps": [
@@ -1369,7 +1369,7 @@
         ],
         "uuid": "b444905c-c0f3-11f0-b1ab-a80a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/aaadc6cd-69cd-4dcb-b0b7-3e3b5616fce7.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/aaadc6cd-69cd-4dcb-b0b7-3e3b5616fce7.root": {
         "num_entries": 1131865,
         "object_path": "Events",
         "steps": [
@@ -1384,7 +1384,7 @@
         ],
         "uuid": "9a82fb34-c113-11f0-ade3-b3e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/abd59c4b-1086-475a-95a4-0174ca238934.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/abd59c4b-1086-475a-95a4-0174ca238934.root": {
         "num_entries": 1155821,
         "object_path": "Events",
         "steps": [
@@ -1399,7 +1399,7 @@
         ],
         "uuid": "b5999b8a-c113-11f0-8df2-07e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/ac89bd2f-59cb-4e82-bf01-8f5c8fa66eba.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/ac89bd2f-59cb-4e82-bf01-8f5c8fa66eba.root": {
         "num_entries": 1865470,
         "object_path": "Events",
         "steps": [
@@ -1418,7 +1418,7 @@
         ],
         "uuid": "85f0d440-c18e-11f0-9e85-b3e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/b1175fa9-d73c-448a-a17e-342580488654.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/b1175fa9-d73c-448a-a17e-342580488654.root": {
         "num_entries": 1054474,
         "object_path": "Events",
         "steps": [
@@ -1433,7 +1433,7 @@
         ],
         "uuid": "f25ca8c0-c292-11f0-97e5-96e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/b3876dbd-8bbd-4b2f-97c1-f8e6f0ae048b.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/b3876dbd-8bbd-4b2f-97c1-f8e6f0ae048b.root": {
         "num_entries": 1865472,
         "object_path": "Events",
         "steps": [
@@ -1452,7 +1452,7 @@
         ],
         "uuid": "de0683aa-c288-11f0-86f8-cde7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/b69f7d9a-7c1c-46d7-88ef-2650762c1f5b.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/b69f7d9a-7c1c-46d7-88ef-2650762c1f5b.root": {
         "num_entries": 1232150,
         "object_path": "Events",
         "steps": [
@@ -1467,7 +1467,7 @@
         ],
         "uuid": "209fc96c-c188-11f0-9407-cfe4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/c23106b1-8104-4075-8fbd-5fd367bab08b.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/c23106b1-8104-4075-8fbd-5fd367bab08b.root": {
         "num_entries": 1893058,
         "object_path": "Events",
         "steps": [
@@ -1486,7 +1486,7 @@
         ],
         "uuid": "89023110-c18e-11f0-b1f3-cde7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/c3260103-08b6-4abf-99da-12c0ae8c5e06.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/c3260103-08b6-4abf-99da-12c0ae8c5e06.root": {
         "num_entries": 1009650,
         "object_path": "Events",
         "steps": [
@@ -1501,7 +1501,7 @@
         ],
         "uuid": "567061da-c10d-11f0-bc42-31e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/c5d1faf5-4fe0-4f30-b963-d242fe7489cb.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/c5d1faf5-4fe0-4f30-b963-d242fe7489cb.root": {
         "num_entries": 1587237,
         "object_path": "Events",
         "steps": [
@@ -1520,7 +1520,7 @@
         ],
         "uuid": "60ed473a-c118-11f0-b3f8-46e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/c6d8d5b4-a79c-4365-945c-5d9be480835c.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/c6d8d5b4-a79c-4365-945c-5d9be480835c.root": {
         "num_entries": 1859807,
         "object_path": "Events",
         "steps": [
@@ -1539,7 +1539,7 @@
         ],
         "uuid": "946e5e8c-c11d-11f0-b960-32e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/d0b5a2cb-b7d9-4931-bcc1-8ea88584f24b.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/d0b5a2cb-b7d9-4931-bcc1-8ea88584f24b.root": {
         "num_entries": 1814840,
         "object_path": "Events",
         "steps": [
@@ -1558,7 +1558,7 @@
         ],
         "uuid": "b9bc9f3c-c113-11f0-8573-3de6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/d27fdea1-7adc-47d0-94e1-c60164b097e2.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/d27fdea1-7adc-47d0-94e1-c60164b097e2.root": {
         "num_entries": 1886835,
         "object_path": "Events",
         "steps": [
@@ -1577,7 +1577,7 @@
         ],
         "uuid": "85e6dff0-c286-11f0-9bcb-a40a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/d2943cd4-6c07-496c-9745-b50493cabb00.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/d2943cd4-6c07-496c-9745-b50493cabb00.root": {
         "num_entries": 964957,
         "object_path": "Events",
         "steps": [
@@ -1592,7 +1592,7 @@
         ],
         "uuid": "41cee314-c19e-11f0-9d3f-4ee4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/dcfed050-f829-4496-a449-172eb0ed788a.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/dcfed050-f829-4496-a449-172eb0ed788a.root": {
         "num_entries": 1469496,
         "object_path": "Events",
         "steps": [
@@ -1607,7 +1607,7 @@
         ],
         "uuid": "d666d408-c0fb-11f0-b206-6e0a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e324c365-7bb9-4cd6-b55e-d84969fcab8f.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e324c365-7bb9-4cd6-b55e-d84969fcab8f.root": {
         "num_entries": 1779526,
         "object_path": "Events",
         "steps": [
@@ -1626,7 +1626,7 @@
         ],
         "uuid": "6fa4f650-c123-11f0-8301-4ae6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e5606c57-cd7c-4a8c-ac58-305b6c7a4ddc.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e5606c57-cd7c-4a8c-ac58-305b6c7a4ddc.root": {
         "num_entries": 1718012,
         "object_path": "Events",
         "steps": [
@@ -1645,7 +1645,7 @@
         ],
         "uuid": "b04554b4-c0f3-11f0-9da0-f9e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e599e55e-eaa8-4e55-a0dd-6caaf10677bb.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e599e55e-eaa8-4e55-a0dd-6caaf10677bb.root": {
         "num_entries": 1794905,
         "object_path": "Events",
         "steps": [
@@ -1664,7 +1664,7 @@
         ],
         "uuid": "110b4dbe-c124-11f0-b83c-88e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e61fc2de-e464-4167-bb31-63206023c153.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e61fc2de-e464-4167-bb31-63206023c153.root": {
         "num_entries": 1853558,
         "object_path": "Events",
         "steps": [
@@ -1683,7 +1683,7 @@
         ],
         "uuid": "d412f218-c0fb-11f0-9f31-a70a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e72052d9-6c1c-4a77-bff0-3e15da6cc057.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e72052d9-6c1c-4a77-bff0-3e15da6cc057.root": {
         "num_entries": 652679,
         "object_path": "Events",
         "steps": [
@@ -1694,7 +1694,7 @@
         ],
         "uuid": "4c3afd9c-c10d-11f0-935e-9ae7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e73a4390-a08c-4e3d-80bb-8bab581c5eee.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e73a4390-a08c-4e3d-80bb-8bab581c5eee.root": {
         "num_entries": 1266936,
         "object_path": "Events",
         "steps": [
@@ -1709,7 +1709,7 @@
         ],
         "uuid": "568bc0d8-c10d-11f0-98de-d3e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e844626f-de18-4000-a53f-efc5969e120a.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e844626f-de18-4000-a53f-efc5969e120a.root": {
         "num_entries": 1110440,
         "object_path": "Events",
         "steps": [
@@ -1724,7 +1724,7 @@
         ],
         "uuid": "d0f06b5c-c28f-11f0-82a8-01e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e9280a01-ea6a-45ce-b7cf-6860fe653a4d.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e9280a01-ea6a-45ce-b7cf-6860fe653a4d.root": {
         "num_entries": 1779914,
         "object_path": "Events",
         "steps": [
@@ -1743,7 +1743,7 @@
         ],
         "uuid": "b116ed12-c0f3-11f0-9567-60e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e9bfee9f-57fc-44ba-99fd-79aa662b17a6.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/e9bfee9f-57fc-44ba-99fd-79aa662b17a6.root": {
         "num_entries": 1034379,
         "object_path": "Events",
         "steps": [
@@ -1758,7 +1758,7 @@
         ],
         "uuid": "b2bba1bc-c0f3-11f0-8cbe-91e5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/ee81917a-4b1e-4ebe-96aa-8fb3a8e61f07.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/ee81917a-4b1e-4ebe-96aa-8fb3a8e61f07.root": {
         "num_entries": 1848419,
         "object_path": "Events",
         "steps": [
@@ -1777,7 +1777,7 @@
         ],
         "uuid": "b31cb132-c0f3-11f0-ba8b-a5e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/f1bd6bfe-eea2-45f9-a636-13d52ef4d683.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/f1bd6bfe-eea2-45f9-a636-13d52ef4d683.root": {
         "num_entries": 1218036,
         "object_path": "Events",
         "steps": [
@@ -1792,7 +1792,7 @@
         ],
         "uuid": "b5bfe4fe-c0f3-11f0-b1ab-dee5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/f236ce56-700f-4e50-80bd-a4c92666869a.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/f236ce56-700f-4e50-80bd-a4c92666869a.root": {
         "num_entries": 975198,
         "object_path": "Events",
         "steps": [
@@ -1807,7 +1807,7 @@
         ],
         "uuid": "794f4cf4-c165-11f0-8676-9ee7b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fa9c78be-acd2-4682-aeb1-6875317b82d7.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fa9c78be-acd2-4682-aeb1-6875317b82d7.root": {
         "num_entries": 830308,
         "object_path": "Events",
         "steps": [
@@ -1818,7 +1818,7 @@
         ],
         "uuid": "4dbb930c-c10d-11f0-affc-57e6b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fbb528a5-954f-427d-8565-02bc53123cfc.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fbb528a5-954f-427d-8565-02bc53123cfc.root": {
         "num_entries": 1299499,
         "object_path": "Events",
         "steps": [
@@ -1833,7 +1833,7 @@
         ],
         "uuid": "05929420-c132-11f0-aeff-a40a020abeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fd40eb69-5025-4776-b074-8717ffb0608a.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fd40eb69-5025-4776-b074-8717ffb0608a.root": {
         "num_entries": 1654052,
         "object_path": "Events",
         "steps": [
@@ -1852,7 +1852,7 @@
         ],
         "uuid": "b3af2602-c0f3-11f0-b1ab-15e4b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fd45d787-95e4-46a0-aa9e-98edc71e8764.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fd45d787-95e4-46a0-aa9e-98edc71e8764.root": {
         "num_entries": 1754685,
         "object_path": "Events",
         "steps": [
@@ -1871,7 +1871,7 @@
         ],
         "uuid": "a2cb45c8-c283-11f0-80f6-ebe5b49dbeef"
       },
-      "root://eos.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fed688c9-b0fa-43d4-9f7b-0f5d730d9f4a.root": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/data/Run2016B/SingleMuon/NANOAOD/HIPM_UL2016_NanoAODv15_v2-v1/2820000/fed688c9-b0fa-43d4-9f7b-0f5d730d9f4a.root": {
         "num_entries": 449055,
         "object_path": "Events",
         "steps": [
@@ -7281,6 +7281,31 @@
       "nGenEvts": 90947213,
       "original_fraction": 1.0,
       "sumGenWgts": 1545707981555.562
+    }
+  },
+  "ewk_zlljj": {
+    "files": {
+      "root://xcache.cms.rcac.purdue.edu:1094//store/mc/RunIISummer20UL16NanoAODAPVv15/EWKZ2Jets_ZToLL_M-50_TuneCP5_withDipoleRecoil_13TeV-madgraph-pythia8/NANOAODSIM/150X_mcRun2_asymptotic_preVFP_v1-v1/130000/7664c2a8-d9f2-41e8-8879-71643524ec6c.root": {
+        "num_entries": 500000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            500000
+          ]
+        ],
+        "uuid": "f97b3504-ac85-11f0-9414-08319e86beef"
+      }
+    },
+    "form": null,
+    "metadata": {
+      "data_entries": null,
+      "dataset": "ewk_zlljj",
+      "fraction": 1.0,
+      "is_mc": true,
+      "nGenEvts": 500000,
+      "original_fraction": 1.0,
+      "sumGenWgts": 500000.0
     }
   },
   "ggh_powhegPS": {

@@ -1843,7 +1843,8 @@ class EventProcessor(processor.ProcessorABC):
             if whichMethod == "function" or whichMethod == "both":
                 # choose the config file
                 if "MiNNLO" in dataset:
-                    zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
+                    zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"] # FIXME
+                    # zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"] # FIXME
                 else:
                     zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
 
