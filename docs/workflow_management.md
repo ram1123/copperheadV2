@@ -17,8 +17,10 @@ title: Workflow management: Snakemake
     ```bash
     snakemake -s workflow/Snakefile -j 1 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60
 
-    # Force run some rune
-    snakemake -s workflow/Snakefile -j 1 --resources gateway=2 --rerun-incomplete --restart-times 3 --latency-wait 60 --forcerun stage1Compact 
+    # Force run some rule
+    snakemake -s workflow/Snakefile -j 1 --resources gateway=2 --rerun-incomplete --restart-times 3 --latency-wait 60 --forcerun stage1Compact
+
+    snakemake -s workflow/Snakefile --configfile workflow/config_2.yaml -j 1 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60
     ```
 
 2. Check summary
@@ -33,7 +35,7 @@ title: Workflow management: Snakemake
     ```bash
     snakemake -s workflow/Snakefile --dag | dot -Tpng > dag.png
     snakemake -s workflow/Snakefile --dag | dot -Tpdf > dag.pdf
-    
+
     snakemake --rulegraph | dot -Tpng > rulegraph.png
     ```
 

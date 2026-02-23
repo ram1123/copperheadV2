@@ -105,7 +105,7 @@ rule all:
             njets_plot=PLOT_NJETS,
             zpt_mode=PLOT_ZPT_MODES,
             var_set=PLOT_VAR_SETS,
-        ),        
+        ),
         # (4) get zpt
         expand("state/zpt_step0_{year}.done", year=YEARS),
         expand("state/zpt_step1_{year}_{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
@@ -136,7 +136,26 @@ rule plot_all:
             njets_plot=PLOT_NJETS,
             zpt_mode=PLOT_ZPT_MODES,
             var_set=PLOT_VAR_SETS,
-        ),            
+        ),
+
+
+rule all_stage1:
+    input:
+        # (1) stage1 for all years
+        expand("state/stage1_{year}.done", year=YEARS),
+        # (2) stage1Compact for all years
+        expand("state/stage1_compact_{year}.done", year=YEARS),
+        # (3) plotter (after stage1)
+        # expand(
+        #     "state/plots_{year}_{cat}_{njets_plot}_{zpt_mode}_{var_set}.done",
+        #     year=YEARS,
+        #     cat=PLOT_CATS,
+        #     njets_plot=PLOT_NJETS,
+        #     zpt_mode=PLOT_ZPT_MODES,
+        #     var_set=PLOT_VAR_SETS,
+        # ),
+
+
 
 # ---------------------------------------
 # 1) Stage-1 (all samples)
@@ -156,6 +175,7 @@ rule stage1:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -189,6 +209,7 @@ rule stage1Compact:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
             -c {params.yaml} \
@@ -227,7 +248,7 @@ rule plots:
     shell:
         r"""
         set -euo pipefail
-        set -x 
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 \
         python plotter/validation_plotter_unified.py \
@@ -265,6 +286,7 @@ rule zpt0:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -295,6 +317,7 @@ rule zpt1:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -326,6 +349,7 @@ rule zpt2:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -359,6 +383,7 @@ rule MassCalibrationMC:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -391,6 +416,7 @@ rule MassCalibrationMCClosure:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -423,6 +449,7 @@ rule MassCalibrationData:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -455,6 +482,7 @@ rule MassCalibrationDataClosure:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -504,6 +532,7 @@ rule stage1_corr:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -534,6 +563,7 @@ rule stage1Compact_corr:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
@@ -561,6 +591,7 @@ rule plots_corr:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         PYTHONUNBUFFERED=1 python plotter/validation_plotter_unified.py \
           -y {wildcards.year} \
@@ -591,6 +622,7 @@ rule zpt_njet0:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
@@ -613,6 +645,7 @@ rule zpt_njet1:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
@@ -635,6 +668,7 @@ rule zpt_njet2p:
     shell:
         r"""
         set -euo pipefail
+        set -x
         mkdir -p state logs
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \

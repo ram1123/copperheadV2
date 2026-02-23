@@ -2,6 +2,14 @@
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
 
+# 20 February 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDMuIDFix_V2 -y "2022preEE 2022postEE 2023 2023BPix" -m compact -k -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l test -y "2022postEE" -m compact -k -i 1)
+
+```
+
 # 17 February 2026
 
 ```bash
