@@ -47,6 +47,7 @@ shap = ">=0.50.0, <0.51"
 graphviz = "*"
 scikit-hep-testdata = "*"
 scipy = "==1.15.2"
+rsync = ">=3.3.0,<4"
 
 [pypi-dependencies]
 cmsstyle = "*"

@@ -11,6 +11,8 @@ background:
             processes_per_year:
                 2024:
                     - dyTo2Mu_M-50_aMCatNLO
+                2017:
+                    - dyTo2L_M-50_aMCatNLO
 
         TT:
             processes:

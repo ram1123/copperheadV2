@@ -2,19 +2,20 @@ import pandas as pd
 import numpy as np
 
 
-df_a = pd.read_csv(
-    "yield_Run3_nanoAODv12_02Feb_FilterJets_2022preEE_2022postEE_2023_2023BPix_2024.csv"
-)
 df_b = pd.read_csv(
-    "yield_Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV_2022preEE_2022postEE_2023_2023BPix_2024.csv"
+    "yield_Run2_NanoV15_Feb23_2026_noQGLSF_2017.csv"
+)
+df_a = pd.read_csv(
+    "yield_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_2017.csv"
 )
 
 KEYS = ["sample", "category", "region", "year"]
 
+suffixes = ("_V12", "_V15")
 df = df_a.merge(
     df_b,
     on=KEYS,
-    suffixes=("_A", "_B"),
+    suffixes=suffixes,
     how="inner",  # only compare common rows
 )
 
@@ -25,20 +26,20 @@ def percent_diff(a, b):
     return np.where(a != 0, 100.0 * (b - a) / a, np.nan)
 
 
-df["raw_events_diff_pct"] = percent_diff(df["raw_events_A"], df["raw_events_B"])
+df["raw_events_diff_pct"] = percent_diff(df[f"raw_events{suffixes[0]}"], df[f"raw_events{suffixes[1]}"])
 
-df["yield_diff_pct"] = percent_diff(df["yield_A"], df["yield_B"])
+df["yield_diff_pct"] = percent_diff(df[f"yield{suffixes[0]}"], df[f"yield{suffixes[1]}"])
 
-df["raw_events_diff_pct"] = percent_diff(df["raw_events_A"], df["raw_events_B"])
+df["raw_events_diff_pct"] = percent_diff(df[f"raw_events{suffixes[0]}"], df[f"raw_events{suffixes[1]}"])
 
-df["yield_diff_pct"] = percent_diff(df["yield_A"], df["yield_B"])
+df["yield_diff_pct"] = percent_diff(df[f"yield{suffixes[0]}"], df[f"yield{suffixes[1]}"])
 
 cols = KEYS + [
-    "raw_events_A",
-    "raw_events_B",
+    f"raw_events{suffixes[0]}",
+    f"raw_events{suffixes[1]}",
     "raw_events_diff_pct",
-    "yield_A",
-    "yield_B",
+    f"yield{suffixes[0]}",
+    f"yield{suffixes[1]}",
     "yield_diff_pct",
 ]
 
