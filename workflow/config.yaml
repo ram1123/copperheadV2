@@ -13,7 +13,6 @@ years: ["2022postEE"]
 # label_suffix: "FilterJetsHorn30GeV_Feb23"
 label_suffix: "FilterJetsHorn30GeV_Feb23_tightPassLepVeto"
 
-
 # dask gateway
 use_gateway: true
 cluster_index: 0
