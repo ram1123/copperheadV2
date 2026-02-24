@@ -744,7 +744,7 @@ if __name__ == "__main__":
                 to_project_setting_w2["val_sumw2"] = "sumw2"
                 hist_w2 = sample_hist[to_project_setting_w2].project(var).values()
                 if np.sum(hist_val)==0: # skip processes that doesn't have anything
-                    logger.warning(f"hist_val is empty for {group_name} in {var}, skipping!")
+                    logger.debug(f"hist_val is empty for {group_name} in {var}, skipping!")
                     continue
                 hist_dict = {
                     "hist_arr" : hist_val,
@@ -817,7 +817,7 @@ if __name__ == "__main__":
             # if args.remove_zpt_weights, then update the args.label
             zpt_postfix = "default_zpt_weights"
             if args.remove_zpt_weights:
-                logger.warning("Removing zpt weights from the events!")
+                logger.debug("Removing zpt weights from the events!")
                 zpt_postfix = "no_zpt_weights"
             if args.use_dnn_zpt_weights:
                 logger.warning("Using DNN-based zpt weights for the events!")

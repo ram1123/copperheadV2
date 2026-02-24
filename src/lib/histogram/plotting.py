@@ -171,7 +171,7 @@ def plotDataMC_compare(
         data_pos = data_hist > 0
         both_pos = mc_pos & data_pos
 
-        ratio_hist[mc_pos] = data_hist[mc_pos] / bkg_mc_sum[mc_pos]
+        ratio_hist[both_pos] = data_hist[both_pos] / bkg_mc_sum[both_pos]
 
         rel_unc_ratio = np.zeros_like(bkg_mc_sum, dtype=float)
         rel_unc_ratio[both_pos] = np.sqrt(
@@ -192,16 +192,31 @@ def plotDataMC_compare(
         # den = bkg_mc_sum[inf_filter]
         den = bkg_mc_sum
         den_sumw2 = bkg_mc_w2_sum
-        # den_sumw2 = bkg_mc_w2_sum[inf_filter]
-        if sum(den) > 0:
-            unity = np.ones_like(den)
-            w2 = np.zeros_like(den)
-            w2[den > 0] = den_sumw2[den > 0] / den[den > 0] ** 2
-            den_unc = poisson_interval(unity, w2)
+
+        if np.sum(den) > 0:
+            unity = np.ones_like(den, dtype=float)
+            w2 = np.zeros_like(den, dtype=float)
+
+            den_pos = den > 0
+            w2[den_pos] = den_sumw2[den_pos] / (den[den_pos] ** 2)
+
+            # --- avoid poisson_interval with w2==0 (causes divide-by-zero inside hist) ---
+            ok = den_pos & (w2 > 0)
+
+            den_unc_full = np.full((2, den.size), np.nan, dtype=float)
+
+            if np.any(ok):
+                den_unc_ok = poisson_interval(unity[ok], w2[ok])
+                den_unc_full[:, ok] = den_unc_ok
+
+            # if den>0 but w2==0, the uncertainty is exactly 0 -> band is exactly 1
+            zero_unc = den_pos & ~(w2 > 0)
+            den_unc_full[:, zero_unc] = 1.0
+
             ax_ratio.fill_between(
                 binning,
-                np.r_[den_unc[0], den_unc[0, -1]],
-                np.r_[den_unc[1], den_unc[1, -1]],
+                np.r_[den_unc_full[0], den_unc_full[0, -1]],
+                np.r_[den_unc_full[1], den_unc_full[1, -1]],
                 label="Stat. unc.",
                 **ratio_err_opts,
             )
