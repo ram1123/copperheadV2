@@ -214,8 +214,32 @@ def plotDataMC_compare(
         ax_ratio.set_xlabel(x_title)
         ax_ratio.set_ylabel('Data / MC')
         ax_ratio.set_xlim(binning[0], binning[-1])
-        ax_ratio.set_ylim(0.5,1.5)
-        ax_ratio.set_yticks([0.6, 0.8, 1.0, 1.2, 1.4]) # explicitly ask for 1.4 and 0.6
+
+        finite = np.isfinite(ratio_hist)
+        if np.any(finite):
+            rmin = float(np.nanmin(ratio_hist[finite]))
+            rmax = float(np.nanmax(ratio_hist[finite]))
+
+            # ensure unity is visible
+            rmin = min(rmin, 1.0)
+            rmax = max(rmax, 1.0)
+
+            # small padding (10% of span, or 0.05 minimum)
+            span = max(rmax - rmin, 1e-6)
+            pad = max(0.10 * span, 0.05)
+            ylo = rmin - pad
+            yhi = rmax + pad
+
+            # optional safety clamp (avoid insane autoscale)
+            ylo = max(ylo, 0.0)
+            yhi = min(yhi, 5.0)
+
+        else:
+            # fallback if ratio_hist is all-NaN
+            ylo, yhi = 0.5, 1.5
+        ax_ratio.set_ylim(ylo, yhi)
+        # ax_ratio.set_yticks([0.6, 0.8, 1.0, 1.2, 1.4]) # explicitly ask for 1.4 and 0.6
+        ax_ratio.set_yticks(np.linspace(ylo, yhi, 7))
     else:
         ax_main.set_xlabel(x_title)
 
@@ -280,7 +304,7 @@ def plotDataMC_compare(
     if title != "":
         ax_main.set_title(title)
     # save figure, we assume that the directory exists
-    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
+    hep.cms.label(data=True, loc=0, text=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
     plt.close(fig)
 
@@ -524,7 +548,7 @@ def plotDataMC_compare_normalized(
     if title != "":
         ax_main.set_title(title)
     # save figure, we assume that the directory exists
-    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
+    hep.cms.label(data=True, loc=0, text=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
     plt.close(fig)
 

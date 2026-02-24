@@ -328,9 +328,13 @@ if __name__ == "__main__":
                     jobstat.mark_running(dataset, idx,
                         meta={
                             "split count": len(smaller_files),
-                            "path": save_path,
-                            "redirector": None,
+                            "max_attempts": len(AAA_REDIRECTORS),
                             "args.max_file_len": args.max_file_len,
+                            "redirector": None,
+                            "path": save_path,
+                            "git_commit_hash": git_commit_hash,
+                            "git_branch": branch_name,
+                            "git patch path": git_info_path,
                             })
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                         try:
@@ -362,11 +366,11 @@ if __name__ == "__main__":
                                 idx,
                                 meta={
                                     "split count": len(smaller_files),
-                                    "path": save_path,
-                                    "redirector": host_prefix,
                                     "attempt": attempt,
                                     "max_attempts": len(AAA_REDIRECTORS),
                                     "args.max_file_len": args.max_file_len,
+                                    "redirector": host_prefix,
+                                    "path": save_path,
                                     "git_commit_hash": git_commit_hash,
                                     "git_branch": branch_name,
                                     "git patch path": git_info_path,
@@ -409,11 +413,11 @@ if __name__ == "__main__":
                                     e,
                                     meta={
                                         "split count": len(smaller_files),
-                                        "path": save_path,
-                                        "redirector": host_prefix,
                                         "attempt": attempt,
                                         "max_attempts": len(AAA_REDIRECTORS),
                                         "args.max_file_len": args.max_file_len,
+                                        "redirector": host_prefix,
+                                        "path": save_path,
                                         "git_commit_hash": git_commit_hash,
                                         "git_branch": branch_name,
                                         "git patch path": git_info_path,

@@ -1,9 +1,18 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import time
 import traceback
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+
+def _now_ts():
+    return time.time()
+
+
+def _now_iso():
+    # timezone-aware
+    return datetime.now(timezone.utc).isoformat()
 
 
 class JobStatus:
@@ -48,12 +57,13 @@ class JobStatus:
     ) -> None:
         running, _, _ = self._paths(dataset, idx)
 
-        ts = time.time()
+        ts = _now_ts()
         running.write_text(str(ts))  # store raw float timestamp
 
         self._append_ledger(
             {
                 "ts": ts,
+                "ts_iso": _now_iso(),
                 "dataset": dataset,
                 "idx": idx,
                 "status": "running",
@@ -66,7 +76,7 @@ class JobStatus:
     ) -> None:
         running, done, _ = self._paths(dataset, idx)
 
-        end_ts = time.time()
+        end_ts = _now_ts()
 
         duration = None
         if running.exists():
@@ -82,6 +92,7 @@ class JobStatus:
         self._append_ledger(
             {
                 "ts": end_ts,
+                "ts_iso": _now_iso(),
                 "dataset": dataset,
                 "idx": idx,
                 "status": "done",
@@ -98,11 +109,12 @@ class JobStatus:
         meta: Optional[Dict[str, Any]] = None,
     ) -> None:
         running, _, fail = self._paths(dataset, idx)
-        fail.write_text(str(datetime.fromtimestamp(time.time())))
+        fail.write_text(str(_now_ts()))
         running.unlink(missing_ok=True)
         self._append_ledger(
             {
-                "ts": datetime.fromtimestamp(time.time()),
+                "ts": _now_ts(),
+                "ts_iso": _now_iso(),
                 "dataset": dataset,
                 "idx": idx,
                 "status": "failed",

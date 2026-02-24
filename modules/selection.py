@@ -37,6 +37,7 @@ def applyRegionCatCuts(
     variation: str,
     do_vbf_filter_study: bool = False,
     do_VH_veto: bool = False,
+    jj_eta_region: str = "all",
 ):
     use_var = (
         "nominal"
@@ -85,7 +86,7 @@ def applyRegionCatCuts(
     jj_mass = varcol("jj_mass")
     jj_dEta = varcol("jj_dEta")
     jet1_pt = varcol("jet1_pt")
-    njets = varcol("njets")  # if you cut on it anywhere
+    njets = varcol("njets")
 
     prod_cat_cut = ak.ones_like(region, dtype="bool")
 
@@ -109,9 +110,9 @@ def applyRegionCatCuts(
         )
         btag_cut = btagLoose_filter | btagMedium_filter
 
-        # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
         vbf_cut = (jj_mass > 400) & (jj_dEta > 2.5) & (jet1_pt > 35)
         vbf_cut = ak.fill_none(vbf_cut, value=False)
+
         if category == "vbf":
             # print("vbf mode!")
             prod_cat_cut = prod_cat_cut & vbf_cut
@@ -125,10 +126,6 @@ def applyRegionCatCuts(
                 ~btag_cut
             )  # btag cut is for VH and ttH categories
         else:
-            print("Error: invalid category option!")
-            print(
-                "Error: invalid category option! Valid options are: 'vbf', 'ggh', 'nocat'."
-            )
             raise ValueError(
                 "Invalid category option! Valid options are: 'vbf', 'ggh', 'nocat'."
             )
@@ -144,16 +141,60 @@ def applyRegionCatCuts(
 
                 prod_cat_cut = prod_cat_cut & vbf_filter
             else:
-                # print(f"cutting off inclusive dy: {process}")
-                prod_cat_cut = prod_cat_cut & ~vbf_filter
+                prod_cat_cut = prod_cat_cut & (~vbf_filter)
+
+    # ---------------------------------------------------------
+    #  jet-eta region selection (pair topology)
+    # ---------------------------------------------------------
+    if jj_eta_region and jj_eta_region != "all":
+
+        # 1) prefer precomputed mask if present
+        if jj_eta_region in events.fields:
+            jj_eta_mask = ak.fill_none(events[jj_eta_region], value=False)
+
         else:
-            # print(f"no extra processing for {process}")
-            pass
+            # 2) compute from jet1_eta/jet2_eta (variation-safe)
+            jet1_eta = varcol("jet1_eta")
+            jet2_eta = varcol("jet2_eta")
+
+            a1 = abs(jet1_eta)
+            a2 = abs(jet2_eta)
+
+            # basic regions
+            j1_c = a1 < 2.5
+            j2_c = a2 < 2.5
+
+            j1_f25 = a1 > 2.5
+            j2_f25 = a2 > 2.5
+
+            j1_he = (a1 > 2.5) & (a1 < 3.0)
+            j2_he = (a2 > 2.5) & (a2 < 3.0)
+
+            j1_f30 = a1 > 3.0
+            j2_f30 = a2 > 3.0
+
+            masks = {
+                "jj_both_central": j1_c & j2_c,
+                "jj_one_fwd25_one_central": (j1_f25 & j2_c) | (j2_f25 & j1_c),
+                "jj_one_he_one_central": (j1_he & j2_c) | (j2_he & j1_c),
+                "jj_one_fwd30_one_central": (j1_f30 & j2_c) | (j2_f30 & j1_c),
+                "jj_both_fwd25": j1_f25 & j2_f25,
+                "jj_both_he": j1_he & j2_he,
+                "jj_both_fwd30": j1_f30 & j2_f30,
+                "jj_one_he_one_fwd30": (j1_he & j2_f30) | (j2_he & j1_f30),
+            }
+
+            if jj_eta_region not in masks:
+                raise ValueError(
+                    f"Invalid jj_eta_region='{jj_eta_region}'. "
+                    f"Valid: all, {', '.join(masks.keys())}"
+                )
+
+            jj_eta_mask = ak.fill_none(masks[jj_eta_region], value=False)
+
+        prod_cat_cut = prod_cat_cut & jj_eta_mask
 
     category_selection = prod_cat_cut & region
-    # filter events for selected category
-
-    # print(f"len(events) {process} b4 selection: {len(events)}")
     events = events[category_selection]
     return events
 
