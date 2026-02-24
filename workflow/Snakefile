@@ -9,8 +9,8 @@ SUFFIX = config["label_suffix"]
 ZPT_JETS_CATS = ["0", "1", "2p"]
 PLOT_CATS = ["nocat", "vbf", "ggh"]
 # PLOT_CATS = ["nocat"]
-PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
-# PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
+# PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
+PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
 PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
 PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
 
@@ -146,14 +146,14 @@ rule all_stage1:
         # (2) stage1Compact for all years
         expand("state/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        # expand(
-        #     "state/plots_{year}_{cat}_{njets_plot}_{zpt_mode}_{var_set}.done",
-        #     year=YEARS,
-        #     cat=PLOT_CATS,
-        #     njets_plot=PLOT_NJETS,
-        #     zpt_mode=PLOT_ZPT_MODES,
-        #     var_set=PLOT_VAR_SETS,
-        # ),
+        expand(
+            "state/plots_{year}_{cat}_{njets_plot}_{zpt_mode}_{var_set}.done",
+            year=YEARS,
+            cat=PLOT_CATS,
+            njets_plot=PLOT_NJETS,
+            zpt_mode=PLOT_ZPT_MODES,
+            var_set=PLOT_VAR_SETS,
+        ),
 
 
 

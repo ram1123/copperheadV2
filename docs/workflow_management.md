@@ -16,6 +16,7 @@ title: Workflow management: Snakemake
 
     ```bash
     snakemake -s workflow/Snakefile -j 1 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60
+    snakemake -s workflow/Snakefile all_stage1 -j 1 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60
 
     # Force run some rule
     snakemake -s workflow/Snakefile -j 1 --resources gateway=2 --rerun-incomplete --restart-times 3 --latency-wait 60 --forcerun stage1Compact
