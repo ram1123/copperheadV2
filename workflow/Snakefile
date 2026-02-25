@@ -242,8 +242,8 @@ rule stage1Compact:
 # 3) Plotter (depends on stage1 outputs)
 # ---------------------------------------
 rule plots:
-    # input:
-        # "state/stage1_compact_{year}.done"
+    input:
+        "state/stage1_compact_{year}.done"
     output:
         done="state/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done"
     log:
