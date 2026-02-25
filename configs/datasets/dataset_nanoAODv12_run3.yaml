@@ -1352,9 +1352,8 @@ years:
                     - "POWHEG"
 
             ggh_amcatnlo:
-                skip_sample: False
-                datasets:
-                    - None
+                skip_sample: True
+                datasets: []
                 cross_section_pb: 0.0135096
                 notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
                 cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
