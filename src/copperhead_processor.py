@@ -223,7 +223,7 @@ def pick_vbf_pairs(jets):
     }
 
 
-def apply_puppimet_jet_horn_recipe(
+def apply_ECALBadCalib_EventFilter_recipe(
     events,
     base_mask,
     *,
@@ -585,7 +585,7 @@ class EventProcessor(processor.ProcessorABC):
             logger.debug(f"evt_qual_flg: {evt_qual_flg}")
             evnt_qual_flg_selection = evnt_qual_flg_selection & events.Flag[evt_qual_flg]
 
-        evnt_qual_flg_selection = apply_puppimet_jet_horn_recipe(events, evnt_qual_flg_selection, is_mc=is_mc)
+        evnt_qual_flg_selection = apply_ECALBadCalib_EventFilter_recipe(events, evnt_qual_flg_selection, is_mc=is_mc)
         self.selection.add("event_quality_flags", evnt_qual_flg_selection)
 
         # --------------------------------------------------------
