@@ -425,7 +425,7 @@ years:
 
 
             ggh_amcatnlo:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 0.0135096
@@ -900,7 +900,7 @@ years:
                     - "POWHEG"
 
             ggh_amcatnlo:
-                skip_sample: False
+                skip_sample: True
                 datasets:
                     - None
                 cross_section_pb: 0.0135096
