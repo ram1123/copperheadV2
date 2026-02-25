@@ -57,7 +57,7 @@ def plotDataMC_compare(
     x_title="Mass (GeV)",
     y_title="Events",
     plot_ratio=True,
-    plot_ratio_range="auto" # available options "fixed" or "auto"
+    plot_ratio_range="auto", # available options "fixed" or "auto"
     log_scale=True,
     lumi = "",
     status = "Private Work",
