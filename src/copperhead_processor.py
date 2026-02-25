@@ -2294,76 +2294,76 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         padded_jets = ak.pad_none(jets, target=4) # padd jets
         jet1, jet2 = pair_dict["lead"]
-        # --------------------------------------------
-        # jet rapidity-region booleans (event-level)
-        # --------------------------------------------
-        # save boolean for the jets separated by rapidity regions:
-        #  1. both jets in the central region (abs(eta) < 2.5)
-        #  2. one jet in the forward region (abs(eta) > 2.5) and one jet in the central region
-        #  3. one jet in the HE region (2.5 < abs(eta) < 3.0) and one jet in the central region
-        #  4. one jet in the forward region (abs(eta) > 3.0) and one jet in the central region
-        #  5. both jets in the forward region (abs(eta) > 2.5)
-        #  6. both jets in the HE region (2.5 < abs(eta) < 3.0)
-        #  7. both jets in the forward region (abs(eta) > 3.0)
-        #  8. one jet in the HE region (2.5 < abs(eta) < 3.0) and one jet in the forward region (abs(eta) > 3.0)
-
-        # Guard against missing jets (None)
-        jet1_eta = ak.fill_none(jet1.eta, 999.0)
-        jet2_eta = ak.fill_none(jet2.eta, 999.0)
-
-        aeta1 = abs(jet1_eta)
-        aeta2 = abs(jet2_eta)
-
-        has2jets = (~ak.is_none(jet1.eta)) & (~ak.is_none(jet2.eta))
-
-        is_c1 = aeta1 < 2.5
-        is_c2 = aeta2 < 2.5
-
-        is_he1 = (aeta1 > 2.5) & (aeta1 < 3.0)
-        is_he2 = (aeta2 > 2.5) & (aeta2 < 3.0)
-
-        is_fwd25_1 = aeta1 > 2.5
-        is_fwd25_2 = aeta2 > 2.5
-
-        is_fwd30_1 = aeta1 > 3.0
-        is_fwd30_2 = aeta2 > 3.0
-
-        # 1) both jets central
-        jj_both_central = has2jets & is_c1 & is_c2
-
-        # 2) one jet forward (>2.5) and one jet central
-        jj_one_fwd25_one_central = has2jets & ((is_fwd25_1 & is_c2) | (is_fwd25_2 & is_c1))
-
-        # 3) one jet in HE (2.5-3.0) and one jet central
-        jj_one_he_one_central = has2jets & ((is_he1 & is_c2) | (is_he2 & is_c1))
-
-        # 4) one jet forward (>3.0) and one jet central
-        jj_one_fwd30_one_central = has2jets & ((is_fwd30_1 & is_c2) | (is_fwd30_2 & is_c1))
-
-        # 5) both jets forward (>2.5)
-        jj_both_fwd25 = has2jets & is_fwd25_1 & is_fwd25_2
-
-        # 6) both jets in HE (2.5-3.0)
-        jj_both_he = has2jets & is_he1 & is_he2
-
-        # 7) both jets forward (>3.0)
-        jj_both_fwd30 = has2jets & is_fwd30_1 & is_fwd30_2
-
-        # 8) one jet in HE (2.5-3.0) and one jet forward (>3.0)
-        jj_one_he_one_fwd30 = has2jets & ((is_he1 & is_fwd30_2) | (is_he2 & is_fwd30_1))
-
-        # save these boolean variables to the output dict
         jet_loop_out_dict = {}
-        jet_loop_out_dict.update({
-            f"jj_both_central": jj_both_central,
-            f"jj_one_fwd25_one_central": jj_one_fwd25_one_central,
-            f"jj_one_he_one_central": jj_one_he_one_central,
-            f"jj_one_fwd30_one_central": jj_one_fwd30_one_central,
-            f"jj_both_fwd25": jj_both_fwd25,
-            f"jj_both_he": jj_both_he,
-            f"jj_both_fwd30": jj_both_fwd30,
-            f"jj_one_he_one_fwd30": jj_one_he_one_fwd30,
-        })
+        # # --------------------------------------------
+        # # jet rapidity-region booleans (event-level)
+        # # --------------------------------------------
+        # # save boolean for the jets separated by rapidity regions:
+        # #  1. both jets in the central region (abs(eta) < 2.5)
+        # #  2. one jet in the forward region (abs(eta) > 2.5) and one jet in the central region
+        # #  3. one jet in the HE region (2.5 < abs(eta) < 3.0) and one jet in the central region
+        # #  4. one jet in the forward region (abs(eta) > 3.0) and one jet in the central region
+        # #  5. both jets in the forward region (abs(eta) > 2.5)
+        # #  6. both jets in the HE region (2.5 < abs(eta) < 3.0)
+        # #  7. both jets in the forward region (abs(eta) > 3.0)
+        # #  8. one jet in the HE region (2.5 < abs(eta) < 3.0) and one jet in the forward region (abs(eta) > 3.0)
+
+        # # Guard against missing jets (None)
+        # jet1_eta = ak.fill_none(jet1.eta, 999.0)
+        # jet2_eta = ak.fill_none(jet2.eta, 999.0)
+
+        # aeta1 = abs(jet1_eta)
+        # aeta2 = abs(jet2_eta)
+
+        # has2jets = (~ak.is_none(jet1.eta)) & (~ak.is_none(jet2.eta))
+
+        # is_c1 = aeta1 < 2.5
+        # is_c2 = aeta2 < 2.5
+
+        # is_he1 = (aeta1 > 2.5) & (aeta1 < 3.0)
+        # is_he2 = (aeta2 > 2.5) & (aeta2 < 3.0)
+
+        # is_fwd25_1 = aeta1 > 2.5
+        # is_fwd25_2 = aeta2 > 2.5
+
+        # is_fwd30_1 = aeta1 > 3.0
+        # is_fwd30_2 = aeta2 > 3.0
+
+        # # 1) both jets central
+        # jj_both_central = has2jets & is_c1 & is_c2
+
+        # # 2) one jet forward (>2.5) and one jet central
+        # jj_one_fwd25_one_central = has2jets & ((is_fwd25_1 & is_c2) | (is_fwd25_2 & is_c1))
+
+        # # 3) one jet in HE (2.5-3.0) and one jet central
+        # jj_one_he_one_central = has2jets & ((is_he1 & is_c2) | (is_he2 & is_c1))
+
+        # # 4) one jet forward (>3.0) and one jet central
+        # jj_one_fwd30_one_central = has2jets & ((is_fwd30_1 & is_c2) | (is_fwd30_2 & is_c1))
+
+        # # 5) both jets forward (>2.5)
+        # jj_both_fwd25 = has2jets & is_fwd25_1 & is_fwd25_2
+
+        # # 6) both jets in HE (2.5-3.0)
+        # jj_both_he = has2jets & is_he1 & is_he2
+
+        # # 7) both jets forward (>3.0)
+        # jj_both_fwd30 = has2jets & is_fwd30_1 & is_fwd30_2
+
+        # # 8) one jet in HE (2.5-3.0) and one jet forward (>3.0)
+        # jj_one_he_one_fwd30 = has2jets & ((is_he1 & is_fwd30_2) | (is_he2 & is_fwd30_1))
+
+        # # save these boolean variables to the output dict
+        # jet_loop_out_dict.update({
+        #     f"jj_both_central": jj_both_central,
+        #     f"jj_one_fwd25_one_central": jj_one_fwd25_one_central,
+        #     f"jj_one_he_one_central": jj_one_he_one_central,
+        #     f"jj_one_fwd30_one_central": jj_one_fwd30_one_central,
+        #     f"jj_both_fwd25": jj_both_fwd25,
+        #     f"jj_both_he": jj_both_he,
+        #     f"jj_both_fwd30": jj_both_fwd30,
+        #     f"jj_one_he_one_fwd30": jj_one_he_one_fwd30,
+        # })
 
         do_additional_jet_vars = self.config["switches"]["do_additional_jet_vars"]
         if do_additional_jet_vars:
