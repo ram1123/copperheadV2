@@ -198,7 +198,13 @@ if __name__ == "__main__":
         "2016postVFP": 19.50,
         "2016preVFP": 16.81,
         "2016": 36.3,
-        "all" : 137,
+        # "all" : 137, # Run2
+        "2022preEE": "7.9804",
+        "2022postEE": "26.6717",
+        "2023": "17.7940",
+        "2023BPix": "9.4510",
+        "2024": "108.9600",
+        "all": "170.8571", # 2022 - 2024
     }
     lumi_val = lumi_dict[year]
     sample_groups = {
@@ -273,7 +279,8 @@ if __name__ == "__main__":
         lumi = lumi_val,
         status = status,
         bdtCat_boundaries=bdt_edges,
-        significance_tuple = (subCatSignificance_hist, bdt_edges4plot)
+        significance_tuple = (subCatSignificance_hist, bdt_edges4plot),
+        ymax=0.1
     )
 
     

@@ -270,14 +270,14 @@ def plot_6_7(df, binning, var, xlabel, save_dir):
 
 def plot_6_7BySubCat(df, binning, var, xlabel, save_dir, cat_idx=None):
     
-    # --- binning ---
+    # --- binning --- # FIXME: copy the edges from 2024 BDT edges yaml file
     bdt_edges = np.array([ # 2018 UL subcat edges
         0.0,
-        0.39327239990234375,
-        0.5264375805854797,
-        0.736026406288147,
-        0.8443986773490906,
-        1.1
+        0.39617791771888733,
+        0.44750669598579407,
+        0.5049778819084167,
+        0.5425251722335815,
+        1.1,
     ])
     bdt_edges = bdt_edges*2 -1
 
@@ -643,6 +643,14 @@ if __name__ == "__main__":
     action="store",
     help="",
     )
+    parser.add_argument(
+    "-model",
+    "--model_name",
+    dest="model_name",
+    default="",
+    action="store",
+    help="",
+    )
     args = parser.parse_args()
     # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/*/"
     year = args.year
@@ -665,7 +673,13 @@ if __name__ == "__main__":
         "2016postVFP": 19.50,
         "2016preVFP": 16.81,
         "2016": 36.3,
-        "all" : 137,
+        # "all" : 137, # Run2
+        "2022preEE": "7.9804",
+        "2022postEE": "26.6717",
+        "2023": "17.7940",
+        "2023BPix": "9.4510",
+        "2024": "108.9600",
+        "all": "170.8571", # 2022 - 2024
     }
     lumi_val = lumi_dict[year]
     sample_groups = {
@@ -689,7 +703,7 @@ if __name__ == "__main__":
 
     
     full_load_path = load_path+f"processed_events_sigMC*.parquet" 
-    # full_load_path = load_path+f"processed_events_sigMC_ggh.parquet" 
+    # full_load_path = load_path+f"processed_events_sigMC_ggh*.parquet" 
     df = getDfAndPreProcess(full_load_path)
 
 
@@ -703,36 +717,44 @@ if __name__ == "__main__":
     save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Fig6_7"
     # save_dir = f"plots/{args.category}/{args.year}signal/Fig6_7"
     os.makedirs(save_dir, exist_ok=True)
-    
-    bdt_inputs = [
-        'dimuon_cos_theta_cs', 
-        'dimuon_phi_cs', 
-        'dimuon_rapidity', 
-        'dimuon_pt', 
-        'jet1_eta_nominal', 
-        # 'jet2_eta_nominal', 
-        'jet1_pt_nominal', 
-        'jet2_pt_nominal', 
-        'jj_dEta_nominal', 
-        'jj_dPhi_nominal', 
-        'jj_mass_nominal', 
-        # 'mmj1_dEta', 
-        # 'mmj1_dPhi',  
-        'mmj_min_dEta_nominal', 
-        'mmj_min_dPhi_nominal', 
-        'mu1_eta', 
-        'mu1_pt_over_mass', 
-        'mu2_eta', 
-        'mu2_pt_over_mass', 
-        'zeppenfeld_nominal',
-        'njets_nominal',
-        # 'mmj1_dEta_nominal', 
-        # 'mmj1_dPhi_nominal',  
-        'BDT_score',  
-    ]
-    variables = bdt_inputs + ["dimuon_mass", "dimuon_ebe_mass_res", "jet2_eta_nominal", "rpt_nominal"]
+    # extract BDT inputs
+    model_path = f"/work/users/yun79/Run2_MVA_trainer/output/bdt_{args.model_name}_{args.year}"
+    training_feat_path = f"{model_path}/training_features.json"
+    print(f"trainig_feat_path: {training_feat_path}")
+    with open(training_feat_path, 'r') as file:
+        bdt_inputs = json.load(file)
+    # bdt_inputs = [
+    #     'dimuon_cos_theta_cs', 
+    #     'dimuon_phi_cs', 
+    #     'dimuon_rapidity', 
+    #     'dimuon_pt', 
+    #     'jet1_eta_nominal', 
+    #     # 'jet2_eta_nominal', 
+    #     'jet1_pt_nominal', 
+    #     'jet2_pt_nominal', 
+    #     'jj_dEta_nominal', 
+    #     'jj_dPhi_nominal', 
+    #     'jj_mass_nominal', 
+    #     # 'mmj1_dEta', 
+    #     # 'mmj1_dPhi',  
+    #     'mmj_min_dEta_nominal', 
+    #     'mmj_min_dPhi_nominal', 
+    #     'mu1_eta', 
+    #     'mu1_pt_over_mass', 
+    #     'mu2_eta', 
+    #     'mu2_pt_over_mass', 
+    #     'zeppenfeld_nominal',
+    #     'njets_nominal',
+    #     # 'mmj1_dEta_nominal', 
+    #     # 'mmj1_dPhi_nominal',  
+    #     'BDT_score',  
+    # ]
+    variables = bdt_inputs + ["dimuon_mass", "dimuon_ebe_mass_res"]
     # variables =  ["dimuon_mass", "dimuon_ebe_mass_res"
+    print(f"varibles: {variables}")
+    print(f"df.columns: {df.columns}")
     threshold_targets = [0.3, .65, .8, .95]
+    variables.remove("year") # no need to print year for now
     for var in variables:
         plot_var = getPlotVar(var)
         if plot_var == "dimuon_mass":
@@ -754,28 +776,28 @@ if __name__ == "__main__":
 
     
     
-    # ----------------------------------------------------
-    #  compare jet eta distribution when | y_mumu | > 1.0
-    # ----------------------------------------------------
-    save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Fig6_7_yMuMuCut"
-    os.makedirs(save_dir, exist_ok=True)
+    # # ----------------------------------------------------
+    # #  compare jet eta distribution when | y_mumu | > 1.0
+    # # ----------------------------------------------------
+    # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Fig6_7_yMuMuCut"
+    # os.makedirs(save_dir, exist_ok=True)
     
-    yMuMuCut = abs(df["dimuon_rapidity"]) > 1.0
-    df_yMuMuCut = df[yMuMuCut]
-    for var in ["jet1_eta_nominal", "jet2_eta_nominal", "dimuon_rapidity"]:
-        plot_var = getPlotVar(var)
-        if plot_var == "dimuon_mass":
-            binning = np.linspace(115, 135, 50)
-        else:
-            binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
-        xlabel =  plot_settings[plot_var].get("xlabel")
-        thresholds = []
-        for threshold_target in threshold_targets:
-            threshold = weighted_quantile(df["BDT_score"], threshold_target, sample_weight=df["wgt_nominal"])
-            thresholds.append(threshold)
-        thresholds = np.array(thresholds)
-        print("BDT score threshold (30% cumulative weight):", thresholds)
-        plot_6_7BySubCat(df_yMuMuCut, binning, var, xlabel, save_dir)
+    # yMuMuCut = abs(df["dimuon_rapidity"]) > 1.0
+    # df_yMuMuCut = df[yMuMuCut]
+    # for var in ["jet1_eta_nominal", "jet2_eta_nominal", "dimuon_rapidity"]:
+    #     plot_var = getPlotVar(var)
+    #     if plot_var == "dimuon_mass":
+    #         binning = np.linspace(115, 135, 50)
+    #     else:
+    #         binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+    #     xlabel =  plot_settings[plot_var].get("xlabel")
+    #     thresholds = []
+    #     for threshold_target in threshold_targets:
+    #         threshold = weighted_quantile(df["BDT_score"], threshold_target, sample_weight=df["wgt_nominal"])
+    #         thresholds.append(threshold)
+    #     thresholds = np.array(thresholds)
+    #     print("BDT score threshold (30% cumulative weight):", thresholds)
+    #     plot_6_7BySubCat(df_yMuMuCut, binning, var, xlabel, save_dir)
     
     # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Scatter"
     # # os.makedirs(save_dir, exist_ok=True)

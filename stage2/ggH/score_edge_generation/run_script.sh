@@ -9,13 +9,14 @@ category="ggh"
 
 # model_name="Run3PrelimResultsJan25_2026_NoAnnhilateWgts"
 # model_name="Run3PrelimResultsJan29_2026_reducedInput2"
-# model_name="Run3PrelimResultsFeb09_2026_jecjer"
-model_name="Run3PrelimResultsFeb10_2026_jecjer_flatDimuMass"
+model_name="Run3PrelimResultsFeb09_2026_jecjer"
+# model_name="Run3PrelimResultsFeb10_2026_jecjer_flatDimuMass"
 
 
 
 # stage2_save_path="/depot/cms/users/yun79/hmm/copperheadV1clean/$label/${model_name}_${category}_recreate1_87SigOct31_2025_newEdgeTarget/stage2_output" 
-stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model_name}_${category}/stage2_output" 
+# stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model_name}_${category}/stage2_output" 
+stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model_name}_${category}_perYr/stage2_output" 
 
 
 # years="2016preVFP 2016postVFP 2017 2018"

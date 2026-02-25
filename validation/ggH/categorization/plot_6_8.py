@@ -77,6 +77,7 @@ def plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=
     leg = ROOT.TLegend(0.75,0.75,1.0,1.0)
     hist_l = []
     BDT_cats = enumerate(masks)
+    print(f"masks: {masks}")
     for i, m in BDT_cats:
         if cat_idx is not None:
             if i != cat_idx: # skip plotting cat_idx not specified
@@ -165,6 +166,7 @@ def plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, no
     canvas = ROOT.TCanvas("c", "c", 800, 600)
     leg = ROOT.TLegend(0.75,0.75,1.0,1.0)
     hist_l = []
+    print(f"masks: {masks}")
     BDT_cats = enumerate(masks)
     for i, m in BDT_cats:
         if cat_idx is not None:
@@ -306,7 +308,13 @@ if __name__ == "__main__":
         "2016postVFP": 19.50,
         "2016preVFP": 16.81,
         "2016": 36.3,
-        "all" : 137,
+        # "all" : 137, # Run2
+        "2022preEE": "7.9804",
+        "2022postEE": "26.6717",
+        "2023": "17.7940",
+        "2023BPix": "9.4510",
+        "2024": "108.9600",
+        "all": "170.8571", # 2022 - 2024
     }
     lumi_val = lumi_dict[year]
     sample_groups = {
@@ -341,9 +349,7 @@ if __name__ == "__main__":
         plot_settings = json.load(file)
     plot_var = "BDT_score"
     binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
-    save_fname = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Fig6_8"
-    # Make directory if it doesn't exist
-    os.makedirs(os.path.dirname(save_fname), exist_ok=True)
+    
     # status = "Private"
     status = "Simulation"
 
@@ -365,22 +371,29 @@ if __name__ == "__main__":
     print(f"bkgMC_BDT_score: {bkgMC_BDT_score}")
     print(f"bkgMC_wgt_nominal: {bkgMC_wgt_nominal}")
 
-
-    # nbins = 75
-    nbins = 100
-    # nbins = 120
-    
-    plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True)
-    plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True)
-    for cat_idx in range(n_bdt_cats):
-        plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, cat_idx=cat_idx)
-        plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, cat_idx=cat_idx)
+    nbins_l = [
+        100,
+        50,
+        25
+    ]
+    for nbins in nbins_l:
+        save_fname = f"plots/{args.label}_x_{args.category}/{args.year}_signal/fig_6_8Nbins{nbins}/Fig6_8"
+        # Make directory if it doesn't exist
+        os.makedirs(os.path.dirname(save_fname), exist_ok=True)
         
-    plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E")
-    plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E")
-    for cat_idx in range(n_bdt_cats):
-        plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E", cat_idx=cat_idx)
-        plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E", cat_idx=cat_idx)
+        
+        
+        plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True)
+        plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True)
+        for cat_idx in range(n_bdt_cats):
+            plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, cat_idx=cat_idx)
+            plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, cat_idx=cat_idx)
+            
+        plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E")
+        plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E")
+        for cat_idx in range(n_bdt_cats):
+            plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E", cat_idx=cat_idx)
+            plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E", cat_idx=cat_idx)
     
 
     

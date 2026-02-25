@@ -49,9 +49,15 @@
 # - 0.28
 # - 0.1
 # - 0.03
-target_yields:  # Run3PrelimResultsFeb10_2026_jecjer_flatDimuMass_ggh
-- 0.2
+# target_yields:  # Run3PrelimResultsFeb10_2026_jecjer_flatDimuMass_ggh
+# - 0.2
+# - 0.38
+# - 0.27
+# - 0.11
+# - 0.04
+target_yields:  # Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV_x_Run3PrelimResultsFeb09_2026_jecjer_ggh_perYr
+- 0.21
 - 0.38
-- 0.27
-- 0.11
+- 0.24
+- 0.13
 - 0.04

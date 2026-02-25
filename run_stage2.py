@@ -16,7 +16,7 @@ import configs.categories.category_cuts as category_cuts
 import json
 # from modules.utils import removeForwardJets, fromPdDftoAkZip
 from modules.selection import filterRegion
-
+import time
 
 def split_into_n_parts(lst, n_parts):
     return [lst[i::n_parts] for i in range(n_parts)]
@@ -190,39 +190,40 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
                    
       ]
 
-    bdt_inputs = [ # FIXME. overwrite for testing
-            'dimuon_cos_theta_cs', 
-            'dimuon_phi_cs', 
-            'dimuon_rapidity', 
-            'dimuon_pt', 
-            'jet1_eta_nominal', 
-            'jet2_eta_nominal', # this technically is not in BDT, but add just in case 
-            'jet1_pt_nominal', 
-            'jet2_pt_nominal', 
-            'jj_dEta_nominal', 
-            'jj_dPhi_nominal', 
-            'jj_mass_nominal', 
-            # 'mmj1_dEta', 
-            # 'mmj1_dPhi',  
-            'mmj_min_dEta_nominal', 
-            'mmj_min_dPhi_nominal', 
-            'mu1_eta', 
-            'mu1_pt_over_mass', 
-            'mu2_eta', 
-            'mu2_pt_over_mass', 
-            'zeppenfeld_nominal',
-            'njets_nominal',
-            'rpt_nominal', # this technically is not in BDT, but add just in case 
-            # 'dimuon_ebe_mass_res_rel',
-        ]
-    fields2load += bdt_inputs
+    # bdt_inputs = [ # FIXME. overwrite for testing
+    #         # 'dimuon_cos_theta_cs', 
+    #         # 'dimuon_phi_cs', 
+    #         # 'dimuon_rapidity', 
+    #         # 'dimuon_pt', 
+    #         # 'jet1_eta_nominal', 
+    #         # 'jet2_eta_nominal', # this technically is not in BDT, but add just in case 
+    #         # 'jet1_pt_nominal', 
+    #         # 'jet2_pt_nominal', 
+    #         # 'jj_dEta_nominal', 
+    #         # 'jj_dPhi_nominal', 
+    #         # 'jj_mass_nominal', 
+    #         # # 'mmj1_dEta', 
+    #         # # 'mmj1_dPhi',  
+    #         # 'mmj_min_dEta_nominal', 
+    #         # 'mmj_min_dPhi_nominal', 
+    #         # 'mu1_eta', 
+    #         # 'mu1_pt_over_mass', 
+    #         # 'mu2_eta', 
+    #         # 'mu2_pt_over_mass', 
+    #         # 'zeppenfeld_nominal',
+    #         # 'njets_nominal',
+    #         # 'rpt_nominal', # this technically is not in BDT, but add just in case 
+    #         # # 'dimuon_ebe_mass_res_rel',
+    #     ]
+    # fields2load += bdt_inputs
+    fields2load += training_features # add BDT inputs
 
     
     for variation in jec_unc_fields: # add jec unc variations
         fields2load4variation = apply_variation(fields2load, variation)
         training_feature4variation = apply_variation(training_features, variation)
         fields2load = fields2load + fields2load4variation + training_feature4variation
-    fields2load = list(set(fields2load + training_features + wgt_unc_fields)) # remove redundant fields
+    fields2load = list(set(fields2load + wgt_unc_fields)) # remove redundant fields
 
     print(f"fields2load: {fields2load}")
     # print(f"training_features: {training_features}")
@@ -251,10 +252,8 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
     # # original end -------------------------------
 
     # filter events for ggH category
-    # dimuon_mass = events.dimuon_mass
-    # region = (dimuon_mass >= 110) & (dimuon_mass <= 150.0) # signal region
-    # region = (dimuon_mass >= 70) & (dimuon_mass <= 150.0) # signal region
-    region, _ = filterRegion(events, region="full")
+    # region, _ = filterRegion(events, region="full")
+    region, _ = filterRegion(events, region="signal")
     category_str = "ggh"
     cut_names = getCategoryCutNames(category_str)
     gghCat_selection = (
@@ -384,7 +383,9 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
             # 'mmj1_dEta_nominal', 
             # 'mmj1_dPhi_nominal',  
         ]
-        fields2save += bdt_inputs
+        # fields2save += bdt_inputs
+        fields2save += training_features
+        
     # add bdt inputs for fig 6.7 ----------------------
 
     for field in processed_events.fields: # add all fields mentioning bdt score
@@ -741,7 +742,8 @@ if __name__ == "__main__":
         elif sample.lower() == "vbf":
             # full_load_path = load_path+f"/vbf_powheg_dipole/*/*.parquet"
             # full_load_path = load_path+f"/vbf_*/*/*.parquet"
-            full_load_path = load_path+f"/vbf_*NLO/*/*.parquet"
+            # full_load_path = load_path+f"/vbf_*NLO/*/*.parquet"
+            full_load_path = load_path+f"/vbf_powheg*/*/*.parquet"
             is_signal_MC = True
         elif sample.lower() == "dy":
             # full_load_path = load_path+f"/dy_*/*/*.parquet"
@@ -798,6 +800,7 @@ if __name__ == "__main__":
         filelist_l = split_into_n_parts(filelist_big, n_part_target)
         print(f"sample: {sample}")
         print(f"len(filelist_l): {len(filelist_l)}")
+        # print(f"filelist_l: {filelist_l}")
         n_partitions = len(filelist_l)
         for partition_idx in range(n_partitions):
         # for partition_idx in range(len(filelist_l)):
@@ -904,7 +907,7 @@ if __name__ == "__main__":
                 pass
             
             ak.to_parquet(processed_events, save_filename)
-
+            time.sleep(3) # wait three second for stability
         
         # This is ineligant, but also save the bdt edges that was presumably used
         BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"

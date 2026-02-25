@@ -1,5 +1,4 @@
 import ROOT
-import ROOT as rt
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -31,7 +30,7 @@ def chi2_ndf_manual(pdf, data_hist, x, regions, nfloat):
     ndf = nbin - nfloat
     return chi2, ndf
 
-def getNewRangeHist(hist2copy: rt.TH1D, new_hist_name: str, xlow_new: float, xhigh_new: float):
+def getNewRangeHist(hist2copy: ROOT.TH1D, new_hist_name: str, xlow_new: float, xhigh_new: float):
     """
     """
     # get binwise content
@@ -52,7 +51,7 @@ def getNewRangeHist(hist2copy: rt.TH1D, new_hist_name: str, xlow_new: float, xhi
     # print(bin_dict)
     new_nbins = len(bin_dict["content"])
 
-    new_hist = rt.TH1D(new_hist_name, new_hist_name, new_nbins, xlow_new, xhigh_new)
+    new_hist = ROOT.TH1D(new_hist_name, new_hist_name, new_nbins, xlow_new, xhigh_new)
     for i in range(1, new_hist.GetNbinsX() + 1):
         content = bin_dict["content"][i-1]
         new_hist.SetBinContent(i, content)
@@ -67,7 +66,7 @@ def getNewRangeHist(hist2copy: rt.TH1D, new_hist_name: str, xlow_new: float, xhi
     # raise ValueError
     return new_hist
 
-def getGOF_KS(x: rt.RooRealVar, data: rt.RooDataHist, pdf: rt.RooAbsPdf, cat_name:str, save_path:str):
+def getGOF_KS(x: ROOT.RooRealVar, data: ROOT.RooDataHist, pdf: ROOT.RooAbsPdf, cat_name:str, save_path:str):
     """
     Get KS value for specific value
     """
@@ -75,7 +74,7 @@ def getGOF_KS(x: rt.RooRealVar, data: rt.RooDataHist, pdf: rt.RooAbsPdf, cat_nam
     nbins = x.getBins()
     var_name = x.GetName()
     # # Generate toy dataset
-    # data = pdf.generate(rt.RooArgSet(x), 1000)
+    # data = pdf.generate(ROOT.RooArgSet(x), 1000)
     hist_data_orig = data.createHistogram(var_name).Clone("clone")# clone it just in case
     # Create a histogram of the PDF
     hist_pdf_orig = pdf.createHistogram(var_name, nbins)

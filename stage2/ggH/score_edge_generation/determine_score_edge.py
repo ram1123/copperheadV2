@@ -34,7 +34,7 @@ def obtain_BDT_edges(target_sig_effs, years, load_path):
     
 
         # full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sig*.parquet"
-        full_load_path = f"{load_path}/{year}/processed_events_sigMC_ggh.parquet" # ignore VBF signal sample
+        full_load_path = f"{load_path}/{year}/processed_events_sigMC_ggh_*.parquet" # ignore VBF signal sample
         events = dak.from_parquet(full_load_path)
         
         signal_score = ak.to_numpy(events.BDT_score.compute())
@@ -118,7 +118,7 @@ def get_background_yields(bdt_score_edges, year:str, load_path:str):
     """
     return: out_arr of size len(bdt_score_edges) -1, value in each bin represnting signal yield in that category
     """
-    full_load_path = f"{load_path}/{year}/processed_events_data.parquet"  # use data for bkg
+    full_load_path = f"{load_path}/{year}/processed_events_data_*.parquet"  # use data for bkg
     events = dak.from_parquet(full_load_path)
     background_score = ak.to_numpy(events.BDT_score.compute())
     background_wgt = ak.to_numpy(events.wgt_nominal.compute())

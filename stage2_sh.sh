@@ -17,11 +17,12 @@ category="ggh"
 # model_name="Run3PrelimResultsJan29_2026_reducedInput"
 # model_name="Run3PrelimResultsJan29_2026_reducedInput2"
 # model_name="Run3PrelimResultsFeb07_2026_jecjer"
-# model_name="Run3PrelimResultsFeb09_2026_jecjer"
-model_name="Run3PrelimResultsFeb10_2026_jecjer_flatDimuMass"
+model_name="Run3PrelimResultsFeb09_2026_jecjer"
+# model_name="Run3PrelimResultsFeb10_2026_jecjer_flatDimuMass"
 
-# stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model_name}_${category}_memoryRefactor/stage2_output" 
-stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model_name}_${category}/stage2_output" 
+# stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model_name}_${category}/stage2_output" 
+stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model_name}_${category}_perYr/stage2_output" 
+# stage2_save_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/$label/${model_name}_${category}_perYr_BdtEdgeOptimized/stage2_output" 
 
 
 bdt_edge_config_path="/work/users/yun79/sideHustle2/copperheadV2/configs/MVA/ggH/BDT_edges.yaml"
@@ -122,7 +123,9 @@ bdt_edge_config_path="/work/users/yun79/sideHustle2/copperheadV2/configs/MVA/ggH
 # stage3_label="${label}_X_${model_name}_diffTargetYield"
 # stage3_label="${label}_X_${model_name}_repeat"
 # stage3_label="${label}_X_${model_name}_memoryRefactor"
-stage3_label="${label}_X_${model_name}"
+# stage3_label="${label}_X_${model_name}_perYr"
+# stage3_label="${label}_X_${model_name}_perYr_BdtEdgeOptimized"
+stage3_label="${label}_X_${model_name}_perYr_redo"
 
 echo "stage2 path: ${stage2_save_path}"
 year="all"
