@@ -57,6 +57,7 @@ def plotDataMC_compare(
     x_title="Mass (GeV)",
     y_title="Events",
     plot_ratio=True,
+    plot_ratio_range="auto" # available options "fixed" or "auto"
     log_scale=True,
     lumi = "",
     status = "Private Work",
@@ -231,7 +232,7 @@ def plotDataMC_compare(
         ax_ratio.set_xlim(binning[0], binning[-1])
 
         finite = np.isfinite(ratio_hist)
-        if np.any(finite):
+        if np.any(finite) and plot_ratio_range == "auto":
             rmin = float(np.nanmin(ratio_hist[finite]))
             rmax = float(np.nanmax(ratio_hist[finite]))
 
@@ -248,13 +249,13 @@ def plotDataMC_compare(
             # optional safety clamp (avoid insane autoscale)
             ylo = max(ylo, 0.0)
             yhi = min(yhi, 5.0)
-
+            set_yticks = np.linspace(ylo, yhi, 7)
         else:
-            # fallback if ratio_hist is all-NaN
+            # fallback if ratio_hist is all-NaN or plot_ratio_range is not "auto"
             ylo, yhi = 0.5, 1.5
+            set_yticks = [0.6, 0.8, 1.0, 1.2, 1.4]
         ax_ratio.set_ylim(ylo, yhi)
-        # ax_ratio.set_yticks([0.6, 0.8, 1.0, 1.2, 1.4]) # explicitly ask for 1.4 and 0.6
-        ax_ratio.set_yticks(np.linspace(ylo, yhi, 7))
+        ax_ratio.set_yticks(set_yticks)
     else:
         ax_main.set_xlabel(x_title)
 

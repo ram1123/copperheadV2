@@ -873,6 +873,7 @@ if __name__ == "__main__":
                 status = status,
                 log_scale = do_logscale,
                 CenterOfMass = CM_energy,
+                plot_ratio_range = "fixed", # options: "fixed" or "auto"
             )
             plotDataMC_compare(
                 binning,
@@ -887,6 +888,7 @@ if __name__ == "__main__":
                 status = status,
                 log_scale = False,
                 CenterOfMass=CM_energy,
+                plot_ratio_range = "fixed", # options: "fixed" or "auto"
             )
 
     close_dask_client()
