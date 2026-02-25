@@ -37,6 +37,11 @@ def getRapidity(obj):
     rap = 0.5 * np.log((e + pz) / (e - pz))
     return rap
 
+# helper: delta-phi in [-pi, pi]
+def _delta_phi(phi1, phi2):
+    dphi = phi1 - phi2
+    dphi = (dphi + np.pi) % (2.0 * np.pi) - np.pi
+    return abs(dphi)
 
 def _mass2_kernel(t, x, y, z):
     return t * t - x * x - y * y - z * z

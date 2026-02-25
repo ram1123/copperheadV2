@@ -23,12 +23,23 @@ SAMPLES: Dict[str, str] = {
     # "stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/*.parquet",
     # "TT": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_02Feb_FilterJets/"
     # "stage1_output/2022postEE/f1_0/ttjets_sl/0/*.parquet",
-    "new_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn30GeV_JetIDFix/stage1_output/2024/f1_0/vbf_powheg/0/*.parquet",
-    "old_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_15Feb_FilterJetsHorn30GeV/stage1_output/2024/f1_0/vbf_powheg/0/*.parquet",
+    # "new_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn30GeV_JetIDFix/stage1_output/2024/f1_0/vbf_powheg/0/*.parquet",
+    # "old_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_15Feb_FilterJetsHorn30GeV/stage1_output/2024/f1_0/vbf_powheg/0/*.parquet",
     # "new_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDFix/stage1_output/2022postEE/f1_0/vbf_powheg_dipole/0/*.parquet",
     # "old_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_15Feb_FilterJetsHorn30GeV/stage1_output/2022postEE/f1_0/vbf_powheg_dipole/0/*.parquet",
     # "new_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDFix/stage1_output/2023/f1_0/vbf_powheg/0/*.parquet",
     # "old_JETID": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_15Feb_FilterJetsHorn30GeV/stage1_output/2023/f1_0/vbf_powheg/0/*.parquet",
+
+    # COMPARE V12 AND V15
+    # "v12": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2017/compacted/data_*/0/*.parquet",
+    # "v15": "/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Feb23_2026_noQGLSF/stage1_output/2017/compacted/data_*/0/*.parquet",
+
+    # "v12": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2017/compacted/vbf_powheg_dipole/0/*.parquet",
+    # "v15": "/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Feb23_2026_noQGLSF/stage1_output/2017/compacted/vbf_powheg_dipole/0/*.parquet",    
+
+    "v12": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2017/compacted/dy_M-50_aMCatNLO/0/*.parquet",
+    "v15": "/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Feb23_2026_noQGLSF/stage1_output/2017/compacted/dyTo2L_M-50_aMCatNLO/0/*.parquet",    
+
 }
 
 OUTDIR = Path(
@@ -166,9 +177,15 @@ def _auto_range(arrs: Dict[str, np.ndarray]) -> Tuple[float, float]:
 
 def _save_overlay(arrs: Dict[str, np.ndarray], field: str, outdir: Path) -> None:
     """
-    Overlay plot for one variable: sample lists, normalized to unity.
+    Overlay plot for one variable: unit-normalized densities + ratio panel.
+
+    Ratio definition:
+        ratio(label) = density(label) / density(ref_label)
+    where ref_label is chosen as:
+        - "Old_EvtFilter" if present,
+        - else the first key in arrs (in insertion order).
     """
-    # Drop empty ones (but keep at least 2 for a comparison)
+    # Drop empty ones
     arrs = {k: v for k, v in arrs.items() if v is not None and v.size > 0}
     if len(arrs) < 1:
         return
@@ -176,44 +193,169 @@ def _save_overlay(arrs: Dict[str, np.ndarray], field: str, outdir: Path) -> None
     lo, hi = _auto_range(arrs)
     name = _safe_name(field)
 
-    # Linear
-    fig, ax = plt.subplots(figsize=(8.0, 5.5), constrained_layout=True)
+    # Choose reference
+    labels = list(arrs.keys())
+    ref_label = "Old_EvtFilter" if "Old_EvtFilter" in arrs else labels[0]
+
+    # Common bin edges
+    edges = np.linspace(lo, hi, NBINS + 1)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+
+    def _density_hist(x: np.ndarray) -> np.ndarray:
+        # density=True -> normalized by (N * bin_width), integrates to 1
+        h, _ = np.histogram(x, bins=edges, density=True)
+        return h.astype(np.float64, copy=False)
+
+    # Precompute densities (so ratio uses *exactly* the same binning)
+    dens: Dict[str, np.ndarray] = {lab: _density_hist(arr) for lab, arr in arrs.items()}
+    ref = dens[ref_label]
+
+    # Avoid divide-by-zero: ratio undefined where ref==0
+    def _ratio(num: np.ndarray, den: np.ndarray) -> np.ndarray:
+        r = np.full_like(num, np.nan, dtype=np.float64)
+        m = den > 0
+        r[m] = num[m] / den[m]
+        return r
+
+    # ---------- Linear + ratio ----------
+    fig = plt.figure(figsize=(8.0, 7.0), constrained_layout=True)
+    gs = fig.add_gridspec(nrows=2, ncols=1, height_ratios=[3.0, 1.0], hspace=0.05)
+    ax = fig.add_subplot(gs[0])
+    rax = fig.add_subplot(gs[1], sharex=ax)
+
+    # top pad: densities
     for label, arr in arrs.items():
         ax.hist(
             arr,
-            bins=NBINS,
-            range=(lo, hi),
+            bins=edges,
             histtype="step",
             linewidth=1.6,
-            density=True, # NOTE: NORMALIZED TO UNITY
+            density=True,
             label=f"{label} (N={arr.size})",
         )
-    ax.set_xlabel(field)
+
     ax.set_ylabel("Unit-normalized density")
     ax.set_title(field)
     ax.grid(True)
     ax.legend()
+
+    # bottom pad: ratios vs ref
+    all_ratios = []
+
+    for label in labels:
+        if label == ref_label:
+            continue
+        rr = _ratio(dens[label], ref)
+        rax.plot(centers, rr, marker="o", markersize=2.5, linewidth=1.2, label=f"{label}/{ref_label}")
+        all_ratios.append(rr)
+
+    rax.axhline(1.0, linewidth=1.0, linestyle="--")
+    rax.set_xlabel(field)
+    rax.set_ylabel("Ratio")
+    rax.grid(True)
+    # --- automatic y-range ---
+    if all_ratios:
+        rr_all = np.concatenate(all_ratios)
+        finite = np.isfinite(rr_all)
+
+        if np.any(finite):
+            rmin = float(np.nanmin(rr_all[finite]))
+            rmax = float(np.nanmax(rr_all[finite]))
+
+            # ensure unity is visible
+            rmin = min(rmin, 1.0)
+            rmax = max(rmax, 1.0)
+
+            span = max(rmax - rmin, 1e-6)
+            pad = max(0.10 * span, 0.02)  # 10% padding (at least 0.02)
+
+            ylo = rmin - pad
+            yhi = rmax + pad
+
+            # optional safety clamp
+            ylo = max(ylo, 0.0)
+            yhi = min(yhi, 5.0)
+
+            rax.set_ylim(ylo, yhi)
+        else:
+            rax.set_ylim(0.9, 1.1)
+    else:
+        rax.set_ylim(0.9, 1.1)
+
+    # hide x tick labels on top pad
+    plt.setp(ax.get_xticklabels(), visible=False)
+
     fig.savefig(outdir / f"{name}.pdf")
     plt.close(fig)
 
-    # Log-y
-    fig, ax = plt.subplots(figsize=(8.0, 5.5), constrained_layout=True)
+    # ---------- Log-y + ratio ----------
+    fig = plt.figure(figsize=(8.0, 7.0), constrained_layout=True)
+    gs = fig.add_gridspec(nrows=2, ncols=1, height_ratios=[3.0, 1.0], hspace=0.05)
+    ax = fig.add_subplot(gs[0])
+    rax = fig.add_subplot(gs[1], sharex=ax)
+
     for label, arr in arrs.items():
         ax.hist(
             arr,
-            bins=NBINS,
-            range=(lo, hi),
+            bins=edges,
             histtype="step",
             linewidth=1.6,
-            density=True, # NOTE: NORMALIZED TO UNITY
+            density=True,
             label=f"{label} (N={arr.size})",
         )
-    ax.set_xlabel(field)
+
+    ax.set_yscale("log")
     ax.set_ylabel("Unit-normalized density")
     ax.set_title(f"{field} (log-y)")
-    ax.set_yscale("log")
     ax.grid(True)
     ax.legend()
+
+    # bottom pad: ratios vs ref
+    all_ratios = []
+
+    for label in labels:
+        if label == ref_label:
+            continue
+        rr = _ratio(dens[label], ref)
+        rax.plot(centers, rr, marker="o", markersize=2.5, linewidth=1.2, label=f"{label}/{ref_label}")
+        all_ratios.append(rr)
+
+    rax.axhline(1.0, linewidth=1.0, linestyle="--")
+    rax.set_xlabel(field)
+    rax.set_ylabel("Ratio")
+    rax.grid(True)
+
+    # --- automatic y-range ---
+    if all_ratios:
+        rr_all = np.concatenate(all_ratios)
+        finite = np.isfinite(rr_all)
+
+        if np.any(finite):
+            rmin = float(np.nanmin(rr_all[finite]))
+            rmax = float(np.nanmax(rr_all[finite]))
+
+            # ensure unity is visible
+            rmin = min(rmin, 1.0)
+            rmax = max(rmax, 1.0)
+
+            span = max(rmax - rmin, 1e-6)
+            pad = max(0.10 * span, 0.02)  # 10% padding (at least 0.02)
+
+            ylo = rmin - pad
+            yhi = rmax + pad
+
+            # optional safety clamp
+            ylo = max(ylo, 0.0)
+            yhi = min(yhi, 5.0)
+
+            rax.set_ylim(ylo, yhi)
+        else:
+            rax.set_ylim(0.9, 1.1)
+    else:
+        rax.set_ylim(0.9, 1.1)
+
+    plt.setp(ax.get_xticklabels(), visible=False)
+
     fig.savefig(outdir / f"{name}_log.pdf")
     plt.close(fig)
 

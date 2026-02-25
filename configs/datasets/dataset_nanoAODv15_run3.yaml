@@ -1,91 +1,91 @@
 years:
     "2024":
         Data:
-            total_lumi_pb: 108960.0
+            total_lumi_pb: 109820.0
             pdmv_twiki: "https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#Year_2024"
             data_C:
                 skip_sample: False
                 datasets:
                     - /Muon0/Run2024C-MINIv6NANOv15-v1/NANOAOD
                     - /Muon1/Run2024C-MINIv6NANOv15-v1/NANOAOD
-                lumi_pb: 7240.0
+                lumi_pb: 7260.0
                 das_request: NONE
                 golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
-                    golden_json_official: NONE
+                    golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
 
             data_D:
                 skip_sample: False
                 datasets:
                     - /Muon0/Run2024D-MINIv6NANOv15-v1/NANOAOD
                     - /Muon1/Run2024D-MINIv6NANOv15-v1/NANOAOD
-                lumi_pb: 7960.0
+                lumi_pb: 7980.0
                 das_request: NONE
                 golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
-                    golden_json_official: NONE
+                    golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
 
             data_E:
                 skip_sample: False
                 datasets:
                     - /Muon0/Run2024E-MINIv6NANOv15-v1/NANOAOD
                     - /Muon1/Run2024E-MINIv6NANOv15-v1/NANOAOD
-                lumi_pb: 11320.0
+                lumi_pb: 11420.0
                 das_request: NONE
                 golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
-                    golden_json_official: NONE
+                    golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
 
             data_F:
                 skip_sample: False
                 datasets:
                     - /Muon0/Run2024F-MINIv6NANOv15-v1/NANOAOD
                     - /Muon1/Run2024F-MINIv6NANOv15-v1/NANOAOD
-                lumi_pb: 27760.0
+                lumi_pb: 28040.0
                 das_request: NONE
                 golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
-                    golden_json_official: NONE
+                    golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
 
             data_G:
                 skip_sample: False
                 datasets:
                     - /Muon0/Run2024G-MINIv6NANOv15-v1/NANOAOD
                     - /Muon1/Run2024G-MINIv6NANOv15-v2/NANOAOD
-                lumi_pb: 37770.0
+                lumi_pb: 38070.0
                 das_request: NONE
                 golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
-                    golden_json_official: NONE
+                    golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
 
             data_H:
                 skip_sample: False
                 datasets:
                     - /Muon0/Run2024H-MINIv6NANOv15-v1/NANOAOD
                     - /Muon1/Run2024H-MINIv6NANOv15-v2/NANOAOD
-                lumi_pb: 5440.0
+                lumi_pb: 5490.0
                 das_request: NONE
                 golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
-                    golden_json_official: NONE
+                    golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
 
             data_I:
                 skip_sample: False
                 datasets:
                     - /Muon0/Run2024I-MINIv6NANOv15_v2-v1/NANOAOD
                     - /Muon1/Run2024I-MINIv6NANOv15_v2-v1/NANOAOD
-                lumi_pb: 11470.0
+                lumi_pb: 11560.0
                 das_request: NONE
                 golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
-                    golden_json_official: NONE
+                    golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
 
         DY:
             dyTo2L_M-50_0j:

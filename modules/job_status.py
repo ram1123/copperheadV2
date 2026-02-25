@@ -1,8 +1,18 @@
+from datetime import datetime, timezone
 import json
 import time
 import traceback
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+
+def _now_ts():
+    return time.time()
+
+
+def _now_iso():
+    # timezone-aware
+    return datetime.now(timezone.utc).isoformat()
 
 
 class JobStatus:
@@ -46,10 +56,14 @@ class JobStatus:
         self, dataset: str, idx: int, meta: Optional[Dict[str, Any]] = None
     ) -> None:
         running, _, _ = self._paths(dataset, idx)
-        running.write_text(str(time.time()))
+
+        ts = _now_ts()
+        running.write_text(str(ts))  # store raw float timestamp
+
         self._append_ledger(
             {
-                "ts": time.time(),
+                "ts": ts,
+                "ts_iso": _now_iso(),
                 "dataset": dataset,
                 "idx": idx,
                 "status": "running",
@@ -61,15 +75,29 @@ class JobStatus:
         self, dataset: str, idx: int, meta: Optional[Dict[str, Any]] = None
     ) -> None:
         running, done, _ = self._paths(dataset, idx)
-        done.write_text(str(time.time()))
+
+        end_ts = _now_ts()
+
+        duration = None
+        if running.exists():
+            try:
+                start_ts = float(running.read_text().strip())
+                duration = end_ts - start_ts
+            except Exception:
+                duration = None
+
+        done.write_text(str(end_ts))
         running.unlink(missing_ok=True)
+
         self._append_ledger(
             {
-                "ts": time.time(),
+                "ts": end_ts,
+                "ts_iso": _now_iso(),
                 "dataset": dataset,
                 "idx": idx,
                 "status": "done",
                 "meta": meta or {},
+                "duration_seconds": duration,
             }
         )
 
@@ -81,11 +109,12 @@ class JobStatus:
         meta: Optional[Dict[str, Any]] = None,
     ) -> None:
         running, _, fail = self._paths(dataset, idx)
-        fail.write_text(str(time.time()))
+        fail.write_text(str(_now_ts()))
         running.unlink(missing_ok=True)
         self._append_ledger(
             {
-                "ts": time.time(),
+                "ts": _now_ts(),
+                "ts_iso": _now_iso(),
                 "dataset": dataset,
                 "idx": idx,
                 "status": "failed",
@@ -168,7 +197,16 @@ def write_stage1_summary(
         for r in summary["done"]:
             redir = (r.get("meta") or {}).get("redirector", "")
             path = (r.get("meta") or {}).get("path", "")
-            f.write(f"- {r['dataset']}[{r['idx']}]  {redir}  {path}\n")
+            dur = r.get("duration_seconds", None)
+
+            if dur:
+                mins = int(dur // 60)
+                secs = int(dur % 60)
+                dur_str = f"{mins}m {secs}s"
+            else:
+                dur_str = "unknown"
+
+            f.write(f"- {r['dataset']}[{r['idx']}]  {dur_str}  {redir}  {path}\n")
 
     if logger:
         logger.info(f"[summary] wrote {out_log}")

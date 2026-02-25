@@ -11,9 +11,9 @@ cuda = "12.4"
 [tasks]
 
 [dependencies]
-python = "3.11.*"
+python = "==3.12.9"
 pip = "*"
-coffea = "==2025.3.0"
+coffea = "==2025.1.1"
 awkward = "*"
 uproot = "*"
 hist = "*"
@@ -41,13 +41,16 @@ plotly = "*"
 rucio-clients = "*"
 fsspec-xrootd = "*"
 snakemake-minimal = ">=9.16.3,<10"
+mpmath = "<=1.3"
+ax-platform = ">=1.2.1, <2"
+shap = ">=0.50.0, <0.51"
+graphviz = "*"
+scikit-hep-testdata = "*"
+scipy = "==1.15.2"
+rsync = ">=3.3.0,<4"
 
 [pypi-dependencies]
 cmsstyle = "*"
-scikit-hep-testdata = "*"
-graphviz = "*"
-ax-platform = ">=1.2.1, <2"
-shap = ">=0.50.0, <0.51"
 
 [activation]
 scripts = ["scripts/pixi_activate.sh"]

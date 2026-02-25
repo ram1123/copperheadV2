@@ -279,7 +279,15 @@ def jet_id(jets, config, year = None):
     elif is_run2(year):
         """For Run 2, use the custom jet ID based on the official tight WP definition."""
         logger.info("Using custom jet ID for Run 2!")
-        pass_jet_id, _ = custom_jet_id(jets, year, jet_type="AK4PUPPI")
+        pass_jetid_tight, pass_jetid_tight_lepveto = custom_jet_id(
+            jets, year, jet_type="AK4PUPPI"
+        )
+        jet_id_wps = {
+            "tight": pass_jetid_tight,
+            "tightFailLepVeto": pass_jetid_tight & ~pass_jetid_tight_lepveto,
+            "tightPassLepVeto": pass_jetid_tight & pass_jetid_tight_lepveto,
+        }
+        pass_jet_id = jet_id_wps[jet_id2use]
     elif is_run3(year):
         """For Run 3, use the correctionlib based jetID."""
         logger.info("Using correctionlib-based jet ID for Run 3!")

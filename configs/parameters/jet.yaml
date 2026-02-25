@@ -25,8 +25,10 @@ jet_eta_cut:
     "2023BPix": 4.7
     "2024": 4.7
 jet_id:
-    2016preVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
-    2016postVFP: tight # For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
+    # INFO: For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
+    # INFO: Use tight, tightPassLepVeto, or tightFailLepVeto
+    2016preVFP: tight
+    2016postVFP: tight
     "2017": tight
     "2018": tight
     2016_RERECO: loose
@@ -35,7 +37,6 @@ jet_id:
     "2022preEE": tight
     "2022postEE": tight
     "2023": tight
-    # "2023": tightlep
     "2023BPix": tight
     "2024": tight
 jet_id_json_files: # old method as of Dec 16 2024,

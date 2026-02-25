@@ -46,7 +46,7 @@ def build_common_parser() -> argparse.ArgumentParser:
         "-input",
         "--input_path",
         dest="input_path",
-        default="validation",
+        default="",
         action="store",
         help="input path to read stage1 output files",
     )

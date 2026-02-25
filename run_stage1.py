@@ -1,5 +1,6 @@
 import copy
 import ctypes
+from datetime import datetime
 import glob
 import json
 import os
@@ -75,17 +76,17 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # dict to hold the max_num_elements info per sample
     dict_max_num_elements = {
-        "data_": 900, # None means no limit (use uproot's default behavior)
-        "dy_": 500,
+        "data_": 900,  # None means no limit (use uproot's default behavior)
+        "dy": 250,
         "ttjets_dl": 250,
         "ttjets_sl": 250,
-        }
-    max_num_elements = 800 # default
+    }
+    max_num_elements = 500 # default
     if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
         max_num_elements = dict_max_num_elements[[key for key in dict_max_num_elements.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
         logger.debug(f"Setting max_num_elements for {dataset_dict['metadata']['dataset']} to {max_num_elements}")
     else:
-        max_num_elements = 800
+        max_num_elements = 500
     logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
 
     events = NanoEventsFactory.from_root(
@@ -264,7 +265,9 @@ if __name__ == "__main__":
         # Get git information; for the log. Also, it will help with debugging, if needed.
         git_commit_hash, branch_name, diff = get_git_info()
         # save this information in a file in the `start_save_path` directory
-        git_info_path = os.path.join(start_save_path, "git_info.txt")
+        # add timestamp to the filename to avoid overwriting in case of multiple runs
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        git_info_path = os.path.join(start_save_path, f"git_info_{timestamp}.txt")
         with open(git_info_path, "w") as f:
             f.write(f"Git commit hash: {git_commit_hash}\n")
             f.write(f"Branch name: {branch_name}\n")
@@ -288,15 +291,15 @@ if __name__ == "__main__":
                 # dict to hold file lenght info per sample
                 dict_file_length = {
                     "data_": 900,
-                    "dy_": 500,
+                    "dy": 250,
                     "ttjets_dl": 250,
                     "ttjets_sl": 250,
-                    }
+                }
                 if any(key in dataset for key in dict_file_length.keys()):
                     args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
                     logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
                 else:
-                    args.max_file_len = 900
+                    args.max_file_len = 500
                 logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
 
                 # split the sample files into smaller chunks of size args.max_file_len
@@ -322,7 +325,17 @@ if __name__ == "__main__":
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
 
                     # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
-                    jobstat.mark_running(dataset, idx)
+                    jobstat.mark_running(dataset, idx,
+                        meta={
+                            "split count": len(smaller_files),
+                            "max_attempts": len(AAA_REDIRECTORS),
+                            "args.max_file_len": args.max_file_len,
+                            "redirector": None,
+                            "path": save_path,
+                            "git_commit_hash": git_commit_hash,
+                            "git_branch": branch_name,
+                            "git patch path": git_info_path,
+                            })
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                         try:
                             logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
@@ -349,7 +362,19 @@ if __name__ == "__main__":
                                 raise RuntimeError("Parquet write produced no files.")
 
                             jobstat.mark_done(
-                                dataset, idx, meta={"path": save_path, "redirector": host_prefix}
+                                dataset,
+                                idx,
+                                meta={
+                                    "split count": len(smaller_files),
+                                    "attempt": attempt,
+                                    "max_attempts": len(AAA_REDIRECTORS),
+                                    "args.max_file_len": args.max_file_len,
+                                    "redirector": host_prefix,
+                                    "path": save_path,
+                                    "git_commit_hash": git_commit_hash,
+                                    "git_branch": branch_name,
+                                    "git patch path": git_info_path,
+                                },
                             )
                             logger.info(f"[resume] success on attempt {attempt} with {host_prefix}")
                             break  # stop trying once successful
@@ -361,11 +386,43 @@ if __name__ == "__main__":
                                 f"[resume] attempt {attempt} failed for {dataset}[{idx}] "
                                 f"({type(e).__name__}: {e})"
                             )
+                            # save the list of files that were attempted in this failure for debugging,
+                            # with the redirector info in the filename
+                            # as well as the error message for this failure
+                            timestamp = time.strftime("%Y%m%d-%H%M%S")
+                            error_info_path = os.path.join(
+                                start_save_path,
+                                "_status",
+                                f"error_{dataset}_{idx}_{timestamp}.txt",
+                            )
+                            with open(error_info_path, "w") as f:
+                                f.write(f"Error message: {msg}\n")
+                                f.write(f"Attempted files with {host_prefix}:\n")
+                                f.write(f"Total files attempted: {len(alt_sample['files'])}\n")
+                                for i, file in enumerate(alt_sample["files"]):
+                                    f.write(f"{i:4}: {file}\n")
+                            logger.info(f"Saved error info to {error_info_path}")
+
                             if attempt < len(AAA_REDIRECTORS) and tls_bad:
                                 logger.warning(f"Retrying {dataset}[{idx}] with next redirector ...")
                                 continue  # next redirector in list
                             else:
-                                jobstat.mark_failed(dataset, idx, e)
+                                jobstat.mark_failed(
+                                    dataset,
+                                    idx,
+                                    e,
+                                    meta={
+                                        "split count": len(smaller_files),
+                                        "attempt": attempt,
+                                        "max_attempts": len(AAA_REDIRECTORS),
+                                        "args.max_file_len": args.max_file_len,
+                                        "redirector": host_prefix,
+                                        "path": save_path,
+                                        "git_commit_hash": git_commit_hash,
+                                        "git_branch": branch_name,
+                                        "git patch path": git_info_path,
+                                    },
+                                )
                                 logger.exception(
                                     f"[resume] write failed after {attempt} attempts for {dataset}[{idx}]"
                                 )

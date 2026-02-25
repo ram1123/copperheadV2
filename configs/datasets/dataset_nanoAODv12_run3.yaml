@@ -1,13 +1,13 @@
 years:
     "2022preEE":
         Data:
-            total_lumi_pb: 7980.4
+            total_lumi_pb: 7990.0
             data_C:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022C-16Dec2023-v1/NANOAOD
                     - /SingleMuon/Run2022C-16Dec2023-v1/NANOAOD
-                lumi_pb: 5010.4 # e.g. 5.0
+                lumi_pb: 5020.0 
                 das_request: "https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod/global&input=dataset%20status=*%20dataset=/Muon/Run2022C-16Dec2023-v1/NANOAOD"
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -18,7 +18,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022D-16Dec2023-v1/NANOAOD
-                lumi_pb: 2970.0 # e.g. 3.1
+                lumi_pb: 2970.0 
                 das_request: "https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod/global&input=dataset%20status=*%20dataset=/Muon/Run2022D-16Dec2023-v1/NANOAOD"
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -423,6 +423,22 @@ years:
                 references:
                     - "POWHEG"
 
+
+            ggh_amcatnlo:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
             vbf_powheg_dipole:
                 skip_sample: False
                 datasets:
@@ -441,7 +457,7 @@ years:
             vbf_aMCatNLO:
                 skip_sample: True
                 datasets:
-                    - None
+                    - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
                 cross_section_pb: 0.00105742
                 notes: NONE
                 cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
@@ -455,12 +471,12 @@ years:
 
     "2022postEE":
         Data:
-            total_lumi_pb: 26671.7
+            total_lumi_pb: 26680.0
             data_E:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022E-16Dec2023-v1/NANOAOD
-                lumi_pb: 5807.0
+                lumi_pb: 5810.0
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -471,7 +487,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022F-16Dec2023-v1/NANOAOD
-                lumi_pb: 17781.9
+                lumi_pb: 17780.0
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -481,7 +497,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022G-16Dec2023-v1/NANOAOD
-                lumi_pb: 3082.8
+                lumi_pb: 3090.0
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -883,6 +899,21 @@ years:
                 references:
                     - "POWHEG"
 
+            ggh_amcatnlo:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
             vbf_powheg_dipole:
                 skip_sample: False
                 datasets:
@@ -898,9 +929,24 @@ years:
                 references:
                     - "POWHEG (with dipole recoil)"
 
+            vbf_aMCatNLO:
+                skip_sample: True
+                datasets:
+                    - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 0.00105742
+                notes: NONE
+                cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: NONE
+                br_source: NONE
+                references:
+                    - "aMC@NLO"
+
     "2023":
         Data:
-            total_lumi_pb: 17794.0
+            total_lumi_pb: 17960.0
             data_C:
                 skip_sample: False
                 datasets:
@@ -912,7 +958,7 @@ years:
                     - /Muon1/Run2023C-22Sep2023_v2-v1/NANOAOD
                     - /Muon1/Run2023C-22Sep2023_v3-v1/NANOAOD
                     - /Muon1/Run2023C-22Sep2023_v4-v2/NANOAOD
-                lumi_pb: 17794.0
+                lumi_pb: 17960.0
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
@@ -1305,6 +1351,20 @@ years:
                 references:
                     - "POWHEG"
 
+            ggh_amcatnlo:
+                skip_sample: True
+                datasets: []
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
             vbf_powheg_dipole:
                 skip_sample: True
                 datasets:
@@ -1352,7 +1412,7 @@ years:
 
     "2023BPix":
         Data:
-            total_lumi_pb: 9451.0
+            total_lumi_pb: 9680.0
             data_D:
                 skip_sample: False
                 datasets:
@@ -1360,7 +1420,7 @@ years:
                     - /Muon0/Run2023D-22Sep2023_v2-v1/NANOAOD
                     - /Muon1/Run2023D-22Sep2023_v1-v1/NANOAOD
                     - /Muon1/Run2023D-22Sep2023_v2-v1/NANOAOD
-                lumi_pb: 9451.0
+                lumi_pb: 9680.0
                 das_request:
                 golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:

@@ -57,6 +57,7 @@ def plotDataMC_compare(
     x_title="Mass (GeV)",
     y_title="Events",
     plot_ratio=True,
+    plot_ratio_range="auto", # available options "fixed" or "auto"
     log_scale=True,
     lumi = "",
     status = "Private Work",
@@ -171,7 +172,7 @@ def plotDataMC_compare(
         data_pos = data_hist > 0
         both_pos = mc_pos & data_pos
 
-        ratio_hist[mc_pos] = data_hist[mc_pos] / bkg_mc_sum[mc_pos]
+        ratio_hist[both_pos] = data_hist[both_pos] / bkg_mc_sum[both_pos]
 
         rel_unc_ratio = np.zeros_like(bkg_mc_sum, dtype=float)
         rel_unc_ratio[both_pos] = np.sqrt(
@@ -192,16 +193,31 @@ def plotDataMC_compare(
         # den = bkg_mc_sum[inf_filter]
         den = bkg_mc_sum
         den_sumw2 = bkg_mc_w2_sum
-        # den_sumw2 = bkg_mc_w2_sum[inf_filter]
-        if sum(den) > 0:
-            unity = np.ones_like(den)
-            w2 = np.zeros_like(den)
-            w2[den > 0] = den_sumw2[den > 0] / den[den > 0] ** 2
-            den_unc = poisson_interval(unity, w2)
+
+        if np.sum(den) > 0:
+            unity = np.ones_like(den, dtype=float)
+            w2 = np.zeros_like(den, dtype=float)
+
+            den_pos = den > 0
+            w2[den_pos] = den_sumw2[den_pos] / (den[den_pos] ** 2)
+
+            # --- avoid poisson_interval with w2==0 (causes divide-by-zero inside hist) ---
+            ok = den_pos & (w2 > 0)
+
+            den_unc_full = np.full((2, den.size), np.nan, dtype=float)
+
+            if np.any(ok):
+                den_unc_ok = poisson_interval(unity[ok], w2[ok])
+                den_unc_full[:, ok] = den_unc_ok
+
+            # if den>0 but w2==0, the uncertainty is exactly 0 -> band is exactly 1
+            zero_unc = den_pos & ~(w2 > 0)
+            den_unc_full[:, zero_unc] = 1.0
+
             ax_ratio.fill_between(
                 binning,
-                np.r_[den_unc[0], den_unc[0, -1]],
-                np.r_[den_unc[1], den_unc[1, -1]],
+                np.r_[den_unc_full[0], den_unc_full[0, -1]],
+                np.r_[den_unc_full[1], den_unc_full[1, -1]],
                 label="Stat. unc.",
                 **ratio_err_opts,
             )
@@ -214,8 +230,32 @@ def plotDataMC_compare(
         ax_ratio.set_xlabel(x_title)
         ax_ratio.set_ylabel('Data / MC')
         ax_ratio.set_xlim(binning[0], binning[-1])
-        ax_ratio.set_ylim(0.5,1.5)
-        ax_ratio.set_yticks([0.6, 0.8, 1.0, 1.2, 1.4]) # explicitly ask for 1.4 and 0.6
+
+        finite = np.isfinite(ratio_hist)
+        if np.any(finite) and plot_ratio_range == "auto":
+            rmin = float(np.nanmin(ratio_hist[finite]))
+            rmax = float(np.nanmax(ratio_hist[finite]))
+
+            # ensure unity is visible
+            rmin = min(rmin, 1.0)
+            rmax = max(rmax, 1.0)
+
+            # small padding (10% of span, or 0.05 minimum)
+            span = max(rmax - rmin, 1e-6)
+            pad = max(0.10 * span, 0.05)
+            ylo = rmin - pad
+            yhi = rmax + pad
+
+            # optional safety clamp (avoid insane autoscale)
+            ylo = max(ylo, 0.0)
+            yhi = min(yhi, 5.0)
+            set_yticks = np.linspace(ylo, yhi, 7)
+        else:
+            # fallback if ratio_hist is all-NaN or plot_ratio_range is not "auto"
+            ylo, yhi = 0.5, 1.5
+            set_yticks = [0.6, 0.8, 1.0, 1.2, 1.4]
+        ax_ratio.set_ylim(ylo, yhi)
+        ax_ratio.set_yticks(set_yticks)
     else:
         ax_main.set_xlabel(x_title)
 
@@ -280,7 +320,7 @@ def plotDataMC_compare(
     if title != "":
         ax_main.set_title(title)
     # save figure, we assume that the directory exists
-    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
+    hep.cms.label(data=True, loc=0, text=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
     plt.close(fig)
 
@@ -524,7 +564,7 @@ def plotDataMC_compare_normalized(
     if title != "":
         ax_main.set_title(title)
     # save figure, we assume that the directory exists
-    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
+    hep.cms.label(data=True, loc=0, text=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
     plt.close(fig)
 

@@ -18,6 +18,7 @@ from modules.dask_utils import close_dask_client, get_dask_client
 from modules.trials import get_stage1_path
 from modules.utils import logger
 from modules.sample_config import get_bkg_sig_dicts
+from cli.common_argparser import build_common_parser
 
 # ----------------------------------------------------------------------
 # Fields to read
@@ -98,7 +99,7 @@ def get_yield(
         }
 
     # dask_awkward read per process
-    events_lazy = dak.from_parquet(parquet_pattern, columns=fields)
+    events_lazy = dak.from_parquet(sorted(parquet_files), columns=fields)
 
     # Materialize into awkward.Array
     events = events_lazy.compute()
@@ -146,6 +147,9 @@ def get_yield(
 # Main driver
 # ----------------------------------------------------------------------
 def main() -> None:
+    parser = build_common_parser()
+    args = parser.parse_args()
+
     # Environment setup
     cwd = str(Path.cwd())
     print(f"PWD: {cwd}")
@@ -157,7 +161,10 @@ def main() -> None:
     print(f"PYTHONPATH: {os.environ['PYTHONPATH']}")
 
     # Get base stage1 directory from your trials helper
-    stage1_dir = get_stage1_path()  # default = "current"
+    if args.input_path == "":
+        stage1_dir = get_stage1_path()  # default = "current"
+    else:
+        stage1_dir = args.input_path
     load_path_template = str(Path(stage1_dir) / "{year}" / "f1_0")
     print(f"Using LOAD_PATH template: {load_path_template}")
 
@@ -178,7 +185,6 @@ def main() -> None:
     categories = ["nocat", "vbf", "ggh"]
     # categories = ["nocat"]
 
-    args = parse_args()
 
     # Define all possible years we want to support
     ALL_YEARS = [
@@ -204,7 +210,7 @@ def main() -> None:
     print(f"Will write yields to: {outfile}")
 
     # Start Dask client
-    get_dask_client(use_gateway = True, cluster_index = 2)
+    get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
 
     rows: List[Dict[str, Any]] = []
 
@@ -281,24 +287,6 @@ def main() -> None:
     print(f"\nWrote summary to {summary_outfile}")
     close_dask_client()
 
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Compute yields for H→μμ stage1 outputs for one or more trials."
-    )
-    parser.add_argument(
-        "--years",
-        nargs="+",
-        default=["2018"],
-        help=(
-            "Years to run over. Examples:\n"
-            "  --years 2018\n"
-            "  --years 2018 2017 2016preVFP\n"
-            "  --years all\n"
-            "If not provided, defaults to ['2018']."
-        ),
-    )
-    return parser.parse_args()
 
 
 if __name__ == "__main__":
