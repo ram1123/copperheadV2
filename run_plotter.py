@@ -49,15 +49,29 @@ if SAVE_ROOT.exists() and not FORCE:
 
 # years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # years = ["2022preEE"]
-# years = ["2022postEE"]
+years = ["2022postEE"]
 # years = ["2023"]
 # years = ["2023BPix"]
-years = ["2024"]
+# years = ["2024"]
 
-categories = ["nocat", "vbf", "ggh"]
+# categories = ["nocat", "vbf", "ggh"]
+categories = ["nocat", "ggh"]
 # categories = ["ggh"]
 # categories = ["vbf"]
 # categories = ["nocat"]
+
+
+JJ_ETA_REGIONS = [
+    "all",
+    "jj_both_central",
+    "jj_one_fwd25_one_central",
+    "jj_one_he_one_central",
+    "jj_one_fwd30_one_central",
+    "jj_both_fwd25",
+    "jj_both_he",
+    "jj_both_fwd30",
+    "jj_one_he_one_fwd30",
+]
 
 # Boolean flags
 vbf_filter_study_options = [False]  # True/False list
@@ -66,12 +80,14 @@ add_dnn_zpt_weights_options = [False]  # True/False list
 min_set_of_vars = True  # minimal set of vars
 
 region_options = [
-    ["h-sidebands", "z-peak"],
+    # ["h-sidebands", "z-peak"],
+    ["h-sidebands"],
 ]
 
-njets_options = ["inclusive"]
+# njets_options = ["inclusive"]
 # njets_options = ["inclusive", "0", "1", "2"]
 # njets_options = ["0", "1", "2"]
+njets_options = [ "2"]
 
 
 # -----------------------------------------------------------------------------
@@ -87,6 +103,7 @@ def build_command(
     add_dnn_zpt_weights: bool,
     region: list[str],
     njets: str,
+    jj_eta_regions: str,
 ) -> list[str]:
     cmd = (
         BASE_SCRIPT
@@ -94,9 +111,10 @@ def build_command(
         + ["--save_path", str(save_path)]
         + ["--load", str(load_path)]
         + ["-cat", cat]
-        # + ["--use-compacted", "compacted"]  # "", "compacted", "compacted_WithDNNScore"
+        + ["--use-compacted", "compacted"]  # "", "compacted", "compacted_WithDNNScore"
         + ["--use_gateway", "--cluster_index", "0"]
         + ["--njets", str(njets)]
+        + ["--jj-eta-region", jj_eta_regions]
     )
 
     if DEBUG:
@@ -127,6 +145,7 @@ def run_all_combos():
         load_path = Path(str(LOAD_PATH).format(year=year))
 
         combo_iter = itertools.product(
+            JJ_ETA_REGIONS,
             categories,
             vbf_filter_study_options,
             remove_zpt_weights_options,
@@ -135,7 +154,7 @@ def run_all_combos():
             njets_options,
         )
 
-        for cat, vbf_flag, zpt_flag, dnn_flag, region_list, njets in combo_iter:
+        for jj_eta_regions, cat, vbf_flag, zpt_flag, dnn_flag, region_list, njets in combo_iter:
             # skip meaningless combos
             if cat == "vbf" and njets != "inclusive":
                 logger.debug(f"Skipping vbf with njets={njets} (not meaningful)")
@@ -162,6 +181,7 @@ def run_all_combos():
                 add_dnn_zpt_weights=dnn_flag,
                 region=region,
                 njets=njets,
+                jj_eta_regions=jj_eta_regions,
             )
 
             job_idx += 1

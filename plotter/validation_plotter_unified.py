@@ -255,6 +255,27 @@ if __name__ == "__main__":
         default="inclusive",
         help="jet multiplicity selection: 'inclusive' or exactly '0', '1', or '2'",
     )
+    parser.add_argument(
+        "--jj-eta-region",
+        dest="jj_eta_region",
+        default="all",
+        choices=[
+            "all",
+            "jj_both_central",
+            "jj_one_fwd25_one_central",
+            "jj_one_he_one_central",
+            "jj_one_fwd30_one_central",
+            "jj_both_fwd25",
+            "jj_both_he",
+            "jj_both_fwd30",
+            "jj_one_he_one_fwd30",
+        ],
+        help=(
+            "Select dijet eta topology using jet1_eta/jet2_eta. "
+            "'central' = |eta|<2.5, 'he' = 2.5<|eta|<3.0, "
+            "'fwd25' = |eta|>2.5, 'fwd30' = |eta|>3.0. Default: all"
+        ),
+    )    
     # add dnn score to the plotting variable list
     parser.add_argument(
      "--dnn-score",
@@ -615,15 +636,6 @@ if __name__ == "__main__":
                 # ------------------------------------------------
                 # take the mass region and category cuts
                 # ------------------------------------------------
-                jj_eta_region = "all"
-                # jj_eta_region = "jj_both_central"
-                # jj_eta_region = "jj_one_fwd25_one_central"
-                # jj_eta_region = "jj_one_he_one_central"
-                # jj_eta_region = "jj_one_fwd30_one_central"
-                # jj_eta_region = "jj_both_fwd25"
-                # jj_eta_region = "jj_both_he"
-                # jj_eta_region = "jj_both_fwd30"
-                # jj_eta_region = "jj_one_he_one_fwd30"
                 events = dak.map_partitions(
                     selection.applyRegionCatCuts,
                     events,
@@ -632,7 +644,7 @@ if __name__ == "__main__":
                     process,
                     "nominal",
                     args.do_vbf_filter_study,
-                    jj_eta_region=jj_eta_region,
+                    jj_eta_region=args.jj_eta_region,
                 )
 
                 #  FOR DEBUG PURPOSES
@@ -822,8 +834,8 @@ if __name__ == "__main__":
             if args.use_dnn_zpt_weights:
                 logger.warning("Using DNN-based zpt weights for the events!")
                 zpt_postfix = "dnn_zpt_weights"
-            if jj_eta_region != "all":
-                zpt_postfix += f"_{jj_eta_region}"
+            if args.jj_eta_region != "all":
+                zpt_postfix += f"_{args.jj_eta_region}"
 
             if args.year == "*":
                 full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
