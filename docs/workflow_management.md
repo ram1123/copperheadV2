@@ -21,7 +21,7 @@ title: Workflow management: Snakemake
     # Force run some rule
     snakemake -s workflow/Snakefile -j 1 --resources gateway=2 --rerun-incomplete --restart-times 3 --latency-wait 60 --forcerun stage1Compact
 
-    snakemake -s workflow/Snakefile --configfile workflow/config_2.yaml -j 1 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60
+    snakemake -s workflow/Snakefile --configfile workflow/config.yaml -j 1 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60
     ```
 
 2. Check summary
