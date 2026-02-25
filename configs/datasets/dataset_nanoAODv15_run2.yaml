@@ -617,7 +617,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL17NanoAODv15-150X_mc2017_realistic_v1-v1/NANOAODSIM
-                cross_section_pb: 0.012652906
+                cross_section_pb: 0.01057
                 cross_section_source: null
                 kfactor:
                     value: 1.0
@@ -1080,7 +1080,7 @@ years:
           skip_sample: False
           datasets:
             - /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv15-150X_mc2018_realistic_v1-v1/NANOAODSIM
-          cross_section_pb: 0.012652906
+          cross_section_pb: 0.01057
           cross_section_source: null
           kfactor: { value: 1.0, source: null }
           filter_efficiency: 1.0
@@ -1437,7 +1437,7 @@ years:
           skip_sample: False
           datasets:
             - /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODv15-150X_mcRun2_asymptotic_v1-v1/NANOAODSIM
-          cross_section_pb: 0.012652906
+          cross_section_pb: 0.01057
           cross_section_source: null
           kfactor: { value: 1.0, source: null }
           filter_efficiency: 1.0
@@ -1456,7 +1456,7 @@ years:
 
     "2016preVFP":
       Data:
-        total_lumi_pb: 19520.0
+        total_lumi_pb: 19500.0
         data_B:
           skip_sample: False
           datasets:
@@ -1817,7 +1817,7 @@ years:
           skip_sample: False
           datasets:
             - /GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL16NanoAODAPVv15-150X_mcRun2_asymptotic_preVFP_v1-v1/NANOAODSIM
-          cross_section_pb: 0.012652906
+          cross_section_pb: 0.01057
           cross_section_source: null
           kfactor: { value: 1.0, source: null }
           filter_efficiency: 1.0
