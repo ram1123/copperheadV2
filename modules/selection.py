@@ -180,6 +180,7 @@ def applyRegionCatCuts(
 
             masks = {
                 "jj_both_central": j1_c & j2_c,
+                "jj_non_central": ~ (j1_c & j2_c),
                 "jj_one_fwd25_one_central": (j1_f25 & j2_c) | (j2_f25 & j1_c),
                 "jj_one_he_one_central": (j1_he & j2_c) | (j2_he & j1_c),
                 "jj_one_fwd30_one_central": (j1_f30 & j2_c) | (j2_f30 & j1_c),

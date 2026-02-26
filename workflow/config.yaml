@@ -1,3 +1,12 @@
+# filesystem base for hmm area
+hmm_base: /work/projects/hmm
+
+#  pattern of output folder: 
+# load_path=lambda wc: (
+#     f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
+#     f"{label_for_year_corr(wc.year)}/stage1_output/{wc.year}/f1_0"
+# ),          
+
 # what to run
 years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years: ["2022preEE", "2023", "2023BPix"]
