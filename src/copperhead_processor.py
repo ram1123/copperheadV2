@@ -1850,8 +1850,7 @@ class EventProcessor(processor.ProcessorABC):
             if whichMethod == "function" or whichMethod == "both":
                 # choose the config file
                 if "MiNNLO" in dataset:
-                    zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"] # FIXME
-                    # zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"] # FIXME
+                    zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
                 else:
                     zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
 
@@ -2228,7 +2227,7 @@ class EventProcessor(processor.ProcessorABC):
         # source: https://indico.cern.ch/event/1434807/contributions/6040633/attachments/2893077/5071932/JERC%20meeting%2009_07.pdf
         jetHorn_region = abs(jets.eta) > 2.5
         jetHorn_pt_cut = (jets.pt > self.config["jet_pt_cut"]) # pt cut on jethorn doesn't change
-        if do_jet_horn_puid: # defined in switches
+        if do_jet_horn_puid: # For Run-2
             jetHorn_puid_cut = (get_puId(jets) >= 7) | (
                 jets.pt >= 50
             )  # tight pu Id #FIXME: hardcoded puID
