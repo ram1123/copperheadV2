@@ -67,13 +67,20 @@ def safe_ratio(num, den, default=0.0):
     return ak.where(den != 0, num / den, default)
 
 
-def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
+def getZptWgts_3region(dimuon_pt, njets, nbins, year: str, config_path: str, NanoAODv: int):
     """
     Get Z pT weights based on polynomial fits in 3 regions.
     TODO: Implement the possibility to apply the zpt weights w.r.t. number of generated jets instead of reco jets.
     """
     logger.info(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
+    wgt_config = wgt_config[str(year)]
+    if ("nanoAODv12" in wgt_config.keys()) or ("nanoAODv15" in wgt_config.keys()): # see if the nanoAODV distinction exists
+        try:
+            logger.info(f"nanoAODv{NanoAODv}")
+            wgt_config = wgt_config[f"nanoAODv{NanoAODv}"] # pick the zpt config for correct nanoAODv
+        except:
+            raise ValueError(f"Zpt config for nanoAODv{NanoAODv} is not yet available!")
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
 
@@ -82,24 +89,24 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         zpt_wgt_by_jet = ak.zeros_like(dimuon_pt)
 
         # Get cut-off regions between the polynomial fits
-        poly_fit_cutoff_min = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
-        poly_fit_cutoff_max = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmax1"]
+        poly_fit_cutoff_min = wgt_config[f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
+        poly_fit_cutoff_max = wgt_config[f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmax1"]
 
         # Get the function order
-        f0_order = int(wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f0_order"])
-        f1_order = int(wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f1_order"])
+        f0_order = int(wgt_config[f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f0_order"])
+        f1_order = int(wgt_config[f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f1_order"])
 
         # first polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(f0_order + 1):  # Dynamically use max_order from the configuration
-            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
+            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
             polynomial_term = coeff*(dimuon_pt**order) # a * x^n
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
 
         # compute the value of the first polynomial at the cutoff min
         f0_xmin = 0.0
         for order in range(f0_order + 1):
-            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
+            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
             f0_xmin += coeff * (poly_fit_cutoff_min ** order)
 
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_min >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
@@ -107,7 +114,7 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         # 2nd polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(f1_order + 1):  # p goes from 0 to max_order
-            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
+            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
             polynomial_term = coeff * (dimuon_pt**order)  # a * x^n
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
 
@@ -115,7 +122,7 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         f1_xmin = 0.0
         f1_xmax = 0.0
         for order in range(f1_order + 1):
-            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
+            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
             f1_xmin += coeff * (poly_fit_cutoff_min ** order)
             f1_xmax += coeff * (poly_fit_cutoff_max ** order)
 
@@ -128,8 +135,8 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
             zpt_wgt_by_jet)
 
         # horizontal line beyond poly_fit_cutoff_max horizontal_c0 and horizontal_mx
-        # coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["horizontal_c0"]
-        mx = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["horizontal_mx"]
+        # coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins]["horizontal_c0"]
+        mx = wgt_config[f"njet_{jet_multiplicity}"][nbins]["horizontal_mx"]
         y_at_xmax = f1_xmax + offset
         coeff = y_at_xmax - mx*poly_fit_cutoff_max
 
@@ -1848,8 +1855,8 @@ class EventProcessor(processor.ProcessorABC):
                 else:
                     zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
 
-                zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg)
-                zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg)
+                zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv)
+                zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg, NanoAODv)
 
                 # --- save both to parquet
                 _add_block(out_dict, {
