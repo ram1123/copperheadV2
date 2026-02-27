@@ -132,11 +132,11 @@ rule all:
         expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
         expand(STATEDIR + "/zpt_step1_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
         expand(STATEDIR + "/zpt_step2_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
-        # (5) get EBE mass calibration
-        expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
+        # # # (5) get EBE mass calibration
+        # # expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
+        # # expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
+        # # expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
+        # # expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
         # # (6) second-pass stage1 using latest corrections for zpt and EBE mass calibration
         # expand(STATEDIR + "/stage1_corr_{year}.done", year=YEARS),
         # expand(STATEDIR + "/stage1_compact_corr_{year}.done", year=YEARS),
