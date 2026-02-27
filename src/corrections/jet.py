@@ -349,9 +349,10 @@ def get_puId(jets):
         logger.info("Using puIdDisc for PUID")
         return jets.puIdDisc
 
-    raise AttributeError(
-        "Jet collection has no PUID branch: expected one of puId17, puId, puIdDisc"
+    logger.warning(
+        "Jet collection has no PUID branch (puId17/puId/puIdDisc). Falling back to tight-pass dummy puId=7."
     )
+    return ak.full_like(jets.pt, 7, dtype=np.int8)
 
 def jet_puid(jets, config):
     jet_puid2use = config["jet_puid"]
