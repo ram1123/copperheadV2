@@ -656,8 +656,7 @@ jec_parameters:
         2022postEE: Summer22EE_22Sep2023_JRV1_MC
         "2023": Summer23Prompt23_RunCv1234_JRV1_MC
         2023BPix: Summer23BPixPrompt23_RunD_JRV1_MC
-        # "2024": Summer24Prompt24_V1_MC
-        "2024": Summer23BPixPrompt23_RunD_JRV1_MC
+        "2024": Summer24Prompt24_V2_MC
     jec_data_tags:
         2016preVFP:
             Summer19UL16APV_RunBCD_V7_DATA:
