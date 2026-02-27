@@ -13,7 +13,7 @@ cuda = "12.4"
 [dependencies]
 python = "==3.12.9"
 pip = "*"
-coffea = "==2025.1.1"
+coffea = "==2024.11.0"
 awkward = "*"
 uproot = "*"
 hist = "*"
@@ -46,7 +46,7 @@ ax-platform = ">=1.2.1, <2"
 shap = ">=0.50.0, <0.51"
 graphviz = "*"
 scikit-hep-testdata = "*"
-scipy = "==1.15.2"
+scipy = "==1.14.1"
 rsync = ">=3.3.0,<4"
 
 [pypi-dependencies]

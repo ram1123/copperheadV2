@@ -45,6 +45,7 @@ title: Workflow management: Snakemake
     snakemake -s workflow/Snakefile --dag | dot -Tpdf > dag.pdf
 
     snakemake --rulegraph | dot -Tpng > rulegraph.png
+    snakemake --rulegraph | dot -Tpdf > rulegraph.pdf
     
     ```
 
