@@ -232,8 +232,6 @@ if __name__ == "__main__":
             # y-range set auto based on minimum and maximum of the ratio histogram
             min_ratio = hist_SF.GetMinimum()
             max_ratio = hist_SF.GetMaximum()
-            ratio_plot.SetMinimum(min_ratio * 0.8)  # Set minimum y-axis value to 80% of the minimum ratio
-            ratio_plot.SetMaximum(max_ratio * 1.2)  # Set maximum y-axis value to 120% of the maximum ratio
 
             ratio_plot.Draw()
     
