@@ -12,6 +12,7 @@ RUN_TAG = config.get("run_tag", "default")
 LOGDIR = f"logs/{RUN_TAG}"
 STATEDIR = f"state/{RUN_TAG}"
 
+REPEATS = ["1", "2", "3"] # In case some jobs fails for the stage-1, so to recover it run the stage-1 three times. All followed dependents will depend on the "3"
 ZPT_JETS_CATS = ["0", "1", "2"]
 PLOT_CATS = ["nocat", "vbf", "ggh"]
 # PLOT_CATS = ["nocat"]
@@ -34,6 +35,7 @@ PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
 
 wildcard_constraints:
     year="|".join([str(y) for y in YEARS]),
+    rep="|".join(REPEATS),
     cat="|".join(PLOT_CATS),
     njets="|".join(ZPT_JETS_CATS),
     njets_plot = "|".join(PLOT_NJETS),
@@ -116,7 +118,7 @@ def gw_flags_plots():
 rule all:
     input:
         # (1) stage1 for all years
-        expand(STATEDIR + "/stage1_{year}.done", year=YEARS),
+        expand(STATEDIR + "/stage1_{year}_rep{rep}.done", year=YEARS, rep=REPEATS,),
         # (2) stage1Compact for all years
         expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
@@ -131,8 +133,8 @@ rule all:
         ),
         # (4) get zpt
         expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
-        expand(STATEDIR + "/zpt_step1_{year}_{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
-        expand(STATEDIR + "/zpt_step2_{year}_{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
+        expand(STATEDIR + "/zpt_step1_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
+        expand(STATEDIR + "/zpt_step2_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
         # # # (5) get EBE mass calibration
         # # expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
         # # expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
@@ -166,7 +168,7 @@ rule plot_all:
 rule all_stage1:
     input:
         # (1) stage1 for all years
-        expand(STATEDIR + "/stage1_{year}.done", year=YEARS),
+        expand(STATEDIR + "/stage1_{year}_rep{rep}.done", year=YEARS, rep=REPEATS,),
         # (2) stage1Compact for all years
         expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
@@ -187,9 +189,9 @@ rule all_stage1:
 # ---------------------------------------
 rule stage1:
     output:
-        done=STATEDIR + "/stage1_{year}.done",
+        done=STATEDIR + "/stage1_{year}_rep{rep}.done",
     log:
-        LOGDIR + "/stage1_{year}.log",
+        LOGDIR + "/stage1_{year}_rep{rep}.log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
@@ -221,7 +223,7 @@ rule stage1:
 # ---------------------------------------
 rule stage1Compact:
     input:
-       STATEDIR + "/stage1_{year}.done",
+       STATEDIR + "/stage1_{year}_rep3.done",
     output:
         done=STATEDIR + "/stage1_compact_{year}.done",
     log:
@@ -353,9 +355,9 @@ rule zpt1:
     input:
        STATEDIR + "/zpt_step0_{year}.done",
     output:
-        done=STATEDIR + "/zpt_step1_{year}_{njets}.done",
+        done=STATEDIR + "/zpt_step1_{year}_njets{njets}.done",
     log:
-        LOGDIR + "/zpt_step1_{year}_{njets}.log",
+        LOGDIR + "/zpt_step1_{year}_njets{njets}.log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
@@ -385,11 +387,11 @@ rule zpt1:
 # ---------------------------------------
 rule zpt2:
     input:
-       STATEDIR + "/zpt_step1_{year}_{njets}.done",
+       STATEDIR + "/zpt_step1_{year}_njets{njets}.done",
     output:
-        done=STATEDIR + "/zpt_step2_{year}_{njets}.done",
+        done=STATEDIR + "/zpt_step2_{year}_njets{njets}.done",
     log:
-        LOGDIR + "/zpt_step2_{year}_{njets}.log",
+        LOGDIR + "/zpt_step2_{year}_njets{njets}.log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
@@ -563,7 +565,7 @@ rule MassCalibrationDataClosure:
 rule corrections_ready:
     input:
         zpt=lambda wc: expand(
-            STATEDIR + "/zpt_step2_{year}_{njets}.done",
+            STATEDIR + "/zpt_step2_{year}_njets{njets}.done",
             year=wc.year,
             njets=ZPT_JETS_CATS,
         ),
@@ -689,7 +691,7 @@ rule plots_corr:
 # ---------------------------------------
 rule zpt_njet0:
     input:
-       STATEDIR + "/stage1_{year}.done",
+       STATEDIR + "/stage1_compact_{year}.done",
     output:
         done=STATEDIR + "/zpt_wgt_{year}_njet0.done",
     log:
@@ -715,7 +717,7 @@ rule zpt_njet0:
 
 rule zpt_njet1:
     input:
-       STATEDIR + "/stage1_{year}.done",
+       STATEDIR + "/stage1_compact_{year}.done",
     output:
         done=STATEDIR + "/zpt_wgt_{year}_njet1.done",
     log:
@@ -741,7 +743,7 @@ rule zpt_njet1:
 
 rule zpt_njet2p:
     input:
-       STATEDIR + "/stage1_{year}.done",
+       STATEDIR + "/stage1_compact_{year}.done",
     output:
         done=STATEDIR + "/zpt_wgt_{year}_njet2p.done",
     log:

@@ -228,6 +228,13 @@ if __name__ == "__main__":
             ratio_plot = ROOT.TRatioPlot(hist_data, hist_dy)
             ratio_plot.SetH1DrawOpt("E")  # Draw data with error bars
             ratio_plot.SetH2DrawOpt("E")  # Draw DY with error bars
+            
+            # y-range set auto based on minimum and maximum of the ratio histogram
+            min_ratio = hist_SF.GetMinimum()
+            max_ratio = hist_SF.GetMaximum()
+            ratio_plot.SetMinimum(min_ratio * 0.8)  # Set minimum y-axis value to 80% of the minimum ratio
+            ratio_plot.SetMaximum(max_ratio * 1.2)  # Set maximum y-axis value to 120% of the maximum ratio
+
             ratio_plot.Draw()
             ratio_plot.GetLowerRefYaxis().SetTitle("Data / DY")
             ratio_plot.GetLowerRefXaxis().SetTitle("Dimuon pT (GeV)")
