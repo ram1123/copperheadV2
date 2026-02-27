@@ -703,7 +703,7 @@ if __name__ == "__main__":
 
     
     full_load_path = load_path+f"processed_events_sigMC*.parquet" 
-    # full_load_path = load_path+f"processed_events_sigMC_ggh.parquet" 
+    # full_load_path = load_path+f"processed_events_sigMC_ggh*.parquet" 
     df = getDfAndPreProcess(full_load_path)
 
 

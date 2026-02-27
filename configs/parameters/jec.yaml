@@ -657,7 +657,7 @@ jec_parameters:
         "2023": Summer23Prompt23_RunCv1234_JRV1_MC
         2023BPix: Summer23BPixPrompt23_RunD_JRV1_MC
         # "2024": Summer24Prompt24_V1_MC
-        "2024": Summer23BPixPrompt23_RunD_JRV1_MC
+        "2024": Summer23BPixPrompt23_RunD_JRV1_MC # FIXME: not sure why this is done like this
     jec_data_tags:
         2016preVFP:
             Summer19UL16APV_RunBCD_V7_DATA:

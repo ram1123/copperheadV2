@@ -20,13 +20,12 @@ model_name="Run3PrelimResultsFeb09_2026_jecjer"
 # model_name="Run3PrelimResultsFeb10_2026_jecjer_flatDimuMass"
 
 category="ggh"
-stage2_save_path="${model_name}_${category}/" 
-# stage2_save_path="${model_name}_${category}_memoryRefactor/" 
+# stage2_save_path="${model_name}_${category}/" 
+stage2_save_path="${model_name}_${category}_perYr/" 
 
 
 
-# region="z-peak"
-region="h-sidebands"
+# region="h-sidebands"
 
 # year="all"
 # python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
@@ -42,23 +41,23 @@ region="h-sidebands"
 # year="2022preEE"
 # python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
 
-# year="all"
-# region="signal"
-# python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
-
 
 # # plot Fig 6.13 from AN-19-124
-year="all"
+# year="all"
+year="2024"
+# year="2023BPix"
+# year="2023"
+# year="2022postEE"
+# year="2022preEE"
 region="signal"
-python plot_6_8.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
+# python plot_6_8.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
 # python plot_6_13.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
 # python plot_6_19.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
 # python getTable_6_2And6_12.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
-# # -----------------------------------------------------
+# -----------------------------------------------------
 # plot 6.7 
-# # -----------------------------------------------------
-# python plot_6_7.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path} --model_name ${model_name}
-
+# -----------------------------------------------------
+python plot_6_7.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path} --model_name ${model_name}
 
 # # # # -----------------------------------------------------
 # # # plot 6.7 
@@ -86,4 +85,3 @@ python plot_6_8.py -label $label -cat $stage2_save_path -y ${year} --region ${re
 # # # python plot_6_7.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
 # # # year="2016preVFP"
 # # # python plot_6_7.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
-

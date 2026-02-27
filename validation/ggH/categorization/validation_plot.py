@@ -211,10 +211,10 @@ if __name__ == "__main__":
         "dy": ["dy"],
         "top": ["tt", "st"],
         "ewk": ["ewk"],
-        # "diboson": ["ww", "wz", "zz"],
-        # "other": ["other"],
-        "diboson": ["ww", "wz"],
-        "other": [],
+        "diboson": ["ww", "wz", "zz"],
+        "other": ["other"],
+        # "diboson": ["ww", "wz"],
+        # "other": [],
     }
     
     
