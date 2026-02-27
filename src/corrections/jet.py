@@ -902,13 +902,13 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
         # logger.debug(f"jets.pt b4 JER smear: {jets.pt[:20].compute()}")
 
         jer_strat = config["switches"]["jer_strat"]
-        logger.debug(f"jer_strat: {jer_strat}")
-        logger.debug(f"type jer_strat: {type(jer_strat)}")
-        if jer_strat == 1:
+        logger.info(f"jer_strat: {jer_strat}")
+        if jer_strat == 0: # default Hybrid
+            jer_smearing = jer_smearing # no change
+        elif jer_strat == 1:
             jer_smearing = applyStrat1(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
         elif jer_strat == 2:
             jer_smearing = applyStrat2(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
-            logger.debug("strat2 is being used!")
         elif jer_strat == 3:
             jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, get_puId(jets), pt_jec, jets.eta, year)
         else:

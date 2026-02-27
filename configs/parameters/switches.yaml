@@ -153,20 +153,20 @@ switches:
         "2023BPix": false
         "2024": false
     do_zpt:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         '2022preEE': true
         '2022postEE': true
         "2023": true
         "2023BPix": true
         "2024": true
-    do_jet_PUID_wgt:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+    apply_jet_PUID_wgt:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -176,7 +176,7 @@ switches:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
-        '2018': true
+        '2018': true # For nanoAODv15, we don't have the proper ratio yet
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -224,10 +224,10 @@ switches:
         "2023BPix": 30.0
         "2024": 30.0
     do_jet_horn_puid: # For run-2 samples where we added strict PUID cut for the horn region
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+        '2016preVFP': false # For nanoAODv12, do_jet_horn_puid should be true
+        '2016postVFP': false # For nanoAODv12, do_jet_horn_puid should be true
+        '2017': false # For nanoAODv12, do_jet_horn_puid should be true
+        '2018': false # For nanoAODv12, do_jet_horn_puid should be true
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -244,10 +244,10 @@ switches:
         "2023BPix": true
         "2024": true
     jer_strat: # JER strat. 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised.
-        '2016preVFP': 3
-        '2016postVFP': 3
-        '2017': 3
-        '2018': 3
+        '2016preVFP': 0 # For nanoAODv12, jer_strat should be 3
+        '2016postVFP': 0 # For nanoAODv12, jer_strat should be 3
+        '2017': 0 # For nanoAODv12, jer_strat should be 3
+        '2018': 0 # For nanoAODv12, jer_strat should be 3
         '2022preEE': 2
         '2022postEE': 2
         "2023": 2
@@ -273,17 +273,17 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_qgl_wgt:
+    do_qgl_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
-    do_btag_wgt:
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_btag_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
         '2016preVFP': true
         '2016postVFP': true
         '2017': true

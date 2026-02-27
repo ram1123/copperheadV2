@@ -67,13 +67,20 @@ def safe_ratio(num, den, default=0.0):
     return ak.where(den != 0, num / den, default)
 
 
-def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
+def getZptWgts_3region(dimuon_pt, njets, nbins, year: str, config_path: str, NanoAODv: int):
     """
     Get Z pT weights based on polynomial fits in 3 regions.
     TODO: Implement the possibility to apply the zpt weights w.r.t. number of generated jets instead of reco jets.
     """
     logger.info(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
+    wgt_config = wgt_config[str(year)]
+    if ("nanoAODv12" in wgt_config.keys()) or ("nanoAODv15" in wgt_config.keys()): # see if the nanoAODV distinction exists
+        try:
+            logger.info(f"nanoAODv{NanoAODv}")
+            wgt_config = wgt_config[f"nanoAODv{NanoAODv}"] # pick the zpt config for correct nanoAODv
+        except:
+            raise ValueError(f"Zpt config for nanoAODv{NanoAODv} is not yet available!")
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
 
@@ -82,24 +89,24 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         zpt_wgt_by_jet = ak.zeros_like(dimuon_pt)
 
         # Get cut-off regions between the polynomial fits
-        poly_fit_cutoff_min = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
-        poly_fit_cutoff_max = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmax1"]
+        poly_fit_cutoff_min = wgt_config[f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
+        poly_fit_cutoff_max = wgt_config[f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmax1"]
 
         # Get the function order
-        f0_order = int(wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f0_order"])
-        f1_order = int(wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f1_order"])
+        f0_order = int(wgt_config[f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f0_order"])
+        f1_order = int(wgt_config[f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f1_order"])
 
         # first polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(f0_order + 1):  # Dynamically use max_order from the configuration
-            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
+            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
             polynomial_term = coeff*(dimuon_pt**order) # a * x^n
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
 
         # compute the value of the first polynomial at the cutoff min
         f0_xmin = 0.0
         for order in range(f0_order + 1):
-            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
+            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
             f0_xmin += coeff * (poly_fit_cutoff_min ** order)
 
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_min >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
@@ -107,7 +114,7 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         # 2nd polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(f1_order + 1):  # p goes from 0 to max_order
-            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
+            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
             polynomial_term = coeff * (dimuon_pt**order)  # a * x^n
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
 
@@ -115,7 +122,7 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
         f1_xmin = 0.0
         f1_xmax = 0.0
         for order in range(f1_order + 1):
-            coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
+            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
             f1_xmin += coeff * (poly_fit_cutoff_min ** order)
             f1_xmax += coeff * (poly_fit_cutoff_max ** order)
 
@@ -128,8 +135,8 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year, config_path):
             zpt_wgt_by_jet)
 
         # horizontal line beyond poly_fit_cutoff_max horizontal_c0 and horizontal_mx
-        # coeff = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["horizontal_c0"]
-        mx = wgt_config[str(year)][f"njet_{jet_multiplicity}"][nbins]["horizontal_mx"]
+        # coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins]["horizontal_c0"]
+        mx = wgt_config[f"njet_{jet_multiplicity}"][nbins]["horizontal_mx"]
         y_at_xmax = f1_xmax + offset
         coeff = y_at_xmax - mx*poly_fit_cutoff_max
 
@@ -1847,8 +1854,8 @@ class EventProcessor(processor.ProcessorABC):
                 else:
                     zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
 
-                zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg)
-                zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg)
+                zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv)
+                zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg, NanoAODv)
 
                 # --- save both to parquet
                 _add_block(out_dict, {
@@ -2193,8 +2200,8 @@ class EventProcessor(processor.ProcessorABC):
 
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         logger.debug(f"dnn_year: {dnn_year}")
-        if self.config["switches"]["do_jet_PUID_wgt"]:
-            logger.info("Applying jet PUID!")
+        if self.config["switches"]["apply_jet_PUID_wgt"]:
+            logger.info("Applying jet PUID cut!")
             pass_jet_puid = jet_puid(jets, self.config)
         else:
             pass_jet_puid = ak.ones_like(pass_jet_id, dtype="bool")
@@ -2207,6 +2214,8 @@ class EventProcessor(processor.ProcessorABC):
         elif is_run2(year):
             # if qgl is not present, set it to -1.0
             jets["qgl"] = jets.qgl if hasattr(jets, "qgl") else ak.zeros_like(jets.pt) - 1.0
+            if hasattr(jets, "btagUParTAK4B"):
+                jets["btagUParTAK4B"] = jets.btagUParTAK4B
         elif is_run3(year):
             jets["btagPNetQvG"] = jets.btagPNetQvG
             jets["btagDeepFlavQG"] = jets.btagDeepFlavQG
@@ -2214,7 +2223,6 @@ class EventProcessor(processor.ProcessorABC):
             raise ValueError(f"Year {year} not recognized for jet QGL assignment!")
 
         jet_pt_cut = (jets.pt > self.config["jet_pt_cut"])
-
         # add additonal pT cut for the forward regions to reduce jet horn  ----------------------------------------------
         # source: https://indico.cern.ch/event/1434807/contributions/6040633/attachments/2893077/5071932/JERC%20meeting%2009_07.pdf
         jetHorn_region = abs(jets.eta) > 2.5
@@ -2223,6 +2231,7 @@ class EventProcessor(processor.ProcessorABC):
             jetHorn_puid_cut = (get_puId(jets) >= 7) | (
                 jets.pt >= 50
             )  # tight pu Id #FIXME: hardcoded puID
+            
             jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
             jetHorn_PUID_cut = ak.ones_like(pass_jet_puid, dtype="bool") # default value is True
             # jetHorn_PUID_cut = ak.where(jetHorn_region, jetHorn_cut, jetHorn_PUID_cut)
@@ -2251,6 +2260,7 @@ class EventProcessor(processor.ProcessorABC):
             jetHorn_ptcut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
 
         # add additonal pT cut for the forward regions  ----------------------------------------------
+        
         jet_selection = (
             jet_pt_cut
             & pass_jet_id
@@ -2263,10 +2273,11 @@ class EventProcessor(processor.ProcessorABC):
 
         jets = jets[jet_selection] # INFO: this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
         jets = ak.to_packed(jets)
-
+        # print(f"ak.any(jets.pt < 50): {ak.sum((jets.pt < 50)[:200]).compute()}")
+        
         # apply jetpuid if not have done already
-        if is_mc and (variation=="nominal") and is_run2(year): # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
-            logger.debug("Applying jet PUID scale factors and adding jetpuid_wgt!")
+        if is_mc and (variation=="nominal") and is_run2(year) and hasattr(jets, "puId"): # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
+            logger.info("Applying jet PUID scale factors and adding jetpuid_wgt!")
             jetpuid_weight = get_jetpuid_weights_eta_dependent(year, jets, self.config) # FIXME
             # now we add jetpuid_wgt
             # FIXME: we should get the weight for each jet and multiply them together.
@@ -2274,7 +2285,7 @@ class EventProcessor(processor.ProcessorABC):
                     weight=jetpuid_weight,
             )
         else:
-            logger.warning(f"Skipping jet PUID SFs for variation: {variation}, is_mc: {is_mc}, dnn_year: {dnn_year}")
+            logger.info(f"Skipping jet PUID SFs for variation: {variation}, is_mc: {is_mc}, dnn_year: {dnn_year}")
 
         # jets = ak.where(jet_selection, jets, None)
         # muons = events.Muon
@@ -2464,8 +2475,15 @@ class EventProcessor(processor.ProcessorABC):
             f"ll_zstar_log_{variation}": np.log(np.abs(zeppenfeld)),
             f"zeppenfeld_{variation}": zeppenfeld,
             f"njets_{variation}": njets,
+            
         })
 
+        if hasattr(jets, "btagUParTAK4B"):
+            jet_loop_out_dict.update({
+                f"jet1_btagUParTAK4B_{variation}": jet1.btagUParTAK4B,
+                f"jet2_btagUParTAK4B_{variation}": jet2.btagUParTAK4B,
+            })
+        
         if is_run2(year):
             """Additional jet variables only for Run2"""
             jet_loop_out_dict.update({
@@ -2918,10 +2936,11 @@ class EventProcessor(processor.ProcessorABC):
             btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
             btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
         else: # UL
-            # NOTE: maybe keep the nBtagLoose and nBtagMedium deepbFlavB as a separate variable for quick testing
-            # btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-            # btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            if hasattr(jets, "btagDeepB"):
+            if hasattr(jets, "btagUParTAK4B"):
+                logger.info("Using btagUParTAK4B btag!")
+                btagLoose_filter = (jets.btagUParTAK4B > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
+                btagMedium_filter = (jets.btagUParTAK4B > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+            elif hasattr(jets, "btagDeepB"):
                 btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
                 btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
             elif hasattr(jets, "btagDeepFlavB"):

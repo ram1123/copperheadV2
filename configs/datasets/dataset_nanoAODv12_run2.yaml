@@ -398,7 +398,7 @@ years:
         skip_sample: False
         datasets:
           - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2018/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
-        cross_section_pb: 0.012652906
+        cross_section_pb: 0.01057
         cross_section_source: null
         kfactor:
           value: 1.0
@@ -749,7 +749,7 @@ years:
         skip_sample: False
         datasets:
           - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2017/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
-        cross_section_pb: 0.012652906
+        cross_section_pb: 0.01057
         cross_section_source: null
         kfactor:
           value: 1.0
@@ -1065,7 +1065,7 @@ years:
         skip_sample: False
         datasets:
           - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016postVFP/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
-        cross_section_pb: 0.012652906
+        cross_section_pb: 0.01057
         cross_section_source: null
         kfactor:
           value: 1.0
@@ -1441,7 +1441,7 @@ years:
         skip_sample: False
         datasets:
           - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
-        cross_section_pb: 0.012652906
+        cross_section_pb: 0.01057
         cross_section_source: null
         kfactor:
           value: 1.0
