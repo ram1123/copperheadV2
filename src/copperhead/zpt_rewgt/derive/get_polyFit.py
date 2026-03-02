@@ -232,14 +232,14 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     elif year == "2022preEE":
-        if njet == 2 or njet == 1 or njet == 0:
+        if njet == 2 or njet == 1:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
-            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     elif year == "2022postEE":
-        if njet == 2 or njet == 1 or njet == 0:
+        if njet == 2 or njet == 1:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
@@ -419,7 +419,7 @@ def main():
     os.makedirs(in_dir_yaml, exist_ok=True)
     yaml_path = f"{in_dir_yaml}/zpt_rewgt_params_{args.dy_sample}.yaml"
 
-    new_cfg = OmegaConf.create(save_dict)  # top-level: "2018", "2017"
+    new_cfg = OmegaConf.create(save_dict)
 
     if os.path.isfile(yaml_path):
         existing = OmegaConf.load(yaml_path)
@@ -427,7 +427,13 @@ def main():
     else:
         merged = new_cfg
 
-    OmegaConf.save(config=merged, f=yaml_path)
+    # Convert to sorted YAML string first
+    sorted_yaml = OmegaConf.to_yaml(merged, sort_keys=True)
+
+    # Save the sorted string to the file
+    with open(yaml_path, "w") as f:
+        f.write(sorted_yaml)
+
     print(f"Saved fit parameters to {yaml_path}")
 
 if __name__ == "__main__":

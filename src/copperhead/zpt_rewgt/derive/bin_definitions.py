@@ -25,13 +25,13 @@ poly_fit_ranges = {
 
     "2022preEE": {
         "njet0": [15, 80],
-        "njet1": [21, 80],
-        "njet2": [10, 120],
+        "njet1": [21, 100],
+        "njet2": [18, 90],
     },
     "2022postEE": {
-        "njet0": [13, 100],
-        "njet1": [21, 90],
-        "njet2": [15, 110],
+        "njet0": [15, 80.5],
+        "njet1": [15, 80.5],
+        "njet2": [15, 90.5],
     },
     "2023": {
         "njet0": [12, 80],
@@ -51,40 +51,55 @@ poly_fit_ranges = {
 }
 
 
-def define_custom_binning():
+def define_custom_binning(njets="1"):
     """
     Returns an array of custom bin edges:
-    0-50 in steps of 0.25, 50-80 in steps of 1, 80-100 in 2.5, 100-200 in 10.
+    Build variable bin edges using (x_end, step) segments.
     """
-    edges = []
+
+    segments_map = {
+        "0": [
+            (15.0, 0.2),
+            (30.0, 0.5),
+            (50.0, 1.0),
+            (80.0, 2.5),
+            (120.0, 10.0),
+            (200.0, 25.0),
+        ],
+
+        "1": [
+            (10.0, 1.0),
+            (30.0, 1.0),
+            (50.0, 2.5),
+            (80.0, 2.5),
+            (120.0, 10.0),
+            (200.0, 25.0),
+        ],
+
+        "2": [
+            (10.0, 0.5),
+            (30.0, 0.5),
+            (50.0, 1.0),
+            (80.0, 2.5),
+            (120.0, 10.0),
+            (200.0, 25.0),
+        ],
+    }
+
+    nj = str(njets)
+
+    edges = [0.0]
     x = 0.0
-    while x <= 10.0:
-        edges.append(x)
-        x += 0.1
-    while x <= 20.0:
-        edges.append(x)
-        x += 0.2
-    while x <= 30.0:
-        edges.append(x)
-        x += 0.3
-    while x < 50.0:
-        edges.append(x)
-        x += 0.4
-    while x < 60.0:
-        edges.append(x)
-        x += 2.5
-    while x < 80.0:
-        edges.append(x)
-        x += 2.5
-    while x < 120.0:
-        edges.append(x)
-        x += 10.0
-    while x <= 200.0:
-        edges.append(x)
-        x += 25.0
-    # Ensure the last edge is exactly 200
-    if edges[-1] < 200.0:
-        edges.append(200.0)
+
+    for x_end, step in segments_map[nj]:
+        while x + step < x_end + 1e-12:
+            x += step
+            edges.append(x)
+
+    # ---- Force ONLY final boundary to be exactly 200 ----
+    if edges[-1] != 200.0:
+        edges[-1] = 200.0
+
 
     # NOTE: if last bin width is smaller than the previous one, merge the last two bins
     if (edges[-1] - edges[-2]) < (edges[-2] - edges[-3]):
@@ -92,4 +107,5 @@ def define_custom_binning():
         edges.pop()
     # round the edges to avoid floating point issues
     edges = np.round(edges, 2)
-    return np.unique(edges).tolist()
+    edges = np.unique(edges).tolist()
+    return edges

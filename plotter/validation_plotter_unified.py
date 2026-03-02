@@ -50,6 +50,12 @@ group_dict = {
         "2023": ["dyTo2L_M-50_incl"],
         "2023BPix": ["dyTo2L_M-50_incl"],
         "2024": ["dyTo2Mu_M-50_aMCatNLO"],
+
+        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],        
+        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
     },
     "EWK": {
         "2022preEE": ["ewk_mmjj_mll_105_160"],
