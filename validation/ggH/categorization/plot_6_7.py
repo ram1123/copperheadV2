@@ -583,6 +583,8 @@ def compareMC(df_dict, binning, var, xlabel, save_dir, unweighted=False, abs_wgt
 
 def getDfAndPreProcess(full_load_path):
     df = dd.read_parquet(full_load_path).compute()
+    print(df.columns)
+    print(full_load_path)
     _, df = filterRegion(df, region="h-peak")
     # change BDT score range from [0,1] to [-1,1]
     # print(df)
@@ -628,6 +630,13 @@ if __name__ == "__main__":
     help="label",
     )
     parser.add_argument(
+    "--bdt_year",
+    dest="bdt_year",
+    default="all",
+    action="store",
+    help="label",
+    )
+    parser.add_argument(
     "-reg",
     "--region",
     dest="region",
@@ -660,8 +669,6 @@ if __name__ == "__main__":
         year_param = "2016*"
     else:
         year_param = year
-    # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
-    # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_outputForFig6_7/{year_param}/"
     load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_outputForFig6_7/{year_param}/"
     # events = dak.from_parquet(f"{load_path}/*data.parquet")
     # print(events.fields)
@@ -718,7 +725,8 @@ if __name__ == "__main__":
     # save_dir = f"plots/{args.category}/{args.year}signal/Fig6_7"
     os.makedirs(save_dir, exist_ok=True)
     # extract BDT inputs
-    model_path = f"/work/users/yun79/Run2_MVA_trainer/output/bdt_{args.model_name}_{args.year}"
+    
+    model_path = f"/work/users/yun79/Run2_MVA_trainer/output/bdt_{args.model_name}_{args.bdt_year}"
     training_feat_path = f"{model_path}/training_features.json"
     print(f"trainig_feat_path: {training_feat_path}")
     with open(training_feat_path, 'r') as file:
