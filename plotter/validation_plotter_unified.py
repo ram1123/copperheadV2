@@ -652,6 +652,7 @@ if __name__ == "__main__":
                     "nominal",
                     args.do_vbf_filter_study,
                     jj_eta_region=args.jj_eta_region,
+                    njets_selection=str(args.njets),
                 )
 
                 #  FOR DEBUG PURPOSES

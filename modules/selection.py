@@ -43,6 +43,7 @@ def applyRegionCatCuts(
     do_vbf_filter_study: bool = False,
     do_VH_veto: bool = False,
     jj_eta_region: str = "all",
+    njets_selection: str = "inclusive",  # available options ["inclusive", "0", "1", "2"],
 ):
     use_var = (
         "nominal"
@@ -147,6 +148,22 @@ def applyRegionCatCuts(
                 prod_cat_cut = prod_cat_cut & vbf_filter
             else:
                 prod_cat_cut = prod_cat_cut & (~vbf_filter)
+
+    # ---------------------------------------------------------
+    #  Select events based on number of jets
+    # ---------------------------------------------------------
+    if njets_selection != "inclusive":
+        if njets_selection == "0":
+            njets_mask = (njets == 0)
+        elif njets_selection == "1":
+            njets_mask = (njets == 1)
+        elif njets_selection == "2":
+            njets_mask = (njets >= 2)
+        else:
+            raise ValueError(
+                f"Invalid njets_selection='{njets_selection}'. Valid options: 'inclusive', '0', '1', '2'."
+            )
+        prod_cat_cut = prod_cat_cut & ak.fill_none(njets_mask, value=False)
 
     # ---------------------------------------------------------
     #  jet-eta region selection (pair topology)
