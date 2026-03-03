@@ -234,8 +234,8 @@ if __name__ == "__main__":
         field_dict = tranformBDT_score(field_dict)
         sample_dict[group] = field_dict
 
-    plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
-    # plot_setting_fname = "plot_settings_vbfCat_MVA_input.json"
+    # plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+    plot_setting_fname = "../../../src/lib/histogram/plot_settings_gghCat_BDT_input.json"
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
     plot_var = "BDT_score"
@@ -280,7 +280,7 @@ if __name__ == "__main__":
         status = status,
         bdtCat_boundaries=bdt_edges,
         significance_tuple = (subCatSignificance_hist, bdt_edges4plot),
-        ymax=0.1
+        # ymax=0.1
     )
 
     

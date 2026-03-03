@@ -108,7 +108,7 @@ def apply_roccor(events, roccor_file_path: str, is_mc:bool, test_mode=False):
     # events["Muon", "pt_roch_down"] = events.Muon.pt_roch - events.Muon.pt * errors
 
 
-def apply_roccorRun3(events, roccor_file_path: str, is_mc:bool, test_mode=False):
+def apply_KitMuScaleRe_Run3(events, roccor_file_path: str, is_mc:bool, test_mode=False):
     cset = correctionlib.CorrectionSet.from_file(roccor_file_path)
     if is_mc: # MC: both scale correction to gen Z peak AND resolution correction to Z width in data
         

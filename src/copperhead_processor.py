@@ -47,7 +47,7 @@ from src.corrections.jet import (
     jet_id,
     jet_puid,
 )
-from src.corrections.rochester import apply_roccor, apply_roccorRun3
+from src.corrections.rochester import apply_roccor, apply_KitMuScaleRe_Run3
 from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
 
 from modules.vector_operations import (
@@ -626,8 +626,8 @@ class EventProcessor(processor.ProcessorABC):
                 logger.debug("doing Run2 rochester!")
                 apply_roccor(events, self.config["roccor_file"], is_mc)
             elif is_run3(year):
-                logger.debug("doing Run3 rochester!")
-                apply_roccorRun3(events, self.config["roccor_file"], is_mc)
+                logger.debug("doing Run3 KIT muon Scale Resolution!")
+                apply_KitMuScaleRe_Run3(events, self.config["roccor_file"], is_mc)
             else:
                 raise ValueError(f"Year {year} is neither Run2 nor Run3!")
             events["Muon", "pt"] = events.Muon.pt_roch

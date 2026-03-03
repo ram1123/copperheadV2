@@ -4,7 +4,6 @@ import argparse
 import sys
 import os
 import numpy as np
-import json
 from collections import OrderedDict
 import cmsstyle as CMS
 import mplhep as hep

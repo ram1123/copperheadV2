@@ -373,7 +373,8 @@ if __name__ == "__main__":
             full_save_fname = f"{full_save_path}/{var}_cat{sub_cat}.pdf"
         
         
-            plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+            # plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+            plot_setting_fname = "../../../src/lib/histogram/plot_settings_gghCat_BDT_input.json"
             # plot_setting_fname = "plot_settings_vbfCat_MVA_input.json"
             with open(plot_setting_fname, "r") as file:
                 plot_settings = json.load(file)

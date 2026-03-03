@@ -170,7 +170,8 @@ def getLandxBern(x):
 
 
 def getFEWZxBern(x):
-    roo_spline_func = getFEWZ_roospline(x, "modules/ucsd_workspace/")
+    # roo_spline_func = getFEWZ_roospline(x, "modules/ucsd_workspace/")
+    roo_spline_func = getFEWZ_roospline(x, "../../../modules/ucsd_workspace/")
 
     name = "fewz_1j_spl_pdf"
     roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
@@ -737,12 +738,13 @@ if __name__ == "__main__":
         sample_dict = fillSampleValues(events, sample_dict, group)
 
 
-    plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+    # plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
+    plot_setting_fname = "../../../src/lib/histogram/plot_settings_gghCat_BDT_input.json"
     # plot_setting_fname = "plot_settings_vbfCat_MVA_input.json"
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
-    plot_var = "BDT_score"
-    binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
+    # plot_var = "BDT_score"
+    # binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
     # save_fname = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Fig6_19"
     save_fname = f"{args.save_path}/{args.label}_x_{args.category}/{args.year}_{args.region}/Fig6_19"
     
