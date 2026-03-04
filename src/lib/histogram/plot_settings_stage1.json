@@ -1,4 +1,12 @@
 {
+    "BDT_score": {
+        "variable": "BDT_score",
+        "binning_linspace": [-1, 1, 51],
+        "density": false,
+        "ylabel": "Events / 1 GeV",
+        "xlabel": "BDT Score",
+        "color": "royalblue"
+    },    
     "dimuon_mass": {
         "variable": "dimuon_mass",
         "binning_linspace": [110, 150, 51],
