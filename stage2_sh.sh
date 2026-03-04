@@ -24,13 +24,22 @@ year="2022postEE"
 sample_l="ggh vbf data"
 
 step=$1
-echo "Step: "$step""
+
+print_box() {
+    local msg="$1"
+    local len=${#msg}
+    local border=$(printf '%*s' "$((len + 4))" '' | tr ' ' '=')
+
+    echo "$border"
+    echo "| $msg |"
+    echo "$border"
+}
 
 # -----------------------------------------------------
 # Train BDT
 # -----------------------------------------------------
 if [[ "$step" == "0" ]]; then
-    echo "Training the BDT for ggH"
+    print_box "Training the BDT for ggH"
     do_hyperparam_search="0" # false
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
@@ -47,7 +56,7 @@ fi
 # for BDT edge calculation
 # -----------------------------------------------------
 if [[ "$step" == "1"|| ""$step"" == "all" ]]; then
-    echo "Step: 1: Apply selection and add the BDT score branch to the ouput parquet file."
+    print_box "Step: 1: Apply selection and add the BDT score branch to the ouput parquet file."
     python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model_name
 fi
 
@@ -57,7 +66,7 @@ fi
 # Obtain the target yield
 # -----------------------------------------------------
 if [[ "$step" == "2"|| ""$step"" == "all" ]]; then
-    echo "Step: 2: Obtain the target yield"
+    print_box "Step: 2: Obtain the target yield"
     python stage2/ggH/score_edge_generation/determine_score_edge.py -load $stage2_save_path --years ${year}
     python stage2/ggH/score_edge_generation/validation.py
     # NOTE: Above step will print the **target yield** on the terminal.
@@ -73,20 +82,20 @@ fi
 # Obtain the BDT edges
 # -----------------------------------------------------
 if [[ "$step" == "3" || ""$step"" == "all" ]]; then
-    echo "Step: 3: Obtain the BDT score edges for categorization"
+    print_box "Step: 3: Obtain the BDT score edges for categorization"
     sample_l="ggh vbf"
     python stage2/ggH/calculate_score_edges.py -load $stage2_save_path --year $year --edge_cfg_path ${bdt_edge_config_path}
 fi
 
 if [[ "$step" == "4" || ""$step"" == "all" ]]; then
-    echo "Step: 4: Run stage-2 again to save the BDT score and sub-category index in the output parquet file."
+    print_box "Step: 4: Run stage-2 again to save the BDT score and sub-category index in the output parquet file."
     # sample_l="data ggh vbf dy ewk tt ww wz zz other"
     sample_l="data ggh vbf dy  tt ww wz"
     python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model_name
 fi
 
 if [[ "$step" == "5" || ""$step"" == "all" ]]; then
-    echo "Step: 5: Obtain the BDT score plot"
+    print_box "Step: 5: Obtain the BDT score plot"
     sample_l="data ggh vbf dy tt ww wz"
     region="h-sidebands"
     stage2_save_path="${model_name}_${category}_perYr/"
@@ -94,15 +103,16 @@ if [[ "$step" == "5" || ""$step"" == "all" ]]; then
 fi
 
 if [[ "$step" == "6" || ""$step"" == "all" ]]; then
-    echo "Step: 6: Get the workspace"
+    print_box "Step: 6: Get the workspace"
     stage3_label="${label}_X_${model_name}_perYr"
-    echo "stage2 path: ${stage2_save_path}"
+    echo "stage2_save_path: ${stage2_save_path}"
     python run_stage3.py -load $stage2_save_path -cat $category --year $year --label $stage3_label
 fi
 
 
 if [[ "$step" == "7" || ""$step"" == "all" ]]; then
-    echo "Step: 7: Obtain the datacard"
-    stage3_label="${label}_X_${model}"
+    print_box "Step: 7: Obtain the datacard"
+    stage3_label="${label}_X_${model_name}_perYr"
+    echo "stage2_save_path: ${stage2_save_path}"
     python stage2/ggH_datacard/generate_datacard.py -load $stage2_save_path -cat $category --year $year --label $stage3_label
 fi
