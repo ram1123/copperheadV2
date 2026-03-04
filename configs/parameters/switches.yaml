@@ -243,7 +243,7 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
-    jer_strat: # JER strat. 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised.
+    jer_strat: # JER strat. -1 is to not apply jer, 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised.
         '2016preVFP': 0 # For nanoAODv12, jer_strat should be 3
         '2016postVFP': 0 # For nanoAODv12, jer_strat should be 3
         '2017': 0 # For nanoAODv12, jer_strat should be 3

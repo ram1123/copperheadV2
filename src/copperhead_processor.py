@@ -1191,7 +1191,7 @@ class EventProcessor(processor.ProcessorABC):
 
             # 3) Apply JER smearing on MC
             # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
-            if is_mc and self.config["switches"]["jer_strat"]:
+            if is_mc and (self.config["switches"]["jer_strat"] >=0):
                 logger.debug("Applying JER smearing!")
                 jets = do_jer_smear(jets, self.config, events.event, nanoAOD_version=NanoAODv)
             else:
