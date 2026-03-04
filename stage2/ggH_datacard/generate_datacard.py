@@ -15,7 +15,7 @@ import os
 import copy
 import pandas as pd
 # from modules.utils import getGOF_KS
-from src.corrections.jet import applyUpDown, getJecJerUncertainties
+# from src.corrections.jet import applyUpDown, getJecJerUncertainties
 
 def fillWgtVarations(df : pd.DataFrame, events, nSubCats : int):
     # print(f"fillWgtVarations b4: \n {df}")
@@ -296,8 +296,9 @@ if __name__ == "__main__":
         fields2load  = [
             "dimuon_mass",
         ]
-        jec_unc_fields = ["Absolute", "FlavorQCD"]
-        jec_unc_fields = applyUpDown(jec_unc_fields)
+        # jec_unc_fields = ["Absolute", "FlavorQCD"]
+        jec_unc_fields = []
+        # jec_unc_fields = applyUpDown(jec_unc_fields)
         processed_events = getProcessedEvents(events, fields2load, jec_unc_fields)
         print(f"processed_events.wgt_nominal: {processed_events.wgt_nominal}")
         # print(f"processed_events.wgt_nominal len: {ak.num(processed_events.wgt_nominal, axis=0)}")
@@ -360,11 +361,12 @@ if __name__ == "__main__":
         df_JecCombined = combine_dfByYear(df_JecByYear, jec_unc_fields, years, nSubCats)
         df_JecCombined.to_csv(f"{base_path}/{sample}_jecUnc_absYield.csv")
 
-        df_JecCombined_rel = df_JecCombined.div(df_wgts["wgt_nominal"], axis=0)
-        df_JecCombined_rel.to_csv(f"{base_path}/{sample}_jecUnc_relYield.csv")
+        # df_JecCombined_rel = df_JecCombined.div(df_wgts["wgt_nominal"], axis=0)
+        # df_JecCombined_rel.to_csv(f"{base_path}/{sample}_jecUnc_relYield.csv")
 
         
-        df_total = pd.concat([df_wgts_rel, df_JecCombined_rel], axis=1)
+        # df_total = pd.concat([df_wgts_rel, df_JecCombined_rel], axis=1)
+        df_total = pd.concat([df_wgts_rel], axis=1)
 
         df_total.to_csv(f"{base_path}/{sample}_total_relYield.csv")
 
