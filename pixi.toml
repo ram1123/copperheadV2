@@ -11,7 +11,8 @@ cuda = "12.4"
 [tasks]
 
 [dependencies]
-python = "==3.12.9"
+python = ">=3.11,<3.12"
+julia = ">=1.9,<1.12"
 pip = "*"
 coffea = "==2024.11.0"
 awkward = "*"
@@ -34,7 +35,7 @@ omegaconf = "*"
 seaborn = "*"
 libnvjitlink-dev = "*"
 pytorch = "2.5.*"
-scikit-learn = "*"
+scikit-learn = ">=1.4,<1.6"
 numpy = "*"
 matplotlib = "*"
 plotly = "*"
@@ -48,9 +49,13 @@ graphviz = "*"
 scikit-hep-testdata = "*"
 scipy = "==1.14.1"
 rsync = ">=3.3.0,<4"
+sympy = "*"
+pysr = "*"
+ripgrep = ">=15.1.0,<16"
 
 [pypi-dependencies]
 cmsstyle = "*"
+juliacall = "*"
 
 [activation]
 scripts = ["scripts/pixi_activate.sh"]
