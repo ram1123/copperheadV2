@@ -14,14 +14,16 @@ STATEDIR = f"state/{RUN_TAG}"
 
 REPEATS = ["1", "2", "3"] # In case some jobs fails for the stage-1, so to recover it run the stage-1 three times. All followed dependents will depend on the "3"
 ZPT_JETS_CATS = ["0", "1", "2"]
+
 PLOT_CATS = ["nocat", "vbf", "ggh"]
 # PLOT_CATS = ["nocat"]
 # PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
+# PLOT_NJETS = ["0", "1", "2"]   # adapt to what your script accepts
 PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
 JJ_ETA_REGIONS = [
     "all",
-    "jj_both_central",
-    "jj_non_central",
+    # "jj_both_central",
+    # "jj_non_central",
     # "jj_one_fwd25_one_central",
     # "jj_one_he_one_central",
     # "jj_one_fwd30_one_central",
@@ -92,11 +94,6 @@ def label_for_year(year: str) -> str:
     return f"{era_tag}_nanoAODv{nano}_{RUN_TAG}"
 
 
-def label_for_year_corr(year: str) -> str:
-    """This label is after zpt and EBE correction"""
-    return f"{label_for_year(year)}_Corr"
-
-
 USE_GW = bool(config.get("use_gateway", False))
 CLIDX  = str(config.get("cluster_index", 0))
 
@@ -135,11 +132,11 @@ rule all:
         expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
         expand(STATEDIR + "/zpt_step1_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
         expand(STATEDIR + "/zpt_step2_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
-        # # # (5) get EBE mass calibration
-        # # expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
-        # # expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
-        # # expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
-        # # expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
+        # (5) get EBE mass calibration
+        expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
+        expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
+        expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
+        expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
         # # (6) second-pass stage1 using latest corrections for zpt and EBE mass calibration
         # expand(STATEDIR + "/stage1_corr_{year}.done", year=YEARS),
         # expand(STATEDIR + "/stage1_compact_corr_{year}.done", year=YEARS),
@@ -595,7 +592,7 @@ rule stage1_corr:
         statedir=STATEDIR,
         nano=lambda wc: nano_for_year(wc.year),
         yaml=lambda wc: yaml_for_year(wc.year),
-        label=lambda wc: label_for_year_corr(wc.year),
+        label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
     resources:
         gateway=1,
@@ -628,7 +625,7 @@ rule stage1Compact_corr:
         statedir=STATEDIR,
         nano=lambda wc: nano_for_year(wc.year),
         yaml=lambda wc: yaml_for_year(wc.year),
-        label=lambda wc: label_for_year_corr(wc.year),
+        label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
     resources:
         gateway=1,
@@ -651,37 +648,55 @@ rule stage1Compact_corr:
 
 rule plots_corr:
     input:
-       STATEDIR + "/stage1_corr_{year}.done",
+       STATEDIR + "/stage1_compact_corr_{year}.done",
     output:
-        done=STATEDIR + "/plots_corr_{year}_{cat}.done",
+        done=STATEDIR + "/plots_corr_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
     log:
-        LOGDIR + "/plots_corr_{year}_{cat}.log",
+        LOGDIR + "/plots_corr_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
         gw=lambda wc: gw_flags_plots(),
         load_path=lambda wc: (
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
-            f"{label_for_year_corr(wc.year)}/stage1_output/{wc.year}/f1_0"
+            f"{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0"
         ),        
-        save_path=lambda wc: f"validation/figs_corr/Run3_nanoAODv{nano_for_year(wc.year)}/{label_for_year_corr(wc.year)}/VBFfilter_False",
+        save_path=lambda wc: (
+            f"validation/figs/Run3_nanoAODv{nano_for_year(wc.year)}/"
+            f"{label_for_year(wc.year)}/VBFfilter_False/"
+        ),
+        # map wildcards -> CLI flags
+        zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",
+        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else ""        
     shell:
         r"""
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 python plotter/validation_plotter_unified.py \
-          -y {wildcards.year} \
-          --save_path {params.save_path} \
-          --load {params.load_path} \
-          -cat {wildcards.cat} \
-          {params.gw} \
-          --njets inclusive \
-          --minimum_set \
-          --region h-sidebands z-peak \
-          --remove_zpt_weights \
-          > {log} 2>&1
-        touch {output.done}
+        PYTHONUNBUFFERED=1 \
+        python plotter/validation_plotter_unified.py \
+            -y {wildcards.year} \
+            --save_path {params.save_path} \
+            --load {params.load_path} \
+            --use-compacted "compacted" \
+            -cat {wildcards.cat} \
+            {params.gw} \
+            --njets {wildcards.njets_plot} \
+            --jj-eta-region "{wildcards.jj_eta_region}" \
+            --region h-sidebands z-peak \
+            {params.minset_flag} \
+            {params.zpt_flag} \
+            > {log} 2>&1
+
+        # ---- SUCCESS CHECK ----
+        if grep -q "Plots are saved to " {log}; then
+            echo "Plot job successful."
+            touch {output.done}
+        else
+            echo "ERROR: Plot job did not complete successfully."
+            echo "Success string not found in log."
+            exit 1
+        fi
         """
 
 
