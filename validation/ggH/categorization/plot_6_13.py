@@ -235,7 +235,7 @@ if __name__ == "__main__":
         sample_dict[group] = field_dict
 
     # plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
-    plot_setting_fname = "../../../src/lib/histogram/plot_settings_gghCat_BDT_input.json"
+    plot_setting_fname = "src/lib/histogram/plot_settings_gghCat_BDT_input.json"
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
     plot_var = "BDT_score"
@@ -255,8 +255,8 @@ if __name__ == "__main__":
         year="2024"
     elif year == "2016":
         year="2016preVFP"
-    else:
-        year="2024"
+    # else:
+        # ye/ar="2024"
     load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_output/{year}/"
     
     bdt_edges = OmegaConf.load(f"{load_path}/BDT_edges.yaml")[year]

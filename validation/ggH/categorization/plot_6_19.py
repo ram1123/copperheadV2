@@ -171,7 +171,7 @@ def getLandxBern(x):
 
 def getFEWZxBern(x):
     # roo_spline_func = getFEWZ_roospline(x, "modules/ucsd_workspace/")
-    roo_spline_func = getFEWZ_roospline(x, "../../../modules/ucsd_workspace/")
+    roo_spline_func = getFEWZ_roospline(x, "modules/ucsd_workspace/")
 
     name = "fewz_1j_spl_pdf"
     roo_spline_pdf = rt.RooWrapperPdf(name, name, roo_spline_func)
@@ -739,7 +739,7 @@ if __name__ == "__main__":
 
 
     # plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
-    plot_setting_fname = "../../../src/lib/histogram/plot_settings_gghCat_BDT_input.json"
+    plot_setting_fname = "src/lib/histogram/plot_settings_gghCat_BDT_input.json"
     # plot_setting_fname = "plot_settings_vbfCat_MVA_input.json"
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)

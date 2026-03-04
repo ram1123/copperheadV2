@@ -100,6 +100,23 @@ if [[ "$step" == "5" || ""$step"" == "all" ]]; then
     region="h-sidebands"
     stage2_save_path="${model_name}_${category}_perYr/"
     python validation/ggH/categorization/validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
+
+    print_box "Step: 6: Obtain few more validation plots"
+    sample_l="ggh vbf dy tt ww wz"
+    # Step-a: Get the files
+    python run_stage2.py -load $stage2_load_path -save $stage2_save_path --samples $sample_l -cat $category --fraction 1.0 --year $year --model_name $model_name --do_6p7
+
+    # Step-b: Get the plot
+    region="signal"
+    bdt_year=${year}
+    stage2_save_path="${model_name}_${category}_perYr/" 
+    python validation/ggH/categorization/plot_6_7.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path} --model_name ${model_name} --bdt_year ${bdt_year}
+    python validation/ggH/categorization/plot_6_13.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
+    python validation/ggH/categorization/plot_6_19.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
+    python validation/ggH/categorization/plot_6_8.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path} 
+
+    # ERROR: 
+    python validation/ggH/categorization/getTable_6_2And6_12.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
 fi
 
 if [[ "$step" == "6" || ""$step"" == "all" ]]; then
