@@ -15,7 +15,7 @@ import os
 import copy
 import pandas as pd
 # from modules.utils import getGOF_KS
-# from src.corrections.jet import applyUpDown, getJecJerUncertainties
+from src.corrections.jet import applyUpDown, getJecJerUncertainties
 
 def fillWgtVarations(df : pd.DataFrame, events, nSubCats : int):
     # print(f"fillWgtVarations b4: \n {df}")
@@ -296,9 +296,8 @@ if __name__ == "__main__":
         fields2load  = [
             "dimuon_mass",
         ]
-        # jec_unc_fields = ["Absolute", "FlavorQCD"]
-        jec_unc_fields = []
-        # jec_unc_fields = applyUpDown(jec_unc_fields)
+        jec_unc_fields = ["Absolute", "FlavorQCD"]
+        jec_unc_fields = applyUpDown(jec_unc_fields)
         processed_events = getProcessedEvents(events, fields2load, jec_unc_fields)
         print(f"processed_events.wgt_nominal: {processed_events.wgt_nominal}")
         # print(f"processed_events.wgt_nominal len: {ak.num(processed_events.wgt_nominal, axis=0)}")
@@ -346,27 +345,26 @@ if __name__ == "__main__":
             row_labels = row_labels + [f"subCat{i}_{year}" for i in range(nSubCats)]
             
         # df = pd.DataFrame(index=row_labels, columns=(jec_unc_fields+["year"))
-        # # jec_unc_fields = ["Absolute", "FlavorQCD", "Absolute_2018", "Absolute_2017"]
-        # jec_yml_path = "/work/users/yun79/Run3/copperheadV2/configs/parameters/jec.yaml"
-        # jec_unc_fields = getJecJerUncertainties(jec_yml_path)
-        # jec_unc_fields = applyUpDown(jec_unc_fields)
-        # print(f"jec_unc_fields: {jec_unc_fields}")
-        # # raise ValueError
-        # df_JecByYear = pd.DataFrame(index=row_labels, columns=(jec_unc_fields + ["nominal"]))
-        # fname = f"processed_events_sigMC_{sample}.parquet"
-        # load_path = f"{args.load_path}/year_value/{fname}"
-        # print(f"load_path: {load_path}")
-        # df_JecByYear = fillJecJerVarationsByYear(df_JecByYear, load_path, years, nSubCats, jec_unc_fields)
-        # print(f"df_JecByYear: {df_JecByYear}")
-        # df_JecCombined = combine_dfByYear(df_JecByYear, jec_unc_fields, years, nSubCats)
-        # df_JecCombined.to_csv(f"{base_path}/{sample}_jecUnc_absYield.csv")
+        # jec_unc_fields = ["Absolute", "FlavorQCD", "Absolute_2018", "Absolute_2017"]
+        jec_yml_path = "configs/parameters/jec.yaml"
+        jec_unc_fields = getJecJerUncertainties(jec_yml_path)
+        jec_unc_fields = applyUpDown(jec_unc_fields)
+        print(f"jec_unc_fields: {jec_unc_fields}")
+        # raise ValueError
+        df_JecByYear = pd.DataFrame(index=row_labels, columns=(jec_unc_fields + ["nominal"]))
+        fname = f"processed_events_sigMC_{sample}.parquet"
+        load_path = f"{args.load_path}/year_value/{fname}"
+        print(f"load_path: {load_path}")
+        df_JecByYear = fillJecJerVarationsByYear(df_JecByYear, load_path, years, nSubCats, jec_unc_fields)
+        print(f"df_JecByYear: {df_JecByYear}")
+        df_JecCombined = combine_dfByYear(df_JecByYear, jec_unc_fields, years, nSubCats)
+        df_JecCombined.to_csv(f"{base_path}/{sample}_jecUnc_absYield.csv")
 
-        # df_JecCombined_rel = df_JecCombined.div(df_wgts["wgt_nominal"], axis=0)
-        # df_JecCombined_rel.to_csv(f"{base_path}/{sample}_jecUnc_relYield.csv")
+        df_JecCombined_rel = df_JecCombined.div(df_wgts["wgt_nominal"], axis=0)
+        df_JecCombined_rel.to_csv(f"{base_path}/{sample}_jecUnc_relYield.csv")
 
         
-        # df_total = pd.concat([df_wgts_rel, df_JecCombined_rel], axis=1)
-        df_total = pd.concat([df_wgts_rel], axis=1)
+        df_total = pd.concat([df_wgts_rel, df_JecCombined_rel], axis=1)
 
         df_total.to_csv(f"{base_path}/{sample}_total_relYield.csv")
 
