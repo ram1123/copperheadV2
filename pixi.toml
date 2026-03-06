@@ -52,6 +52,8 @@ rsync = ">=3.3.0,<4"
 sympy = "*"
 pysr = "*"
 ripgrep = ">=15.1.0,<16"
+optuna = ">=4.7.0,<5"
+ruff = ">=0.15.5,<0.16"
 
 [pypi-dependencies]
 cmsstyle = "*"
