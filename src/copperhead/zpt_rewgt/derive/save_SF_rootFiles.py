@@ -228,9 +228,38 @@ if __name__ == "__main__":
             ratio_plot = ROOT.TRatioPlot(hist_data, hist_dy)
             ratio_plot.SetH1DrawOpt("E")  # Draw data with error bars
             ratio_plot.SetH2DrawOpt("E")  # Draw DY with error bars
+            
+            # y-range set auto based on minimum and maximum of the ratio histogram
+            min_ratio = hist_SF.GetMinimum()
+            max_ratio = hist_SF.GetMaximum()
+
             ratio_plot.Draw()
+    
+            # ---------------------------
+            # LOWER PAD (ratio)
+            # ---------------------------            
+            # NOTE: Set min/max or title should go after `ratio_plot.Draw()`
             ratio_plot.GetLowerRefYaxis().SetTitle("Data / DY")
             ratio_plot.GetLowerRefXaxis().SetTitle("Dimuon pT (GeV)")
+            ratio_plot.GetLowerRefGraph().SetMinimum(max(min_ratio * 0.8, 0.0));
+            ratio_plot.GetLowerRefGraph().SetMaximum(min(max_ratio * 1.2, 5.0));
+
+            # ---------------------------
+            # UPPER PAD (Data + DY)
+            # ---------------------------
+            upper_pad = ratio_plot.GetUpperPad()
+            upper_pad.cd()
+
+            max_data = hist_data.GetMaximum()
+            max_dy   = hist_dy.GetMaximum()
+
+            ymax = max(max_data, max_dy)
+            ymax *= 1.3  # 30% headroom
+
+            # Set range on upper histogram axis
+            ratio_plot.GetUpperRefYaxis().SetRangeUser(0.0, ymax)
+
+            canvas.Update()
 
             # add legend
             legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)  # Legend coordinates (x1, y1, x2, y2)

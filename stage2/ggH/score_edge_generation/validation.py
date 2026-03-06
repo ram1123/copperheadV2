@@ -5,7 +5,7 @@ import pandas as pd
 
 if __name__ == "__main__":
     
-    for iter_idx in range(1, 8):
+    for iter_idx in range(1, 6):
         load_path = f"iter{iter_idx}_significances.csv"
         sig_df = pd.read_csv(load_path)
         plt.scatter(sig_df["sig_eff"], sig_df["Significance"], color='blue', s=50, alpha=0.7)  # s=50 sets dot size, alpha=0.7 makes them slightly transparent
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         # xticks = list(plt.xticks()[0])  # Get current x-ticks
         # xticks.extend([max_sig_eff])  # Add vertical line positions
         xticks = list(not_common_effs) + [max_sig_eff]
-        print(xticks)
+        print(f"xticks: {xticks}")
         plt.xticks(sorted(xticks))  # Set updated ticks
 
         
@@ -44,3 +44,43 @@ if __name__ == "__main__":
         plt.savefig(f"iter{iter_idx}_significances.png")
         plt.clf()
 
+
+        # -----------------------------
+        # Write YAML target yields
+        # -----------------------------
+        # UPDATE IT: such that it will save key as the label name and in further steps it 
+        # should extract target yeilds using the label name instead of "target_yeild". So, 
+        # that we keep target yields for each labels.
+        if iter_idx != 5: continue
+
+        boundaries = sorted(not_common_effs)
+
+        yields = []
+        yields.append(boundaries[0])
+
+        for i in range(1, len(boundaries)):
+            yields.append(boundaries[i] - boundaries[i-1])
+
+        yields.append(1.0 - boundaries[-1])
+
+        yields = np.round(yields, 2)
+
+        yaml_data = {
+            "target_yields": yields.tolist()
+        }
+
+        with open("stage2/ggH/target_yields.yaml", "w") as f:
+            f.write(
+                "target_yields:  # 2023 Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2\n"
+            )
+            f.write(f"# {boundaries}\n")
+
+            for i, y in enumerate(yields):
+                if i == 0:
+                    f.write(f"- {y}\n")
+                elif i == len(yields) - 1:
+                    f.write(f"- {y}  # 1.0 - {boundaries[-1]}\n")
+                else:
+                    low = int(boundaries[i-1]*100)
+                    high = int(boundaries[i]*100)
+                    f.write(f"- {y}  # {high}-{low}\n")

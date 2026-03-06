@@ -451,9 +451,8 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"event_filter length: {len(event_filter)}")
         logger.debug(f"events length: {len(events)}")
 
-
         # if not ((events.run >= 362433) & (events.run <= 367144)):
-            # continue
+        # continue
         # debug_mask = ((events.run >= 362433) & (events.run <= 367144))
 
         # For debug: if run, lumi, and event :
@@ -2231,7 +2230,7 @@ class EventProcessor(processor.ProcessorABC):
             jetHorn_puid_cut = (get_puId(jets) >= 7) | (
                 jets.pt >= 50
             )  # tight pu Id #FIXME: hardcoded puID
-            
+
             jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
             jetHorn_PUID_cut = ak.ones_like(pass_jet_puid, dtype="bool") # default value is True
             # jetHorn_PUID_cut = ak.where(jetHorn_region, jetHorn_cut, jetHorn_PUID_cut)
@@ -2244,8 +2243,9 @@ class EventProcessor(processor.ProcessorABC):
 
         do_jet_horn_ptcut = self.config["switches"].get("do_jet_horn_ptcut", False)
         if do_jet_horn_ptcut:
-            """ Remove jets in the jet horn region with pT < 50 GeV
-                 horn region: 3.0 > abs(eta) > 2.5
+            """ Run-3 recommendation:
+                - Remove jets in the jet horn region with pT < 50 GeV
+                  and horn region: 3.0 > abs(eta) > 2.5
             """
             logger.info(f"Applying additional jet pT cut of {do_jet_horn_ptcut} GeV for forward region (jet horn region)!")
             jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) < 3.0)
@@ -2259,8 +2259,43 @@ class EventProcessor(processor.ProcessorABC):
         else:
             jetHorn_ptcut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
 
+        HE_HF_ptcut = ak.ones_like(jets.pt, dtype=bool)
+
+        # Prefer asymmetric if true
+        if self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]:
+            thr_lead, thr_sub = self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]
+            logger.warning(
+                f"Applying asymmetric jet pT cut for HE/HF jets (|eta|>2.5): "
+                f"leading>{thr_lead} GeV, subleading>{thr_sub} GeV"
+            )
+
+            is_hehf = abs(jets.eta) > 2.5
+
+            # ASSUMPTION: jets are already sorted by pT (lead=idx0, sub=idx1)
+            idx = ak.local_index(jets.pt)
+
+            # leading jet (index 0) if it's in HE/HF
+            HE_HF_ptcut = ak.where(
+                is_hehf & (idx == 0),
+                jets.pt > thr_lead,
+                HE_HF_ptcut,
+            )
+            # subleading jet (index 1) if it's in HE/HF
+            HE_HF_ptcut = ak.where(
+                is_hehf & (idx == 1),
+                jets.pt > thr_sub,
+                HE_HF_ptcut,
+            )
+
+        elif self.config["switches"]["add_pt_cut_for_HE_HF_jets"]:
+            thr = self.config["switches"]["add_pt_cut_for_HE_HF_jets"]
+            logger.warning(f"Applying additional jet pT cut of {thr} GeV for HE/HF jets!")
+
+            is_hehf = abs(jets.eta) > 2.5
+            HE_HF_ptcut = ak.where(is_hehf, jets.pt > thr, HE_HF_ptcut)
+
         # add additonal pT cut for the forward regions  ----------------------------------------------
-        
+
         jet_selection = (
             jet_pt_cut
             & pass_jet_id
@@ -2274,7 +2309,7 @@ class EventProcessor(processor.ProcessorABC):
         jets = jets[jet_selection] # INFO: this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
         jets = ak.to_packed(jets)
         # print(f"ak.any(jets.pt < 50): {ak.sum((jets.pt < 50)[:200]).compute()}")
-        
+
         # apply jetpuid if not have done already
         if is_mc and (variation=="nominal") and is_run2(year) and hasattr(jets, "puId"): # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
             logger.info("Applying jet PUID scale factors and adding jetpuid_wgt!")
@@ -2305,6 +2340,7 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         padded_jets = ak.pad_none(jets, target=4) # padd jets
         jet1, jet2 = pair_dict["lead"]
+
         jet_loop_out_dict = {}
         # # --------------------------------------------
         # # jet rapidity-region booleans (event-level)
@@ -2399,6 +2435,11 @@ class EventProcessor(processor.ProcessorABC):
                     f"vbf_{tag}_mjj_{variation}":       jj.mass,
                     f"vbf_{tag}_deta_{variation}":      np.abs(j1.eta - j2.eta),
                 })
+                if is_mc:
+                    jet_loop_out_dict.update({
+                        f"vbf_{tag}_jet1_hasMatchedGenJet_{variation}": j1.genJetIdx != -1,
+                        f"vbf_{tag}_jet2_hasMatchedGenJet_{variation}": j2.genJetIdx != -1,
+                    })
 
             jet_loop_out_dict[f"vbf_maxmjj_deta25_hasPair_{variation}"] = pair_dict["has_mjj_deta"]
 
@@ -2454,14 +2495,12 @@ class EventProcessor(processor.ProcessorABC):
             f"jet1_pt_{variation}": jet1.pt,
             f"jet1_eta_{variation}": jet1.eta,
             f"jet1_phi_{variation}": jet1.phi,
-            # f"jet1_puId_{variation}": get_puId(jet1),
-            # f"jet1_hasMatchedGenJet_{variation}": jet1.genJetIdx != -1,
+            f"jet1_puId_{variation}": get_puId(jet1),
             # -------------------------
             f"jet2_pt_{variation}": jet2.pt,
             f"jet2_eta_{variation}": jet2.eta,
             f"jet2_phi_{variation}": jet2.phi,
-            # f"jet2_puId_{variation}": get_puId(jet2),
-            # f"jet2_hasMatchedGenJet_{variation}": jet2.genJetIdx != -1,
+            f"jet2_puId_{variation}": get_puId(jet2),
             # -------------------------
             # -------------------------
             f"jj_mass_{variation}": dijet.mass,
@@ -2475,7 +2514,7 @@ class EventProcessor(processor.ProcessorABC):
             f"ll_zstar_log_{variation}": np.log(np.abs(zeppenfeld)),
             f"zeppenfeld_{variation}": zeppenfeld,
             f"njets_{variation}": njets,
-            
+
         })
 
         if hasattr(jets, "btagUParTAK4B"):
@@ -2483,7 +2522,15 @@ class EventProcessor(processor.ProcessorABC):
                 f"jet1_btagUParTAK4B_{variation}": jet1.btagUParTAK4B,
                 f"jet2_btagUParTAK4B_{variation}": jet2.btagUParTAK4B,
             })
-        
+
+        if is_mc:
+            jet_loop_out_dict.update({
+                f"jet1_hasMatchedGenJet_{variation}": jet1.genJetIdx != -1,
+                f"jet2_hasMatchedGenJet_{variation}": jet2.genJetIdx != -1,
+                f"jet3_hasMatchedGenJet_{variation}": jet3.genJetIdx != -1,
+                f"jet4_hasMatchedGenJet_{variation}": jet4.genJetIdx != -1,
+            })
+
         if is_run2(year):
             """Additional jet variables only for Run2"""
             jet_loop_out_dict.update({
@@ -2587,10 +2634,10 @@ class EventProcessor(processor.ProcessorABC):
                 # f"jet2_btagDeepFlavCvB_{variation}": jet2.btagDeepFlavCvB,
                 # f"jet2_btagDeepFlavCvL_{variation}": jet2.btagDeepFlavCvL,
                 # f"jet2_btagDeepFlavQG_{variation}":  jet2.btagDeepFlavQG,
-                # f"jet3_btagDeepFlavCvB_{variation}": jet3.btagDeepFlavCvB,
+                f"jet3_btagDeepFlavCvB_{variation}": jet3.btagDeepFlavCvB,
                 # f"jet3_btagDeepFlavCvL_{variation}": jet3.btagDeepFlavCvL,
                 # f"jet3_btagDeepFlavQG_{variation}":  jet3.btagDeepFlavQG,
-                # f"jet4_btagDeepFlavCvB_{variation}": jet4.btagDeepFlavCvB,
+                f"jet4_btagDeepFlavCvB_{variation}": jet4.btagDeepFlavCvB,
                 # f"jet4_btagDeepFlavCvL_{variation}": jet4.btagDeepFlavCvL,
                 # f"jet4_btagDeepFlavQG_{variation}":  jet4.btagDeepFlavQG,
             })
@@ -2643,16 +2690,16 @@ class EventProcessor(processor.ProcessorABC):
                 f"jet2_neEmEF_{variation}": jet2.neEmEF,
                 f"jet2_neHEF_{variation}":  jet2.neHEF,
                 f"jet2_muEF_{variation}":   jet2.muEF,
-                # f"jet3_chEmEF_{variation}": jet3.chEmEF,
-                # f"jet3_chHEF_{variation}":  jet3.chHEF,
-                # f"jet3_neEmEF_{variation}": jet3.neEmEF,
-                # f"jet3_neHEF_{variation}":  jet3.neHEF,
-                # f"jet3_muEF_{variation}":   jet3.muEF,
-                # f"jet4_chEmEF_{variation}": jet4.chEmEF,
-                # f"jet4_chHEF_{variation}":  jet4.chHEF,
-                # f"jet4_neEmEF_{variation}": jet4.neEmEF,
-                # f"jet4_neHEF_{variation}":  jet4.neHEF,
-                # f"jet4_muEF_{variation}":   jet4.muEF,
+                f"jet3_chEmEF_{variation}": jet3.chEmEF,
+                f"jet3_chHEF_{variation}":  jet3.chHEF,
+                f"jet3_neEmEF_{variation}": jet3.neEmEF,
+                f"jet3_neHEF_{variation}":  jet3.neHEF,
+                f"jet3_muEF_{variation}":   jet3.muEF,
+                f"jet4_chEmEF_{variation}": jet4.chEmEF,
+                f"jet4_chHEF_{variation}":  jet4.chHEF,
+                f"jet4_neEmEF_{variation}": jet4.neEmEF,
+                f"jet4_neHEF_{variation}":  jet4.neHEF,
+                f"jet4_muEF_{variation}":   jet4.muEF,
             })
         if "chMultiplicity" in jets.fields:
             extra_jet_loop_dict.update({
@@ -2660,10 +2707,10 @@ class EventProcessor(processor.ProcessorABC):
                 f"jet2_chMultiplicity_{variation}": jet2.chMultiplicity,
                 f"jet1_neMultiplicity_{variation}": jet1.neMultiplicity,
                 f"jet2_neMultiplicity_{variation}": jet2.neMultiplicity,
-                # f"jet3_chMultiplicity_{variation}": jet3.chMultiplicity,
-                # f"jet4_chMultiplicity_{variation}": jet4.chMultiplicity,
-                # f"jet3_neMultiplicity_{variation}": jet3.neMultiplicity,
-                # f"jet4_neMultiplicity_{variation}": jet4.neMultiplicity,
+                f"jet3_chMultiplicity_{variation}": jet3.chMultiplicity,
+                f"jet4_chMultiplicity_{variation}": jet4.chMultiplicity,
+                f"jet3_neMultiplicity_{variation}": jet3.neMultiplicity,
+                f"jet4_neMultiplicity_{variation}": jet4.neMultiplicity,
             })
 
         # # --- Multiplicities & constituents ---
@@ -2677,14 +2724,14 @@ class EventProcessor(processor.ProcessorABC):
                 f"jet2_nElectrons_{variation}":    jet2.nElectrons,
                 f"jet2_nMuons_{variation}":        jet2.nMuons,
                 f"jet2_nSVs_{variation}":          jet2.nSVs,
-                # f"jet3_nConstituents_{variation}": jet3.nConstituents,
-                # f"jet3_nElectrons_{variation}":    jet3.nElectrons,
-                # f"jet3_nMuons_{variation}":        jet3.nMuons,
-                # f"jet3_nSVs_{variation}":          jet3.nSVs,
-                # f"jet4_nConstituents_{variation}": jet4.nConstituents,
-                # f"jet4_nElectrons_{variation}":    jet4.nElectrons,
-                # f"jet4_nMuons_{variation}":        jet4.nMuons,
-                # f"jet4_nSVs_{variation}":          jet4.nSVs,
+                f"jet3_nConstituents_{variation}": jet3.nConstituents,
+                f"jet3_nElectrons_{variation}":    jet3.nElectrons,
+                f"jet3_nMuons_{variation}":        jet3.nMuons,
+                f"jet3_nSVs_{variation}":          jet3.nSVs,
+                f"jet4_nConstituents_{variation}": jet4.nConstituents,
+                f"jet4_nElectrons_{variation}":    jet4.nElectrons,
+                f"jet4_nMuons_{variation}":        jet4.nMuons,
+                f"jet4_nSVs_{variation}":          jet4.nSVs,
             })
 
         # # --- Jet–electron & jet–muon indices, SV indices ---
@@ -2737,16 +2784,16 @@ class EventProcessor(processor.ProcessorABC):
             extra_jet_loop_dict.update({
                 f"jet1_hadronFlavour_{variation}": jet1.hadronFlavour,
                 f"jet2_hadronFlavour_{variation}": jet2.hadronFlavour,
-                # f"jet3_hadronFlavour_{variation}": jet3.hadronFlavour,
-                # f"jet4_hadronFlavour_{variation}": jet4.hadronFlavour,
+                f"jet3_hadronFlavour_{variation}": jet3.hadronFlavour,
+                f"jet4_hadronFlavour_{variation}": jet4.hadronFlavour,
             })
 
         if "partonFlavour" in jets.fields:
             extra_jet_loop_dict.update({
                 f"jet1_partonFlavour_{variation}": jet1.partonFlavour,
                 f"jet2_partonFlavour_{variation}": jet2.partonFlavour,
-                # f"jet3_partonFlavour_{variation}": jet3.partonFlavour,
-                # f"jet4_partonFlavour_{variation}": jet4.partonFlavour,
+                f"jet3_partonFlavour_{variation}": jet3.partonFlavour,
+                f"jet4_partonFlavour_{variation}": jet4.partonFlavour,
             })
 
         # --- HF noise variables ---
@@ -2760,14 +2807,14 @@ class EventProcessor(processor.ProcessorABC):
                 f"jet2_hfadjacentEtaStripsSize_{variation}": jet2.hfadjacentEtaStripsSize,
                 f"jet2_hfsigmaEtaEta_{variation}":           jet2.hfsigmaEtaEta,
                 f"jet2_hfsigmaPhiPhi_{variation}":           jet2.hfsigmaPhiPhi,
-                # f"jet3_hfcentralEtaStripSize_{variation}":   jet3.hfcentralEtaStripSize,
-                # f"jet3_hfadjacentEtaStripsSize_{variation}": jet3.hfadjacentEtaStripsSize,
-                # f"jet3_hfsigmaEtaEta_{variation}":           jet3.hfsigmaEtaEta,
-                # f"jet3_hfsigmaPhiPhi_{variation}":           jet3.hfsigmaPhiPhi,
-                # f"jet4_hfcentralEtaStripSize_{variation}":   jet4.hfcentralEtaStripSize,
-                # f"jet4_hfadjacentEtaStripsSize_{variation}": jet4.hfadjacentEtaStripsSize,
-                # f"jet4_hfsigmaEtaEta_{variation}":           jet4.hfsigmaEtaEta,
-                # f"jet4_hfsigmaPhiPhi_{variation}":           jet4.hfsigmaPhiPhi,
+                f"jet3_hfcentralEtaStripSize_{variation}":   jet3.hfcentralEtaStripSize,
+                f"jet3_hfadjacentEtaStripsSize_{variation}": jet3.hfadjacentEtaStripsSize,
+                f"jet3_hfsigmaEtaEta_{variation}":           jet3.hfsigmaEtaEta,
+                f"jet3_hfsigmaPhiPhi_{variation}":           jet3.hfsigmaPhiPhi,
+                f"jet4_hfcentralEtaStripSize_{variation}":   jet4.hfcentralEtaStripSize,
+                f"jet4_hfadjacentEtaStripsSize_{variation}": jet4.hfadjacentEtaStripsSize,
+                f"jet4_hfsigmaEtaEta_{variation}":           jet4.hfsigmaEtaEta,
+                f"jet4_hfsigmaPhiPhi_{variation}":           jet4.hfsigmaPhiPhi,
             })
 
         # # --- Muon subtraction factor ---

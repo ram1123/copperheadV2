@@ -192,7 +192,7 @@ if __name__ == "__main__":
     # load_path =f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/{args.category}/stage2_output/{year_param}/"
     load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_output/{year_param}/"
     print(f"load_path : {load_path}")
-    lumi_dict = {
+    lumi_dict = { # FIXME: Update this from central place.
         "2018" : 59.83,
         "2017" : 41.48,
         "2016postVFP": 19.50,
@@ -235,7 +235,7 @@ if __name__ == "__main__":
         sample_dict[group] = field_dict
 
     # plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
-    plot_setting_fname = "../../../src/lib/histogram/plot_settings_gghCat_BDT_input.json"
+    plot_setting_fname = "src/lib/histogram/plot_settings_gghCat_BDT_input.json"
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
     plot_var = "BDT_score"
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     bkg_MC = sample_dict["background"]
     sig_MC = sample_dict["signal"]
     # save_fname = "plots/Fig6_13.pdf"
-    save_fname = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Fig6_13.pdf"
+    save_fname = f"plots/{args.label}_x_{args.category}/{year}_signal/Fig6_13.pdf"
     # print(f"sample_dict: {sample_dict}")
     print(f"binning: {binning}")
     print(f"bkg_MC: {bkg_MC}")
@@ -255,8 +255,6 @@ if __name__ == "__main__":
         year="2024"
     elif year == "2016":
         year="2016preVFP"
-    else:
-        year="2024"
     load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_output/{year}/"
     
     bdt_edges = OmegaConf.load(f"{load_path}/BDT_edges.yaml")[year]

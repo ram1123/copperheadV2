@@ -34,11 +34,11 @@ jet_id:
     2016_RERECO: loose
     "2017_RERECO": tight
     "2018_RERECO": tight
-    "2022preEE": tight
-    "2022postEE": tight
-    "2023": tight
-    "2023BPix": tight
-    "2024": tight
+    "2022preEE": tightPassLepVeto
+    "2022postEE": tightPassLepVeto
+    "2023": tightPassLepVeto
+    "2023BPix": tightPassLepVeto
+    "2024": tightPassLepVeto
 jet_id_json_files: # old method as of Dec 16 2024,
     2016preVFP: dummy
     2016postVFP: dummy

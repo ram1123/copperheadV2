@@ -302,6 +302,51 @@ DIJET_VARS: List[str] = [
     "htsoft5_nominal",
 ]
 
+# ============================================================
+# Jet ID variables (composition, flavour, HF noise, etc.)
+# ============================================================
+
+JET_ID_VARIABLES: List[str] = [
+    # --- Energy fractions ---
+    "jet1_chEmEF",
+    "jet1_chHEF",
+    "jet1_neEmEF",
+    "jet1_neHEF",
+    "jet1_muEF",
+    "jet2_chEmEF",
+    "jet2_chHEF",
+    "jet2_neEmEF",
+    "jet2_neHEF",
+    "jet2_muEF",
+    # --- Multiplicities ---
+    "jet1_chMultiplicity",
+    "jet2_chMultiplicity",
+    "jet1_neMultiplicity",
+    "jet2_neMultiplicity",
+    # --- Constituents ---
+    "jet1_nConstituents",
+    "jet1_nElectrons",
+    "jet1_nMuons",
+    "jet1_nSVs",
+    "jet2_nConstituents",
+    "jet2_nElectrons",
+    "jet2_nMuons",
+    "jet2_nSVs",
+    # --- Flavour ---
+    "jet1_hadronFlavour",
+    "jet2_hadronFlavour",
+    "jet1_partonFlavour",
+    "jet2_partonFlavour",
+    # --- HF noise variables ---
+    "jet1_hfcentralEtaStripSize",
+    "jet1_hfadjacentEtaStripsSize",
+    "jet1_hfsigmaEtaEta",
+    "jet1_hfsigmaPhiPhi",
+    "jet2_hfcentralEtaStripSize",
+    "jet2_hfadjacentEtaStripsSize",
+    "jet2_hfsigmaEtaEta",
+    "jet2_hfsigmaPhiPhi",
+]
 # ----------------------------------------------------------------------
 # VBF: additional variables (pair-based, nominal only)
 # Produced by your snippet for tag in: lead, maxmjj, maxdeta, maxmjj_deta25
@@ -348,7 +393,8 @@ VAR_SETS: Dict[str, List[str]] = {
     "muon_plots": MUON_PLOT_VARS,
     "dimuon_plots": DIMUON_PLOT_VARS,
     # "vbf_additional": VBF_ADDITIONAL_VARS,
-    # "met": MET_VARS,
+    "met": MET_VARS,
+    # "jet_id": JET_ID_VARIABLES,
 }
 
 

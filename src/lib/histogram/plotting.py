@@ -763,6 +763,7 @@ def plotDataMC_compare_eager(
     # save figure, we assume that the directory exists
     hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
+    print(f"plots saved: {save_full_path}")
 
 
 def plotFig_6_13(

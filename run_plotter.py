@@ -64,6 +64,7 @@ categories = ["nocat", "ggh"]
 JJ_ETA_REGIONS = [
     "all",
     "jj_both_central",
+    "jj_non_central",
     "jj_one_fwd25_one_central",
     "jj_one_he_one_central",
     "jj_one_fwd30_one_central",

@@ -38,3 +38,4 @@ pixi.lock
 *.pt
 *.npz
 *.done
+.julia_depot/

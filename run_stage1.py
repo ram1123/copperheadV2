@@ -152,7 +152,7 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
 
     FIXME: This function currently does not handle /store paths correctly. As gfal-mkdir command does not work with coffea_latest environment.
     """
-    if eos_path.startswith("/depot"):
+    if eos_path.startswith("/depot") or eos_path.startswith("/work"):
         os.makedirs(eos_path, exist_ok=True)
         return
 

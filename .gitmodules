@@ -1,0 +1,3 @@
+[submodule "MVA_training/ggH_BDT"]
+	path = MVA_training/ggH_BDT
+	url = git@github.com:ram1123/Run2_MVA_trainer.git

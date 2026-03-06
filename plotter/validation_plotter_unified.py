@@ -50,6 +50,12 @@ group_dict = {
         "2023": ["dyTo2L_M-50_incl"],
         "2023BPix": ["dyTo2L_M-50_incl"],
         "2024": ["dyTo2Mu_M-50_aMCatNLO"],
+
+        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],        
+        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
     },
     "EWK": {
         "2022preEE": ["ewk_mmjj_mll_105_160"],
@@ -262,6 +268,7 @@ if __name__ == "__main__":
         choices=[
             "all",
             "jj_both_central",
+            "jj_non_central",
             "jj_one_fwd25_one_central",
             "jj_one_he_one_central",
             "jj_one_fwd30_one_central",
@@ -645,6 +652,7 @@ if __name__ == "__main__":
                     "nominal",
                     args.do_vbf_filter_study,
                     jj_eta_region=args.jj_eta_region,
+                    njets_selection=str(args.njets),
                 )
 
                 #  FOR DEBUG PURPOSES

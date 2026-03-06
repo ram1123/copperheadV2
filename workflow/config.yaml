@@ -1,17 +1,29 @@
+# filesystem base for hmm area
+hmm_base: /work/projects/hmm
+
+#  pattern of output folder: 
+# load_path=lambda wc: (
+#     f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
+#     f"{label_for_year_corr(wc.year)}/stage1_output/{wc.year}/f1_0"
+# ),          
+
 # what to run
-# years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
+years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years: ["2022preEE", "2023", "2023BPix"]
-years: ["2022postEE"]
+# years: ["2022postEE"]
 # years: ["2023", "2023BPix"]
 # years: ["2024", "2016preVFP", "2016postVFP", "2017"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2016preVFP", "2016postVFP", "2017"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2016preVFP", "2016postVFP", "2017"]
 # years: ["2024"]
-# label_suffix: "FilterJetsHorn30GeV_JetIDMuIDFix_V2"
-# label_suffix: "FilterJetsHorn30GeV_JetIDMuIDFix_V2"
-# label_suffix: "FilterJetsHorn30GeV_JetIDMuIDFix_UpdateEventFilter"
-# label_suffix: "FilterJetsHorn30GeV_Feb23"
-label_suffix: "FilterJetsHorn30GeV_Feb23_tightPassLepVeto"
+# run_tag: "FilterJetsHorn30GeV_JetIDMuIDFix_V2"
+# run_tag: "FilterJetsHorn30GeV_JetIDMuIDFix_V2"
+# run_tag: "FilterJetsHorn30GeV_JetIDMuIDFix_UpdateEventFilter"
+# run_tag: "FilterJetsHorn30GeV_Feb23"
+# run_tag: "FilterJetsHorn30GeV_Feb23"
+# run_tag: "FilterJetsHorn30GeV_Feb23_tightPassLepVeto"
+# run_tag: "FilterEventsHorn50GeV_Feb23_tightPassLepVeto_NoJER"
+run_tag: "FilterJetsHorn30GeV_Feb23_NoJER_v2"
 
 # dask gateway
 use_gateway: true

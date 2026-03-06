@@ -167,6 +167,8 @@ def factor_pair(df, nuis, proc):
     try:
         up = float(df.loc[f"{nuis}_up", proc])
         dn = float(df.loc[f"{nuis}_down", proc])
+        if np.isnan(up) or np.isnan(dn):
+            return "-"        
         # if up > 0 and dn > 0:
         if round(up, 3) == round(dn, 3):
             return f"{up:.4g}"
@@ -280,7 +282,7 @@ if __name__ == "__main__":
     # make pd df ------------------------------------------------------------------
     for sample in samples:
         year = args.year
-        fname = f"processed_events_sigMC_{sample}.parquet"
+        fname = f"processed_events_sigMC_{sample}*.parquet"
         if year=="all":
             load_path = f"{args.load_path}/*/{fname}"
         elif year=="2016only":
@@ -344,7 +346,7 @@ if __name__ == "__main__":
             
         # df = pd.DataFrame(index=row_labels, columns=(jec_unc_fields+["year"))
         # jec_unc_fields = ["Absolute", "FlavorQCD", "Absolute_2018", "Absolute_2017"]
-        jec_yml_path = "/work/users/yun79/Run3/copperheadV2/configs/parameters/jec.yaml"
+        jec_yml_path = "configs/parameters/jec.yaml"
         jec_unc_fields = getJecJerUncertainties(jec_yml_path)
         jec_unc_fields = applyUpDown(jec_unc_fields)
         print(f"jec_unc_fields: {jec_unc_fields}")

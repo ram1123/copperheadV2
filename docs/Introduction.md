@@ -5,9 +5,11 @@ title: Introduction
 ## Framework setup
 
 ```bash
-git clone https://github.com/ram1123/copperheadV2.git
+git clone --recurse-submodules https://github.com/green-cabbage/copperheadV2.git
 cd copperheadV2
 git checkout main
+# If already cloned the repo, then to update the submodules run:
+git submodule update --remote --merge
 ```
 
 Everytime you open a new terminal session, run the following command to setup the environment variables:

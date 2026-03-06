@@ -716,7 +716,7 @@ if __name__ == "__main__":
 
     # plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
     # plot_setting_fname = "../../../src/lib/histogram/plot_settings_gghCat_BDT_input.json"
-    plot_setting_fname = "../../../src/lib/histogram/plot_settings_gghCat_BDT_inputFig6_7.json"
+    plot_setting_fname = "src/lib/histogram/plot_settings_gghCat_BDT_inputFig6_7.json"
     # plot_setting_fname = "plot_settings_vbfCat_MVA_input.json"
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
@@ -726,7 +726,7 @@ if __name__ == "__main__":
     os.makedirs(save_dir, exist_ok=True)
     # extract BDT inputs
     
-    model_path = f"/work/users/yun79/Run2_MVA_trainer/output/bdt_{args.model_name}_{args.bdt_year}"
+    model_path = f"output/bdt_{args.model_name}_{args.bdt_year}"
     training_feat_path = f"{model_path}/training_features.json"
     print(f"trainig_feat_path: {training_feat_path}")
     with open(training_feat_path, 'r') as file:

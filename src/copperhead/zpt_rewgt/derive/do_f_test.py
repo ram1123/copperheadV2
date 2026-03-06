@@ -71,18 +71,17 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outText
 
         polynomial_expr_low = " + ".join([f"[{i}]*x**{i}" for i in range(order_low + 1)])
         fit_func_low = ROOT.TF1(f"poly{order}", polynomial_expr_low, 0, fit_xmax)
-        _ = hist_SF.Fit(fit_func_low, "L", xmin=fit_xmin, xmax=fit_xmax)
-        _ = hist_SF.Fit(fit_func_low, "L", xmin=fit_xmin, xmax=fit_xmax)
-        fit_low = hist_SF.Fit(fit_func_low, "R", xmin=fit_xmin, xmax=fit_xmax)
+        _ = hist_SF.Fit(fit_func_low, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
+        _ = hist_SF.Fit(fit_func_low, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
+        fit_low = hist_SF.Fit(fit_func_low, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
         chi2_low = fit_func_low.GetChisquare()
         ndf_low = fit_func_low.GetNDF()
 
         polynomial_expr_high = " + ".join([f"[{i}]*x**{i}" for i in range(order_high + 1)])
         fit_func_high = ROOT.TF1(f"poly{order}", polynomial_expr_high, 0, fit_xmax)
-        _ = hist_SF.Fit(fit_func_high, "L", xmin=fit_xmin, xmax=fit_xmax)
-        _ = hist_SF.Fit(fit_func_high, "L", xmin=fit_xmin, xmax=fit_xmax)
-        fit_high = hist_SF.Fit(fit_func_high, "R", xmin=fit_xmin, xmax=fit_xmax)
-
+        _ = hist_SF.Fit(fit_func_high, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
+        _ = hist_SF.Fit(fit_func_high, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
+        fit_high = hist_SF.Fit(fit_func_high, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
         chi2_high = fit_func_high.GetChisquare()
         ndf_high = fit_func_high.GetNDF()
 
@@ -158,7 +157,7 @@ for njet in args.njet:
         hist_dy = workspace.obj("hist_dy").Clone("hist_dy_clone")
 
         # Define custom bin edges: adaptive binning with finer bins near zero and coarser bins at higher pt
-        edges = define_custom_binning()
+        edges = define_custom_binning(njet)
 
         nbins_new = len(edges) - 1
         xbins = array.array('d', edges)

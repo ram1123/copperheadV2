@@ -344,7 +344,7 @@ if __name__ == "__main__":
     bkgMC_subCategory_idx = bkgMC_events.subCategory_idx.compute()
 
     # plot_setting_fname = "../../../src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
-    plot_setting_fname = "../../../src/lib/histogram/plot_settings_gghCat_BDT_input.json"
+    plot_setting_fname = "src/lib/histogram/plot_settings_gghCat_BDT_input.json"
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
     plot_var = "BDT_score"

@@ -164,7 +164,7 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
 
     # year_param="all"  # make all year to take one BDT trained over all years # FIXME
     print(f"year_param: {year_param}")
-    model_path = f"/work/users/yun79/Run2_MVA_trainer/output/bdt_{model_name}_{year_param}"
+    model_path = f"output/bdt_{model_name}_{year_param}"
     training_feat_path = f"{model_path}/training_features.json"
     print(f"trainig_feat_path: {training_feat_path}")
     with open(training_feat_path, 'r') as file:
@@ -300,7 +300,7 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
         # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_final_2018/",
         # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_WgtOff_includeQGL_2018/",
         # "models_path" : f"/depot/cms/users/yun79/hmm/trained_MVAs/bdt_{model_name}_{year_param}/",
-        "models_path" : f"/depot/cms/users/yun79/hmm/trained_MVAs/bdt_{model_name}_{year_param}",
+        "models_path" : f"output/bdt_{model_name}_{year_param}",
         # "models_path" : model_path,
         "year" : year_param,
     }
