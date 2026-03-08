@@ -242,8 +242,7 @@ if __name__ == "__main__":
     binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
     bkg_MC = sample_dict["background"]
     sig_MC = sample_dict["signal"]
-    # save_fname = "plots/Fig6_13.pdf"
-    save_fname = f"plots/{args.label}_x_{args.category}/{year}_signal/Fig6_13.pdf"
+    save_fname = f"{args.save_path}/{args.label}_x_{args.category}/{year}_signal/Fig6_13.pdf"
     # print(f"sample_dict: {sample_dict}")
     print(f"binning: {binning}")
     print(f"bkg_MC: {bkg_MC}")

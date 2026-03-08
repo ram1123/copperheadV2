@@ -1,12 +1,32 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
+import argparse
+import os
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default=".",
+    action="store",
+    help="path where the edge validation is saved",
+    )
+    parser.add_argument(
+    "--label",
+    dest="label",
+    default="",
+    action="store",
+    help="stage2 run label",
+    )
+    args = parser.parse_args()
+    save_path = f"{args.save_path}/{args.label}"
+    os.makedirs(save_path, exist_ok=True)
     
     for iter_idx in range(1, 6):
-        load_path = f"iter{iter_idx}_significances.csv"
+        load_path = f"{save_path}/iter{iter_idx}_significances.csv"
         sig_df = pd.read_csv(load_path)
         plt.scatter(sig_df["sig_eff"], sig_df["Significance"], color='blue', s=50, alpha=0.7)  # s=50 sets dot size, alpha=0.7 makes them slightly transparent
 
@@ -41,7 +61,7 @@ if __name__ == "__main__":
         
         plt.xlabel("Signal Efficiency")
         plt.ylabel("Approximate Median Significance")
-        plt.savefig(f"iter{iter_idx}_significances.png")
+        plt.savefig(f"{save_path}/iter{iter_idx}_significances.png")
         plt.clf()
 
 
@@ -71,7 +91,7 @@ if __name__ == "__main__":
 
         with open("stage2/ggH/target_yields.yaml", "w") as f:
             f.write(
-                "target_yields:  # 2023 Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2\n"
+                f"target_yields:  # {args.label}\n"
             )
             f.write(f"# {boundaries}\n")
 
