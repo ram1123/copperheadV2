@@ -377,7 +377,7 @@ if __name__ == "__main__":
         25
     ]
     for nbins in nbins_l:
-        save_fname = f"plots/{args.label}_x_{args.category}/{args.year}_signal/fig_6_8Nbins{nbins}/Fig6_8"
+        save_fname = f"{args.save_path}/{args.label}_x_{args.category}/{args.year}_signal/fig_6_8Nbins{nbins}/Fig6_8"
         # Make directory if it doesn't exist
         os.makedirs(os.path.dirname(save_fname), exist_ok=True)
         

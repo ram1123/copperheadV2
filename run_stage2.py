@@ -124,7 +124,7 @@ def getDeltaPhi(phi1,phi2):
     dphi = abs(np.mod(phi1 - phi2 + np.pi, 2 * np.pi) - np.pi)
     return dphi
         
-def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fields=[], jec_unc_fields=[], do_6p7=False, model_base_path=".") -> ak.Record:
+def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_name:str, wgt_unc_fields=[], jec_unc_fields=[], do_6p7=False, model_base_path=".") -> ak.Record:
     """
     Takes the given stage1 output, runs MVA, and returns a new 
     ak.Record with MVA score + relevant info from stage1 output
@@ -159,12 +159,15 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
     # merged 2016preVFP and 2016postVFP for BDT training
     if "2016" in year:
         year_param = "2016"
+        bdt_training_year = "2016"
     else:
         year_param = year
+        bdt_training_year = model_trainYear
 
     # year_param="all"  # make all year to take one BDT trained over all years # FIXME
     print(f"year_param: {year_param}")
-    model_path = f"{model_base_path}/output/bdt_{model_name}_{year_param}"
+    print(f"bdt_training_year: {bdt_training_year}")
+    model_path = f"{model_base_path}/output/bdt_{model_name}_{bdt_training_year}"
     training_feat_path = f"{model_path}/training_features.json"
     print(f"trainig_feat_path: {training_feat_path}")
     with open(training_feat_path, 'r') as file:
@@ -295,8 +298,8 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
     # else:
     #     year_param = year
     parameters = {
-        "models_path" : f"{model_base_path}/output/bdt_{model_name}_{year_param}",
-        "year" : year_param,
+        "models_path" : f"{model_base_path}/output/bdt_{model_name}_{bdt_training_year}",
+        "year" : bdt_training_year,
     }
     print(f"parameters models path: {parameters['models_path']}")
     variatons2loop = ["nominal"] + jec_unc_fields
@@ -639,6 +642,14 @@ if __name__ == "__main__":
     help="MVA model name to load",
     )
     parser.add_argument(
+    "-trainYear",
+    "--model_trainYear",
+    dest="model_trainYear",
+    default="",
+    action="store",
+    help="Year over which MVA model is trained.",
+    )
+    parser.add_argument(
     "-cat",
     "--category",
     dest="category",
@@ -845,20 +856,20 @@ if __name__ == "__main__":
                     
                     processed_events_l = []
                     # test on only wgts first
-                    processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7, model_base_path=mva_base_path)
+                    processed_events = process4gghCategory(events, args.year, args.model_trainYear, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7, model_base_path=mva_base_path)
                     processed_events_l.append(processed_events)
     
                     smaller_jec_unc_field_l = split_maxlen(jec_unc_fields, 4)
                     for small_jec_unc_fields in smaller_jec_unc_field_l:
                         print(f"small_jec_unc_fields: {small_jec_unc_fields}")
                         
-                        processed_events = process4gghCategory(events, args.year, args.model_name, jec_unc_fields=small_jec_unc_fields, model_base_path=mva_base_path)
+                        processed_events = process4gghCategory(events, args.year, args.model_trainYear, args.model_name, jec_unc_fields=small_jec_unc_fields, model_base_path=mva_base_path)
                         processed_events_l.append(processed_events)
     
                     processed_events = mergeAkZips(processed_events_l)
                     del processed_events_l
                 else:
-                    processed_events = process4gghCategory(events, args.year, args.model_name, do_6p7=args.do_6p7, model_base_path=mva_base_path)
+                    processed_events = process4gghCategory(events, args.year, args.model_trainYear, args.model_name, do_6p7=args.do_6p7, model_base_path=mva_base_path)
             elif category == "vbf":
                 processed_events = process4vbfCategory(events) 
             else: 
