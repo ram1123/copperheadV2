@@ -124,7 +124,7 @@ def getDeltaPhi(phi1,phi2):
     dphi = abs(np.mod(phi1 - phi2 + np.pi, 2 * np.pi) - np.pi)
     return dphi
         
-def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fields=[], jec_unc_fields=[], do_6p7=False) -> ak.Record:
+def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fields=[], jec_unc_fields=[], do_6p7=False, model_base_path=".") -> ak.Record:
     """
     Takes the given stage1 output, runs MVA, and returns a new 
     ak.Record with MVA score + relevant info from stage1 output
@@ -164,7 +164,7 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
 
     # year_param="all"  # make all year to take one BDT trained over all years # FIXME
     print(f"year_param: {year_param}")
-    model_path = f"output/bdt_{model_name}_{year_param}"
+    model_path = f"{model_base_path}/output/bdt_{model_name}_{year_param}"
     training_feat_path = f"{model_path}/training_features.json"
     print(f"trainig_feat_path: {training_feat_path}")
     with open(training_feat_path, 'r') as file:
@@ -295,13 +295,7 @@ def process4gghCategory(events: ak.Record, year:str, model_name:str, wgt_unc_fie
     # else:
     #     year_param = year
     parameters = {
-    # "models_path" : "/depot/cms/hmm/vscheure/data/trained_models/",
-        # 
-        # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_final_2018/",
-        # "models_path" : "/depot/cms/users/yun79/hmm/trained_MVAs/bdt_WgtOff_includeQGL_2018/",
-        # "models_path" : f"/depot/cms/users/yun79/hmm/trained_MVAs/bdt_{model_name}_{year_param}/",
-        "models_path" : f"output/bdt_{model_name}_{year_param}",
-        # "models_path" : model_path,
+        "models_path" : f"{model_base_path}/output/bdt_{model_name}_{year_param}",
         "year" : year_param,
     }
     print(f"parameters models path: {parameters['models_path']}")
@@ -684,6 +678,13 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, add all the fields that JEC variations is applied on",
     )
+    parser.add_argument(
+    "--mva_base_path",
+    dest="mva_base_path",
+    default=".",
+    action="store",
+    help="base path where MVA model is saved",
+    )
     start_time = time.time()
     client =  Client(n_workers=30,  threads_per_worker=1, processes=True, memory_limit='30 GiB') 
 
@@ -728,6 +729,7 @@ if __name__ == "__main__":
 
     print(f"args.samples: {args.samples}")
     is_signal_MC = False
+    mva_base_path = args.mva_base_path
     for sample in args.samples:
         if sample.lower() == "data":
             full_load_path = load_path+f"/data_*/*/*.parquet" # original
@@ -839,24 +841,24 @@ if __name__ == "__main__":
             print("done loading events!")
             if category == "ggh":
                 if is_signal_MC: # add extra fields for uncertainties in datacard
-                    # processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, jec_unc_fields=jec_unc_fields)
+                    # processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, jec_unc_fields=jec_unc_fields, model_base_path=mva_base_path)
                     
                     processed_events_l = []
                     # test on only wgts first
-                    processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7)
+                    processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7, model_base_path=mva_base_path)
                     processed_events_l.append(processed_events)
     
                     smaller_jec_unc_field_l = split_maxlen(jec_unc_fields, 4)
                     for small_jec_unc_fields in smaller_jec_unc_field_l:
                         print(f"small_jec_unc_fields: {small_jec_unc_fields}")
                         
-                        processed_events = process4gghCategory(events, args.year, args.model_name, jec_unc_fields=small_jec_unc_fields)
+                        processed_events = process4gghCategory(events, args.year, args.model_name, jec_unc_fields=small_jec_unc_fields, model_base_path=mva_base_path)
                         processed_events_l.append(processed_events)
     
                     processed_events = mergeAkZips(processed_events_l)
                     del processed_events_l
                 else:
-                    processed_events = process4gghCategory(events, args.year, args.model_name, do_6p7=args.do_6p7)
+                    processed_events = process4gghCategory(events, args.year, args.model_name, do_6p7=args.do_6p7, model_base_path=mva_base_path)
             elif category == "vbf":
                 processed_events = process4vbfCategory(events) 
             else: 
