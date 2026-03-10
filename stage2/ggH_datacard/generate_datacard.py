@@ -276,7 +276,7 @@ if __name__ == "__main__":
     dest="save_path",
     default="plots",
     action="store",
-    help="string value production category we're working on",
+    help="Output files will be saved here",
     )
     args = parser.parse_args()
     # check for valid arguments
