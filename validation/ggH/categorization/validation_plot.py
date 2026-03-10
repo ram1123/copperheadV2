@@ -335,7 +335,7 @@ if __name__ == "__main__":
                     "weights":np.concatenate(sample_dict[group_name]["wgt_nominal"], axis=0)
                 }
 
-            print(f"bkg_MC_dict: {bkg_MC_dict}")
+            # print(f"bkg_MC_dict: {bkg_MC_dict}")
             
         
             # define Sig MC dict

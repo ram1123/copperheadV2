@@ -6,7 +6,8 @@
 
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDMuIDFix_V2 -y "2022preEE 2022postEE 2023 2023BPix" -m compact -k -i 1)
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l test -y "2022postEE" -m compact -k -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2 -y "2022preEE 2022postEE" -m compact -k -i 0)
+snakemake -s workflow/Snakefile plot_all  -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --allowed-rules plots  -R plots
 
 ```
 

@@ -254,6 +254,7 @@ if __name__ == "__main__":
         year="2024"
     elif year == "2016":
         year="2016preVFP"
+
     load_path =f"{args.base_path}/{args.label}/{args.category}/stage2_output/{year}/"
     
     bdt_edges = OmegaConf.load(f"{load_path}/BDT_edges.yaml")[year]
