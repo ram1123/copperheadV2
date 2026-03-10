@@ -15,7 +15,7 @@ import os
 import copy
 import pandas as pd
 # from modules.utils import getGOF_KS
-# from src.corrections.jet import applyUpDown, getJecJerUncertainties
+from src.corrections.jet import applyUpDown, getJecJerUncertainties
 
 def fillWgtVarations(df : pd.DataFrame, events, nSubCats : int):
     # print(f"fillWgtVarations b4: \n {df}")
