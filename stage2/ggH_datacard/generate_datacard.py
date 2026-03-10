@@ -15,7 +15,7 @@ import os
 import copy
 import pandas as pd
 # from modules.utils import getGOF_KS
-# from src.corrections.jet import applyUpDown, getJecJerUncertainties
+from src.corrections.jet import applyUpDown, getJecJerUncertainties
 
 def fillWgtVarations(df : pd.DataFrame, events, nSubCats : int):
     # print(f"fillWgtVarations b4: \n {df}")
@@ -63,9 +63,9 @@ def fillJecJerVarationsByYear(df : pd.DataFrame, load_path, years : list, nSubCa
     for subCat_ix in range(nSubCats):
         for year in years:
             year_load_path = load_path.replace("year_value", year)
-            # print(f"year_load_path: {year_load_path}")
+            print(f"year_load_path: {year_load_path}")
             events = ak.from_parquet(year_load_path)
-            # print(f"events.fields: {events.fields}")
+            print(f"events.fields: {events.fields}")
             row_data = {}
             # row_data["year"] =  year
             for jec_unc_name in jec_unc_fields:
@@ -208,11 +208,23 @@ QCDscale_qqH     lnN     -            0.997/1.004  -
 pdf_Higgs_gg     lnN     1.032        -            -          
 pdf_Higgs_qq     lnN     -            1.021        -      
 ------------
-lumi_13TeV_2016  lnN       1.012        1.012        -
-lumi_13TeV_2017  lnN       1.023        1.023        -
-lumi_13TeV_2018  lnN       1.025        1.025        -
 """)# QCD and pdf Source table 2.1 from AN-19-124. Lumi source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/LumiRecommendationsRun2
-    
+        
+    if year == "2016":
+        lines.append("lumi_13TeV_2016       lnN     1.012       1.012       -")
+    elif year == "2017":
+        lines.append("lumi_13TeV_2017       lnN     1.023       1.023       -")
+    elif year == "2018":
+        lines.append("lumi_13TeV_2018       lnN     1.025       1.025       -")
+    elif "2022" in year:
+        lines.append("lumi_13p6TeV_Corr     lnN     1.0138      1.0138      -")
+    elif "2023" in year:
+        lines.append("lumi_13p6TeV_Corr     lnN     1.0017      1.0017      -")
+        lines.append("lumi_13p6TeV_23_24    lnN     1.0127      1.0127      -")
+    elif "2024" in year:
+        lines.append("lumi_13p6TeV_Corr     lnN     1.0020      1.0020      -")
+        lines.append("lumi_13p6TeV_23_24    lnN     1.0068      1.0068      -")
+        lines.append("lumi_13p6TeV_uncorr   lnN     1.0144      1.0144      -")
     for u in nuisances:
         # for sample i
         ggh_val = factor_pair(df, u, f"subCat{subCat_ix}_ggh")
@@ -258,6 +270,14 @@ if __name__ == "__main__":
     action="store",
     help="MVA model name to load",
     )
+    parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default="plots",
+    action="store",
+    help="string value production category we're working on",
+    )
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
@@ -274,7 +294,7 @@ if __name__ == "__main__":
     # year = "2017" #FIXME
 
     # make save directory
-    base_path = f"./datacards/{args.year}/{args.label}"
+    base_path = f"{args.save_path}/stage3/{args.year}/{args.label}/datacards/"
     plot_save_path = base_path
     if not os.path.exists(plot_save_path):
         os.makedirs(plot_save_path)
@@ -339,8 +359,11 @@ if __name__ == "__main__":
         # fill in jec/jer unc
         # --------------------------------------------------------------
 
-        years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-        # years = ["2017"] 
+        if args.year == "all":
+            # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
+            years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
+        else:
+            years = [args.year]
         row_labels = []
         for year in years:
             row_labels = row_labels + [f"subCat{i}_{year}" for i in range(nSubCats)]
@@ -353,7 +376,7 @@ if __name__ == "__main__":
         print(f"jec_unc_fields: {jec_unc_fields}")
         # raise ValueError
         df_JecByYear = pd.DataFrame(index=row_labels, columns=(jec_unc_fields + ["nominal"]))
-        fname = f"processed_events_sigMC_{sample}.parquet"
+        fname = f"processed_events_sigMC_{sample}*.parquet"
         load_path = f"{args.load_path}/year_value/{fname}"
         print(f"load_path: {load_path}")
         df_JecByYear = fillJecJerVarationsByYear(df_JecByYear, load_path, years, nSubCats, jec_unc_fields)
@@ -417,6 +440,8 @@ pdf_index_ggh discrete
         datacard_subCat_str = datacard_subCat_str.replace("pdf_index_ggh discrete", "")
         with open(datacard_fname, "w") as f:
             f.write(datacard_subCat_str)
+
+    print(f"Datacards saved at {base_path}")
 
     print("Success!")
 

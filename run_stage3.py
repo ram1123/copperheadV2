@@ -276,6 +276,14 @@ if __name__ == "__main__":
     action="store",
     help="MVA model name to load",
     )
+    parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default="plots",
+    action="store",
+    help="string value production category we're working on",
+    )    
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
@@ -306,7 +314,7 @@ if __name__ == "__main__":
     print("events loaded!")
 
     # make plot directory
-    base_path = f"./validation/stage3/{args.year}/{args.label}"
+    base_path = f"{args.save_path}/stage3/{args.year}/{args.label}"
     plot_save_path = base_path
     if not os.path.exists(plot_save_path):
         os.makedirs(plot_save_path)
@@ -2753,7 +2761,7 @@ if __name__ == "__main__":
     # Save to Signal, Background and Data to Workspace
     # ---------------------------------------------------
     # workspace_path = "./workspaces"
-    workspace_path = f"{base_path}/workspaces"
+    workspace_path = f"{base_path}/datacards/my_workspace"
     if not os.path.exists(workspace_path):
         os.makedirs(workspace_path)
     # post fit

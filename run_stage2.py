@@ -158,14 +158,10 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
 
     # merged 2016preVFP and 2016postVFP for BDT training
     if "2016" in year:
-        year_param = "2016"
         bdt_training_year = "2016"
     else:
-        year_param = year
         bdt_training_year = model_trainYear
 
-    # year_param="all"  # make all year to take one BDT trained over all years # FIXME
-    print(f"year_param: {year_param}")
     print(f"bdt_training_year: {bdt_training_year}")
     model_path = f"{model_base_path}/output/bdt_{model_name}_{bdt_training_year}"
     training_feat_path = f"{model_path}/training_features.json"
@@ -289,14 +285,6 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
         events[field] = ak.fill_none(events[field], value=none_val)
     
     print(f"process4gghCategory year: {year}")
-    # if year == "2016_RERECO": # I didn't train a separate BDT for rereco eras
-    #     year_param = "2016preVFP"
-    # elif "RERECO" in year: # ie 2017_RERECO
-    #     year_param = year.replace("_RERECO", "")
-    # elif "2016" in year: # we merge 2016preVFP and 2016postVFP into one 2016 for BDT training
-    #     year_param = "2016"
-    # else:
-    #     year_param = year
     parameters = {
         "models_path" : f"{model_base_path}/output/bdt_{model_name}_{bdt_training_year}",
         "year" : bdt_training_year,
@@ -320,7 +308,6 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
     # load BDT score edges for subcategory divison
     BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
     edges = OmegaConf.load(BDTedges_load_path)
-    # edges = np.array(edges[year_param])
     edges = np.array(edges[year])
     # edges = 1-edges
     print(f"subCat BDT edges: {edges}")
