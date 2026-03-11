@@ -729,6 +729,7 @@ if __name__ == "__main__":
     is_signal_MC = False
     mva_base_path = args.mva_base_path
     for sample in args.samples:
+        print(f"sample: {sample}")
         if sample.lower() == "data":
             full_load_path = load_path+f"/data_*/*/*.parquet" # original
             # altering to match copperheadV1's stasge1 output to work with copperheadV2
@@ -821,7 +822,7 @@ if __name__ == "__main__":
             
             if args.do_jecUnc:
                 from src.corrections.jet import getJecJerUncertainties
-                jec_yml_path = "/work/users/yun79/Run3/copperheadV2/configs/parameters/jec.yaml"
+                jec_yml_path = "configs/parameters/jec.yaml"
                 jec_unc_fields = getJecJerUncertainties(jec_yml_path, year=args.year) # jec_unc_fields = ["Absolute", etc]
                 jec_unc_fields = applyUpDown(jec_unc_fields) # jec_unc_fields = ["Absolute_up", "Absolute_down", etc]
             else:

@@ -361,7 +361,7 @@ if __name__ == "__main__":
 
         if args.year == "all":
             # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-            years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
+            years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
         else:
             years = [args.year]
         row_labels = []
