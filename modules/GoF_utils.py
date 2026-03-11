@@ -1,6 +1,7 @@
 import ROOT
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import f
 
 def chi2_ndf_manual(pdf, data_hist, x, regions, nfloat):
     chi2 = 0.0
@@ -173,3 +174,11 @@ def getGOF_KS(x: ROOT.RooRealVar, data: ROOT.RooDataHist, pdf: ROOT.RooAbsPdf, c
         plt.clf()
         
     return return_dict
+
+
+def get_fStats_n_pVal(chi2_low, chi2_high, ndf_low, ndf_high):
+    delta_chi2 = chi2_low - chi2_high
+    delta_dof = -(ndf_high - ndf_low) # Negative sign because the order_high is greater than order_low
+    f_statistic = (delta_chi2 / chi2_high) * (ndf_high / delta_dof) if delta_dof != 0 and chi2_high != 0 else 0
+    p_value = 1 - f.cdf(f_statistic, delta_dof, ndf_high)
+    return f_statistic, p_value

@@ -2,6 +2,8 @@ import ROOT
 import ROOT as rt
 from typing import Tuple, List, Dict
 ROOT.gStyle.SetOptStat(0) # remove stats box
+from modules.GoF_utils import chi2_ndf_manual
+import pandas as pd
 
 def getFEWZ_roospline(x, root_path):
     """
@@ -247,8 +249,32 @@ def getUnityHistBand(x, pdf, fitResult, hist2copy):
     h_band.SetMarkerSize(0)
     h_band.SetLineWidth(0)
     return h_band
-    
-def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, save_fname, normalize=True, nbins=100, y_range_l=None):
+
+def zero_yield_in_range(hist, x_min, x_max):
+    """
+    Set the yield (bin content) of a TH1 histogram to zero
+    for bins whose centers lie within [x_min, x_max].
+
+    Parameters
+    ----------
+    hist : ROOT.TH1
+        Input histogram (e.g., TH1F)
+    x_min : float
+        Lower bound of x range
+    x_max : float
+        Upper bound of x range
+    """
+
+    for i in range(1, hist.GetNbinsX() + 1):
+        x = hist.GetBinCenter(i)
+
+        if x_min <= x <= x_max:
+            hist.SetBinContent(i, 0.0)
+            hist.SetBinError(i, 0.0)
+
+    return hist
+
+def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, save_fname, normalize=True, nbins=100, y_range_l=None, blinded=True, fit_range="hiSB,loSB"):
     # normalize=False
     x_name = x.GetName()
     for ix in range(len(subCat_dataHists)):
@@ -274,6 +300,7 @@ def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, sa
         legend = rt.TLegend(0.65,0.75,0.9,0.9)
         frame = x.frame()
         roo_hist_shapModifier = getShapeModifierHist(x, roo_histData_allCat, subCat_dataHists[ix], normalize=normalize, nbins=nbins)
+
         # plot the SMF fit function first
         roo_hist_shapModifier.plotOn(frame, Invisible=True) # Invisible plot for SMF functions to plot over
         SMF_pdf = SMF_pdf_l[ix]
@@ -283,11 +310,13 @@ def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, sa
         SMF_pdf.plotOn(frame, LineColor=rt.kRed)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1),"Polynomial fit", "L")
         
-        
         # plot the shape modifier data
-
-        roo_hist_shapModifier.plotOn(frame)
+        if blinded==True:
+            roo_hist_shapModifier.plotOn(frame, ROOT.RooFit.CutRange(fit_range))
+        else:
+            roo_hist_shapModifier.plotOn(frame)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1),"Shape Modifier", "PE")
+        
         
         
 
@@ -332,6 +361,10 @@ def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, sa
         h_band_line.SetLineWidth(2)
         h_band_line.SetFillStyle(0)  # No fill
         h_band_line.Draw("HIST L SAME")
+
+        if blinded:
+            blinded_x_min, blinded_x_max = 115, 135
+            ratio_hist = zero_yield_in_range(ratio_hist, blinded_x_min, blinded_x_max)
         ratio_hist.Draw("E1 SAME")
         
 
@@ -410,8 +443,8 @@ def get_pdf_by_name(add_pdf, name):
         ROOT.RooAbsPdf or None: The extracted RooAbsPdf if found, otherwise None.
     """
     if not isinstance(add_pdf, ROOT.RooAddPdf):
-        print("Error: Input is not a RooAddPdf instance.")
-        return None
+        print("Warning: Input is not a RooAddPdf instance, just returning the pdf")
+        return add_pdf
 
     # Get the list of component PDFs
     pdf_list = add_pdf.pdfList()
@@ -541,7 +574,7 @@ def getResidHistBand(x, pdf, fitResult, dataHist, n_sigma=1, color=rt.kGreen):
 #     return roo_dataHist
 
 
-def plot_6_26(x, subCat_dataHists, multi_pdf_l, fitResult, save_fname, target_nbins=50, coreFuncName="", unblind=False):
+def plot_6_26(x, subCat_dataHists, multi_pdf_l, fitResult, save_fname, target_nbins=50, coreFuncName="", unblind=False, applyBkgCompName=True, nFit_params=3):
     # target_nbins = 100
     target_nbins = 80 # NOTE: the plots are sensitve to rebins
     x_name = x.GetName()
@@ -558,7 +591,10 @@ def plot_6_26(x, subCat_dataHists, multi_pdf_l, fitResult, save_fname, target_nb
     else:
         fit_range = "loSB,hiSB"
         plot_range = "full"
-        
+    df_dict = {
+        "bdt_cat" : [],
+        "chi2/ndf" : [],
+    }
     for ix in range(len(subCat_dataHists)):
     # for ix in range(1):
         canvas = rt.TCanvas("canvas","canvas",800, 800) # giving a specific name for each canvas prevents segfault
@@ -582,28 +618,29 @@ def plot_6_26(x, subCat_dataHists, multi_pdf_l, fitResult, save_fname, target_nb
         legend = rt.TLegend(0.55,0.65,0.9,0.9)
         frame = x.frame()
         subCat_dataHist = subCat_dataHists[ix]
-        subCat_dataHist = rebinHist(x, subCat_dataHist, target_nbins) # rebin
          
         
         multi_pdf = multi_pdf_l[ix]
+        if applyBkgCompName:
+            bkg_pdf_name = f"model_SubCat{ix}_SMFx{coreFuncName}"
+        else:
+            bkg_pdf_name = multi_pdf.GetName()
         
+        # get chi2
+        if bkg_pdf_name != multi_pdf.GetName():
+            comps = multi_pdf.getComponents()
+            bkg_comp = comps.find(bkg_pdf_name)
+        else:
+            bkg_comp = multi_pdf
+        chi2_regions = [(110,115), (135,150)] # h sidebands
+        chi2, NDF = chi2_ndf_manual(bkg_comp, subCat_dataHist, x, chi2_regions, nFit_params)
+        df_dict["bdt_cat"].append(ix)
+        df_dict["chi2/ndf"].append(chi2/NDF)
+
+        # plot
+        subCat_dataHist = rebinHist(x, subCat_dataHist, target_nbins) # rebin
         subCat_dataHist.plotOn(frame, Invisible=True)
         # bkg_pdf_name = f"model_SubCat{ix}_SMFxBWZRedux"
-        bkg_pdf_name = f"model_SubCat{ix}_SMFx{coreFuncName}"
-        
-        # multi_pdf.plotOn(frame, Components=bkg_pdf_name, Invisible=True) 
-        # hresid_bkg_only = frame.residHist() # obtain residual for later
-
-        # multi_pdf.plotOn(frame, VisualizeError=(fitResult, 2), FillColor=(ROOT.kOrange), Components=bkg_pdf_name) 
-        # legend.AddEntry(frame.getObject(int(frame.numItems())-1),"+/ 2\sigma", "F")
-        
-        # multi_pdf.plotOn(frame, VisualizeError=(fitResult, 1), FillColor=(ROOT.kGreen), Components=bkg_pdf_name) 
-        # legend.AddEntry(frame.getObject(int(frame.numItems())-1),"+/ 1\sigma", "F")
-        
-        # multi_pdf.plotOn(frame, LineColor=rt.kRed, LineWidth=2, Components=bkg_pdf_name, LineStyle=rt.kDashed)
-        # legend.AddEntry(frame.getObject(int(frame.numItems())-1),"Fitted background", "L")
-        # multi_pdf.plotOn(frame, LineColor=rt.kRed, LineWidth=2)
-        
         
         multi_pdf.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range(plot_range), Components=bkg_pdf_name, Invisible=True) 
         hresid_bkg_only = frame.residHist() # obtain residual for later
@@ -617,8 +654,6 @@ def plot_6_26(x, subCat_dataHists, multi_pdf_l, fitResult, save_fname, target_nb
         multi_pdf.plotOn(frame, rt.RooFit.NormRange(fit_range), rt.RooFit.Range(plot_range), LineColor=rt.kRed, LineWidth=2, Components=bkg_pdf_name, LineStyle=rt.kDashed)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1),"Fitted background", "L")
         
-
-
         # sig_frac = get_fracFromAddPdf(add_pdf, f"frac_subCat{ix}")
         # sig_frac.Print("v")
         # original_frac_val = sig_frac.getVal()
@@ -718,10 +753,8 @@ def plot_6_26(x, subCat_dataHists, multi_pdf_l, fitResult, save_fname, target_nb
             canvas.SaveAs(f"{save_fname}_{coreFuncName}_subCat{ix}_unblinded.pdf")
         else:
             canvas.SaveAs(f"{save_fname}_{coreFuncName}_subCat{ix}_blinded.pdf")
-            
-    
-    fitResult.Print()
-
+    # fitResult.Print()
+    return pd.DataFrame(df_dict)
 
 
 # -----------------------------------------------------

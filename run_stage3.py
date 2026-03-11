@@ -415,7 +415,16 @@ if __name__ == "__main__":
 
 
     name = "subCat0_SMF"
-    subCat0_SMF = rt.RooChebychev(name, name, mass, [a0_subCat0, a1_subCat0, a3_subCat0])
+    subCat0_SMF = rt.RooChebychev(
+        name, 
+        name, 
+        mass, 
+        [
+            a0_subCat0, 
+            a1_subCat0, 
+            a3_subCat0
+        ],
+    )
 
 
 
@@ -3177,6 +3186,7 @@ if __name__ == "__main__":
         "sumExp" : "SumExp",
         "FEWZxBern" : "FEWZxBern",
     }
+    df_dict = {}
     for core_func, coreFuncName in core_funcs.items():
         save_fname = f"{plot_save_path}/fig6_26_{coreFuncName}"
 
@@ -3187,9 +3197,11 @@ if __name__ == "__main__":
             sim_sigBkg_pdf[f"subCat3_{core_func}"],
             sim_sigBkg_pdf[f"subCat4_{core_func}"],
         ]
-        plot_6_26(mass, subCat_dataHists, multi_pdf_l, fitResult, save_fname, coreFuncName=coreFuncName, unblind=False)
+        coreFunc_df = plot_6_26(mass, subCat_dataHists, multi_pdf_l, fitResult, save_fname, coreFuncName=coreFuncName, unblind=False, nFit_params=3)
+        df_dict[coreFuncName] = coreFunc_df
 
-
+    df_chi2 = pd.concat(df_dict, axis=1)
+    df_chi2.to_csv(f"{plot_save_path}/chi2ndf.csv")
 
     # ---------------------------------------------------
     # Unblinded fitting
@@ -3331,14 +3343,14 @@ if __name__ == "__main__":
     #     sim_sigBkg_pdf["subCat4_sumExp"],
     # ]
     # plot_6_26(mass, subCat_dataHists, multi_pdf_l, fitResult, save_fname, coreFuncName="SumExp")
-    multi_pdf_l = [
-        sim_sigBkg_pdf["subCat0_FEWZxBern"],
-        sim_sigBkg_pdf["subCat1_FEWZxBern"],
-        sim_sigBkg_pdf["subCat2_FEWZxBern"],
-        sim_sigBkg_pdf["subCat3_FEWZxBern"],
-        sim_sigBkg_pdf["subCat4_FEWZxBern"],
-    ]
-    plot_6_26(mass, subCat_dataHists, multi_pdf_l, fitResult, save_fname, coreFuncName="FEWZxBern", unblind=True)
+    # multi_pdf_l = [
+    #     sim_sigBkg_pdf["subCat0_FEWZxBern"],
+    #     sim_sigBkg_pdf["subCat1_FEWZxBern"],
+    #     sim_sigBkg_pdf["subCat2_FEWZxBern"],
+    #     sim_sigBkg_pdf["subCat3_FEWZxBern"],
+    #     sim_sigBkg_pdf["subCat4_FEWZxBern"],
+    # ]
+    # plot_6_26(mass, subCat_dataHists, multi_pdf_l, fitResult, save_fname, coreFuncName="FEWZxBern", unblind=True, nFit_params=3)
 
     # print(f"data_subCat0_signal sumentries: {data_subCat0_signal.sumEntries()}")
     # print(f"data_subCat1_signal sumentries: {data_subCat1_signal.sumEntries()}")
