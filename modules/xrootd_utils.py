@@ -3,7 +3,7 @@ import re
 AAA_REDIRECTORS = [
     "root://eos.cms.rcac.purdue.edu/",                  # 2
     "root://eos.cms.rcac.purdue.edu/",                  # 2
-    "root://xcache.cms.rcac.purdue.edu/",                  # 1
+    # "root://xcache.cms.rcac.purdue.edu/",                  # 1
 ]
 
 # Accept prefixes like:
