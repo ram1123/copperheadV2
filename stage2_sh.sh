@@ -15,8 +15,8 @@ category="ggh"
 # model_name="Run3_08March_HPeachFold_train_with_bestHP"
 # model_name="Run3_09March_Check"
 # model_name="Run3_10March_005Trials"
-# model_name="Run3_10March_020Trials"
-model_name="Run3_10March_020Trials_RemovedAddHyperPars"
+model_name="Run3_10March_020Trials"
+# model_name="Run3_10March_020Trials_RemovedAddHyperPars"
 # model_name="Run3_10March_100Trials"
 # model_name="Run3_10March_020Trials_oneHotEncoding"
 # model_name="Run3_10March_020Trials_oneHotEncoding_Scan"
@@ -160,11 +160,17 @@ if [[ "${step}" == "2" || "${step}" == "all" ]]; then
 
     save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/${year}"
     mkdir -p "${save_path}"
+    echo "save_path: ${save_path}"
 
-    # FIXME: remove "all" from years if exists
+    # FIXME: remove "all" from years list if exists
+    unwanted_year="all"
+    echo "old years list: ${years[*]}"
+
+    local_years=( "${years[@]//${unwanted_year}/}" )
+    echo "New years list: ${local_years[*]}"
     python stage2/ggH/score_edge_generation/determine_score_edge.py \
         -load ${stage2_save_path} \
-        --years ${years[@]} \
+        --years ${local_years} \
         --label ${stage2_label} \
         -save ${save_path}
 
