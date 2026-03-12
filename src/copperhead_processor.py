@@ -2206,8 +2206,17 @@ class EventProcessor(processor.ProcessorABC):
                 "rho",
                 "area",
                 "btagDeepB",
+                # Need following when running over JEC. First two for 2022 and 2023. All below for 2024
                 "genJetIdx",
                 "btagDeepFlavB",
+                "chHEF",
+                "neHEF",
+                "chEmEF",
+                "neEmEF",
+                "muEF",
+                "chMultiplicity",
+                "neMultiplicity",
+                "multiplicity"
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
 

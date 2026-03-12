@@ -632,7 +632,7 @@ def extract_values(cfg):
     values = list(set(values)) # make a list of unique vals
     return values
     
-def getJecJerUncertainties(yaml_filename, year=None):
+def getJecJerUncertainties(yaml_filename, year=None, jer_unc = False):
     """
     helper function to load the jec uncertainties
     """
@@ -645,7 +645,10 @@ def getJecJerUncertainties(yaml_filename, year=None):
         jec_uncs = extract_values(cfg)
     else:
         jec_uncs = cfg[year]
-    jer_uncs = [f"jer{i}" for i in range(1,7)]
+    if jer_unc:
+        jer_uncs = [f"jer{i}" for i in range(1,7)]  
+    else:
+        jer_uncs = []
     return jec_uncs + jer_uncs
 
 def get_baseVariations(variation_shifts : list):

@@ -16,7 +16,8 @@ category="ggh"
 # model_name="Run3_09March_Check"
 # model_name="Run3_10March_005Trials"
 # model_name="Run3_10March_020Trials"
-model_name="Run3_10March_100Trials"
+model_name="Run3_10March_020Trials_RemovedAddHyperPars"
+# model_name="Run3_10March_100Trials"
 # model_name="Run3_10March_020Trials_oneHotEncoding"
 # model_name="Run3_10March_020Trials_oneHotEncoding_Scan"
 # model_name="Run3_09Mar_HPScan_100Trials"
@@ -41,7 +42,8 @@ stage2_save_path="${base_path}/${label}/${stage2_label}/stage2_output"
 bdt_edge_config_path="configs/MVA/ggH/BDT_edges.yaml"
 mva_base_path="${PWD}"
 
-all_years=(2022preEE 2022postEE 2023 2023BPix 2024)
+all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
+# all_years=(all)
 
 if [[ "${year}" == "all" ]]; then
     years=("${all_years[@]}")
@@ -106,7 +108,7 @@ print_config
 if [[ "${step}" == "0" ]]; then
     print_box "Step 0: Training the BDT for ggH"
     do_hyperparam_search="1" # false
-    n_trials="100" # It is for the bayseian optimization
+    n_trials="20" # It is for the bayseian optimization
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
     mass_decorrelation_strat="targetZpeakMass" # target distribution Zpeak mass
@@ -130,16 +132,19 @@ if [[ "${step}" == "1" || "${step}" == "all" ]]; then
         print_box "Step 1: Apply selection and add BDT score branch (${year_i})"
         sample_l="ggh vbf data"
 
-        python run_stage2.py \
-            -load ${stage2_load_path} \
-            -save ${stage2_save_path} \
-            --samples ${sample_l} \
-            -cat ${category} \
-            --fraction 1.0 \
-            --year ${year_i} \
-            --model_name ${model_name} \
-            --model_trainYear ${model_trainYear} \
-            --mva_base_path ${mva_base_path}
+        if [[ "${year_i}" != "all" ]]; then
+            python run_stage2.py \
+                -load ${stage2_load_path} \
+                -save ${stage2_save_path} \
+                --samples ${sample_l} \
+                -cat ${category} \
+                --fraction 1.0 \
+                --year ${year_i} \
+                --model_name ${model_name} \
+                --model_trainYear ${model_trainYear} \
+                --mva_base_path ${mva_base_path} \
+                # --do_jecUnc # FIXME: make do_jecUnc optional
+        fi
     done
 fi
 
@@ -156,6 +161,7 @@ if [[ "${step}" == "2" || "${step}" == "all" ]]; then
     save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/${year}"
     mkdir -p "${save_path}"
 
+    # FIXME: remove "all" from years if exists
     python stage2/ggH/score_edge_generation/determine_score_edge.py \
         -load ${stage2_save_path} \
         --years ${years[@]} \
@@ -172,11 +178,13 @@ fi
 # -----------------------------------------------------
 if [[ "${step}" == "3" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
-        print_box "Step 3: Obtain the BDT score edges (${year_i})"
-        python stage2/ggH/calculate_score_edges.py \
-            -load ${stage2_save_path} \
-            --year ${year_i} \
-            --edge_cfg_path ${bdt_edge_config_path}
+        if [[ "${year_i}" != "all" ]]; then
+            print_box "Step 3: Obtain the BDT score edges (${year_i})"
+            python stage2/ggH/calculate_score_edges.py \
+                -load ${stage2_save_path} \
+                --year ${year_i} \
+                --edge_cfg_path ${bdt_edge_config_path}
+        fi
     done
 fi
 
@@ -188,16 +196,18 @@ if [[ "${step}" == "4" || "${step}" == "all" ]]; then
         print_box "Step 4: Run stage2 again to save BDT score + sub-category (${year_i})"
         sample_l="data ggh vbf dy tt ww wz"
 
-        python run_stage2.py \
-            -load ${stage2_load_path} \
-            -save ${stage2_save_path} \
-            --samples ${sample_l} \
-            -cat ${category} \
-            --fraction 1.0 \
-            --year ${year_i} \
-            --model_name ${model_name} \
-            --model_trainYear ${model_trainYear} \
-            --mva_base_path ${mva_base_path}
+        if [[ "${year_i}" != "all" ]]; then
+            python run_stage2.py \
+                -load ${stage2_load_path} \
+                -save ${stage2_save_path} \
+                --samples ${sample_l} \
+                -cat ${category} \
+                --fraction 1.0 \
+                --year ${year_i} \
+                --model_name ${model_name} \
+                --model_trainYear ${model_trainYear} \
+                --mva_base_path ${mva_base_path}
+        fi
     done
 fi
 
@@ -234,17 +244,20 @@ if [[ "${step}" == "6" || "${step}" == "all" ]]; then
         print_box "Step 6: Prepare extra validation inputs (${year_i})"
         sample_l="ggh vbf dy tt ww wz"
 
-        python run_stage2.py \
-            -load ${stage2_load_path} \
-            -save ${stage2_save_path} \
-            --samples ${sample_l} \
-            -cat ${category} \
-            --fraction 1.0 \
-            --year ${year_i} \
-            --model_name ${model_name} \
-            --model_trainYear ${model_trainYear} \
-            --mva_base_path ${mva_base_path} \
-            --do_6p7
+        if [[ "${year_i}" != "all" ]]; then
+            # Stage-2 doesn't accept the year == all option.
+            python run_stage2.py \
+                -load ${stage2_load_path} \
+                -save ${stage2_save_path} \
+                --samples ${sample_l} \
+                -cat ${category} \
+                --fraction 1.0 \
+                --year ${year_i} \
+                --model_name ${model_name} \
+                --model_trainYear ${model_trainYear} \
+                --mva_base_path ${mva_base_path} \
+                --do_6p7
+        fi
 
         region="signal"
 
@@ -298,42 +311,47 @@ if [[ "${step}" == "6" || "${step}" == "all" ]]; then
     done
 fi
 
+
 # -----------------------------------------------------
 # Step 7: Workspace
 # -----------------------------------------------------
 if [[ "${step}" == "7" || "${step}" == "ws" || "${step}" == "all" ]]; then
-    print_box "Step 7: Get workspace year: (${year})"
-    stage3_label="${label}_X_${model_name}_perYr"
-    save_path="output/bdt_${model_name}_${model_trainYear}"
-    mkdir -p "${save_path}"
+    for year_i in "${years[@]}"; do
+        print_box "Step 7: Get workspace year: (${year_i})"
+        stage3_label="${label}_X_${model_name}_perYr"
+        save_path="output/bdt_${model_name}_${model_trainYear}"
+        mkdir -p "${save_path}"
 
-    echo "stage2_save_path: ${stage2_save_path}"
+        echo "stage2_save_path: ${stage2_save_path}"
 
-    python run_stage3.py \
-        -load ${stage2_save_path} \
-        -cat ${category} \
-        --year ${year} \
-        --label ${stage3_label} \
-        -save ${save_path}
+        python run_stage3.py \
+            -load ${stage2_save_path} \
+            -cat ${category} \
+            --year ${year_i} \
+            --label ${stage3_label} \
+            -save ${save_path}
+    done
 fi
 
 # -----------------------------------------------------
 # Step 8: Datacard
 # -----------------------------------------------------
 if [[ "${step}" == "8" || "${step}" == "dc" || "${step}" == "all" ]]; then
-    print_box "Step 8: Obtain datacard year: (${year})"
-    stage3_label="${label}_X_${model_name}_perYr"
-    save_path="output/bdt_${model_name}_${model_trainYear}"
-    mkdir -p "${save_path}"
+    for year_i in "${years[@]}"; do
+        print_box "Step 8: Obtain datacard year: (${year_i})"
+        stage3_label="${label}_X_${model_name}_perYr"
+        save_path="output/bdt_${model_name}_${model_trainYear}"
+        mkdir -p "${save_path}"
 
-    echo "stage2_save_path: ${stage2_save_path}"
+        echo "stage2_save_path: ${stage2_save_path}"
 
-    python stage2/ggH_datacard/generate_datacard.py \
-        -load ${stage2_save_path} \
-        -cat ${category} \
-        --year ${year} \
-        --label ${stage3_label} \
-        -save ${save_path}
+        python stage2/ggH_datacard/generate_datacard.py \
+            -load ${stage2_save_path} \
+            -cat ${category} \
+            --year ${year_i} \
+            --label ${stage3_label} \
+            -save ${save_path}
+    done
 fi
 
 print_box "Done"

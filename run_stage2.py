@@ -17,6 +17,7 @@ import json
 # from modules.utils import removeForwardJets, fromPdDftoAkZip
 from modules.selection import filterRegion
 import time
+from modules.utils import logger
 
 def split_into_n_parts(lst, n_parts):
     return [lst[i::n_parts] for i in range(n_parts)]
@@ -34,7 +35,7 @@ def prepare_features(events, features, variation="nominal"):
         elif trf in events.fields:
             features_var.append(trf)
         else:
-            print(f"Variable {trf} not found in training dataframe!")
+            logger.info(f"Variable {trf} not found in training dataframe!")
     return features_var
 
 def renameFieldsToV2(events):
@@ -84,10 +85,10 @@ def categoryWrapper(name: str, events) -> ak.Array:
     for class_name, obj in inspect.getmembers(category_cuts):
         if ("__" not in class_name) and ("Custom" in class_name):  # only look at classes I wrote
             if name == obj.name:
-                # print(f"found category cut for {name}!")
+                # logger.info(f"found category cut for {name}!")
                 return obj.filterCategory(events) # this is a 1-D boolean awkward array with length of events
     if not found_cut:
-        print(f"ERROR: given category name {name} for categoryWrapper is not supported!")
+        logger.info(f"ERROR: given category name {name} for categoryWrapper is not supported!")
         raise ValueError
 
 def categoryWrapperLoop(names: List[str], events) -> ak.Array:
@@ -95,7 +96,7 @@ def categoryWrapperLoop(names: List[str], events) -> ak.Array:
     Wrapper function that implements categoryWrapper in a loop
     """
     if len(names) == 0:
-        print(f"ERROR: given names in categoryWrapperLoop is empty!")
+        logger.info(f"ERROR: given names in categoryWrapperLoop is empty!")
         raise ValueError
     bool_arrs = [categoryWrapper(name, events) for name in names]
     out_arr = bool_arrs[0]
@@ -114,7 +115,7 @@ def getCategoryCutNames(category:str) -> List[str]:
     category_config = OmegaConf.load("configs/categories/categories.yml")
     out_list = category_config["baseline"]
     out_list += category_config[category]
-    print(f"getCategoryCutNames out_list: {out_list}")
+    logger.info(f"getCategoryCutNames out_list: {out_list}")
     return out_list
 
 def getDeltaPhi(phi1,phi2):
@@ -162,17 +163,17 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
     else:
         bdt_training_year = model_trainYear
 
-    print(f"bdt_training_year: {bdt_training_year}")
+    logger.info(f"bdt_training_year: {bdt_training_year}")
     model_path = f"{model_base_path}/output/bdt_{model_name}_{bdt_training_year}"
     training_feat_path = f"{model_path}/training_features.json"
-    print(f"trainig_feat_path: {training_feat_path}")
+    logger.info(f"trainig_feat_path: {training_feat_path}")
     with open(training_feat_path, 'r') as file:
         training_features = json.load(file)
 
     # load training features from the ak.Record
     for training_feature in training_features:
         if training_feature not in events.fields:
-            print(f"missing feature: {training_feature}")
+            logger.info(f"missing feature: {training_feature}")
 
     # ----------------------------------
     # do preprocessing
@@ -224,21 +225,21 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
         fields2load = fields2load + fields2load4variation + training_feature4variation
     fields2load = list(set(fields2load + wgt_unc_fields)) # remove redundant fields
 
-    print(f"fields2load: {fields2load}")
-    # print(f"training_features: {training_features}")
+    logger.info(f"fields2load: {fields2load}")
+    # logger.info(f"training_features: {training_features}")
     # raise ValueError
 
     # turns out this code was unneccsary but keeping just in case ----------------------------
     # # FIXME: if there's any missing up and down variations, just plug it with the nominal value:
     # for field in fields2load:
     #     if field not in events.fields:
-    #         print(f"{field} not avialable in events.fields! Replacing with the nominal verion!")
+    #         logger.info(f"{field} not avialable in events.fields! Replacing with the nominal verion!")
     #         field2copy = None
     #         for bdt_input in bdt_inputs:
     #             bdt_input_cut = bdt_input.replace("_nominal", "")
     #             if bdt_input_cut in field:
     #                 field2copy = bdt_input
-    #         print(f"field2copy: {field2copy}")
+    #         logger.info(f"field2copy: {field2copy}")
     #         events[field] = events[field2copy]
     # turns out this code was unneccsary but keeping just in case ----------------------------
 
@@ -249,6 +250,7 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
     #     field : events[field] for field in fields2load
     # }).compute()
     # # original end -------------------------------
+    logger.info(f"fields available: {events.fields}")
 
     # filter events for ggH category
     # region, _ = filterRegion(events, region="full")
@@ -259,13 +261,16 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
         categoryWrapperLoop(cut_names, events)
         & region
     )
-    print(f"gghCat_selection: {gghCat_selection}")
-    print(f"gghCat_selection sum: {ak.sum(gghCat_selection)}")
-    print(f"gghCat_selection anti sum: {ak.sum(~gghCat_selection)}")
-    print(f"gghCat_selection sum: {ak.sum(events['wgt_nominal'][gghCat_selection])}")
-    print(f"events num b4: {ak.num(events, axis=0)}")
+    logger.info(f"gghCat_selection: {gghCat_selection}")
+    logger.info(f"gghCat_selection sum: {ak.sum(gghCat_selection)}")
+    logger.info(f"gghCat_selection anti sum: {ak.sum(~gghCat_selection)}")
+    logger.info(f"gghCat_selection sum: {ak.sum(events['wgt_nominal'][gghCat_selection])}")
+    logger.info(f"events num b4: {ak.num(events, axis=0)}")
     events = events[gghCat_selection]
-    print(f"events num after: {ak.num(events, axis=0)}")
+    logger.info(f"events num after: {ak.num(events, axis=0)}")
+
+    logger.info(f"fields to load: {fields2load}")
+    logger.info(f"fields available: {events.fields}")
 
     # original start -------------------------------
     events = ak.zip({
@@ -284,20 +289,20 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
             # none_val = 0.0 # AN's method # V2_Aug16_2025Reprod_IssueNum2
         events[field] = ak.fill_none(events[field], value=none_val)
     
-    print(f"process4gghCategory year: {year}")
+    logger.info(f"process4gghCategory year: {year}")
     parameters = {
         "models_path" : f"{model_base_path}/output/bdt_{model_name}_{bdt_training_year}",
         "year" : bdt_training_year,
     }
-    print(f"parameters models path: {parameters['models_path']}")
+    logger.info(f"parameters models path: {parameters['models_path']}")
     variatons2loop = ["nominal"] + jec_unc_fields
-    print(f"variatons2loop: {variatons2loop}")
+    logger.info(f"variatons2loop: {variatons2loop}")
 
     # -----------------------------------------------
     # df = ak.to_dataframe(events).reset_index(drop=True)
-    # # print(df["jet1_eta_nominal"][:30])
+    # # logger.info(df["jet1_eta_nominal"][:30])
     # df = removeForwardJets(df)
-    # # print(df["jet1_eta_nominal"][:30])
+    # # logger.info(df["jet1_eta_nominal"][:30])
     # events = fromPdDftoAkZip(df)
     # -----------------------------------------------
     
@@ -310,7 +315,7 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
     edges = OmegaConf.load(BDTedges_load_path)
     edges = np.array(edges[year])
     # edges = 1-edges
-    print(f"subCat BDT edges: {edges}")
+    logger.info(f"subCat BDT edges: {edges}")
 
     for variation in variatons2loop:
         if variation == "nominal":
@@ -408,7 +413,7 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
 #     events["mu2_pt_over_mass"] = events.mu2_pt / events.dimuon_mass
 #     events["dimuon_ebe_mass_res_rel"] = events.dimuon_ebe_mass_res / events.dimuon_mass
 #     events["rpt"] = events.mmjj_pt / (events.dimuon_pt + events.jet1_pt + events.jet2_pt)# as of writing this code, rpt variable is calculated, but not saved during stage1
-#     print("Warning find a way to fix the year thing")
+#     logger.info("Warning find a way to fix the year thing")
 #     raise ValueError
 #     events["year"] = ak.ones_like(events.mu1_pt)* 2018
 
@@ -480,7 +485,7 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
 #     # load training features from the ak.Record
 #     for training_feature in training_features:
 #         if training_feature not in events.fields:
-#             print(f"mssing feature: {training_feature}")
+#             logger.info(f"mssing feature: {training_feature}")
 
 #     # ----------------------------------
 #     # do preprocessing
@@ -556,7 +561,7 @@ def getOtherSamples(load_path):
     for mc_name in otherMC_samples:
         glob_path = load_path+f"/{mc_name}/*/*.parquet"
         glob_out = glob.glob(glob_path)
-        print(f"{mc_name} glob_out: {len(glob_out)}")
+        logger.info(f"{mc_name} glob_out: {len(glob_out)}")
         glob_l += glob_out
     return glob_l
 
@@ -567,7 +572,7 @@ def applyUpDown(variation_base_l: list):
     variation_up_l = [f"{variation}_up" for variation in variation_base_l]
     variation_down_l = [f"{variation}_down" for variation in variation_base_l]
     combined_variation_l = variation_up_l + variation_down_l
-    # print(f"combined_variation_l: {combined_variation_l}")
+    # logger.info(f"combined_variation_l: {combined_variation_l}")
     return combined_variation_l
 
 
@@ -694,8 +699,8 @@ if __name__ == "__main__":
     # )
     # cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
     # client = gateway.connect(cluster_info.name).get_client()
-    # print(f"client: {client}")
-    # print("Gateway Client created")
+    # logger.info(f"client: {client}")
+    # logger.info("Gateway Client created")
 
 
 
@@ -703,13 +708,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
-        print("load path to load stage1 output is not specified!")
+        logger.info("load path to load stage1 output is not specified!")
         raise ValueError
     if args.save_path == None:
-        print("save path is not specified!")
+        logger.info("save path is not specified!")
         raise ValueError
     if len(args.samples) == 0:
-        print("samples list is zero!")
+        logger.info("samples list is zero!")
         raise ValueError
     if args.fraction is None: # fraction == 1.0
         load_path = f"{args.load_path}/{args.year}/f1_0"
@@ -722,14 +727,14 @@ if __name__ == "__main__":
     # compacted_load_path = f"{args.load_path}/{args.year}/compacted" 
     # if os.path.isdir(load_path): 
     #     load_path = compacted_load_path
-    print(f"load_path: {load_path}")
+    logger.info(f"load_path: {load_path}")
     category = args.category.lower()
 
-    print(f"args.samples: {args.samples}")
+    logger.info(f"args.samples: {args.samples}")
     is_signal_MC = False
     mva_base_path = args.mva_base_path
     for sample in args.samples:
-        print(f"sample: {sample}")
+        logger.info(f"sample: {sample}")
         if sample.lower() == "data":
             full_load_path = load_path+f"/data_*/*/*.parquet" # original
             # altering to match copperheadV1's stasge1 output to work with copperheadV2
@@ -756,7 +761,7 @@ if __name__ == "__main__":
                 full_load_path = load_path+f"/dyTo2Mu_M-50_aMCatNLO/*/*.parquet"
             else:
                 full_load_path = load_path+f"/dy*incl/*/*.parquet"
-            print(f"DY full_load_path: {full_load_path}")
+            logger.info(f"[Sample] DY full_load_path: {full_load_path}")
         elif sample.lower() == "ewk":
             # full_load_path = load_path+f"/ewk_lljj_mll50_mjj120/*/*.parquet"
             full_load_path = load_path+f"/ewk_*/*/*.parquet"
@@ -775,17 +780,17 @@ if __name__ == "__main__":
             full_load_path = getOtherSamples(load_path) # returns a list
             if len(full_load_path) ==0: continue
         else:
-            print(f"unsupported sample!")
+            logger.info(f"[Sample] unsupported sample!")
             raise ValueError
             
-        # print(f"full_load_path: {full_load_path}")
+        # logger.info(f"full_load_path: {full_load_path}")
         # if "data" in full_load_path:
         #     data_filelist.append(full_load_path)
         # elif ("ggh" in full_load_path) or ("vbf" in full_load_path):
         #     sig_MC_filelist.append(full_load_path)
         # else:
         #     bkg_MC_filelist.append(full_load_path)
-        # print(f"full_load_path: {full_load_path}")
+        # logger.info(f"full_load_path: {full_load_path}")
         if not isinstance(full_load_path, list):
             filelist_big = glob.glob(full_load_path)
         else:
@@ -799,16 +804,16 @@ if __name__ == "__main__":
         else:
             n_part_target = 1
         filelist_l = split_into_n_parts(filelist_big, n_part_target)
-        print(f"sample: {sample}")
-        print(f"len(filelist_l): {len(filelist_l)}")
-        # print(f"filelist_l: {filelist_l}")
+        logger.info(f"[Sample] sample: {sample}")
+        logger.info(f"[Sample] len(filelist_l): {len(filelist_l)}")
+        # logger.info(f"filelist_l: {filelist_l}")
         n_partitions = len(filelist_l)
         for partition_idx in range(n_partitions):
         # for partition_idx in range(len(filelist_l)):
             filelist = filelist_l[partition_idx]
             # events = dak.from_parquet(full_load_path)
             events = dak.from_parquet(filelist)
-            # print(f"events.fields: {events.fields}")
+            # logger.info(f"events.fields: {events.fields}")
             target_chunksize = 150_000
             # events = events.repartition(rows_per_partition=target_chunksize) # FIXME
     
@@ -817,10 +822,11 @@ if __name__ == "__main__":
                 if (("wgt" in field) and not ("separate" in field)) and not ("nominal" in field):
                     wgt_unc_fields.append(field)
             if args.do_6p7:
-                print("processing for figure 6.7 production, skipping weight uncertainty!")
+                logger.info(f"[partition_idx:{partition_idx}] processing for figure 6.7 production, skipping weight uncertainty!")
                 wgt_unc_fields = [] 
             
-            if args.do_jecUnc:
+            is_data_sample = sample.lower() == "data"
+            if args.do_jecUnc and not is_data_sample:
                 from src.corrections.jet import getJecJerUncertainties
                 jec_yml_path = "configs/parameters/jec.yaml"
                 jec_unc_fields = getJecJerUncertainties(jec_yml_path, year=args.year) # jec_unc_fields = ["Absolute", etc]
@@ -829,34 +835,39 @@ if __name__ == "__main__":
                 jec_unc_fields =[] 
             
             # extra_fields = wgt_unc_fields + jec_unc_fields
-            print(f"wgt_unc_fields: {wgt_unc_fields}")
-            print(f"jec_unc_fields: {jec_unc_fields}")
-            print(f"args.do_6p7: {args.do_6p7}")
-            print(f"category: {category}")
-            print(f"is_signal_MC: {is_signal_MC}")
-            print(f"sample: {sample}")
-            # print(f"wgt_unc_fields: {len(wgt_unc_fields)}")
+            logger.info(f"[partition_idx:{partition_idx}] wgt_unc_fields: {wgt_unc_fields}")
+            logger.info(f"[partition_idx:{partition_idx}] jec_unc_fields: {jec_unc_fields}")
+            logger.info(f"[partition_idx:{partition_idx}] args.do_6p7: {args.do_6p7}")
+            logger.info(f"[partition_idx:{partition_idx}] category: {category}")
+            logger.info(f"[partition_idx:{partition_idx}] is_signal_MC: {is_signal_MC}")
+            logger.info(f"[partition_idx:{partition_idx}] sample: {sample}")
+            # logger.info(f"wgt_unc_fields: {len(wgt_unc_fields)}")
             
-            print("done loading events!")
+            logger.info("done loading events!")
             if category == "ggh":
                 if is_signal_MC: # add extra fields for uncertainties in datacard
                     # processed_events = process4gghCategory(events, args.year, args.model_name, wgt_unc_fields=wgt_unc_fields, jec_unc_fields=jec_unc_fields, model_base_path=mva_base_path)
                     
                     processed_events_l = []
                     # test on only wgts first
+                    logger.info(f"[partition_idx:{partition_idx}] Events field: {events.fields}")
+                    logger.warning("This is first call of process4gghCategory")
                     processed_events = process4gghCategory(events, args.year, args.model_trainYear, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7, model_base_path=mva_base_path)
                     processed_events_l.append(processed_events)
     
                     smaller_jec_unc_field_l = split_maxlen(jec_unc_fields, 4)
                     for small_jec_unc_fields in smaller_jec_unc_field_l:
-                        print(f"small_jec_unc_fields: {small_jec_unc_fields}")
+                        logger.info(f"[partition_idx:{partition_idx}] small_jec_unc_fields: {small_jec_unc_fields}")
                         
+                        logger.info(f"[partition_idx:{partition_idx}] Events field: {events.fields}")
+                        logger.warning("This is 2nd call of process4gghCategory")
                         processed_events = process4gghCategory(events, args.year, args.model_trainYear, args.model_name, jec_unc_fields=small_jec_unc_fields, model_base_path=mva_base_path)
                         processed_events_l.append(processed_events)
     
                     processed_events = mergeAkZips(processed_events_l)
                     del processed_events_l
                 else:
+                    logger.warning(f"[partition_idx:{partition_idx}] This is 3rd call of process4gghCategory")
                     processed_events = process4gghCategory(events, args.year, args.model_trainYear, args.model_name, do_6p7=args.do_6p7, model_base_path=mva_base_path)
             elif category == "vbf":
                 processed_events = process4vbfCategory(events) 
@@ -864,11 +875,12 @@ if __name__ == "__main__":
                 print ("unsupported category given!")
                 raise ValueError
             # define save path and save
+            logger.warning(f"[partition_idx:{partition_idx}] passed step-1")
             if args.do_6p7:
                 save_path = f"{args.save_path}ForFig6_7/{args.year}"
             else:
                 save_path = f"{args.save_path}/{args.year}"
-            print(f"save_path: {save_path}")
+            logger.info(f"[partition_idx:{partition_idx}] save_path: {save_path}")
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
                 
@@ -899,7 +911,7 @@ if __name__ == "__main__":
             else:
                 print ("unsupported sample given!")
                 raise ValueError
-            print(f"save_filename: {save_filename}")
+            logger.info(f"[partition_idx:{partition_idx}] save_filename: {save_filename}")
         
             # delete the file if there's already same save_filename
             try:
@@ -915,7 +927,9 @@ if __name__ == "__main__":
         edges = OmegaConf.load(BDTedges_load_path)
         OmegaConf.save(config=edges, f=f'{save_path}/BDT_edges.yaml')
     
-    end_time = time.time()
-    print(f"stage2 done in {end_time-start_time} seconds")
+    client = Client.current()
+    client.close()
 
+    end_time = time.time()
+    logger.info(f"stage2 done in {end_time-start_time} seconds")
     
