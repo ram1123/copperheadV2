@@ -657,6 +657,20 @@ def get_baseVariations(variation_shifts : list):
     # logger.debug(f"variation_base_l: {variation_base_l}")
     return variation_base_l
 
+def get_jec_sources(cset, jec_tag, jet_type="AK4PFPuppi"):
+    sources = []
+
+    prefix = f"{jec_tag}_Regrouped_"
+    suffix = f"_{jet_type}"
+
+    for key in cset.keys():
+        logger.debug(f"JEC keys: {key}")
+        if key.startswith(prefix) and key.endswith(suffix):
+            source = key[len(prefix):-len(suffix)]
+            sources.append(source)
+
+    return sorted(sources)
+
 def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
     jec_parameters = config["jec_parameters"]
 
