@@ -107,7 +107,7 @@ print_config
 # -----------------------------------------------------
 if [[ "${step}" == "0" ]]; then
     print_box "Step 0: Training the BDT for ggH"
-    do_hyperparam_search="1" # false
+    do_hyperparam_search="1" # true (enable hyperparameter search)
     n_trials="20" # It is for the bayseian optimization
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
