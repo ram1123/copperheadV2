@@ -3,6 +3,7 @@ import numpy
 import warnings
 from functools import partial, reduce
 import operator
+from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 
 
 def getDataJecTag(jec_pars, dataset):
@@ -715,7 +716,7 @@ class JECStack:
             raise ValueError("json_path is required for clib initialization.")
 
         # Load corrections directly from the JSON path
-        self.cset = clib.CorrectionSet.from_file(self.json_path)
+        self.cset = get_corrset(self.json_path)
 
         # Construct lists for jec, jer, and uncertainties
         self.jec_names_clib = [f"{self.jec_tag}_{level}_{self.jet_algo}" for level in self.jec_levels]

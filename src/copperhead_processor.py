@@ -48,6 +48,7 @@ from src.corrections.jet import (
     jet_id,
     jet_puid,
 )
+from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 from src.corrections.rochester import apply_roccor, apply_KitMuScaleRe_Run3
 from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
 
@@ -346,7 +347,7 @@ class EventProcessor(processor.ProcessorABC):
             raise ValueError("Jet veto maps path is not specified in the config!")
 
         # Load correction set
-        cset = correctionlib.CorrectionSet.from_file(jet_veto_maps_path)
+        cset = get_corrset(jet_veto_maps_path)
         logger.debug(f"jet_veto_maps_cset: {cset}")
         logger.debug(f"jet_veto_maps_cset keys: {list(cset.keys())}")
 
@@ -388,7 +389,7 @@ class EventProcessor(processor.ProcessorABC):
             raise ValueError("Jet veto maps path is not specified in the config!")
 
         # Load correction set
-        cset = correctionlib.CorrectionSet.from_file(jet_veto_maps_path)
+        cset = get_corrset(jet_veto_maps_path)
         logger.debug(f"jet_veto_maps_cset: {cset}")
         logger.debug(f"jet_veto_maps_cset keys: {list(cset.keys())}")
 
@@ -1187,7 +1188,7 @@ class EventProcessor(processor.ProcessorABC):
                         if run in dataset:
                             jec_tag = getJecDataTag(run, self.config["jec_parameters"]["jec_data_tags"])                
                 jerc_load_path = self.config["jec_parameters"]["jerc_load_path"]
-                cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
+                cset = get_corrset(jerc_load_path)
                 jec_unc_sources = get_jec_sources(cset, jec_tag)
                 variation_l = ["nominal"] + jec_unc_sources
             else:
@@ -2119,7 +2120,7 @@ class EventProcessor(processor.ProcessorABC):
 
             # Load the correction set
             json_path = self.config["BS_res_calib_path"]["MC"] if is_mc else self.config["BS_res_calib_path"]["Data"]
-            correction_set = correctionlib.CorrectionSet.from_file(json_path)
+            correction_set = get_corrset(json_path)
 
             # Access the specific correction by name
             correction = correction_set["BS_ebe_mass_res_calibration"]
@@ -2988,7 +2989,7 @@ class EventProcessor(processor.ProcessorABC):
                 "iterativefit,iterativefit,iterativefit",
             )
             else:
-                btag_file =  correctionlib.CorrectionSet.from_file(self.config["btag_sf_json"],)
+                btag_file = get_corrset(self.config["btag_sf_json"])
                 # btag_json=btag_file["deepJet_shape"]
                 btag_json=btag_file["deepCSV_shape"]
 

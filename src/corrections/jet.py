@@ -13,6 +13,7 @@ import random
 
 from modules.utils import logger
 from modules.classify_year import is_run3, is_run2
+from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 
 def printCorrObjInputs(corr_obj):
     input_names = [inp.name for inp in corr_obj.inputs]
@@ -293,7 +294,7 @@ def jet_id(jets, config, year = None):
         """For Run 3, use the correctionlib based jetID."""
         logger.info("Using correctionlib-based jet ID for Run 3!")
         jet_id_json_files = config["jet_id_json_files"]
-        cset = correctionlib.CorrectionSet.from_file(jet_id_json_files)
+        cset = get_corrset(jet_id_json_files)
         eval_dict = {
             "eta": jets.eta,
             "chHEF": jets.chHEF,
@@ -680,7 +681,7 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
     jerc_load_path = jec_parameters["jerc_load_path"]
     logger.debug(f"jerc_load_path: {jerc_load_path}")
 
-    cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
+    cset = get_corrset(jerc_load_path)
 
 
     if is_mc:
@@ -864,10 +865,10 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
     jerc_load_path = jec_parameters["jerc_load_path"]
     logger.debug(f"jerc_load_path: {jerc_load_path}")
 
-    cset = correctionlib.CorrectionSet.from_file(jerc_load_path)
+    cset = get_corrset(jerc_load_path)
 
     jersmear_load_path = jec_parameters["jersmear_load_path"]
-    cset_jersmear = correctionlib.CorrectionSet.from_file(jersmear_load_path)
+    cset_jersmear = get_corrset(jersmear_load_path)
     logger.debug(f"jerc_load_path: {jerc_load_path}")
     logger.debug(f"jersmear_load_path: {jersmear_load_path}")
 

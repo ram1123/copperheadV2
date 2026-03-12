@@ -22,6 +22,7 @@ import correctionlib
 import ROOT
 
 from modules.utils import logger
+from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 
 # surpress RooFit printout
 rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
@@ -299,7 +300,7 @@ def closure_test_resolution_binning(
     os.makedirs(output_dir, exist_ok=True)
 
     # load correction
-    cset = correctionlib.CorrectionSet.from_file(CalibrationFactorJSONFile)
+    cset = get_corrset(CalibrationFactorJSONFile)
     corr = cset["BS_ebe_mass_res_calibration"]
 
     # build predicted resolutions in a single compute

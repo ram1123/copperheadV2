@@ -5,6 +5,7 @@ import pandas as pd
 import correctionlib.schemav2 as cs
 from src.corrections.MuonScaRe import pt_resol, pt_scale, pt_resol_var, pt_scale_var
 import correctionlib
+from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 
 def apply_roccor(events, roccor_file_path: str, is_mc:bool, test_mode=False):
     rochester_data = txt_converters.convert_rochester_file(
@@ -109,7 +110,7 @@ def apply_roccor(events, roccor_file_path: str, is_mc:bool, test_mode=False):
 
 
 def apply_KitMuScaleRe_Run3(events, roccor_file_path: str, is_mc:bool, test_mode=False):
-    cset = correctionlib.CorrectionSet.from_file(roccor_file_path)
+    cset = get_corrset(roccor_file_path)
     if is_mc: # MC: both scale correction to gen Z peak AND resolution correction to Z width in data
         
         events["Muon", "ptscalecorr"] = pt_scale(

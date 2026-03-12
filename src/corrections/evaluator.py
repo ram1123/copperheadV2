@@ -10,6 +10,7 @@ import correctionlib
 
 import logging
 from modules.utils import logger
+from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 
 def get_corr_inputs(input_dict, corr_obj):
     """
@@ -176,7 +177,7 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
     elif Run==3:
         jsonGz_path = parameters["pu_file_mc"]
         logger.info(f"jsonGz_path: {jsonGz_path}")
-        ceval = correctionlib.CorrectionSet.from_file(jsonGz_path)
+        ceval = get_corrset(jsonGz_path)
         key = list(ceval.keys())[0]
         pu_lookup = ceval[key]
         pu_weights = {}
@@ -975,7 +976,7 @@ def qgl_weights_V2(jets, config, isHerwig, dnn_year):
     """
     # print(f"qgl jets: {jets.compute()}")
     # fname = config["jmar_sf_file"]
-    # jmar_evaluator = correctionlib.CorrectionSet.from_file(fname)
+    # jmar_evaluator = get_corrset(fname)
     # map_name = "Gluon_Pythia"
     # sf = jmar_evaluator[map_name]
     # out_wgts = {
@@ -1613,7 +1614,7 @@ def eval_jetpuid_sf(year, jets, jet_puid_wp, config):
     """
     fname = config["jmar_sf_file"]
     # print(f"fname: {fname}")
-    puid_evaluator = correctionlib.CorrectionSet.from_file(fname)
+    puid_evaluator = get_corrset(fname)
     wp_converter = {
         "loose" : "L",
         "medium" : "M",
