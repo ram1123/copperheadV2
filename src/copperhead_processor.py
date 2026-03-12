@@ -1294,7 +1294,9 @@ class EventProcessor(processor.ProcessorABC):
         if self.config["switches"]["do_jec_unc"]:
             pt_variations += applyUpDown(jec_unc_sources)
 
-        if self.config["switches"]["do_jer_unc"]:
+        if self.config["switches"]["do_jer_unc"] and self.config["switches"]["jer_strat"] >= 0:
+            # FIXME: JER variation part is not running. 
+            #         As for Run-3 we are not applying the JER so we don't need it, yet.
             jec_pars = self.config["jec_parameters"]
             pt_variations += jec_pars["jer_variations"]            
 
