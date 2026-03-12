@@ -52,6 +52,25 @@ def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=N
     # Default → run
     return True
 
+def get_expected_events_from_files_dict(files_dict):
+    """
+    Count expected input events from prestage file dict.
+
+    Supports:
+      {file: {"steps": [[start, stop], ...], ...}}
+    and falls back to num_entries if needed.
+    """
+    total = 0
+
+    for _, finfo in files_dict.items():
+        if isinstance(finfo, dict):
+            if "steps" in finfo and finfo["steps"] is not None:
+                for step in finfo["steps"]:
+                    total += int(step[1]) - int(step[0])
+            elif "num_entries" in finfo:
+                total += int(finfo["num_entries"])
+    return int(total)
+
 # #-------------------------------------------------------------------
 
 def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
@@ -101,7 +120,8 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         },
     ).events()
 
-    out_collections = processor.process(events, dataset_yaml_file=dataset_yaml_file)
+    processed_event_count = 0
+    out_collections, processed_event_count = processor.process(events, dataset_yaml_file=dataset_yaml_file)
 
     # Save the cutflow
     if hasattr(processor, "cutflow") and isCutflow:
@@ -124,10 +144,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     logger.debug(f"skim_zip: {skim_zip}")
     # skim_zip.persist().to_parquet(save_path)
     to_persist = skim_zip.persist()
-    to_persist.to_parquet(save_path)
-    # raise ValueError
-    return None
-    # return skim_zip
+    to_persist = to_persist.to_parquet(save_path, compute=False)
+    persisted, processed_event_count = dask.compute(to_persist, processed_event_count)
+    return processed_event_count
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -323,6 +342,10 @@ if __name__ == "__main__":
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
+                    ExpectedEvents_from_prestage = get_expected_events_from_files_dict(smaller_sample["files"])
+                    logger.debug(f"ExpectedEvents_from_prestage: {ExpectedEvents_from_prestage}")
+
+                    processed_event_count = 0
 
                     # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
                     jobstat.mark_running(dataset, idx,
@@ -352,7 +375,10 @@ if __name__ == "__main__":
                             eos_mkdirs(save_path)
 
                             # rebuild the events/out collections for this attempt
-                            dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
+                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
+
+                            logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
+                            logger.info(f"Processed events: {processed_event_count}")
 
                             # to_persist = to_persist.persist()
                             # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
@@ -360,6 +386,9 @@ if __name__ == "__main__":
 
                             if not _parquet_dir_has_files(save_path):
                                 raise RuntimeError("Parquet write produced no files.")
+
+                            if ExpectedEvents_from_prestage != processed_event_count:
+                                raise ValueError("Number of processed events are not same as expected events.")
 
                             jobstat.mark_done(
                                 dataset,
@@ -374,6 +403,8 @@ if __name__ == "__main__":
                                     "git_commit_hash": git_commit_hash,
                                     "git_branch": branch_name,
                                     "git patch path": git_info_path,
+                                    "Expected events from pre-stage": ExpectedEvents_from_prestage,
+                                    "Processed events from stage-1": processed_event_count,
                                 },
                             )
                             logger.info(f"[resume] success on attempt {attempt} with {host_prefix}")
@@ -421,6 +452,8 @@ if __name__ == "__main__":
                                         "git_commit_hash": git_commit_hash,
                                         "git_branch": branch_name,
                                         "git patch path": git_info_path,
+                                        "Expected events from pre-stage": ExpectedEvents_from_prestage,
+                                        "Processed events from stage-1": processed_event_count,                                        
                                     },
                                 )
                                 logger.exception(

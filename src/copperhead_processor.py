@@ -448,7 +448,7 @@ class EventProcessor(processor.ProcessorABC):
         self.selection = PackedSelection()
 
         event_filter = ak.ones_like(events.event, dtype="bool") # 1D boolean array to be used to filter out bad events
-        # self.processed_event_count = ak.sum(ak.ones_like(events.event)) # For METADATA of event count
+        self.processed_event_count = ak.num(events, axis=0) # For METADATA of event count
         # Debugging: Check structure of event_filter
         logger.debug(f"event_filter type: {type(event_filter)}")
         logger.debug(f"event_filter length: {len(event_filter)}")
@@ -2088,8 +2088,7 @@ class EventProcessor(processor.ProcessorABC):
         t22 = time.perf_counter()
         logger.info(f"[timing] Cutflow time: {t22 - t21:.2f} seconds")
 
-        return out_dict
-        # return out_dict, self.processed_event_count  # For METADATA of event count
+        return out_dict, self.processed_event_count  # For METADATA of event count
 
     def postprocess(self, accumulator):
         """
