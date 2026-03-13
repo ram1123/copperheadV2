@@ -388,7 +388,11 @@ if __name__ == "__main__":
                                 raise RuntimeError("Parquet write produced no files.")
 
                             if ExpectedEvents_from_prestage != processed_event_count:
-                                raise ValueError("Number of processed events are not same as expected events.")
+                                raise ValueError(
+                                    f"Number of processed events does not match expected events: "
+                                    f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
+                                    f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
+                                )
 
                             jobstat.mark_done(
                                 dataset,
