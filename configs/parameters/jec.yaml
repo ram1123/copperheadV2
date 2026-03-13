@@ -125,63 +125,63 @@ jec_parameters:
             - FlavorQCD
         "2022preEE":
             - Absolute
-            - Absolute_2018
+            - Absolute_2022
             - BBEC1
-            - BBEC1_2018
+            - BBEC1_2022
             - EC2
-            - EC2_2018
+            - EC2_2022
             - HF
-            - HF_2018
+            - HF_2022
             - RelativeBal
-            - RelativeSample_2018
+            - RelativeSample_2022
             - FlavorQCD
         "2022postEE":
             - Absolute
-            - Absolute_2018
+            - Absolute_2022EE
             - BBEC1
-            - BBEC1_2018
+            - BBEC1_2022EE
             - EC2
-            - EC2_2018
+            - EC2_2022EE
             - HF
-            - HF_2018
+            - HF_2022EE
             - RelativeBal
-            - RelativeSample_2018
+            - RelativeSample_2022EE
             - FlavorQCD
         "2023":
             - Absolute
-            - Absolute_2018
+            - Absolute_2023
             - BBEC1
-            - BBEC1_2018
+            - BBEC1_2023
             - EC2
-            - EC2_2018
+            - EC2_2023
             - HF
-            - HF_2018
+            - HF_2023
             - RelativeBal
-            - RelativeSample_2018
+            - RelativeSample_2023
             - FlavorQCD
         "2023BPix":
             - Absolute
-            - Absolute_2018
+            - Absolute_2023BPix
             - BBEC1
-            - BBEC1_2018
+            - BBEC1_2023BPix
             - EC2
-            - EC2_2018
+            - EC2_2023BPix
             - HF
-            - HF_2018
+            - HF_2023BPix
             - RelativeBal
-            - RelativeSample_2018
+            - RelativeSample_2023BPix
             - FlavorQCD
         "2024":
             - Absolute
-            - Absolute_2018
+            - Absolute_2024
             - BBEC1
-            - BBEC1_2018
+            - BBEC1_2024
             - EC2
-            - EC2_2018
+            - EC2_2024
             - HF
-            - HF_2018
+            - HF_2024
             - RelativeBal
-            - RelativeSample_2018
+            - RelativeSample_2024
             - FlavorQCD
     jec_variations:
         2016preVFP:

@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from modules.utils import logger
 
 
 
@@ -24,14 +25,14 @@ def prepare_features(events: ak.Record, training_features, variation="nominal", 
     else:
         features = training_features
     features_var = []
-    #print(features)
+    #logger.info(features)
     for trf in features:
         if f"{trf}_{variation}" in events.fields:
             features_var.append(f"{trf}_{variation}")
         elif trf in events.fields:
             features_var.append(trf)
         else:
-            print(f"Variable {trf} not found in training dataframe!")
+            logger.info(f"Variable {trf} not found in training dataframe!")
     return features_var
 
     
@@ -56,14 +57,14 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
     """
     
     """
-    # print(f"sum df.h_peak: {ak.sum(df.h_peak)}")
+    # logger.info(f"sum df.h_peak: {ak.sum(df.h_peak)}")
     # overwrite dimuon mass for regions not in h_peak
 
     
 
     # # temporary definition of event bc I don't have it, and we need it for 4-fold method to work
     # if "event" not in df.fields:
-    #     print("Events not in Fields, using np arange instead")
+    #     logger.info("Events not in Fields, using np arange instead")
     #     df["event"] = np.arange(len(df.dimuon_pt))
     
     # features = prepare_features(df,training_features, variation=variation, add_year=False)
@@ -79,7 +80,7 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         features = apply_variation(training_features, variation)
 
 
-    print(f"{variation} bdt features: {features}")
+    logger.info(f"{variation} bdt features: {features}")
     year = parameters["year"]
 
     # df.loc[:, score_name] = 0
@@ -92,39 +93,39 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         eval_folds = [(i + f) % nfolds for f in [3]]
         eval_filter = (df.event % nfolds ) == (np.array(eval_folds) * ak.ones_like(df.event))
         # eval_filter = df.event.mod(nfolds).isin(eval_folds)
-        print(f"eval_folds: {eval_folds}")
-        # print(f"eval_filter: {eval_filter}")
+        logger.info(f"eval_folds: {eval_folds}")
+        # logger.info(f"eval_filter: {eval_filter}")
         # scalers_path = f"{parameters['models_path']}/{model}_{year}/scalers_{model}_{year}_{i}.npy"
-        # print(f"scalers_path: {scalers_path}")
+        # logger.info(f"scalers_path: {scalers_path}")
         # scalers = np.load(scalers_path, allow_pickle=True)
         # model_path = f"{parameters['models_path']}/{model}_{year}/{model}_{year}_{i}.pkl"
         model_path = f"{parameters['models_path']}/{model}_{year}_{i}.pkl"
-        # print(f"model_path: {model_path}")
+        # logger.info(f"model_path: {model_path}")
         
         bdt_model = pickle.load(open(model_path, "rb"))
         df_i = df[eval_filter]
-        # print(f"df_i: {len(df_i)}")
-        # print(len
+        # logger.info(f"df_i: {len(df_i)}")
+        # logger.info(len
         if len(df_i) == 0:
             continue
-        # print(f"scalers: {scalers.shape}")
-        # print(f"df_i: {df_i}")
+        # logger.info(f"scalers: {scalers.shape}")
+        # logger.info(f"df_i: {df_i}")
         df_i_feat = df_i[features]
-        # print(f"df_i_feat: {df_i_feat}")
-        # print(f"bdt_model.feature_names_in_: {bdt_model.feature_names_in_}")
+        # logger.info(f"df_i_feat: {df_i_feat}")
+        # logger.info(f"bdt_model.feature_names_in_: {bdt_model.feature_names_in_}")
         # scale the features
         df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
-        # print(f"df_i_feat: {df_i_feat.shape}")
+        # logger.info(f"df_i_feat: {df_i_feat.shape}")
         # df_i_feat = ak.Array(df_i_feat)
         # df_i_feat = (df_i_feat - scalers[0]) / scalers[1]
 
         df_i_feat = ak.to_numpy(df_i_feat)
         if len(df_i_feat) > 0:
-            print(f"model: {model}")
+            logger.info(f"model: {model}")
             prediction = np.array(
                 bdt_model.predict_proba(df_i_feat)[:, 1]
             ).ravel()
-            # print(f"prediction: {prediction}")
+            # logger.info(f"prediction: {prediction}")
             score_total[eval_filter] = prediction
 
     df[score_name] = score_total
@@ -175,7 +176,7 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str],
     """
     
     """
-    print(f"sum df.h_peak: {ak.sum(df.h_peak)}")
+    logger.info(f"sum df.h_peak: {ak.sum(df.h_peak)}")
 
     # # temporary fix to due to some bug according to Valerie
     # df['mmj_min_dEta'] = df["mmj2_dEta"]
@@ -202,20 +203,20 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str],
         eval_folds = [(i + f) % nfolds for f in [3]]
         eval_filter = (df.event % nfolds ) == (np.array(eval_folds) * ak.ones_like(df.event))
         scalers_path = f"{parameters['models_path']}/{model}/scalers_{model}_{i}.npy"
-        print(f"scalers_path: {scalers_path}")
+        logger.info(f"scalers_path: {scalers_path}")
         scalers = np.load(scalers_path, allow_pickle=True)
         df_i = df[eval_filter]
         if len(df_i) == 0:
             continue
-        print(f"scalers: {scalers.shape}")
-        print(f"df_i: {df_i}")
+        logger.info(f"scalers: {scalers.shape}")
+        logger.info(f"df_i: {df_i}")
         df_i_feat = df_i[features]
         df_i_feat = ak.concatenate([df_i_feat[field][:, np.newaxis] for field in df_i_feat.fields], axis=1)
-        print(f"df_i_feat[:,0]: {df_i_feat[:,0]}")
-        print(f'df_i.dimuon_cos_theta_cs: {df_i.dimuon_cos_theta_cs}')
+        logger.info(f"df_i_feat[:,0]: {df_i_feat[:,0]}")
+        logger.info(f'df_i.dimuon_cos_theta_cs: {df_i.dimuon_cos_theta_cs}')
         df_i_feat = ak.to_numpy(ak.Array(df_i_feat))
         df_i = (df_i_feat - scalers[0]) / scalers[1]
-        print(f"df_i: {df_i.shape}")
+        logger.info(f"df_i: {df_i.shape}")
         # df_i = torch.tensor(df_i.values).float()
         df_i = torch.from_numpy(df_i).float()
 
@@ -227,14 +228,14 @@ def evaluate_dnn(df: ak.Record, variation: str, model: str, features: List[str],
         dnn_model.eval()
 
         prediction = dnn_model(df_i).detach().numpy().flatten()
-        print(f"prediction: {prediction.shape}")
+        logger.info(f"prediction: {prediction.shape}")
         # prediction = (prediction - 1/2)*2 # temporary shift the sigmoid result to have range of a tanh
             
         score_total[eval_filter] = np.arctanh(prediction)
         score_raw[eval_filter] = prediction
     df[score_name] = score_total
     df[score_name+"_sigmoid"] = score_raw
-    print(f"dnn score_total: {score_total}")
-    print(f"dnn score_total max: {np.max(score_total)}")
-    print(f"dnn score_total min: {np.min(score_total)}")
+    logger.info(f"dnn score_total: {score_total}")
+    logger.info(f"dnn score_total max: {np.max(score_total)}")
+    logger.info(f"dnn score_total min: {np.min(score_total)}")
     return df

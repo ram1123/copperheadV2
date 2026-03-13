@@ -191,7 +191,7 @@ def extract_nuisances(df):
     nuis.remove("wgt_nominal")
     return nuis
 
-def buildDataCard(df, samples, subCat_ix):
+def buildDataCard(df, samples, subCat_ix, year):
     nuisances = extract_nuisances(df)
     lines = []
     # print(nuisances)
@@ -225,6 +225,11 @@ pdf_Higgs_qq     lnN     -            1.021        -
         lines.append("lumi_13p6TeV_Corr     lnN     1.0020      1.0020      -")
         lines.append("lumi_13p6TeV_23_24    lnN     1.0068      1.0068      -")
         lines.append("lumi_13p6TeV_uncorr   lnN     1.0144      1.0144      -")
+    elif year == "all":
+        lines.append("lumi_13p6TeV_Corr     lnN     1.0020      1.0020      -")
+        lines.append("lumi_13p6TeV_23_24    lnN     1.0068      1.0068      -")
+        lines.append("lumi_13p6TeV_uncorr   lnN     1.0144      1.0144      -")
+    
     for u in nuisances:
         # for sample i
         ggh_val = factor_pair(df, u, f"subCat{subCat_ix}_ggh")
@@ -316,9 +321,9 @@ if __name__ == "__main__":
         fields2load  = [
             "dimuon_mass",
         ]
-        # jec_unc_fields = ["Absolute", "FlavorQCD"]
-        jec_unc_fields = []
-        # jec_unc_fields = applyUpDown(jec_unc_fields)
+        jec_unc_fields = ["Absolute", "FlavorQCD"]
+        # jec_unc_fields = []
+        jec_unc_fields = applyUpDown(jec_unc_fields)
         processed_events = getProcessedEvents(events, fields2load, jec_unc_fields)
         print(f"processed_events.wgt_nominal: {processed_events.wgt_nominal}")
         # print(f"processed_events.wgt_nominal len: {ak.num(processed_events.wgt_nominal, axis=0)}")
@@ -361,7 +366,7 @@ if __name__ == "__main__":
 
         if args.year == "all":
             # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-            years = ["2022preEE", "2022postEE", "2023", "2023BPix"]
+            years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
         else:
             years = [args.year]
         row_labels = []
@@ -371,9 +376,19 @@ if __name__ == "__main__":
         # df = pd.DataFrame(index=row_labels, columns=(jec_unc_fields+["year"))
         # jec_unc_fields = ["Absolute", "FlavorQCD", "Absolute_2018", "Absolute_2017"]
         jec_yml_path = "configs/parameters/jec.yaml"
-        jec_unc_fields = getJecJerUncertainties(jec_yml_path)
-        jec_unc_fields = applyUpDown(jec_unc_fields)
+
+        if args.year == "all":
+            years_for_jec = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+            jec_unc_base = []
+            for y in years_for_jec:
+                jec_unc_base.extend(getJecJerUncertainties(jec_yml_path, year=y))
+            jec_unc_base = sorted(set(jec_unc_base))
+        else:
+            jec_unc_base = getJecJerUncertainties(jec_yml_path, year=args.year)
+
+        jec_unc_fields = applyUpDown(jec_unc_base)
         print(f"jec_unc_fields: {jec_unc_fields}")
+        
         # raise ValueError
         df_JecByYear = pd.DataFrame(index=row_labels, columns=(jec_unc_fields + ["nominal"]))
         fname = f"processed_events_sigMC_{sample}*.parquet"
@@ -384,12 +399,12 @@ if __name__ == "__main__":
         df_JecCombined = combine_dfByYear(df_JecByYear, jec_unc_fields, years, nSubCats)
         df_JecCombined.to_csv(f"{base_path}/{sample}_jecUnc_absYield.csv")
 
-        # df_JecCombined_rel = df_JecCombined.div(df_wgts["wgt_nominal"], axis=0)
-        # df_JecCombined_rel.to_csv(f"{base_path}/{sample}_jecUnc_relYield.csv")
+        df_JecCombined_rel = df_JecCombined.div(df_wgts["wgt_nominal"], axis=0)
+        df_JecCombined_rel.to_csv(f"{base_path}/{sample}_jecUnc_relYield.csv")
 
         
-        # df_total = pd.concat([df_wgts_rel, df_JecCombined_rel], axis=1)
-        df_total = pd.concat([df_wgts_rel], axis=1)
+        df_total = pd.concat([df_wgts_rel, df_JecCombined_rel], axis=1)
+        # df_total = pd.concat([df_wgts_rel], axis=1)
 
         df_total.to_csv(f"{base_path}/{sample}_total_relYield.csv")
 
@@ -428,7 +443,7 @@ pdf_index_ggh discrete
     # nSubCats = 1
     for subCat_ix in range(nSubCats):
         datacard_subCat_str = datacard_start.replace("CAT_INDEX", str(subCat_ix))
-        datacard_subCat_str += buildDataCard(df_datacardLike, samples, subCat_ix)
+        datacard_subCat_str += buildDataCard(df_datacardLike, samples, subCat_ix, args.year)
         datacard_subCat_str += datacard_end.replace("CAT_INDEX", str(subCat_ix))
         
         # Write it to a file
