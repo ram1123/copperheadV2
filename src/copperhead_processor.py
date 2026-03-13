@@ -1186,7 +1186,14 @@ class EventProcessor(processor.ProcessorABC):
                     for run in self.config["jec_parameters"]["runs"]:
                         logger.debug(f"run: {run}, dataset: {dataset}")
                         if run in dataset:
-                            jec_tag = getJecDataTag(run, self.config["jec_parameters"]["jec_data_tags"])                
+                            jec_tag = getJecDataTag(run, self.config["jec_parameters"]["jec_data_tags"])
+                    if jec_tag is None:
+                        raise ValueError(
+                            f"No JEC tag found for dataset '{dataset}'. "
+                            f"Check that one of the configured runs "
+                            f"({self.config['jec_parameters']['runs']}) "
+                            f"is present in the dataset name."
+                        )
                 jerc_load_path = self.config["jec_parameters"]["jerc_load_path"]
                 cset = get_corrset(jerc_load_path)
                 jec_unc_sources = get_jec_sources(cset, jec_tag)
