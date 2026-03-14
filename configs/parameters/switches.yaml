@@ -238,11 +238,11 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': false # (30.0, 25.0) or false
-        '2022postEE': false # (30.0, 25.0) or false
-        "2023": false # (30.0, 25.0) or false
-        "2023BPix": false # (30.0, 25.0) or false
-        "2024": false # (30.0, 25.0) or false
+        '2022preEE': false # [35.0, 30.0] or false
+        '2022postEE': false # [35.0, 30.0] or false
+        "2023": false # [35.0, 30.0] or false
+        "2023BPix": false # [35.0, 30.0] or false
+        "2024": false # [35.0, 30.0] or false
     do_jet_horn_puid: # For run-2 samples where we added strict PUID cut for the horn region
         '2016preVFP': false # For nanoAODv12, do_jet_horn_puid should be true
         '2016postVFP': false # For nanoAODv12, do_jet_horn_puid should be true
@@ -291,7 +291,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_jer_unc:
+    do_jer_unc: # FIXME: Not validated yet for Run-3
         '2016preVFP': false
         '2016postVFP': false
         '2017': false

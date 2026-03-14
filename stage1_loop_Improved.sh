@@ -47,9 +47,18 @@ postfix=""
 dask="0"
 cluster_index="0"
 isMC="0"
+isSync="0"
+
+# ----------- Default save paths -----------
+save_path_depot="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
+save_path_work="/work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
+save_path_local="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
+save_path_eos="/store/user/rasharma/hmm/copperheadV1clean/$label/"
+
+save_path="$save_path_depot"   # default
 
 # ----------- Parse options -----------
-while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksf" option; do
+while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksfS:z" option; do
     case "$option" in
         h) usage ;;
         c) datasetYAML="$OPTARG" ;;
@@ -69,6 +78,8 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksf" option; do
         k) dask="1" ;;
         s) skipBadFiles="1" ;;
         f) frac="1" ;;
+        S) save_path="$OPTARG" ;;
+        z) isSync="1" ;;        
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
@@ -109,10 +120,6 @@ log_file="log_$(date +%Y%m%d_%H%M%S).txt"
 exec 3>>"$log_file"  # FD 3 for logging
 
 log() { echo "$@" | tee -a "$log_file"; }
-
-# save_path="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
-save_path="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
-# save_path="/store/user/rasharma/hmm/copperheadV1clean/$label/" # EOS path
 
 trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 log "Program started on $(date)"
@@ -202,6 +209,11 @@ for year in "${years[@]}"; do
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv --max_file_len $max_file_len --yaml $datasetYAML  --isCutflow --rerun "
     command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML  --skipSamples "
     # command1="python -W ignore run_stage1.py -y $year --save_path $save_path --NanoAODv $NanoAODv  --max_file_len $max_file_len --yaml $datasetYAML  "
+
+    if [[ "${isSync}" == "1" ]]; then
+        command0+=" --sync "
+        command1+=" --sync --isCutflow "
+    fi
 
     ### DNN training parameters
     training_fold=4
@@ -374,7 +386,7 @@ for year in "${years[@]}"; do
             log "Running mass calibration..."
             log "Command: $command6"
             eval "$command6"
-            ;;            
+            ;;
         compact)
             log "Compacting parquet data for year $year..."
             log "Command: $command_compact"

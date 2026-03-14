@@ -29,7 +29,7 @@ markdown_extensions:
 nav:
     - Home: index.md
     - Introduction:
-          - Introduction: Introduction.md
+          - Introduction and Setup: Introduction.md
           - Basic Information: Run3_all_basic_Information.md
 
     - Running:

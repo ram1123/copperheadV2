@@ -1,3 +1,4 @@
+import argparse
 import copy
 import ctypes
 from datetime import datetime
@@ -125,14 +126,49 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # Save the cutflow
     if hasattr(processor, "cutflow") and isCutflow:
-        logger.info("Saving cutflow information")
-        cutflow_save_path = f"{save_path}"
-        if not os.path.exists(cutflow_save_path):
-            os.makedirs(cutflow_save_path)
-        cutflow_save_path = f"{save_path}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
+        logger.info("Saving cutflow information (NPZ and JSON)")
+        
+        # Ensure directory exists
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
 
-        processor.cutflow.to_npz(cutflow_save_path).compute()
-        logger.info(f"Cutflow saved to {cutflow_save_path}")
+        base_name = f"cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}"
+        npz_path = os.path.join(save_path, f"{base_name}.npz")
+        json_path = os.path.join(save_path, f"{base_name}.json")
+
+        # 1. Save NPZ (Efficient for reloading into Coffea/Python later)
+        # The .compute() ensures Dask finishes the task before writing
+        processor.cutflow.to_npz(npz_path).compute()
+        logger.info(f"NPZ saved: {npz_path}")
+
+        # 2. Save JSON
+        logger.debug(f"processor.cutflow.logger.info(): {processor.cutflow.print()}")
+        try:
+            cf_res = processor.cutflow
+            
+            # Helper to safely convert numpy values to python scalars
+            def clean(val):
+                return val.item() if hasattr(val, "item") else val
+
+            # Build a structured dictionary
+            # _names: list of cut names
+            # _nevcutflow: cumulative counts
+            # _nevonecut: individual cut counts
+            combined_data = {}
+            for i, name in enumerate(cf_res._names):
+                combined_data[name] = {
+                    "cumulative": clean(cf_res._nevcutflow[i]),
+                    "individual": clean(cf_res._nevonecut[i])
+                }
+
+            with open(json_path, 'w') as f:
+                json.dump(combined_data, f, indent=4)
+                
+            logger.info(f"JSON saved to {json_path}")
+
+        except Exception as e:
+            logger.error(f"JSON save failed: {e}")
+
 
     dataset_fraction = dataset_dict["metadata"]["fraction"]
 
@@ -231,6 +267,13 @@ if __name__ == "__main__":
         action="store_true",
         help="If true, skips samples listed in configs/skip_stage1_run.py",
     )
+    parser.add_argument(
+        "--sync",
+        dest="sync",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="If true, syncs files before preprocessing",
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -266,6 +309,8 @@ if __name__ == "__main__":
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
         # -------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
+        if args.sync:
+            sample_path = sample_path.replace(".json", "_sync.json") # INFO: Hardcoded sample_path        
         logger.debug(f"Sample path: {sample_path}")
         with open(sample_path) as file:
             samples = json.loads(file.read())
