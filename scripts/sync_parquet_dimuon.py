@@ -20,6 +20,7 @@ from typing import List, Optional
 import dask_awkward as dak
 import awkward as ak
 import pandas as pd
+import json
 
 from distributed import Client
 
@@ -514,6 +515,90 @@ def compare_two_sync_txt(
         return
 
 
+def compare_two_cutflow_json(
+    json1: str,
+    json2: str,
+    out_path: Path,
+    tolerance: float = 0.0,
+) -> None:
+    """
+    Compare two cutflow JSON files of format:
+
+    {
+        "CutName": {
+            "cumulative": 1000,
+            "individual": 1000
+        },
+        ...
+    }
+
+    Writes only mismatches to out_path.
+    """
+    print(f"[INFO] Loading cutflow json 1: {json1}")
+    with open(json1, "r") as f:
+        d1 = json.load(f)
+
+    print(f"[INFO] Loading cutflow json 2: {json2}")
+    with open(json2, "r") as f:
+        d2 = json.load(f)
+
+    all_cuts = sorted(set(d1.keys()) | set(d2.keys()))
+    rows = []
+
+    for cut in all_cuts:
+        rec = {"cut": cut}
+
+        cut1 = d1.get(cut)
+        cut2 = d2.get(cut)
+
+        if cut1 is None:
+            rec["status"] = "missing_in_json1"
+            rec["cumulative_1"] = None
+            rec["cumulative_2"] = cut2.get("cumulative")
+            rec["delta_cumulative"] = None
+            rec["individual_1"] = None
+            rec["individual_2"] = cut2.get("individual")
+            rec["delta_individual"] = None
+            rows.append(rec)
+            continue
+
+        if cut2 is None:
+            rec["status"] = "missing_in_json2"
+            rec["cumulative_1"] = cut1.get("cumulative")
+            rec["cumulative_2"] = None
+            rec["delta_cumulative"] = None
+            rec["individual_1"] = cut1.get("individual")
+            rec["individual_2"] = None
+            rec["delta_individual"] = None
+            rows.append(rec)
+            continue
+
+        c1 = float(cut1.get("cumulative", 0.0))
+        c2 = float(cut2.get("cumulative", 0.0))
+        i1 = float(cut1.get("individual", 0.0))
+        i2 = float(cut2.get("individual", 0.0))
+
+        dc = c2 - c1
+        di = i2 - i1
+
+        if abs(dc) > tolerance or abs(di) > tolerance:
+            rec["status"] = "different"
+            rec["cumulative_1"] = c1
+            rec["cumulative_2"] = c2
+            rec["delta_cumulative"] = dc
+            rec["individual_1"] = i1
+            rec["individual_2"] = i2
+            rec["delta_individual"] = di
+            rows.append(rec)
+
+    df = pd.DataFrame(rows)
+    df.to_csv(out_path, index=False)
+
+    if not rows:
+        print("[INFO] No cutflow mismatches found (within tolerance).")
+    else:
+        print(f"[INFO] Wrote {len(df)} cutflow mismatches to {out_path}")
+
 # ----------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------
@@ -598,6 +683,16 @@ def main():
             compare_two_sync_txt(
                 txt1=file1,
                 txt2=file2,
+                out_path=out_path,
+                tolerance=args.tolerance,
+            )
+            return
+
+        # If both are cutflow json files -> compare json files
+        if str(file1).endswith(".json") and str(file2).endswith(".json"):
+            compare_two_cutflow_json(
+                json1=file1,
+                json2=file2,
                 out_path=out_path,
                 tolerance=args.tolerance,
             )
