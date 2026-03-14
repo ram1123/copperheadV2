@@ -1,0 +1,123 @@
+name: Stage1 Sync Check
+
+on:
+  push:
+    branches: [ main, master, dev_March26_week3 ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sync-stage1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pixi
+        uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          cache: true
+
+      - name: Show pixi environment info
+        run: |
+          pixi info
+          pixi run python --version
+
+      - name: Create output directories
+        run: |
+          mkdir -p test/output
+          mkdir -p test/reference
+
+      # STEP-1: Get the stage-1 output
+      - name: Run stage-1 sync sample
+        run: |
+          pixi run bash -lc '
+            set -euo pipefail
+            time bash stage1_loop_Improved.sh \
+              -c configs/datasets/sync_dataset_nanoAODv12.yaml \
+              -v 12 \
+              -l dev_March26_week3 \
+              -y "2022preEE" \
+              -m 1 \
+              -z \
+              -S test/output
+          '
+
+      # STEP-2: Get the sync text files
+      - name: Produce sync text files
+        run: |
+          pixi run bash -lc '
+            set -euo pipefail
+
+            python scripts/sync_parquet_dimuon.py \
+              test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/data_D/0/ \
+              -o test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt
+
+            python scripts/sync_parquet_dimuon.py \
+              test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/dyTo2L_M-50_incl/0/ \
+              -o test/output/dev_March26_week3/stage1_output/2022preEE_dy_eventKinematics.txt
+
+            python scripts/sync_parquet_dimuon.py \
+              test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/vbf_powheg_dipole/0/ \
+              -o test/output/dev_March26_week3/stage1_output/2022preEE_vbf_eventKinematics.txt
+          '
+
+      # STEP-3: Compare the reference with new generated text file
+      - name: Compare against references
+        run: |
+          pixi run bash -lc '
+            set -euo pipefail
+
+            python scripts/sync_parquet_dimuon.py \
+              test/reference/2022preEE_dataD_eventKinematics.txt \
+              test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt \
+              -o diff_dataD.csv
+
+            python scripts/sync_parquet_dimuon.py \
+              test/reference/2022preEE_dy_eventKinematics.txt \
+              test/output/dev_March26_week3/stage1_output/2022preEE_dy_eventKinematics.txt \
+              -o diff_dy.csv
+
+            python scripts/sync_parquet_dimuon.py \
+              test/reference/2022preEE_vbf_eventKinematics.txt \
+              test/output/dev_March26_week3/stage1_output/2022preEE_vbf_eventKinematics.txt \
+              -o diff_vbf.csv
+          '
+
+      # STEP-4: Fail if any diff file is non-empty
+      - name: Check diff outputs
+        run: |
+          set -euo pipefail
+
+          fail=0
+          for f in diff_dataD.csv diff_dy.csv diff_vbf.csv; do
+            if [ -f "$f" ] && [ -s "$f" ]; then
+              echo "ERROR: Non-empty diff found in $f"
+              echo "----- $f -----"
+              cat "$f"
+              echo "---------------"
+              fail=1
+            else
+              echo "OK: $f is empty or not produced."
+            fi
+          done
+
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload diff artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-stage1-artifacts
+          path: |
+            diff_dataD.csv
+            diff_dy.csv
+            diff_vbf.csv
+            test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt
+            test/output/dev_March26_week3/stage1_output/2022preEE_dy_eventKinematics.txt
+            test/output/dev_March26_week3/stage1_output/2022preEE_vbf_eventKinematics.txt
+          if-no-files-found: warn
