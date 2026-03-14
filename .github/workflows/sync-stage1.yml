@@ -98,14 +98,15 @@ jobs:
 
           fail=0
           for f in diff_dataD.csv diff_dy.csv diff_vbf.csv; do
-            if [ -f "$f" ] && [ -s "$f" ]; then
+            if [ ! -f "$f" ]; then
+              echo "OK: $f not produced."
+              continue
+            else
               echo "ERROR: Non-empty diff found in $f"
               echo "----- $f -----"
               cat "$f"
               echo "---------------"
               fail=1
-            else
-              echo "OK: $f is empty or not produced."
             fi
           done
 

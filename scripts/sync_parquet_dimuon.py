@@ -506,13 +506,13 @@ def compare_two_sync_txt(
         if mismatch:
             rows.append(rec)
 
-    pd.DataFrame(rows).to_csv(out_path, index=False)
     if not rows:
         print("[INFO] No mismatches found (within tolerance).")
         return
-    else:
-        print(f"[INFO] Wrote {len(rows)} mismatching events to {out_path}")
-        return
+
+    pd.DataFrame(rows).to_csv(out_path, index=False)
+    print(f"[INFO] Wrote {len(rows)} mismatching events to {out_path}")
+    return
 
 
 def compare_two_cutflow_json(
@@ -591,13 +591,12 @@ def compare_two_cutflow_json(
             rec["delta_individual"] = di
             rows.append(rec)
 
-    df = pd.DataFrame(rows)
-    df.to_csv(out_path, index=False)
-
     if not rows:
         print("[INFO] No cutflow mismatches found (within tolerance).")
-    else:
-        print(f"[INFO] Wrote {len(df)} cutflow mismatches to {out_path}")
+
+    df = pd.DataFrame(rows)
+    df.to_csv(out_path, index=False)
+    print(f"[INFO] Wrote {len(df)} cutflow mismatches to {out_path}")
 
 # ----------------------------------------------------------------------
 # CLI
