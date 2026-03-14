@@ -50,12 +50,12 @@ isMC="0"
 isSync="0"
 
 # ----------- Default save paths -----------
-save_path_depot="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
-save_path_work="/work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean/$label/"
-save_path_local="/depot/cms/users/$USER/hmm/copperheadV1clean/$label/"
-save_path_eos="/store/user/rasharma/hmm/copperheadV1clean/$label/"
+save_path_depot="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean"
+save_path_work="/work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean"
+save_path_local="/depot/cms/users/$USER/hmm/copperheadV1clean"
+save_path_eos="/store/user/rasharma/hmm/copperheadV1clean"
 
-save_path="$save_path_depot"   # default
+save_path="$save_path_work"   # default
 
 # ----------- Parse options -----------
 while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksfS:z" option; do
@@ -84,6 +84,7 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksfS:z" option; do
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
 done
+save_path=${save_path}/${label}
 
 # ----------- Check environment and load modules -----------
 if [[ -z "${CONDA_PREFIX:-}" ]]; then
