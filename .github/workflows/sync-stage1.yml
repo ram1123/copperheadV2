@@ -2,7 +2,7 @@ name: Stage1 Sync Check
 
 on:
   push:
-    branches: [ main, dev_run3_2022_2023, dev_March26_week3 ]
+    branches: [ main, dev_run3_2022_2023 ]
     paths:
       - "run_stage1.py"
       - "src/**"
@@ -13,7 +13,7 @@ on:
       - "stage1_loop_Improved.sh"
       - "pixi.toml"
       - "pixi.lock"
-      - ".github/workflows/**"    
+      - ".github/workflows/**"
   pull_request:
     paths:
       - "run_stage1.py"
