@@ -18,6 +18,9 @@ import copy
 import pandas as pd
 from modules.GoF_utils import getGOF_KS
 from modules.RooWorkspaceUtils import print_workspace_vars, freeze_all_vars
+import uuid
+from modules.utils import logger
+
 
 def normalizeFlatHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
     """
@@ -42,11 +45,6 @@ def normalizeFlatHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHis
     normalizedHist_name = rooHist.GetName() + "_normalized"
     roo_hist_normalized = rt.RooDataHist(normalizedHist_name, normalizedHist_name, rt.RooArgSet(x), THist)
     return roo_hist_normalized
-
-
-
-
-
 
 
 def normalizeRooHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
@@ -78,7 +76,7 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, rooH
         rt.kViolet,
     ]
     for core_type, coreFunction_list in model_dict_by_coreFunction.items():
-        name = "Canvas"
+        name = f"Canvas_{uuid.uuid4().hex}"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         frame = mass.frame()
@@ -110,6 +108,8 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, rooH
         canvas.Update()
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
+        canvas.Close()
+        del canvas        
 
 def plotBkgBySubCat_normalized(mass:rt.RooRealVar, model_dict_by_subCat: Dict, save_path: str):
     """
@@ -129,7 +129,7 @@ def plotBkgBySubCat_normalized(mass:rt.RooRealVar, model_dict_by_subCat: Dict, s
     ]
 
     for subCat_idx, subCat_list in model_dict_by_subCat.items():
-        name = "Canvas"
+        name = f"Canvas_{uuid.uuid4().hex}"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         frame = mass.frame()
@@ -151,6 +151,9 @@ def plotBkgBySubCat_normalized(mass:rt.RooRealVar, model_dict_by_subCat: Dict, s
         canvas.Update()
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
+        canvas.Close()
+        del canvas
+
 
 def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by_subCat:Dict, save_path: str):
     """
@@ -170,7 +173,7 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by
     ]
     max_list = [1300, 1000, 400, 300, 90]
     for subCat_idx, subCat_list in model_dict_by_subCat.items():
-        name = "Canvas"
+        name = f"Canvas_{uuid.uuid4().hex}"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         frame = mass.frame()
@@ -191,9 +194,9 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by
         legend.Draw()
         canvas.Update()
         canvas.Draw()
-        # canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.pdf")
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.png")
-
+        canvas.Close()
+        del canvas    
 
 
 def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list: List, save_path: str):
@@ -213,7 +216,7 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list
         rt.kViolet,
     ]
     for model_type, model_list in model_dict_by_sample.items():
-        name = "Canvas"
+        name = f"Canvas_{uuid.uuid4().hex}"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         frame = mass.frame()
@@ -240,7 +243,8 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list
         canvas.Update()
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{model_type}.pdf")
-
+        canvas.Close()
+        del canvas  
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -2553,7 +2557,7 @@ if __name__ == "__main__":
 
     # subCat 0
     print(f"data_subCat0_signal.sumEntries(): {data_subCat0_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -2575,7 +2579,7 @@ if __name__ == "__main__":
 
     # subCat 1
     print(f"data_subCat1_signal.sumEntries(): {data_subCat1_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -2596,7 +2600,7 @@ if __name__ == "__main__":
 
     # subCat 2
     print(f"data_subCat2_signal.sumEntries(): {data_subCat2_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -2617,7 +2621,7 @@ if __name__ == "__main__":
 
     # subCat 3
     print(f"data_subCat3_signal.sumEntries(): {data_subCat3_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -2638,7 +2642,7 @@ if __name__ == "__main__":
 
     # subCat 4
     print(f"data_subCat4_signal.sumEntries(): {data_subCat4_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -2663,7 +2667,7 @@ if __name__ == "__main__":
 
     # subCat 0
     print(f"data_subCat0_vbf_signal.sumEntries(): {data_subCat0_vbf_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -2684,7 +2688,7 @@ if __name__ == "__main__":
 
     # subCat 1
     print(f"data_subCat1_vbf_signal.sumEntries(): {data_subCat1_vbf_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -2705,7 +2709,7 @@ if __name__ == "__main__":
 
     # subCat 2
     print(f"data_subCat2_vbf_signal.sumEntries(): {data_subCat2_vbf_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -2726,7 +2730,7 @@ if __name__ == "__main__":
 
     # subCat 3
     print(f"data_subCat3_vbf_signal.sumEntries(): {data_subCat3_vbf_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -2747,7 +2751,7 @@ if __name__ == "__main__":
 
     # subCat 4
     print(f"data_subCat4_vbf_signal.sumEntries(): {data_subCat4_vbf_signal.sumEntries()}")
-    name = "Canvas"
+    name = f"Canvas_{uuid.uuid4().hex}"
     canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
     canvas.cd()
     frame = mass.frame()
@@ -3489,6 +3493,3 @@ if __name__ == "__main__":
         4 : roo_histData_subCat4,
     }
     plotBkgBySubCat(mass, model_dict_by_subCat, data_dict_by_subCat, plot_save_path)
-
-
-
