@@ -34,6 +34,10 @@ dask.config.set({"distributed.scheduler.worker-saturation": 1.0})
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 np.set_printoptions(threshold=sys.maxsize)
+from contextlib import nullcontext
+
+ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
+report_ctx = performance_report(filename="dask-report.html") if ENABLE_DASK_REPORT else nullcontext()
 
 
 def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=None):
@@ -143,6 +147,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
         # 2. Save JSON
         logger.debug(f"processor.cutflow.logger.info(): {processor.cutflow.print()}")
+        logger.debug(f"processor.cutflow.logger.info(): {processor.cutflow.result()}")
         try:
             cf_res = processor.cutflow
             
@@ -340,7 +345,7 @@ if __name__ == "__main__":
         logger.info(f"git_info_path: {git_info_path}")
 
         # if True:
-        with performance_report(filename="dask-report.html"):
+        with report_ctx:
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 logger.info("{}{}".format("\n" * 2, "=" * 51))
                 logger.info(f"===         Processing dataset: {dataset}       ===")
@@ -530,7 +535,7 @@ if __name__ == "__main__":
         start_save_path = f"{args.save_path}/stage1_output_test/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
         os.makedirs(start_save_path, exist_ok=True)
-        with performance_report(filename="dask-report.html"):
+        with report_ctx:
             for dataset, sample in tqdm.tqdm(samples.items()):
                 logger.debug(f"dataset: {dataset}")
                 save_path = getSavePath(start_save_path, sample, 0)
