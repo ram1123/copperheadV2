@@ -58,13 +58,12 @@ jobs:
 
       - name: Install pixi env
         run: |
-          export CONDA_OVERRIDE_CUDA=12.0
-          pixi install --locked
+          pixi install --locked -e ci
 
       - name: Show pixi environment info
         run: |
-          pixi info
-          pixi run python --version
+          pixi run -e ci python --version
+          pixi run -e ci python -c "import sys; print(sys.executable)"
 
       - name: Create output directories
         run: |
@@ -74,7 +73,7 @@ jobs:
       # STEP-1: Get the stage-1 output
       - name: Run stage-1 sync sample
         run: |
-          pixi run bash -lc '
+          pixi run -e ci  bash -lc '
             set -euo pipefail
             time bash stage1_loop_Improved.sh \
               -c configs/datasets/sync_dataset_nanoAODv12.yaml \
@@ -89,7 +88,7 @@ jobs:
       # STEP-2: Get the sync text files
       - name: Produce sync text files
         run: |
-          pixi run bash -lc '
+          pixi run -e ci  bash -lc '
             set -euo pipefail
 
             python scripts/sync_parquet_dimuon.py \
@@ -108,7 +107,7 @@ jobs:
       # STEP-3: Compare the reference with new generated text file
       - name: Compare against references
         run: |
-          pixi run bash -lc '
+          pixi run -e ci  bash -lc '
             set -euo pipefail
 
             python scripts/sync_parquet_dimuon.py \
@@ -135,7 +134,7 @@ jobs:
           fail=0
           for f in diff_dataD_2022preEE.csv diff_dy_2022preEE.csv diff_vbf_2022preEE.csv; do
             if [ ! -f "$f" ]; then
-              echo "OK: $f not produced."
+              echo "OK: $f not produced (treating as no differences)."
               continue
             else
               echo "ERROR: Non-empty diff found in $f"
