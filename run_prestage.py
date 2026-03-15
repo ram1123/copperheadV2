@@ -279,7 +279,6 @@ if __name__ == "__main__":
         total_events = 0
 
         client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
-        close_dask_client()
 
         big_sample_info = {}
         # load dataset sample paths from yaml files
