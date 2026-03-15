@@ -15,8 +15,7 @@ category="ggh"
 # model_name="Run3_08March_HPeachFold_train_with_bestHP"
 # model_name="Run3_09March_Check"
 # model_name="Run3_10March_005Trials"
-# model_name="Run3_10March_020Trials"
-model_name="Run3_10March_020Trials_EBEinTraining"
+model_name="Run3_10March_020Trials"
 # model_name="Run3_10March_020Trials_RemovedAddHyperPars"
 # model_name="Run3_10March_100Trials"
 # model_name="Run3_10March_020Trials_oneHotEncoding"
@@ -109,7 +108,7 @@ print_config
 if [[ "${step}" == "0" ]]; then
     print_box "Step 0: Training the BDT for ggH"
     do_hyperparam_search="1" # true (enable hyperparameter search)
-    n_trials="51" # It is for the bayseian optimization
+    n_trials="20" # It is for the bayseian optimization
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
     mass_decorrelation_strat="targetZpeakMass" # target distribution Zpeak mass
@@ -171,7 +170,7 @@ if [[ "${step}" == "2" || "${step}" == "all" ]]; then
     echo "New years list: ${local_years[*]}"
     python stage2/ggH/score_edge_generation/determine_score_edge.py \
         -load ${stage2_save_path} \
-        --years ${local_years[@]} \
+        --years ${local_years} \
         --label ${stage2_label} \
         -save ${save_path}
 
