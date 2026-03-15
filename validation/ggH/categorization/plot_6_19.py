@@ -21,6 +21,7 @@ import ROOT
 import ROOT as rt
 import copy
 import pandas as pd
+import uuid
 
 # Get the parent directory
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -352,12 +353,10 @@ def plot_6_19(dataDict_by_subCat, save_fname, nSubCats=5, apply_blind=True):
         nfree_params = fitResult.floatParsFinal().getSize() # ndf should be consistent over all possible bkg fit functions
         print(f"nfree_params: {nfree_params}")
 
-    
-        
         # --------------------------------------------------------------------
         # plot
         # --------------------------------------------------------------------
-        name = "Canvas"
+        name = f"Canvas_{uuid.uuid4().hex}"
         canvas = rt.TCanvas(name,name,800, 800) # giving a specific name for each canvas prevents segfault?
         canvas.cd()
         # Define upper and lower pads
@@ -561,7 +560,8 @@ def plot_6_19(dataDict_by_subCat, save_fname, nSubCats=5, apply_blind=True):
             canvas.SaveAs(f"{save_fname}_subCat{target_subCat}_blinded.pdf")
         else:
             canvas.SaveAs(f"{save_fname}_subCat{target_subCat}_unblinded.pdf")
-
+        canvas.Close()
+        del canvas
 
         # --------------------------------------------------------------------
         # KS test
@@ -612,8 +612,6 @@ def plot_6_19(dataDict_by_subCat, save_fname, nSubCats=5, apply_blind=True):
                     "test pass": ks_stat<pass_threshold,
                 }
 
-
-            
     df = pd.DataFrame(df_rows, columns=["BDT cat", "fit function", "chi2ndf"])
     df_pivot = df.pivot(index="BDT cat", columns="fit function", values="chi2ndf")
     print(df)
@@ -624,7 +622,6 @@ def plot_6_19(dataDict_by_subCat, save_fname, nSubCats=5, apply_blind=True):
     else:
         df.to_csv(f"{save_fname}_chi2ndf_unblinded.csv")
         df_pivot.to_csv(f"{save_fname}_chi2ndfByFitFunc_unblinded.csv")
-    # raise ValueError
 
     # ks test 
     ks_df.to_csv(f"{save_fname}_KS_stats.csv")

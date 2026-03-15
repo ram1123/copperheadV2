@@ -4,6 +4,8 @@ from typing import Tuple, List, Dict
 ROOT.gStyle.SetOptStat(0) # remove stats box
 from modules.GoF_utils import chi2_ndf_manual
 import pandas as pd
+from modules.utils import logger
+import uuid
 
 def getFEWZ_roospline(x, root_path):
     """
@@ -278,8 +280,8 @@ def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, sa
     # normalize=False
     x_name = x.GetName()
     for ix in range(len(subCat_dataHists)):
-    # for ix in range(1):
-        canvas = rt.TCanvas("canvas","canvas",800, 800) # giving a specific name for each canvas prevents segfault
+        name = f"Canvas_{ix}"        
+        canvas = rt.TCanvas(name, name, 800, 800) # giving a specific name for each canvas prevents segfault
         canvas.cd()
         # Define upper and lower pads
         pad1 = ROOT.TPad("pad1", "Distribution", 0, 0.3, 1, 1.0)
@@ -316,9 +318,6 @@ def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, sa
         else:
             roo_hist_shapModifier.plotOn(frame)
         legend.AddEntry(frame.getObject(int(frame.numItems())-1),"Shape Modifier", "PE")
-        
-        
-        
 
         # plot settings
         frame.Draw()
@@ -366,14 +365,12 @@ def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, sa
             blinded_x_min, blinded_x_max = 115, 135
             ratio_hist = zero_yield_in_range(ratio_hist, blinded_x_min, blinded_x_max)
         ratio_hist.Draw("E1 SAME")
-        
 
-        
         canvas.Update()
         canvas.Draw()
         canvas.SaveAs(f"{save_fname}_subCat{ix}.pdf")
-    # raise ValueError
-
+        canvas.Close()
+        del canvas
 
 
 def getSigBkgPdf(bkg_pdf_dict, sig_pdf_dict, nSubCats=5):
@@ -596,8 +593,8 @@ def plot_6_26(x, subCat_dataHists, multi_pdf_l, fitResult, save_fname, target_nb
         "chi2/ndf" : [],
     }
     for ix in range(len(subCat_dataHists)):
-    # for ix in range(1):
-        canvas = rt.TCanvas("canvas","canvas",800, 800) # giving a specific name for each canvas prevents segfault
+        name = f"canvas_{ix}"
+        canvas = rt.TCanvas(name, name, 800, 800) # giving a specific name for each canvas prevents segfault
         canvas.cd()
         # Define upper and lower pads
         pad1 = ROOT.TPad("pad1", "Distribution", 0, 0.3, 1, 1.0)
@@ -753,6 +750,8 @@ def plot_6_26(x, subCat_dataHists, multi_pdf_l, fitResult, save_fname, target_nb
             canvas.SaveAs(f"{save_fname}_{coreFuncName}_subCat{ix}_unblinded.pdf")
         else:
             canvas.SaveAs(f"{save_fname}_{coreFuncName}_subCat{ix}_blinded.pdf")
+        canvas.Close()
+        del canvas
     # fitResult.Print()
     return pd.DataFrame(df_dict)
 
