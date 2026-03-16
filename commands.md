@@ -1,6 +1,92 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
+# 14 March 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/sync_dataset_nanoAODv12.yaml -v 12 -l dev_March26_week3 -y "2017 2018" -m 0 -z -S test/output)
+time(bash stage1_loop_Improved.sh -c configs/datasets/sync_dataset_nanoAODv12.yaml -v 12 -l dev_March26_week3 -y "2017 2018" -m 1 -z -S test/output)
+
+
+(/depot/cms/kernels/coffea_latest) [shar1172@purdue-af-182 copperheadV2_Feb2026]$ python scripts/sync_parquet_dimuon.py /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022preEE/f1_0/data_C/0/ /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Mar13_tightPassLepVeto_NoJER/stage1_output/2022preEE/f1_0/data_C/0/ -o sync_2022preEE_dataC_MeetingReport.csv
+Created new Dask client: <Client: 'tcp://127.0.0.1:33491' processes=12 threads=12, memory=120.00 GiB>
+[INFO] Loading directory 1: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022preEE/f1_0/data_C/0/
+[INFO] Reading parquet pattern: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022preEE/f1_0/data_C/0/*.parquet
+[WARNING] Missing columns in /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022preEE/f1_0/data_C/0/: ['separate_wgt_genWeight', 'separate_wgt_genWeight_normalization', 'separate_wgt_xsec', 'separate_wgt_lumi', 'separate_wgt_pu_wgt', 'separate_wgt_l1prefiring', 'separate_wgt_muID', 'separate_wgt_muIso', 'separate_wgt_muTrig', 'separate_wgt_LHERen', 'separate_wgt_LHEFac', 'separate_wgt_pdf_2rms', 'separate_wgt_jetpuid_wgt', 'separate_wgt_qgl_wgt', 'separate_wgt_zpt_wgt']
+[INFO] Loaded 3874323 rows from /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022preEE/f1_0/data_C/0/
+
+[INFO] Loading directory 2: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Mar13_tightPassLepVeto_NoJER/stage1_output/2022preEE/f1_0/data_C/0/
+[INFO] Reading parquet pattern: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Mar13_tightPassLepVeto_NoJER/stage1_output/2022preEE/f1_0/data_C/0/*.parquet
+[WARNING] Missing columns in /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Mar13_tightPassLepVeto_NoJER/stage1_output/2022preEE/f1_0/data_C/0/: ['separate_wgt_genWeight', 'separate_wgt_genWeight_normalization', 'separate_wgt_xsec', 'separate_wgt_lumi', 'separate_wgt_pu_wgt', 'separate_wgt_l1prefiring', 'separate_wgt_muID', 'separate_wgt_muIso', 'separate_wgt_muTrig', 'separate_wgt_LHERen', 'separate_wgt_LHEFac', 'separate_wgt_pdf_2rms', 'separate_wgt_jetpuid_wgt', 'separate_wgt_qgl_wgt', 'separate_wgt_zpt_wgt']
+[INFO] Loaded 3874323 rows from /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Mar13_tightPassLepVeto_NoJER/stage1_output/2022preEE/f1_0/data_C/0/
+
+```
+
+# 13 March 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/sync_dataset_nanoAODv12.yaml -v 12 -l dev_March26_week3 -y "2017 2018 2022preEE" -m 0 -z -S test/output)
+time(bash stage1_loop_Improved.sh -c configs/datasets/sync_dataset_nanoAODv12.yaml -v 12 -l dev_March26_week3 -y "2017 2018 2022preEE" -m 1 -z -S test/output)
+
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/data_D/0/ -o test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/dyTo2L_M-50_incl/0/ -o test/output/dev_March26_week3/stage1_output/2022preEE_dy_eventKinematics.txt
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/vbf_powheg_dipole/0/ -o test/output/dev_March26_week3/stage1_output/2022preEE_vbf_eventKinematics.txt
+
+
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2018/f1_0/data_A/0/ -o test/output/dev_March26_week3/stage1_output/2018_dataA_eventKinematics.txt
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2017/f1_0/data_B/0/ -o test/output/dev_March26_week3/stage1_output/2017_dataB_eventKinematics.txt
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2017/f1_0/dy_M-50_aMCatNLO/0/ -o test/output/dev_March26_week3/stage1_output/2017_dy_eventKinematics.txt
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2017/f1_0/vbf_powheg_dipole/0/ -o test/output/dev_March26_week3/stage1_output/2017_vbf_eventKinematics.txt
+
+
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics_new.txt -o diff.csv
+
+
+# STEP-1: Get the stage-1 output
+time(bash stage1_loop_Improved.sh -c configs/datasets/sync_dataset_nanoAODv12.yaml -v 12 -l dev_March26_week3 -y "2022preEE" -m 1 -z -S test/output)
+
+# STEP-2: Get the sync text files
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/data_D/0/ -o test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/dyTo2L_M-50_incl/0/ -o test/output/dev_March26_week3/stage1_output/2022preEE_dy_eventKinematics.txt
+python scripts/sync_parquet_dimuon.py test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/vbf_powheg_dipole/0/ -o test/output/dev_March26_week3/stage1_output/2022preEE_vbf_eventKinematics.txt
+
+# STEP-3: Compare the reference with new generated text file
+python scripts/sync_parquet_dimuon.py test/reference/2022preEE_dataD_eventKinematics.txt test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt -o diff_dataD.csv
+python scripts/sync_parquet_dimuon.py test/reference/2022preEE_dy_eventKinematics.txt test/output/dev_March26_week3/stage1_output/2022preEE_dy_eventKinematics.txt -o diff_dy.csv
+python scripts/sync_parquet_dimuon.py test/reference/2022preEE_vbf_eventKinematics.txt test/output/dev_March26_week3/stage1_output/2022preEE_vbf_eventKinematics.txt -o diff_vbf.csv
+
+# STEP-4: Report if the diff_*.csv is not empty.
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/sync_dataset_nanoAODv12.yaml -v 12 -l main -y "2017 2018" -m 1 )
+
+```
+
+
+# 11 March 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v3 -y "2022postEE" -m 1 -k -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v3 -y "2022preEE 2022postEE 2023 2023BPix 2024" -m 1 -k -i 0)
+```
+
+# 04 March 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2 -y "2022preEE" -m compact -k -i 0)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJets_Asym_pT_HEHF_30_25 -y "2022postEE" -m 1 -k -i 0)
+
+python plotter/validate_pysr_real_fake_before_after.py -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1cleanRun3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet --pysr-out validation/pysr_out_splitHEHF -o validation/pysr_real_fake_before_after --variation nominal   --n-jets 4
+
+snakemake -s workflow/Snakefile plot_all  -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --allowed-rules plots  -R plots
+snakemake -s workflow/Snakefile -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 
+snakemake -s workflow/Snakefile all_stage1 -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60  --forceall 
+```
+
+# 01 March 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2 -y "2022postEE" -m zpt_fit12)
+```
 
 # 20 February 2026
 
@@ -8,10 +94,12 @@
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDMuIDFix_V2 -y "2022preEE 2022postEE 2023 2023BPix" -m compact -k -i 1)
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2 -y "2022preEE 2022postEE" -m compact -k -i 0)
 snakemake -s workflow/Snakefile plot_all  -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --allowed-rules plots  -R plots
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l test -y "2022postEE" -m compact -k -i 1)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l Run2_nanoAODv12_24Feb -y "2017" -m 1 -k -i 2)
 
 ```
 
-# 17 February 2026
+# 17 February 2026  
 
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_15Feb_FilterJetsHorn30GeV -y "2023BPix" -m 1 -k -i 1)
