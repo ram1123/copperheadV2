@@ -1,7 +1,7 @@
 [workspace]
 authors = ["ram1123 <ramkrishna.sharma71@gmail.com>"]
 channels = ["conda-forge", "bioconda"]
-name = "coffea_latest_ml"
+name = "copperhead-analysis"
 platforms = ["linux-64"]
 version = "0.1.0"
 
@@ -53,14 +53,14 @@ hepconvert = "*"
 scikit-hep-testdata = "*"
 
 # ----------------------------------------------------------------------
-# Higgs Combine and ROOT
+# Higgs Combine
 # ----------------------------------------------------------------------
 [feature.combine.dependencies]
 cms-combine = "==10.4.2"
 root = "6.36.*"
 
 # ----------------------------------------------------------------------
-# ML / training extras
+# ML / training
 # ----------------------------------------------------------------------
 [feature.ml.dependencies]
 xgboost = "*"
@@ -70,7 +70,7 @@ optuna = ">=4.7.0,<5"
 shap = ">=0.50.0,<0.51"
 
 # ----------------------------------------------------------------------
-# Development / notebook / plotting extras
+# Dev / notebooks
 # ----------------------------------------------------------------------
 [feature.dev.dependencies]
 ipywidgets = "*"
@@ -80,36 +80,35 @@ ruff = ">=0.15.5,<0.16"
 graphviz = "*"
 
 # ----------------------------------------------------------------------
-# Symbolic regression / Julia extras
+# Symbolic regression
 # ----------------------------------------------------------------------
 [feature.symbolic.dependencies]
 julia = ">=1.9,<1.12"
 pysr = "*"
 
+[feature.symbolic.pypi-dependencies]
+juliacall = "*"
+
 # ----------------------------------------------------------------------
-# Workflow / pipeline extras
+# Workflow tools
 # ----------------------------------------------------------------------
 [feature.workflow.dependencies]
 snakemake-minimal = ">=9.16.3,<10"
 
 # ----------------------------------------------------------------------
-# CUDA helper libs (keep out of CI if possible)
+# CUDA helpers
 # ----------------------------------------------------------------------
 [feature.cuda.dependencies]
 libnvjitlink-dev = "*"
 
 # ----------------------------------------------------------------------
-# PyPI-only packages
+# Style helpers
 # ----------------------------------------------------------------------
 [feature.style.pypi-dependencies]
 cmsstyle = "*"
 
-[feature.symbolic.pypi-dependencies]
-juliacall = "*"
-
 # ----------------------------------------------------------------------
-# Activation scripts
-# Keep them off CI unless really needed
+# Local activation
 # ----------------------------------------------------------------------
 [feature.local.activation]
 scripts = ["scripts/pixi_activate.sh"]
@@ -118,8 +117,8 @@ scripts = ["scripts/pixi_activate.sh"]
 # Environments
 # ----------------------------------------------------------------------
 [environments]
-# Minimal CI environment for GitHub Actions sync tests
-ci = ["analysis", "local"]
+ci = ["analysis"]
+
 default = ["analysis", "dev", "root", "workflow", "style", "local"]
 
 # Full heavy environment with ML + symbolic tools

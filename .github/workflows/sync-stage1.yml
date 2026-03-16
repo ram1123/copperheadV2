@@ -61,6 +61,9 @@ jobs:
         run: |
           pixi install --locked -e ci
 
+      - name: Set PYTHONPATH
+        run: echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
+
       - name: Show pixi environment info
         run: |
           pixi run -e ci python --version
