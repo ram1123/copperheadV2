@@ -32,10 +32,14 @@ log*.txt
 *.tsv
 # pixi environments
 .pixi/*
-!.pixi/config.toml
-pixi.lock
 .snakemake/
 *.pt
 *.npz
 *.done
 .julia_depot/
+*.sha256
+*.bkup
+*.jsonl
+*.out
+test*.py
+test*.sh
