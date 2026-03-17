@@ -1,0 +1,16 @@
+imax *                                                                                                                        
+jmax *                                                                                                                        
+kmax *                                                                                                                        
+------------                                                                                                                  
+shapes bkg         cat2_ggh           my_workspace/workspace_bkg_cat2_ggh.root     w:bkg_cat2_ggh_pdf            
+shapes data_obs    cat2_ggh           my_workspace/workspace_bkg_cat2_ggh.root     w:data_cat2_ggh                                              
+------------                                                                                                                  
+bin                cat2_ggh      
+observation        -1                                                                                                         
+------------                                                                                                                  
+bin                cat2_ggh
+process            bkg
+process            1 
+rate               1
+------------
+pdf_index_ggh discrete

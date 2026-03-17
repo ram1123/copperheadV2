@@ -38,6 +38,14 @@ if __name__ == "__main__":
     help="path were stage2 output is saved",
     )
     parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default=".",
+    action="store",
+    help="path where the edge validation is saved",
+    )    
+    parser.add_argument(
     "--edge_cfg_path",
     dest="edge_cfg_path",
     default=None,
@@ -62,7 +70,8 @@ if __name__ == "__main__":
     # target_yields = [0.43, 0.28, 0.14, 0.1 , 0.05]
     # target_yields = [0.23, 0.36, 0.26, 0.11, 0.04] # V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix_X_V2_UL_Jan18_2025_Feb15_newBinEdges
     # target_yields = [0.23, 0.36, 0.41]
-    yaml_path = "stage2/ggH/target_yields.yaml"
+    yaml_path = f"{sysargs.save_path}/target_yields.yaml"
+    print(f"yaml_path: {yaml_path}")
     target_yields = OmegaConf.load(yaml_path)["target_yields"]
     print(f"target_yields: {target_yields}")
 
@@ -114,8 +123,9 @@ if __name__ == "__main__":
     if sysargs.edge_cfg_path is None:
         config_path = f"/work/users/yun79/Run3/copperheadV2/configs/MVA/ggH/BDT_edges.yaml"
     else:
-        config_path = sysargs.edge_cfg_path
+        config_path = f"{sysargs.edge_cfg_path}/BDT_edges.yaml"
     # Load the config file
+    print(f"config_path: {config_path}")
     config = OmegaConf.load(config_path)
     print(f"old config: {config}")
     bin_edges = [float(value) for value in bin_edges] # need to convert to 32-bit b4 writing to omegaconf

@@ -1,0 +1,18 @@
+imax *                                                                                                                        
+jmax *                                                                                                                        
+kmax *                                                                                                                        
+------------                                                                                                                  
+#shapes bkg         cat1_ggh           workspace_bkg_cat1_ggh.root     w:bkg_cat1_ggh_pdf            
+#shapes data_obs    cat1_ggh           workspace_bkg_cat1_ggh.root     w:data_cat1_ggh         
+shapes bkg         cat1_ggh           my_workspace/workspace_bkg_cat1_ggh.root     w:bkg_cat1_ggh_pdf       
+shapes data_obs    cat1_ggh           my_workspace/workspace_bkg_cat1_ggh.root     w:data_cat1_ggh 
+
+------------                                                                                                                  
+bin                cat1_ggh      
+observation        -1                                                                                                         
+------------                                                                                                                  
+bin                cat1_ggh
+process            bkg
+process            1 
+rate               1
+------------

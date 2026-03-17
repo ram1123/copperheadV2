@@ -16,7 +16,7 @@ category="ggh"
 # model_name="Run3_09March_Check"
 # model_name="Run3_10March_005Trials"
 model_name="Run3_10March_020Trials"
-# model_name="Run3_10March_020Trials_EBEinTraining"
+# model_name="Run3_10March_020Trials_EBEinTraining" # Run3_10March_020Trials_EBEinTraining
 # model_name="Run3_10March_020Trials_RemovedAddHyperPars"
 # model_name="Run3_10March_100Trials"
 # model_name="Run3_10March_020Trials_oneHotEncoding"
@@ -35,7 +35,7 @@ if [[ -z "${step}" ]]; then
 fi
 
 model_trainYear="all"
-label_tag="AllYear"
+label_tag="AllYear_17March"
 
 stage2_label="${model_name}_${category}_${label_tag}"
 stage2_save_path="${base_path}/${label}/${stage2_label}/stage2_output"
@@ -43,7 +43,8 @@ stage2_save_path="${base_path}/${label}/${stage2_label}/stage2_output"
 bdt_edge_config_path="configs/MVA/ggH/BDT_edges.yaml"
 mva_base_path="${PWD}"
 
-all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
+# all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
+all_years=(2022preEE 2022postEE 2023 2023BPix 2024)
 # all_years=(all)
 
 if [[ "${year}" == "all" ]]; then
@@ -108,7 +109,7 @@ print_config
 # -----------------------------------------------------
 if [[ "${step}" == "0" ]]; then
     print_box "Step 0: Training the BDT for ggH"
-    do_hyperparam_search="1" # true (enable hyperparameter search)
+    do_hyperparam_search="0" # true (enable hyperparameter search)
     n_trials="51" # It is for the bayseian optimization
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
@@ -129,6 +130,10 @@ fi
 # Step 1: Apply stage2 for BDT edge calculation
 # -----------------------------------------------------
 if [[ "${step}" == "1" || "${step}" == "all" ]]; then
+    local_years="all"
+    save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/${local_years}"
+    echo "save_path: ${save_path}"
+
     for year_i in "${years[@]}"; do
         print_box "Step 1: Apply selection and add BDT score branch (${year_i})"
         sample_l="ggh vbf data"
@@ -144,6 +149,7 @@ if [[ "${step}" == "1" || "${step}" == "all" ]]; then
                 --model_name ${model_name} \
                 --model_trainYear ${model_trainYear} \
                 --mva_base_path ${mva_base_path} \
+                --edge_cfg_path "${save_path}/${stage2_label}" \
                 # --do_jecUnc # FIXME: make do_jecUnc optional
         fi
     done
@@ -157,9 +163,11 @@ fi
 #   2. /work/users/shar1172/copperheadV2_Feb2026/stage2/ggH/target_yields.yaml
 # -----------------------------------------------------
 if [[ "${step}" == "2" || "${step}" == "all" ]]; then
+    # This step for only year == all
     print_box "Step 2: Obtain the target yield"
+    local_years="all"
 
-    save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/${year}"
+    save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/${local_years}"
     mkdir -p "${save_path}"
     echo "save_path: ${save_path}"
 
@@ -167,7 +175,6 @@ if [[ "${step}" == "2" || "${step}" == "all" ]]; then
     unwanted_year="all"
     echo "old years list: ${years[*]}"
 
-    local_years=( "${years[@]//${unwanted_year}/}" )
     echo "New years list: ${local_years[*]}"
     python stage2/ggH/score_edge_generation/determine_score_edge.py \
         -load ${stage2_save_path} \
@@ -184,13 +191,18 @@ fi
 # Step 3: Obtain BDT edges
 # -----------------------------------------------------
 if [[ "${step}" == "3" || "${step}" == "all" ]]; then
+    local_years="all"
+    save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/${local_years}"
+    echo "save_path: ${save_path}"
+
     for year_i in "${years[@]}"; do
         if [[ "${year_i}" != "all" ]]; then
             print_box "Step 3: Obtain the BDT score edges (${year_i})"
             python stage2/ggH/calculate_score_edges.py \
                 -load ${stage2_save_path} \
                 --year ${year_i} \
-                --edge_cfg_path ${bdt_edge_config_path}
+                -save "${save_path}/${stage2_label}" \
+                --edge_cfg_path "${save_path}/${stage2_label}"
         fi
     done
 fi
@@ -199,6 +211,10 @@ fi
 # Step 4: Run stage2 again to save BDT score and sub-category
 # -----------------------------------------------------
 if [[ "${step}" == "4" || "${step}" == "all" ]]; then
+    local_years="all"
+    save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/${local_years}"
+    echo "save_path: ${save_path}"
+
     for year_i in "${years[@]}"; do
         print_box "Step 4: Run stage2 again to save BDT score + sub-category (${year_i})"
         sample_l="data ggh vbf dy tt ww wz"
@@ -213,7 +229,8 @@ if [[ "${step}" == "4" || "${step}" == "all" ]]; then
                 --year ${year_i} \
                 --model_name ${model_name} \
                 --model_trainYear ${model_trainYear} \
-                --mva_base_path ${mva_base_path}
+                --mva_base_path ${mva_base_path} \
+                --edge_cfg_path "${save_path}/${stage2_label}"
         fi
     done
 fi
@@ -244,6 +261,10 @@ fi
 # Step 6: More validation plots / tables
 # -----------------------------------------------------
 if [[ "${step}" == "6" || "${step}" == "all" ]]; then
+    local_years="all"
+    save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/${local_years}"
+    echo "save_path: ${save_path}"
+
     for year_i in "${years[@]}"; do
         save_path="output/bdt_${model_name}_${model_trainYear}/ggH/categorization/plots/${year_i}"
         mkdir -p "${save_path}"
@@ -263,6 +284,7 @@ if [[ "${step}" == "6" || "${step}" == "all" ]]; then
                 --model_name ${model_name} \
                 --model_trainYear ${model_trainYear} \
                 --mva_base_path ${mva_base_path} \
+                --edge_cfg_path "${save_path}/${stage2_label}" \
                 --do_6p7
         fi
 
@@ -322,7 +344,7 @@ fi
 # -----------------------------------------------------
 # Step 7: Workspace
 # -----------------------------------------------------
-if [[ "${step}" == "7" || "${step}" == "ws" || "${step}" == "dcall" ]]; then
+if [[ "${step}" == "7" || "${step}" == "dcall" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 7: Get workspace year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
@@ -343,7 +365,7 @@ fi
 # -----------------------------------------------------
 # Step 8: Datacard
 # -----------------------------------------------------
-if [[ "${step}" == "8" || "${step}" == "dc" || "${step}" == "dcall" ]]; then
+if [[ "${step}" == "8" || "${step}" == "dcall" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 8: Obtain datacard year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
@@ -358,7 +380,57 @@ if [[ "${step}" == "8" || "${step}" == "dc" || "${step}" == "dcall" ]]; then
             --year ${year_i} \
             --label ${stage3_label} \
             -save ${save_path}
+
+        echo "Copy the script: scripts/get_significance.sh to path: ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        cp scripts/get_significance.sh ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        cp scripts/get_impactPlots.sh ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+
+        echo "Copy the background datacards to the same path"
+        cp stage3/bkg_datacards_template/*bkg*.txt ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        
+        echo "Go to path given below and run"
+        echo "cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        echo "bash get_significance.sh"
+        echo "bash get_impactPlots.sh"
     done
+    
+fi
+
+# -----------------------------------------------------
+# Step 9: Run Significance
+# -----------------------------------------------------
+if [[ "${step}" == "9" || "${step}" == "dcall" || "${step}" == "all" ]]; then
+    for year_i in "${years[@]}"; do
+        print_box "Step 9: Run significance for year: (${year_i})"
+        stage3_label="${label}_X_${model_name}_${label_tag}"
+        save_path="output/bdt_${model_name}_${model_trainYear}"
+        mkdir -p "${save_path}"
+
+        echo "stage2_save_path: ${stage2_save_path}"
+        echo "Go to path given below and run"
+        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        bash get_significance.sh
+        cd -
+    done
+    
+fi
+
+# -----------------------------------------------------
+# Step 9: Run Significance
+# -----------------------------------------------------
+if [[ "${step}" == "10" || "${step}" == "im" || "${step}" == "all" ]]; then
+    for year_i in "${years[@]}"; do
+        print_box "Step 10: Run Impact for year: (${year_i})"
+        stage3_label="${label}_X_${model_name}_${label_tag}"
+        save_path="output/bdt_${model_name}_${model_trainYear}"
+        mkdir -p "${save_path}"
+
+        echo "stage2_save_path: ${stage2_save_path}"
+        echo "Go to path given below and run"
+        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        bash get_impactPlots.sh
+    done
+    
 fi
 
 print_box "Done"
