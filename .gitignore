@@ -39,3 +39,10 @@ pixi.lock
 *.npz
 *.done
 .julia_depot/
+*.sha256
+*.bkup
+*.jsonl
+*.out
+test*.py
+test*.sh
+output/

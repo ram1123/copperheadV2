@@ -19,6 +19,38 @@ from modules.selection import filterRegion
 import time
 from modules.utils import logger
 
+
+def load_or_create_bdt_edges(edge_cfg_path):
+    """
+    Load BDT edges from YAML.
+    If file does not exist, create a default dummy file.
+    """
+
+    BDTedges_load_path = os.path.join(edge_cfg_path, "BDT_edges.yaml")
+
+    if not os.path.exists(BDTedges_load_path):
+        print(f"[INFO] BDT edges file not found. Creating dummy file at: {BDTedges_load_path}")
+
+        dummy_edges = {
+            "2024": [0.0, 0.453, 0.641, 0.804, 0.888, 1.1],
+            "2023BPix": [0.0, 0.384, 0.577, 0.749, 0.852, 1.1],
+            "2023": [0.0, 0.387, 0.595, 0.778, 0.870, 1.1],
+            "2022postEE": [0.0, 0.371, 0.547, 0.735, 0.841, 1.1],
+            "2022preEE": [0.0, 0.376, 0.551, 0.740, 0.842, 1.1],
+            "2018": [0.0, 0.369, 0.506, 0.589, 0.721, 1.1],
+            "2017": [0.0, 0.394, 0.518, 0.633, 0.786, 1.1],
+            "2016postVFP": [0.0, 0.394, 0.521, 0.635, 0.795, 1.1],
+            "2016preVFP": [0.0, 0.394, 0.523, 0.637, 0.794, 1.1],
+        }
+
+        os.makedirs(edge_cfg_path, exist_ok=True)
+        OmegaConf.save(config=dummy_edges, f=BDTedges_load_path)
+
+    # Load edges
+    edges = OmegaConf.load(BDTedges_load_path)
+    return edges
+
+
 def split_into_n_parts(lst, n_parts):
     return [lst[i::n_parts] for i in range(n_parts)]
 
@@ -125,7 +157,7 @@ def getDeltaPhi(phi1,phi2):
     dphi = abs(np.mod(phi1 - phi2 + np.pi, 2 * np.pi) - np.pi)
     return dphi
         
-def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_name:str, wgt_unc_fields=[], jec_unc_fields=[], do_6p7=False, model_base_path=".") -> ak.Record:
+def process4gghCategory(events: ak.Record, edge_cfg_path:str, year:str, model_trainYear:str, model_name:str, wgt_unc_fields=[], jec_unc_fields=[], do_6p7=False, model_base_path=".") -> ak.Record:
     """
     Takes the given stage1 output, runs MVA, and returns a new 
     ak.Record with MVA score + relevant info from stage1 output
@@ -311,8 +343,7 @@ def process4gghCategory(events: ak.Record, year:str, model_trainYear:str, model_
         events = evaluate_bdt(events, variation, model_name, training_features, parameters) 
     processed_events = events
     # load BDT score edges for subcategory divison
-    BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
-    edges = OmegaConf.load(BDTedges_load_path)
+    edges = load_or_create_bdt_edges(edge_cfg_path)
     edges = np.array(edges[year])
     # edges = 1-edges
     logger.info(f"subCat BDT edges: {edges}")
@@ -688,6 +719,13 @@ if __name__ == "__main__":
     action="store",
     help="base path where MVA model is saved",
     )
+    parser.add_argument(
+    "--edge_cfg_path",
+    dest="edge_cfg_path",
+    default=None,
+    action="store",
+    help="path were stage2 output is saved",
+    )    
     start_time = time.time()
     client =  Client(n_workers=30,  threads_per_worker=1, processes=True, memory_limit='30 GiB') 
 
@@ -852,7 +890,7 @@ if __name__ == "__main__":
                     # test on only wgts first
                     logger.info(f"[partition_idx:{partition_idx}] Events field: {events.fields}")
                     logger.warning("This is first call of process4gghCategory")
-                    processed_events = process4gghCategory(events, args.year, args.model_trainYear, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7, model_base_path=mva_base_path)
+                    processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7, model_base_path=mva_base_path)
                     processed_events_l.append(processed_events)
     
                     smaller_jec_unc_field_l = split_maxlen(jec_unc_fields, 4)
@@ -861,14 +899,14 @@ if __name__ == "__main__":
                         
                         logger.info(f"[partition_idx:{partition_idx}] Events field: {events.fields}")
                         logger.warning("This is 2nd call of process4gghCategory")
-                        processed_events = process4gghCategory(events, args.year, args.model_trainYear, args.model_name, jec_unc_fields=small_jec_unc_fields, model_base_path=mva_base_path)
+                        processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, jec_unc_fields=small_jec_unc_fields, model_base_path=mva_base_path)
                         processed_events_l.append(processed_events)
     
                     processed_events = mergeAkZips(processed_events_l)
                     del processed_events_l
                 else:
                     logger.warning(f"[partition_idx:{partition_idx}] This is 3rd call of process4gghCategory")
-                    processed_events = process4gghCategory(events, args.year, args.model_trainYear, args.model_name, do_6p7=args.do_6p7, model_base_path=mva_base_path)
+                    processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, do_6p7=args.do_6p7, model_base_path=mva_base_path)
             elif category == "vbf":
                 processed_events = process4vbfCategory(events) 
             else: 
@@ -923,8 +961,7 @@ if __name__ == "__main__":
             time.sleep(3) # wait three second for stability
         
         # This is ineligant, but also save the bdt edges that was presumably used
-        BDTedges_load_path = "./configs/MVA/ggH/BDT_edges.yaml"
-        edges = OmegaConf.load(BDTedges_load_path)
+        edges = load_or_create_bdt_edges(args.edge_cfg_path)
         OmegaConf.save(config=edges, f=f'{save_path}/BDT_edges.yaml')
     
     client = Client.current()
