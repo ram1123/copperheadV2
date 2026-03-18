@@ -2,7 +2,7 @@ name: Deploy MkDocs to GitHub Pages
 
 on:
   push:
-    branches: ["dev_run3_2022_2023"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
