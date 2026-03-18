@@ -25,9 +25,39 @@
 # - 0.25
 # - 0.06
 # - 0.01
-target_yields:  # DYMiNNLO_11Apr2025_X_V2_UL_Apr11_2025_DyMinnloTtStVvEwkGghVbf
-- 0.22
-- 0.28
+# target_yields:  # DYMiNNLO_11Apr2025_X_V2_UL_Apr11_2025_DyMinnloTtStVvEwkGghVbf
+# - 0.22
+# - 0.28
+# - 0.21
+# - 0.2
+# - 0.09
+# target_yields:  # Run3PrelimResultsJan25_2026_NoAnnhilateWgts_ggh
+# - 0.26
+# - 0.42
+# - 0.18
+# - 0.1
+# - 0.04
+# target_yields:  # Run3PrelimResultsJan29_2026_reducedInput2_ggh
+# - 0.05
+# - 0.11
+# - 0.22
+# - 0.25
+# - 0.37
+# target_yields:  # Run3PrelimResultsFeb09_2026_jecjer_ggh
+# - 0.22
+# - 0.37
+# - 0.28
+# - 0.1
+# - 0.03
+# target_yields:  # Run3PrelimResultsFeb10_2026_jecjer_flatDimuMass_ggh
+# - 0.2
+# - 0.38
+# - 0.27
+# - 0.11
+# - 0.04
+target_yields:  # Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV_x_Run3PrelimResultsFeb09_2026_jecjer_ggh_perYr
 - 0.21
-- 0.2
-- 0.09
+- 0.38
+- 0.24
+- 0.13
+- 0.04

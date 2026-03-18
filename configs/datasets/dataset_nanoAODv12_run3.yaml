@@ -1,0 +1,1876 @@
+years:
+    "2022preEE":
+        Data:
+            total_lumi_pb: 7990.0
+            data_C:
+                skip_sample: False
+                datasets:
+                    - /Muon/Run2022C-16Dec2023-v1/NANOAOD
+                    - /SingleMuon/Run2022C-16Dec2023-v1/NANOAOD
+                lumi_pb: 5020.0 
+                das_request: "https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod/global&input=dataset%20status=*%20dataset=/Muon/Run2022C-16Dec2023-v1/NANOAOD"
+                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                references:
+                    ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
+                    golden_json_official: test
+
+            data_D:
+                skip_sample: False
+                datasets:
+                    - /Muon/Run2022D-16Dec2023-v1/NANOAOD
+                lumi_pb: 2970.0 
+                das_request: "https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod/global&input=dataset%20status=*%20dataset=/Muon/Run2022D-16Dec2023-v1/NANOAOD"
+                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                references:
+                    ppd_summary_table: "Run 3 Data-taking twiki (2022D)"
+                    golden_json_official: test
+        DY:
+            dyTo2L_M-50_0j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 5034.65
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2L_M-50_1j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 952.29
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2L_M-50_2j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 359.05
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2Mu_M-105To160:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 49.21
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dy_M-50_aMCatNLO:
+                skip_sample: False
+                datasets:
+                    - /DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 5991.00
+                notes:  cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
+                cross_section_source:   "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                notes2: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_source2: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MadGraph5_aMC"
+
+            dyTo2L_M-50_incl:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v1/NANOAODSIM
+                notes: njets <= 2, not njets==2;
+                cross_section_pb: 5991.00
+                notes2:  cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
+                cross_section_source:   "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                notes3: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_source3: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MadGraph5_aMC"
+
+            dyTo2Mu_MLL_10To50:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 6744.00 # 1997.0*3 = 5991.0
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_50To120:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 2219.00
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_120To200:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 21.65
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+        Top:
+            tt_inclusive:
+                skip_sample: False
+                datasets:
+                    - /TT_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /TT_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 923.6
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_sl:
+                skip_sample: False
+                datasets:
+                    - /TTtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /TTtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 405.69
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.3258*0.6741*2 = 405.69
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_dl:
+                skip_sample: False
+                datasets:
+                    - /TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 98.04
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.3258*0.3258 = 98.04
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_fh:
+                skip_sample: False
+                datasets:
+                    - /TTto4Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /TTto4Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 419.69
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.6741*0.6741 = 419.69
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            st_tw_top:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 35.99
+                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 36.05
+                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+        VV:
+            ww_2l2nu:
+                skip_sample: False
+                datasets:
+                    - /WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 11.79
+                cross_section_source: "SMP-25-013"
+                kfactor:
+                    value: 1.0
+                    source: "POWHEG+MCFM"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_3lnu:
+                skip_sample: False
+                datasets:
+                    - /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v3/NANOAODSIM
+                cross_section_pb: 4.924
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZto3LNu_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.08
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_2l2q:
+                skip_sample: False
+                datasets:
+                    - /WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 7.568
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.08
+                    source:  SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_1l1nu2q:
+                skip_sample: False
+                datasets:
+                    - /WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 15.87
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz:
+                skip_sample: False
+                datasets:
+                    - /ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 12.75
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_2l2u:
+                skip_sample: False
+                datasets:
+                    - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 1.031
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.16
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_2l2q:
+                skip_sample: False
+                datasets:
+                    - /ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 6.788
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.19
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_4l:
+                skip_sample: False
+                datasets:
+                    - /ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 1.39
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.19
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+        EWK:
+            ewk_lljj:
+                skip_sample: False
+                datasets:
+                    - /EWK_2L2J_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 1.421
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_lljj_mll50_mjj120:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: None
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160:
+                skip_sample: False
+                datasets:
+                    - /EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 0.06445
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160_mjj120:
+                skip_sample: False
+                datasets:
+                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 0.06447
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+        Higgs:
+            ggh_powhegPS:
+                skip_sample: False
+                datasets:
+                    - /GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
+
+            ggh_amcatnlo:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
+            vbf_powheg_dipole:
+                skip_sample: False
+                datasets:
+                    - /VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM
+                cross_section_pb: 0.00105742
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "pdg"
+                references:
+                    - "POWHEG (with dipole recoil)"
+
+            vbf_aMCatNLO:
+                skip_sample: True
+                datasets:
+                    - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 0.00105742
+                notes: NONE
+                cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: NONE
+                br_source: NONE
+                references:
+                    - "aMC@NLO"
+
+    "2022postEE":
+        Data:
+            total_lumi_pb: 26680.0
+            data_E:
+                skip_sample: False
+                datasets:
+                    - /Muon/Run2022E-16Dec2023-v1/NANOAOD
+                lumi_pb: 5810.0
+                das_request:
+                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                references:
+                    ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
+                    golden_json_official: test
+
+            data_F:
+                skip_sample: False
+                datasets:
+                    - /Muon/Run2022F-16Dec2023-v1/NANOAOD
+                lumi_pb: 17780.0
+                das_request:
+                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                references:
+                    ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
+                    golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+            data_G:
+                skip_sample: False
+                datasets:
+                    - /Muon/Run2022G-16Dec2023-v1/NANOAOD
+                lumi_pb: 3090.0
+                das_request:
+                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                references:
+                    ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
+                    golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+        DY:
+            dyTo2L_M-50_0j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 5034.65
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2L_M-50_1j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 952.29
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2L_M-50_2j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 359.05
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2Mu_M-105To160:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 49.21
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dy_M-50_aMCatNLO:
+                skip_sample: False
+                datasets:
+                    - /DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v5-v2/NANOAODSIM
+                notes: cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
+                cross_section_pb: 5991.0
+                cross_section_source: "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                cross_section_source_FEWS_NotUsed: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/, 2124.08*3 = 6372.24
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MadGraph5_aMC"
+
+            dyTo2L_M-50_incl:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v1/NANOAODSIM
+                notes: cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
+                cross_section_pb: 5991.00
+                cross_section_source: "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                cross_section_source_FEWS_NotUsed: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/, 2124.08*3 = 6372.24
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MadGraph5_aMC"
+
+
+            dyTo2Mu_MLL_10To50:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 6744.00 # 1997.0*3 = 5991.0
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_50To120:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 2219.00
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_120To200:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 21.65
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+        Top:
+            tt_inclusive:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 923.6
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_sl:
+                skip_sample: False
+                datasets:
+                    - /TTtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /TTtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 405.69
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.3258*0.6741*2 = 405.69
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_dl:
+                skip_sample: False
+                datasets:
+                    - /TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 98.04
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.3258*0.3258 = 98.04
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_fh:
+                skip_sample: False
+                datasets:
+                    - /TTto4Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /TTto4Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 419.69
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.6741*0.6741 = 419.69
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            st_tw_top:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 35.99
+                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 36.05
+                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+        VV:
+            ww_2l2nu:
+                skip_sample: False
+                datasets:
+                    - /WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 11.79
+                cross_section_source: "SMP-25-013"
+                kfactor:
+                    value: 1.0
+                    source: "POWHEG+MCFM"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_3lnu:
+                skip_sample: False
+                datasets:
+                    - /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 4.924
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZto3LNu_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.08
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_2l2q:
+                skip_sample: False
+                datasets:
+                    - /WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 7.568
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.08
+                    source:  SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_1l1nu2q:
+                skip_sample: False
+                datasets:
+                    - /WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 15.87
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz:
+                skip_sample: False
+                datasets:
+                    - /ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 12.75
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_2l2u:
+                skip_sample: False
+                datasets:
+                    - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 1.031
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.16
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_2l2q:
+                skip_sample: False
+                datasets:
+                    - /ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 6.788
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.19
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_4l:
+                skip_sample: False
+                datasets:
+                    - /ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 1.39
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.19
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+        EWK:
+            ewk_lljj:
+                skip_sample: False
+                datasets:
+                    - /EWK_2L2J_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 1.421
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_lljj_mll50_mjj120:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: None
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160:
+                skip_sample: False
+                datasets:
+                    - /EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 0.06445
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160_mjj120:
+                skip_sample: False
+                datasets:
+                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 0.06447
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+        Higgs:
+            ggh_powhegPS:
+                skip_sample: False
+                datasets:
+                    - /GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v1/NANOAODSIM
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
+            ggh_amcatnlo:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
+            vbf_powheg_dipole:
+                skip_sample: False
+                datasets:
+                    - /VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM
+                cross_section_pb: 0.00105742
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "pdg"
+                references:
+                    - "POWHEG (with dipole recoil)"
+
+            vbf_aMCatNLO:
+                skip_sample: True
+                datasets:
+                    - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 0.00105742
+                notes: NONE
+                cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: NONE
+                br_source: NONE
+                references:
+                    - "aMC@NLO"
+
+    "2023":
+        Data:
+            total_lumi_pb: 17960.0
+            data_C:
+                skip_sample: False
+                datasets:
+                    - /Muon0/Run2023C-22Sep2023_v1-v1/NANOAOD
+                    - /Muon0/Run2023C-22Sep2023_v2-v1/NANOAOD
+                    - /Muon0/Run2023C-22Sep2023_v3-v1/NANOAOD
+                    - /Muon0/Run2023C-22Sep2023_v4-v1/NANOAOD
+                    - /Muon1/Run2023C-22Sep2023_v1-v1/NANOAOD
+                    - /Muon1/Run2023C-22Sep2023_v2-v1/NANOAOD
+                    - /Muon1/Run2023C-22Sep2023_v3-v1/NANOAOD
+                    - /Muon1/Run2023C-22Sep2023_v4-v2/NANOAOD
+                lumi_pb: 17960.0
+                das_request:
+                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                references:
+                    ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
+                    golden_json_official: test
+
+        DY:
+            dyTo2L_M-50_0j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
+                cross_section_pb: 5034.65
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2L_M-50_1j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
+                cross_section_pb: 952.29
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2L_M-50_2j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v4/NANOAODSIM
+                cross_section_pb: 359.05
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2Mu_M-105To160:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: 49.21
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dy_M-50_aMCatNLO:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 5558.0
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MadGraph5_aMC"
+
+            dyTo2L_M-50_incl:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2;
+                cross_section_pb: 5991.00
+                notes2:  cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
+                cross_section_source:   "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                notes3: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_source3: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                cross_section_source4: https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MadGraph5_aMC"
+
+            dyTo2Mu_MLL_10To50:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 6744.00 # 1997.0*3 = 5991.0
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_50To120:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 2219.00
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_120To200:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 21.65
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+        Top:
+            tt_inclusive:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 923.6
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_sl:
+                skip_sample: False
+                datasets:
+                    - /TTtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                cross_section_pb: 405.69
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.3258*0.6741*2 = 405.69
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_dl:
+                skip_sample: False
+                datasets:
+                    - /TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                cross_section_pb: 98.04
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.3258*0.3258 = 98.04
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_fh:
+                skip_sample: False
+                datasets:
+                    - /TTto4Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                cross_section_pb: 419.69
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.6741*0.6741 = 419.69
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            st_tw_top:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 35.99
+                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 36.05
+                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+        VV:
+            ww_2l2nu:
+                skip_sample: False
+                datasets:
+                    - /WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v4/NANOAODSIM
+                cross_section_pb: 11.79
+                cross_section_source: "SMP-25-013"
+                kfactor:
+                    value: 1.0
+                    source: "POWHEG+MCFM"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_3lnu:
+                skip_sample: False
+                datasets:
+                    - /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                    - /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15_ext1-v2/NANOAODSIM
+                cross_section_pb: 4.924
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZto3LNu_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.08
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_2l2q:
+                skip_sample: False
+                datasets:
+                    - /WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
+                cross_section_pb: 7.568
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.08
+                    source:  SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_1l1nu2q:
+                skip_sample: False
+                datasets:
+                    - /WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                cross_section_pb: 15.87
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz:
+                skip_sample: False
+                datasets:
+                    - /ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                cross_section_pb: 12.75
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_2l2u:
+                skip_sample: False
+                datasets:
+                    - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
+                cross_section_pb: 1.031
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.16
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_2l2q:
+                skip_sample: False
+                datasets:
+                    - /ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
+                cross_section_pb: 6.788
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.19
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_4l:
+                skip_sample: False
+                datasets:
+                    - /ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
+                cross_section_pb: 1.39
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.19
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+        EWK:
+            ewk_lljj:
+                skip_sample: False
+                datasets:
+                    - /EWK_2L2J_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: 1.421
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_lljj_mll50_mjj120:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: None
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160:
+                skip_sample: False
+                datasets:
+                    - /EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: 0.06445
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160_mjj120:
+                skip_sample: False
+                datasets:
+                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: 0.06447
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+        Higgs:
+            ggh_powhegPS:
+                skip_sample: False
+                datasets:
+                    - /GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
+            ggh_amcatnlo:
+                skip_sample: True
+                datasets: []
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
+            vbf_powheg_dipole:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 0.00105742
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "pdg"
+                references:
+                    - "POWHEG (with dipole recoil)"
+
+            vbf_powheg:
+                skip_sample: False
+                datasets:
+                    - /VBFHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: 0.00105742
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "pdg"
+                references:
+                    - "POWHEG (with dipole recoil)"
+
+            vbf_aMCatNLO:
+                skip_sample: False
+                datasets:
+                    - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: 0.00105742
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "pdg"
+                references:
+                    - "POWHEG (with dipole recoil)"
+
+    "2023BPix":
+        Data:
+            total_lumi_pb: 9680.0
+            data_D:
+                skip_sample: False
+                datasets:
+                    - /Muon0/Run2023D-22Sep2023_v1-v1/NANOAOD
+                    - /Muon0/Run2023D-22Sep2023_v2-v1/NANOAOD
+                    - /Muon1/Run2023D-22Sep2023_v1-v1/NANOAOD
+                    - /Muon1/Run2023D-22Sep2023_v2-v1/NANOAOD
+                lumi_pb: 9680.0
+                das_request:
+                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                references:
+                    ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
+                    golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+
+        DY:
+            dyTo2L_M-50_0j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 5034.65
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2L_M-50_1j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 952.29
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2L_M-50_2j:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 359.05
+                cross_section_source: SMP-25-013,AN2023_179_v6
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dyTo2Mu_M-105To160:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 49.21
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu-2Jets_MLL-105To160_TuneCP5_13p6TeV_amcatnloFXFX-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
+            dy_M-50_aMCatNLO:
+                skip_sample: True
+                datasets:
+                    - None
+                notes: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_pb: 6372.24
+                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MadGraph5_aMC"
+
+            dyTo2L_M-50_incl:
+                skip_sample: False
+                datasets:
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v4/NANOAODSIM
+                notes: njets <= 2, not njets==2;
+                cross_section_pb: 5991.00
+                notes2:  cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
+                cross_section_source:   "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                notes3: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
+                cross_section_source3: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                cross_section_source4: https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MadGraph5_aMC"
+
+
+            dyTo2Mu_MLL_10To50:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 6744.00 # 1997.0*3 = 5991.0
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-10to50_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_50To120:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 2219.00
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+            dyTo2Mu_MLL_120To200:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                notes: njets <= 2, not njets==2
+                cross_section_pb: 21.65
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYto2Mu_MLL-120to200_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "Powheg"
+
+        Top:
+            tt_inclusive:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 923.6
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_sl:
+                skip_sample: False
+                datasets:
+                    - /TTtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 405.69
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.3258*0.6741*2 = 405.69
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_dl:
+                skip_sample: False
+                datasets:
+                    - /TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 98.04
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.3258*0.3258 = 98.04
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            ttjets_fh:
+                skip_sample: False
+                datasets:
+                    - /TTto4Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 419.69
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO
+                notes: NNLO+NNLL top-quark-pair cross sections 923.6; multiplied by the branching ratio of SL = 923.6*0.6741*0.6741 = 419.69
+                kfactor:
+                    value: 1.0
+                    source: "Top NNLO+NNLL"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG "
+
+            st_tw_top:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 35.99
+                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 36.05
+                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
+                notes: NONE
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+        VV:
+            ww_2l2nu:
+                skip_sample: False
+                datasets:
+                    - /WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 11.79
+                cross_section_source: "SMP-25-013"
+                kfactor:
+                    value: 1.0
+                    source: "POWHEG+MCFM"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_3lnu:
+                skip_sample: False
+                datasets:
+                    - /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
+                    - /WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 4.924
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZto3LNu_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.08
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_2l2q:
+                skip_sample: False
+                datasets:
+                    - /WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
+                cross_section_pb: 7.568
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.08
+                    source:  SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            wz_1l1nu2q:
+                skip_sample: False
+                datasets:
+                    - /WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
+                cross_section_pb: 15.87
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DWZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz:
+                skip_sample: False
+                datasets:
+                    - /ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
+                cross_section_pb: 12.75
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_2l2u:
+                skip_sample: False
+                datasets:
+                    - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 1.031
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.16
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_2l2q:
+                skip_sample: False
+                datasets:
+                    - /ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 6.788
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.19
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            zz_4l:
+                skip_sample: False
+                datasets:
+                    - /ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 1.39
+                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DZZ_TuneCP5_13p6TeV_pythia8
+                kfactor:
+                    value: 1.19
+                    source: SMP-25-013,AN2023_179_v6, NLO to NNLO k-factor from MATRIX
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+        EWK:
+            ewk_lljj:
+                skip_sample: False
+                datasets:
+                    - /EWK_2L2J_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 1.421
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_lljj_mll50_mjj120:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: None
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160:
+                skip_sample: False
+                datasets:
+                    - /EWK_2Mu2J_Bin-MLL-105to160_TuneCH3_13p6TeV_madgraph-herwig7/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 0.06445
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+            ewk_mmjj_mll_105_160_mjj120:
+                skip_sample: True
+                datasets:
+                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v3/NANOAODSIM
+                cross_section_pb: 0.06447
+                cross_section_source: "computed using gen cross-section analyzer script"
+                kfactor:
+                    value: 1.00
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - NONE
+
+        Higgs:
+            ggh_powhegPS:
+                skip_sample: False
+                datasets:
+                    - /GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
+            ggh_amcatnlo:
+                skip_sample: False
+                datasets:
+                    - /GluGluHto2Mu_M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 0.0135096
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "HXSWG"
+                references:
+                    - "POWHEG"
+
+            vbf_powheg_dipole:
+                skip_sample: True
+                datasets:
+                    - None
+                cross_section_pb: 0.00105742
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "pdg"
+                references:
+                    - "POWHEG (with dipole recoil)"
+
+            vbf_powheg:
+                skip_sample: False
+                datasets:
+                    - /VBFHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 0.00105742
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "pdg"
+                references:
+                    - "POWHEG (with dipole recoil)"
+
+            vbf_aMCatNLO:
+                skip_sample: False
+                datasets:
+                    - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 0.00105742
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.6e-4
+                br_source: "pdg"
+                references:
+                    - "POWHEG (with dipole recoil)"

@@ -1,0 +1,20 @@
+ROOT FILE: /store/data/Run2022C/SingleMuon/NANOAOD/16Dec2023-v1/50000/57749259-0917-494b-b140-0ea02999b16f.root
+
+
+Cutflow stats:
+Cut TotalEntries        :pass = 585767              cumulative pass = 585767              all = 585767              -- eff = 100.0 %                    -- cumulative eff = 100.0 %
+Cut HLT_filter          :pass = 227031              cumulative pass = 227031              all = 585767              -- eff = 38.8 %                    -- cumulative eff = 38.8 %
+Cut lumi_mask           :pass = 432068              cumulative pass = 170409              all = 585767              -- eff = 73.8 %                    -- cumulative eff = 29.1 %
+Cut event_quality_flags :pass = 584376              cumulative pass = 170188              all = 585767              -- eff = 99.8 %                    -- cumulative eff = 29.1 %
+Cut PV_npvsGood         :pass = 585344              cumulative pass = 170188              all = 585767              -- eff = 99.9 %                    -- cumulative eff = 29.1 %
+Cut muon_pT_roch        :pass = 562057              cumulative pass = 169600              all = 585767              -- eff = 96.0 %                    -- cumulative eff = 29.0 %
+Cut muon_eta            :pass = 583178              cumulative pass = 169389              all = 585767              -- eff = 99.6 %                    -- cumulative eff = 28.9 %
+Cut muon_id             :pass = 565113              cumulative pass = 167776              all = 585767              -- eff = 96.5 %                    -- cumulative eff = 28.6 %
+Cut muon_isGlobal_or_Tracker:pass = 582027              cumulative pass = 167776              all = 585767              -- eff = 99.4 %                    -- cumulative eff = 28.6 %
+Cut muon_selection      :pass = 542948              cumulative pass = 167547              all = 585767              -- eff = 92.7 %                    -- cumulative eff = 28.6 %
+Cut muon_iso            :pass = 308529              cumulative pass = 161257              all = 585767              -- eff = 52.7 %                    -- cumulative eff = 27.5 %
+Cut nmuons              :pass = 14138               cumulative pass = 10822               all = 585767              -- eff = 2.4 %                    -- cumulative eff = 1.8 %
+Cut mm_charge           :pass = 133404              cumulative pass = 10805               all = 585767              -- eff = 22.8 %                    -- cumulative eff = 1.8 %
+Cut electron_veto       :pass = 585056              cumulative pass = 10800               all = 585767              -- eff = 99.9 %                    -- cumulative eff = 1.8 %
+Cut HemVeto             :pass = 585767              cumulative pass = 10800               all = 585767              -- eff = 100.0 %                    -- cumulative eff = 1.8 %
+Cut trigger_match       :pass = 191300              cumulative pass = 10606               all = 585767              -- eff = 32.7 %                    -- cumulative eff = 1.8 %

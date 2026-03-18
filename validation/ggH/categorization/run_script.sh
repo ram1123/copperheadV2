@@ -2,51 +2,60 @@
 set -e
 # run stage2 twice. First to generate BDT scores (we assume that an appropriate BDT is already trained, then generate score bin edges once more, then finally run stage2 again to save both bdt scores and ggH sub-category index
 
-# sample_l="data dy ewk tt st ww wz zz" 
-sample_l="data ggh vbf dy ewk tt st ww wz zz" 
+# sample_l="data ggh vbf dy ewk tt ww wz zz" 
+# sample_l="data ggh vbf dy ewk tt ww wz" 
+sample_l="data ggh vbf dy tt ww wz" 
 
-# label="V2_Jan29_JecOn_TrigMatchFixed_2016UlJetIdFix"
-# label="UpdatedDY_100_200_CrossSection_24Feb_jetpuidOff"
-# label="UpdatedDY_100_200_CrossSection_24Feb_jetpuidOff_newZptWgt25Mar2025"
-# label="DYMiNNLO_jetpuidOff_newZptWgt25Mar2025"
-label="DYMiNNLO_30Mar2025"
+# label="Run3_nanoAODv15_24Jan2025"
+# label="Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV"
+label="Run3_nanoAODv15_28Feb_JetsHorn30GeV_NoJer_tightPassLepVeto"
 
-stage2_load_path="/depot/cms/users/yun79/hmm/copperheadV1clean/$label/stage1_output"
+base_path="/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean"
 
-# category="20Mar2025_ggh"
+# model_name="Feb28_2026_flatDimuMass_tuned"
+# model_name="Feb28_2026_zPeakShapeMatch_tuned"
+# model_name="Feb28_2026_hPeakShapeMatch"
+# model_name="Feb28_2026_zPeakShapeMatch_ReWgtNormalized"
+model_name="Mar03_2026_FlatDist_ReWgtNormalized"
 
-# model_name="V2_UL_Mar24_2025_DyTtStVvEwkGghVbf_scale_pos_weight"
-# model_name="V2_UL_Mar25_2025_DyGghVbf_scale_pos_weight_newZpt"
-# model_name="V2_UL_Mar26_2025_DyGghVbf_scale_pos_weight_dyMiNNLO"
-# model_name="V2_UL_Mar26_2025_DyTtStVvEwkGghVbf_scale_pos_weight_dyMiNNLO"
-# model_name="V2_UL_Mar30_2025_DyMiNNLOGghVbf"
-# model_name="V2_UL_Mar30_2025_DyMiNNLOGghVbf_removeJetVar"
-# model_name="V2_UL_Mar30_2025_DyMiNNLOGghVbf_removeAllJetVar"
-# model_name="V2_UL_Mar30_2025_DyMiNNLOGghVbf_onlyMuVar"
-# model_name="V2_UL_Mar30_2025_DyMiNNLOGghVbf_onlyMuVar_ZeppenJjMass_DeltaVars"
-model_name="V2_UL_Apr09_2025_DyMinnloTtStVvEwkGghVbf_hyperParamOnScaleWgt0_75"
+category="ggh"
+# stage2_save_path="${model_name}_${category}/" 
+# stage2_save_path="${model_name}_${category}_perYr/" 
+stage2_save_path="${model_name}_${category}_allYr/" 
 
-category="${model_name}_ggh"
-# year="2018"
 
-# region="z-peak"
-# python validation_plot.py -label $label -cat $category --samples $sample_l -y $year --region ${region}
 
-# region="signal"
-# python validation_plot.py -label $label -cat $category --samples $sample_l -y $year --region ${region}
-
-year="2017"
-region="z-peak"
-python validation_plot.py -label $label -cat $category --samples $sample_l -y $year --region ${region}
-
-region="signal"
-python validation_plot.py -label $label -cat $category --samples $sample_l -y $year --region ${region}
-# year="2016postVFP"
-# python validation_plot.py -label $label -cat $category --samples $sample_l -y $year
-
-# year="2016preVFP"
-# python validation_plot.py -label $label -cat $category --samples $sample_l -y $year
-
+region="h-sidebands"
 
 # year="all"
-# python validation_plot.py -label $label -cat $category --samples $sample_l -y $year
+# python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
+
+year="2024"
+python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
+# year="2023BPix"
+# python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
+# year="2023"
+# python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
+# year="2022postEE"
+# python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
+# year="2022preEE"
+# python validation_plot.py -label $label -cat $stage2_save_path --samples $sample_l -y $year --region ${region} --base_path ${base_path}
+
+
+# # plot Fig 6.13 from AN-19-124
+# year="all"
+year="2024"
+# year="2023BPix"
+# year="2023"
+# year="2022postEE"
+# year="2022preEE"
+region="signal"
+python plot_6_8.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
+python plot_6_13.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
+python plot_6_19.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
+python getTable_6_2And6_12.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path}
+# -----------------------------------------------------
+# plot 6.7 
+# -----------------------------------------------------
+bdt_year="all"
+python plot_6_7.py -label $label -cat $stage2_save_path -y ${year} --region ${region} --base_path ${base_path} --model_name ${model_name} --bdt_year ${bdt_year}

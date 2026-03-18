@@ -1,30 +1,39 @@
 import os
-import dask_awkward as dak
-import awkward as ak
-import argparse
-from distributed import Client
-import logging
-from modules.utils import logger
 import pickle
+
+import awkward as ak
+import dask_awkward as dak
 import numpy as np
-
+from cli.common_argparser import build_common_parser
+from modules.dask_utils import close_dask_client, get_dask_client
+from modules.utils import logger
+from run_stage2_vbf import DNNWrapper, getFoldFilter, prepare_features
 from tqdm import tqdm
+import glob
 
-from run_stage2_vbf import DNNWrapper, prepare_features, getFoldFilter
 
-
-def ensure_compacted(year, sample, load_path, compacted_path):
+def ensure_compacted(year, sample, input_path, compacted_path):
+    logger.debug(f"year: {year}")
+    logger.debug(f"samples: {sample}")
+    logger.debug(f"input_path: {input_path}")
     logger.debug(f"Checking compacted dataset: {compacted_path}")
 
     if not os.path.exists(compacted_path):
-        logger.info(f"Compacted dataset not found. Creating at {compacted_path}")
+        logger.info(f"Compacted dataset not found: {compacted_path}")
 
-        orig_path = os.path.join(load_path, sample)
+        orig_path = os.path.join(input_path, sample)
         if not os.path.exists(orig_path):
-            logger.debug(f"Original data not found at {orig_path}. Skipping.")
+            logger.info(f"Original data not found at {orig_path}. Skipping.")
             return
 
         logger.debug(f"Reading data from {orig_path}")
+        # check if any parquet files exist (recursively)
+        parquet_files = glob.glob(os.path.join(orig_path, "**", "*.parquet"), recursive=True)
+
+        if len(parquet_files) == 0:
+            logger.warning(f"No parquet files found under {orig_path}. Skipping.")
+            return        
+
         inFile = dak.from_parquet(orig_path)
 
         if "vbf_powheg_dipole" in sample:
@@ -36,7 +45,7 @@ def ensure_compacted(year, sample, load_path, compacted_path):
 
         logger.info(f"Writing compacted data to {compacted_path}")
         inFile.to_parquet(compacted_path)
-        logger.debug(f"Dataset successfully compacted.")
+        logger.debug("Dataset successfully compacted.")
     else:
         logger.warning(f"Compacted dataset already exists at {compacted_path}")
 
@@ -59,7 +68,7 @@ def add_dnn_score(events_partition,
         arr = nan_val * ak.ones_like(events_partition.event)
         # If the feature is "dimuon_mass", set its value to 125.0
         if feat == "dimuon_mass" and fix_dimuon_mass:
-            logger.info(f"Setting 'dimuon_mass' feature to 125.0 for all events in partition.")
+            logger.info("Setting 'dimuon_mass' feature to 125.0 for all events in partition.")
             arr = 125.0 * ak.ones_like(events_partition.event)
         input_arr_dict[feat] = arr
 
@@ -105,7 +114,7 @@ def add_dnn_score(events_partition,
     events_partition = ak.with_field(events_partition, dnn_vbf_score_atanh, "dnn_vbf_score_atanh")
     return events_partition
 
-def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path, add_dnn_score_flag=False, tag="", fix_dimuon_mass=False):
+def compact_and_add_dnn_score(year, sample, input_path, compacted_dir, model_path, add_dnn_score_flag=False, tag="", fix_dimuon_mass=False):
     compacted_path = os.path.join(compacted_dir, sample, "0") # Added zero to match the original path structure
 
     compacted_dir_tagged = f"{compacted_dir}_{tag}" if tag else compacted_dir
@@ -115,7 +124,7 @@ def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path
     logger.info(f"Checking compacted dataset for: {compacted_path}")
 
     # compact the dataset
-    ensure_compacted(year, sample, load_path, compacted_path)
+    ensure_compacted(year, sample, input_path, compacted_path)
 
     # Add the DNN score to the compacted dataset
     if not add_dnn_score_flag:
@@ -162,11 +171,8 @@ def compact_and_add_dnn_score(year, sample, load_path, compacted_dir, model_path
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Compacts parquet datasets.")
-    parser.add_argument("-y", "--year", required=True, help="Year of the dataset")
-    parser.add_argument("-l", "--load_path", required=True, help="Path to the original dataset")
+    parser = build_common_parser()
     parser.add_argument("-c", "--compacted_dir", default="", help="Path to store the compacted dataset")
-    parser.add_argument("-t", "--tag", default="", help="Tag for the compacted directory")
     parser.add_argument("-m", "--model_path", help="Path to the DNN model directory")
     parser.add_argument(
         "--fix_dimuon_mass",
@@ -178,45 +184,39 @@ if __name__ == "__main__":
         action="store_true",
         help="Add DNN score to the compacted dataset"
     )
-    parser.add_argument("--use_gateway", action="store_true", help="Use Dask Gateway client")
-    parser.add_argument(
-     "--log-level",
-     default=logging.INFO,
-     type=lambda x: getattr(logging, x),
-     help="Configure the logging level."
-    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
 
-    if args.use_gateway:
-        from dask_gateway import Gateway
-        gateway = Gateway(
-            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-        )
-        cluster_info = gateway.list_clusters()[0]  # get the first cluster by default. There only should be one anyways
-        client = gateway.connect(cluster_info.name).get_client()
-        logger.info("Gateway Client created")
-    else:
-        client = Client(n_workers=64, threads_per_worker=1, processes=True, memory_limit='10 GiB')
-        logger.info("Local scale Client created")
+    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
 
     # append /stage1_output/2018/f1_0 to load path
-    args.load_path = os.path.join(args.load_path, f"stage1_output/{args.year}/f1_0")
+    args.input_path = os.path.join(args.input_path, f"stage1_output/{args.year}/f1_0")
+    logger.info(f"Input path: {args.input_path}")
 
     if not args.compacted_dir:
         logger.debug("No compacted directory provided, using default.")
-        args.compacted_dir = (args.load_path).replace("f1_0", "compacted")
+        args.compacted_dir = (args.input_path).replace("f1_0", "compacted")
     logger.info(f"Compacted directory set to: {args.compacted_dir}")
 
-    samples = os.listdir(args.load_path)
+    samples = os.listdir(args.input_path)
     for sample in tqdm(samples, desc="Processing samples"):
         # Uncomment below lines to filter specific samples for testing
         # if sample != "vbf_powheg_dipole": continue
         # if "MiNNLO" not in sample: continue
         # if "dy_VBF_filter" not in sample:
-            # continue
+        # continue
         # if "DY" not in sample: continue
         logger.info(f"Processing sample: {sample}")
-        compact_and_add_dnn_score(args.year, sample, args.load_path, args.compacted_dir, args.model_path, args.add_dnn_score, args.tag, args.fix_dimuon_mass)
+        compact_and_add_dnn_score(
+            args.year,
+            sample,
+            args.input_path,
+            args.compacted_dir,
+            args.model_path,
+            args.add_dnn_score,
+            args.save_postfix,
+            args.fix_dimuon_mass,
+        )
+
+    close_dask_client()

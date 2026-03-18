@@ -15,7 +15,6 @@ import itertools
 import ROOT
 import os
 
-import logging
 from modules.utils import logger
 
 class Variable(object):
@@ -48,20 +47,20 @@ def load_stage2_output_hists(argset, parameters, dataset):
     var_name = argset["var_name"]
     global_path = parameters.get("global_path", None)
     global_path_postfix = parameters.get("global_path_postfix", None)
+    no_variations = parameters.get("no_variations", False)
 
     if (global_path is None):
         logger.error("global_path is not set in parameters!")
         raise ValueError("global_path is not set in parameters!")
         # return
 
-    # path = f"{global_path}/stage2_histograms/{var_name}/{year}_h-peak_vbf_{year}_UpdatedQGL_17July_Test_RenameScore/{year}"
     if global_path_postfix:
-        path = f"{global_path}/stage2_histograms/{var_name}_{global_path_postfix}/{year}"
+        path = f"{global_path}/stage2_histograms/{var_name}_{global_path_postfix}"
+        if no_variations:
+            path += "_NoSyst"
+        path += f"/{year}"
     else:
         path = f"{global_path}/stage2_histograms/{var_name}/{year}"
-    # score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned
-    # stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July_July31_Rebinned
-    # stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_17July/2018_h-peak_vbf_2018_UpdatedQGL
     paths = glob.glob(f"{path}/{dataset}*.pkl")
 
     logger.debug(f"dataset: {dataset}")
@@ -133,6 +132,10 @@ def to_templates(parameters, hist_df=None):
     # datasets = list(parameters["datasets"]) # original
     # datasets = list(parameters["datasets"]) + ["ewk_lljj_mll105_160_py_dipole", "vbf_powheg_herwig"] # manually add partonShower
     datasets = list(parameters["datasets"])
+    log_level = parameters.get("log_level", "INFO")
+    # reset logger with new log level
+    logger.setLevel(log_level)
+
     if hist_df is None:
         logger.debug("Loading histograms from stage2 output")
         logger.debug(f"datasets: {datasets}")
@@ -146,8 +149,9 @@ def to_templates(parameters, hist_df=None):
 
         hist_rows = []
         for dataset in datasets:
+            logger.info(f"Loading histograms for dataset: {dataset}")
             hist_row = load_stage2_output_hists(argset_load, parameters, dataset)
-            logger.debug(f"hist_row: {hist_row}")
+            logger.info(f"hist_row: {hist_row}")
             hist_rows.append(hist_row)
 
         hist_df = pd.concat(hist_rows).reset_index(drop=True)
@@ -280,10 +284,10 @@ def make_templates(args, parameters={}):
         add_EWK_PartonShower = False
         for wgt_variation in wgt_variations:
             if "qqH_hmm" ==group:
-                add_VBF_PartonShower = True
+                add_VBF_PartonShower = False
                 break
             elif "EWK" ==group:
-                add_EWK_PartonShower = True
+                add_EWK_PartonShower = False
                 break
         if add_VBF_PartonShower:
             wgt_variations += ["qqH_hmm_SignalPartonShowerUp", "qqH_hmm_SignalPartonShowerDown"]
@@ -328,11 +332,11 @@ def make_templates(args, parameters={}):
                     variation_dataset = "vbf_powheg_herwig"
                 elif ("EWK" in variation):
                     # ewk_lljj_mll50_mjj120_hist.pkl
-                    baseline_dataset = "ewk_lljj_mll50_mjj120"
+                    # baseline_dataset = "ewk_lljj_mll50_mjj120"
+                    baseline_dataset = "ewk_lljj"
                     variation_dataset = "ewk_lljj_mll105_160_py_dipole"
                 else:
-                    logger.warning("no parton shower exists for this sample!")
-                    raise ValueError
+                    raise ValueError("no parton shower exists for this sample!")
                 # vals_baseline = hist_df.loc[hist_df.dataset == baseline_dataset, "hist"].values
                 logger.debug(f'hist_df.loc[hist_df.dataset == baseline_dataset, "hist"]: {hist_df.loc[hist_df.dataset == baseline_dataset, "hist"]}')
                 # hist_baseline = hist_df.loc[hist_df.dataset == baseline_dataset, "hist"].values.sum()

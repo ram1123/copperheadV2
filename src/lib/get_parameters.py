@@ -1,5 +1,6 @@
 import glob
 from omegaconf import OmegaConf
+from rich import print
 
 def getParametersForYr(parameter_path: str, year: str) -> dict:
     """
@@ -18,14 +19,23 @@ def getParametersForYr(parameter_path: str, year: str) -> dict:
     merged_param = OmegaConf.merge(*params)
     yr_specific_params = {}
     for key, val in merged_param.items():
+        # print(f"key: {key}, val: {val}")
         if "cross_sections" in key:
             yr_specific_params[key] = val
         elif "jec" in key: # if jec, then do it separately
             sub_jec_pars = {}
             for sub_key, sub_val in val.items():
+                # print(f"sub_key: {sub_key}, sub_val: {sub_val}")
                 sub_jec_pars[sub_key] = sub_val[year]
             yr_specific_params[key] = sub_jec_pars
+        elif key == "switches":
+            sub_switches = {}
+            for sub_key, sub_val in val.items():
+                # print(f"sub_key: {sub_key}, sub_val: {sub_val}")
+                sub_switches[sub_key] = sub_val[year]
+            yr_specific_params[key] = sub_switches
         else:
+            # print(f"key: {key}, val: {val}")
             yr_specific_params[key] = val[year]
     yr_specific_params["do_roccor"] = True
     yr_specific_params["do_fsr"] = True

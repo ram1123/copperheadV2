@@ -3,6 +3,7 @@ import numpy
 import warnings
 from functools import partial, reduce
 import operator
+from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 
 
 def getDataJecTag(jec_pars, dataset):
@@ -30,13 +31,13 @@ def ApplyJetCorrections(jec_pars, year, dataset):
     print(f"is_mc: {is_mc}")
     print(f"jec_pars: {jec_pars}")
     jet_algo = jec_pars["jet_algorithm"]
-    jec_tag =  jec_parameters["jec_tags"][year] if is_mc else getDataJecTag(jec_pars, dataset)
+    jec_tag =  jec_parameters["jec_tags"][year] if is_mc else getDataJecTag(jec_pars, dataset) # FIXME: jec_parameters is not defined
     jec_levels = jec_pars["jec_levels_mc"] if is_mc else jec_pars["jec_levels_data"]
     if is_mc:
-        jer_tag = jec_pars["jer_tags"] 
+        jer_tag = jec_pars["jer_tags"]
         junc_types = jec_pars["jec_unc_to_consider"]
         junc_types = ["Regrouped_" + junc_type for junc_type in junc_types] # add "Regrouped" for each variation
-    else: 
+    else:
         jer_tag = None
         junc_types = None
     print(f"jet_algo: {jet_algo}")
@@ -45,7 +46,7 @@ def ApplyJetCorrections(jec_pars, year, dataset):
     print(f"jer_tag: {jer_tag}")
     print(f"junc_types: {junc_types}")
 
-    json_path = f"/work/users/yun79/valerie/fork/copperheadV2/data/POG/JME/{year}_UL/jet_jerc.json.gz" # Hard code for now
+    json_path = f"/work/users/yun79/valerie/fork/copperheadV2/data/POG/JME/{year}_UL/jet_jerc.json.gz" # FIXME: Hard code for now
     # Create JECStack for clib scenario
     jec_stack = JECStack(
         jec_tag=jec_tag,
@@ -715,7 +716,7 @@ class JECStack:
             raise ValueError("json_path is required for clib initialization.")
 
         # Load corrections directly from the JSON path
-        self.cset = clib.CorrectionSet.from_file(self.json_path)
+        self.cset = get_corrset(self.json_path)
 
         # Construct lists for jec, jer, and uncertainties
         self.jec_names_clib = [f"{self.jec_tag}_{level}_{self.jet_algo}" for level in self.jec_levels]

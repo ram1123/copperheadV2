@@ -1,61 +1,75 @@
-from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
-from src.copperhead_processor import EventProcessor
-# from src.copperhead_processor_cutflow import EventProcessor
-# NanoAODSchema.warn_missing_crossrefs = False
-import awkward as ak
-import matplotlib.pyplot as plt
-import numpy as np
-import dask
-dask.config.set(annotations={"retries": 3})
-# from dask.distributed import Client
+import copy
+import ctypes
+from datetime import datetime
+import glob
+import json
+import os
+import subprocess
 import sys
 import time
-import json
-from distributed import LocalCluster, Client, progress
-import pandas as pd
-import os
-import tqdm
 import warnings
-import dask_awkward as dak
-import glob
 from itertools import islice
-import copy
-import argparse
+
+import awkward as ak
+import dask
+import numpy as np
+import tqdm
+from cli.common_argparser import build_common_parser
+from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
-import os
-from omegaconf import OmegaConf
-from coffea.nanoevents.methods import vector
-from rich import print
 
-import subprocess, time
-from pathlib import Path
+from modules.dask_utils import close_dask_client, get_dask_client
+from modules.job_status import JobStatus, write_stage1_summary
+from modules.utils import get_git_info, logger
+from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+from src.copperhead_processor import EventProcessor
+from src.lib.get_parameters import getParametersForYr
+from configs.skip_stage1_run import samples_to_skip, samples_to_run
 
-# dask.config.set({'logging.distributed': 'error'})
-import logging
-from modules.utils import logger
-from modules.utils import get_git_info
+dask.config.set(annotations={"retries": 5})
+dask.config.set({"distributed.scheduler.default-task-retries": 5})
+dask.config.set({"distributed.scheduler.worker-saturation": 1.0})
 
-import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-# test_mode = False
 np.set_printoptions(threshold=sys.maxsize)
-import gc
-import ctypes
-from src.lib.get_parameters import getParametersForYr
 
-def trim_memory() -> int:
-     libc = ctypes.CDLL("libc.so.6")
-     return libc.malloc_trim(0)
 
-# # test code limiting memory leak -----------------------------------
-# import gc
-# client.run(gc.collect)  # collect garbage on all workers
-# import ctypes
-# def trim_memory() -> int:
-#      libc = ctypes.CDLL("libc.so.6")
-#      return libc.malloc_trim(0)
-# client.run(trim_memory)
+def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=None):
+    """
+    Decide whether a dataset should be processed.
+    Returns True if it should run, False if it should be skipped.
+    """
+
+    # If explicit run-list is provided → highest priority
+    if samples_to_run:
+        return dataset in samples_to_run
+
+    # Else, apply skip list if requested
+    if args.skipSamples and samples_to_skip:
+        return dataset not in samples_to_skip
+
+    # Default → run
+    return True
+
+def get_expected_events_from_files_dict(files_dict):
+    """
+    Count expected input events from prestage file dict.
+
+    Supports:
+      {file: {"steps": [[start, stop], ...], ...}}
+    and falls back to num_entries if needed.
+    """
+    total = 0
+
+    for _, finfo in files_dict.items():
+        if isinstance(finfo, dict):
+            if "steps" in finfo and finfo["steps"] is not None:
+                for step in finfo["steps"]:
+                    total += int(step[1]) - int(step[0])
+            elif "num_entries" in finfo:
+                total += int(finfo["num_entries"])
+    return int(total)
 
 # #-------------------------------------------------------------------
 
@@ -66,11 +80,10 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     """
     fraction = round(dataset_dict["metadata"]["fraction"], 3)
     fraction_str = str(fraction).replace('.', '_')
-    sample_name = dataset_dict['metadata']['dataset']
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
 
-def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None, isCutflow=False):
+def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml"):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
         save_path = f"/depot/cms/users/{username}/results/stage1/test/" # default
@@ -82,17 +95,17 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     # dict to hold the max_num_elements info per sample
     dict_max_num_elements = {
-        "data_": None, # None means no limit (use uproot's default behavior)
-        "dy_": 200,
-        "ttjets_dl": 400,
-        "ttjets_sl": 1500,
-        }
-    max_num_elements = 800 # default
+        "data_": 900,  # None means no limit (use uproot's default behavior)
+        "dy": 250,
+        "ttjets_dl": 250,
+        "ttjets_sl": 250,
+    }
+    max_num_elements = 500 # default
     if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
         max_num_elements = dict_max_num_elements[[key for key in dict_max_num_elements.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
         logger.debug(f"Setting max_num_elements for {dataset_dict['metadata']['dataset']} to {max_num_elements}")
     else:
-        max_num_elements = 800
+        max_num_elements = 500
     logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
 
     events = NanoEventsFactory.from_root(
@@ -107,16 +120,16 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         },
     ).events()
 
-    out_collections = processor.process(events)
+    processed_event_count = 0
+    out_collections, processed_event_count = processor.process(events, dataset_yaml_file=dataset_yaml_file)
 
     # Save the cutflow
     if hasattr(processor, "cutflow") and isCutflow:
-        fraction = round(dataset_dict["metadata"]["fraction"], 3)
-        fraction_str = str(fraction).replace('.', '_')
-        cutflow_save_path = f"{save_path}/f{fraction_str}"
+        logger.info("Saving cutflow information")
+        cutflow_save_path = f"{save_path}"
         if not os.path.exists(cutflow_save_path):
             os.makedirs(cutflow_save_path)
-        cutflow_save_path = f"{save_path}/f{fraction_str}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
+        cutflow_save_path = f"{save_path}/cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}.npz"
 
         processor.cutflow.to_npz(cutflow_save_path).compute()
         logger.info(f"Cutflow saved to {cutflow_save_path}")
@@ -125,14 +138,15 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
 
     logger.debug(f"out_collections keys: {out_collections.keys()}")
 
-    skim_dict = out_collections
-    skim_dict["fraction"] = dataset_fraction*(ak.ones_like(out_collections["event"]))
-    #----------------------------------
-    skim_zip = ak.zip(skim_dict, depth_limit=1)
+    out_collections["fraction"] = dataset_fraction * (ak.ones_like(out_collections["event"]))
+    # ----------------------------------
+    skim_zip = ak.zip(out_collections, depth_limit=1)
     logger.debug(f"skim_zip: {skim_zip}")
     # skim_zip.persist().to_parquet(save_path)
-    # raise ValueError
-    return skim_zip
+    to_persist = skim_zip.persist()
+    to_persist = to_persist.to_parquet(save_path, compute=False)
+    persisted, processed_event_count = dask.compute(to_persist, processed_event_count)
+    return processed_event_count
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -157,7 +171,7 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
 
     FIXME: This function currently does not handle /store paths correctly. As gfal-mkdir command does not work with coffea_latest environment.
     """
-    if eos_path.startswith("/depot"):
+    if eos_path.startswith("/depot") or eos_path.startswith("/work"):
         os.makedirs(eos_path, exist_ok=True)
         return
 
@@ -178,41 +192,16 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
     raise RuntimeError(f"Failed to create EOS directory: {eos_path}")
 
 
+def _parquet_dir_has_files(p: str) -> bool:
+    try:
+        return any(fn.endswith(".parquet") for fn in os.listdir(p))
+    except Exception:
+        return False
+
+
 if __name__ == "__main__":
     t0 = time.perf_counter()
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-    "-save",
-    "--save_path",
-    dest="save_path",
-    default=None,
-    action="store",
-    help="save path to store stage1 output files",
-    )
-    parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="string value of year we are calculating",
-    )
-    parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
-    )
-    parser.add_argument(
-    "-aod_v",
-    "--NanoAODv",
-    dest="NanoAODv",
-    type=int,
-    default=9,
-    choices = [9, 12],
-    help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
-    )
+    parser = build_common_parser()
     parser.add_argument(
         "-maxfile",
         "--max_file_len",
@@ -221,12 +210,6 @@ if __name__ == "__main__":
         default = 3000,
         help = "How many maximum files to process simultaneously.",
     )
-    parser.add_argument(
-     "--log-level",
-     default=logging.ERROR,
-     type=lambda x: getattr(logging, x),
-     help="Configure the logging level."
-     )
     parser.add_argument(
         "--test_mode",
         action="store_true",
@@ -277,32 +260,8 @@ if __name__ == "__main__":
     logger.debug(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
+    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
     if not test_mode: # full scale implementation
-        if args.use_gateway:
-            from dask_gateway import Gateway
-            gateway = Gateway(
-                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-            )
-            # gateway = Gateway()
-            logger.info("Connecting to Dask Gateway")
-            logger.info(f"gateway: {gateway}")
-            logger.info(f"gateway list clusters: {gateway.list_clusters()}")
-
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-            client = gateway.connect(cluster_info.name).get_client()
-            logger.debug(f"client: {client}")
-            logger.info("Gateway Client created")
-            xrd_env = {
-                "XRD_REQUESTTIMEOUT": "900",
-                "XRD_STREAMTIMEOUT": "900",
-                "XRD_CONNECTIONWINDOW": "120",
-                "XRD_TIMEOUTRESOLUTION": "5",
-            }
-            client.run(lambda env=xrd_env: __import__("os").environ.update(env))
-        else:
-            client = Client(n_workers=64,  threads_per_worker=1, processes=True, memory_limit='10 GiB')
-            logger.info("Local scale Client created")
         t2 = time.perf_counter()
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
         # -------------------------------------------------------------------------------------
@@ -319,75 +278,191 @@ if __name__ == "__main__":
         logger.info(f"start_save_path: {start_save_path}")
         # make the directory if it doesn't exist
         eos_mkdirs(start_save_path)
+        # Resumability markers ------------------------------------------------
+        jobstat = JobStatus(status_dir=os.path.join(start_save_path, "_status"))
 
         # Get git information; for the log. Also, it will help with debugging, if needed.
         git_commit_hash, branch_name, diff = get_git_info()
         # save this information in a file in the `start_save_path` directory
-        git_info_path = os.path.join(start_save_path, "git_info.txt")
+        # add timestamp to the filename to avoid overwriting in case of multiple runs
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        git_info_path = os.path.join(start_save_path, f"git_info_{timestamp}.txt")
         with open(git_info_path, "w") as f:
             f.write(f"Git commit hash: {git_commit_hash}\n")
             f.write(f"Branch name: {branch_name}\n")
             f.write(f"Diff:\n{diff}\n")
         logger.info(f"git_info_path: {git_info_path}")
 
+        # if True:
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
-                from configs.skip_stage1_run import samples_to_skip
-                if dataset in samples_to_skip and args.skipSamples:
-                    logger.warning(f"Skipping dataset as per configs/skip_stage1_run.py: {dataset}")
+                logger.info("{}{}".format("\n" * 2, "=" * 51))
+                logger.info(f"===         Processing dataset: {dataset}       ===")
+                logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
+                logger.info(f"===         Year: {args.year}                        ===")
+                logger.info("{}{}".format("=" * 51, "\n" * 2))
+
+                if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
+                    logger.warning(f"Skipping dataset: {dataset}")
                     continue
+
                 sample_step = time.time()
                 # dict to hold file lenght info per sample
                 dict_file_length = {
-                    "data_": 2500,
-                    "dy_": 10,
-                    "ttjets_dl": 15,
-                    "ttjets_sl": 30
-                    }
+                    "data_": 900,
+                    "dy": 250,
+                    "ttjets_dl": 250,
+                    "ttjets_sl": 250,
+                }
                 if any(key in dataset for key in dict_file_length.keys()):
                     args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
                     logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
                 else:
-                    args.max_file_len = 2500
+                    args.max_file_len = 500
                 logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
 
                 # split the sample files into smaller chunks of size args.max_file_len
+                # # use only 1/4 of the total files available in sample for test mode
+                # if True:
+                #     total_files = len(sample["files"])
+                #     print(f"total_files for {dataset}: {total_files}")
+                #     print(f"files: {sample['files']}")
+                #     test_files = sample["files"][100]
+                #     sample["files"] = test_files
+                #     logger.info(f"Test mode: Using only 1/4 of total files for {dataset}. total_files: {total_files}, test_files used: {len(test_files)}")
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
-                logger.info(f"max_file_len: {args.max_file_len}")
                 logger.info(f"len(smaller_files): {len(smaller_files)}")
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                    logger.info(f"Processing {dataset} file index {idx}")
+                    # Skip if already done (unless user wants a full rerun)
+                    if not args.rerun and not jobstat.should_run(dataset, idx):
+                        logger.info(f"[resume] skip {dataset}[{idx}] (done marker present)")
+                        continue
+
                     smaller_sample = copy.deepcopy(sample)
                     smaller_sample["files"] = smaller_files[idx]
                     var_step = time.time()
                     save_path = getSavePath(start_save_path, smaller_sample, idx)
-                    logger.info(f"save_path: {save_path}")
-                    if not os.path.exists(save_path):
-                        logger.debug(f"Path: {save_path} is going to be created")
-                        eos_mkdirs(save_path)
-                    else:
-                        if args.rerun:
-                            # remove previously existing directory, if exists, then remake path
-                            if os.path.exists(save_path):
-                                logger.warning(f"Going to delete directory: {save_path}")
-                                os.system(f"rm -r {save_path}")
-                            logger.info(f"Path: {save_path} is going to be created")
+                    ExpectedEvents_from_prestage = get_expected_events_from_files_dict(smaller_sample["files"])
+                    logger.debug(f"ExpectedEvents_from_prestage: {ExpectedEvents_from_prestage}")
+
+                    processed_event_count = 0
+
+                    # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
+                    jobstat.mark_running(dataset, idx,
+                        meta={
+                            "split count": len(smaller_files),
+                            "max_attempts": len(AAA_REDIRECTORS),
+                            "args.max_file_len": args.max_file_len,
+                            "redirector": None,
+                            "path": save_path,
+                            "git_commit_hash": git_commit_hash,
+                            "git_branch": branch_name,
+                            "git patch path": git_info_path,
+                            })
+                    for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+                        try:
+                            logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
+                            # build fresh file list with this redirector
+                            alt_sample = copy.deepcopy(smaller_sample)
+                            # logger.info(f"alt_sample['files']: {alt_sample['files']}")
+
+                            alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
+
+                            logger.debug(f"alt_sample['files']: {alt_sample['files']}")
+
+                            # clean partial output from previous tries
+                            os.system(f"rm -rf '{save_path}'")
                             eos_mkdirs(save_path)
-                        else:
-                            logger.warning(f"Path: {save_path} already exists. Skipping this file index. Use --rerun to overwrite.")
-                            continue
-                    t3a = time.perf_counter()
 
-                    to_persist = dataset_loop(coffea_processor, smaller_sample, file_idx=idx, test=test_mode, save_path=start_save_path)
-                    t3 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to process dataset {dataset} file index {idx}: {round(t3 - t3a, 3)} seconds")
+                            # rebuild the events/out collections for this attempt
+                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
 
+                            logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
+                            logger.info(f"Processed events: {processed_event_count}")
 
-                    # persist and save to parquet
-                    to_persist = to_persist.persist()
-                    to_persist.to_parquet(save_path)
-                    t4 = time.perf_counter()
-                    logger.info(f"[Timing] Time taken to save parquet files: {round(t4 - t3, 3)} seconds")
+                            # to_persist = to_persist.persist()
+                            # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
+                            # to_persist.to_parquet(save_path)
+
+                            if not _parquet_dir_has_files(save_path):
+                                raise RuntimeError("Parquet write produced no files.")
+
+                            if ExpectedEvents_from_prestage != processed_event_count:
+                                raise ValueError(
+                                    f"Number of processed events does not match expected events: "
+                                    f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
+                                    f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
+                                )
+
+                            jobstat.mark_done(
+                                dataset,
+                                idx,
+                                meta={
+                                    "split count": len(smaller_files),
+                                    "attempt": attempt,
+                                    "max_attempts": len(AAA_REDIRECTORS),
+                                    "args.max_file_len": args.max_file_len,
+                                    "redirector": host_prefix,
+                                    "path": save_path,
+                                    "git_commit_hash": git_commit_hash,
+                                    "git_branch": branch_name,
+                                    "git patch path": git_info_path,
+                                    "Expected events from pre-stage": ExpectedEvents_from_prestage,
+                                    "Processed events from stage-1": processed_event_count,
+                                },
+                            )
+                            logger.info(f"[resume] success on attempt {attempt} with {host_prefix}")
+                            break  # stop trying once successful
+
+                        except Exception as e:
+                            msg = str(e)
+                            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+                            logger.warning(
+                                f"[resume] attempt {attempt} failed for {dataset}[{idx}] "
+                                f"({type(e).__name__}: {e})"
+                            )
+                            # save the list of files that were attempted in this failure for debugging,
+                            # with the redirector info in the filename
+                            # as well as the error message for this failure
+                            timestamp = time.strftime("%Y%m%d-%H%M%S")
+                            error_info_path = os.path.join(
+                                start_save_path,
+                                "_status",
+                                f"error_{dataset}_{idx}_{timestamp}.txt",
+                            )
+                            with open(error_info_path, "w") as f:
+                                f.write(f"Error message: {msg}\n")
+                                f.write(f"Attempted files with {host_prefix}:\n")
+                                f.write(f"Total files attempted: {len(alt_sample['files'])}\n")
+                                for i, file in enumerate(alt_sample["files"]):
+                                    f.write(f"{i:4}: {file}\n")
+                            logger.info(f"Saved error info to {error_info_path}")
+
+                            if attempt < len(AAA_REDIRECTORS) and tls_bad:
+                                logger.warning(f"Retrying {dataset}[{idx}] with next redirector ...")
+                                continue  # next redirector in list
+                            else:
+                                jobstat.mark_failed(
+                                    dataset,
+                                    idx,
+                                    e,
+                                    meta={
+                                        "split count": len(smaller_files),
+                                        "attempt": attempt,
+                                        "max_attempts": len(AAA_REDIRECTORS),
+                                        "args.max_file_len": args.max_file_len,
+                                        "redirector": host_prefix,
+                                        "path": save_path,
+                                        "git_commit_hash": git_commit_hash,
+                                        "git_branch": branch_name,
+                                        "git patch path": git_info_path,
+                                        "Expected events from pre-stage": ExpectedEvents_from_prestage,
+                                        "Processed events from stage-1": processed_event_count,                                        
+                                    },
+                                )
+                                logger.exception(
+                                    f"[resume] write failed after {attempt} attempts for {dataset}[{idx}]"
+                                )
 
                     var_elapsed = round(time.time() - var_step, 3)
                     logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
@@ -398,40 +473,6 @@ if __name__ == "__main__":
 
     else:
         # FIXME: update this for /store usage
-        if args.use_gateway:
-            from dask_gateway import Gateway
-
-            gateway = Gateway(
-                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-            )
-            # gateway = Gateway()
-            logger.info("Connecting to Dask Gateway")
-            logger.info(f"gateway: {gateway}")
-            logger.info(f"gateway list clusters: {gateway.list_clusters()}")
-
-            cluster_info = gateway.list_clusters()[
-                0
-            ]  # get the first cluster by default. There only should be one anyways
-            client = gateway.connect(cluster_info.name).get_client()
-            logger.debug(f"client: {client}")
-            logger.info("Gateway Client created")
-            xrd_env = {
-                "XRD_REQUESTTIMEOUT": "900",
-                "XRD_STREAMTIMEOUT": "900",
-                "XRD_CONNECTIONWINDOW": "120",
-                "XRD_TIMEOUTRESOLUTION": "5",
-            }
-            client.run(lambda env=xrd_env: __import__("os").environ.update(env))
-        else:
-            client = Client(
-                n_workers=64,
-                threads_per_worker=1,
-                processes=True,
-                memory_limit="10 GiB",
-            )
-            logger.info("Local scale Client created")
-
         sample_path = "./prestage_output/fraction_processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(sample_path) as file:
             samples = json.loads(file.read())
@@ -440,15 +481,14 @@ if __name__ == "__main__":
         for dataset in samples.keys():
             samples[dataset]["metadata"]["NanoAODv"] = args.NanoAODv
 
-        start_save_path = args.save_path + f"/stage1_output_test/{args.year}"
+        start_save_path = f"{args.save_path}/stage1_output_test/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
         os.makedirs(start_save_path, exist_ok=True)
         with performance_report(filename="dask-report.html"):
             for dataset, sample in tqdm.tqdm(samples.items()):
                 logger.debug(f"dataset: {dataset}")
-                to_persist = dataset_loop(coffea_processor, sample, test=test_mode, save_path=start_save_path)
-
                 save_path = getSavePath(start_save_path, sample, 0)
+
                 logger.info(f"save_path: {save_path}")
                 if not os.path.exists(save_path):
                     logger.debug(f"Path: {save_path} is going to be created")
@@ -460,6 +500,15 @@ if __name__ == "__main__":
                     for file in filelist:
                         os.remove(file)
                 logger.debug("Directory created or cleaned")
-                to_persist.persist().to_parquet(save_path)
+                dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file)
+
     elapsed = round(time.time() - time_step, 3)
+
+    write_stage1_summary(
+        status_dir=os.path.join(start_save_path, "_status"),
+        out_json_path=os.path.join(start_save_path, "_status", "stage1_summary.json"),
+        logger=logger,
+    )
+
+    close_dask_client()
     logger.info(f"Finished everything in {elapsed} s.")

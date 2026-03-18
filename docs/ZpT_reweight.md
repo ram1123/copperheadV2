@@ -1,64 +1,74 @@
+---
+title: Z pT Reweighting
+---
+
 # Introduction
 
-There are three steps to run:
-1. `step-1`: get the root file with the histogram that contains the ratio of data and MC (DY) in the z-peak region.
-2. `step-2`: Use the f-test to determine the best polynomial order for the fit.
-   1. **NOTE** : Before running this step, make sure to update bins and ranges in [bin_definitions.py](../data/zpt_rewgt/fitting/bin_definitions.py)
-3. `step-3`: Use the best polynomial order to fit the data and get the reweighting factors.
+In DY production, the transverse momentum (pT) of the Z boson is not perfectly modelled in Monte Carlo (MC) simulations. This mismodelling can lead to discrepancies between data and MC in analyses that rely on accurate Z boson kinematics. To address this issue, we apply a reweighting procedure to correct the Z-pT distribution in DY MC to better match the observed data.
 
-# Technical Details
+In our framework, we have implemented a systematic approach to derive the Z-pT reweighting factors. This involves three steps, they are:
 
-As usual we can run all three steps from our centeralized script `stage1_loop_Improved.sh`:
+1. Extract the Z-pT distributions from both data and DY MC in the Z-peak region.
+2. Fit the ratio of data to MC Z-pT distributions using polynomial functions in three different pT ranges as the behavior of the ratio varies across these ranges. The rough boundaries are:
+    - Low pT: 0 - 10 GeV
+    - Medium pT: 10 - 100 GeV
+    - High pT: 100 - 200 GeV
+
+3. Once we get the three fit functions, we then sum them up to get the final reweighting function, its order and coefficients are stored in a YAML file. Finally, we apply these reweighting factors to the DY MC events based on their Z boson pT.
+
+# DY pt mismodelling correction: Technical details
+
+Several steps are needed to get the Z-pT weights.
+
+**Step-1**: Obtain the histograms of Z-pT in data and MC, in `.root` format.
 
 ```bash
-bash stage1_loop_Improved.sh -l <Label> -y <Year> -m <StepToRun>
+bash stage1_loop_Improved.sh  -l label_for_ntuple -y 2018 -m "zpt_fit0" -n 0
 ```
 
-Where
-- `<Label>` is the label for the run, using which is finds the stage1 output files.
-- `<Year>` is the year of the data, e.g. `2017`, `2018`, `2016preVFP`, `2016postVFP`.
-- `<StepToRun>` is the step to run, e.g. `zpt_fit`, `zpt_fit0`, `zpt_fit1`, `zpt_fit2`, `zpt_fit12`.
-   - `zpt_fit` runs all three steps.
-    - `zpt_fit0` runs the first step, which is to get the root file with the histogram that contains the ratio of data and MC (DY) in the z-peak region.
-    - `zpt_fit1` runs the second step, which is to use the f-test to determine the best polynomial order for the fit. This step needs two additional arguments:
-        - `--nbins`: number of bins in the z-peak region, e.g. `20`.
-        - `--njet`: number of jets in the event, e.g. `0`, `1`, `2`.
-        - `--outAppend`: a string to append to the output file name, e.g. `-v12`.
-    - `zpt_fit2` runs the third step, which is to use the best polynomial order to fit the data and get the reweighting factors. This step needs the same additional arguments as `zpt_fit1`.
+Arguments:
 
-## Technical Details to improve fits
+- `-l`: label for the ntuple.
+- `-y`: year of the data.
+- `-m`: mode to run, here it is `zpt_fit0` for step-1, which gets the histograms of Z-pT in data and MC.
+- `-n`: jet bin to consider, `0` for zero jet bin, `1` for one jet bin and `2` for greater than equal to two jet bin.
 
+**Step-2**: Fit the ratio histograms to determine the best polynomial order for each pT range.
 
-## Example commands
+```bash
+bash stage1_loop_Improved.sh -l label_for_ntuple -y 2018 -m "zpt_fit1" -n 0
+```
 
-***Used by me to run the script***
+Arguments:
 
-- Generally, at first I get the root file with the histogram that contains the ratio of data and MC (DY) in the z-peak region, using `zpt_fit0`:
+- `-l`: label for the ntuple.
+- `-y`: year of the data.
+- `-m`: mode to run, here it is `zpt_fit1` for step-2, which fits the ratio histograms to determine the best polynomial order for each pT range.
+- `-n`: jet bin to consider, `0` for zero jet bin, `1` for one jet bin and `2` for greater than equal to two jet bin.
 
-    ```bash
-    time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -y "2018 2017 2016preVFP 2016postVFP" -m zpt_fit0)
-    ```
+This step uses the f-test to determine the best polynomial order for the fit.
 
-- Then I run the second and third step for one year at a time, using `zpt_fit1` and `zpt_fit2` (or `zpt_fit12`):
+**NOTE** : Before running this step, make sure to update bins and ranges in [bin_definitions.py](../src/copperhead/zpt_rewgt/derive/bin_definitions.py). If the final fit in next step is not good enough, you may need to adjust the binning and ranges here.
 
-    ```bash
-    time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -y 2018 -m zpt_fit1 -n 0)
-    time(bash stage1_loop_Improved.sh -l Run2_nanoAODv12_UpdatedQGL_17July -y 2018 -m zpt_fit2 -n 0)
-    ```
+**Step-3**: Now we calculate the Z-pT weights using the fit functions obtained in the previous step.
 
+```bash
+bash stage1_loop_Improved.sh -v 12 -l label_for_ntuple -y 2018  -m "zpt_fit2" -n 0
+```
 
-## Details of step-1
+Arguments:
 
-- Code location: [save_SF_rootFiles.py](../data/zpt_rewgt/fitting/save_SF_rootFiles.py)
+- `-v`: version of the output files.
+- `-l`: label for the ntuple.
+- `-y`: year of the data.
+- `-m`: mode to run, here it is `zpt_fit2` for step-3, which obtains the final function for Z-pT reweighting.
+- `-n`: jet bin to consider, `0` for zero jet bin, `1` for one jet bin and `2` for greater than equal to two jet bin.
 
+Some important notes:
 
-## Details of step-2
-- Code location: [do_f_test.py](../data/zpt_rewgt/fitting/do_f_test.py)
+1. If the fit quality in step-3 is not good enough, you may need to go back to step-2 and readjust the boundaries of the three functions, or the bin widths in [bin_definitions.py](../src/copperhead/zpt_rewgt/derive/bin_definitions.py).
+1. If the boundaries and bin widths look fine, but not the fit quality, you may need to manually set the polynomial orders (to one higher order, generally it works) in the the `zpt_fit_config.yaml` file generated in step-2, and then rerun step-3.
 
-## Details of step-3
-- Code location: [get_polyFit.py](../data/zpt_rewgt/fitting/get_polyFit.py)
+**Step-4**: Once you have the YAML file, then either copy it into the path `data/zpt_rewgt/` in the repository or copy the contents of the YAML file into the existing YAML file in the path `data/zpt_rewgt/`.
 
-
-**At the end don't forgot to commit the two YAML files. First file contains the details of the fit and the second file contains the reweighting factors.**
-
-# References/Important links
+**Step-5**: Finally, commit the YAML files having the Z-pT reweighting function parameters to the repository for future use in analysis. This YAML file saves the polynomial orders and coefficients for each pT range, for each year and jet bin. Furthermore, it also contains the number of bins and ranges used in the derivation of the Z-pT weights. This YAML file will be read by the [copperhead_processor.py](../src/copperhead/copperhead_processor.py) during the ntuple processing to save the Z-pT weights in the output ntuples.

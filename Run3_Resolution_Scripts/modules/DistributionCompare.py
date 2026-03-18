@@ -11,15 +11,20 @@ import uproot
 from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
 
 class DistributionCompare:
-    def __init__(self, year, input_paths_labels, fields, control_region=None, directoryTag="test", varlist_file="varlist.yaml"):
+    def __init__(self, year, input_paths_labels, fields, control_region=None, directoryTag="test", varlist="varlist.yaml"):
         self.year = year
         self.input_paths_labels = input_paths_labels
         self.fields = fields
         self.control_region = control_region
         self.directoryTag = directoryTag
         self.events = {}
-        with open(varlist_file, 'r') as f:
-            self.varlist = yaml.safe_load(f)
+        # varlist can be list or yaml file
+        if isinstance(varlist, dict):
+            print(f"varlist is a dict: {varlist}")
+            self.varlist = varlist
+        else:
+            with open(varlist, 'r') as f:
+                self.varlist = yaml.safe_load(f)
 
         self.mass_fit_range = { # add mean with range to be used in RooFit
             "h-peak": (125, 115, 135),
@@ -27,6 +32,9 @@ class DistributionCompare:
             "signal": (125, 110, 150),
             "z-peak": (90, 70, 110)
         }
+
+    def all_vars(self):
+        return list(self.varlist.keys())
 
     def filter_region(self, events, region="h-peak"):
         dimuon_mass = events.dimuon_mass
@@ -91,8 +99,20 @@ class DistributionCompare:
     def load_data(self):
         def load(path):
             if path.endswith(".root"):
+                files = sorted(glob.glob(path))
+                if not files:
+                    raise FileNotFoundError(f"No ROOT files match pattern: {path}")
+
+                print("Files to load:")
+                for f in files:
+                    print("  ", f)
+
+                # coffea ≥ 2023: specify the tree name via the "files" argument
+                # as a dict: {filename: "TreeName"}
+                file_spec = {f: "Events" for f in files}
+
                 events = NanoEventsFactory.from_root(
-                    {path: "Events"},
+                    file_spec,
                     schemaclass=NanoAODSchema,
                     uproot_options={"timeout": 2400},
                     metadata={"dataset": "SingleMuon_Run2018C"},
@@ -105,26 +125,50 @@ class DistributionCompare:
                 events_data = {}
                 if self.fields:
                     for field in self.fields:
-                        events_data[field] = events.Muon[field.replace("Muon_", "")]
-                        # events_data[f"Muon_{field}"] = events.Muon[field]
+                        arr = events.Muon[field.replace("Muon_", "")]
+                        # ensure ak.Array (NOT dask)
+                        if hasattr(arr, "compute"):   # dask case
+                            arr = arr.compute()
+                        events_data[field] = arr
+
             elif path.endswith(".parquet"):
                 events_data = dak.from_parquet(path)
                 print(f"Available fields: {events_data.fields}")
                 # Load only the required fields
-                events_data = ak.zip({field: events_data[field] for field in self.fields}).compute()
-            print(f"Loaded {len(events_data)} events from {path}")
-            # print(f"Loaded fields: {events_data.keys()}")
+                events_data = ak.zip(
+                    {field: events_data[field] for field in self.fields}
+                ).compute()
+            else:
+                raise ValueError(f"Unsupported file type: {path}")
+
+            # ---- proper event counting ----
+            if isinstance(events_data, dict):
+                first_key = next(iter(events_data))
+                n_events = len(events_data[first_key])
+            else:
+                n_events = len(events_data)
+
+            print(f"Loaded {n_events} events from {path}")
             print(f"control_region: {self.control_region}")
+
             if self.control_region is not None:
                 print(f"Filtering events for region: {self.control_region}")
                 events_data = self.filter_region(events_data, region=self.control_region)
+
             return events_data
 
         for label, path in self.input_paths_labels.items():
             print(f"Loading {label} : {path}")
             self.events[label] = load(path)
-            print(f"{label} data loaded: {len(self.events[label])} events")
 
+            # count again correctly at top level
+            if isinstance(self.events[label], dict):
+                first_key = next(iter(self.events[label]))
+                n_events = len(self.events[label][first_key])
+            else:
+                n_events = len(self.events[label])
+
+            print(f"{label} data loaded: {n_events} events")
     def add_new_variable(self):
         # Add variable: ptErr/pT for both leading and sub-leading muons
         for label, data in self.events.items():
@@ -134,12 +178,55 @@ class DistributionCompare:
         print("New variable added: ptErr/pT for both leading and sub-leading muons")
 
     def get_hist_params(self, var):
-        params = self.varlist.get(var, self.varlist["default"])
-        return params
+        """
+        Expected structure:
+        self.varlist = {
+            'Muon_pt': [
+                {'Range': [50, 20, 80]},
+                {'Title': 'Muon p_{T} [GeV]'},
+                {'RatioPlot': [0.01, -0.01]}
+            ],
+            'default': [...]
+        }
+        """
+        # --- Normalize var ---
+        if isinstance(var, dict):
+            var_name = next(iter(var))
+        else:
+            var_name = var
+
+        # --- Get Params (fallback to default) ---
+        if var_name in self.varlist:
+            params = self.varlist[var_name]
+        else:
+            params = self.varlist["default"]
+
+        print(f"Histogram params for {var_name}: {params}")
+
+        # Case A: YAML-style with dictionaries
+        if isinstance(params[0], dict) and "Range" in params[0]:
+            bins, xmin, xmax = params[0]["Range"]
+            xtitle = params[1]["Title"]
+            ratio_min, ratio_max = params[2]["RatioPlot"]
+
+        # Case B: Simple list format
+        else:
+            if len(params) < 6:
+                raise ValueError(
+                    f"Invalid parameter format for variable {var_name}: {params}"
+                )
+            bins, xmin, xmax = params[0], params[1], params[2]
+            xtitle = params[3]
+            ratio_min, ratio_max = params[4], params[5]
+
+        return bins, xmin, xmax, xtitle, ratio_min, ratio_max
+
 
     def compare(self, var, xlabel=None, filename="comparison.pdf", events_dict=None):
         rt.gStyle.SetOptStat(0)
         bins, xmin, xmax, xtitle, ratio_range_min, ratio_range_max = self.get_hist_params(var)
+
+        print(f"bins: {bins}, xmin: {xmin}, xmax: {xmax}, xtitle: {xtitle}, ratio_range_min: {ratio_range_min}, ratio_range_max: {ratio_range_max}")
         xlabel = xlabel or xtitle
 
         # Define Canvas
@@ -152,6 +239,7 @@ class DistributionCompare:
 
         if events_dict is None:
             events_dict = self.events
+        print(f"events_dict keys: {events_dict.keys()}")
         for idx, (label, data) in enumerate(events_dict.items()):
             values = ak.to_numpy(data[var])
             hist = rt.TH1D(label, xlabel, bins, xmin, xmax)
@@ -166,6 +254,7 @@ class DistributionCompare:
             histograms.append(hist)
             legend.AddEntry(hist, label, "l")
 
+
         # First explicitly draw the histograms otherwise TRatioPlot will not work
         histograms[0].Draw("HIST")
         histograms[0].GetXaxis().SetTitle(xlabel)
@@ -179,9 +268,9 @@ class DistributionCompare:
             ratio_plot = rt.TRatioPlot(histograms[0], histograms[1])
             ratio_plot.Draw()
             ratio_plot.GetLowerRefYaxis().SetTitle("Ratio")
-            ratio_plot.GetLowerRefYaxis().SetRangeUser(ratio_range_min, ratio_range_max)
-            ratio_plot.GetLowerRefGraph().SetMinimum(ratio_range_min)
-            ratio_plot.GetLowerRefGraph().SetMaximum(ratio_range_max)
+            # ratio_plot.GetLowerRefYaxis().SetRangeUser(ratio_range_min, ratio_range_max)
+            # ratio_plot.GetLowerRefGraph().SetMinimum(ratio_range_min)
+            # ratio_plot.GetLowerRefGraph().SetMaximum(ratio_range_max)
 
             ratio_plot.GetUpperPad().cd()
             legend.Draw()
@@ -189,7 +278,7 @@ class DistributionCompare:
             canvas.Update()
 
         canvas.SaveAs(filename)
-        canvas.SaveAs(filename.replace(".pdf", ".root"))
+        # canvas.SaveAs(filename.replace(".pdf", ".root"))
 
         # Save the log version of the plot
         ratio_plot.GetUpperPad().SetLogy()
@@ -197,7 +286,7 @@ class DistributionCompare:
         histograms[0].SetMaximum(max(histograms[0].GetMaximum(), histograms[1].GetMaximum())*100)
 
         canvas.SaveAs(filename.replace(".pdf", "_log.pdf"))
-        canvas.SaveAs(filename.replace(".pdf", "_log.root"))
+        # canvas.SaveAs(filename.replace(".pdf", "_log.root"))
 
         # clear memory
         for hist in histograms:

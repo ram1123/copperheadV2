@@ -1,100 +1,130 @@
 muon_pt_cut:
-  2016preVFP: 20.0
-  2016postVFP: 20.0
-  '2017': 20.0
-  '2018': 20.0
-  2016_RERECO: 20.0
-  '2017_RERECO': 20.0
-  '2018_RERECO': 20.0
-  2022preEE: 20.0
-  2022postEE: 20.0
+    2016preVFP: 20.0
+    2016postVFP: 20.0
+    "2017": 20.0
+    "2018": 20.0
+    2016_RERECO: 20.0
+    "2017_RERECO": 20.0
+    "2018_RERECO": 20.0
+    2022preEE: 20.0
+    2022postEE: 20.0
+    "2023": 20.0
+    "2023BPix": 20.0
+    "2024": 20.0
 muon_eta_cut:
-  2016preVFP: 2.4
-  2016postVFP: 2.4
-  '2017': 2.4
-  '2018': 2.4
-  2016_RERECO: 2.4
-  '2017_RERECO': 2.4
-  '2018_RERECO': 2.4
-  2022preEE: 2.4
-  2022postEE: 2.4
+    2016preVFP: 2.4
+    2016postVFP: 2.4
+    "2017": 2.4
+    "2018": 2.4
+    2016_RERECO: 2.4
+    "2017_RERECO": 2.4
+    "2018_RERECO": 2.4
+    2022preEE: 2.4
+    2022postEE: 2.4
+    "2023": 2.4
+    "2023BPix": 2.4
+    "2024": 2.4
 muon_iso_cut:
-  2016preVFP: 0.25
-  2016postVFP: 0.25
-  '2017': 0.25
-  '2018': 0.25
-  2016_RERECO: 0.25
-  '2017_RERECO': 0.25
-  '2018_RERECO': 0.25
-  2022preEE: 0.25
-  2022postEE: 0.25
+    2016preVFP: 0.25
+    2016postVFP: 0.25
+    "2017": 0.25
+    "2018": 0.25
+    2016_RERECO: 0.25
+    "2017_RERECO": 0.25
+    "2018_RERECO": 0.25
+    2022preEE: 0.25
+    2022postEE: 0.25
+    "2023": 0.25
+    "2023BPix": 0.25
+    "2024": 0.25
 muon_id:
-  2016preVFP: mediumId
-  2016postVFP: mediumId
-  '2017': mediumId
-  '2018': mediumId
-  2016_RERECO: mediumId
-  '2017_RERECO': mediumId
-  '2018_RERECO': mediumId
-  2022preEE: mediumId
-  2022postEE: mediumId
+    2016preVFP: mediumId
+    2016postVFP: mediumId
+    "2017": mediumId
+    "2018": mediumId
+    2016_RERECO: mediumId
+    "2017_RERECO": mediumId
+    "2018_RERECO": mediumId
+    2022preEE: mediumId
+    2022postEE: mediumId
+    "2023": mediumId
+    "2023BPix": mediumId
+    "2024": mediumId
 muon_flags:
-  2016preVFP: []
-  2016postVFP: []
-  '2017': []
-  '2018': []
-  2016_RERECO: []
-  '2017_RERECO': []
-  '2018_RERECO': []
-  2022preEE: []
-  2022postEE: []
+    2016preVFP: []
+    2016postVFP: []
+    "2017": []
+    "2018": []
+    2016_RERECO: []
+    "2017_RERECO": []
+    "2018_RERECO": []
+    2022preEE: []
+    2022postEE: []
+    "2023": []
+    "2023BPix": []
+    "2024": []
 muon_leading_pt:
-  2016preVFP: 26.0
-  2016postVFP: 26.0
-  '2017': 29.0
-  '2018': 26.0
-  2016_RERECO: 26.0
-  '2017_RERECO': 29.0
-  '2018_RERECO': 26.0
-  2022preEE: 26.0
-  2022postEE: 26.0
+    2016preVFP: 26.0
+    2016postVFP: 26.0
+    "2017": 29.0
+    "2018": 26.0
+    2016_RERECO: 26.0
+    "2017_RERECO": 29.0
+    "2018_RERECO": 26.0
+    2022preEE: 26.0
+    2022postEE: 26.0
+    "2023": 26.0
+    "2023BPix": 26.0
+    "2024": 26.0
 muon_trigmatch_iso:
-  2016preVFP: 0.15
-  2016postVFP: 0.15
-  '2017': 0.15
-  '2018': 0.15
-  2016_RERECO: 0.15
-  '2017_RERECO': 0.15
-  '2018_RERECO': 0.15
-  2022preEE: 0.15
-  2022postEE: 0.15
+    2016preVFP: 0.15
+    2016postVFP: 0.15
+    "2017": 0.15
+    "2018": 0.15
+    2016_RERECO: 0.15
+    "2017_RERECO": 0.15
+    "2018_RERECO": 0.15
+    2022preEE: 0.15
+    2022postEE: 0.15
+    "2023": 0.15
+    "2023BPix": 0.15
+    "2024": 0.15
 muon_trigmatch_dr:
-  2016preVFP: 0.4 # 0.1
-  2016postVFP: 0.4 # 0.1
-  '2017': 0.4 # 0.1
-  '2018': 0.4 # 0.1
-  2016_RERECO: 0.4 # 0.1
-  '2017_RERECO': 0.4 # 0.1
-  '2018_RERECO': 0.4 # 0.1
-  2022preEE: 0.4 # 0.1
-  2022postEE: 0.4 # 0.1
+    2016preVFP: 0.4 # 0.1
+    2016postVFP: 0.4 # 0.1
+    "2017": 0.4 # 0.1
+    "2018": 0.4 # 0.1
+    2016_RERECO: 0.4 # 0.1
+    "2017_RERECO": 0.4 # 0.1
+    "2018_RERECO": 0.4 # 0.1
+    2022preEE: 0.4 # 0.1
+    2022postEE: 0.4 # 0.1
+    "2023": 0.4 # 0.1
+    "2023BPix": 0.4 # 0.1
+    "2024": 0.4 # 0.1
 muon_trigmatch_pt:
-  2016preVFP: 24.0
-  2016postVFP: 24.0
-  '2017': 27.0 #27.0
-  '2018': 24.0
-  2016_RERECO: 24.0
-  '2017_RERECO': 27.0
-  '2018_RERECO': 24.0
-  2022preEE: 24.0
-  2022postEE: 24.0
+    2016preVFP: 24.0
+    2016postVFP: 24.0
+    "2017": 27.0 #27.0
+    "2018": 24.0
+    2016_RERECO: 24.0
+    "2017_RERECO": 27.0
+    "2018_RERECO": 24.0
+    2022preEE: 24.0
+    2022postEE: 24.0
+    "2023": 24.0
+    "2023BPix": 24.0
+    "2024": 24.0
 muon_trigmatch_id:
-  2016preVFP: tightId
-  2016postVFP: tightId
-  '2017': tightId
-  '2018': tightId
-  2016_RERECO: tightId
-  '2017_RERECO': tightId
-  '2018_RERECO': tightId
-  2022preEE: tightId
-  2022postEE: tightId
+    2016preVFP: tightId
+    2016postVFP: tightId
+    "2017": tightId
+    "2018": tightId
+    2016_RERECO: tightId
+    "2017_RERECO": tightId
+    "2018_RERECO": tightId
+    2022preEE: tightId
+    2022postEE: tightId
+    "2023": tightId
+    "2023BPix": tightId
+    "2024": tightId

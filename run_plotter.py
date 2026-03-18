@@ -1,112 +1,125 @@
-import subprocess
 import itertools
 import logging
-from modules.utils import logger
-from pathlib import Path
+import subprocess
 import sys
+from pathlib import Path
+from shlex import join as shjoin
+
+from modules.trials import get_stage1_path
+from modules.utils import logger
 
 logger.setLevel(logging.INFO)
 
-DRY_RUN = len(sys.argv) > 1 and sys.argv[1] == "--dry-run"
+# -----------------------------------------------------------------------------
+# CLI flags (no argparse)
+# -----------------------------------------------------------------------------
+ARGS = set(sys.argv[1:])
+DRY_RUN = "--dry-run" in ARGS
+FORCE = "--force" in ARGS
+DEBUG = "--debug" in ARGS
 
-base_script = ["python", "plotter/validation_plotter_unified.py"]
-# base_script = ["python", "validation_plotter_unified.py"]
+if DEBUG:
+    logger.setLevel(logging.DEBUG)
 
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_MiNNLO/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_aMCatNLO/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterAndAMCATNLO_MjjCutForAllCats/PUjetVeto50GeV_2p5_4p0_Jet70GeV/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterAndAMCATNLO_7July/SwitchedCutToHyeonCode_AddedbackToFun_InvertgJJcut/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/VBFStichingFinal_7July_DNNinSignalRegion/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/VBFStichingFinal_7July_DNN_MassSetTo125/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/compacted_hpeakWithDYVBF_FixDimuonMass/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/compacted_hpeakWithDYVBF/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/NobtagForVBF_16July2025_DNN/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/btagForVBF_16July2025_DNN/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/WithBtagForVBF_17July2025/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterOnly_diMuonLess100GeV/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterPlusaMCatNLO/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_08June/CrossCheck_VBFFilterPlusaMCatNLO_NoMjjCut/"
+# -----------------------------------------------------------------------------
+# User config
+# -----------------------------------------------------------------------------
+BASE_SCRIPT = ["python", "plotter/validation_plotter_unified.py"]
 
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/CheckNewZpT_28July2025/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/WithBtagForVBF_17July2025_DNN_FixDiMuonMass/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_17July/Rerun_07August2025/"
+stage1_dir = Path(get_stage1_path())  # default = "current"
+LOAD_PATH = stage1_dir / "{year}" / "f1_0"
+logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/Aug18_DnnRange20"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/WithDY012_jets_18September"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_SoftJetBugFixV3/Aug18_DnnRange20/Aug29_2025"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_07Sep2025/BothSoftJetVars/Sep12_2025/"
-# SAVE_PATH = "./validation/figs/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_DNN_Reorder/LatestBin_23September"
-# SAVE_PATH = "./validation/figs/skimmed_for_dnn_AK8jets/LatestBin_23September"
-SAVE_PATH = "./validation/figs/Run2_nanoAODv12_AK8jets/LatestBin_23September_NoVHveto"
+# Get the main directory based on run2 and nanoAOD version from the load path, e.g. Run3_nanoAODv12
+# Example: Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV -> Run3_nanoAODv12
+stage1_name = stage1_dir.parent.name
+parts = stage1_name.split("_")
+logger.info(f"Parsed stage1_name: {stage1_name}, parts: {parts}")
+outputDir = "_".join(parts[:2]) if len(parts) >= 2 else stage1_name
+logger.info(f"outputDir: {outputDir}")
 
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_WithDNNScore/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_OLD_WithDNNScore_MassSetTo125/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeakWithDYVBF/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/{year}/compacted_hpeak_16July2025_FixDimuonMass/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test_FixDimuonMass/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_17July/stage1_output/{year}/compacted_hpeak_UpdatedQGL_17July_Test/"
+SAVE_TAG = "incDY"
+# SAVE_TAG = "incDY_DNNWgts"
+SAVE_ROOT = Path("./validation/figs") / outputDir / f"{stage1_name}_{SAVE_TAG}"
+logger.info(f"Using SAVE_ROOT: {SAVE_ROOT}")
 
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt//stage1_output/{year}/compacted_13August_FixDimuonMass/"
-# LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2018/compacted_19September_FixDimuonMass/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_SoftJetBugFixV3/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_07Sep2025/stage1_output/{year}/f1_0/"
-# LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage1_output/{year}/compacted/"
+# Prevent overwriting
+if SAVE_ROOT.exists() and not FORCE:
+    raise RuntimeError(f"SAVE_ROOT exists: {SAVE_ROOT} (use --force to proceed)")
 
-# LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/skimmed_for_dnn_AK8jets/2017/"
+# years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+# years = ["2022preEE"]
+years = ["2022postEE"]
+# years = ["2023"]
+# years = ["2023BPix"]
+# years = ["2024"]
 
-LOAD_PATH = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_AK8jets/stage1_output/{year}/f1_0/"
-
-
-# years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016"]
-# years = ["2017", "2016postVFP", "2016preVFP"]
-# years = ["2018", "2017", "2016postVFP", "2016preVFP", "2016", "*"]
-years = ["2016preVFP"]
-# years = ["*"]
-
-# categories = ["vbf", "ggh", "nocat"]
-# categories = ["nocat", "ggh"]
-# categories = ["vbf", "ggh"]
-categories = ["vbf"]
+# categories = ["nocat", "vbf", "ggh"]
+categories = ["nocat", "ggh"]
+# categories = ["ggh"]
+# categories = ["vbf"]
 # categories = ["nocat"]
 
+
+JJ_ETA_REGIONS = [
+    "all",
+    "jj_both_central",
+    "jj_non_central",
+    "jj_one_fwd25_one_central",
+    "jj_one_he_one_central",
+    "jj_one_fwd30_one_central",
+    "jj_both_fwd25",
+    "jj_both_he",
+    "jj_both_fwd30",
+    "jj_one_he_one_fwd30",
+]
+
 # Boolean flags
-vbf_filter_study_options = [True]  # True to apply VBF filter study, False to skip it
-remove_zpt_weights_options = [False]  # True to remove zpt weights, False to keep them
-debug_options = False
-min_set_of_vars = False  # If True, only use a minimal set of variables  to plot
+vbf_filter_study_options = [False]  # True/False list
+remove_zpt_weights_options = [True]  # True/False list
+add_dnn_zpt_weights_options = [False]  # True/False list
+min_set_of_vars = True  # minimal set of vars
 
 region_options = [
-    # ["h-sidebands", "z-peak", "signal", "h-peak"]
-    # ["h-sidebands", "signal", "h-peak"]
-    ["h-sidebands", "z-peak"]
-    # ["h-sidebands"]
+    # ["h-sidebands", "z-peak"],
+    ["h-sidebands"],
 ]
-njets_options = ["inclusive", "0", "1", "2"]  # inclusive = No cut on nJets
-# njets_options = ["inclusive", "0", "1"]  # inclusive = No cut on nJets
-# njets_options = [ "0", "1"]  # inclusive = No cut on nJets
-# njets_options = ["inclusive"]  # inclusive = No cut on nJets
-# njets_options = ["2"]  # inclusive = No cut on nJets
 
-def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_weights, region, njets):
+# njets_options = ["inclusive"]
+# njets_options = ["inclusive", "0", "1", "2"]
+# njets_options = ["0", "1", "2"]
+njets_options = [ "2"]
+
+
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+def build_command(
+    year: str,
+    save_path: Path,
+    load_path: Path,
+    cat: str,
+    vbf_filter_study: bool,
+    remove_zpt_weights: bool,
+    add_dnn_zpt_weights: bool,
+    region: list[str],
+    njets: str,
+    jj_eta_regions: str,
+) -> list[str]:
     cmd = (
-        base_script +
-        ["-y", year,
-         "--save_path", save_path,
-         "--load", load_path,
-         "-cat", cat,
-        #  "--use_compacted", "compacted",  # options: "", "compacted", "compacted_WithDNNScore"
-         "--use_gateway",
-        #  "--dnn-score"
-         ]
+        BASE_SCRIPT
+        + ["-y", year]
+        + ["--save_path", str(save_path)]
+        + ["--load", str(load_path)]
+        + ["-cat", cat]
+        + ["--use-compacted", "compacted"]  # "", "compacted", "compacted_WithDNNScore"
+        + ["--use_gateway", "--cluster_index", "0"]
+        + ["--njets", str(njets)]
+        + ["--jj-eta-region", jj_eta_regions]
     )
 
-    if debug_options:
-        cmd += ["--log-level",  "DEBUG"]
+    if DEBUG:
+        cmd += ["--log-level", "DEBUG"]
 
     if min_set_of_vars:
         cmd += ["--minimum_set"]
@@ -115,51 +128,75 @@ def build_command(year, save_path, load_path, cat, vbf_filter_study, remove_zpt_
         cmd += ["--vbf_filter_study"]
 
     if region:
-        cmd += ["--region"] + region
-    if njets is not None:
-        cmd += ["--njets", str(njets)]
+        cmd += ["--region", *region]
 
     if remove_zpt_weights:
-        cmd.append("--remove_zpt_weights")
+        cmd += ["--remove_zpt_weights"]
 
+    if add_dnn_zpt_weights:
+        cmd += ["--use_dnn_zpt_weights"]
 
     return cmd
 
+
 def run_all_combos():
-    i = 1
+    job_idx = 0
+
     for year in years:
-        # save_path = f"{SAVE_PATH}"
-        if year == "2016":
-            load_path = LOAD_PATH.format(year=str(year)+"*")
-        else:
-            load_path = LOAD_PATH.format(year=year)
+        load_path = Path(str(LOAD_PATH).format(year=year))
+
         combo_iter = itertools.product(
+            JJ_ETA_REGIONS,
             categories,
             vbf_filter_study_options,
             remove_zpt_weights_options,
+            add_dnn_zpt_weights_options,
             region_options,
-            njets_options
+            njets_options,
         )
-        for cat, vbf_flag, zpt_flag, region, njets in combo_iter:
-            save_path = str(Path(f"{SAVE_PATH}") / f"VBFfilter_{vbf_flag}")
-            # if cat == "ggh" and vbf_flag:
-            #     logger.debug(f"Skipping ggh with vbf_filter_study: {i}")
-            #     continue  # skip --vbf_filter_study for ggh, not meaningful
 
-            if cat == "vbf" and (not (njets == "inclusive" )):
-                logger.debug(f"Skipping vbf with njets: {njets}")
-                continue  # skip njets for vbf, not meaningful
+        for jj_eta_regions, cat, vbf_flag, zpt_flag, dnn_flag, region_list, njets in combo_iter:
+            # skip meaningless combos
+            if cat == "vbf" and njets != "inclusive":
+                logger.debug(f"Skipping vbf with njets={njets} (not meaningful)")
+                continue
 
-            # skip if vbf_filter_study_options is True then remove "z-peak" from region
-            if vbf_flag and "z-peak" in region:
-                region = [r for r in region if r != "z-peak"]
-                logger.debug(f"Removing 'z-peak' from region for vbf_filter_study: {region}")
+            # if vbf_filter_study: remove z-peak from region
+            region = [r for r in region_list if not (vbf_flag and r == "z-peak")]
 
-            cmd = build_command(year, save_path, load_path, cat, vbf_flag, zpt_flag, region, njets)
-            logger.info(f"[{year}][{cat}][{i}] Running: {' '.join(cmd)}")
+            # structured save dirs (much easier to browse)
+            save_path = (
+                SAVE_ROOT
+                / f"VBFfilter_{vbf_flag}"
+            )
+
+            save_path.mkdir(parents=True, exist_ok=True)
+
+            cmd = build_command(
+                year=year,
+                save_path=save_path,
+                load_path=load_path,
+                cat=cat,
+                vbf_filter_study=vbf_flag,
+                remove_zpt_weights=zpt_flag,
+                add_dnn_zpt_weights=dnn_flag,
+                region=region,
+                njets=njets,
+                jj_eta_regions=jj_eta_regions,
+            )
+
+            job_idx += 1
+            logger.info("\n" + "=" * 80)
+            logger.info(
+                f"[{job_idx:04d}] {year} {cat} njets={njets} vbf={vbf_flag} zptRm={zpt_flag} dnnZpt={dnn_flag}"
+            )
+            logger.info(shjoin(cmd))
+            # if job_idx < 3:  # only print the first few commands for sanity check
+            #     continue;
+
             if not DRY_RUN:
                 subprocess.run(cmd, check=True)
-            i += 1
+
 
 if __name__ == "__main__":
     run_all_combos()

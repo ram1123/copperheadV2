@@ -5,6 +5,8 @@ import argparse
 from omegaconf import OmegaConf
 import time
 import pandas as pd
+import os
+
 
 
 def calculate_AMS(sig_yields, bkg_yields):
@@ -34,7 +36,8 @@ def obtain_BDT_edges(target_sig_effs, years, load_path):
     
 
         # full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sig*.parquet"
-        full_load_path = f"{load_path}/{year}/processed_events_sigMC_ggh.parquet" # ignore VBF signal sample
+        full_load_path = f"{load_path}/{year}/processed_events_sigMC_ggh_*.parquet" # ignore VBF signal sample
+        print(f"full_load_path: {full_load_path}")
         events = dak.from_parquet(full_load_path)
         
         signal_score = ak.to_numpy(events.BDT_score.compute())
@@ -118,7 +121,7 @@ def get_background_yields(bdt_score_edges, year:str, load_path:str):
     """
     return: out_arr of size len(bdt_score_edges) -1, value in each bin represnting signal yield in that category
     """
-    full_load_path = f"{load_path}/{year}/processed_events_data.parquet"  # use data for bkg
+    full_load_path = f"{load_path}/{year}/processed_events_data_*.parquet"  # use data for bkg
     events = dak.from_parquet(full_load_path)
     background_score = ak.to_numpy(events.BDT_score.compute())
     background_wgt = ak.to_numpy(events.wgt_nominal.compute())
@@ -151,7 +154,22 @@ if __name__ == "__main__":
     '--years',
     nargs='+',
     default=["2016preVFP", "2016postVFP", "2017", "2018"],
-    help='List of years to process (default: 2018 2017)'
+    help='List of years to process. when "all" is given, then take all years that is available in the stage2 output'
+    )
+    parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default=".",
+    action="store",
+    help="path where the edge validation is saved",
+    )
+    parser.add_argument(
+    "--label",
+    dest="label",
+    default="",
+    action="store",
+    help="stage2 run label",
     )
     start_time = time.time()
     """
@@ -190,7 +208,14 @@ if __name__ == "__main__":
     final_sig_effs = [1.0]
 
     years = sysargs.years
+    years = [ # replace all with "*"
+        "*" if (s=="all") else s
+        for s in years
+    ]
     print(f"years: {years}")
+
+    save_path = f"{sysargs.save_path}/{sysargs.label}"
+    os.makedirs(save_path, exist_ok=True)
     
     # for iter_idx in range(1, 8):
     for iter_idx in range(1, 7):
@@ -253,7 +278,7 @@ if __name__ == "__main__":
         print(f"sig_effs2iterate after remove: {sig_effs2iterate}")
 
         # Record the AMS
-        AMS_df.to_csv(f"iter{iter_idx}_significances.csv")
+        AMS_df.to_csv(f"{save_path}/iter{iter_idx}_significances.csv")
         
 
     

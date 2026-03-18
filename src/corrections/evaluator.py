@@ -8,6 +8,10 @@ import dask_awkward as dak
 from omegaconf import OmegaConf
 import correctionlib
 
+import logging
+from modules.utils import logger
+from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
+
 def get_corr_inputs(input_dict, corr_obj):
     """
     Helper function for getting values of input variables
@@ -154,6 +158,7 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
     ntrueint = np array for making dense lookup
     distinction for run2 and run3 is not the most elegant method, but it should
     be good enough for the time being
+    FIXME: Use is_run2 and is_run3 instead of Run variable, and make the code more modular by separating run2 and run3 logic into different functions
     """
     if Run ==2:
         if onTheSpot:
@@ -171,8 +176,8 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
             # print(f"pu_weights[{var}]: {pu_weights[var].compute()}")
     elif Run==3:
         jsonGz_path = parameters["pu_file_mc"]
-        print(f"jsonGz_path: {jsonGz_path}")
-        ceval = correctionlib.CorrectionSet.from_file(jsonGz_path)
+        logger.info(f"jsonGz_path: {jsonGz_path}")
+        ceval = get_corrset(jsonGz_path)
         key = list(ceval.keys())[0]
         pu_lookup = ceval[key]
         pu_weights = {}
@@ -183,7 +188,6 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
         print("ERROR: unacceptable Run value is given!")
         raise ValueError
     return pu_weights
-
 
 
 # NNLOPS SF-------------------------------------------------------------------------
@@ -964,17 +968,15 @@ def add_pdf_variations(events, config, dataset):
     return pdf_vars
 
 
-
-
 # QGL SF-------------------------------------------------------------------------
 
-def qgl_weights_V2(jets, config, isHerwig):
+def qgl_weights_V2(jets, config, isHerwig, dnn_year):
     """
     source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/QuarkGluonLikelihood#Recommendation_for_13_TeV_data_a
     """
     # print(f"qgl jets: {jets.compute()}")
     # fname = config["jmar_sf_file"]
-    # jmar_evaluator = correctionlib.CorrectionSet.from_file(fname)
+    # jmar_evaluator = get_corrset(fname)
     # map_name = "Gluon_Pythia"
     # sf = jmar_evaluator[map_name]
     # out_wgts = {
@@ -1000,7 +1002,14 @@ def qgl_weights_V2(jets, config, isHerwig):
     # print(f"isHerwig: {isHerwig}")
     # print(f"jets.qgl: {jets.qgl.compute()}")
 
-    wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)
+    # --- choose score and weight mask depending on year ---
+    score_field = "qgl"
+    if dnn_year < 2022.0:  # Run 2: use QGL
+        wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)
+        score_field = "qgl"
+    else:  # Run 3: use PNet QvG
+        wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2.5) & (jets.btagPNetQvG > 0)
+        score_field = "btagPNetQvG"
     lightOrGluon = (abs(jets.partonFlavour) < 4) | (jets.partonFlavour == 21)
     jets = jets[wgt_mask & lightOrGluon]
     njets = ak.num(jets, axis=1)
@@ -1013,9 +1022,8 @@ def qgl_weights_V2(jets, config, isHerwig):
     light = (abs(jets.partonFlavour) < 4)
     gluon = (jets.partonFlavour == 21)
 
-    qgl = jets.qgl
+    qgl = getattr(jets, score_field)
     qgl_weights = ak.ones_like(jets.pt)
-
 
     if isHerwig:
         light_val =  (
@@ -1307,14 +1315,19 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
     jets = ak.to_packed(jets[btag_jet_selection])
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
 
+    if hasattr(jets, "btagDeepB"):
+        score_field = "btagDeepB"
+    else:
+        logger.warning("jets has no attribute btagDeepB, using btagDeepFlavB instead")
+        score_field = "btagDeepFlavB"
 
+    btag_score = getattr(jets, score_field)
     correctionlib_out = btag_json.evaluate( # UL
         "central",
         jets.hadronFlavour,
         abs(jets.eta),
         jets.pt,
-        # jets.btagDeepFlavB,
-        jets.btagDeepB,
+        btag_score,
     )
 
     # correctionlib_out = btag_json.eval( # RERECO
@@ -1364,7 +1377,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # sys_wgts =  btag_json.eval( # RERECO
                 #     f"up_{sys}",
@@ -1382,7 +1395,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # sys_wgts =  btag_json.eval( # RERECO
                 #     f"down_{sys}",
@@ -1424,7 +1437,7 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
         abs(jets.eta),
         jets.pt,
         # jets.btagDeepFlavB,
-        jets.btagDeepB,
+        btag_score,
     )
     # print(f"correctionlib_out: {correctionlib_out.compute()}")
     # correctionlib_out = ak.pad_none(correctionlib_out, target=1)
@@ -1467,7 +1480,7 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # print(f"sys_wgts up: {sys_wgts.compute()}")
                 btag_wgt_up = ak.where(btag_mask, sys_wgts, btag_wgt_up)
@@ -1484,7 +1497,7 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
                     hadronFlavour,
                     abs(jets.eta),
                     jets.pt,
-                    jets.btagDeepB,
+                    btag_score,
                 )
                 # print(f"sys_wgts down: {sys_wgts.compute()}")
                 btag_wgt_down = ak.where(btag_mask, sys_wgts, btag_wgt_down)
@@ -1589,10 +1602,6 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
 #     return btag.wgt, btag_syst
 
 
-
-
-
-
 # -----------------------------------------------------------
 #
 # jet puid weight
@@ -1605,7 +1614,7 @@ def eval_jetpuid_sf(year, jets, jet_puid_wp, config):
     """
     fname = config["jmar_sf_file"]
     # print(f"fname: {fname}")
-    puid_evaluator = correctionlib.CorrectionSet.from_file(fname)
+    puid_evaluator = get_corrset(fname)
     wp_converter = {
         "loose" : "L",
         "medium" : "M",
@@ -1841,10 +1850,3 @@ def get_jetpuid_weights_old(evaluator, year, jets, pt_name, jet_puid_opt, jet_pu
         # print(f"puid_weight after: {puid_weight}")
         # print(f"puid_weight: {ak.to_numpy(puid_weight.compute())}")
     return puid_weight
-
-
-
-
-
-
-

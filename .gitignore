@@ -1,4 +1,8 @@
+*.patch
 CMSSW_13_0_14/
+.nfs*
+log_old/
+bin/
 *.err
 *.log
 *.npy
@@ -26,3 +30,12 @@ log*.txt
 *.d
 *.bak
 *.tsv
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+pixi.lock
+.snakemake/
+*.pt
+*.npz
+*.done
+.julia_depot/

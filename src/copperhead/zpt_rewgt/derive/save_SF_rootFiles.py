@@ -1,0 +1,274 @@
+import os
+import sys
+from array import array
+
+import awkward as ak
+import dask_awkward as dak
+import numpy as np
+import ROOT
+from cli.common_argparser import build_common_parser
+from modules import classify_year, selection
+from modules.dask_utils import get_dask_client
+from modules.dask_utils import close_dask_client
+
+def zipAndCompute(events, fields2load):
+    zpt_wgt_name = "separate_wgt_zpt_wgt"
+    if zpt_wgt_name in events.fields:
+        events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # turn off Zpt
+
+    return_zip = ak.zip({
+        field : events[field] for field in fields2load
+    })
+    return return_zip.compute() # compute and return
+
+if __name__ == "__main__":
+    """
+    This file is meant to define the Zpt histogram binning for zpt fitting
+    """
+    parser = build_common_parser()
+    args = parser.parse_args()
+
+    # intialize dask client
+    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+
+    # specify stage1 output label
+    run_label = args.label
+    if args.year == "all":
+        # years =  ["2018", "2017","2016postVFP","2016preVFP"]
+        years =  ["2017","2016postVFP","2016preVFP"]
+    else:
+        years = [args.year]
+
+    for year in years:
+        plot_path = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
+        os.makedirs(plot_path, exist_ok=True)
+        print(f"years: {years}")
+
+        # get user name
+        user_name = os.getenv("USER")
+        if user_name is None:
+            print("Error: USER environment variable is not set.")
+            sys.exit(1)
+
+        base_path = f"{args.input_path}/stage1_output/{year}/compacted"  # define the save path of stage1 outputs
+
+        # if base_path does not exist, check to replace "compacted" with "f1_0"
+        if not os.path.exists(base_path):
+            base_path = base_path.replace("compacted", "f1_0")
+            if not os.path.exists(base_path):
+                raise RuntimeError(f"Base path does not exist: {base_path}")
+
+        # load the data and dy samples
+        print(f"base path data : {base_path}/data_*/*/*.parquet")
+        data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
+
+        DY_BASE_PATH = ""
+        if classify_year.is_run2(year):
+            if args.dy_sample == "MiNNLO":
+                DY_BASE_PATH = f"{base_path}/dy*MiNNLO/*/*.parquet"
+            elif args.dy_sample == "aMCatNLO":
+                DY_BASE_PATH = f"{base_path}/dy*_aMCatNLO/*/*.parquet"
+            else:
+                raise ValueError(f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, or VBF_filter.")
+        else: # run3
+            if year == "2024":
+                DY_BASE_PATH = f"{base_path}/dyTo2Mu_M-50_aMCatNLO/*/*.parquet"
+            elif args.dy_sample == "powheg":
+                DY_BASE_PATH = f"{base_path}/dyTo2Mu_MLL_*/*/*.parquet"
+            elif args.dy_sample == "INCamcatnloFXFX":
+                DY_BASE_PATH = f"{base_path}/dyTo2L_M-50_incl/*/*.parquet"
+            elif args.dy_sample == "amcatnloFXFX":
+                DY_BASE_PATH = f"{base_path}/dyTo2L_M-50_*j/*/*.parquet"
+            else:
+                raise ValueError(
+                    f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, VBF_filter, powheg, or amcatnloFXFX."
+                )
+
+        print(f"base path dy: {DY_BASE_PATH}")
+        dy_events = dak.from_parquet(DY_BASE_PATH)
+        # apply z-peak region filter and nothing else
+        _, data_events = selection.filterRegion(data_events, region="z-peak")
+        _, dy_events = selection.filterRegion(dy_events, region="z-peak")
+        print(f"dy_events: {dy_events}")
+        # print(f"dy_events.dimuon_mass.compute(): {dy_events.dimuon_mass.compute()}")
+
+        njet_field = "njets_nominal"
+        for njet in [0,1,2]:
+            if njet != 2:
+                data_events_loop = data_events[data_events[njet_field] ==njet]
+                dy_events_loop = dy_events[dy_events[njet_field] ==njet]
+            else:
+                data_events_loop = data_events[data_events[njet_field] >=njet]
+                dy_events_loop = dy_events[dy_events[njet_field] >=njet]
+
+            fields2load = ["wgt_nominal", "dimuon_pt"]
+            # data_dict = {field: ak.to_numpy(data_events_loop[field].compute()) for field in fields2load}
+            # dy_dict = {field: ak.to_numpy(dy_events_loop[field].compute()) for field in fields2load}
+            data_dict = zipAndCompute(data_events_loop, fields2load)
+            data_dict = {field: ak.to_numpy(data_dict[field]) for field in data_dict.fields}
+            dy_dict = zipAndCompute(dy_events_loop, fields2load)
+            dy_dict = {field: ak.to_numpy(dy_dict[field]) for field in dy_dict.fields}
+
+            # print(f"data_dict: {data_dict}")
+            # print(f"dy_dict: {dy_dict}")
+
+            # binning = config["rewgt_binning"]
+            # # Convert the list of bin edges to a C-style array
+            # # binning_array = np.array(binning)
+            binning_array = np.linspace(0, 200, 2001)  # 2000 bins from 0 to 200 GeV
+            # binning_array = np.linspace(0, 200, 80)  # 2000 bins from 0 to 200 GeV
+
+            # Step 2: Create the histogram with variable bin widths
+            hist_data = ROOT.TH1F("hist_data", "Data", len(binning_array) - 1, binning_array)
+            hist_dy = ROOT.TH1F("hist_dy", "DY", len(binning_array) - 1, binning_array)
+
+            #  Step 3: Fill the histogram with data
+            # Convert the values and weights to arrays
+            # Note: The values and weights should be numpy arrays or lists
+            values = data_dict["dimuon_pt"]
+            values = array('d', values)
+            weights = data_dict["wgt_nominal"]
+            weights = array('d', weights)
+            hist_data.FillN(len(values), values, weights)
+
+            values = dy_dict["dimuon_pt"]
+            values = array('d', values)
+            weights = dy_dict["wgt_nominal"]
+            weights = array('d', weights)
+            hist_dy.FillN(len(values), values, weights)
+
+            # Step 4: Get the Scale Factor (SF) histogram, by dividing data histogram by DY histogram
+            hist_SF = hist_data.Clone("hist_SF")
+            hist_SF.Divide(hist_dy)
+
+            # Step 5: save the histograms in workspace
+            workspace = ROOT.RooWorkspace("zpt_Workspace")
+
+            # Import the histograms into the workspace
+            getattr(workspace, "import")(hist_data)  # Use getattr to call 'import' (Python keyword)
+            getattr(workspace, "import")(hist_dy)
+
+            # Step 6: Save the workspace to a ROOT file
+            copy_file = ROOT.TFile(f"{plot_path}/{year}_njet{njet}.root", "RECREATE")
+            workspace.Write()  # Write the workspace to the file
+            copy_file.Close()
+
+            # # Sanity check: Loop through the bins and calculate the relative error
+            # print("data Hist Bin | Content | Error | Relative Error (%)")
+            # print("------------------------------------------")
+            # hist = hist_data
+            # for i in range(1, hist.GetNbinsX() + 1):  # Loop over bins (1-indexed in ROOT)
+            #     content = hist.GetBinContent(i)      # Bin content
+            #     error = hist.GetBinError(i)          # Bin error
+            #     if content != 0:
+            #         relative_error = (error / content) * 100  # Relative error in percentage
+            #     else:
+            #         relative_error = 0  # Avoid division by zero
+
+            #     # Print the results
+            #     print(f"{i:3} | {content:7.2f} | {error:6.2f} | {relative_error:6.2f} %")
+            # print("dy Hist Bin | Content | Error | Relative Error (%)")
+            # print("------------------------------------------")
+            # hist = hist_dy
+            # for i in range(1, hist.GetNbinsX() + 1):  # Loop over bins (1-indexed in ROOT)
+            #     content = hist.GetBinContent(i)      # Bin content
+            #     error = hist.GetBinError(i)          # Bin error
+            #     if content != 0:
+            #         relative_error = (error / content) * 100  # Relative error in percentage
+            #     else:
+            #         relative_error = 0  # Avoid division by zero
+
+            #     # Print the results
+            #     print(f"{i:3} | {content:7.2f} | {error:6.2f} | {relative_error:6.2f} %")
+            # print("SF Hist Bin | Content | Error | Relative Error (%)")
+            # print("------------------------------------------")
+            # hist = hist_SF
+            # for i in range(1, hist.GetNbinsX() + 1):  # Loop over bins (1-indexed in ROOT)
+            #     content = hist.GetBinContent(i)      # Bin content
+            #     error = hist.GetBinError(i)          # Bin error
+            #     if content != 0:
+            #         relative_error = (error / content) * 100  # Relative error in percentage
+            #     else:
+            #         relative_error = 0  # Avoid division by zero
+
+            #     # Print the results
+            #     print(f"{i:3} | {content:7.2f} | {error:6.2f} | {relative_error:6.2f} %")
+
+            canvas = ROOT.TCanvas("canvas", f"histogram {run_label}", 800, 600)
+            # Set histogram styles
+            hist_data.SetLineColor(ROOT.kRed)
+            hist_dy.SetLineColor(ROOT.kBlue)
+            hist_data.Draw()
+            hist_dy.Draw("SAME")
+
+            # Add a legend
+            legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)  # Legend coordinates (x1, y1, x2, y2)
+            legend.AddEntry(hist_data, "Data 1", "l")  # "l" means line style
+            legend.AddEntry(hist_dy, "DY", "l")
+            legend.Draw()
+
+            # Save the canvas as an image
+            canvas.SaveAs(f"{plot_path}/dataDy_{year}_njet{njet}.pdf")
+
+            canvas.SetLogy(1)
+            canvas.Update()
+            canvas.SaveAs(f"{plot_path}/dataDy_{year}_njet{njet}_logScale.pdf")
+            canvas.SetLogy(0)
+            canvas.Update()
+            # ---------------------------------------------------------
+
+            canvas = ROOT.TCanvas("canvas", f"SF histogram {run_label}", 800, 600)
+            hist_SF.Draw()
+
+            # Save the canvas as an image
+            canvas.SaveAs(f"{plot_path}/SF_{year}_njet{njet}.pdf")
+
+            # plot data and dy histograms together using TRatioPlot
+            canvas = ROOT.TCanvas("canvas", f"Data vs DY {run_label}", 800, 800)
+            ratio_plot = ROOT.TRatioPlot(hist_data, hist_dy)
+            ratio_plot.SetH1DrawOpt("E")  # Draw data with error bars
+            ratio_plot.SetH2DrawOpt("E")  # Draw DY with error bars
+            
+            # y-range set auto based on minimum and maximum of the ratio histogram
+            min_ratio = hist_SF.GetMinimum()
+            max_ratio = hist_SF.GetMaximum()
+
+            ratio_plot.Draw()
+    
+            # ---------------------------
+            # LOWER PAD (ratio)
+            # ---------------------------            
+            # NOTE: Set min/max or title should go after `ratio_plot.Draw()`
+            ratio_plot.GetLowerRefYaxis().SetTitle("Data / DY")
+            ratio_plot.GetLowerRefXaxis().SetTitle("Dimuon pT (GeV)")
+            ratio_plot.GetLowerRefGraph().SetMinimum(max(min_ratio * 0.8, 0.0));
+            ratio_plot.GetLowerRefGraph().SetMaximum(min(max_ratio * 1.2, 5.0));
+
+            # ---------------------------
+            # UPPER PAD (Data + DY)
+            # ---------------------------
+            upper_pad = ratio_plot.GetUpperPad()
+            upper_pad.cd()
+
+            max_data = hist_data.GetMaximum()
+            max_dy   = hist_dy.GetMaximum()
+
+            ymax = max(max_data, max_dy)
+            ymax *= 1.3  # 30% headroom
+
+            # Set range on upper histogram axis
+            ratio_plot.GetUpperRefYaxis().SetRangeUser(0.0, ymax)
+
+            canvas.Update()
+
+            # add legend
+            legend = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)  # Legend coordinates (x1, y1, x2, y2)
+            legend.AddEntry(hist_data, "Data", "l")  # "l" means line style
+            legend.AddEntry(hist_dy, "DY", "l")
+            legend.Draw()
+
+            # Save the canvas as an image
+            canvas.SaveAs(f"{plot_path}/dataOverDY_{year}_njet{njet}.pdf")
+
+    if client is not None:
+        close_dask_client()

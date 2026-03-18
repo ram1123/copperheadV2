@@ -1,0 +1,230 @@
+base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
+
+trials:
+    current:
+        # stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJets/stage1_output/"
+        comment: "What plotter should use by default"
+
+    Run2_HEMVetoFix_v1:
+        stage1: "{base_dir}/Run2_nanoAODv12_HEMVetoFix_NoSyst/stage1_output/"
+        comment: Rerun 2018 after HEM veto fix
+        date: December 07, 2025
+        years: all 4 run-2 era
+        gitSHA: 001b85faee5c7c6b97ba0fc3c9027d7e2f7d7e78
+
+    Run2_HEMVetoFix:
+        stage1: "{base_dir}/Run2_nanoAODv12_28Nov_HEMVetoFix_NoSyst_V2/stage1_output/"
+        comment: Rerun 2018 after HEM veto fix
+        date: December 07, 2025
+        years: all 4 run-2 era
+        gitSHA: 001b85faee5c7c6b97ba0fc3c9027d7e2f7d7e78
+
+    Run2_HEMVetoFix_WithSyst:
+        stage1: "{base_dir}/Run2_nanoAODv12_28Nov_HEMVetoFix/stage1_output/"
+        comment: Rerun 2018 after HEM veto fix
+        date: December 12, 2025
+        gitSHA: bbb80648733e28155430d221f7f552615896535b
+
+    Run2_legacy_NoSyst:
+        stage1: "{base_dir}/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/"
+        comment: For September 25, 2025 HMuMu report
+        gitTab: V1.0
+        Reference: https://github.com/ram1123/copperheadV2/discussions/61
+
+    Run2_legacy:
+        stage1: "{base_dir}/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage1_output/"
+        comment: For September 25, 2025 HMuMu report
+        gitTab: V1.0
+        Reference: https://github.com/ram1123/copperheadV2/discussions/61
+
+    Run3_nanoAODv12_JVM_JetFilter_WithJecJer_JetPt_30GeV_v2:
+        stage1: "{base_dir}/Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV/stage1_output/"
+        comment:
+            - Generated this version as a sanity check. It should be identical to `Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV`
+            - Used jet pT threshold of 30 GeV (Default one is 25 GeV)
+            - used JVM to filter jets only.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+            - Latest zpt after the bug fixes (SHA a03553013bfbbc836524c9cc126ab602075e2f10 and 943088ae14744834140787103af6657b48ef09c9) are available only for 2022postEE, 2023BPix and 2024.
+        gitSHA: a33728e8d6ff9b12d6844b8e9276f546ba99a8e9
+        date: February 10, 2026
+        years: 2022postEE, 2022preEE, 2023, 2023BPix
+
+    Run3_nanoAODv15_JVM_JetFilter_WithJecJer_JetPt_30GeV_v2:
+        stage1: "{base_dir}/Run3_nanoAODv15_10Feb_FilterJetsHorn30GeV/stage1_output/"
+        comment:
+            - Generated this version as a sanity check. It should be identical to `Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV`
+            - Used jet pT threshold of 30 GeV (Default one is 25 GeV)
+            - used JVM to filter jets only.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+            - Latest zpt after the bug fixes (SHA a03553013bfbbc836524c9cc126ab602075e2f10 and 943088ae14744834140787103af6657b48ef09c9) are available only for 2022postEE, 2023BPix and 2024.
+        gitSHA: a33728e8d6ff9b12d6844b8e9276f546ba99a8e9
+        date: February 15, 2026
+        years: 2024
+
+    Run3_nanoAODv12_JVM_JetFilter_WithJecJer_JetPt_30GeV:
+        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/"
+        comment:
+            - Used jet pT threshold of 30 GeV (Default one is 25 GeV)
+            - used JVM to filter jets only.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+            - Latest zpt after the bug fixes (SHA a03553013bfbbc836524c9cc126ab602075e2f10 and 943088ae14744834140787103af6657b48ef09c9) are available only for 2022postEE, 2023BPix and 2024.
+        gitSHA: 943088ae14744834140787103af6657b48ef09c9
+        date: February 02, 2026
+        years: 2022postEE, 2022preEE, 2023, 2023BPix
+
+    Run3_nanoAODv15_JVM_JetFilter_WithJecJer_JetPt_30GeV:
+        stage1: "{base_dir}/Run3_nanoAODv15_02Feb_FilterJetsHorn30GeV/stage1_output/"
+        comment:
+            - Used jet pT threshold of 30 GeV (Default one is 25 GeV)
+            - used JVM to filter jets only.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+            - Latest zpt after the bug fixes (SHA a03553013bfbbc836524c9cc126ab602075e2f10 and 943088ae14744834140787103af6657b48ef09c9) are available only for 2022postEE, 2023BPix and 2024.
+        gitSHA: 943088ae14744834140787103af6657b48ef09c9
+        date: February 02, 2026
+        years: 2024
+
+    Run3_nanoAODv12_JVM_JetFilter_WithJecJer:
+        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJets/stage1_output/"
+        comment:
+            - used JVM to filter jets only.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+            - Latest zpt after the bug fixes (SHA a03553013bfbbc836524c9cc126ab602075e2f10 and 943088ae14744834140787103af6657b48ef09c9) are available only for 2022postEE, 2023BPix and 2024.
+        gitSHA: 943088ae14744834140787103af6657b48ef09c9
+        date: February 02, 2026
+        years: 2022postEE, 2022preEE, 2023, 2023BPix
+
+    Run3_nanoAODv15_JVM_JetFilter_WithJecJer:
+        stage1: "{base_dir}/Run3_nanoAODv15_02Feb_FilterJets/stage1_output/"
+        comment:
+            - used JVM to filter jets only.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+            - Latest zpt after the bug fixes (SHA a03553013bfbbc836524c9cc126ab602075e2f10 and 943088ae14744834140787103af6657b48ef09c9) are available only for 2022postEE, 2023BPix and 2024.
+        gitSHA: 943088ae14744834140787103af6657b48ef09c9
+        date: February 02, 2026
+        years: 2024
+
+    Run3_nanoAODv12_JVM_EventFilter_WithJecJer:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Feb_JecJer/stage1_output/"
+        comment:
+            - used JVM to filter events.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+        gitSHA: 386a3e431dcdde442b9a2960656497904b3e6def
+        date: February 01, 2026
+        years: 2022postEE, 2022preEE, 2023, 2023BPix
+
+    Run3_nanoAODv15_JVM_EventFilter_WithJecJer:
+        stage1: "{base_dir}/Run3_nanoAODv15_01Feb_JecJer/stage1_output/"
+        comment:
+            - used JVM to filter events.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+        gitSHA: 386a3e431dcdde442b9a2960656497904b3e6def
+        date: February 01, 2026
+        years: 2024
+
+    Run3_nanoAODv15_JVM_JetFilter_WithJecJer:
+        stage1: "{base_dir}/Run3_nanoAODv15_01Feb_JecJerFilterJets/stage1_output/"
+        comment:
+            - used JVM to filter jets.
+            - Preliminary EBE is derived for data and MC for all year (missing one is 2024 MC EBE).
+            - Updated ZpT weights should be used with aMCatNLO inclusive samples only
+        gitSHA: 73ee37144f2f57cf218658d67e12dedb6666d329
+        date: February 02, 2026
+        years: 2024
+
+    Run3_nanoAODv12_JVMjetfilter_v2:
+        stage1: "{base_dir}/Run3_nanoAODv12_23Jan_JVMFilterJets/stage1_output/"
+        comment:
+            - used JVM to filter jets. EBE is only derived for data, and applied to both data and MC. Also, for EBE, I still need to fix few fits.
+            - ZpT bug fixed, updated the var list so that by default it should have all input features that we need for BDT or DNN.
+            - Finally I decided to use 0j, 1j and 2j sample for the further study. the zpt weights are old ones.
+        gitSHA: 862f5884e0a33eb35fa41fdaa680ffb9f0e9dfcd
+        date: January 23, 2026
+        years: 2022postEE, 2022preEE, 2023, 2023BPix
+
+    Run3_nanoAODv15_NoJVM:
+        stage1: "{base_dir}/Run3_nanoAODv15_16Dec_NoJVM/stage1_output/"
+        comment: "DEPRECATED: DO NOT USE. NO JVM used and pileup weights are wrong (uses 2023 PU for 2024). Superseded by Run3_nanoAODv15_NoJVM_v2."
+        gitSHA: 684106663a2537928230ef5374c0fad04195867b
+        date: December 16, 2025
+        years: 2024
+        deprecated: true
+        NOTE: OLD should be removed after checking `Run3_nanoAODv15_NoJVM_v2`.
+
+    Run3_nanoAODv15_NoJVM_v2:
+        stage1: "{base_dir}/Run3_nanoAODv15_15Jan_NoJVM/stage1_output/"
+        comment: No JVM used. Rerunning to cross-check if it is generated with official PU json file or not
+        gitSHA: d0e9a00c133c6e9eff3322e8f26b5e401bf5f4f5
+        date: January 15, 2026
+        years: 2024
+
+    Run3_noJetVetoMap_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_NoJVM/stage1_output/"
+        comment: "Run-3 without using any Jet veto map"
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+        year: 2023
+
+    Run3_WithJetVetoMap:
+        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map"
+
+    Run3_WithJetVetoMap_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVM/stage1_output/"
+        comment: "Run-3 using the official JET veto map"
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_WithJetVetoMap_Horn50GeV:
+        stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoMap_HornpT50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map and adding the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+
+    Run3_WithJetVetoMap_Horn50GeV_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVM_Horn50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map and adding the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_JetVeto_jetfilter:
+        stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO."
+
+    Run3_JetVeto_jetfilter_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. "
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_JetVeto_jetfilter_Horn50GeV:
+        stage1: "{base_dir}/Run3_nanoAODv12_17Nov_JetVetoFilterJetsOnly_HornpT50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+
+    Run3_JetVeto_jetfilter_Horn50GeV_v1:
+        stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+
+    Run3_JetVeto_jetfilter_Horn50GeV_v2:
+        stage1: "{base_dir}/Run3_nanoAODv12_01Dec_JVMFilterJets_Horn50GeV/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5)"
+        years: 2023
+        date: December 02, 2025
+        gitSHA: a0c2aa7efbcd6ec5fe3bfa9f81734e8f3f109fa7
+
+    Run3_JetVeto_jetfilter_Horn50GeV_tightMuon:
+        stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_TightMuon/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt, phi and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5). Also, changed the muon ID to tight"
+
+    Run3_JetVeto_jetfilter_Horn50GeV_JetIDTightLepVetoPass:
+        stage1: "{base_dir}/Run3_nanoAODv12_18Nov_JetVetoFilterJetsOnly_HornPt50GeV_JetIDTightLepVetoPass/stage1_output/"
+        comment: "Run-3 using the official JET veto map but instead of events, we removed jets. Also, updated MET and PuppiMET variables. set the MET_pt and sumEt to ZERO. Added the recommended jet pT (>50 GeV) in the horn region (3.0 > abs(eta) > 2.5). Used jetID ==6 which is pass jet ID and tightlepton veto"

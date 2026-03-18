@@ -3,14 +3,21 @@
 ## setup
 
 ```bash
-git clone https://github.com/green-cabbage/copperheadV2.git
+git clone --recurse-submodules https://github.com/green-cabbage/copperheadV2.git
 cd copperheadV2
 git checkout main
+# If already cloned the repo, then to update the submodules run:
+git submodule update --remote --merge
 source setup_env.sh
-# Run first seven column of DaskGatewaySLURM.ipynb to start the DASK Gateway.
 ```
 
 ## Run the code
+
+### Create the dask client
+
+1. Open the jupyter notebook [DaskGatewaySLURM.ipynb](DaskGatewaySLURM.ipynb)
+1. Run cells upto "Create Dask Client" to create the dask client.
+
 ### Run the pre-stage
 Pre-stage reads the dataset information from the YAML file and saves the root files to read in next step with its metadata in a JSON file.
 
@@ -23,6 +30,16 @@ Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting, 
 
 ```bash
 bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
+```
+
+### Get the validation plots:
+
+Before running the below code make sure to update the input and output paths and several other parameters in the [run_plotter.py](run_plotter.py) file.
+
+The main code for plotting is in the [plotter/validation_plotter_unified.py](plotter/validation_plotter_unified.py) file. In this file you may need to update the list of datasets to be considered for different processes. You can see them here [validation_plotter_unified.py#L28-L83](https://github.com/ram1123/copperheadV2/blob/2cdaf09321000a8eb4a5eb8faf06e22f5e9ec560/plotter/validation_plotter_unified.py#L28-L83)
+
+```bash
+python run_plotter.py
 ```
 
 ## Per-event mass calibration

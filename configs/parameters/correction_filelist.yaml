@@ -1,42 +1,17 @@
 roccor_file:
-  2016preVFP: data/roch_corr/RoccoR2016aUL.txt
+  "2016preVFP": data/roch_corr/RoccoR2016aUL.txt
   2016postVFP: data/roch_corr/RoccoR2016bUL.txt
   '2017': data/roch_corr/RoccoR2017UL.txt
   '2018': data/roch_corr/RoccoR2018UL.txt # UL original
-  # '2018': data/roch_corr/RoccoR2018.txt # rereco test
   2016_RERECO: data/roch_corr/RoccoR2016.txt
   '2017_RERECO': data/roch_corr/RoccoR2017.txt
   '2018_RERECO': data/roch_corr/RoccoR2018.txt
-  2022preEE: data/roch_corr/RoccoR2018UL.txt
-  2022postEE: data/roch_corr/RoccoR2018UL.txt
-res_calib_path:
-  2016preVFP:
-    MC: data/res_calib/res_calib_MC_2016.root
-    Data: data/res_calib/res_calib_Data_2016.root
-  2016postVFP:
-    MC: data/res_calib/res_calib_MC_2016.root
-    Data: data/res_calib/res_calib_Data_2016.root
-  '2017':
-    MC: data/res_calib/res_calib_MC_2017.root
-    Data: data/res_calib/res_calib_Data_2017.root
-  '2018':
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
-  2016_RERECO:
-    MC: data/res_calib/res_calib_MC_2016.root
-    Data: data/res_calib/res_calib_Data_2016.root
-  '2017_RERECO':
-    MC: data/res_calib/res_calib_MC_2017.root
-    Data: data/res_calib/res_calib_Data_2017.root
-  '2018_RERECO':
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
-  2022preEE:
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
-  2022postEE:
-    MC: data/res_calib/res_calib_MC_2018.root
-    Data: data/res_calib/res_calib_Data_2018.root
+  2022preEE: data/roch_corr/2022_Summer22.json
+  2022postEE: data/roch_corr/2022_Summer22EE.json
+  "2023": data/roch_corr/2023_Summer23.json
+  2023BPix: data/roch_corr/2023_Summer23BPix.json
+  # "2024":  /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-11-27/muon_scalesmearing.json.gz
+  "2024": data/roch_corr/2024_Summer24.json # From Hyeon (Copied from GitLab)
 BS_res_calib_path:
   2016preVFP:
     MC: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12_MC.json
@@ -53,5 +28,18 @@ BS_res_calib_path:
   2016_RERECO: dummy
   '2017_RERECO': dummy
   '2018_RERECO': dummy
-  2022preEE: dummy
-  2022postEE: dummy
+  2022preEE: # EBE/BS calibration derived from data; same JSON used for MC and Data
+    MC: data/res_calib/res_calib_BS_correction_2022preEE_MC_nanoAODv12.json
+    Data: data/res_calib/res_calib_BS_correction_2022preEE_Data_nanoAODv12.json
+  2022postEE: # EBE/BS calibration derived from data; same JSON used for MC and Data
+    MC: data/res_calib/res_calib_BS_correction_2022postEE_MC_nanoAODv12.json
+    Data: data/res_calib/res_calib_BS_correction_2022postEE_Data_nanoAODv12.json
+  "2023": # EBE/BS calibration derived from data; same JSON used for MC and Data
+    MC: data/res_calib/res_calib_BS_correction_2023_MC_nanoAODv12.json
+    Data: data/res_calib/res_calib_BS_correction_2023_Data_nanoAODv12.json
+  2023BPix: # EBE/BS calibration derived from data; same JSON used for MC and Data
+    MC: data/res_calib/res_calib_BS_correction_2023BPix_MC_nanoAODv12.json
+    Data: data/res_calib/res_calib_BS_correction_2023BPix_Data_nanoAODv12.json
+  "2024": # EBE/BS calibration derived from data; same JSON used for MC and Data
+    MC: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
+    Data: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json

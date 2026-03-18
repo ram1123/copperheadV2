@@ -1,71 +1,113 @@
-import sys
-import awkward as ak
-import dask_awkward as dak
-import numpy as np
-import json
 import argparse
-import os
-from src.lib.histogram.ROOT_utils import setTDRStyle, CMS_lumi
-from src.lib.histogram.plotting import plotDataMC_compare
-from distributed import Client
-import time
-import tqdm
-import glob
 import copy
-import hist.dask as hda
-import dask
+import glob
+import json
 import logging
-from modules.utils import logger
-from modules import selection
+import os
+import time
+import sys
 
+import awkward as ak
+import dask
+import dask_awkward as dak
+import hist.dask as hda
+import numpy as np
+import tqdm
+
+from cli.common_argparser import build_common_parser
+from modules.dask_utils import close_dask_client, get_dask_client
+from modules import selection
+from modules.utils import logger
+from src.lib.histogram.plotting import plotDataMC_compare
+from modules.classify_year import is_run2, is_run3
+from configs.variables.variable_lists import get_all_vars
 from scripts.compact_parquet_data import ensure_compacted
 
 # This order is for the stack plotting in the control plots
-# bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"]
-# bkg_MC_order = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"]
-# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"]
-# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined"]
-bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
-# bkg_MC_order = ["OTHER", "EWK", "VV", "TOP", "DY"]
-
-DY_aMCatNLO = ["dy_M-100To200_aMCatNLO", "dy_M-50_aMCatNLO"]
-# DY_aMCatNLO = ["dy_M-100To200_aMCatNLO"]
-
-DY_MiNNLO = ["dy_M-100To200_MiNNLO", "dy_M-50_MiNNLO"]
-
-
-DY_HTBinned = [
-    "dy_M-4to50_HT-70to100", "dy_M-4to50_HT-100to200", "dy_M-4to50_HT-200to400", "dy_M-4to50_HT-400to600", "dy_M-4to50_HT-600toInf",
-    "dy_M-50_HT-70to100", "dy_M-50_HT-100to200", "dy_M-50_HT-200to400", "dy_M-50_HT-400to600", "dy_M-50_HT-600to800", "dy_M-50_HT-800to1200", "dy_M-50_HT-1200to2500", "dy_M-50_HT-2500toInf"
-]
-
-DYVBF = ["dy_VBF_filter"]
+# bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
+bkg_MC_order = ["VV", "EWK",  "TOP", "DY"]
 
 
 group_dict = {
-    "DATA": ["data_A", "data_B", "data_C", "data_D", "data_E",  "data_F", "data_G", "data_H"],
+    "DATA": {
+        "2016preVFP": ["data_B", "data_C", "data_D", "data_E", "data_F"],
+        "2016postVFP": ["data_F", "data_G", "data_H"],
+        "2016": ["data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
+        "2017": ["data_B", "data_C", "data_D", "data_E", "data_F"],
+        "2018": ["data_A", "data_B", "data_C", "data_D"],
+        "run2": ["data_A", "data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
 
-    # "DY": DY_aMCatNLO,
-    "DY": DY_MiNNLO,
-    # "DY_MINNLO": DY_MiNNLO ,
-    # "DY_AMCATNLO":   DY_aMCatNLO,
-    "DYVBF": ["dy_VBF_filter"],
+        "2022preEE": ["data_C", "data_D"],
+        "2022postEE": ["data_E", "data_F", "data_G"],
+        "2023": ["data_C"],
+        "2023BPix": ["data_D"],
+        "2024": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
+        "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
+    },
+    "DY": {
+        "2022preEE": ["dyTo2L_M-50_incl"],
+        "2022postEE": ["dyTo2L_M-50_incl"],
+        "2023": ["dyTo2L_M-50_incl"],
+        "2023BPix": ["dyTo2L_M-50_incl"],
+        "2024": ["dyTo2Mu_M-50_aMCatNLO"],
 
-    # "DYJ01": ["DYJ01"],
-    # "DYJ2": ["DYJ2"],
-
-    "TOP": ["ttjets_dl", "ttjets_sl", "st_tw_top", "st_tw_antitop", "st_t_top", "st_t_antitop"],
-    # "AddTop": ["st_s_lep", "TTTJ", "TTTT","TTTW", "TTWjets_LNu", "TTWJets_QQ", "TTWW", "TTZ_LLnunu", "tZq_ll"],
-
-    "EWK": ["ewk_lljj_mll50_mjj120"],
-
-    "VV": ["ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_1l1nu2q", "zz"],
-    # "VVContinuum": ["GluGluContin_ZZ2e2mu", "GluGluContin_ZZ2mu2nu", "GluGluContin_ZZ2mu2tau", "GluGluContin_ZZ4mu", "GluGluContin_ZZ4tau"],
-
-    "OTHER": ["www", "wwz", "wzz", "zzz"],
-    "GGH": ["ggh_powhegPS"],
-    "VBF": ["vbf_powheg_dipole"]
+        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],        
+        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+    },
+    "EWK": {
+        "2022preEE": ["ewk_mmjj_mll_105_160"],
+        "2022postEE": ["ewk_mmjj_mll_105_160"],
+        "2023": ["ewk_mmjj_mll_105_160"],
+        "2023BPix": ["ewk_mmjj_mll_105_160"],
+        "2024": ["ewk_mmjj_mll_105_160"],
+    },
+    "TOP": [
+        # "tt_inclusive",
+        "ttjets_dl",
+        "ttjets_sl",
+        # "ttjets_fh",
+        # "st_tw_top",
+        # "st_tw_antitop",
+        # "st_t_top",
+        # "st_t_antitop",
+    ],
+    "VV": [
+        "ww_2l2nu",
+        "wz_3lnu",
+        "wz_2l2q",
+        "wz_1l1nu2q",
+        "zz_2l2q",
+        "zz_2l2u",
+        "zz_2l2nu",
+        "zz_4l",
+    ],
+    # "OTHER": ["www", "wwz", "wzz", "zzz"],
+    "ggH": ["ggh_powhegPS"],
+    "VBF": {
+        "2022preEE": ["vbf_powheg_dipole"],
+        "2022postEE": ["vbf_powheg_dipole"],
+        "2023": ["vbf_powheg"],
+        "2023BPix": ["vbf_powheg"],
+        "2024": ["vbf_powheg"],
+    },
 }
+
+def parseGroupProcesses(group_dict, year: str):
+    """
+    helper function that simplifies group_dict to be
+    specific to one year.
+    """
+    year_specific_group_dict = {}
+    for group_name, processes in group_dict.items():
+        logger.debug(f"Group '{group_name}' processes (original): {processes}")
+        if type(processes) is dict:
+            processes = processes[year]
+        year_specific_group_dict[group_name] = processes
+    logger.debug(f"Group dict specific to year {year}: {year_specific_group_dict}")
+    return year_specific_group_dict
 
 def find_group_name(process_name, group_dict_param):
     # Avoid redefining group_dict from outer scope
@@ -101,184 +143,18 @@ def getPlotVar(var_param: str):
     return plot_var
 
 
-def applyRegionCatCuts(events, category: str, region_name: str, njets: str, process: str, do_vbf_filter_study: bool):
-    # do mass region cut
-    mass = events.dimuon_mass
-    z_peak = ((mass > 70) & (mass < 110))
-    h_sidebands =  ((mass > 110) & (mass < 115.03)) | ((mass > 135.03) & (mass < 150))
-    h_peak = ((mass > 115.03) & (mass < 135.03))
-    if region_name == "signal":
-        region = h_sidebands | h_peak
-    elif region_name == "h-peak":
-        region = h_peak
-    elif region_name == "h-sidebands":
-        region = h_sidebands
-    elif region_name == "z-peak":
-        region = z_peak
-    else:
-        print(f"ERROR: acceptable region names are: z-peak, h-sidebands, h-peak, signal. Got {region_name} instead!")
-        raise ValueError
-
-    prod_cat_cut =  ak.ones_like(region, dtype="bool")
-
-    # FIXME: add cut to veto pileup jets: pT < 50 GeV in 2.5 < | eta(j) | 4.0
-    # pileup_jet_veto = ((events.jet1_pt_nominal < 50) & (abs(events.jet1_eta_nominal) > 2.5) & (abs(events.jet1_eta_nominal) < 4.0)) | (events.jet1_pt_nominal < 70)
-    # pileup_jet_veto = ak.fill_none(pileup_jet_veto, value=False)
-    # prod_cat_cut = prod_cat_cut & ~pileup_jet_veto
-
-    # Remove jets beyong 2.5 rapidity
-    # high_eta_jet_veto = (abs(events.jet1_eta_nominal) > 2.5) | (abs(events.jet2_eta_nominal) > 2.5)
-    # high_eta_jet_veto = ak.fill_none(high_eta_jet_veto, value=False)
-    # prod_cat_cut = prod_cat_cut & ~high_eta_jet_veto
-
-    # do category cut
-    if category.lower() == "nocat":
-        # print("nocat mode!")
-        pass
-    else: # VBF or ggH
-        btagLoose_filter = ak.fill_none((events.nBtagLoose_nominal >= 2), value=False)
-        btagMedium_filter = ak.fill_none((events.nBtagMedium_nominal >= 1), value=False) & ak.fill_none((events.njets_nominal >= 2), value=False)
-        btag_cut = btagLoose_filter | btagMedium_filter
-        # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # in the future none values will be replaced with False
-        vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5) & (events.jet1_pt_nominal > 35)
-        vbf_cut = ak.fill_none(vbf_cut, value=False)
-        if category.lower() == "vbf":
-            # print("vbf mode!")
-            prod_cat_cut =  prod_cat_cut & vbf_cut
-            prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-            if do_vbf_filter_study and process.startswith("dy_"):
-                """
-                Apply VBF filter, generator level di-jet invariant mass cut of 350 GeV
-                This is for the stiching the inclusive and VBF DY samples.
-                For inclusive DY samples, we apply the cut of < 350 GeV
-                For VBF DY samples, we apply the cut of >= 350 GeV
-                NOTE: For the inclusive DY category, we apply the cut (gjj_mass > 350 GeV)
-                and then invert it to select inclusive DY events.
-                This approach is necessary due to the behavior of NaN values when applying
-                comparison operators in awkward arrays:
-
-                - If we use (gjj_mass < 350 GeV), any event where gjj_mass is NaN will result in False,
-                so those events will be excluded from the selection.
-                Example:
-                    - Event 1: gjj_mass = 250 GeV  --> (250 < 350) = True  (selected)
-                    - Event 2: gjj_mass = NaN      --> (NaN < 350) = False (not selected)
-
-                - If we use (gjj_mass > 350 GeV), events with NaN will also result in False,
-                but if we then invert the selection (~), those NaN events will be included:
-                Example:
-                    - Event 1: gjj_mass = 250 GeV  --> (250 > 350) = False --> ~False = True  (selected)
-                    - Event 2: gjj_mass = NaN      --> (NaN > 350) = False --> ~False = True (selected)
-
-                Therefore, by using (gjj_mass > 350 GeV) and inverting the mask, we ensure that both
-                events with gjj_mass < 350 GeV and events with NaN values are included in the inclusive DY selection.
-                This guarantees that no events are lost due to NaN values in gjj_mass.
-                """
-                if ("dy_VBF_filter" in process):
-                    logger.warning(f"Apply VBF filter gen cut > 350 for VBF DY!: process = {process}")
-                    vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                    # logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
-                    # logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
-
-                    prod_cat_cut =  (prod_cat_cut
-                                & vbf_filter
-                    )
-                elif (process == "dy_M-100To200_MiNNLO" or
-                        process == "dy_M-50_MiNNLO" or
-                        process == "dy_M-100To200_aMCatNLO" or
-                        process == "dy_M-50_aMCatNLO"):
-                    logger.warning(f"Apply inverted VBF filter gen cut > 350 for inc. DY!: process = {process}")
-
-                    vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-                    # logger.debug(f"{process}: events before filter = {ak.num(events, axis=0).compute()}")
-                    # logger.debug(f"{process}: events after filter = {ak.sum(vbf_filter).compute()}")
-
-                    prod_cat_cut =  (
-                        prod_cat_cut
-                        & ~vbf_filter
-                    )
-                else:
-                    logger.warning(f"no extra processing for {process}")
-                    pass
-
-        elif category.lower() == "ggh":
-            # print("ggH mode!")
-            prod_cat_cut =  prod_cat_cut & ~vbf_cut
-            prod_cat_cut = prod_cat_cut & ~btag_cut # btag cut is for VH and ttH categories
-        else:
-            print("Error: invalid category option!")
-            raise ValueError
-
-    # add njets cut
-    if njets != "inclusive":
-        if njets == "0":
-            njets_cut = (events.njets_nominal == 0)
-        elif njets == "1":
-            njets_cut = (events.njets_nominal == 1)
-        elif njets == "2":
-            njets_cut = (events.njets_nominal >= 2)
-        else:
-            logger.error(f"ERROR: njets value {njets} is not supported! Use 0, 1 or 2.")
-            raise ValueError
-        njets_cut = ak.fill_none(njets_cut, value=False)
-        prod_cat_cut = prod_cat_cut & njets_cut
-
-    category_selection = (
-        prod_cat_cut &
-        region
-    )
-
-    events = events[category_selection]
-    return events
-
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = build_common_parser()
     parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="string value of year we are calculating",
-    )
-    parser.add_argument(
-    "-data",
-    "--data",
-    dest="data_samples",
-    default=["A", "B", "C", "D", "E", "F", "G", "H"],
-    # default=["A"],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of data samples represented by alphabetical letters A-H",
-    )
-    parser.add_argument(
-    "-bkg",
-    "--background",
-    dest="bkg_samples",
-    # default=["DY", "TOP", "EWK", "VV", "OTHER"],
-    # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY"],
-    # default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF"],
-    # default = ["OTHER", "EWK", "VV", "DY", "DYVBF"],
-    # default = ["OTHER", "EWK", "VV",  "TOP", "DY", "DY_MiNNLO", "DY_aMCatNLO"],
-    default = ["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
-    # default = ["OTHER", "EWK", "VV", "TOP", "DY" ],
-    # default = ["AddTop", "OTHER", "EWK", "VVContinuum", "VV", "TOP", "DY", "DYVBF"],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
-    )
-    parser.add_argument(
-    "-sig",
-    "--signal",
-    dest="sig_samples",
-    default=["VBF","GGH"],
-    # default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of sig samples represented by shorthands: ggH, VBF",
+        "-bkgorder",
+        "--background_order",
+        dest="background_samples",
+        # default=["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
+        default=["EWK", "VV", "TOP", "DY"],
+        nargs="*",
+        type=str,
+        action="store",
+        help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
     )
     parser.add_argument(
     "-var",
@@ -286,7 +162,8 @@ if __name__ == "__main__":
     dest="variables",
     # default=["dimuon", "mu"],
     # default=["dijet", "jet"],
-    default=["dimuon", "dijet", "jet", "mu"],
+    # default=["dimuon", "dijet", "jet", "mu"],
+    default=["dimuon", "dijet", "jet"],
     nargs="*",
     type=str,
     action="store",
@@ -309,22 +186,6 @@ if __name__ == "__main__":
     help="load path",
     )
     parser.add_argument(
-    "-label",
-    "--label",
-    dest="label",
-    default="",
-    action="store",
-    help="label",
-    )
-    parser.add_argument(
-    "-save",
-    "--save_path",
-    dest="save_path",
-    default="./validation/figs/",
-    action="store",
-    help="save path",
-    )
-    parser.add_argument(
     "-lumi",
     "--lumi",
     dest="lumi",
@@ -335,7 +196,7 @@ if __name__ == "__main__":
     parser.add_argument(
     "--status",
     dest="status",
-    default="",
+    default="Preliminary",
     action="store",
     help="Status of results ie Private, Preliminary, In Progress",
     )
@@ -365,20 +226,6 @@ if __name__ == "__main__":
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
     )
     parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
-    )
-    # parser.add_argument(
-    # "--vbf",
-    # dest="vbf_cat_mode",
-    # default=False,
-    # action=argparse.BooleanOptionalAction,
-    # help="If true, apply vbf cut for vbf category, else, ggH category cut",
-    # )
-    parser.add_argument(
     "-cat",
     "--category",
     dest="category",
@@ -401,12 +248,41 @@ if __name__ == "__main__":
     help="If true, remove z-pt weights from the events",
     )
     parser.add_argument(
+        "--use_dnn_zpt_weights",
+        dest="use_dnn_zpt_weights",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="If true, use DNN-based z-pt weights for the events",
+    )
+    parser.add_argument(
         "--njets",
         dest="njets",
         choices=["inclusive", "0", "1", "2"],
         default="inclusive",
         help="jet multiplicity selection: 'inclusive' or exactly '0', '1', or '2'",
     )
+    parser.add_argument(
+        "--jj-eta-region",
+        dest="jj_eta_region",
+        default="all",
+        choices=[
+            "all",
+            "jj_both_central",
+            "jj_non_central",
+            "jj_one_fwd25_one_central",
+            "jj_one_he_one_central",
+            "jj_one_fwd30_one_central",
+            "jj_both_fwd25",
+            "jj_both_he",
+            "jj_both_fwd30",
+            "jj_one_he_one_fwd30",
+        ],
+        help=(
+            "Select dijet eta topology using jet1_eta/jet2_eta. "
+            "'central' = |eta|<2.5, 'he' = 2.5<|eta|<3.0, "
+            "'fwd25' = |eta|>2.5, 'fwd30' = |eta|>3.0. Default: all"
+        ),
+    )    
     # add dnn score to the plotting variable list
     parser.add_argument(
      "--dnn-score",
@@ -416,11 +292,12 @@ if __name__ == "__main__":
      help="If true, include DNN score in the plots",
     )
     parser.add_argument(
-     "--log-level",
-     default=logging.INFO,
-     type=lambda x: getattr(logging, x),
-     help="Configure the logging level."
-     )
+     "--addVars",
+     dest="addVars",
+     default=False,
+     action=argparse.BooleanOptionalAction,
+     help="If true, add additional variables to the plots",
+    )
     parser.add_argument(
         "--use-compacted",
         dest="use_compacted",
@@ -435,6 +312,35 @@ if __name__ == "__main__":
     logger.setLevel(args.log_level)
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
+
+    group_dict = parseGroupProcesses(group_dict, args.year)
+
+    if is_run3(args.year):
+        CM_energy = 13.6  # TeV
+    elif is_run2(args.year):
+        CM_energy = 13.0  # TeV
+    else:
+        raise ValueError(f"Unsupported year: {args.year}")
+
+    if args.lumi == "":
+        # read lumi value from configs/parameters/lumi.yaml
+        infile_lumi = os.path.join("configs", "parameters", "lumi.yaml")
+        import yaml
+        with open(infile_lumi, "r") as f:
+            lumi_config = yaml.safe_load(f)
+        lumi_dict = lumi_config.get("integrated_lumis", {})
+        args.lumi = lumi_dict.get(args.year, 0.0)
+        # convert from pb to fb
+        args.lumi = round(args.lumi / 1000.0, 1)
+        if args.lumi == 0.0:
+            logger.error(f"lumi for year {args.year} is not defined!")
+            raise ValueError(f"lumi for year {args.year} is not defined!")
+
+    # FIXME: Later try to get the lumi from the copperhead_processor get_sample_info function
+    # from modules.get_sample_info import get_sample_info
+    # sample_info = get_sample_info("./configs/datasets/dataset_nanoAODv12_run3.yaml", dataset, year) # FIXME: hardcoded filename
+    # integrated_lumi = sample_info["total_lumi_pb"]
+    logger.warning(f"lumi: {args.lumi}")
 
     # if cat is vbf and njet is < 2 then skip the program
     # if args.category.lower() == "vbf" and (args.njets == "0" or args.njets == "1"):
@@ -461,13 +367,6 @@ if __name__ == "__main__":
         logger.error("No regions specified! Exiting the program.")
         raise ValueError("No regions specified!")
 
-    # if args.remove_zpt_weights, then update the args.label
-    if args.remove_zpt_weights:
-        if args.label == "":
-            args.label = "no_zpt_weights"
-        else:
-            args.label += "_no_zpt_weights"
-
     available_processes = []
 
     logger.info("group_dict: {group_dict}".format(group_dict=group_dict))
@@ -478,9 +377,9 @@ if __name__ == "__main__":
             available_processes.append(f"data_{data_letter.upper()}")
 
     # take bkg
-    bkg_samples = args.bkg_samples
-    if len(bkg_samples) > 0:
-        for bkg_sample in bkg_samples:
+    background_samples = args.background_samples
+    if len(background_samples) > 0:
+        for bkg_sample in background_samples:
             bkg_sample_upper = bkg_sample.upper()
             if bkg_sample_upper in group_dict:
                 available_processes.extend(group_dict[bkg_sample_upper])
@@ -491,7 +390,7 @@ if __name__ == "__main__":
     sig_samples = args.sig_samples
     if len(sig_samples) > 0:
         for sig_sample in sig_samples:
-            sig_sample_upper = sig_sample.upper()
+            sig_sample_upper = sig_sample
             if sig_sample_upper in group_dict:
                 available_processes.extend(group_dict[sig_sample_upper])
             else:
@@ -500,83 +399,16 @@ if __name__ == "__main__":
     logger.info(f"available_processes: {available_processes}")
     # gather variables to plot:
     kinematic_vars = ['pt', 'eta', 'phi']
-    if args.minimum_set: kinematic_vars = ['pt']
-    variables2plot = []
-    if args.dnn_score:
-        variables2plot.append("dnn_vbf_score")
-        variables2plot.append("dnn_vbf_score_atanh")
-    if len(args.variables) == 0:
-        logger.error("no variables to plot!")
-        raise ValueError
-    if args.minimum_set: args.variables = ["dimuon", "mu"] # if minimum set is requested, only plot dimuon, and mu variables
-    for particle in args.variables:
-        if "dimuon" in particle:
-            variables2plot.append(f"{particle}_mass")
-            variables2plot.append(f"{particle}_pt")
-            variables2plot.append(f"{particle}_eta")
-            if args.minimum_set: # if minimum set is requested, only plot pt and mass
-                continue
-            variables2plot.append(f"{particle}_phi")
-            variables2plot.append(f"{particle}_cos_theta_cs")
-            variables2plot.append(f"{particle}_phi_cs")
-            variables2plot.append(f"{particle}_cos_theta_eta")
-            variables2plot.append(f"{particle}_phi_eta")
-            variables2plot.append(f"mmj_min_dPhi_nominal")
-            variables2plot.append(f"mmj_min_dEta_nominal")
-            variables2plot.append(f"ll_zstar_log_nominal")
-            variables2plot.append(f"dimuon_ebe_mass_res")
-            variables2plot.append(f"dimuon_ebe_mass_res_rel")
-            variables2plot.append(f"{particle}_rapidity")
-            variables2plot.append("MET_pt")
-            variables2plot.append("MET_phi")
-            variables2plot.append("MET_sumEt")
-            variables2plot.append("acoplanarity")
-            variables2plot.append("PV_npvs")
-            variables2plot.append("PV_npvsGood")
-        elif "dijet" in particle:
-            variables2plot.append(f"jj_dEta_nominal")
-            variables2plot.append(f"jj_mass_nominal")
-            variables2plot.append(f"jj_pt_nominal")
-            variables2plot.append(f"jj_dPhi_nominal")
-            variables2plot.append(f"zeppenfeld_nominal")
-            variables2plot.append(f"rpt_nominal")
-            variables2plot.append(f"pt_centrality_nominal")
-            variables2plot.append(f"nsoftjets2_nominal")
-            variables2plot.append(f"htsoft2_nominal")
-            variables2plot.append(f"nsoftjets5_nominal")
-            variables2plot.append(f"htsoft5_nominal")
-            # variables2plot.append(f"nsoftjets2_new_nominal")
-            # variables2plot.append(f"htsoft2_new_nominal")
-            # variables2plot.append(f"nsoftjets5_new_nominal")
-            # variables2plot.append(f"htsoft5_new_nominal")
-
-            # --------------------------------------------------
-            # variables2plot.append(f"gjj_mass")
-
-        elif ("mu" in particle) :
-            for kinematic in kinematic_vars:
-                # plot both leading and subleading muons/jets
-                variables2plot.append(f"{particle}1_{kinematic}")
-                variables2plot.append(f"{particle}2_{kinematic}")
-            if not args.minimum_set: # if minimum set is requested, only plot pt and mass
-                variables2plot.append(f"{particle}1_pt_over_mass")
-                variables2plot.append(f"{particle}2_pt_over_mass")
-        elif ("jet" in particle):
-            variables2plot.append(f"njets_nominal")
-            for kinematic in kinematic_vars:
-                # plot both leading and subleading muons/jets
-                variables2plot.append(f"{particle}1_{kinematic}_nominal")
-                variables2plot.append(f"{particle}2_{kinematic}_nominal")
-            variables2plot.append(f"jet1_qgl_nominal")
-            variables2plot.append(f"jet2_qgl_nominal")
-
-        else:
-            logger.warning(f"Unsupported variable: {particle} is given!")
+    if args.minimum_set: kinematic_vars = ['pt', 'eta']
+    variables2plot = get_all_vars(args.minimum_set)  # get the full list of variables from the config file
 
     variables2plot_orig = copy.deepcopy(variables2plot)
     if "jj_mass_nominal" in variables2plot:
         variables2plot += ["jj_mass_nominal_range2"] # add another range to plot
+    if "dimuon_mass" in variables2plot:
+        variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
     logger.info(f"variables2plot: {variables2plot}")
+    # sys.exit()
     # obtain plot settings from config file
 
     if args.category == "ggh":
@@ -591,29 +423,24 @@ if __name__ == "__main__":
     status = args.status.replace("_", " ")
 
     # define client for parallelization
-    if args.use_gateway:
-        from dask_gateway import Gateway
-        gateway = Gateway(
-            "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-            proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-        )
-        cluster_info = gateway.list_clusters()[-1]  # get the first cluster by default. There only should be one anyways
-        client = gateway.connect(cluster_info.name).get_client()
-        logger.info("Gateway Client created")
-    else:
-        client = Client(n_workers=64, threads_per_worker=1, processes=True, memory_limit='10 GiB')
-        logger.info("Local scale Client created")
+    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+    logger.info(f"client: {client}")
+
     # record time
     time_step = time.time()
 
     # check if the compacted path exists
     if args.use_compacted != "":
-        args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
+        # path name should contain the string "f1_0" which is the default load path, otherwise throw error
+        if "f1_0" not in args.load_path:
+            raise ValueError("The load path should contain the string 'f1_0' to use the compacted path! Exiting the program.")
 
         # run compact script for each process
-        # for process in available_processes:
-        #     compacted_path_DNN = os.path.join(args.load_path, process, "0")
-        #     ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
+        for process in available_processes:
+            compacted_path_DNN = os.path.join(args.load_path, process, "0")
+            ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
+
+        args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
 
     logger.info(f"Using parquet files from {args.load_path}")
     # load saved parquet files. This increases memory use, but increases runtime significantly
@@ -660,9 +487,23 @@ if __name__ == "__main__":
                 logger.debug("Append separate_wgt_zpt_wgt to fields2load!")
                 fields2load.append("separate_wgt_zpt_wgt")
 
+            if (
+                "zpt_wgt_reco_dnn" in events.fields
+                and "separate_wgt_zpt_wgt" in events.fields
+                and args.use_dnn_zpt_weights
+            ):
+                logger.debug("Append separate_wgt_zpt_wgt and zpt_wgt_reco_dnn to fields2load!")
+                fields2load.append("separate_wgt_zpt_wgt")
+                fields2load.append("zpt_wgt_reco_dnn")
         # filter out redundant fields by using the set object
         fields2load = list(set(fields2load))
-        logger.info(f"fields2load: {fields2load}")
+        logger.debug(f"fields2load: {fields2load}")
+
+        # check if all fields to load are in the events
+        # fields_in_events = events.fields
+        # for field in fields2load:
+        #     if field not in fields_in_events:
+        #         logger.warning(f"field {field} not in events, removing from fields2load!")
 
         # # TOREMOVE
         # if "separate_wgt_qgl_wgt" in events.fields:
@@ -672,13 +513,26 @@ if __name__ == "__main__":
             logger.warning("removing separate_wgt_zpt_wgt!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
 
+        if (
+            "separate_wgt_zpt_wgt" in events.fields
+            and "zpt_wgt_reco_dnn" in events.fields
+            and args.use_dnn_zpt_weights
+            ):
+            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
+            events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_reco_dnn"] # apply the weights obtained from the DNN
+        # if "dy" in process.lower():
+        #     # scale the weights for DY samples by 3.0
+        #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
+        #     events["wgt_nominal"] = events["wgt_nominal"] * (1997.0/2124.08)
+
         loaded_events[process] = events
     logger.info("finished loading parquet files!")
     # mplhep style starts here --------------------------------------
     logger.info("Using mplhep style for plotting!")
-    import mplhep as hep
-    import matplotlib.pyplot as plt
     import matplotlib
+    import matplotlib.pyplot as plt
+    import mplhep as hep
     # hep.style.use("CMS")
     # Load CMS style including color-scheme (it's an editable dict)
     plt.style.use(hep.style.CMS)
@@ -789,13 +643,16 @@ if __name__ == "__main__":
                 # ------------------------------------------------
                 # take the mass region and category cuts
                 # ------------------------------------------------
-                events = dak.map_partitions(selection.applyRegionCatCuts,
+                events = dak.map_partitions(
+                    selection.applyRegionCatCuts,
                     events,
                     args.category,
                     region_name,
                     process,
                     "nominal",
-                    args.do_vbf_filter_study
+                    args.do_vbf_filter_study,
+                    jj_eta_region=args.jj_eta_region,
+                    njets_selection=str(args.njets),
                 )
 
                 #  FOR DEBUG PURPOSES
@@ -821,8 +678,17 @@ if __name__ == "__main__":
                     # temporary over write
                     # logger.info(f"events.fields: {events.fields}")
                     if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                        logger.info("removing Zpt rewgt!")
+                        logger.debug("removing Zpt rewgt!")
                         weights = weights/events["separate_wgt_zpt_wgt"]
+
+                    if (
+                        "separate_wgt_zpt_wgt" in events.fields
+                        and "zpt_wgt_reco_dnn" in events.fields
+                        and args.use_dnn_zpt_weights
+                    ):
+                        logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+                        weights = weights / events["separate_wgt_zpt_wgt"]
+                        weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
 
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
@@ -898,7 +764,7 @@ if __name__ == "__main__":
                 to_project_setting_w2["val_sumw2"] = "sumw2"
                 hist_w2 = sample_hist[to_project_setting_w2].project(var).values()
                 if np.sum(hist_val)==0: # skip processes that doesn't have anything
-                    logger.warning(f"hist_val is empty for {group_name} in {var}, skipping!")
+                    logger.debug(f"hist_val is empty for {group_name} in {var}, skipping!")
                     continue
                 hist_dict = {
                     "hist_arr" : hist_val,
@@ -911,7 +777,7 @@ if __name__ == "__main__":
                         data_dict = hist_dict
                     else: # keep data blinded
                         data_dict = {key: np.zeros_like(value) for key, value in hist_dict.items()}
-                elif "GGH" == group_name or "VBF" == group_name: # signal
+                elif "ggH" == group_name or "VBF" == group_name: # signal
                     sig_MC_dict[group_name] = hist_dict
                 else: # bkg MC
                     bkg_MC_dict[group_name] = hist_dict
@@ -968,10 +834,21 @@ if __name__ == "__main__":
             # ---------------------------------------------------
             # All data are prepped, now plot Data/MC histogram
             # -------------------------------------------------------
+            # if args.remove_zpt_weights, then update the args.label
+            zpt_postfix = "default_zpt_weights"
+            if args.remove_zpt_weights:
+                logger.debug("Removing zpt weights from the events!")
+                zpt_postfix = "no_zpt_weights"
+            if args.use_dnn_zpt_weights:
+                logger.warning("Using DNN-based zpt weights for the events!")
+                zpt_postfix = "dnn_zpt_weights"
+            if args.jj_eta_region != "all":
+                zpt_postfix += f"_{args.jj_eta_region}"
+
             if args.year == "*":
-                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
+                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
             else:
-                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{args.label}"
+                full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
             logger.debug(f"full_save_path: {full_save_path}")
 
             if not os.path.exists(full_save_path):
@@ -991,19 +868,6 @@ if __name__ == "__main__":
             elif var == "dnn_vbf_score_atanh":
                 binning = np.array(plot_settings[var]["binning_nonuniform"])
 
-            if args.lumi == "":
-                if args.year == "2016preVFP":
-                    args.lumi = "16.81"
-                elif args.year == "2016postVFP":
-                    args.lumi = "19.50"
-                elif args.year == "2016" or args.year == "2016*":
-                    args.lumi = "36.31"
-                elif args.year == "2017":
-                    args.lumi = "41.48"
-                elif args.year == "2018":
-                    args.lumi = "60" # 59.83
-                elif args.year == "AllYear" or args.year == "*":
-                    args.lumi = "138" # 137.62fb-1
             plotDataMC_compare(
                 binning,
                 data_dict,
@@ -1016,6 +880,8 @@ if __name__ == "__main__":
                 lumi = args.lumi,
                 status = status,
                 log_scale = do_logscale,
+                CenterOfMass = CM_energy,
+                plot_ratio_range = "fixed", # options: "fixed" or "auto"
             )
             plotDataMC_compare(
                 binning,
@@ -1029,6 +895,11 @@ if __name__ == "__main__":
                 lumi = args.lumi,
                 status = status,
                 log_scale = False,
+                CenterOfMass=CM_energy,
+                plot_ratio_range = "fixed", # options: "fixed" or "auto"
             )
+
+    close_dask_client()
+    logger.info("Plots are saved to %s", full_save_path)
     time_elapsed = round(time.time() - time_step, 3)
     logger.info(f"Finished in {time_elapsed} s.")

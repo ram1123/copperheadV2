@@ -1,3 +1,8 @@
+---
+title: Run2 DY Samples List
+---
+
+
 # Possible replacement for the VBF DY samples list
 
 ## DY Jet binned samples

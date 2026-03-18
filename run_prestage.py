@@ -1,31 +1,97 @@
-import awkward as ak
-from coffea.dataset_tools import rucio_utils
-from coffea.dataset_tools.preprocess import preprocess
-from coffea.nanoevents import NanoEventsFactory, NanoAODSchema, BaseSchema
+import argparse
+import copy
+import glob
 import json
 import os
-import argparse
-import dask
-dask.config.set({'logging.distributed': 'error'})
-from distributed import LocalCluster, Client
-import time
-import copy
-import tqdm
-import uproot
-import random
 import re
-import glob
-# import warnings
-# warnings.filterwarnings("error", module="coffea.*")
-from omegaconf import OmegaConf
-import numpy as np
+import time
 import uuid
 
-import sys
-from collections.abc import Sequence
-
-import logging
+import awkward as ak
+import coffea
+import dask
+import numpy as np
+import tqdm
+import uproot
+from cli.common_argparser import build_common_parser
+from coffea.dataset_tools import rucio_utils
+from coffea.dataset_tools.preprocess import preprocess
+from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
+from distributed import Client
 from modules.utils import logger
+from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+from omegaconf import OmegaConf
+
+# import warnings
+# warnings.filterwarnings("error", module="coffea.*")
+
+dask.config.set({'logging.distributed': 'error'})
+
+def nanoevents_from_root_with_redirectors(
+    file_input, host_prefix, attempt, schemaclass, uproot_options, metadata=None
+):
+    if metadata is None:
+        metadata = {}
+
+    try:
+        fi_norm = normalize_paths(file_input, host_prefix)
+        logger.info(f"[prestage] attempt {attempt} using redirector {host_prefix}")
+        events = NanoEventsFactory.from_root(
+            fi_norm,
+            metadata=metadata,
+            schemaclass=schemaclass,
+            uproot_options=uproot_options,
+        ).events()
+        logger.info(f"[prestage] attempt {attempt} succeeded to read metadata with {host_prefix}")
+        return events
+
+    except Exception as e:
+        msg = str(e)
+        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+        logger.warning(
+            f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e} (tls_bad={tls_bad})"
+        )
+        raise
+
+
+def preprocess_with_redirectors(
+    final_output, step_size: int, align_clusters: bool, skip_bad_files: bool
+):
+    """
+    Run coffea.dataset_tools.preprocess, retrying with different AAA redirectors
+    if we hit typical XRootD / LZMA issues.
+    """
+    for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+        try:
+            # Normalize file URLs inside "files" dicts
+            norm_final_output = {}
+            for sname, sinfo in final_output.items():
+                norm_final_output[sname] = {
+                    "files": normalize_paths(sinfo["files"], host_prefix)
+                }
+
+            logger.info(
+                f"[prestage] preparing files: attempt {attempt} with redirector {host_prefix}"
+            )
+            return preprocess(
+                norm_final_output,
+                step_size=step_size,
+                align_clusters=align_clusters,
+                skip_bad_files=skip_bad_files,
+            )
+
+        except Exception as e:
+            msg = str(e)
+            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+            logger.warning(
+                f"[prestage] preprocess attempt {attempt} failed "
+                f"with {host_prefix}: {type(e).__name__}: {e}"
+            )
+            if tls_bad and attempt < len(AAA_REDIRECTORS):
+                logger.warning("[prestage] retrying preprocess with next redirector...")
+                continue
+            # Non-AAA error or no more redirectors
+            raise
 
 
 def getBadFile(fname):
@@ -50,7 +116,7 @@ def getBadFile(fname):
             return "" # if no problem, return empty string
         else:
             return fname # bad file
-    except Exception as e:
+    except Exception:
         # return f"An error occurred with file {fname}: {e}"
         # print(f"An error occurred with file {fname}: {e}")
         return fname # bad fileclient
@@ -132,7 +198,7 @@ def get_Xcache_filelist(fnames: list):
         root_file = re.findall(r"/store.*", fname)[0]
         x_cache_fname = "root://xcache.cms.rcac.purdue.edu/" + root_file
         new_fnames.append(x_cache_fname)
-    print(f"new_fnames: {new_fnames}")
+    # logger.debug(f"new_fnames: {new_fnames}")
     return new_fnames
 
 def find_keys_in_yaml(yaml_data, keys_to_find):
@@ -156,15 +222,7 @@ def find_keys_in_yaml(yaml_data, keys_to_find):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-    "-y",
-    "--year",
-    dest="year",
-    default="2018",
-    action="store",
-    help="year value. The options are: 2016preVFP, 2016postVFP, 2017, 2018",
-    )
+    parser = build_common_parser()
     parser.add_argument(
     "-ch",
     "--chunksize",
@@ -172,57 +230,6 @@ if __name__ == "__main__":
     default="10000",
     action="store",
     help="chunksize",
-    )
-    parser.add_argument(
-        "--yaml",
-        dest="dataset_yaml_file",
-        default="configs/datasets/dataset.yaml",
-        help="path of yaml file containing the dataset names"
-    )
-    parser.add_argument(
-    "-frac",
-    "--change_fraction",
-    dest="fraction",
-    default=None,
-    action="store",
-    help="change fraction of steps of the data",
-    )
-    parser.add_argument(
-    "-data",
-    "--data",
-    dest="data_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of data samples represented by alphabetical letters A-H",
-    )
-    parser.add_argument(
-    "-bkg",
-    "--background",
-    dest="bkg_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of bkg samples represented by shorthands: DY, TT, ST, DB (diboson), EWK",
-    )
-    parser.add_argument(
-    "-sig",
-    "--signal",
-    dest="sig_samples",
-    default=[],
-    nargs="*",
-    type=str,
-    action="store",
-    help="list of sig samples represented by shorthands: ggH, VBF",
-    )
-    parser.add_argument(
-    "--use_gateway",
-    dest="use_gateway",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, uses dask gateway client instead of local",
     )
     parser.add_argument(
     "--xcache",
@@ -238,15 +245,6 @@ if __name__ == "__main__":
     action=argparse.BooleanOptionalAction,
     help="If true, uses skips bad files when calling preprocessing",
     )
-    parser.add_argument(
-    "-aod_v",
-    "--NanoAODv",
-    type=int,
-    dest="NanoAODv",
-    default=9,
-    choices = [9, 12],
-    help="version number of NanoAOD samples we're working with. currently, only 9 and 12 are supported",
-    )
     parser.add_argument( # temp flag to test the 2 percent data discrepancy in ggH cat between mine and official workspace
     "--run2_rereco",
     dest="run2_rereco",
@@ -255,13 +253,6 @@ if __name__ == "__main__":
     help="If true, uses skips bad files when calling preprocessing",
     )
     parser.add_argument(
-     "--log-level",
-     default=logging.ERROR,
-     type=lambda x: getattr(logging, x),
-     help="Configure the logging level."
-    )
-    # argument for prestage output and output file
-    parser.add_argument(
         "--prestage_output",
         dest="prestage_output",
         default="./prestage_output",
@@ -269,6 +260,7 @@ if __name__ == "__main__":
         help="path to prestage output directory",
     )
     args = parser.parse_args()
+
     time_step = time.time()
     logger.setLevel(args.log_level)
     os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
@@ -297,70 +289,70 @@ if __name__ == "__main__":
         logger.debug(f'datasets.years: {datasets.years}')
         logger.debug(f'datasets.years.keys(): {datasets.years.keys()}')
         if args.run2_rereco: # temp condition for RERECO data case
-            dataset = datasets.years[f"{year}_RERECO"]
+            year_node = datasets.years[f"{year}_RERECO"]
         else: # normal
-            dataset = datasets.years[f"{year}"]
+            year_node = datasets.years[f"{year}"]
         new_sample_list = []
 
-        logger.info(f'dataset: {dataset}')
+        # 1) DATA: allow -data C D ... (matches keys like data_C, data_D)
+        if "Data" in year_node:
+            data_keys = [k for k in year_node["Data"].keys() if k.lower().startswith("data_")]
+            logger.debug(data_keys)
+            data_samples = args.data_samples
+            logger.info(f"data_samples to read: {data_samples}")
+            if len(args.data_samples) > 0:
+                for data_letter in args.data_samples:
+                    for sample_name in data_keys:
+                        if sample_name.lower().endswith(data_letter.lower()):
+                            new_sample_list.append(sample_name)
+            else:
+                logger.warning("No -data letters specified; skipping data.")
+        else:
+            logger.warning("No 'Data' block found in YAML for this year.")
 
-        # take data and add to the list: `new_sample_list[]`
-        logger.debug(f'data: {dataset["Data"].keys()}')
-        data_l =  [sample_name for sample_name in dataset['Data'].keys() if "data" in sample_name]
-        logger.debug(data_l)
-        data_samples = args.data_samples
-        logger.info(f"data_samples to read: {data_samples}")
+        # 2) BKG/SIG groups: allow -bkg DY TT EWK VV VVV and -sig ggH VBF
+        group_keys = [k for k in year_node.keys() if k != "Data"]
+        logger.debug(f"Signal and background MC group keys: {group_keys}")
 
-        if len(data_samples) >0:
-            for data_letter in data_samples:
-                for sample_name in data_l:
-                    if data_letter in sample_name:
-                        logger.debug(sample_name)
-                        new_sample_list.append(sample_name)
+        def _append_group_samples(requested_names):
+            for wanted in requested_names:
+                for g in group_keys:
+                    if g == wanted:
+                        new_sample_list.extend(list(year_node[g].keys()))
 
-        logger.debug(f"Loaded samples: {new_sample_list}")
+        # backgrounds
+        if len(args.bkg_samples) > 0:
+            _append_group_samples(args.bkg_samples)
 
-        # take bkg and add to the list: `new_sample_list[]`
-        bkg_l = [sample_name for sample_name in dataset.keys() if "data" not in sample_name.lower()]
-        logger.debug(f"background samples defined in YAML file: {bkg_l}")
-        bkg_samples = args.bkg_samples
-        logger.info(f"background samples asked to read: {bkg_samples}")
-        if len(bkg_samples) >0:
-            for bkg_letter in bkg_samples:
-                for bkg_name in bkg_l:
-                    if bkg_letter == bkg_name:
-                        for bkgs in dataset[bkg_name].keys():
-                            new_sample_list.append(bkgs)
+        # signals (group names should also be top-level like ggH, VBF if present)
+        if len(args.sig_samples) > 0:
+            _append_group_samples(args.sig_samples)
 
-        logger.debug(f"Loaded samples: {new_sample_list}")
+        logger.debug(f"Loaded samples (names): {new_sample_list}")
 
-        # take sig and add to the list: `new_sample_list[]`
-        sig_samples = args.sig_samples
-        logger.info(f"signal samples to load: {sig_samples}")
-        if len(sig_samples) >0:
-            for sig_sample in sig_samples:
-                for bkg_letter in bkg_l: # bkg_l contains both bkg and signal samples keys
-                    logger.debug(f"bkg_letter: {bkg_letter}, sig_sample: {sig_sample}")
-                    if bkg_letter in sig_sample:
-                        for bkgs in dataset[bkg_letter].keys():
-                            new_sample_list.append(bkgs)
+        # --- flatten YAML for just the selected samples into a dict {sample_name: sample_dict} ----
+        dataset = {}
 
-        logger.debug(f"Loaded samples: {new_sample_list}")
-
-        dataset_dict = {}
-        for sample_name_temp in new_sample_list:
-            try:
-                temp_dict = find_keys_in_yaml(dataset, sample_name_temp)
-                dataset_dict.update(temp_dict)
-            except Exception as e:
-                logger.error(f"Sample {sample_name} gives error {e}. Skipping")
+        logger.debug(f"new_sample_list: {new_sample_list}")
+        for name in new_sample_list:
+            # search in Data first
+            if "Data" in year_node and name in year_node["Data"]:
+                dataset[name] = year_node["Data"][name]
                 continue
-        dataset = dataset_dict # overwrite dataset bc we don't need it anymore
-        logger.debug(f"dataset: {dataset}")
-        logger.debug(f"dataset keys: {dataset.keys()}")
-        logger.debug(f"year: {year}")
-        logger.debug(f"type(year): {type(year)}")
-        logger.debug(f"Is run2_rereco: {args.run2_rereco}")
+            # then search in each signal/bkg MC group
+            for g in group_keys:
+                if name in year_node[g]:
+                    dataset[name] = year_node[g][name]
+                    dataset[name]["__group__"] = g
+                    break
+
+        logger.debug(f"Number of selected samples: {len(dataset)}")
+        logger.debug(f"Selected sample keys: {list(dataset.keys())}")
+        logger.debug(f"Selected sample: {dataset}")
+        if not dataset:
+            raise RuntimeError("No samples matched your selection. Check -data/-bkg/-sig arguments vs YAML.")
+
+        logger.info(f"Final selected dataset keys: {list(dataset.keys())}")
 
         fnames = ""
 
@@ -370,7 +362,6 @@ if __name__ == "__main__":
             logger.debug(f"dataset[sample_name]: {dataset[sample_name]}")
             logger.debug(f"is data?: {is_data}")
 
-            dataset_name = dataset[sample_name]
             allowlist_sites = ["T2_DE_DESY", "T2_AT_Vienna", "T2_DE_RWTH", "T2_IT_Legnaro",
                                 "T2_US_Caltech", "T2_UL_Florida", "T2_US_MIT", "T2_US_Purdue", "T2_US_Wisconsin", "T2_US_Nebraska", "T2_US_Vanderbilt",
                                 "T2_BE_UCL", "T2_BR_SPRACE", "T2_EE_Estonia",
@@ -381,17 +372,38 @@ if __name__ == "__main__":
             logger.debug(f"allowlist_sites: {allowlist_sites}")
 
             # print(f"type(dataset_name): {type(dataset_name)}")
-            is_some_list_type = isinstance(dataset_name, Sequence) and not isinstance(dataset_name, str)
-            logger.debug(f"is_some_list_type: {is_some_list_type}")
-            if is_some_list_type:
-                fnames = []
-                for single_dataset_name in dataset_name:
-                    fnames += getDatasetRootFiles(single_dataset_name, allowlist_sites)
-                # print(f"fnames: {fnames}")
-                # raise ValueError
+            sample_cfg = dataset[sample_name]
+
+            logger.debug(f"sample_name: {sample_name}")
+            logger.debug(f"sample_cfg: {sample_cfg}")
+
+            logger.debug(f"type(sample_cfg): {type(sample_cfg)}")
+
+            skip_sample = False
+            # extract list of DAS paths or local files
+            if OmegaConf.is_dict(sample_cfg) and "datasets" in sample_cfg:
+                ds_list = OmegaConf.to_container(sample_cfg["datasets"], resolve=True)
+                if "skip_sample" in sample_cfg:
+                    skip_sample = sample_cfg["skip_sample"]
+                    logger.debug(f"Sample {sample_name} has skip_sample = {skip_sample}")
+                    if skip_sample:
+                        logger.warning(f"Skipping sample {sample_name} as per skip_sample flag.")
+                        continue
+
+            elif OmegaConf.is_list(sample_cfg):
+                ds_list = OmegaConf.to_container(sample_cfg, resolve=True)
+            elif isinstance(sample_cfg, str):
+                ds_list = [sample_cfg]
             else:
-                single_dataset_name = dataset_name
-                fnames = getDatasetRootFiles(single_dataset_name, allowlist_sites)
+                raise ValueError(f"Unexpected sample_cfg type {type(sample_cfg)} for {sample_name}")
+
+            # resolve files
+            fnames = []
+            for single_dataset_name in ds_list:
+                if "None" in single_dataset_name:
+                    logger.warning(f"Sample {sample_name} has 'None' dataset; skipping.")
+                    continue
+                fnames += getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
             if len(fnames) == 0:
                 logger.error(f"No files found for sample {sample_name}. Skipping this sample.")
@@ -409,11 +421,12 @@ if __name__ == "__main__":
             if args.xcache:
                 fnames = get_Xcache_filelist(fnames)
 
-            logger.debug(f"file names: {fnames}")
-            logger.debug(f"sample_name: {sample_name}")
-            logger.debug(f"len(fnames): {len(fnames)}")
-            logger.debug(f"file names: {fnames}")
+            # # if fnames contains `/eos/vbc/experiments/cms` remove it.
+            # fnames = [f.replace("/eos/vbc/experiments/cms", "") if "/eos/vbc/experiments/cms" in f else f for f in fnames]
 
+            logger.debug(f"sample_name: {sample_name}")
+            logger.debug(f"file names: {fnames}")
+            logger.debug(f"len(fnames): {len(fnames)}")
 
             """
             run through each file and collect total number of
@@ -423,57 +436,120 @@ if __name__ == "__main__":
                 "nGenEvts" : None,
                 "data_entries" : None,
             }
-            if is_data: # data sample
-                file_input = {fname : {"object_path": "Events"} for fname in fnames}
-                events = NanoEventsFactory.from_root(
-                        file_input,
-                        metadata={},
-                        schemaclass=NanoAODSchema,
-                        uproot_options={"timeout":4*2400},
-                ).events()
-                logger.debug(f"file_input: {file_input}")
-                logger.debug(f"events.fields: {events.fields}")
-                preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                total_events += preprocess_metadata["data_entries"]
+            if is_data:  # data sample
+                base_file_input = {fname: {"object_path": "Events"} for fname in fnames}
+
+                for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+                    try:
+                        file_input = normalize_paths(base_file_input, host_prefix)
+                        logger.info(
+                            f"[prestage] data sample {sample_name}: attempt {attempt} using {host_prefix}"
+                        )
+
+                        events = NanoEventsFactory.from_root(
+                            file_input,
+                            metadata={},
+                            schemaclass=NanoAODSchema,
+                            uproot_options={"timeout": 4 * 2400},
+                        ).events()
+                        logger.debug(f"file_input: {file_input}")
+                        logger.debug(f"events.fields: {events.fields}")
+                        # if coffea version < 2025.3.0 then use the line below
+                        if coffea.__version__ == "2024.11.0":
+                            preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                        elif coffea.__version__ == "2025.3.0":
+                            # For coffea version 2025.3.0, count the entries directly from ROOT files
+                            n_events_total = 0
+                            for fname_normalized in file_input.keys():
+                                with uproot.open(f"{fname_normalized}:Events") as tree:
+                                    # or: tree = uproot.open(fname_normalized)["Events"]
+                                    n_events_total += tree.num_entries
+
+                            preprocess_metadata["data_entries"] = int(n_events_total)
+                        else:
+                            raise RuntimeError(f"Unsupported coffea version: {coffea.__version__}")
+                        total_events += preprocess_metadata["data_entries"]
+
+                        logger.info(
+                            f"[prestage] data sample {sample_name}: success on attempt {attempt} "
+                            f"with {host_prefix}, entries = {preprocess_metadata['data_entries']}"
+                        )
+                        break  # success → stop trying redirectors
+
+                    except Exception as e:
+                        msg = str(e)
+                        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+                        logger.warning(
+                            f"[prestage] data sample {sample_name}: attempt {attempt} failed "
+                            f"with {host_prefix}: {type(e).__name__}: {e}"
+                        )
+                        if tls_bad and attempt < len(AAA_REDIRECTORS):
+                            logger.warning("[prestage] retrying data sample with next redirector...")
+                            continue
+                        # Non-AAA error or last redirector → propagate
+                        raise
             else: # if MC
-                if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
-                    file_input = {fname : {"object_path": "Events"} for fname in fnames}
-                    events = NanoEventsFactory.from_root(
-                            file_input,
-                            metadata={},
-                            schemaclass=BaseSchema,
-                            uproot_options={"timeout":4*2400},
-                    ).events()
-                    gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
-                    preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
-                    preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
-                else:
-                    file_input = {fname : {"object_path": "Runs"} for fname in fnames}
-                    logger.debug(f"file_input: {file_input}")
-                    # print(f"file_input: {file_input}")
-                    runs = NanoEventsFactory.from_root(
-                            file_input,
-                            metadata={},
-                            schemaclass=BaseSchema,
-                            uproot_options={"timeout":4*2400},
-                    ).events()
+                for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+                    try:
+                        if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
+                            file_input = {fname : {"object_path": "Events"} for fname in fnames}
+                            file_input = normalize_paths(file_input, host_prefix)
+                            events = nanoevents_from_root_with_redirectors(
+                                file_input=file_input,
+                                host_prefix=host_prefix,
+                                attempt=attempt,
+                                schemaclass=BaseSchema,
+                                metadata={},
+                                uproot_options={"timeout": 4 * 2400},
+                            )
+                            gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
+                            preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
+                            preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
+                            break  # stop trying once successful
+                        else:
+                            file_input = {fname: {"object_path": "Runs"} for fname in fnames}
+                            file_input = normalize_paths(file_input, host_prefix)
+                            logger.debug(f"file_input: {file_input}")
+                            runs = nanoevents_from_root_with_redirectors(
+                                file_input=file_input,
+                                host_prefix=host_prefix,
+                                attempt=attempt,
+                                schemaclass=BaseSchema,
+                                metadata={},
+                                uproot_options={"timeout": 4 * 2400},
+                            )
 
-
-                    # print(f"runs.fields: {runs.fields}")
-                    # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
-                    if "genEventSumw" in runs.fields:
-                        # sumGenwgts = ak.sum(runs.genEventSumw).compute()
-                        # sumGenwgts_v2 = ak.sum(events.genWeight).compute()
-                        # gen_wgt_max = ak.max(events.genWeight).compute()
-                        # big_gen_wgt = events.genWeight > 3000
-                        # print(f"big_gen_wgt num: {ak.sum(big_gen_wgt).compute()}")
-                        # print(f"gen_wgt_max: {gen_wgt_max}")
-                        # print(f"nevents: {nevents}")
-                        preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                        preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    else: # nanoAODv6
-                        preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                        preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                            # print(f"runs.fields: {runs.fields}")
+                            # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
+                            if "genEventSumw" in runs.fields:
+                                logger.debug("genEventSumw found: nanoAODv9 or v12")
+                                # sumGenwgts = ak.sum(runs.genEventSumw).compute()
+                                # sumGenwgts_v2 = ak.sum(events.genWeight).compute()
+                                # gen_wgt_max = ak.max(events.genWeight).compute()
+                                # big_gen_wgt = events.genWeight > 3000
+                                # print(f"big_gen_wgt num: {ak.sum(big_gen_wgt).compute()}")
+                                # print(f"gen_wgt_max: {gen_wgt_max}")
+                                # print(f"nevents: {nevents}")
+                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                            else: # nanoAODv6
+                                logger.debug("genEventSumw_ found: nanoAODv6")
+                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                            logger.info(f"[prestage] data sample {sample_name}: success on attempt {attempt} ")
+                            break  # stop trying once successful
+                    except Exception as e:
+                        msg = str(e)
+                        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+                        logger.warning(
+                            f"[prestage] data sample {sample_name}: attempt {attempt} failed "
+                            f"with {host_prefix}: {type(e).__name__}: {e}"
+                        )
+                        if tls_bad and attempt < len(AAA_REDIRECTORS):
+                            logger.warning("[prestage] retrying data sample with next redirector...")
+                            continue
+                        # Non-AAA error or last redirector → propagate
+                        raise
 
                 total_events += preprocess_metadata["nGenEvts"]
 
@@ -522,7 +598,7 @@ if __name__ == "__main__":
                 }
                 # print(f"final_output: {final_output}")
                 step_size = int(args.chunksize)
-                files_available, files_total = preprocess(
+                files_available, files_total = preprocess_with_redirectors(
                     final_output,
                     step_size=step_size,
                     align_clusters=False,
@@ -545,13 +621,13 @@ if __name__ == "__main__":
             pre_stage_data[sample_name]['metadata']["dataset"] = sample_name
             big_sample_info.update(pre_stage_data)
 
-        #save the sample info
+        # save the sample info
         directory = args.prestage_output
         filename = directory+"/processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         if not os.path.exists(directory):
             os.makedirs(directory)
         with open(filename, "w") as file:
-                json.dump(big_sample_info, file)
+            json.dump(big_sample_info, file, indent=2, sort_keys=True)
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")
@@ -609,11 +685,10 @@ if __name__ == "__main__":
                         end_idx = len(file_dict["steps"])-1
                         event_counter += file_dict["steps"][end_idx][1]
 
-        #save the sample info
+        # save the sample info
         filename = directory+"/fraction_processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         with open(filename, "w") as file:
-                json.dump(new_samples, file)
+            json.dump(new_samples, file, indent=2, sort_keys=True)
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")
-
