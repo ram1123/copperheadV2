@@ -1,0 +1,82 @@
+{
+    "TotalEntries": {
+        "cumulative": 1000,
+        "individual": 1000
+    },
+    "lumi_mask": {
+        "cumulative": 1000,
+        "individual": 1000
+    },
+    "HLT_filter": {
+        "cumulative": 1000,
+        "individual": 1000
+    },
+    "event_quality_flags": {
+        "cumulative": 872,
+        "individual": 872
+    },
+    "PV_npvsGood": {
+        "cumulative": 869,
+        "individual": 997
+    },
+    "muon_pT_roch": {
+        "cumulative": 869,
+        "individual": 1000
+    },
+    "muon_eta": {
+        "cumulative": 814,
+        "individual": 911
+    },
+    "muon_id": {
+        "cumulative": 814,
+        "individual": 976
+    },
+    "muon_isGlobal_or_Tracker": {
+        "cumulative": 780,
+        "individual": 917
+    },
+    "muon_selection": {
+        "cumulative": 780,
+        "individual": 965
+    },
+    "muon_iso": {
+        "cumulative": 774,
+        "individual": 851
+    },
+    "nmuons": {
+        "cumulative": 724,
+        "individual": 822
+    },
+    "mm_charge": {
+        "cumulative": 52,
+        "individual": 52
+    },
+    "electron_veto": {
+        "cumulative": 52,
+        "individual": 358
+    },
+    "HemVeto": {
+        "cumulative": 52,
+        "individual": 998
+    },
+    "trigger_match": {
+        "cumulative": 52,
+        "individual": 1000
+    },
+    "dimuon_mass_window_76_106": {
+        "cumulative": 51,
+        "individual": 644
+    },
+    "h_peak_115_135": {
+        "cumulative": 48,
+        "individual": 49
+    },
+    "h_sidebands_110_115_135_150": {
+        "cumulative": 0,
+        "individual": 0
+    },
+    "h_sidebands_106_115_135_150": {
+        "cumulative": 0,
+        "individual": 0
+    }
+}
