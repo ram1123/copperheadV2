@@ -119,7 +119,7 @@ scripts = ["scripts/pixi_activate.sh"]
 # ----------------------------------------------------------------------
 [environments]
 # Minimal CI environment for GitHub Actions sync tests
-ci = ["analysis", "local"]
+ci = ["analysis"]
 default = ["analysis", "dev", "root", "workflow", "style", "local"]
 
 # Full heavy environment with ML + symbolic tools
