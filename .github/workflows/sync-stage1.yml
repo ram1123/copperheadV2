@@ -91,7 +91,7 @@ jobs:
               -o test/output/label_output/stage1_output/${{ matrix.year }}_data_eventKinematics.txt
 
             python scripts/sync_parquet_dimuon.py \
-              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/dyTo2L_M-50_incl/0/ \
+              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/dy*/0/ \
               -o test/output/label_output/stage1_output/${{ matrix.year }}_dy_eventKinematics.txt
 
             python scripts/sync_parquet_dimuon.py \
