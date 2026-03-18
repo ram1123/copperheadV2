@@ -57,7 +57,7 @@ bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -
 1. To get the yields from the reduced ntuples, use the script [get_yields.py](../get_yields.py).
 
     ```bash
-    python get_yields.py --years 2018
+    python scripts/get_yields.py --years 2018
     ```
     Note that this file reads ntuples from the YAML file [configs/trials.yml](../configs/trials.yml). Update the path under the key `current` to point the label with with the reduced ntuples are created.
 
@@ -66,7 +66,7 @@ bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -
 1. To compare the yields with previous results, use the script [sync_parquet_dimuon.py](../sync_parquet_dimuon.py).
 
     ```bash
-    python sync_parquet_dimuon.py DIR1 DIR2 -o diff.csv
+    python scripts/sync_parquet_dimuon.py DIR1 DIR2 -o diff.csv
     ```
 
 ### Control Plots
