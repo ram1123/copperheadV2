@@ -87,7 +87,7 @@ jobs:
             export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
             python scripts/sync_parquet_dimuon.py \
-              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/data_D/0/ \
+              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/data_*/ \
               -o test/output/label_output/stage1_output/${{ matrix.year }}_data_eventKinematics.txt
 
             python scripts/sync_parquet_dimuon.py \
