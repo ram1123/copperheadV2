@@ -2,7 +2,7 @@ name: Stage1 Sync Check
 
 on:
   push:
-    branches: [ main, dev_run3_2022_2023 ]
+    branches: [ main ]
     paths:
       - "run_stage1.py"
       - "src/**"
@@ -25,13 +25,17 @@ on:
       - "stage1_loop_Improved.sh"
       - "pixi.toml"
       - "pixi.lock"
-      - ".github/workflows/**"  
+      - ".github/workflows/**"
   workflow_dispatch:
 
 jobs:
   sync-stage1:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        year: [2017, 2022preEE]
     env:
       CONDA_OVERRIDE_CUDA: "12.0"
       ENABLE_DASK_REPORT: "0"
@@ -46,17 +50,6 @@ jobs:
           cache: true
           cache-write: true
 
-      - name: Cache pixi files
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/rattler
-            ~/.pixi
-            .pixi
-          key: ${{ runner.os }}-pixi-${{ hashFiles('pixi.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pixi-
-
       - name: Install pixi env
         run: |
           pixi install --locked -e ci
@@ -69,80 +62,86 @@ jobs:
       - name: Create output directories
         run: |
           mkdir -p test/output
-          mkdir -p test/reference
 
       # STEP-1: Get the stage-1 output
       - name: Run stage-1 sync sample
         run: |
-          pixi run -e ci  bash -lc '
+          pixi run -e ci bash -lc '
             set -euo pipefail
+            export PYTHONPATH="$PWD:${PYTHONPATH:-}"
+
             time bash stage1_loop_Improved.sh \
               -c configs/datasets/sync_dataset_nanoAODv12.yaml \
               -v 12 \
-              -l dev_March26_week3 \
-              -y "2022preEE" \
+              -l label_output \
+              -y "${{ matrix.year }}" \
               -m 1 \
               -z \
               -S test/output
           '
 
-      # STEP-2: Get the sync text files
       - name: Produce sync text files
         run: |
-          pixi run -e ci  bash -lc '
+          pixi run -e ci bash -lc '
             set -euo pipefail
+            export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
             python scripts/sync_parquet_dimuon.py \
-              test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/data_D/0/ \
-              -o test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt
+              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/data_D/0/ \
+              -o test/output/label_output/stage1_output/${{ matrix.year }}_data_eventKinematics.txt
 
             python scripts/sync_parquet_dimuon.py \
-              test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/dyTo2L_M-50_incl/0/ \
-              -o test/output/dev_March26_week3/stage1_output/2022preEE_dy_eventKinematics.txt
+              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/dyTo2L_M-50_incl/0/ \
+              -o test/output/label_output/stage1_output/${{ matrix.year }}_dy_eventKinematics.txt
 
             python scripts/sync_parquet_dimuon.py \
-              test/output/dev_March26_week3/stage1_output/2022preEE/f1_0/vbf_powheg_dipole/0/ \
-              -o test/output/dev_March26_week3/stage1_output/2022preEE_vbf_eventKinematics.txt
+              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/vbf_powheg_dipole/0/ \
+              -o test/output/label_output/stage1_output/${{ matrix.year }}_vbf_eventKinematics.txt
           '
 
-      # STEP-3: Compare the reference with new generated text file
       - name: Compare against references
         run: |
-          pixi run -e ci  bash -lc '
+          pixi run -e ci bash -lc '
             set -euo pipefail
+            export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
             python scripts/sync_parquet_dimuon.py \
-              test/reference/2022preEE_dataD_eventKinematics.txt \
-              test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt \
-              -o diff_dataD_2022preEE.csv
+              test/reference/${{ matrix.year }}_data_eventKinematics.txt \
+              test/output/label_output/stage1_output/${{ matrix.year }}_data_eventKinematics.txt \
+              -o diff_data_${{ matrix.year }}.csv
 
             python scripts/sync_parquet_dimuon.py \
-              test/reference/2022preEE_dy_eventKinematics.txt \
-              test/output/dev_March26_week3/stage1_output/2022preEE_dy_eventKinematics.txt \
-              -o diff_dy_2022preEE.csv
+              test/reference/${{ matrix.year }}_dy_eventKinematics.txt \
+              test/output/label_output/stage1_output/${{ matrix.year }}_dy_eventKinematics.txt \
+              -o diff_dy_${{ matrix.year }}.csv
 
             python scripts/sync_parquet_dimuon.py \
-              test/reference/2022preEE_vbf_eventKinematics.txt \
-              test/output/dev_March26_week3/stage1_output/2022preEE_vbf_eventKinematics.txt \
-              -o diff_vbf_2022preEE.csv
+              test/reference/${{ matrix.year }}_vbf_eventKinematics.txt \
+              test/output/label_output/stage1_output/${{ matrix.year }}_vbf_eventKinematics.txt \
+              -o diff_vbf_${{ matrix.year }}.csv
           '
 
-      # STEP-4: Fail if any diff file is non-empty
       - name: Check diff outputs
         run: |
           set -euo pipefail
 
           fail=0
-          for f in diff_dataD_2022preEE.csv diff_dy_2022preEE.csv diff_vbf_2022preEE.csv; do
+          for f in \
+            diff_data_${{ matrix.year }}.csv \
+            diff_dy_${{ matrix.year }}.csv \
+            diff_vbf_${{ matrix.year }}.csv
+          do
             if [ ! -f "$f" ]; then
-              echo "OK: $f not produced (treating as no differences)."
+              echo "OK: $f not produced."
               continue
-            else
+            elif [ -s "$f" ]; then
               echo "ERROR: Non-empty diff found in $f"
               echo "----- $f -----"
               cat "$f"
               echo "---------------"
               fail=1
+            else
+              echo "OK: $f exists and is empty."
             fi
           done
 
@@ -152,14 +151,14 @@ jobs:
 
       - name: Upload diff artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
-          name: sync-stage1-artifacts
+          name: sync-stage1-artifacts-${{ matrix.year }}
           path: |
-            diff_dataD_2022preEE.csv
-            diff_dy_2022preEE.csv
-            diff_vbf_2022preEE.csv
-            test/output/dev_March26_week3/stage1_output/2022preEE_dataD_eventKinematics.txt
-            test/output/dev_March26_week3/stage1_output/2022preEE_dy_eventKinematics.txt
-            test/output/dev_March26_week3/stage1_output/2022preEE_vbf_eventKinematics.txt
+            diff_data_${{ matrix.year }}.csv
+            diff_dy_${{ matrix.year }}.csv
+            diff_vbf_${{ matrix.year }}.csv
+            test/output/label_output/stage1_output/${{ matrix.year }}_data_eventKinematics.txt
+            test/output/label_output/stage1_output/${{ matrix.year }}_dy_eventKinematics.txt
+            test/output/label_output/stage1_output/${{ matrix.year }}_vbf_eventKinematics.txt
           if-no-files-found: warn

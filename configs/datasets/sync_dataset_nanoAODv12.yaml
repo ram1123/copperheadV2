@@ -16,7 +16,7 @@ years:
   "2017":
     Data:
       total_lumi_pb: 59830.0
-      data_B:
+      data_D: # FIXME: replaced data_B -> data_D. So, that output file shoudl be same for 2017 and 2022preEE. Easier for the CI/CD sync names.
         skip_sample: False
         datasets:
           - test/data/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017B/
