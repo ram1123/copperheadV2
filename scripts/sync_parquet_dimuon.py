@@ -20,6 +20,7 @@ from typing import List, Optional
 import dask_awkward as dak
 import awkward as ak
 import pandas as pd
+import json
 
 from distributed import Client
 
@@ -29,45 +30,7 @@ from distributed import Client
 # ----------------------------------------------------------------------
 KEY_VARS = ["run", "luminosityBlock", "event"]
 
-V1_FIELDS_2COMPUTE: List[str] = [
-    # "gjj_mass",  # handled dynamically if needed
-    "separate_wgt_genWeight",
-    "separate_wgt_genWeight_normalization",
-    "separate_wgt_xsec",
-    "separate_wgt_lumi",
-    "separate_wgt_pu_wgt",
-    "separate_wgt_l1prefiring",
-    "separate_wgt_muID",
-    "separate_wgt_muIso",
-    "separate_wgt_muTrig",
-    "separate_wgt_LHERen",
-    "separate_wgt_LHEFac",
-    "separate_wgt_pdf_2rms",
-    "separate_wgt_jetpuid_wgt",
-    "separate_wgt_qgl_wgt",
-    "separate_wgt_zpt_wgt",
-    "separate_wgt_ones",
-    "wgt_nominal",
-    "nBtagLoose_nominal",
-    "nBtagMedium_nominal",
-    "dimuon_pt",
-    "dimuon_eta",
-    "dimuon_mass",
-    "jet1_phi_nominal",
-    "jet1_pt_nominal",
-    "jet2_pt_nominal",
-    "jet2_phi_nominal",
-    "jet1_eta_nominal",
-    "jet2_eta_nominal",
-    "jj_mass_nominal",
-    "jj_dEta_nominal",
-    "event",
-    "njets_nominal",
-    # "nfatJets_drmuon",
-    # "MET_pt",
-]
-
-SyncVariablesList: List[str] = [
+SYNCVARLIST: List[str] = [
     # event id
     "run",
     "luminosityBlock",
@@ -97,10 +60,23 @@ SyncVariablesList: List[str] = [
     "wgt_nominal",
     "nBtagLoose_nominal",
     "nBtagMedium_nominal",
+    "separate_wgt_genWeight",
+    "separate_wgt_genWeight_normalization",
+    "separate_wgt_xsec",
+    "separate_wgt_lumi",
+    "separate_wgt_pu_wgt",
+    "separate_wgt_l1prefiring",
+    "separate_wgt_muID",
+    "separate_wgt_muIso",
+    "separate_wgt_muTrig",
+    "separate_wgt_LHERen",
+    "separate_wgt_LHEFac",
+    "separate_wgt_pdf_2rms",
+    "separate_wgt_jetpuid_wgt",
+    "separate_wgt_qgl_wgt",
+    "separate_wgt_zpt_wgt",
+    "separate_wgt_ones",    
 ]
-
-# DIMUON_VARS = list(V1_FIELDS_2COMPUTE)
-DIMUON_VARS = list(SyncVariablesList)
 
 # ----------------------------------------------------------------------
 # Dask client helper
@@ -175,7 +151,7 @@ def load_dir_to_df(
 
     # Combine and de-duplicate column list (keep order: keys → dimuon → extra)
     cols = []
-    for c in KEY_VARS + DIMUON_VARS:
+    for c in SYNCVARLIST:
         if c not in cols:
             cols.append(c)
 
@@ -226,17 +202,17 @@ def load_dir_to_df(
 # ----------------------------------------------------------------------
 # Single-dir dump
 # ----------------------------------------------------------------------
-def dump_single_dir_sync_old(df: pd.DataFrame, out_path: Path) -> None:
+def dump_single_dir_sync_to_CSV(df: pd.DataFrame, out_path: Path) -> None:
     """
     Save a text file with:
     event,run,luminosityBlock,dimuon_pt,dimuon_mass,dimuon_eta
     """
-    cols = KEY_VARS + DIMUON_VARS
+    cols = KEY_VARS + SYNCVARLIST
     cols = [c for c in cols if c in df.columns]
 
     # Reorder so event,run,lumi come in that order
     ordered = ["event", "run", "luminosityBlock"]
-    for c in DIMUON_VARS:
+    for c in SYNCVARLIST:
         if c in cols:
             ordered.append(c)
 
@@ -251,64 +227,42 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     """
     Save a text file with one event per line in format:
 
-    run:lumi:event:pTL1:etaL1:phiL1:pTL2:etaL2:phiL2:mLL:pTLL:EtaLL:phiLL:
-    pTj1:etaj1:phij1:pTj2:etaj2:phij2:mjj:dEtajj
+    run:lumi:event,mu1_pt,mu1_eta,mu1_phi,mu2_pt,mu2_eta,mu2_phi,
+    dimuon_mass,dimuon_pt,dimuon_eta,dimuon_phi,
+    jet1_pt_nominal,jet1_eta_nominal,jet1_phi_nominal,
+    jet2_pt_nominal,jet2_eta_nominal,jet2_phi_nominal,
+    jj_mass_nominal,jj_dEta_nominal,...
 
-    All floats formatted with .2f
+    Missing values are written as -100.00
     """
-    required = [
-        "run",
-        "luminosityBlock",
-        "event",
-        "mu1_pt",
-        "mu1_eta",
-        "mu1_phi",
-        "mu2_pt",
-        "mu2_eta",
-        "mu2_phi",
-        "dimuon_mass",
-        "dimuon_pt",
-        "dimuon_eta",
-        "dimuon_phi",
-        "jet1_pt_nominal",
-        "jet1_eta_nominal",
-        "jet1_phi_nominal",
-        "jet2_pt_nominal",
-        "jet2_eta_nominal",
-        "jet2_phi_nominal",
-        "jj_mass_nominal",
-        "jj_dEta_nominal",
-    ]
+    missing = [c for c in SYNCVARLIST if c not in df.columns]
+    required = [c for c in SYNCVARLIST if c not in KEY_VARS and c in df.columns]
 
-    missing = [c for c in required if c not in df.columns]
     if missing:
-        raise RuntimeError(f"Missing required columns for txt dump: {missing}")
+        print(f"[WARNING] Missing columns for sync dump: {missing}")
 
-    # Fill NaNs (if any) to avoid formatting errors
-    df2 = df[required].copy()
-    # replace any none with -100.0
-    df2 = df2.fillna(-100.0)
+    df2 = df.copy()
 
-    # Write fast without pandas to_csv (custom format)
-    n = 0
+    for c in required:
+        df2[c] = df2[c].fillna(-100.0)
+
     with open(out_path, "w") as f:
-        for r in df2.itertuples(index=False):
-            # r is in the exact column order in `required`
-            line = (
-                f"{int(r.run)}:{int(r.luminosityBlock)}:{int(r.event)}:"
-                f"{float(r.mu1_pt):.2f}:{float(r.mu1_eta):.2f}:{float(r.mu1_phi):.2f}:"
-                f"{float(r.mu2_pt):.2f}:{float(r.mu2_eta):.2f}:{float(r.mu2_phi):.2f}:"
-                f"{float(r.dimuon_mass):.2f}:{float(r.dimuon_pt):.2f}:{float(r.dimuon_eta):.2f}:"
-                f"{float(r.dimuon_phi):.2f}:"
-                f"{float(r.jet1_pt_nominal):.2f}:{float(r.jet1_eta_nominal):.2f}:"
-                f"{float(r.jet1_phi_nominal):.2f}:{float(r.jet2_pt_nominal):.2f}:"
-                f"{float(r.jet2_eta_nominal):.2f}:{float(r.jet2_phi_nominal):.2f}:"
-                f"{float(r.jj_mass_nominal):.2f}:{float(r.jj_dEta_nominal):.2f}\n"
-            )
-            f.write(line)
-            n += 1
+        for _, row in df2.iterrows():
+            run = int(row["run"])
+            lumi = int(row["luminosityBlock"])
+            event = int(row["event"])
 
-    print(f"[INFO] Wrote {n} lines to {out_path}")
+            values = []
+            for c in required:
+                v = row[c]
+                if pd.isna(v):
+                    v = -100.0
+                values.append(f"{float(v):.2f}")
+
+            line = f"{run}:{lumi}:{event}," + ",".join(values)
+            f.write(line + "\n")
+
+    print(f"[INFO] Wrote {len(df2)} lines to {out_path}")
 
 # ----------------------------------------------------------------------
 # Two-dir comparison
@@ -377,7 +331,7 @@ def compare_two_dirs(
 
         mismatch = False
 
-        for var in DIMUON_VARS:
+        for var in SYNCVARLIST:
             if var not in row1 or var not in row2:
                 continue
 
@@ -406,62 +360,86 @@ def compare_two_dirs(
 
 def parse_sync_txt(path: str) -> pd.DataFrame:
     """
-    Parse the dumped sync format lines:
+    Parse sync txt lines in format:
 
-    run:lumi:event:mu1_pt:mu1_eta:mu1_phi:mu2_pt:mu2_eta:mu2_phi:
-    dimuon_mass:dimuon_pt:dimuon_eta:dimuon_phi:
-    jet1_pt:jet1_eta:jet1_phi:jet2_pt:jet2_eta:jet2_phi:
-    jj_mass:jj_dEta
+    run:lumi:event,val1,val2,...
 
-    Returns DataFrame indexed by (run, luminosityBlock, event).
+    The variable order is taken from SYNCVARLIST (excluding KEY_VARS).
+    If a line has fewer values than SYNCVARLIST expects, the missing ones
+    are filled with -100.0. If it has more, extras are ignored.
+
+    Returns
+    -------
+    pd.DataFrame
+        Indexed by (run, luminosityBlock, event).
     """
-    cols = [
-        "run", "luminosityBlock", "event",
-        "mu1_pt", "mu1_eta", "mu1_phi",
-        "mu2_pt", "mu2_eta", "mu2_phi",
-        "dimuon_mass", "dimuon_pt", "dimuon_eta", "dimuon_phi",
-        "jet1_pt_nominal", "jet1_eta_nominal", "jet1_phi_nominal",
-        "jet2_pt_nominal", "jet2_eta_nominal", "jet2_phi_nominal",
-        "jj_mass_nominal", "jj_dEta_nominal",
-    ]
+    value_cols = [c for c in SYNCVARLIST if c not in KEY_VARS]
 
-    rows = []
-    bad = 0
+    # Read all non-empty lines
     with open(path, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            parts = line.split(":")
-            if len(parts) != len(cols):
-                bad += 1
-                continue
+        lines = [ln.strip() for ln in f if ln.strip()]
 
-            # first 3 are ints, rest floats
-            try:
-                run = int(parts[0])
-                lumi = int(parts[1])
-                evt = int(parts[2])
-                floats = [float(x) for x in parts[3:]]
-            except Exception:
-                bad += 1
-                continue
+    if not lines:
+        raise RuntimeError(f"No non-empty lines found in {path}")
 
-            row = {"run": run, "luminosityBlock": lumi, "event": evt}
-            for c, v in zip(cols[3:], floats):
-                row[c] = v
-            rows.append(row)
+    bad = 0
+    records = []
+
+    for iline, line in enumerate(lines, start=1):
+        parts = line.split(",")
+
+        if len(parts) < 2:
+            bad += 1
+            print(f"[WARNING] malformed line {iline} in {path}: too few fields")
+            continue
+
+        # Parse run:lumi:event
+        try:
+            run_str, lumi_str, evt_str = parts[0].split(":")
+            run = int(run_str)
+            lumi = int(lumi_str)
+            evt = int(evt_str)
+        except Exception:
+            bad += 1
+            print(f"[WARNING] failed to parse run:lumi:event on line {iline}: {parts[0]}")
+            continue
+
+        raw_vals = parts[1:]
+
+        # Optional one-time info
+        if iline == 1:
+            print(
+                f"[INFO] Detected {len(raw_vals)} value columns in {path}; "
+                f"SYNCVARLIST expects {len(value_cols)}"
+            )
+
+        row = {
+            "run": run,
+            "luminosityBlock": lumi,
+            "event": evt,
+        }
+
+        # Fill from SYNCVARLIST order, pad missing with -100.0
+        for i, col in enumerate(value_cols):
+            if i < len(raw_vals):
+                try:
+                    row[col] = float(raw_vals[i])
+                except Exception:
+                    row[col] = -100.0
+            else:
+                row[col] = -100.0
+
+        records.append(row)
 
     if bad:
         print(f"[WARNING] {bad} malformed lines skipped in {path}")
 
-    df = pd.DataFrame(rows)
-    if df.empty:
+    if not records:
         raise RuntimeError(f"No valid rows parsed from {path}")
 
+    df = pd.DataFrame.from_records(records)
     df = df.set_index(KEY_VARS).sort_index()
     return df
-
 
 def compare_two_sync_txt(
     txt1: str,
@@ -489,11 +467,11 @@ def compare_two_sync_txt(
 
     # write only1 and only2 to separate files
     if len(only1) > 0:
-        only1_path = out_path.parent / f"only_in_{Path(txt1).stem}.csv"
+        only1_path = out_path.parent / f"only_in_{Path(txt1).stem}.txt"
         df1.loc[only1].reset_index().to_csv(only1_path, index=False)
         print(f"[INFO] Wrote {len(only1)} events only in txt1 to {only1_path}")
     if len(only2) > 0:
-        only2_path = out_path.parent / f"only_in_{Path(txt2).stem}.csv"
+        only2_path = out_path.parent / f"only_in_{Path(txt2).stem}.txt"
         df2.loc[only2].reset_index().to_csv(only2_path, index=False)
         print(f"[INFO] Wrote {len(only2)} events only in txt2 to {only2_path}")
 
@@ -534,6 +512,91 @@ def compare_two_sync_txt(
 
     pd.DataFrame(rows).to_csv(out_path, index=False)
     print(f"[INFO] Wrote {len(rows)} mismatching events to {out_path}")
+    return
+
+
+def compare_two_cutflow_json(
+    json1: str,
+    json2: str,
+    out_path: Path,
+    tolerance: float = 0.0,
+) -> None:
+    """
+    Compare two cutflow JSON files of format:
+
+    {
+        "CutName": {
+            "cumulative": 1000,
+            "individual": 1000
+        },
+        ...
+    }
+
+    Writes only mismatches to out_path.
+    """
+    print(f"[INFO] Loading cutflow json 1: {json1}")
+    with open(json1, "r") as f:
+        d1 = json.load(f)
+
+    print(f"[INFO] Loading cutflow json 2: {json2}")
+    with open(json2, "r") as f:
+        d2 = json.load(f)
+
+    all_cuts = sorted(set(d1.keys()) | set(d2.keys()))
+    rows = []
+
+    for cut in all_cuts:
+        rec = {"cut": cut}
+
+        cut1 = d1.get(cut)
+        cut2 = d2.get(cut)
+
+        if cut1 is None:
+            rec["status"] = "missing_in_json1"
+            rec["cumulative_1"] = None
+            rec["cumulative_2"] = cut2.get("cumulative")
+            rec["delta_cumulative"] = None
+            rec["individual_1"] = None
+            rec["individual_2"] = cut2.get("individual")
+            rec["delta_individual"] = None
+            rows.append(rec)
+            continue
+
+        if cut2 is None:
+            rec["status"] = "missing_in_json2"
+            rec["cumulative_1"] = cut1.get("cumulative")
+            rec["cumulative_2"] = None
+            rec["delta_cumulative"] = None
+            rec["individual_1"] = cut1.get("individual")
+            rec["individual_2"] = None
+            rec["delta_individual"] = None
+            rows.append(rec)
+            continue
+
+        c1 = float(cut1.get("cumulative", 0.0))
+        c2 = float(cut2.get("cumulative", 0.0))
+        i1 = float(cut1.get("individual", 0.0))
+        i2 = float(cut2.get("individual", 0.0))
+
+        dc = c2 - c1
+        di = i2 - i1
+
+        if abs(dc) > tolerance or abs(di) > tolerance:
+            rec["status"] = "different"
+            rec["cumulative_1"] = c1
+            rec["cumulative_2"] = c2
+            rec["delta_cumulative"] = dc
+            rec["individual_1"] = i1
+            rec["individual_2"] = i2
+            rec["delta_individual"] = di
+            rows.append(rec)
+
+    if not rows:
+        print("[INFO] No cutflow mismatches found (within tolerance).")
+
+    df = pd.DataFrame(rows)
+    df.to_csv(out_path, index=False)
+    print(f"[INFO] Wrote {len(df)} cutflow mismatches to {out_path}")
 
 # ----------------------------------------------------------------------
 # CLI
@@ -551,7 +614,7 @@ def parse_args():
         "-o",
         "--out",
         type=str,
-        default="sync_0_vs_3_dimuon_diff.txt",
+        default=None,
         help="Output txt/csv file path. If not given, derived from directory name(s).",
     )
     parser.add_argument(
@@ -612,13 +675,23 @@ def main():
     elif len(dirs) == 2:
         file1, file2 = dirs
 
-        out_path = Path(args.out) if args.out else Path("sync_txt_diff.csv")
+        out_path = Path(args.out) if args.out else Path("sync_txt_diff.txt")
 
         # If both are text dumps -> compare text files
         if (str(file1).endswith(".txt") ) and (str(file2).endswith(".txt")):
             compare_two_sync_txt(
                 txt1=file1,
                 txt2=file2,
+                out_path=out_path,
+                tolerance=args.tolerance,
+            )
+            return
+
+        # If both are cutflow json files -> compare json files
+        if str(file1).endswith(".json") and str(file2).endswith(".json"):
+            compare_two_cutflow_json(
+                json1=file1,
+                json2=file2,
                 out_path=out_path,
                 tolerance=args.tolerance,
             )

@@ -1,5 +1,7 @@
 # 🐍 Copperhead V2, - Columnar Parallel Pythonic framEwork for Run3 H&rarr;µµ Decay search
 
+[![Stage1 Sync Check](https://github.com/ram1123/copperheadV2/actions/workflows/sync-stage1.yml/badge.svg?branch=dev_March26_week3)](https://github.com/ram1123/copperheadV2/actions/workflows/sync-stage1.yml)
+
 ## setup
 
 ```bash

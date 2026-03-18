@@ -21,6 +21,7 @@ from distributed import Client
 from modules.utils import logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from omegaconf import OmegaConf
+from modules.dask_utils import close_dask_client, get_dask_client
 
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")
@@ -157,7 +158,6 @@ def removeBadFiles(filelist):
     clean_filtlist = list(set(filelist) - set(bad_filelist)) # remove bad files from the filelist
     return clean_filtlist
 
-# def getDatasetRootFiles(single_dataset_name: list, allowlist_sites: list)-> list:
 def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
     # logger.info(f"dataset name: {single_dataset_name}")
     # single_dataset_name = single_dataset_name["path"]
@@ -166,7 +166,7 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
         fnames = glob.glob(f"{single_dataset_name}/*.root")
         logger.debug(f"fnames: {fnames}")
         fnames = [fname.replace("/eos/purdue", "root://eos.cms.rcac.purdue.edu/") for fname in fnames] # replace to xrootd bc sometimes eos mounts timeout when reading
-    elif single_dataset_name.startswith("/depot"):
+    elif single_dataset_name.startswith("/depot") or single_dataset_name.startswith("test"):
         fnames = glob.glob(f"{single_dataset_name}/*.root")
         logger.debug(f"fnames: {fnames}")
     else:
@@ -259,6 +259,14 @@ if __name__ == "__main__":
         action="store",
         help="path to prestage output directory",
     )
+    parser.add_argument(
+        "--sync",
+        dest="sync",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="If true, syncs files before preprocessing",
+    )
+
     args = parser.parse_args()
 
     time_step = time.time()
@@ -269,19 +277,9 @@ if __name__ == "__main__":
 
     if args.fraction is None: # do the normal prestage setup
         total_events = 0
-        # get dask client
-        if args.use_gateway:
-            from dask_gateway import Gateway
-            gateway = Gateway(
-                "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
-                proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
-            )
-            cluster_info = gateway.list_clusters()[0]# get the first cluster by default. There only should be one anyways
-            client = gateway.connect(cluster_info.name).get_client()
-            logger.debug("Gateway Client created")
-        else: # use local cluster
-            client = Client(n_workers=15,  threads_per_worker=1, processes=True, memory_limit='30 GiB')
-            logger.info("Local scale Client created")
+
+        client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+
         big_sample_info = {}
         # load dataset sample paths from yaml files
         datasets = OmegaConf.load(args.dataset_yaml_file)
@@ -624,10 +622,14 @@ if __name__ == "__main__":
         # save the sample info
         directory = args.prestage_output
         filename = directory+"/processor_samples_"+year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
+        if args.sync:
+            filename = filename.replace(".json", "_sync.json") # INFO: Hardcoded filename
         if not os.path.exists(directory):
             os.makedirs(directory)
         with open(filename, "w") as file:
             json.dump(big_sample_info, file, indent=2, sort_keys=True)
+
+        close_dask_client()
 
         elapsed = round(time.time() - time_step, 3)
         logger.info(f"Finished everything in {elapsed} s.")

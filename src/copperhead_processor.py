@@ -50,7 +50,7 @@ from src.corrections.jet import (
 )
 from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 from src.corrections.rochester import apply_roccor, apply_KitMuScaleRe_Run3
-from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
+# from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
 
 from modules.vector_operations import (
     getRapidity,
@@ -1910,20 +1910,20 @@ class EventProcessor(processor.ProcessorABC):
                     "dimuon_rapidity": getRapidity(dimuon),
                 }
 
-                cfg_base = ZptDNNConfig(
-                    model_path="DUMMY",
-                    feature_names=[
-                        "mu1_pt","mu2_pt","mu1_eta","mu2_eta",
-                        "acoplanarity","dimuon_pt","dimuon_rapidity"
-                    ],
-                    output_mode="logit_to_odds",
-                    device="cpu",
-                    clip_weight_min=0.2,
-                    clip_weight_max=5.0,
-                )
+                # cfg_base = ZptDNNConfig(
+                #     model_path="DUMMY",
+                #     feature_names=[
+                #         "mu1_pt","mu2_pt","mu1_eta","mu2_eta",
+                #         "acoplanarity","dimuon_pt","dimuon_rapidity"
+                #     ],
+                #     output_mode="logit_to_odds",
+                #     device="cpu",
+                #     clip_weight_min=0.2,
+                #     clip_weight_max=5.0,
+                # )
 
-                zpt_wgt_reco_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_reco, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
-                zpt_wgt_gen_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_gen, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
+                # zpt_wgt_reco_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_reco, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
+                # zpt_wgt_gen_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_gen, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
 
                 # --- save both to parquet
                 _add_block(out_dict, {

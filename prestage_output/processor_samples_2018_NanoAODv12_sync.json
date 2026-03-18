@@ -1,0 +1,27 @@
+{
+  "data_A": {
+    "files": {
+      "test/data/eos/purdue/store/user/rasharma/customNanoAOD_GT36/UL2018/SingleMuon_Run2018A/1C134297-FD4F-2B45-8360-C169130914A9_NanoAOD_1000.root": {
+        "num_entries": 1000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "uuid": "fc949d34-1f9e-11f1-bd3f-f20a050abeef"
+      }
+    },
+    "form": null,
+    "metadata": {
+      "data_entries": 1000,
+      "dataset": "data_A",
+      "fraction": 1.0,
+      "is_mc": false,
+      "nGenEvts": null,
+      "original_fraction": 1.0,
+      "sumGenWgts": null
+    }
+  }
+}
