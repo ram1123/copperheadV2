@@ -3,6 +3,7 @@ import awkward as ak
 import numpy as np
 import argparse
 from omegaconf import OmegaConf
+from pathlib import Path
 
 def filterRegion(events, region="h-peak"):
     dimuon_mass = events.dimuon_mass
@@ -121,16 +122,19 @@ if __name__ == "__main__":
 
     # save the new bin edges
     if sysargs.edge_cfg_path is None:
-        config_path = f"/work/users/yun79/Run3/copperheadV2/configs/MVA/ggH/BDT_edges.yaml"
+        # Default to a repo-relative config path instead of a user-specific absolute path
+        repo_root = Path(__file__).resolve().parents[2]
+        config_path = repo_root / "configs" / "MVA" / "ggH" / "BDT_edges.yaml"
     else:
-        config_path = f"{sysargs.edge_cfg_path}/BDT_edges.yaml"
+        # Treat edge_cfg_path as a directory containing BDT_edges.yaml
+        config_path = Path(sysargs.edge_cfg_path) / "BDT_edges.yaml"
     # Load the config file
     print(f"config_path: {config_path}")
-    config = OmegaConf.load(config_path)
+    config = OmegaConf.load(str(config_path))
     print(f"old config: {config}")
     bin_edges = [float(value) for value in bin_edges] # need to convert to 32-bit b4 writing to omegaconf
     config[sysargs.year] = bin_edges 
     print(f"new config: {config}")
     # Overwrite the yaml file
-    OmegaConf.save(config, config_path)
+    OmegaConf.save(config, str(config_path))
     
