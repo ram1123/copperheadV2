@@ -4,8 +4,6 @@ from typing import Tuple, List, Dict
 ROOT.gStyle.SetOptStat(0) # remove stats box
 from modules.GoF_utils import chi2_ndf_manual
 import pandas as pd
-from modules.utils import logger
-import uuid
 
 def getFEWZ_roospline(x, root_path):
     """
