@@ -1,3 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+
 index_value="0"
 index_name="sumExp"
 text2workspace.py datacard_comb_sig_all_ggh.txt -m 125
