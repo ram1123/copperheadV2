@@ -40,7 +40,6 @@ label_tag="AllYear_17March"
 stage2_label="${model_name}_${category}_${label_tag}"
 stage2_save_path="${base_path}/${label}/${stage2_label}/stage2_output"
 
-bdt_edge_config_path="configs/MVA/ggH/BDT_edges.yaml"
 mva_base_path="${PWD}"
 
 # all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
