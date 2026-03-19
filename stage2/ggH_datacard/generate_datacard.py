@@ -124,12 +124,25 @@ def getProcessedEvents(events, fields2load, jec_unc_fields):
         "BDT_score",
         "subCategory_idx",
     ]
-    bdt_fields_variation = [] 
+    bdt_fields_variation = []
     for jec_unc_field in jec_unc_fields:
-        bdt_fields_variation = bdt_fields_variation + [f"{bdt_field}_{jec_unc_field}" for bdt_field in bdt_fields]
+        for bdt_field in bdt_fields:
+            name = f"{bdt_field}_{jec_unc_field}"
+            if name in events.fields:
+                bdt_fields_variation.append(name)
+
     wgt_fields = [field for field in events.fields if "wgt" in field]
-    fields_total = fields2load + bdt_fields + bdt_fields_variation + wgt_fields
-    print(fields_total)
+
+    # keep only fields that exist
+    requested = fields2load + bdt_fields + bdt_fields_variation + wgt_fields
+    fields_total = [field for field in requested if field in events.fields]
+
+    missing = [field for field in requested if field not in events.fields]
+    if missing:
+        print(f"[INFO] Missing fields skipped: {missing}")
+
+    print("fields_total:", fields_total)
+
     processed_events = ak.zip({field: events[field] for field in fields_total}).compute()
     return processed_events
 

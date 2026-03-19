@@ -89,7 +89,7 @@ if __name__ == "__main__":
             "target_yields": yields.tolist()
         }
 
-        with open("stage2/ggH/target_yields.yaml", "w") as f:
+        with open(f"{save_path}/target_yields.yaml", "w") as f:
             f.write(
                 f"target_yields:  # {args.label}\n"
             )
