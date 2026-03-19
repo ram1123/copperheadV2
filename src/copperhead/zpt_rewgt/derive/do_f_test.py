@@ -7,6 +7,7 @@ import ROOT
 from bin_definitions import define_custom_binning, poly_fit_ranges
 from cli.common_argparser import build_common_parser
 from modules.utils import logger
+from modules.GoF_utils import get_fStats_n_pVal
 from omegaconf import OmegaConf
 from scipy.stats import f
 
@@ -60,7 +61,6 @@ def save_histogram(hist_SF, fit_func_high, order_high, year, njet, target_nbins,
 
     canvas.SaveAs(f"{save_path}/fit_best_{year}_njet{njet}_{target_nbins}_order{order_high}_{outtext}.pdf")
 
-
 def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outTextFile, outTextFile_keys, year, njet, outtext=""):
     optimized_orders = {}
     print(f"Performing F-test for {year} njet{njet} with {target_nbins} bins; outtext: {outtext}")
@@ -85,10 +85,11 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outText
         chi2_high = fit_func_high.GetChisquare()
         ndf_high = fit_func_high.GetNDF()
 
-        delta_chi2 = chi2_low - chi2_high
-        delta_dof = -(ndf_high - ndf_low) # Negative sign because the order_high is greater than order_low
-        f_statistic = (delta_chi2 / chi2_high) * (ndf_high / delta_dof) if delta_dof != 0 and chi2_high != 0 else 0
-        p_value = 1 - f.cdf(f_statistic, delta_dof, ndf_high)
+        # delta_chi2 = chi2_low - chi2_high
+        # delta_dof = -(ndf_high - ndf_low) # Negative sign because the order_high is greater than order_low
+        # f_statistic = (delta_chi2 / chi2_high) * (ndf_high / delta_dof) if delta_dof != 0 and chi2_high != 0 else 0
+        # p_value = 1 - f.cdf(f_statistic, delta_dof, ndf_high)
+        f_statistic, p_value = get_fStats_n_pVal(chi2_low, chi2_high, ndf_low, ndf_high)
 
         # Log results
         if ndf_low == 0 or ndf_high == 0:

@@ -139,7 +139,7 @@ def plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=
     print(f"save_fname_final: {save_fname_final}")
     canvas.SaveAs(f"{save_fname_final}.pdf")
     f = ROOT.TFile(f"{save_fname_final}.root", "RECREATE")
-    d = f.mkdir("plots")
+    d = f.mkdir(f"{args.save_path}")
     d.cd()
     canvas.Write()   # writes inside /plots/
     f.Close()
@@ -228,7 +228,7 @@ def plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, no
     # save canvas as pdf and root file
     canvas.SaveAs(f"{save_fname_final}.pdf")
     f = ROOT.TFile(f"{save_fname_final}.root", "RECREATE")
-    d = f.mkdir("plots")
+    d = f.mkdir(f"{args.save_path}")
     d.cd()
     canvas.Write()   # writes inside /plots/
     f.Close()

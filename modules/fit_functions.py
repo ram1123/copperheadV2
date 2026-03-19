@@ -184,20 +184,6 @@ def getPdfToHist(x, pdf, hist2copy):
         pdf_hist.SetBinError(i, 0) # remove errors
     return pdf_hist
 
-# def getRatioHist(x, hist, pdf):
-#     ratio_hist = hist.Clone("ratio_hist")
-#     for i in range(1, hist.GetNbinsX()+1):
-#         xval = ratio_hist.GetXaxis().GetBinCenter(i)
-#         x.setVal(xval)
-    
-#         # get uncertainty on PDF at this point from fit result
-#         hist_val = ratio_hist.GetBinContent(i)
-#         pdf_val = pdf.getVal(ROOT.RooArgSet(x))
-#         print(f"bin {i} hist_val: {hist_val}")
-#         print(f"bin {i} pdf_val: {pdf_val}")
-#         ratio_hist.SetBinContent(i, hist_val/pdf_val)  # ratio = 1
-#         ratio_hist.SetBinError(i, 0) # remove errors
-#     return ratio_hist
 
 def getRatioHist(x, hist, pdf):
     hist_clone = hist.Clone("ratio_hist")
@@ -274,6 +260,7 @@ def zero_yield_in_range(hist, x_min, x_max):
 
     return hist
 
+    
 def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, save_fname, normalize=True, nbins=100, y_range_l=None, blinded=True, fit_range="hiSB,loSB"):
     # normalize=False
     x_name = x.GetName()
@@ -334,11 +321,6 @@ def plot_6_23(x, roo_histData_allCat, subCat_dataHists, SMF_pdf_l, fitResult, sa
         # Bottom pad start
         pad2.cd()
         ratio_frame= x.frame()
-
-        # SMF_pdf_hist = SMF_pdf.createHistogram(x.GetName()).Clone("SMF_pdf_clone")
-        # ratio_hist = roo_hist_shapModifier.createHistogram(x.GetName()).Clone("ratio_hist")
-        # ratio_hist.Scale(SMF_pdf_hist.Integral() / ratio_hist.Integral())  # normalize
-        # ratio_hist.Divide(SMF_pdf_hist)
 
         shapeModifier_hist = roo_hist_shapModifier.createHistogram(x.GetName())
         ratio_hist = getRatioHist(x, shapeModifier_hist, SMF_pdf)
