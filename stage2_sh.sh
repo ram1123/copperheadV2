@@ -158,9 +158,6 @@ fi
 # -----------------------------------------------------
 # Step 2: Obtain target yield
 # This one can take multiple years at once.
-# FIXME: Keep these two files at the output directory too
-#   1. /work/users/shar1172/copperheadV2_Feb2026/configs/MVA/ggH/BDT_edges.yaml
-#   2. /work/users/shar1172/copperheadV2_Feb2026/stage2/ggH/target_yields.yaml
 # -----------------------------------------------------
 if [[ "${step}" == "2" || "${step}" == "all" ]]; then
     # This step for only year == all
@@ -261,13 +258,12 @@ fi
 # Step 6: More validation plots / tables
 # -----------------------------------------------------
 if [[ "${step}" == "6" || "${step}" == "all" ]]; then
-    local_years="all"
-    save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/${local_years}"
-    echo "save_path: ${save_path}"
+    edge_save_path="output/bdt_${model_name}_${model_trainYear}/ggH/score_edge_generation/all"
+    echo "edge_save_path: ${edge_save_path}"
 
     for year_i in "${years[@]}"; do
-        save_path="output/bdt_${model_name}_${model_trainYear}/ggH/categorization/plots/${year_i}"
-        mkdir -p "${save_path}"
+        plot_save_path="output/bdt_${model_name}_${model_trainYear}/ggH/categorization/plots/${year_i}"
+        mkdir -p "${plot_save_path}"
 
         print_box "Step 6: Prepare extra validation inputs (${year_i})"
         sample_l="ggh vbf dy tt ww wz"
@@ -284,7 +280,7 @@ if [[ "${step}" == "6" || "${step}" == "all" ]]; then
                 --model_name ${model_name} \
                 --model_trainYear ${model_trainYear} \
                 --mva_base_path ${mva_base_path} \
-                --edge_cfg_path "${save_path}/${stage2_label}" \
+                --edge_cfg_path "${edge_save_path}/${stage2_label}" \
                 --do_6p7
         fi
 
@@ -299,7 +295,7 @@ if [[ "${step}" == "6" || "${step}" == "all" ]]; then
             --base_path ${base_path} \
             --model_name ${model_name} \
             --bdt_year ${model_trainYear} \
-            -save ${save_path} \
+            -save ${plot_save_path} \
             --mva_base_path ${mva_base_path}
 
         print_box "Step 6.2: Fig 6.8 (${year_i})"
@@ -309,7 +305,7 @@ if [[ "${step}" == "6" || "${step}" == "all" ]]; then
             -y ${year_i} \
             --region ${region} \
             --base_path ${base_path} \
-            -save ${save_path}
+            -save ${plot_save_path}
 
         print_box "Step 6.3: Fig 6.13 (${year_i})"
         python validation/ggH/categorization/plot_6_13.py \
@@ -318,7 +314,7 @@ if [[ "${step}" == "6" || "${step}" == "all" ]]; then
             -y ${year_i} \
             --region ${region} \
             --base_path ${base_path} \
-            -save ${save_path}
+            -save ${plot_save_path}
 
         print_box "Step 6.4: Fig 6.19 (${year_i})"
         python validation/ggH/categorization/plot_6_19.py \
@@ -327,7 +323,7 @@ if [[ "${step}" == "6" || "${step}" == "all" ]]; then
             -y ${year_i} \
             --region ${region} \
             --base_path ${base_path} \
-            -save ${save_path}
+            -save ${plot_save_path}
 
         print_box "Step 6.5: Table 6.2 and 6.12 (${year_i})"
         python validation/ggH/categorization/getTable_6_2And6_12.py \
@@ -336,10 +332,9 @@ if [[ "${step}" == "6" || "${step}" == "all" ]]; then
             -y ${year_i} \
             --region ${region} \
             --base_path ${base_path} \
-            -save ${save_path}
+            -save ${plot_save_path}
     done
 fi
-
 
 # -----------------------------------------------------
 # Step 7: Workspace
@@ -381,19 +376,18 @@ if [[ "${step}" == "8" || "${step}" == "dcall" || "${step}" == "all" ]]; then
             --label ${stage3_label} \
             -save ${save_path}
 
-        echo "Copy the script: scripts/get_significance.sh to path: ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        echo "Copy the scripts to: ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
         cp scripts/get_significance.sh ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
         cp scripts/get_impactPlots.sh ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
 
         echo "Copy the background datacards to the same path"
         cp stage3/bkg_datacards_template/*bkg*.txt ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
-        
+
         echo "Go to path given below and run"
         echo "cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
         echo "bash get_significance.sh"
         echo "bash get_impactPlots.sh"
     done
-    
 fi
 
 # -----------------------------------------------------
@@ -408,15 +402,15 @@ if [[ "${step}" == "9" || "${step}" == "dcall" || "${step}" == "all" ]]; then
 
         echo "stage2_save_path: ${stage2_save_path}"
         echo "Go to path given below and run"
-        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+
+        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
         bash get_significance.sh
-        cd -
+        cd - >/dev/null
     done
-    
 fi
 
 # -----------------------------------------------------
-# Step 9: Run Significance
+# Step 10: Run Impact
 # -----------------------------------------------------
 if [[ "${step}" == "10" || "${step}" == "im" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
@@ -427,10 +421,11 @@ if [[ "${step}" == "10" || "${step}" == "im" || "${step}" == "all" ]]; then
 
         echo "stage2_save_path: ${stage2_save_path}"
         echo "Go to path given below and run"
-        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+
+        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
         bash get_impactPlots.sh
+        cd - >/dev/null
     done
-    
 fi
 
 print_box "Done"
