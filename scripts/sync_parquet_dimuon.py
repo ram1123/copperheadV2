@@ -311,7 +311,7 @@ def compare_two_dirs(
 
         for var in SYNCVARLIST:
             if var not in row1 or var not in row2:
-            continue
+                continue
 
             v1 = row1[var]
             v2 = row2[var]
@@ -321,7 +321,7 @@ def compare_two_dirs(
             record[f"{var}_2"] = v2
             record[f"delta_{var}"] = delta
 
-                    if abs(delta) > tolerance:
+            if abs(delta) > tolerance:
                 mismatch = True
 
         if mismatch:
@@ -631,7 +631,7 @@ def main():
     args = parse_args()
     dirs = args.dirs
 
-    client = get_dask_client(True)
+    client = get_dask_client()
 
     if len(dirs) == 1:
         print("[INFO] Single directory provided: dumping sync txt file.")
