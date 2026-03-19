@@ -965,9 +965,11 @@ if __name__ == "__main__":
             ak.to_parquet(processed_events, save_filename)
             time.sleep(3) # wait three second for stability
         
-        # This is ineligant, but also save the bdt edges that was presumably used
-        edges = load_or_create_bdt_edges(args.edge_cfg_path)
-        OmegaConf.save(config=edges, f=f'{save_path}/BDT_edges.yaml')
+        # This is inelegant, but also save the BDT edges that were presumably used.
+        # Only relevant for ggH category and when an edge configuration path is provided.
+        if getattr(args, "category", None) == "ggh" and args.edge_cfg_path:
+            edges = load_or_create_bdt_edges(args.edge_cfg_path)
+            OmegaConf.save(config=edges, f=f'{save_path}/BDT_edges.yaml')
     
     client = Client.current()
     client.close()
