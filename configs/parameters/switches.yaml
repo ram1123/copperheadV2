@@ -272,10 +272,10 @@ switches:
         # 1 : jer strat 1 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets if pT > 50. For fake jets with pT < 50 and passing tight PU Id, apply stochastic method. For fake jets with pT < 50 and failing tight PU Id, apply no jer smearing.
         # 2 : jer strat 2 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets except fake jets with pT <= 50 and abseta > 2.5. For fake jets with pT <= 50 and abseta > 2.5, apply no jer smearing.
         # 3 : our custom Run2 jer smearinig method for CHS jets. Source: https://indico.cern.ch/event/1499935/#175-update-from-purdue, slide 19
-        '2016preVFP': 0 # For nanoAODv12, jer_strat should be 3
-        '2016postVFP': 0 # For nanoAODv12, jer_strat should be 3
-        '2017': 0 # For nanoAODv12, jer_strat should be 3
-        '2018': 0 # For nanoAODv12, jer_strat should be 3
+        '2016preVFP': 3 # For nanoAODv12, jer_strat should be 3
+        '2016postVFP': 3 # For nanoAODv12, jer_strat should be 3
+        '2017': 3 # For nanoAODv12, jer_strat should be 3
+        '2018': 3 # For nanoAODv12, jer_strat should be 3
         '2022preEE': -1
         '2022postEE': -1
         "2023": -1

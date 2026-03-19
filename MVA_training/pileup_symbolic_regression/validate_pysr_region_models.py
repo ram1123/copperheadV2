@@ -14,6 +14,55 @@ python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
   -o validation/pysr_region_scan/plots \
   --variation nominal \
   --n-jets 4
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  --pysr-out validation/pysr_best \
+  -o validation/pysr_region_scan_Eff98/plots \
+  --variation nominal \
+  --n-jets 4  
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  --pysr-out validation/pysr_best \
+  -o validation/pysr_region_scan_Eff95/plots \
+  --variation nominal \
+  --n-jets 4  
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  --pysr-out validation/pysr_best \
+  -o validation/pysr_region_scan_Eff90/plots \
+  --variation nominal \
+  --n-jets 4  
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  --pysr-out validation/pysr_best \
+  -o validation/pysr_region_scan_Eff80/plots \
+  --variation nominal \
+  --n-jets 4  
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  --pysr-out validation/pysr_best \
+  -o validation/pysr_region_scan_Eff80_pTMax50/plots \
+  --variation nominal \
+  --n-jets 4  
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  --pysr-out validation/pysr_best \
+  -o validation/pysr_region_scan_Eff50/plots \
+  --variation nominal \
+  --n-jets 4   
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  --pysr-out validation/pysr_best \
+  -o validation/best_HE_HF_yet \
+  --variation nominal \
+  --n-jets 4  
 """
 
 # ============================================================
@@ -448,7 +497,7 @@ def plot_stacked_before_after(values, y_hs, pass_mask, outbase, title, xlab, nbi
 
     plot_stacked_total_real_fake(
         values, y_hs,
-        outpath=f"{outbase}_before.pdf",
+        outpath=f"{outbase}_before_log.pdf" if logy else f"{outbase}_before.pdf",
         title=f"{title} (before)",
         xlab=xlab,
         nbins=nbins, xmin=xmin, xmax=xmax, logy=logy
@@ -457,7 +506,7 @@ def plot_stacked_before_after(values, y_hs, pass_mask, outbase, title, xlab, nbi
     plot_stacked_total_real_fake(
         np.asarray(values)[pass_mask],
         np.asarray(y_hs)[pass_mask],
-        outpath=f"{outbase}_after.pdf",
+        outpath=f"{outbase}_after_log.pdf" if logy else f"{outbase}_after.pdf",
         title=f"{title} (after)",
         xlab=xlab,
         nbins=nbins, xmin=xmin, xmax=xmax, logy=logy
@@ -692,20 +741,20 @@ def main():
             vals_pt, ys, pm,
             os.path.join(args.outdir, f"stack_{region}_pt"),
             f"{region} jet p_{{T}}", "jet p_{T} [GeV]",
-            nbins=40, xmin=args.pt_min, xmax=args.pt_turnoff, logy=True
+            nbins=40, xmin=args.pt_min, xmax=args.pt_turnoff, logy=False
         )
         plot_stacked_before_after(
             vals_eta, ys, pm,
             os.path.join(args.outdir, f"stack_{region}_eta"),
             f"{region} jet #eta", "jet #eta",
-            nbins=40, xmin=-5.0, xmax=5.0, logy=True
+            nbins=40, xmin=-5.0, xmax=5.0, logy=False
         )
         xmin_s, xmax_s = infer_range(vals_score[np.isfinite(vals_score)])
         plot_stacked_before_after(
             vals_score, ys, pm,
             os.path.join(args.outdir, f"stack_{region}_score"),
             f"{region} score", "score",
-            nbins=50, xmin=xmin_s, xmax=xmax_s, logy=True
+            nbins=50, xmin=xmin_s, xmax=xmax_s, logy=False
         )
 
     # physics safety

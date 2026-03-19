@@ -1,9 +1,13 @@
-base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
+# base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
+base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
         # stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/"
-        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJets/stage1_output/"
+        # stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn30GeV_JetIDMuIDFix_V2/stage1_output/"
+        # stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER/stage1_output/"
+        # stage1: "{base_dir}/Run3_nanoAODv12_FilterEventsHorn50GeV_Feb23_tightPassLepVeto_NoJER/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/"
         comment: "What plotter should use by default"
 
     Run2_HEMVetoFix_v1:

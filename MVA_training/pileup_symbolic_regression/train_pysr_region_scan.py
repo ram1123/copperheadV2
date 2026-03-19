@@ -11,12 +11,24 @@ from pysr import PySRRegressor
 Example commands:
 python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
   -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
-  -o validation/pysr_region_scan \
+  -o validation/pysr_region_scan_Eff98 \
   --variation nominal \
   --n-jets 4 \
   --pt-min 25 \
   --pt-turnoff 80 \
   --hs-eff 0.98 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22
+
+python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  -o validation/pysr_region_scan_Eff95 \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 80 \
+  --hs-eff 0.95 \
   --niterations 300 \
   --population-size 400 \
   --maxsize 22
@@ -29,6 +41,78 @@ python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
   --pt-min 25 \
   --pt-turnoff 80 \
   --hs-eff 0.90 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22
+
+python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  -o validation/pysr_region_scan_Eff80_ValidJetsInfoOnly \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 80 \
+  --hs-eff 0.80 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22 
+
+python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  -o validation/pysr_region_scan_Eff80_pTMax50 \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 50 \
+  --hs-eff 0.80 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22   
+
+python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  -o validation/pysr_region_scan_Eff80_pTMax50_nJ2 \
+  --variation nominal \
+  --n-jets 2 \
+  --pt-min 25 \
+  --pt-turnoff 50 \
+  --hs-eff 0.80 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22   
+
+python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  -o validation/pysr_region_scan_Eff80 \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 80 \
+  --hs-eff 0.80 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22     
+
+python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  -o validation/pysr_region_scan_Eff75 \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 80 \
+  --hs-eff 0.75 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22  
+
+time python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  -o validation/pysr_region_scan_Eff50 \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 80 \
+  --hs-eff 0.50 \
   --niterations 300 \
   --population-size 400 \
   --maxsize 22
@@ -142,13 +226,17 @@ HE_FEATURE_SETS = {
         "nSVs", "nConstituents",
         "lognC",
     ],
-    "HE_comp_occ_pt": [
+    # "HE_comp_occ_pt": [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "nElectrons", "nMuons",
+    #     "nSVs", "nConstituents",
+    #     "lognC",
+    #     "pt", "logpt",
+    # ],
+    "HE_comp_v2": [
         "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
-        "nElectrons", "nMuons",
-        "nSVs", "nConstituents",
-        "lognC",
-        "pt", "logpt",
-    ],
+        "nConstituents",
+    ],    
 }
 
 HF_FEATURE_SETS = {
@@ -165,33 +253,33 @@ HF_FEATURE_SETS = {
         "hf_ratio", "hf_sigma_sum",
         "nElectrons", "nMuons", "nSVs",
     ],
-    "HF_core_occ_nan": [
-        "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
-        "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
-        "hfsigmaEtaEta", "hfsigmaPhiPhi",
-        "hf_ratio", "hf_sigma_sum",
-        "nElectrons", "nMuons", "nSVs",
-        "isnan_hfsigmaEtaEta", "isnan_hfsigmaPhiPhi", "isnan_hf_sigma_sum",
-    ],
-    "HF_v2": ["isnan_hfsigmaEtaEta", "isnan_hfsigmaPhiPhi", "isnan_hf_sigma_sum"],
-    "HF_v3": [
-        "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
-        "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
-        "hfsigmaEtaEta", "hfsigmaPhiPhi",
-        "hf_ratio", "hf_sigma_sum",
-        "pt", "logpt",
-    ],
+    # "HF_core_occ_nan": [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    #     "hf_ratio", "hf_sigma_sum",
+    #     "nElectrons", "nMuons", "nSVs",
+    #     "isnan_hfsigmaEtaEta", "isnan_hfsigmaPhiPhi", "isnan_hf_sigma_sum",
+    # ],
+    # "HF_v2": ["isnan_hfsigmaEtaEta", "isnan_hfsigmaPhiPhi", "isnan_hf_sigma_sum"],
+    # "HF_v3": [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    #     "hf_ratio", "hf_sigma_sum",
+    #     "pt", "logpt",
+    # ],
     "HF_v4": [
         "hfcentralEtaStripSize", "hfadjacentEtaStripsSize", 
         "hfsigmaEtaEta", "hfsigmaPhiPhi", 
         "hf_ratio", "hf_sigma_sum",
     ],
-    "HF_v5": [
-        "hfcentralEtaStripSize", "hfadjacentEtaStripsSize", 
-        "hfsigmaEtaEta", "hfsigmaPhiPhi", 
-        "hf_ratio", "hf_sigma_sum",
-        "pt", "logpt",
-    ],
+    # "HF_v5": [
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize", 
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi", 
+    #     "hf_ratio", "hf_sigma_sum",
+    #     "pt", "logpt",
+    # ],
 }
 
 REGION_PLANS = {
@@ -235,17 +323,24 @@ def build_df_from_prefix(
         .astype(np.float32)
         .to_numpy()
     )
-    aeta = np.abs(eta)
 
-    y_hs = (
-        pd.to_numeric(
-            df_in[col(prefix, "hasMatchedGenJet", variation)], errors="coerce"
-        )
-        .fillna(0)
-        .astype(bool)
+    y_hs_raw = (
+        pd.to_numeric(df_in[col(prefix, "hasMatchedGenJet", variation)], errors="coerce")
         .to_numpy()
-        .astype(np.float32)
     )
+
+    # --------------------------------------------------
+    # Jet existence mask:
+    # keep only jets with valid kinematics and pt > 0
+    # --------------------------------------------------
+    exists = np.isfinite(pt) & np.isfinite(eta) & (pt > 0)
+
+    # if label is missing for non-existing jets, this also protects you
+    good_label = exists & np.isfinite(y_hs_raw)
+    y_hs = np.full_like(pt, np.nan, dtype=np.float32)
+    y_hs[good_label] = y_hs_raw[good_label].astype(bool).astype(np.float32)    
+
+    aeta = np.abs(eta)
 
     df["pt"] = pt
     df["eta"] = eta
@@ -278,6 +373,12 @@ def build_df_from_prefix(
     df["rid"] = region_id(df["aeta"].to_numpy()).astype(np.float32)
 
     df = df.replace([np.inf, -np.inf], np.nan)
+
+    # --------------------------------------------------
+    # Drop non-existing jets here
+    # --------------------------------------------------
+    df = df[exists].copy()
+
     return df
 
 
@@ -343,14 +444,9 @@ def finalize_feature_columns(df, requested_features):
 
     feature_cols = [f for f in requested_features if f in df.columns]
 
-    # numeric cast + fill
+    # numeric cast
     for f in feature_cols:
-        if not f.startswith("isnan_"):
-            df[f] = pd.to_numeric(df[f], errors="coerce").astype(np.float32)
-
-    for f in feature_cols:
-        if not f.startswith("isnan_"):
-            df[f] = df[f].fillna(0.0)
+        df[f] = pd.to_numeric(df[f], errors="coerce").astype(np.float32)
 
     return df, feature_cols
 
@@ -375,7 +471,7 @@ def train_pysr(
         verbosity=1,
         random_state=seed,
         deterministic=True,
-        parallelism="serial",
+        parallelism="multiprocessing",
         binary_operators=["+", "-", "*", "/"],
         unary_operators=["abs", "sqrt", "log1p", "tanh"],
         complexity_of_operators={"/": 3, "log1p": 2, "tanh": 2, "sqrt": 2, "abs": 1},
@@ -407,9 +503,8 @@ def train_region_feature_scan(df_all, outdir, args):
                 print(f"[WARN] Skip {region}/{tag}: empty feature list after filtering")
                 continue
 
-            work = (
-                work.replace([np.inf, -np.inf], np.nan).dropna(subset=["y_hs"]).copy()
-            )
+            work = work.replace([np.inf, -np.inf], np.nan).copy()
+            work = work.dropna(subset=["y_hs"] + feature_cols).copy()            
 
             X = work[feature_cols].to_numpy(dtype=np.float32)
             y = work["y_hs"].to_numpy(dtype=np.float32)
@@ -435,6 +530,12 @@ def train_region_feature_scan(df_all, outdir, args):
                 maxsize=args.maxsize,
                 seed=args.seed,
             )
+
+            print(f"Model equation: {model.equations}")
+
+            # In your train_pysr function or immediately after fit
+            best_row = model.get_best()
+            print(f"Selected Complexity: {best_row['complexity']}, Loss: {best_row['loss']}")
 
             score = model.predict(X).astype(np.float32)
 
@@ -535,7 +636,7 @@ def main():
         thr = rec["threshold_info"]
         pu_rej = None if thr is None else thr.get("pu_rej_est", None)
         print(
-            f"{reg:>2} | {tag:<18} | n={rec['n_train']:>6} | nfeat={rec['n_features']:>2} | PUrej@HS98 = {pu_rej}"
+            f"{reg:>2} | {tag:<18} | n={rec['n_train']:>6} | nfeat={rec['n_features']:>2} | PUrej@HS{int(args.hs_eff*100)} = {pu_rej}"
         )
 
 
