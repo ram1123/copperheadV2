@@ -26,6 +26,11 @@ def load_or_create_bdt_edges(edge_cfg_path):
     If file does not exist, create a default dummy file.
     """
 
+    if not edge_cfg_path:
+        raise ValueError(
+            "edge_cfg_path is None or empty. Please provide a valid directory via the --edge_cfg_path option."
+        )
+
     BDTedges_load_path = os.path.join(edge_cfg_path, "BDT_edges.yaml")
 
     if not os.path.exists(BDTedges_load_path):
