@@ -2751,6 +2751,28 @@ class EventProcessor(processor.ProcessorABC):
                     f"jet4_neEmEF_{variation}": jet4.neEmEF,
                     f"jet4_neHEF_{variation}":  jet4.neHEF,
                     f"jet4_muEF_{variation}":   jet4.muEF,
+                })    
+        if "hfEmEF" in jets.fields:
+            extra_jet_loop_dict.update({
+                f"jet1_hfEmEF_{variation}": jet1.hfEmEF,
+                f"jet2_hfEmEF_{variation}": jet2.hfEmEF,
+                f"jet1_hfHEF_{variation}": jet1.hfHEF,
+                f"jet2_hfHEF_{variation}": jet2.hfHEF,        
+                f"jet1_muonSubtrDeltaEta_{variation}": jet1.muonSubtrDeltaEta,
+                f"jet2_muonSubtrDeltaEta_{variation}": jet2.muonSubtrDeltaEta,
+                f"jet1_muonSubtrDeltaPhi_{variation}": jet1.muonSubtrDeltaPhi,
+                f"jet2_muonSubtrDeltaPhi_{variation}": jet2.muonSubtrDeltaPhi,                                                
+            })
+            if do_additional_jet_vars:
+                extra_jet_loop_dict.update({
+                    f"jet3_hfEmEF_{variation}": jet3.hfEmEF,
+                    f"jet4_hfEmEF_{variation}": jet4.hfEmEF,
+                    f"jet3_hfHEF_{variation}": jet3.hfHEF,
+                    f"jet4_hfHEF_{variation}": jet4.hfHEF,   
+                    f"jet3_muonSubtrDeltaEta_{variation}": jet3.muonSubtrDeltaEta,
+                    f"jet4_muonSubtrDeltaEta_{variation}": jet4.muonSubtrDeltaEta,   
+                    f"jet3_muonSubtrDeltaPhi_{variation}": jet3.muonSubtrDeltaPhi,
+                    f"jet4_muonSubtrDeltaPhi_{variation}": jet4.muonSubtrDeltaPhi,                                                            
                 })                
         if "chMultiplicity" in jets.fields:
             extra_jet_loop_dict.update({
@@ -2879,23 +2901,29 @@ class EventProcessor(processor.ProcessorABC):
                     f"jet4_hfsigmaEtaEta_{variation}":           jet4.hfsigmaEtaEta,
                     f"jet4_hfsigmaPhiPhi_{variation}":           jet4.hfsigmaPhiPhi,
                 })
-        # # --- Muon subtraction factor ---
-        # if "muonSubtrFactor" in jets.fields:
-        #     extra_jet_loop_dict.update({
-        #         f"jet1_muonSubtrFactor_{variation}": jet1.muonSubtrFactor,
-        #         f"jet2_muonSubtrFactor_{variation}": jet2.muonSubtrFactor,
-        #         # f"jet3_muonSubtrFactor_{variation}": jet3.muonSubtrFactor,
-        #         # f"jet4_muonSubtrFactor_{variation}": jet4.muonSubtrFactor,
-        #     })
+        # --- Muon subtraction factor ---
+        if "muonSubtrFactor" in jets.fields:
+            extra_jet_loop_dict.update({
+                f"jet1_muonSubtrFactor_{variation}": jet1.muonSubtrFactor,
+                f"jet2_muonSubtrFactor_{variation}": jet2.muonSubtrFactor,
+            })
+            if do_additional_jet_vars:
+                extra_jet_loop_dict.update({
+                    f"jet3_muonSubtrFactor_{variation}": jet3.muonSubtrFactor,
+                    f"jet4_muonSubtrFactor_{variation}": jet4.muonSubtrFactor,                    
+                })
 
-        # # --- Raw factor (1 - JEC factor) ---
-        # if "rawFactor" in jets.fields:
-        #     extra_jet_loop_dict.update({
-        #         f"jet1_rawFactor_{variation}": jet1.rawFactor,
-        #         f"jet2_rawFactor_{variation}": jet2.rawFactor,
-        #         # f"jet3_rawFactor_{variation}": jet3.rawFactor,
-        #         # f"jet4_rawFactor_{variation}": jet4.rawFactor,
-        #     })
+        # --- Raw factor (1 - JEC factor) ---
+        if "rawFactor" in jets.fields:
+            extra_jet_loop_dict.update({
+                f"jet1_rawFactor_{variation}": jet1.rawFactor,
+                f"jet2_rawFactor_{variation}": jet2.rawFactor,
+            })
+            if do_additional_jet_vars:
+                extra_jet_loop_dict.update({
+                    f"jet3_rawFactor_{variation}": jet3.rawFactor,
+                    f"jet4_rawFactor_{variation}": jet4.rawFactor,                    
+                })
 
         # Merge into main jet_loop_out_dict
         jet_loop_out_dict.update(extra_jet_loop_dict)

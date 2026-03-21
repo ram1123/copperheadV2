@@ -101,9 +101,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     # dict to hold the max_num_elements info per sample
     dict_max_num_elements = {
         "data_": 900,  # None means no limit (use uproot's default behavior)
-        "dy": 250,
-        "ttjets_dl": 250,
-        "ttjets_sl": 250,
+        "dy": 500,
+        "ttjets_dl": 500,
+        "ttjets_sl": 500,
     }
     max_num_elements = 500 # default
     if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
@@ -361,9 +361,9 @@ if __name__ == "__main__":
                 # dict to hold file lenght info per sample
                 dict_file_length = {
                     "data_": 900,
-                    "dy": 250,
-                    "ttjets_dl": 250,
-                    "ttjets_sl": 250,
+                    "dy": 500,
+                    "ttjets_dl": 500,
+                    "ttjets_sl": 500,
                 }
                 if any(key in dataset for key in dict_file_length.keys()):
                     args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]

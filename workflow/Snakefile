@@ -63,6 +63,7 @@ YEAR_META = {
 }
 
 DATASET_YAMLS = {
+    ("run2", "12"): "configs/datasets/dataset_nanoAODv12_run2.yaml",
     ("run2", "15"): "configs/datasets/dataset_nanoAODv15_run2.yaml",
     ("run3", "15"): "configs/datasets/dataset_nanoAODv15_run3.yaml",
     ("run3", "12"): "configs/datasets/dataset_nanoAODv12_run3.yaml",

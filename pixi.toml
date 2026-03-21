@@ -13,7 +13,8 @@ list-tasks = "pixi task list"
 check = "python -c 'import coffea, awkward, uproot; print(\"Stack Ready\")'"
 lint = "ruff check ."
 format = "ruff format ."
-stage1 = "snakemake -s workflow/Snakefile -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60"
+stage1 = "snakemake -s workflow/Snakefile -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 "
+stage1unlock = "snakemake -s workflow/Snakefile -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --unlock"
 stage2 = "bash stage2_sh.sh all all"
 plot = "snakemake -s workflow/Snakefile plot_all  -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --allowed-rules plots  -R plots"
 
@@ -127,10 +128,9 @@ scripts = ["scripts/pixi_activate.sh"]
 # Minimal CI environment for GitHub Actions sync tests
 ci = ["analysis"]
 
-default = ["analysis", "dev", "root", "workflow", "style", "local"]
+default = ["analysis", "dev", "root", "workflow", "style", "local", "ml"]
 
 # Full heavy environment with ML + symbolic tools
 full = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"]
-ml = ["analysis", "ml", "dev", "style", "local"]
 symbolic = ["analysis", "symbolic", "dev", "style", "local"]
 combine = ["analysis", "combine", "ml", "local", "style"]
