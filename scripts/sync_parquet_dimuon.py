@@ -23,7 +23,11 @@ import pandas as pd
 import json
 
 from distributed import Client
-
+from multiprocessing import Pool
+from functools import partial
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import os
 
 # ----------------------------------------------------------------------
 # Columns
@@ -264,6 +268,60 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
 
     print(f"[INFO] Wrote {len(df2)} lines to {out_path}")
 
+
+def process_common_idxs(common_idx, c1, c2, tolerance, use_rel_error=False):
+    """
+    helper function that speeds looking up any difference in common idxs
+    within a set tolerance
+    """
+
+    rows: List[dict] = []
+
+    for idx in common_idx:
+        row1 = c1.loc[idx]
+        row2 = c2.loc[idx]
+
+        record = {
+            "run": idx[0],
+            "luminosityBlock": idx[1],
+            "event": idx[2],
+        }
+
+        mismatch = False
+
+        for var in SYNCVARLIST:
+            if var not in row1 or var not in row2:
+                continue
+
+            v1 = row1[var]
+            v2 = row2[var]
+            delta = v2 - v1
+
+            record[f"{var}_1"] = v1
+            record[f"{var}_2"] = v2
+            record[f"delta_{var}"] = delta
+
+            if use_rel_error:
+                if v2 == 0:
+                    err = abs(delta/v1)
+                else:
+                    err = abs(delta/v2)
+            else:
+                err = abs(delta)
+
+            if err > tolerance:
+                mismatch = True
+                print(f"[Info]: Surpass err tol on {var}")
+
+        if mismatch:
+            rows.append(record)
+    return rows
+
+def chunk_list(lst, chunk_size):
+  """Split a list into chunks of specified size."""
+  return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
+
+
 # ----------------------------------------------------------------------
 # Two-dir comparison
 # ----------------------------------------------------------------------
@@ -317,46 +375,79 @@ def compare_two_dirs(
     c1 = df1.loc[common_idx]
     c2 = df2.loc[common_idx]
 
-    rows: List[dict] = []
 
-    for idx in common_idx:
-        row1 = c1.loc[idx]
-        row2 = c2.loc[idx]
-
-        record = {
-            "run": idx[0],
-            "luminosityBlock": idx[1],
-            "event": idx[2],
-        }
-
-        mismatch = False
-
-        for var in SYNCVARLIST:
-            if var not in row1 or var not in row2:
-                continue
-
-            v1 = row1[var]
-            v2 = row2[var]
-            delta = v2 - v1
-
-            record[f"{var}_1"] = v1
-            record[f"{var}_2"] = v2
-            record[f"delta_{var}"] = delta
-
-            if abs(delta) > tolerance:
-                mismatch = True
-
-        if mismatch:
-            rows.append(record)
+    # ---------------------------
+    chunk_size = 10_000
+    common_idx_chunks = chunk_list(common_idx, chunk_size)
+    print(f"[INFO] len(common_idx_chunks): {len(common_idx_chunks)}")
+    # apply parallelization
+    inputs = [(c1, c2, common_idx_chunk, tolerance) for common_idx_chunk in common_idx_chunks]
+    partial_process_common_idxs = partial(process_common_idxs, c1=c1, c2=c2, tolerance=tolerance, use_rel_error=False)
+    with Pool() as pool:
+        rows = pool.map(partial_process_common_idxs, common_idx_chunks)
+        # flatten rows
+        import itertools
+        rows = list(itertools.chain.from_iterable(rows))
 
     if not rows:
         print("[INFO] No mismatches found (within tolerance).")
-        return
+        # return
+    else:
+        df_out = pd.DataFrame(rows)
+        df_out.to_csv(out_path, index=False)
+        print(f"[INFO] Wrote {len(df_out)} mismatching events to {out_path}")
+    # ---------------------------
 
-    df_out = pd.DataFrame(rows)
-    df_out.to_csv(out_path, index=False)
-    print(f"[INFO] Wrote {len(df_out)} mismatching events to {out_path}")
+    # plotComparison = True
+    # # ---------------------------
+    # # plot common variables
+    # # ---------------------------
+    # # test_size=1000
+    # # c1 = c1[:test_size]
+    # # c2 = c2[:test_size]
+    # if plotComparison:
+    #     variables = ["mu1_pt", "mu2_pt", "mu1_eta", "mu2_eta"]
+    #     weight_field = "wgt_nominal"
+        
+    #     bin_edges_dict = {
+    #         # "mu1_pt":  np.array([0, 10, 20, 30, 40, 50, 75, 100, 150, 200]),
+    #         # "mu2_pt":  np.array([0, 10, 20, 30, 40, 50, 75, 100, 150, 200]),
+    #         # "mu1_eta": np.array([-2.4, -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.4]),
+    #         # "mu2_eta": np.array([-2.4, -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.4]),s
+    #         "mu1_pt":  np.linspace(0, 120, 50),
+    #         "mu2_pt":  np.linspace(0, 120, 50),
+    #         "mu1_eta": np.linspace(-2.4, 2.4, 50),
+    #         "mu2_eta": np.linspace(-2.4, 2.4, 50),
+    #     }
+    #     save_dir = "./common_idx"
+    #     os.makedirs(save_dir, exist_ok=True)
 
+    #     for var in variables:
+    #         bin_edges = bin_edges_dict[var]
+        
+    #         counts_v12 = weighted_histogram_flat(c1, var, weight_field, bin_edges)
+    #         counts_v15 = weighted_histogram_flat(c2, var, weight_field, bin_edges)
+    #         plot_overlay(bin_edges, counts_v12, counts_v15, var, save_dir, normalized=False)
+
+    #     save_dir = "./as_is"
+    #     os.makedirs(save_dir, exist_ok=True)
+    #     for var in variables:
+    #         bin_edges = bin_edges_dict[var]
+        
+    #         counts_v12 = weighted_histogram_flat(df1, var, weight_field, bin_edges)
+    #         counts_v15 = weighted_histogram_flat(df2, var, weight_field, bin_edges)
+    #         print(f"{var} counts_v12: {counts_v12}")
+    #         print(f"{var} counts_v15: {counts_v15}")
+    #         plot_overlay(bin_edges, counts_v12, counts_v15, var, save_dir, normalized=False)
+        
+    #     save_dir = "./as_is_normToUnity"
+    #     os.makedirs(save_dir, exist_ok=True)
+    #     for var in variables:
+    #         bin_edges = bin_edges_dict[var]
+        
+    #         counts_v12 = weighted_histogram_flat(df1, var, weight_field, bin_edges)
+    #         counts_v15 = weighted_histogram_flat(df2, var, weight_field, bin_edges)
+    #         plot_overlay(bin_edges, counts_v12, counts_v15, var, save_dir, normalized=True)
 
 def parse_sync_txt(path: str) -> pd.DataFrame:
     """
@@ -441,6 +532,41 @@ def parse_sync_txt(path: str) -> pd.DataFrame:
     df = df.set_index(KEY_VARS).sort_index()
     return df
 
+def weighted_histogram_flat(dak_array, value_field, weight_field, bin_edges):
+    values = (dak_array[value_field])
+    # weights = ak.to_numpy(dak_array[weight_field])
+    weights = np.ones_like(values)
+
+    mask = np.isfinite(values) & np.isfinite(weights)
+    values = values[mask]
+    weights = weights[mask]
+
+    counts, _ = np.histogram(values, bins=bin_edges, weights=weights)
+    return counts
+
+def plot_overlay(bin_edges, counts_v12, counts_v15, var_name, save_dir, normalized=False):
+    y12 = counts_v12.astype(float)
+    y15 = counts_v15.astype(float)
+
+    if normalized:
+        if y12.sum() > 0:
+            y12 = y12 / y12.sum()
+        if y15.sum() > 0:
+            y15 = y15 / y15.sum()
+
+    plt.figure(figsize=(7, 5))
+    plt.stairs(y12, bin_edges, label="v12", linewidth=1)
+    plt.stairs(y15, bin_edges, label="v15", linewidth=1)
+
+    plt.xlabel(var_name)
+    plt.ylabel("Normalized entries" if normalized else "Weighted entries")
+    plt.title(f"{var_name}: v12 vs v15")
+    plt.legend()
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(f"{save_dir}/{var_name}.png")
+
+
 def compare_two_sync_txt(
     txt1: str,
     txt2: str,
@@ -512,6 +638,7 @@ def compare_two_sync_txt(
 
     pd.DataFrame(rows).to_csv(out_path, index=False)
     print(f"[INFO] Wrote {len(rows)} mismatching events to {out_path}")
+
     return
 
 
