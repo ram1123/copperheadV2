@@ -328,7 +328,6 @@ if __name__ == "__main__":
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_data*.parquet"
     print(f"load_path: {load_path}")
-    # eventsData = dak.from_parquet(load_path)
     processed_eventsData = load_compute_parquet(load_path)
     print(f"processed_eventsData length: {ak.num(processed_eventsData.dimuon_mass, axis=0)}")
     print("events loaded!")
@@ -1619,12 +1618,6 @@ if __name__ == "__main__":
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_ggh*.parquet"
     processed_eventsSignalMC = load_compute_parquet(load_path)
-    # load_path = glob.glob(load_path)
-    # eventsSignalMC = dak.from_parquet(load_path)
-    # fields2compute = ["wgt_nominal", "dimuon_mass", subCatIdx_name]
-    # processed_eventsSignalMC = ak.zip({
-    #     field :  eventsSignalMC[field] for field in fields2compute
-    # }).compute()
     print(f"ggH yield: {np.sum(processed_eventsSignalMC.wgt_nominal)}")
     print("signal events loaded")
 
@@ -2102,13 +2095,6 @@ if __name__ == "__main__":
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_vbf*.parquet" # Fig 6.15 was only with qqH process, though with all 2016, 2017 and 2018
     processed_eventsSignalMC_vbf = load_compute_parquet(load_path)
-
-    # load_path = glob.glob(load_path)
-    # eventsSignalMC_vbf = dak.from_parquet(load_path)
-    # fields2compute = ["wgt_nominal", "dimuon_mass", subCatIdx_name]
-    # processed_eventsSignalMC_vbf = ak.zip({
-    #     field :  eventsSignalMC_vbf[field] for field in fields2compute
-    # }).compute()
     print(f"qqH yield: {np.sum(processed_eventsSignalMC_vbf.wgt_nominal)}")
     print("signal events loaded")
 
