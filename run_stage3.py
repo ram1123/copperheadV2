@@ -30,7 +30,13 @@ def load_compute_parquet(
     helper function that takes an a load path to read parquet and returns a computed ak zip
     
     """
-    load_path = glob.glob(load_path) # loading from explicit list of parquet files is more stable
+    pattern = load_path
+    load_path = glob.glob(pattern)  # loading from explicit list of parquet files is more stable
+    if not load_path:
+        raise ValueError(
+            f"No parquet files found matching pattern: {pattern!r}. "
+            "Please check the input path or filename pattern."
+        )
     events = dak.from_parquet(load_path)
     for field in fields2compute:
         if field not in events.fields:
