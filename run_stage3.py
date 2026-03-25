@@ -20,8 +20,32 @@ from modules.GoF_utils import getGOF_KS
 from modules.RooWorkspaceUtils import print_workspace_vars, freeze_all_vars
 import uuid
 from modules.utils import logger
+import glob
 
-
+def load_compute_parquet(
+    load_path, 
+    fields2compute = ["wgt_nominal", "dimuon_mass", "subCategory_idx"]
+    ):
+    """
+    helper function that takes an a load path to read parquet and returns a computed ak zip
+    
+    """
+    pattern = load_path
+    load_path = glob.glob(pattern)  # loading from explicit list of parquet files is more stable
+    if not load_path:
+        raise ValueError(
+            f"No parquet files found matching pattern: {pattern!r}. "
+            "Please check the input path or filename pattern."
+        )
+    events = dak.from_parquet(load_path)
+    for field in fields2compute:
+        if field not in events.fields:
+            raise ValueError(f"Error: field {field} not available to compute!")
+    processed_zip = ak.zip({
+        field :  events[field] for field in fields2compute
+    }).compute()
+    return processed_zip
+    
 def normalizeFlatHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
     """
     Takes rootHistogram and returns a new copy with histogram values normalized to sum to one
@@ -227,9 +251,7 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list
         legend = rt.TLegend(0.65,0.55,0.9,0.7)
         # apparently I have to plot invisible roo dataset for fit function plotting to work. Maybe this helps with normalization?
 
-        # print(f"normalized_hist integral: {normalized_hist.sum(False)}")
         for ix in range(len(model_list)):
-            # sig_hist = sigHist_list[ix]
             sig_hist = sigHist_list[0]
             normalized_hist = normalizeRooHist(mass, sig_hist)
             normalized_hist.plotOn(frame, rt.RooFit.MarkerColor(0), rt.RooFit.LineColor(0), Invisible=True  )
@@ -312,8 +334,7 @@ if __name__ == "__main__":
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_data*.parquet"
     print(f"load_path: {load_path}")
-    # processed_eventsData = ak.from_parquet(load_path)
-    processed_eventsData = dak.from_parquet(load_path).compute()
+    processed_eventsData = load_compute_parquet(load_path)
     print(f"processed_eventsData length: {ak.num(processed_eventsData.dimuon_mass, axis=0)}")
     print("events loaded!")
 
@@ -1561,7 +1582,6 @@ if __name__ == "__main__":
     os.makedirs(gof_save_path, exist_ok=True)
     gof_df = pd.DataFrame(columns=[
         "pdf category", "region", "KS statistic", "nevents", "alpha", "pass threshold", "test pass",
-        # "chi2_ndf loSB + hiSB",
     ])
     for i in range(len(corePDF_subCats)):
         hist_data = hist_datas[i]
@@ -1589,62 +1609,8 @@ if __name__ == "__main__":
                     "alpha": alpha,
                     "pass threshold": pass_threshold,
                     "test pass": ks_stat<pass_threshold,
-                    # "chi2_ndf loSB + hiSB" : chi2_ndf,
                 }
     gof_df.to_csv(f"{gof_save_path}/KS_stats.csv")
-
-
-    # raise ValueError
-
-    # #----------------------------------------------------------------------------
-    # # Now do multi-Pdf
-    # # ---------------------------------------------------------------------------
-
-    # # Define category to distinguish physics and control samples events
-    # sample = rt.RooCategory("sample", "sample")
-    # sample.defineType("subCat0_BWZRedux")
-    # sample.defineType("subCat1_BWZRedux")
-    # sample.defineType("subCat2_BWZRedux")
-    # sample.defineType("subCat3_BWZRedux")
-    # sample.defineType("subCat4_BWZRedux")
-
-
-    # # Construct combined dataset in (x,sample)
-    # combData = rt.RooDataSet(
-    #     "combData",
-    #     "combined data",
-    #     {mass},
-    #     Index=sample,
-    #     Import={
-    #         "subCat0_BWZRedux": data_subCat0_BWZRedux,
-    #         "subCat1_BWZRedux": data_subCat1_BWZRedux,
-    #         "subCat2_BWZRedux": data_subCat2_BWZRedux,
-    #         "subCat3_BWZRedux": data_subCat3_BWZRedux,
-    #         "subCat4_BWZRedux": data_subCat4_BWZRedux,
-    #     },
-    # )
-    # # ---------------------------------------------------
-    # # Construct a simultaneous pdf in (x, sample)
-    # # -----------------------------------------------------------------------------------
-
-    # simPdf = rt.RooSimultaneous(
-    #                             "simPdf",
-    #                             "simultaneous pdf",
-    #                             {
-    #                                 "subCat0_BWZRedux": corePdf_subCat0,
-    #                                 "subCat1_BWZRedux": corePdf_subCat1,
-    #                                 "subCat2_BWZRedux": corePdf_subCat2,
-    #                                 "subCat3_BWZRedux": corePdf_subCat3,
-    #                                 "subCat4_BWZRedux": corePdf_subCat4,
-    #                             },
-    #                             sample,
-    # )
-    # # ---------------------------------------------------
-    # # Perform a simultaneous fit
-    # # ---------------------------------------------------
-    # fitResult = simPdf.fitTo(combData, rt.RooFit.Range(fit_range), EvalBackend=device, PrintLevel=0 ,Save=True,SumW2Error=True)
-    # fitResult.Print()
-    # raise ValueError
 
 
     # ---------------------------------------------------
@@ -1657,8 +1623,7 @@ if __name__ == "__main__":
         load_path = f"{args.load_path}/2016*/processed_events_sigMC_ggh*.parquet"
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_ggh*.parquet"
-    # processed_eventsSignalMC = ak.from_parquet(load_path)
-    processed_eventsSignalMC = dak.from_parquet(load_path).compute()
+    processed_eventsSignalMC = load_compute_parquet(load_path)
     print(f"ggH yield: {np.sum(processed_eventsSignalMC.wgt_nominal)}")
     print("signal events loaded")
 
@@ -2135,9 +2100,7 @@ if __name__ == "__main__":
         load_path = f"{args.load_path}/2016*/processed_events_sigMC_vbf*.parquet"
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_vbf*.parquet" # Fig 6.15 was only with qqH process, though with all 2016, 2017 and 2018
-
-    # processed_eventsSignalMC_vbf = ak.from_parquet(load_path)
-    processed_eventsSignalMC_vbf = dak.from_parquet(load_path).compute()
+    processed_eventsSignalMC_vbf = load_compute_parquet(load_path)
     print(f"qqH yield: {np.sum(processed_eventsSignalMC_vbf.wgt_nominal)}")
     print("signal events loaded")
 
