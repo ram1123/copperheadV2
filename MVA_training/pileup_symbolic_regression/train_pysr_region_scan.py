@@ -7,6 +7,8 @@ import pandas as pd
 
 from pysr import PySRRegressor
 
+from rich import print
+
 """
 Example commands:
 python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
@@ -44,6 +46,31 @@ python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
   --niterations 300 \
   --population-size 400 \
   --maxsize 22
+
+
+python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  -o validation/pysr_region_scan_Eff80_v2 \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 80 \
+  --hs-eff 0.80 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22
+
+python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part040.parquet \
+  -o validation/pysr_region_scan_Eff80_AddVars \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 80 \
+  --hs-eff 0.80 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22  
 
 python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
   -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
@@ -113,6 +140,44 @@ time python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
   --pt-min 25 \
   --pt-turnoff 80 \
   --hs-eff 0.50 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22
+
+
+
+time python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2024/f1_0/dyTo2Mu_M-50_aMCatNLO/0/part132.parquet \
+  -o validation/pysr_region_scan_Eff80_y2024_pT50 \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 50 \
+  --hs-eff 0.80 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22
+
+time python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2024/f1_0/dyTo2Mu_M-50_aMCatNLO/0/part132.parquet \
+  -o validation/pysr_region_scan_Eff80_y2024_pT50_v2 \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 25 \
+  --pt-turnoff 50 \
+  --hs-eff 0.80 \
+  --niterations 300 \
+  --population-size 400 \
+  --maxsize 22  
+
+time python MVA_training/pileup_symbolic_regression/train_pysr_region_scan.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
+  -o validation/pysr_region_scan_Eff80_pT3050 \
+  --variation nominal \
+  --n-jets 4 \
+  --pt-min 30 \
+  --pt-turnoff 50 \
+  --hs-eff 0.80 \
   --niterations 300 \
   --population-size 400 \
   --maxsize 22
@@ -219,69 +284,156 @@ def derive_thresholds(
 # Feature sets
 # ============================================================
 HE_FEATURE_SETS = {
-    "HE_comp": [
-        "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
-    ],
-    "HE_comp_occ": [
-        "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
-        "nElectrons", "nMuons",
-        "nSVs", "nConstituents",
-        "lognC",
-    ],
-    # "HE_comp_occ_pt": [
+    # "HE_comp": [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    # ],
+    # "HE_comp_occ": [
     #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
     #     "nElectrons", "nMuons",
     #     "nSVs", "nConstituents",
     #     "lognC",
-    #     "pt", "logpt",
     # ],
-    "HE_comp_v2": [
-        "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
-        "nConstituents",
+    # # "HE_comp_occ_pt": [
+    # #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    # #     "nElectrons", "nMuons",
+    # #     "nSVs", "nConstituents",
+    # #     "lognC",
+    # #     "pt", "logpt",
+    # # ],
+    # "HE_comp_v2": [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "nConstituents", "lognC",
+    # ],
+    "HE_comp_v3": [
+        "nConstituents", "lognC",
+        "muEF", "mass", "rawFactor",
+        "neHEF"
     ],    
+    # "HE_comp_occ_struct": [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "nElectrons", "nMuons", "nSVs", "nConstituents", "lognC",
+    #     "mass", "area", 
+    #     "rawFactor", "muonSubtrFactor",
+    # ],
+    # "HE_struct_only": [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "mass", "area", 
+    #     "rawFactor", "muonSubtrFactor",
+    # ],
+    # "HE_v15" : [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "chMultiplicity",
+    #     "nElectrons", "nMuons", "nSVs", "nConstituents", "lognC",
+    #     "mass", "area", "rawFactor", "muonSubtrFactor",
+    #     "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
+    # ],
+#    "HE_v15_core" : [
+#     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+#     "chMultiplicity",
+#     "muonSubtrFactor",
+#     "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
+#     ],
+#    "HE_v15_core_puID" : [
+#     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+#     "chMultiplicity",
+#     "muonSubtrFactor",
+#     "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
+#     "puId",
+#     ]    
 }
 
 HF_FEATURE_SETS = {
-    "HF_core": [
-        "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
-        "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
-        "hfsigmaEtaEta", "hfsigmaPhiPhi",
-        "hf_ratio", "hf_sigma_sum",
-    ],
-    "HF_core_occ": [
-        "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
-        "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
-        "hfsigmaEtaEta", "hfsigmaPhiPhi",
-        "hf_ratio", "hf_sigma_sum",
-        "nElectrons", "nMuons", "nSVs",
-    ],
-    # "HF_core_occ_nan": [
+    # "HF_core": [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    #     "hf_ratio", "hf_sigma_sum",
+    # ],
+    # "HF_core_occ": [
     #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
     #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
     #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
     #     "hf_ratio", "hf_sigma_sum",
     #     "nElectrons", "nMuons", "nSVs",
-    #     "isnan_hfsigmaEtaEta", "isnan_hfsigmaPhiPhi", "isnan_hf_sigma_sum",
     # ],
-    # "HF_v2": ["isnan_hfsigmaEtaEta", "isnan_hfsigmaPhiPhi", "isnan_hf_sigma_sum"],
-    # "HF_v3": [
-    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
-    #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
-    #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    # # "HF_core_occ_nan": [
+    # #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    # #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+    # #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    # #     "hf_ratio", "hf_sigma_sum",
+    # #     "nElectrons", "nMuons", "nSVs",
+    # #     "isnan_hfsigmaEtaEta", "isnan_hfsigmaPhiPhi", "isnan_hf_sigma_sum",
+    # # ],
+    # # "HF_v2": ["isnan_hfsigmaEtaEta", "isnan_hfsigmaPhiPhi", "isnan_hf_sigma_sum"],
+    # # "HF_v3": [
+    # #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    # #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+    # #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    # #     "hf_ratio", "hf_sigma_sum",
+    # #     "pt", "logpt",
+    # # ],
+    # "HF_v4": [
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize", 
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi", 
     #     "hf_ratio", "hf_sigma_sum",
-    #     "pt", "logpt",
     # ],
-    "HF_v4": [
-        "hfcentralEtaStripSize", "hfadjacentEtaStripsSize", 
-        "hfsigmaEtaEta", "hfsigmaPhiPhi", 
-        "hf_ratio", "hf_sigma_sum",
-    ],
     # "HF_v5": [
     #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize", 
     #     "hfsigmaEtaEta", "hfsigmaPhiPhi", 
     #     "hf_ratio", "hf_sigma_sum",
     #     "pt", "logpt",
     # ],
+    # "HF_core_struct": [
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    #     "hf_ratio", "hf_sigma_sum",
+    #     "mass", "area", 
+    #     "rawFactor", "muonSubtrFactor",
+    # ],
+    # "HF_hfonly_struct": [
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    #     "hf_ratio", "hf_sigma_sum",
+    #     "mass", "area", 
+    #     "rawFactor", "muonSubtrFactor",
+    # ],
+    "HF_hfonly_struct_kin": [
+        "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+        "hfsigmaEtaEta", "hfsigmaPhiPhi",
+        "hf_ratio", "hf_sigma_sum",
+        "mass", "area", 
+        "rawFactor", "muonSubtrFactor",
+        "pt", "logpt",
+        "eta"
+    ],    
+    # "HF_v15_core" : [
+    #     "hfEmEF", "hfHEF",
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripSize",
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    #     "hf_ratio", "hf_sigma_sum",
+    # ],
+    # "HF_v15_ext" : [
+    #     "hfEmEF", "hfHEF",
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "chMultiplicity",
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripSize",
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    #     "hf_ratio", "hf_sigma_sum",
+    #     "muonSubtrFactor",
+    #     "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
+    # ]
+    # "HF_v15_ext_puId" : [
+    #     "hfEmEF", "hfHEF",
+    #     "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
+    #     "chMultiplicity",
+    #     "hfcentralEtaStripSize", "hfadjacentEtaStripSize",
+    #     "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    #     "hf_ratio", "hf_sigma_sum",
+    #     "muonSubtrFactor",
+    #     "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
+    #     "puId",
+    # ]    
 }
 
 REGION_PLANS = {
@@ -312,6 +464,21 @@ DEFAULT_FEATURE_VARS = [
     ("hfadjacentEtaStripsSize", "hfadjacentEtaStripsSize"),
     ("hfsigmaEtaEta", "hfsigmaEtaEta"),
     ("hfsigmaPhiPhi", "hfsigmaPhiPhi"),
+
+    # Additional vars
+    ("mass", "mass"),
+    ("area", "area"),
+    ("rawFactor", "rawFactor"),
+    ("muonSubtrFactor", "muonSubtrFactor"),
+
+    # Additional vars: Only available in v15
+    ("chMultiplicity", "chMultiplicity"),
+    ("neMultiplicity", "neMultiplicity"),
+    ("hfEmEF", "hfEmEF"),
+    ("hfHEF", "hfHEF"),
+    ("muonSubtrDeltaEta", "muonSubtrDeltaEta"),
+    ("muonSubtrDeltaPhi", "muonSubtrDeltaPhi"),
+    ("puId", "puId"),
 ]
 
 
@@ -446,6 +613,8 @@ def balance_hs_pu(df, seed=1):
 def finalize_feature_columns(df, requested_features):
     df = df.copy()
 
+    print(f"requested_features: {requested_features}")
+
     # create requested isnan_* flags
     for f in requested_features:
         if f.startswith("isnan_"):
@@ -453,7 +622,13 @@ def finalize_feature_columns(df, requested_features):
             if base in df.columns:
                 df[f] = df[base].isna().astype(np.float32)
 
+    print(df.columns)
     feature_cols = [f for f in requested_features if f in df.columns]
+
+    print(f"feature_cols: {feature_cols}")
+
+    # if len(feature_cols) != len(requested_features):
+    #     raise ValueError(f"feature length ({len(feature_cols)}) is not same as request feature length ({len(requested_features)})")
 
     # numeric cast
     for f in feature_cols:
@@ -478,7 +653,7 @@ def train_pysr(
         niterations=niterations,
         population_size=population_size,
         maxsize=maxsize,
-        model_selection="best",
+        model_selection="accuracy",
         verbosity=1,
         random_state=seed,
         deterministic=True,
@@ -548,7 +723,14 @@ def train_region_feature_scan(df_all, outdir, args):
             best_row = model.get_best()
             print(f"Selected Complexity: {best_row['complexity']}, Loss: {best_row['loss']}")
 
-            score = model.predict(X).astype(np.float32)
+            score = model.predict(X)
+            print("score shape:", score.shape, "min/max:", float(np.min(score)), float(np.max(score)))
+
+            score = np.asarray(score, dtype=np.float32)
+            # If PySR returns a scalar for a constant model, broadcast it
+            if score.ndim == 0:
+                score = np.full(len(X), float(score), dtype=np.float32)
+            
 
             thr = derive_thresholds(
                 work,
@@ -584,6 +766,8 @@ def train_region_feature_scan(df_all, outdir, args):
                 "threshold_info": thr.get(region, None),
             }
             summary.append(rec)
+            # in summary also add the running conditions
+
 
             print(f"[{region}/{tag}] best eq: {eq}")
             print(f"[{region}/{tag}] threshold info: {json.dumps(thr, indent=2)}")
@@ -627,6 +811,8 @@ def main():
     n_jets = max(1, min(args.n_jets, 4))
     prefixes = [f"{args.jet_prefix_base}{i}_" for i in range(1, n_jets + 1)]
 
+    print(f"columns present length: {len(df_in.columns)}")
+    print(f"columns present: {df_in.columns}")
     missing = []
     for p in prefixes:
         for req in ["pt", "eta", "hasMatchedGenJet"]:
@@ -637,6 +823,8 @@ def main():
         raise KeyError("Missing required columns:\n  " + "\n  ".join(missing[:50]))
 
     df_all = concat_prefixes(df_in, prefixes, args.variation)
+
+    print(f"columns present: {df_all.columns}")
 
     summary = train_region_feature_scan(df_all, args.outdir, args)
 

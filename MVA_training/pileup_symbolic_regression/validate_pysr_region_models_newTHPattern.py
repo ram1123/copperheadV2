@@ -8,140 +8,47 @@ from rich import print
 import ROOT
 
 ROOT.gROOT.SetBatch(True)
+
 """
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan/plots \
-  --variation nominal \
-  --n-jets 4
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff98/plots \
-  --variation nominal \
-  --n-jets 4  
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff95/plots \
-  --variation nominal \
-  --n-jets 4  
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff90/plots \
-  --variation nominal \
-  --n-jets 4  
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff80/plots \
-  --variation nominal \
-  --n-jets 4  
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff80_pTMax50/plots \
-  --variation nominal \
-  --n-jets 4  
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff50/plots \
-  --variation nominal \
-  --n-jets 4   
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/best_HE_HF_yet \
-  --variation nominal \
-  --n-jets 4  
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part040.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff80_pTMax50/plots \
-  --variation nominal \
-  --n-jets 4 \
-  --pt-turnoff 50 
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part040.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff80_AddVars/plots \
-  --variation nominal \
-  --n-jets 4 \
-  --pt-turnoff 80  
-
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part040.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff80_AddVars_pt50/plots \
-  --variation nominal \
-  --n-jets 4 \
-  --pt-turnoff 50  
-
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part040.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff80_y2024_pT50_v2/plots \
-  --variation nominal \
-  --n-jets 4 \
-  --pt-turnoff 50  
-
- 
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part040.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff80_pT3050/plots \
-  --variation nominal \
-  --n-jets 4 \
-  --pt-min 30 \
-  --pt-turnoff 50   
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part040.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_out_first4jets/plots \
-  --variation nominal \
-  --n-jets 4 \
-  --pt-min 30 \
-  --pt-turnoff 50   
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
-  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part040.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff90_pT3050/plots \
-  --variation nominal \
-  --n-jets 4 \
-  --pt-min 30 \
-  --pt-turnoff 50     
-
-python MVA_training/pileup_symbolic_regression/validate_pysr_region_models.py \
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models_newTHPattern.py \
   -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part038.parquet \
-  --pysr-out validation/pysr_best \
-  -o validation/pysr_region_scan_Eff90_pT3050_custom/plots_v2 \
+  --pysr-out validation/pysr_best_threshold_scan \
+  -o validation/pysr_best_threshold_scan/plots_hs_eff_80 \
   --variation nominal \
   --n-jets 4 \
-  --pt-min 30 \
-  --pt-turnoff 50       
+  --hs-eff 0.80
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models_newTHPattern.py \
+  -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part038.parquet \
+  --pysr-out validation/pysr_best_threshold_scan_etadependent \
+  -o validation/pysr_best_threshold_scan_etadependent/plots_hs_eff_80 \
+  --variation nominal \
+  --n-jets 4 \
+  --hs-eff 0.80  
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models_newTHPattern.py   \
+    -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part038.parquet \
+    --pysr-out validation/pysr_best_threshold_scan_v2   \
+    -o validation/pysr_best_threshold_scan_v2/plots_hs_eff_85   \
+    --variation nominal   --n-jets 4   --hs-eff 0.85   
+
+python MVA_training/pileup_symbolic_regression/validate_pysr_region_models_newTHPattern.py   \
+    -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part038.parquet \
+    --pysr-out validation/pysr_best_threshold_scan_decorrelate_pT   \
+    -o validation/pysr_best_threshold_scan_decorrelate_pT/plots_hs_eff_85   \
+    --variation nominal   --n-jets 4   --hs-eff 0.85       
 """
+
 
 # ============================================================
 # Basic helpers
 # ============================================================
 def col(prefix: str, var: str, variation: str) -> str:
     return f"{prefix}{var}_{variation}"
+
+
+def hs_eff_key(hs_eff: float) -> str:
+    return f"{hs_eff:.3f}".rstrip("0").rstrip(".")
 
 
 def region_mask(aeta: np.ndarray, region: str) -> np.ndarray:
@@ -169,16 +76,6 @@ def infer_range(x):
     return float(lo), float(hi)
 
 
-def default_range(var):
-    if var == "pt":
-        return (25.0, 80.0)
-    if var == "eta":
-        return (-5.0, 5.0)
-    if var == "score":
-        return (None, None)
-    return (None, None)
-
-
 def save_canvas(c, outpath):
     c.SaveAs(outpath)
     print(f"[Saved] {outpath}")
@@ -187,14 +84,82 @@ def save_canvas(c, outpath):
 # ============================================================
 # Load trained region artifacts
 # ============================================================
-def load_region_artifacts(pysr_out, region):
-    expr = open(os.path.join(pysr_out, f"best_equation_{region}.txt")).read().strip()
-    feats = json.load(open(os.path.join(pysr_out, f"features_used_{region}.json")))
-    thrj = json.load(open(os.path.join(pysr_out, f"thresholds_{region}.json")))
-    info = thrj[region]
-    thr = float(info["threshold"])
-    direction = str(info["direction"])
-    return expr, feats, thr, direction
+def load_region_artifacts(pysr_out, region, hs_eff):
+    eq_path = os.path.join(pysr_out, f"best_equation_{region}_EffScan.txt")
+    feat_path = os.path.join(pysr_out, f"features_used_{region}_EffScan.json")
+    thr_path = os.path.join(pysr_out, f"thresholds_{region}_EffScan.json")
+    # thr_path = os.path.join(pysr_out, f"thresholds_{region}_etaBinned_EffScan.json")
+
+    if not os.path.exists(eq_path) or not os.path.exists(feat_path) or not os.path.exists(thr_path):
+        return None
+
+    expr = open(eq_path).read().strip()
+    feats = json.load(open(feat_path))
+    thrj = json.load(open(thr_path))
+
+    key = hs_eff_key(hs_eff)
+
+    # New rescanned global format
+    if key in thrj:
+        info = thrj[key]
+        if info is None:
+            raise ValueError(f"{region}: threshold entry for hs-eff={hs_eff} is None")
+
+        # global threshold entry
+        if isinstance(info, dict) and ("threshold" in info) and ("direction" in info):
+            thr = float(info["threshold"])
+            direction = str(info["direction"])
+            return expr, feats, thr, direction
+
+        # eta-binned entry accidentally stored here
+        if isinstance(info, dict) and ("bins" in info):
+            return expr, feats, None, None
+    
+    if key in thrj:
+        info = thrj[key]
+        if info is None:
+            raise ValueError(f"{region}: threshold entry for hs-eff={hs_eff} is None")
+        thr = float(info["threshold"])
+        direction = str(info["direction"])
+        return expr, feats, thr, direction
+
+    if region in thrj:
+        info = thrj[region]
+        if info is None:
+            raise ValueError(f"{region}: old-format threshold entry is None")
+        thr = float(info["threshold"])
+        direction = str(info["direction"])
+        return expr, feats, thr, direction
+
+    raise KeyError(
+        f"Could not find threshold for region={region}, hs-eff={hs_eff} in {thr_path}. "
+        f"Available keys: {list(thrj.keys())}"
+    )
+
+
+def load_he_eta_binned_thresholds(pysr_out, hs_eff):
+    key = hs_eff_key(hs_eff)
+
+    candidates = [
+        os.path.join(pysr_out, "thresholds_HE_etaBinned.json"),
+    ]
+
+    # also allow any suffixed eta-binned file
+    for fname in sorted(os.listdir(pysr_out)):
+        if fname.startswith("thresholds_HE_etaBinned") and fname.endswith(".json"):
+            full = os.path.join(pysr_out, fname)
+            if full not in candidates:
+                candidates.append(full)
+
+    for path in candidates:
+        if not os.path.exists(path):
+            continue
+
+        data = json.load(open(path))
+        if key in data and data[key] is not None:
+            return data[key]
+
+    return None
 
 
 def apply_wp(score, thr, direction):
@@ -206,6 +171,31 @@ def apply_wp(score, thr, direction):
     raise ValueError(direction)
 
 
+def apply_he_eta_binned_wp(score, aeta, thr_json):
+    score = np.asarray(score)
+    aeta = np.asarray(aeta)
+    pass_mask = np.ones_like(score, dtype=bool)
+
+    if thr_json is None or "bins" not in thr_json:
+        return pass_mask
+
+    for b in thr_json["bins"]:
+        lo = b["eta_min"]
+        hi = b["eta_max"]
+        thr = b["threshold"]
+        direction = b["direction"]
+        m = (aeta >= lo) & (aeta < hi) & np.isfinite(score)
+
+        if direction == "keep_high":
+            pass_mask[m] = score[m] >= thr
+        elif direction == "keep_low":
+            pass_mask[m] = score[m] <= thr
+        else:
+            raise ValueError(f"Unknown direction: {direction}")
+
+    return pass_mask
+
+
 def pu_rejection_fixed_wp(pu_scores, thr, direction):
     pu_scores = np.asarray(pu_scores)
     if direction == "keep_high":
@@ -215,29 +205,79 @@ def pu_rejection_fixed_wp(pu_scores, thr, direction):
     raise ValueError(direction)
 
 
+def pu_rejection_fixed_wp_eta_binned(pu_scores, pu_aeta, thr_json):
+    pu_scores = np.asarray(pu_scores)
+    pu_aeta = np.asarray(pu_aeta)
+    keep = np.ones_like(pu_scores, dtype=bool)
+
+    if thr_json is None or "bins" not in thr_json:
+        return np.nan
+
+    for b in thr_json["bins"]:
+        lo = b["eta_min"]
+        hi = b["eta_max"]
+        thr = b["threshold"]
+        direction = b["direction"]
+        m = (pu_aeta >= lo) & (pu_aeta < hi) & np.isfinite(pu_scores)
+
+        if direction == "keep_high":
+            keep[m] = pu_scores[m] >= thr
+        elif direction == "keep_low":
+            keep[m] = pu_scores[m] <= thr
+        else:
+            raise ValueError(f"Unknown direction: {direction}")
+
+    return float((~keep).mean())
+
+
+def hs_eff_fixed_wp_eta_binned(hs_scores, hs_aeta, thr_json):
+    hs_scores = np.asarray(hs_scores)
+    hs_aeta = np.asarray(hs_aeta)
+    keep = np.ones_like(hs_scores, dtype=bool)
+
+    if thr_json is None or "bins" not in thr_json:
+        return np.nan
+
+    for b in thr_json["bins"]:
+        lo = b["eta_min"]
+        hi = b["eta_max"]
+        thr = b["threshold"]
+        direction = b["direction"]
+        m = (hs_aeta >= lo) & (hs_aeta < hi) & np.isfinite(hs_scores)
+
+        if direction == "keep_high":
+            keep[m] = hs_scores[m] >= thr
+        elif direction == "keep_low":
+            keep[m] = hs_scores[m] <= thr
+        else:
+            raise ValueError(f"Unknown direction: {direction}")
+
+    return float(keep.mean())
+
+
 # ============================================================
 # Score evaluation
 # ============================================================
 def compute_score_from_sympy_x(expr_str: str, X: np.ndarray) -> np.ndarray:
     loc = {
         "np": np,
-
-        # common PySR outputs
         "abs": np.abs,
         "Abs": np.abs,
-
         "sqrt": np.sqrt,
         "sqrt_abs": lambda x: np.sqrt(np.abs(x)),
-
         "log": lambda x: np.log(np.clip(x, 1e-6, None)),
         "log1p": safe_log1p,
         "log1p_abs": lambda x: np.log1p(np.abs(x)),
-
         "tanh": np.tanh,
     }
     for i in range(X.shape[1]):
         loc[f"x{i}"] = X[:, i]
-    return eval(expr_str, {"__builtins__": {}}, loc).astype(np.float32)
+
+    out = eval(expr_str, {"__builtins__": {}}, loc)
+    out = np.asarray(out, dtype=np.float32)
+    if out.ndim == 0:
+        out = np.full(X.shape[0], float(out), dtype=np.float32)
+    return out
 
 
 # ============================================================
@@ -449,7 +489,9 @@ def plot_score_real_fake(score, y_hs, outpath, region):
 # ============================================================
 # Plot 2/3: fixed WP performance vs pt
 # ============================================================
-def plot_wp_performance_vs_pt(dfj, score, outdir, thr_he, dir_he, thr_hf, dir_hf, min_hs=30, min_pu=30):
+def plot_wp_performance_vs_pt(dfj, score, outdir,
+                              he_cfg=None, hf_cfg=None,
+                              min_hs=30, min_pu=30):
     bins = np.array([25, 30, 35, 40, 50, 60, 70, 80], dtype=np.float32)
     centers = 0.5 * (bins[:-1] + bins[1:])
 
@@ -457,12 +499,57 @@ def plot_wp_performance_vs_pt(dfj, score, outdir, thr_he, dir_he, thr_hf, dir_hf
     aeta = dfj["aeta"].to_numpy()
     pt = dfj["pt"].to_numpy()
 
-    for region in ["HE", "HF"]:
-        mreg = region_mask(aeta, region)
-        thr = thr_he if region == "HE" else thr_hf
-        direction = dir_he if region == "HE" else dir_hf
-
+    if he_cfg is not None:
         pu_rej, hs_eff = [], []
+        mreg = region_mask(aeta, "HE")
+
+        for lo, hi in zip(bins[:-1], bins[1:]):
+            m = mreg & (pt >= lo) & (pt < hi) & np.isfinite(score)
+
+            hs_scores = score[m & y_hs]
+            hs_aeta   = aeta[m & y_hs]
+            pu_scores = score[m & (~y_hs)]
+            pu_aeta   = aeta[m & (~y_hs)]
+
+            if len(hs_scores) < min_hs or len(pu_scores) < min_pu:
+                hs_eff.append(np.nan)
+                pu_rej.append(np.nan)
+                continue
+
+            if he_cfg.get("eta_binned", False):
+                hs_eff.append(hs_eff_fixed_wp_eta_binned(hs_scores, hs_aeta, he_cfg["thr_json"]))
+                pu_rej.append(pu_rejection_fixed_wp_eta_binned(pu_scores, pu_aeta, he_cfg["thr_json"]))
+            else:
+                hs_eff.append(float(apply_wp(hs_scores, he_cfg["thr"], he_cfg["dir"]).mean()))
+                pu_rej.append(pu_rejection_fixed_wp(pu_scores, he_cfg["thr"], he_cfg["dir"]))
+
+        c1 = ROOT.TCanvas("c_purej_HE", "", 850, 700)
+        g1 = make_tgraph_finite(
+            centers, pu_rej,
+            "g_purej_HE",
+            "PU rejection vs pT (HE) [fixed WP]",
+            "jet p_{T} [GeV]", "PU rejection"
+        )
+        if g1:
+            g1.Draw("APL")
+            g1.GetYaxis().SetRangeUser(0.0, 1.0)
+        save_canvas(c1, os.path.join(outdir, "pu_rejection_vs_pt_HE.pdf"))
+
+        c2 = ROOT.TCanvas("c_hseff_HE", "", 850, 700)
+        g2 = make_tgraph_finite(
+            centers, hs_eff,
+            "g_hseff_HE",
+            "HS efficiency vs pT (HE) [fixed WP]",
+            "jet p_{T} [GeV]", "HS efficiency"
+        )
+        if g2:
+            g2.Draw("APL")
+            g2.GetYaxis().SetRangeUser(0.0, 1.0)
+        save_canvas(c2, os.path.join(outdir, "hs_eff_vs_pt_HE.pdf"))
+
+    if hf_cfg is not None:
+        pu_rej, hs_eff = [], []
+        mreg = region_mask(aeta, "HF")
 
         for lo, hi in zip(bins[:-1], bins[1:]):
             m = mreg & (pt >= lo) & (pt < hi) & np.isfinite(score)
@@ -474,32 +561,32 @@ def plot_wp_performance_vs_pt(dfj, score, outdir, thr_he, dir_he, thr_hf, dir_hf
                 pu_rej.append(np.nan)
                 continue
 
-            hs_eff.append(float(apply_wp(hs_scores, thr, direction).mean()))
-            pu_rej.append(pu_rejection_fixed_wp(pu_scores, thr, direction))
+            hs_eff.append(float(apply_wp(hs_scores, hf_cfg["thr"], hf_cfg["dir"]).mean()))
+            pu_rej.append(pu_rejection_fixed_wp(pu_scores, hf_cfg["thr"], hf_cfg["dir"]))
 
-        c1 = ROOT.TCanvas(f"c_purej_{region}", "", 850, 700)
+        c1 = ROOT.TCanvas("c_purej_HF", "", 850, 700)
         g1 = make_tgraph_finite(
             centers, pu_rej,
-            f"g_purej_{region}",
-            f"PU rejection vs pT ({region}) [fixed WP]",
+            "g_purej_HF",
+            "PU rejection vs pT (HF) [fixed WP]",
             "jet p_{T} [GeV]", "PU rejection"
         )
         if g1:
             g1.Draw("APL")
             g1.GetYaxis().SetRangeUser(0.0, 1.0)
-        save_canvas(c1, os.path.join(outdir, f"pu_rejection_vs_pt_{region}.pdf"))
+        save_canvas(c1, os.path.join(outdir, "pu_rejection_vs_pt_HF.pdf"))
 
-        c2 = ROOT.TCanvas(f"c_hseff_{region}", "", 850, 700)
+        c2 = ROOT.TCanvas("c_hseff_HF", "", 850, 700)
         g2 = make_tgraph_finite(
             centers, hs_eff,
-            f"g_hseff_{region}",
-            f"HS efficiency vs pT ({region}) [fixed WP]",
+            "g_hseff_HF",
+            "HS efficiency vs pT (HF) [fixed WP]",
             "jet p_{T} [GeV]", "HS efficiency"
         )
         if g2:
             g2.Draw("APL")
             g2.GetYaxis().SetRangeUser(0.0, 1.0)
-        save_canvas(c2, os.path.join(outdir, f"hs_eff_vs_pt_{region}.pdf"))
+        save_canvas(c2, os.path.join(outdir, "hs_eff_vs_pt_HF.pdf"))
 
 
 # ============================================================
@@ -540,9 +627,27 @@ def plot_stacked_total_real_fake(values, y_hs, outpath, title, xlab, nbins=50, x
     stack.Add(h_fake)
     stack.Add(h_real)
 
-    c = ROOT.TCanvas("c_stack", "", 850, 700)
+    # ============================================================
+    # Canvas with 2 pads
+    # ============================================================
+    c = ROOT.TCanvas("c_stack", "", 850, 800)
+
+    pad1 = ROOT.TPad("pad1", "", 0, 0.30, 1, 1)
+    pad2 = ROOT.TPad("pad2", "", 0, 0.00, 1, 0.30)
+
+    pad1.SetBottomMargin(0.02)
+    pad2.SetTopMargin(0.00)
+    pad2.SetBottomMargin(0.30)
+
+    pad1.Draw()
+    pad2.Draw()
+
+    # ============================================================
+    # Upper pad (stack)
+    # ============================================================
+    pad1.cd()
     if logy:
-        c.SetLogy()
+        pad1.SetLogy()
 
     stack.Draw("hist")
     h_tot.Draw("E1 same")
@@ -560,6 +665,51 @@ def plot_stacked_total_real_fake(values, y_hs, outpath, title, xlab, nbins=50, x
     leg.AddEntry(h_fake, "Fake (PU)", "f")
     leg.Draw()
 
+    # ============================================================
+    # Ratio pad (Fake / Real)
+    # ============================================================
+    pad2.cd()
+
+    h_ratio = h_real.Clone("h_ratio")
+    h_ratio.Reset()
+
+    for i in range(1, h_real.GetNbinsX() + 1):
+        r = h_real.GetBinContent(i)
+        f = h_fake.GetBinContent(i)
+
+        if r > 0:
+            val = f/(r+f)
+            h_ratio.SetBinContent(i, val)
+            h_ratio.SetBinError(i, 0.0)
+        else:
+            h_ratio.SetBinContent(i, 0.0)
+
+    h_ratio.SetTitle("")
+    h_ratio.GetYaxis().SetTitle("Fake/Total")
+    h_ratio.GetXaxis().SetTitle(xlab)
+
+    h_ratio.SetMarkerStyle(20)
+    h_ratio.SetMarkerSize(0.8)
+
+    h_ratio.GetYaxis().SetNdivisions(505)
+    h_ratio.GetYaxis().SetTitleSize(0.09)
+    h_ratio.GetYaxis().SetTitleOffset(0.5)
+    h_ratio.GetYaxis().SetLabelSize(0.08)
+
+    h_ratio.GetXaxis().SetTitleSize(0.10)
+    h_ratio.GetXaxis().SetLabelSize(0.08)
+
+    h_ratio.SetMinimum(0.0)
+    h_ratio.SetMaximum(1.0)  # adjust if needed
+
+    h_ratio.Draw("E1")
+
+    # reference line at 1
+    line = ROOT.TLine(xmin, 1.0, xmax, 1.0)
+    line.SetLineStyle(2)
+    line.Draw()
+
+    # ============================================================
     save_canvas(c, outpath)
 
 
@@ -591,14 +741,12 @@ def plot_stacked_before_after(values, y_hs, pass_mask, outbase, title, xlab, nbi
 def plot_jet_eta_before_after_mask(dfj, pass_mask, outdir):
     eta = dfj["eta"].to_numpy()
 
-    h_before = make_hist("h_eta_before", "Jet #eta before/after PU cut;jet #eta;Normalized entries", 60, -5.0, 5.0)
-    h_after  = make_hist("h_eta_after",  "Jet #eta before/after PU cut;jet #eta;Normalized entries", 60, -5.0, 5.0)
+    h_before = make_hist("h_eta_before", "Jet #eta before/after PU cut;jet #eta;Entries", 60, -5.0, 5.0)
+    h_after  = make_hist("h_eta_after",  "Jet #eta before/after PU cut;jet #eta;Entries", 60, -5.0, 5.0)
 
     fill_hist(h_before, eta[np.isfinite(eta)])
     fill_hist(h_after, eta[pass_mask & np.isfinite(eta)])
 
-    normalize_hist(h_before)
-    normalize_hist(h_after)
 
     h_before.SetLineColor(ROOT.kBlack)
     h_before.SetLineWidth(2)
@@ -606,9 +754,29 @@ def plot_jet_eta_before_after_mask(dfj, pass_mask, outdir):
     h_after.SetLineWidth(2)
     h_after.SetLineStyle(2)
 
-    c = ROOT.TCanvas("c_eta_ba", "", 850, 700)
+    # ============================================================
+    # Canvas with ratio pad
+    # ============================================================
+    c = ROOT.TCanvas("c_eta_ba", "", 850, 800)
+
+    pad1 = ROOT.TPad("pad1", "", 0, 0.30, 1, 1)
+    pad2 = ROOT.TPad("pad2", "", 0, 0.00, 1, 0.30)
+
+    pad1.SetBottomMargin(0.02)
+    pad2.SetTopMargin(0.05)
+    pad2.SetBottomMargin(0.30)
+
+    pad1.Draw()
+    pad2.Draw()
+
+    # ============================================================
+    # Top pad
+    # ============================================================
+    pad1.cd()
+
     ymax = max(h_before.GetMaximum(), h_after.GetMaximum()) * 1.25
     h_before.SetMaximum(ymax)
+
     h_before.Draw("hist")
     h_after.Draw("hist same")
 
@@ -619,6 +787,51 @@ def plot_jet_eta_before_after_mask(dfj, pass_mask, outdir):
     leg.AddEntry(h_after, "After cut", "l")
     leg.Draw()
 
+    # ============================================================
+    # Ratio pad (After / Before)
+    # ============================================================
+    pad2.cd()
+
+    h_ratio = h_after.Clone("h_ratio")
+    h_ratio.Reset()
+
+    for i in range(1, h_before.GetNbinsX() + 1):
+        b = h_before.GetBinContent(i)
+        a = h_after.GetBinContent(i)
+
+        if b > 0:
+            # h_ratio.SetBinContent(i, a / b)
+            h_ratio.SetBinContent(i, (b-a)/b)
+            h_ratio.SetBinError(i, 0.0)  # keep simple
+        else:
+            h_ratio.SetBinContent(i, 0.0)
+
+    h_ratio.SetTitle("")
+    h_ratio.GetYaxis().SetTitle("(Before-After)/Before")
+    h_ratio.GetXaxis().SetTitle("jet #eta")
+
+    h_ratio.SetMarkerStyle(20)
+    h_ratio.SetMarkerSize(0.8)
+
+    h_ratio.GetYaxis().SetNdivisions(505)
+    h_ratio.GetYaxis().SetTitleSize(0.09)
+    h_ratio.GetYaxis().SetTitleOffset(0.5)
+    h_ratio.GetYaxis().SetLabelSize(0.08)
+
+    h_ratio.GetXaxis().SetTitleSize(0.10)
+    h_ratio.GetXaxis().SetLabelSize(0.08)
+
+    h_ratio.SetMinimum(0.0)
+    h_ratio.SetMaximum(1.0)  # important for efficiency plots
+
+    h_ratio.Draw("E1")
+
+    # reference line at 1
+    line = ROOT.TLine(-5.0, 1.0, 5.0, 1.0)
+    line.SetLineStyle(2)
+    line.Draw()
+
+    # ============================================================
     save_canvas(c, os.path.join(outdir, "jet_eta_before_after.pdf"))
 
 
@@ -633,7 +846,7 @@ def autodetect_col(df_in, variation, keys):
 
 def plot_mjj_deta_before_after(df_in, variation, outdir,
                                vbf_base, score_func_for_twojets,
-                               thr_he, dir_he, thr_hf, dir_hf,
+                               he_cfg, hf_cfg,
                                pt_min=25, pt_turnoff=80,
                                mjj_col=None, deta_col=None):
     p1 = f"{vbf_base}1_"
@@ -673,8 +886,16 @@ def plot_mjj_deta_before_after(df_in, variation, outdir,
         he = region_mask(aeta, "HE") & lowpt & np.isfinite(s)
         hf = region_mask(aeta, "HF") & lowpt & np.isfinite(s)
         pm = np.ones_like(s, dtype=bool)
-        pm[he] = apply_wp(s[he], thr_he, dir_he)
-        pm[hf] = apply_wp(s[hf], thr_hf, dir_hf)
+
+        if he_cfg is not None:
+            if he_cfg.get("eta_binned", False):
+                pm[he] = apply_he_eta_binned_wp(s[he], aeta[he], he_cfg["thr_json"])
+            else:
+                pm[he] = apply_wp(s[he], he_cfg["thr"], he_cfg["dir"])
+
+        if hf_cfg is not None:
+            pm[hf] = apply_wp(s[hf], hf_cfg["thr"], hf_cfg["dir"])
+
         return pm
 
     pass_evt = pass_one(aeta1, lowpt1, s1) & pass_one(aeta2, lowpt2, s2)
@@ -746,15 +967,40 @@ def main():
     ap.add_argument("--vbf-jet-base", default="vbf_maxmjj_jet")
     ap.add_argument("--mjj-col", default=None)
     ap.add_argument("--deta-col", default=None)
+    ap.add_argument("--hs-eff", type=float, default=0.90,
+                    help="Working point to load from rescanned thresholds json, e.g. 0.98, 0.95, 0.90")
     args = ap.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
 
-    expr_he, feats_he, thr_he, dir_he = load_region_artifacts(args.pysr_out, "HE")
-    expr_hf, feats_hf, thr_hf, dir_hf = load_region_artifacts(args.pysr_out, "HF")
+    he_model = load_region_artifacts(args.pysr_out, "HE", args.hs_eff)
+    hf_model = load_region_artifacts(args.pysr_out, "HF", args.hs_eff)
+    try:
+        he_eta_binned = load_he_eta_binned_thresholds(args.pysr_out, args.hs_eff)
+    except Exception:
+        he_eta_binned = None
 
-    print("[HE] direction/thr:", dir_he, thr_he, "nfeat:", len(feats_he), "expr:", expr_he)
-    print("[HF] direction/thr:", dir_hf, thr_hf, "nfeat:", len(feats_hf), "expr:", expr_hf)
+    if he_model is None and hf_model is None:
+        raise RuntimeError(f"No HE/HF model artifacts found in {args.pysr_out}")
+
+    if he_model is not None:
+        expr_he, feats_he, thr_he, dir_he = he_model
+        print("[HE] hs-eff:", args.hs_eff, "direction/thr:", dir_he, thr_he,
+              "nfeat:", len(feats_he), "expr:", expr_he)
+    else:
+        expr_he, feats_he, thr_he, dir_he = None, None, None, None
+        print("[HE] not found, skipping.")
+
+    if he_eta_binned is not None:
+        print("[HE eta-binned] using eta-dependent thresholds")
+
+    if hf_model is not None:
+        expr_hf, feats_hf, thr_hf, dir_hf = hf_model
+        print("[HF] hs-eff:", args.hs_eff, "direction/thr:", dir_hf, thr_hf,
+              "nfeat:", len(feats_hf), "expr:", expr_hf)
+    else:
+        expr_hf, feats_hf, thr_hf, dir_hf = None, None, None, None
+        print("[HF] not found, skipping.")
 
     df_in = pd.read_parquet(args.input).reset_index(drop=True)
 
@@ -771,13 +1017,23 @@ def main():
     score = np.full(len(dfj), np.nan, dtype=np.float32)
     pass_mask = np.ones(len(dfj), dtype=bool)
 
-    if m_he.any():
+    if he_model is not None and m_he.any():
         Xhe = build_feature_matrix(df_in, dfj.loc[m_he].copy(), feats_he, args.variation)
         score_he = compute_score_from_sympy_x(expr_he, Xhe)
         score[m_he] = score_he
-        pass_mask[m_he] = apply_wp(score_he, thr_he, dir_he)
 
-    if m_hf.any():
+        if he_eta_binned is not None:
+            print("[HE] applying eta-binned thresholds")
+            pass_mask[m_he] = apply_he_eta_binned_wp(score_he, aeta[m_he], he_eta_binned)
+        elif (thr_he is not None) and (dir_he is not None):
+            print("[HE] applying global threshold")
+            pass_mask[m_he] = apply_wp(score_he, thr_he, dir_he)
+        else:
+            raise RuntimeError(
+                "HE model exists, but neither eta-binned nor global HE thresholds were found."
+            )
+
+    if hf_model is not None and m_hf.any():
         Xhf = build_feature_matrix(df_in, dfj.loc[m_hf].copy(), feats_hf, args.variation)
         score_hf = compute_score_from_sympy_x(expr_hf, Xhf)
         score[m_hf] = score_hf
@@ -785,20 +1041,33 @@ def main():
 
     print("score finite fraction:", np.isfinite(score).mean(), "N=", len(score))
 
-    # score distributions
-    if m_he.any():
-        plot_score_real_fake(score[m_he], y_hs[m_he], os.path.join(args.outdir, "score_real_fake_HE.pdf"), "HE")
-    if m_hf.any():
-        plot_score_real_fake(score[m_hf], y_hs[m_hf], os.path.join(args.outdir, "score_real_fake_HF.pdf"), "HF")
+    if he_model is not None and m_he.any():
+        plot_score_real_fake(
+            score[m_he], y_hs[m_he],
+            os.path.join(args.outdir, "score_real_fake_HE.pdf"), "HE"
+        )
 
-    # fixed WP performance vs pt
+    if hf_model is not None and m_hf.any():
+        plot_score_real_fake(
+            score[m_hf], y_hs[m_hf],
+            os.path.join(args.outdir, "score_real_fake_HF.pdf"), "HF"
+        )
+
+    he_cfg = None
+    if he_model is not None:
+        if he_eta_binned is not None:
+            he_cfg = {"eta_binned": True, "thr_json": he_eta_binned}
+        else:
+            he_cfg = {"eta_binned": False, "thr": thr_he, "dir": dir_he}
+
+    hf_cfg = None if hf_model is None else {"thr": thr_hf, "dir": dir_hf}
+
     plot_wp_performance_vs_pt(
         dfj, score, args.outdir,
-        thr_he=thr_he, dir_he=dir_he,
-        thr_hf=thr_hf, dir_hf=dir_hf,
+        he_cfg=he_cfg,
+        hf_cfg=hf_cfg,
     )
 
-    # stacked plots by region
     for region, mask in [("HE", m_he), ("HF", m_hf)]:
         if not mask.any():
             continue
@@ -819,7 +1088,7 @@ def main():
             vals_eta, ys, pm,
             os.path.join(args.outdir, f"stack_{region}_eta"),
             f"{region} jet #eta", "jet #eta",
-            nbins=40, xmin=-5.0, xmax=5.0, logy=False
+            nbins=80, xmin=-5.0, xmax=5.0, logy=False
         )
         xmin_s, xmax_s = infer_range(vals_score[np.isfinite(vals_score)])
         plot_stacked_before_after(
@@ -829,7 +1098,6 @@ def main():
             nbins=50, xmin=xmin_s, xmax=xmax_s, logy=False
         )
 
-    # physics safety
     plot_jet_eta_before_after_mask(dfj, pass_mask, args.outdir)
 
     def score_for_two_vbf_jets(df_in, variation):
@@ -853,12 +1121,14 @@ def main():
             mm_hf = region_mask(aeta_tmp, "HF")
 
             s = np.full(n, np.nan, dtype=np.float32)
-            if mm_he.any():
+            if he_model is not None and mm_he.any():
                 Xhe = build_feature_matrix(df_in, tmp.loc[mm_he].copy(), feats_he, variation)
                 s[mm_he] = compute_score_from_sympy_x(expr_he, Xhe)
-            if mm_hf.any():
+
+            if hf_model is not None and mm_hf.any():
                 Xhf = build_feature_matrix(df_in, tmp.loc[mm_hf].copy(), feats_hf, variation)
                 s[mm_hf] = compute_score_from_sympy_x(expr_hf, Xhf)
+
             return s
 
         return score_one(p1, 0), score_one(p2, 1)
@@ -867,8 +1137,8 @@ def main():
         df_in, args.variation, args.outdir,
         vbf_base=args.vbf_jet_base,
         score_func_for_twojets=score_for_two_vbf_jets,
-        thr_he=thr_he, dir_he=dir_he,
-        thr_hf=thr_hf, dir_hf=dir_hf,
+        he_cfg=he_cfg,
+        hf_cfg=hf_cfg,
         pt_min=args.pt_min, pt_turnoff=args.pt_turnoff,
         mjj_col=args.mjj_col, deta_col=args.deta_col
     )
