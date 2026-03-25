@@ -20,7 +20,7 @@ from modules.GoF_utils import getGOF_KS
 from modules.RooWorkspaceUtils import print_workspace_vars, freeze_all_vars
 import uuid
 from modules.utils import logger
-
+import glob
 
 def normalizeFlatHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
     """
@@ -1657,8 +1657,12 @@ if __name__ == "__main__":
         load_path = f"{args.load_path}/2016*/processed_events_sigMC_ggh*.parquet"
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_ggh*.parquet"
-    # processed_eventsSignalMC = ak.from_parquet(load_path)
-    processed_eventsSignalMC = dak.from_parquet(load_path).compute()
+    load_path = glob.glob(load_path)
+    eventsSignalMC = dak.from_parquet(load_path)
+    fields2compute = ["wgt_nominal", "dimuon_mass", subCatIdx_name]
+    processed_eventsSignalMC = ak.zip({
+        field :  eventsSignalMC[field] for field in fields2compute
+    }).compute()
     print(f"ggH yield: {np.sum(processed_eventsSignalMC.wgt_nominal)}")
     print("signal events loaded")
 
@@ -2136,8 +2140,12 @@ if __name__ == "__main__":
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_vbf*.parquet" # Fig 6.15 was only with qqH process, though with all 2016, 2017 and 2018
 
-    # processed_eventsSignalMC_vbf = ak.from_parquet(load_path)
-    processed_eventsSignalMC_vbf = dak.from_parquet(load_path).compute()
+    load_path = glob.glob(load_path)
+    eventsSignalMC_vbf = dak.from_parquet(load_path)
+    fields2compute = ["wgt_nominal", "dimuon_mass",subCatIdx_name]
+    processed_eventsSignalMC_vbf = ak.zip({
+        field :  eventsSignalMC_vbf[field] for field in fields2compute
+    }).compute()
     print(f"qqH yield: {np.sum(processed_eventsSignalMC_vbf.wgt_nominal)}")
     print("signal events loaded")
 
