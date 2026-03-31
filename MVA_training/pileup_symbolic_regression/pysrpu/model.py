@@ -1,5 +1,7 @@
 import numpy as np
-from pysr import PySRRegressor
+from pysr import PySRRegressor, silence_julia_warning
+
+silence_julia_warning()
 
 def train_pysr(X, y, niterations, population_size, maxsize, seed=1):
     # elementwise_loss="loss(yhat, y) = log(1 + exp(- (2y - 1) * yhat))",

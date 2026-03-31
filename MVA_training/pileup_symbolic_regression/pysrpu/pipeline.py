@@ -18,10 +18,10 @@ def load_features_from_yaml(path):
     with open(path, "r") as f:
         cfg = yaml.safe_load(f)
 
-    if "features" not in cfg:
-        raise ValueError("YAML must contain 'features' key")
+    if "regions" not in cfg:
+        raise ValueError("YAML must contain 'regions' key")
 
-    return cfg["features"]
+    return cfg["regions"]
 
 
 def run_training(args):
@@ -101,7 +101,8 @@ def run_training(args):
         # -------------------------------
         # 5) Select features
         # -------------------------------
-        feature_cols = load_features_from_yaml(args.features_yaml)
+        feature_cols = load_features_from_yaml(args.features_yaml)[region]
+        print(f"feature_cols: {feature_cols}")
         feature_cols = drop_constant_columns(df_bal, feature_cols)
 
         if len(feature_cols) == 0:
@@ -426,7 +427,7 @@ def run_rescan(args):
 
     df = concat_prefixes(df, [f"jet{i}_" for i in range(1, 5)], "nominal")
     df["y_hs"] = df["y_hs"].astype(bool)
-    
+
     df = derive_features(df)
 
     # ------------------------------------------------

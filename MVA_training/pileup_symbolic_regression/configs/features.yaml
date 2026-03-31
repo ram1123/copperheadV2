@@ -1,0 +1,72 @@
+# configs/features.yaml
+
+regions:
+
+  central:
+    - chEmEF
+    - chHEF
+    - neEmEF
+    - neHEF
+    - muEF
+    - nConstituents
+    - lognC
+    - pt
+    - eta
+
+  HE:
+    - chEmEF
+    - chHEF
+    - neEmEF
+    - neHEF
+    - muEF
+    - nConstituents
+    - lognC
+    - pt
+    - eta
+
+  HF:
+    - pt
+    - eta
+    - hfcentralEtaStripSize
+    - hfadjacentEtaStripsSize
+    - hfsigmaEtaEta
+    - hfsigmaPhiPhi
+    - hf_ratio
+    - hf_sigma_sum
+    - mass
+
+  HFpos:
+    - pt
+    - hfcentralEtaStripSize
+    - hfadjacentEtaStripsSize
+    - hf_ratio
+    - hf_sigma_sum
+
+  HFneg:
+    - pt
+    - hfcentralEtaStripSize
+    - hfadjacentEtaStripsSize
+    - hf_ratio
+    - hf_sigma_sum
+
+  HEpos:
+    - chEmEF
+    - chHEF
+    - neEmEF
+    - neHEF
+    - muEF
+    - nConstituents
+    - lognC
+    - pt
+    - eta
+
+  HEneg:
+    - chEmEF
+    - chHEF
+    - neEmEF
+    - neHEF
+    - muEF
+    - nConstituents
+    - lognC
+    - pt
+    - eta

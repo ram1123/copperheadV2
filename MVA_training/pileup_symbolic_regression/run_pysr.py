@@ -8,12 +8,11 @@ from pysrpu.pipeline import (
 """
 python MVA_training/pileup_symbolic_regression/run_pysr.py \
     -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/2022postEE/f1_0/dyTo2L_M-50_incl/0/part135.parquet" \
-    -o test_results_hf \
-    --features-yaml MVA_training/pileup_symbolic_regression/configs/features_hf.yaml \
-    --use-glob \
+    -o test_results_temp \
+    --features-yaml MVA_training/pileup_symbolic_regression/configs/features.yaml \
     --niterations 3 \
     --population-size 400 \
-    --maxsize 2
+    --maxsize 7 \
     --mode train
 """
 
