@@ -1,0 +1,26 @@
+{
+  "region": "HFneg",
+  "equation": "0.07250358*x5 - tanh(tanh(5.170657*x10 - log(Abs(x11 - 0.59002423) + 1) + Abs(1.8644509*x7 - 1.8644509*log(Abs(x8) + 1))))",
+  "features": [
+  "chEmEF",
+  "chHEF",
+  "neEmEF",
+  "neHEF",
+  "muEF",
+  "hfcentralEtaStripSize",
+  "hfadjacentEtaStripsSize",
+  "hfsigmaEtaEta",
+  "hfsigmaPhiPhi",
+  "hf_ratio",
+  "hf_sigma_sum",
+  "mass",
+  "area"
+  ],
+  "threshold": 0.4149978756904602,
+  "direction": "keep_high",
+  "pu_rejection": 0.3722163308589608,
+  "n_region": 10386,
+  "hs_eff_target": 0.8,
+  "pt_min": 25.0,
+  "pt_turnoff": 50.0    
+}

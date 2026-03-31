@@ -1,0 +1,86 @@
+[
+  {
+    "region": "HEpos",
+    "equation": "(x5 * 0.088470094)",
+    "features": [
+      "chEmEF",
+      "chHEF",
+      "neEmEF",
+      "neHEF",
+      "muEF",
+      "nConstituents",
+      "pt",
+      "eta",
+      "hfcentralEtaStripSize",
+      "hfadjacentEtaStripsSize",
+      "hfsigmaEtaEta",
+      "hfsigmaPhiPhi"
+    ],
+    "threshold": 0.353880375623703,
+    "direction": "keep_high",
+    "pu_rejection": 0.48963317384370014,
+    "n_region": 1697
+  },
+  {
+    "region": "HEneg",
+    "equation": "(x5 * 0.08006758)",
+    "features": [
+      "chEmEF",
+      "chHEF",
+      "neEmEF",
+      "neHEF",
+      "muEF",
+      "nConstituents",
+      "pt",
+      "eta",
+      "hfcentralEtaStripSize",
+      "hfadjacentEtaStripsSize",
+      "hfsigmaEtaEta",
+      "hfsigmaPhiPhi"
+    ],
+    "threshold": 0.3202703297138214,
+    "direction": "keep_high",
+    "pu_rejection": 0.37568058076225047,
+    "n_region": 1607
+  },
+  {
+    "region": "HFpos",
+    "equation": "(x4 * 0.011820324)",
+    "features": [
+      "chHEF",
+      "neEmEF",
+      "neHEF",
+      "nConstituents",
+      "pt",
+      "eta",
+      "hfcentralEtaStripSize",
+      "hfadjacentEtaStripsSize",
+      "hfsigmaEtaEta",
+      "hfsigmaPhiPhi"
+    ],
+    "threshold": 0.35448935627937317,
+    "direction": "keep_high",
+    "pu_rejection": 0.4596117720726362,
+    "n_region": 2968
+  },
+  {
+    "region": "HFneg",
+    "equation": "tanh(x4 * 0.014664315)",
+    "features": [
+      "chHEF",
+      "neEmEF",
+      "neHEF",
+      "nConstituents",
+      "pt",
+      "eta",
+      "hfcentralEtaStripSize",
+      "hfadjacentEtaStripsSize",
+      "hfsigmaEtaEta",
+      "hfsigmaPhiPhi"
+    ],
+    "threshold": 0.409736692905426,
+    "direction": "keep_high",
+    "pu_rejection": 0.4256278171281391,
+    "n_region": 2917
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "region": "HEneg",
+  "equation": "sqrt(Abs(-tanh((0.91489786 - x4)*(x1 - 1.4189613)) - 0.238782*sqrt(Abs(-tanh(0.090360105/(-x1 + sqrt(Abs(x3 + 0.3061475))))))))",
+  "features": [
+  "nConstituents",
+  "lognC",
+  "muEF",
+  "mass",
+  "neHEF"
+  ],
+  "threshold": 0.37724483013153076,
+  "direction": "keep_high",
+  "pu_rejection": 0.5289012003693444,
+  "n_region": 5415,
+  "hs_eff_target": 0.8,
+  "pt_min": 25.0,
+  "pt_turnoff": 50.0  
+}
