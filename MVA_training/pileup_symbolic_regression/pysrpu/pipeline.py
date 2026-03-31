@@ -55,6 +55,7 @@ def run_training(args):
     if missing:
         raise KeyError("Missing required columns:\n  " + "\n  ".join(missing[:50]))
     df = concat_prefixes(df, prefixes, "nominal")
+    df["y_hs"] = df["y_hs"].astype(bool)
 
     df = derive_features(df)
 
@@ -73,7 +74,8 @@ def run_training(args):
     regions = ["HEpos", "HEneg", "HFpos", "HFneg"]
 
     summary_all = []
-
+    
+    features_by_region = load_features_from_yaml(args.features_yaml)
     for region in regions:
 
         print(f"\n==== Region: {region} ====")
@@ -101,7 +103,7 @@ def run_training(args):
         # -------------------------------
         # 5) Select features
         # -------------------------------
-        feature_cols = load_features_from_yaml(args.features_yaml)[region]
+        feature_cols = features_by_region[region]
         print(f"feature_cols: {feature_cols}")
         feature_cols = drop_constant_columns(df_bal, feature_cols)
 
@@ -132,8 +134,8 @@ def run_training(args):
 
         y_full = df_region["y_hs"].values
 
-        hs_scores = score_full[y_full > 0.5]
-        pu_scores = score_full[y_full <= 0.5]
+        hs_scores = score[y_full]
+        pu_scores = score[~y_full]
 
         if len(hs_scores) == 0 or len(pu_scores) == 0:
             print("No HS or PU events in region.")
@@ -155,27 +157,7 @@ def run_training(args):
             pass_mask = score_full < thr
 
         # -------------------------------
-        # 8) pT performance
-        # -------------------------------
-        pt_bins = args.pt_bins
-        hs_eff_vs_pt, pu_rej_vs_pt = compute_wp_vs_pt(
-            df_region,
-            pass_mask,
-            pt_bins,
-        )
-
-        # optional ROOT plot
-        if args.make_plots:
-            plot_wp_vs_pt(
-                df_region,
-                pass_mask,
-                pt_bins,
-                args.output,
-                f"{region}",
-            )
-
-        # -------------------------------
-        # 9) Save region summary
+        # 8) Save region summary
         # -------------------------------
         result = {
             "region": region,
@@ -187,6 +169,10 @@ def run_training(args):
             "n_region": int(len(df_region)),
             "pt_min": args.pt_min,
             "pt_turnoff": args.pt_turnoff,
+            "valid_pt_range": {
+                "min": args.pt_min,
+                "max": args.pt_turnoff,
+            }            
         }
 
         summary_all.append(result)
@@ -198,7 +184,7 @@ def run_training(args):
             json.dump(result, f, indent=2)
 
     # -------------------------------
-    # 10) Save global summary
+    # 9) Save global summary
     # -------------------------------
     with open(
         os.path.join(args.output, "summary_all.json"),
@@ -361,12 +347,13 @@ def run_validation(args):
                 os.path.join(args.output, f"score_real_fake_{region}.pdf"), region
             )
 
+            plot_jet_eta_before_after_mask(df_region, pass_mask, args.output, region)
 
             # ============================================================
             # New: Stacked before/after plots
             # ============================================================
 
-            # 1️⃣ Score before/after
+            # 1 Score before/after
             plot_stacked_before_after(
                 score,
                 y_hs,
@@ -378,7 +365,7 @@ def run_validation(args):
                 logy=False
             )
 
-            # 2️⃣ pT sculpting check
+            # 2 pT sculpting check
             plot_stacked_before_after(
                 df_region["pt"].values,
                 y_hs,
@@ -390,7 +377,7 @@ def run_validation(args):
                 logy=False
             )
 
-            # 3️⃣ eta sculpting check
+            # 3 eta sculpting check
             plot_stacked_before_after(
                 df_region["eta"].values,
                 y_hs,
@@ -401,8 +388,6 @@ def run_validation(args):
                 nbins=50,
                 logy=False
             )
-
-            plot_jet_eta_before_after_mask(df_region, pass_mask, args.output, region)
 
     print("Validation complete.")
 
@@ -470,8 +455,8 @@ def run_rescan(args):
         score = evaluate_equation(df_region, equation, feature_cols)
 
         y = df_region["y_hs"].values
-        hs_scores = score[y > 0.5]
-        pu_scores = score[y <= 0.5]
+        hs_scores = score[y]
+        pu_scores = score[~y]
 
         scan_results = []
 
