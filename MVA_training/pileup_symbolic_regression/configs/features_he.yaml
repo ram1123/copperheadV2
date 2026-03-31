@@ -1,0 +1,18 @@
+# configs/features_hf.yaml
+
+features:
+  - chEmEF
+  - chHEF
+  - neEmEF
+  - neHEF
+  - muEF
+  - nConstituents
+  - lognC
+  - pt
+  - eta
+  - hfcentralEtaStripSize
+  - hfadjacentEtaStripsSize
+  - hfsigmaEtaEta
+  - hfsigmaPhiPhi
+  - hf_ratio
+  - hf_sigma_sum
