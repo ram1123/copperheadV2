@@ -11,7 +11,7 @@ from .balance import balance_hs_pu
 from .model import train_pysr, safe_predict
 from .thresholds import threshold_and_direction
 from .metrics import compute_wp_vs_pt
-from .plots import plot_wp_vs_pt
+from .plots import plot_wp_vs_pt, plot_score_real_fake, plot_stacked_before_after, plot_jet_eta_before_after_mask
 
 
 def load_features_from_yaml(path):
@@ -57,6 +57,15 @@ def run_training(args):
     df = concat_prefixes(df, prefixes, "nominal")
 
     df = derive_features(df)
+
+    # ------------------------------------------------
+    # Apply pT selection
+    # ------------------------------------------------
+    pt = df["pt"].values
+
+    turnon_mask = (pt >= args.pt_min) & (pt < args.pt_turnoff)
+
+    df = df[turnon_mask]
 
     # -------------------------------
     # 3) Region loop
@@ -175,6 +184,8 @@ def run_training(args):
             "direction": direction,
             "pu_rejection": float(pu_rej),
             "n_region": int(len(df_region)),
+            "pt_min": args.pt_min,
+            "pt_turnoff": args.pt_turnoff,
         }
 
         summary_all.append(result)
@@ -260,8 +271,35 @@ def run_validation(args):
     if missing:
         raise KeyError("Missing required columns:\n  " + "\n  ".join(missing[:50]))
     df = concat_prefixes(df, prefixes, "nominal")
+    df["y_hs"] = df["y_hs"].astype(bool)
+
+    print("\n==== DEBUG y_hs after concat_prefixes ====")
+
+    # if "y_hs" not in df.columns:
+    #     print("y_hs column NOT FOUND")
+    # else:
+    #     y = df["y_hs"]
+
+    #     print("dtype:", y.dtype)
+    #     print("unique values (first 20):", np.unique(y)[:20])
+    #     print("min:", np.nanmin(y))
+    #     print("max:", np.nanmax(y))
+    #     print("value counts:")
+    #     print(y.value_counts(dropna=False))
+    #     print("=========================================\n")
+        
 
     df = derive_features(df)
+
+    # ------------------------------------------------
+    # Apply pT selection
+    # ------------------------------------------------
+    pt = df["pt"].values
+
+    turnon_mask = (pt >= args.pt_min) & (pt < args.pt_turnoff)
+
+    df = df[turnon_mask]
+
 
     # ---------------------------
     # Loop over saved summaries
@@ -292,6 +330,7 @@ def run_validation(args):
             continue
 
         score = evaluate_equation(df_region, equation, feature_cols)
+        y_hs = df_region["y_hs"].values
 
         if direction == "keep_high":
             pass_mask = score > threshold
@@ -306,6 +345,7 @@ def run_validation(args):
         )
 
         if args.make_plots:
+            # --- Eff/Rej vs pT
             plot_wp_vs_pt(
                 df_region,
                 pass_mask,
@@ -313,6 +353,55 @@ def run_validation(args):
                 args.output,
                 f"{region}_validation",
             )
+        
+            # --- Score distribution real vs fake
+            plot_score_real_fake(
+                score, y_hs,
+                os.path.join(args.output, f"score_real_fake_{region}.pdf"), region
+            )
+
+
+            # ============================================================
+            # New: Stacked before/after plots
+            # ============================================================
+
+            # 1️⃣ Score before/after
+            plot_stacked_before_after(
+                score,
+                y_hs,
+                pass_mask,
+                outbase=os.path.join(args.output, f"stack_score_{region}"),
+                title=f"{region} score",
+                xlab="Score",
+                nbins=50,
+                logy=False
+            )
+
+            # 2️⃣ pT sculpting check
+            plot_stacked_before_after(
+                df_region["pt"].values,
+                y_hs,
+                pass_mask,
+                outbase=os.path.join(args.output, f"stack_pt_{region}"),
+                title=f"{region} pT",
+                xlab="Jet p_{T} [GeV]",
+                nbins=50,
+                logy=False
+            )
+
+            # 3️⃣ eta sculpting check
+            plot_stacked_before_after(
+                df_region["eta"].values,
+                y_hs,
+                pass_mask,
+                outbase=os.path.join(args.output, f"stack_eta_{region}"),
+                title=f"{region} eta",
+                xlab="Jet eta",
+                nbins=50,
+                logy=False
+            )
+
+            plot_jet_eta_before_after_mask(df_region, pass_mask, args.output, region)
 
     print("Validation complete.")
 
@@ -336,7 +425,18 @@ def run_rescan(args):
     )
 
     df = concat_prefixes(df, [f"jet{i}_" for i in range(1, 5)], "nominal")
+    df["y_hs"] = df["y_hs"].astype(bool)
+    
     df = derive_features(df)
+
+    # ------------------------------------------------
+    # Apply pT selection
+    # ------------------------------------------------
+    pt = df["pt"].values
+
+    turnon_mask = (pt >= args.pt_min) & (pt < args.pt_turnoff)
+
+    df = df[turnon_mask]
 
     # Define HS-eff scan grid
     if args.hs_scan is None:

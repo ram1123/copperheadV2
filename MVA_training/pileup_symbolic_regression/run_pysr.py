@@ -38,7 +38,7 @@ def main():
     parser.add_argument("--min-train", type=int, default=500)
     parser.add_argument("--max-rows", type=int, default=None)
     parser.add_argument("--pt-bins", nargs="+", type=float,
-                        default=[25,35,50,75,100,150,200])
+                        default=[25,27,30,32.5,35,37.5,40,42.5,45,47.5,50])
     parser.add_argument("--make-plots", action="store_true")
     parser.add_argument(
         "--hs-scan",
@@ -47,6 +47,8 @@ def main():
         default=None,
         help="List of HS efficiency targets to scan"
     )
+    parser.add_argument("--pt-min", type=float, default=25.0)
+    parser.add_argument("--pt-turnoff", type=float, default=50.0)    
 
     args = parser.parse_args()
 
