@@ -14,7 +14,7 @@ check = "python -c 'import coffea, awkward, uproot; print(\"Stack Ready\")'"
 lint = "ruff check ."
 # format = "ruff format ."
 stage1 = "snakemake -s workflow/Snakefile -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 "
-plot = "snakemake -s workflow/Snakefile plot_all  -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --allowed-rules plots  -R plots --forceall "
+plot = "snakemake -s workflow/Snakefile plot_all  -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --allowed-rules plots plot_all --forceall "
 unlock = "snakemake -s workflow/Snakefile --unlock"
 stage2 = "bash stage2_sh.sh all all"
 
