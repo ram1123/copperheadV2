@@ -223,6 +223,16 @@ switches:
         "2023": 30.0
         "2023BPix": 30.0
         "2024": 30.0
+    do_jet_HE_nConstCut: # For run-3 we scanned and noted that for nconstituents <= 3 its mostly fake jets.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     add_pt_cut_for_HE_HF_jets:
         '2016preVFP': false
         '2016postVFP': false
@@ -316,6 +326,17 @@ switches:
         '2016postVFP': true
         '2017': true
         '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_unc: # INFO: Use to turn on/off all unc variations. 
+        # TO-DO: Need to implement it in the copperhead.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false

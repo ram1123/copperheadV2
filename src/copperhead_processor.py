@@ -2451,7 +2451,10 @@ class EventProcessor(processor.ProcessorABC):
         do_he_ptcut = self.config["switches"]["do_jet_horn_ptcut"]
         add_hehf_ptcut = self.config["switches"]["add_pt_cut_for_HE_HF_jets"]
         add_hehf_asym = self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]
+        do_jet_HE_nConstCut = self.config["switches"]["do_jet_HE_nConstCut"]
 
+        jetHorn_ptcut = ak.ones_like(jets.pt, dtype=bool) # default value is True
+        HE_HF_ptcut = ak.ones_like(jets.pt, dtype=bool)
         n_active = sum(bool(x) for x in [do_he_ptcut, add_hehf_ptcut, add_hehf_asym])
         if n_active > 1:
             raise ValueError(
@@ -2477,7 +2480,6 @@ class EventProcessor(processor.ProcessorABC):
         else:
             jetHorn_ptcut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
 
-        HE_HF_ptcut = ak.ones_like(jets.pt, dtype=bool)
 
         # Prefer asymmetric if true
         if self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]:
@@ -2513,6 +2515,21 @@ class EventProcessor(processor.ProcessorABC):
             HE_HF_ptcut = ak.where(is_hehf, jets.pt > thr, HE_HF_ptcut)
 
         # add additonal pT cut for the forward regions  ----------------------------------------------
+        
+        if do_jet_HE_nConstCut:
+            """ Run-3 recommendation:
+                - Remove jets having nConstituents <= 3
+                  and horn region: 3.0 > abs(eta) > 2.5
+            """
+            logger.info(f"Applying nConstituent cut > 3 for the HE region")
+            jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) < 3.0)
+            jetHorn_nConst_cut_local = (jets.nConstituents > 3)
+
+            jetHorn_nConst_Cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+            jetHorn_region, jetHorn_nConst_Cut = ak.broadcast_arrays(
+                jetHorn_region, jetHorn_nConst_Cut
+            )
+            jetHorn_nConst_Cut = ak.where(jetHorn_region, jetHorn_nConst_cut_local, jetHorn_nConst_Cut)
 
         jet_selection = (
             jet_pt_cut
@@ -2521,6 +2538,8 @@ class EventProcessor(processor.ProcessorABC):
             & clean
             & jetHorn_PUID_cut
             & jetHorn_ptcut
+            & HE_HF_ptcut
+            & jetHorn_nConst_Cut
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
 
@@ -2566,75 +2585,6 @@ class EventProcessor(processor.ProcessorABC):
         jet1, jet2 = pair_dict["lead"]
 
         jet_loop_out_dict = {}
-        # # --------------------------------------------
-        # # jet rapidity-region booleans (event-level)
-        # # --------------------------------------------
-        # # save boolean for the jets separated by rapidity regions:
-        # #  1. both jets in the central region (abs(eta) < 2.5)
-        # #  2. one jet in the forward region (abs(eta) > 2.5) and one jet in the central region
-        # #  3. one jet in the HE region (2.5 < abs(eta) < 3.0) and one jet in the central region
-        # #  4. one jet in the forward region (abs(eta) > 3.0) and one jet in the central region
-        # #  5. both jets in the forward region (abs(eta) > 2.5)
-        # #  6. both jets in the HE region (2.5 < abs(eta) < 3.0)
-        # #  7. both jets in the forward region (abs(eta) > 3.0)
-        # #  8. one jet in the HE region (2.5 < abs(eta) < 3.0) and one jet in the forward region (abs(eta) > 3.0)
-
-        # # Guard against missing jets (None)
-        # jet1_eta = ak.fill_none(jet1.eta, 999.0)
-        # jet2_eta = ak.fill_none(jet2.eta, 999.0)
-
-        # aeta1 = abs(jet1_eta)
-        # aeta2 = abs(jet2_eta)
-
-        # has2jets = (~ak.is_none(jet1.eta)) & (~ak.is_none(jet2.eta))
-
-        # is_c1 = aeta1 < 2.5
-        # is_c2 = aeta2 < 2.5
-
-        # is_he1 = (aeta1 > 2.5) & (aeta1 < 3.0)
-        # is_he2 = (aeta2 > 2.5) & (aeta2 < 3.0)
-
-        # is_fwd25_1 = aeta1 > 2.5
-        # is_fwd25_2 = aeta2 > 2.5
-
-        # is_fwd30_1 = aeta1 > 3.0
-        # is_fwd30_2 = aeta2 > 3.0
-
-        # # 1) both jets central
-        # jj_both_central = has2jets & is_c1 & is_c2
-
-        # # 2) one jet forward (>2.5) and one jet central
-        # jj_one_fwd25_one_central = has2jets & ((is_fwd25_1 & is_c2) | (is_fwd25_2 & is_c1))
-
-        # # 3) one jet in HE (2.5-3.0) and one jet central
-        # jj_one_he_one_central = has2jets & ((is_he1 & is_c2) | (is_he2 & is_c1))
-
-        # # 4) one jet forward (>3.0) and one jet central
-        # jj_one_fwd30_one_central = has2jets & ((is_fwd30_1 & is_c2) | (is_fwd30_2 & is_c1))
-
-        # # 5) both jets forward (>2.5)
-        # jj_both_fwd25 = has2jets & is_fwd25_1 & is_fwd25_2
-
-        # # 6) both jets in HE (2.5-3.0)
-        # jj_both_he = has2jets & is_he1 & is_he2
-
-        # # 7) both jets forward (>3.0)
-        # jj_both_fwd30 = has2jets & is_fwd30_1 & is_fwd30_2
-
-        # # 8) one jet in HE (2.5-3.0) and one jet forward (>3.0)
-        # jj_one_he_one_fwd30 = has2jets & ((is_he1 & is_fwd30_2) | (is_he2 & is_fwd30_1))
-
-        # # save these boolean variables to the output dict
-        # jet_loop_out_dict.update({
-        #     f"jj_both_central": jj_both_central,
-        #     f"jj_one_fwd25_one_central": jj_one_fwd25_one_central,
-        #     f"jj_one_he_one_central": jj_one_he_one_central,
-        #     f"jj_one_fwd30_one_central": jj_one_fwd30_one_central,
-        #     f"jj_both_fwd25": jj_both_fwd25,
-        #     f"jj_both_he": jj_both_he,
-        #     f"jj_both_fwd30": jj_both_fwd30,
-        #     f"jj_one_he_one_fwd30": jj_one_he_one_fwd30,
-        # })
 
         do_additional_jet_vars = self.config["switches"]["do_additional_jet_vars"]
         if do_additional_jet_vars:
@@ -2841,14 +2791,15 @@ class EventProcessor(processor.ProcessorABC):
                 "hfEmEF", "hfHEF",
                 "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
                 "chMultiplicity", "neMultiplicity",
-                "nConstituents", "nElectrons", "nMuons", "nSVs",
-                "electronIdx1", "electronIdx2", "muonIdx1", "muonIdx2",
-                "svIdx1", "svIdx2",
-                "genJetIdx",
+                "nConstituents", "nElectrons", "nMuons", 
+                # "nSVs", "electronIdx1", "electronIdx2", "muonIdx1", "muonIdx2",
+                # "svIdx1", "svIdx2",
+                # "genJetIdx",
                 "hadronFlavour", "partonFlavour",
                 "hfcentralEtaStripSize", "hfadjacentEtaStripsSize", 
                 "hfsigmaEtaEta", "hfsigmaPhiPhi", 
-                "muonSubtrFactor", "rawFactor", 
+                "muonSubtrFactor", "rawFactor",
+                "puIdDisc"
             ]
 
             jets_to_process = [jet1, jet2, jet3, jet4] if do_additional_jet_vars else [jet1, jet2]
@@ -2863,26 +2814,6 @@ class EventProcessor(processor.ProcessorABC):
 
             # Merge into main jet_loop_out_dict
             jet_loop_out_dict.update(extra_jet_loop_dict)
-
-        # if is_mc and (variation == "nominal"):
-        #     nominal_dict = {
-        #         f"jet1_pt_gen_{variation}" : jet1.pt_gen,
-        #         f"jet2_pt_gen_{variation}" : jet2.pt_gen,
-        #     }
-        #     jet_loop_out_dict.update(nominal_dict)
-
-        # if (variation == "nominal"):
-        #     nominal_dict = {
-        #         f"jet1_pt_raw_{variation}" : jet1.pt_raw,
-        #         f"jet2_pt_raw_{variation}" : jet2.pt_raw,
-        #         f"jet1_mass_raw_{variation}" : jet1.mass_raw,
-        #         f"jet2_mass_raw_{variation}" : jet2.mass_raw,
-        #         f"jet1_mass_jec_{variation}" : jet1.mass_jec,
-        #         f"jet2_mass_jec_{variation}" : jet2.mass_jec,
-        #         f"jet1_pt_jec_{variation}" : jet1.pt_jec,
-        #         f"jet2_pt_jec_{variation}" : jet2.pt_jec,
-        #     }
-        # jet_loop_out_dict.update(nominal_dict)
 
         # ------------------------------------------------------------#
         # Fill soft activity jet variables
@@ -2915,21 +2846,10 @@ class EventProcessor(processor.ProcessorABC):
         # jet_loop_out_dict.update(sj_dict)
         jet_loop_out_dict.update(sj_dict_HIG19006)
 
+
         # ------------------------------------------------------------#
-        # Apply remaining cuts
+        # Calculate QGL weights, btag SF and apply btag veto
         # ------------------------------------------------------------#
-
-        # Cut has to be defined here because we will use it in
-        # b-tag weights calculation
-        # vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5) & (jet1.pt > 35) # the extra jet1 pt cut is for Dmitry's Vbf cut, but that doesn't exist on AN-19-124's ggH category cut
-
-        # vbf_cut = (dijet.mass > 400) & (jj_dEta > 2.5)
-        # vbf_cut = ak.fill_none(vbf_cut, value=False)
-        # jet_loop_out_dict.update({"vbf_cut": vbf_cut})
-
-        # # ------------------------------------------------------------#
-        # # Calculate QGL weights, btag SF and apply btag veto
-        # # ------------------------------------------------------------#
         if is_mc and (variation == "nominal") and (self.config["switches"]["do_qgl_wgt"]):
             # --- QGL weights  start --- #
             isHerwig = "herwig" in dataset
@@ -3042,17 +2962,5 @@ class EventProcessor(processor.ProcessorABC):
             f"nBtagMedium_{variation}": nBtagMedium,
         }
         jet_loop_out_dict.update(temp_out_dict)
-
-        # --------------------------------------------------------------#
-        # Fill outputs
-        # --------------------------------------------------------------#
-
-        # variables.update({"wgt_nominal": weights.get_weight("nominal")})
-
-        # All variables are affected by jet pT because of jet selections:
-        # a jet may or may not be selected depending on pT variation.
-
-        #     for key, val in variables.items():
-        #         output.loc[:, pd.IndexSlice[key, variation]] = val
 
         return jet_loop_out_dict
