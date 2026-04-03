@@ -2234,7 +2234,7 @@ class EventProcessor(processor.ProcessorABC):
 
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         logger.debug(f"dnn_year: {dnn_year}")
-        if self.config["switches"]["apply_jet_PUID_wgt"]:
+        if self.config["switches"]["do_jet_PUID_cut"]:
             logger.info("Applying jet PUID cut!")
             pass_jet_puid = jet_puid(jets, self.config)
         else:
