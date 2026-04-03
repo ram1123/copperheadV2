@@ -271,7 +271,7 @@ def jet_id(jets, config, year = None):
 
     pass_jet_id = ak.ones_like(jets.pt, dtype=bool)
     jet_id2use = config["jet_id"]
-    if hasattr(jets, "jetId"):
+    if hasattr(jets, "jetId") and is_run2(year):
         jet_id_wps = {
             "tight": jets.jetId >= 2,
             "tightFailLepVeto": jets.jetId == 2,
@@ -307,7 +307,7 @@ def jet_id(jets, config, year = None):
             "multiplicity": jets.chMultiplicity + jets.neMultiplicity
         }
 
-        # Default tight for NanoAOD version 13 and above
+        # Default tight for NanoAOD version 12 and above
         idTight = cset["AK4PUPPI_Tight"]
         inputsTight = [eval_dict[input.name] for input in idTight.inputs]
         idTight_value = idTight.evaluate(*inputsTight)
