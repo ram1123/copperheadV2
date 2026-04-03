@@ -271,11 +271,45 @@ def jet_id(jets, config, year = None):
 
     pass_jet_id = ak.ones_like(jets.pt, dtype=bool)
     jet_id2use = config["jet_id"]
-    if hasattr(jets, "jetId"):
+    if hasattr(jets, "jetId") and is_run2(year):
+        logger.info("Using Run2 official jet-id for the custom nanoAODv12")
         jet_id_wps = {
             "tight": jets.jetId >= 2,
             "tightFailLepVeto": jets.jetId == 2,
             "tightPassLepVeto": jets.jetId == 6,
+        }
+        pass_jet_id = jet_id_wps[jet_id2use]
+    elif hasattr(jets, "jetId") and is_run3(year):
+        # Referece: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
+        logger.info("Using Run3 official jet-id for the nanoAODv12")
+
+        abs_eta = abs(jets.eta)
+
+        # Tight jet ID
+        passJetIdTight = ak.zeros_like(jets.pt, dtype=bool)
+
+        mask_barrel_endcap = abs_eta <= 2.7
+        mask_he = (abs_eta > 2.7) & (abs_eta <= 3.0)
+        mask_hf = abs_eta > 3.0
+
+        pass_tight_bit = (jets.jetId & (1 << 1)) != 0
+
+        passJetIdTight = (
+            (mask_barrel_endcap & pass_tight_bit)
+            | (mask_he & pass_tight_bit & (jets.neHEF < 0.99))
+            | (mask_hf & pass_tight_bit & (jets.neEmEF < 0.4))
+        )
+
+        # TightLepVeto jet ID
+        passJetIdTightLepVeto = ak.where(
+            abs_eta <= 2.7,
+            passJetIdTight & (jets.muEF < 0.8) & (jets.chEmEF < 0.8),
+            passJetIdTight,
+        )
+        jet_id_wps = {
+            "tight": passJetIdTight,
+            "tightFailLepVeto": passJetIdTight & ~passJetIdTightLepVeto,
+            "tightPassLepVeto": passJetIdTight & passJetIdTightLepVeto,
         }
         pass_jet_id = jet_id_wps[jet_id2use]
     elif is_run2(year):
