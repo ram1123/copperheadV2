@@ -6,6 +6,8 @@ configfile: "workflow/config.yaml"
 HMM_BASE = config.get("hmm_base", f"/work/projects/hmm")
 HMM_USER = os.environ["USER"]
 
+USE_EXISTING_STAGE1 = config.get("use_existing_stage1", False)
+
 YEARS = config["years"]
 RUN_TAG = config.get("run_tag", "default")
 
@@ -280,7 +282,9 @@ rule stage1Compact:
 # ---------------------------------------
 rule plots:
     input:
-       STATEDIR + "/stage1_compact_{year}.done",
+        lambda wc: [] if USE_EXISTING_STAGE1 else [
+            STATEDIR + f"/stage1_compact_{wc.year}.done"
+        ]       
     output:
         done=STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
     log:
