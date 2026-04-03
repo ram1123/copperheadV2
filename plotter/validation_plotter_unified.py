@@ -881,7 +881,7 @@ if __name__ == "__main__":
                 status = status,
                 log_scale = do_logscale,
                 CenterOfMass = CM_energy,
-                plot_ratio_range = default, # options: "default" or "auto" or list with format [0.8, 1.2]
+                plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
             )
             plotDataMC_compare(
                 binning,
@@ -896,7 +896,7 @@ if __name__ == "__main__":
                 status = status,
                 log_scale = False,
                 CenterOfMass=CM_energy,
-                plot_ratio_range = default, # options: "default" or "auto" or list with format [0.8, 1.2]
+                plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
             )
 
     close_dask_client()
