@@ -2453,8 +2453,9 @@ class EventProcessor(processor.ProcessorABC):
         add_hehf_asym = self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]
         do_jet_HE_nConstCut = self.config["switches"]["do_jet_HE_nConstCut"]
 
-        jetHorn_ptcut = ak.ones_like(jets.pt, dtype=bool) # default value is True
-        HE_HF_ptcut = ak.ones_like(jets.pt, dtype=bool)
+        jetHorn_ptcut = ak.ones_like(jets.pt, dtype="bool") # default value is True
+        HE_HF_ptcut = ak.ones_like(jets.pt, dtype="bool")
+        jetHorn_nConst_Cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
         n_active = sum(bool(x) for x in [do_he_ptcut, add_hehf_ptcut, add_hehf_asym])
         if n_active > 1:
             raise ValueError(
@@ -2525,7 +2526,6 @@ class EventProcessor(processor.ProcessorABC):
             jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) < 3.0)
             jetHorn_nConst_cut_local = (jets.nConstituents > 3)
 
-            jetHorn_nConst_Cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
             jetHorn_region, jetHorn_nConst_Cut = ak.broadcast_arrays(
                 jetHorn_region, jetHorn_nConst_Cut
             )
