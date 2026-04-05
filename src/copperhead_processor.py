@@ -94,13 +94,13 @@ def region_mask_eta(eta, region):
     abs_eta = abs(eta)
 
     if region == "HEpos":
-        return (eta > 0) & (abs_eta >= 2.5) & (abs_eta < 3.0)
+        return (eta > 0) & (abs_eta >= 2.5) & (abs_eta <= 3.0)
     elif region == "HEneg":
-        return (eta < 0) & (abs_eta >= 2.5) & (abs_eta < 3.0)
+        return (eta < 0) & (abs_eta >= 2.5) & (abs_eta <= 3.0)
     elif region == "HFpos":
-        return (eta > 0) & (abs_eta >= 3.0)
+        return (eta > 0) & (abs_eta > 3.0)
     elif region == "HFneg":
-        return (eta < 0) & (abs_eta >= 3.0)
+        return (eta < 0) & (abs_eta > 3.0)
     else:
         raise ValueError(f"Unknown region {region}")
 
@@ -2470,7 +2470,7 @@ class EventProcessor(processor.ProcessorABC):
                   and horn region: 3.0 > abs(eta) > 2.5
             """
             logger.info(f"Applying additional jet pT cut of {do_he_ptcut} GeV for forward region (jet horn region)!")
-            jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) < 3.0)
+            jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) <= 3.0)
             jetHorn_pt_cut = (jets.pt > do_he_ptcut) # https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetMET#Run3_recommendations
 
             jetHorn_ptcut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
@@ -2523,7 +2523,7 @@ class EventProcessor(processor.ProcessorABC):
                   and horn region: 3.0 > abs(eta) > 2.5
             """
             logger.info(f"Applying nConstituent cut > 3 for the HE region")
-            jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) < 3.0)
+            jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) <= 3.0)
             jetHorn_nConst_cut_local = (jets.nConstituents > 3)
 
             jetHorn_region, jetHorn_nConst_Cut = ak.broadcast_arrays(
