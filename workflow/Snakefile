@@ -258,6 +258,10 @@ rule stage1Compact:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        outpath=lambda wc: (
+            f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
+            f"{label_for_year(wc.year)}/stage1_output/{wc.year}"
+        ),           
     resources:
         gateway=1,
     shell:
@@ -277,7 +281,7 @@ rule stage1Compact:
         # -----------------------------
         # Validation block
         # -----------------------------
-        BASE="{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/{params.label}/stage1_output/{wildcards.year}"
+        BASE="{params.outpath}"
         DIR_F1="$BASE/f1_0"
         DIR_CMP="$BASE/compacted"
 
@@ -297,16 +301,16 @@ rule stage1Compact:
             fi
 
             # --- Size comparison (in bytes, robust) ---
-            size_f1=$(du -sb "$f1_dir" | awk '{print $1}')
-            size_cmp=$(du -sb "$cmp_dir" | awk '{print $1}')
+            size_f1=$(du -sb "$f1_dir" | awk '{{print $1}}')
+            size_cmp=$(du -sb "$cmp_dir" | awk '{{print $1}}')
 
             # allow small tolerance (important!)
-            ratio=$(awk "BEGIN {print $size_cmp / $size_f1}")
+            ratio=$(awk "BEGIN {{print $size_cmp / $size_f1}}")
 
             echo "$sample : f1=$size_f1 cmp=$size_cmp ratio=$ratio"
 
             # allow up to 20% shrink (very safe)
-            if (( $(awk "BEGIN {print ($ratio < 0.8)}") )); then
+            if (( $(awk "BEGIN {{print ($ratio < 0.8)}}") )); then
                 echo "Size mismatch for $sample → deleting compacted"
                 rm -rf "$cmp_dir"
                 fail_flag=1
