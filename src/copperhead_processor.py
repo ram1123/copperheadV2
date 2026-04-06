@@ -3021,8 +3021,8 @@ class EventProcessor(processor.ProcessorABC):
             temp_out_dict[f"nBtagMedium_UparT_{variation}"] = nBtagMedium_UParT
 
         if hasattr(jets, "btagPNetB"):
-            temp_out_dict[f"nBtagLoose_PNet_{variation}"] = nBtagLoose_UParT
-            temp_out_dict[f"nBtagMedium_PNet_{variation}"] = nBtagMedium_UParT
+            temp_out_dict[f"nBtagLoose_PNet_{variation}"] = nBtagLoose_PNet
+            temp_out_dict[f"nBtagMedium_PNet_{variation}"] = nBtagMedium_PNet
 
         if hasattr(jets, "btagRobustParTAK4B"):
             temp_out_dict[f"nBtagLoose_RParT{variation}"] = nBtagLoose_RParT
