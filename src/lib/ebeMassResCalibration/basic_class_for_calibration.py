@@ -395,7 +395,7 @@ def closure_test_resolution_binning(
         # measured sigma from Z-mass fit in THIS bin
         mass = df_bin["dimuon_mass"].to_numpy()
         weights = df_bin["wgt_nominal"].to_numpy() if "wgt_nominal" in df_bin else None
-        if np.any(weights < 0):
+        if weights is not None and np.any(weights < 0):
             logger.warning("Negative weights detected in closure bin!")        
         df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
         cat_name = f"resBin{i}"
