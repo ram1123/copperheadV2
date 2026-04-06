@@ -1386,9 +1386,9 @@ def btag_weights_jsonKeepDim(processor, systs, jets, btag_eta_val, weights, bjet
     sum_after = dak.map_partitions(ak.sum, weights*btag_wgt, keepdims=True)
     normalization = sum_before / sum_after
     btag_wgt = btag_wgt * normalization # normalize to match the cross section
-    for sys, values in btag_syst.items():
-        values["up"] = values["up"] * normalization
-        values["down"] = values["down"] * normalization
+    for sys in btag_syst:
+        btag_syst[sys]["up"] = btag_syst[sys]["up"] * normalization
+        btag_syst[sys]["down"] = btag_syst[sys]["down"] * normalization
     return btag_wgt, btag_syst
 
 def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file):
@@ -1493,9 +1493,9 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
     sum_after = ak.sum(weights*btag_wgt, axis=None)
     normalization = sum_before / sum_after
     btag_wgt = btag_wgt * normalization
-    for sys, values in btag_syst.items():
-        values["up"] = values["up"] * normalization
-        values["down"] = values["down"] * normalization
+    for sys in btag_syst:
+        btag_syst[sys]["up"] = btag_syst[sys]["up"] * normalization
+        btag_syst[sys]["down"] = btag_syst[sys]["down"] * normalization
     # print(f"btag_wgt after normalization: {ak.to_numpy(btag_wgt.compute())}")
     return btag_wgt, btag_syst
     # sum_before = weights.df["nominal"][bjet_sel_mask].sum()
