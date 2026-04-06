@@ -41,8 +41,8 @@ CONFIG = {
     "memory_limit": "8 GiB",
     "zcr_filter_range": (75, 105),
     "nbins": 120,
-    "fields_of_interest": ["mu1_pt", "mu1_eta", "mu2_eta", "dimuon_mass"],
-    "fields_with_errors": ["mu1_pt", "mu1_ptErr", "mu2_pt", "mu2_ptErr", "mu1_eta", "mu2_eta", "dimuon_mass"],
+    "fields_of_interest": ["mu1_pt", "mu1_eta", "mu2_eta", "dimuon_mass", "wgt_nominal"],
+    "fields_with_errors": ["mu1_pt", "mu1_ptErr", "mu2_pt", "mu2_ptErr", "mu1_eta", "mu2_eta", "dimuon_mass", "wgt_nominal"],
 }
 
 
@@ -169,10 +169,23 @@ def get_calib_categories(events):
 
     return categories
 
-CLOSURE_BINS = [
+CLOSURE_BINS_Run2_AN = [
     (0.6, 0.7),
     (0.7, 0.8),
     (0.8, 0.9),
+    (0.9, 1.0),
+    (1.0, 1.1),
+    (1.1, 1.2),
+    (1.3, 1.4),
+    (1.4, 1.5),
+    (1.5, 1.7),
+    (1.7, 2.0),
+    (2.0, 2.5),
+    (2.5, 3.5),
+]
+
+CLOSURE_BINS = [ # Merge the first three bins due to lack of statistics.
+    (0.6, 0.9),
     (0.9, 1.0),
     (1.0, 1.1),
     (1.1, 1.2),
@@ -250,6 +263,21 @@ def apply_roorealvar_cfg(var, pcfg: dict):
     if "const" in pcfg:
         var.setConstant(bool(pcfg["const"]))
     return var
+
+
+def weighted_median(x, w):
+    x = np.asarray(x)
+    w = np.asarray(w)
+    m = np.isfinite(x) & np.isfinite(w) & (w > 0)
+    x = x[m]
+    w = w[m]
+    if len(x) == 0:
+        return np.nan
+    order = np.argsort(x)
+    x = x[order]
+    w = w[order]
+    cdf = np.cumsum(w) / np.sum(w)
+    return x[np.searchsorted(cdf, 0.5)]
 
 
 def plot_histogram(data, bins, range, xlabel, ylabel, title, output_path, median=None):
@@ -339,13 +367,20 @@ def closure_test_resolution_binning(
             continue
 
         # predicted medians
-        med_noncal = df_bin["sigma_pred_noncal"].median()
-        med_cal = df_bin["sigma_pred_cal"].median()
+        weights = df_bin["wgt_nominal"].to_numpy() if "wgt_nominal" in df_bin else None
+        if np.any(weights < 0):
+            logger.warning("Negative weights detected in closure bin!")  
+        if weights is not None:
+            med_noncal = weighted_median(df_bin["sigma_pred_noncal"], weights)
+            med_cal = weighted_median(df_bin["sigma_pred_cal"], weights)
+        else:
+            med_noncal = df_bin["sigma_pred_noncal"].median()
+            med_cal = df_bin["sigma_pred_cal"].median()
 
         # plot mass resolution distribution both calibrated and non-calibrated
         plt.figure(figsize=(8, 6))
-        plt.hist(df_bin["sigma_pred_cal"], bins=CONFIG["nbins"], range=RANGE[i], color='C0', alpha=0.7, label="Calibrated")
-        plt.hist(df_bin["sigma_pred_noncal"], bins=CONFIG["nbins"], range=RANGE[i], color='C1', alpha=0.7, label="Non-Calibrated")
+        plt.hist(df_bin["sigma_pred_cal"], bins=CONFIG["nbins"], range=RANGE[i], weights=weights, color='C0', alpha=0.7, label="Calibrated")
+        plt.hist(df_bin["sigma_pred_noncal"], bins=CONFIG["nbins"], range=RANGE[i], weights=weights, color='C1', alpha=0.7, label="Non-Calibrated")
         plt.xlabel("Dimuon mass resolution (GeV)")
         plt.ylabel("Events")
         plt.title(f"Category {i}\n Median Cal = {med_cal:.4f} GeV, Median NonCal = {med_noncal:.4f} GeV")
@@ -359,11 +394,15 @@ def closure_test_resolution_binning(
 
         # measured sigma from Z-mass fit in THIS bin
         mass = df_bin["dimuon_mass"].to_numpy()
+        weights = df_bin["wgt_nominal"].to_numpy() if "wgt_nominal" in df_bin else None
+        if np.any(weights < 0):
+            logger.warning("Negative weights detected in closure bin!")        
         df_fit = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
         cat_name = f"resBin{i}"
         with timed(f"Fitting Z mass for closure bin {i}..."):
             df_fit = generateBWxDCB_RooCMSShape_plot(
                 mass,
+                weights,
                 cat_name,
                 nbins=CONFIG["nbins"],
                 df_fit=df_fit,
@@ -381,7 +420,7 @@ def closure_test_resolution_binning(
                 "cat_name": i,
                 "bin_low": lo,
                 "bin_high": hi,
-                "nEvents": len(df_bin),
+                "nEvents": float(np.sum(weights)) if weights is not None else len(df_bin),
                 "fit_val": sigma_fit,
                 "fit_err": sigma_err,
                 "median_val_NonCal": med_noncal,
@@ -568,6 +607,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
 
 def generateBWxDCB_RooCMSShape_plot(
     mass_arr,
+    weights,
     cat_idx: str,
     nbins,
     df_fit=None,
@@ -642,6 +682,25 @@ def generateBWxDCB_RooCMSShape_plot(
     mass.setMax("cache",cache_hi)
 
     roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
+    if weights is not None:
+        logger.info("Using weighted RooDataSet")
+
+        wvar = rt.RooRealVar("weight", "weight", 1.0)
+        data_dict = {
+            mass_name: mass_arr,
+            "weight": weights,
+        }
+
+        roo_dataset = rt.RooDataSet.from_numpy(
+            data_dict,
+            [mass, wvar],
+            weight_name="weight"
+        )
+    else:
+        roo_dataset = rt.RooDataSet.from_numpy(
+            {mass_name: mass_arr},
+            [mass]
+        )    
     if roo_dataset.numEntries() == 0:
         logger.error(f"No entries in RooDataSet for category {cat_idx}. Skipping.")
         return df_fit
@@ -715,8 +774,22 @@ def generateBWxDCB_RooCMSShape_plot(
     time_step = time.time()
 
     if ifbinned:
-        # fitting directly to unbinned dataset is slow, so first make a histogram
-        roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
+        if weights is not None:
+            roo_hist = rt.RooDataHist(
+                "data_hist",
+                "binned weighted dataset",
+                rt.RooArgSet(mass),
+                roo_dataset,
+                1.0  # normalization factor (keep 1)
+            )
+        else:
+            roo_hist = rt.RooDataHist(
+                "data_hist",
+                "binned dataset",
+                rt.RooArgSet(mass),
+                roo_dataset
+            )
+
         if roo_hist.numEntries() == 0:
             logger.error(f"No entries in RooDataHist for category {cat_idx}. Skipping.")
             return df_fit
@@ -776,7 +849,17 @@ def generateBWxDCB_RooCMSShape_plot(
     time.sleep(1) # rest a second for stability
     # do plotting
     # NOTE: Remember to provide "Name" argument to plotOn so that legend and chi2 can find the correct objects
-    roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
+    if weights is not None:
+        roo_dataset.plotOn(
+            frame,
+            rt.RooFit.DataError(rt.RooAbsData.SumW2),
+            rt.RooFit.Name("data_hist")
+        )
+    else:
+        roo_dataset.plotOn(
+            frame,
+            rt.RooFit.Name("data_hist")
+        )    
     # roo_hist.plotOn(frame, Name="data_hist") # name is explicitly defined so chiSquare can find it
     final_model.plotOn(frame, Components="signal", Name="signal", LineColor=rt.kBlue)
     final_model.plotOn(frame, Components="bkg", Name="bkg", LineColor=rt.kRed)

@@ -40,6 +40,7 @@ from basic_class_for_calibration import (
     closure_test_resolution_binning,
     CONFIG,
     plot_histogram,
+    weighted_median
 )
 
 from basic_class_for_calibration import timed
@@ -65,7 +66,7 @@ def save_dataframe_to_csv(df, path, description="DataFrame"):
     logger.info(f"Saved {description} to {path}")
 
 
-def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=None, ifbinned=False, inputFilePath=""):
+def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=None, ifbinned=False, inputFilePath="", isMC=0):
     logger.info("=== Step 1: Mass fitting in ZCR ===")
     tstart = time.time()
 
@@ -87,7 +88,11 @@ def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=
         else:
             logger.info(f"Extracting mass for category {cat_name}...")
             with timed(f"extract mass for category {cat_name}"):
-                mass = ddf.loc[mask, "dimuon_mass"].compute().to_numpy()
+                cols = ["dimuon_mass"] + (["wgt_nominal"] if isMC else [])
+                tmp = ddf.loc[mask, cols].compute()
+
+                mass = tmp["dimuon_mass"].to_numpy()
+                weights = tmp["wgt_nominal"].to_numpy() if isMC else None
             # save to numpy array
             with timed(f"save mass numpy for category {cat_name}"):
                 if fix_fitting_one_cat is not None:
@@ -99,6 +104,7 @@ def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=
             continue
         df_fit = generateBWxDCB_RooCMSShape_plot(
             mass,
+            weights,
             cat_name,
             nbins=CONFIG["nbins"],
             df_fit=df_fit,
@@ -160,7 +166,11 @@ def step2_mass_resolution(df, output_dir="tmp", pdfFile_ExtraText="", n_boot=300
             continue
 
         vals = cat_df["dimuon_ebe_mass_res_NonCal"].to_numpy()
-        med = float(np.median(vals))
+        weights = cat_df["wgt_nominal"].to_numpy() if "wgt_nominal" in cat_df.columns else None        
+        if "wgt_nominal" in cat_df.columns:
+            med = float(weighted_median(vals, weights))
+        else:
+            med = float(np.median(vals))
         med_err = float(
             median_bootstrap_err(vals, n_boot=n_boot, seed=hash(cat_name) % (2**32))
         )
@@ -322,6 +332,7 @@ def main():
                     fix_fitting_one_cat=fix_fitting_one_cat,
                     ifbinned=ifbinned,
                     inputFilePath=LOAD_PATH.format(year=year),
+                    isMC=isMC,
                 )
                 if fix_fitting_one_cat:
                     # df_fit currently contains ONLY the newly refit category from step1
@@ -382,7 +393,7 @@ def main():
                 df_merged = step3_compute_calibration(df_fit, df_res)
                 save_dataframe_to_csv(df_merged, f"{output_dir}/calibration_factors.csv", "calibration factors")
 
-            if fix_fitting_one_cat or args.steps == "all":
+            if fix_fitting_one_cat or args.steps == "step3" or args.steps == "all" :
                 df_merged = pd.read_csv(f"{output_dir}/calibration_factors.csv")
                 # Save LaTeX tables
                 for fmt, rounding in [(f"calibration_factors.tex", None),
