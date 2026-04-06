@@ -317,6 +317,7 @@ def closure_test_resolution_binning(
     pdfFile_ExtraText="",
     ifbinned=True,
     fix_bin=None,
+    isMC=True,
 ):
     """
     Validate calibration using bins in predicted per-event resolution (Table-32 style).
@@ -326,6 +327,8 @@ def closure_test_resolution_binning(
     """
     logger.info("Starting closure test in resolution binning...")
     os.makedirs(output_dir, exist_ok=True)
+
+    CLOSURE_BINS_LOCAL = CLOSURE_BINS_Run2_AN if isMC else CLOSURE_BINS
 
     # load correction
     cset = get_corrset(CalibrationFactorJSONFile)
@@ -356,11 +359,11 @@ def closure_test_resolution_binning(
 
     logger.info("Dataframe computed.")
     rows = []
-    for i, (lo, hi) in enumerate(CLOSURE_BINS, start=1):
+    for i, (lo, hi) in enumerate(CLOSURE_BINS_LOCAL, start=1):
         if fix_bin is not None and i != int(fix_bin):
             logger.warning(f"Skipping bin {i} as per fix_bin={fix_bin}")
             continue
-        mask = (df["sigma_pred_cal"] >= lo) & (df["sigma_pred_cal"] < hi)
+        mask = (df["sigma_pred_noncal"] >= lo) & (df["sigma_pred_noncal"] < hi)
         df_bin = df[mask]
         if df_bin.empty:
             logger.warning(f"Closure bin {i} [{lo},{hi}) empty, skipping.")
@@ -368,7 +371,7 @@ def closure_test_resolution_binning(
 
         # predicted medians
         weights = df_bin["wgt_nominal"].to_numpy() if "wgt_nominal" in df_bin else None
-        if np.any(weights < 0):
+        if weights is not None and np.any(weights < 0):
             logger.warning("Negative weights detected in closure bin!")  
         if weights is not None:
             med_noncal = weighted_median(df_bin["sigma_pred_noncal"], weights)
@@ -379,12 +382,11 @@ def closure_test_resolution_binning(
 
         # plot mass resolution distribution both calibrated and non-calibrated
         plt.figure(figsize=(8, 6))
-        plt.hist(df_bin["sigma_pred_cal"], bins=CONFIG["nbins"], range=RANGE[i], weights=weights, color='C0', alpha=0.7, label="Calibrated")
-        plt.hist(df_bin["sigma_pred_noncal"], bins=CONFIG["nbins"], range=RANGE[i], weights=weights, color='C1', alpha=0.7, label="Non-Calibrated")
+        plt.hist(df_bin["sigma_pred_cal"], bins=CONFIG["nbins"], range=RANGE.get(i, (0.5, 4.0)), weights=weights, color='C0', alpha=0.7, label="Calibrated")
+        plt.hist(df_bin["sigma_pred_noncal"], bins=CONFIG["nbins"], range=RANGE.get(i, (0.5, 4.0)), weights=weights, color='C1', alpha=0.7, label="Non-Calibrated")
         plt.xlabel("Dimuon mass resolution (GeV)")
         plt.ylabel("Events")
         plt.title(f"Category {i}\n Median Cal = {med_cal:.4f} GeV, Median NonCal = {med_noncal:.4f} GeV")
-        plt.legend()
 
         plt.axvline(med_cal, color="red", linestyle="dashed", linewidth=2, label=f"Median Cal: {med_cal:.4f}")
         plt.axvline(med_noncal, color="blue", linestyle="dashed", linewidth=2, label=f"Median NonCal: {med_noncal:.4f}")

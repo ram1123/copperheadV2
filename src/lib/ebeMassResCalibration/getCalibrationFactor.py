@@ -40,10 +40,10 @@ from basic_class_for_calibration import (
     closure_test_resolution_binning,
     CONFIG,
     plot_histogram,
-    weighted_median
+    weighted_median,
+    timed
 )
 
-from basic_class_for_calibration import timed
 
 CURRENT_DIR = Path(__file__).resolve().parent
 
@@ -131,6 +131,19 @@ def median_bootstrap_err(x, n_boot=300, seed=12345):
     meds = np.median(x[idx], axis=1)
     return np.std(meds, ddof=1)
 
+def weighted_bootstrap_median(x, w, n_boot=300, seed=12345):
+    x = np.asarray(x)
+    w = np.asarray(w)
+
+    w = w / np.sum(w)
+    rng = np.random.default_rng(seed)
+
+    meds = []
+    for _ in range(n_boot):
+        idx = rng.choice(len(x), size=len(x), p=w)
+        meds.append(np.median(x[idx]))
+
+    return np.std(meds)
 
 def step2_mass_resolution(df, output_dir="tmp", pdfFile_ExtraText="", n_boot=300):
     """
@@ -172,7 +185,7 @@ def step2_mass_resolution(df, output_dir="tmp", pdfFile_ExtraText="", n_boot=300
         else:
             med = float(np.median(vals))
         med_err = float(
-            median_bootstrap_err(vals, n_boot=n_boot, seed=hash(cat_name) % (2**32))
+            weighted_bootstrap_median(vals, weights, n_boot=n_boot, seed=hash(cat_name) % (2**32))
         )
 
         rows.append(
@@ -431,6 +444,7 @@ def main():
                         ifbinned=ifbinned,
                         pdfFile_ExtraText="",
                         fix_bin=fix_fitting_one_cat,
+                        isMC=isMC,
                     )
                 # if fix_fitting_one_cat is not None, then update the existing closure_csv
                 if fix_fitting_one_cat is not None and os.path.exists(closure_csv):
