@@ -280,7 +280,7 @@ def jet_id(jets, config, year=None, jet_id_key="jet_id"):
         }
         pass_jet_id = jet_id_wps[jet_id2use]
     elif hasattr(jets, "jetId") and is_run3(year):
-        # Referece: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
+        # Reference: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
         logger.info("Using Run3 official jet-id for the nanoAODv12")
 
         abs_eta = abs(jets.eta)
