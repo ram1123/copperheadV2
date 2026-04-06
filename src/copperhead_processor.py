@@ -39,6 +39,7 @@ from src.corrections.jet import (
     applyHemVeto,
     applyJetUncertaintyKinematics,
     applyUpDown,
+    btag_jet_selection,
     custom_jet_id,
     get_jec_sources,
     do_jec_scale,
@@ -2407,6 +2408,11 @@ class EventProcessor(processor.ProcessorABC):
             pass_jet_puid = jet_puid(jets, self.config)
         else:
             pass_jet_puid = ak.ones_like(pass_jet_id, dtype="bool")
+
+        btag_selection = btag_jet_selection(
+            jets, clean, pass_jet_puid, self.config, year
+        )
+        btag_jets = ak.to_packed(jets[btag_selection])
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
@@ -2892,7 +2898,6 @@ class EventProcessor(processor.ProcessorABC):
         Loose PUID for jets with pT< 50 GeV (for CHS jets only), as recommended by JetMet
         Reference: https://btv-wiki.docs.cern.ch/ScaleFactors/#important-notes
 
-        FIXME: For b-tag the jetID should be tight, currently we are using the common for general jets and b-tag jets.
         """
         if is_run3(year):
             btag_eta_val = 2.5
@@ -2905,8 +2910,8 @@ class EventProcessor(processor.ProcessorABC):
         if is_mc and (variation == "nominal") and (self.config["switches"]["do_btag_wgt"]):
             # --- Btag weights  start--- #
             logger.info("doing btag wgt!")
-            bjet_sel_mask = ak.ones_like(njets) #& two_jets & vbf_cut
-            btag_systs = self.config["btag_systs"] #if do_btag_syst else []
+            bjet_sel_mask = ak.ones_like(ak.num(btag_jets, axis=1))
+            btag_systs = self.config["btag_systs"]
             if "RERECO" in year:
                 # if True:
                 btag_json = BTagScaleFactor(
@@ -2921,7 +2926,7 @@ class EventProcessor(processor.ProcessorABC):
 
             # keep dims start -------------------------------------
             btag_wgt, btag_syst = btag_weights_jsonKeepDim(
-                        self, btag_systs, jets, btag_eta_val, weights, bjet_sel_mask, btag_json
+                        self, btag_systs, btag_jets, btag_eta_val, weights, bjet_sel_mask, btag_json
             )
             weights.add("btag_wgt",
                     weight=btag_wgt,
@@ -2957,24 +2962,23 @@ class EventProcessor(processor.ProcessorABC):
         #         weights.add_weight(f"btag_wgt_{name}", bs, how="only_vars")
 
         if "RERECO" in year:
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val) # original value
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)
+            btagLoose_filter = btag_jets.btagDeepB > self.config["btag_loose_wp"]
+            btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp"]
         if is_run3(year) or is_run2(year): # Run3: Different btagging taggers and WPs
-            btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val)
-            btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)
-            if hasattr(jets, "btagUParTAK4B"):
+            btagLoose_filter = btag_jets.btagDeepFlavB > self.config["btag_loose_wp"]
+            btagMedium_filter = btag_jets.btagDeepFlavB > self.config["btag_medium_wp"]
+            if hasattr(btag_jets, "btagUParTAK4B"):
                 logger.info("Using btagUParTAK4B btag!")
-                btagLoose_filter_UParT = (jets.btagUParTAK4B > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val)
-                btagMedium_filter_UParT = (jets.btagUParTAK4B > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)                                
-            if hasattr(jets, "btagPNetB"):
+                btagLoose_filter_UParT = btag_jets.btagUParTAK4B > self.config["btag_loose_wp"]
+                btagMedium_filter_UParT = btag_jets.btagUParTAK4B > self.config["btag_medium_wp"]
+            if hasattr(btag_jets, "btagPNetB"):
                 logger.info("Using btagPNetB btag!")
-                btagLoose_filter_PNet = (jets.btagPNetB > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val)
-                btagMedium_filter_PNet = (jets.btagPNetB > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)
-            if hasattr(jets, "btagRobustParTAK4B"):
+                btagLoose_filter_PNet = btag_jets.btagPNetB > self.config["btag_loose_wp"]
+                btagMedium_filter_PNet = btag_jets.btagPNetB > self.config["btag_medium_wp"]
+            if hasattr(btag_jets, "btagRobustParTAK4B"):
                 logger.info("Using btagRobustParTAK4B btag!")
-                btagLoose_filter_RParT = (jets.btagRobustParTAK4B > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val)
-                btagMedium_filter_RParT = (jets.btagRobustParTAK4B > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)                                
-
+                btagLoose_filter_RParT = btag_jets.btagRobustParTAK4B > self.config["btag_loose_wp"]
+                btagMedium_filter_RParT = btag_jets.btagRobustParTAK4B > self.config["btag_medium_wp"]
 
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)
