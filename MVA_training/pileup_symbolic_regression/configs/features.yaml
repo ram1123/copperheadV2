@@ -9,9 +9,9 @@ regions:
     - neHEF
     - muEF
     - nConstituents
-    - lognC
-    - pt
-    - eta
+    - mass
+    - area
+    - rawFactor
 
   HE:
     - chEmEF
@@ -20,34 +20,9 @@ regions:
     - neHEF
     - muEF
     - nConstituents
-    - lognC
-    - pt
-    - eta
-
-  HF:
-    - pt
-    - eta
-    - hfcentralEtaStripSize
-    - hfadjacentEtaStripsSize
-    - hfsigmaEtaEta
-    - hfsigmaPhiPhi
-    - hf_ratio
-    - hf_sigma_sum
     - mass
-
-  HFpos:
-    - pt
-    - hfcentralEtaStripSize
-    - hfadjacentEtaStripsSize
-    - hf_ratio
-    - hf_sigma_sum
-
-  HFneg:
-    - pt
-    - hfcentralEtaStripSize
-    - hfadjacentEtaStripsSize
-    - hf_ratio
-    - hf_sigma_sum
+    - area
+    - rawFactor
 
   HEpos:
     - chEmEF
@@ -56,9 +31,9 @@ regions:
     - neHEF
     - muEF
     - nConstituents
-    - lognC
-    - pt
-    - eta
+    - mass
+    - area
+    - rawFactor
 
   HEneg:
     - chEmEF
@@ -67,6 +42,39 @@ regions:
     - neHEF
     - muEF
     - nConstituents
-    - lognC
-    - pt
-    - eta
+    - mass
+    - area
+    - rawFactor
+
+  HF:
+    - hfcentralEtaStripSize
+    - hfadjacentEtaStripsSize
+    - hfsigmaEtaEta
+    - hfsigmaPhiPhi
+    - hf_ratio
+    - hf_sigma_sum
+    - mass
+    - rawFactor
+    - area
+
+  HFpos:
+    - hfcentralEtaStripSize
+    - hfadjacentEtaStripsSize
+    - hfsigmaEtaEta
+    - hfsigmaPhiPhi
+    - hf_ratio
+    - hf_sigma_sum
+    - mass
+    - rawFactor
+    - area
+
+  HFneg:
+    - hfcentralEtaStripSize
+    - hfadjacentEtaStripsSize
+    - hfsigmaEtaEta
+    - hfsigmaPhiPhi
+    - hf_ratio
+    - hf_sigma_sum
+    - mass
+    - rawFactor
+    - area

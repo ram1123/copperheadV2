@@ -94,6 +94,7 @@ def run_training(args):
             df_region,
             seed=args.seed,
             min_train=args.min_train,
+            max_per_class=10000,
         )
 
         if df_bal is None:
@@ -133,9 +134,10 @@ def run_training(args):
         score_full = safe_predict(model, X_full)
 
         y_full = df_region["y_hs"].values
+        y_mask = y_full.astype(bool)
 
-        hs_scores = score[y_full]
-        pu_scores = score[~y_full]
+        hs_scores = score_full[y_mask]
+        pu_scores = score_full[~y_mask]
 
         if len(hs_scores) == 0 or len(pu_scores) == 0:
             print("No HS or PU events in region.")
@@ -222,6 +224,7 @@ def evaluate_equation(df, equation, feature_cols):
         "log1p": safe_log1p,
         "log1p_abs": lambda x: np.log1p(np.abs(x)),
         "tanh": np.tanh,
+        "log_abs": lambda x: np.log(np.abs(x) + 1e-12),
     }
 
     return eval(equation, safe_dict, local_dict)

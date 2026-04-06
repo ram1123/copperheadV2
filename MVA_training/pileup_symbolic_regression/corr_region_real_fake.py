@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import ROOT
 
+from modules.root_2dColorProfile import set_gradient_style
+
 ROOT.gROOT.SetBatch(True)
 
 """
@@ -13,6 +15,15 @@ time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
     -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part*.parquet"   \
     -o validation/corr_jet1_v2   \
     --prefix jet1_
+
+time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
+    -o validation/corr_JetIDFix_jet_   \
+    --prefix jet1_  
+time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
+    -o validation/corr_JetIDFix_jet_   \
+    --prefix jet2_  
 """
 
 def infer_existing_files(pattern: str):
@@ -153,14 +164,14 @@ def infer_range_2d(x, Var, fallback=(0.0, 1.0, 50)):
     x = x[np.isfinite(x)]
     if len(x) < 10:
         return fallback
-    lo = np.percentile(x, 0.001)
+    lo = np.percentile(x, 0.00001)
     hi = np.percentile(x, 99.9999)
     if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
         return fallback
     if "nConstituents" in Var:
-        return 0, 20, 20
-    if "pt" in Var: hi = 100.0
+        return int(lo), 20, int(20-int(lo))
     if "mass" in Var: hi = 15.0
+    if "pt" in Var: hi = 100.0
     return float(lo), float(hi), infer_nbins(x, float(lo), float(hi))
 
 
@@ -215,6 +226,95 @@ def draw_2d_plot(df_sub, xcol, ycol, out_pdf, title, xVar, yVar, prefix, variati
     print(f"[Saved] {out_pdf}")
 
 
+def draw_2d_ratio_plot(
+    df_real,
+    df_fake,
+    xcol,
+    ycol,
+    out_pdf,
+    title,
+    xVar,
+    yVar,
+    prefix,
+    variation,
+):
+    x_real = pd.to_numeric(df_real[xcol], errors="coerce").to_numpy(dtype=np.float32)
+    y_real = pd.to_numeric(df_real[ycol], errors="coerce").to_numpy(dtype=np.float32)
+
+    x_fake = pd.to_numeric(df_fake[xcol], errors="coerce").to_numpy(dtype=np.float32)
+    y_fake = pd.to_numeric(df_fake[ycol], errors="coerce").to_numpy(dtype=np.float32)
+
+    m_real = np.isfinite(x_real) & np.isfinite(y_real)
+    m_fake = np.isfinite(x_fake) & np.isfinite(y_fake)
+
+    x_real, y_real = x_real[m_real], y_real[m_real]
+    x_fake, y_fake = x_fake[m_fake], y_fake[m_fake]
+
+    if len(x_real) + len(x_fake) < 10:
+        print(f"[WARN] Too few events for ratio plot: {title}")
+        return
+
+    xmin, xmax, xnbins = infer_range_2d(
+        np.concatenate([x_real, x_fake]), xVar
+    )
+    ymin, ymax, ynbins = infer_range_2d(
+        np.concatenate([y_real, y_fake]), yVar
+    )
+
+    def short_label(colname):
+        s = colname
+        if s.startswith(prefix):
+            s = s[len(prefix):]
+        suffix = f"_{variation}"
+        if s.endswith(suffix):
+            s = s[:-len(suffix)]
+        return s
+
+    xlab = short_label(xcol)
+    ylab = short_label(ycol)
+
+    h_real = ROOT.TH2F("h_real", "", xnbins, xmin, xmax, ynbins, ymin, ymax)
+    h_fake = ROOT.TH2F("h_fake", "", xnbins, xmin, xmax, ynbins, ymin, ymax)
+
+    for xv, yv in zip(x_real, y_real):
+        h_real.Fill(float(xv), float(yv))
+
+    for xv, yv in zip(x_fake, y_fake):
+        h_fake.Fill(float(xv), float(yv))
+
+    h_ratio = ROOT.TH2F(
+        "h_ratio",
+        f"{title};{xlab};{ylab}",
+        xnbins, xmin, xmax,
+        ynbins, ymin, ymax,
+    )
+
+    for ix in range(1, xnbins + 1):
+        for iy in range(1, ynbins + 1):
+            n_real = h_real.GetBinContent(ix, iy)
+            n_fake = h_fake.GetBinContent(ix, iy)
+            denom = n_real + n_fake
+            if denom > 0:
+                h_ratio.SetBinContent(ix, iy, n_fake / denom)
+            else:
+                h_ratio.SetBinContent(ix, iy, 0.0)
+
+    c = ROOT.TCanvas("c_ratio", "", 850, 750)
+    c.SetLeftMargin(0.12)
+    c.SetRightMargin(0.15)
+    c.SetBottomMargin(0.12)
+
+    h_ratio.SetStats(0)
+    h_ratio.GetZaxis().SetTitle("Fake / (Real + Fake)")
+    h_ratio.SetMinimum(0.0)
+    h_ratio.SetMaximum(1.0)
+
+    h_ratio.Draw("COLZ")
+    c.SaveAs(out_pdf)
+
+    print(f"[Saved] {out_pdf}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--input", required=True,
@@ -228,9 +328,11 @@ def main():
     ap.add_argument("--max-rows", type=int, default=None)
     args = ap.parse_args()
 
+    set_gradient_style()
+
     os.makedirs(args.outdir, exist_ok=True)
 
-    vars_short = ["mass", "muEF", "nConstituents", "pt", "eta", "area"]
+    vars_short = ["mass", "muEF", "nConstituents", "pt", "eta", "area", "rawFactor"] # "area"]
     cols = [f"{args.prefix}{v}_{args.variation}" for v in vars_short]
 
     eta_col = f"{args.prefix}eta_{args.variation}"
@@ -256,6 +358,26 @@ def main():
     reg_masks = region_masks(df, eta_col)
     real_mask, fake_mask = real_fake_masks(df, genmatch_col, args.genmatch_mode)
 
+    pairs = [
+        ("mass", "nConstituents"),
+        ("pt", "nConstituents"),
+        ("muEF", "nConstituents"),
+        ("eta", "nConstituents"),
+        ("area", "nConstituents"),
+        ("rawFactor", "nConstituents"),
+        ("mass", "muEF"),
+        ("pt", "muEF"),
+        ("area", "muEF"),
+        ("mass", "pt"),
+        ("eta", "mass"),
+        ("area", "mass"),
+        ("area", "pt"),
+        ("area", "eta"),
+        ("rawFactor", "pt"),
+        ("rawFactor", "eta"),        
+        ("rawFactor", "area"),
+    ]
+
     for region_name, reg_mask in reg_masks.items():
         groups = {
             "all": reg_mask,
@@ -274,23 +396,36 @@ def main():
             #     prefix=args.prefix,
             #     variation=args.variation,
             # )
-            pairs = [
-                ("mass", "nConstituents"),
-                ("pt", "nConstituents"),
-                ("muEF", "nConstituents"),
-                ("eta", "nConstituents"),
-                ("area", "nConstituents"),
-                # ("mass", "muEF"),
-                # ("pt", "muEF"),
-                # ("area", "muEF"),
-                # ("mass", "pt"),
-                # ("eta", "mass"),
-                # ("area", "mass"),
-                # ("area", "pt"),
-                # ("area", "eta"),
-            ]
 
             for xv, yv in pairs:
+                xcol = f"{args.prefix}{xv}_{args.variation}"
+                ycol = f"{args.prefix}{yv}_{args.variation}"
+
+                if xcol not in df_num.columns or ycol not in df_num.columns:
+                    continue
+
+                df_real = df_num.loc[reg_mask & real_mask].dropna()
+                df_fake = df_num.loc[reg_mask & fake_mask].dropna()
+
+                # existing real/fake plots already handled above
+
+                out_ratio = os.path.join(
+                    args.outdir,
+                    f"twod_ratio_{args.prefix[:-1]}_{region_name}_{xv}_vs_{yv}.pdf"
+                )
+
+                draw_2d_ratio_plot(
+                    df_real=df_real,
+                    df_fake=df_fake,
+                    xcol=xcol,
+                    ycol=ycol,
+                    out_pdf=out_ratio,
+                    title=f"{args.prefix[:-1]} {region_name}: Fake Fraction ({xv} vs {yv})",
+                    xVar=xv,
+                    yVar=yv,
+                    prefix=args.prefix,
+                    variation=args.variation,
+                )
                 xcol = f"{args.prefix}{xv}_{args.variation}"
                 ycol = f"{args.prefix}{yv}_{args.variation}"
 

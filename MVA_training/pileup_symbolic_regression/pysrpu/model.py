@@ -10,14 +10,14 @@ def train_pysr(X, y, niterations, population_size, maxsize, seed=1):
         niterations=niterations,
         population_size=population_size,
         maxsize=maxsize,
-        model_selection="best", # accuracy
+        model_selection="best", # options: best, accuracy
         verbosity=1,
         random_state=seed,
         deterministic=True,
         parallelism="multiprocessing",
         binary_operators=["+", "-", "*", "/"],
-        unary_operators=["sqrt", "log1p", "tanh"],
-        complexity_of_operators={"/": 3, "log1p": 2, "tanh": 2, "sqrt": 2},
+        unary_operators=["sqrt", "log1p", "tanh", "log"],
+        complexity_of_operators={"/": 3, "log1p": 2, "log": 2, "tanh": 2, "sqrt": 2},
         # elementwise_loss=elementwise_loss,
         elementwise_loss="logistic",
     )

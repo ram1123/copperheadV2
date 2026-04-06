@@ -16,9 +16,9 @@ or:
 
 Example:
   python plot_real_fake_stack.py -i input.parquet -o outdir --normalize
-  python plotter/plot_real_fake_jets_stack.py \
-    -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part038.parquet \
-    -o validation/compare_real_fake 
+  python MVA_training/pileup_symbolic_regression/plot_real_fake_jets_stack.py \
+    -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part018.parquet \
+    -o validation/compare_real_fake/After_JetID_Fix 
 """
 
 import os
@@ -33,9 +33,9 @@ ROOT.gROOT.SetBatch(True)
 
 JET_ID_VARIABLES = [
     # --- Jet kinematics ---
-    "jet1_default_pt_nominal", "jet1_default_eta_nominal", "jet1_default_phi_nominal", "jet1_default_mass_nominal",
+    # "jet1_default_pt_nominal", "jet1_default_eta_nominal", "jet1_default_phi_nominal", "jet1_default_mass_nominal",
     "jet1_pt_nominal", "jet1_eta_nominal", "jet1_phi_nominal", "jet1_rapidity_nominal",
-    "jet2_default_pt_nominal", "jet2_default_eta_nominal", "jet2_default_phi_nominal", "jet2_default_mass_nominal",
+    # "jet2_default_pt_nominal", "jet2_default_eta_nominal", "jet2_default_phi_nominal", "jet2_default_mass_nominal",
     "jet2_pt_nominal", "jet2_eta_nominal", "jet2_phi_nominal", "jet2_rapidity_nominal",
     "jet1_mass_nominal", "jet2_mass_nominal", 
     # "jj_dEta_nominal", "jj_mass_nominal",
@@ -55,19 +55,19 @@ JET_ID_VARIABLES = [
 
     # --- Constituents / leptons / SVs ---
     "jet1_nConstituents_nominal", "jet2_nConstituents_nominal", 
-    "jet1_nElectrons_nominal", "jet1_nMuons_nominal", "jet1_nSVs_nominal",
-    "jet2_nElectrons_nominal", "jet2_nMuons_nominal", "jet2_nSVs_nominal",
+    # "jet1_nElectrons_nominal", "jet1_nMuons_nominal", "jet1_nSVs_nominal",
+    # "jet2_nElectrons_nominal", "jet2_nMuons_nominal", "jet2_nSVs_nominal",
 
     # --- Object indices ---
-    "jet1_electronIdx1_nominal", "jet1_electronIdx2_nominal",
-    "jet1_muonIdx1_nominal", "jet1_muonIdx2_nominal",
-    "jet1_svIdx1_nominal", "jet1_svIdx2_nominal",
-    "jet1_genJetIdx_nominal",
+    # "jet1_electronIdx1_nominal", "jet1_electronIdx2_nominal",
+    # "jet1_muonIdx1_nominal", "jet1_muonIdx2_nominal",
+    # "jet1_svIdx1_nominal", "jet1_svIdx2_nominal",
+    # "jet1_genJetIdx_nominal",
 
-    "jet2_electronIdx1_nominal", "jet2_electronIdx2_nominal",
-    "jet2_muonIdx1_nominal", "jet2_muonIdx2_nominal",
-    "jet2_svIdx1_nominal", "jet2_svIdx2_nominal",
-    "jet2_genJetIdx_nominal",
+    # "jet2_electronIdx1_nominal", "jet2_electronIdx2_nominal",
+    # "jet2_muonIdx1_nominal", "jet2_muonIdx2_nominal",
+    # "jet2_svIdx1_nominal", "jet2_svIdx2_nominal",
+    # "jet2_genJetIdx_nominal",
 
     # --- Flavour / taggers ---
     "jet1_hadronFlavour_nominal", "jet2_hadronFlavour_nominal",
@@ -99,7 +99,7 @@ def parse_args():
                    help="How to interpret genmatch column")
 
     # Basic selection (applied per-jet depending on jet1/jet2)
-    p.add_argument("--pt-min", type=float, default=30.0)
+    p.add_argument("--pt-min", type=float, default=25.0)
     p.add_argument("--abs-eta-max", type=float, default=4.7)
 
     # Plot options
@@ -145,7 +145,7 @@ def default_range(var: str):
 
     # Multiplicities / constituents
     if "Multiplicity" in var or "nConstituents" in var or var.endswith(("nElectrons", "nMuons", "nSVs")):
-        return 0.0, 80.0, 50
+        return 0.0, 30.0, 30
 
     # Flavour (discrete)
     if var.endswith(("hadronFlavour", "partonFlavour")):
@@ -177,7 +177,7 @@ def infer_nbins(x, xmin, xmax):
     return max(20, min(nbins, 80))
 
 
-def infer_range(x, fallback=(0.0, 1.0)):
+def infer_range(x, fallback=(0.0, 1.0, 100)):
     x = x[np.isfinite(x)]
     if len(x) == 0:
         return fallback
@@ -300,7 +300,7 @@ def plot_var(df, var, args, region="inclusive"):
 
     xmin, xmax, nbins = default_range(var)
     if xmin is None or xmax is None or nbins is None:
-        xmin2, xmax2, nbins = infer_range(x[total_mask], fallback=(0.0, 1.0))
+        xmin2, xmax2, nbins = infer_range(x[total_mask], fallback=(0.0, 1.0, 100))
         xmin = xmin2 if xmin is None else xmin
         xmax = xmax2 if xmax is None else xmax
 

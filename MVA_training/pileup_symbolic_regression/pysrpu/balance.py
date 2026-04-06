@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 
-def balance_hs_pu(df, seed=1, min_train=500):
+def balance_hs_pu(df, seed=1, min_train=500, max_per_class=4000):
     hs = df[df["y_hs"] > 0.5]
     pu = df[df["y_hs"] <= 0.5]
-    n = min(len(hs), len(pu))
+    n = min(len(hs), len(pu), max_per_class)
     if n < min_train:
         return None
     hs = hs.sample(n=n, random_state=seed)
