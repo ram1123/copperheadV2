@@ -2902,7 +2902,7 @@ class EventProcessor(processor.ProcessorABC):
         if is_run3(year):
             btag_eta_val = 2.5
         elif is_run2(year):
-            if "2016" in str(year): 
+            if str(year).startswith("2016"):
                 btag_eta_val = 2.4
             else:
                 btag_eta_val = 2.5
