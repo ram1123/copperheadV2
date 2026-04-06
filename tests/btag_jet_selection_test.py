@@ -13,9 +13,33 @@ class BtagJetSelectionTest(unittest.TestCase):
         jets = ak.Array(
             [
                 [
-                    {"pt": 30.0, "eta": 0.2, "jetId": 2},
-                    {"pt": 35.0, "eta": 0.3, "jetId": 6},
-                    {"pt": 18.0, "eta": 0.4, "jetId": 2},
+                    {
+                        "pt": 30.0,
+                        "eta": 0.2,
+                        "jetId": 2,
+                        "neHEF": 0.1,
+                        "neEmEF": 0.1,
+                        "muEF": 0.0,
+                        "chEmEF": 0.0,
+                    },
+                    {
+                        "pt": 35.0,
+                        "eta": 0.3,
+                        "jetId": 6,
+                        "neHEF": 0.1,
+                        "neEmEF": 0.1,
+                        "muEF": 0.0,
+                        "chEmEF": 0.0,
+                    },
+                    {
+                        "pt": 18.0,
+                        "eta": 0.4,
+                        "jetId": 2,
+                        "neHEF": 0.1,
+                        "neEmEF": 0.1,
+                        "muEF": 0.0,
+                        "chEmEF": 0.0,
+                    },
                 ]
             ]
         )
