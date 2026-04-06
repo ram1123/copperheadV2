@@ -2414,17 +2414,17 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
-        # get QGL cut
+        # get QGL discriminator
         if NanoAODv == 9 and is_run2(year):
             jets["qgl"] = jets.qgl
-        elif is_run2(year):
-            # if qgl is not present, set it to -1.0
-            jets["qgl"] = jets.qgl if hasattr(jets, "qgl") else ak.zeros_like(jets.pt) - 1.0
-            if hasattr(jets, "btagUParTAK4B"):
-                jets["btagUParTAK4B"] = jets.btagUParTAK4B
-        elif is_run3(year):
-            jets["btagPNetQvG"] = jets.btagPNetQvG if hasattr(jets, "btagPNetQvG") else ak.zeros_like(jets.pt) - 999.0
-            jets["btagDeepFlavQG"] = jets.btagDeepFlavQG if hasattr(jets, "btagDeepFlavQG") else ak.zeros_like(jets.pt) - 999.0
+        elif NanoAODv == 12:
+            jets["btagPNetQvG"] = jets.btagPNetQvG if hasattr(jets, "btagPNetQvG") else ak.zeros_like(jets.pt) - 1.0
+            jets["btagDeepFlavQG"] = jets.btagDeepFlavQG if hasattr(jets, "btagDeepFlavQG") else ak.zeros_like(jets.pt) - 1.0
+            jets["btagRobustParTAK4QG"] = jets.btagRobustParTAK4QG if hasattr(jets, "btagRobustParTAK4QG") else ak.zeros_like(jets.pt) - 1.0
+        elif NanoAODv == 15:
+            jets["btagPNetQvG"] = jets.btagPNetQvG if hasattr(jets, "btagPNetQvG") else ak.zeros_like(jets.pt) - 1.0
+            jets["btagDeepFlavQG"] = jets.btagDeepFlavQG if hasattr(jets, "btagDeepFlavQG") else ak.zeros_like(jets.pt) - 1.0
+            jets["btagUParTAK4QvG"] = jets.btagUParTAK4QvG if hasattr(jets, "btagUParTAK4QvG") else ak.zeros_like(jets.pt) - 1.0            
         else:
             raise ValueError(f"Year {year} not recognized for jet QGL assignment!")
 
@@ -2780,11 +2780,27 @@ class EventProcessor(processor.ProcessorABC):
         # Add additional Jet NanoAOD variables for leading 4 jets
         # (only if the branches exist in this NanoAOD)
         # ------------------------------------------------------------------
-        if do_additional_vars:
+        jet_vars = [
+                "qgl", "btagPNetQvG", "btagDeepFlavQG", 
+                "btagRobustParTAK4QG", "btagUParTAK4QvG",
 
+                "btagDeepFlavB", "btagRobustParTAK4B",
+                "btagPNetB", "btagUParTAK4B", "btagUParTAK4probb",
+                "btagUParTAK4probbb",
+                ]
+        jets_to_process = [jet1, jet2, jet3, jet4] if do_additional_jet_vars else [jet1, jet2]
+        for i, jet in enumerate(jets_to_process, start=1):
+            for var in jet_vars:
+                # Get the value if it exists, otherwise return None
+                val = getattr(jet, var, None)
+                
+                # Only add to the dict if the attribute actually exists on this jet
+                if val is not None:
+                    jet_loop_out_dict[f"jet{i}_{var}_{variation}"] = val
+
+        if do_additional_vars:
             # The flat list of variables we need
             jet_vars = [
-                "qgl", "btagPNetQvG",
                 "jetId",
                 "btagUParTAK4B", "btagDeepFlavB", "btagDeepFlavCvB",
                 "chEmEF", "chHEF", "neEmEF", "neHEF", "muEF",
@@ -2848,7 +2864,7 @@ class EventProcessor(processor.ProcessorABC):
 
 
         # ------------------------------------------------------------#
-        # Calculate QGL weights, btag SF and apply btag veto
+        # Calculate QGL weights
         # ------------------------------------------------------------#
         if is_mc and (variation == "nominal") and (self.config["switches"]["do_qgl_wgt"]):
             # --- QGL weights  start --- #
@@ -2866,6 +2882,28 @@ class EventProcessor(processor.ProcessorABC):
             )
             # --- QGL weights  end --- #
 
+
+        # ------------------------------------------------------------#
+        # btag SF and apply btag veto
+        # ------------------------------------------------------------#
+        """
+        Jet collection: AK4CHS (Run-2) or AK4PUPPI (Run-3)
+        Jet pT> 20 GeV
+        Jet |η|< 2.4 (before and including 2016) and |η|< 2.5 for 2017 onward
+        Tight jet ID
+        Loose PUID for jets with pT< 50 GeV (for CHS jets only), as recommended by JetMet
+        Reference: https://btv-wiki.docs.cern.ch/ScaleFactors/#important-notes
+
+        FIXME: For b-tag the jetID should be tight, currently we are using the common for general jets and b-tag jets.
+        """
+        if is_run3(year):
+            btag_eta_val = 2.5
+        elif is_run2(year):
+            if "2016" in str(year): 
+                btag_eta_val = 2.4
+            else:
+                btag_eta_val = 2.5
+
         if is_mc and (variation == "nominal") and (self.config["switches"]["do_btag_wgt"]):
             # --- Btag weights  start--- #
             logger.info("doing btag wgt!")
@@ -2874,10 +2912,10 @@ class EventProcessor(processor.ProcessorABC):
             if "RERECO" in year:
                 # if True:
                 btag_json = BTagScaleFactor(
-                self.config["btag_sf_csv"],
-                BTagScaleFactor.RESHAPE,
-                "iterativefit,iterativefit,iterativefit",
-            )
+                    self.config["btag_sf_csv"],
+                    BTagScaleFactor.RESHAPE,
+                    "iterativefit,iterativefit,iterativefit",
+                )
             else:
                 btag_file = get_corrset(self.config["btag_sf_json"])
                 # btag_json=btag_file["deepJet_shape"]
@@ -2885,7 +2923,7 @@ class EventProcessor(processor.ProcessorABC):
 
             # keep dims start -------------------------------------
             btag_wgt, btag_syst = btag_weights_jsonKeepDim(
-                        self, btag_systs, jets, weights, bjet_sel_mask, btag_json
+                        self, btag_systs, jets, btag_eta_val, weights, bjet_sel_mask, btag_json
             )
             weights.add("btag_wgt",
                     weight=btag_wgt,
@@ -2920,32 +2958,49 @@ class EventProcessor(processor.ProcessorABC):
         #     for name, bs in btag_syst.items():
         #         weights.add_weight(f"btag_wgt_{name}", bs, how="only_vars")
 
-        # Separate from ttH and VH phase space
-
         if "RERECO" in year:
-            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5) # original value
-            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-        if is_run3(year): # Run3: Different btagging taggers and WPs
-            btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-            btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-        else: # UL
+            btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val) # original value
+            btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)
+        if is_run3(year) or is_run2(year): # Run3: Different btagging taggers and WPs
+            btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val)
+            btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)
             if hasattr(jets, "btagUParTAK4B"):
                 logger.info("Using btagUParTAK4B btag!")
-                btagLoose_filter = (jets.btagUParTAK4B > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-                btagMedium_filter = (jets.btagUParTAK4B > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            elif hasattr(jets, "btagDeepB"):
-                btagLoose_filter = (jets.btagDeepB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-                btagMedium_filter = (jets.btagDeepB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
-            elif hasattr(jets, "btagDeepFlavB"):
-                # FIXME: Currently the working point is used what was defined for DeepB, should be updated for DeepFlavB
-                btagLoose_filter = (jets.btagDeepFlavB > self.config["btag_loose_wp"]) & (abs(jets.eta) < 2.5)
-                btagMedium_filter = (jets.btagDeepFlavB > self.config["btag_medium_wp"]) & (abs(jets.eta) < 2.5)
+                btagLoose_filter_UParT = (jets.btagUParTAK4B > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val)
+                btagMedium_filter_UParT = (jets.btagUParTAK4B > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)                                
+            if hasattr(jets, "btagPNetB"):
+                logger.info("Using btagPNetB btag!")
+                btagLoose_filter_PNet = (jets.btagPNetB > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val)
+                btagMedium_filter_PNet = (jets.btagPNetB > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)
+            if hasattr(jets, "btagRobustParTAK4B"):
+                logger.info("Using btagRobustParTAK4B btag!")
+                btagLoose_filter_RParT = (jets.btagRobustParTAK4B > self.config["btag_loose_wp"]) & (abs(jets.eta) < btag_eta_val)
+                btagMedium_filter_RParT = (jets.btagRobustParTAK4B > self.config["btag_medium_wp"]) & (abs(jets.eta) < btag_eta_val)                                
+
 
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)
 
         nBtagLoose = ak.sum(btagLoose_filter, axis=1)
         nBtagMedium = ak.sum(btagMedium_filter, axis=1)
+        if hasattr(jets, "btagUParTAK4B"):
+            btagLoose_filter_UParT = ak.fill_none(btagLoose_filter_UParT, value=False)
+            btagMedium_filter_UParT = ak.fill_none(btagMedium_filter_UParT, value=False)
+
+            nBtagLoose_UParT = ak.sum(btagLoose_filter_UParT, axis=1)
+            nBtagMedium_UParT = ak.sum(btagMedium_filter_UParT, axis=1)            
+        if hasattr(jets, "btagPNetB"):
+            btagLoose_filter_PNet = ak.fill_none(btagLoose_filter_PNet, value=False)
+            btagMedium_filter_PNet = ak.fill_none(btagMedium_filter_PNet, value=False)
+
+            nBtagLoose_PNet = ak.sum(btagLoose_filter_PNet, axis=1)
+            nBtagMedium_PNet = ak.sum(btagMedium_filter_PNet, axis=1)            
+        if hasattr(jets, "btagRobustParTAK4B"):
+            btagLoose_filter_RParT = ak.fill_none(btagLoose_filter_RParT, value=False)
+            btagMedium_filter_RParT = ak.fill_none(btagMedium_filter_RParT, value=False)
+
+            nBtagLoose_RParT = ak.sum(btagLoose_filter_RParT, axis=1)
+            nBtagMedium_RParT = ak.sum(btagMedium_filter_RParT, axis=1)            
 
         # #quick sanity check
         # logger.info(f"nBtagLoose : {nBtagLoose[:20].compute()}")
@@ -2961,6 +3016,18 @@ class EventProcessor(processor.ProcessorABC):
             f"nBtagLoose_{variation}": nBtagLoose,
             f"nBtagMedium_{variation}": nBtagMedium,
         }
+        if hasattr(jets, "btagUParTAK4B"):
+            temp_out_dict[f"nBtagLoose_UparT_{variation}"] = nBtagLoose_UParT
+            temp_out_dict[f"nBtagMedium_UparT_{variation}"] = nBtagMedium_UParT
+
+        if hasattr(jets, "btagPNetB"):
+            temp_out_dict[f"nBtagLoose_PNet_{variation}"] = nBtagLoose_UParT
+            temp_out_dict[f"nBtagMedium_PNet_{variation}"] = nBtagMedium_UParT
+
+        if hasattr(jets, "btagRobustParTAK4B"):
+            temp_out_dict[f"nBtagLoose_RParT{variation}"] = nBtagLoose_RParT
+            temp_out_dict[f"nBtagMedium_RParT{variation}"] = nBtagMedium_RParT
+
         jet_loop_out_dict.update(temp_out_dict)
 
         return jet_loop_out_dict
