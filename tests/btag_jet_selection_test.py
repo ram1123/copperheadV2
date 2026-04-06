@@ -127,8 +127,8 @@ class BtagJetSelectionTest(unittest.TestCase):
 
         with patch(
             "src.corrections.evaluator.dak.map_partitions",
-            side_effect=lambda func, arr, keepdims=True: ak.Array(
-                [func(arr.compute(), axis=None, keepdims=keepdims)]
+            side_effect=lambda func, arr, *args, **kwargs: ak.Array(
+                [func(arr.compute(), *args, **kwargs)]
             ),
         ):
             btag_wgt, btag_syst = btag_weights_jsonKeepDim(
