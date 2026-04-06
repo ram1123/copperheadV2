@@ -2907,7 +2907,12 @@ class EventProcessor(processor.ProcessorABC):
             else:
                 btag_eta_val = 2.5
 
-        if is_mc and (variation == "nominal") and (self.config["switches"]["do_btag_wgt"]):
+        do_btag_wgt = (
+            is_mc
+            and (variation == "nominal")
+            and self.config["switches"]["do_btag_wgt"]
+        )
+        if do_btag_wgt:
             # --- Btag weights  start--- #
             logger.info("doing btag wgt!")
             bjet_sel_mask = ak.ones_like(ak.num(btag_jets, axis=1))
