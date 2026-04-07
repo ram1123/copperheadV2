@@ -1,7 +1,7 @@
 [
   {
     "region": "HEpos",
-    "equation": "(x5 * 0.088470094)",
+    "equation": "(log_abs(sqrt_abs(x5) + x2) - x8)",
     "features": [
       "chEmEF",
       "chHEF",
@@ -9,21 +9,24 @@
       "neHEF",
       "muEF",
       "nConstituents",
-      "pt",
-      "eta",
-      "hfcentralEtaStripSize",
-      "hfadjacentEtaStripsSize",
-      "hfsigmaEtaEta",
-      "hfsigmaPhiPhi"
+      "mass",
+      "area",
+      "rawFactor"
     ],
-    "threshold": 0.353880375623703,
+    "threshold": 0.3611159324645996,
     "direction": "keep_high",
-    "pu_rejection": 0.48963317384370014,
-    "n_region": 1697
+    "pu_rejection": 0.527081817236719,
+    "n_region": 16463,
+    "pt_min": 25.0,
+    "pt_turnoff": 50.0,
+    "valid_pt_range": {
+      "min": 25.0,
+      "max": 50.0
+    }
   },
   {
     "region": "HEneg",
-    "equation": "(x5 * 0.08006758)",
+    "equation": "((log1p_abs(x5) - tanh(x3)) * 0.3815938)",
     "features": [
       "chEmEF",
       "chHEF",
@@ -31,56 +34,69 @@
       "neHEF",
       "muEF",
       "nConstituents",
-      "pt",
-      "eta",
-      "hfcentralEtaStripSize",
-      "hfadjacentEtaStripsSize",
-      "hfsigmaEtaEta",
-      "hfsigmaPhiPhi"
+      "mass",
+      "area",
+      "rawFactor"
     ],
-    "threshold": 0.3202703297138214,
+    "threshold": 0.4008890688419342,
     "direction": "keep_high",
-    "pu_rejection": 0.37568058076225047,
-    "n_region": 1607
+    "pu_rejection": 0.5104983848638671,
+    "n_region": 15919,
+    "pt_min": 25.0,
+    "pt_turnoff": 50.0,
+    "valid_pt_range": {
+      "min": 25.0,
+      "max": 50.0
+    }
   },
   {
     "region": "HFpos",
-    "equation": "(x4 * 0.011820324)",
+    "equation": "log1p_abs(log_abs(x7) + (x8 + x2))",
     "features": [
-      "chHEF",
-      "neEmEF",
-      "neHEF",
-      "nConstituents",
-      "pt",
-      "eta",
       "hfcentralEtaStripSize",
       "hfadjacentEtaStripsSize",
       "hfsigmaEtaEta",
-      "hfsigmaPhiPhi"
+      "hfsigmaPhiPhi",
+      "hf_ratio",
+      "hf_sigma_sum",
+      "mass",
+      "rawFactor",
+      "area"
     ],
-    "threshold": 0.35448935627937317,
+    "threshold": 0.45506805181503296,
     "direction": "keep_high",
-    "pu_rejection": 0.4596117720726362,
-    "n_region": 2968
+    "pu_rejection": 0.3395172910662824,
+    "n_region": 18482,
+    "pt_min": 25.0,
+    "pt_turnoff": 50.0,
+    "valid_pt_range": {
+      "min": 25.0,
+      "max": 50.0
+    }
   },
   {
     "region": "HFneg",
-    "equation": "tanh(x4 * 0.014664315)",
+    "equation": "log_abs(log_abs((-1.3661135 / x7) - x0))",
     "features": [
-      "chHEF",
-      "neEmEF",
-      "neHEF",
-      "nConstituents",
-      "pt",
-      "eta",
       "hfcentralEtaStripSize",
       "hfadjacentEtaStripsSize",
       "hfsigmaEtaEta",
-      "hfsigmaPhiPhi"
+      "hfsigmaPhiPhi",
+      "hf_ratio",
+      "hf_sigma_sum",
+      "mass",
+      "rawFactor",
+      "area"
     ],
-    "threshold": 0.409736692905426,
+    "threshold": 0.41432034969329834,
     "direction": "keep_high",
-    "pu_rejection": 0.4256278171281391,
-    "n_region": 2917
+    "pu_rejection": 0.31146371902299874,
+    "n_region": 18402,
+    "pt_min": 25.0,
+    "pt_turnoff": 50.0,
+    "valid_pt_range": {
+      "min": 25.0,
+      "max": 50.0
+    }
   }
 ]

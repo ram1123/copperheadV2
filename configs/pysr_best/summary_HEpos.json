@@ -1,18 +1,25 @@
 {
   "region": "HEpos",
-  "equation": "0.9205671*tanh(x0/(x3*x4 + x4**2*(x3 - 6.5471935/x1) + 7.654556/x1))",
+  "equation": "(log_abs(sqrt_abs(x5) + x2) - x8)",
   "features": [
-  "nConstituents",
-  "lognC",
-  "muEF",
-  "mass",
-  "neHEF"
+    "chEmEF",
+    "chHEF",
+    "neEmEF",
+    "neHEF",
+    "muEF",
+    "nConstituents",
+    "mass",
+    "area",
+    "rawFactor"
   ],
-  "threshold": 0.36662083864212036,
+  "threshold": 0.3611159324645996,
   "direction": "keep_high",
-  "pu_rejection": 0.49514563106796117,
-  "n_region": 6077,
-  "hs_eff_target": 0.8,
+  "pu_rejection": 0.527081817236719,
+  "n_region": 16463,
   "pt_min": 25.0,
-  "pt_turnoff": 50.0    
+  "pt_turnoff": 50.0,
+  "valid_pt_range": {
+    "min": 25.0,
+    "max": 50.0
+  }
 }
