@@ -160,6 +160,8 @@ def evaluate_symbolic_equation(jets, cfg):
         "log": lambda x: np.log(ak.where(x > 1e-6, x, 1e-6)),
         "log1p": lambda x: np.log1p(ak.where(x > 0, x, 0)),
         "tanh": np.tanh,
+        "log1p_abs": lambda x: np.log1p(np.abs(x)),
+        "log_abs": lambda x: np.log(np.maximum(np.abs(x), 1e-6)),
     }
 
     return eval(cfg["_compiled_equation"], safe_dict, local_dict)
@@ -168,10 +170,7 @@ def evaluate_symbolic_equation(jets, cfg):
 # ---------------------------------------------------------
 # Main mask builder
 # ---------------------------------------------------------
-def build_pysr_pu_masks(jets, base_dir="configs/pysr_best"):
-
-    configs = load_pysr_configs(base_dir)
-
+def build_pysr_pu_masks(jets, configs):
     pt = jets.pt
     eta = jets.eta
 
@@ -187,12 +186,7 @@ def build_pysr_pu_masks(jets, base_dir="configs/pysr_best"):
         # region + pt window
         # -----------------------
         mask_region = region_mask_eta(eta, region)
-
-        mask_pt = (
-            (pt >= cfg["pt_min"])
-            & (pt < cfg["pt_turnoff"])
-        )
-
+        mask_pt = (pt >= cfg["pt_min"]) & (pt < cfg["pt_turnoff"])
         mask_active = mask_region & mask_pt
 
         # -----------------------
@@ -2877,7 +2871,7 @@ class EventProcessor(processor.ProcessorABC):
 
             # keep dims start -------------------------------------
             # qgl_wgts = qgl_weights_keepDim(jet1, jet2, njets, isHerwig)
-            qgl_wgts = qgl_weights_V2(jets, self.config, isHerwig, dnn_year)
+            qgl_wgts = qgl_weights_V2(jets, self.config, isHerwig, year)
             # keep dims end -------------------------------------
             weights.add("qgl_wgt",
                         weight=qgl_wgts["nom"],
@@ -2926,8 +2920,17 @@ class EventProcessor(processor.ProcessorABC):
                 )
             else:
                 btag_file = get_corrset(self.config["btag_sf_json"])
-                # btag_json=btag_file["deepJet_shape"]
-                btag_json=btag_file["deepCSV_shape"]
+                available_keys = list(btag_file.keys())
+                logger.debug(f"Available btag correction keys: {available_keys}")
+
+                if "deepJet_shape" not in available_keys:
+                    raise KeyError(
+                        f"deepJet_shape not found in {self.config['btag_sf_json']}. "
+                        f"Available keys: {available_keys}"
+                    )                
+
+                btag_json=btag_file["deepJet_shape"]
+                logger.info("Using btag correction key: deepJet_shape")
 
             # keep dims start -------------------------------------
             btag_wgt, btag_syst = btag_weights_jsonKeepDim(
