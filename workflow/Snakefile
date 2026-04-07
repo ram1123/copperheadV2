@@ -317,7 +317,8 @@ rule stage1Compact:
             fi
 
             # --- Check parquet existence ---
-            if ! find "$cmp_dir/0" -name "*.parquet" | grep -q .; then
+            nparquet=$(find "$cmp_dir" -name "*.parquet" | wc -l)
+            if [[ "$nparquet" -eq 0 ]]; then
                 echo "No parquet found in $sample"
                 rm -rf "$cmp_dir"
                 fail_flag=1
