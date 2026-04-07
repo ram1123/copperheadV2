@@ -148,19 +148,7 @@ def ensure_symbolic_features(jets, features):
 # Safe equation evaluation (awkward-safe)
 # ---------------------------------------------------------
 def evaluate_symbolic_equation(jets, cfg):
-
-    features = cfg["features"]
-    jets = ensure_symbolic_features(jets, features)
-
-    equation = cfg["equation"]
-
-    # Build X matrix (awkward-safe)
-    X = ak.concatenate(
-        [jets[feat][:, None] for feat in features],
-        axis=1,
-    )
-
-    local_dict = {f"x{i}": X[:, i] for i in range(len(features))}
+    local_dict = {f"x{i}": jets[feat] for i, feat in enumerate(cfg["features"])}
 
     safe_dict = {
         "np": np,
@@ -173,10 +161,7 @@ def evaluate_symbolic_equation(jets, cfg):
         "tanh": np.tanh,
     }
 
-    compiled = compile(equation, "<string>", "eval")
-    score = eval(compiled, safe_dict, local_dict)
-
-    return score
+    return eval(cfg["_compiled_equation"], safe_dict, local_dict)
 
 
 # ---------------------------------------------------------
@@ -505,6 +490,14 @@ class EventProcessor(processor.ProcessorABC):
         # Reference: https://nbviewer.org/github/scikit-hep/coffea/blob/master/binder/packedselection.ipynb
         self.selection = {}
         self.cutflow = {}
+
+        self.pysr_configs = load_pysr_configs()
+        for region, cfg in self.pysr_configs.items():
+            cfg["_compiled_equation"] = compile(cfg["equation"], f"<pysr_{region}>", "eval")
+
+        self.pysr_all_features = set()
+        for cfg in self.pysr_configs.values():
+            self.pysr_all_features.update(cfg["features"])        
 
     def compute_jet_veto_eventfilter(self, events, jets):
         """ apply the jet veto maps. the .gz file should be read using correctionlib and the file
@@ -1659,11 +1652,10 @@ class EventProcessor(processor.ProcessorABC):
         })
 
         # MET
-        if self.config["switches"]["add_met_vars"]:
-            _add_block(out_dict, {
-                "PuppiMET_pt": PuppiMET.pt,
-                "PuppiMET_phi": PuppiMET.phi,
-                "PuppiMET_sumEt": PuppiMET.sumEt,
+        _add_block(out_dict, {
+            "PuppiMET_pt": PuppiMET.pt,
+            "PuppiMET_phi": PuppiMET.phi,
+            "PuppiMET_sumEt": PuppiMET.sumEt,
         })
 
         # FatJet block
@@ -1682,7 +1674,7 @@ class EventProcessor(processor.ProcessorABC):
             })
 
         # Additional jet block
-        if do_additional_jet_vars:
+        if do_additional_jet_vars and False:
             # Default jet kinematics (nominal, pre-JEC/JER snapshot)
             _add_block(out_dict, {
                 "jet1_default_pt_nominal": jet1_default.pt,
@@ -1706,13 +1698,16 @@ class EventProcessor(processor.ProcessorABC):
                 "jet4_default_mass_nominal": jet4_default.mass,
             })
 
+        _add_block(out_dict, {
+            "PV_npvs": events.PV.npvs,
+            "PV_npvsGood": events.PV.npvsGood,
+        })
+
         # --- Extra muon variables  ----------------------
         do_additional_vars = self.config["switches"]["do_additional_vars"]
-        if do_additional_vars:
+        save_full_muon_detail = self.config["switches"].get("save_full_muon_detail", False)
+        if save_full_muon_detail:
             _add_block(out_dict, {
-                "PV_npvs": events.PV.npvs,
-                "PV_npvsGood": events.PV.npvsGood,
-
                 "mu1_charge": mu1.charge,
                 "mu2_charge": mu2.charge,
                 "mu1_iso": mu1.pfRelIso04_all,
@@ -1895,7 +1890,7 @@ class EventProcessor(processor.ProcessorABC):
         # Charge correlation
         q1q2 = mu1.charge * mu2.charge   # should be -1 for selected OS events
 
-        if do_additional_vars:
+        if save_full_muon_detail:
             _add_block(out_dict, {
                 # pt correlations
                 "mu12_pt_sum":      pt_sum,
@@ -2125,26 +2120,27 @@ class EventProcessor(processor.ProcessorABC):
         # apply vbf filter phase cut if DY test end ---------------------------------
         logger.debug(f"weight statistics: {weights.weightStatistics.keys()}")
         # logger.debug(f"weight variations: {weights.variations}")
-        wgt_nominal = weights.weight()
 
         # add in weights
+        save_all_weight_vars = self.config["switches"].get("save_all_weight_vars", False)
 
-        weight_dict = {"wgt_nominal" : wgt_nominal}
+        weight_dict = {"wgt_nominal": weights.weight()}
 
-        # loop through weight variations
-        for variation in weights.variations:
-            wgt_variation = weights.weight(variation)
-            variation_name = "wgt_" + variation.replace("Up", "_up").replace("Down", "_down") # match the naming scheme of copperhead
-            weight_dict[variation_name] = wgt_variation
+        if save_all_weight_vars:
+            for variation in weights.variations:
+                variation_name = "wgt_" + variation.replace("Up", "_up").replace("Down", "_down") # match the naming scheme of copperhead
+                weight_dict[variation_name] = weights.weight(variation)
 
         t20 = time.perf_counter()
         logger.info(f"[timing] Weights variations time: {t20 - t19:.2f} seconds")
 
         # temporarily shut off partial weights start -----------------------------------------
-        for weight_type in list(weights.weightStatistics.keys()):
-            wgt_name = "separate_wgt_" + weight_type
-            # logger.info(f"wgt_name: {wgt_name}")
-            weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
+        
+        do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
+        if do_save_partial_weights:
+            for weight_type in list(weights.weightStatistics.keys()):
+                wgt_name = "separate_wgt_" + weight_type
+                weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
         # temporarily shut off partial weights end -----------------------------------------
         t21 = time.perf_counter()
         logger.info(f"[timing] Weights partials time: {t21 - t20:.2f} seconds")
@@ -2550,7 +2546,8 @@ class EventProcessor(processor.ProcessorABC):
         extra_jet_loop_dict = {}
         ifpySR = False
         if ifpySR:
-            pysr_dict, pysr_region = build_pysr_pu_masks(jets)
+            jets = ensure_symbolic_features(jets, self.pysr_all_features)
+            pysr_dict, pysr_region = build_pysr_pu_masks(jets, self.pysr_configs)
             jets = jets[pysr_dict["jet_pysr_pu_pass"]]
 
         # apply jetpuid if not have done already
@@ -2591,7 +2588,8 @@ class EventProcessor(processor.ProcessorABC):
             jet3 = padded_jets[:,2]
             jet4 = padded_jets[:,3]
 
-        if variation == "nominal":
+        save_alt_vbf_pairs = self.config.get("output", {}).get("save_alt_vbf_pairs", False)
+        if variation == "nominal" and save_alt_vbf_pairs:
             for tag, (j1, j2) in [
                 ("lead", pair_dict["lead"]),
                 ("maxmjj", pair_dict["max_mjj"]),
@@ -3016,15 +3014,15 @@ class EventProcessor(processor.ProcessorABC):
             f"nBtagLoose_{variation}": nBtagLoose,
             f"nBtagMedium_{variation}": nBtagMedium,
         }
-        if hasattr(jets, "btagUParTAK4B"):
+        if hasattr(jets, "btagUParTAK4B") and do_additional_vars:
             temp_out_dict[f"nBtagLoose_UparT_{variation}"] = nBtagLoose_UParT
             temp_out_dict[f"nBtagMedium_UparT_{variation}"] = nBtagMedium_UParT
 
-        if hasattr(jets, "btagPNetB"):
+        if hasattr(jets, "btagPNetB") and do_additional_vars:
             temp_out_dict[f"nBtagLoose_PNet_{variation}"] = nBtagLoose_PNet
             temp_out_dict[f"nBtagMedium_PNet_{variation}"] = nBtagMedium_PNet
 
-        if hasattr(jets, "btagRobustParTAK4B"):
+        if hasattr(jets, "btagRobustParTAK4B") and do_additional_vars:
             temp_out_dict[f"nBtagLoose_RParT{variation}"] = nBtagLoose_RParT
             temp_out_dict[f"nBtagMedium_RParT{variation}"] = nBtagMedium_RParT
 
