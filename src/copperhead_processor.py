@@ -2129,14 +2129,21 @@ class EventProcessor(processor.ProcessorABC):
         t20 = time.perf_counter()
         logger.info(f"[timing] Weights variations time: {t20 - t19:.2f} seconds")
 
-        # temporarily shut off partial weights start -----------------------------------------
-        
+        # Save partial weights start -----------------------------------------
         do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
         if do_save_partial_weights:
             for weight_type in list(weights.weightStatistics.keys()):
                 wgt_name = "separate_wgt_" + weight_type
                 weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
-        # temporarily shut off partial weights end -----------------------------------------
+        else:
+            """
+            We need "zpt" weight separately for the z-pt reweighting.
+            """
+            for weight_type in list(weights.weightStatistics.keys()):
+                if "zpt" in weight_type: 
+                    wgt_name = "separate_wgt_" + weight_type
+                    weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])            
+
         t21 = time.perf_counter()
         logger.info(f"[timing] Weights partials time: {t21 - t20:.2f} seconds")
 
