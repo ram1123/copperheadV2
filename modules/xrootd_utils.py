@@ -1,8 +1,13 @@
 import re
 
+"""
+As all our NanoAODs are on purdue EOS, so we should just use `root://eos.cms.rcac.purdue.edu/`
+
+- Now, the Snakemake takes care of re-running so we don't need multiple redirector here.
+"""
 AAA_REDIRECTORS = [
     "root://eos.cms.rcac.purdue.edu/",                  # 2
-    "root://eos.cms.rcac.purdue.edu/",                  # 2
+    # "root://eos.cms.rcac.purdue.edu/",                  # 2
     # "root://xcache.cms.rcac.purdue.edu/",                  # 1
 ]
 
@@ -113,3 +118,11 @@ AAA_ERROR_FRAGMENTS = (
     "[ERROR] Socket timeout",
     "[ERROR] Server responded with an error",
 )
+
+SCHEDULER_TLS_ERROR_FRAGMENTS = [
+    "CERTIFICATE_VERIFY_FAILED",
+    "SSLCertVerificationError",
+    "Failed to reconnect to scheduler",
+    "FutureCancelledError",
+    "cancelled for reason: unknown",
+]

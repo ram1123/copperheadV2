@@ -19,7 +19,8 @@ def ensure_compacted(year, sample, input_path, compacted_path):
     logger.debug(f"Checking compacted dataset: {compacted_path}")
 
     if not os.path.exists(compacted_path):
-        logger.info(f"Compacted dataset not found: {compacted_path}")
+        logger.info("No compacted dataset exists")
+        logger.debug(f"Compacted dataset not found: {compacted_path}")
 
         orig_path = os.path.join(input_path, sample)
         if not os.path.exists(orig_path):
@@ -40,10 +41,10 @@ def ensure_compacted(year, sample, input_path, compacted_path):
             logger.warning(f"Sample {sample} is a VBF sample, so, using a smaller chunk size (100k) for repartitioning.")
             target_chunksize = 100_000
         else:
-            target_chunksize = 500_000
+            target_chunksize = 300_000
         inFile = inFile.repartition(rows_per_partition=target_chunksize)
 
-        logger.info(f"Writing compacted data to {compacted_path}")
+        logger.info("Writing compacted dataset")
         inFile.to_parquet(compacted_path)
         logger.debug("Dataset successfully compacted.")
     else:
@@ -207,6 +208,7 @@ if __name__ == "__main__":
         # if "dy_VBF_filter" not in sample:
         # continue
         # if "DY" not in sample: continue
+        print("\n\n")
         logger.info(f"Processing sample: {sample}")
         compact_and_add_dnn_score(
             args.year,
