@@ -24,6 +24,32 @@ jet_eta_cut:
     "2023": 4.7
     "2023BPix": 4.7
     "2024": 4.7
+btag_jet_pt_cut:
+    2016preVFP: 20.0
+    2016postVFP: 20.0
+    "2017": 20.0
+    "2018": 20.0
+    2016_RERECO: 20.0
+    "2017_RERECO": 20.0
+    "2018_RERECO": 20.0
+    "2022preEE": 20.0
+    "2022postEE": 20.0
+    "2023": 20.0
+    "2023BPix": 20.0
+    "2024": 20.0
+btag_jet_eta_cut:
+    2016preVFP: 2.4
+    2016postVFP: 2.4
+    "2017": 2.5
+    "2018": 2.5
+    2016_RERECO: 2.4
+    "2017_RERECO": 2.5
+    "2018_RERECO": 2.5
+    "2022preEE": 2.5
+    "2022postEE": 2.5
+    "2023": 2.5
+    "2023BPix": 2.5
+    "2024": 2.5
 jet_id:
     # INFO: For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
     # INFO: Use tight, tightPassLepVeto, or tightFailLepVeto
@@ -39,6 +65,20 @@ jet_id:
     "2023": tightPassLepVeto
     "2023BPix": tightPassLepVeto
     "2024": tightPassLepVeto
+btag_jet_id:
+    # B-tag selection follows the dedicated tight jet ID recommendation.
+    2016preVFP: tight
+    2016postVFP: tight
+    "2017": tight
+    "2018": tight
+    2016_RERECO: tight
+    "2017_RERECO": tight
+    "2018_RERECO": tight
+    "2022preEE": tight
+    "2022postEE": tight
+    "2023": tight
+    "2023BPix": tight
+    "2024": tight
 jet_id_json_files: # old method as of Dec 16 2024,
     2016preVFP: dummy
     2016postVFP: dummy

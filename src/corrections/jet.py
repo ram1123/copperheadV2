@@ -260,7 +260,7 @@ def custom_jet_id(jets, year, jet_type="AK4PUPPI"):
     return pass_tight, pass_tight_lepveto
 
 
-def jet_id(jets, config, year = None):
+def jet_id(jets, config, year=None, jet_id_key="jet_id"):
     """https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
 
     If "jetId" is in the fields of jets, use that. Else, use custom_jet_id function as mentioned in the link:
@@ -270,7 +270,7 @@ def jet_id(jets, config, year = None):
         raise ValueError("Year must be specified for jet ID determination.")
 
     pass_jet_id = ak.ones_like(jets.pt, dtype=bool)
-    jet_id2use = config["jet_id"]
+    jet_id2use = config.get(jet_id_key, config["jet_id"])
     if hasattr(jets, "jetId") and is_run2(year):
         logger.info("Using Run2 official jet-id for the custom nanoAODv12")
         jet_id_wps = {
@@ -280,7 +280,7 @@ def jet_id(jets, config, year = None):
         }
         pass_jet_id = jet_id_wps[jet_id2use]
     elif hasattr(jets, "jetId") and is_run3(year):
-        # Referece: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
+        # Reference: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
         logger.info("Using Run3 official jet-id for the nanoAODv12")
 
         abs_eta = abs(jets.eta)
@@ -363,6 +363,32 @@ def jet_id(jets, config, year = None):
         raise ValueError("Jet collection has no 'jetId' branch and is not Run 3 for correctionlib-based jet ID. Cannot determine jet ID.")
 
     return pass_jet_id
+
+
+def btag_jet_selection(jets, clean, pass_jet_puid, config, year=None):
+    """Return the dedicated jet mask used for b-tag jet counting and weights."""
+    if year is None:
+        raise ValueError("Year must be specified for b-tag jet selection.")
+
+    btag_pass_jet_id = jet_id(jets, config, year, jet_id_key="btag_jet_id")
+    jet_algorithm = str(config["jec_parameters"]["jet_algorithm"]).lower()
+    uses_chs_jets = "chs" in jet_algorithm
+    btag_pass_jet_puid = (
+        pass_jet_puid if uses_chs_jets else ak.ones_like(btag_pass_jet_id, dtype=bool)
+    )
+
+    btag_pt_cut = config.get("btag_jet_pt_cut", 20.0)
+    btag_eta_cut = config.get(
+        "btag_jet_eta_cut", 2.4 if year.startswith("2016") else 2.5
+    )
+
+    return (
+        clean
+        & (jets.pt > btag_pt_cut)
+        & btag_pass_jet_id
+        & btag_pass_jet_puid
+        & (abs(jets.eta) < btag_eta_cut)
+    )
 
 
 def get_puId(jets):

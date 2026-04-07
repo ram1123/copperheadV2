@@ -10,15 +10,15 @@ switches:
         "2023BPix": false
         "2024": false
     do_additional_vars:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     save_all_weight_vars:
         '2016preVFP': false
         '2016postVFP': false
@@ -336,6 +336,7 @@ switches:
         '2016postVFP': true
         '2017': true
         '2018': true
+        # Run-3: Recommendation does not exists, yet.
         '2022preEE': false
         '2022postEE': false
         "2023": false
