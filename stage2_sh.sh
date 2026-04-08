@@ -11,6 +11,8 @@ base_path="/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean"
 stage2_load_path="${base_path}/${label}/stage1_output"
 
 category="ggh"
+do_hyperparam_search="1" # true (enable hyperparameter search for BDT)
+n_trials="5" # It is for the bayseian optimization for the BDT
 
 # model_name="Run3_08March_HPeachFold_train_with_bestHP"
 # model_name="Run3_09March_Check"
@@ -23,7 +25,7 @@ category="ggh"
 # model_name="Run3_10March_020Trials_oneHotEncoding_Scan"
 # model_name="Run3_09Mar_HPScan_100Trials"
 # model_name="Run3_09Mar_HPScan_500Trials"
-model_name="Run3_07Apr_020Trials_pySR"
+model_name="Run3_07Apr_005Trials_pySR"
 
 step="${1:-}"
 year="${2:-all}"
@@ -79,6 +81,8 @@ print_config() {
     echo "category         : ${category}"
     echo "model_name       : ${model_name}"
     echo "model_trainYear  : ${model_trainYear}"
+    echo "Search HP        : ${do_hyperparam_search}"
+    echo "Number of trials : ${n_trials}"
     echo "stage2_label     : ${stage2_label}"
     echo "base_path        : ${base_path}"
     echo "stage2_load_path : ${stage2_load_path}"
@@ -112,8 +116,6 @@ print_config
 # -----------------------------------------------------
 if [[ "${step}" == "0" ]]; then
     print_box "Step 0: Training the BDT for ggH"
-    do_hyperparam_search="0" # true (enable hyperparameter search)
-    n_trials="51" # It is for the bayseian optimization
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
     mass_decorrelation_strat="targetZpeakMass" # target distribution Zpeak mass
