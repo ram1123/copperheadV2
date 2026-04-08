@@ -131,7 +131,11 @@ ci = ["analysis"]
 
 default = ["analysis", "dev", "root", "workflow", "style", "local", "ml"]
 
-# Full heavy environment with ML + symbolic tools
+# This environment has everything except combine
 full = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"]
+
+# Dedicated environment for the symbolic regression
 symbolic = ["analysis", "symbolic", "dev", "style", "local"]
-combine = ["analysis", "combine", "ml", "local", "style"]
+
+# for ggH stage-2 script
+combine = ["analysis", "combine", "ml", "local", "style", "dev"]
