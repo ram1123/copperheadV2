@@ -19,11 +19,13 @@ time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
 time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
     -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
     -o validation/corr_JetIDFix_jet_   \
-    --prefix jet1_  
+    --prefix jet1_  \
+    --apply-cleaning
 time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
     -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
     -o validation/corr_JetIDFix_jet_   \
-    --prefix jet2_  
+    --prefix jet2_  \
+    --apply-cleaning
 """
 
 def infer_existing_files(pattern: str):
@@ -41,12 +43,12 @@ def region_masks(df, eta_col):
     aeta = np.abs(df[eta_col].to_numpy(dtype=np.float32))
     eta = (df[eta_col].to_numpy(dtype=np.float32))
     return {
-        "inclusive": np.isfinite(aeta),
-        "central": (aeta < 2.5),
-        "HE": (aeta >= 2.5) & (aeta < 3.0),
+        # "inclusive": np.isfinite(aeta),
+        # "central": (aeta < 2.5),
+        # "HE": (aeta >= 2.5) & (aeta < 3.0),
         "HEpos": (eta >= 2.5) & (eta < 3.0),
         "HEneg": (eta <= -2.5) & (eta > -3.0),        
-        "HF": (aeta >= 3.0),
+        # "HF": (aeta >= 3.0),
         "HFpos": (eta >= 3.0),
         "HFneg": (eta <= -3.0),
     }
@@ -169,9 +171,10 @@ def infer_range_2d(x, Var, fallback=(0.0, 1.0, 50)):
     if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
         return fallback
     if "nConstituents" in Var:
-        return int(lo), 20, int(20-int(lo))
+        return int(lo), 10, int(10-int(lo))
     if "mass" in Var: hi = 15.0
-    if "pt" in Var: hi = 100.0
+    if "pt" in Var: hi = 50.0
+    if "rawFactor" in Var: lo, hi = 0.2, 0.5
     return float(lo), float(hi), infer_nbins(x, float(lo), float(hi))
 
 
@@ -326,6 +329,11 @@ def main():
     ap.add_argument("--genmatch-mode", default="hasMatchedGenJet",
                     choices=["hasMatchedGenJet", "bool"])
     ap.add_argument("--max-rows", type=int, default=None)
+    ap.add_argument(
+        "--apply-cleaning",
+        action="store_true",
+        help="Apply region-specific cleaning (HE/HF fake rejection)"
+    )    
     args = ap.parse_args()
 
     set_gradient_style()
@@ -379,6 +387,55 @@ def main():
     ]
 
     for region_name, reg_mask in reg_masks.items():
+        if args.apply_cleaning:
+            print("[INFO] Cleaning ENABLED")
+            # ---------------------------------------------------------
+            # Apply HE-only cleaning
+            # ---------------------------------------------------------
+            if region_name in ["HEpos", "HEneg"]:
+
+                nC_col = f"{args.prefix}nConstituents_{args.variation}"
+                pt_col = f"{args.prefix}pt_{args.variation}"
+                area_col = f"{args.prefix}area_{args.variation}"
+
+                nC = pd.to_numeric(df_num[nC_col], errors="coerce")
+                pt = pd.to_numeric(df_num[pt_col], errors="coerce")
+                area = pd.to_numeric(df_num[area_col], errors="coerce")
+
+                reject_mask = (nC < 4) & (pt < 40.0)
+                reject_mask_area = (area > 0.56)
+
+                he_clean_mask = reg_mask & ~(reject_mask) & (~reject_mask_area)
+
+                print(
+                    f"[INFO] HE cleaning {region_name}: "
+                    f"{int(reg_mask.sum())} → {int(he_clean_mask.sum())}"
+                )
+
+                reg_mask = he_clean_mask
+            if region_name in ["HFpos", "HFneg"]:
+
+                nC_col = f"{args.prefix}nConstituents_{args.variation}"
+                pt_col = f"{args.prefix}pt_{args.variation}"
+                area_col = f"{args.prefix}area_{args.variation}"
+
+                nC = pd.to_numeric(df_num[nC_col], errors="coerce")
+                pt = pd.to_numeric(df_num[pt_col], errors="coerce")
+                area = pd.to_numeric(df_num[area_col], errors="coerce")
+
+                reject_mask = (nC <= 5) & (area > 0.56)
+
+                hf_clean_mask = reg_mask & ~(reject_mask)
+
+                print(
+                    f"[INFO] HE cleaning {region_name}: "
+                    f"{int(reg_mask.sum())} → {int(hf_clean_mask.sum())}"
+                )
+
+                reg_mask = hf_clean_mask            
+        else:
+            print("[INFO] Cleaning DISABLED")
+
         groups = {
             "all": reg_mask,
             "real": reg_mask & real_mask,
@@ -389,13 +446,8 @@ def main():
             df_sel = df_num.loc[mask].dropna()
             tag = f"{args.prefix[:-1]}_{region_name}_{kind}"
 
-            # save_corr_and_heatmap(
-            #     df_sel,
-            #     out_base=os.path.join(args.outdir, f"corr_{tag}"),
-            #     label=tag,
-            #     prefix=args.prefix,
-            #     variation=args.variation,
-            # )
+            df_real = df_num.loc[groups["real"]].dropna()
+            df_fake = df_num.loc[groups["fake"]].dropna()
 
             for xv, yv in pairs:
                 xcol = f"{args.prefix}{xv}_{args.variation}"
@@ -403,9 +455,6 @@ def main():
 
                 if xcol not in df_num.columns or ycol not in df_num.columns:
                     continue
-
-                df_real = df_num.loc[reg_mask & real_mask].dropna()
-                df_fake = df_num.loc[reg_mask & fake_mask].dropna()
 
                 # existing real/fake plots already handled above
 

@@ -17,8 +17,9 @@ or:
 Example:
   python plot_real_fake_stack.py -i input.parquet -o outdir --normalize
   python MVA_training/pileup_symbolic_regression/plot_real_fake_jets_stack.py \
-    -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part018.parquet \
-    -o validation/compare_real_fake/After_JetID_Fix 
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part01*.parquet" \
+    -o validation/compare_real_fake/After_JetID_Fix_HEHFcut \
+    --apply-cleaning 
 """
 
 import os
@@ -33,16 +34,15 @@ ROOT.gROOT.SetBatch(True)
 
 JET_ID_VARIABLES = [
     # --- Jet kinematics ---
-    # "jet1_default_pt_nominal", "jet1_default_eta_nominal", "jet1_default_phi_nominal", "jet1_default_mass_nominal",
-    "jet1_pt_nominal", "jet1_eta_nominal", "jet1_phi_nominal", "jet1_rapidity_nominal",
-    # "jet2_default_pt_nominal", "jet2_default_eta_nominal", "jet2_default_phi_nominal", "jet2_default_mass_nominal",
-    "jet2_pt_nominal", "jet2_eta_nominal", "jet2_phi_nominal", "jet2_rapidity_nominal",
+    "jet1_pt_nominal", "jet1_eta_nominal", 
+    "jet2_pt_nominal", "jet2_eta_nominal", 
     "jet1_mass_nominal", "jet2_mass_nominal", 
+    "jet1_phi_nominal", "jet2_phi_nominal", 
     # "jj_dEta_nominal", "jj_mass_nominal",
 
     # --- Jet ID / PU ID ---
-    "jet1_puId_nominal", "jet1_jetId_nominal", "jet1_hasMatchedGenJet_nominal",
-    "jet2_puId_nominal", "jet2_jetId_nominal", "jet2_hasMatchedGenJet_nominal",
+    # "jet1_puId_nominal", "jet1_jetId_nominal", "jet1_hasMatchedGenJet_nominal",
+    # "jet2_puId_nominal", "jet2_jetId_nominal", "jet2_hasMatchedGenJet_nominal",
 
     # --- Energy fractions ---
     "jet1_chEmEF_nominal", "jet1_chHEF_nominal", "jet1_neEmEF_nominal", "jet1_neHEF_nominal", 
@@ -50,8 +50,8 @@ JET_ID_VARIABLES = [
     "jet1_muEF_nominal", "jet2_muEF_nominal",
 
     # --- Multiplicities ---
-    # "jet1_chMultiplicity_nominal", "jet2_chMultiplicity_nominal",
-    # "jet1_neMultiplicity_nominal", "jet2_neMultiplicity_nominal",
+    "jet1_chMultiplicity_nominal", "jet2_chMultiplicity_nominal",
+    "jet1_neMultiplicity_nominal", "jet2_neMultiplicity_nominal",
 
     # --- Constituents / leptons / SVs ---
     "jet1_nConstituents_nominal", "jet2_nConstituents_nominal", 
@@ -70,8 +70,8 @@ JET_ID_VARIABLES = [
     # "jet2_genJetIdx_nominal",
 
     # --- Flavour / taggers ---
-    "jet1_hadronFlavour_nominal", "jet2_hadronFlavour_nominal",
-    "jet1_partonFlavour_nominal", "jet2_partonFlavour_nominal",
+    # "jet1_hadronFlavour_nominal", "jet2_hadronFlavour_nominal",
+    # "jet1_partonFlavour_nominal", "jet2_partonFlavour_nominal",
     "jet1_btagDeepFlavQG_nominal", "jet2_btagDeepFlavQG_nominal",
     "jet1_btagPNetQvG_nominal", "jet2_btagPNetQvG_nominal",
     "jet1_btagDeepFlavB_nominal", "jet2_btagDeepFlavB_nominal",
@@ -84,8 +84,9 @@ JET_ID_VARIABLES = [
     "jet2_hfsigmaEtaEta_nominal", "jet2_hfsigmaPhiPhi_nominal",
 
     # --- Raw / muon-subtracted info / geometry ---
-    "jet1_area_nominal", "jet1_muonSubtrFactor_nominal", "jet1_rawFactor_nominal",
-    "jet2_area_nominal", "jet2_muonSubtrFactor_nominal", "jet2_rawFactor_nominal",
+    "jet1_area_nominal", "jet2_area_nominal",
+    "jet1_rawFactor_nominal", "jet2_rawFactor_nominal",
+    "jet1_muonSubtrFactor_nominal", "jet2_muonSubtrFactor_nominal",
 ]
 
 
@@ -108,6 +109,24 @@ def parse_args():
 
     # Optional: limit number of rows for quick tests
     p.add_argument("--max-rows", type=int, default=None, help="Read only first N rows")
+
+    p.add_argument(
+        "--region",
+        default="inclusive",
+        choices=[
+            "inclusive", "central",
+            "HE", "HF",
+            "HEpos", "HEneg",
+            "HFpos", "HFneg"
+        ],
+        help="Eta region selection"
+    )
+
+    p.add_argument(
+        "--apply-cleaning",
+        action="store_true",
+        help="Apply HE/HF cleaning (same logic as corr script)"
+    )    
     return p.parse_args()
 
 
@@ -145,7 +164,7 @@ def default_range(var: str):
 
     # Multiplicities / constituents
     if "Multiplicity" in var or "nConstituents" in var or var.endswith(("nElectrons", "nMuons", "nSVs")):
-        return 0.0, 30.0, 30
+        return 0.0, 10.0, 10
 
     # Flavour (discrete)
     if var.endswith(("hadronFlavour", "partonFlavour")):
@@ -260,9 +279,17 @@ def eta_region_mask(df, prefix, region, abs_eta_max):
     elif region == "central":
         return aeta < 2.5
     elif region == "HE":
-        return (aeta >= 2.5) & (aeta < 3.0)
+        return (aeta > 2.5) & (aeta <= 3.0)
     elif region == "HF":
-        return (aeta >= 3.0) & (aeta <= abs_eta_max)
+        return (aeta > 3.0) & (aeta <= abs_eta_max)
+    elif region == "HEpos":
+        return (eta > 2.5) & (eta <= 3.0)
+    elif region == "HEneg":
+        return (eta < -2.5) & (eta >= -3.0)
+    elif region == "HFpos":
+        return (eta > 3.0) & (eta <= abs_eta_max)
+    elif region == "HFneg":
+        return (eta < -3.0)
     else:
         raise ValueError(f"Unknown region: {region}")
 
@@ -286,6 +313,50 @@ def plot_var(df, var, args, region="inclusive"):
     # masks
     pre = get_preselection_mask(df, prefix, args.pt_min, args.abs_eta_max)
     reg = eta_region_mask(df, prefix, region, args.abs_eta_max)
+
+    # ---------------------------------------------------------
+    # Optional HE/HF cleaning
+    # ---------------------------------------------------------
+    if args.apply_cleaning:
+
+        nC_col = prefix + "nConstituents_nominal"
+        pt_col = prefix + "pt_nominal"
+        area_col = prefix + "area_nominal"
+        eta_col = prefix + "eta_nominal"
+        mass_col = prefix + "mass_nominal"
+
+        nC = df[nC_col].to_numpy(dtype=np.float32)
+        pt = df[pt_col].to_numpy(dtype=np.float32)
+        area = df[area_col].to_numpy(dtype=np.float32)
+        eta = df[eta_col].to_numpy(dtype=np.float32)
+        mass = df[mass_col].to_numpy(dtype=np.float32)
+        aeta = np.abs(eta)
+
+        # HE region mask (geometry only)
+        he_geom = (aeta > 2.5) & (aeta <= 3.0)
+
+        # HF region mask (geometry only)
+        hf_geom = (aeta > 3.0)
+
+        # HE cleaning condition
+        he_reject = he_geom & (
+            ((nC < 4) & (pt < 30.0)) 
+            | ((area > 0.56) & (nC < 6))
+            # (mass < 3.0)
+        )
+
+        # HF cleaning condition
+        hf_reject_cut = (
+            (nC < 5) & (area > 0.56)
+        )
+        hf_reject = hf_geom & hf_reject_cut
+
+        # Remove jets failing either
+        # reject = he_reject | hf_reject
+        reject = hf_reject
+
+        reg = reg & (~reject)
+
     real_mask, fake_mask = get_real_fake_masks(df, prefix, args.genmatch_suffix, args.genmatch_mode)
 
     total_mask = pre & reg
@@ -473,7 +544,7 @@ def main():
 
     print(f"[INFO] N rows: {len(df)}")
 
-    regions = ["inclusive", "central", "HE", "HF"]
+    regions = [args.region]
 
 
     for var in JET_ID_VARIABLES:
