@@ -2551,7 +2551,7 @@ class EventProcessor(processor.ProcessorABC):
         # print(f"ak.any(jets.pt < 50): {ak.sum((jets.pt < 50)[:200]).compute()}")
 
         extra_jet_loop_dict = {}
-        ifpySR = False
+        ifpySR = self.config["switches"]["do_use_pySR_score"]
         if ifpySR:
             jets = ensure_symbolic_features(jets, self.pysr_all_features)
             pysr_dict, pysr_region = build_pysr_pu_masks(jets, self.pysr_configs)

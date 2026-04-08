@@ -238,11 +238,11 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': 30.0
-        '2022postEE': 30.0
-        "2023": 30.0
-        "2023BPix": 30.0
-        "2024": 30.0
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_jet_HE_nConstCut: # For run-3 we scanned and noted that for nconstituents <= 3 its mostly fake jets.
         '2016preVFP': false
         '2016postVFP': false
@@ -253,6 +253,16 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+    do_use_pySR_score: # For run-3 reject the jets based on the pySR equeation.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
     add_pt_cut_for_HE_HF_jets:
         '2016preVFP': false
         '2016postVFP': false
