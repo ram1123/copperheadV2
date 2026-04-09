@@ -268,6 +268,7 @@ def apply_roorealvar_cfg(var, pcfg: dict):
 def weighted_median(x, w):
     x = np.asarray(x)
     w = np.asarray(w)
+    
     m = np.isfinite(x) & np.isfinite(w) & (w > 0)
     x = x[m]
     w = w[m]
