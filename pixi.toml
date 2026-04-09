@@ -138,4 +138,4 @@ full = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda"
 symbolic = ["analysis", "symbolic", "dev", "style", "local"]
 
 # for ggH stage-2 script
-combine = ["analysis", "combine", "ml", "local", "style", "dev"]
+combine = ["analysis", "combine", "ml", "local", "style", "dev", "workflow"]
