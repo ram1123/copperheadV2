@@ -6,16 +6,18 @@ echo "$(date)"
 # -----------------------------------------------------
 # Configuration
 # -----------------------------------------------------
-label="Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2"
+label="Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr03_tightPassLepVeto_NoJER_JetIDFix"
 base_path="/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean"
 stage2_load_path="${base_path}/${label}/stage1_output"
 
 category="ggh"
+do_hyperparam_search="1" # true (enable hyperparameter search for BDT)
+n_trials="5" # It is for the bayseian optimization for the BDT
 
 # model_name="Run3_08March_HPeachFold_train_with_bestHP"
 # model_name="Run3_09March_Check"
 # model_name="Run3_10March_005Trials"
-model_name="Run3_10March_020Trials"
+# model_name="Run3_10March_020Trials"
 # model_name="Run3_10March_020Trials_EBEinTraining" # Run3_10March_020Trials_EBEinTraining
 # model_name="Run3_10March_020Trials_RemovedAddHyperPars"
 # model_name="Run3_10March_100Trials"
@@ -23,6 +25,7 @@ model_name="Run3_10March_020Trials"
 # model_name="Run3_10March_020Trials_oneHotEncoding_Scan"
 # model_name="Run3_09Mar_HPScan_100Trials"
 # model_name="Run3_09Mar_HPScan_500Trials"
+model_name="Run3_07Apr_005Trials_pySR"
 
 step="${1:-}"
 year="${2:-all}"
@@ -34,23 +37,26 @@ if [[ -z "${step}" ]]; then
     exit 1
 fi
 
-model_trainYear="all"
-label_tag="AllYear_17March"
-
-stage2_label="${model_name}_${category}_${label_tag}"
-stage2_save_path="${base_path}/${label}/${stage2_label}/stage2_output"
-
-mva_base_path="${PWD}"
-
 # all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
 all_years=(2022preEE 2022postEE 2023 2023BPix 2024)
 # all_years=(all)
 
 if [[ "${year}" == "all" ]]; then
     years=("${all_years[@]}")
+    model_trainYear="allYear"
+    label_tag="AllYear_17March"
 else
     years=("${year}")
+    model_trainYear="${year}"
+    label_tag="${year}_07Apr"
 fi
+
+
+stage2_label="${model_name}_${category}_${label_tag}"
+stage2_save_path="${base_path}/${label}/${stage2_label}/stage2_output"
+
+mva_base_path="${PWD}"
+
 
 # -----------------------------------------------------
 # Helpers
@@ -75,6 +81,8 @@ print_config() {
     echo "category         : ${category}"
     echo "model_name       : ${model_name}"
     echo "model_trainYear  : ${model_trainYear}"
+    echo "Search HP        : ${do_hyperparam_search}"
+    echo "Number of trials : ${n_trials}"
     echo "stage2_label     : ${stage2_label}"
     echo "base_path        : ${base_path}"
     echo "stage2_load_path : ${stage2_load_path}"
@@ -108,8 +116,6 @@ print_config
 # -----------------------------------------------------
 if [[ "${step}" == "0" ]]; then
     print_box "Step 0: Training the BDT for ggH"
-    do_hyperparam_search="0" # true (enable hyperparameter search)
-    n_trials="51" # It is for the bayseian optimization
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
     mass_decorrelation_strat="targetZpeakMass" # target distribution Zpeak mass

@@ -1,0 +1,25 @@
+{
+  "region": "HEpos",
+  "equation": "(log_abs(sqrt_abs(x5) + x2) - x8)",
+  "features": [
+    "chEmEF",
+    "chHEF",
+    "neEmEF",
+    "neHEF",
+    "muEF",
+    "nConstituents",
+    "mass",
+    "area",
+    "rawFactor"
+  ],
+  "threshold": 0.3611159324645996,
+  "direction": "keep_high",
+  "pu_rejection": 0.527081817236719,
+  "n_region": 16463,
+  "pt_min": 25.0,
+  "pt_turnoff": 50.0,
+  "valid_pt_range": {
+    "min": 25.0,
+    "max": 50.0
+  }
+}

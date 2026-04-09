@@ -11,6 +11,7 @@ import correctionlib
 import logging
 from modules.utils import logger
 from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
+from modules.classify_year import is_run2, is_run3
 
 def get_corr_inputs(input_dict, corr_obj):
     """
@@ -1303,15 +1304,12 @@ def get_qgl_weights(jet, isHerwig):
     return qgl_weights
 
 # Btag SF-------------------------------------------------------------------------
-
-def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, btag_json):
+def btag_weights_jsonKeepDim(processor, systs, jets, btag_eta_val, weights, bjet_sel_mask, btag_json):
     """
     We assume jets to be non padded jet that has passed the base jet selection.
     I don't think jets need to be sorted after JEC for this to work, however
     """
-    # btag = pd.DataFrame(index=bjet_sel_mask.index)
-    # btag_jet_selection = abs(jets.eta) < 2.4 # AN says 2.5 on line 624
-    btag_jet_selection = abs(jets.eta) < 2.5 # AN says 2.5 on line 624
+    btag_jet_selection = abs(jets.eta) < btag_eta_val
     jets = ak.to_packed(jets[btag_jet_selection])
     jets["pt"] = ak.where((jets.pt > 1000), 1000, jets.pt) # clip max pt
 
@@ -1330,16 +1328,6 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
         btag_score,
     )
 
-    # correctionlib_out = btag_json.eval( # RERECO
-    #     "central",
-    #     jets.hadronFlavour,
-    #     abs(jets.eta),
-    #     jets.pt,
-    #     # jets.btagDeepFlavB,
-    #     jets.btagDeepB,
-    #     True
-    # )
-
     btag_wgt = ak.prod(correctionlib_out, axis=1) # for events with no qualified jets(empty row), the value is 1.0
     btag_wgt = ak.where((btag_wgt < 0.01), 1.0, btag_wgt)
     # print(f"btag_wgt b4 normalization: {ak.to_numpy(btag_wgt.compute())}")
@@ -1357,12 +1345,8 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
 
     btag_syst = {}
     for sys in systs:
-
-
         btag_wgt_up = ak.ones_like(jets.pt)
         btag_wgt_down = ak.ones_like(jets.pt)
-        #
-
 
         for flavor, f_syst in flavors.items():
             if sys in f_syst:
@@ -1379,14 +1363,7 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                     jets.pt,
                     btag_score,
                 )
-                # sys_wgts =  btag_json.eval( # RERECO
-                #     f"up_{sys}",
-                #     hadronFlavour,
-                #     abs(jets.eta),
-                #     jets.pt,
-                #     jets.btagDeepB,
-                #     True
-                # )
+
                 btag_wgt_up = ak.where(btag_mask, sys_wgts, btag_wgt_up)
 
 
@@ -1397,14 +1374,6 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
                     jets.pt,
                     btag_score,
                 )
-                # sys_wgts =  btag_json.eval( # RERECO
-                #     f"down_{sys}",
-                #     hadronFlavour,
-                #     abs(jets.eta),
-                #     jets.pt,
-                #     jets.btagDeepB,
-                #     True
-                # )
                 btag_wgt_down = ak.where(btag_mask, sys_wgts, btag_wgt_down)
 
         btag_wgt_up = ak.prod(btag_wgt_up, axis=1)
@@ -1415,7 +1384,11 @@ def btag_weights_jsonKeepDim(processor, systs, jets, weights, bjet_sel_mask, bta
     weights = weights.weight()
     sum_before = dak.map_partitions(ak.sum, weights, keepdims=True)
     sum_after = dak.map_partitions(ak.sum, weights*btag_wgt, keepdims=True)
-    btag_wgt = btag_wgt * sum_before / sum_after # normalize to match the cross section
+    normalization = sum_before / sum_after
+    btag_wgt = btag_wgt * normalization # normalize to match the cross section
+    for sys in btag_syst:
+        btag_syst[sys]["up"] = btag_syst[sys]["up"] * normalization
+        btag_syst[sys]["down"] = btag_syst[sys]["down"] * normalization
     return btag_wgt, btag_syst
 
 def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file):
@@ -1518,7 +1491,11 @@ def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file)
     weights = weights.weight()
     sum_before = ak.sum(weights, axis=None)
     sum_after = ak.sum(weights*btag_wgt, axis=None)
-    btag_wgt = btag_wgt * sum_before / sum_after
+    normalization = sum_before / sum_after
+    btag_wgt = btag_wgt * normalization
+    for sys in btag_syst:
+        btag_syst[sys]["up"] = btag_syst[sys]["up"] * normalization
+        btag_syst[sys]["down"] = btag_syst[sys]["down"] * normalization
     # print(f"btag_wgt after normalization: {ak.to_numpy(btag_wgt.compute())}")
     return btag_wgt, btag_syst
     # sum_before = weights.df["nominal"][bjet_sel_mask].sum()

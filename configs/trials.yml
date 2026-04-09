@@ -1,10 +1,50 @@
-base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
+# base_dir: /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean
+base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        # stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/stage1_output/"
         stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJets/stage1_output/"
         comment: "What plotter should use by default"
+
+    Run3_JetIDFix_pySR:
+        base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/"
+        comment: Rerun 2022postEE after JetID fix, using score based on pySR
+        date: April 07, 2025
+        years: 2022postEE
+        gitSHA: f943ca6c76bd97994330cedad2888f178d35ebca
+
+    Run3_JetIDFix_HEnConst03:
+        base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn25GeV_nConst03_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/"
+        comment: Rerun 2022postEE after JetID fix, after adding the nConstituents > 3 for the HE region.
+        date: April 06, 2025
+        years: 2022postEE
+        gitSHA: f943ca6c76bd97994330cedad2888f178d35ebca
+
+    Run3_JetIDFix_HEpT30:
+        base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn25GeV_HE30GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/"
+        comment: Rerun 2022postEE after JetID fix, after adding the pT > 30 for the HE region.
+        date: April 05, 2025
+        years: 2022postEE
+        gitSHA: f943ca6c76bd97994330cedad2888f178d35ebca
+
+    Run3_JetIDFix:
+        base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/"
+        comment: Rerun 2022postEE after JetID fix
+        date: April 05, 2025
+        years: 2022postEE
+        gitSHA: f943ca6c76bd97994330cedad2888f178d35ebca
+
+    Run3_HMuMuFeb2026_report:
+        base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2/stage1_output/"
+        comment:  HE jet pT > 30, No JER, JETID = tightPassLepVeto
+        date: April 05, 2025
+        years: 2022preEE, 2022postEE, 2023, 2023BPix, 2024
+        gitSHA: ---
 
     Run2_HEMVetoFix_v1:
         stage1: "{base_dir}/Run2_nanoAODv12_HEMVetoFix_NoSyst/stage1_output/"

@@ -1,15 +1,35 @@
 switches:
-    add_met_vars:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
+    save_full_muon_detail:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_additional_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    save_all_weight_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_save_partial_weights:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -218,11 +238,31 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': 30.0
-        '2022postEE': 30.0
-        "2023": 30.0
-        "2023BPix": 30.0
-        "2024": 30.0
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_jet_HE_nConstCut: # For run-3 we scanned and noted that for nconstituents <= 3 its mostly fake jets.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_use_pySR_score: # For run-3 reject the jets based on the pySR equeation.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
     add_pt_cut_for_HE_HF_jets:
         '2016preVFP': false
         '2016postVFP': false
@@ -306,6 +346,7 @@ switches:
         '2016postVFP': true
         '2017': true
         '2018': true
+        # Run-3: Recommendation does not exists, yet.
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -316,6 +357,17 @@ switches:
         '2016postVFP': true
         '2017': true
         '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_unc: # INFO: Use to turn on/off all unc variations. 
+        # TO-DO: Need to implement it in the copperhead.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false

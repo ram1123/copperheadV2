@@ -23,6 +23,7 @@ import pandas as pd
 import json
 
 from distributed import Client
+from modules.dask_utils import close_dask_client, get_dask_client
 
 
 # ----------------------------------------------------------------------
@@ -75,31 +76,8 @@ SYNCVARLIST: List[str] = [
     "separate_wgt_jetpuid_wgt",
     "separate_wgt_qgl_wgt",
     "separate_wgt_zpt_wgt",
-    "separate_wgt_ones",    
+    "separate_wgt_ones",
 ]
-
-# ----------------------------------------------------------------------
-# Dask client helper
-# ----------------------------------------------------------------------
-def get_dask_client(
-    n_workers: int = 12,
-    threads_per_worker: int = 1,
-    memory_limit: str = "10 GiB",
-) -> Client:
-    """Create or reuse a local Dask client."""
-    try:
-        client = Client.current()
-        print(f"Reusing existing Dask client: {client}")
-        return client
-    except ValueError:
-        client = Client(
-            n_workers=n_workers,
-            threads_per_worker=threads_per_worker,
-            processes=True,
-            memory_limit=memory_limit,
-        )
-        print(f"Created new Dask client: {client}")
-        return client
 
 
 # ----------------------------------------------------------------------
@@ -441,6 +419,7 @@ def parse_sync_txt(path: str) -> pd.DataFrame:
     df = df.set_index(KEY_VARS).sort_index()
     return df
 
+
 def compare_two_sync_txt(
     txt1: str,
     txt2: str,
@@ -598,6 +577,7 @@ def compare_two_cutflow_json(
     df.to_csv(out_path, index=False)
     print(f"[INFO] Wrote {len(df)} cutflow mismatches to {out_path}")
 
+
 # ----------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------
@@ -651,7 +631,7 @@ def main():
     args = parse_args()
     dirs = args.dirs
 
-    get_dask_client()
+    client = get_dask_client()
 
     if len(dirs) == 1:
         print("[INFO] Single directory provided: dumping sync txt file.")
@@ -678,7 +658,7 @@ def main():
         out_path = Path(args.out) if args.out else Path("sync_txt_diff.txt")
 
         # If both are text dumps -> compare text files
-        if (str(file1).endswith(".txt") ) and (str(file2).endswith(".txt")):
+        if (str(file1).endswith(".txt")) and (str(file2).endswith(".txt")):
             compare_two_sync_txt(
                 txt1=file1,
                 txt2=file2,
@@ -712,6 +692,8 @@ def main():
 
     else:
         raise SystemExit("Please provide one or two directories.")
+
+    close_dask_client()
 
 
 if __name__ == "__main__":

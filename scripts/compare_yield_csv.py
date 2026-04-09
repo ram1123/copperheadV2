@@ -2,24 +2,32 @@ import pandas as pd
 import numpy as np
 
 
-df_b = pd.read_csv(
-    "yield_Run2_NanoV15_Feb23_2026_noQGLSF_2017.csv"
-)
-df_a = pd.read_csv(
-    "yield_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_2017.csv"
-)
+configs = {
+    "legacy": {
+        "file": "yield_Run3_nanoAODv12_FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2_2022postEE.csv",
+        "suffix": "_legacy",
+    },
+    "JetIDFix": {
+        "file": "yield_Run3_nanoAODv12_FilterJetsHorn25GeV_HE30GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix_2022postEE.csv",
+        "suffix": "_JetIDFix",
+    },
+}
 
 KEYS = ["sample", "category", "region", "year"]
+labels = list(configs.keys())
+suffixes = (configs[labels[0]]["suffix"], configs[labels[1]]["suffix"])
 
-suffixes = ("_V12", "_V15")
-df = df_a.merge(
-    df_b,
+dfs = {k: pd.read_csv(v["file"]) for k, v in configs.items()}
+
+
+df = dfs[labels[0]].merge(
+    dfs[labels[1]],
     on=KEYS,
     suffixes=suffixes,
-    how="inner",  # only compare common rows
+    how="inner",
 )
 
-# print(df.head(10))
+print(df.head())
 
 
 def percent_diff(a, b):

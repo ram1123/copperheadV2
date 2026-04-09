@@ -6,6 +6,8 @@ configfile: "workflow/config.yaml"
 HMM_BASE = config.get("hmm_base", f"/work/projects/hmm")
 HMM_USER = os.environ["USER"]
 
+USE_EXISTING_STAGE1 = config.get("use_existing_stage1", False)
+
 YEARS = config["years"]
 RUN_TAG = config.get("run_tag", "default")
 
@@ -63,6 +65,7 @@ YEAR_META = {
 }
 
 DATASET_YAMLS = {
+    ("run2", "12"): "configs/datasets/dataset_nanoAODv12_run2.yaml",
     ("run2", "15"): "configs/datasets/dataset_nanoAODv15_run2.yaml",
     ("run3", "15"): "configs/datasets/dataset_nanoAODv15_run3.yaml",
     ("run3", "12"): "configs/datasets/dataset_nanoAODv12_run3.yaml",
@@ -139,7 +142,7 @@ rule all:
         expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
         expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
         expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
-        # # (6) second-pass stage1 using latest corrections for zpt and EBE mass calibration
+        # (6) second-pass stage1 using latest corrections for zpt and EBE mass calibration
         # expand(STATEDIR + "/stage1_corr_{year}.done", year=YEARS),
         # expand(STATEDIR + "/stage1_compact_corr_{year}.done", year=YEARS),
         # expand(STATEDIR + "/plots_corr_{year}_{cat}.done", year=YEARS, cat=PLOT_CATS),
@@ -255,6 +258,10 @@ rule stage1Compact:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        outpath=lambda wc: (
+            f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
+            f"{label_for_year(wc.year)}/stage1_output/{wc.year}"
+        ),           
     resources:
         gateway=1,
     shell:
@@ -270,6 +277,61 @@ rule stage1Compact:
             -m compact \
             {params.gw} \
             > {log} 2>&1
+
+        # -----------------------------
+        # Validation block
+        # -----------------------------
+        BASE="{params.outpath}"
+        DIR_F1="$BASE/f1_0"
+        DIR_CMP="$BASE/compacted"
+
+        echo "Checking compact consistency..."
+
+        fail_flag=0
+
+        for sample in $(ls "$DIR_F1"); do
+            f1_dir="$DIR_F1/$sample"
+            cmp_dir="$DIR_CMP/$sample"
+
+            # --- Check existence ---
+            if [[ ! -d "$cmp_dir" ]]; then
+                echo "Missing compacted sample: $sample"
+                fail_flag=1
+                continue
+            fi
+
+            # --- Size comparison (in bytes, robust) ---
+            size_f1=$(du -sb "$f1_dir" | awk '{{print $1}}')
+            size_cmp=$(du -sb "$cmp_dir" | awk '{{print $1}}')
+
+            # allow small tolerance (important!)
+            ratio=$(awk "BEGIN {{print $size_cmp / $size_f1}}")
+
+            echo "$sample : f1=$size_f1 cmp=$size_cmp ratio=$ratio"
+
+            # allow up to 20% shrink (very safe)
+            if (( $(awk "BEGIN {{print ($ratio < 0.8)}}") )); then
+                echo "Size mismatch for $sample → deleting compacted"
+                rm -rf "$cmp_dir"
+                fail_flag=1
+            fi
+
+            # --- Check parquet existence ---
+            nparquet=$(find "$cmp_dir" -name "*.parquet" | wc -l)
+            if [[ "$nparquet" -eq 0 ]]; then
+                echo "No parquet found in $sample"
+                rm -rf "$cmp_dir"
+                fail_flag=1
+            fi
+        done
+
+        # --- Final decision ---
+        if [[ "$fail_flag" -ne 0 ]]; then
+            echo "ERROR: Compact validation failed"
+            exit 1
+        fi
+
+        echo "Compact validation passed"
         touch {output.done}
         """
 
@@ -279,7 +341,9 @@ rule stage1Compact:
 # ---------------------------------------
 rule plots:
     input:
-       STATEDIR + "/stage1_compact_{year}.done",
+        lambda wc: [] if USE_EXISTING_STAGE1 else [
+            STATEDIR + f"/stage1_compact_{wc.year}.done"
+        ]       
     output:
         done=STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
     log:

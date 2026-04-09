@@ -165,7 +165,8 @@ def main() -> None:
         stage1_dir = get_stage1_path()  # default = "current"
     else:
         stage1_dir = args.input_path
-    load_path_template = str(Path(stage1_dir) / "{year}" / "f1_0")
+    # load_path_template = str(Path(stage1_dir) / "{year}" / "f1_0")
+    load_path_template = str(Path(stage1_dir) / "{year}" / "compacted")
     print(f"Using LOAD_PATH template: {load_path_template}")
 
     # Physics / config toggles
@@ -249,8 +250,8 @@ def main() -> None:
         print("-" * 60)
 
         for proc in processes:
-            if "data" in proc and region == "h-peak":
-                continue
+            # if "data" in proc and region == "h-peak":
+                # continue
             rows.append(get_yield(proc, **common_kwargs))
 
     df = pd.DataFrame(rows)

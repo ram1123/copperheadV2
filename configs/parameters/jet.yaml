@@ -24,6 +24,32 @@ jet_eta_cut:
     "2023": 4.7
     "2023BPix": 4.7
     "2024": 4.7
+btag_jet_pt_cut:
+    2016preVFP: 25.0
+    2016postVFP: 25.0
+    "2017": 25.0
+    "2018": 25.0
+    2016_RERECO: 25.0
+    "2017_RERECO": 25.0
+    "2018_RERECO": 25.0
+    "2022preEE": 25.0
+    "2022postEE": 25.0
+    "2023": 25.0
+    "2023BPix": 25.0
+    "2024": 25.0
+btag_jet_eta_cut:
+    2016preVFP: 2.4
+    2016postVFP: 2.4
+    "2017": 2.5
+    "2018": 2.5
+    2016_RERECO: 2.4
+    "2017_RERECO": 2.5
+    "2018_RERECO": 2.5
+    "2022preEE": 2.5
+    "2022postEE": 2.5
+    "2023": 2.5
+    "2023BPix": 2.5
+    "2024": 2.5
 jet_id:
     # INFO: For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
     # INFO: Use tight, tightPassLepVeto, or tightFailLepVeto
@@ -39,6 +65,20 @@ jet_id:
     "2023": tightPassLepVeto
     "2023BPix": tightPassLepVeto
     "2024": tightPassLepVeto
+btag_jet_id:
+    # B-tag selection follows the dedicated tight jet ID recommendation.
+    2016preVFP: tight
+    2016postVFP: tight
+    "2017": tight
+    "2018": tight
+    2016_RERECO: tight
+    "2017_RERECO": tight
+    "2018_RERECO": tight
+    "2022preEE": tight
+    "2022postEE": tight
+    "2023": tight
+    "2023BPix": tight
+    "2024": tight
 jet_id_json_files: # old method as of Dec 16 2024,
     2016preVFP: dummy
     2016postVFP: dummy
@@ -78,7 +118,7 @@ min_dr_mu_jet:
     "2023": 0.4
     "2023BPix": 0.4
     "2024": 0.4
-btag_loose_wp:
+btag_loose_wp_DeepCSV:
     2016preVFP: 0.2027 # DeepCSV
     2016postVFP: 0.1918 # DeepCSV
     "2017": 0.1355 # DeepCSV
@@ -86,12 +126,12 @@ btag_loose_wp:
     2016_RERECO: 0.2217 # DeepCSV central sources for RERECO https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation102X
     "2017_RERECO": 0.1522 # DeepCSV
     "2018_RERECO": 0.1241 # DeepCSV
-    "2022preEE": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-    "2022postEE": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-    "2023": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-    "2023BPix": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-    "2024": 0.0246 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer24/#ak4-b-tagging for UParTAK4
-btag_medium_wp:
+    "2022preEE": 0.000
+    "2022postEE": 0.000
+    "2023": 0.000
+    "2023BPix": 0.000
+    "2024": 0.000
+btag_medium_wp_DeepCSV:
     2016preVFP: 0.6001 # DeepCSV
     2016postVFP: 0.5847 # DeepCSV
     "2017": 0.4506 # DeepCSV
@@ -99,10 +139,88 @@ btag_medium_wp:
     2016_RERECO: 0.6321 # DeepCSV
     "2017_RERECO": 0.4941 # DeepCSV
     "2018_RERECO": 0.4184 # DeepCSV
-    "2022preEE": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-    "2022postEE": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-    "2023": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
-    "2023BPix": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging
+    "2022preEE": 0.000
+    "2022postEE": 0.000
+    "2023": 0.000
+    "2023BPix": 0.000
+    "2024": 0.000
+btag_loose_wp_deepJet:
+    2016preVFP: 0.000
+    2016postVFP: 0.000
+    "2017": 0.000
+    "2018": 0.000
+    2016_RERECO: 0.000
+    "2017_RERECO": 0.000
+    "2018_RERECO": 0.000
+    "2022preEE": 0.0583 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
+    "2022postEE": 0.0614 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
+    "2023": 0.0479 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
+    "2023BPix": 0.048 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
+    "2024": 0.000 
+btag_medium_wp_deepJet:
+    2016preVFP: 0.000
+    2016postVFP: 0.000
+    "2017": 0.000
+    "2018": 0.000
+    2016_RERECO: 0.000
+    "2017_RERECO": 0.000
+    "2018_RERECO": 0.000
+    "2022preEE": 0.3086 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
+    "2022postEE": 0.3196 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
+    "2023": 0.2431 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
+    "2023BPix": 0.2435 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
+    "2024": 0.000 
+btag_loose_wp_ParticleNet:
+    2016preVFP: 0.000
+    2016postVFP: 0.000
+    "2017": 0.000
+    "2018": 0.000
+    2016_RERECO: 0.000
+    "2017_RERECO": 0.000
+    "2018_RERECO": 0.000
+    "2022preEE": 0.047 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
+    "2022postEE": 0.0499 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
+    "2023": 0.0358 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
+    "2023BPix": 0.0359 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
+    "2024": 0.000 
+btag_medium_wp_ParticleNet:
+    2016preVFP: 0.000
+    2016postVFP: 0.000
+    "2017": 0.000
+    "2018": 0.000
+    2016_RERECO: 0.000
+    "2017_RERECO": 0.000
+    "2018_RERECO": 0.000
+    "2022preEE": 0.245 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
+    "2022postEE": 0.2605 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
+    "2023": 0.1917 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
+    "2023BPix": 0.1919 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
+    "2024": 0.000     
+btag_loose_wp_UParT:
+    2016preVFP: 0.0387
+    2016postVFP: 0.0400
+    "2017": 0.0331
+    "2018": 0.0308 
+    2016_RERECO: 0.000 
+    "2017_RERECO": 0.000
+    "2018_RERECO": 0.000
+    "2022preEE": 0.000
+    "2022postEE": 0.000
+    "2023": 0.000
+    "2023BPix": 0.000
+    "2024": 0.0246 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer24/#ak4-b-tagging for UParTAK4
+btag_medium_wp_UParT:
+    2016preVFP: 0.1847
+    2016postVFP: 0.1898
+    "2017": 0.1776
+    "2018": 0.1610
+    2016_RERECO: 0.000
+    "2017_RERECO": 0.000
+    "2018_RERECO": 0.000
+    "2022preEE": 0.000
+    "2022postEE": 0.000
+    "2023": 0.000
+    "2023BPix": 0.000
     "2024": 0.1272 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer24/#ak4-b-tagging for UParTAK4
 softjet_dr2:
     2016preVFP: 0.16

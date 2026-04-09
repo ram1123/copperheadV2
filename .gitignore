@@ -1,3 +1,4 @@
+*.csv
 *.patch
 CMSSW_13_0_14/
 .nfs*

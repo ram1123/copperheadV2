@@ -9,6 +9,15 @@ version = "0.1.0"
 cuda = "12.4"
 
 [tasks]
+list-tasks = "pixi task list"
+check = "python -c 'import coffea, awkward, uproot; print(\"Stack Ready\")'"
+lint = "ruff check ."
+# format = "ruff format ."
+stage1 = "snakemake -s workflow/Snakefile all_stage1 -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 "
+stage1full = "snakemake -s workflow/Snakefile -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 "
+plot = "snakemake -s workflow/Snakefile plot_all  -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --allowed-rules plots plot_all --forceall --config use_existing_stage1=True"
+unlock = "snakemake -s workflow/Snakefile --unlock"
+stage2 = "bash stage2_sh.sh all all"
 
 # ----------------------------------------------------------------------
 # Core analysis stack: needed for stage-prestage/stage1
@@ -119,10 +128,14 @@ scripts = ["scripts/pixi_activate.sh"]
 [environments]
 # Minimal CI environment for GitHub Actions sync tests
 ci = ["analysis"]
-default = ["analysis", "dev", "root", "workflow", "style", "local"]
 
-# Full heavy environment with ML + symbolic tools
+default = ["analysis", "dev", "root", "workflow", "style", "local", "ml"]
+
+# This environment has everything except combine
 full = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"]
-ml = ["analysis", "ml", "dev", "style", "local"]
+
+# Dedicated environment for the symbolic regression
 symbolic = ["analysis", "symbolic", "dev", "style", "local"]
-combine = ["analysis", "combine", "ml", "local", "style"]
+
+# for ggH stage-2 script
+combine = ["analysis", "combine", "ml", "local", "style", "dev", "workflow"]
