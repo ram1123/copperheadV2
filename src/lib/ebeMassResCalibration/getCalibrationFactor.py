@@ -131,11 +131,24 @@ def median_bootstrap_err(x, n_boot=300, seed=12345):
     meds = np.median(x[idx], axis=1)
     return np.std(meds, ddof=1)
 
+
 def weighted_bootstrap_median(x, w, n_boot=300, seed=12345):
     x = np.asarray(x)
     w = np.asarray(w)
 
+    mask = np.isfinite(x) & np.isfinite(w)
+    x = x[mask]
+    w = w[mask]
+
+    if len(x) < 5:
+        return np.nan
+
+    w = np.abs(w)
+    if np.sum(w) == 0:
+        return np.nan
+
     w = w / np.sum(w)
+
     rng = np.random.default_rng(seed)
 
     meds = []
@@ -143,7 +156,8 @@ def weighted_bootstrap_median(x, w, n_boot=300, seed=12345):
         idx = rng.choice(len(x), size=len(x), p=w)
         meds.append(np.median(x[idx]))
 
-    return np.std(meds)
+    return np.std(meds, ddof=1)
+
 
 def step2_mass_resolution(df, output_dir="tmp", pdfFile_ExtraText="", n_boot=300):
     """
