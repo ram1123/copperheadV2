@@ -365,30 +365,16 @@ def jet_id(jets, config, year=None, jet_id_key="jet_id"):
     return pass_jet_id
 
 
-def btag_jet_selection(jets, clean, pass_jet_puid, config, year=None):
-    """Return the dedicated jet mask used for b-tag jet counting and weights."""
+def btag_jet_selection(jets, config, year):
     if year is None:
         raise ValueError("Year must be specified for b-tag jet selection.")
+    btag_pt_cut = jets.pt > config["btag_jet_pt_cut"]
+    if is_run3(year):
+        btag_eta_cut = abs(jets.eta) < 2.5
+    elif is_run2(year):
+        btag_eta_cut = abs(jets.eta) < (2.4 if str(year).startswith("2016") else 2.5)
 
-    btag_pass_jet_id = jet_id(jets, config, year, jet_id_key="btag_jet_id")
-    jet_algorithm = str(config["jec_parameters"]["jet_algorithm"]).lower()
-    uses_chs_jets = "chs" in jet_algorithm
-    btag_pass_jet_puid = (
-        pass_jet_puid if uses_chs_jets else ak.ones_like(btag_pass_jet_id, dtype=bool)
-    )
-
-    btag_pt_cut = config.get("btag_jet_pt_cut", 20.0)
-    btag_eta_cut = config.get(
-        "btag_jet_eta_cut", 2.4 if year.startswith("2016") else 2.5
-    )
-
-    return (
-        clean
-        & (jets.pt > btag_pt_cut)
-        & btag_pass_jet_id
-        & btag_pass_jet_puid
-        & (abs(jets.eta) < btag_eta_cut)
-    )
+    return btag_pt_cut & btag_eta_cut
 
 
 def get_puId(jets):

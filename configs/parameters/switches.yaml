@@ -1,4 +1,14 @@
 switches:
+    do_add_jet_ID_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': true
+        "2023": false
+        "2023BPix": false
+        "2024": false
     save_full_muon_detail:
         '2016preVFP': false
         '2016postVFP': false
@@ -9,13 +19,13 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_additional_vars:
+    save_four_jets_kinematics:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
         '2018': false
         '2022preEE': false
-        '2022postEE': false
+        '2022postEE': true
         "2023": false
         "2023BPix": false
         "2024": false
@@ -44,11 +54,11 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
     do_getFatJet_vars:
         '2016preVFP': false
         '2016postVFP': false
