@@ -66,7 +66,7 @@ def save_dataframe_to_csv(df, path, description="DataFrame"):
     logger.info(f"Saved {description} to {path}")
 
 
-def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=None, ifbinned=False, inputFilePath="", isMC=0):
+def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=None, ifbinned=False, inputFilePath="", isMC=False):
     logger.info("=== Step 1: Mass fitting in ZCR ===")
     tstart = time.time()
 
