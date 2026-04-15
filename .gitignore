@@ -47,3 +47,4 @@ pixi.lock
 test*.py
 test*.sh
 output/
+logs/

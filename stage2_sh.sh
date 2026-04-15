@@ -6,13 +6,21 @@ echo "$(date)"
 # -----------------------------------------------------
 # Configuration
 # -----------------------------------------------------
-label="Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+# label="Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+# label="Run3_nanoAODv12_FilterJetsHorn25GeV_HE30GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+# label="Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+label="Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
 base_path="/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean"
 stage2_load_path="${base_path}/${label}/stage1_output"
 
 category="ggh"
-do_hyperparam_search="1" # true (enable hyperparameter search for BDT)
-n_trials="5" # It is for the bayseian optimization for the BDT
+
+do_hyperparam_search="0" # true (enable hyperparameter search for BDT)
+
+step="${1:-}"
+year="${2:-all}"
+n_trials="${3:-100}"
+date_tag="${4:-13Apr}"
 
 # model_name="Run3_08March_HPeachFold_train_with_bestHP"
 # model_name="Run3_09March_Check"
@@ -25,10 +33,15 @@ n_trials="5" # It is for the bayseian optimization for the BDT
 # model_name="Run3_10March_020Trials_oneHotEncoding_Scan"
 # model_name="Run3_09Mar_HPScan_100Trials"
 # model_name="Run3_09Mar_HPScan_500Trials"
-model_name="Run3_07Apr_005Trials_pySR"
+# model_name="Run3_07Apr_005Trials_pySR"
+# model_name="Run3_07Apr_005Trials_HE30GeV"
+# model_name="Run3_07Apr_005Trials"
+# model_name="Run3_07Apr_100Trials_pySR"
+model_name="Run3_${n_trials}Trials_pySR_${date_tag}"
 
-step="${1:-}"
-year="${2:-all}"
+# bdt_Run3_100Trials_pySR_13Apr_2022postEE
+
+# Run3_3Trials_pySR_13Apr
 
 if [[ -z "${step}" ]]; then
     echo "Usage: $0 <step> <year|all>"
@@ -43,12 +56,12 @@ all_years=(2022preEE 2022postEE 2023 2023BPix 2024)
 
 if [[ "${year}" == "all" ]]; then
     years=("${all_years[@]}")
-    model_trainYear="allYear"
-    label_tag="AllYear_17March"
+    model_trainYear="all"
+    label_tag="AllYear_${date_tag}"
 else
     years=("${year}")
     model_trainYear="${year}"
-    label_tag="${year}_07Apr"
+    label_tag="${year}_${date_tag}"
 fi
 
 
@@ -115,20 +128,33 @@ print_config
 # Only run once, not looped over years here.
 # -----------------------------------------------------
 if [[ "${step}" == "0" ]]; then
-    print_box "Step 0: Training the BDT for ggH"
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
     mass_decorrelation_strat="targetZpeakMass" # target distribution Zpeak mass
     # mass_decorrelation_strat="targetHpeakMass" # target distribution Hpeak mass
     # mass_decorrelation_strat="targetHsidebandMass" # target distribution lower H sidebands and uppper ZCR mass window
 
+    if [[ "${do_hyperparam_search}" == "1" ]]; then
+        print_box "Step 0: Scan the hyperparameters for the BDT"
+        python MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py \
+            --name ${model_name} \
+            --year ${year} \
+            -load ${stage2_load_path} \
+            -param_search ${do_hyperparam_search} \
+            --n_trials ${n_trials} \
+            --massDeCorrStrat ${mass_decorrelation_strat} 
+            # --overwrite_cached_df
+    fi
+
+    print_box "Step 0: Training the BDT for ggH"
+    do_hyperparam_search="0" # true (enable hyperparameter search for BDT)
     python MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py \
         --name ${model_name} \
         --year ${year} \
         -load ${stage2_load_path} \
         -param_search ${do_hyperparam_search} \
         --n_trials ${n_trials} \
-        --massDeCorrStrat ${mass_decorrelation_strat}
+        --massDeCorrStrat ${mass_decorrelation_strat}      
 fi
 
 # -----------------------------------------------------
