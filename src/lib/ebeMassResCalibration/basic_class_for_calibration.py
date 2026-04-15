@@ -266,9 +266,27 @@ def apply_roorealvar_cfg(var, pcfg: dict):
 
 
 def weighted_median(x, w):
+    """
+    Compute the weighted median for non-negative event weights.
+
+    Policy for weights:
+      - negative weights are not supported and raise ``ValueError``;
+      - zero weights are ignored, since they do not contribute to the result;
+      - non-finite values in ``x`` or ``w`` are ignored.
+
+    This explicit validation avoids silently dropping negative-weight events
+    here while other closure/histogram code may still include them.
+    """
     x = np.asarray(x)
     w = np.asarray(w)
-    
+
+    negative_weight_mask = np.isfinite(w) & (w < 0)
+    if np.any(negative_weight_mask):
+        raise ValueError(
+            "weighted_median does not support negative weights. "
+            "Pass only non-negative weights or apply the same filtering "
+            "policy consistently before calling this function."
+        )
     m = np.isfinite(x) & np.isfinite(w) & (w > 0)
     x = x[m]
     w = w[m]
