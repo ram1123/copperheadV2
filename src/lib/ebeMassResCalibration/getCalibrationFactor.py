@@ -133,21 +133,41 @@ def median_bootstrap_err(x, n_boot=300, seed=12345):
 
 
 def weighted_bootstrap_median(x, w, n_boot=300, seed=12345):
-    x = np.asarray(x)
-    w = np.asarray(w)
+    """Bootstrap uncertainty on a weighted median.
 
-    mask = np.isfinite(x) & np.isfinite(w)
+    If ``w`` is ``None``, fall back to the unweighted bootstrap uncertainty.
+    Non-finite values are removed. To stay consistent with ``weighted_median``,
+    only entries with strictly positive weights are used; zero and negative
+    weights are dropped.
+    """
+    try:
+        x = np.asarray(x, dtype=float)
+    except (TypeError, ValueError):
+        return np.nan
+
+    if w is None:
+        return median_bootstrap_err(x, n_boot=n_boot, seed=seed)
+
+    try:
+        w = np.asarray(w, dtype=float)
+    except (TypeError, ValueError):
+        return np.nan
+
+    if x.shape != w.shape:
+        return np.nan
+
+    mask = np.isfinite(x) & np.isfinite(w) & (w > 0)
     x = x[mask]
     w = w[mask]
 
     if len(x) < 5:
         return np.nan
 
-    w = np.abs(w)
-    if np.sum(w) == 0:
+    wsum = np.sum(w)
+    if wsum <= 0:
         return np.nan
 
-    w = w / np.sum(w)
+    w = w / wsum
 
     rng = np.random.default_rng(seed)
 
