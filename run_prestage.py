@@ -8,6 +8,8 @@ import time
 import uuid
 
 import awkward as ak
+import dask_awkward as dak
+
 import coffea
 import dask
 import numpy as np
@@ -419,8 +421,9 @@ if __name__ == "__main__":
             if args.xcache:
                 fnames = get_Xcache_filelist(fnames)
 
-            # # if fnames contains `/eos/vbc/experiments/cms` remove it.
-            # fnames = [f.replace("/eos/vbc/experiments/cms", "") if "/eos/vbc/experiments/cms" in f else f for f in fnames]
+            # FIXME: Below search replace is a fix for some of files that has this string (not sure why)
+            # if fnames contains `/eos/vbc/experiments/cms` remove it. 
+            fnames = [f.replace("/eos/vbc/experiments/cms", "") if "/eos/vbc/experiments/cms" in f else f for f in fnames]
 
             logger.debug(f"sample_name: {sample_name}")
             logger.debug(f"file names: {fnames}")
@@ -454,7 +457,7 @@ if __name__ == "__main__":
                         logger.debug(f"events.fields: {events.fields}")
                         # if coffea version < 2025.3.0 then use the line below
                         if coffea.__version__ == "2024.11.0":
-                            preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                            preprocess_metadata["data_entries"] = int(dak.num(events, axis=0).compute())
                         elif coffea.__version__ == "2025.3.0":
                             # For coffea version 2025.3.0, count the entries directly from ROOT files
                             n_events_total = 0
