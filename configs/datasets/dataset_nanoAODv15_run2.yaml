@@ -1,7 +1,61 @@
 years:
+    "2018PR":
+        Data:
+          total_lumi_pb: 59560.0
+          data_A:
+            skip_sample: False
+            datasets:
+              - /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/SingleMuon_Run2018A
+            lumi_pb: null
+            das_request: "local customNanoAOD, no DAS"
+            parent_das: todo
+            golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
+            references:
+              - null
+        
+        DY:
+          dy_M-100To200_aMCatNLO:
+            skip_sample: False
+            datasets:
+              - /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/DYJetsToLL_M-100to200_TuneCP5_13TeV-amcatnloFXFX-pythia8
+            cross_section_pb: 233.8592627
+            cross_section_source: None
+            kfactor:
+              value: 1.0
+              source: null
+            filter_efficiency: 1.0
+            references:
+              - null
+        
+        Higgs:
+          vbf_powheg_dipole:
+            skip_sample: False
+            datasets:
+              - /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8
+            cross_section_pb: null
+            cross_section_source: null
+            kfactor:
+              value: 1.0
+              source: null
+            filter_efficiency: 1.0
+            references:
+              - null
+        
+          ggh_powhegPS:
+            skip_sample: False
+            datasets:
+              - /depot/cms/hmm/shar1172/Small_NanoAOD_ForValidtionPR/UL2018/GluGluHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8
+            cross_section_pb: null
+            cross_section_source: null
+            kfactor:
+              value: 1.0
+              source: null
+            filter_efficiency: 1.0
+            references:
+              - null
     "2017":
         Data:
-            total_lumi_pb: 41480.0
+            total_lumi_pb: 42700.0
             data_B:
                 skip_sample: False
                 datasets:
@@ -640,7 +694,7 @@ years:
                 - null
     "2018": # FIXME: From here onwards below is the automated version of chatGPT from codimd doc (https://codimd.web.cern.ch/aK_Yxu91QHqpsjeWaa4aIw#Parts-missing). So there's a good chance that there's errors
       Data:
-        total_lumi_pb: 59830.0
+        total_lumi_pb: 59560.0
         data_A:
           skip_sample: False
           datasets:
