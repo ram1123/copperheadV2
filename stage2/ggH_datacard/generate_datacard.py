@@ -226,9 +226,9 @@ pdf_Higgs_qq     lnN     -            1.021        -
     if year == "2016":
         lines.append("lumi_13TeV_2016       lnN     1.012       1.012       -")
     elif year == "2017":
-        lines.append("lumi_13TeV_2017       lnN     1.023       1.023       -")
+        lines.append("lumi_13TeV_2017       lnN     1.023       1.0082       -")
     elif year == "2018":
-        lines.append("lumi_13TeV_2018       lnN     1.025       1.025       -")
+        lines.append("lumi_13TeV_2018       lnN     1.025       1.0084       -")
     elif "2022" in year:
         lines.append("lumi_13p6TeV_Corr     lnN     1.0138      1.0138      -")
     elif "2023" in year:
