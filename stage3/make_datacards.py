@@ -77,7 +77,7 @@ rate_syst_lookup = {
         "XsecAndNormggH": {"ggH": 1.38313},
     },
 }
-lumi_syst = {
+lumi_syst = { # NOTE: values are in percent, NOTE: lumi values source: "For analyses using the three or four years integrated" https://twiki.cern.ch/twiki/bin/viewauth/CMS/LumiRecommendationsRun2
     "2016": {
         # "uncor2016": 2.2,
         # "xyfac": 0.9,
@@ -86,7 +86,9 @@ lumi_syst = {
         # "beta": 0.5,
         # "calib": 0.0,
         # "ghost": 0.4,
-        "lumi2016": 1.2,
+        "lumi_13TeV_1516_l":  0.31,
+        "lumi_13TeV_151617_l":  0.18,
+        "lumi_13TeV_15161718_l":  0.64,
     },
     "2017": {
         # "uncor2017": 2.0,
@@ -96,7 +98,9 @@ lumi_syst = {
         # "beta": 0.5,
         # "calib": 0.3,
         # "ghost": 0.1,
-        "lumi2017": 2.3,
+        "lumi_13TeV_1516_l":  0.31,
+        "lumi_13TeV_151617_l":  0.18,
+        "lumi_13TeV_15161718_l":  0.64,
     },
     "2018": {
         # "uncor2018": 1.5,
@@ -106,7 +110,9 @@ lumi_syst = {
         # "beta": 0.0,
         # "calib": 0.2,
         # "ghost": 0.0,
-        "lumi2018": 2.5,
+        "lumi_13TeV_1516_l":  0.31,
+        "lumi_13TeV_151617_l":  0.18,
+        "lumi_13TeV_15161718_l":  0.64,
     },
     # Updated the lumi values from here: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun3#2024
     # FIXME: WE should send this at a centralized YAML file
