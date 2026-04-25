@@ -114,7 +114,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
     if not os.path.exists(full_save_path):
         os.makedirs(full_save_path)
     # tag = "Run2_nanoAODv12_AK8jets"
-    dnn_tag = "HPScan_03Sep_17bins_08Oct"  # FIXME
+    dnn_tag = plot_var
     full_save_fname = f"{full_save_path}/{var}_{region_name}_{dnn_tag}.pdf"
     logger.info(f"full_save_fname: {full_save_fname}")
     # raise ValueError
@@ -281,9 +281,10 @@ if __name__ == "__main__":
     # load_path = f"/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_FixPUJetIDWgt_Rebinned_NoSyst/2016preVFP/"
     # load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_JESVar/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_21bins/2018/"
 
-    # Path with FatJet variables
-    # load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_17bins_NoSyst/{year_param}/"
-    load_path = f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/{args.label}/stage2_histograms/score_Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt_HPScan_03Sep_17bins/{year_param}/"
+    load_path = (
+        f"/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/"
+        f"{args.label}/stage2_histograms/score_{args.mva_name}/{year_param}/"
+    )
 
     logger.info(f"Looking for pickled histograms in: {load_path}")
 

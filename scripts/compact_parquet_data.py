@@ -12,6 +12,38 @@ from tqdm import tqdm
 import glob
 
 
+def resolve_scaler_path(model_trained_path, fold):
+    npz_path = os.path.join(model_trained_path, f"scalers_{fold}.npz")
+    npy_path = os.path.join(model_trained_path, f"scalers_{fold}.npy")
+    if os.path.exists(npz_path):
+        return npz_path
+    if os.path.exists(npy_path):
+        return npy_path
+    raise FileNotFoundError(f"Missing scaler for fold {fold}: checked {npz_path} and {npy_path}")
+
+
+def load_scaler_stats(model_trained_path, fold):
+    scaler_path = resolve_scaler_path(model_trained_path, fold)
+    if scaler_path.endswith(".npz"):
+        with np.load(scaler_path, allow_pickle=True) as scaler_file:
+            return scaler_file["mean"], scaler_file["std"]
+    scaler_mean, scaler_std = np.load(scaler_path, allow_pickle=True)
+    return scaler_mean, scaler_std
+
+
+def resolve_model_path(model_trained_path, fold):
+    candidates = [
+        os.path.join(model_trained_path, f"fold{fold}", "best_torchscript.pt"),
+        os.path.join(model_trained_path, f"fold{fold}", "best_model_torchJit_ver.pt"),
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    raise FileNotFoundError(
+        f"Missing model for fold {fold}: checked {', '.join(candidates)}"
+    )
+
+
 def ensure_compacted(year, sample, input_path, compacted_path):
     logger.debug(f"year: {year}")
     logger.debug(f"samples: {sample}")
@@ -86,8 +118,7 @@ def add_dnn_score(events_partition,
                 in_feat = 125.0 * ak.ones_like(events_partition.event)
             else:
                 in_feat = events_partition[feat]
-            scalers_path = f"{model_trained_path}/scalers_{fold}.npy"
-            scaler_mean, scaler_mean_std = np.load(scalers_path)
+            scaler_mean, scaler_mean_std = load_scaler_stats(model_trained_path, fold)
             scaler_mean = scaler_mean[ix] # get feature relevant mean & std dev
             scaler_mean_std = scaler_mean_std[ix] # get feature relevant mean & std dev
             in_feat = (in_feat - scaler_mean) / scaler_mean_std
@@ -133,6 +164,9 @@ def compact_and_add_dnn_score(year, sample, input_path, compacted_dir, model_pat
         return
 
     logger.info(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
+    if not os.path.exists(compacted_path):
+        logger.warning(f"Compacted dataset missing at {compacted_path}. Skipping DNN score addition.")
+        return
     # Load the compacted dataset
     logger.debug(f"Loading compacted dataset from {compacted_path}")
     events = dak.from_parquet(compacted_path)
@@ -148,7 +182,7 @@ def compact_and_add_dnn_score(year, sample, input_path, compacted_dir, model_pat
     model_cache = {}
     nfolds = 3  # Assuming 3 folds, adjust as necessary
     for fold in range(nfolds):
-        model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
+        model_load_path = resolve_model_path(model_trained_path, fold)
         logger.debug(f"Loading model for fold {fold} from {model_load_path}")
         model_cache[fold] = DNNWrapper(model_load_path)
         logger.debug(f"Loaded model for fold {fold} from {model_load_path}")

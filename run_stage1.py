@@ -215,7 +215,7 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
     if eos_path.startswith("/depot") or eos_path.startswith("/work") or eos_path.startswith("test"):
         os.makedirs(eos_path, exist_ok=True)
         return
-    if not eos_path.startswith("/store") or not eos_path.startswith("davs"):
+    if not eos_path.startswith("/store") and not eos_path.startswith("davs"):
         raise RuntimeError(f"Path does not starts with /depot or /work or /store or davs. Please check path.")
     if not eos_path.startswith("davs://eos.cms.rcac.purdue.edu:9000/"):
         eos_path = f"davs://eos.cms.rcac.purdue.edu:9000/{eos_path.lstrip('/')}"

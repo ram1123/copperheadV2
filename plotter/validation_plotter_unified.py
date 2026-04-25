@@ -104,6 +104,10 @@ def parseGroupProcesses(group_dict, year: str):
     for group_name, processes in group_dict.items():
         logger.debug(f"Group '{group_name}' processes (original): {processes}")
         if type(processes) is dict:
+            if year not in processes:
+                raise KeyError(
+                    f"Year '{year}' is not configured for process group '{group_name}'."
+                )
             processes = processes[year]
         year_specific_group_dict[group_name] = processes
     logger.debug(f"Group dict specific to year {year}: {year_specific_group_dict}")
@@ -313,6 +317,11 @@ if __name__ == "__main__":
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
 
+    if args.remove_zpt_weights and args.use_dnn_zpt_weights:
+        raise ValueError(
+            "Use either --remove_zpt_weights or --use_dnn_zpt_weights, not both."
+        )
+
     group_dict = parseGroupProcesses(group_dict, args.year)
 
     if is_run3(args.year):
@@ -435,12 +444,13 @@ if __name__ == "__main__":
         if "f1_0" not in args.load_path:
             raise ValueError("The load path should contain the string 'f1_0' to use the compacted path! Exiting the program.")
 
+        compacted_base_path = (args.load_path).replace("f1_0", args.use_compacted)
         # run compact script for each process
         for process in available_processes:
-            compacted_path_DNN = os.path.join(args.load_path, process, "0")
+            compacted_path_DNN = os.path.join(compacted_base_path, process, "0")
             ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
 
-        args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
+        args.load_path = compacted_base_path
 
     logger.info(f"Using parquet files from {args.load_path}")
     # load saved parquet files. This increases memory use, but increases runtime significantly
@@ -505,27 +515,6 @@ if __name__ == "__main__":
         #     if field not in fields_in_events:
         #         logger.warning(f"field {field} not in events, removing from fields2load!")
 
-        # # TOREMOVE
-        # if "separate_wgt_qgl_wgt" in events.fields:
-        #     logger.info("removing separate_wgt_qgl_wgt!")
-        #     events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_qgl_wgt"] # remove zpt wgt
-        if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-            logger.warning("removing separate_wgt_zpt_wgt!")
-            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
-
-        if (
-            "separate_wgt_zpt_wgt" in events.fields
-            and "zpt_wgt_reco_dnn" in events.fields
-            and args.use_dnn_zpt_weights
-            ):
-            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
-            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
-            events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_reco_dnn"] # apply the weights obtained from the DNN
-        # if "dy" in process.lower():
-        #     # scale the weights for DY samples by 3.0
-        #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
-        #     events["wgt_nominal"] = events["wgt_nominal"] * (1997.0/2124.08)
-
         loaded_events[process] = events
     logger.info("finished loading parquet files!")
     # mplhep style starts here --------------------------------------
@@ -589,10 +578,6 @@ if __name__ == "__main__":
         style="\n" + "="*50 + "\n",))
     sample_hist_dictByVar2compute = {}
     for var in tqdm.tqdm(variables2plot):
-        sample_hist_empty = sample_hist_dictByVar[var]
-        sample_hist_l = []
-        var_step = time.time()
-        # for process in available_processes:
         if "_nominal" in var:
             plot_var = var.replace("_nominal", "")
         else:
@@ -600,6 +585,10 @@ if __name__ == "__main__":
         if plot_var not in plot_settings.keys():
             logger.warning(f"variable {var} not configured in plot settings!")
             continue
+        sample_hist_empty = sample_hist_dictByVar[var]
+        sample_hist_l = []
+        var_step = time.time()
+        # for process in available_processes:
         # -----------------------------------------------
         # intialize variables for filling histograms
         if var == "dnn_vbf_score_atanh":

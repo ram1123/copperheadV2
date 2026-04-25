@@ -72,6 +72,9 @@ ak_array = TypeVar('ak_array')
 # ---------------------------------------------------------
 def load_pysr_configs(base_dir="configs/pysr_best"):
     configs = {}
+    if not os.path.isdir(base_dir):
+        logger.warning(f"PySR config directory not found: {base_dir}")
+        return configs
 
     for fname in os.listdir(base_dir):
         if not fname.endswith(".json"):
@@ -486,13 +489,20 @@ class EventProcessor(processor.ProcessorABC):
         self.selection = {}
         self.cutflow = {}
 
-        self.pysr_configs = load_pysr_configs()
-        for region, cfg in self.pysr_configs.items():
-            cfg["_compiled_equation"] = compile(cfg["equation"], f"<pysr_{region}>", "eval")
-
+        self.pysr_configs = {}
         self.pysr_all_features = set()
-        for cfg in self.pysr_configs.values():
-            self.pysr_all_features.update(cfg["features"])        
+        if self.config["switches"].get("do_use_pySR_score", False):
+            pysr_base_dir = self.config.get("pysr_config_dir", "configs/pysr_best")
+            self.pysr_configs = load_pysr_configs(pysr_base_dir)
+            if not self.pysr_configs:
+                raise FileNotFoundError(
+                    f"PySR scoring is enabled, but no config JSON files were found in {pysr_base_dir}."
+                )
+            for region, cfg in self.pysr_configs.items():
+                cfg["_compiled_equation"] = compile(
+                    cfg["equation"], f"<pysr_{region}>", "eval"
+                )
+                self.pysr_all_features.update(cfg["features"])
 
     def compute_jet_veto_eventfilter(self, events, jets):
         """ apply the jet veto maps. the .gz file should be read using correctionlib and the file
