@@ -224,20 +224,45 @@ def safe_ratio(num, den, default=0.0):
     return ak.where(den != 0, num / den, default)
 
 
-def getZptWgts_3region(dimuon_pt, njets, nbins, year: str, config_path: str, NanoAODv: int):
+def _load_zpt_config_section(year: str, config_path: str, NanoAODv: int):
+    logger.info(f"zpt config file: {config_path}")
+    wgt_config = OmegaConf.load(config_path)
+    wgt_config = wgt_config[str(year)]
+    if ("nanoAODv12" in wgt_config.keys()) or ("nanoAODv15" in wgt_config.keys()):
+        try:
+            logger.info(f"nanoAODv{NanoAODv}")
+            wgt_config = wgt_config[f"nanoAODv{NanoAODv}"]
+        except Exception as exc:
+            raise ValueError(
+                f"Zpt config for nanoAODv{NanoAODv} is not yet available!"
+            ) from exc
+    return wgt_config
+
+
+def _get_zpt_coeff(wgt_config, jet_multiplicity: int, nbins, coeff_name: str, sigma_shift: float = 0.0):
+    base = wgt_config[f"njet_{jet_multiplicity}"][nbins][coeff_name]
+    if sigma_shift == 0.0:
+        return base
+
+    err_name = f"{coeff_name}_err"
+    err_val = wgt_config[f"njet_{jet_multiplicity}"][nbins].get(err_name, 0.0)
+    return base + sigma_shift * err_val
+
+
+def getZptWgts_3region(
+    dimuon_pt,
+    njets,
+    nbins,
+    year: str,
+    config_path: str,
+    NanoAODv: int,
+    sigma_shift: float = 0.0,
+):
     """
     Get Z pT weights based on polynomial fits in 3 regions.
     TODO: Implement the possibility to apply the zpt weights w.r.t. number of generated jets instead of reco jets.
     """
-    logger.info(f"zpt config file: {config_path}")
-    wgt_config = OmegaConf.load(config_path)
-    wgt_config = wgt_config[str(year)]
-    if ("nanoAODv12" in wgt_config.keys()) or ("nanoAODv15" in wgt_config.keys()): # see if the nanoAODV distinction exists
-        try:
-            logger.info(f"nanoAODv{NanoAODv}")
-            wgt_config = wgt_config[f"nanoAODv{NanoAODv}"] # pick the zpt config for correct nanoAODv
-        except:
-            raise ValueError(f"Zpt config for nanoAODv{NanoAODv} is not yet available!")
+    wgt_config = _load_zpt_config_section(year, config_path, NanoAODv)
     zpt_wgt = ak.ones_like(dimuon_pt)
     jet_multiplicies = [0,1,2]
 
@@ -256,14 +281,18 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year: str, config_path: str, Nan
         # first polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(f0_order + 1):  # Dynamically use max_order from the configuration
-            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
+            coeff = _get_zpt_coeff(
+                wgt_config, jet_multiplicity, nbins, f"f0_p{order}", sigma_shift
+            )
             polynomial_term = coeff*(dimuon_pt**order) # a * x^n
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
 
         # compute the value of the first polynomial at the cutoff min
         f0_xmin = 0.0
         for order in range(f0_order + 1):
-            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f0_p{order}"]
+            coeff = _get_zpt_coeff(
+                wgt_config, jet_multiplicity, nbins, f"f0_p{order}", sigma_shift
+            )
             f0_xmin += coeff * (poly_fit_cutoff_min ** order)
 
         zpt_wgt_by_jet = ak.where((poly_fit_cutoff_min >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
@@ -271,7 +300,9 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year: str, config_path: str, Nan
         # 2nd polynomial fit
         zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
         for order in range(f1_order + 1):  # p goes from 0 to max_order
-            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
+            coeff = _get_zpt_coeff(
+                wgt_config, jet_multiplicity, nbins, f"f1_p{order}", sigma_shift
+            )
             polynomial_term = coeff * (dimuon_pt**order)  # a * x^n
             zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
 
@@ -279,7 +310,9 @@ def getZptWgts_3region(dimuon_pt, njets, nbins, year: str, config_path: str, Nan
         f1_xmin = 0.0
         f1_xmax = 0.0
         for order in range(f1_order + 1):
-            coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"f1_p{order}"]
+            coeff = _get_zpt_coeff(
+                wgt_config, jet_multiplicity, nbins, f"f1_p{order}", sigma_shift
+            )
             f1_xmin += coeff * (poly_fit_cutoff_min ** order)
             f1_xmax += coeff * (poly_fit_cutoff_max ** order)
 
@@ -1518,7 +1551,6 @@ class EventProcessor(processor.ProcessorABC):
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
             do_lhe = (
                 ("LHEScaleWeight" in events.fields)
-                and ("LHEPdfWeight" in events.fields)
                 and ("nominal" in pt_variations)
             )
             if do_lhe:
@@ -1556,6 +1588,7 @@ class EventProcessor(processor.ProcessorABC):
             do_pdf = (
                 self.config["switches"]["do_pdf"]
                 and ("nominal" in pt_variations)
+                and ("LHEPdfWeight" in events.fields)
                 and (
                     "dy" in dataset
                     or "ewk" in dataset
@@ -2039,6 +2072,7 @@ class EventProcessor(processor.ProcessorABC):
         if do_zpt:
             njets_reco = out_dict["njets_nominal"]
             njets_gen = n_genjets_pt30_eta47
+            save_zpt_variations = self.config["switches"].get("save_zpt_variations", False)
 
             logger.info("=======================  apply zpt weights =======================")
             whichMethod = "function" # DNN or function or both
@@ -2053,10 +2087,34 @@ class EventProcessor(processor.ProcessorABC):
                 zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg, NanoAODv)
 
                 # --- save both to parquet
-                _add_block(out_dict, {
+                zpt_block = {
                     "zpt_wgt_reco": zpt_wgt_reco,
                     "zpt_wgt_gen":  zpt_wgt_gen,
-                })
+                }
+
+                if save_zpt_variations:
+                    zpt_wgt_reco_up = getZptWgts_3region(
+                        dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv, sigma_shift=1.0
+                    )
+                    zpt_wgt_reco_down = getZptWgts_3region(
+                        dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv, sigma_shift=-1.0
+                    )
+                    zpt_wgt_gen_up = getZptWgts_3region(
+                        dimuon.pt, njets_gen, "function", year, zpt_cfg, NanoAODv, sigma_shift=1.0
+                    )
+                    zpt_wgt_gen_down = getZptWgts_3region(
+                        dimuon.pt, njets_gen, "function", year, zpt_cfg, NanoAODv, sigma_shift=-1.0
+                    )
+                    zpt_block.update(
+                        {
+                            "zpt_wgt_reco_up": zpt_wgt_reco_up,
+                            "zpt_wgt_reco_down": zpt_wgt_reco_down,
+                            "zpt_wgt_gen_up": zpt_wgt_gen_up,
+                            "zpt_wgt_gen_down": zpt_wgt_gen_down,
+                        }
+                    )
+
+                _add_block(out_dict, zpt_block)
             if (whichMethod == "DNN" or whichMethod == "both") and str(year) == "2024": #FIXME: year is temporarily here.
                 # 1) choose model family (MiNNLO vs aMCatNLO)
                 # model_paths = self.config["zpt_dnn_models_aMCatNLO"]  # dict with 0j/1j/2j
@@ -2108,7 +2166,15 @@ class EventProcessor(processor.ProcessorABC):
                 "zpt_njets_gen": njets_gen,
             })
             # apply reco zpt weight to event weight
-            weights.add("zpt_wgt", weight=zpt_wgt_reco)
+            if save_zpt_variations:
+                weights.add(
+                    "zpt_wgt",
+                    weight=zpt_wgt_reco,
+                    weightUp=zpt_wgt_reco_up,
+                    weightDown=zpt_wgt_reco_down,
+                )
+            else:
+                weights.add("zpt_wgt", weight=zpt_wgt_reco)
 
         t19 = time.perf_counter()
         logger.info(f"[timing] Zpt weights time: {t19 - t18:.2f} seconds")

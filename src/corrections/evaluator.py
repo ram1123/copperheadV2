@@ -347,6 +347,10 @@ def nnlops_weights(Higgs_pt, njets30, parameters, dataset):
         mc_generator = "mcatnlo"
     elif "powheg" in dataset:
         mc_generator = "powheg"
+    else:
+        raise ValueError(
+            f"Unable to determine NNLOPS generator mode from dataset name: {dataset}"
+        )
     nnlops_w = nnlops.evaluate(Higgs_pt, njets30, mc_generator)
     # print(f'nnlops_weights nnlops_w: {ak.to_numpy(nnlops_w)}')
     return nnlops_w
@@ -975,6 +979,12 @@ def qgl_weights_V2(jets, config, isHerwig, dnn_year):
     """
     source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/QuarkGluonLikelihood#Recommendation_for_13_TeV_data_a
     """
+    if isinstance(dnn_year, str):
+        year_prefix = dnn_year[:4]
+        if not year_prefix.isdigit():
+            raise ValueError(f"Unsupported year format for QGL weights: {dnn_year}")
+        dnn_year = float(year_prefix)
+
     # print(f"qgl jets: {jets.compute()}")
     # fname = config["jmar_sf_file"]
     # jmar_evaluator = get_corrset(fname)
@@ -1074,7 +1084,11 @@ def qgl_weights_V2(jets, config, isHerwig, dnn_year):
     sf_values = qgl_weights[qgl_wgt_applied]
     # print(f"sf_values: {sf_values.compute()}")
     current_normalization = dak.map_partitions(np.sum, sf_values, keepdims=True)
-    norm_factor = nevents_selected/current_normalization
+    norm_factor = ak.where(
+        current_normalization != 0,
+        nevents_selected / current_normalization,
+        1.0,
+    )
 
     # print(f"nevents_selected: {nevents_selected.compute()}")
     # print(f"current_normalization: {current_normalization.compute()}")

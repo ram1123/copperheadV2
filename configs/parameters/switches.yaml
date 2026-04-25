@@ -192,6 +192,16 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+    save_zpt_variations:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     apply_jet_PUID_wgt:
         '2016preVFP': false
         '2016postVFP': false
