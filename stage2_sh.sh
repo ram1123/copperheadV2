@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}"
+
 echo "$(date)"
 
 # -----------------------------------------------------
@@ -68,7 +71,8 @@ fi
 stage2_label="${model_name}_${category}_${label_tag}"
 stage2_save_path="${base_path}/${label}/${stage2_label}/stage2_output"
 
-mva_base_path="${PWD}"
+mva_base_path="${SCRIPT_DIR}"
+trainer_script="MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py"
 
 
 # -----------------------------------------------------
@@ -101,6 +105,7 @@ print_config() {
     echo "stage2_load_path : ${stage2_load_path}"
     echo "stage2_save_path : ${stage2_save_path}"
     echo "mva_base_path    : ${mva_base_path}"
+    echo "script_dir       : ${SCRIPT_DIR}"
 }
 
 init_run_log() {
@@ -123,6 +128,22 @@ init_run_log() {
 init_run_log
 print_config
 
+if [[ ! -f "run_stage2.py" || ! -f "run_stage3.py" ]]; then
+    echo "Required workflow entrypoints are missing. Run this script from the copperheadV2 checkout."
+    exit 1
+fi
+
+if [[ "${step}" == "0" && ! -f "${trainer_script}" ]]; then
+    echo "Missing ggH trainer script: ${trainer_script}"
+    echo "Step 0 cannot run in this checkout until that file is restored or the script path is updated."
+    exit 1
+fi
+
+trainer_supports_n_trials="0"
+if [[ -f "${trainer_script}" ]] && grep -q "n_trials" "${trainer_script}"; then
+    trainer_supports_n_trials="1"
+fi
+
 # -----------------------------------------------------
 # Step 0: Train BDT
 # Only run once, not looped over years here.
@@ -134,27 +155,27 @@ if [[ "${step}" == "0" ]]; then
     # mass_decorrelation_strat="targetHpeakMass" # target distribution Hpeak mass
     # mass_decorrelation_strat="targetHsidebandMass" # target distribution lower H sidebands and uppper ZCR mass window
 
+    trainer_args=(
+        python "${trainer_script}"
+        --name "${model_name}"
+        --year "${year}"
+        -load "${stage2_load_path}"
+        --massDeCorrStrat "${mass_decorrelation_strat}"
+    )
+    if [[ "${trainer_supports_n_trials}" == "1" ]]; then
+        trainer_args+=(--n_trials "${n_trials}")
+    fi
+
     if [[ "${do_hyperparam_search}" == "1" ]]; then
         print_box "Step 0: Scan the hyperparameters for the BDT"
-        python MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py \
-            --name ${model_name} \
-            --year ${year} \
-            -load ${stage2_load_path} \
-            -param_search ${do_hyperparam_search} \
-            --n_trials ${n_trials} \
-            --massDeCorrStrat ${mass_decorrelation_strat} 
-            # --overwrite_cached_df
+        "${trainer_args[@]}" \
+            -param_search "${do_hyperparam_search}"
     fi
 
     print_box "Step 0: Training the BDT for ggH"
     do_hyperparam_search="0" # true (enable hyperparameter search for BDT)
-    python MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py \
-        --name ${model_name} \
-        --year ${year} \
-        -load ${stage2_load_path} \
-        -param_search ${do_hyperparam_search} \
-        --n_trials ${n_trials} \
-        --massDeCorrStrat ${mass_decorrelation_strat}      
+    "${trainer_args[@]}" \
+        -param_search "${do_hyperparam_search}"
 fi
 
 # -----------------------------------------------------
@@ -408,11 +429,11 @@ if [[ "${step}" == "8" || "${step}" == "dcall" || "${step}" == "all" ]]; then
             -save ${save_path}
 
         echo "Copy the scripts to: ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
-        cp scripts/get_significance.sh ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
-        cp scripts/get_impactPlots.sh ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        cp scripts/get_significance.sh "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        cp scripts/get_impactPlots.sh "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
 
         echo "Copy the background datacards to the same path"
-        cp stage3/bkg_datacards_template/*bkg*.txt ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        cp stage3/bkg_datacards_template/*bkg*.txt "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
 
         echo "Go to path given below and run"
         echo "cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
@@ -434,7 +455,7 @@ if [[ "${step}" == "9" || "${step}" == "dcall" || "${step}" == "all" ]]; then
         echo "stage2_save_path: ${stage2_save_path}"
         echo "Go to path given below and run"
 
-        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        cd "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
         bash get_significance.sh
         cd - >/dev/null
     done
@@ -453,7 +474,7 @@ if [[ "${step}" == "10" || "${step}" == "im" || "${step}" == "all" ]]; then
         echo "stage2_save_path: ${stage2_save_path}"
         echo "Go to path given below and run"
 
-        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        cd "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
         bash get_impactPlots.sh
         cd - >/dev/null
     done

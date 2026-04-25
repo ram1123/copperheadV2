@@ -44,6 +44,22 @@ def resolve_model_path(model_trained_path, fold):
     )
 
 
+def infer_nfolds(model_trained_path):
+    fold = 0
+    while True:
+        try:
+            resolve_model_path(model_trained_path, fold)
+            resolve_scaler_path(model_trained_path, fold)
+            fold += 1
+        except FileNotFoundError:
+            break
+    if fold == 0:
+        raise FileNotFoundError(
+            f"No fold artifacts were found under model path: {model_trained_path}"
+        )
+    return fold
+
+
 def ensure_compacted(year, sample, input_path, compacted_path):
     logger.debug(f"year: {year}")
     logger.debug(f"samples: {sample}")
@@ -180,7 +196,7 @@ def compact_and_add_dnn_score(year, sample, input_path, compacted_dir, model_pat
 
     # Load and Cache models for each fold
     model_cache = {}
-    nfolds = 3  # Assuming 3 folds, adjust as necessary
+    nfolds = infer_nfolds(model_trained_path)
     for fold in range(nfolds):
         model_load_path = resolve_model_path(model_trained_path, fold)
         logger.debug(f"Loading model for fold {fold} from {model_load_path}")

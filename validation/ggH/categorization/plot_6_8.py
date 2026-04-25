@@ -113,7 +113,7 @@ def plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=
         # draw_mode = "HIST"
         if i ==0:
             THist.SetTitle("")
-            THist.GetXaxis().SetTitle("m_{\mu\mu} [GeV]")
+        THist.GetXaxis().SetTitle(r"m_{\mu\mu} [GeV]")
             
             THist.Draw(f"{draw_mode}")
         else:
@@ -203,7 +203,7 @@ def plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, no
         # draw_mode = "HIST"
         if i ==0:
             THist.SetTitle("")
-            THist.GetXaxis().SetTitle("m_{\mu\mu} [GeV]")
+        THist.GetXaxis().SetTitle(r"m_{\mu\mu} [GeV]")
             
             THist.Draw(f"{draw_mode}")
         else:

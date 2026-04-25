@@ -6,6 +6,7 @@ from omegaconf import OmegaConf
 import time
 import pandas as pd
 import os
+import glob
 
 
 
@@ -23,6 +24,11 @@ def calculate_AMS(sig_yields, bkg_yields):
     for ix in range(len(sig_yields)):
         S = sig_yields[ix]
         B = bkg_yields[ix]
+        if S <= 0:
+            continue
+        if B <= 0:
+            ams_sq_sum += 2.0 * S
+            continue
         AMS = (S + B) * np.log(1 + S/B) - S
         AMS = np.sqrt(2*AMS)
         ams_sq_sum += AMS**2
@@ -38,6 +44,8 @@ def obtain_BDT_edges(target_sig_effs, years, load_path):
         # full_load_path = f"{sysargs.load_path}/{sysargs.year}/processed_events_sig*.parquet"
         full_load_path = f"{load_path}/{year}/processed_events_sigMC_ggh_*.parquet" # ignore VBF signal sample
         print(f"full_load_path: {full_load_path}")
+        if not glob.glob(full_load_path):
+            raise FileNotFoundError(f"No ggH signal parquet files matched: {full_load_path}")
         events = dak.from_parquet(full_load_path)
         
         signal_score = ak.to_numpy(events.BDT_score.compute())
@@ -99,6 +107,8 @@ def get_signal_yields(bdt_score_edges, year:str, load_path:str):
     return: out_arr of size len(bdt_score_edges) -1, value in each bin represnting signal yield in that category
     """
     full_load_path = f"{load_path}/{year}/processed_events_sigMC*.parquet"  # include all signal
+    if not glob.glob(full_load_path):
+        raise FileNotFoundError(f"No signal parquet files matched: {full_load_path}")
     events = dak.from_parquet(full_load_path)
     signal_score = ak.to_numpy(events.BDT_score.compute())
     signal_wgt = ak.to_numpy(events.wgt_nominal.compute())
@@ -122,6 +132,8 @@ def get_background_yields(bdt_score_edges, year:str, load_path:str):
     return: out_arr of size len(bdt_score_edges) -1, value in each bin represnting signal yield in that category
     """
     full_load_path = f"{load_path}/{year}/processed_events_data_*.parquet"  # use data for bkg
+    if not glob.glob(full_load_path):
+        raise FileNotFoundError(f"No background parquet files matched: {full_load_path}")
     events = dak.from_parquet(full_load_path)
     background_score = ak.to_numpy(events.BDT_score.compute())
     background_wgt = ak.to_numpy(events.wgt_nominal.compute())

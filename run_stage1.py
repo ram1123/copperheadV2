@@ -15,7 +15,7 @@ import awkward as ak
 import dask
 import numpy as np
 import tqdm
-from cli.common_argparser import build_common_parser
+from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
 
@@ -283,6 +283,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
+    args.dataset_yaml_file = resolve_dataset_yaml_file(
+        args.dataset_yaml_file, args.year, args.NanoAODv
+    )
+    logger.info(f"Using dataset YAML: {args.dataset_yaml_file}")
 
     test_mode = args.test_mode
     logger.debug(f"Test mode: {test_mode}")

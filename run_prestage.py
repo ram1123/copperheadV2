@@ -15,7 +15,7 @@ import dask
 import numpy as np
 import tqdm
 import uproot
-from cli.common_argparser import build_common_parser
+from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from coffea.dataset_tools import rucio_utils
 from coffea.dataset_tools.preprocess import preprocess
 from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
@@ -275,6 +275,10 @@ if __name__ == "__main__":
     logger.setLevel(args.log_level)
     os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
     year = args.year
+    args.dataset_yaml_file = resolve_dataset_yaml_file(
+        args.dataset_yaml_file, year, args.NanoAODv
+    )
+    logger.info(f"Using dataset YAML: {args.dataset_yaml_file}")
     logger.info(f"year: {year}")
 
     if args.fraction is None: # do the normal prestage setup
