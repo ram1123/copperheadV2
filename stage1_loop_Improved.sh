@@ -329,12 +329,12 @@ for year in "${years[@]}"; do
         2p)
             log "Running the validation of stage2 (i.e. data/mc plot for dnn score) for year $year..."
             region2p="h-sidebands"
-            command2p1="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p}"
+            command2p1="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}"
             log "Command: $command2p1"
             eval "$command2p1"
 
             region2p="h-peak"
-            command2p2="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p}"
+            command2p2="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}"
             log "Command: $command2p2"
             eval "$command2p2"
             ;;
@@ -401,20 +401,19 @@ for year in "${years[@]}"; do
             ;;
         dnn|dnn_pre|dnn_train|dnn_var_rank)
             log "Running DNN step(s) for year $year..."
-            # cmd_preproc="python MVA_training/VBF/run3_model/dnn_preprocessor.py --label $label --region $region --category $category --year $year --log-level DEBUG "
-            cmd_preproc="python MVA_training/VBF_new/preprocess_dnn.py --label $label --region $region --category $category --year $year --log-level DEBUG "
+            cmd_preproc="python MVA_training/VBF_run3/preprocess_dnn.py --label $label --region $region --category $category --year $year --log-level DEBUG "
             # Alternative cmd_train configurations (uncomment and adjust as needed):
 
             # -- Bayesian Optimization:
-            # cmd_train="python MVA_training/VBF/run3_model/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 55 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
-            # cmd_train="python MVA_training/VBF/run3_model/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 51 --bo-epochs 51 --bo-fold 0 --n-epochs 51 --batch-size 15536 --log-level INFO "
+            # cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --bo --bo-trials 55 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
+            # cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --bo --bo-trials 51 --bo-epochs 51 --bo-fold 0 --n-epochs 51 --batch-size 15536 --log-level INFO "
 
             # -- Quick test:
-            # cmd_train="python MVA_training/VBF/run3_model/dnn_train.py --label $label --region $region --category $category --year $year --bo --bo-trials 3 --bo-epochs 3 --bo-fold 0 --n-epochs 3 --batch-size 15536 --log-level INFO "
-            # cmd_train="python MVA_training/VBF/run3_model/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 3 --batch-size 15536 --log-level DEBUG "
+            # cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --bo --bo-trials 3 --bo-epochs 3 --bo-fold 0 --n-epochs 3 --batch-size 15536 --log-level INFO "
+            # cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --n-epochs 3 --batch-size 15536 --log-level DEBUG "
 
             # Active configuration:
-            cmd_train="python MVA_training/VBF/run3_model/dnn_train.py --label $label --region $region --category $category --year $year --n-epochs 51 --log-level INFO "
+            cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --n-epochs 51 --log-level INFO "
             cmd_var_rank="python MVA_training/VBF/variable_ranking.py "
 
             if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then
