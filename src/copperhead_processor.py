@@ -224,6 +224,45 @@ def safe_ratio(num, den, default=0.0):
     return ak.where(den != 0, num / den, default)
 
 
+def build_muon_kinematic_variation_block(
+    processor,
+    mu1,
+    mu2,
+    pt1,
+    pt2,
+    suffix: str,
+    is_mc: bool,
+    doing_BS_correction: bool = False,
+):
+    mu1_var = ak.with_field(mu1, pt1, "pt")
+    mu2_var = ak.with_field(mu2, pt2, "pt")
+    dimuon_var = mu1_var + mu2_var
+    dimuon_mass_res_var, calibration_var = processor.get_mass_resolution(
+        dimuon_var,
+        mu1_var,
+        mu2_var,
+        is_mc,
+        doing_BS_correction=doing_BS_correction,
+    )
+    dimuon_mass_res_var = dimuon_mass_res_var * calibration_var
+
+    return {
+        f"mu1_pt_{suffix}": mu1_var.pt,
+        f"mu2_pt_{suffix}": mu2_var.pt,
+        f"mu1_pt_over_mass_{suffix}": safe_ratio(mu1_var.pt, dimuon_var.mass, default=0.0),
+        f"mu2_pt_over_mass_{suffix}": safe_ratio(mu2_var.pt, dimuon_var.mass, default=0.0),
+        f"dimuon_mass_{suffix}": dimuon_var.mass,
+        f"dimuon_pt_{suffix}": dimuon_var.pt,
+        f"dimuon_pt_log_{suffix}": np.log(ak.where(dimuon_var.pt > 0, dimuon_var.pt, 1e-6)),
+        f"dimuon_eta_{suffix}": dimuon_var.eta,
+        f"dimuon_rapidity_{suffix}": getRapidity(dimuon_var),
+        f"dimuon_ebe_mass_res_{suffix}": dimuon_mass_res_var,
+        f"dimuon_ebe_mass_res_rel_{suffix}": safe_ratio(
+            dimuon_mass_res_var, dimuon_var.mass, default=0.0
+        ),
+    }
+
+
 def _load_zpt_config_section(year: str, config_path: str, NanoAODv: int):
     logger.info(f"zpt config file: {config_path}")
     wgt_config = OmegaConf.load(config_path)
@@ -1688,6 +1727,92 @@ class EventProcessor(processor.ProcessorABC):
             "dimuon_cos_theta_cs": dimuon_cos_theta_cs,
             "dimuon_phi_cs": dimuon_phi_cs,
         })
+
+        save_muon_roccor_variations = self.config["switches"].get(
+            "save_muon_roccor_variations", True
+        )
+        if is_mc and save_muon_roccor_variations:
+            muon_variation_block = {}
+            if hasattr(mu1, "pt_roch_up") and hasattr(mu2, "pt_roch_up"):
+                muon_variation_block.update(
+                    build_muon_kinematic_variation_block(
+                        self,
+                        mu1,
+                        mu2,
+                        mu1.pt_roch_up,
+                        mu2.pt_roch_up,
+                        "mu_roccor_up",
+                        is_mc,
+                        doing_BS_correction=doing_BS_correction,
+                    )
+                )
+            if hasattr(mu1, "pt_roch_down") and hasattr(mu2, "pt_roch_down"):
+                muon_variation_block.update(
+                    build_muon_kinematic_variation_block(
+                        self,
+                        mu1,
+                        mu2,
+                        mu1.pt_roch_down,
+                        mu2.pt_roch_down,
+                        "mu_roccor_down",
+                        is_mc,
+                        doing_BS_correction=doing_BS_correction,
+                    )
+                )
+            if hasattr(mu1, "pt_roch_scale_up") and hasattr(mu2, "pt_roch_scale_up"):
+                muon_variation_block.update(
+                    build_muon_kinematic_variation_block(
+                        self,
+                        mu1,
+                        mu2,
+                        mu1.pt_roch_scale_up,
+                        mu2.pt_roch_scale_up,
+                        "mu_scale_up",
+                        is_mc,
+                        doing_BS_correction=doing_BS_correction,
+                    )
+                )
+            if hasattr(mu1, "pt_roch_scale_down") and hasattr(mu2, "pt_roch_scale_down"):
+                muon_variation_block.update(
+                    build_muon_kinematic_variation_block(
+                        self,
+                        mu1,
+                        mu2,
+                        mu1.pt_roch_scale_down,
+                        mu2.pt_roch_scale_down,
+                        "mu_scale_down",
+                        is_mc,
+                        doing_BS_correction=doing_BS_correction,
+                    )
+                )
+            if hasattr(mu1, "pt_roch_resol_up") and hasattr(mu2, "pt_roch_resol_up"):
+                muon_variation_block.update(
+                    build_muon_kinematic_variation_block(
+                        self,
+                        mu1,
+                        mu2,
+                        mu1.pt_roch_resol_up,
+                        mu2.pt_roch_resol_up,
+                        "mu_resol_up",
+                        is_mc,
+                        doing_BS_correction=doing_BS_correction,
+                    )
+                )
+            if hasattr(mu1, "pt_roch_resol_down") and hasattr(mu2, "pt_roch_resol_down"):
+                muon_variation_block.update(
+                    build_muon_kinematic_variation_block(
+                        self,
+                        mu1,
+                        mu2,
+                        mu1.pt_roch_resol_down,
+                        mu2.pt_roch_resol_down,
+                        "mu_resol_down",
+                        is_mc,
+                        doing_BS_correction=doing_BS_correction,
+                    )
+                )
+            if len(muon_variation_block) > 0:
+                _add_block(out_dict, muon_variation_block)
 
         # MET
         _add_block(out_dict, {
