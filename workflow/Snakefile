@@ -99,11 +99,16 @@ def label_for_year(year: str) -> str:
     return f"{era_tag}_nanoAODv{nano}_{RUN_TAG}"
 
 
+def plot_base_for_year(year: str) -> str:
+    era, nano = YEAR_META[year]
+    era_tag = "Run2" if era == "run2" else "Run3"
+    return f"validation/figs/{era_tag}_nanoAODv{nano}"
+
+
 USE_GW = bool(config.get("use_gateway", False))
 CLIDX  = str(config.get("cluster_index", 0))
 
 ZPT = config["zpt"]
-ZPT_TAG = label_for_year(YEARS[0])  # Use first year's label for ZPT_TAG
 ZPT_OUT = ZPT.get("outbase", "try_zpt_dnn")
 ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
 ZPT_BATCH = int(ZPT.get("batch", 65536))
@@ -357,7 +362,7 @@ rule plots:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0"
         ),        
         save_path=lambda wc: (
-            f"validation/figs/Run3_nanoAODv{nano_for_year(wc.year)}/"
+            f"{plot_base_for_year(wc.year)}/"
             f"{label_for_year(wc.year)}/VBFfilter_False/"
         ),
         # map wildcards -> CLI flags
@@ -427,6 +432,7 @@ rule zpt0:
           -l {params.label} \
           -y "{wildcards.year}" \
           -m zpt_fit0 \
+          {params.gw} \
           > {log} 2>&1
         touch {output.done}
         """
@@ -461,6 +467,7 @@ rule zpt1:
           -y "{wildcards.year}" \
           -m zpt_fit1 \
           -n {wildcards.njets} \
+          {params.gw} \
           > {log} 2>&1
         touch {output.done}
         """
@@ -495,6 +502,7 @@ rule zpt2:
           -y "{wildcards.year}" \
           -m zpt_fit2 \
           -n {wildcards.njets} \
+          {params.gw} \
           > {log} 2>&1
         touch {output.done}
         """
@@ -749,7 +757,7 @@ rule plots_corr:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0"
         ),        
         save_path=lambda wc: (
-            f"validation/figs/Run3_nanoAODv{nano_for_year(wc.year)}/"
+            f"{plot_base_for_year(wc.year)}/"
             f"{label_for_year(wc.year)}/VBFfilter_False/"
         ),
         # map wildcards -> CLI flags
@@ -801,6 +809,7 @@ rule zpt_njet0:
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
+        zpt_tag=lambda wc: label_for_year(wc.year),
     shell:
         r"""
         set -euo pipefail
@@ -808,7 +817,7 @@ rule zpt_njet0:
         mkdir -p {params.logdir} {params.statedir}
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet0 \
+          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet0 \
           --njet-bin 0 \
           --max-events {ZPT_MAXEV} \
           --batch {ZPT_BATCH} \
@@ -827,6 +836,7 @@ rule zpt_njet1:
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
+        zpt_tag=lambda wc: label_for_year(wc.year),
     shell:
         r"""
         set -euo pipefail
@@ -834,7 +844,7 @@ rule zpt_njet1:
         mkdir -p {params.logdir} {params.statedir}
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet1 \
+          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet1 \
           --njet-bin 1 \
           --max-events {ZPT_MAXEV} \
           --batch {ZPT_BATCH} \
@@ -853,6 +863,7 @@ rule zpt_njet2p:
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
+        zpt_tag=lambda wc: label_for_year(wc.year),
     shell:
         r"""
         set -euo pipefail
@@ -860,7 +871,7 @@ rule zpt_njet2p:
         mkdir -p {params.logdir} {params.statedir}
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet2p \
+          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet2p \
           --njet-bin 2p \
           --max-events {ZPT_MAXEV} \
           --batch {ZPT_BATCH} \

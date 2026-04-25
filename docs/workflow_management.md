@@ -53,6 +53,29 @@ title: Workflow management: Snakemake
     
     ```
 
+# Main Rules
+
+The current [workflow/Snakefile](../workflow/Snakefile) drives these main steps:
+
+1. `stage1`
+2. `stage1Compact`
+3. `plots`
+4. `zpt0`
+5. `zpt1`
+6. `zpt2`
+7. `MassCalibrationMC`
+8. `MassCalibrationMCClosure`
+9. `MassCalibrationData`
+10. `MassCalibrationDataClosure`
+
+For the Z-pT flow specifically:
+
+1. `zpt0` runs `stage1_loop_Improved.sh -m zpt_fit0`
+2. `zpt1` runs `stage1_loop_Improved.sh -m zpt_fit1`
+3. `zpt2` runs `stage1_loop_Improved.sh -m zpt_fit2`
+
+The plot rules call [validation_plotter_unified.py](../plotter/validation_plotter_unified.py), and the Z-pT DNN rules call [train_dnn_zpt_reweight_dak.py](../MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py).
+
 # Issue
 
 1. For the plotting code, zpt and mass calibration it is reading the input file path from `trials.yaml`. But, as I am using the snakemake this looks like not a good idea. I should pass it from the command line so that these steps takes the appropriate input informations.
