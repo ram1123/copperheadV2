@@ -398,6 +398,11 @@ def _add_block(out, block):
     return out
 
 
+def _pack_selected(arr, mask):
+    """Apply a boolean event mask once and repack the resulting layout."""
+    return ak.to_packed(arr[mask])
+
+
 def pick_vbf_pairs(jets):
     """
     Returns a dict of jet1/jet2 for different pairing criteria.
@@ -856,10 +861,10 @@ class EventProcessor(processor.ProcessorABC):
 
         # Save raw variables before computing any corrections
         # rochester corrects pt only, but fsr_recovery changes all vals below
-        events["Muon", "pt_raw"] = ak.ones_like(events.Muon.pt) * events.Muon.pt
-        events["Muon", "eta_raw"] = ak.ones_like(events.Muon.eta) * events.Muon.eta
-        events["Muon", "phi_raw"] = ak.ones_like(events.Muon.phi) * events.Muon.phi
-        events["Muon", "pfRelIso04_all_raw"] = ak.ones_like(events.Muon.pfRelIso04_all) * events.Muon.pfRelIso04_all
+        events["Muon", "pt_raw"] = events.Muon.pt
+        events["Muon", "eta_raw"] = events.Muon.eta
+        events["Muon", "phi_raw"] = events.Muon.phi
+        events["Muon", "pfRelIso04_all_raw"] = events.Muon.pfRelIso04_all
 
         # --------------------------------------------------------
         # Step-7: Apply Rochester correction to muon pT
@@ -1216,13 +1221,14 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("h_sidebands_106_115_135_150", h_sidebands2)
         # ------------------- Cutflow dimuon mass window: END -----------------------
 
-        events = events[event_filter==True]
-        muons = muons[event_filter==True]
-        nmuons = ak.to_packed(nmuons[event_filter==True])
+        selected_events_mask = event_filter
+        events = _pack_selected(events, selected_events_mask)
+        muons = _pack_selected(muons, selected_events_mask)
+        nmuons = _pack_selected(nmuons, selected_events_mask)
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
-                pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter==True])
+                pu_wgts[variation] = _pack_selected(pu_wgts[variation], selected_events_mask)
         # pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
 
         t9 = time.perf_counter()
@@ -1483,15 +1489,18 @@ class EventProcessor(processor.ProcessorABC):
         # # Apply genweights, PU weights
         # # and L1 prefiring weights
         # # ------------------------------------------------------------#
-        weights = Weights(None, storeIndividual=True) # none for dask awkward
+        save_all_weight_vars = self.config["switches"].get("save_all_weight_vars", False)
+        do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
+        weights = Weights(None, storeIndividual=do_save_partial_weights) # none for dask awkward
         # weights = Weights(len(events))
         if is_mc:
+            gen_weight_ones = ak.ones_like(events.genWeight)
             if "MiNNLO" in dataset: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
                 weights.add("genWeight", weight=np.sign(events.genWeight)) # just extract the sign, not the magnitude
             else:
                 weights.add("genWeight", weight=events.genWeight)
             # original initial weight start ----------------
-            weights.add("genWeight_normalization", weight=ak.ones_like(events.genWeight)/sumWeights) # temporary commenting out
+            weights.add("genWeight_normalization", weight=gen_weight_ones/sumWeights) # temporary commenting out
 
             logger.info(f"year: {year}, dataset_yaml_file: {dataset_yaml_file}")
             # FIXME: Remove this if condition later when we update the yaml file for run2 too.
@@ -1510,8 +1519,8 @@ class EventProcessor(processor.ProcessorABC):
             logger.debug(f"kfactor: {kfactor}")
             logger.info(f"cross_section (after k-factor): {cross_section}")
 
-            weights.add("xsec", weight=ak.ones_like(events.genWeight)*cross_section)
-            weights.add("lumi", weight=ak.ones_like(events.genWeight)*integrated_lumi)
+            weights.add("xsec", weight=gen_weight_ones*cross_section)
+            weights.add("lumi", weight=gen_weight_ones*integrated_lumi)
             # original initial weight end ----------------
 
             if do_pu_wgt:
@@ -2142,8 +2151,8 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         if (self.config["switches"]["do_HemVeto"] and self.config["switches"]["do_HemVetoStudy"]):
             logger.info("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
-            HemVeto_filter = ak.to_packed(HemVeto_filter[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
-            is_HemRegion = ak.to_packed(is_HemRegion[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
+            HemVeto_filter = _pack_selected(HemVeto_filter, selected_events_mask) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
+            is_HemRegion = _pack_selected(is_HemRegion, selected_events_mask) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
 
             _add_block(out_dict, {
                 "HemVeto_filter" : HemVeto_filter,
@@ -2281,15 +2290,24 @@ class EventProcessor(processor.ProcessorABC):
                 # zpt_wgt_gen_dnn = eval_zpt_torchscript_by_njet(zpt_features_reco, njets_gen, cfg_base, model_paths_by_cats, scalar_paths_by_cats)
 
                 # --- save both to parquet
-                _add_block(out_dict, {
-                    "zpt_wgt_reco_dnn": zpt_wgt_reco_dnn,
-                    "zpt_wgt_gen_dnn": zpt_wgt_gen_dnn,
-                })
+                if ("zpt_wgt_reco_dnn" in locals()) and ("zpt_wgt_gen_dnn" in locals()):
+                    _add_block(out_dict, {
+                        "zpt_wgt_reco_dnn": zpt_wgt_reco_dnn,
+                        "zpt_wgt_gen_dnn": zpt_wgt_gen_dnn,
+                    })
+                else:
+                    logger.warning(
+                        "Requested Zpt DNN output branches, but DNN Zpt weights were not evaluated; skipping zpt_wgt_reco_dnn/zpt_wgt_gen_dnn."
+                    )
 
             _add_block(out_dict, {
                 "zpt_njets_reco": njets_reco,
                 "zpt_njets_gen": njets_gen,
             })
+            if not do_save_partial_weights:
+                _add_block(out_dict, {
+                    "separate_wgt_zpt_wgt": zpt_wgt_reco,
+                })
             # apply reco zpt weight to event weight
             if save_zpt_variations:
                 weights.add(
@@ -2318,8 +2336,6 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"weight variations: {weights.variations}")
 
         # add in weights
-        save_all_weight_vars = self.config["switches"].get("save_all_weight_vars", False)
-
         weight_dict = {"wgt_nominal": weights.weight()}
 
         if save_all_weight_vars:
@@ -2331,19 +2347,10 @@ class EventProcessor(processor.ProcessorABC):
         logger.info(f"[timing] Weights variations time: {t20 - t19:.2f} seconds")
 
         # Save partial weights start -----------------------------------------
-        do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
         if do_save_partial_weights:
             for weight_type in list(weights.weightStatistics.keys()):
                 wgt_name = "separate_wgt_" + weight_type
                 weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
-        else:
-            """
-            We need "zpt" weight separately for the z-pt reweighting.
-            """
-            for weight_type in list(weights.weightStatistics.keys()):
-                if "zpt" in weight_type: 
-                    wgt_name = "separate_wgt_" + weight_type
-                    weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])            
 
         t21 = time.perf_counter()
         logger.info(f"[timing] Weights partials time: {t21 - t20:.2f} seconds")
@@ -2995,6 +3002,7 @@ class EventProcessor(processor.ProcessorABC):
 
         do_add_jet_ID_vars = self.config["switches"]["do_add_jet_ID_vars"]
         if do_add_jet_ID_vars:
+            extra_jet_loop_dict = {}
             # The flat list of variables we need
             jet_vars = [
                 "mass", "area",
