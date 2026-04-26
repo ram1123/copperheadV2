@@ -3,8 +3,16 @@ base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
 
 trials:
     current:
-        stage1: "{base_dir}/Run3_nanoAODv12_02Feb_FilterJets/stage1_output/"
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/"
         comment: "What plotter should use by default"
+
+    Run3_JetIDFix_pySR:
+        base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/"
+        comment: Rerun all year after JetID fix and b-tag update, using score based on pySR
+        date: April 07, 2025
+        years: 2022preEE, 2022postEE, 2023, 2023BPix, 2024
+        gitSHA: 707c069c0e59c509c4e702cca11941c619dd401c
 
     Run3_JetIDFix_pySR:
         base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean

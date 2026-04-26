@@ -9,11 +9,11 @@ hmm_base: /work/projects/hmm
 # )
 
 # what to run
-# years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
+years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # years: ["2022preEE", "2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE"]
 # years: ["2022preEE"]
-years: ["2022postEE"]
+# years: ["2022postEE"]
 # years: ["2024"]
 # years: ["2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2016preVFP", "2016postVFP", "2017", "2018"]
@@ -23,7 +23,16 @@ years: ["2022postEE"]
 # run_tag: "FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
 # run_tag: "FilterJetsHorn25GeV_HE30GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
 # run_tag: "FilterJetsHorn25GeV_nConst03_Apr03_tightPassLepVeto_NoJER_JetIDFix"
-run_tag: "FilterJetsHorn25GeV_pySR_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+# run_tag: "FilterJetsHorn25GeV_pySR_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+
+
+# Below tags are after JetID Fix and b-tag changes
+run_tag: "FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2"
+# run_tag: "FilterJetsHorn25GeV_HE30GeV_Apr09_tightPassLepVeto_NoJER"
+# run_tag: "FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
+
+# run_tag: "FilterJetsHorn25GeV_Apr14_tightPassLepVeto_NoJER_pySRTraining"
+# run_tag: "test_14apr"
 
 # dask gateway
 use_gateway: true

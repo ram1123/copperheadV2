@@ -312,7 +312,7 @@ years:
                 references:
                     - NONE
 
-            zz_2l2u:
+            zz_2l2nu:
                 skip_sample: False
                 datasets:
                     - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
@@ -394,18 +394,18 @@ years:
                 references:
                     - NONE
 
-            ewk_mmjj_mll_105_160_mjj120:
-                skip_sample: False
-                datasets:
-                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-                cross_section_pb: 0.06447
-                cross_section_source: "computed using gen cross-section analyzer script"
-                kfactor:
-                    value: 1.00
-                    source: NONE
-                filter_efficiency: 1.0
-                references:
-                    - NONE
+            # ewk_mmjj_mll_105_160_mjj120:
+            #     skip_sample: False
+            #     datasets:
+            #         - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+            #     cross_section_pb: 0.06447
+            #     cross_section_source: "computed using gen cross-section analyzer script"
+            #     kfactor:
+            #         value: 1.00
+            #         source: NONE
+            #     filter_efficiency: 1.0
+            #     references:
+            #         - NONE
 
         Higgs:
             ggh_powhegPS:
@@ -454,20 +454,20 @@ years:
                 references:
                     - "POWHEG (with dipole recoil)"
 
-            vbf_aMCatNLO:
-                skip_sample: True
-                datasets:
-                    - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-                cross_section_pb: 0.00105742
-                notes: NONE
-                cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
-                kfactor:
-                    value: 1.00
-                    source: "HXSWG"
-                branching_ratio: NONE
-                br_source: NONE
-                references:
-                    - "aMC@NLO"
+            # vbf_aMCatNLO:
+            #     skip_sample: False
+            #     datasets:
+            #         - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+            #     cross_section_pb: 0.00105742
+            #     notes: NONE
+            #     cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+            #     kfactor:
+            #         value: 1.00
+            #         source: "HXSWG"
+            #     branching_ratio: NONE
+            #     br_source: NONE
+            #     references:
+            #         - "aMC@NLO"
 
     "2022postEE":
         Data:
@@ -870,18 +870,18 @@ years:
                 references:
                     - NONE
 
-            ewk_mmjj_mll_105_160_mjj120:
-                skip_sample: False
-                datasets:
-                    - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
-                cross_section_pb: 0.06447
-                cross_section_source: "computed using gen cross-section analyzer script"
-                kfactor:
-                    value: 1.00
-                    source: NONE
-                filter_efficiency: 1.0
-                references:
-                    - NONE
+            # ewk_mmjj_mll_105_160_mjj120:
+            #     skip_sample: False
+            #     datasets:
+            #         - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+            #     cross_section_pb: 0.06447
+            #     cross_section_source: "computed using gen cross-section analyzer script"
+            #     kfactor:
+            #         value: 1.00
+            #         source: NONE
+            #     filter_efficiency: 1.0
+            #     references:
+            #         - NONE
 
         Higgs:
             ggh_powhegPS:
@@ -930,7 +930,7 @@ years:
                     - "POWHEG (with dipole recoil)"
 
             vbf_aMCatNLO:
-                skip_sample: True
+                skip_sample: False
                 datasets:
                     - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
                 cross_section_pb: 0.00105742
@@ -1353,7 +1353,8 @@ years:
 
             ggh_amcatnlo:
                 skip_sample: True
-                datasets: []
+                datasets:
+                    - None
                 cross_section_pb: 0.0135096
                 notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
                 cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
@@ -1787,7 +1788,7 @@ years:
                     - NONE
 
             ewk_mmjj_mll_105_160_mjj120:
-                skip_sample: True
+                skip_sample: False
                 datasets:
                     - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v3/NANOAODSIM
                 cross_section_pb: 0.06447

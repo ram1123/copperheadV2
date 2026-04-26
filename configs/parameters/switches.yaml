@@ -5,7 +5,7 @@ switches:
         '2017': false
         '2018': false
         '2022preEE': false
-        '2022postEE': true
+        '2022postEE': false
         "2023": false
         "2023BPix": false
         "2024": false
@@ -25,7 +25,7 @@ switches:
         '2017': false
         '2018': false
         '2022preEE': false
-        '2022postEE': true
+        '2022postEE': false
         "2023": false
         "2023BPix": false
         "2024": false
@@ -49,16 +49,16 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_additional_jet_vars:
+    save_default_jet_vars:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_getFatJet_vars:
         '2016preVFP': false
         '2016postVFP': false
@@ -163,7 +163,7 @@ switches:
         2016preVFP: true
         2016postVFP: true
         "2017": true
-        "2018": false
+        "2018": true
         2016_RERECO: true
         "2017_RERECO": true
         "2018_RERECO": false
@@ -191,7 +191,7 @@ switches:
         '2022postEE': true
         "2023": true
         "2023BPix": true
-        "2024": true
+        "2024": false
     apply_jet_PUID_wgt:
         '2016preVFP': false
         '2016postVFP': false
@@ -268,11 +268,11 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     add_pt_cut_for_HE_HF_jets:
         '2016preVFP': false
         '2016postVFP': false
@@ -284,20 +284,23 @@ switches:
         "2023BPix": false
         "2024": false
     add_asymmetric_pt_cut_for_HE_HF_jets:
+        # available options: [35.0, 30.0] or false
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': false # [35.0, 30.0] or false
-        '2022postEE': false # [35.0, 30.0] or false
-        "2023": false # [35.0, 30.0] or false
-        "2023BPix": false # [35.0, 30.0] or false
-        "2024": false # [35.0, 30.0] or false
-    do_jet_horn_puid: # For run-2 samples where we added strict PUID cut for the horn region
-        '2016preVFP': false # For nanoAODv12, do_jet_horn_puid should be true
-        '2016postVFP': false # For nanoAODv12, do_jet_horn_puid should be true
-        '2017': false # For nanoAODv12, do_jet_horn_puid should be true
-        '2018': false # For nanoAODv12, do_jet_horn_puid should be true
+        '2022preEE': false 
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_jet_horn_puid: 
+        # For run-2 samples where we added strict PUID cut for the horn region
+        # For nanoAODv12, do_jet_horn_puid should be true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false

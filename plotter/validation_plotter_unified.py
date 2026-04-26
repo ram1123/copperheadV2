@@ -513,7 +513,7 @@ if __name__ == "__main__":
             logger.warning("removing separate_wgt_zpt_wgt!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
 
-        if (
+        elif (
             "separate_wgt_zpt_wgt" in events.fields
             and "zpt_wgt_reco_dnn" in events.fields
             and args.use_dnn_zpt_weights
@@ -675,20 +675,20 @@ if __name__ == "__main__":
                     # weights = weights / 59830.0 # FIXME: this is hardcoded value, should be replaced with lumi value from config file
 
                     # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
-                    # temporary over write
-                    # logger.info(f"events.fields: {events.fields}")
-                    if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                        logger.debug("removing Zpt rewgt!")
-                        weights = weights/events["separate_wgt_zpt_wgt"]
+                    # # temporary over write
+                    # # logger.info(f"events.fields: {events.fields}")
+                    # if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
+                    #     logger.debug("removing Zpt rewgt!")
+                    #     weights = weights/events["separate_wgt_zpt_wgt"]
 
-                    if (
-                        "separate_wgt_zpt_wgt" in events.fields
-                        and "zpt_wgt_reco_dnn" in events.fields
-                        and args.use_dnn_zpt_weights
-                    ):
-                        logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
-                        weights = weights / events["separate_wgt_zpt_wgt"]
-                        weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
+                    # if (
+                    #     "separate_wgt_zpt_wgt" in events.fields
+                    #     and "zpt_wgt_reco_dnn" in events.fields
+                    #     and args.use_dnn_zpt_weights
+                    # ):
+                    #     logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+                    #     weights = weights / events["separate_wgt_zpt_wgt"]
+                    #     weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
 
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure

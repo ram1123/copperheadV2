@@ -13,6 +13,7 @@ RUN_TAG = config.get("run_tag", "default")
 
 LOGDIR = f"logs/{RUN_TAG}"
 STATEDIR = f"state/{RUN_TAG}"
+FAIL_LOG = f"{LOGDIR}/failed_jobs.log"
 
 REPEATS = ["1"] # In case some jobs fails for the stage-1, so to recover it run the stage-1 three times. All followed dependents will depend on the "3"
 FINAL_REP = REPEATS[-1]
@@ -150,6 +151,7 @@ rule all:
         # expand(STATEDIR + "/zpt_wgt_{year}_njet0.done", year=YEARS),
         # expand(STATEDIR + "/zpt_wgt_{year}_njet1.done", year=YEARS),
         # expand(STATEDIR + "/zpt_wgt_{year}_njet2p.done", year=YEARS),
+        f"{STATEDIR}/summary.done"
 
 rule plot_all:
     input:
@@ -183,6 +185,7 @@ rule all_stage1:
             zpt_mode=PLOT_ZPT_MODES,
             var_set=PLOT_VAR_SETS,
         ),
+        # f"{STATEDIR}/summary.done"
 
 
 
@@ -205,7 +208,7 @@ rule stage1:
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/"
             "_status/stage1_summary.log"
-        ),        
+        ),
     resources:
         gateway=1,
     shell:
@@ -213,6 +216,7 @@ rule stage1:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
+        ts=$(date +"%Y-%m-%d_%H-%M-%S")
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
           -v {params.nano} \
@@ -223,8 +227,19 @@ rule stage1:
           > {log} 2>&1
         summary="{params.summary}"
 
+        # Rename log file after running the command, as Snakemake
+        # delets the log file before running the command. 
+        LOGFILE="{log}"
+        if [[ -f "$LOGFILE" ]]; then
+            echo "Rotating existing log → $LOGFILE.attempt_${{ts}}"
+            cp "$LOGFILE" "$LOGFILE.attempt_${{ts}}"
+        else
+            echo "No previous log found (first run)"
+        fi
+        
         if [[ ! -f "$summary" ]]; then
             echo "ERROR: stage1 summary log not found: $summary"
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             exit 1
         fi
 
@@ -233,10 +248,12 @@ rule stage1:
 
         if [[ "$failed" != "0" ]]; then
             echo "ERROR: Stage1 summary indicates FAILED: 0"
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             exit 1
         fi
 
         echo "Stage1 completed successfully"
+        echo "{rule} {wildcards} SUCCESS attempt time stamp: ${{ts}}" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -309,8 +326,17 @@ rule stage1Compact:
 
             echo "$sample : f1=$size_f1 cmp=$size_cmp ratio=$ratio"
 
-            # allow up to 20% shrink (very safe)
-            if (( $(awk "BEGIN {{print ($ratio < 0.8)}}") )); then
+            if [[ "$sample" == "ttjets_sl" ]]; then
+                # allow up to 60% shrink for ttjets_sl
+                threshold=0.35
+            elif [[ "$sample" == "wz_1l1nu2q" ]]; then
+                threshold=0.045
+            else
+                # allow up to 20% shrink (very safe)
+                threshold=0.8
+            fi
+
+            if (( $(awk "BEGIN {{print ($ratio < $threshold)}}") )); then
                 echo "Size mismatch for $sample → deleting compacted"
                 rm -rf "$cmp_dir"
                 fail_flag=1
@@ -328,10 +354,13 @@ rule stage1Compact:
         # --- Final decision ---
         if [[ "$fail_flag" -ne 0 ]]; then
             echo "ERROR: Compact validation failed"
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
+            echo "stage1Compact year={wildcards.year} attempt= FAILED" >> {FAIL_LOG}
             exit 1
         fi
 
         echo "Compact validation passed"
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -362,7 +391,7 @@ rule plots:
         ),
         # map wildcards -> CLI flags
         zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",
-        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else ""
+        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else "",
     # resources:
     #     gateway=1
     shell:
@@ -389,10 +418,12 @@ rule plots:
         # ---- SUCCESS CHECK ----
         if grep -q "Plots are saved to " {log}; then
             echo "Plot job successful."
+            echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
             touch {output.done}
         else
             echo "ERROR: Plot job did not complete successfully."
             echo "Success string not found in log."
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             exit 1
         fi
         """
@@ -428,6 +459,7 @@ rule zpt0:
           -y "{wildcards.year}" \
           -m zpt_fit0 \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -462,6 +494,7 @@ rule zpt1:
           -m zpt_fit1 \
           -n {wildcards.njets} \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -496,6 +529,7 @@ rule zpt2:
           -m zpt_fit2 \
           -n {wildcards.njets} \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -534,6 +568,7 @@ rule MassCalibrationMC:
           -m calib  \
           {params.gw}  \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -569,6 +604,7 @@ rule MassCalibrationMCClosure:
           -m calib_closure  \
           {params.gw}  \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -604,6 +640,7 @@ rule MassCalibrationData:
           -m calib \
           {params.gw}  \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -639,6 +676,7 @@ rule MassCalibrationDataClosure:
           -m calib_closure \
           {params.gw}  \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -663,6 +701,7 @@ rule corrections_ready:
     shell:
         r"""
         mkdir -p {params.logdir} {params.statedir}
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output}
         """
 
@@ -754,7 +793,7 @@ rule plots_corr:
         ),
         # map wildcards -> CLI flags
         zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",
-        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else ""        
+        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else "",
     shell:
         r"""
         set -euo pipefail
@@ -782,6 +821,7 @@ rule plots_corr:
         else
             echo "ERROR: Plot job did not complete successfully."
             echo "Success string not found in log."
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             exit 1
         fi
         """
@@ -866,4 +906,44 @@ rule zpt_njet2p:
           --batch {ZPT_BATCH} \
           > {log} 2>&1
         touch {output.done}
+        """
+
+rule summary:
+    input:
+        expand(STATEDIR + "/stage1_{year}_rep{rep}.done", year=YEARS, rep=REPEATS),
+        expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
+        expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
+        expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
+    output:
+        f"{STATEDIR}/summary.done"
+    shell:
+        r"""
+        echo "=============================="
+        echo " FINAL JOB SUMMARY"
+        echo "=============================="
+
+        if [[ -f {FAIL_LOG} ]]; then
+            echo ""
+            echo "FAILED JOBS:"
+            cat {FAIL_LOG} | grep FAILED || true
+
+            nfail=$(grep -c FAILED {FAIL_LOG} || true)
+        else
+            nfail=0
+        fi
+
+        nsuccess=$(grep -c SUCCESS {FAIL_LOG} || true)
+
+        echo ""
+        echo "SUCCESS: $nsuccess"
+        echo "FAILED:  $nfail"
+
+        if [[ "$nfail" -ne 0 ]]; then
+            echo "Some jobs failed"
+            exit 1
+        else
+            echo "All jobs successful"
+        fi
+
+        touch {output}
         """
