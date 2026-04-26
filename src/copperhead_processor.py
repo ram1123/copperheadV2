@@ -1846,7 +1846,7 @@ class EventProcessor(processor.ProcessorABC):
             })
 
         # Additional jet block
-        if self.config["switches"]["do_additional_jet_vars"]:
+        if self.config["switches"]["save_default_jet_vars"]:
             # Default jet kinematics (nominal, pre-JEC/JER snapshot)
             _add_block(out_dict, {
                 "jet1_default_pt_nominal": jet1_default.pt,
@@ -2925,6 +2925,45 @@ class EventProcessor(processor.ProcessorABC):
             f"njets_{variation}": njets,
         })
 
+        jet_loop_out_dict.update(
+            {
+                f"jet1_rapidity_{variation}": jet1_rapidity,  # max rel err: 0.7394
+                f"jet2_rapidity_{variation}": jet2_rapidity,  # max rel err: 0.781
+                f"jj_pt_{variation}": dijet.pt,
+                f"jj_eta_{variation}": dijet.eta,
+                f"jj_phi_{variation}": dijet.phi,
+                f"mmj1_dEta_{variation}": mmj1_dEta,
+                f"mmj1_dPhi_{variation}": mmj1_dPhi,
+                f"mmj1_dR_{variation}": mmj1_dR,
+                f"mmj2_dEta_{variation}": mmj2_dEta,
+                f"mmj2_dPhi_{variation}": mmj2_dPhi,
+                f"mmj2_dR_{variation}": mmj2_dR,
+                f"mmjj_pt_{variation}": mmjj.pt,
+                f"mmjj_eta_{variation}": mmjj.eta,
+                f"mmjj_phi_{variation}": mmjj.phi,
+                f"mmjj_mass_{variation}": mmjj.mass,
+            }
+        )
+        if save_four_jets_kinematics:
+            jet_loop_out_dict.update(
+                {
+                    f"jet3_pt_{variation}": jet3.pt,
+                    f"jet3_eta_{variation}": jet3.eta,
+                    f"jet3_rapidity_{variation}": jet3_rapidity,
+                    f"jet3_phi_{variation}": jet3.phi,
+                    # -------------------------
+                    f"jet4_pt_{variation}": jet4.pt,
+                    f"jet4_eta_{variation}": jet4.eta,
+                    f"jet4_rapidity_{variation}": jet4_rapidity,
+                    f"jet4_phi_{variation}": jet4.phi,
+                }
+            )
+
+            jet_loop_out_dict.update({
+                f"jet3_puId_{variation}": get_puId(jet3),
+                f"jet4_puId_{variation}": get_puId(jet4),
+            })
+
         if is_mc and variation == "nominal":
             jet_loop_out_dict.update({
                 f"jet1_hasMatchedGenJet_{variation}": jet1.genJetIdx != -1,
@@ -2935,47 +2974,6 @@ class EventProcessor(processor.ProcessorABC):
                     f"jet3_hasMatchedGenJet_{variation}": jet3.genJetIdx != -1,
                     f"jet4_hasMatchedGenJet_{variation}": jet4.genJetIdx != -1,
                 })
-
-        if self.config["switches"]["do_additional_jet_vars"]:
-            jet_loop_out_dict.update(
-                {
-                    f"jet1_rapidity_{variation}": jet1_rapidity,  # max rel err: 0.7394
-                    f"jet2_rapidity_{variation}": jet2_rapidity,  # max rel err: 0.781
-                    f"jj_pt_{variation}": dijet.pt,
-                    f"jj_eta_{variation}": dijet.eta,
-                    f"jj_phi_{variation}": dijet.phi,
-                    f"mmj1_dEta_{variation}": mmj1_dEta,
-                    f"mmj1_dPhi_{variation}": mmj1_dPhi,
-                    f"mmj1_dR_{variation}": mmj1_dR,
-                    f"mmj2_dEta_{variation}": mmj2_dEta,
-                    f"mmj2_dPhi_{variation}": mmj2_dPhi,
-                    f"mmj2_dR_{variation}": mmj2_dR,
-                    f"mmjj_pt_{variation}": mmjj.pt,
-                    f"mmjj_eta_{variation}": mmjj.eta,
-                    f"mmjj_phi_{variation}": mmjj.phi,
-                    f"mmjj_mass_{variation}": mmjj.mass,
-                }
-            )
-            if save_four_jets_kinematics:
-                jet_loop_out_dict.update(
-                    {
-                        f"jet3_pt_{variation}": jet3.pt,
-                        f"jet3_eta_{variation}": jet3.eta,
-                        f"jet3_rapidity_{variation}": jet3_rapidity,
-                        f"jet3_phi_{variation}": jet3.phi,
-                        # -------------------------
-                        f"jet4_pt_{variation}": jet4.pt,
-                        f"jet4_eta_{variation}": jet4.eta,
-                        f"jet4_rapidity_{variation}": jet4_rapidity,
-                        f"jet4_phi_{variation}": jet4.phi,
-                    }
-                )
-
-        if save_four_jets_kinematics:
-            jet_loop_out_dict.update({
-                f"jet3_puId_{variation}": get_puId(jet3),
-                f"jet4_puId_{variation}": get_puId(jet4),
-            })
 
         # ------------------------------------------------------------------
         # Add additional Jet NanoAOD variables for leading 4 jets

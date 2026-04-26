@@ -134,6 +134,14 @@ def derive_features(df):
         denom = df["hfsigmaEtaEta"] + df["hfsigmaPhiPhi"] + 1e-6
         df["hf_ratio"] = df["hfsigmaEtaEta"] / denom
 
+    df["hf_energy_asym"] = df["hfEmEF"] - df["hfHEF"]
+    
+    df["hf_strip_ratio"] = np.where(
+        df["hfadjacentEtaStripsSize"] > 0,
+        df["hfcentralEtaStripSize"] / df["hfadjacentEtaStripsSize"],
+        0.0
+    )
+
     return df
 
 

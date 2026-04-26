@@ -20,6 +20,14 @@ Example:
     -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part01*.parquet" \
     -o validation/compare_real_fake/After_JetID_Fix_HEHFcut \
     --apply-cleaning 
+
+  python MVA_training/pileup_symbolic_regression/plot_real_fake_jets_stack.py \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_Feb23_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
+    -o validation/compare_real_fake/Before_JetID_Fix_1D
+
+  python MVA_training/pileup_symbolic_regression/plot_real_fake_jets_stack.py \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
+    -o validation/compare_real_fake/After_JetID_Fix_1D
 """
 
 import os
@@ -36,7 +44,7 @@ JET_ID_VARIABLES = [
     # --- Jet kinematics ---
     "jet1_pt_nominal", "jet1_eta_nominal", 
     "jet2_pt_nominal", "jet2_eta_nominal", 
-    "jet1_mass_nominal", "jet2_mass_nominal", 
+    # "jet1_mass_nominal", "jet2_mass_nominal", 
     "jet1_phi_nominal", "jet2_phi_nominal", 
     # "jj_dEta_nominal", "jj_mass_nominal",
 
@@ -50,8 +58,8 @@ JET_ID_VARIABLES = [
     "jet1_muEF_nominal", "jet2_muEF_nominal",
 
     # --- Multiplicities ---
-    "jet1_chMultiplicity_nominal", "jet2_chMultiplicity_nominal",
-    "jet1_neMultiplicity_nominal", "jet2_neMultiplicity_nominal",
+    # "jet1_chMultiplicity_nominal", "jet2_chMultiplicity_nominal",
+    # "jet1_neMultiplicity_nominal", "jet2_neMultiplicity_nominal",
 
     # --- Constituents / leptons / SVs ---
     "jet1_nConstituents_nominal", "jet2_nConstituents_nominal", 
@@ -72,10 +80,10 @@ JET_ID_VARIABLES = [
     # --- Flavour / taggers ---
     # "jet1_hadronFlavour_nominal", "jet2_hadronFlavour_nominal",
     # "jet1_partonFlavour_nominal", "jet2_partonFlavour_nominal",
-    "jet1_btagDeepFlavQG_nominal", "jet2_btagDeepFlavQG_nominal",
-    "jet1_btagPNetQvG_nominal", "jet2_btagPNetQvG_nominal",
-    "jet1_btagDeepFlavB_nominal", "jet2_btagDeepFlavB_nominal",
-    "jet1_btagDeepFlavCvB_nominal", "jet2_btagDeepFlavCvB_nominal",
+    # "jet1_btagDeepFlavQG_nominal", "jet2_btagDeepFlavQG_nominal",
+    # "jet1_btagPNetQvG_nominal", "jet2_btagPNetQvG_nominal",
+    # "jet1_btagDeepFlavB_nominal", "jet2_btagDeepFlavB_nominal",
+    # "jet1_btagDeepFlavCvB_nominal", "jet2_btagDeepFlavCvB_nominal",
 
     # --- HF noise variables ---
     "jet1_hfcentralEtaStripSize_nominal", "jet1_hfadjacentEtaStripsSize_nominal",
@@ -84,9 +92,9 @@ JET_ID_VARIABLES = [
     "jet2_hfsigmaEtaEta_nominal", "jet2_hfsigmaPhiPhi_nominal",
 
     # --- Raw / muon-subtracted info / geometry ---
-    "jet1_area_nominal", "jet2_area_nominal",
-    "jet1_rawFactor_nominal", "jet2_rawFactor_nominal",
-    "jet1_muonSubtrFactor_nominal", "jet2_muonSubtrFactor_nominal",
+    # "jet1_area_nominal", "jet2_area_nominal",
+    # "jet1_rawFactor_nominal", "jet2_rawFactor_nominal",
+    # "jet1_muonSubtrFactor_nominal", "jet2_muonSubtrFactor_nominal",
 ]
 
 

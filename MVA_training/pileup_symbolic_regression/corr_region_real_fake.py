@@ -5,6 +5,8 @@ import argparse
 import numpy as np
 import pandas as pd
 import ROOT
+from itertools import combinations
+from tqdm import tqdm
 
 from modules.root_2dColorProfile import set_gradient_style
 
@@ -26,6 +28,25 @@ time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
     -o validation/corr_JetIDFix_jet_   \
     --prefix jet2_  \
     --apply-cleaning
+
+# 08 April 2026
+time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_Feb23_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
+    -o validation/corr_BeforeJetIDFix   \
+    --prefix jet1_  
+time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_Feb23_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
+    -o validation/corr_BeforeJetIDFix   \
+    --prefix jet2_  
+
+time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
+    -o validation/corr_AfterJetIDFix   \
+    --prefix jet1_
+time python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py   \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part0*.parquet"  \
+    -o validation/corr_AfterJetIDFix   \
+    --prefix jet2_
 """
 
 def infer_existing_files(pattern: str):
@@ -340,7 +361,12 @@ def main():
 
     os.makedirs(args.outdir, exist_ok=True)
 
-    vars_short = ["mass", "muEF", "nConstituents", "pt", "eta", "area", "rawFactor"] # "area"]
+    vars_short = [
+        "pt", "eta", "phi", "chEmEF", "neEmEF", "neHEF", "muEF",
+        "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+        "hfsigmaEtaEta", "hfsigmaPhiPhi", "rawFactor", "area", "mass", "nConstituents"
+    ]    
+    # vars_short = ["muEF", "nConstituents", "pt", "eta"]
     cols = [f"{args.prefix}{v}_{args.variation}" for v in vars_short]
 
     eta_col = f"{args.prefix}eta_{args.variation}"
@@ -366,27 +392,21 @@ def main():
     reg_masks = region_masks(df, eta_col)
     real_mask, fake_mask = real_fake_masks(df, genmatch_col, args.genmatch_mode)
 
-    pairs = [
-        ("mass", "nConstituents"),
-        ("pt", "nConstituents"),
-        ("muEF", "nConstituents"),
-        ("eta", "nConstituents"),
-        ("area", "nConstituents"),
-        ("rawFactor", "nConstituents"),
-        ("mass", "muEF"),
-        ("pt", "muEF"),
-        ("area", "muEF"),
-        ("mass", "pt"),
-        ("eta", "mass"),
-        ("area", "mass"),
-        ("area", "pt"),
-        ("area", "eta"),
-        ("rawFactor", "pt"),
-        ("rawFactor", "eta"),        
-        ("rawFactor", "area"),
+    variables = [
+        "pt", "eta", "phi", "chEmEF", "neEmEF", "neHEF", "muEF",
+        "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+        "hfsigmaEtaEta", "hfsigmaPhiPhi", "rawFactor", "area", "mass", "nConstituents"
     ]
 
-    for region_name, reg_mask in reg_masks.items():
+    # Generate all unique pairs (combinations of 2)
+    pairs = list(combinations(variables, 2))
+
+    print(pairs)
+    for i, (var1, var2) in enumerate(pairs):
+        print(f'{i:4} ("{var1}", "{var2}"),')
+    
+
+    for region_name, reg_mask in tqdm(reg_masks.items(), desc="Processing regions"):
         if args.apply_cleaning:
             print("[INFO] Cleaning ENABLED")
             # ---------------------------------------------------------
