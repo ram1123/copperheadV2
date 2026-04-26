@@ -8,7 +8,13 @@ from omegaconf import OmegaConf
 from typing import Tuple, List, Dict
 import glob, os
 
-from src.lib.MVA_functions import prepare_features, evaluate_bdt, evaluate_dnn, apply_variation
+from src.lib.MVA_functions import (
+    prepare_features,
+    evaluate_bdt,
+    evaluate_dnn,
+    apply_variation,
+    resolve_variation_field,
+)
 import argparse
 import time
 import sys, inspect
@@ -95,7 +101,6 @@ def renameFieldsToV2(events):
         "mmj2_dPhi",
         "dimuon_rapidity",
         "wgt_nominal_total",
-        "zeppenfeld",
     ]
     for V2_field in V2_fields:
         if V2_field == "dimuon_rapidity":
@@ -256,10 +261,14 @@ def process4gghCategory(events: ak.Record, edge_cfg_path:str, year:str, model_tr
     fields2load += training_features # add BDT inputs
 
 
-    for variation in jec_unc_fields: # add jec unc variations
-        fields2load4variation = apply_variation(fields2load, variation)
-        training_feature4variation = apply_variation(training_features, variation)
-        fields2load = fields2load + fields2load4variation + training_feature4variation
+    available_fields = set(events.fields)
+    for variation in jec_unc_fields:
+        for field in fields2load + training_features:
+            try:
+                varied_field = resolve_variation_field(available_fields, field, variation)
+            except KeyError:
+                continue
+            fields2load.append(varied_field)
     fields2load = list(set(fields2load + wgt_unc_fields)) # remove redundant fields
 
     logger.info(f"fields2load: {fields2load}")
@@ -612,6 +621,38 @@ def applyUpDown(variation_base_l: list):
     return combined_variation_l
 
 
+def discover_stage1_shape_systs(fields):
+    prefixes = [
+        "dimuon_mass_",
+        "dimuon_pt_",
+        "dimuon_pt_log_",
+        "dimuon_eta_",
+        "dimuon_rapidity_",
+        "dimuon_ebe_mass_res_",
+        "dimuon_ebe_mass_res_rel_",
+        "mu1_pt_",
+        "mu2_pt_",
+        "mu1_pt_over_mass_",
+        "mu2_pt_over_mass_",
+        "jet1_pt_",
+        "jet2_pt_",
+        "jj_mass_",
+        "jj_dEta_",
+        "njets_",
+        "nBtagLoose_",
+        "nBtagMedium_",
+    ]
+    suffixes = set()
+    for field in fields:
+        if not (field.endswith("_up") or field.endswith("_down")):
+            continue
+        for prefix in prefixes:
+            if field.startswith(prefix):
+                suffixes.add(field[len(prefix):])
+                break
+    return sorted(suffixes)
+
+
 def mergeAkZips(ak_zips : list):
     """
     helper function that merges fields of zips from
@@ -854,17 +895,28 @@ if __name__ == "__main__":
                 wgt_unc_fields = []
 
             is_data_sample = sample.lower() == "data"
+            shape_unc_fields = []
             if args.do_jecUnc and not is_data_sample:
                 from src.corrections.jet import getJecJerUncertainties
                 jec_yml_path = "configs/parameters/jec.yaml"
-                jec_unc_fields = getJecJerUncertainties(jec_yml_path, year=args.year) # jec_unc_fields = ["Absolute", etc]
-                jec_unc_fields = applyUpDown(jec_unc_fields) # jec_unc_fields = ["Absolute_up", "Absolute_down", etc]
-            else:
-                jec_unc_fields =[]
+                jec_unc_fields = getJecJerUncertainties(jec_yml_path, year=args.year)
+                shape_unc_fields.extend(applyUpDown(jec_unc_fields))
+
+            if not is_data_sample:
+                available_shape_systs = discover_stage1_shape_systs(events.fields)
+                muon_shape_systs = [
+                    syst for syst in available_shape_systs
+                    if syst.startswith("mu_roccor_")
+                    or syst.startswith("mu_scale_")
+                    or syst.startswith("mu_resol_")
+                ]
+                shape_unc_fields.extend(muon_shape_systs)
+
+            shape_unc_fields = sorted(set(shape_unc_fields))
 
             # extra_fields = wgt_unc_fields + jec_unc_fields
             logger.info(f"[partition_idx:{partition_idx}] wgt_unc_fields: {wgt_unc_fields}")
-            logger.info(f"[partition_idx:{partition_idx}] jec_unc_fields: {jec_unc_fields}")
+            logger.info(f"[partition_idx:{partition_idx}] shape_unc_fields: {shape_unc_fields}")
             logger.info(f"[partition_idx:{partition_idx}] args.do_6p7: {args.do_6p7}")
             logger.info(f"[partition_idx:{partition_idx}] category: {category}")
             logger.info(f"[partition_idx:{partition_idx}] is_signal_MC: {is_signal_MC}")
@@ -883,7 +935,7 @@ if __name__ == "__main__":
                     processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7, model_base_path=mva_base_path)
                     processed_events_l.append(processed_events)
 
-                    smaller_jec_unc_field_l = split_maxlen(jec_unc_fields, 4)
+                    smaller_jec_unc_field_l = split_maxlen(shape_unc_fields, 4)
                     for small_jec_unc_fields in smaller_jec_unc_field_l:
                         logger.info(f"[partition_idx:{partition_idx}] small_jec_unc_fields: {small_jec_unc_fields}")
 

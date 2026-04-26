@@ -486,7 +486,6 @@ if __name__ == "__main__":
             "dimuon_pt",
             "jet2_pt_nominal",
             "jj_pt_nominal",
-            "zeppenfeld_nominal",
         ]
 
         is_data = "data" in process.lower()

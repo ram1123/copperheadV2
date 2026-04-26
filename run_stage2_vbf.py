@@ -53,13 +53,24 @@ def get_compactedPath(stage1_path):
         logger.critical(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
         raise FileNotFoundError(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
 
-def discover_jes_systs(fields, jet_prefixes=None):
+def discover_shape_systs(fields, prefixes=None):
     """
-    Discover available JES/JER-like up/down suffixes from any jet-related variable.
-    Returns a sorted list of strings like ['Absolute_2018_up', 'HF_down', ...].
+    Discover available shape-variation suffixes from shifted stage1 branches.
+    This covers both jet/JEC-like variations and muon-momentum shape variations.
     """
-    if jet_prefixes is None:
-        jet_prefixes = [
+    if prefixes is None:
+        prefixes = [
+            "dimuon_mass_",
+            "dimuon_pt_",
+            "dimuon_pt_log_",
+            "dimuon_eta_",
+            "dimuon_rapidity_",
+            "dimuon_ebe_mass_res_",
+            "dimuon_ebe_mass_res_rel_",
+            "mu1_pt_",
+            "mu2_pt_",
+            "mu1_pt_over_mass_",
+            "mu2_pt_over_mass_",
             "jet1_pt_",
             "jet2_pt_",
             "jj_mass_",
@@ -72,29 +83,37 @@ def discover_jes_systs(fields, jet_prefixes=None):
     for f in fields:
         if not (f.endswith("_up") or f.endswith("_down")):
             continue
-        for p in jet_prefixes:
+        for p in prefixes:
             if f.startswith(p):
                 suffixes.add(f[len(p):])
                 break
     return sorted(suffixes)
 
-def columns_for_selection(category, variation):
-    # minimal columns for cuts; add here if your selection changes
+def resolve_variation_field(base, variation, fields):
     use_var = "nominal" if variation.startswith("wgt") else variation
-    base = [
+    candidates = [f"{base}_{use_var}", f"{base}_nominal", base]
+    for cand in candidates:
+        if cand in fields:
+            return cand
+    raise KeyError(
+        f"Selection/feature field '{base}' for variation '{variation}' is unavailable. Tried: {candidates}"
+    )
+
+
+def columns_for_selection(category, variation, fields):
+    # minimal columns for cuts; add here if your selection changes
+    base_names = [
         "dimuon_mass",
-        "event",
-        f"njets_{use_var}",
-        "gjj_mass",
-        f"nBtagLoose_{use_var}",
-        f"nBtagMedium_{use_var}",
-        f"jj_mass_{use_var}",
-        f"jj_dEta_{use_var}",
-        f"jet1_pt_{use_var}",
-        "nfatJets_drmuon",
-        "MET_pt",
+        "njets",
+        "nBtagLoose",
+        "nBtagMedium",
+        "jj_mass",
+        "jj_dEta",
+        "jet1_pt",
     ]
-    return base
+    cols = ["event", "gjj_mass", "nfatJets_drmuon", "MET_pt"]
+    cols.extend(resolve_variation_field(name, variation, fields) for name in base_names)
+    return cols
 
 
 def resolve_vbf_training_layout(model_path: Path, model_tag: str, nfolds: int):
@@ -380,7 +399,7 @@ if __name__ == "__main__":
         logger.debug(f"fields: {fields}")
 
         # Auto-discover JES/JER-like systematic suffixes from jet-related columns
-        jes_systs = discover_jes_systs(fields)
+        jes_systs = discover_shape_systs(fields)
         # if "log_" exists remove that element from jes_systs, as these are not variations. This log belongs to the log of a particular variable.
         jes_systs = [sys for sys in jes_systs if not sys.startswith("log_")]
         logger.info(f"Discovered JES/JER variations: {jes_systs}")
@@ -508,7 +527,7 @@ if __name__ == "__main__":
                 logger.debug(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
                 continue
 
-            sel_cols = columns_for_selection(category, variation)
+            sel_cols = columns_for_selection(category, variation, fields)
             needed_cols = set(sel_cols + [wgt_variation])
 
             logger.debug(f"sel_cols: {sel_cols}")
@@ -551,6 +570,11 @@ if __name__ == "__main__":
             if region == "h-sidebands":
                 try:
                     events["dimuon_mass"] = 125.0 * ak.ones_like(events.dimuon_mass)
+                    shifted_mass_field = feature_sources.get("dimuon_mass")
+                    if shifted_mass_field and shifted_mass_field in events.fields:
+                        events[shifted_mass_field] = 125.0 * ak.ones_like(
+                            events[shifted_mass_field]
+                        )
                     logger.debug("[sidebands] Forced dimuon_mass=125.0 for DNN inputs")
                 except Exception as _e:
                     logger.warning(f"[sidebands] Failed to fix dimuon_mass to 125.0: {_e}")
