@@ -403,6 +403,11 @@ def _pack_selected(arr, mask):
     return ak.to_packed(arr[mask])
 
 
+def _select_only(arr, mask):
+    """Apply a boolean event mask without repacking lazy event records."""
+    return arr[mask]
+
+
 def pick_vbf_pairs(jets):
     """
     Returns a dict of jet1/jet2 for different pairing criteria.
@@ -1222,7 +1227,11 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------- Cutflow dimuon mass window: END -----------------------
 
         selected_events_mask = event_filter
-        events = _pack_selected(events, selected_events_mask)
+        # Do not repack the full NanoEvents record here: that can force unrelated
+        # lazy buffers (for example L1EtSum) to materialize and crash on Dask-backed
+        # placeholder arrays. A plain event slice still trims the graph without
+        # touching excluded branches.
+        events = _select_only(events, selected_events_mask)
         muons = _pack_selected(muons, selected_events_mask)
         nmuons = _pack_selected(nmuons, selected_events_mask)
 
