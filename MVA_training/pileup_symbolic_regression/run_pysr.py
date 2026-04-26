@@ -14,6 +14,17 @@ python MVA_training/pileup_symbolic_regression/run_pysr.py \
     --population-size 400 \
     --maxsize 7 \
     --mode train
+
+# 2024
+
+time python MVA_training/pileup_symbolic_regression/run_pysr.py \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr14_tightPassLepVeto_NoJER_pySRTraining/stage1_output/2024/f1_0/dyTo2Mu_M-50_aMCatNLO/0/part*.parquet" \
+    -o validation/pySR/run2024_14Apr_v2 \
+    --features-yaml MVA_training/pileup_symbolic_regression/configs/features.yaml \
+    --niterations 100 \
+    --population-size 400 \
+    --maxsize 7 \
+    --mode train
 """
 
 def main():

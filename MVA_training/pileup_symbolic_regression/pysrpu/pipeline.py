@@ -94,7 +94,7 @@ def run_training(args):
             df_region,
             seed=args.seed,
             min_train=args.min_train,
-            max_per_class=10000,
+            max_per_class=5000,
         )
 
         if df_bal is None:
