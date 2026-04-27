@@ -113,8 +113,7 @@ def plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=
         # draw_mode = "HIST"
         if i ==0:
             THist.SetTitle("")
-        THist.GetXaxis().SetTitle(r"m_{\mu\mu} [GeV]")
-            
+            THist.GetXaxis().SetTitle(r"m_{\mu\mu} [GeV]")
             THist.Draw(f"{draw_mode}")
         else:
             THist.Draw(f"{draw_mode} SAME")
@@ -203,8 +202,7 @@ def plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, no
         # draw_mode = "HIST"
         if i ==0:
             THist.SetTitle("")
-        THist.GetXaxis().SetTitle(r"m_{\mu\mu} [GeV]")
-            
+            THist.GetXaxis().SetTitle(r"m_{\mu\mu} [GeV]")
             THist.Draw(f"{draw_mode}")
         else:
             THist.Draw(f"{draw_mode} SAME")
@@ -380,9 +378,7 @@ if __name__ == "__main__":
         save_fname = f"{args.save_path}/{args.label}_x_{args.category}/{args.year}_signal/fig_6_8Nbins{nbins}/Fig6_8"
         # Make directory if it doesn't exist
         os.makedirs(os.path.dirname(save_fname), exist_ok=True)
-        
-        
-        
+
         plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True)
         plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True)
         for cat_idx in range(n_bdt_cats):
@@ -394,6 +390,3 @@ if __name__ == "__main__":
         for cat_idx in range(n_bdt_cats):
             plot_6_8(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E", cat_idx=cat_idx)
             plot_6_8BySubCat(bkg_variables, bdt_edges, nbins, xmin, xmax, save_fname, normalize=True, draw_mode="E", cat_idx=cat_idx)
-    
-
-    

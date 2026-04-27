@@ -18,12 +18,13 @@ stage2_load_path="${base_path}/${label}/stage1_output"
 
 category="ggh"
 
-do_hyperparam_search="0" # true (enable hyperparameter search for BDT)
+do_hyperparam_search="1" # true (enable hyperparameter search for BDT)
+train_bdt="0"
 
 step="${1:-}"
 year="${2:-all}"
-n_trials="${3:-100}"
-date_tag="${4:-13Apr}"
+n_trials="${3:-050}"
+date_tag="${4:-26Apr}"
 
 # model_name="Run3_08March_HPeachFold_train_with_bestHP"
 # model_name="Run3_09March_Check"
@@ -53,8 +54,8 @@ if [[ -z "${step}" ]]; then
     exit 1
 fi
 
-# all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
-all_years=(2022preEE 2022postEE 2023 2023BPix 2024)
+all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
+# all_years=(2022preEE 2022postEE 2023 2023BPix 2024)
 # all_years=(all)
 
 if [[ "${year}" == "all" ]]; then
@@ -139,16 +140,12 @@ if [[ "${step}" == "0" && ! -f "${trainer_script}" ]]; then
     exit 1
 fi
 
-trainer_supports_n_trials="0"
-if [[ -f "${trainer_script}" ]] && grep -q "n_trials" "${trainer_script}"; then
-    trainer_supports_n_trials="1"
-fi
 
 # -----------------------------------------------------
 # Step 0: Train BDT
 # Only run once, not looped over years here.
 # -----------------------------------------------------
-if [[ "${step}" == "0" ]]; then
+if [[ ( "${step}" == "0" || "${step}" == "all" ) && "${train_bdt}" == "1" ]]; then
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
     mass_decorrelation_strat="targetZpeakMass" # target distribution Zpeak mass
@@ -161,10 +158,8 @@ if [[ "${step}" == "0" ]]; then
         --year "${year}"
         -load "${stage2_load_path}"
         --massDeCorrStrat "${mass_decorrelation_strat}"
+        --n_trials "${n_trials}"
     )
-    if [[ "${trainer_supports_n_trials}" == "1" ]]; then
-        trainer_args+=(--n_trials "${n_trials}")
-    fi
 
     if [[ "${do_hyperparam_search}" == "1" ]]; then
         print_box "Step 0: Scan the hyperparameters for the BDT"

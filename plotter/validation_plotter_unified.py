@@ -514,6 +514,27 @@ if __name__ == "__main__":
         #     if field not in fields_in_events:
         #         logger.warning(f"field {field} not in events, removing from fields2load!")
 
+        # # TOREMOVE
+        # if "separate_wgt_qgl_wgt" in events.fields:
+        #     logger.info("removing separate_wgt_qgl_wgt!")
+        #     events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_qgl_wgt"] # remove zpt wgt
+        if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
+            logger.warning("removing separate_wgt_zpt_wgt!")
+            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
+
+        elif (
+            "separate_wgt_zpt_wgt" in events.fields
+            and "zpt_wgt_reco_dnn" in events.fields
+            and args.use_dnn_zpt_weights
+            ):
+            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
+            events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_reco_dnn"] # apply the weights obtained from the DNN
+        # if "dy" in process.lower():
+        #     # scale the weights for DY samples by 3.0
+        #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
+        #     events["wgt_nominal"] = events["wgt_nominal"] * (1997.0/2124.08)
+
         loaded_events[process] = events
     logger.info("finished loading parquet files!")
     # mplhep style starts here --------------------------------------
@@ -577,6 +598,10 @@ if __name__ == "__main__":
         style="\n" + "="*50 + "\n",))
     sample_hist_dictByVar2compute = {}
     for var in tqdm.tqdm(variables2plot):
+        sample_hist_empty = sample_hist_dictByVar[var]
+        sample_hist_l = []
+        var_step = time.time()
+        # for process in available_processes:
         if "_nominal" in var:
             plot_var = var.replace("_nominal", "")
         else:
@@ -584,10 +609,6 @@ if __name__ == "__main__":
         if plot_var not in plot_settings.keys():
             logger.warning(f"variable {var} not configured in plot settings!")
             continue
-        sample_hist_empty = sample_hist_dictByVar[var]
-        sample_hist_l = []
-        var_step = time.time()
-        # for process in available_processes:
         # -----------------------------------------------
         # intialize variables for filling histograms
         if var == "dnn_vbf_score_atanh":

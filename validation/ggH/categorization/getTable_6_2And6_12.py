@@ -20,6 +20,27 @@ import copy
 import pandas as pd
 import glob
 
+
+def get_group_glob_patterns(group):
+    pattern_map = {
+        "ggh": ["processed_events_sigMC_ggh_*.parquet"],
+        "vbf": ["processed_events_sigMC_vbf_*.parquet"],
+        "dy": ["processed_events_bkgMC_dy_*.parquet"],
+        "tt": ["processed_events_bkgMC_tt_*.parquet"],
+        "ewk": ["processed_events_bkgMC_ewk_*.parquet"],
+        "diboson": [
+            "processed_events_bkgMC_ww_*.parquet",
+            "processed_events_bkgMC_wz_*.parquet",
+            "processed_events_bkgMC_zz_*.parquet",
+        ],
+        "other": [
+            "processed_events_bkgMC_other_*.parquet",
+            "processed_events_bkgMC_st_*.parquet",
+        ],
+        "data": ["processed_events_data_*.parquet"],
+    }
+    return pattern_map.get(group, [])
+
 # # Get the parent directory
 # parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 # # Add it to sys.path
@@ -379,8 +400,9 @@ def getYieldTable(sample_dict, samples2list, nSubCats=5):
         sample_zip = sample_dict[sample]
         sample_wgt = sample_zip["wgt_nominal"]
         sample_bdt_cat = sample_zip["subCategory_idx"]
-        print(f"sample_wgt: {sample_wgt}")
-        if len(sample_wgt) ==0: continue
+        print(f"{sample} sample_wgt len: {len(sample_wgt)}")
+        if len(sample_wgt) == 0:
+            continue
         # print(np.max(sample_bdt_cat))
         for cat in range(nSubCats):
             # print(f"{sample} cat: {cat}")
@@ -485,43 +507,34 @@ if __name__ == "__main__":
     # sample_groups = {
     #     "data" : "data*",
     # }
-    sample_groups = {
-        # "data": ["data"],
-        "ggh": ["ggh"],
-        "vbf": ["vbf"],
-        "dy": ["dy"],
-        "tt": ["tt"],
-        "ewk": ["ewk"],
-        "diboson": ["ww", "wz", "zz"],
-        "other": ["other", "st"],
-    }
+    sample_groups = ["ggh", "vbf", "dy", "tt", "ewk", "diboson", "other"]
     sample_dict = {
         group: {
             "wgt_nominal" : [],
             "dimuon_mass": [],
             "subCategory_idx": [],
-        } for group in sample_groups.keys()
+        } for group in sample_groups
     }
     if args.region != "signal":
         print("Error, region is not signal!")
         raise ValueError
-    for group, group_fnames in sample_groups.items():
+    for group in sample_groups:
         filelist = []
-        for group_fname in group_fnames:
-            full_load_path = load_path+f"*{group_fname}.parquet" 
+        for pattern in get_group_glob_patterns(group):
+            full_load_path = os.path.join(load_path, pattern)
             fname_filelist = glob.glob(full_load_path)
             filelist += fname_filelist
-        # print(f"{group} filelist : {filelist}")
-        # print(f"{group} filelist len: {len(filelist)}")
-        
-        # events = dak.from_parquet(full_load_path)
-        if len(filelist) == 0: continue # empty list, then skip
+        filelist = sorted(set(filelist))
+        print(f"{group} filelist len: {len(filelist)}")
+        if len(filelist) == 0:
+            continue
         events = dak.from_parquet(filelist)
         _, events = filterRegion(events, region=args.region)
         sample_dict = fillSampleValues(events, sample_dict, group)
 
     # print(f"sample_dict: {sample_dict}")
     save_path = f"{args.save_path}/{args.label}_x_{args.category}/{args.year}_{args.region}/"
+    os.makedirs(save_path, exist_ok=True)
     samples2list = ["ggh", "vbf"]
     table_6_2 = getYieldTable(sample_dict, samples2list)
     table_6_2.to_csv(f"{save_path}/table6_2.csv")
@@ -544,6 +557,3 @@ if __name__ == "__main__":
     # print(f"dataDict_by_subCat: {dataDict_by_subCat}")
     
     # plot_6_19(dataDict_by_subCat, save_fname, apply_blind = apply_blind)
-    
-
-    
