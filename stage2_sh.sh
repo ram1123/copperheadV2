@@ -126,6 +126,15 @@ init_run_log() {
     echo ""
 }
 
+resolve_stage3_output_label() {
+    local stage3_label="$1"
+    if [[ "${run_stage3_core_pdf_variants}" == "1" ]]; then
+        echo "${stage3_label}_${stage3_baseline_variant_tag}"
+    else
+        echo "${stage3_label}"
+    fi
+}
+
 # -----------------------------------------------------
 # Start logging + print config
 # -----------------------------------------------------
@@ -418,13 +427,6 @@ if [[ "${step}" == "7" || "${step}" == "dcall" || "${step}" == "all" || "${step}
                 --label ${stage3_label} \
                 -save ${save_path}
         fi
-
-        python validation/ggH/bias_test/run_bias_test.py \
-            -load ${stage2_save_path} \
-            -cat ${category} \
-            --year ${year_i} \
-            --label ${stage3_label} \
-            -save ${save_path}
     done
 fi
 
@@ -435,7 +437,7 @@ if [[ "${step}" == "8" || "${step}" == "dcall" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 8: Obtain datacard year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
-        stage3_output_label="${stage3_label}_${stage3_baseline_variant_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         mkdir -p "${save_path}"
 
@@ -469,7 +471,7 @@ if [[ "${step}" == "9" || "${step}" == "dcall" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 9: Run significance for year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
-        stage3_output_label="${stage3_label}_${stage3_baseline_variant_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         mkdir -p "${save_path}"
 
@@ -483,13 +485,97 @@ if [[ "${step}" == "9" || "${step}" == "dcall" || "${step}" == "all" ]]; then
 fi
 
 # -----------------------------------------------------
+# Step 11: Bias test submission
+# Requires the combined significance datacard from step 9.
+# -----------------------------------------------------
+if [[ "${step}" == "11" || "${step}" == "bias" || "${step}" == "all" ]]; then
+    bias_template_dir="validation/ggH/bias_test/FuncCandidateVsCorePdfBias"
+
+    for year_i in "${years[@]}"; do
+        print_box "Step 11: Prepare and submit bias test for year: (${year_i})"
+        stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
+        save_path="output/bdt_${model_name}_${model_trainYear}"
+        datacard_dir="${save_path}/stage3/${year_i}/${stage3_output_label}/datacards"
+        bias_output_dir="${save_path}/stage3/${year_i}/${stage3_output_label}/bias_test"
+        bias_job_dir="${bias_output_dir}/FuncCandidateVsCorePdfBias"
+        core_workspace_dir="${datacard_dir}/my_workspace"
+        fitfunc_workspace_dir="${bias_output_dir}/workspaces"
+        combined_datacard="${datacard_dir}/datacard_comb_sig_all_ggh.txt"
+
+        mkdir -p "${save_path}"
+
+        if [[ ! -f "${combined_datacard}" ]]; then
+            echo "Missing combined datacard: ${combined_datacard}"
+            echo "Run step 9 first so the significance workflow creates datacard_comb_sig_all_ggh.txt."
+            exit 1
+        fi
+
+        if [[ ! -d "${core_workspace_dir}" ]]; then
+            echo "Missing stage3 workspace directory: ${core_workspace_dir}"
+            exit 1
+        fi
+
+        python validation/ggH/bias_test/run_bias_test.py \
+            -load ${stage2_save_path} \
+            -cat ${category} \
+            --year ${year_i} \
+            --label ${stage3_output_label} \
+            -save ${save_path}
+
+        if [[ ! -d "${fitfunc_workspace_dir}" ]]; then
+            echo "Missing bias-test workspace directory: ${fitfunc_workspace_dir}"
+            exit 1
+        fi
+
+        mkdir -p "${bias_job_dir}"
+        mkdir -p "${bias_job_dir}/corePdf_workspace" "${bias_job_dir}/funcCandidate_workspace" "${bias_job_dir}/slurm_log"
+
+        cp -f "${core_workspace_dir}/"*.root "${bias_job_dir}/corePdf_workspace/"
+        cp -f "${fitfunc_workspace_dir}/"*.root "${bias_job_dir}/funcCandidate_workspace/"
+        sed 's#my_workspace/#corePdf_workspace/#g' "${combined_datacard}" > "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt"
+        sed 's#my_workspace/#funcCandidate_workspace/#g' "${combined_datacard}" > "${bias_job_dir}/datacard_comb_sig_all_ggh_fitFuncCand.txt"
+
+        sh "${bias_template_dir}/slurm_wrapper.sh" "${bias_job_dir}"
+
+        echo "Bias jobs submitted from: ${bias_job_dir}"
+        echo "After the Slurm jobs finish, run:"
+        echo "bash ${SCRIPT_DIR}/stage2_sh.sh bias_collect ${year_i} ${n_trials} ${date_tag}"
+    done
+fi
+
+# -----------------------------------------------------
+# Step 12: Bias test aggregation
+# Run this after the Slurm jobs from step 11 finish.
+# -----------------------------------------------------
+if [[ "${step}" == "12" || "${step}" == "bias_collect" ]]; then
+    for year_i in "${years[@]}"; do
+        print_box "Step 12: Aggregate bias test results for year: (${year_i})"
+        stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
+        save_path="output/bdt_${model_name}_${model_trainYear}"
+        bias_job_dir="${save_path}/stage3/${year_i}/${stage3_output_label}/bias_test/FuncCandidateVsCorePdfBias"
+
+        if [[ ! -d "${bias_job_dir}" ]]; then
+            echo "Missing bias job directory: ${bias_job_dir}"
+            exit 1
+        fi
+
+        (
+            cd "${bias_job_dir}"
+            python "${SCRIPT_DIR}/validation/ggH/bias_test/FuncCandidateVsCorePdfBias/aggregate_bias_pull_fitDiagnostics.py"
+        )
+    done
+fi
+
+# -----------------------------------------------------
 # Step 10: Run Impact
 # -----------------------------------------------------
 if [[ "${step}" == "10" || "${step}" == "im" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 10: Run Impact for year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
-        stage3_output_label="${stage3_label}_${stage3_baseline_variant_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         mkdir -p "${save_path}"
 

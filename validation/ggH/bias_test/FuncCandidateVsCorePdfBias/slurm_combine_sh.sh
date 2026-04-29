@@ -32,7 +32,8 @@ fi
 cat="all"
 
 slurm_dir=slurmJobs/slurmJob_in${true_idx}_out${out_idx}_${1}_${2}
-start_dir=/work/users/shar1172/copperheadV2_Feb2026/validation/ggH/bias_test/FuncCandidateVsCorePdfBias/
+start_dir="${5:-$(cd "$(dirname "$0")" && pwd)}"
+echo "start_dir: ${start_dir}"
 slurm_path=${start_dir}/${slurm_dir}
 datacard1_name="datacard_comb_sig_all_ggh_fitFuncCand.txt"
 datacard2_name="datacard_comb_sig_all_ggh_corePdf.txt"
@@ -48,8 +49,8 @@ cp -f -r ${ws1_path} ${slurm_path}
 cp -f -r ${ws2_path} ${slurm_path}
 echo "slurm_path: ${slurm_path}"
 cd ${slurm_path}
-text2workspace.py -m 125 datacard_comb_sig_${cat}_ggh_fitFuncCand.txt 
-text2workspace.py -m 125 datacard_comb_sig_${cat}_ggh_corePdf.txt 
+text2workspace.py -m 125 datacard_comb_sig_${cat}_ggh_fitFuncCand.txt
+text2workspace.py -m 125 datacard_comb_sig_${cat}_ggh_corePdf.txt
 echo "random_seed: ${random_seed}"
 echo "slurm_dir: ${slurm_dir}"
 
