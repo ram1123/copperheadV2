@@ -170,8 +170,26 @@ def resolve_glob(base_path: str, year: str, glob_template: str, process: str) ->
         .replace("{PROCESS}", process)
     )
     patt = Path(patt).as_posix() # ensure no // issues in the path
-    # logger.info(f"reading: {patt}")
     files = sorted(_glob.glob(patt))
+    if files:
+        return files
+
+    fallback_patterns = []
+    if "/compacted/" in patt:
+        fallback_patterns.append(patt.replace("/compacted/", "/f1_0/"))
+    if "/f1_0/" in patt:
+        fallback_patterns.append(patt.replace("/f1_0/", "/compacted/"))
+
+    for fallback_patt in fallback_patterns:
+        fallback_files = sorted(_glob.glob(fallback_patt))
+        if fallback_files:
+            logger.info(
+                "[resolve_glob] No files for %s; using fallback pattern %s",
+                patt,
+                fallback_patt,
+            )
+            return fallback_files
+
     return files
 
 
