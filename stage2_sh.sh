@@ -54,9 +54,9 @@ if [[ -z "${step}" ]]; then
     exit 1
 fi
 
-all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
+# all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
 # all_years=(2022preEE 2022postEE 2023 2023BPix 2024)
-# all_years=(all)
+all_years=(all)
 
 if [[ "${year}" == "all" ]]; then
     years=("${all_years[@]}")
@@ -74,6 +74,9 @@ stage2_save_path="${base_path}/${label}/${stage2_label}/stage2_output"
 
 mva_base_path="${SCRIPT_DIR}"
 trainer_script="MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py"
+stage3_variants_script="run_stage3_core_pdf_variants.sh"
+run_stage3_core_pdf_variants="0"
+stage3_baseline_variant_tag="all_core_pdfs"
 
 
 # -----------------------------------------------------
@@ -131,6 +134,11 @@ print_config
 
 if [[ ! -f "run_stage2.py" || ! -f "run_stage3.py" ]]; then
     echo "Required workflow entrypoints are missing. Run this script from the copperheadV2 checkout."
+    exit 1
+fi
+
+if [[ "${run_stage3_core_pdf_variants}" == "1" && ! -f "${stage3_variants_script}" ]]; then
+    echo "Missing stage3 variants wrapper: ${stage3_variants_script}"
     exit 1
 fi
 
@@ -386,7 +394,7 @@ fi
 # -----------------------------------------------------
 # Step 7: Workspace
 # -----------------------------------------------------
-if [[ "${step}" == "7" || "${step}" == "dcall" || "${step}" == "all" ]]; then
+if [[ "${step}" == "7" || "${step}" == "dcall" || "${step}" == "all" || "${step}" == "bias" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 7: Get workspace year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
@@ -395,7 +403,23 @@ if [[ "${step}" == "7" || "${step}" == "dcall" || "${step}" == "all" ]]; then
 
         echo "stage2_save_path: ${stage2_save_path}"
 
-        python run_stage3.py \
+        if [[ "${run_stage3_core_pdf_variants}" == "1" ]]; then
+            bash "${stage3_variants_script}" \
+                -load ${stage2_save_path} \
+                -cat ${category} \
+                --year ${year_i} \
+                --label ${stage3_label} \
+                -save ${save_path}
+        else
+            python run_stage3.py \
+                -load ${stage2_save_path} \
+                -cat ${category} \
+                --year ${year_i} \
+                --label ${stage3_label} \
+                -save ${save_path}
+        fi
+
+        python validation/ggH/bias_test/run_bias_test.py \
             -load ${stage2_save_path} \
             -cat ${category} \
             --year ${year_i} \
@@ -411,6 +435,7 @@ if [[ "${step}" == "8" || "${step}" == "dcall" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 8: Obtain datacard year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="${stage3_label}_${stage3_baseline_variant_tag}"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         mkdir -p "${save_path}"
 
@@ -420,18 +445,18 @@ if [[ "${step}" == "8" || "${step}" == "dcall" || "${step}" == "all" ]]; then
             -load ${stage2_save_path} \
             -cat ${category} \
             --year ${year_i} \
-            --label ${stage3_label} \
+            --label ${stage3_output_label} \
             -save ${save_path}
 
-        echo "Copy the scripts to: ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
-        cp scripts/get_significance.sh "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
-        cp scripts/get_impactPlots.sh "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        echo "Copy the scripts to: ${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
+        cp scripts/get_significance.sh "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
+        cp scripts/get_impactPlots.sh "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
 
         echo "Copy the background datacards to the same path"
-        cp stage3/bkg_datacards_template/*bkg*.txt "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        cp stage3/bkg_datacards_template/*bkg*.txt "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
 
         echo "Go to path given below and run"
-        echo "cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        echo "cd ${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
         echo "bash get_significance.sh"
         echo "bash get_impactPlots.sh"
     done
@@ -444,13 +469,14 @@ if [[ "${step}" == "9" || "${step}" == "dcall" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 9: Run significance for year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="${stage3_label}_${stage3_baseline_variant_tag}"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         mkdir -p "${save_path}"
 
         echo "stage2_save_path: ${stage2_save_path}"
         echo "Go to path given below and run"
 
-        cd "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        cd "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
         bash get_significance.sh
         cd - >/dev/null
     done
@@ -463,13 +489,14 @@ if [[ "${step}" == "10" || "${step}" == "im" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 10: Run Impact for year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="${stage3_label}_${stage3_baseline_variant_tag}"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         mkdir -p "${save_path}"
 
         echo "stage2_save_path: ${stage2_save_path}"
         echo "Go to path given below and run"
 
-        cd "${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        cd "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
         bash get_impactPlots.sh
         cd - >/dev/null
     done

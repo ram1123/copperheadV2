@@ -67,7 +67,7 @@ def create_core_pdf(pdf_type, subcat_index, x, init_vals):
         return pdf, param_l
         
     elif pdf_type == "FEWZxBern":
-        pdf, param_l = getFEWZxBern(x, init_vals, fewz_workspace_path="../../../modules/ucsd_workspace/")
+        pdf, param_l = getFEWZxBern(x, init_vals, fewz_workspace_path="./modules/ucsd_workspace/")
         return pdf, param_l
         
     elif pdf_type == "LandauxBern":
@@ -151,6 +151,14 @@ if __name__ == "__main__":
     action="store",
     help="MVA model name to load",
     )
+    parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default=".",
+    action="store",
+    help="root output path for stage3-style products",
+    )
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
@@ -179,11 +187,12 @@ if __name__ == "__main__":
     print(f"processed_eventsData length: {ak.num(processed_eventsData.dimuon_mass, axis=0)}")
     print("events loaded!")
 
-    # make plot directory
-    base_path = f"./validation/stage3/{args.year}/{args.label}"
+    # Keep bias-study outputs inside the same stage3 tree as the rest of the workflow,
+    # but isolate them in a dedicated subdirectory so they do not collide with stage3 workspaces.
+    stage3_base_path = f"{args.save_path}/stage3/{args.year}/{args.label}"
+    base_path = f"{stage3_base_path}/bias_test"
     plot_save_path = base_path
-    if not os.path.exists(plot_save_path):
-        os.makedirs(plot_save_path)
+    os.makedirs(plot_save_path, exist_ok=True)
 
     # Define your list of column names
     column_list = ["year", "category", "dataset", "yield"]
@@ -1645,8 +1654,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------
     # workspace_path = "./workspaces"
     workspace_path = f"{base_path}/workspaces"
-    if not os.path.exists(workspace_path):
-        os.makedirs(workspace_path)
+    os.makedirs(workspace_path, exist_ok=True)
 
 
     # unfreeze the hmm sigma and peak b4 saving

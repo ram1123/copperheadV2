@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#SBATCH --job-name=nanoAOD_array       # Name of the job array
+#SBATCH --output=/depot/cms/users/yun79/hig-19-006-datacards/ggH/HMuMuCombine/FuncCandidateVsCorePdfBias/slurm_log/slurm_combine_task_%A_%a.out
+#SBATCH --error=/depot/cms/users/yun79/hig-19-006-datacards/ggH/HMuMuCombine/FuncCandidateVsCorePdfBias/slurm_log/slurm_combine_task_%A_%a.err
+#SBATCH --account=cms
+#SBATCH --array=1-2   
+# SBATCH --array=1-100   
+# SBATCH --array=1-200   
+#SBATCH --ntasks=1                     # Number of tasks per job
+#SBATCH --cpus-per-task=1              # Number of CPUs per task
+#SBATCH --mem=3000                    # Memory per task
+#SBATCH --time=2:00:00                # Max run time for each task (HH:MM:SS)
+#SBATCH --get-user-env                 # Get environment variables for the job
+
+
+
+# configFile=$(sed -n "${SLURM_ARRAY_TASK_ID}p" missing_or_corrupt_files_2016_24Feb.txt | awk '{print $1}')
+# outputDirectory=$(sed -n "${SLURM_ARRAY_TASK_ID}p" missing_or_corrupt_files_2016_24Feb.txt | awk '{print $3}')
+# nEvents=$(sed -n "${SLURM_ARRAY_TASK_ID}p" missing_or_corrupt_files_2016_24Feb.txt | awk '{print $4}')
+
+echo "Processing job Task ID ${SLURM_ARRAY_TASK_ID} " 
+echo "Processing job ID ${SLURM_ARRAY_JOB_ID} " 
+# SLURM_ARRAY_TASK_ID is given from the array range
+
+in_index=$1
+out_index=$2
+
+
+# Run the main script
+echo "sh slurm_combine_sh.sh ${SLURM_ARRAY_TASK_ID} ${SLURM_ARRAY_JOB_ID} ${in_index} ${out_index}"
+run -e combine --manifest-path /cvmfs/cms-af.opensciencegrid.org/paf/pixi/copperheadV2_dev/pixi.toml  sh slurm_combine_sh.sh ${SLURM_ARRAY_TASK_ID} ${SLURM_ARRAY_JOB_ID} ${in_index} ${out_index}
+
+# sh slurm_combine_sh.sh 1 1 0 1
