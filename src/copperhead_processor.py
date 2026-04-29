@@ -45,6 +45,7 @@ from src.corrections.jet import (
     do_jec_scale,
     do_jer_smear,
     fill_softjets_HIG19006,
+    getJecDataTag,
     get_jec_factories,
     get_jet_variation,
     get_puId,
@@ -1563,10 +1564,10 @@ class EventProcessor(processor.ProcessorABC):
             pt_variations += applyUpDown(jec_unc_sources)
 
         if self.config["switches"]["do_jer_unc"] and self.config["switches"]["jer_strat"] >= 0:
-            # FIXME: JER variation part is not running. 
+            # FIXME: JER variation part is not running.
             #         As for Run-3 we are not applying the JER so we don't need it, yet.
             jec_pars = self.config["jec_parameters"]
-            pt_variations += jec_pars["jer_variations"]            
+            pt_variations += jec_pars["jer_variations"]
 
         logger.debug(f"pt_variations: {pt_variations}")
         if is_mc:
@@ -2600,6 +2601,9 @@ class EventProcessor(processor.ProcessorABC):
                 "rho",
                 "area",
                 "btagDeepB",
+                "btagPNetB",
+                "btagUParTAK4B",
+                "btagRobustParTAK4B",
                 # Need following when running over JEC. First two for 2022 and 2023. All below for 2024
                 "genJetIdx",
                 "btagDeepFlavB",
@@ -2610,7 +2614,14 @@ class EventProcessor(processor.ProcessorABC):
                 "muEF",
                 "chMultiplicity",
                 "neMultiplicity",
-                "multiplicity"
+                "multiplicity",
+                # Needed by PySR-derived optional features in Run 3
+                "hfcentralEtaStripSize",
+                "hfadjacentEtaStripsSize",
+                "hfsigmaEtaEta",
+                "hfsigmaPhiPhi",
+                "nConstituents",
+                "rawFactor",
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
 
@@ -2640,7 +2651,7 @@ class EventProcessor(processor.ProcessorABC):
         elif NanoAODv == 15:
             jets["btagPNetQvG"] = jets.btagPNetQvG if hasattr(jets, "btagPNetQvG") else ak.zeros_like(jets.pt) - 1.0
             jets["btagDeepFlavQG"] = jets.btagDeepFlavQG if hasattr(jets, "btagDeepFlavQG") else ak.zeros_like(jets.pt) - 1.0
-            jets["btagUParTAK4QvG"] = jets.btagUParTAK4QvG if hasattr(jets, "btagUParTAK4QvG") else ak.zeros_like(jets.pt) - 1.0            
+            jets["btagUParTAK4QvG"] = jets.btagUParTAK4QvG if hasattr(jets, "btagUParTAK4QvG") else ak.zeros_like(jets.pt) - 1.0
         else:
             raise ValueError(f"Year {year} not recognized for jet QGL assignment!")
 
@@ -2678,7 +2689,7 @@ class EventProcessor(processor.ProcessorABC):
                 "Only one of "
                 "do_jet_horn_ptcut, add_pt_cut_for_HE_HF_jets, "
                 "add_asymmetric_pt_cut_for_HE_HF_jets can be enabled at once."
-            )   
+            )
 
         if do_he_ptcut:
             """ Run-3 recommendation:
@@ -2696,7 +2707,6 @@ class EventProcessor(processor.ProcessorABC):
             jetHorn_ptcut = ak.where(jetHorn_region, jetHorn_pt_cut, jetHorn_ptcut)
         else:
             jetHorn_ptcut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
-
 
         # Prefer asymmetric if true
         if self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]:
@@ -2732,7 +2742,7 @@ class EventProcessor(processor.ProcessorABC):
             HE_HF_ptcut = ak.where(is_hehf, jets.pt > thr, HE_HF_ptcut)
 
         # add additonal pT cut for the forward regions  ----------------------------------------------
-        
+
         if do_jet_HE_nConstCut:
             """ Run-3 recommendation:
                 - Remove jets having nConstituents <= 3
@@ -2769,9 +2779,9 @@ class EventProcessor(processor.ProcessorABC):
             pysr_dict, pysr_region = build_pysr_pu_masks(jets, self.pysr_configs)
             jets = jets[pysr_dict["jet_pysr_pu_pass"]]
 
-        # INFO: Below patch is basically applying the eta selection and returns new jet 
+        # INFO: Below patch is basically applying the eta selection and returns new jet
         #       collection. As all other selections are already applied for the jets selection.
-        #       I keep the functionality to add other selection so that in near future 
+        #       I keep the functionality to add other selection so that in near future
         #       if ttH analysis changes anything that we can change accordingly.
         btag_selection = btag_jet_selection(jets, self.config, year)
         btag_jets = ak.to_packed(jets[btag_selection])
@@ -2989,20 +2999,20 @@ class EventProcessor(processor.ProcessorABC):
         # (only if the branches exist in this NanoAOD)
         # ------------------------------------------------------------------
         jet_vars = [
-                "qgl", "btagPNetQvG", "btagDeepFlavQG", 
+                "qgl", "btagPNetQvG", "btagDeepFlavQG",
                 "btagRobustParTAK4QG", "btagUParTAK4QvG",
 
-                "btagPNetB", 
-                "btagUParTAK4B", 
-                "btagDeepB", 
-                # "btagDeepFlavB", 
+                "btagPNetB",
+                "btagUParTAK4B",
+                "btagDeepB",
+                # "btagDeepFlavB",
                 ]
         jets_to_process = [jet1, jet2, jet3, jet4] if save_four_jets_kinematics else [jet1, jet2]
         for i, jet in enumerate(jets_to_process, start=1):
             for var in jet_vars:
                 # Get the value if it exists, otherwise return None
                 val = getattr(jet, var, None)
-                
+
                 # Only add to the dict if the attribute actually exists on this jet
                 if val is not None:
                     jet_loop_out_dict[f"jet{i}_{var}_{variation}"] = val
@@ -3018,13 +3028,13 @@ class EventProcessor(processor.ProcessorABC):
                 "hfEmEF", "hfHEF",
                 "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
                 "chMultiplicity", "neMultiplicity",
-                "nConstituents", "nElectrons", "nMuons", 
+                "nConstituents", "nElectrons", "nMuons",
                 # "nSVs", "electronIdx1", "electronIdx2", "muonIdx1", "muonIdx2",
                 # "svIdx1", "svIdx2",
                 # "genJetIdx",
                 "hadronFlavour", "partonFlavour",
-                "hfcentralEtaStripSize", "hfadjacentEtaStripsSize", 
-                "hfsigmaEtaEta", "hfsigmaPhiPhi", 
+                "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+                "hfsigmaEtaEta", "hfsigmaPhiPhi",
                 "muonSubtrFactor", "rawFactor",
                 "puIdDisc"
             ]
@@ -3034,7 +3044,7 @@ class EventProcessor(processor.ProcessorABC):
                 for var in jet_vars:
                     # Get the value if it exists, otherwise return None
                     val = getattr(jet, var, None)
-                    
+
                     # Only add to the dict if the attribute actually exists on this jet
                     if val is not None:
                         extra_jet_loop_dict[f"jet{i}_{var}_{variation}"] = val
@@ -3134,7 +3144,7 @@ class EventProcessor(processor.ProcessorABC):
                     raise KeyError(
                         f"deepJet_shape not found in {self.config['btag_sf_json']}. "
                         f"Available keys: {available_keys}"
-                    )                
+                    )
 
                 btag_json=btag_file["deepJet_shape"]
                 logger.info("Using btag correction key: deepJet_shape")
@@ -3176,6 +3186,9 @@ class EventProcessor(processor.ProcessorABC):
             # for name, bs in btag_syst.items():
             #     weights.add_weight(f"btag_wgt_{name}", bs, how="only_vars")
 
+        btagLoose_filter = ak.zeros_like(btag_jets.pt, dtype="bool")
+        btagMedium_filter = ak.zeros_like(btag_jets.pt, dtype="bool")
+
         if "RERECO" in year:
             btagLoose_filter = btag_jets.btagDeepB > self.config["btag_loose_wp"]
             btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp"]
@@ -3183,7 +3196,7 @@ class EventProcessor(processor.ProcessorABC):
         if is_run2(year) and NanoAODv == 12 and hasattr(btag_jets, "btagDeepB"):
             logger.info("Using deepJet btag!")
             btagLoose_filter = btag_jets.btagDeepB > self.config["btag_loose_wp_DeepCSV"] # FIXME: check the var name and score
-            btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp_DeepCSV"]            
+            btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp_DeepCSV"]
 
         # if is_run3(year) and NanoAODv == 12 and hasattr(btag_jets, "btagDeepFlavB"):
         #     logger.info("Using deepJet btag!")
@@ -3204,7 +3217,7 @@ class EventProcessor(processor.ProcessorABC):
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)
 
         nBtagLoose = ak.sum(btagLoose_filter, axis=1)
-        nBtagMedium = ak.sum(btagMedium_filter, axis=1)         
+        nBtagMedium = ak.sum(btagMedium_filter, axis=1)
 
         # #quick sanity check
         # logger.info(f"nBtagLoose : {nBtagLoose[:20].compute()}")
