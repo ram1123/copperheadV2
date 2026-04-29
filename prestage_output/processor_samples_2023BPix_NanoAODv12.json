@@ -18915,7 +18915,7 @@
       "is_mc": true,
       "nGenEvts": 94876537,
       "original_fraction": 1.0,
-      "sumGenWgts": 1691376041677.812
+      "sumGenWgts": 1691376041677.8118
     }
   },
   "dyTo2Mu_M-105To160": {
@@ -19820,7 +19820,7 @@
       "is_mc": true,
       "nGenEvts": 9035307,
       "original_fraction": 1.0,
-      "sumGenWgts": 1223067695.83466
+      "sumGenWgts": 1223067695.8346598
     }
   },
   "dyTo2Mu_MLL_10To50": {
@@ -20797,7 +20797,7 @@
       "is_mc": true,
       "nGenEvts": 2872000,
       "original_fraction": 1.0,
-      "sumGenWgts": 6375580723.840002
+      "sumGenWgts": 6375580723.840003
     }
   },
   "ewk_lljj": {
@@ -21002,6 +21002,53 @@
       "nGenEvts": 177141,
       "original_fraction": 1.0,
       "sumGenWgts": 177141.0
+    }
+  },
+  "ewk_mmjj_mll_105_160_mjj120": {
+    "files": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23BPixNanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_postBPix_v6-v3/2530000/43836a78-88e9-450b-9f62-a83911500428.root": {
+        "num_entries": 138000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            138000
+          ]
+        ],
+        "uuid": "41dad5e0-e217-11f0-bf56-54b65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23BPixNanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_postBPix_v6-v3/2530000/a11098db-910c-45f5-b739-bb1643f5199c.root": {
+        "num_entries": 384000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            384000
+          ]
+        ],
+        "uuid": "118c777c-e1ef-11f0-b9a0-8ab65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/Run3Summer23BPixNanoAODv12/EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/NANOAODSIM/130X_mcRun3_2023_realistic_postBPix_v6-v3/2530000/cab5e2a3-cc72-4854-b0b9-a276985ef602.root": {
+        "num_entries": 3000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            3000
+          ]
+        ],
+        "uuid": "5abbc172-e1dc-11f0-98bb-c683e4a9beef"
+      }
+    },
+    "form": null,
+    "metadata": {
+      "data_entries": null,
+      "dataset": "ewk_mmjj_mll_105_160_mjj120",
+      "fraction": 1.0,
+      "is_mc": true,
+      "nGenEvts": 525000,
+      "original_fraction": 1.0,
+      "sumGenWgts": 33910.73199
     }
   },
   "ggh_amcatnlo": {
@@ -33248,7 +33295,7 @@
       "is_mc": true,
       "nGenEvts": 82058000,
       "original_fraction": 1.0,
-      "sumGenWgts": 27433736988.612007
+      "sumGenWgts": 27433736988.612
     }
   },
   "vbf_aMCatNLO": {
