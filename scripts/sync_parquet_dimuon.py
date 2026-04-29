@@ -177,6 +177,34 @@ def load_dir_to_df(
     return df
 
 
+def _with_occurrence_index(df: pd.DataFrame, label: str) -> pd.DataFrame:
+    """
+    Make repeated (run, lumi, event) keys comparable by appending a stable
+    occurrence counter within each key group.
+    """
+    missing = [c for c in KEY_VARS if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"Missing key columns in {label}: {missing}")
+
+    sort_cols = [c for c in KEY_VARS if c in df.columns]
+    sort_cols.extend(c for c in SYNCVARLIST if c not in KEY_VARS and c in df.columns)
+    if sort_cols:
+        df = df.sort_values(sort_cols, kind="mergesort").reset_index(drop=True)
+
+    duplicate_mask = df.duplicated(KEY_VARS, keep=False)
+    duplicate_count = int(duplicate_mask.sum())
+    if duplicate_count:
+        print(
+            f"[INFO] Found {duplicate_count} rows with duplicated event keys in {label}; with key columns {KEY_VARS}."
+            "Appending occurrence index to make them comparable."
+            "comparing them with an occurrence index."
+        )
+
+    df = df.copy()
+    df["_sync_instance"] = df.groupby(KEY_VARS, sort=False).cumcount()
+    return df.set_index(KEY_VARS + ["_sync_instance"]).sort_index()
+
+
 # ----------------------------------------------------------------------
 # Single-dir dump
 # ----------------------------------------------------------------------
@@ -271,14 +299,8 @@ def compare_two_dirs(
     print(f"[INFO] Loading directory 2: {dir2}")
     df2 = load_dir_to_df(dir2, category=category, region=region, process=process)
 
-    # Index by (run, lumi, event)
-    if not set(KEY_VARS).issubset(df1.columns):
-        raise RuntimeError(f"Missing key columns in dir1 DataFrame: {KEY_VARS}")
-    if not set(KEY_VARS).issubset(df2.columns):
-        raise RuntimeError(f"Missing key columns in dir2 DataFrame: {KEY_VARS}")
-
-    df1 = df1.set_index(KEY_VARS)
-    df2 = df2.set_index(KEY_VARS)
+    df1 = _with_occurrence_index(df1, f"dir1 ({dir1})")
+    df2 = _with_occurrence_index(df2, f"dir2 ({dir2})")
 
     common_idx = df1.index.intersection(df2.index)
     only1 = df1.index.difference(df2.index)
@@ -305,6 +327,7 @@ def compare_two_dirs(
             "run": idx[0],
             "luminosityBlock": idx[1],
             "event": idx[2],
+            "_sync_instance": idx[3],
         }
 
         mismatch = False
@@ -416,8 +439,7 @@ def parse_sync_txt(path: str) -> pd.DataFrame:
         raise RuntimeError(f"No valid rows parsed from {path}")
 
     df = pd.DataFrame.from_records(records)
-    df = df.set_index(KEY_VARS).sort_index()
-    return df
+    return _with_occurrence_index(df, path)
 
 
 def compare_two_sync_txt(
@@ -470,7 +492,12 @@ def compare_two_sync_txt(
         r2 = c2.loc[idx]
 
         mismatch = False
-        rec = {"run": idx[0], "luminosityBlock": idx[1], "event": idx[2]}
+        rec = {
+            "run": idx[0],
+            "luminosityBlock": idx[1],
+            "event": idx[2],
+            "_sync_instance": idx[3],
+        }
 
         for v in vars_to_check:
             v1 = float(r1[v])
