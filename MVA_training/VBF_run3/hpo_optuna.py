@@ -147,9 +147,11 @@ def save_study_plots(study, out_dir: str) -> None:
 
 
 def suggest_hidden(trial: optuna.Trial) -> list[int]:
-    n_layers = trial.suggest_int("n_layers", 2, 7)
-    first_width = trial.suggest_categorical("first_width", (128, 256, 384, 512, 768, 1024, 1280, 1536, 2048))
-    shrink = trial.suggest_float("shrink_factor", 0.4, 0.75)
+    n_layers = trial.suggest_int("n_layers", 2, 4)
+    first_width = trial.suggest_categorical(
+        "first_width", (256, 384, 512, 768, 1024)
+    )
+    shrink = trial.suggest_float("shrink_factor", 0.45, 0.70)
 
     hidden: list[int] = []
     w = float(first_width)
@@ -179,23 +181,23 @@ def suggest_hparams(trial: optuna.Trial, cfg: TrainConfig) -> Dict[str, Any]:
     # dropout: either one value broadcasted, or per-layer
     drop_mode = trial.suggest_categorical("drop_mode", ["one", "per_layer"])
     if drop_mode == "one":
-        p = trial.suggest_float("dropout", 0.0, 0.35)
+        p = trial.suggest_float("dropout", 0.02, 0.30)
         dropout = [p] * len(hidden)
     else:
         dropout = [
-            trial.suggest_float(f"dropout_l{i}", 0.0, 0.5) for i in range(len(hidden))
+            trial.suggest_float(f"dropout_l{i}", 0.0, 0.35) for i in range(len(hidden))
         ]
 
     # ---- optimizer / regularization ----
-    lr = trial.suggest_float("lr", 3e-4, 3e-3, log=True)
-    weight_decay = trial.suggest_float("weight_decay", 1e-6, 5e-3, log=True)
+    lr = trial.suggest_float("lr", 2.5e-4, 1.2e-3, log=True)
+    weight_decay = trial.suggest_float("weight_decay", 1e-5, 2e-3, log=True)
 
-    label_smoothing = trial.suggest_float("label_smoothing", 0.0, 0.05)
-    grad_clip_norm = trial.suggest_float("grad_clip_norm", 0.0, 5.0)
+    label_smoothing = trial.suggest_float("label_smoothing", 0.0, 0.04)
+    grad_clip_norm = trial.suggest_float("grad_clip_norm", 1.0, 4.5)
 
     # (optional) training dynamics
     # keep batch size fixed unless you want to benchmark GPU memory/time carefully
-    batch_size = trial.suggest_categorical("batch_size", [1024, 2048, 4096])
+    batch_size = trial.suggest_categorical("batch_size", [2048, 4096])
 
     return dict(
         activation=activation,
@@ -264,6 +266,8 @@ def objective_factory(
                 out_dir=str(trial_dir),
                 trial=trial,  # enables pruning per epoch
                 trial_step_offset=f * cfg.epochs,  # unique step across folds
+                evaluate_train_each_epoch=False,
+                run_final_evaluation=False,
             )
             scores.append(float(score))
 
@@ -378,7 +382,7 @@ def main() -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    sampler = optuna.samplers.TPESampler(seed=args.seed, multivariate=True)
+    sampler = optuna.samplers.TPESampler(seed=args.seed, multivariate=False)
     pruner = optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=3)
 
     study = optuna.create_study(
@@ -419,6 +423,7 @@ def main() -> None:
         "best_value": study.best_value,
         "best_params": study.best_params,
         "n_trials": len(study.trials),
+        "trial_seed": int(args.seed + study.best_trial.number),
     }
 
     with open(out_dir / "optuna_best.json", "w") as f:
