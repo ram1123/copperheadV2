@@ -15,6 +15,7 @@ set -e
 ntoys="50"
 nGeneratedToys="50"
 fitdiag_parallel="${BIAS_FITDIAG_PARALLEL:-30}"
+expect_signal="${BIAS_EXPECT_SIGNAL:-0}"
 # true_idx="1"
 # out_idx="core"
 true_idx=$3
@@ -56,5 +57,5 @@ text2workspace.py -m 125 datacard_comb_sig_${cat}_ggh_corePdf.txt
 echo "random_seed: ${random_seed}"
 echo "slurm_dir: ${slurm_dir}"
 
-combineTool.py datacard_comb_sig_${cat}_ggh_fitFuncCand.root -M GenerateOnly -m 125 --setParameters pdf_index_ggh=${true_idx} -t ${nGeneratedToys}  --expectSignal 0 --saveToys -m 125 --freezeParameters pdf_index_ggh --X-rtd MINIMIZER_MaxCalls=20000000000 -s ${random_seed}
-time(combineTool.py datacard_comb_sig_${cat}_ggh_corePdf.root -M FitDiagnostics   -m 125 --toysFile higgsCombine.Test.GenerateOnly.mH125.${random_seed}.root   -t ${ntoys}  --expectSignal 0 --cminRunAllDiscreteCombinations  --rMin -20 --rMax 20 --freezeParameters pdf_index_ggh --setParameters pdf_index_ggh=${out_idx} --cminDefaultMinimizerStrategy=${minStrat}  --X-rtd MINIMIZER_MaxCalls=20000000000 -n bias_in${true_idx}_out${out_idx}_nToys${ntoys}_${cat}_asimovDataset --parallel ${fitdiag_parallel} )
+combineTool.py datacard_comb_sig_${cat}_ggh_fitFuncCand.root -M GenerateOnly -m 125 --setParameters pdf_index_ggh=${true_idx} -t ${nGeneratedToys}  --expectSignal ${expect_signal} --saveToys -m 125 --freezeParameters pdf_index_ggh --X-rtd MINIMIZER_MaxCalls=20000000000 -s ${random_seed}
+time(combineTool.py datacard_comb_sig_${cat}_ggh_corePdf.root -M FitDiagnostics   -m 125 --toysFile higgsCombine.Test.GenerateOnly.mH125.${random_seed}.root   -t ${ntoys}  --expectSignal ${expect_signal} --cminRunAllDiscreteCombinations  --rMin -20 --rMax 20 --freezeParameters pdf_index_ggh --setParameters pdf_index_ggh=${out_idx} --cminDefaultMinimizerStrategy=${minStrat}  --X-rtd MINIMIZER_MaxCalls=20000000000 -n bias_in${true_idx}_out${out_idx}_nToys${ntoys}_${cat}_asimovDataset --parallel ${fitdiag_parallel} )

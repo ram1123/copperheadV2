@@ -5,6 +5,13 @@ WORK_DIR="${1:-${SCRIPT_DIR}}"
 WORK_DIR="$(cd "${WORK_DIR}" && pwd)"
 RUN_MODE="${2:-${BIAS_RUN_MODE:-slurm}}"
 MAX_LOCAL_JOBS="${3:-${BIAS_LOCAL_JOBS:-8}}"
+SELECTED_INDEX_FILE="${WORK_DIR}/selected_truth_function_indices.txt"
+
+truth_indices=(0 1 2 3 4 5 6 7)
+if [[ -f "${SELECTED_INDEX_FILE}" ]]; then
+    mapfile -t _truth_index_lines < "${SELECTED_INDEX_FILE}"
+    read -r -a truth_indices <<< "${_truth_index_lines[*]}"
+fi
 
 # Note on the out index:
 # out_index="0" # sumExp
@@ -18,7 +25,7 @@ if [[ "${RUN_MODE}" == "local" ]]; then
     running_jobs=0
     task_id=1
 
-    for in_index in {0..7}; do # function candidate has 8 in_index and each are frozen for toy generation
+    for in_index in "${truth_indices[@]}"; do
         for out_index in {1..1}; do # set core pdf index to BWZ redux, but it is NOT frozen
             local_job_id="${job_id_base}${task_id}"
             pixi run -e combine --manifest-path /cvmfs/cms-af.opensciencegrid.org/paf/pixi/copperheadV2_dev/pixi.toml \
@@ -36,7 +43,7 @@ if [[ "${RUN_MODE}" == "local" ]]; then
     wait
 else
     # individual fit function ----------------------
-    for in_index in {0..7}; do # function candidate has 8 in_index and each are frozen for toy generation
+    for in_index in "${truth_indices[@]}"; do
         for out_index in {1..1}; do # set core pdf index to BWZ redux, but it is NOT frozen
             sbatch "${SCRIPT_DIR}/slurm_setup.sub" $in_index $out_index "${WORK_DIR}" "${SCRIPT_DIR}"
         done
