@@ -33,6 +33,7 @@ cat="all"
 
 slurm_dir=slurmJobs/slurmJob_in${true_idx}_out${out_idx}_${1}_${2}
 start_dir="${5:-$(cd "$(dirname "$0")" && pwd)}"
+start_dir="$(cd "${start_dir}" && pwd)"
 echo "start_dir: ${start_dir}"
 slurm_path=${start_dir}/${slurm_dir}
 datacard1_name="datacard_comb_sig_all_ggh_fitFuncCand.txt"

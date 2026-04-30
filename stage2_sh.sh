@@ -497,11 +497,11 @@ if [[ "${step}" == "11" || "${step}" == "bias" || "${step}" == "all" ]]; then
         stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         datacard_dir="${save_path}/stage3/${year_i}/${stage3_output_label}/datacards"
-        bias_output_dir="${save_path}/stage3/${year_i}/${stage3_output_label}/bias_test"
+        bias_output_dir="${SCRIPT_DIR}/${save_path}/stage3/${year_i}/${stage3_output_label}/bias_test"
         bias_job_dir="${bias_output_dir}/FuncCandidateVsCorePdfBias"
-        core_workspace_dir="${datacard_dir}/my_workspace"
+        core_workspace_dir="${SCRIPT_DIR}/${datacard_dir}/my_workspace"
         fitfunc_workspace_dir="${bias_output_dir}/workspaces"
-        combined_datacard="${datacard_dir}/datacard_comb_sig_all_ggh.txt"
+        combined_datacard="${SCRIPT_DIR}/${datacard_dir}/datacard_comb_sig_all_ggh.txt"
 
         mkdir -p "${save_path}"
 
@@ -554,7 +554,7 @@ if [[ "${step}" == "12" || "${step}" == "bias_collect" ]]; then
         stage3_label="${label}_X_${model_name}_${label_tag}"
         stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
         save_path="output/bdt_${model_name}_${model_trainYear}"
-        bias_job_dir="${save_path}/stage3/${year_i}/${stage3_output_label}/bias_test/FuncCandidateVsCorePdfBias"
+        bias_job_dir="${SCRIPT_DIR}/${save_path}/stage3/${year_i}/${stage3_output_label}/bias_test/FuncCandidateVsCorePdfBias"
 
         if [[ ! -d "${bias_job_dir}" ]]; then
             echo "Missing bias job directory: ${bias_job_dir}"

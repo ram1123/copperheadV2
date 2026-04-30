@@ -2,6 +2,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="${1:-${SCRIPT_DIR}}"
+WORK_DIR="$(cd "${WORK_DIR}" && pwd)"
 
 # Note on the out index:
 # out_index="0" # sumExp
