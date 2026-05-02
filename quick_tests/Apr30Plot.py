@@ -4,13 +4,143 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mplhep as hep
 import dask
+import pandas as pd
 
 import os
 import sys
-
-from modules.selection import filterRegion
-
 from pathlib import Path
+
+# from modules.selection import filterRegion
+def filterRegion(events, region="h-peak"):
+    if isinstance(events, pd.DataFrame):
+        fields = events.columns
+    else: # awkward zip
+        fields = events.fields  
+    if "dimuon_mass" not in fields:
+        raise ValueError("dimuon_mass not found in events fields for region selection.")
+    dimuon_mass = events["dimuon_mass"]
+    z_peak = (dimuon_mass >= 70.0) & (dimuon_mass < 110.0)
+    h_peak = (dimuon_mass >= 115.0) & (dimuon_mass < 135.0)
+    h_sidebands = ((dimuon_mass >= 110.0) & (dimuon_mass < 115.0)) | (
+        (dimuon_mass >= 135.0) & (dimuon_mass < 150.0)
+    )
+    if region == "z-peak":
+        mask = z_peak
+    elif region == "h-peak":
+        mask = h_peak
+    elif region == "h-sidebands":
+        mask = h_sidebands
+    elif region == "signal":
+        mask = h_sidebands | h_peak
+    elif region == "full":
+        mask = z_peak | h_sidebands | h_peak
+    else:
+        raise ValueError(
+            f"Invalid region selection: {region}. Valid options are: 'z-peak', 'h-peak', 'h-sidebands', 'signal', 'full'."
+        )
+
+    return mask, events[mask]
+
+
+# Define the calibration categories ---
+def get_calib_categories(events):
+    """
+    Returns a dictionary of 30 boolean masks based on muon1_eta, muon2_eta and mu1_pt.
+    Eta bins:
+      B: |eta| <= 0.9
+      O: 0.9 < |eta| <= 1.8
+      E: 1.8 < |eta| <= 2.4
+    pT bins for mu1_pt:
+      Bin1: (30, 45]
+      Bin2: (45, 52]
+      Bin3: (52, 62]
+      Bin4: (62, 200]
+
+    For the lowest pT bin, the eta combinations are merged into three groups.
+    For the other bins, each of the nine eta combinations is kept separately.
+    Referece: HIG-19-006, AN-19-124
+    """
+    BB = ((np.abs(events["mu1_eta"])<=0.9) & (np.abs(events["mu2_eta"])<=0.9))
+    BO = ((np.abs(events["mu1_eta"])<=0.9) & ((np.abs(events["mu2_eta"])>0.9) & (np.abs(events["mu2_eta"]) <=1.8)))
+    BE = ((np.abs(events["mu1_eta"])<=0.9) & ((np.abs(events["mu2_eta"])>1.8) & (np.abs(events["mu2_eta"]) <=2.4)))
+    OB = (((np.abs(events["mu1_eta"])>0.9) & (np.abs(events["mu1_eta"])<=1.8)) & (np.abs(events["mu2_eta"])<=0.9))
+    OO = (((np.abs(events["mu1_eta"])>0.9) & (np.abs(events["mu1_eta"])<=1.8)) & ((np.abs(events["mu2_eta"])>0.9) & (np.abs(events["mu2_eta"])<=1.8)))
+    OE = (((np.abs(events["mu1_eta"])>0.9) & (np.abs(events["mu1_eta"])<=1.8)) & ((np.abs(events["mu2_eta"])>1.8) & (np.abs(events["mu2_eta"])<=2.4)))
+    EB = (((np.abs(events["mu1_eta"])>1.8) & (np.abs(events["mu1_eta"])<=2.4)) & (np.abs(events["mu2_eta"])<=0.9))
+    EO = (((np.abs(events["mu1_eta"])>1.8) & (np.abs(events["mu1_eta"])<=2.4)) & ((np.abs(events["mu2_eta"])>0.9) & (np.abs(events["mu2_eta"])<=1.8)))
+    EE = (((np.abs(events["mu1_eta"])>1.8) & (np.abs(events["mu1_eta"])<=2.4)) & ((np.abs(events["mu2_eta"])>1.8) & (np.abs(events["mu2_eta"])<=2.4)))
+
+    # pT bins for mu1_pt
+    mask_30_45 = (events["mu1_pt"] > 30) & (events["mu1_pt"] <= 45)
+    mask_45_52 = (events["mu1_pt"] > 45) & (events["mu1_pt"] <= 52)
+    mask_52_62 = (events["mu1_pt"] > 52) & (events["mu1_pt"] <= 62)
+    mask_62_200 = (events["mu1_pt"] > 62) & (events["mu1_pt"] <= 200)
+
+    # For pT bin 30-45, group the eta combinations into three categories.
+    # cat_30_45_1 = mask_30_45 & (BB | OB | EB)
+    # cat_30_45_2 = mask_30_45 & (BO | OO | EO)
+    # cat_30_45_3 = mask_30_45 & (BE | OE | EE)
+    cats_30_45 = {
+        "30-45_BB": mask_30_45 & BB,
+        "30-45_BO": mask_30_45 & BO,
+        "30-45_BE": mask_30_45 & BE,
+        "30-45_OB": mask_30_45 & OB,
+        "30-45_OO": mask_30_45 & OO,
+        "30-45_OE": mask_30_45 & OE,
+        "30-45_EB": mask_30_45 & EB,
+        "30-45_EO": mask_30_45 & EO,
+        "30-45_EE": mask_30_45 & EE,
+    }
+
+    # For the remaining bins, each eta combination is its own category.
+    cats_45_52 = {
+        "45-52_BB": mask_45_52 & BB,
+        "45-52_BO": mask_45_52 & BO,
+        "45-52_BE": mask_45_52 & BE,
+        "45-52_OB": mask_45_52 & OB,
+        "45-52_OO": mask_45_52 & OO,
+        "45-52_OE": mask_45_52 & OE,
+        "45-52_EB": mask_45_52 & EB,
+        "45-52_EO": mask_45_52 & EO,
+        "45-52_EE": mask_45_52 & EE,
+    }
+
+    cats_52_62 = {
+        "52-62_BB": mask_52_62 & BB,
+        "52-62_BO": mask_52_62 & BO,
+        "52-62_BE": mask_52_62 & BE,
+        "52-62_OB": mask_52_62 & OB,
+        "52-62_OO": mask_52_62 & OO,
+        "52-62_OE": mask_52_62 & OE,
+        "52-62_EB": mask_52_62 & EB,
+        "52-62_EO": mask_52_62 & EO,
+        "52-62_EE": mask_52_62 & EE,
+    }
+
+    cats_62_200 = {
+        "62-200_BB": mask_62_200 & BB,
+        "62-200_BO": mask_62_200 & BO,
+        "62-200_BE": mask_62_200 & BE,
+        "62-200_OB": mask_62_200 & OB,
+        "62-200_OO": mask_62_200 & OO,
+        "62-200_OE": mask_62_200 & OE,
+        "62-200_EB": mask_62_200 & EB,
+        "62-200_EO": mask_62_200 & EO,
+        "62-200_EE": mask_62_200 & EE,
+    }
+
+    # categories = {
+    #     "30-45_BB_OB_EB": cat_30_45_1,
+    #     "30-45_BO_OO_EO": cat_30_45_2,
+    #     "30-45_BE_OE_EE": cat_30_45_3
+    # }
+    categories = cats_30_45
+    # categories.update(cats_30_45)
+    categories.update(cats_45_52)
+    categories.update(cats_52_62)
+    categories.update(cats_62_200)
+
+    return categories
 
 def get_matching_directories(pattern):
     """Returns a unique, sorted list of directories matching the parquet pattern."""
@@ -132,8 +262,9 @@ def plot_variable_from_parquets(
     else:
         plt.ylabel("Weighted events")
 
-    if title is not None:
-        plt.title(title)
+    # NOTE: no titles in plots for now
+    # if title is not None:
+        # plt.title(title)
 
     plt.legend(fontsize=10)
     plt.tight_layout()
@@ -200,6 +331,144 @@ def make_paths_for_sample(base_parquet_paths, sample):
     }
 
 
+def get_bin_edges_for_sample(bin_edges, sample):
+    """Return the bin edges for a given physics sample.
+
+    bin_edges can be either a single array-like object, or a dictionary
+    keyed by sample names like "data", "DY", "VBF", and "ggH".
+    """
+
+    if isinstance(bin_edges, dict):
+        if sample not in bin_edges:
+            raise KeyError(
+                f"Missing bin_edges entry for sample '{sample}'. "
+                f"Available keys: {list(bin_edges.keys())}"
+            )
+        return bin_edges[sample]
+
+    return bin_edges
+
+
+def get_calib_category_names():
+    """Return the calibration category names produced by get_calib_categories()."""
+
+    pt_bins = ["30-45", "45-52", "52-62", "62-200"]
+    eta_bins = ["BB", "BO", "BE", "OB", "OO", "OE", "EB", "EO", "EE"]
+
+    return [f"{pt_bin}_{eta_bin}" for pt_bin in pt_bins for eta_bin in eta_bins]
+
+
+def plot_variable_from_parquets_calib_category(
+    variable,
+    bin_edges,
+    parquet_paths,
+    calib_category,
+    weight_variable="wgt_nominal",
+    normalize=False,
+    region="h-peak",
+    xlabel=None,
+    ylabel=None,
+    title=None,
+    output_name=None,
+):
+    """
+    Plot a weighted histogram after applying one pt-eta calibration category.
+
+    This intentionally mirrors plot_variable_from_parquets(), but adds one
+    extra selection step using get_calib_categories(events). The original
+    plot_variable_from_parquets() function is left unchanged.
+    """
+
+    bin_edges = np.asarray(bin_edges)
+    hists = {}
+
+    for label, parquet_path in parquet_paths.items():
+        print(f"Processing {label}, category {calib_category}: {parquet_path}")
+        print(f"Reading directories for {label} from: {get_matching_directories(parquet_path)}")
+
+        events = dak.from_parquet(parquet_path)
+        _, events = filterRegion(events, region=region)
+
+        calib_categories = get_calib_categories(events)
+        if calib_category not in calib_categories:
+            raise KeyError(
+                f"Unknown calib_category '{calib_category}'. "
+                f"Available categories: {list(calib_categories.keys())}"
+            )
+
+        events = events[calib_categories[calib_category]]
+
+        values = events[variable]
+        weights = events[weight_variable]
+
+        values_np, weights_np = dask.compute(values, weights)
+
+        values_np = ak.to_numpy(values_np)
+        weights_np = ak.to_numpy(weights_np)
+
+        mask = np.isfinite(values_np) & np.isfinite(weights_np)
+        values_np = values_np[mask]
+        weights_np = weights_np[mask]
+
+        if normalize:
+            weight_sum = np.sum(weights_np)
+            if weight_sum > 0:
+                weights_np = weights_np / weight_sum
+
+        hist_values, _ = np.histogram(
+            values_np,
+            bins=bin_edges,
+            weights=weights_np,
+        )
+        hist_values_w2, _ = np.histogram(
+            values_np,
+            bins=bin_edges,
+            weights=weights_np * weights_np,
+        )
+
+        hists[label] = [hist_values, hist_values_w2]
+
+    hep.style.use("CMS")
+
+    plt.figure(figsize=(8, 6))
+
+    for label, hist_values_l in hists.items():
+        hist_values, hist_values_w2 = hist_values_l
+        hep.histplot(
+            hist_values,
+            bins=bin_edges,
+            label=label,
+            histtype="step",
+            yerr=np.sqrt(hist_values_w2),
+            linewidth=2,
+        )
+
+    plt.xlabel(xlabel if xlabel is not None else variable)
+
+    if ylabel is not None:
+        plt.ylabel(ylabel)
+    elif normalize:
+        plt.ylabel("Normalized events")
+    else:
+        plt.ylabel("Weighted events")
+
+    if title is not None:
+        plt.title(title)
+
+    plt.legend(fontsize=10)
+    plt.tight_layout()
+
+    if output_name is not None:
+        directory = os.path.dirname(output_name)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        plt.savefig(output_name, dpi=200)
+
+    plt.show()
+
+    return hists, bin_edges
+
+
 def run_plots_for_block(
     desc,
     base_parquet_paths,
@@ -207,30 +476,18 @@ def run_plots_for_block(
     bin_edges,
     region,
     normalize=True,
+    output_subdir=None,
 ):
     """
-    For a given comparison block, make separate plots for:
-        data, DY, VBF, ggH
+    For a given comparison block, make separate plots for each sample.
 
-    Output format:
+    Default output format:
         {region}/{desc}/{sample}/{var}_normalized.pdf
 
-    Notes
-    -----
+    If output_subdir is provided:
+        {region}/{desc}/{sample}/{output_subdir}/{var}_normalized.pdf
+
     plot_variable_from_parquets() is intentionally unchanged.
-
-    The bin_edges argument can be either:
-        1. A single array-like object used for every sample.
-        2. A dictionary with sample-specific bin edges, e.g.
-           {
-               "data": np.linspace(-4.7, 4.7, 101),
-               "DY":   np.linspace(-4.7, 4.7, 101),
-               "VBF":  np.linspace(-4.7, 4.7, 61),
-               "ggH":  np.linspace(-4.7, 4.7, 61),
-           }
-
-    In np.linspace(start, stop, num=N), N is the number of bin edges,
-    so the number of bins is N - 1.
     """
 
     for sample in sample_pattern_dict:
@@ -239,23 +496,15 @@ def run_plots_for_block(
             sample=sample,
         )
 
-        # Pick the binning for this sample. This keeps
-        # plot_variable_from_parquets() unchanged, because each call still
-        # receives a single bin_edges array.
-        if isinstance(bin_edges, dict):
-            if sample not in bin_edges:
-                raise KeyError(
-                    f"Missing bin_edges entry for sample '{sample}'. "
-                    f"Available keys: {list(bin_edges.keys())}"
-                )
-            sample_bin_edges = bin_edges[sample]
-        else:
-            sample_bin_edges = bin_edges
+        sample_bin_edges = get_bin_edges_for_sample(bin_edges, sample)
 
         for var in variables:
             var_title = var_title_dict[var]
 
-            output_name = f"{region}/{desc}/{sample}/{var}_normalized.pdf"
+            if output_subdir is None:
+                output_name = f"{region}/{desc}/{sample}/{var}_normalized.pdf"
+            else:
+                output_name = f"{region}/{desc}/{sample}/{output_subdir}/{var}_normalized.pdf"
 
             hists, bins = plot_variable_from_parquets(
                 variable=var,
@@ -264,7 +513,50 @@ def run_plots_for_block(
                 normalize=normalize,
                 region=region,
                 xlabel=var_title,
-                # title=f"{var_title} distribution",
+                output_name=output_name,
+            )
+
+
+def run_dimuon_mass_calib_category_plots_for_block(
+    desc,
+    base_parquet_paths,
+    bin_edges,
+    region,
+    normalize=True,
+    categories=None,
+):
+    """
+    Make dimuon_mass plots split by pt-eta calibration category.
+
+    Output format:
+        {region}/{desc}/{sample}/{pt_eta_cat}/dimuon_mass_normalized.pdf
+    """
+
+    variable = "dimuon_mass"
+    var_title = var_title_dict[variable]
+
+    if categories is None:
+        categories = get_calib_category_names()
+
+    for sample in sample_pattern_dict:
+        parquet_paths = make_paths_for_sample(
+            base_parquet_paths=base_parquet_paths,
+            sample=sample,
+        )
+        sample_bin_edges = get_bin_edges_for_sample(bin_edges, sample)
+
+        for calib_category in categories:
+            output_name = f"{region}/{desc}/{sample}/{calib_category}/{variable}_normalized.pdf"
+
+            hists, bins = plot_variable_from_parquets_calib_category(
+                variable=variable,
+                bin_edges=sample_bin_edges,
+                parquet_paths=parquet_paths,
+                calib_category=calib_category,
+                normalize=normalize,
+                region=region,
+                xlabel=var_title,
+                title=f"{var_title}: {calib_category}",
                 output_name=output_name,
             )
 
@@ -384,15 +676,15 @@ if __name__ == "__main__":
     }
 
 
-    for desc, base_parquet_paths in plot_blocks.items():
-        run_plots_for_block(
-            desc=desc,
-            base_parquet_paths=base_parquet_paths,
-            variables=variables,
-            bin_edges=eta_bin_edges_by_sample,
-            region=region,
-            normalize=True,
-        )
+    # for desc, base_parquet_paths in plot_blocks.items():
+    #     run_plots_for_block(
+    #         desc=desc,
+    #         base_parquet_paths=base_parquet_paths,
+    #         variables=variables,
+    #         bin_edges=eta_bin_edges_by_sample,
+    #         region=region,
+    #         normalize=True,
+    #     )
 
     # ------------------------------------------------------------
     # Repeat for dimuon mass plot
@@ -426,10 +718,23 @@ if __name__ == "__main__":
 
 
     for desc, base_parquet_paths in plot_blocks.items():
-        run_plots_for_block(
+        # Inclusive dimuon_mass plot:
+        #   {region}/{desc}/{sample}/inclusive/dimuon_mass_normalized.pdf
+        # run_plots_for_block(
+        #     desc=desc,
+        #     base_parquet_paths=base_parquet_paths,
+        #     variables=variables,
+        #     bin_edges=mass_bin_edges_by_sample,
+        #     region=region,
+        #     normalize=True,
+        #     output_subdir="inclusive",
+        # )
+
+        # pt-eta calibration category dimuon_mass plots:
+        #   {region}/{desc}/{sample}/{pt_eta_cat}/dimuon_mass_normalized.pdf
+        run_dimuon_mass_calib_category_plots_for_block(
             desc=desc,
             base_parquet_paths=base_parquet_paths,
-            variables=variables,
             bin_edges=mass_bin_edges_by_sample,
             region=region,
             normalize=True,
