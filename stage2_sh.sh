@@ -13,7 +13,9 @@ echo "$(date)"
 # label="Run3_nanoAODv12_FilterJetsHorn25GeV_HE30GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
 # label="Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
 label="Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
-base_path="/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean"
+# base_path="/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean"
+base_path="/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean"
+
 stage2_load_path="${base_path}/${label}/stage1_output"
 
 category="ggh"
