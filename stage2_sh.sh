@@ -79,6 +79,11 @@ trainer_script="MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py"
 stage3_variants_script="run_stage3_core_pdf_variants.sh"
 run_stage3_core_pdf_variants="0"
 stage3_baseline_variant_tag="all_core_pdfs"
+bias_run_mode="${BIAS_RUN_MODE:-local}"
+bias_local_jobs="${BIAS_LOCAL_JOBS:-32}"
+bias_fitdiag_parallel="${BIAS_FITDIAG_PARALLEL:-32}"
+bias_expect_signal="${BIAS_EXPECT_SIGNAL:-1}"
+bias_max_chi2ndf="${BIAS_MAX_CHI2NDF:-2.0}"
 
 
 # -----------------------------------------------------
@@ -106,6 +111,11 @@ print_config() {
     echo "model_trainYear  : ${model_trainYear}"
     echo "Search HP        : ${do_hyperparam_search}"
     echo "Number of trials : ${n_trials}"
+    echo "bias_run_mode    : ${bias_run_mode}"
+    echo "bias_local_jobs  : ${bias_local_jobs}"
+    echo "bias_fitdiag_par : ${bias_fitdiag_parallel}"
+    echo "bias_expect_sig  : ${bias_expect_signal}"
+    echo "bias_max_chi2ndf : ${bias_max_chi2ndf}"
     echo "stage2_label     : ${stage2_label}"
     echo "base_path        : ${base_path}"
     echo "stage2_load_path : ${stage2_load_path}"
@@ -523,7 +533,8 @@ if [[ "${step}" == "11" || "${step}" == "bias" || "${step}" == "all" ]]; then
             -cat ${category} \
             --year ${year_i} \
             --label ${stage3_output_label} \
-            -save ${save_path}
+            -save ${save_path} \
+            --max-chi2ndf ${bias_max_chi2ndf}
 
         if [[ ! -d "${fitfunc_workspace_dir}" ]]; then
             echo "Missing bias-test workspace directory: ${fitfunc_workspace_dir}"
@@ -535,10 +546,24 @@ if [[ "${step}" == "11" || "${step}" == "bias" || "${step}" == "all" ]]; then
 
         cp -f "${core_workspace_dir}/"*.root "${bias_job_dir}/corePdf_workspace/"
         cp -f "${fitfunc_workspace_dir}/"*.root "${bias_job_dir}/funcCandidate_workspace/"
-        sed 's#my_workspace/#corePdf_workspace/#g' "${combined_datacard}" > "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt"
-        sed 's#my_workspace/#funcCandidate_workspace/#g' "${combined_datacard}" > "${bias_job_dir}/datacard_comb_sig_all_ggh_fitFuncCand.txt"
+        combineCards.py \
+            "${datacard_dir}/datacard_cat0_ggh.txt" \
+            "${datacard_dir}/datacard_cat1_ggh.txt" \
+            "${datacard_dir}/datacard_cat2_ggh.txt" \
+            "${datacard_dir}/datacard_cat3_ggh.txt" \
+            "${datacard_dir}/datacard_cat4_ggh.txt" \
+            > "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt"
+        sed 's#my_workspace/#funcCandidate_workspace/#g' "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt" > "${bias_job_dir}/datacard_comb_sig_all_ggh_fitFuncCand.txt"
+        sed -i.bak 's#my_workspace/#corePdf_workspace/#g' "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt"
+        rm -f "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt.bak"
+        if [[ -f "${bias_output_dir}/selected_truth_function_indices.txt" ]]; then
+            cp -f "${bias_output_dir}/selected_truth_function_indices.txt" "${bias_job_dir}/"
+        fi
+        printf '%s\n' "${bias_expect_signal}" > "${bias_job_dir}/bias_truth_r.txt"
 
-        sh "${bias_template_dir}/slurm_wrapper.sh" "${bias_job_dir}"
+        BIAS_FITDIAG_PARALLEL="${bias_fitdiag_parallel}" \
+        BIAS_EXPECT_SIGNAL="${bias_expect_signal}" \
+        sh "${bias_template_dir}/slurm_wrapper.sh" "${bias_job_dir}" "${bias_run_mode}" "${bias_local_jobs}"
 
         echo "Bias jobs submitted from: ${bias_job_dir}"
         echo "After the Slurm jobs finish, run:"
