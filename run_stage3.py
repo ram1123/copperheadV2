@@ -84,6 +84,29 @@ def build_core_pdf_arglist(core_pdf_entries: List[Tuple[str, ROOT.RooAbsPdf]], e
 def workspace_root_path(dir_path: str, kind: str, cat_idx: int, category: str, variant_tag: str) -> str:
     return f"{dir_path}/workspace_{kind}_cat{cat_idx}_{category}_{variant_tag}.root"
 
+def load_compute_parquet(
+    load_path,
+    fields2compute = ["wgt_nominal", "dimuon_mass", "subCategory_idx"]
+    ):
+    """
+    helper function that takes an a load path to read parquet and returns a computed ak zip
+
+    """
+    pattern = load_path
+    load_path = glob.glob(pattern)  # loading from explicit list of parquet files is more stable
+    if not load_path:
+        raise ValueError(
+            f"No parquet files found matching pattern: {pattern!r}. "
+            "Please check the input path or filename pattern."
+        )
+    events = dak.from_parquet(load_path)
+    for field in fields2compute:
+        if field not in events.fields:
+            raise ValueError(f"Error: field {field} not available to compute!")
+    processed_zip = ak.zip({
+        field :  events[field] for field in fields2compute
+    }).compute()
+    return processed_zip
 
 def normalizeFlatHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
     """
@@ -172,7 +195,7 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, rooH
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
         canvas.Close()
-        del canvas        
+        del canvas
 
 def plotBkgBySubCat_normalized(mass:rt.RooRealVar, model_dict_by_subCat: Dict, save_path: str):
     """
@@ -259,7 +282,7 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.png")
         canvas.Close()
-        del canvas    
+        del canvas
 
 
 def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list: List, save_path: str):
@@ -305,7 +328,7 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{model_type}.pdf")
         canvas.Close()
-        del canvas  
+        del canvas
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -491,12 +514,12 @@ if __name__ == "__main__":
 
     name = "subCat0_SMF"
     subCat0_SMF = rt.RooChebychev(
-        name, 
-        name, 
-        mass, 
+        name,
+        name,
+        mass,
         [
-            a0_subCat0, 
-            a1_subCat0, 
+            a0_subCat0,
+            a1_subCat0,
             a3_subCat0
         ],
     )
@@ -1452,7 +1475,7 @@ if __name__ == "__main__":
     print("----------------------------------")
     print(f"pdf_list_subCat0: {pdf_list_subCat0}")
     pdf_list_subCat0.Print("v")
-    print("----------------------------------")    
+    print("----------------------------------")
     corePdf_subCat0 = rt.RooMultiPdf("CorePdf_subCat0","CorePdf_subCat0",cat_subCat0,pdf_list_subCat0)
     # penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     penalty = 0.5
@@ -1494,7 +1517,7 @@ if __name__ == "__main__":
     print("----------------------------------")
     print(f"pdf_list_subCat1: {pdf_list_subCat1}")
     pdf_list_subCat1.Print("v")
-    print("----------------------------------")        
+    print("----------------------------------")
     corePdf_subCat1 = rt.RooMultiPdf("CorePdf_subCat1","CorePdf_subCat1",cat_subCat1,pdf_list_subCat1)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat1.setCorrectionFactor(penalty)
@@ -1534,7 +1557,7 @@ if __name__ == "__main__":
     print("----------------------------------")
     print(f"pdf_list_subCat2: {pdf_list_subCat2}")
     pdf_list_subCat2.Print("v")
-    print("----------------------------------")        
+    print("----------------------------------")
     corePdf_subCat2 = rt.RooMultiPdf("CorePdf_subCat2","CorePdf_subCat2",cat_subCat2,pdf_list_subCat2)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat2.setCorrectionFactor(penalty)
@@ -1573,7 +1596,7 @@ if __name__ == "__main__":
     print("----------------------------------")
     print(f"pdf_list_subCat3: {pdf_list_subCat3}")
     pdf_list_subCat3.Print("v")
-    print("----------------------------------")        
+    print("----------------------------------")
     corePdf_subCat3 = rt.RooMultiPdf("CorePdf_subCat3","CorePdf_subCat3",cat_subCat3,pdf_list_subCat3)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat3.setCorrectionFactor(penalty)
@@ -1612,7 +1635,7 @@ if __name__ == "__main__":
     print("----------------------------------")
     print(f"pdf_list_subCat4: {pdf_list_subCat4}")
     pdf_list_subCat4.Print("v")
-    print("----------------------------------")        
+    print("----------------------------------")
     corePdf_subCat4 = rt.RooMultiPdf("CorePdf_subCat4","CorePdf_subCat4",cat_subCat4,pdf_list_subCat4)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat4.setCorrectionFactor(penalty)
