@@ -9,6 +9,9 @@ Options:
   -h            Show this help message
   -c <file>     Dataset YAML file (default: configs/datasets/dataset_nanoAODv12.yaml)
   -m <mode>     Mode: 0 (prestage), 1 (stage1), 2 (stage2), 3 (stage3), all,
+                4 (copy datacards), 5|combine_vbf (build VBF combined cards/workspaces),
+                6|combine_vbf_significance, 7|combine_vbf_impacts,
+                8|combine_vbf_lhscan, 9|combine_vbf_all,
                 zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12, zpt_val, calib,
                 compact, dnn|dnn_pre|dnn_train|dnn_var_rank (default: all)
   -v <version>  NanoAOD version (default: 12)
@@ -31,7 +34,7 @@ EOF
 # ---------- Default values ----------
 datasetYAML="configs/datasets/dataset_nanoAODv12.yaml"
 NanoAODv="12"
-declare -a years=("2018PR" "2018" "2017" "2016postVFP" "2016preVFP" "2016" "run2" "run3")
+declare -a years=("2018PR" "2018" "2017" "2016postVFP" "2016preVFP" "2016" "2022preEE" "2022postEE" "2023" "2023BPix" "2024" "2025" "2026" "Run2" "Run3" "Run2Run3")
 label="Default_nanoAODv9"
 debug="0"
 mode="all"
@@ -79,7 +82,7 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksfS:z" option; do
         s) skipBadFiles="1" ;;
         f) frac="1" ;;
         S) save_path="$OPTARG" ;;
-        z) isSync="1" ;;        
+        z) isSync="1" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
@@ -122,6 +125,193 @@ exec 3>>"$log_file"  # FD 3 for logging
 
 log() { echo "$@" | tee -a "$log_file"; }
 
+combine_vbf_cards() {
+    local card_dir="$1"
+    local out_txt="$2"
+    shift
+    shift
+    (
+        cd "${card_dir}" || exit 1
+        combineCards.py "$@" > "${out_txt}"
+    )
+}
+
+vbf_card_dir() {
+    echo "$save_path/stage3_datacards_${save_postfix}/score_${label}"
+}
+
+vbf_card_stem() {
+    local year="$1"
+    case "$year" in
+        run2) echo "HMuMu_13TeV_Run2" ;;
+        run3) echo "HMuMu_13TeV_Run3" ;;
+        run2run3|run2+run3) echo "HMuMu_13TeV_Run2Run3" ;;
+        *) echo "HMuMu_13TeV_${year}" ;;
+    esac
+}
+
+ensure_vbf_card() {
+    local year="$1"
+    year="${year//$'\r'/}"
+    year="${year#"${year%%[![:space:]]*}"}"
+    year="${year%"${year##*[![:space:]]}"}"
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local stem
+    stem="$(vbf_card_stem "$year")"
+    local card_path="${card_dir}/${stem}.txt"
+
+    log "ensure_vbf_card: requested year='${year}' card='${card_path}'"
+
+    if [[ -s "${card_path}" ]]; then
+        log "ensure_vbf_card: reusing existing non-empty card ${card_path}"
+        return 0
+    fi
+
+    rm -f "${card_path}"
+
+    case "$year" in
+        2016preVFP|2016postVFP|2017|2018|2022preEE|2022postEE|2023|2023BPix|2024|2025|2026)
+            local sr="datacard_vbf_SR_${year}.txt"
+            local sb="datacard_vbf_SB_${year}.txt"
+            log "ensure_vbf_card: matched single-year SR/SB case for ${year}"
+            if [[ ! -f "${card_dir}/${sr}" || ! -f "${card_dir}/${sb}" ]]; then
+                log "Missing SR/SB VBF datacards for ${year}:"
+                log "  ${card_dir}/${sr}"
+                log "  ${card_dir}/${sb}"
+                return 1
+            fi
+            log "Building ${stem}.txt"
+            combine_vbf_cards "${card_dir}" "${stem}.txt" "SR_${year}=${sr}" "SB_${year}=${sb}"
+            ;;
+        2016)
+            log "ensure_vbf_card: matched combined 2016 case"
+            ensure_vbf_card "2016preVFP" || return 1
+            ensure_vbf_card "2016postVFP" || return 1
+            log "Building ${stem}.txt"
+            combine_vbf_cards "${card_dir}" "${stem}.txt" \
+                "preVFP=HMuMu_13TeV_2016preVFP.txt" \
+                "postVFP=HMuMu_13TeV_2016postVFP.txt"
+            ;;
+        Run2|run2)
+            log "ensure_vbf_card: matched Run2 case"
+            ensure_vbf_card "2016" || return 1
+            ensure_vbf_card "2017" || return 1
+            ensure_vbf_card "2018" || return 1
+            log "Building ${stem}.txt"
+            combine_vbf_cards "${card_dir}" "${stem}.txt" \
+                "y2016=HMuMu_13TeV_2016.txt" \
+                "y2017=HMuMu_13TeV_2017.txt" \
+                "y2018=HMuMu_13TeV_2018.txt"
+            ;;
+        Run3|run3)
+            log "ensure_vbf_card: matched Run3 case"
+            ensure_vbf_card "2022preEE" || return 1
+            ensure_vbf_card "2022postEE" || return 1
+            ensure_vbf_card "2023" || return 1
+            ensure_vbf_card "2023BPix" || return 1
+            ensure_vbf_card "2024" || return 1
+            # ensure_vbf_card "2025" || return 1
+            # ensure_vbf_card "2026" || return 1
+            log "Building ${stem}.txt"
+            combine_vbf_cards "${card_dir}" "${stem}.txt" \
+                "y2022preEE=HMuMu_13TeV_2022preEE.txt" \
+                "y2022postEE=HMuMu_13TeV_2022postEE.txt" \
+                "y2023=HMuMu_13TeV_2023.txt" \
+                "y2023BPix=HMuMu_13TeV_2023BPix.txt" \
+                "y2024=HMuMu_13TeV_2024.txt" 
+                # "y2025=HMuMu_13TeV_2025.txt" \
+                # "y2026=HMuMu_13TeV_2026.txt"
+            ;;
+        Run2Run3|run2run3|Run2+Run3|run2+run3)
+            log "ensure_vbf_card: matched Run2Run3 case"
+            ensure_vbf_card "Run2" || return 1
+            ensure_vbf_card "Run3" || return 1
+            log "Building ${stem}.txt"
+            combine_vbf_cards "${card_dir}" "${stem}.txt" \
+                "Run2=HMuMu_13TeV_Run2.txt" \
+                "Run3=HMuMu_13TeV_Run3.txt"
+            ;;
+        *)
+            log "Unsupported VBF combine year: ${year}"
+            return 1
+            ;;
+    esac
+
+    if [[ ! -s "${card_path}" ]]; then
+        log "Failed to build non-empty VBF combined card: ${card_path}"
+        return 1
+    fi
+}
+
+ensure_vbf_workspace() {
+    local year="$1"
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local stem
+    stem="$(vbf_card_stem "$year")"
+    ensure_vbf_card "$year" || return 1
+    (
+        cd "${card_dir}"
+        if [[ ! -f "${stem}.root" ]]; then
+            text2workspace.py "${stem}.txt" -m 125
+        fi
+    )
+}
+
+run_vbf_significance() {
+    local year="$1"
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local stem
+    stem="$(vbf_card_stem "$year")"
+    ensure_vbf_card "$year" || return 1
+    (
+        cd "${card_dir}"
+        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 > "${stem}_prefitsignificance.log"
+        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 --freezeParameters allConstrainedNuisances > "${stem}_prefitsignificance_StatOnly.log"
+    )
+}
+
+run_vbf_impacts() {
+    local year="$1"
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local stem
+    stem="$(vbf_card_stem "$year")"
+    ensure_vbf_card "$year" || return 1
+    ensure_vbf_workspace "$year" || return 1
+    (
+        cd "${card_dir}"
+        combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}" --setParameterRanges r=-5.0,5.0 --doInitialFit --robustFit 1 -t -1 --expectSignal 1
+        combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}" --setParameterRanges r=-5.0,5.0 --doFits --robustFit 1 -t -1 --expectSignal 1 --parallel 60
+        combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}" --setParameterRanges r=-5.0,5.0 -o "impacts_${year}_${save_postfix}.json" -t -1 --expectSignal 1 --parallel 60
+        plotImpacts.py -i "impacts_${year}_${save_postfix}.json" -o "impacts_${year}_${save_postfix}"
+    )
+}
+
+run_vbf_lhscan() {
+    local year="$1"
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local stem
+    stem="$(vbf_card_stem "$year")"
+    ensure_vbf_card "$year" || return 1
+    ensure_vbf_workspace "$year" || return 1
+    (
+        cd "${card_dir}"
+        log "Producing likelihood scan for ${year} in ${card_dir}, output name suffix ${save_postfix}"
+        log "Datacard: ${card_dir}/${stem}.txt"
+        combine -M MultiDimFit "${stem}.root" -m 125 --freezeParameters MH -n ".lhscan${year}_${save_postfix}.with_syst" --algo grid --points 100 --setParameterRanges r=-5.0,5.0 -t -1 --expectSignal 1
+        combine -M MultiDimFit "${stem}.root" -m 125 --freezeParameters MH,allConstrainedNuisances -n ".lhscan${year}_${save_postfix}.with_syst.statonly" --algo grid --points 100 --setParameterRanges r=-5.0,5.0 -t -1 --expectSignal 1
+        plot1DScan.py "higgsCombine.lhscan${year}_${save_postfix}.with_syst.MultiDimFit.mH125.root" \
+            --main-label "With systematics" \
+            --main-color 1 \
+            --others "higgsCombine.lhscan${year}_${save_postfix}.with_syst.statonly.MultiDimFit.mH125.root:Stat-only:2" \
+            -o "lh_scan_${year}_${save_postfix}"
+    )
+}
+
 trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 log "Program started on $(date)"
 
@@ -145,8 +335,8 @@ declare -A data_l_dict=(
 bkg_l="DY Top VV EWK VVV"
 # bkg_l=""
 
-# sig_l="VBF"
-sig_l="Higgs"
+sig_l="VBF"
+# sig_l="Higgs"
 # sig_l=""
 
 if [[ "$debug" -ge 1 ]]; then
@@ -219,8 +409,11 @@ for year in "${years[@]}"; do
     ### DNN training parameters
     training_fold=4
     model_label="${label}"
-    model_trained_path="./dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
-    training_tag="trained_best_optuna_03trail_v3"
+    # model_trained_path="./dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
+    # training_tag="trained_best_optuna_03trail_v3"
+
+    model_trained_path="./dnn/trained_models/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
+    training_tag="trained_best_optuna_v1_multifold_050Trials"
 
     # ########## Compact command ##########
     # command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path/$training_tag --add_dnn_score  --fix_dimuon_mass --tag $save_postfix  "
@@ -329,12 +522,14 @@ for year in "${years[@]}"; do
         2p)
             log "Running the validation of stage2 (i.e. data/mc plot for dnn score) for year $year..."
             region2p="h-sidebands"
-            command2p1="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}"
+            mva_name_suffix="_May05_2026_NoSyst"
+            load_path="${save_path}/stage2_histograms/score_${label}${mva_name_suffix}"
+            command2p1="python plotter/plot_DNN_score.py --load $load_path -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}${mva_name_suffix}"
             log "Command: $command2p1"
             eval "$command2p1"
 
             region2p="h-peak"
-            command2p2="python plotter/plot_DNN_score.py -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}"
+            command2p2="python plotter/plot_DNN_score.py --load $load_path -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}${mva_name_suffix}"
             log "Command: $command2p2"
             eval "$command2p2"
             ;;
@@ -354,6 +549,31 @@ for year in "${years[@]}"; do
             # -a : preserve permissions, timestamps, symbolic links,
             # -v : verbose output
             # --delete : delete files in the destination that are not in the source
+            ;;
+        5|combine_vbf)
+            log "Building combined VBF card/workspace for year $year..."
+            ensure_vbf_card "$year"
+            ensure_vbf_workspace "$year"
+            ;;
+        6|combine_vbf_significance)
+            log "Running VBF significance for year $year..."
+            run_vbf_significance "$year"
+            ;;
+        7|combine_vbf_impacts)
+            log "Running VBF impacts for year $year..."
+            run_vbf_impacts "$year"
+            ;;
+        8|combine_vbf_lhscan)
+            log "Running VBF likelihood scan for year $year..."
+            run_vbf_lhscan "$year"
+            ;;
+        9|combine_vbf_all)
+            log "Running full VBF Combine chain for year $year..."
+            ensure_vbf_card "$year"
+            ensure_vbf_workspace "$year"
+            run_vbf_significance "$year"
+            run_vbf_impacts "$year"
+            run_vbf_lhscan "$year"
             ;;
         all)
             log "Running pre-stage for year $year..."

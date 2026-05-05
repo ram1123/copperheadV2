@@ -561,7 +561,7 @@ if __name__ == "__main__":
                 process=sample_type,
                 category=category,
                 region_name=region,
-                do_vbf_filter_study=True,
+                do_vbf_filter_study=False,
                 variation=variation,
             )
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
