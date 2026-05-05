@@ -259,6 +259,55 @@ ensure_vbf_workspace() {
     )
 }
 
+extract_significance_value() {
+    local log_path="$1"
+    sed -n 's/.*Significance:[[:space:]]*\([-+0-9.eE][0-9.eE+-]*\).*/\1/p' "${log_path}" | head -n 1
+}
+
+collect_vbf_significance_summary() {
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local summary_csv="${card_dir}/vbf_significance_summary_${save_postfix}.csv"
+    local tmp_rows
+    tmp_rows="$(mktemp "${card_dir}/.vbf_significance_rows_XXXXXX.csv")"
+    : > "${tmp_rows}"
+    # local ordered_years=(
+    #     2016preVFP 2016postVFP 2016 2017 2018 Run2
+    #     2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 Run3 Run2Run3
+    # )
+    local ordered_years=(
+        2022preEE 2022postEE 2023 2023BPix 2024 Run3
+    )
+    local y stem sig_log stat_log sig_val stat_val
+    for y in "${ordered_years[@]}"; do
+        stem="$(vbf_card_stem "$y")"
+        sig_log="${card_dir}/${stem}_prefitsignificance.log"
+        stat_log="${card_dir}/${stem}_prefitsignificance_StatOnly.log"
+        echo "sig_log: ${sig_log}"
+        echo "stat_log: ${stat_log}"
+        if [[ -f "${sig_log}" || -f "${stat_log}" ]]; then
+            sig_val="NA"
+            stat_val="NA"
+            if [[ -f "${sig_log}" ]]; then
+                sig_val="$(extract_significance_value "${sig_log}" 2>/dev/null || echo "NA")"
+            fi
+            if [[ -f "${stat_log}" ]]; then
+                stat_val="$(extract_significance_value "${stat_log}" 2>/dev/null || echo "NA")"
+            fi
+            printf "%s,%s,%s,%s\n" "${y}" "${stem}.txt" "${sig_val}" "${stat_val}" >> "${tmp_rows}"
+        fi
+    done
+
+    {
+        echo "year,card,significance,significance_statonly"
+        cat "${tmp_rows}"
+    } > "${summary_csv}"
+    rm -f "${tmp_rows}"
+
+    log "Collected VBF significance summary from logs:"
+    log "  ${summary_csv}"
+}
+
 run_vbf_significance() {
     local year="$1"
     local card_dir
@@ -335,8 +384,8 @@ declare -A data_l_dict=(
 bkg_l="DY Top VV EWK VVV"
 # bkg_l=""
 
-sig_l="VBF"
-# sig_l="Higgs"
+# sig_l="VBF"
+sig_l="Higgs"
 # sig_l=""
 
 if [[ "$debug" -ge 1 ]]; then
@@ -428,8 +477,9 @@ for year in "${years[@]}"; do
 
     # ########## STAGE-2 command ##########
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix ${save_postfix} --no_variations "
-    # command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l --save_postfix ${save_postfix}  "
+    sig_l_stage2="ggH VBF"
+    command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix} --no_variations "
+    command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}  "
 
     # ########## STAGE-3 command ##########
     command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} --no_variations "
@@ -575,6 +625,10 @@ for year in "${years[@]}"; do
             run_vbf_impacts "$year"
             run_vbf_lhscan "$year"
             ;;
+        10|combine_vbf_summary)
+            log "Collecting VBF significance summary from logs..."
+            collect_vbf_significance_summary
+            ;;            
         all)
             log "Running pre-stage for year $year..."
             log "Command: $command0"
