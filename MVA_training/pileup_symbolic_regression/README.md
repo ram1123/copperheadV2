@@ -74,3 +74,31 @@ These summaries are what the downstream PySR jet filtering uses.
 
 - [plot_real_fake_jets_stack.py](/Users/ramkrishnasharma/Documents/New%20project%203/copperheadV2/MVA_training/pileup_symbolic_regression/plot_real_fake_jets_stack.py): stacked real/fake jet plots
 - [corr_region_real_fake.py](/Users/ramkrishnasharma/Documents/New%20project%203/copperheadV2/MVA_training/pileup_symbolic_regression/corr_region_real_fake.py): 2D region correlation plots
+
+Run the stacked real/fake jet plots with:
+
+```bash
+python MVA_training/pileup_symbolic_regression/plot_real_fake_jets_stack.py \
+  -i "/path/to/part*.parquet" \
+  -o validation/compare_real_fake/example \
+  --apply-cleaning
+```
+
+Useful options:
+- `--region HEpos`, `HEneg`, `HFpos`, `HFneg`, `HE`, `HF`, or `inclusive`
+- `--normalize`
+- `--apply-cleaning`
+
+Run the 2D correlation plots with:
+
+```bash
+python MVA_training/pileup_symbolic_regression/corr_region_real_fake.py \
+  -i "/path/to/part*.parquet" \
+  -o validation/corr_example \
+  --prefix jet1_ \
+  --apply-cleaning
+```
+
+Typical prefixes are:
+- `--prefix jet1_`
+- `--prefix jet2_`
