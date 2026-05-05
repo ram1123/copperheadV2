@@ -64,6 +64,16 @@ coffea_nanoevent = TypeVar('coffea_nanoevent')
 ak_array = TypeVar('ak_array')
 
 
+def getJetType(NanoAODv: int, year: str):
+    if is_run2(year):
+        if NanoAODv<15:
+            jet_type = "AK4PFchs"
+        else: # nanoV15
+            jet_type = "AK4PFPuppi"
+    else: # run3 all jets are PUPPI
+        jet_type = "AK4PFPuppi"
+    return jet_type
+
 def safe_ratio(num, den, default=0.0):
     """Element-wise safe division for awkward arrays."""
     return ak.where(den != 0, num / den, default)
@@ -480,6 +490,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"events.metadata: {events.metadata}")
         NanoAODv = events.metadata['NanoAODv']
         is_mc = events.metadata['is_mc']
+        self.config['NanoAODv'] = NanoAODv
         logger.debug(f"NanoAODv: {NanoAODv}")
 
         t1 = time.perf_counter()
@@ -1174,6 +1185,7 @@ class EventProcessor(processor.ProcessorABC):
         do_jec_unc = self.config["switches"]["do_jec_unc"]
         do_jer_unc = self.config["switches"]["do_jer_unc"]
         jec_unc_sources = []
+        jet_type = getJetType(NanoAODv, year)
         if do_jec:
             logger.info("doing JEC  (+ JER for MC)!")
 
@@ -1195,8 +1207,8 @@ class EventProcessor(processor.ProcessorABC):
                             f"is present in the dataset name."
                         )
                 jerc_load_path = self.config["jec_parameters"]["jerc_load_path"]
-                cset = get_corrset(jerc_load_path)
-                jec_unc_sources = get_jec_sources(cset, jec_tag)
+                cset = get_corrset(jerc_load_path, NanoAODv)
+                jec_unc_sources = get_jec_sources(cset, jec_tag, jet_type=jet_type)
                 variation_l = ["nominal"] + jec_unc_sources
             else:
                 variation_l = ["nominal"]
@@ -1216,7 +1228,7 @@ class EventProcessor(processor.ProcessorABC):
             # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
             if is_mc and (self.config["switches"]["jer_strat"] >=0):
                 logger.debug("Applying JER smearing!")
-                jets = do_jer_smear(jets, self.config, events.event, nanoAOD_version=NanoAODv)
+                jets = do_jer_smear(jets, self.config, events.event)
             else:
                 logger.warning(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 
@@ -2226,7 +2238,6 @@ class EventProcessor(processor.ProcessorABC):
                 "multiplicity"
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
-
         # ------------------------------------------------------------#
         # Apply jetID and PUID
         # ------------------------------------------------------------#

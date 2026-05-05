@@ -500,7 +500,7 @@ def fill_softjets_HIG19006(events, jets, mu1, mu2, nmuons, cutoff, test_mode=Fal
     return out_dict
 
 
-def getHemVetoRunFilter(run, event_num, config, is_mc):
+def getHemVetoRunFilter(run, event_num, config, is_mc: bool, NanoAODv: int):
     """
     For data:
     return the conditions for applying HemVeto. For data, this is just
@@ -508,9 +508,15 @@ def getHemVetoRunFilter(run, event_num, config, is_mc):
     For MC:
     Randomly reject a given fraction of events using for MC to match HEM Vetoed jets in 2018 UL as reccommended in https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8 (though we reject her "eventNum % 15 == 0" method of random rejection and just use random number generation)
     """
+    hemvetoRatioConfig = config["HemVeto_ratio"]
     if is_mc:
-        prob = config["HemVeto_ratio"] # ratio of HemVeto applicable run / total nevents for 2018UL
-        logger.debug(f"HEMveto prob: {prob}")
+        try: # see if the nanoAODV distinction exists
+            logger.info(f"nanoAODv{NanoAODv}")
+            prob = config["HemVeto_ratio"][f"nanoAODv{NanoAODv}"] # ratio of HemVeto applicable run / total nevents for 2018UL
+        except:
+            prob = config["HemVeto_ratio"]
+
+        logger.info(f"HEMveto prob: {prob}")
         # intialize random number generator
         resrng = cs.Correction(
             name="resrng",
@@ -535,7 +541,7 @@ def getHemVetoRunFilter(run, event_num, config, is_mc):
     else: #For data, just a simple run >= 319077 cut. Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8
         return (run >= 319077)
 
-def applyHemVeto(jets, run, event_num, config, is_mc: bool):
+def applyHemVeto(jets, run, event_num, config, is_mc: bool, NanoAODv: int):
     """
     Apply HEM veto for 2018 UL as recommended on https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/5
     """
@@ -586,7 +592,7 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
     )
 
     # hemveto_run_filter = (run >= 319077)
-    hemveto_run_filter = getHemVetoRunFilter(run, event_num, config, is_mc)
+    hemveto_run_filter = getHemVetoRunFilter(run, event_num, config, is_mc, NanoAODv)
 
     # combine all the conditions
     hemveto = loose_jet_selection & hemveto_region
@@ -681,7 +687,7 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
     jerc_load_path = jec_parameters["jerc_load_path"]
     logger.debug(f"jerc_load_path: {jerc_load_path}")
 
-    cset = get_corrset(jerc_load_path)
+    cset = get_corrset(jerc_load_path, config['NanoAODv'])
 
 
     if is_mc:
@@ -852,7 +858,7 @@ def apply_jer_unc(jets):
     return jets
 
 
-def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_version=12):
+def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
     """
     we assume that jec has been applied (we need pt_jec and pt_raw)
 
@@ -865,7 +871,7 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
     jerc_load_path = jec_parameters["jerc_load_path"]
     logger.debug(f"jerc_load_path: {jerc_load_path}")
 
-    cset = get_corrset(jerc_load_path)
+    cset = get_corrset(jerc_load_path, NanoAODv=config['NanoAODv'])
 
     jersmear_load_path = jec_parameters["jersmear_load_path"]
     cset_jersmear = get_corrset(jersmear_load_path)
