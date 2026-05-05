@@ -1,0 +1,143 @@
+# configs/features.yaml
+
+regions:
+
+  central:
+    - chEmEF
+    - chHEF
+    - neEmEF
+    - neHEF
+    - muEF
+    - chMultiplicity
+    - neMultiplicity
+    - nConstituents
+    - nElectrons
+    - nMuons
+    - nSVs
+    - puIdDisc
+    - muonSubtrFactor
+    - muonSubtrDeltaEta
+    - muonSubtrDeltaPhi
+    - mass
+    - area
+    - rawFactor
+
+  HE:
+    - chEmEF
+    - chHEF
+    - neEmEF
+    - neHEF
+    - muEF
+    - chMultiplicity
+    - neMultiplicity
+    - nConstituents
+    - nElectrons
+    - nMuons
+    - nSVs
+    - puIdDisc
+    - muonSubtrFactor
+    - muonSubtrDeltaEta
+    - muonSubtrDeltaPhi
+    - mass
+    - area
+    - rawFactor
+
+  HEpos:
+    - chEmEF
+    - chHEF
+    - neEmEF
+    - neHEF
+    - muEF
+    - chMultiplicity
+    - neMultiplicity
+    - nConstituents
+    - nElectrons
+    - nMuons
+    - nSVs
+    - puIdDisc
+    - muonSubtrFactor
+    - muonSubtrDeltaEta
+    - muonSubtrDeltaPhi
+    - mass
+    - area
+    - rawFactor
+
+  HEneg:
+    - chEmEF
+    - chHEF
+    - neEmEF
+    - neHEF
+    - muEF
+    - chMultiplicity
+    - neMultiplicity
+    - nConstituents
+    - nElectrons
+    - nMuons
+    - nSVs
+    - puIdDisc
+    - muonSubtrFactor
+    - muonSubtrDeltaEta
+    - muonSubtrDeltaPhi
+    - mass
+    - area
+    - rawFactor
+
+  HF:
+    - hfEmEF
+    - hfHEF
+    - hf_energy_asym
+    - hfcentralEtaStripSize
+    - hfadjacentEtaStripsSize
+    - hf_strip_ratio
+    - hfsigmaEtaEta
+    - hfsigmaPhiPhi
+    - nConstituents
+    - chMultiplicity
+    - neMultiplicity
+    - puIdDisc
+    - muonSubtrFactor
+    - muonSubtrDeltaEta
+    - muonSubtrDeltaPhi
+    - mass
+    - rawFactor
+    - area
+
+  HFpos:
+    - hfEmEF
+    - hfHEF
+    - hf_energy_asym
+    - hfcentralEtaStripSize
+    - hfadjacentEtaStripsSize
+    - hf_strip_ratio
+    - hfsigmaEtaEta
+    - hfsigmaPhiPhi
+    - nConstituents
+    - chMultiplicity
+    - neMultiplicity
+    - puIdDisc
+    - muonSubtrFactor
+    - muonSubtrDeltaEta
+    - muonSubtrDeltaPhi
+    - mass
+    - rawFactor
+    - area
+
+  HFneg:
+    - hfEmEF
+    - hfHEF
+    - hf_energy_asym
+    - hfcentralEtaStripSize
+    - hfadjacentEtaStripsSize
+    - hf_strip_ratio
+    - hfsigmaEtaEta
+    - hfsigmaPhiPhi
+    - nConstituents
+    - chMultiplicity
+    - neMultiplicity
+    - puIdDisc
+    - muonSubtrFactor
+    - muonSubtrDeltaEta
+    - muonSubtrDeltaPhi
+    - mass
+    - rawFactor
+    - area
