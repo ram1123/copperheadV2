@@ -89,8 +89,8 @@ def make_significance_binning_uniform(
     if score_min >= score_max:
         raise ValueError("score_min must be less than score_max")
 
-    # create fine bins
-    fine_edges = np.linspace(0, score_max, fine_bins + 1, dtype=float)
+    # create fine bins across the requested score range
+    fine_edges = np.linspace(score_min, score_max, fine_bins + 1, dtype=float)
 
     # histogram signal and background in fine bins
     S_NoWgt_hist, _ = np.histogram(sig_score, bins=fine_edges)
@@ -107,11 +107,25 @@ def make_significance_binning_uniform(
     for bin_i in range(fine_bins):
         S_bin = S_hist[bin_i]
         B_bin = B_hist[bin_i]
-        if (S_bin + B_bin) < min_total_events_per_bin or S_bin < min_signal_per_bin:
-            pass
-        else:
-            pass  # keep the bin as is
-        significance = z2_asimov(S_hist[bin_i], B_hist[bin_i])
+        S_bin_nw = S_NoWgt_hist[bin_i]
+        B_bin_nw = B_NoWgt_hist[bin_i]
+        if (S_bin_nw + B_bin_nw) < min_total_events_per_bin:
+            logger.debug(
+                "Rejecting uniform bin %s: raw events=%s below threshold=%s",
+                bin_i,
+                S_bin_nw + B_bin_nw,
+                min_total_events_per_bin,
+            )
+            return None, None, None, None, None, None, None
+        if S_bin < min_signal_per_bin:
+            logger.debug(
+                "Rejecting uniform bin %s: weighted signal=%s below threshold=%s",
+                bin_i,
+                S_bin,
+                min_signal_per_bin,
+            )
+            return None, None, None, None, None, None, None
+        significance = z2_asimov(S_bin, B_bin)
         Z_hist.append(np.sqrt(significance) if significance > 0.0 else 0.0)
         total_Z2 += significance
     total_Z = np.sqrt(total_Z2) if total_Z2 > 0.0 else 0.0
@@ -209,20 +223,23 @@ def make_significance_binning(
     acc_l = nF - 1
     acc_r = nF  # accumulator is [acc_l, acc_r)
     S_acc, B_acc = SB(acc_l, acc_r)
+    S_acc_nw, B_acc_nw = SBnw(acc_l, acc_r)
 
     i = acc_l - 1
     while True:
         can_merge = i >= 0
         # force-merge if guards not satisfied
         need_guard_merge = (S_acc < min_signal_per_bin) or (
-            (S_acc + B_acc) < min_total_events_per_bin
+            (S_acc_nw + B_acc_nw) < min_total_events_per_bin
         )
 
         if can_merge:
             # local separate vs merged Z²
             S_L, B_L = SB(i, i + 1)
             z2_sep = z2_asimov(S_L, B_L) + z2_asimov(S_acc, B_acc)
+            S_L_nw, B_L_nw = SBnw(i, i + 1)
             S_m, B_m = (S_L + S_acc, B_L + B_acc)
+            S_m_nw, B_m_nw = (S_L_nw + S_acc_nw, B_L_nw + B_acc_nw)
             z2_mrg = z2_asimov(S_m, B_m)
 
             # fractional drop if we merge (robust to z2_sep ~ 0)
@@ -235,6 +252,7 @@ def make_significance_binning(
                 )
                 acc_l = i
                 S_acc, B_acc = S_m, B_m
+                S_acc_nw, B_acc_nw = S_m_nw, B_m_nw
                 i -= 1
             else:
                 # veto merge -> freeze current accumulator as a bin; start new acc at left bin
@@ -242,6 +260,7 @@ def make_significance_binning(
                 acc_r = acc_l
                 acc_l = i
                 S_acc, B_acc = SB(acc_l, acc_r)
+                S_acc_nw, B_acc_nw = SBnw(acc_l, acc_r)
                 i -= 1
         else:
             # nothing left to merge: finalize accumulator
@@ -484,6 +503,13 @@ def plot_binning_scan_root(
     # mg.GetXaxis().SetTitleSize(0.05)
     # mg.GetXaxis().SetLabelSize(0.04)
 
+    # increase the size of the markers
+    for i in range(mg.GetListOfGraphs().GetEntries()):
+        gr = mg.GetListOfGraphs().At(i)
+        gr.SetMarkerStyle(20 + i)  # different marker style for each graph
+        gr.SetMarkerSize(1.5)  # increase marker size
+        gr.SetLineWidth(2)  # increase line width
+
     # draw mg with color options
     mg.Draw("AP")
 
@@ -524,7 +550,7 @@ def collect_scores(process_globs, selection, category="vbf", region_name="h-peak
     do_vbf_filter_study = False
     for name, globpath in items:
         if "dy_" in name:
-            do_vbf_filter_study = True
+            do_vbf_filter_study = False
         else:
             do_vbf_filter_study = False
         print(
@@ -555,7 +581,7 @@ def collect_bkg(process_globs, selection, category="vbf", region_name="h-peak"):
 # Example driver snippet
 # -----------------------
 if __name__ == "__main__":
-    import selection
+    from modules import selection
 
     from distributed import Client
 
@@ -564,24 +590,28 @@ if __name__ == "__main__":
     )
     print("Local scale Client created")
     sig_globs = {
-        "vbf_powheg_dipole": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/vbf_powheg_dipole/**/*.parquet",
-        # "ggh_powhegPS": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ggh_powhegPS/**/*.parquet",
+        "vbf_powheg_dipole": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/vbf_powheg_dipole/**/*.parquet",
+        # "ggh_powhegPS": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ggh_powhegPS/**/*.parquet",
     }
     sig_score, sig_w = collect_scores(sig_globs, selection)
 
     bkg_globs = {
-        "dy_VBF_filter": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_VBF_filter/**/*.parquet",
-        "dy_M-50_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-50_aMCatNLO/**/*.parquet",
-        "dy_M-100To200_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-100To200_aMCatNLO/**/*.parquet",
-        "ewk_lljj_mll50_mjj120": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ewk_lljj_mll50_mjj120/**/*.parquet",
-        "ttjets_dl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_dl/**/*.parquet",
-        "ttjets_sl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_sl/**/*.parquet",
-        "zz": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/zz/**/*.parquet",
+        # "dy_VBF_filter": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/dy_VBF_filter/**/*.parquet",
+        "dy_M-50_aMCatNLO": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/dyTo2L_M-50_incl/**/*.parquet",
+        "ewk_lljj_mll50_mjj120": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ewk_mmjj_mll_105_160/**/*.parquet",
+        "ttjets_dl": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ttjets_dl/**/*.parquet",
+        "ttjets_sl": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ttjets_sl/**/*.parquet",
+        "zz_4l": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/zz_4l/**/*.parquet",
+        "zz_2l2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/zz_2l2q/**/*.parquet",
+        "zz_2l2u": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/zz_2l2u/**/*.parquet",
+        "ww_2l2nu": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ww_2l2nu/**/*.parquet",
+        "wz_1l1nu2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/wz_1l1nu2q/**/*.parquet",
+        "wz_2l2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/wz_2l2q/**/*.parquet",
+        "wz_3lnu": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/wz_3lnu/**/*.parquet",
     }
     bkg_score, bkg_w = collect_scores(bkg_globs, selection)
 
-    score_lower = 0.0
-    score_min = float(min(sig_score.max(), bkg_score.max()))
+    score_min = float(min(sig_score.min(), bkg_score.min()))
     score_upper = float(max(sig_score.max(), bkg_score.max()))
     logger.info(
         f"Derived dnn_vbf_score_atanh range: [{score_min:.6f}, {score_upper:.6f}]"
@@ -596,7 +626,7 @@ if __name__ == "__main__":
             sig_w,
             bkg_w,
             nbins_list=range(3, max_nbins + 1),
-            score_min=score_lower,
+            score_min=score_min,
             score_max=score_upper,
             min_total_events_per_bin=5.0,
             min_signal_per_bin=0.05,

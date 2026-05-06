@@ -233,6 +233,12 @@ def apply_hparams(cfg: TrainConfig, hp: Dict[str, Any]) -> TrainConfig:
         save_history=False,
         save_best=False,
         save_last=False,
+        save_torchscript=False,
+        # The dataset is already materialized in memory, so multiprocessing
+        # adds overhead and can hang on batch systems during long HPO loops.
+        num_workers=0,
+        prefetch_factor=None,
+        pin_memory=False,
     )
     return new_cfg
 
@@ -256,6 +262,17 @@ def objective_factory(
         # isolate outputs per trial (optional)
         trial_dir = Path(out_dir) / "optuna_trials" / f"trial_{trial.number:05d}"
         trial_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info(
+            "[trial %d] starting hidden=%s activation=%s batch_norm=%s batch_size=%d lr=%.3e wd=%.3e",
+            trial.number,
+            hp["hidden"],
+            hp["activation"],
+            hp["batch_norm"],
+            int(hp["batch_size"]),
+            float(hp["lr"]),
+            float(hp["weight_decay"]),
+        )
 
         scores = []
         for f in folds:
@@ -381,6 +398,9 @@ def main() -> None:
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    storage = args.storage
+    if storage is None:
+        storage = f"sqlite:///{(out_dir / 'optuna_study.db').resolve()}"
 
     sampler = optuna.samplers.TPESampler(seed=args.seed, multivariate=False)
     pruner = optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=3)
@@ -390,7 +410,7 @@ def main() -> None:
         direction="maximize",
         sampler=sampler,
         pruner=pruner,
-        storage=args.storage,
+        storage=storage,
         load_if_exists=True,
     )
 
@@ -405,10 +425,11 @@ def main() -> None:
     timeout = None if args.timeout_min is None else int(args.timeout_min) * 60
 
     logger.info(
-        "Starting Optuna study '%s' (trials=%d, folds=%s)",
+        "Starting Optuna study '%s' (trials=%d, folds=%s, storage=%s)",
         args.study_name,
         args.n_trials,
         folds,
+        storage,
     )
     study.optimize(
         objective, n_trials=args.n_trials, timeout=timeout, gc_after_trial=True

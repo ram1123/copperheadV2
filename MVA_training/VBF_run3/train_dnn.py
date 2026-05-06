@@ -190,6 +190,7 @@ class TrainConfig:
     save_last: bool
     save_history: bool
     save_predictions: bool
+    save_torchscript: bool
 
 
 def _load_yaml(path: str) -> Dict[str, Any]:
@@ -289,6 +290,7 @@ def load_config(cfg_path: str) -> TrainConfig:
     save_last = bool(art.get("save_last_model", True))
     save_history = bool(art.get("save_history", True))
     save_predictions = bool(art.get("save_predictions", False))
+    save_torchscript = bool(art.get("save_torchscript", True))
 
     return TrainConfig(
         seed=seed,
@@ -346,6 +348,7 @@ def load_config(cfg_path: str) -> TrainConfig:
         save_last=save_last,
         save_history=save_history,
         save_predictions=save_predictions,
+        save_torchscript=save_torchscript,
     )
 
 
@@ -921,6 +924,15 @@ def train_one_fold(
     fold_dir.mkdir(parents=True, exist_ok=True)
     plots_dir.mkdir(parents=True, exist_ok=True)
 
+    logger.info(
+        "[fold %d] start epochs=%d batch_size=%d num_workers=%d device=%s",
+        fold_idx,
+        cfg.epochs,
+        cfg.batch_size,
+        cfg.num_workers,
+        cfg.device,
+    )
+
     # Load parquet
     train_path = Path(data_dir) / f"data_df_train_{fold_idx}.parquet"
     val_path = Path(data_dir) / f"data_df_validation_{fold_idx}.parquet"
@@ -1204,8 +1216,9 @@ def train_one_fold(
                     best_path,
                 )
 
-            # export torchscript for stage-2
-            export_torchscript(model, len(cfg.training_features), best_ts_path)
+            if cfg.save_torchscript:
+                # Export only when requested; HPO does not consume these files.
+                export_torchscript(model, len(cfg.training_features), best_ts_path)
 
         # early stopping
         if early is not None:
@@ -1227,8 +1240,9 @@ def train_one_fold(
             },
             last_path,
         )
-        # export torchscript for stage-2
-        export_torchscript(model, len(cfg.training_features), last_ts_path)
+        if cfg.save_torchscript:
+            # Export only when requested; HPO does not consume these files.
+            export_torchscript(model, len(cfg.training_features), last_ts_path)
 
     # load best for final evaluation if requested
     if cfg.es_enable and cfg.es_restore_best and cfg.save_best and best_path.exists():
