@@ -182,6 +182,14 @@ class DNNWrapper(torch_wrapper):
         ], {}
 
 
+def sigmoid_ak(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def clip_ak(x, min_value, max_value):
+    return ak.where(x < min_value, min_value, ak.where(x > max_value, max_value, x))
+
+
 def prepare_features(events, features, variation="nominal"):
     features_var = []
     missing_features = []
@@ -628,7 +636,7 @@ if __name__ == "__main__":
                 ],  # np.newaxis is added so that we can concat on axis=1
                 axis=1,
             )
-            dnn_score = nan_val * ak.ones_like(events.event)
+            dnn_logit = nan_val * ak.ones_like(events.event)
 
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
@@ -637,9 +645,13 @@ if __name__ == "__main__":
                 dnn_score_fold = dnnWrap(input_arr)
                 dnn_score_fold = ak.flatten(dnn_score_fold, axis=None)
 
-                dnn_score = ak.where(eval_filter, dnn_score_fold, dnn_score)
-            # transform dnn_score
-            dnn_score = np.arctanh(dnn_score)
+                dnn_logit = ak.where(eval_filter, dnn_score_fold, dnn_logit)
+
+            valid_mask = dnn_logit != nan_val
+            dnn_score = sigmoid_ak(dnn_logit)
+            dnn_score = ak.where(valid_mask, dnn_score, nan_val)
+            dnn_score = np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
+            dnn_score = ak.where(valid_mask, dnn_score, nan_val)
 
             # ---------------------------------------------------
             # Now onto converting DNN score as histograms
