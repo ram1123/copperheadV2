@@ -458,11 +458,11 @@ for year in "${years[@]}"; do
     ### DNN training parameters
     training_fold=4
     model_label="${label}"
-    # model_trained_path="./dnn/trained_models/Run3_nanoAODv12_02Feb_FilterJetsHorn30GeV/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
-    # training_tag="trained_best_optuna_03trail_v3"
-
-    model_trained_path="./dnn/trained_models/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
+    # model_dir="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
+    model_dir="2022postEE_h-peak_vbf"
     training_tag="trained_best_optuna_v1_multifold_050Trials"
+
+    model_trained_path="./dnn/trained_models/${label}/${model_dir}"
 
     # ########## Compact command ##########
     # command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path/$training_tag --add_dnn_score  --fix_dimuon_mass --tag $save_postfix  "
@@ -478,12 +478,16 @@ for year in "${years[@]}"; do
     # ########## STAGE-2 command ##########
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
     sig_l_stage2="ggH VBF"
-    command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix} --no_variations "
-    command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}  "
-
-    # ########## STAGE-3 command ##########
-    command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} --no_variations "
-    # command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} "
+    variation=false
+    if ${variation}; then
+        command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}  "
+        command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} "
+        variation_tag=""
+    else
+        command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix} --no_variations "
+        command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} --no_variations "
+        variation_tag="_NoSyst"
+    fi
 
     # ########## Z-PT VALIDATION command ##########
     command4="python validation/zpt_rewgt/validation.py -y $year --label $label --in $save_path --data $data_l --background $bkg_l --signal $sig_l   "
@@ -572,14 +576,14 @@ for year in "${years[@]}"; do
         2p)
             log "Running the validation of stage2 (i.e. data/mc plot for dnn score) for year $year..."
             region2p="h-sidebands"
-            mva_name_suffix="_May05_2026_NoSyst"
+            mva_name_suffix="_${save_postfix}${variation_tag}"
             load_path="${save_path}/stage2_histograms/score_${label}${mva_name_suffix}"
-            command2p1="python plotter/plot_DNN_score.py --load $load_path -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}${mva_name_suffix}"
+            command2p1="python plotter/plot_DNN_score.py --load $load_path -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}${mva_name_suffix} --log-level DEBUG"
             log "Command: $command2p1"
             eval "$command2p1"
 
             region2p="h-peak"
-            command2p2="python plotter/plot_DNN_score.py --load $load_path -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}${mva_name_suffix}"
+            command2p2="python plotter/plot_DNN_score.py --load $load_path -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}${mva_name_suffix} --log-level DEBUG"
             log "Command: $command2p2"
             eval "$command2p2"
             ;;
@@ -622,6 +626,7 @@ for year in "${years[@]}"; do
             ensure_vbf_card "$year"
             ensure_vbf_workspace "$year"
             run_vbf_significance "$year"
+            collect_vbf_significance_summary
             run_vbf_impacts "$year"
             run_vbf_lhscan "$year"
             ;;

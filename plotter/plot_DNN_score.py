@@ -260,7 +260,16 @@ if __name__ == "__main__":
     action="store",
     help="region value to plot, available regions are: h_peak, h_sidebands, z_peak and signal (h_peak OR h_sidebands)",
     )
+    parser.add_argument(
+        "--log-level",
+        default=logging.INFO,
+        type=lambda x: getattr(logging, x),
+        help="Configure the logging level.",
+    )    
     args = parser.parse_args()
+
+    logger.setLevel(args.log_level)
+    
     year = args.year
     if year == "run2":
         year_param = "*"

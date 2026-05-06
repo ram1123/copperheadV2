@@ -8,10 +8,14 @@ set -euo pipefail
 # Override any of the variables below from the shell, for example:
 #   TAG=my_tag HPO_TRIALS=12 HPO_FOLDS=0,1 bash run_dnn.sh
 
+# /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022preEE/f1_0/
+# LABEL="Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
+LABEL="Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2"
 CONFIG="${CONFIG:-configs/dnn_run3_vbf.yaml}"
-BASE_PATH="${BASE_PATH:-/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/}"
-TAG="${TAG:-Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER}"
-YEARS="${YEARS:-2022preEE,2022postEE,2023,2023BPix,2024}"
+BASE_PATH="${BASE_PATH:-/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/${LABEL}/stage1_output/}"
+TAG="${TAG:-${LABEL}}"
+# YEARS="${YEARS:-2022preEE,2022postEE,2023,2023BPix,2024}"
+YEARS="${YEARS:-2022postEE}"
 REGION="${REGION:-h-peak}"
 CATEGORY="${CATEGORY:-vbf}"
 
@@ -53,7 +57,7 @@ echo "[run_dnn] HPO trials:  ${HPO_TRIALS}"
 echo "[run_dnn] Optuna best: ${OPTUNA_BEST_JSON}"
 
 # Run the pre-process script
-# "${PREPROCESS_CMD[@]}"
+"${PREPROCESS_CMD[@]}"
 
 time python MVA_training/VBF_run3/hpo_optuna.py \
   --config "${CONFIG}" \
