@@ -1,3 +1,5 @@
+import glob
+
 import numpy as np
 
 from rich import print
@@ -556,7 +558,12 @@ def collect_scores(process_globs, selection, category="vbf", region_name="h-peak
         print(
             f"Processing {name} from {globpath} (do_vbf_filter_study={do_vbf_filter_study})"
         )
-        ev = dak.from_parquet(globpath)
+
+        files = sorted(glob.glob(globpath, recursive=True))
+        if not files:
+            raise FileNotFoundError(f"No parquet files matched: {globpath}")
+        ev = dak.from_parquet(files)
+
         ev = selection.applyRegionCatCuts(
             ev,
             category=category,
@@ -590,24 +597,25 @@ if __name__ == "__main__":
     )
     print("Local scale Client created")
     sig_globs = {
-        "vbf_powheg_dipole": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/vbf_powheg_dipole/**/*.parquet",
-        # "ggh_powhegPS": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ggh_powhegPS/**/*.parquet",
+        "vbf_powheg_dipole": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/vbf_powheg_dipole/0/*.parquet",
+        # "ggh_powhegPS": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ggh_powhegPS/0/*.parquet",
     }
     sig_score, sig_w = collect_scores(sig_globs, selection)
 
     bkg_globs = {
-        # "dy_VBF_filter": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/dy_VBF_filter/**/*.parquet",
-        "dy_M-50_aMCatNLO": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/dyTo2L_M-50_incl/**/*.parquet",
-        "ewk_lljj_mll50_mjj120": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ewk_mmjj_mll_105_160/**/*.parquet",
-        "ttjets_dl": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ttjets_dl/**/*.parquet",
-        "ttjets_sl": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ttjets_sl/**/*.parquet",
-        "zz_4l": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/zz_4l/**/*.parquet",
-        "zz_2l2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/zz_2l2q/**/*.parquet",
-        "zz_2l2u": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/zz_2l2u/**/*.parquet",
-        "ww_2l2nu": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/ww_2l2nu/**/*.parquet",
-        "wz_1l1nu2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/wz_1l1nu2q/**/*.parquet",
-        "wz_2l2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/wz_2l2q/**/*.parquet",
-        "wz_3lnu": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted_May06_2026_FixDimuonMass/wz_3lnu/**/*.parquet",
+        # "dy_VBF_filter": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/dy_VBF_filter/0/*.parquet",
+        "dy_M-50_aMCatNLO": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/dyTo2L_M-50_incl/0/*.parquet",
+        "dy_M-50_aMCatNLO_24": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/dyTo2Mu_M-50_aMCatNLO/0/*.parquet",
+        "ewk_lljj_mll50_mjj120": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ewk_mmjj_mll_105_160/0/*.parquet",
+        "ttjets_dl": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ttjets_dl/0/*.parquet",
+        "ttjets_sl": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ttjets_sl/0/*.parquet",
+        "zz_4l": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/zz_4l/0/*.parquet",
+        "zz_2l2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/zz_2l2q/0/*.parquet",
+        "zz_2l2u": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/zz_2l2u/0/*.parquet",
+        "ww_2l2nu": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ww_2l2nu/0/*.parquet",
+        "wz_1l1nu2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/wz_1l1nu2q/0/*.parquet",
+        "wz_2l2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/wz_2l2q/0/*.parquet",
+        "wz_3lnu": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/wz_3lnu/0/*.parquet",
     }
     bkg_score, bkg_w = collect_scores(bkg_globs, selection)
 

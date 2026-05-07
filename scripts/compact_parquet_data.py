@@ -18,6 +18,14 @@ from tqdm import tqdm
 import glob
 
 
+def sigmoid_ak(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def clip_ak(x, min_value, max_value):
+    return ak.where(x < min_value, min_value, ak.where(x > max_value, max_value, x))
+
+
 def resolve_scaler_path(model_trained_path, fold):
     npz_path = os.path.join(model_trained_path, f"scalers_{fold}.npz")
     npy_path = os.path.join(model_trained_path, f"scalers_{fold}.npy")
@@ -112,11 +120,10 @@ def add_dnn_score(events_partition,
                 model_cache,
                 nfolds, fix_dimuon_mass):
     if getattr(events_partition.layout.backend, "name", None) == "typetracer":
-        return ak.with_field(
-            ak.with_field(events_partition, np.empty(0, np.float32), "dnn_vbf_score"),
-            np.empty(0, np.float32),
-            "dnn_vbf_score_atanh",
-        )
+        out = ak.with_field(events_partition, np.empty(0, np.float32), "dnn_vbf_score")
+        out = ak.with_field(out, np.empty(0, np.float32), "dnn_vbf_score_atanh")
+        out = ak.with_field(out, np.empty(0, np.float32), "dnn_vbf_logit")
+        return out
     # Prepare features for this partition
     features_to_use = prepare_features(events_partition, training_features)
     no_scale_features = {
@@ -181,7 +188,7 @@ def add_dnn_score(events_partition,
     input_arr = ak.concatenate(
         [input_arr_dict[feat][:, np.newaxis] for feat in features_to_use], axis=1
     )
-    dnn_vbf_score = nan_val * ak.ones_like(events_partition.event)
+    dnn_vbf_logit = nan_val * ak.ones_like(events_partition.event)
     for fold in range(nfolds):
         # eval_folds = [(fold + f) % nfolds for f in [3]]
         eval_folds = [fold]
@@ -189,14 +196,20 @@ def add_dnn_score(events_partition,
         dnnWrap = model_cache[fold]
         dnn_score_fold = dnnWrap(input_arr)
         dnn_score_fold = ak.flatten(dnn_score_fold, axis=None)
-        dnn_vbf_score = ak.where(eval_filter, dnn_score_fold, dnn_vbf_score)
-        # transformed DNN
-        dnn_vbf_score = np.clip(dnn_vbf_score, -0.999999, 0.999999)
-        dnn_vbf_score_atanh = np.arctanh(dnn_vbf_score)
+        dnn_vbf_logit = ak.where(eval_filter, dnn_score_fold, dnn_vbf_logit)
 
-    # return the events with the dnn_vbf_score and dnn_vbf_score_atanh fields added
+    valid_mask = dnn_vbf_logit != nan_val
+    dnn_vbf_score = sigmoid_ak(dnn_vbf_logit)
+    dnn_vbf_score = ak.where(valid_mask, dnn_vbf_score, nan_val)
+
+    score_for_atanh = clip_ak(dnn_vbf_score, 0.0, 0.999999)
+    dnn_vbf_score_atanh = np.arctanh(score_for_atanh)
+    dnn_vbf_score_atanh = ak.where(valid_mask, dnn_vbf_score_atanh, nan_val)
+
+    # return the events with the dnn_vbf_score, dnn_vbf_score_atanh, and dnn_vbf_logit fields added
     events_partition = ak.with_field(events_partition, dnn_vbf_score, "dnn_vbf_score")
     events_partition = ak.with_field(events_partition, dnn_vbf_score_atanh, "dnn_vbf_score_atanh")
+    events_partition = ak.with_field(events_partition, dnn_vbf_logit, "dnn_vbf_logit")
     return events_partition
 
 def compact_and_add_dnn_score(
@@ -285,7 +298,8 @@ def compact_and_add_dnn_score(
         logger.debug(f"Loaded model for fold {fold} from {model_load_path}")
 
     meta = ak.with_field(events._meta, np.zeros(0, dtype=np.float32), "dnn_vbf_score")
-    meta = ak.with_field(meta,              np.zeros(0, dtype=np.float32), "dnn_vbf_score_atanh")
+    meta = ak.with_field(meta, np.zeros(0, dtype=np.float32), "dnn_vbf_score_atanh")
+    meta = ak.with_field(meta, np.zeros(0, dtype=np.float32), "dnn_vbf_logit")
     events = dak.map_partitions(
         add_dnn_score,
         events,

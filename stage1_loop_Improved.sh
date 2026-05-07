@@ -125,6 +125,18 @@ exec 3>>"$log_file"  # FD 3 for logging
 
 log() { echo "$@" | tee -a "$log_file"; }
 
+join_by() {
+    local delimiter="$1"
+    shift
+    local first="${1:-}"
+    shift || true
+    printf "%s" "${first}"
+    local item
+    for item in "$@"; do
+        printf "%s%s" "${delimiter}" "${item}"
+    done
+}
+
 combine_vbf_cards() {
     local card_dir="$1"
     local out_txt="$2"
@@ -364,6 +376,15 @@ run_vbf_lhscan() {
 trap 'log "Program FAILED on $(date)"; exec 3>&- ' ERR
 log "Program started on $(date)"
 
+dnn_config="${DNN_CONFIG:-configs/dnn_run3_vbf.yaml}"
+dnn_years_csv="$(join_by "," "${years[@]}")"
+dnn_hpo_folds="${HPO_FOLDS:-0,1,2,3}"
+dnn_hpo_trials="${HPO_TRIALS:-50}"
+dnn_hpo_label="${HPO_LABEL:-v1_multifold_050Trials}"
+dnn_train_label="${TRAIN_LABEL:-trained_best_optuna_${dnn_hpo_label}}"
+dnn_optuna_best_json="${OPTUNA_BEST_JSON:-dnn/trained_models/${label}/${dnn_years_csv//,/-}_${region}_${category}/hpo_optuna/${dnn_hpo_label}/optuna_best.json}"
+dnn_run_invoked=0
+
 declare -A data_l_dict=(
     [2018PR]="A"
     [2016preVFP]="B C D E F"
@@ -458,15 +479,13 @@ for year in "${years[@]}"; do
     ### DNN training parameters
     training_fold=4
     model_label="${label}"
-    # model_dir="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
-    model_dir="2022postEE_h-peak_vbf"
-    training_tag="trained_best_optuna_v1_multifold_050Trials"
-
+    # model_dir="${dnn_years_csv//,/-}_${region}_${category}"
+    model_dir="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
+    training_tag="${dnn_train_label}"
     model_trained_path="./dnn/trained_models/${label}/${model_dir}"
 
     # ########## Compact command ##########
-    # command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path/$training_tag --add_dnn_score  --fix_dimuon_mass --tag $save_postfix  "
-    command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path  "
+    command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path --model_tag $training_tag --add_dnn_score --fix_dimuon_mass --save_postfix $save_postfix "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
@@ -627,13 +646,41 @@ for year in "${years[@]}"; do
             ensure_vbf_workspace "$year"
             run_vbf_significance "$year"
             collect_vbf_significance_summary
-            run_vbf_impacts "$year"
-            run_vbf_lhscan "$year"
+            # run_vbf_impacts "$year"
+            # run_vbf_lhscan "$year"
             ;;
         10|combine_vbf_summary)
             log "Collecting VBF significance summary from logs..."
             collect_vbf_significance_summary
-            ;;            
+            ;;    
+        11|vbf_limit)
+            log "Running stage2 for year $year..."
+            log "Command: $command2"
+            eval "$command2"
+
+            log "Running the validation of stage2 (i.e. data/mc plot for dnn score) for year $year..."
+            region2p="h-sidebands"
+            mva_name_suffix="_${save_postfix}${variation_tag}"
+            load_path="${save_path}/stage2_histograms/score_${label}${mva_name_suffix}"
+            command2p1="python plotter/plot_DNN_score.py --load $load_path -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}${mva_name_suffix} --log-level DEBUG"
+            log "Command: $command2p1"
+            eval "$command2p1"
+
+            region2p="h-peak"
+            command2p2="python plotter/plot_DNN_score.py --load $load_path -label $label -cat $category -y ${year} --region ${region2p} --mva_name ${label}${mva_name_suffix} --log-level DEBUG"
+            log "Command: $command2p2"
+            eval "$command2p2"
+
+            log "Running stage3 for year $year..."
+            log "Command: $command3"
+            eval "$command3"            
+
+            log "Running full VBF Combine chain for year $year..."
+            ensure_vbf_card "$year"
+            ensure_vbf_workspace "$year"
+            run_vbf_significance "$year"
+            collect_vbf_significance_summary        
+            ;;    
         all)
             log "Running pre-stage for year $year..."
             log "Command: $command0"
@@ -679,44 +726,97 @@ for year in "${years[@]}"; do
             eval "$command_compact"
             ;;
         dnn|dnn_pre|dnn_train|dnn_var_rank)
-            log "Running DNN step(s) for year $year..."
-            cmd_preproc="python MVA_training/VBF_run3/preprocess_dnn.py --label $label --region $region --category $category --year $year --log-level DEBUG "
-            # Alternative cmd_train configurations (uncomment and adjust as needed):
-
-            # -- Bayesian Optimization:
-            # cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --bo --bo-trials 55 --bo-epochs 100 --bo-fold 0 --n-epochs 100 --batch-size 15536 --log-level INFO "
-            # cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --bo --bo-trials 51 --bo-epochs 51 --bo-fold 0 --n-epochs 51 --batch-size 15536 --log-level INFO "
-
-            # -- Quick test:
-            # cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --bo --bo-trials 3 --bo-epochs 3 --bo-fold 0 --n-epochs 3 --batch-size 15536 --log-level INFO "
-            # cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --n-epochs 3 --batch-size 15536 --log-level DEBUG "
-
-            # Active configuration:
-            cmd_train="python MVA_training/VBF_run3/train_dnn.py --label $label --region $region --category $category --year $year --n-epochs 51 --log-level INFO "
-            cmd_var_rank="python MVA_training/VBF/variable_ranking.py "
-
-            if [[ "$mode" == "dnn_pre" || "$mode" == "dnn" ]]; then
-                if [[ "$dask" == "1" ]]; then
-                    cmd_preproc+=" --use_gateway "
-                fi
-                log "Running DNN preprocessor..."
-                log "Command: $cmd_preproc"
-                eval "$cmd_preproc"
+            if [[ "${dnn_run_invoked}" == "1" ]]; then
+                log "DNN workflow already launched for years=${dnn_years_csv}; skipping duplicate invocation from year ${year}."
+                continue
             fi
-
-            if [[ "$mode" == "dnn_train" || "$mode" == "dnn" ]]; then
-                if [[ "$debug" == "1" ]]; then
-                    cmd_train+=" --debug "
-                fi
-                log "Running DNN training..."
-                log "Command: $cmd_train"
-                eval "$cmd_train"
-            fi
+            dnn_run_invoked=1
 
             if [[ "$mode" == "dnn_var_rank" ]]; then
-                log "Running variable ranking..."
-                log "Command: $cmd_var_rank"
-                eval "$cmd_var_rank"
+                log "Variable ranking is only available in the legacy Run-2 DNN flow; no Run-3 driver is wired here."
+                exit 1
+            fi
+
+            run_preprocess=0
+            run_hpo=0
+            run_train=0
+            dnn_out_base="dnn/trained_models/${label}/${dnn_years_csv//,/-}_${region}_${category}"
+            dnn_hpo_out_dir="${dnn_out_base}/hpo_optuna/${dnn_hpo_label}"
+            case "$mode" in
+                dnn)
+                    run_preprocess=1
+                    run_hpo=1
+                    run_train=1
+                    ;;
+                dnn_pre)
+                    run_preprocess=1
+                    ;;
+                dnn_train)
+                    run_hpo=1
+                    run_train=1
+                    ;;
+            esac
+
+            log "Running DNN workflow for years=${dnn_years_csv}"
+            log "  DNN config: ${dnn_config}"
+            log "  DNN output base: ${dnn_out_base}"
+            log "  DNN HPO dir: ${dnn_hpo_out_dir}"
+            log "  DNN best json: ${dnn_optuna_best_json}"
+            log "  Stage2/3 model path: ${model_trained_path}"
+            log "  Stage2/3 model tag: ${training_tag}"
+
+            dnn_cmd_pre=(
+                python
+                MVA_training/VBF_run3/preprocess_dnn.py
+                --config "${dnn_config}"
+                --base-path "${save_path}/stage1_output/"
+                --tag "${label}"
+                --years "${dnn_years_csv}"
+            )
+            if [[ "$dask" == "1" ]]; then
+                dnn_cmd_pre+=(--use-dask-gateway --cluster-index "${cluster_index}")
+            fi
+
+            dnn_cmd_hpo=(
+                python
+                MVA_training/VBF_run3/hpo_optuna.py
+                --config "${dnn_config}"
+                --data-dir "${dnn_out_base}/"
+                --out-dir "${dnn_hpo_out_dir}"
+                --n-trials "${dnn_hpo_trials}"
+                --folds "${dnn_hpo_folds}"
+            )
+            if [[ -n "${HPO_TIMEOUT_MIN:-}" ]]; then
+                dnn_cmd_hpo+=(--timeout-min "${HPO_TIMEOUT_MIN}")
+            fi
+
+            dnn_cmd_train=(
+                python
+                MVA_training/VBF_run3/train_dnn.py
+                --config "${dnn_config}"
+                --data-dir "${dnn_out_base}/"
+                --out-dir "${dnn_out_base}/${dnn_train_label}"
+            )
+            if [[ -f "${dnn_optuna_best_json}" ]]; then
+                dnn_cmd_train+=(--optuna-best-json "${dnn_optuna_best_json}")
+            fi
+
+            if [[ "${run_preprocess}" == "1" ]]; then
+                log "Command: ${dnn_cmd_pre[*]}"
+                "${dnn_cmd_pre[@]}"
+            fi
+
+            if [[ "${run_hpo}" == "1" ]]; then
+                log "Command: ${dnn_cmd_hpo[*]}"
+                time "${dnn_cmd_hpo[@]}"
+            fi
+
+            if [[ "${run_train}" == "1" ]]; then
+                if [[ ! -f "${dnn_optuna_best_json}" ]]; then
+                    log "WARNING: ${dnn_optuna_best_json} not found; training will use config hyperparameters."
+                fi
+                log "Command: ${dnn_cmd_train[*]}"
+                time "${dnn_cmd_train[@]}"
             fi
             ;;
         *)
