@@ -15,6 +15,18 @@ python MVA_training/pileup_symbolic_regression/run_pysr.py \
     --maxsize 7 \
     --mode train
 
+# multiple processes:
+python MVA_training/pileup_symbolic_regression/run_pysr.py \
+    -i \
+    "/.../dyTo2L_M-50_incl/0/part*.parquet" \
+    "/.../ttjets_dl/0/part*.parquet" \
+    "/.../ttjets_sl/0/part*.parquet" \
+    "/.../ewk_mmjj_mll_105_160/0/part*.parquet" \
+    -o validation/pySR/run_multi_bkg \
+    --features-yaml MVA_training/pileup_symbolic_regression/configs/features.yaml \
+    --mode train \
+    --use-glob
+
 # 2024
 
 time python MVA_training/pileup_symbolic_regression/run_pysr.py \
@@ -30,7 +42,14 @@ time python MVA_training/pileup_symbolic_regression/run_pysr.py \
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-i","--input", required=True)
+    parser.add_argument(
+        "-i",
+        "--input",
+        required=True,
+        nargs="+",
+        help="One or more parquet files, glob patterns, or parquet dataset directories. "
+             "Comma-separated values are also accepted inside each argument.",
+    )
     parser.add_argument("--mode", choices=["train","validate","rescan"], default="train")
     parser.add_argument("--use-glob", action="store_true")
     parser.add_argument("--use-pyarrow", action="store_true")

@@ -32,6 +32,9 @@ def run_training(args):
     # 1) Load data
     # -------------------------------
     paths = expand_inputs(args.input, args.use_glob)
+    if not paths:
+        raise FileNotFoundError("No parquet inputs were resolved from --input.")
+    print(f"Resolved {len(paths)} parquet inputs for training.")
 
     df = load_parquet(
         paths,
@@ -241,6 +244,9 @@ def run_validation(args):
     # Load dataset
     # ---------------------------
     paths = expand_inputs(args.input, args.use_glob)
+    if not paths:
+        raise FileNotFoundError("No parquet inputs were resolved from --input.")
+    print(f"Resolved {len(paths)} parquet inputs for validation.")
 
     df = load_parquet(
         paths,
@@ -405,6 +411,9 @@ def run_rescan(args):
     # Load dataset
     # ---------------------------
     paths = expand_inputs(args.input, args.use_glob)
+    if not paths:
+        raise FileNotFoundError("No parquet inputs were resolved from --input.")
+    print(f"Resolved {len(paths)} parquet inputs for rescan.")
 
     df = load_parquet(
         paths,

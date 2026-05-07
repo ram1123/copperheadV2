@@ -1,12 +1,29 @@
 import os
 from glob import glob
 
-def expand_inputs(inp: str, use_glob: bool) -> list[str]:
-    if os.path.isdir(inp):
-        return [inp]  # dataset directory
-    if use_glob or any(ch in inp for ch in "*?[]"):
-        return sorted(glob(inp))
-    return [inp]
+def expand_inputs(inp, use_glob: bool) -> list[str]:
+    if isinstance(inp, str):
+        raw_inputs = [tok.strip() for tok in inp.split(",") if tok.strip()]
+    else:
+        raw_inputs = []
+        for item in inp:
+            raw_inputs.extend(tok.strip() for tok in str(item).split(",") if tok.strip())
+
+    paths: list[str] = []
+    seen: set[str] = set()
+    for item in raw_inputs:
+        if os.path.isdir(item):
+            expanded = [item]
+        elif use_glob or any(ch in item for ch in "*?[]"):
+            expanded = sorted(glob(item))
+        else:
+            expanded = [item]
+
+        for path in expanded:
+            if path not in seen:
+                seen.add(path)
+                paths.append(path)
+    return paths
 
 def load_parquet(paths, use_pyarrow, columns=None, max_rows=None):
     import pandas as pd
