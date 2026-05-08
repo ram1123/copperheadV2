@@ -89,6 +89,11 @@ def main():
         help="Balance HS/PU separately within each inferred process group (DY/Top/EWK/...).",
     )
     parser.add_argument(
+        "--balance-pt-bins",
+        action="store_true",
+        help="When balancing processes, also stratify HS/PU sampling within pT bins.",
+    )
+    parser.add_argument(
         "--max-per-process-class",
         type=int,
         default=2000,

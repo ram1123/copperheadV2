@@ -172,6 +172,7 @@ def run_training(args):
                 min_train=args.min_train,
                 max_per_process_class=args.max_per_process_class,
                 equalize_processes=(not args.no_equalize_processes),
+                pt_bins=args.pt_bins if args.balance_pt_bins else None,
             )
         else:
             df_bal = balance_hs_pu(
