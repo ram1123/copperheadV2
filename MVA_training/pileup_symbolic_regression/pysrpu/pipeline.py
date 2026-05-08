@@ -3,11 +3,24 @@ from glob import glob
 import json
 import numpy as np
 import yaml
+import pandas as pd
 
 from .io import expand_inputs, load_parquet
-from .features import derive_features, drop_constant_columns, build_df_from_prefix, col, concat_prefixes
+from .features import (
+    derive_features,
+    drop_constant_columns,
+    build_df_from_prefix,
+    col,
+    concat_prefixes,
+    required_parquet_columns,
+)
 from .regions import region_mask_eta
-from .balance import balance_hs_pu
+from .balance import (
+    balance_hs_pu,
+    balance_hs_pu_by_process,
+    summarize_process_label_counts,
+    summarize_process_rows,
+)
 from .model import train_pysr, safe_predict
 from .thresholds import threshold_and_direction
 from .metrics import compute_wp_vs_pt
@@ -24,6 +37,46 @@ def load_features_from_yaml(path):
     return cfg["regions"]
 
 
+def expected_process_groups(df):
+    if "__process_group" not in df.columns:
+        return []
+    return sorted(str(x) for x in df["__process_group"].dropna().unique())
+
+
+def process_report_rows(region, stage, rows):
+    out = []
+    for row in rows:
+        row_out = {"region": region, "stage": stage}
+        row_out.update(row)
+        out.append(row_out)
+    return out
+
+
+def write_process_report(output_dir, rows):
+    if not rows:
+        return
+    report_df = pd.DataFrame(rows)
+    report_df.to_csv(os.path.join(output_dir, "process_balance_report.csv"), index=False)
+
+
+def build_columns_to_load(features_yaml_path: str):
+    features_by_region = load_features_from_yaml(features_yaml_path)
+    requested_features = sorted(
+        {
+            feature
+            for region_features in features_by_region.values()
+            for feature in region_features
+        }
+    )
+    prefixes = [f"jet{i}_" for i in range(1, 4 + 1)]
+    columns = required_parquet_columns(
+        requested_features=requested_features,
+        prefixes=prefixes,
+        variation="nominal",
+    )
+    return features_by_region, prefixes, columns
+
+
 def run_training(args):
 
     os.makedirs(args.output, exist_ok=True)
@@ -34,13 +87,18 @@ def run_training(args):
     paths = expand_inputs(args.input, args.use_glob)
     if not paths:
         raise FileNotFoundError("No parquet inputs were resolved from --input.")
+    if args.max_files is not None:
+        paths = paths[: args.max_files]
     print(f"Resolved {len(paths)} parquet inputs for training.")
+    features_by_region, prefixes, columns_to_load = build_columns_to_load(args.features_yaml)
+    print(f"Loading {len(columns_to_load)} parquet columns for training.")
 
     df = load_parquet(
         paths,
         use_pyarrow=args.use_pyarrow,
-        columns=None,
+        columns=columns_to_load,
         max_rows=args.max_rows,
+        attach_source_meta=True,
     )
 
     # -------------------------------
@@ -48,7 +106,6 @@ def run_training(args):
     # -------------------------------
     # required columns check
     required = ["eta", "pt", "hasMatchedGenJet"]
-    prefixes = [f"jet{i}_" for i in range(1, 4 + 1)]
     missing = []
     for p in prefixes:
         for req in required:
@@ -77,14 +134,29 @@ def run_training(args):
     regions = ["HEpos", "HEneg", "HFpos", "HFneg"]
 
     summary_all = []
+    process_report = []
+    expected_groups = expected_process_groups(df)
     
-    features_by_region = load_features_from_yaml(args.features_yaml)
     for region in regions:
 
         print(f"\n==== Region: {region} ====")
 
         mask_region = region_mask_eta(df["eta"].values, region)
         df_region = df[mask_region].copy()
+
+        before_process_rows = summarize_process_rows(df_region)
+        before_process_label_rows = summarize_process_label_counts(df_region)
+        present_before = {row["process_group"] for row in before_process_rows}
+        missing_before = sorted(set(expected_groups) - present_before)
+        if missing_before:
+            print(
+                f"WARNING: Region {region} is missing process groups before balancing: {', '.join(missing_before)}"
+            )
+
+        process_report.extend(process_report_rows(region, "before_rows", before_process_rows))
+        process_report.extend(
+            process_report_rows(region, "before_labels", before_process_label_rows)
+        )
 
         if len(df_region) < args.min_train:
             print("Too few events, skipping.")
@@ -93,16 +165,46 @@ def run_training(args):
         # -------------------------------
         # 4) Balance
         # -------------------------------
-        df_bal = balance_hs_pu(
-            df_region,
-            seed=args.seed,
-            min_train=args.min_train,
-            max_per_class=5000,
-        )
+        if args.balance_processes:
+            df_bal, balance_summary = balance_hs_pu_by_process(
+                df_region,
+                seed=args.seed,
+                min_train=args.min_train,
+                max_per_process_class=args.max_per_process_class,
+                equalize_processes=(not args.no_equalize_processes),
+            )
+        else:
+            df_bal = balance_hs_pu(
+                df_region,
+                seed=args.seed,
+                min_train=args.min_train,
+                max_per_class=args.max_per_class,
+            )
+            balance_summary = {
+                "mode": "global_hs_pu",
+                "n_total": int(len(df_bal)) if df_bal is not None else 0,
+            }
 
         if df_bal is None:
             print("Balance failed, skipping.")
+            if balance_summary:
+                print(json.dumps(balance_summary, indent=2))
             continue
+        print(json.dumps(balance_summary, indent=2))
+
+        after_process_rows = summarize_process_rows(df_bal)
+        after_process_label_rows = summarize_process_label_counts(df_bal)
+        present_after = {row["process_group"] for row in after_process_rows}
+        missing_after = sorted(set(expected_groups) - present_after)
+        if missing_after:
+            print(
+                f"WARNING: Region {region} is missing process groups after balancing: {', '.join(missing_after)}"
+            )
+
+        process_report.extend(process_report_rows(region, "after_rows", after_process_rows))
+        process_report.extend(
+            process_report_rows(region, "after_labels", after_process_label_rows)
+        )
 
         # -------------------------------
         # 5) Select features
@@ -177,7 +279,10 @@ def run_training(args):
             "valid_pt_range": {
                 "min": args.pt_min,
                 "max": args.pt_turnoff,
-            }            
+            },
+            "balance_summary": balance_summary,
+            "missing_process_groups_before": missing_before,
+            "missing_process_groups_after": missing_after,
         }
 
         summary_all.append(result)
@@ -196,6 +301,8 @@ def run_training(args):
         "w",
     ) as f:
         json.dump(summary_all, f, indent=2)
+
+    write_process_report(args.output, process_report)
 
     print("\nTraining complete.")
 
@@ -246,18 +353,22 @@ def run_validation(args):
     paths = expand_inputs(args.input, args.use_glob)
     if not paths:
         raise FileNotFoundError("No parquet inputs were resolved from --input.")
+    if args.max_files is not None:
+        paths = paths[: args.max_files]
     print(f"Resolved {len(paths)} parquet inputs for validation.")
+    _, prefixes, columns_to_load = build_columns_to_load(args.features_yaml)
+    print(f"Loading {len(columns_to_load)} parquet columns for validation.")
 
     df = load_parquet(
         paths,
         use_pyarrow=args.use_pyarrow,
-        columns=None,
+        columns=columns_to_load,
         max_rows=args.max_rows,
+        attach_source_meta=True,
     )
 
     # required columns check
     required = ["eta", "pt", "hasMatchedGenJet"]
-    prefixes = [f"jet{i}_" for i in range(1, 4 + 1)]
     missing = []
     for p in prefixes:
         for req in required:
@@ -413,13 +524,18 @@ def run_rescan(args):
     paths = expand_inputs(args.input, args.use_glob)
     if not paths:
         raise FileNotFoundError("No parquet inputs were resolved from --input.")
+    if args.max_files is not None:
+        paths = paths[: args.max_files]
     print(f"Resolved {len(paths)} parquet inputs for rescan.")
+    _, prefixes, columns_to_load = build_columns_to_load(args.features_yaml)
+    print(f"Loading {len(columns_to_load)} parquet columns for rescan.")
 
     df = load_parquet(
         paths,
         use_pyarrow=args.use_pyarrow,
-        columns=None,
+        columns=columns_to_load,
         max_rows=args.max_rows,
+        attach_source_meta=True,
     )
 
     df = concat_prefixes(df, [f"jet{i}_" for i in range(1, 5)], "nominal")
