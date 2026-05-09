@@ -47,6 +47,7 @@ from src.corrections.jet import (
     get_puId,
     jet_id,
     jet_puid,
+    getJecDataTag,
 )
 from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 from src.corrections.rochester import apply_roccor, apply_KitMuScaleRe_Run3
@@ -1186,6 +1187,8 @@ class EventProcessor(processor.ProcessorABC):
         do_jer_unc = self.config["switches"]["do_jer_unc"]
         jec_unc_sources = []
         jet_type = getJetType(NanoAODv, year)
+        self.config["jec_parameters"]["jet_algorithm"] = jet_type # defin jet type / jet algorithm into the jec.yaml
+        logger.info(f'jec params: {self.config["jec_parameters"]}')
         if do_jec:
             logger.info("doing JEC  (+ JER for MC)!")
 
@@ -1193,27 +1196,34 @@ class EventProcessor(processor.ProcessorABC):
             if do_jec_unc:
                 if is_mc:
                     jec_tag = self.config["jec_parameters"]["jec_tags"]
+                    if (not isinstance(jec_tag, str)): 
+                        jec_tag = jec_tag[f"nanoAODv{NanoAODv}"]
                 else: # data
-                    jec_tag = None
-                    for run in self.config["jec_parameters"]["runs"]:
-                        logger.debug(f"run: {run}, dataset: {dataset}")
-                        if run in dataset:
-                            jec_tag = getJecDataTag(run, self.config["jec_parameters"]["jec_data_tags"])
-                    if jec_tag is None:
-                        raise ValueError(
-                            f"No JEC tag found for dataset '{dataset}'. "
-                            f"Check that one of the configured runs "
-                            f"({self.config['jec_parameters']['runs']}) "
-                            f"is present in the dataset name."
-                        )
+                    # jec_tag = None
+                    # for run in self.config["jec_parameters"]["runs"]:
+                    #     logger.info(f"run: {run}, dataset: {dataset}")
+                    #     logger.info(f"run in dataset: {run in dataset}")
+                    #     if run in dataset:
+                    #         jec_tag = getJecDataTag(run, self.config["jec_parameters"]["jec_data_tags"], NanoAODv=self.config["NanoAODv"])
+                    # if jec_tag is None:
+                    #     raise ValueError(
+                    #         f"No JEC tag found for dataset '{dataset}'. "
+                    #         f"Check that one of the configured runs "
+                    #         f"({self.config['jec_parameters']['runs']}) "
+                    #         f"is present in the dataset name."
+                    #     )
+                    pass # FIXME: jec_unc on data leads to diff data/MC agreement on control plots for VBF channel. This doesn't happen on MC
                 jerc_load_path = self.config["jec_parameters"]["jerc_load_path"]
                 cset = get_corrset(jerc_load_path, NanoAODv)
                 jec_unc_sources = get_jec_sources(cset, jec_tag, jet_type=jet_type)
                 variation_l = ["nominal"] + jec_unc_sources
+                logger.info(f"jec_unc_sources: {jec_unc_sources}")
+                logger.info(f"jec_tag: {jec_tag}")
+                logger.info(f"jet_type: {jet_type}")
             else:
                 variation_l = ["nominal"]
 
-            logger.debug(f"variations: {variation_l}")
+            logger.info(f"variations: {variation_l}")
 
             # 2) Apply JES to jets (nominal + uncertainty sources)
             jets = do_jec_scale(jets, events, self.config, is_mc, dataset, uncs=variation_l)
@@ -3084,6 +3094,7 @@ class EventProcessor(processor.ProcessorABC):
             logger.info("Using btagUParTAK4B btag!")
             btagLoose_filter = btag_jets.btagUParTAK4B > self.config["btag_loose_wp_UParT"]
             btagMedium_filter = btag_jets.btagUParTAK4B > self.config["btag_medium_wp_UParT"]
+        logger.info(f"hasattr(btag_jets, 'btagUParTAK4B'): {hasattr(btag_jets, 'btagUParTAK4B')}")
 
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)

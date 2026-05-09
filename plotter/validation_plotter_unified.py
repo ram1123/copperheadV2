@@ -45,6 +45,30 @@ group_dict = {
         "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
     },
     "DY": {
+        "2016preVFP": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            "dy_M-100To200_MiNNLO",# run2 nanoV12
+            "dy_M-50_MiNNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
+        "2016postVFP": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            "dy_M-100To200_MiNNLO",# run2 nanoV12
+            "dy_M-50_MiNNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
+        "2017": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            "dy_M-100To200_MiNNLO",# run2 nanoV12
+            "dy_M-50_MiNNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
+        "2018": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            "dy_M-100To200_MiNNLO",# run2 nanoV12
+            "dy_M-50_MiNNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
         "2022preEE": ["dyTo2L_M-50_incl"],
         "2022postEE": ["dyTo2L_M-50_incl"],
         "2023": ["dyTo2L_M-50_incl"],
@@ -58,6 +82,10 @@ group_dict = {
         # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
     },
     "EWK": {
+        "2016preVFP": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
+        "2016postVFP": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
+        "2017": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
+        "2018": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
         "2022preEE": ["ewk_mmjj_mll_105_160"],
         "2022postEE": ["ewk_mmjj_mll_105_160"],
         "2023": ["ewk_mmjj_mll_105_160"],
@@ -87,6 +115,10 @@ group_dict = {
     # "OTHER": ["www", "wwz", "wzz", "zzz"],
     "ggH": ["ggh_powhegPS"],
     "VBF": {
+        "2016preVFP": ["vbf_powheg_dipole"],
+        "2016postVFP": ["vbf_powheg_dipole"],
+        "2017": ["vbf_powheg_dipole"],
+        "2018": ["vbf_powheg_dipole"],
         "2022preEE": ["vbf_powheg_dipole"],
         "2022postEE": ["vbf_powheg_dipole"],
         "2023": ["vbf_powheg"],
@@ -315,6 +347,8 @@ if __name__ == "__main__":
 
     group_dict = parseGroupProcesses(group_dict, args.year)
 
+    if args.do_vbf_filter_study:
+        group_dict["DY"] = group_dict["DY"] + ["dy_VBF_filter"]
     if is_run3(args.year):
         CM_energy = 13.6  # TeV
     elif is_run2(args.year):

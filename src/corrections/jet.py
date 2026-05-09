@@ -603,13 +603,16 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool, NanoAODv: int):
     return hemveto, is_HemRegion
 
 
-def getJecDataTag(run, jec_data_tags):
-    logger.debug(f"run: {run}")
-    logger.debug(f"jec_data_tags: {jec_data_tags}")
+def getJecDataTag(run, jec_data_tags, NanoAODv=None):
+    logger.info(f"run: {run}")
+    logger.info(f"jec_data_tags: {jec_data_tags}")
+    if (not isinstance(jec_data_tags, str)) and (NanoAODv is not None): # if it's a dictionary like
+        jec_data_tags = jec_data_tags[f"nanoAODv{NanoAODv}"]
+    logger.info(f"jec_data_tags: {jec_data_tags}")
     for jec_tag, jec_run_l in jec_data_tags.items():
         for jec_run in jec_run_l:
             if run == jec_run:
-                logger.debug(f"found match in jec_run {jec_run}!")
+                logger.info(f"found match in jec_run {jec_run}!")
                 return jec_tag
 
     return None # return none if nothing matches
@@ -672,6 +675,8 @@ def get_jec_sources(cset, jec_tag, jet_type="AK4PFPuppi"):
 
     prefix = f"{jec_tag}_Regrouped_"
     suffix = f"_{jet_type}"
+    logger.info(f"prefix: {prefix}")
+    logger.info(f"suffix: {suffix}")
 
     for key in cset.keys():
         logger.debug(f"JEC keys: {key}")
@@ -692,13 +697,19 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
 
     if is_mc:
         jec_tag = jec_parameters["jec_tags"]
+        logger.info(f"jec_parameters: {jec_parameters}")
+        logger.info(f"jec_tag: {jec_tag}")
+        logger.info(f"NanoAODv: {config['NanoAODv']}")
+        if (not isinstance(jec_tag, str)): # if it's a dictionary like
+            NanoAODv = config["NanoAODv"]
+            jec_tag = jec_tag[f"nanoAODv{NanoAODv}"]
     else: # data
         jec_tag = None
         for run in jec_parameters["runs"]:
             logger.debug(f"run: {run}, dataset: {dataset}")
             if run in dataset:
-                jec_tag = getJecDataTag(run, jec_parameters["jec_data_tags"])
-    logger.debug(f"jec_tag: {jec_tag}")
+                jec_tag = getJecDataTag(run, jec_parameters["jec_data_tags"], NanoAODv=config["NanoAODv"])
+    logger.info(f"jec_tag: {jec_tag}")
     if jec_tag is None:
         raise ValueError("JEC tag not found!")
 
