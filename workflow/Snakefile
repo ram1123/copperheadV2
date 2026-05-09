@@ -21,10 +21,12 @@ FINAL_REP = REPEATS[-1]
 ZPT_JETS_CATS = ["0", "1", "2"]
 
 PLOT_CATS = ["nocat", "vbf", "ggh"]
+# PLOT_CATS = ["vbf", "ggh"]
+# PLOT_CATS = ["vbf"]
 # PLOT_CATS = ["nocat"]
-# PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
+PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
 # PLOT_NJETS = ["0", "1", "2"]   # adapt to what your script accepts
-PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
+# PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
 JJ_ETA_REGIONS = [
     "all",
     # "jj_both_central",
@@ -37,6 +39,7 @@ JJ_ETA_REGIONS = [
     # "jj_both_fwd30",
     # "jj_one_he_one_fwd30",
 ]
+#PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
 PLOT_ZPT_MODES  = ["withzpt", "nozpt"] # ["withzpt", "nozpt"]
 PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
 
@@ -96,12 +99,14 @@ def yaml_for_year(year: str) -> str:
 
 def label_for_year(year: str) -> str:
     era, nano = YEAR_META[year]
+    # nano = "12"
     era_tag = "Run2" if era == "run2" else "Run3"
     return f"{era_tag}_nanoAODv{nano}_{RUN_TAG}"
 
 
 def plot_base_for_year(year: str) -> str:
     era, nano = YEAR_META[year]
+    # nano = "12"
     era_tag = "Run2" if era == "run2" else "Run3"
     return f"validation/figs/{era_tag}_nanoAODv{nano}"
 
@@ -122,6 +127,26 @@ def gw_flags():
 def gw_flags_plots():
     return f" --use_gateway --cluster_index {CLIDX} " if USE_GW else ""
 
+PLOT_TARGETS = [
+    (year, cat, njets_plot, jj_eta_region, zpt_mode, var_set)
+    for year in YEARS
+    for cat in PLOT_CATS
+    for njets_plot in PLOT_NJETS
+    for jj_eta_region in JJ_ETA_REGIONS
+    for zpt_mode in PLOT_ZPT_MODES
+    for var_set in PLOT_VAR_SETS
+    if not (cat == "vbf" and njets_plot != "inclusive")
+]
+PLOT_DONE = expand(
+    STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
+    zip,
+    year=[x[0] for x in PLOT_TARGETS],
+    cat=[x[1] for x in PLOT_TARGETS],
+    njets_plot=[x[2] for x in PLOT_TARGETS],
+    jj_eta_region=[x[3] for x in PLOT_TARGETS],
+    zpt_mode=[x[4] for x in PLOT_TARGETS],
+    var_set=[x[5] for x in PLOT_TARGETS],
+)
 
 rule all:
     input:
@@ -130,15 +155,7 @@ rule all:
         # (2) stage1Compact for all years
         expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        expand(
-           STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-            year=YEARS,
-            cat=PLOT_CATS,
-            njets_plot=PLOT_NJETS,
-            jj_eta_region=JJ_ETA_REGIONS,
-            zpt_mode=PLOT_ZPT_MODES,
-            var_set=PLOT_VAR_SETS,
-        ),
+        PLOT_DONE,
         # (4) get zpt
         expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
         expand(STATEDIR + "/zpt_step1_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
@@ -163,15 +180,7 @@ rule plot_all:
         # (2) stage1Compact for all years
         # expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        expand(
-           STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-            year=YEARS,
-            cat=PLOT_CATS,
-            njets_plot=PLOT_NJETS,
-            jj_eta_region=JJ_ETA_REGIONS,
-            zpt_mode=PLOT_ZPT_MODES,
-            var_set=PLOT_VAR_SETS,
-        ),
+        PLOT_DONE,
 
 
 rule all_stage1:
@@ -181,15 +190,7 @@ rule all_stage1:
         # (2) stage1Compact for all years
         expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        expand(
-           STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-            year=YEARS,
-            cat=PLOT_CATS,
-            njets_plot=PLOT_NJETS,
-            jj_eta_region=JJ_ETA_REGIONS,
-            zpt_mode=PLOT_ZPT_MODES,
-            var_set=PLOT_VAR_SETS,
-        ),
+        PLOT_DONE,
         # f"{STATEDIR}/summary.done"
 
 
