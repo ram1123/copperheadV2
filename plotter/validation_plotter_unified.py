@@ -45,6 +45,30 @@ group_dict = {
         "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
     },
     "DY": {
+        "2016preVFP": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            "dy_M-100To200_MiNNLO",# run2 nanoV12
+            "dy_M-50_MiNNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
+        "2016postVFP": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            "dy_M-100To200_MiNNLO",# run2 nanoV12
+            "dy_M-50_MiNNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
+        "2017": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            "dy_M-100To200_MiNNLO",# run2 nanoV12
+            "dy_M-50_MiNNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
+        "2018": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            "dy_M-100To200_MiNNLO",# run2 nanoV12
+            "dy_M-50_MiNNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
         "2022preEE": ["dyTo2L_M-50_incl"],
         "2022postEE": ["dyTo2L_M-50_incl"],
         "2023": ["dyTo2L_M-50_incl"],
@@ -58,6 +82,10 @@ group_dict = {
         # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
     },
     "EWK": {
+        "2016preVFP": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
+        "2016postVFP": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
+        "2017": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
+        "2018": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
         "2022preEE": ["ewk_mmjj_mll_105_160"],
         "2022postEE": ["ewk_mmjj_mll_105_160"],
         "2023": ["ewk_mmjj_mll_105_160"],
@@ -87,6 +115,10 @@ group_dict = {
     # "OTHER": ["www", "wwz", "wzz", "zzz"],
     "ggH": ["ggh_powhegPS"],
     "VBF": {
+        "2016preVFP": ["vbf_powheg_dipole"],
+        "2016postVFP": ["vbf_powheg_dipole"],
+        "2017": ["vbf_powheg_dipole"],
+        "2018": ["vbf_powheg_dipole"],
         "2022preEE": ["vbf_powheg_dipole"],
         "2022postEE": ["vbf_powheg_dipole"],
         "2023": ["vbf_powheg"],
@@ -315,6 +347,8 @@ if __name__ == "__main__":
 
     group_dict = parseGroupProcesses(group_dict, args.year)
 
+    if args.do_vbf_filter_study:
+        group_dict["DY"] = group_dict["DY"] + ["dy_VBF_filter"]
     if is_run3(args.year):
         CM_energy = 13.6  # TeV
     elif is_run2(args.year):
@@ -513,7 +547,7 @@ if __name__ == "__main__":
             logger.warning("removing separate_wgt_zpt_wgt!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
 
-        if (
+        elif (
             "separate_wgt_zpt_wgt" in events.fields
             and "zpt_wgt_reco_dnn" in events.fields
             and args.use_dnn_zpt_weights
@@ -675,20 +709,6 @@ if __name__ == "__main__":
                     # weights = weights / 59830.0 # FIXME: this is hardcoded value, should be replaced with lumi value from config file
 
                     # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
-                    # temporary over write
-                    # logger.info(f"events.fields: {events.fields}")
-                    if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                        logger.debug("removing Zpt rewgt!")
-                        weights = weights/events["separate_wgt_zpt_wgt"]
-
-                    if (
-                        "separate_wgt_zpt_wgt" in events.fields
-                        and "zpt_wgt_reco_dnn" in events.fields
-                        and args.use_dnn_zpt_weights
-                    ):
-                        logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
-                        weights = weights / events["separate_wgt_zpt_wgt"]
-                        weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
 
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure

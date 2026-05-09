@@ -271,7 +271,7 @@ def jet_id(jets, config, year = None):
 
     pass_jet_id = ak.ones_like(jets.pt, dtype=bool)
     jet_id2use = config["jet_id"]
-    if hasattr(jets, "jetId"):
+    if hasattr(jets, "jetId") and is_run2(year):
         jet_id_wps = {
             "tight": jets.jetId >= 2,
             "tightFailLepVeto": jets.jetId == 2,
@@ -307,7 +307,7 @@ def jet_id(jets, config, year = None):
             "multiplicity": jets.chMultiplicity + jets.neMultiplicity
         }
 
-        # Default tight for NanoAOD version 13 and above
+        # Default tight for NanoAOD version 12 and above
         idTight = cset["AK4PUPPI_Tight"]
         inputsTight = [eval_dict[input.name] for input in idTight.inputs]
         idTight_value = idTight.evaluate(*inputsTight)
@@ -500,7 +500,7 @@ def fill_softjets_HIG19006(events, jets, mu1, mu2, nmuons, cutoff, test_mode=Fal
     return out_dict
 
 
-def getHemVetoRunFilter(run, event_num, config, is_mc):
+def getHemVetoRunFilter(run, event_num, config, is_mc: bool, NanoAODv: int):
     """
     For data:
     return the conditions for applying HemVeto. For data, this is just
@@ -508,9 +508,15 @@ def getHemVetoRunFilter(run, event_num, config, is_mc):
     For MC:
     Randomly reject a given fraction of events using for MC to match HEM Vetoed jets in 2018 UL as reccommended in https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8 (though we reject her "eventNum % 15 == 0" method of random rejection and just use random number generation)
     """
+    hemvetoRatioConfig = config["HemVeto_ratio"]
     if is_mc:
-        prob = config["HemVeto_ratio"] # ratio of HemVeto applicable run / total nevents for 2018UL
-        logger.debug(f"HEMveto prob: {prob}")
+        try: # see if the nanoAODV distinction exists
+            logger.info(f"nanoAODv{NanoAODv}")
+            prob = config["HemVeto_ratio"][f"nanoAODv{NanoAODv}"] # ratio of HemVeto applicable run / total nevents for 2018UL
+        except:
+            prob = config["HemVeto_ratio"]
+
+        logger.info(f"HEMveto prob: {prob}")
         # intialize random number generator
         resrng = cs.Correction(
             name="resrng",
@@ -535,7 +541,7 @@ def getHemVetoRunFilter(run, event_num, config, is_mc):
     else: #For data, just a simple run >= 319077 cut. Source: https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8
         return (run >= 319077)
 
-def applyHemVeto(jets, run, event_num, config, is_mc: bool):
+def applyHemVeto(jets, run, event_num, config, is_mc: bool, NanoAODv: int):
     """
     Apply HEM veto for 2018 UL as recommended on https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/5
     """
@@ -586,7 +592,7 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
     )
 
     # hemveto_run_filter = (run >= 319077)
-    hemveto_run_filter = getHemVetoRunFilter(run, event_num, config, is_mc)
+    hemveto_run_filter = getHemVetoRunFilter(run, event_num, config, is_mc, NanoAODv)
 
     # combine all the conditions
     hemveto = loose_jet_selection & hemveto_region
@@ -597,13 +603,16 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool):
     return hemveto, is_HemRegion
 
 
-def getJecDataTag(run, jec_data_tags):
-    logger.debug(f"run: {run}")
-    logger.debug(f"jec_data_tags: {jec_data_tags}")
+def getJecDataTag(run, jec_data_tags, NanoAODv=None):
+    logger.info(f"run: {run}")
+    logger.info(f"jec_data_tags: {jec_data_tags}")
+    if (not isinstance(jec_data_tags, str)) and (NanoAODv is not None): # if it's a dictionary like
+        jec_data_tags = jec_data_tags[f"nanoAODv{NanoAODv}"]
+    logger.info(f"jec_data_tags: {jec_data_tags}")
     for jec_tag, jec_run_l in jec_data_tags.items():
         for jec_run in jec_run_l:
             if run == jec_run:
-                logger.debug(f"found match in jec_run {jec_run}!")
+                logger.info(f"found match in jec_run {jec_run}!")
                 return jec_tag
 
     return None # return none if nothing matches
@@ -666,6 +675,8 @@ def get_jec_sources(cset, jec_tag, jet_type="AK4PFPuppi"):
 
     prefix = f"{jec_tag}_Regrouped_"
     suffix = f"_{jet_type}"
+    logger.info(f"prefix: {prefix}")
+    logger.info(f"suffix: {suffix}")
 
     for key in cset.keys():
         logger.debug(f"JEC keys: {key}")
@@ -681,18 +692,24 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
     jerc_load_path = jec_parameters["jerc_load_path"]
     logger.debug(f"jerc_load_path: {jerc_load_path}")
 
-    cset = get_corrset(jerc_load_path)
+    cset = get_corrset(jerc_load_path, config['NanoAODv'])
 
 
     if is_mc:
         jec_tag = jec_parameters["jec_tags"]
+        logger.info(f"jec_parameters: {jec_parameters}")
+        logger.info(f"jec_tag: {jec_tag}")
+        logger.info(f"NanoAODv: {config['NanoAODv']}")
+        if (not isinstance(jec_tag, str)): # if it's a dictionary like
+            NanoAODv = config["NanoAODv"]
+            jec_tag = jec_tag[f"nanoAODv{NanoAODv}"]
     else: # data
         jec_tag = None
         for run in jec_parameters["runs"]:
             logger.debug(f"run: {run}, dataset: {dataset}")
             if run in dataset:
-                jec_tag = getJecDataTag(run, jec_parameters["jec_data_tags"])
-    logger.debug(f"jec_tag: {jec_tag}")
+                jec_tag = getJecDataTag(run, jec_parameters["jec_data_tags"], NanoAODv=config["NanoAODv"])
+    logger.info(f"jec_tag: {jec_tag}")
     if jec_tag is None:
         raise ValueError("JEC tag not found!")
 
@@ -852,7 +869,7 @@ def apply_jer_unc(jets):
     return jets
 
 
-def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_version=12):
+def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
     """
     we assume that jec has been applied (we need pt_jec and pt_raw)
 
@@ -865,7 +882,7 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
     jerc_load_path = jec_parameters["jerc_load_path"]
     logger.debug(f"jerc_load_path: {jerc_load_path}")
 
-    cset = get_corrset(jerc_load_path)
+    cset = get_corrset(jerc_load_path, NanoAODv=config['NanoAODv'])
 
     jersmear_load_path = jec_parameters["jersmear_load_path"]
     cset_jersmear = get_corrset(jersmear_load_path)

@@ -162,7 +162,7 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
-    apply_jet_PUID_wgt:
+    do_jet_PUID_cut:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
