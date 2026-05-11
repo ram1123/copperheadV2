@@ -104,6 +104,10 @@ def parseGroupProcesses(group_dict, year: str):
     for group_name, processes in group_dict.items():
         logger.debug(f"Group '{group_name}' processes (original): {processes}")
         if type(processes) is dict:
+            if year not in processes:
+                raise KeyError(
+                    f"Year '{year}' is not configured for process group '{group_name}'."
+                )
             processes = processes[year]
         year_specific_group_dict[group_name] = processes
     logger.debug(f"Group dict specific to year {year}: {year_specific_group_dict}")
@@ -313,6 +317,11 @@ if __name__ == "__main__":
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
 
+    if args.remove_zpt_weights and args.use_dnn_zpt_weights:
+        raise ValueError(
+            "Use either --remove_zpt_weights or --use_dnn_zpt_weights, not both."
+        )
+
     group_dict = parseGroupProcesses(group_dict, args.year)
 
     if is_run3(args.year):
@@ -435,12 +444,13 @@ if __name__ == "__main__":
         if "f1_0" not in args.load_path:
             raise ValueError("The load path should contain the string 'f1_0' to use the compacted path! Exiting the program.")
 
+        compacted_base_path = (args.load_path).replace("f1_0", args.use_compacted)
         # run compact script for each process
         for process in available_processes:
-            compacted_path_DNN = os.path.join(args.load_path, process, "0")
+            compacted_path_DNN = os.path.join(compacted_base_path, process, "0")
             ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
 
-        args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
+        args.load_path = compacted_base_path
 
     logger.info(f"Using parquet files from {args.load_path}")
     # load saved parquet files. This increases memory use, but increases runtime significantly
@@ -476,7 +486,6 @@ if __name__ == "__main__":
             "dimuon_pt",
             "jet2_pt_nominal",
             "jj_pt_nominal",
-            "zeppenfeld_nominal",
         ]
 
         is_data = "data" in process.lower()
@@ -513,7 +522,7 @@ if __name__ == "__main__":
             logger.warning("removing separate_wgt_zpt_wgt!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
 
-        if (
+        elif (
             "separate_wgt_zpt_wgt" in events.fields
             and "zpt_wgt_reco_dnn" in events.fields
             and args.use_dnn_zpt_weights
@@ -675,20 +684,20 @@ if __name__ == "__main__":
                     # weights = weights / 59830.0 # FIXME: this is hardcoded value, should be replaced with lumi value from config file
 
                     # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
-                    # temporary over write
-                    # logger.info(f"events.fields: {events.fields}")
-                    if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                        logger.debug("removing Zpt rewgt!")
-                        weights = weights/events["separate_wgt_zpt_wgt"]
+                    # # temporary over write
+                    # # logger.info(f"events.fields: {events.fields}")
+                    # if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
+                    #     logger.debug("removing Zpt rewgt!")
+                    #     weights = weights/events["separate_wgt_zpt_wgt"]
 
-                    if (
-                        "separate_wgt_zpt_wgt" in events.fields
-                        and "zpt_wgt_reco_dnn" in events.fields
-                        and args.use_dnn_zpt_weights
-                    ):
-                        logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
-                        weights = weights / events["separate_wgt_zpt_wgt"]
-                        weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
+                    # if (
+                    #     "separate_wgt_zpt_wgt" in events.fields
+                    #     and "zpt_wgt_reco_dnn" in events.fields
+                    #     and args.use_dnn_zpt_weights
+                    # ):
+                    #     logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+                    #     weights = weights / events["separate_wgt_zpt_wgt"]
+                    #     weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
 
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
@@ -881,7 +890,7 @@ if __name__ == "__main__":
                 status = status,
                 log_scale = do_logscale,
                 CenterOfMass = CM_energy,
-                plot_ratio_range = "fixed", # options: "fixed" or "auto"
+                plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
             )
             plotDataMC_compare(
                 binning,
@@ -896,7 +905,7 @@ if __name__ == "__main__":
                 status = status,
                 log_scale = False,
                 CenterOfMass=CM_energy,
-                plot_ratio_range = "fixed", # options: "fixed" or "auto"
+                plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
             )
 
     close_dask_client()

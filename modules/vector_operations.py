@@ -30,10 +30,14 @@ def convert_vector_type_4d(vector, vector_name):
 
 
 def getRapidity(obj):
-    px = obj.pt * np.cos(obj.phi)
-    py = obj.pt * np.sin(obj.phi)
-    pz = obj.pt * np.sinh(obj.eta)
-    e = np.sqrt(px**2 + py**2 + pz**2 + obj.mass**2)
+    if hasattr(obj, "energy") and hasattr(obj, "pz"):
+        e = obj.energy
+        pz = obj.pz
+    else:
+        px = obj.pt * np.cos(obj.phi)
+        py = obj.pt * np.sin(obj.phi)
+        pz = obj.pt * np.sinh(obj.eta)
+        e = np.sqrt(px**2 + py**2 + pz**2 + obj.mass**2)
     rap = 0.5 * np.log((e + pz) / (e - pz))
     return rap
 
