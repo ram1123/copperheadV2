@@ -5,6 +5,7 @@ This function defines the full, shared CLI.
 """
 import argparse
 import logging
+from pathlib import Path
 
 
 def build_common_parser() -> argparse.ArgumentParser:
@@ -155,3 +156,20 @@ def build_common_parser() -> argparse.ArgumentParser:
         help="For zpt reweighting, choose the type of DY samples to use",
     )
     return parser
+
+
+def resolve_dataset_yaml_file(dataset_yaml_file: str, year: str, NanoAODv: int) -> str:
+    """
+    Resolve to the versioned dataset config files that actually exist in this repo.
+    """
+    candidate = Path(dataset_yaml_file)
+    if candidate.exists():
+        return str(candidate)
+
+    run_period = "run3" if str(year).startswith("202") else "run2"
+
+    fallback = Path(f"configs/datasets/dataset_nanoAODv{NanoAODv}_{run_period}.yaml")
+    if fallback.exists():
+        return str(fallback)
+
+    return dataset_yaml_file
