@@ -95,12 +95,13 @@ To run pre-stage the `StageNo` should be "0". For running `Stage1` the argument 
 ## Step - 2: Get Z-pT reweight
 
 1. Get weight, data/DY, in the jet multiplicity bins
-   * Code located in `data/Zpt_rewgt/fitting/do_fitting.py`
-   * It extracts p_T(mumu) from data and DY in the Z-peak region. Also, the ratio of data/dy in nJet bins. Then save them as .root file
+   * Code located in `src/copperhead/zpt_rewgt/derive/save_SF_rootFiles.py`
+   * It extracts dimuon pT in the Z-peak region and saves `Data`, `DY`, and `Data / DY` inputs for the fit.
 2. Fit the ratio data/dy: `do_f_test.py`
    * From here, get the polynomial that fits our data best as per f-test.
-3. Run `get_goodnessofFit.py`: Fits and saves the polynomial info in the YAML file.
-4. How to save the weight into the skimmed file:
+3. Run `get_polyFit.py`: builds the final piecewise function, produces goodness-of-fit plots, and saves the polynomial info in the YAML file.
+4. Run `plotter/validation_plotter_unified.py` twice, once with the default Z-pT weight and once with `--remove_zpt_weights`, and compare the plots for `inclusive`, `0`, `1`, and `2` jet selections.
+5. How to save the weight into the skimmed file:
    - Run: `work/users/shar1172/HMuMu/copperheadV2/src/copperhead_processor.py`
    - The function that saves weight in above script is `getZptWgts()`
 
@@ -128,6 +129,3 @@ python Scripts/Investigate_ParquetFile.py
 
 - [ ] Update how the pre-stage JSON files are saved. It should be saved with year name, so that we don't need to run pre-stage everytime.
     - [ ] Also, if we already run for data and running for MC then it should append info to the JSON file.
-- [ ]
-
-
