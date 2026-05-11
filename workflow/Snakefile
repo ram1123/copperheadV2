@@ -6,11 +6,14 @@ configfile: "workflow/config.yaml"
 HMM_BASE = config.get("hmm_base", f"/work/projects/hmm")
 HMM_USER = os.environ["USER"]
 
+USE_EXISTING_STAGE1 = config.get("use_existing_stage1", False)
+
 YEARS = config["years"]
 RUN_TAG = config.get("run_tag", "default")
 
 LOGDIR = f"logs/{RUN_TAG}"
 STATEDIR = f"state/{RUN_TAG}"
+FAIL_LOG = f"{LOGDIR}/failed_jobs.log"
 
 REPEATS = ["1"] # In case some jobs fails for the stage-1, so to recover it run the stage-1 three times. All followed dependents will depend on the "3"
 FINAL_REP = REPEATS[-1]
@@ -18,10 +21,12 @@ FINAL_REP = REPEATS[-1]
 ZPT_JETS_CATS = ["0", "1", "2"]
 
 PLOT_CATS = ["nocat", "vbf", "ggh"]
+# PLOT_CATS = ["vbf", "ggh"]
+# PLOT_CATS = ["vbf"]
 # PLOT_CATS = ["nocat"]
-# PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
+PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
 # PLOT_NJETS = ["0", "1", "2"]   # adapt to what your script accepts
-PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
+# PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
 JJ_ETA_REGIONS = [
     "all",
     # "jj_both_central",
@@ -34,6 +39,7 @@ JJ_ETA_REGIONS = [
     # "jj_both_fwd30",
     # "jj_one_he_one_fwd30",
 ]
+#PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
 PLOT_ZPT_MODES  = ["withzpt", "nozpt"] # ["withzpt", "nozpt"]
 PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
 
@@ -63,6 +69,7 @@ YEAR_META = {
 }
 
 DATASET_YAMLS = {
+    ("run2", "12"): "configs/datasets/dataset_nanoAODv12_run2.yaml",
     ("run2", "15"): "configs/datasets/dataset_nanoAODv15_run2.yaml",
     ("run3", "15"): "configs/datasets/dataset_nanoAODv15_run3.yaml",
     ("run3", "12"): "configs/datasets/dataset_nanoAODv12_run3.yaml",
@@ -92,15 +99,22 @@ def yaml_for_year(year: str) -> str:
 
 def label_for_year(year: str) -> str:
     era, nano = YEAR_META[year]
+    # nano = "12"
     era_tag = "Run2" if era == "run2" else "Run3"
     return f"{era_tag}_nanoAODv{nano}_{RUN_TAG}"
+
+
+def plot_base_for_year(year: str) -> str:
+    era, nano = YEAR_META[year]
+    # nano = "12"
+    era_tag = "Run2" if era == "run2" else "Run3"
+    return f"validation/figs/{era_tag}_nanoAODv{nano}"
 
 
 USE_GW = bool(config.get("use_gateway", False))
 CLIDX  = str(config.get("cluster_index", 0))
 
 ZPT = config["zpt"]
-ZPT_TAG = label_for_year(YEARS[0])  # Use first year's label for ZPT_TAG
 ZPT_OUT = ZPT.get("outbase", "try_zpt_dnn")
 ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
 ZPT_BATCH = int(ZPT.get("batch", 65536))
@@ -113,6 +127,26 @@ def gw_flags():
 def gw_flags_plots():
     return f" --use_gateway --cluster_index {CLIDX} " if USE_GW else ""
 
+PLOT_TARGETS = [
+    (year, cat, njets_plot, jj_eta_region, zpt_mode, var_set)
+    for year in YEARS
+    for cat in PLOT_CATS
+    for njets_plot in PLOT_NJETS
+    for jj_eta_region in JJ_ETA_REGIONS
+    for zpt_mode in PLOT_ZPT_MODES
+    for var_set in PLOT_VAR_SETS
+    if not (cat == "vbf" and njets_plot != "inclusive")
+]
+PLOT_DONE = expand(
+    STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
+    zip,
+    year=[x[0] for x in PLOT_TARGETS],
+    cat=[x[1] for x in PLOT_TARGETS],
+    njets_plot=[x[2] for x in PLOT_TARGETS],
+    jj_eta_region=[x[3] for x in PLOT_TARGETS],
+    zpt_mode=[x[4] for x in PLOT_TARGETS],
+    var_set=[x[5] for x in PLOT_TARGETS],
+)
 
 rule all:
     input:
@@ -121,15 +155,7 @@ rule all:
         # (2) stage1Compact for all years
         expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        expand(
-           STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-            year=YEARS,
-            cat=PLOT_CATS,
-            njets_plot=PLOT_NJETS,
-            jj_eta_region=JJ_ETA_REGIONS,
-            zpt_mode=PLOT_ZPT_MODES,
-            var_set=PLOT_VAR_SETS,
-        ),
+        PLOT_DONE,
         # (4) get zpt
         expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
         expand(STATEDIR + "/zpt_step1_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
@@ -139,7 +165,7 @@ rule all:
         expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
         expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
         expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
-        # # (6) second-pass stage1 using latest corrections for zpt and EBE mass calibration
+        # (6) second-pass stage1 using latest corrections for zpt and EBE mass calibration
         # expand(STATEDIR + "/stage1_corr_{year}.done", year=YEARS),
         # expand(STATEDIR + "/stage1_compact_corr_{year}.done", year=YEARS),
         # expand(STATEDIR + "/plots_corr_{year}_{cat}.done", year=YEARS, cat=PLOT_CATS),
@@ -147,21 +173,14 @@ rule all:
         # expand(STATEDIR + "/zpt_wgt_{year}_njet0.done", year=YEARS),
         # expand(STATEDIR + "/zpt_wgt_{year}_njet1.done", year=YEARS),
         # expand(STATEDIR + "/zpt_wgt_{year}_njet2p.done", year=YEARS),
+        f"{STATEDIR}/summary.done"
 
 rule plot_all:
     input:
         # (2) stage1Compact for all years
         # expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        expand(
-           STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-            year=YEARS,
-            cat=PLOT_CATS,
-            njets_plot=PLOT_NJETS,
-            jj_eta_region=JJ_ETA_REGIONS,
-            zpt_mode=PLOT_ZPT_MODES,
-            var_set=PLOT_VAR_SETS,
-        ),
+        PLOT_DONE,
 
 
 rule all_stage1:
@@ -171,15 +190,8 @@ rule all_stage1:
         # (2) stage1Compact for all years
         expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        expand(
-           STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-            year=YEARS,
-            cat=PLOT_CATS,
-            njets_plot=PLOT_NJETS,
-            jj_eta_region=JJ_ETA_REGIONS,
-            zpt_mode=PLOT_ZPT_MODES,
-            var_set=PLOT_VAR_SETS,
-        ),
+        PLOT_DONE,
+        # f"{STATEDIR}/summary.done"
 
 
 
@@ -202,7 +214,7 @@ rule stage1:
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/"
             "_status/stage1_summary.log"
-        ),        
+        ),
     resources:
         gateway=1,
     shell:
@@ -210,6 +222,7 @@ rule stage1:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
+        ts=$(date +"%Y-%m-%d_%H-%M-%S")
         PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
           -c {params.yaml} \
           -v {params.nano} \
@@ -220,8 +233,19 @@ rule stage1:
           > {log} 2>&1
         summary="{params.summary}"
 
+        # Rename log file after running the command, as Snakemake
+        # delets the log file before running the command. 
+        LOGFILE="{log}"
+        if [[ -f "$LOGFILE" ]]; then
+            echo "Rotating existing log → $LOGFILE.attempt_${{ts}}"
+            cp "$LOGFILE" "$LOGFILE.attempt_${{ts}}"
+        else
+            echo "No previous log found (first run)"
+        fi
+        
         if [[ ! -f "$summary" ]]; then
             echo "ERROR: stage1 summary log not found: $summary"
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             exit 1
         fi
 
@@ -230,10 +254,12 @@ rule stage1:
 
         if [[ "$failed" != "0" ]]; then
             echo "ERROR: Stage1 summary indicates FAILED: 0"
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             exit 1
         fi
 
         echo "Stage1 completed successfully"
+        echo "{rule} {wildcards} SUCCESS attempt time stamp: ${{ts}}" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -255,6 +281,10 @@ rule stage1Compact:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        outpath=lambda wc: (
+            f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
+            f"{label_for_year(wc.year)}/stage1_output/{wc.year}"
+        ),           
     resources:
         gateway=1,
     shell:
@@ -270,6 +300,73 @@ rule stage1Compact:
             -m compact \
             {params.gw} \
             > {log} 2>&1
+
+        # -----------------------------
+        # Validation block
+        # -----------------------------
+        BASE="{params.outpath}"
+        DIR_F1="$BASE/f1_0"
+        DIR_CMP="$BASE/compacted"
+
+        echo "Checking compact consistency..."
+
+        fail_flag=0
+
+        for sample in $(ls "$DIR_F1"); do
+            f1_dir="$DIR_F1/$sample"
+            cmp_dir="$DIR_CMP/$sample"
+
+            # --- Check existence ---
+            if [[ ! -d "$cmp_dir" ]]; then
+                echo "Missing compacted sample: $sample"
+                fail_flag=1
+                continue
+            fi
+
+            # --- Size comparison (in bytes, robust) ---
+            size_f1=$(du -sb "$f1_dir" | awk '{{print $1}}')
+            size_cmp=$(du -sb "$cmp_dir" | awk '{{print $1}}')
+
+            # allow small tolerance (important!)
+            ratio=$(awk "BEGIN {{print $size_cmp / $size_f1}}")
+
+            echo "$sample : f1=$size_f1 cmp=$size_cmp ratio=$ratio"
+
+            if [[ "$sample" == "ttjets_sl" ]]; then
+                # allow up to 60% shrink for ttjets_sl
+                threshold=0.35
+            elif [[ "$sample" == "wz_1l1nu2q" ]]; then
+                threshold=0.045
+            else
+                # allow up to 20% shrink (very safe)
+                threshold=0.8
+            fi
+
+            if (( $(awk "BEGIN {{print ($ratio < $threshold)}}") )); then
+                echo "Size mismatch for $sample → deleting compacted"
+                rm -rf "$cmp_dir"
+                fail_flag=1
+            fi
+
+            # --- Check parquet existence ---
+            nparquet=$(find "$cmp_dir" -name "*.parquet" | wc -l)
+            if [[ "$nparquet" -eq 0 ]]; then
+                echo "No parquet found in $sample"
+                rm -rf "$cmp_dir"
+                fail_flag=1
+            fi
+        done
+
+        # --- Final decision ---
+        if [[ "$fail_flag" -ne 0 ]]; then
+            echo "ERROR: Compact validation failed"
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
+            echo "stage1Compact year={wildcards.year} attempt= FAILED" >> {FAIL_LOG}
+            exit 1
+        fi
+
+        echo "Compact validation passed"
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -279,7 +376,9 @@ rule stage1Compact:
 # ---------------------------------------
 rule plots:
     input:
-       STATEDIR + "/stage1_compact_{year}.done",
+        lambda wc: [] if USE_EXISTING_STAGE1 else [
+            STATEDIR + f"/stage1_compact_{wc.year}.done"
+        ]       
     output:
         done=STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
     log:
@@ -293,12 +392,12 @@ rule plots:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0"
         ),        
         save_path=lambda wc: (
-            f"validation/figs/Run3_nanoAODv{nano_for_year(wc.year)}/"
+            f"{plot_base_for_year(wc.year)}/"
             f"{label_for_year(wc.year)}/VBFfilter_False/"
         ),
         # map wildcards -> CLI flags
         zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",
-        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else ""
+        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else "",
     # resources:
     #     gateway=1
     shell:
@@ -325,10 +424,12 @@ rule plots:
         # ---- SUCCESS CHECK ----
         if grep -q "Plots are saved to " {log}; then
             echo "Plot job successful."
+            echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
             touch {output.done}
         else
             echo "ERROR: Plot job did not complete successfully."
             echo "Success string not found in log."
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             exit 1
         fi
         """
@@ -363,7 +464,9 @@ rule zpt0:
           -l {params.label} \
           -y "{wildcards.year}" \
           -m zpt_fit0 \
+          {params.gw} \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -397,7 +500,9 @@ rule zpt1:
           -y "{wildcards.year}" \
           -m zpt_fit1 \
           -n {wildcards.njets} \
+          {params.gw} \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -431,7 +536,9 @@ rule zpt2:
           -y "{wildcards.year}" \
           -m zpt_fit2 \
           -n {wildcards.njets} \
+          {params.gw} \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -470,6 +577,7 @@ rule MassCalibrationMC:
           -m calib  \
           {params.gw}  \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -505,6 +613,7 @@ rule MassCalibrationMCClosure:
           -m calib_closure  \
           {params.gw}  \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -540,6 +649,7 @@ rule MassCalibrationData:
           -m calib \
           {params.gw}  \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -575,6 +685,7 @@ rule MassCalibrationDataClosure:
           -m calib_closure \
           {params.gw}  \
           > {log} 2>&1
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
 
@@ -599,6 +710,7 @@ rule corrections_ready:
     shell:
         r"""
         mkdir -p {params.logdir} {params.statedir}
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output}
         """
 
@@ -685,12 +797,12 @@ rule plots_corr:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0"
         ),        
         save_path=lambda wc: (
-            f"validation/figs/Run3_nanoAODv{nano_for_year(wc.year)}/"
+            f"{plot_base_for_year(wc.year)}/"
             f"{label_for_year(wc.year)}/VBFfilter_False/"
         ),
         # map wildcards -> CLI flags
         zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",
-        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else ""        
+        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else "",
     shell:
         r"""
         set -euo pipefail
@@ -718,6 +830,7 @@ rule plots_corr:
         else
             echo "ERROR: Plot job did not complete successfully."
             echo "Success string not found in log."
+            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             exit 1
         fi
         """
@@ -737,6 +850,7 @@ rule zpt_njet0:
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
+        zpt_tag=lambda wc: label_for_year(wc.year),
     shell:
         r"""
         set -euo pipefail
@@ -744,7 +858,7 @@ rule zpt_njet0:
         mkdir -p {params.logdir} {params.statedir}
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet0 \
+          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet0 \
           --njet-bin 0 \
           --max-events {ZPT_MAXEV} \
           --batch {ZPT_BATCH} \
@@ -763,6 +877,7 @@ rule zpt_njet1:
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
+        zpt_tag=lambda wc: label_for_year(wc.year),
     shell:
         r"""
         set -euo pipefail
@@ -770,7 +885,7 @@ rule zpt_njet1:
         mkdir -p {params.logdir} {params.statedir}
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet1 \
+          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet1 \
           --njet-bin 1 \
           --max-events {ZPT_MAXEV} \
           --batch {ZPT_BATCH} \
@@ -789,6 +904,7 @@ rule zpt_njet2p:
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
+        zpt_tag=lambda wc: label_for_year(wc.year),
     shell:
         r"""
         set -euo pipefail
@@ -796,10 +912,50 @@ rule zpt_njet2p:
         mkdir -p {params.logdir} {params.statedir}
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet2p \
+          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet2p \
           --njet-bin 2p \
           --max-events {ZPT_MAXEV} \
           --batch {ZPT_BATCH} \
           > {log} 2>&1
         touch {output.done}
+        """
+
+rule summary:
+    input:
+        expand(STATEDIR + "/stage1_{year}_rep{rep}.done", year=YEARS, rep=REPEATS),
+        expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
+        expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
+        expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
+    output:
+        f"{STATEDIR}/summary.done"
+    shell:
+        r"""
+        echo "=============================="
+        echo " FINAL JOB SUMMARY"
+        echo "=============================="
+
+        if [[ -f {FAIL_LOG} ]]; then
+            echo ""
+            echo "FAILED JOBS:"
+            cat {FAIL_LOG} | grep FAILED || true
+
+            nfail=$(grep -c FAILED {FAIL_LOG} || true)
+        else
+            nfail=0
+        fi
+
+        nsuccess=$(grep -c SUCCESS {FAIL_LOG} || true)
+
+        echo ""
+        echo "SUCCESS: $nsuccess"
+        echo "FAILED:  $nfail"
+
+        if [[ "$nfail" -ne 0 ]]; then
+            echo "Some jobs failed"
+            exit 1
+        else
+            echo "All jobs successful"
+        fi
+
+        touch {output}
         """
