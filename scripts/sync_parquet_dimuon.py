@@ -23,6 +23,7 @@ import pandas as pd
 import json
 
 from distributed import Client
+from modules.dask_utils import close_dask_client, get_dask_client
 
 
 # ----------------------------------------------------------------------
@@ -75,31 +76,8 @@ SYNCVARLIST: List[str] = [
     "separate_wgt_jetpuid_wgt",
     "separate_wgt_qgl_wgt",
     "separate_wgt_zpt_wgt",
-    "separate_wgt_ones",    
+    "separate_wgt_ones",
 ]
-
-# ----------------------------------------------------------------------
-# Dask client helper
-# ----------------------------------------------------------------------
-def get_dask_client(
-    n_workers: int = 12,
-    threads_per_worker: int = 1,
-    memory_limit: str = "10 GiB",
-) -> Client:
-    """Create or reuse a local Dask client."""
-    try:
-        client = Client.current()
-        print(f"Reusing existing Dask client: {client}")
-        return client
-    except ValueError:
-        client = Client(
-            n_workers=n_workers,
-            threads_per_worker=threads_per_worker,
-            processes=True,
-            memory_limit=memory_limit,
-        )
-        print(f"Created new Dask client: {client}")
-        return client
 
 
 # ----------------------------------------------------------------------
@@ -199,6 +177,34 @@ def load_dir_to_df(
     return df
 
 
+def _with_occurrence_index(df: pd.DataFrame, label: str) -> pd.DataFrame:
+    """
+    Make repeated (run, lumi, event) keys comparable by appending a stable
+    occurrence counter within each key group.
+    """
+    missing = [c for c in KEY_VARS if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"Missing key columns in {label}: {missing}")
+
+    sort_cols = [c for c in KEY_VARS if c in df.columns]
+    sort_cols.extend(c for c in SYNCVARLIST if c not in KEY_VARS and c in df.columns)
+    if sort_cols:
+        df = df.sort_values(sort_cols, kind="mergesort").reset_index(drop=True)
+
+    duplicate_mask = df.duplicated(KEY_VARS, keep=False)
+    duplicate_count = int(duplicate_mask.sum())
+    if duplicate_count:
+        print(
+            f"[INFO] Found {duplicate_count} rows with duplicated event keys in {label}; with key columns {KEY_VARS}."
+            "Appending occurrence index to make them comparable."
+            "comparing them with an occurrence index."
+        )
+
+    df = df.copy()
+    df["_sync_instance"] = df.groupby(KEY_VARS, sort=False).cumcount()
+    return df.set_index(KEY_VARS + ["_sync_instance"]).sort_index()
+
+
 # ----------------------------------------------------------------------
 # Single-dir dump
 # ----------------------------------------------------------------------
@@ -293,14 +299,8 @@ def compare_two_dirs(
     print(f"[INFO] Loading directory 2: {dir2}")
     df2 = load_dir_to_df(dir2, category=category, region=region, process=process)
 
-    # Index by (run, lumi, event)
-    if not set(KEY_VARS).issubset(df1.columns):
-        raise RuntimeError(f"Missing key columns in dir1 DataFrame: {KEY_VARS}")
-    if not set(KEY_VARS).issubset(df2.columns):
-        raise RuntimeError(f"Missing key columns in dir2 DataFrame: {KEY_VARS}")
-
-    df1 = df1.set_index(KEY_VARS)
-    df2 = df2.set_index(KEY_VARS)
+    df1 = _with_occurrence_index(df1, f"dir1 ({dir1})")
+    df2 = _with_occurrence_index(df2, f"dir2 ({dir2})")
 
     common_idx = df1.index.intersection(df2.index)
     only1 = df1.index.difference(df2.index)
@@ -327,6 +327,7 @@ def compare_two_dirs(
             "run": idx[0],
             "luminosityBlock": idx[1],
             "event": idx[2],
+            "_sync_instance": idx[3],
         }
 
         mismatch = False
@@ -438,8 +439,8 @@ def parse_sync_txt(path: str) -> pd.DataFrame:
         raise RuntimeError(f"No valid rows parsed from {path}")
 
     df = pd.DataFrame.from_records(records)
-    df = df.set_index(KEY_VARS).sort_index()
-    return df
+    return _with_occurrence_index(df, path)
+
 
 def compare_two_sync_txt(
     txt1: str,
@@ -491,7 +492,12 @@ def compare_two_sync_txt(
         r2 = c2.loc[idx]
 
         mismatch = False
-        rec = {"run": idx[0], "luminosityBlock": idx[1], "event": idx[2]}
+        rec = {
+            "run": idx[0],
+            "luminosityBlock": idx[1],
+            "event": idx[2],
+            "_sync_instance": idx[3],
+        }
 
         for v in vars_to_check:
             v1 = float(r1[v])
@@ -598,6 +604,7 @@ def compare_two_cutflow_json(
     df.to_csv(out_path, index=False)
     print(f"[INFO] Wrote {len(df)} cutflow mismatches to {out_path}")
 
+
 # ----------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------
@@ -651,7 +658,7 @@ def main():
     args = parse_args()
     dirs = args.dirs
 
-    get_dask_client()
+    client = get_dask_client()
 
     if len(dirs) == 1:
         print("[INFO] Single directory provided: dumping sync txt file.")
@@ -678,7 +685,7 @@ def main():
         out_path = Path(args.out) if args.out else Path("sync_txt_diff.txt")
 
         # If both are text dumps -> compare text files
-        if (str(file1).endswith(".txt") ) and (str(file2).endswith(".txt")):
+        if (str(file1).endswith(".txt")) and (str(file2).endswith(".txt")):
             compare_two_sync_txt(
                 txt1=file1,
                 txt2=file2,
@@ -712,6 +719,8 @@ def main():
 
     else:
         raise SystemExit("Please provide one or two directories.")
+
+    close_dask_client()
 
 
 if __name__ == "__main__":
