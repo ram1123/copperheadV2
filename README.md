@@ -10,7 +10,7 @@ cd copperheadV2
 git checkout main
 # If already cloned the repo, then to update the submodules run:
 git submodule update --remote --merge
-source setup_env.sh
+./enter_pixi.sh [default/full/symbolic/combine]
 ```
 
 ## Run the code
@@ -20,18 +20,50 @@ source setup_env.sh
 1. Open the jupyter notebook [DaskGatewaySLURM.ipynb](DaskGatewaySLURM.ipynb)
 1. Run cells upto "Create Dask Client" to create the dask client.
 
+### Preferred pipeline scripts
+
+The workflow is now split into two entry scripts:
+
+- [run_analysis_pipeline.sh](run_analysis_pipeline.sh)
+  - `prestage`, `stage1`, `stage2`, `stage2_plot`, `stage3`
+  - `compact`
+  - `dnn`, `dnn_pre`, `dnn_train`
+  - `zpt_*`
+  - `calib`, `calib_closure`
+- [run_stats_pipeline.sh](run_stats_pipeline.sh)
+  - datacard copy / combine / significance / impacts / likelihood scans
+
+Shared path and naming helpers live in:
+
+- [stage1_loop_common.sh](stage1_loop_common.sh)
+
+Example:
+
+```bash
+bash run_analysis_pipeline.sh -m 0 -y 2022preEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml
+bash run_analysis_pipeline.sh -m 1 -y 2022preEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml
+```
+
+### Legacy script
+
+The old all-in-one driver is still available for transition:
+
+- [stage1_loop_Improved.sh](stage1_loop_Improved.sh)
+
+We are keeping it documented for now, but new usage should prefer the split scripts above.
+
 ### Run the pre-stage
 Pre-stage reads the dataset information from the YAML file and saves the root files to read in next step with its metadata in a JSON file.
 
 ```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 0
+bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 0
 ```
 ### Run the stage1
 
 Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting, and and all other necessary weights for the analysis.
 
 ```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
+bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
 ```
 
 ### Get the validation plots:
@@ -47,7 +79,7 @@ python run_plotter.py
 ## Per-event mass calibration
 
 ```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "calib"
+bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "calib"
 ```
 
 - To adjust the fitting one can change the parameters in the script `src/lib/ebeMassResCalibration/ebeMassResPlotter.py`
@@ -63,14 +95,43 @@ bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -
 ## Z-pT reweighting
 
 ```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt"
+bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt"
 ```
 
 ### Z-pT reweighting - validation
 
 ```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt_val"
+bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt_val"
 ```
+
+### Run the VBF stats pipeline
+
+After `stage3` has produced the datacards, use the stats driver for VBF statistical workflows.
+
+Typical modes include:
+
+- `-m 4`: copy datacards
+- `-m 5`: build combined VBF cards and workspaces
+- `-m 6`: run significance
+- `-m 7`: run impacts
+- `-m 8`: run likelihood scan
+- `-m 9`: run the full VBF combine chain
+- `-m 10`: collect significance summaries
+- `-m 11`: run the stage2/stage3/stats limit chain
+
+Example:
+
+```bash
+./enter_pixi.sh combine
+bash run_stats_pipeline.sh -m 9 -y Run3 -l label_for_ntuple
+```
+
+Legacy note:
+
+```bash
+bash stage1_loop_Improved.sh -m 9 -y Run3 -l label_for_ntuple
+```
+
 
 ## Step - 1:
 
@@ -79,10 +140,22 @@ bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -
 ### How to run
 
 ```bash
-bash stage1_loop_Improved.sh <StageNo>
+bash run_analysis_pipeline.sh <options>
 ```
 
-To run pre-stage the `StageNo` should be "0". For running `Stage1` the argument should be 1.
+For example:
+
+```bash
+bash run_analysis_pipeline.sh -m 0 -y 2022preEE
+bash run_analysis_pipeline.sh -m 1 -y 2022preEE
+bash run_stats_pipeline.sh -m combine_vbf_all -y Run3
+```
+
+Legacy equivalent during the transition period:
+
+```bash
+bash stage1_loop_Improved.sh -m 0 -y 2022preEE
+```
 
 ### Improvements
 

@@ -12,14 +12,27 @@ git checkout main
 git submodule update --remote --merge
 ```
 
-Everytime you open a new terminal session, run the following command to setup the environment variables:
+Every time you open a new terminal session, enter one of the Pixi environments with:
 
 ```bash
-source setup_env.sh
-# default conda environment is `coffea_latest`.
-source setup_env.sh yun
-# yun is for `yun_coffea_latest`
+./enter_pixi.sh default
 ```
+
+Available environments are:
+
+```bash
+./enter_pixi.sh default
+./enter_pixi.sh full
+./enter_pixi.sh symbolic
+./enter_pixi.sh combine
+```
+
+Use the environment that matches your task:
+
+- `default`: standard analysis workflow
+- `full`: larger analysis environment with extra packages
+- `symbolic`: PySR / symbolic-regression work
+- `combine`: statistical inference / Combine workflow
 
 To create the dask client, open the jupyter notebook [DaskGatewaySLURM.ipynb](../DaskGatewaySLURM.ipynb) and run cells upto section "Create the gateway" to create the dask client.
 
@@ -35,7 +48,7 @@ To create the dask client, open the jupyter notebook [DaskGatewaySLURM.ipynb](..
 Pre-stage reads the dataset information from the YAML file and saves the root files to read in next step with its metadata in a JSON file.
 
 ```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 0
+bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 0
 ```
 where
 - `-v`: nanoAOD version
@@ -44,11 +57,51 @@ where
 - `-y`: year of data-taking
 - `-m`: run mode. `0` for pre-processing, `1` for stage-1 processing.
 
+Legacy note:
+
+```bash
+bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 0
+```
+
 
 Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting, and and all other necessary weights for the analysis.
 
 ```bash
+bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
+```
+
+Legacy note:
+
+```bash
 bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
+```
+
+### Run the VBF stats pipeline
+
+After `stage3` has produced the datacards, use the stats driver for VBF statistical workflows.
+
+Typical modes include:
+
+- `-m 4`: copy datacards
+- `-m 5`: build combined VBF cards and workspaces
+- `-m 6`: run significance
+- `-m 7`: run impacts
+- `-m 8`: run likelihood scan
+- `-m 9`: run the full VBF combine chain
+- `-m 10`: collect significance summaries
+- `-m 11`: run the stage2/stage3/stats limit chain
+
+Example:
+
+```bash
+./enter_pixi.sh combine
+bash run_stats_pipeline.sh -m 9 -y Run3 -l label_for_ntuple
+```
+
+Legacy note:
+
+```bash
+bash stage1_loop_Improved.sh -m 9 -y Run3 -l label_for_ntuple
 ```
 
 ### Get the yields 
