@@ -17,8 +17,11 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+years = args.years
+if (not years or years == ["2018"]) and args.year != "2018":
+    years = [args.year]
 
-year = args.years[0]
+year = years[0]
 if "2016" in year:
     year = "2016"
 
@@ -26,7 +29,7 @@ if "2016" in year:
 parameters = {
     # < general settings >
     "log_level": args.log_level,
-    "years": args.years,
+    "years": years,
     "global_path": args.input_path,
     "global_path_postfix": args.save_postfix,
     "outpath_postfix": args.save_postfix,

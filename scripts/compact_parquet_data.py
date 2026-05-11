@@ -1,5 +1,6 @@
 import os
 import pickle
+from pathlib import Path
 
 import awkward as ak
 import dask_awkward as dak
@@ -7,9 +8,72 @@ import numpy as np
 from cli.common_argparser import build_common_parser
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.utils import logger
-from run_stage2_vbf import DNNWrapper, getFoldFilter, prepare_features
+from run_stage2_vbf import (
+    DNNWrapper,
+    getFoldFilter,
+    prepare_features,
+    resolve_vbf_training_layout,
+)
 from tqdm import tqdm
 import glob
+
+
+def sigmoid_ak(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def clip_ak(x, min_value, max_value):
+    return ak.where(x < min_value, min_value, ak.where(x > max_value, max_value, x))
+
+
+def resolve_scaler_path(model_trained_path, fold):
+    npz_path = os.path.join(model_trained_path, f"scalers_{fold}.npz")
+    npy_path = os.path.join(model_trained_path, f"scalers_{fold}.npy")
+    if os.path.exists(npz_path):
+        return npz_path
+    if os.path.exists(npy_path):
+        return npy_path
+    raise FileNotFoundError(f"Missing scaler for fold {fold}: checked {npz_path} and {npy_path}")
+
+
+def load_scaler_stats(model_trained_path, fold):
+    scaler_path = resolve_scaler_path(model_trained_path, fold)
+    if scaler_path.endswith(".npz"):
+        with np.load(scaler_path, allow_pickle=True) as scaler_file:
+            features = scaler_file["features"] if "features" in scaler_file.files else None
+            return scaler_file["mean"], scaler_file["std"], features
+    scaler_mean, scaler_std = np.load(scaler_path, allow_pickle=True)
+    return scaler_mean, scaler_std, None
+
+
+def resolve_model_path(model_trained_path, fold):
+    candidates = [
+        os.path.join(model_trained_path, f"fold{fold}", "best_torchscript.pt"),
+        os.path.join(model_trained_path, f"fold{fold}", "best_model_torchJit_ver.pt"),
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    raise FileNotFoundError(
+        f"Missing model for fold {fold}: checked {', '.join(candidates)}"
+    )
+
+
+def infer_nfolds(model_trained_path, scaler_root=None):
+    fold = 0
+    while True:
+        try:
+            resolve_model_path(model_trained_path, fold)
+            resolve_scaler_path(scaler_root or model_trained_path, fold)
+            fold += 1
+        except FileNotFoundError:
+            break
+    if fold == 0:
+        raise FileNotFoundError(
+            "No fold artifacts were found under model path: "
+            f"{model_trained_path} with scaler root: {scaler_root or model_trained_path}"
+        )
+    return fold
 
 
 def ensure_compacted(year, sample, input_path, compacted_path):
@@ -19,7 +83,8 @@ def ensure_compacted(year, sample, input_path, compacted_path):
     logger.debug(f"Checking compacted dataset: {compacted_path}")
 
     if not os.path.exists(compacted_path):
-        logger.info(f"Compacted dataset not found: {compacted_path}")
+        logger.info("No compacted dataset exists")
+        logger.debug(f"Compacted dataset not found: {compacted_path}")
 
         orig_path = os.path.join(input_path, sample)
         if not os.path.exists(orig_path):
@@ -40,10 +105,10 @@ def ensure_compacted(year, sample, input_path, compacted_path):
             logger.warning(f"Sample {sample} is a VBF sample, so, using a smaller chunk size (100k) for repartitioning.")
             target_chunksize = 100_000
         else:
-            target_chunksize = 500_000
+            target_chunksize = 300_000
         inFile = inFile.repartition(rows_per_partition=target_chunksize)
 
-        logger.info(f"Writing compacted data to {compacted_path}")
+        logger.info("Writing compacted dataset")
         inFile.to_parquet(compacted_path)
         logger.debug("Dataset successfully compacted.")
     else:
@@ -55,13 +120,16 @@ def add_dnn_score(events_partition,
                 model_cache,
                 nfolds, fix_dimuon_mass):
     if getattr(events_partition.layout.backend, "name", None) == "typetracer":
-        return ak.with_field(
-            ak.with_field(events_partition, np.empty(0, np.float32), "dnn_vbf_score"),
-            np.empty(0, np.float32),
-            "dnn_vbf_score_atanh",
-        )
+        out = ak.with_field(events_partition, np.empty(0, np.float32), "dnn_vbf_score")
+        out = ak.with_field(out, np.empty(0, np.float32), "dnn_vbf_score_atanh")
+        out = ak.with_field(out, np.empty(0, np.float32), "dnn_vbf_logit")
+        return out
     # Prepare features for this partition
     features_to_use = prepare_features(events_partition, training_features)
+    no_scale_features = {
+        "year",
+        "nsoftjets5_nominal",
+    }
     nan_val = -999.0
     input_arr_dict = {}
     for feat in features_to_use:
@@ -76,6 +144,30 @@ def add_dnn_score(events_partition,
         # eval_folds = [(fold + f) % nfolds for f in [3]]
         eval_folds = [fold]
         eval_filter = getFoldFilter(events_partition, eval_folds, nfolds)
+        scaler_mean, scaler_std, scaler_features = load_scaler_stats(model_trained_path, fold)
+        scaler_mean = scaler_mean.astype(np.float64)
+        scaler_std = scaler_std.astype(np.float64)
+        if scaler_features is None:
+            scaler_map = {
+                feat: (scaler_mean[ix], scaler_std[ix])
+                for ix, feat in enumerate(features_to_use[: len(scaler_mean)])
+            }
+        else:
+            scaler_features = [str(x) for x in scaler_features]
+            scaler_map = {
+                feat: (scaler_mean[ix], scaler_std[ix])
+                for ix, feat in enumerate(scaler_features)
+            }
+
+        missing_in_scaler = [
+            feat for feat in features_to_use
+            if feat not in scaler_map and feat not in no_scale_features
+        ]
+        if missing_in_scaler:
+            raise ValueError(
+                f"Features {missing_in_scaler} are missing in scaler and not in NO_SCALE features"
+            )
+
         for ix in range(len(features_to_use)):
             feat = features_to_use[ix]
             input_arr_fold = input_arr_dict[feat]
@@ -85,36 +177,52 @@ def add_dnn_score(events_partition,
                 in_feat = 125.0 * ak.ones_like(events_partition.event)
             else:
                 in_feat = events_partition[feat]
-            scalers_path = f"{model_trained_path}/scalers_{fold}.npy"
-            scaler_mean, scaler_mean_std = np.load(scalers_path)
-            scaler_mean = scaler_mean[ix] # get feature relevant mean & std dev
-            scaler_mean_std = scaler_mean_std[ix] # get feature relevant mean & std dev
-            in_feat = (in_feat - scaler_mean) / scaler_mean_std
+            if feat in scaler_map and feat not in no_scale_features:
+                mu, sigma = scaler_map[feat]
+                in_feat = (in_feat - mu) / sigma
+            else:
+                in_feat = ak.values_astype(in_feat, "float32")
 
             input_arr_fold = ak.where(eval_filter, in_feat, input_arr_fold)
             input_arr_dict[feat] = input_arr_fold
     input_arr = ak.concatenate(
         [input_arr_dict[feat][:, np.newaxis] for feat in features_to_use], axis=1
     )
-    dnn_vbf_score = nan_val * ak.ones_like(events_partition.event)
+    dnn_vbf_logit = nan_val * ak.ones_like(events_partition.event)
     for fold in range(nfolds):
         # eval_folds = [(fold + f) % nfolds for f in [3]]
         eval_folds = [fold]
         eval_filter = getFoldFilter(events_partition, eval_folds, nfolds)
         dnnWrap = model_cache[fold]
         dnn_score_fold = dnnWrap(input_arr)
-        dnn_score_fold = ak.flatten(dnn_score_fold, axis=1)
-        dnn_vbf_score = ak.where(eval_filter, dnn_score_fold, dnn_vbf_score)
-        # transformed DNN
-        dnn_vbf_score = np.clip(dnn_vbf_score, -0.999999, 0.999999)
-        dnn_vbf_score_atanh = np.arctanh(dnn_vbf_score)
+        dnn_score_fold = ak.flatten(dnn_score_fold, axis=None)
+        dnn_vbf_logit = ak.where(eval_filter, dnn_score_fold, dnn_vbf_logit)
 
-    # return the events with the dnn_vbf_score and dnn_vbf_score_atanh fields added
+    valid_mask = dnn_vbf_logit != nan_val
+    dnn_vbf_score = sigmoid_ak(dnn_vbf_logit)
+    dnn_vbf_score = ak.where(valid_mask, dnn_vbf_score, nan_val)
+
+    score_for_atanh = clip_ak(dnn_vbf_score, 0.0, 0.999999)
+    dnn_vbf_score_atanh = np.arctanh(score_for_atanh)
+    dnn_vbf_score_atanh = ak.where(valid_mask, dnn_vbf_score_atanh, nan_val)
+
+    # return the events with the dnn_vbf_score, dnn_vbf_score_atanh, and dnn_vbf_logit fields added
     events_partition = ak.with_field(events_partition, dnn_vbf_score, "dnn_vbf_score")
     events_partition = ak.with_field(events_partition, dnn_vbf_score_atanh, "dnn_vbf_score_atanh")
+    events_partition = ak.with_field(events_partition, dnn_vbf_logit, "dnn_vbf_logit")
     return events_partition
 
-def compact_and_add_dnn_score(year, sample, input_path, compacted_dir, model_path, add_dnn_score_flag=False, tag="", fix_dimuon_mass=False):
+def compact_and_add_dnn_score(
+    year,
+    sample,
+    input_path,
+    compacted_dir,
+    model_path,
+    add_dnn_score_flag=False,
+    tag="",
+    fix_dimuon_mass=False,
+    model_tag="",
+):
     compacted_path = os.path.join(compacted_dir, sample, "0") # Added zero to match the original path structure
 
     compacted_dir_tagged = f"{compacted_dir}_{tag}" if tag else compacted_dir
@@ -132,32 +240,70 @@ def compact_and_add_dnn_score(year, sample, input_path, compacted_dir, model_pat
         return
 
     logger.info(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
+    if not os.path.exists(compacted_path):
+        logger.warning(f"Compacted dataset missing at {compacted_path}. Skipping DNN score addition.")
+        return
     # Load the compacted dataset
     logger.debug(f"Loading compacted dataset from {compacted_path}")
     events = dak.from_parquet(compacted_path)
 
     # Load the DNN model
     logger.debug(f"Loading DNN model from {model_path}")
-    model_trained_path = model_path
-    with open(f"{model_trained_path}/training_features.pkl", "rb") as f:
+    model_path_obj = Path(model_path).resolve()
+    layout_attempts = []
+
+    if model_tag:
+        layout_attempts.append((model_path_obj, model_tag))
+
+    if model_path_obj.name:
+        layout_attempts.append((model_path_obj.parent, model_path_obj.name))
+
+    layout_attempts.append((model_path_obj, ""))
+
+    feature_dir = None
+    training_dir = None
+    last_error = None
+    for base_path, model_tag in layout_attempts:
+        try:
+            feature_dir, training_dir = resolve_vbf_training_layout(
+                base_path, model_tag, nfolds=4
+            )
+            logger.info(
+                "Resolved DNN layout with base=%s model_tag=%s -> feature_dir=%s training_dir=%s",
+                base_path,
+                model_tag,
+                feature_dir,
+                training_dir,
+            )
+            break
+        except FileNotFoundError as exc:
+            last_error = exc
+
+    if feature_dir is None or training_dir is None:
+        raise FileNotFoundError(
+            f"Could not resolve DNN layout for model_path={model_path}. Last error: {last_error}"
+        )
+
+    with open(feature_dir / "training_features.pkl", "rb") as f:
         training_features = pickle.load(f)
     logger.debug(f"Training features loaded: {training_features}")
 
     # Load and Cache models for each fold
     model_cache = {}
-    nfolds = 3  # Assuming 3 folds, adjust as necessary
+    nfolds = infer_nfolds(str(training_dir), scaler_root=str(feature_dir))
     for fold in range(nfolds):
-        model_load_path = f"{model_trained_path}/fold{fold}/best_model_torchJit_ver.pt"
+        model_load_path = resolve_model_path(str(training_dir), fold)
         logger.debug(f"Loading model for fold {fold} from {model_load_path}")
         model_cache[fold] = DNNWrapper(model_load_path)
         logger.debug(f"Loaded model for fold {fold} from {model_load_path}")
 
     meta = ak.with_field(events._meta, np.zeros(0, dtype=np.float32), "dnn_vbf_score")
-    meta = ak.with_field(meta,              np.zeros(0, dtype=np.float32), "dnn_vbf_score_atanh")
+    meta = ak.with_field(meta, np.zeros(0, dtype=np.float32), "dnn_vbf_score_atanh")
+    meta = ak.with_field(meta, np.zeros(0, dtype=np.float32), "dnn_vbf_logit")
     events = dak.map_partitions(
         add_dnn_score,
         events,
-        model_trained_path=model_trained_path,
+        model_trained_path=str(feature_dir),
         training_features=training_features,
         model_cache=model_cache,
         nfolds=nfolds,
@@ -174,6 +320,11 @@ if __name__ == "__main__":
     parser = build_common_parser()
     parser.add_argument("-c", "--compacted_dir", default="", help="Path to store the compacted dataset")
     parser.add_argument("-m", "--model_path", help="Path to the DNN model directory")
+    parser.add_argument(
+        "--model_tag",
+        default="",
+        help="Optional trained-model tag under --model_path, matching stage-2 conventions.",
+    )
     parser.add_argument(
         "--fix_dimuon_mass",
         action="store_true",
@@ -207,6 +358,7 @@ if __name__ == "__main__":
         # if "dy_VBF_filter" not in sample:
         # continue
         # if "DY" not in sample: continue
+        print("\n\n")
         logger.info(f"Processing sample: {sample}")
         compact_and_add_dnn_score(
             args.year,
@@ -217,6 +369,7 @@ if __name__ == "__main__":
             args.add_dnn_score,
             args.save_postfix,
             args.fix_dimuon_mass,
+            args.model_tag,
         )
 
     close_dask_client()
