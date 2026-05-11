@@ -19,7 +19,7 @@ EOF
 }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${script_dir}/stage1_loop_common.sh"
+source "${script_dir}/common_workflow.sh"
 
 common_defaults
 parse_common_args "$@"

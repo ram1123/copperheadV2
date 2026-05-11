@@ -111,7 +111,11 @@ print_cmd() {
     local rendered=""
     local arg
     for arg in "$@"; do
-        rendered+="$(printf '%q ' "${arg}")"
+        if [[ "${arg}" == *[[:space:]]* ]]; then
+            rendered+="\"${arg}\" "
+        else
+            rendered+="${arg} "
+        fi
     done
     log "Command: ${rendered% }"
 }
@@ -219,14 +223,27 @@ variation_suffix() {
 build_prestage_cmd() {
     local year="$1"
     local data_streams="$2"
+    local -a data_args=()
+    local -a bkg_args=()
+    local -a sig_args=()
+    local token
+    for token in ${data_streams}; do
+        data_args+=("${token}")
+    done
+    for token in ${bkg_groups}; do
+        bkg_args+=("${token}")
+    done
+    for token in ${sig_groups}; do
+        sig_args+=("${token}")
+    done
     local cmd=(
         python run_prestage.py
         --chunksize "${chunksize}"
         -y "${year}"
         --yaml "${dataset_yaml}"
-        --data "${data_streams}"
-        --background "${bkg_groups}"
-        --signal "${sig_groups}"
+        --data "${data_args[@]}"
+        --background "${bkg_args[@]}"
+        --signal "${sig_args[@]}"
         --NanoAODv "${nanoaod_version}"
         --log-level "$(debug_flag)"
     )
@@ -281,6 +298,19 @@ build_compact_cmd() {
 
 build_stage2_cmd() {
     local year="$1"
+    local -a data_args=()
+    local -a bkg_args=()
+    local -a sig_args=()
+    local token
+    for token in $(data_streams_for_year "${year}"); do
+        data_args+=("${token}")
+    done
+    for token in $(stage2_bkg_groups); do
+        bkg_args+=("${token}")
+    done
+    for token in ggH VBF; do
+        sig_args+=("${token}")
+    done
     local cmd=(
         python run_stage2_vbf.py
         -y "${year}"
@@ -288,9 +318,9 @@ build_stage2_cmd() {
         -l "${label}"
         --model_tag "${dnn_train_label}"
         --model_path "${dnn_model_path}"
-        -data "$(data_streams_for_year "${year}")"
-        -bkg "$(stage2_bkg_groups)"
-        -sig "ggH VBF"
+        -data "${data_args[@]}"
+        -bkg "${bkg_args[@]}"
+        -sig "${sig_args[@]}"
         --save_postfix "${save_postfix}"
         --log-level "$(debug_flag)"
     )

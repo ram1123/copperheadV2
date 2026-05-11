@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: run_analysis_pipeline.sh [options]
+Usage: common_workflow.sh [options]
 
 Modes:
   0|prestage
@@ -21,7 +21,7 @@ EOF
 }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${script_dir}/stage1_loop_common.sh"
+source "${script_dir}/common_workflow.sh"
 
 common_defaults
 parse_common_args "$@"
@@ -60,6 +60,10 @@ for year in "${years[@]}"; do
         all)
             run_mode_from_nul < <(build_prestage_cmd "${year}" "$(data_streams_for_year "${year}")")
             run_mode_from_nul < <(build_stage1_cmd "${year}")
+            run_mode_from_nul < <(build_stage2_cmd "${year}")
+            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
+            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
+            run_mode_from_nul < <(build_stage3_cmd "${year}")
             ;;
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             run_zpt_fit "${year}"
