@@ -399,8 +399,8 @@ class EventProcessor(processor.ProcessorABC):
         dict_update = {
             # "hlt" :["IsoMu24"],
             "do_trigger_match" : True, # False
-            "do_roccor" : True,# True
-            "do_fsr" : True, # True
+            "do_roccor" : False,# True
+            "do_fsr" : False, # True
             "do_geofit" : False, # True # FIXME: Make it false for always
             "do_beamConstraint": True, # if True, override do_geofit
             "do_nnlops" : True,
@@ -533,6 +533,31 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("HLT_filter", HLT_filter)
         event_filter = event_filter & HLT_filter
 
+        # Add selection that run==317340 and luminosityBlock==348
+        run_mask = (events.run == 317340) & (events.luminosityBlock == 348) & (events.event == 462670962)
+        event_filter = event_filter & run_mask
+        # event_mask = (events.run == 317340) & (events.luminosityBlock == 348) & (events.event == 462670962)
+        event = events[(events.run == 317340) & (events.luminosityBlock == 348) & (events.event == 462670962)].compute()
+        # event = events[event_mask]
+
+        if len(event) == 0:
+            print("Event not found in the dataframe.")
+        else:
+            print("Checking each selection condition...")
+
+            checks = {
+                "pTL1 > 25": event["mu1_pt"].values[0] > 25,
+                "abs(etaL1) < 2.4": abs(event["mu1_eta"].values[0]) < 2.4,
+                "pTL2 > 25": event["mu2_pt"].values[0] > 25,
+                "abs(etaL2) < 2.4": abs(event["mu2_eta"].values[0]) < 2.4,
+                "pTZ1 > 55": event["dimuon_pt"].values[0] > 55,
+                "|massZ1 - 91| < 15": abs(event["dimuon_mass"].values[0] - 91) < 15,
+                "MET_pt > 100": event["MET_pt"].values[0] > 100,
+            }
+
+            for condition, passed in checks.items():
+                logger.debug(f"{condition:<25}: {'✅ Passed' if passed else '❌ Rejected'}")
+
         # ------------------------------------------------------------#
         # Skimming end, filter out events and prepare for pre-selection
         # Edit: NVM; doing it this stage breaks fsr recovery
@@ -627,7 +652,7 @@ class EventProcessor(processor.ProcessorABC):
         # # --------------------------------------------------------
         # # # Apply Rochester correction
         if self.config["do_roccor"]:
-            # TODO make more elegant distinction between Run2 and Run3 
+            # TODO make more elegant distinction between Run2 and Run3
             if "16" in year or "17" in year or "18" in year:# Run2 roccor
                 logger.info("doing Run2 rochester!")
                 apply_roccor(events, self.config["roccor_file"], is_mc)
@@ -644,7 +669,8 @@ class EventProcessor(processor.ProcessorABC):
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
-        self.selection.add("muon_pT_roch", ak.any(events.Muon.pt_roch >= self.config["muon_pt_cut"], axis=1))
+        # if roch is False then use muon.pt instead of muon.pt_roch
+        self.selection.add("muon_pt", ak.any(events.Muon.pt >= self.config["muon_pt_cut"], axis=1))
         self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
         self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
         self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
@@ -664,7 +690,7 @@ class EventProcessor(processor.ProcessorABC):
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
         self.selection.add("muon_iso", ak.any(events.Muon.pfRelIso04_all < self.config["muon_iso_cut"], axis=1))
-        # logger.info(f"muon_selectiont: {ak.to_dataframe(muon_selection.compute())}")
+        logger.info(f"muon_selectiont: {ak.to_dataframe(muon_selection.compute())}")
 
         # --------------------------------------------------------
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
@@ -719,7 +745,7 @@ class EventProcessor(processor.ProcessorABC):
 
             mu1_dr_match = ak.sum(mu1_dr_match, axis=1) > 0
             mu1_dr_match = ak.fill_none(mu1_dr_match, value=False) # None is coming from the muon pad none, not trigger_cands, so this is ok
-            mu1_leading_pt_match = mu1.pt_roch >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
+            mu1_leading_pt_match = mu1.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu1_leading_pt_match = ak.fill_none(mu1_leading_pt_match, value=False)
             mu1_trigger_match = mu1_dr_match & mu1_leading_pt_match
 
@@ -728,7 +754,7 @@ class EventProcessor(processor.ProcessorABC):
 
             mu2_dr_match = ak.sum(mu2_dr_match, axis=1) > 0
             mu2_dr_match = ak.fill_none(mu2_dr_match, value=False) # None is coming from the muon pad none, not trigger_cands, so this is ok
-            mu2_leading_pt_match = mu2.pt_roch >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
+            mu2_leading_pt_match = mu2.pt >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu2_leading_pt_match = ak.fill_none(mu2_leading_pt_match, value=False)
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
 
@@ -777,7 +803,7 @@ class EventProcessor(processor.ProcessorABC):
 
         # count muons that pass the muon selection
         nmuons = ak.num(muons, axis=1)
-        # logger.debug(f"nmuons: {nmuons.compute()}")
+        logger.debug(f"nmuons: {nmuons.compute()}")
 
         # Find opposite-sign muons
         mm_charge = ak.prod(muons.charge, axis=1) # techinally not a product of two leading pT muon charge, but (nmuons==2) cut ensures that there's only two muons
@@ -811,12 +837,12 @@ class EventProcessor(processor.ProcessorABC):
         nelectrons = ak.sum(electron_selection, axis=1)
         electron_veto = (nelectrons == 0)
         self.selection.add("electron_veto", electron_veto)
-        if self.config["do_HemVeto"]:
-            HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
-        else:
-            HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
+        # if self.config["do_HemVeto"]:
+        #     HemVeto_filter, _ = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
+        # else:
+        #     HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
 
-        self.selection.add("HemVeto", HemVeto_filter == True)
+        # self.selection.add("HemVeto", HemVeto_filter == True)
         event_filter = (
                 event_filter
                 & lumi_mask
@@ -825,7 +851,7 @@ class EventProcessor(processor.ProcessorABC):
                 # & (mm_charge == -1)
                 # & electron_veto
                 & (events.PV.npvsGood > 0) # number of good primary vertex cut
-                & HemVeto_filter
+                # & HemVeto_filter
 
         )
         event_filter = event_filter & (nmuons == 2)
@@ -846,7 +872,7 @@ class EventProcessor(processor.ProcessorABC):
         # # leading muon pT cut
         # pass_leading_pt = muons.pt_raw > self.config["muon_leading_pt"]
         # logger.debug(f'type self.config["muon_leading_pt"] : {type(self.config["muon_leading_pt"])}')
-        # logger.debug(f'type muons.pt_raw : {ak.type(muons.pt_raw.compute())}')
+        logger.debug(f'type muons.pt_raw : {ak.type(muons.pt_raw.compute())}')
         # # testing -----------------------
         # # pass_leading_pt = muons.pt > self.config["muon_leading_pt"]
         # # ----------------------------------------
@@ -1271,9 +1297,9 @@ class EventProcessor(processor.ProcessorABC):
             "event" : events.event,
             "PV_npvs" : events.PV.npvs,
             "PV_npvsGood" : events.PV.npvsGood,
-            "MET_pt" : events.PuppiMET.pt,
-            "MET_phi" : events.PuppiMET.phi,
-            "MET_sumEt" : events.PuppiMET.sumEt,
+            "MET_pt" : events.MET.pt,
+            "MET_phi" : events.MET.phi,
+            "MET_sumEt" : events.MET.sumEt,
             "mu1_pt" : mu1.pt,
             "mu1_ptErr" : mu1.ptErr,
             "mu2_pt" : mu2.pt,
@@ -1413,9 +1439,9 @@ class EventProcessor(processor.ProcessorABC):
             # once kind of screws with the dak awkward array
 
             logger.info("======================= old zpt method =======================")
-            
+
             zpt_weight_mine_nbins100 = getZptWgts(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
-            
+
             # logger.info("======================= old zpt weights are commented out =======================")
             # if year == "2016postVFP" or year=="2018": #FIXME: This is temporary, we need to sync the zpt strategy and update it.
             #     zpt_weight_mine_nbins100 = getZptWgts_2016postVFP(dimuon.pt, njets, 100, year, self.config["new_zpt_weights_file"])
@@ -1520,7 +1546,7 @@ class EventProcessor(processor.ProcessorABC):
 
         if self.isCutflow:
             required_selections = ['TotalEntries', 'HLT_filter', 'lumi_mask', 'event_quality_flags',
-                               'muon_pT_roch', 'muon_eta', 'muon_id', 'muon_isGlobal_or_Tracker', 'muon_selection', 'muon_iso', 'nmuons',
+                               'muon_pt', 'muon_eta', 'muon_id', 'muon_isGlobal_or_Tracker', 'muon_selection', 'muon_iso', 'nmuons',
                                 'mm_charge', 'electron_veto', 'HemVeto']
                                 # , weights=weights, weightsmodifier=None) # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
             self.cutflow = self.selection.cutflow(*required_selections)
@@ -1801,7 +1827,7 @@ class EventProcessor(processor.ProcessorABC):
         jetHorn_region = abs(jets.eta) > 2.5
         jetHorn_pt_cut = (jets.pt > self.config["jet_pt_cut"]) # pt cut on jethorn doesn't change
         jetHorn_puid_cut = (jets.puId >= 7) | (jets.pt >= 50) # tight pu Id
-        jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut 
+        jetHorn_cut = jetHorn_pt_cut & jetHorn_puid_cut
         jet_pt_cut = ak.where(jetHorn_region, jetHorn_cut, jet_pt_cut)
 
         # add additonal pT cut for the forward regions  ----------------------------------------------

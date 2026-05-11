@@ -1,6 +1,6 @@
 
 
-bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv9.yaml -v 9 -l test_test -y 2018 -m 1 -d 1
+bash stage1_loop_Improved.sh  -c configs/datasets/dataset_nanoAODv9.yaml -v 9 -l 2l2nu_sync_26July -y 2018 -m 0
 
 # 06 May 2025
 
