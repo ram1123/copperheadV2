@@ -260,7 +260,7 @@ def custom_jet_id(jets, year, jet_type="AK4PUPPI"):
     return pass_tight, pass_tight_lepveto
 
 
-def jet_id(jets, config, year = None):
+def jet_id(jets, config, year=None, jet_id_key="jet_id"):
     """https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#NanoAOD_format , jet Id is same for UL 2016,2017 and 2018
 
     If "jetId" is in the fields of jets, use that. Else, use custom_jet_id function as mentioned in the link:
@@ -270,12 +270,46 @@ def jet_id(jets, config, year = None):
         raise ValueError("Year must be specified for jet ID determination.")
 
     pass_jet_id = ak.ones_like(jets.pt, dtype=bool)
-    jet_id2use = config["jet_id"]
-    if hasattr(jets, "jetId"):
+    jet_id2use = config.get(jet_id_key, config["jet_id"])
+    if hasattr(jets, "jetId") and is_run2(year):
+        logger.info("Using Run2 official jet-id for the custom nanoAODv12")
         jet_id_wps = {
             "tight": jets.jetId >= 2,
             "tightFailLepVeto": jets.jetId == 2,
             "tightPassLepVeto": jets.jetId == 6,
+        }
+        pass_jet_id = jet_id_wps[jet_id2use]
+    elif hasattr(jets, "jetId") and is_run3(year):
+        # Reference: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
+        logger.info("Using Run3 official jet-id for the nanoAODv12")
+
+        abs_eta = abs(jets.eta)
+
+        # Tight jet ID
+        passJetIdTight = ak.zeros_like(jets.pt, dtype=bool)
+
+        mask_barrel_endcap = abs_eta <= 2.7
+        mask_he = (abs_eta > 2.7) & (abs_eta <= 3.0)
+        mask_hf = abs_eta > 3.0
+
+        pass_tight_bit = (jets.jetId & (1 << 1)) != 0
+
+        passJetIdTight = (
+            (mask_barrel_endcap & pass_tight_bit)
+            | (mask_he & pass_tight_bit & (jets.neHEF < 0.99))
+            | (mask_hf & pass_tight_bit & (jets.neEmEF < 0.4))
+        )
+
+        # TightLepVeto jet ID
+        passJetIdTightLepVeto = ak.where(
+            abs_eta <= 2.7,
+            passJetIdTight & (jets.muEF < 0.8) & (jets.chEmEF < 0.8),
+            passJetIdTight,
+        )
+        jet_id_wps = {
+            "tight": passJetIdTight,
+            "tightFailLepVeto": passJetIdTight & ~passJetIdTightLepVeto,
+            "tightPassLepVeto": passJetIdTight & passJetIdTightLepVeto,
         }
         pass_jet_id = jet_id_wps[jet_id2use]
     elif is_run2(year):
@@ -329,6 +363,18 @@ def jet_id(jets, config, year = None):
         raise ValueError("Jet collection has no 'jetId' branch and is not Run 3 for correctionlib-based jet ID. Cannot determine jet ID.")
 
     return pass_jet_id
+
+
+def btag_jet_selection(jets, config, year):
+    if year is None:
+        raise ValueError("Year must be specified for b-tag jet selection.")
+    btag_pt_cut = jets.pt > config["btag_jet_pt_cut"]
+    if is_run3(year):
+        btag_eta_cut = abs(jets.eta) < 2.5
+    elif is_run2(year):
+        btag_eta_cut = abs(jets.eta) < (2.4 if str(year).startswith("2016") else 2.5)
+
+    return btag_pt_cut & btag_eta_cut
 
 
 def get_puId(jets):
