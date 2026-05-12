@@ -15,6 +15,10 @@ LOGDIR = f"logs/{RUN_TAG}"
 STATEDIR = f"state/{RUN_TAG}"
 FAIL_LOG = f"{LOGDIR}/failed_jobs.log"
 
+os.makedirs(LOGDIR, exist_ok=True)
+with open(FAIL_LOG, "w", encoding="utf-8"):
+    pass
+
 REPEATS = ["1"] # In case some jobs fails for the stage-1, so to recover it run the stage-1 three times. All followed dependents will depend on the "3"
 FINAL_REP = REPEATS[-1]
 
