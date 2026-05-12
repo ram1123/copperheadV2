@@ -307,7 +307,7 @@ if __name__ == "__main__":
         logger.error(f"lumi for year {year} is not defined!")
         raise ValueError(f"lumi for year {year} is not defined!")
 
-    lumi_val = lumi_dict[year]
+    lumi_val = lumi
 
     possible_samples = ["data", "ggh", "vbf", "dy", "ewk", "tt", "st", "ww", "wz", "zz","VVV"]
 
