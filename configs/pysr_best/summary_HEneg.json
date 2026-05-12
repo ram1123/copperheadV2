@@ -1,0 +1,25 @@
+{
+  "region": "HEneg",
+  "equation": "((log1p_abs(x5) - tanh(x3)) * 0.3815938)",
+  "features": [
+    "chEmEF",
+    "chHEF",
+    "neEmEF",
+    "neHEF",
+    "muEF",
+    "nConstituents",
+    "mass",
+    "area",
+    "rawFactor"
+  ],
+  "threshold": 0.4008890688419342,
+  "direction": "keep_high",
+  "pu_rejection": 0.5104983848638671,
+  "n_region": 15919,
+  "pt_min": 25.0,
+  "pt_turnoff": 50.0,
+  "valid_pt_range": {
+    "min": 25.0,
+    "max": 50.0
+  }
+}
