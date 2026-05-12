@@ -1,6 +1,14 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
+
+# 11 May 2026
+
+```bash
+time bash run_analysis_pipeline.sh -y 2022preEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml -m all
+time bash run_stats_pipeline.sh -y 2022preEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml -m 8
+```
+
 # 14 March 2026
 
 ```bash

@@ -33,36 +33,33 @@ print_run_configuration
 for year in "${years[@]}"; do
     log "Processing year: ${year}"
     case "${mode}" in
-        4|copy_datacards)
-            copy_stage3_datacards
-            ;;
-        5|combine_vbf)
+        4|combine_vbf)
             ensure_vbf_card "${year}"
             ensure_vbf_workspace "${year}"
             ;;
-        6|combine_vbf_significance)
+        5|combine_vbf_significance)
             run_vbf_significance "${year}"
             ;;
-        7|combine_vbf_impacts)
+        6|combine_vbf_impacts)
             run_vbf_impacts "${year}"
             ;;
-        8|combine_vbf_lhscan)
+        7|combine_vbf_lhscan)
             run_vbf_lhscan "${year}"
             ;;
-        9|combine_vbf_all)
+        8|combine_vbf_all)
             ensure_vbf_card "${year}"
             ensure_vbf_workspace "${year}"
             run_vbf_significance "${year}"
             collect_vbf_significance_summary
             ;;
-        10|combine_vbf_summary)
+        9|combine_vbf_summary)
             collect_vbf_significance_summary
             ;;
-        11|vbf_limit)
-            # run_mode_from_nul < <(build_stage2_cmd "${year}")
-            # run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
-            # run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
-            # run_mode_from_nul < <(build_stage3_cmd "${year}")
+        10|vbf_limit)
+            run_mode_from_nul < <(build_stage2_cmd "${year}")
+            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
+            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
+            run_mode_from_nul < <(build_stage3_cmd "${year}")
             ensure_vbf_card "${year}"
             ensure_vbf_workspace "${year}"
             run_vbf_significance "${year}"

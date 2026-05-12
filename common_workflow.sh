@@ -683,13 +683,6 @@ run_vbf_lhscan() {
     )
 }
 
-copy_stage3_datacards() {
-    local src_dir="${save_path}/stage3_datacards_${save_postfix}"
-    local dest_dir="/depot/cms/private/users/shar1172/CombineSetup/CMSSW_14_1_0_pre4/src/HiggsAnalysis/CombinedLimit/HMuMu_StatisticalAnalysis/run3_prelims/${label}"
-    mkdir -p "${dest_dir}"
-    run_cmd rsync -av --delete "${src_dir}" "${dest_dir}/"
-}
-
 require_workflow_root() {
     [[ -f "run_stage2_vbf.py" && -f "run_stage3_vbf.py" ]] || die "Run this script from the copperheadV2 checkout."
 }
