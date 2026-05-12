@@ -1,5 +1,9 @@
 name: Stage1 Sync Check
 
+concurrency:
+  group: sync-stage1-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main ]
@@ -39,6 +43,7 @@ jobs:
     env:
       CONDA_OVERRIDE_CUDA: "12.0"
       ENABLE_DASK_REPORT: "0"
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Checkout repository
@@ -90,7 +95,8 @@ jobs:
             export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
             python scripts/sync_parquet_dimuon.py \
-              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/data_*/ \
+              
+            ${{ matrix.year }}/f1_0/data_*/ \
               -o test/output/label_output/stage1_output/${{ matrix.year }}_data_eventKinematics.txt
 
             python scripts/sync_parquet_dimuon.py \
@@ -129,6 +135,11 @@ jobs:
           set -euo pipefail
 
           fail=0
+          {
+            echo "## Stage1 sync summary for ${{ matrix.year }}"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
           for f in \
             diff_data_${{ matrix.year }}.csv \
             diff_dy_${{ matrix.year }}.csv \
@@ -136,15 +147,22 @@ jobs:
           do
             if [ ! -f "$f" ]; then
               echo "OK: $f not produced."
+              echo "- $f: not produced" >> "$GITHUB_STEP_SUMMARY"
               continue
             elif [ -s "$f" ]; then
               echo "ERROR: Non-empty diff found in $f"
               echo "----- $f -----"
-              cat "$f"
+              sed -n '1,40p' "$f"
+              lines=$(wc -l < "$f" | tr -d ' ')
+              if [ "$lines" -gt 40 ]; then
+                echo "... truncated; full diff saved in workflow artifacts ..."
+              fi
               echo "---------------"
+              echo "- $f: FAIL (${lines} lines, see artifact)" >> "$GITHUB_STEP_SUMMARY"
               fail=1
             else
               echo "OK: $f exists and is empty."
+              echo "- $f: OK" >> "$GITHUB_STEP_SUMMARY"
             fi
           done
 
@@ -161,7 +179,10 @@ jobs:
             diff_data_${{ matrix.year }}.csv
             diff_dy_${{ matrix.year }}.csv
             diff_vbf_${{ matrix.year }}.csv
+            only_in_*.txt
             test/output/label_output/stage1_output/${{ matrix.year }}_data_eventKinematics.txt
             test/output/label_output/stage1_output/${{ matrix.year }}_dy_eventKinematics.txt
             test/output/label_output/stage1_output/${{ matrix.year }}_vbf_eventKinematics.txt
+            test/output/label_output/stage1_output/${{ matrix.year }}/_status/**
+            log_*.txt
           if-no-files-found: warn

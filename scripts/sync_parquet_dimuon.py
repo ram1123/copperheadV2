@@ -79,6 +79,32 @@ SYNCVARLIST: List[str] = [
     "separate_wgt_ones",
 ]
 
+TXT_COMPARE_EXCLUDED_VARS = {
+    "wgt_nominal",
+    "separate_wgt_genWeight",
+    "separate_wgt_genWeight_normalization",
+    "separate_wgt_xsec",
+    "separate_wgt_lumi",
+    "separate_wgt_pu_wgt",
+    "separate_wgt_l1prefiring",
+    "separate_wgt_muID",
+    "separate_wgt_muIso",
+    "separate_wgt_muTrig",
+    "separate_wgt_LHERen",
+    "separate_wgt_LHEFac",
+    "separate_wgt_pdf_2rms",
+    "separate_wgt_jetpuid_wgt",
+    "separate_wgt_qgl_wgt",
+    "separate_wgt_zpt_wgt",
+    "separate_wgt_ones",
+}
+
+
+def _is_data_sync_source(label: str) -> bool:
+    label_l = str(label).lower()
+    name_l = Path(str(label)).name.lower()
+    return ("_data_" in label_l) or name_l.startswith("data") or "data_" in name_l
+
 
 # ----------------------------------------------------------------------
 # Parquet discovery
@@ -483,8 +509,18 @@ def compare_two_sync_txt(
     c1 = df1.loc[common_idx]
     c2 = df2.loc[common_idx]
 
-    # Variables to compare (everything except keys)
-    vars_to_check = [c for c in c1.columns if c in c2.columns]
+    # For data sync txt comparisons, skip weight-like variables
+    skip_weight_like = _is_data_sync_source(txt1) or _is_data_sync_source(txt2)
+    if skip_weight_like:
+        vars_to_check = [
+            c for c in c1.columns
+            if c in c2.columns and c not in TXT_COMPARE_EXCLUDED_VARS
+        ]
+        skipped = [c for c in c1.columns if c in c2.columns and c in TXT_COMPARE_EXCLUDED_VARS]
+        if skipped:
+            print(f"[INFO] Skipping weight-like sync columns for data txt comparison: {skipped}")
+    else:
+        vars_to_check = [c for c in c1.columns if c in c2.columns]
 
     rows = []
     for idx in common_idx:
