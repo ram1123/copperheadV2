@@ -47,6 +47,9 @@ for year in "${years[@]}"; do
         1|stage1)
             run_mode_from_nul < <(build_stage1_cmd "${year}")
             ;;
+        1a|compact)
+            run_mode_from_nul < <(build_compact_cmd "${year}")
+            ;;            
         2|stage2)
             run_mode_from_nul < <(build_stage2_cmd "${year}")
             ;;
@@ -58,8 +61,8 @@ for year in "${years[@]}"; do
             run_mode_from_nul < <(build_stage3_cmd "${year}")
             ;;
         all)
-            run_mode_from_nul < <(build_prestage_cmd "${year}" "$(data_streams_for_year "${year}")")
             run_mode_from_nul < <(build_stage1_cmd "${year}")
+            run_mode_from_nul < <(build_compact_cmd "${year}")
             run_mode_from_nul < <(build_stage2_cmd "${year}")
             run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
             run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
@@ -73,9 +76,6 @@ for year in "${years[@]}"; do
             ;;
         calib_closure)
             run_mode_from_nul < <(build_calib_cmd "${year}" "closure")
-            ;;
-        compact)
-            run_mode_from_nul < <(build_compact_cmd "${year}")
             ;;
         dnn|dnn_pre|dnn_train|dnn_var_rank)
             if [[ "${dnn_invoked}" == "1" ]]; then

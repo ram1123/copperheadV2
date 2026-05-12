@@ -30,7 +30,7 @@ The workflow is now split into two entry scripts:
   - `dnn`, `dnn_pre`, `dnn_train`
   - `zpt_*`
   - `calib`, `calib_closure`
-- [run_stats_pipeline.sh](run_stats_pipeline.sh)
+- [run_stats_pipeline_VBF.sh](run_stats_pipeline_VBF.sh)
   - datacard copy / combine / significance / impacts / likelihood scans
 
 Shared path and naming helpers live in:
@@ -123,7 +123,7 @@ Example:
 
 ```bash
 ./enter_pixi.sh combine
-bash run_stats_pipeline.sh -m 9 -y Run3 -l label_for_ntuple
+bash run_stats_pipeline_VBF.sh -m 9 -y Run3 -l label_for_ntuple
 ```
 
 Legacy note:
@@ -148,7 +148,7 @@ For example:
 ```bash
 bash run_analysis_pipeline.sh -m 0 -y 2022preEE
 bash run_analysis_pipeline.sh -m 1 -y 2022preEE
-bash run_stats_pipeline.sh -m combine_vbf_all -y Run3
+bash run_stats_pipeline_VBF.sh -m combine_vbf_all -y Run3
 ```
 
 Legacy equivalent during the transition period:

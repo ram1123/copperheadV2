@@ -95,7 +95,7 @@ Example:
 
 ```bash
 ./enter_pixi.sh combine
-bash run_stats_pipeline.sh -m 9 -y Run3 -l label_for_ntuple
+bash run_stats_pipeline_VBF.sh -m 9 -y Run3 -l label_for_ntuple
 ```
 
 Legacy note:

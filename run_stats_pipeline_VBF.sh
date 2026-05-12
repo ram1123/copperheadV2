@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: run_stats_pipeline.sh [options]
+Usage: run_stats_pipeline_VBF.sh [options]
 
 Modes:
   4|copy_datacards
@@ -59,10 +59,10 @@ for year in "${years[@]}"; do
             collect_vbf_significance_summary
             ;;
         11|vbf_limit)
-            run_mode_from_nul < <(build_stage2_cmd "${year}")
-            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
-            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
-            run_mode_from_nul < <(build_stage3_cmd "${year}")
+            # run_mode_from_nul < <(build_stage2_cmd "${year}")
+            # run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
+            # run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
+            # run_mode_from_nul < <(build_stage3_cmd "${year}")
             ensure_vbf_card "${year}"
             ensure_vbf_workspace "${year}"
             run_vbf_significance "${year}"
