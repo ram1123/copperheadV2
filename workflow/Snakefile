@@ -257,7 +257,7 @@ rule stage1:
         echo "failed: ${{failed}}"
 
         if [[ "$failed" != "0" ]]; then
-            echo "ERROR: Stage1 summary indicates FAILED: 0"
+            echo "ERROR: Stage1 summary indicates FAILED count: ${{failed}}"
             echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             exit 1
         fi
