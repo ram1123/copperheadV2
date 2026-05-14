@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""
+Example:
+python scripts/get_yields.py \
+    --input /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output \
+    -y 2017
+"""
 
 import argparse
 import glob
@@ -15,8 +20,7 @@ import pandas as pd
 # Your modules
 from modules import selection
 from modules.dask_utils import close_dask_client, get_dask_client
-from modules.trials import get_stage1_path
-from modules.utils import logger
+from modules.utils import get_compacted_path, logger
 from modules.sample_config import get_bkg_sig_dicts
 from cli.common_argparser import build_common_parser
 
@@ -160,14 +164,13 @@ def main() -> None:
 
     print(f"PYTHONPATH: {os.environ['PYTHONPATH']}")
 
-    # Get base stage1 directory from your trials helper
     if args.input_path == "":
-        stage1_dir = get_stage1_path()  # default = "current"
-    else:
-        stage1_dir = args.input_path
-    # load_path_template = str(Path(stage1_dir) / "{year}" / "f1_0")
-    load_path_template = str(Path(stage1_dir) / "{year}" / "compacted")
-    print(f"Using LOAD_PATH template: {load_path_template}")
+        raise ValueError(
+            "Missing input path. Please provide --input /path/to/stage1_output"
+        )
+
+    stage1_dir = Path(args.input_path)
+    print(f"Using stage1 base path: {stage1_dir}")
 
     # Physics / config toggles
     do_VH_veto = False
@@ -219,7 +222,7 @@ def main() -> None:
     for category, year, region in itertools.product(categories, years, regions):
         print("-" * 60)
         print(f"\n\nCategory: {category} | Year: {year} | Region: {region}")
-        load_path = load_path_template.format(year=year)
+        load_path = str(get_compacted_path(stage1_dir / year / "f1_0"))
 
         # Common kwargs for all processes
         common_kwargs = dict(

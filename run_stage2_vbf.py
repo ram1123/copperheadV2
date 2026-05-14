@@ -18,7 +18,7 @@ from cli.common_argparser import build_common_parser
 from coffea.ml_tools.torch_wrapper import torch_wrapper
 from modules import selection
 from modules.dask_utils import get_dask_client
-from modules.utils import fillEventNans, logger
+from modules.utils import fillEventNans, get_compacted_path, logger
 from modules.sample_config import get_bkg_sig_dicts
 from tqdm import tqdm
 
@@ -35,23 +35,6 @@ def get_variation(wgt_variation, sys_variation):
         else:
             return None
 
-
-def get_compactedPath(stage1_path):
-    """
-    check if we have another directory, but with "compacted" in the name.
-    if so, then return that instead
-    NOTE: this is a lazy method that just looks if compacted directory exists.
-    It doesn't check if all the necessary samples are in the directory.
-    """
-    compacted_stage1_path = str(stage1_path).replace("/f1_0", "/compacted")
-    logger.debug(f"compacted_stage1_path: {compacted_stage1_path}")
-    if os.path.isdir(compacted_stage1_path):
-        return Path(compacted_stage1_path)
-    elif os.path.isdir(stage1_path):
-        return Path(stage1_path)
-    else:
-        logger.critical(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
-        raise FileNotFoundError(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
 
 def discover_shape_systs(fields, prefixes=None):
     """
@@ -364,7 +347,7 @@ if __name__ == "__main__":
     logger.info(f"data_samples: {data_samples}")
 
     stage1_path = base_path / "stage1_output" / args.year / "f1_0"
-    stage1_path = get_compactedPath(stage1_path) # get compacted stage1 output if they exist
+    stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
     logger.info(f"stage1 path: {stage1_path}")
     if not os.path.exists(stage1_path):
         logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
