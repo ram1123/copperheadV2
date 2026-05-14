@@ -37,13 +37,13 @@ SAMPLES: Dict[str, str] = {
     # "v12": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2017/compacted/vbf_powheg_dipole/0/*.parquet",
     # "v15": "/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Feb23_2026_noQGLSF/stage1_output/2017/compacted/vbf_powheg_dipole/0/*.parquet",    
 
-    "v12": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/2017/compacted/dy_M-50_aMCatNLO/0/*.parquet",
-    "v15": "/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Feb23_2026_noQGLSF/stage1_output/2017/compacted/dyTo2L_M-50_aMCatNLO/0/*.parquet",    
-
+    # "v12": "/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/fullRun_Jun23_2025_1n2Revised/stage1_output/2017/f1_0/data_D/0/*.parquet",
+    "v12": "/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Mar21_2026/stage1_output/2017/f1_0/data_D/0/*.parquet",
+    "v15": "/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Feb23_2026_noQGLSF/stage1_output/2017/f1_0/data_D/0/*.parquet",    
 }
 
 OUTDIR = Path(
-    "validation/sanity_checks/plot_overlay_all_fields/CompareOldVsNewJetID/2024_vbf_powheg_NewJETIDandMuonID"
+    "validation/sanity_checks/plot_overlay_all_fields/CompareV12AndV15/2017/Data_D"
 )
 NBINS = 60
 
@@ -191,6 +191,8 @@ def _save_overlay(arrs: Dict[str, np.ndarray], field: str, outdir: Path) -> None
         return
 
     lo, hi = _auto_range(arrs)
+    if field=="dimuon_mass":
+        hi = 115
     name = _safe_name(field)
 
     # Choose reference
@@ -454,6 +456,17 @@ def main() -> None:
     client = get_dask_client(use_gateway=args.use_gateway, cluster_index=args.cluster_index)
     print("[INFO] Dask client:", client)
 
+    # ------------------------------------------------
+    # save file load path in txt file
+    # ------------------------------------------------
+    content_to_save = ""
+    for nanoV, file_path in SAMPLES.items():
+        content_to_save += f"samples for {nanoV} was taken from {file_path} \n"
+    file_name = f"{outdir}/load_sample_paths.txt"
+    # Open the file in write mode ('w') and write the content
+    with open(file_name, 'w', encoding='utf-8') as file:
+        file.write(content_to_save)
+    
     # Load all samples as dask-awkward arrays
     events = {}
     for k, path in SAMPLES.items():

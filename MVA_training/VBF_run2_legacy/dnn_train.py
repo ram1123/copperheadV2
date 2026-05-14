@@ -21,13 +21,13 @@ import mplhep as hep
 from sklearn.metrics import confusion_matrix
 
 # #### Libraries for scan HYPERPARAMETERS
-from ax.service.managed_loop import optimize
-from ax.storage.json_store.save import save_experiment
-from ax.service.utils.report_utils import exp_to_df, get_standard_plots
-from ax.plot.trace import optimization_trace_single_method
-from ax.plot.contour import plot_contour
-from ax.utils.notebook.plotting import render
-import plotly.io as pio
+# from ax.service.managed_loop import optimize
+# from ax.storage.json_store.save import save_experiment
+# from ax.service.utils.report_utils import exp_to_df, get_standard_plots
+# from ax.plot.trace import optimization_trace_single_method
+# from ax.plot.contour import plot_contour
+# from ax.utils.notebook.plotting import render
+# import plotly.io as pio
 
 from pathlib import Path
 import json
@@ -49,28 +49,28 @@ from modules import selection
 
 from dnn_helper import *
 
-from MVA_training.VBF.dnn_plotting import plot_loss_curves
-from MVA_training.VBF.dnn_plotting import plotPrecisionRecall
-from MVA_training.VBF.dnn_plotting import plotConfusionMatrix
-from MVA_training.VBF.dnn_plotting import plot_auc_and_loss
-from MVA_training.VBF.dnn_plotting import plot_significance
-from MVA_training.VBF.dnn_plotting import plot_lr
-from MVA_training.VBF.dnn_plotting import plot_overtraining_KS_ROOT
-from MVA_training.VBF.dnn_plotting import plot_calibration_ROOT
-from MVA_training.VBF.dnn_plotting import plot_threshold_scan_ROOT
-from MVA_training.VBF.dnn_plotting import plot_score_feature_corr_ROOT_heatmap
-from MVA_training.VBF.dnn_plotting import plot_score_feature_corr_ROOT_bar
-from MVA_training.VBF.dnn_plotting import plot_score_shapes_and_roc_by_category_ROOT
-from MVA_training.VBF.dnn_plotting import plot_cumulative_SSB_per_process_ROOT
-from MVA_training.VBF.dnn_plotting import permutation_importance_auc
-from MVA_training.VBF.dnn_plotting import plot_perm_importance_ROOT
-from MVA_training.VBF.dnn_plotting import partial_dependence_curve
-from MVA_training.VBF.dnn_plotting import plot_pdp_ROOT
-from MVA_training.VBF.dnn_plotting import plot_weight_distribution_ROOT
-from MVA_training.VBF.dnn_plotting import yield_table_after_cut
-from MVA_training.VBF.dnn_plotting import _roc_weighted
-from MVA_training.VBF.dnn_plotting import cv_consistency_plots_ROOT
-from MVA_training.VBF.dnn_plotting import safe_weighted_auc
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_loss_curves
+from MVA_training.VBF_run2_legacy.dnn_plotting import plotPrecisionRecall
+from MVA_training.VBF_run2_legacy.dnn_plotting import plotConfusionMatrix
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_auc_and_loss
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_significance
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_lr
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_overtraining_KS_ROOT
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_calibration_ROOT
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_threshold_scan_ROOT
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_score_feature_corr_ROOT_heatmap
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_score_feature_corr_ROOT_bar
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_score_shapes_and_roc_by_category_ROOT
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_cumulative_SSB_per_process_ROOT
+from MVA_training.VBF_run2_legacy.dnn_plotting import permutation_importance_auc
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_perm_importance_ROOT
+from MVA_training.VBF_run2_legacy.dnn_plotting import partial_dependence_curve
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_pdp_ROOT
+from MVA_training.VBF_run2_legacy.dnn_plotting import plot_weight_distribution_ROOT
+from MVA_training.VBF_run2_legacy.dnn_plotting import yield_table_after_cut
+from MVA_training.VBF_run2_legacy.dnn_plotting import _roc_weighted
+from MVA_training.VBF_run2_legacy.dnn_plotting import cv_consistency_plots_ROOT
+from MVA_training.VBF_run2_legacy.dnn_plotting import safe_weighted_auc
 
 if not torch.cuda.is_available():
     logger.warning("CUDA is not available. Using CPU for training.")

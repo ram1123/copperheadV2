@@ -16,46 +16,76 @@ or:
 
 Example:
   python plot_real_fake_stack.py -i input.parquet -o outdir --normalize
+  python plotter/plot_real_fake_jets_stack.py \
+    -i /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn_Mar19_tightPassLepVeto_NoJER_pySR/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/0/part038.parquet \
+    -o validation/compare_real_fake 
 """
 
 import os
 import argparse
+import glob
 import numpy as np
 import pandas as pd
 import ROOT
 import sys
-import glob
 
 ROOT.gROOT.SetBatch(True)
 
-
 JET_ID_VARIABLES = [
     # --- Jet kinematics ---
-    "jet1_pt_nominal", "jet1_eta_nominal",
-    "jet2_pt_nominal", "jet2_eta_nominal",
+    "jet1_default_pt_nominal", "jet1_default_eta_nominal", "jet1_default_phi_nominal", "jet1_default_mass_nominal",
+    "jet1_pt_nominal", "jet1_eta_nominal", "jet1_phi_nominal", "jet1_rapidity_nominal",
+    "jet2_default_pt_nominal", "jet2_default_eta_nominal", "jet2_default_phi_nominal", "jet2_default_mass_nominal",
+    "jet2_pt_nominal", "jet2_eta_nominal", "jet2_phi_nominal", "jet2_rapidity_nominal",
+    "jet1_mass_nominal", "jet2_mass_nominal", 
     # "jj_dEta_nominal", "jj_mass_nominal",
 
-    # # --- Energy fractions ---
-    # "jet1_chEmEF_nominal", "jet1_chHEF_nominal", "jet1_neEmEF_nominal", "jet1_neHEF_nominal", "jet1_muEF_nominal",
-    # "jet2_chEmEF_nominal", "jet2_chHEF_nominal", "jet2_neEmEF_nominal", "jet2_neHEF_nominal", "jet2_muEF_nominal",
+    # --- Jet ID / PU ID ---
+    "jet1_puId_nominal", "jet1_jetId_nominal", "jet1_hasMatchedGenJet_nominal",
+    "jet2_puId_nominal", "jet2_jetId_nominal", "jet2_hasMatchedGenJet_nominal",
 
-    # # --- Multiplicities ---
+    # --- Energy fractions ---
+    "jet1_chEmEF_nominal", "jet1_chHEF_nominal", "jet1_neEmEF_nominal", "jet1_neHEF_nominal", 
+    "jet2_chEmEF_nominal", "jet2_chHEF_nominal", "jet2_neEmEF_nominal", "jet2_neHEF_nominal", 
+    "jet1_muEF_nominal", "jet2_muEF_nominal",
+
+    # --- Multiplicities ---
     # "jet1_chMultiplicity_nominal", "jet2_chMultiplicity_nominal",
     # "jet1_neMultiplicity_nominal", "jet2_neMultiplicity_nominal",
 
-    # # --- Constituents ---
-    # "jet1_nConstituents_nominal", "jet1_nElectrons_nominal", "jet1_nMuons_nominal", "jet1_nSVs_nominal",
-    # "jet2_nConstituents_nominal", "jet2_nElectrons_nominal", "jet2_nMuons_nominal", "jet2_nSVs_nominal",
+    # --- Constituents / leptons / SVs ---
+    "jet1_nConstituents_nominal", "jet2_nConstituents_nominal", 
+    "jet1_nElectrons_nominal", "jet1_nMuons_nominal", "jet1_nSVs_nominal",
+    "jet2_nElectrons_nominal", "jet2_nMuons_nominal", "jet2_nSVs_nominal",
 
-    # # --- Flavour ---
-    # "jet1_hadronFlavour_nominal", "jet2_hadronFlavour_nominal",
-    # "jet1_partonFlavour_nominal", "jet2_partonFlavour_nominal",
+    # --- Object indices ---
+    "jet1_electronIdx1_nominal", "jet1_electronIdx2_nominal",
+    "jet1_muonIdx1_nominal", "jet1_muonIdx2_nominal",
+    "jet1_svIdx1_nominal", "jet1_svIdx2_nominal",
+    "jet1_genJetIdx_nominal",
 
-    # # --- HF noise variables ---
-    # "jet1_hfcentralEtaStripSize_nominal", "jet1_hfadjacentEtaStripsSize_nominal",
-    # "jet1_hfsigmaEtaEta_nominal", "jet1_hfsigmaPhiPhi_nominal",
-    # "jet2_hfcentralEtaStripSize_nominal", "jet2_hfadjacentEtaStripsSize_nominal",
-    # "jet2_hfsigmaEtaEta_nominal", "jet2_hfsigmaPhiPhi_nominal",
+    "jet2_electronIdx1_nominal", "jet2_electronIdx2_nominal",
+    "jet2_muonIdx1_nominal", "jet2_muonIdx2_nominal",
+    "jet2_svIdx1_nominal", "jet2_svIdx2_nominal",
+    "jet2_genJetIdx_nominal",
+
+    # --- Flavour / taggers ---
+    "jet1_hadronFlavour_nominal", "jet2_hadronFlavour_nominal",
+    "jet1_partonFlavour_nominal", "jet2_partonFlavour_nominal",
+    "jet1_btagDeepFlavQG_nominal", "jet2_btagDeepFlavQG_nominal",
+    "jet1_btagPNetQvG_nominal", "jet2_btagPNetQvG_nominal",
+    "jet1_btagDeepFlavB_nominal", "jet2_btagDeepFlavB_nominal",
+    "jet1_btagDeepFlavCvB_nominal", "jet2_btagDeepFlavCvB_nominal",
+
+    # --- HF noise variables ---
+    "jet1_hfcentralEtaStripSize_nominal", "jet1_hfadjacentEtaStripsSize_nominal",
+    "jet1_hfsigmaEtaEta_nominal", "jet1_hfsigmaPhiPhi_nominal",
+    "jet2_hfcentralEtaStripSize_nominal", "jet2_hfadjacentEtaStripsSize_nominal",
+    "jet2_hfsigmaEtaEta_nominal", "jet2_hfsigmaPhiPhi_nominal",
+
+    # --- Raw / muon-subtracted info / geometry ---
+    "jet1_area_nominal", "jet1_muonSubtrFactor_nominal", "jet1_rawFactor_nominal",
+    "jet2_area_nominal", "jet2_muonSubtrFactor_nominal", "jet2_rawFactor_nominal",
 ]
 
 
@@ -92,7 +122,7 @@ def jet_prefix(varname: str) -> str:
     if varname.startswith("jet2_"):
         return "jet2_"
     # if varname.startswith("jj_"):
-        # return "jj_"        
+    #     return "jj_"        
     raise ValueError(f"Variable does not start with jet1_ or jet2_: {varname}")
 
 
@@ -261,8 +291,6 @@ def plot_var(df, var, args, region="inclusive"):
     total_mask = pre & reg
     real = total_mask & real_mask
     fake = total_mask & fake_mask
-    real_rate = np.sum(real) / (np.sum(fake) + np.sum(real))
-    fake_rate = np.sum(fake) / (np.sum(fake) + np.sum(real))
 
     if total_mask.sum() == 0:
         print(f"[WARN] No entries for {var} in region={region} -> skipping")
@@ -380,9 +408,10 @@ def plot_var(df, var, args, region="inclusive"):
     leg.SetFillStyle(0)
     leg.SetHeader(region, "C")
     leg.AddEntry(h_total, "Total jets", "pe")
-    leg.AddEntry(h_real,  f"Real (HS) {real_rate*100:.1f}%", "f")
-    leg.AddEntry(h_fake,  f"Fake (PU) {fake_rate*100:.1f}%", "f")
+    leg.AddEntry(h_real,  "Real (HS)", "f")
+    leg.AddEntry(h_fake,  "Fake (PU)", "f")
     leg.Draw()
+
     # Bottom pad
     pad2.cd()
     h_ratio.Draw("E1")

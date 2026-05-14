@@ -41,11 +41,12 @@ from modules.dask_utils import close_dask_client, get_dask_client
 from modules.git_utils import get_git_commit, get_git_state
 from modules.selection import applyRegionCatCuts
 from modules.utils import logger
-from MVA_training.VBF_new.utils.pre_scale_cleaning import pre_scaling_clean
+from MVA_training.VBF_run3.utils.pre_scale_cleaning import pre_scaling_clean
+# from MVA_training.VBF_run2_legacy.pre_scale_cleaning import pre_scaling_clean
 
 # Optional: keep your existing diagnostic plots (safe to disable from CLI)
 try:
-    from MVA_training.VBF_new.utils.scaling_helper import (
+    from MVA_training.VBF_run3.utils.scaling_helper import (
         plot_before_after_scaling,
         plot_corr_before_after,
         plot_scaled_mean_std,

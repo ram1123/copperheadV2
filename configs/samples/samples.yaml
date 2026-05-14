@@ -4,15 +4,18 @@ background:
     groups:
         DY:
             processes:
-                - dyTo2L_M-50_incl
+                # - dyTo2L_M-50_incl
+                - dy_M-100To200_MiNNLO
+                - dyTo2L_M-50_aMCatNLO
+                - dy_VBF_filter
                 # - dyTo2Mu_MLL_10To50
                 # - dyTo2Mu_MLL_50To120
                 # - dyTo2Mu_MLL_120To200
             processes_per_year:
                 2024:
                     - dyTo2Mu_M-50_aMCatNLO
-                2017:
-                    - dyTo2L_M-50_aMCatNLO
+                # 2017:
+                    # - dyTo2L_M-50_aMCatNLO
 
         TT:
             processes:
@@ -20,21 +23,22 @@ background:
                 - ttjets_sl
             processes_per_year: {}
 
-        # ST:
-        #     processes:
-        #         - st_tw_top
-        #         - st_tw_antitop
-        #         - st_t_top
-        #         - st_t_antitop
-        #     processes_per_year: {}
+        ST:
+            processes:
+                - st_tw_top
+                - st_tw_antitop
+                - st_t_top
+                - st_t_antitop
+            processes_per_year: {}
 
         EWK:
             processes:
                 # - ewk_lljj_mll105_160_ptj0
                 # - ewk_lljj_mll105_160_py_dipole
-                # - ewk_lljj_mll50_mjj120
+                - ewk_lljj_mll50_mjj120
                 # - ewk_lljj
                 - ewk_mmjj
+                - ewk_zlljj
             processes_per_year:
                 2022preEE:
                     - ewk_lljj

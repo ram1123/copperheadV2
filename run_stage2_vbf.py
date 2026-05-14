@@ -23,6 +23,46 @@ from modules.sample_config import get_bkg_sig_dicts
 from tqdm import tqdm
 
 
+
+def resolve_vbf_training_layout(model_path: Path, model_tag: str, nfolds: int):
+    """
+    Support both layouts:
+    1) <model_path>/training_features.pkl + fold*/best_torchscript.pt
+    2) <model_path>/training_features.pkl + <model_path>/<model_tag>/fold*/best_torchscript.pt
+    3) <model_path>/<model_tag>/training_features.pkl + fold*/best_torchscript.pt
+    """
+    feature_roots = []
+    for candidate in [model_path, model_path / model_tag]:
+        if candidate not in feature_roots:
+            feature_roots.append(candidate)
+
+    model_roots = []
+    for candidate in [model_path / model_tag, model_path]:
+        if candidate not in model_roots:
+            model_roots.append(candidate)
+
+    missing_reports = []
+    for feature_root in feature_roots:
+        tf_path = feature_root / "training_features.pkl"
+        scaler_paths = [feature_root / f"scalers_{fold}.npz" for fold in range(nfolds)]
+        if not tf_path.is_file() or not all(p.is_file() for p in scaler_paths):
+            continue
+
+        for model_root in model_roots:
+            model_paths = [
+                model_root / f"fold{fold}" / "best_torchscript.pt"
+                for fold in range(nfolds)
+            ]
+            if all(p.is_file() for p in model_paths):
+                return feature_root, model_root
+            missing_reports.extend([f"missing model: {p}" for p in model_paths if not p.is_file()])
+
+        missing_reports.extend([f"missing training feature/scaler artifact under: {feature_root}"])
+
+    details = "\n".join(missing_reports) if missing_reports else "No matching training layout found."
+    raise FileNotFoundError(details)
+
+
 def get_variation(wgt_variation, sys_variation):
     if "nominal" in wgt_variation:
         if "nominal" in sys_variation:
@@ -122,6 +162,13 @@ class DNNWrapper(torch_wrapper):
         return [
             ak.values_astype(arr, "float32"), #only modification we do is is force float32
         ], {}
+
+def sigmoid_ak(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def clip_ak(x, min_value, max_value):
+    return ak.where(x < min_value, min_value, ak.where(x > max_value, max_value, x))
 
 
 def prepare_features(events, features, variation="nominal"):
@@ -319,6 +366,12 @@ if __name__ == "__main__":
     t3 = time.perf_counter()
     logger.info(f"[timing] sample dict processing time: {t3 - t2:.2f} seconds")
 
+
+    if "dy_VBF_filter" in full_sample_dict.keys(): # if dy_VBF_filter is not available, don't apply the VBF filter cut on other DY samples
+        do_vbf_filter_study = True
+    else:
+        do_vbf_filter_study = False
+    
     nfolds = args.nfolds  # Define nfolds once for all samples
     for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
         t4 = time.perf_counter()
@@ -326,6 +379,7 @@ if __name__ == "__main__":
         # if output pkl file already exists, skip
         output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
         if output_pkl_path.exists():
+            print(f"Output pkl file {output_pkl_path} already exists. Skipping {sample_type}.")
             logger.warning(f"Output pkl file {output_pkl_path} already exists. Skipping {sample_type}.")
             continue
 
@@ -443,6 +497,7 @@ if __name__ == "__main__":
         score_hist = score_hist.StrCat(variations, name="variation")
         # add score category
         bins = selection.binning  # use the binning from selection module
+        logger.info(f"bins: {bins}")
         score_name = f"score_{args.label}"
         score_hist = score_hist.Var(bins, name=score_name)
 
@@ -507,13 +562,14 @@ if __name__ == "__main__":
                 columns=needed_cols,
                 # split_row_groups=True, # FIXME: This introduces some issue and number of entries does not remain same.
                 # ).persist()  # Persist to memory for faster access
-            )
+            )           
+            logger.info(f"do_vbf_filter_study: {do_vbf_filter_study}")
             events = selection.applyRegionCatCuts(
                 events_stage1,
                 process=sample_type,
                 category=category,
                 region_name=region,
-                do_vbf_filter_study=True,
+                do_vbf_filter_study=do_vbf_filter_study,
                 variation=variation,
             )
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
@@ -575,7 +631,7 @@ if __name__ == "__main__":
                 ],  # np.newaxis is added so that we can concat on axis=1
                 axis=1,
             )
-            dnn_score = nan_val * ak.ones_like(events.event)
+            dnn_logit = nan_val * ak.ones_like(events.event)
 
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
@@ -584,10 +640,18 @@ if __name__ == "__main__":
                 dnn_score_fold = dnnWrap(input_arr)
                 dnn_score_fold = ak.flatten(dnn_score_fold, axis=None)
 
-                dnn_score = ak.where(eval_filter, dnn_score_fold, dnn_score)
-            # transform dnn_score
-            dnn_score = np.arctanh(dnn_score)
+                dnn_logit = ak.where(eval_filter, dnn_score_fold, dnn_logit)
 
+            valid_mask = dnn_logit != nan_val
+            dnn_score = sigmoid_ak(dnn_logit)
+            dnn_score = ak.where(valid_mask, dnn_score, nan_val)
+            dnn_score = np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
+            dnn_score = ak.where(valid_mask, dnn_score, nan_val)
+
+            # logger.info(f"dnn_score: {dnn_score.compute()}")
+            # logger.info(f"dnn_score: {ak.max(dnn_score).compute()}")
+            # logger.info(f"dnn_score: {ak.min(dnn_score).compute()}")
+            # raise ValueError
             # ---------------------------------------------------
             # Now onto converting DNN score as histograms
             # ---------------------------------------------------

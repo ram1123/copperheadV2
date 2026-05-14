@@ -1184,6 +1184,11 @@ class EventProcessor(processor.ProcessorABC):
 
         do_jec = self.config["switches"]["do_jec"]
         do_jec_unc = self.config["switches"]["do_jec_unc"]
+        # FIXME: override do_jec_unc if on data
+        if not is_mc:
+            do_jec_unc = False
+            self.config["switches"]["do_jec_unc"] = False
+        logger.info(f"do_jec_unc: {do_jec_unc}")
         do_jer_unc = self.config["switches"]["do_jer_unc"]
         jec_unc_sources = []
         jet_type = getJetType(NanoAODv, year)
@@ -1198,21 +1203,21 @@ class EventProcessor(processor.ProcessorABC):
                     jec_tag = self.config["jec_parameters"]["jec_tags"]
                     if (not isinstance(jec_tag, str)): 
                         jec_tag = jec_tag[f"nanoAODv{NanoAODv}"]
-                else: # data
-                    # jec_tag = None
-                    # for run in self.config["jec_parameters"]["runs"]:
-                    #     logger.info(f"run: {run}, dataset: {dataset}")
-                    #     logger.info(f"run in dataset: {run in dataset}")
-                    #     if run in dataset:
-                    #         jec_tag = getJecDataTag(run, self.config["jec_parameters"]["jec_data_tags"], NanoAODv=self.config["NanoAODv"])
-                    # if jec_tag is None:
-                    #     raise ValueError(
-                    #         f"No JEC tag found for dataset '{dataset}'. "
-                    #         f"Check that one of the configured runs "
-                    #         f"({self.config['jec_parameters']['runs']}) "
-                    #         f"is present in the dataset name."
-                    #     )
-                    pass # FIXME: jec_unc on data leads to diff data/MC agreement on control plots for VBF channel. This doesn't happen on MC
+                else: # data  FIXME: jec_unc on data leads to diff data/MC agreement on control plots for VBF channel. This doesn't happen on MC
+                    jec_tag = None
+                    for run in self.config["jec_parameters"]["runs"]:
+                        logger.info(f"run: {run}, dataset: {dataset}")
+                        logger.info(f"run in dataset: {run in dataset}")
+                        if run in dataset:
+                            jec_tag = getJecDataTag(run, self.config["jec_parameters"]["jec_data_tags"], NanoAODv=self.config["NanoAODv"])
+                    if jec_tag is None:
+                        raise ValueError(
+                            f"No JEC tag found for dataset '{dataset}'. "
+                            f"Check that one of the configured runs "
+                            f"({self.config['jec_parameters']['runs']}) "
+                            f"is present in the dataset name."
+                        )
+                    
                 jerc_load_path = self.config["jec_parameters"]["jerc_load_path"]
                 cset = get_corrset(jerc_load_path, NanoAODv)
                 jec_unc_sources = get_jec_sources(cset, jec_tag, jet_type=jet_type)
@@ -1321,16 +1326,17 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # FIXME: For data (is is_mc == False) I should not add this variations.
         pt_variations = ["nominal"]
-        if self.config["switches"]["do_jec_unc"]:
-            pt_variations += applyUpDown(jec_unc_sources)
+        if is_mc:
+            if self.config["switches"]["do_jec_unc"]:
+                pt_variations += applyUpDown(jec_unc_sources)
+    
+            if self.config["switches"]["do_jer_unc"] and self.config["switches"]["jer_strat"] >= 0:
+                # FIXME: JER variation part is not running. 
+                #         As for Run-3 we are not applying the JER so we don't need it, yet.
+                jec_pars = self.config["jec_parameters"]
+                pt_variations += jec_pars["jer_variations"]            
 
-        if self.config["switches"]["do_jer_unc"] and self.config["switches"]["jer_strat"] >= 0:
-            # FIXME: JER variation part is not running. 
-            #         As for Run-3 we are not applying the JER so we don't need it, yet.
-            jec_pars = self.config["jec_parameters"]
-            pt_variations += jec_pars["jer_variations"]            
-
-        logger.debug(f"pt_variations: {pt_variations}")
+        logger.info(f"pt_variations: {pt_variations}")
         if is_mc:
             # moved nnlops reweighting outside of dak process and to run_stage1-----------------
             do_nnlops = self.config["switches"]["do_nnlops"] and ("ggh" in events.metadata["dataset"])
@@ -2238,6 +2244,7 @@ class EventProcessor(processor.ProcessorABC):
                 # Need following when running over JEC. First two for 2022 and 2023. All below for 2024
                 "genJetIdx",
                 "btagDeepFlavB",
+                "btagUParTAK4B",
                 "chHEF",
                 "neHEF",
                 "chEmEF",
@@ -2248,6 +2255,7 @@ class EventProcessor(processor.ProcessorABC):
                 "multiplicity"
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
+            
         # ------------------------------------------------------------#
         # Apply jetID and PUID
         # ------------------------------------------------------------#
@@ -2407,6 +2415,7 @@ class EventProcessor(processor.ProcessorABC):
         padded_jets = ak.pad_none(jets, target=4) # padd jets
         jet1, jet2 = pair_dict["lead"]
 
+        
         jet_loop_out_dict = {}
         # # --------------------------------------------
         # # jet rapidity-region booleans (event-level)
@@ -3071,6 +3080,7 @@ class EventProcessor(processor.ProcessorABC):
 
         # Separate from ttH and VH phase space
         btag_jets = jets[(abs(jets.eta) < 2.5)]
+        
         if "RERECO" in year:
             btagLoose_filter = btag_jets.btagDeepB > self.config["btag_loose_wp"]
             btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp"]

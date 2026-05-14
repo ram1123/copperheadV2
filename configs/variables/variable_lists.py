@@ -62,9 +62,11 @@ VBF_TRAINING_VARS: List[str] = [
     "jet1_pt_nominal",
     "jet1_eta_nominal",
     "jet1_phi_nominal",
+    "jet1_qgl_nominal",
     "jet2_pt_nominal",
     "jet2_eta_nominal",
     "jet2_phi_nominal",
+    "jet2_qgl_nominal",
     "jj_mass_nominal",
     # "jj_mass_log_nominal",
     "jj_dEta_nominal",
@@ -85,9 +87,12 @@ PV_VARS: List[str] = [
 ]
 
 MET_VARS: List[str] = [
-    "PuppiMET_pt",
-    "PuppiMET_phi",
-    "PuppiMET_sumEt",
+    # "PuppiMET_pt",
+    # "PuppiMET_phi",
+    # "PuppiMET_sumEt",
+    # "MET_pt",
+    # "MET_phi",
+    # "MET_sumEt",
 ]
 
 muon_ip_vars = [

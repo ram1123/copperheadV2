@@ -939,62 +939,7 @@ def run_plots_for_block_cached_records(
                 output_name=output_name,
             )
 
-# -------------------------------------------------------------
-# run23Comp
-# -------------------------------------------------------------
 
-run23Comp_paths = {
-    "Run2(2017) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2017/compacted/data_*/0/*.parquet",
-    "Run2(2017) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2017/compacted/data_*/0/*.parquet",
-    "Run3(2024) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2024/compacted/data_C/0/*.parquet",
-}
-
-# -------------------------------------------------------------
-# run23Comp extended
-# -------------------------------------------------------------
-
-run23CompExt_paths = {
-    "Run2(2017) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2017/compacted/data_*/0/*.parquet",
-    "Run2(2017) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2017/compacted/data_*/0/*.parquet",
-    "Run3(2022postEE) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted/data_*/0/*.parquet",
-    "Run3(2024) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2024/compacted/data_C/0/*.parquet",
-}
-
-# -------------------------------------------------------------
-# run2NanoV12
-# -------------------------------------------------------------
-
-run2NanoV12_paths = {
-    "Run2(2018) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2018/compacted/data_*/0/*.parquet",
-    "Run2(2017) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2017/compacted/data_*/0/*.parquet",
-    "Run2(2016postVFP) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2016postVFP/compacted/data_*/0/*.parquet",
-    "Run2(2016preVFP) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2016preVFP/compacted/data_*/0/*.parquet",
-}
-
-
-# -------------------------------------------------------------
-# run2NanoV15
-# -------------------------------------------------------------
-
-run2NanoV15_paths = {
-    "Run2(2018) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2018/compacted/data_*/0/*.parquet",
-    "Run2(2017) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2017/compacted/data_*/0/*.parquet",
-    "Run2(2016postVFP) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2016postVFP/compacted/data_*/0/*.parquet",
-    "Run2(2016preVFP) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2016preVFP/compacted/data_*/0/*.parquet",
-}
-
-
-# -------------------------------------------------------------
-# run3
-# -------------------------------------------------------------
-
-run3_paths = {
-    "Run3(2024) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2024/compacted/data_*/0/*.parquet",
-    "Run3(2023BPix) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2023BPix/compacted/data_*/0/*.parquet",
-    "Run3(2023) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2023/compacted/data_*/0/*.parquet",
-    "Run3(2022postEE) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted/data_*/0/*.parquet",
-    "Run3(2022preEE) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022preEE/compacted/data_*/0/*.parquet",
-}
 
 if __name__ == "__main__":
     # ------------------------------------------------------------
@@ -1043,6 +988,68 @@ if __name__ == "__main__":
     }
 
     # -------------------------------------------------------------
+    # Define the parquet paths
+    # -------------------------------------------------------------
+    
+    # -------------------------------------------------------------
+    # run23Comp
+    # -------------------------------------------------------------
+    
+    run23Comp_paths = {
+        "Run2(2017) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2017) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run3(2024) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2024/compacted/data_C/0/*.parquet",
+    }
+    
+    # -------------------------------------------------------------
+    # run23Comp extended
+    # -------------------------------------------------------------
+    
+    run23CompExt_paths = {
+        "Run2(2017) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2017) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run3(2022postEE) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted/data_*/0/*.parquet",
+        "Run3(2024) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2024/compacted/data_C/0/*.parquet",
+    }
+    
+    # -------------------------------------------------------------
+    # run2NanoV12
+    # -------------------------------------------------------------
+    
+    run2NanoV12_paths = {
+        "Run2(2018) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2018/compacted/data_*/0/*.parquet",
+        "Run2(2017) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2016postVFP) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2016postVFP/compacted/data_*/0/*.parquet",
+        "Run2(2016preVFP) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2016preVFP/compacted/data_*/0/*.parquet",
+    }
+    
+    
+    # -------------------------------------------------------------
+    # run2NanoV15
+    # -------------------------------------------------------------
+    
+    run2NanoV15_paths = {
+        "Run2(2018) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2018/compacted/data_*/0/*.parquet",
+        "Run2(2017) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2016postVFP) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2016postVFP/compacted/data_*/0/*.parquet",
+        "Run2(2016preVFP) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2016preVFP/compacted/data_*/0/*.parquet",
+    }
+    
+    
+    # -------------------------------------------------------------
+    # run3
+    # -------------------------------------------------------------
+    
+    run3_paths = {
+        "Run3(2024) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2024/compacted/data_*/0/*.parquet",
+        "Run3(2023BPix) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2023BPix/compacted/data_*/0/*.parquet",
+        "Run3(2023) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2023/compacted/data_*/0/*.parquet",
+        "Run3(2022postEE) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted/data_*/0/*.parquet",
+        "Run3(2022preEE) PUPPI": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022preEE/compacted/data_*/0/*.parquet",
+    }
+
+    
+    # -------------------------------------------------------------
     # Run all eta plotting blocks
     # -------------------------------------------------------------
 
@@ -1055,25 +1062,89 @@ if __name__ == "__main__":
     }
 
 
-    for desc, base_parquet_paths in plot_blocks.items():
-        # Cached workflow for jet eta plots:
-        # - dak.from_parquet() is called once per {desc, sample, label}
-        # - filterRegion() is applied before dask.compute()
-        # - the region-filtered dask-awkward Records are reused for
-        #   jet1_eta_nominal and jet2_eta_nominal
-        run_plots_for_block_cached_records(
-            desc=desc,
-            base_parquet_paths=base_parquet_paths,
-            variables=variables,
-            bin_edges=eta_bin_edges_by_sample,
-            region=region,
-            normalize=True,
-            persist_records=True,
-        )
+    # for desc, base_parquet_paths in plot_blocks.items():
+    #     # Cached workflow for jet eta plots:
+    #     # - dak.from_parquet() is called once per {desc, sample, label}
+    #     # - filterRegion() is applied before dask.compute()
+    #     # - the region-filtered dask-awkward Records are reused for
+    #     #   jet1_eta_nominal and jet2_eta_nominal
+    #     run_plots_for_block_cached_records(
+    #         desc=desc,
+    #         base_parquet_paths=base_parquet_paths,
+    #         variables=variables,
+    #         bin_edges=eta_bin_edges_by_sample,
+    #         region=region,
+    #         normalize=True,
+    #         persist_records=True,
+    #     )
 
     # ------------------------------------------------------------
     # Repeat for dimuon mass plot
     # ------------------------------------------------------------
+
+    # -------------------------------------------------------------
+    # Define the parquet paths
+    # -------------------------------------------------------------
+    
+    # -------------------------------------------------------------
+    # run23Comp
+    # -------------------------------------------------------------
+    
+    run23Comp_paths = {
+        "Run2(2017) NanoAODv12": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2017) NanoAODv15": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run3(2024) NanoAODv15": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2024/compacted/data_C/0/*.parquet",
+    }
+    
+    # -------------------------------------------------------------
+    # run23Comp extended
+    # -------------------------------------------------------------
+    
+    run23CompExt_paths = {
+        "Run2(2017) NanoAODv12": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2017) NanoAODv15": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run3(2022postEE) NanoAODv12": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted/data_*/0/*.parquet",
+        "Run3(2024) NanoAODv15": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2024/compacted/data_C/0/*.parquet",
+    }
+    
+    # -------------------------------------------------------------
+    # run2NanoV12
+    # -------------------------------------------------------------
+    
+    run2NanoV12_paths = {
+        "Run2(2018) NanoAODv12": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2018/compacted/data_*/0/*.parquet",
+        "Run2(2017) NanoAODv12": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2016postVFP) NanoAODv12": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2016postVFP/compacted/data_*/0/*.parquet",
+        "Run2(2016preVFP) NanoAODv12": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output/2016preVFP/compacted/data_*/0/*.parquet",
+    }
+    
+    
+    # -------------------------------------------------------------
+    # run2NanoV15
+    # -------------------------------------------------------------
+    
+    run2NanoV15_paths = {
+        "Run2(2018) NanoAODv15": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2018/compacted/data_*/0/*.parquet",
+        "Run2(2017) NanoAODv15": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2016postVFP) NanoAODv15": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2016postVFP/compacted/data_*/0/*.parquet",
+        "Run2(2016preVFP) NanoAODv15": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output/2016preVFP/compacted/data_*/0/*.parquet",
+    }
+    
+    
+    # -------------------------------------------------------------
+    # run3
+    # -------------------------------------------------------------
+    
+    run3_paths = {
+        "Run3(2024) NanoAODv15": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2024/compacted/data_*/0/*.parquet",
+        "Run3(2023BPix) NanoAODv12": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2023BPix/compacted/data_*/0/*.parquet",
+        "Run3(2023) NanoAODv12": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2023/compacted/data_*/0/*.parquet",
+        "Run3(2022postEE) NanoAODv12": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022postEE/compacted/data_*/0/*.parquet",
+        "Run3(2022preEE) NanoAODv12": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022preEE/compacted/data_*/0/*.parquet",
+    }
+
+    
+    
 
     mass_bin_edges_by_sample = {
         "data": np.linspace(70, 110, num=201),  # 100 bins

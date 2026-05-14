@@ -60,6 +60,77 @@ For this, there are two scripts available in the `plotter/` directory:
 
 ## DNN Training
 
-### DNN Hyperparameter Optimization
+### DNN preprocessing
 
+NOTE: this step uses dask gateway for parallization. Example:
+```bash
+python MVA_training/VBF_run3/preprocess_dnn.py --config configs/dnn_run2_vbf.yaml \
+--base-path /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026/stage1_output \
+--tag Run2_NanoV12_forVBFChannel_Apr29_2026 \
+--year 2017 \
+--use-dask-gateway --cluster-index 0
+```
+
+### DNN Hyperparameter Optimization
+Once preprocessing is done, do hyperparameter optimization (NOTE: using GPU session will greatly accelerate this).
+example:
+```bash
+VA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run2_vbf.yaml \
+--data-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_Apr29_2026/2017_h-peak_vbf/ \
+--out-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_Apr29_2026/2017_h-peak_vbf/hpo_optuna/v2_108Trials \
+--n-trials 5 --folds 0
+```
 ### DNN Training Command
+
+Example:
+```bash
+time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run2_vbf.yaml \
+--data-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_Apr29_2026/2017_h-peak_vbf/  \
+--out-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_Apr29_2026/2017_h-peak_vbf/trained_best_optuna \
+--optuna-best-json dnn/trained_models/Run2_NanoV12_forVBFChannel_Apr29_2026/2017_h-peak_vbf/hpo_optuna/v2_108Trials/optuna_best.json
+```
+
+
+## VBF stage2 and stage3
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc -y "2017" -m 2 -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc -y "2017" -m 2p -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc -y "2017" -m 3 -k)
+```
+
+
+## DNN bin edge optimization
+
+Change the `command_compact` in `stage1_loop_Improved.sh`, ie
+```bash
+command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path --model_tag $training_tag --add_dnn_score --fix_dimuon_mass --save_postfix $save_postfix "
+```
+
+then run compacted command again (no need to delete things), ie
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc -y "2017" -m compacted -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc -y "2018" -m compacted -k)
+
+```
+
+We re-bin the DNN score edgges. Configure the stage1 label, years and MC samples and then run the python
+
+```bash
+python MVA_training/VBF_run3/scan_bins_for_dnn.py
+```
+
+
+# combine step
+first combine the cards:
+
+
+```bash
+sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026/stage3_datacards_May04_2026/score_Run2_NanoV12_forVBFChannel_Apr29_2026 2017
+```
+
+then generate the signficance
+```bash
+bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026/stage3_datacards_May04_2026/score_Run2_NanoV12_forVBFChannel_Apr29_2026 2017
+```

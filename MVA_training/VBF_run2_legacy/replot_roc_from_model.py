@@ -15,34 +15,18 @@ plt.style.use(hep.style.CMS)
 
 # Setup
 FOLD = 3
-# LABEL = "Run2_nanoAODv12_08June" # With Jet QGL bug
-LABEL = "Run2_nanoAODv12_UpdatedQGL_17July"  # With Jet QGL bug fixed
-LABEL = "Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt"  # With Jet QGL bug fixed
-# TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June_MiNNLO/fold{FOLD}"
-# DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/{LABEL}"
-# TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf/fold{FOLD}"
-# DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/MVA_training/VBF/dnn/trained_models/Run2_nanoAODv12_08June_signal_vbf"
-# TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_h-peak_vbf/fold{FOLD}"
-# DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_h-peak_vbf"
-# TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_h-peak_vbf/fold{FOLD}"
-# DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_h-peak_vbf"
-# TRAINED_MODEL_DIR = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_signal_vbf_15July2025/fold{FOLD}"
-# DATA_PATH = f"/depot/cms/users/shar1172/copperheadV2_main/dnn/trained_models/Run2_nanoAODv12_08June/2018_signal_vbf_15July2025"
+LABEL = "Run2_NanoV12_forVBFChannel_Apr29_2026"  # With Jet QGL bug fixed
 
 TRAINED_MODEL_DIR = (
-    f"/depot/cms/users/shar1172/"
-    f"copperheadV2_main/dnn/trained_models/"
+    f"/work/users/yun79/sideHustle5/"
+    f"copperheadV2/dnn/trained_models/"
     # f"{LABEL}/2018_h-peak_vbf_AllYear_16July/fold{FOLD}"
     # f"{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test/fold{FOLD}"
     # f"{LABEL}/2018_h-peak_vbf_ScanHyperParamV2/fold{FOLD}"
-    f"{LABEL}/run2_h-peak_vbf_ScanHyperParamV1/fold{FOLD}"
+    f"{LABEL}/2017_h-peak_vbf/trained_best_optuna/fold{FOLD}"
 )
 DATA_PATH = (
-    f"/depot/cms/users/shar1172/"
-    # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_AllYear_16July"
-    # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_2018_UpdatedQGL_17July_Test"
-    # f"copperheadV2_main/dnn/trained_models/{LABEL}/2018_h-peak_vbf_ScanHyperParamV2"
-    f"copperheadV2_main/dnn/trained_models/{LABEL}/run2_h-peak_vbf_ScanHyperParamV1"
+    f"/work/users/yun79/sideHustle5/copperheadV2/dnn/trained_models/{LABEL}/2017_h-peak_vbf"
 )
 FEATURES_PKL = f"{DATA_PATH}/training_features.pkl"
 
@@ -76,8 +60,11 @@ print(f"From PKL: Input features: {training_features_test}")
 print(f"From PKL: Total number of input features: {len(training_features_test)}")
 
 # ----- Load checkpoint on CPU and rebuild the trained arch -----
-sd = torch.load(f"{TRAINED_MODEL_DIR}/best_model_weights.pt", map_location="cpu")
+# sd = torch.load(f"{TRAINED_MODEL_DIR}/best_model_weights.pt", map_location="cpu")
+sd = torch.load(f"{TRAINED_MODEL_DIR}/best.pt", map_location="cpu")
+# sd = torch.load(f"{TRAINED_MODEL_DIR}/best_torchscript.pt", map_location="cpu")
 # Infer architecture from weights
+print(sd.keys())
 in_dim  = sd["fc1.weight"].shape[1]
 h1      = sd["fc1.weight"].shape[0]
 h2      = sd["fc2.weight"].shape[0]
