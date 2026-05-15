@@ -80,7 +80,6 @@ group_dict = {
         "wz_2l2q",
         "wz_1l1nu2q",
         "zz_2l2q",
-        "zz_2l2u",
         "zz_2l2nu",
         "zz_4l",
     ],

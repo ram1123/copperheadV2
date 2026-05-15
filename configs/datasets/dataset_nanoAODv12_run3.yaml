@@ -1062,7 +1062,7 @@ years:
                     - None
                 cross_section_pb: 5991.0
                 cross_section_source: "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
-                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8
+                cross_section_source_doc: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -1540,7 +1540,7 @@ years:
                 notes: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
                 cross_section_pb: 5991.0
                 cross_section_source: "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
-                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                cross_section_source_doc: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
                 kfactor:
                     value: 1.0
                     source: NONE

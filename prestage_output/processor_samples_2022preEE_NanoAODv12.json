@@ -23729,7 +23729,7 @@
       "is_mc": true,
       "nGenEvts": 77695706,
       "original_fraction": 1.0,
-      "sumGenWgts": 210139475893.54718
+      "sumGenWgts": 210139475893.5472
     }
   },
   "dyTo2L_M-50_incl": {
@@ -42023,7 +42023,7 @@
       "is_mc": true,
       "nGenEvts": 1453748,
       "original_fraction": 1.0,
-      "sumGenWgts": 31483838.074400008
+      "sumGenWgts": 31483838.074400004
     }
   },
   "dyTo2Mu_MLL_50To120": {
@@ -43924,7 +43924,7 @@
       "is_mc": true,
       "nGenEvts": 6634552,
       "original_fraction": 1.0,
-      "sumGenWgts": 748271352.16804
+      "sumGenWgts": 748271352.1680399
     }
   },
   "ewk_lljj": {
@@ -45014,7 +45014,7 @@
       "is_mc": true,
       "nGenEvts": 200000,
       "original_fraction": 1.0,
-      "sumGenWgts": 6538942.242000015
+      "sumGenWgts": 6538942.2420000145
     }
   },
   "tt_inclusive": {
@@ -50478,7 +50478,7 @@
       "is_mc": true,
       "nGenEvts": 47825636,
       "original_fraction": 1.0,
-      "sumGenWgts": 3847485965.6064005
+      "sumGenWgts": 3847485965.6064014
     }
   },
   "ttjets_fh": {
@@ -57248,7 +57248,7 @@
       "is_mc": true,
       "nGenEvts": 105425350,
       "original_fraction": 1.0,
-      "sumGenWgts": 36617530423.08001
+      "sumGenWgts": 36617530423.08
     }
   },
   "ttjets_sl": {
@@ -70709,7 +70709,7 @@
       "is_mc": true,
       "nGenEvts": 17677536,
       "original_fraction": 1.0,
-      "sumGenWgts": 280546208.9520001
+      "sumGenWgts": 280546208.952
     }
   },
   "wz_2l2q": {
@@ -72684,7 +72684,7 @@
       "is_mc": true,
       "nGenEvts": 11653001,
       "original_fraction": 1.0,
-      "sumGenWgts": 57381741.17017994
+      "sumGenWgts": 57381741.17017993
     }
   },
   "zz": {
