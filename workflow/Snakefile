@@ -152,12 +152,22 @@ PLOT_DONE = expand(
     var_set=[x[5] for x in PLOT_TARGETS],
 )
 
+INITIAL_STAGE1_DONE = [] if USE_EXISTING_STAGE1 else expand(
+    STATEDIR + "/stage1_{year}_rep{rep}.done",
+    year=YEARS,
+    rep=REPEATS,
+)
+INITIAL_STAGE1_COMPACT_DONE = [] if USE_EXISTING_STAGE1 else expand(
+    STATEDIR + "/stage1_compact_{year}.done",
+    year=YEARS,
+)
+
 rule all:
     input:
         # (1) stage1 for all years
-        expand(STATEDIR + "/stage1_{year}_rep{rep}.done", year=YEARS, rep=REPEATS,),
+        INITIAL_STAGE1_DONE,
         # (2) stage1Compact for all years
-        expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
+        INITIAL_STAGE1_COMPACT_DONE,
         # (3) plotter (after stage1)
         PLOT_DONE,
         # (4) get zpt
@@ -169,14 +179,6 @@ rule all:
         expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
         expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
         expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
-        # (6) second-pass stage1 using latest corrections for zpt and EBE mass calibration
-        # expand(STATEDIR + "/stage1_corr_{year}.done", year=YEARS),
-        # expand(STATEDIR + "/stage1_compact_corr_{year}.done", year=YEARS),
-        # expand(STATEDIR + "/plots_corr_{year}_{cat}.done", year=YEARS, cat=PLOT_CATS),
-        # # (4) zpt trainings (after stage1)
-        # expand(STATEDIR + "/zpt_wgt_{year}_njet0.done", year=YEARS),
-        # expand(STATEDIR + "/zpt_wgt_{year}_njet1.done", year=YEARS),
-        # expand(STATEDIR + "/zpt_wgt_{year}_njet2p.done", year=YEARS),
         f"{STATEDIR}/summary.done"
 
 rule plot_all:
@@ -190,9 +192,9 @@ rule plot_all:
 rule all_stage1:
     input:
         # (1) stage1 for all years
-        expand(STATEDIR + "/stage1_{year}_rep{rep}.done", year=YEARS, rep=REPEATS,),
+        INITIAL_STAGE1_DONE,
         # (2) stage1Compact for all years
-        expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
+        INITIAL_STAGE1_COMPACT_DONE,
         # (3) plotter (after stage1)
         PLOT_DONE,
         # f"{STATEDIR}/summary.done"
@@ -227,7 +229,7 @@ rule stage1:
         set -x
         mkdir -p {params.logdir} {params.statedir}
         ts=$(date +"%Y-%m-%d_%H-%M-%S")
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
@@ -238,7 +240,7 @@ rule stage1:
         summary="{params.summary}"
 
         # Rename log file after running the command, as Snakemake
-        # delets the log file before running the command. 
+        # delets the log file before running the command.
         LOGFILE="{log}"
         if [[ -f "$LOGFILE" ]]; then
             echo "Rotating existing log → $LOGFILE.attempt_${{ts}}"
@@ -246,7 +248,7 @@ rule stage1:
         else
             echo "No previous log found (first run)"
         fi
-        
+
         if [[ ! -f "$summary" ]]; then
             echo "ERROR: stage1 summary log not found: $summary"
             echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
@@ -288,7 +290,7 @@ rule stage1Compact:
         outpath=lambda wc: (
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}"
-        ),           
+        ),
     resources:
         gateway=1,
     shell:
@@ -296,7 +298,7 @@ rule stage1Compact:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \
@@ -382,7 +384,7 @@ rule plots:
     input:
         lambda wc: [] if USE_EXISTING_STAGE1 else [
             STATEDIR + f"/stage1_compact_{wc.year}.done"
-        ]       
+        ]
     output:
         done=STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
     log:
@@ -394,7 +396,7 @@ rule plots:
         load_path=lambda wc: (
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0"
-        ),        
+        ),
         save_path=lambda wc: (
             f"{plot_base_for_year(wc.year)}/"
             f"{label_for_year(wc.year)}/VBFfilter_False/"
@@ -443,7 +445,9 @@ rule plots:
 # ---------------------------------------
 rule zpt0:
     input:
-       STATEDIR + "/stage1_compact_{year}.done",
+       lambda wc: [] if USE_EXISTING_STAGE1 else [
+           STATEDIR + f"/stage1_compact_{wc.year}.done"
+       ],
     output:
         done=STATEDIR + "/zpt_step0_{year}.done",
     log:
@@ -462,7 +466,7 @@ rule zpt0:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
@@ -497,7 +501,7 @@ rule zpt1:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
@@ -533,7 +537,7 @@ rule zpt2:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
@@ -552,7 +556,9 @@ rule zpt2:
 # ---------------------------------------
 rule MassCalibrationMC:
     input:
-       STATEDIR + "/stage1_compact_{year}.done",
+       lambda wc: [] if USE_EXISTING_STAGE1 else [
+           STATEDIR + f"/stage1_compact_{wc.year}.done"
+       ],
     output:
         done=STATEDIR + "/mass_calibration_MC_{year}.done",
     log:
@@ -571,7 +577,7 @@ rule MassCalibrationMC:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
@@ -607,7 +613,7 @@ rule MassCalibrationMCClosure:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
@@ -624,7 +630,9 @@ rule MassCalibrationMCClosure:
 
 rule MassCalibrationData:
     input:
-       STATEDIR + "/stage1_compact_{year}.done",
+       lambda wc: [] if USE_EXISTING_STAGE1 else [
+           STATEDIR + f"/stage1_compact_{wc.year}.done"
+       ],
     output:
         done=STATEDIR + "/mass_calibration_Data_{year}.done",
     log:
@@ -643,7 +651,7 @@ rule MassCalibrationData:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
@@ -679,7 +687,7 @@ rule MassCalibrationDataClosure:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
@@ -693,236 +701,6 @@ rule MassCalibrationDataClosure:
         touch {output.done}
         """
 
-
-# ---------------------------------------
-# 8) After we have all preliminary correction
-# ---------------------------------------
-rule corrections_ready:
-    input:
-        zpt=lambda wc: expand(
-            STATEDIR + "/zpt_step2_{year}_njets{njets}.done",
-            year=wc.year,
-            njets=ZPT_JETS_CATS,
-        ),
-        data=STATEDIR + "/mass_calibration_Data_{year}.done",
-        mc=STATEDIR + "/mass_calibration_MC_{year}.done",
-    output:
-       STATEDIR + "/corrections_ready_{year}.done",
-    params:
-        logdir=LOGDIR,
-        statedir=STATEDIR,
-    shell:
-        r"""
-        mkdir -p {params.logdir} {params.statedir}
-        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
-        touch {output}
-        """
-
-
-rule stage1_corr:
-    input:
-       STATEDIR + "/corrections_ready_{year}.done",
-    output:
-        done=STATEDIR + "/stage1_corr_{year}.done",
-    log:
-        LOGDIR + "/stage1_corr_{year}.log",
-    params:
-        logdir=LOGDIR,
-        statedir=STATEDIR,
-        nano=lambda wc: nano_for_year(wc.year),
-        yaml=lambda wc: yaml_for_year(wc.year),
-        label=lambda wc: label_for_year(wc.year),
-        gw=lambda wc: gw_flags(),
-    resources:
-        gateway=1,
-    shell:
-        r"""
-        set -euo pipefail
-        set -x
-        mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
-          -c {params.yaml} \
-          -v {params.nano} \
-          -l {params.label} \
-          -y "{wildcards.year}" \
-          -m 1 \
-          {params.gw} \
-          > {log} 2>&1
-        touch {output.done}
-        """
-
-
-rule stage1Compact_corr:
-    input:
-       STATEDIR + "/stage1_corr_{year}.done",
-    output:
-        done=STATEDIR + "/stage1_compact_corr_{year}.done",
-    log:
-        LOGDIR + "/stage1_compact_corr_{year}.log",
-    params:
-        logdir=LOGDIR,
-        statedir=STATEDIR,
-        nano=lambda wc: nano_for_year(wc.year),
-        yaml=lambda wc: yaml_for_year(wc.year),
-        label=lambda wc: label_for_year(wc.year),
-        gw=lambda wc: gw_flags(),
-    resources:
-        gateway=1,
-    shell:
-        r"""
-        set -euo pipefail
-        set -x
-        mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash stage1_loop_Improved.sh \
-          -c {params.yaml} \
-          -v {params.nano} \
-          -l {params.label} \
-          -y "{wildcards.year}" \
-          -m compact \
-          {params.gw} \
-          > {log} 2>&1
-        touch {output.done}
-        """
-
-
-rule plots_corr:
-    input:
-       STATEDIR + "/stage1_compact_corr_{year}.done",
-    output:
-        done=STATEDIR + "/plots_corr_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-    log:
-        LOGDIR + "/plots_corr_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.log",
-    params:
-        logdir=LOGDIR,
-        statedir=STATEDIR,
-        gw=lambda wc: gw_flags_plots(),
-        load_path=lambda wc: (
-            f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
-            f"{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0"
-        ),        
-        save_path=lambda wc: (
-            f"{plot_base_for_year(wc.year)}/"
-            f"{label_for_year(wc.year)}/VBFfilter_False/"
-        ),
-        # map wildcards -> CLI flags
-        zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",
-        minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else "",
-    shell:
-        r"""
-        set -euo pipefail
-        set -x
-        mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 \
-        python plotter/validation_plotter_unified.py \
-            -y {wildcards.year} \
-            --save_path {params.save_path} \
-            --load {params.load_path} \
-            --use-compacted "compacted" \
-            -cat {wildcards.cat} \
-            {params.gw} \
-            --njets {wildcards.njets_plot} \
-            --jj-eta-region "{wildcards.jj_eta_region}" \
-            --region h-sidebands z-peak \
-            {params.minset_flag} \
-            {params.zpt_flag} \
-            > {log} 2>&1
-
-        # ---- SUCCESS CHECK ----
-        if grep -q "Plots are saved to " {log}; then
-            echo "Plot job successful."
-            touch {output.done}
-        else
-            echo "ERROR: Plot job did not complete successfully."
-            echo "Success string not found in log."
-            echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
-            exit 1
-        fi
-        """
-
-
-# ---------------------------------------
-# 7) ZpT DNN trainings (3 bins) per year
-# Depends on stage1 because it uses stage1 outputs.
-# ---------------------------------------
-rule zpt_njet0:
-    input:
-       STATEDIR + "/stage1_compact_{year}.done",
-    output:
-        done=STATEDIR + "/zpt_wgt_{year}_njet0.done",
-    log:
-        LOGDIR + "/zpt_wgt_{year}_njet0.log",
-    params:
-        logdir=LOGDIR,
-        statedir=STATEDIR,
-        zpt_tag=lambda wc: label_for_year(wc.year),
-    shell:
-        r"""
-        set -euo pipefail
-        set -x
-        mkdir -p {params.logdir} {params.statedir}
-        python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
-          -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet0 \
-          --njet-bin 0 \
-          --max-events {ZPT_MAXEV} \
-          --batch {ZPT_BATCH} \
-          > {log} 2>&1
-        touch {output.done}
-        """
-
-
-rule zpt_njet1:
-    input:
-       STATEDIR + "/stage1_compact_{year}.done",
-    output:
-        done=STATEDIR + "/zpt_wgt_{year}_njet1.done",
-    log:
-        LOGDIR + "/zpt_wgt_{year}_njet1.log",
-    params:
-        logdir=LOGDIR,
-        statedir=STATEDIR,
-        zpt_tag=lambda wc: label_for_year(wc.year),
-    shell:
-        r"""
-        set -euo pipefail
-        set -x
-        mkdir -p {params.logdir} {params.statedir}
-        python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
-          -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet1 \
-          --njet-bin 1 \
-          --max-events {ZPT_MAXEV} \
-          --batch {ZPT_BATCH} \
-          > {log} 2>&1
-        touch {output.done}
-        """
-
-
-rule zpt_njet2p:
-    input:
-       STATEDIR + "/stage1_compact_{year}.done",
-    output:
-        done=STATEDIR + "/zpt_wgt_{year}_njet2p.done",
-    log:
-        LOGDIR + "/zpt_wgt_{year}_njet2p.log",
-    params:
-        logdir=LOGDIR,
-        statedir=STATEDIR,
-        zpt_tag=lambda wc: label_for_year(wc.year),
-    shell:
-        r"""
-        set -euo pipefail
-        set -x
-        mkdir -p {params.logdir} {params.statedir}
-        python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
-          -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet2p \
-          --njet-bin 2p \
-          --max-events {ZPT_MAXEV} \
-          --batch {ZPT_BATCH} \
-          > {log} 2>&1
-        touch {output.done}
-        """
 
 rule summary:
     input:
