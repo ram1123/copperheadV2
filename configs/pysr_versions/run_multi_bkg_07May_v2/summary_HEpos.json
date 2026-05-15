@@ -1,0 +1,95 @@
+{
+  "region": "HEpos",
+  "equation": "(log_abs(sqrt_abs(x5)) / (x3 - -1.0438409))",
+  "features": [
+    "chEmEF",
+    "chHEF",
+    "neEmEF",
+    "neHEF",
+    "muEF",
+    "nConstituents",
+    "mass"
+  ],
+  "threshold": 0.364096075296402,
+  "direction": "keep_high",
+  "pu_rejection": 0.5073658770325239,
+  "n_region": 3207365,
+  "pt_min": 25.0,
+  "pt_turnoff": 50.0,
+  "valid_pt_range": {
+    "min": 25.0,
+    "max": 50.0
+  },
+  "balance_summary": {
+    "mode": "process_balanced",
+    "equalize_processes": true,
+    "max_per_process_class": 2000,
+    "before": [
+      {
+        "process_group": "DY",
+        "label": "HS",
+        "count": 1110249
+      },
+      {
+        "process_group": "DY",
+        "label": "PU",
+        "count": 1536017
+      },
+      {
+        "process_group": "EWK",
+        "label": "HS",
+        "count": 14592
+      },
+      {
+        "process_group": "EWK",
+        "label": "PU",
+        "count": 9453
+      },
+      {
+        "process_group": "Top",
+        "label": "HS",
+        "count": 367046
+      },
+      {
+        "process_group": "Top",
+        "label": "PU",
+        "count": 170008
+      }
+    ],
+    "after": [
+      {
+        "process_group": "DY",
+        "label": "HS",
+        "count": 2000
+      },
+      {
+        "process_group": "DY",
+        "label": "PU",
+        "count": 2000
+      },
+      {
+        "process_group": "EWK",
+        "label": "HS",
+        "count": 2000
+      },
+      {
+        "process_group": "EWK",
+        "label": "PU",
+        "count": 2000
+      },
+      {
+        "process_group": "Top",
+        "label": "HS",
+        "count": 2000
+      },
+      {
+        "process_group": "Top",
+        "label": "PU",
+        "count": 2000
+      }
+    ],
+    "n_total": 12000
+  },
+  "missing_process_groups_before": [],
+  "missing_process_groups_after": []
+}

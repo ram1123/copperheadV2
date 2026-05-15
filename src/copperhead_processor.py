@@ -575,7 +575,8 @@ class EventProcessor(processor.ProcessorABC):
         self.pysr_configs = {}
         self.pysr_all_features = set()
         if self.config["switches"].get("do_use_pySR_score", False):
-            pysr_base_dir = self.config.get("pysr_config_dir", "configs/pysr_best")
+            # pysr_base_dir = self.config.get("pysr_config_dir", "configs/pysr_best")
+            pysr_base_dir = self.config.get("pysr_config_dir", "configs/pysr_versions/run_multi_bkg_07May_v2")
             self.pysr_configs = load_pysr_configs(pysr_base_dir)
             if not self.pysr_configs:
                 raise FileNotFoundError(
