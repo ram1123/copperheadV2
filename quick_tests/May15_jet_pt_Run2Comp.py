@@ -313,22 +313,118 @@ def make_paths_for_sample(base_parquet_paths, sample):
     }
 
 
-def get_bin_edges_for_sample(bin_edges, sample):
-    """Return the bin edges for a given physics sample.
+def _lookup_nested_config(config, keys, config_name, default=None, allow_default=True):
+    """Look up nested dictionary entries with optional fallback to 'default'.
 
-    bin_edges can be either a single array-like object, or a dictionary
-    keyed by sample names like "data", "DY", "VBF", and "ggH".
+    Example
+    -------
+    _lookup_nested_config(cfg, [variable, sample, category], "n_bins") checks:
+      cfg[variable][sample][category]
+
+    At each level, a "default" key may be used as a fallback. This keeps the
+    config compact while still allowing very specific overrides.
     """
 
-    if isinstance(bin_edges, dict):
-        if sample not in bin_edges:
-            raise KeyError(
-                f"Missing bin_edges entry for sample '{sample}'. "
-                f"Available keys: {list(bin_edges.keys())}"
-            )
-        return bin_edges[sample]
+    current = config
+    traversed = []
 
-    return bin_edges
+    for key in keys:
+        traversed.append(key)
+
+        if not isinstance(current, dict):
+            return current
+
+        if key in current:
+            current = current[key]
+        elif allow_default and "default" in current:
+            current = current["default"]
+        elif default is not None:
+            return default
+        else:
+            raise KeyError(
+                f"Missing {config_name} entry for path {traversed}. "
+                f"Available keys at this level: {list(current.keys())}"
+            )
+
+    return current
+
+
+def get_bin_edges(bin_edges_config, variable, sample=None, category=None):
+    """Resolve bin edges for a given variable/sample/category.
+
+    Supported input formats
+    -----------------------
+    1. Direct edges, same for everything:
+        np.linspace(...)
+
+    2. Explicit bin edges by variable/sample/category:
+        bin_edges_config = {
+            "jet1_pt_nominal": {
+                "data": {"nocat": np.linspace(25, 300, 61), "vbf": ...},
+                "DY":   {"default": np.linspace(25, 300, 51)},
+            },
+            "jet1_eta_nominal": {
+                "default": np.linspace(-4.7, 4.7, 95),
+            },
+        }
+
+    3. Edges built from variable ranges and n-bins:
+        bin_edges_config = {
+            "ranges": {
+                "jet1_pt_nominal": (25, 300),
+                "jet2_pt_nominal": (25, 200),
+                "jet1_eta_nominal": (-4.7, 4.7),
+                "jet2_eta_nominal": (-4.7, 4.7),
+            },
+            "n_bins": {
+                "default": 60,
+                "data": {"nocat": 80, "vbf": 40},
+                "DY":   {"nocat": 80, "vbf": 40},
+                "VBF":  {"default": 50, "vbf": 30},
+                "ggH":  {"default": 50, "vbf": 30},
+            },
+        }
+
+    For format 3, np.linspace(low, high, n_bins + 1) is used, because
+    np.histogram expects bin edges, not the number of bins.
+    """
+
+    # Backward compatible path: a single array of bin edges.
+    if not isinstance(bin_edges_config, dict):
+        return np.asarray(bin_edges_config)
+
+    # Format 3: build edges from variable-specific ranges and sample/category n-bins.
+    if "ranges" in bin_edges_config and "n_bins" in bin_edges_config:
+        low, high = _lookup_nested_config(
+            bin_edges_config["ranges"],
+            [variable],
+            config_name="bin range",
+            allow_default=True,
+        )
+
+        n_bins = _lookup_nested_config(
+            bin_edges_config["n_bins"],
+            [sample, category],
+            config_name="number of bins",
+            allow_default=True,
+        )
+
+        return np.linspace(low, high, int(n_bins) + 1)
+
+    # Format 2: explicit edges by variable/sample/category.
+    edges = _lookup_nested_config(
+        bin_edges_config,
+        [variable, sample, category],
+        config_name="bin edges",
+        allow_default=True,
+    )
+
+    return np.asarray(edges)
+
+
+# Backward-compatible wrapper for older calls that only varied by sample.
+def get_bin_edges_for_sample(bin_edges, sample):
+    return get_bin_edges(bin_edges, variable=None, sample=sample, category=None)
 
 
 def get_calib_category_names():
@@ -458,6 +554,7 @@ def run_plots_for_block(
     variables,
     bin_edges,
     region,
+    category=None,
     normalize=True,
     output_subdir=None,
 ):
@@ -479,9 +576,13 @@ def run_plots_for_block(
             sample=sample,
         )
 
-        sample_bin_edges = get_bin_edges_for_sample(bin_edges, sample)
-
         for var in variables:
+            sample_bin_edges = get_bin_edges(
+                bin_edges_config=bin_edges,
+                variable=var,
+                sample=sample,
+                category=category,
+            )
             var_title = var_title_dict[var]
 
             if output_subdir is None:
@@ -508,7 +609,7 @@ def make_event_records_for_sample(
     base_parquet_paths,
     sample,
     region,
-    category: str,
+    category: str = "nocat",
     columns=None,
     persist_records=True,
 ):
@@ -784,7 +885,12 @@ def run_dimuon_mass_plots_for_block_cached_records(
     })
 
     for sample in sample_pattern_dict:
-        sample_bin_edges = get_bin_edges_for_sample(bin_edges, sample)
+        sample_bin_edges = get_bin_edges(
+            bin_edges_config=bin_edges,
+            variable=variable,
+            sample=sample,
+            category=None,
+        )
 
         # Build and optionally persist the region-filtered Records once.
         event_records = make_event_records_for_sample(
@@ -858,8 +964,6 @@ def run_plots_for_block_cached_records(
     ]))
 
     for sample in sample_pattern_dict:
-        sample_bin_edges = get_bin_edges_for_sample(bin_edges, sample)
-
         # Build and optionally persist the region-filtered Records once per
         # {desc, sample}. These same Records are reused for all variables.
         event_records = make_event_records_for_sample(
@@ -870,14 +974,21 @@ def run_plots_for_block_cached_records(
             columns=fields2load,
             persist_records=persist_records,
         )
-
         for var in variables:
+            sample_bin_edges = get_bin_edges(
+                bin_edges_config=bin_edges,
+                variable=var,
+                sample=sample,
+                category=category,
+            )
             var_title = var_title_dict[var]
 
+
+            normalize_tag = "_normalize" if normalize else ""
             if output_subdir is None:
-                output_name = f"{region}/{desc}/{sample}/{category}/{var}_normalized.pdf"
+                output_name = f"{region}/{desc}/{sample}/{category}/{var}{normalize_tag}.pdf"
             else:
-                output_name = f"{region}/{desc}/{sample}/{category}/{output_subdir}/{var}_normalized.pdf"
+                output_name = f"{region}/{desc}/{sample}/{category}/{output_subdir}/{var}{normalize_tag}.pdf"
 
             plot_variable_from_records(
                 variable=var,
@@ -903,36 +1014,68 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
 
     # ------------------------------------------------------------
-    # Eta plots
+    # Variable-dependent binning
     # ------------------------------------------------------------
-    # You can define different binning for each physics sample.
-    # Note: np.linspace(start, stop, num=N) gives N bin edges = N - 1 bins.
-    eta_bin_edges_by_sample = {
-        # "data": np.linspace(-4.7, 4.7, num=101),  # 100 bins
-        # "DY":   np.linspace(-4.7, 4.7, num=101),  # 100 bins
-        # "VBF":  np.linspace(-4.7, 4.7, num=61),   # 60 bins
-        # "ggH":  np.linspace(-4.7, 4.7, num=61),   # 60 bins
-        "data": np.linspace(25, 300, num=61),  # 100 bins
-        "DY":   np.linspace(25, 300, num=61),  # 100 bins
-        "VBF":  np.linspace(25, 300, num=61),   # 60 bins
-        "ggH":  np.linspace(25, 300, num=61),   # 60 bins
-        # "data": np.linspace(-4.7, 4.7, num=100),  # 100 bins
-        # "DY":   np.linspace(-4.7, 4.7, num=100),  # 100 bins
-        # "VBF":  np.linspace(-4.7, 4.7, num=100),   # 60 bins
-        # "ggH":  np.linspace(-4.7, 4.7, num=100),   # 60 bins
+    # This config lets you control binning at two levels:
+    #   1. variable-specific ranges, e.g. eta uses [-4.7, 4.7], pT uses [25, 300]
+    #   2. number of bins per sample and per category, e.g. data/nocat vs VBF/vbf
+    #
+    # Notes:
+    #   - n_bins is the number of histogram bins.
+    #   - get_bin_edges() converts this to n_bins + 1 bin edges.
+    #   - "default" is used as a fallback, so you only need to override special cases.
+    binning_config = {
+        "ranges": {
+            "jet1_pt_nominal": (25.0, 250.0),
+            "jet2_pt_nominal": (25.0, 250.0),
+            "jet1_eta_nominal": (-4.7, 4.7),
+            "jet2_eta_nominal": (-4.7, 4.7),
+            "dimuon_pt": (0, 300),
+        },
+        "n_bins": {
+            # Fallback if no more specific sample/category rule is found.
+            "default": 60,
+
+            # You can tune these independently for each sample and category.
+            "data": {
+                "nocat": 80,
+                "njet2": 60,
+                "bVeto": 60,
+                "vbf": 40,
+            },
+            "DY": {
+                "nocat": 80,
+                "njet2": 60,
+                "bVeto": 60,
+                "vbf": 40,
+            },
+            "VBF": {
+                "nocat": 60,
+                "njet2": 50,
+                "bVeto": 50,
+                "vbf": 35,
+            },
+            "ggH": {
+                "nocat": 60,
+                "njet2": 50,
+                "bVeto": 50,
+                "vbf": 35,
+            },
+        },
     }
 
     region = "h-sidebands"
     # region = "z-peak"
 
     # variables = ["jet1_eta_nominal", "jet2_eta_nominal"]
-    variables = ["jet1_pt_nominal", "jet2_pt_nominal"] + ["jet1_eta_nominal", "jet2_eta_nominal"]
+    variables = ["jet1_pt_nominal", "jet2_pt_nominal"] + ["jet1_eta_nominal", "jet2_eta_nominal", "dimuon_pt"]
 
     var_title_dict = {
         "jet1_eta_nominal": r"Leading jet $\eta$",
         "jet2_eta_nominal": r"Sub-leading jet $\eta$",
-        "jet1_pt_nominal": r"Leading jet $p_T",
+        "jet1_pt_nominal": r"Leading jet $p_T$",
         "jet2_pt_nominal": r"Sub-leading jet $p_T$",
+        "dimuon_pt": r"$p^{\mu\mu}_T$",
     }
 
     # Use all samples for the eta plots.
@@ -948,8 +1091,8 @@ if __name__ == "__main__":
     # -------------------------------------------------------------
 
     run2Comp_paths = {
-        "Run2(2017) CHS": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage1_output/2017/compacted/data_*/0/*.parquet",
-        "Run2(2017) PUPPI": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2017) CHS/NanoAODv12": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage1_output/2017/compacted/data_*/0/*.parquet",
+        "Run2(2017) PUPPI/NanoAODv15": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage1_output/2017/compacted/data_*/0/*.parquet",
     }
     
     # -------------------------------------------------------------
@@ -982,9 +1125,19 @@ if __name__ == "__main__":
                 desc=desc,
                 base_parquet_paths=base_parquet_paths,
                 variables=variables,
-                bin_edges=eta_bin_edges_by_sample,
+                bin_edges=binning_config,
                 region=region,
                 category=category,
                 normalize=True,
+                persist_records=True,
+            )
+            run_plots_for_block_cached_records(
+                desc=desc,
+                base_parquet_paths=base_parquet_paths,
+                variables=variables,
+                bin_edges=binning_config,
+                region=region,
+                category=category,
+                normalize=False,
                 persist_records=True,
             )
