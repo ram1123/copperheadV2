@@ -47,26 +47,30 @@ group_dict = {
     "DY": {
         "2016preVFP": [
             # "dyTo2Mu_M-100to200_MiNNLO", 
-            "dy_M-100To200_MiNNLO",# run2 nanoV12
-            "dy_M-50_MiNNLO", # run2 nanoV12
+            # "dy_M-100To200_MiNNLO",# run2 nanoV12
+            # "dy_M-50_MiNNLO", # run2 nanoV12
+            "dy_M-50_aMCatNLO", # run2 nanoV12
             "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
         ],
         "2016postVFP": [
             # "dyTo2Mu_M-100to200_MiNNLO", 
-            "dy_M-100To200_MiNNLO",# run2 nanoV12
-            "dy_M-50_MiNNLO", # run2 nanoV12
+            # "dy_M-100To200_MiNNLO",# run2 nanoV12
+            # "dy_M-50_MiNNLO", # run2 nanoV12
+            "dy_M-50_aMCatNLO", # run2 nanoV12
             "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
         ],
         "2017": [
             # "dyTo2Mu_M-100to200_MiNNLO", 
-            "dy_M-100To200_MiNNLO",# run2 nanoV12
-            "dy_M-50_MiNNLO", # run2 nanoV12
+            # "dy_M-100To200_MiNNLO",# run2 nanoV12
+            # "dy_M-50_MiNNLO", # run2 nanoV12
+            "dy_M-50_aMCatNLO", # run2 nanoV12
             "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
         ],
         "2018": [
             # "dyTo2Mu_M-100to200_MiNNLO", 
-            "dy_M-100To200_MiNNLO",# run2 nanoV12
-            "dy_M-50_MiNNLO", # run2 nanoV12
+            # "dy_M-100To200_MiNNLO",# run2 nanoV12
+            # "dy_M-50_MiNNLO", # run2 nanoV12
+            "dy_M-50_aMCatNLO", # run2 nanoV12
             "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
         ],
         "2022preEE": ["dyTo2L_M-50_incl"],
@@ -576,7 +580,7 @@ if __name__ == "__main__":
     # initialize histograms
     # FIXME: Is it mandatory to use all regions and channels name below? Or I can just replace it with args.regions and args.category?
     regions = ["z-peak", "signal", "h-peak", "h-sidebands"] # full list of possible regions to loop over
-    channels = ["nocat", "vbf", "ggh"] # full list of possible channels to loop over
+    channels = ["nocat", "vbf", "ggh", "bJetVeto"] # full list of possible channels to loop over
     variations = ["nominal"]
     sample_groups = list(group_dict.keys()) + ["other"]
     logger.info(f"sample_groups: {sample_groups}")
