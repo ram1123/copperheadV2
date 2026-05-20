@@ -20,43 +20,45 @@ def parse_arguments():
     )
     return parser.parse_args()
 
-def make_combined_function(order0, order, xmin, xmax):
+def eval_polynomial(coeffs, xval):
+    return sum(coeff * (xval ** idx) for idx, coeff in enumerate(coeffs))
+
+
+def make_combined_function_reduced(f0_coeffs, f1_coeffs, xmin, xmax, base_tail_slope):
     """
-    Builds a piecewise function:
-    - Polynomial of degree 'order0' from 0 to xmin
-    - Polynomial of degree 'order' from xmin to xmax, shifted to ensure continuity
-    - Linear function y = m·x + c beyond xmax, matched to the value and slope at xmax
+    Builds a reduced-parameter piecewise function:
+    - frozen low-range polynomial, plus a common vertical shift
+    - frozen mid-range polynomial, plus a small linear tilt around xmin
+    - linear tail beyond xmax, with only the slope adjusted in the final refit
+
+    Free parameters:
+    - par[0]: common vertical shift applied to low/mid regions
+    - par[1]: extra mid-range tilt multiplying (x - xmin)
+    - par[2]: delta on the tail slope relative to the local tail fit
     """
-    logger.debug(f"Creating combined function with orders {order0} and {order}, xmin={xmin}, xmax={xmax}")
     def func(x, par):
         xx = x[0]
-        # if xx <= 0:
-        #     return 0.0
+        common_shift = par[0]
+        mid_tilt = par[1]
+        tail_slope = base_tail_slope + par[2]
 
-        # Polynomial f0 up to xmin
-        f0_xmin = sum(par[i] * (xmin**i) for i in range(order0 + 1))
+        low_xmin = eval_polynomial(f0_coeffs, xmin) + common_shift
+        mid_xmin_raw = eval_polynomial(f1_coeffs, xmin)
+        mid_shift = low_xmin - mid_xmin_raw
 
-        # Polynomial f1 up to xmin and xmax
-        f1_coeffs = [par[order0 + 1 + i] for i in range(order + 1)]
-        f1_xmin = sum(f1_coeffs[i] * (xmin**i) for i in range(order + 1))
-        f1_xmax = sum(f1_coeffs[i] * (xmax**i) for i in range(order + 1))
-
-        # Evaluate derivative of f1 at xmax to compute slope for linear extension
-        df1_xmax = sum(i * f1_coeffs[i] * (xmax**(i - 1)) for i in range(1, order + 1))
+        def eval_mid(xmid):
+            return eval_polynomial(f1_coeffs, xmid) + mid_shift + mid_tilt * (xmid - xmin)
 
         if xx < 0.0:
             return 0.0
         elif xx <= xmin:
-            return sum(par[i] * (xx**i) for i in range(order0 + 1))
+            return eval_polynomial(f0_coeffs, xx) + common_shift
         elif xx < xmax:
-            return sum(f1_coeffs[i] * (xx**i) for i in range(order + 1)) + (f0_xmin - f1_xmin)
+            return eval_mid(xx)
         else:
-            # Straight line y = m·x + c
-            # m = df1_xmax  # slope from derivative
-            m = par[order0 + order + 2] # In this case slope is a parameter
-            y_at_xmax = f1_xmax + (f0_xmin - f1_xmin)
-            c = y_at_xmax - m * xmax
-            return m * xx + c
+            y_at_xmax = eval_mid(xmax)
+            tail_intercept = y_at_xmax - tail_slope * xmax
+            return tail_slope * xx + tail_intercept
 
     return func
 
@@ -70,6 +72,14 @@ def rebin_histogram(hist, edges):
     name = hist.GetName() + f"_rebinned_{nbins}"
     rebinned = hist.Rebin(nbins, name, xbins)
     return rebinned
+
+
+def make_confidence_band(hist_sf, fit_result, confidence_level, name):
+    band = hist_sf.Clone(name)
+    band.SetDirectory(0)
+    band.Reset("ICESM")
+    ROOT.TVirtualFitter.GetFitter().GetConfidenceIntervals(band, confidence_level)
+    return band
 
 def fit_polynomial(hist_sf, order, xmin, xmax, fit_opts="L S Q"):
     """
@@ -92,6 +102,65 @@ def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
     hist_sf.Fit(func, fit_opts, "", xmin, xmax)
     return func
 
+
+def build_final_piecewise_coefficients(f0, order0, f1, order1, f_flat, f_comb, xmin1, xmax1):
+    """
+    Convert the reduced-parameter combined refit back into the full set of
+    piecewise coefficients expected by stage1.
+    """
+    common_shift = f_comb.GetParameter(0)
+    common_shift_err = f_comb.GetParError(0)
+    mid_tilt = f_comb.GetParameter(1)
+    mid_tilt_err = f_comb.GetParError(1)
+    delta_tail_slope = f_comb.GetParameter(2)
+    delta_tail_slope_err = f_comb.GetParError(2)
+
+    f0_coeffs = [f0.GetParameter(i) for i in range(order0 + 1)]
+    f0_errors = [f0.GetParError(i) for i in range(order0 + 1)]
+    f1_coeffs = [f1.GetParameter(i) for i in range(order1 + 1)]
+    f1_errors = [f1.GetParError(i) for i in range(order1 + 1)]
+
+    final_f0_coeffs = list(f0_coeffs)
+    final_f0_errors = list(f0_errors)
+    final_f0_coeffs[0] += common_shift
+    final_f0_errors[0] = (final_f0_errors[0] ** 2 + common_shift_err ** 2) ** 0.5
+
+    low_xmin_nominal = eval_polynomial(f0_coeffs, xmin1)
+    mid_xmin_nominal = eval_polynomial(f1_coeffs, xmin1)
+    continuity_shift = low_xmin_nominal - mid_xmin_nominal + common_shift
+
+    final_f1_coeffs = list(f1_coeffs)
+    final_f1_errors = list(f1_errors)
+    final_f1_coeffs[0] += continuity_shift - mid_tilt * xmin1
+    final_f1_coeffs[1] += mid_tilt
+    final_f1_errors[0] = (final_f1_errors[0] ** 2 + common_shift_err ** 2 + (xmin1 * mid_tilt_err) ** 2) ** 0.5
+    final_f1_errors[1] = (final_f1_errors[1] ** 2 + mid_tilt_err ** 2) ** 0.5
+
+    final_tail_slope = f_flat.GetParameter(0) + delta_tail_slope
+    final_tail_slope_err = (f_flat.GetParError(0) ** 2 + delta_tail_slope_err ** 2) ** 0.5
+    y_at_xmax = eval_polynomial(final_f1_coeffs, xmax1)
+    tail_intercept = y_at_xmax - final_tail_slope * xmax1
+    tail_intercept_err = (
+        f_flat.GetParError(1) ** 2
+        + common_shift_err ** 2
+        + ((xmax1 - xmin1) * mid_tilt_err) ** 2
+        + (xmax1 * delta_tail_slope_err) ** 2
+    ) ** 0.5
+
+    return {
+        "f0_coeffs": final_f0_coeffs,
+        "f0_errors": final_f0_errors,
+        "f1_coeffs": final_f1_coeffs,
+        "f1_errors": final_f1_errors,
+        "tail_slope": final_tail_slope,
+        "tail_slope_err": final_tail_slope_err,
+        "tail_intercept": tail_intercept,
+        "tail_intercept_err": tail_intercept_err,
+        "common_shift": common_shift,
+        "mid_tilt": mid_tilt,
+        "delta_tail_slope": delta_tail_slope,
+    }
+
 def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xmax):
     """
     Runs the three-step fits: 1) poly(order0) on [0, xmax0], 2) poly(order1) on [xmin1, xmax1],
@@ -113,47 +182,41 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     f_flat = fit_flat_line(hist_sf, xmax1, global_xmax, fit_opts="L I S R")
     # f_flat = fit_polynomial(hist_sf, order1, xmax1, global_xmax, fit_opts="L I S R")
 
-    # Build combined TF1
-    npar = (order0 + 1) + (order1 + 1) + 2  # coefficients: f0, f1, flat_c
-    logger.debug(f"Creating combined function with {npar} parameters")
+    # Build reduced-parameter combined TF1 using the stable local fits as anchors.
+    f0_coeffs = [f0.GetParameter(i) for i in range(order0 + 1)]
+    f1_coeffs = [f1.GetParameter(i) for i in range(order1 + 1)]
+    base_tail_slope = f_flat.GetParameter(0)
+    logger.debug("Creating reduced-parameter combined function with 3 parameters")
 
-    comb_func = make_combined_function(order0, order1, xmin1, xmax1)
-    logger.debug("Prepared combined function for fitting")
+    comb_func = make_combined_function_reduced(
+        f0_coeffs=f0_coeffs,
+        f1_coeffs=f1_coeffs,
+        xmin=xmin1,
+        xmax=xmax1,
+        base_tail_slope=base_tail_slope,
+    )
+    logger.debug("Prepared reduced-parameter combined function for fitting")
 
+    f_combined = ROOT.TF1("f_combined", comb_func, 0.0, global_xmax, 3)
+    f_combined.SetParName(0, "common_shift")
+    f_combined.SetParName(1, "mid_tilt")
+    f_combined.SetParName(2, "delta_tail_slope")
+    f_combined.SetParameter(0, 0.0)
+    f_combined.SetParameter(1, 0.0)
+    f_combined.SetParameter(2, 0.0)
+    f_combined.SetParLimits(0, -0.5, 0.5)
+    f_combined.SetParLimits(1, -0.02, 0.02)
+    f_combined.SetParLimits(2, -0.02, 0.02)
 
-    f_combined = ROOT.TF1("f_combined", comb_func, 0.0, global_xmax, npar)
-
-    # Gather initial parameters from f0, f1, f_flat
-    params = []
-    for i in range(order0 + 1):
-        params.append(f0.GetParameter(i))
-    for i in range(order1 + 1):
-        params.append(f1.GetParameter(i))
-    params.append(f_flat.GetParameter(0))  # mx
-    params.append(f_flat.GetParameter(1))  # c0
-
-    # print all initial parameters
-    for i, p in enumerate(params):
-        logger.debug(f"Parameter {i}: {p}")
-
-    logger.debug(f"All initial parameters collected: {params}")
-
-    # f_combined.SetParameters(*params) # INFO: If more than 11 parameters then it hit the limit of TF1.SetParameters and overload it. When we have more than 11 parameters we need to set them one by one, as below:
-    for i, p in enumerate(params):
-        f_combined.SetParameter(i, p)
-
-    # Ensure the function is zero below x=0
-    # (the user-defined func handles this internally)
-
-    # Perform final fit
+    # Perform final reduced refit
     final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
     final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
     final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
     logger.debug(f"Final fit result: {final_fit}")
 
-    return f0, f1, f_flat, f_combined
+    return f0, f1, f_flat, f_combined, final_fit
 
-def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
+def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
                       xmin0, xmax0, xmin1, xmax1, global_xmax,
                       year, njet, nbins, save_dir):
     """
@@ -179,6 +242,21 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
     # Draw only the axis first to fix the range
     hist_sf.Draw("axis")
 
+    band95 = None
+    band68 = None
+    if fit_result and int(fit_result.Status()) == 0:
+        band95 = make_confidence_band(hist_sf, fit_result, 0.95, f"band95_{year}_{njet}")
+        band95.SetFillColorAlpha(ROOT.kAzure - 9, 0.35)
+        band95.SetLineColor(ROOT.kAzure - 9)
+        band95.SetLineWidth(0)
+        band95.SetMarkerSize(0)
+
+        band68 = make_confidence_band(hist_sf, fit_result, 0.68, f"band68_{year}_{njet}")
+        band68.SetFillColorAlpha(ROOT.kOrange - 2, 0.45)
+        band68.SetLineColor(ROOT.kOrange - 2)
+        band68.SetLineWidth(0)
+        band68.SetMarkerSize(0)
+
     # Draw the fit function across the full x-range
     f_combined.SetRange(0.0, global_xmax)
     f_combined.SetNpx(5000)   # or 10000 if you want it super smooth
@@ -187,6 +265,10 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
     # Finally draw the histogram and the combined fit
     hist_sf.GetListOfFunctions().Clear()  # remove attached
     hist_sf.Draw("axis")
+    if band95:
+        band95.Draw("E3 SAME")
+    if band68:
+        band68.Draw("E3 SAME")
     hist_sf.Draw("same E")
     f_combined.Draw("SAME")
     ROOT.gPad.Update()
@@ -267,6 +349,10 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined,
     # leg.AddEntry(f1, f"Poly(order={len(f1.GetParameters())-1})", "l")
     # leg.AddEntry(f_flat, "Flat Above xmax", "l")
     leg.AddEntry(f_combined, "Combined Fit", "l")
+    if band68:
+        leg.AddEntry(band68, "68% fit band", "f")
+    if band95:
+        leg.AddEntry(band95, "95% fit band", "f")
     leg.Draw()
 
     # Text box with fit stats
@@ -359,13 +445,13 @@ def main():
             # Removed previous call to h_SF.GetXaxis().SetRangeUser(0.0, global_fit_xmax)
 
             # Perform the piecewise fits
-            f0, f1, f_flat, f_comb = perform_fits(
+            f0, f1, f_flat, f_comb, fit_result = perform_fits(
                 h_SF, order0, xmin0, xmax0, order1, xmin1, xmax1, global_fit_xmax
             )
 
             # Plot the SF and pull distributions
             plot_sf_and_pulls(
-                h_SF, f0, f1, f_flat, f_comb,
+                h_SF, f0, f1, f_flat, f_comb, fit_result,
                 xmin0, xmax0, xmin1, xmax1, global_fit_xmax,
                 year, njet, nbins_new, save_dir
             )
@@ -379,26 +465,52 @@ def main():
             params_dict.update({f"f1_p{i}_err": 0.0 for i in range(max_order+1)})
 
             logger.debug(f"order0: {order0}, order1: {order1}")
-            # get the order of function f_comb and fetch its all parameters
             for i in range(f_comb.GetNpar()):
                 logger.debug(f"f_comb parameter {i}: {f_comb.GetParameter(i)} +/- {f_comb.GetParError(i)}")
 
-            for i in range(order0+1):
-                params_dict[f"f0_p{i}"] = f_comb.GetParameter(i)
-                params_dict[f"f0_p{i}_err"] = f_comb.GetParError(i)
-                logger.debug(f"f0 parameter {i} ({i}): {f_comb.GetParameter(i)} ({f0.GetParameter(i)}) +/- {f_comb.GetParError(i)}")
+            final_piecewise = build_final_piecewise_coefficients(
+                f0=f0,
+                order0=order0,
+                f1=f1,
+                order1=order1,
+                f_flat=f_flat,
+                f_comb=f_comb,
+                xmin1=xmin1,
+                xmax1=xmax1,
+            )
 
-            for i in range(order1+1):
-                params_dict[f"f1_p{i}"] = f_comb.GetParameter(order0 + 1 + i)
-                params_dict[f"f1_p{i}_err"] = f_comb.GetParError(order0 + 1 + i)
-                logger.debug(f"f1 parameter {i} ({order0 + 1 + i}): {f_comb.GetParameter(order0 + 1 + i)}  ({f1.GetParameter(i)}) +/- {f_comb.GetParError(order0 + 1 + i)}")
+            for i in range(order0 + 1):
+                params_dict[f"f0_p{i}"] = final_piecewise["f0_coeffs"][i]
+                params_dict[f"f0_p{i}_err"] = final_piecewise["f0_errors"][i]
+                logger.debug(
+                    f"f0 parameter {i}: {final_piecewise['f0_coeffs'][i]} "
+                    f"(local={f0.GetParameter(i)}) +/- {final_piecewise['f0_errors'][i]}"
+                )
 
-            logger.debug(f"order value: {order0 + order1 + 2}")
-            logger.debug(f"horizontal_mx ({order0 + order1 + 2}): {f_comb.GetParameter(order0 + order1 + 2)} ({f_flat.GetParameter(0)})  +/- {f_comb.GetParError(order0 + order1 + 2)}")
-            logger.debug(f"horizontal_c0 ({order0 + order1 + 3}): {f_comb.GetParameter(order0 + order1 + 3)} ({f_flat.GetParameter(1)})  +/- {f_comb.GetParError(order0 + order1 + 3)}")
+            for i in range(order1 + 1):
+                params_dict[f"f1_p{i}"] = final_piecewise["f1_coeffs"][i]
+                params_dict[f"f1_p{i}_err"] = final_piecewise["f1_errors"][i]
+                logger.debug(
+                    f"f1 parameter {i}: {final_piecewise['f1_coeffs'][i]} "
+                    f"(local={f1.GetParameter(i)}) +/- {final_piecewise['f1_errors'][i]}"
+                )
 
-            params_dict["horizontal_mx"] = f_comb.GetParameter(order0 + order1 + 2)
-            params_dict["horizontal_c0"] = f_comb.GetParameter(order0 + order1 + 3)
+            logger.debug(
+                f"horizontal_mx: {final_piecewise['tail_slope']} "
+                f"(local={f_flat.GetParameter(0)}) +/- {final_piecewise['tail_slope_err']}"
+            )
+            logger.debug(
+                f"horizontal_c0: {final_piecewise['tail_intercept']} "
+                f"(local={f_flat.GetParameter(1)}) +/- {final_piecewise['tail_intercept_err']}"
+            )
+            logger.debug(
+                f"combined adjustments: common_shift={final_piecewise['common_shift']}, "
+                f"mid_tilt={final_piecewise['mid_tilt']}, "
+                f"delta_tail_slope={final_piecewise['delta_tail_slope']}"
+            )
+
+            params_dict["horizontal_mx"] = final_piecewise["tail_slope"]
+            params_dict["horizontal_c0"] = final_piecewise["tail_intercept"]
             params_dict["polynomial_range"] = {"xlow": 0.0, "xmin1": xmin1, "xmax1": xmax1, "xhigh": global_fit_xmax}
             params_dict["total_bins"] = nbins_new
             params_dict["fit_orders"] = {"f0_order": order0, "f1_order": order1}

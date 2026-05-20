@@ -34,17 +34,73 @@ os.makedirs(save_path, exist_ok=True)
 optimized_orders = {}
 save_fit_config = defaultdict(dict)  # For YAML output
 
-def save_histogram(hist_SF, fit_func_high, order_high, year, njet, target_nbins, outtext):
+def make_confidence_band(hist_SF, fit_result, confidence_level, name):
+    band = hist_SF.Clone(name)
+    band.Reset("ICESM")
+    ROOT.TVirtualFitter.GetFitter().GetConfidenceIntervals(
+        band, confidence_level
+    )
+    return band
+
+
+def mask_band_outside_range(band, fit_xmin, fit_xmax):
+    for ibin in range(1, band.GetNbinsX() + 1):
+        x = band.GetBinCenter(ibin)
+        if x < fit_xmin or x > fit_xmax:
+            band.SetBinContent(ibin, 0.0)
+            band.SetBinError(ibin, 0.0)
+    return band
+
+
+def save_histogram(
+    hist_SF,
+    fit_func_high,
+    fit_result_high,
+    order_high,
+    year,
+    njet,
+    target_nbins,
+    outtext,
+    fit_xmin,
+    fit_xmax,
+):
     # Save the fit plot with the best function
     canvas = ROOT.TCanvas("canvas", f"Fit SF {year} njet{njet}", 800, 600)
-    hist_SF.SetLineColor(ROOT.kBlue)
-    hist_SF.SetMinimum(0.25)
-    hist_SF.SetMaximum(4)
-    # set x-axis range
-    # hist_SF.GetXaxis().SetRangeUser(0, 20)
-    hist_SF.Draw()
+    hist_draw = hist_SF.Clone(f"{hist_SF.GetName()}_{year}_{njet}_{outtext}_draw")
+    hist_draw.SetDirectory(0)
+    hist_draw.GetListOfFunctions().Clear()
+    hist_draw.SetLineColor(ROOT.kBlue)
+    hist_draw.SetMinimum(0.25)
+    hist_draw.SetMaximum(4)
+    hist_draw.Draw("E")
+
+    band95 = None
+    band68 = None
+    if fit_result_high and int(fit_result_high.Status()) == 0:
+        band95 = make_confidence_band(
+            hist_draw, fit_result_high, 0.95, f"band95_{year}_{njet}_{outtext}"
+        )
+        band95 = mask_band_outside_range(band95, fit_xmin, fit_xmax)
+        band95.SetFillColorAlpha(ROOT.kAzure - 9, 0.35)
+        band95.SetLineColor(ROOT.kAzure - 9)
+        band95.SetLineWidth(0)
+        band95.SetMarkerSize(0)
+        band95.Draw("E3 SAME")
+
+        band68 = make_confidence_band(
+            hist_draw, fit_result_high, 0.68, f"band68_{year}_{njet}_{outtext}"
+        )
+        band68 = mask_band_outside_range(band68, fit_xmin, fit_xmax)
+        band68.SetFillColorAlpha(ROOT.kOrange - 2, 0.45)
+        band68.SetLineColor(ROOT.kOrange - 2)
+        band68.SetLineWidth(0)
+        band68.SetMarkerSize(0)
+        band68.Draw("E3 SAME")
+
     fit_func_high.SetLineColor(ROOT.kRed)
-    fit_func_high.Draw("SAME")
+    fit_func_high.SetRange(fit_xmin, fit_xmax)
+    fit_func_high.DrawCopy("SAME")
+    hist_draw.Draw("SAME E")
 
     # Add formula text
     formula_string = f"Polynomial: order {order_high} " #+ polynomial_expr_high
@@ -54,7 +110,18 @@ def save_histogram(hist_SF, fit_func_high, order_high, year, njet, target_nbins,
     text_box_formula.SetTextFont(42)
     text_box_formula.SetTextSize(0.03)
     text_box_formula.AddText(formula_string)
+    text_box_formula.AddText(f"Fit range: [{fit_xmin:g}, {fit_xmax:g}]")
     text_box_formula.Draw()
+
+    legend = ROOT.TLegend(0.58, 0.70, 0.88, 0.88)
+    legend.SetBorderSize(0)
+    legend.AddEntry(hist_draw, "Data / DY MC SF", "lep")
+    legend.AddEntry(fit_func_high, "Selected fit", "l")
+    if band68:
+        legend.AddEntry(band68, "68% fit band", "f")
+    if band95:
+        legend.AddEntry(band95, "95% fit band", "f")
+    legend.Draw()
 
     print(f"{save_path}/fit_best_{year}_njet{njet}_{target_nbins}_order{order_high}_{outtext}.pdf")
 
@@ -65,12 +132,18 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outText
     optimized_orders = {}
     print(f"Performing F-test for {year} njet{njet} with {target_nbins} bins; outtext: {outtext}")
     fit_order_start = 1 if outtext == "f0" else 2
+    key = (year, njet, target_nbins)
+    selected_order = fit_order_start
+    selected_fit_func = None
+    selected_fit_result = None
+    selected_polynomial_expr = None
+
     for order in range(fit_order_start, 8):
         order_low, order_high = order, order + 1
         print(f"min: {fit_xmin}, max: {fit_xmax}, order: {order}")
 
         polynomial_expr_low = " + ".join([f"[{i}]*x**{i}" for i in range(order_low + 1)])
-        fit_func_low = ROOT.TF1(f"poly{order}", polynomial_expr_low, 0, fit_xmax)
+        fit_func_low = ROOT.TF1(f"poly{order}_{outtext}_low", polynomial_expr_low, fit_xmin, fit_xmax)
         _ = hist_SF.Fit(fit_func_low, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
         _ = hist_SF.Fit(fit_func_low, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
         fit_low = hist_SF.Fit(fit_func_low, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
@@ -78,7 +151,7 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outText
         ndf_low = fit_func_low.GetNDF()
 
         polynomial_expr_high = " + ".join([f"[{i}]*x**{i}" for i in range(order_high + 1)])
-        fit_func_high = ROOT.TF1(f"poly{order}", polynomial_expr_high, 0, fit_xmax)
+        fit_func_high = ROOT.TF1(f"poly{order}_{outtext}_high", polynomial_expr_high, fit_xmin, fit_xmax)
         _ = hist_SF.Fit(fit_func_high, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
         _ = hist_SF.Fit(fit_func_high, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
         fit_high = hist_SF.Fit(fit_func_high, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
@@ -107,33 +180,67 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outText
             logger.info(f"Significant improvement with polynomial order {order_high} over {order_low}.")
             outTextFile.write(f"{year} njet{njet} {target_nbins} bins: Higher-order {order_high} polynomial significantly improves the fit over {order_low}. chi2_low: {chi2_low/ndf_low} vs chi2_high: {chi2_high/ndf_high}\n")
             outTextFile_keys.write(f"{year} {njet} {target_nbins} {order_high} {order_low}\n")
+            optimized_orders[key] = order_high
+            selected_order = order_high
+            selected_fit_func = fit_func_high.Clone(
+                f"{fit_func_high.GetName()}_{year}_{njet}_{outtext}_selected"
+            )
+            selected_fit_result = fit_high
+            selected_polynomial_expr = polynomial_expr_high
 
-            key = (year, njet, target_nbins)
-            if key not in optimized_orders:
-                optimized_orders[key] = order_high
+    if key not in optimized_orders:
+        logger.info(
+            f"No significant higher-order improvement found; using base polynomial order {selected_order}."
+        )
+        base_expr = " + ".join([f"[{i}]*x**{i}" for i in range(selected_order + 1)])
+        base_fit_func = ROOT.TF1(
+            f"poly_base_{year}_{njet}_{outtext}", base_expr, fit_xmin, fit_xmax
+        )
+        _ = hist_SF.Fit(base_fit_func, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
+        _ = hist_SF.Fit(base_fit_func, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
+        selected_fit_result = hist_SF.Fit(
+            base_fit_func, "L I S R", xmin=fit_xmin, xmax=fit_xmax
+        )
+        selected_fit_func = base_fit_func.Clone(
+            f"{base_fit_func.GetName()}_{year}_{njet}_{outtext}_selected"
+        )
+        selected_polynomial_expr = base_expr
+        optimized_orders[key] = selected_order
+        outTextFile.write(
+            f"{year} njet{njet} {target_nbins} bins: No significant F-test improvement; using base order {selected_order}.\n"
+        )
+        outTextFile_keys.write(f"{year} {njet} {target_nbins} {selected_order} {selected_order}\n")
 
-                # Ensure the nested structure exists in save_fit_config
-                if year not in save_fit_config:
-                    save_fit_config[year] = {}
-                if f"njet{njet}" not in save_fit_config[year]:
-                    save_fit_config[year][f"njet{njet}"] = {}
-                if f"{outtext}" not in save_fit_config[year][f"njet{njet}"]:
-                    print(f"Creating new entry for {year} njet{njet} {outtext}")
-                    save_fit_config[year][f"njet{njet}"][f"{outtext}"] = {}
-                    print(f"===> {save_fit_config}")
+    # Ensure the nested structure exists in save_fit_config
+    if year not in save_fit_config:
+        save_fit_config[year] = {}
+    if f"njet{njet}" not in save_fit_config[year]:
+        save_fit_config[year][f"njet{njet}"] = {}
+    if f"{outtext}" not in save_fit_config[year][f"njet{njet}"]:
+        print(f"Creating new entry for {year} njet{njet} {outtext}")
+        save_fit_config[year][f"njet{njet}"][f"{outtext}"] = {}
+        print(f"===> {save_fit_config}")
 
-                save_fit_config[year][f"njet{njet}"][f"{outtext}"] = {
-                    "order": order_high,
-                    "fit_range": [fit_xmin, fit_xmax],
-                    "bins": target_nbins,
-                    "bin_edges": bin_array.tolist(),
-                    "polynomial_expr": polynomial_expr_high
-                }
+    save_fit_config[year][f"njet{njet}"][f"{outtext}"] = {
+        "order": selected_order,
+        "fit_range": [fit_xmin, fit_xmax],
+        "bins": target_nbins,
+        "bin_edges": bin_array.tolist(),
+        "polynomial_expr": selected_polynomial_expr,
+    }
 
-                save_histogram(hist_SF, fit_func_high, order_high, year, njet, target_nbins, outtext)
-
-            elif optimized_orders[key] == order_low:
-                optimized_orders[key] = order_high
+    save_histogram(
+        hist_SF,
+        selected_fit_func,
+        selected_fit_result,
+        selected_order,
+        year,
+        njet,
+        target_nbins,
+        outtext,
+        fit_xmin,
+        fit_xmax,
+    )
 
 for njet in args.njet:
     input_file = f"{inPath}/{year}_njet{njet}.root"
