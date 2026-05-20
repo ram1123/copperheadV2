@@ -51,6 +51,19 @@ group_dict = {
         "2023BPix": ["dyTo2L_M-50_incl"],
         "2024": ["dyTo2Mu_M-50_aMCatNLO"],
 
+        # "2022preEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2022postEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2023": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2023BPix": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2024": ["dyTo2Mu_M-50_aMCatNLO", "dy_VBF_filter"],
+
+
+        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+
         # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],        
         # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
@@ -495,14 +508,14 @@ if __name__ == "__main__":
                 logger.debug("Append separate_wgt_zpt_wgt to fields2load!")
                 fields2load.append("separate_wgt_zpt_wgt")
 
-            if (
-                "zpt_wgt_reco_dnn" in events.fields
+            elif (
+                "zpt_wgt_gen" in events.fields
                 and "separate_wgt_zpt_wgt" in events.fields
                 and args.use_dnn_zpt_weights
             ):
-                logger.debug("Append separate_wgt_zpt_wgt and zpt_wgt_reco_dnn to fields2load!")
+                logger.debug("Append separate_wgt_zpt_wgt and zpt_wgt_gen to fields2load!")
                 fields2load.append("separate_wgt_zpt_wgt")
-                fields2load.append("zpt_wgt_reco_dnn")
+                fields2load.append("zpt_wgt_gen")
         # filter out redundant fields by using the set object
         fields2load = list(set(fields2load))
         logger.debug(f"fields2load: {fields2load}")
@@ -523,12 +536,12 @@ if __name__ == "__main__":
 
         elif (
             "separate_wgt_zpt_wgt" in events.fields
-            and "zpt_wgt_reco_dnn" in events.fields
+            and "zpt_wgt_gen" in events.fields
             and args.use_dnn_zpt_weights
             ):
-            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_gen!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
-            events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_reco_dnn"] # apply the weights obtained from the DNN
+            events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_gen"] # apply the weights obtained from the DNN
         # if "dy" in process.lower():
         #     # scale the weights for DY samples by 3.0
         #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
@@ -685,19 +698,7 @@ if __name__ == "__main__":
                     # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
                     # # temporary over write
                     # # logger.info(f"events.fields: {events.fields}")
-                    # if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                    #     logger.debug("removing Zpt rewgt!")
-                    #     weights = weights/events["separate_wgt_zpt_wgt"]
-
-                    # if (
-                    #     "separate_wgt_zpt_wgt" in events.fields
-                    #     and "zpt_wgt_reco_dnn" in events.fields
-                    #     and args.use_dnn_zpt_weights
-                    # ):
-                    #     logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
-                    #     weights = weights / events["separate_wgt_zpt_wgt"]
-                    #     weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
-
+                    
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
                     # weights = np.nan_to_num(weights, nan=0.0)
