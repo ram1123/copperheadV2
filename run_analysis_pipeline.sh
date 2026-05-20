@@ -61,8 +61,8 @@ for year in "${years[@]}"; do
             run_mode_from_nul < <(build_stage3_cmd "${year}")
             ;;
         all)
-            run_mode_from_nul < <(build_stage1_cmd "${year}")
-            run_mode_from_nul < <(build_compact_cmd "${year}")
+            # run_mode_from_nul < <(build_stage1_cmd "${year}")
+            # run_mode_from_nul < <(build_compact_cmd "${year}")
             run_mode_from_nul < <(build_stage2_cmd "${year}")
             run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
             run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")

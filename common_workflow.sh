@@ -283,11 +283,11 @@ build_compact_cmd() {
         python scripts/compact_parquet_data.py
         -y "${year}"
         --input_path "${save_path}"
-        -m "${dnn_model_path}"
-        --model_tag "${dnn_train_label}"
-        --add_dnn_score
-        --fix_dimuon_mass
-        --save_postfix "${save_postfix}"
+        # -m "${dnn_model_path}"
+        # --model_tag "${dnn_train_label}"
+        # --add_dnn_score
+        # --fix_dimuon_mass
+        # --save_postfix "${save_postfix}"
         --log-level "$(debug_flag)"
     )
     while IFS= read -r arg; do
@@ -377,6 +377,8 @@ build_calib_cmd() {
         python src/lib/ebeMassResCalibration/getCalibrationFactor.py
         --NanoAODv "${nanoaod_version}"
         --years "${year}"
+        -l "${label}"
+        --input_path "${save_path}"
         --extraString "${postfix}"
         --ifbinned
         --log-level "$(debug_flag)"
@@ -413,7 +415,8 @@ run_mode_from_nul_timed() {
 
 run_zpt_fit() {
     local year="$1"
-    local dy_sample="INCamcatnloFXFX"
+    local dy_sample="IncDY_aMCatNLO_PySR07MayV2"
+    # local dy_sample="IncDY_aMCatNLO_PySR07MayV2_ShapeNormOnly"
     local -a cmd0=(python src/copperhead/zpt_rewgt/derive/save_SF_rootFiles.py -l "${label}" -y "${year}" --input_path "${save_path}" -dy_sample "${dy_sample}")
     local -a cmd1=(python src/copperhead/zpt_rewgt/derive/do_f_test.py -l "${label}" -y "${year}" --dy_sample "${dy_sample}" --nbins "${nbin}" --njet "${njet}" --save_postfix "${save_postfix}" --debug)
     local -a cmd2=(python src/copperhead/zpt_rewgt/derive/get_polyFit.py -l "${label}" -y "${year}" --dy_sample "${dy_sample}" --njet "${njet}" --save_postfix "${save_postfix}")
@@ -445,7 +448,8 @@ run_dnn_workflow_once() {
     case "${dnn_mode}" in
         dnn) run_preprocess="1"; run_hpo="1"; run_train="1" ;;
         dnn_pre) run_preprocess="1" ;;
-        dnn_train) run_hpo="1"; run_train="1" ;;
+        dnn_hpo) run_hpo="1"; run_train="1" ;;
+        dnn_train) run_train="1" ;;
         dnn_var_rank) die "Variable ranking is only available in the legacy Run-2 DNN flow." ;;
     esac
 
@@ -481,9 +485,6 @@ run_dnn_workflow_once() {
         --data-dir "${dnn_base_dir}/"
         --out-dir "${dnn_base_dir}/${dnn_train_label}"
     )
-    if [[ -f "${dnn_best_json}" ]]; then
-        train_cmd+=(--optuna-best-json "${dnn_best_json}")
-    fi
 
     log "Running DNN workflow for years=${dnn_years_csv}"
     log "  DNN config: ${dnn_config}"
@@ -494,7 +495,11 @@ run_dnn_workflow_once() {
     [[ "${run_preprocess}" == "1" ]] && run_cmd "${pre_cmd[@]}"
     [[ "${run_hpo}" == "1" ]] && run_cmd_timed "${hpo_cmd[@]}"
     if [[ "${run_train}" == "1" ]]; then
-        [[ -f "${dnn_best_json}" ]] || log "WARNING: ${dnn_best_json} not found; training will use config hyperparameters."
+        if [[ -f "${dnn_best_json}" ]]; then
+            train_cmd+=(--optuna-best-json "${dnn_best_json}")
+        else
+            log "WARNING: ${dnn_best_json} not found; training will use config hyperparameters."
+        fi    
         run_cmd_timed "${train_cmd[@]}"
     fi
 }
