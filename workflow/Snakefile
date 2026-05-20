@@ -43,8 +43,8 @@ JJ_ETA_REGIONS = [
     # "jj_both_fwd30",
     # "jj_one_he_one_fwd30",
 ]
-#PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
-PLOT_ZPT_MODES  = ["withzpt", "nozpt"] # ["withzpt", "nozpt"]
+PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
+#PLOT_ZPT_MODES  = ["withzpt", "nozpt"] # ["withzpt", "nozpt"]
 PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
 
 wildcard_constraints:
@@ -311,67 +311,12 @@ rule stage1Compact:
         # Validation block
         # -----------------------------
         BASE="{params.outpath}"
-        DIR_F1="$BASE/f1_0"
-        DIR_CMP="$BASE/compacted"
-
-        echo "Checking compact consistency..."
-
-        fail_flag=0
-
-        for sample in $(ls "$DIR_F1"); do
-            f1_dir="$DIR_F1/$sample"
-            cmp_dir="$DIR_CMP/$sample"
-
-            # --- Check existence ---
-            if [[ ! -d "$cmp_dir" ]]; then
-                echo "Missing compacted sample: $sample"
-                fail_flag=1
-                continue
-            fi
-
-            # --- Size comparison (in bytes, robust) ---
-            size_f1=$(du -sb "$f1_dir" | awk '{{print $1}}')
-            size_cmp=$(du -sb "$cmp_dir" | awk '{{print $1}}')
-
-            # allow small tolerance (important!)
-            ratio=$(awk "BEGIN {{print $size_cmp / $size_f1}}")
-
-            echo "$sample : f1=$size_f1 cmp=$size_cmp ratio=$ratio"
-
-            if [[ "$sample" == "ttjets_sl" ]]; then
-                # allow up to 60% shrink for ttjets_sl
-                threshold=0.35
-            elif [[ "$sample" == "wz_1l1nu2q" ]]; then
-                threshold=0.045
-            else
-                # allow up to 20% shrink (very safe)
-                threshold=0.8
-            fi
-
-            if (( $(awk "BEGIN {{print ($ratio < $threshold)}}") )); then
-                echo "Size mismatch for $sample → deleting compacted"
-                rm -rf "$cmp_dir"
-                fail_flag=1
-            fi
-
-            # --- Check parquet existence ---
-            nparquet=$(find "$cmp_dir" -name "*.parquet" | wc -l)
-            if [[ "$nparquet" -eq 0 ]]; then
-                echo "No parquet found in $sample"
-                rm -rf "$cmp_dir"
-                fail_flag=1
-            fi
-        done
-
-        # --- Final decision ---
-        if [[ "$fail_flag" -ne 0 ]]; then
-            echo "ERROR: Compact validation failed"
+        if ! python3 scripts/compact_sanity_check.py --base "$BASE"; then
             echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             echo "stage1Compact year={wildcards.year} attempt= FAILED" >> {FAIL_LOG}
             exit 1
         fi
 
-        echo "Compact validation passed"
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
@@ -426,6 +371,8 @@ rule plots:
             {params.minset_flag} \
             {params.zpt_flag} \
             > {log} 2>&1
+
+        #    --use_dnn_zpt_weights \
 
         # ---- SUCCESS CHECK ----
         if grep -q "Plots are saved to " {log}; then
@@ -707,7 +654,7 @@ rule summary:
         expand(STATEDIR + "/stage1_{year}_rep{rep}.done", year=YEARS, rep=REPEATS),
         expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
+        #expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
     output:
         f"{STATEDIR}/summary.done"
     shell:
