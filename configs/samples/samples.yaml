@@ -11,8 +11,9 @@ background:
             processes_per_year:
                 2024:
                     - dyTo2Mu_M-50_aMCatNLO
-                2017:
-                    - dyTo2L_M-50_aMCatNLO
+                2017: 
+                    - dy_M-50_MiNNLO
+                    - dy_M-100To200_MiNNLO
 
         TT:
             processes:
@@ -20,13 +21,18 @@ background:
                 - ttjets_sl
             processes_per_year: {}
 
-        # ST:
-        #     processes:
-        #         - st_tw_top
-        #         - st_tw_antitop
-        #         - st_t_top
-        #         - st_t_antitop
-        #     processes_per_year: {}
+        ST:
+            processes:
+                - st_tw_top
+                - st_tw_antitop
+                - st_t_top
+                - st_t_antitop
+            processes_per_year:
+                2022preEE: {}
+                2022postEE: {}
+                2023: {}
+                2023BPix: {}
+                2024: {}
 
         EWK:
             processes:
@@ -36,6 +42,8 @@ background:
                 # - ewk_lljj
                 - ewk_mmjj_mll_105_160
             processes_per_year:
+                2017:
+                    - ewk_lljj_mll50_mjj120
                 2022preEE:
                     - ewk_mmjj_mll_105_160
                 2022postEE:
@@ -55,15 +63,25 @@ background:
                 - zz_2l2q  
                 - zz_4l
                 # - zz
-            processes_per_year: {}
+            processes_per_year:
+                2017:
+                    - ww_2l2nu
+                    - wz_1l1nu2q
+                    - wz_2l2q
+                    - wz_3lnu
+                    - zz
 
-        # VVV:
-        #     processes:
-        #         - www
-        #         - wwz
-        #         - wzz
-        #         - zzz
-        #     processes_per_year: {}
+        VVV:
+            processes:
+                - www
+                - wwz
+                - wzz
+                - zzz
+            processes_per_year: 
+                2022preEE: {}
+                2022postEE: {}
+                2023: {}
+                2023BPix: {}            
 
 # --------------------------------------------------
 
