@@ -304,7 +304,7 @@ def applyRegionCatCutsByScore(
     vbf_score = ak.fill_none(events["transf_vbf_score"], float("-inf"))
     ggh_score = ak.fill_none(events["transf_ggh_score"], float("-inf"))
     # is_vbf = ak.fill_none(vbf_score > ggh_score, value=False)
-    is_vbf = ak.fill_none((vbf_score/(vbf_score + ggh_score)) > 0.966, value=False)
+    is_vbf = ak.fill_none((vbf_score/(vbf_score + ggh_score)) > 0.92522, value=False)
     # is_vbf = ak.fill_none(vbf_score > 0.925, value=False)
 
     if category == "nocat":
