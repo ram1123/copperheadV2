@@ -8,12 +8,23 @@ and overlay them with a ratio panel.
 
 
 Example usage:
-time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  55         --xmin 105         --xmax 160         --output compareDY_M50M100_55bins.pdf
-time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/dy_VBF_filter/             --nbins  40         --xmin 110         --xmax 150         --output compareDY_M50M100_40bins.pdf
-time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/All_DY_with_Mjj350_cut_ForComparing/dy_M-50_MiNNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/All_DY_with_Mjj350_cut_ForComparing/dy_M-100To200_MiNNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/All_DY_with_Mjj350_cut_ForComparing/dy_VBF_filter/             --nbins  40         --xmin 110         --xmax 150         --output compareDY_M50M100_40bins_12June_mjjcut.pdf
+time python plotter/compare_inclusiveDY_DYvbfFilter.py  \
+    --dirs1 /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_May14_PySR07MayV2/stage1_output/2024/f1_0/dyTo2Mu_M-50_aMCatNLO/   \
+    --dirs2 /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_May14_PySR07MayV2/stage1_output/2024/f1_0/dy_VBF_filter/ \
+    --nbins  55 --xmin 110  --xmax 150 \
+    --output compareDY_M50M100_55bins_110_150.pdf
 
+time python plotter/compare_inclusiveDY_DYvbfFilter.py  \
+    --dirs1 /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_May14_PySR07MayV2/stage1_output/2024/f1_0/dyTo2Mu_M-50_aMCatNLO/   \
+    --dirs2 /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_May14_PySR07MayV2/stage1_output/2024/f1_0/dy_VBF_filter/ \
+    --nbins  55 --xmin 105  --xmax 160 \
+    --output compareDY_M50M100_55bins_105_160_UseDYCrossMATRIX.pdf
 
-time python compare_inclusiveDY_DYvbfFilter.py         --dirs1 /depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/2018/f1_0/dy_M-50_aMCatNLO/ /depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/2018/f1_0/dy_M-100To200_aMCatNLO/         --dirs2 /depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June/stage1_output/2018/f1_0/dy_VBF_filter_NewZWgt/             --nbins  40         --xmin 110         --xmax 150         --output compareDY_40bins_Run2_nanoAODv12_08June_amc_newzpt.pdf
+time python plotter/compare_inclusiveDY_DYvbfFilter.py  \
+    --dirs1 /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_May14_PySR07MayV2/stage1_output/2024/f1_0/dyTo2Mu_M-50_aMCatNLO/   \
+    --dirs2 /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_May14_PySR07MayV2/stage1_output/2024/f1_0/dy_VBF_filter/ \
+    --nbins  55 --xmin 105  --xmax 160 \
+    --output compareDY_M50M100_55bins_105_160_DefaultXS.pdf
 """
 
 import os
@@ -80,13 +91,15 @@ def fill_hist_from_parquets(th1, parquet_paths):
     must have Sumw2() called beforehand, so ROOT accumulates Σw² for errors.
     """
     ddf = dd.read_parquet(parquet_paths, columns=["dimuon_mass", "wgt_nominal", "gjj_mass"])
-    ddf = ddf[ddf["gjj_mass"] > 350.0]  # Apply the Mjj > 350 GeV cut
+    ddf = ddf[ddf["gjj_mass"] > 300.0]  # Apply the Mjj > 300 GeV cut
     for part in ddf.to_delayed():
         df = part.compute()
         masses = df["dimuon_mass"].to_numpy()
         weights = df["wgt_nominal"].fillna(0.0).to_numpy()
         for m, w in zip(masses, weights):
+        # for m in masses:
             th1.Fill(float(m), float(w))
+            # th1.Fill(float(m))
 
 
 def main():
@@ -109,11 +122,15 @@ def main():
     fill_hist_from_parquets(h1, paths1)
     fill_hist_from_parquets(h2, paths2)
 
+    print(f"Integral of h1 = {h1.Integral()}")
+    print(f"Integral of h2 = {h2.Integral()}")
+
     # 4) Scale each TH1D by (1 / bin_width) to convert Σw → dσ/dm [pb/GeV]
-    bin_width = (args.xmax - args.xmin) / args.nbins
-    scale_factor = 1.0 / bin_width
-    h1.Scale(scale_factor)
-    h2.Scale(scale_factor)
+    # bin_width = (args.xmax - args.xmin) / args.nbins
+    # scale_factor = 1.0 / bin_width
+    # h1.Scale((2091/1997)/h1.Integral())
+    # h2.Scale((2091/1997)/h2.Integral())
+    # h1.Scale(2091/1997)
 
     # 5) Style histograms
     h1.SetLineColor(kBlue)
@@ -126,7 +143,8 @@ def main():
 
     h1.SetTitle("")  # Title is carried by axis labels
     h1.GetXaxis().SetTitle("m_{#mu#mu} [GeV]")
-    h1.GetYaxis().SetTitle("d#sigma/dm [pb/GeV]")
+    # h1.GetYaxis().SetTitle("d#sigma/dm [pb/GeV]")
+    # h1.GetYaxis().SetTitle("Norm to unity")
 
     # 6) Create canvas and draw ratio plot (h2/h1)
     canvas = TCanvas("c", "DY comparison", 800, 600)
@@ -139,7 +157,7 @@ def main():
     rp.GetUpperPad().cd()
     leg = TLegend(0.60, 0.70, 0.88, 0.88)
     leg.SetBorderSize(0)
-    leg.AddEntry(h1, "DY M-50 + M100-200", "lep")
+    leg.AddEntry(h1, "DY M-50", "lep")
     leg.AddEntry(h2, "DY VBF-filter M105-160", "lep")
     leg.Draw()
 
