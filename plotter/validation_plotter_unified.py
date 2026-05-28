@@ -25,7 +25,7 @@ from scripts.compact_parquet_data import ensure_compacted
 
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
-bkg_MC_order = ["VV", "EWK",  "TOP", "DY"]
+bkg_MC_order = ["VV", "EWK",  "TOP", "DY", "DYVBF"]
 
 
 group_dict = {
@@ -69,6 +69,13 @@ group_dict = {
         # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+    },
+    "DYVBF": {
+        "2022preEE": ["dy_VBF_filter"],
+        "2022postEE": ["dy_VBF_filter"],
+        "2023": ["dy_VBF_filter"],
+        "2023BPix": ["dy_VBF_filter"],
+        "2024": ["dy_VBF_filter"],        
     },
     "EWK": {
         "2022preEE": ["ewk_mmjj_mll_105_160"],
@@ -166,7 +173,7 @@ if __name__ == "__main__":
         "--background_order",
         dest="background_samples",
         # default=["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
-        default=["EWK", "VV", "TOP", "DY"],
+        default=["EWK", "VV", "TOP", "DY", "DYVBF"],
         nargs="*",
         type=str,
         action="store",

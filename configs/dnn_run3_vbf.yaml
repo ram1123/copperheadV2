@@ -6,6 +6,10 @@ meta:
 analysis:
   category: "vbf"
   region: "h-peak"
+  # cut: standard VBF category cuts
+  # score: use transf_vbf_score > transf_ggh_score for VBF assignment
+  # auto: use transformer scores when available, otherwise fall back to cuts
+  category_selection: "auto"
 
 data:
   mode: "glob"
