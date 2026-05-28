@@ -21,6 +21,7 @@ common_defaults() {
     cluster_index="0"
     is_mc="0"
     is_sync="0"
+    compact_add_dnn_score="${COMPACT_ADD_DNN_SCORE:-0}"
     with_variations="${WITH_VARIATIONS:-0}"
     chunksize="600000"
     max_file_len="900"
@@ -28,7 +29,7 @@ common_defaults() {
 }
 
 parse_common_args() {
-    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:ksfz" opt; do
+    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:ksfzD" opt; do
         case "${opt}" in
             h) usage ;;
             c) dataset_yaml="${OPTARG}" ;;
@@ -50,6 +51,7 @@ parse_common_args() {
             s) skip_bad_files="1" ;;
             f) debug_fraction="1" ;;
             z) is_sync="1" ;;
+            D) compact_add_dnn_score="1" ;;
             *) usage ;;
         esac
     done
@@ -283,13 +285,17 @@ build_compact_cmd() {
         python scripts/compact_parquet_data.py
         -y "${year}"
         --input_path "${save_path}"
-        # -m "${dnn_model_path}"
-        # --model_tag "${dnn_train_label}"
-        # --add_dnn_score
-        # --fix_dimuon_mass
-        # --save_postfix "${save_postfix}"
         --log-level "$(debug_flag)"
     )
+    if [[ "${compact_add_dnn_score}" == "1" ]]; then
+        cmd+=(
+            -m "${dnn_model_path}"
+            --model_tag "${dnn_train_label}"
+            --add_dnn_score
+            --fix_dimuon_mass
+            --save_postfix "${save_postfix}"
+        )
+    fi
     while IFS= read -r arg; do
         [[ -n "${arg}" ]] && cmd+=("${arg}")
     done < <(append_gateway_args)
@@ -499,7 +505,7 @@ run_dnn_workflow_once() {
             train_cmd+=(--optuna-best-json "${dnn_best_json}")
         else
             log "WARNING: ${dnn_best_json} not found; training will use config hyperparameters."
-        fi    
+        fi
         run_cmd_timed "${train_cmd[@]}"
     fi
 }

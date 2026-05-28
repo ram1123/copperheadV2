@@ -16,6 +16,9 @@ Modes:
   calib|calib_closure
   compact
   dnn|dnn_pre|dnn_train|dnn_var_rank
+
+Options:
+  -D    Add DNN score during the compact step. Default is off.
 EOF
     exit 1
 }
