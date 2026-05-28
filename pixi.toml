@@ -57,6 +57,8 @@ pytz = "*"
 # ROOT / HEP extras
 # ----------------------------------------------------------------------
 [feature.root.dependencies]
+# ROOT for the main analysis stack. Keep this separate from the Combine stack
+# because cms-combine requires a newer ROOT series.
 root = "==6.32.2"
 hepconvert = "*"
 scikit-hep-testdata = "*"
@@ -66,6 +68,7 @@ scikit-hep-testdata = "*"
 # ----------------------------------------------------------------------
 [feature.combine.dependencies]
 cms-combine = "==10.4.2"
+# Kept in its own solve group because it is not compatible with the analysis ROOT pin.
 root = "6.36.*"
 
 # ----------------------------------------------------------------------
@@ -119,23 +122,23 @@ cmsstyle = "*"
 # ----------------------------------------------------------------------
 # Local activation
 # ----------------------------------------------------------------------
-[feature.local.activation]
-scripts = ["scripts/pixi_activate.sh"]
+#[feature.local.activation]
+#scripts = ["scripts/pixi_activate.sh"]
 
 # ----------------------------------------------------------------------
 # Environments
 # ----------------------------------------------------------------------
 [environments]
-# Minimal CI environment for GitHub Actions sync tests
-ci = ["analysis"]
+# Pixi still creates one runnable environment directory per named environment.
+# Using solve groups here reduces duplicate solving work and keeps overlapping
+# environments pinned together.
+# Reference: https://pixi.prefix.dev/v0.21.0/features/multi_environment/
 
-default = ["analysis", "dev", "root", "workflow", "style", "local", "ml"]
+# Minimal CI environment for sync checks and lightweight validation.
+ci = { features = ["analysis"], solve-group = "analysis-stack" }
 
-# This environment has everything except combine
-full = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"]
+# Main day-to-day analysis environment, including symbolic regression and CUDA helpers.
+default = { features = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda"], solve-group = "analysis-stack" }
 
-# Dedicated environment for the symbolic regression
-symbolic = ["analysis", "symbolic", "dev", "style", "local"]
-
-# for ggH stage-2 script
-combine = ["analysis", "combine", "ml", "local", "style", "dev", "workflow"]
+# Kept in a separate solve group because the combine stack pins a different ROOT version.
+combine = { features = ["analysis", "combine", "ml", "style", "dev", "workflow"], solve-group = "combine-stack" }
