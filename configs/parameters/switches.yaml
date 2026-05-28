@@ -59,6 +59,16 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+    do_save_partial_weights_github_ci: # Save individual weights only for GitHub CI/CD runs.
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true        
     save_default_jet_vars:
         '2016preVFP': false
         '2016postVFP': false
