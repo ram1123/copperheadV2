@@ -3,8 +3,6 @@ set -euo pipefail
 
 # Usage:
 #   ./enter_pixi.sh combine
-#   ./enter_pixi.sh symbolic
-#   ./enter_pixi.sh full
 #   ./enter_pixi.sh default
 #   ./enter_pixi.sh ci
 
@@ -22,12 +20,6 @@ case "$PIXI_ENV" in
     combine|Combine)
         PIXI_ENV="combine"
         ;;
-    symbolic|Symbolic)
-        PIXI_ENV="symbolic"
-        ;;
-    full|Full)
-        PIXI_ENV="full"
-        ;;
     default|Default)
         PIXI_ENV="default"
         ;;
@@ -36,7 +28,7 @@ case "$PIXI_ENV" in
         ;;
     *)
         echo "[ERROR] Unknown Pixi environment: $PIXI_ENV"
-        echo "Allowed: combine, symbolic, full, default, ci"
+        echo "Allowed: combine, default, ci"
         exit 1
         ;;
 esac

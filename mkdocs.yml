@@ -35,21 +35,32 @@ nav:
     - Running:
           - Get Yields: GetYields.md
           - Failed Jobs Check: FailedJobsCheck.md
+          - Plotting Codes: PlottingCodes.md
     - Corrections:
           - Z-pT Reweighting: ZpT_reweight.md
           - EBE Mass Resolution: eventbyeventMassResolution.md
+          - Official Recommendations: Official_recommendation.md
+          - Special Treatments Summary: SpecialTreatementsSummary.md
     - Analysis Channels:
         - ggH:
               - Category Boundary Calculation: ggH_BdtCategoryEdgeCalculation.md
               - Validation Plots: ggH_validation.md
               - Datacard Generation: ggH_dataCardGeneration.md
+              - Steps After Stage-1: ggH_steps_after_stage1_v2.md
+              - Steps After Stage-1 (Legacy): ggH_steps_after_stage1.md
+              - Blinded Chi2/NDF: blindedChi2NDF.md
         - VBF:
               - DNN: DNN_VBF.md
     - Workflow Management:
             - Snakemake: workflow_management.md
+            - Cut Flow Cross Check Before PR: cut-flow_beforePR.md
+    - Sync Studies:
+          - Peking Sync Notes: sync/sync_Peking/WhyEventNotSelected.md
     - Notes:
           - Datasets Info: datasets_info.md
+          - Run2 DY Samples List: Run2DY_SamplesList.md
           - NanoAOD v12 vs v9: NanoAODv12_v9.md
+          - Hyeon's Notes: personal_notes.md
           - Known Issues: known_issues.md
     - Maintenance:
           - TODO Summary: TODO_SUMMARY.md

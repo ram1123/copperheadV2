@@ -122,8 +122,8 @@ cmsstyle = "*"
 # ----------------------------------------------------------------------
 # Local activation
 # ----------------------------------------------------------------------
-#[feature.local.activation]
-#scripts = ["scripts/pixi_activate.sh"]
+[feature.local.activation]
+scripts = ["scripts/pixi_activate.sh"]
 
 # ----------------------------------------------------------------------
 # Environments
@@ -138,7 +138,7 @@ cmsstyle = "*"
 ci = { features = ["analysis"], solve-group = "analysis-stack" }
 
 # Main day-to-day analysis environment, including symbolic regression and CUDA helpers.
-default = { features = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda"], solve-group = "analysis-stack" }
+default = { features = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"], solve-group = "analysis-stack" }
 
 # Kept in a separate solve group because the combine stack pins a different ROOT version.
-combine = { features = ["analysis", "combine", "ml", "style", "dev", "workflow"], solve-group = "combine-stack" }
+combine = { features = ["analysis", "combine", "ml", "style", "dev", "workflow", "local"], solve-group = "combine-stack" }
