@@ -22,16 +22,12 @@ Available environments are:
 
 ```bash
 ./enter_pixi.sh default
-./enter_pixi.sh full
-./enter_pixi.sh symbolic
 ./enter_pixi.sh combine
 ```
 
 Use the environment that matches your task:
 
-- `default`: standard analysis workflow
-- `full`: larger analysis environment with extra packages
-- `symbolic`: PySR / symbolic-regression work
+- `default`: standard analysis workflow, ROOT, workflow tools, ML, and symbolic regression
 - `combine`: statistical inference / Combine workflow
 
 To create the dask client, open the jupyter notebook [DaskGatewaySLURM.ipynb](../DaskGatewaySLURM.ipynb) and run cells upto section "Create the gateway" to create the dask client.
@@ -121,6 +117,27 @@ bash stage1_loop_Improved.sh -m 9 -y Run3 -l label_for_ntuple
     ```bash
     python scripts/sync_parquet_dimuon.py DIR1 DIR2 -o diff.csv
     ```
+
+2. The sync txt schema is defined by `SYNCVARLIST` in
+   [scripts/sync_parquet_dimuon.py](../scripts/sync_parquet_dimuon.py). Along with kinematics, it
+   includes `wgt_nominal` and selected partial-weight branches such as
+   `separate_wgt_btag_wgt`, which is useful when a nominal-weight mismatch comes from the b-tag
+   scale factor.
+
+3. To regenerate the sync reference txt files used by GitHub Actions, run:
+
+    ```bash
+    bash scripts/update_sync_references.sh
+    ```
+
+    For a single year:
+
+    ```bash
+    bash scripts/update_sync_references.sh 2017
+    ```
+
+    This reruns the sync stage-1 samples, rebuilds the `*_eventKinematics.txt` files, and updates
+    the copies in `test/reference`.
 
 ### Control Plots
 

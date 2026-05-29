@@ -10,7 +10,9 @@ cd copperheadV2
 git checkout main
 # If already cloned the repo, then to update the submodules run:
 git submodule update --remote --merge
-./enter_pixi.sh [default/full/symbolic/combine]
+./enter_pixi.sh 
+# or 
+./enter_pixi.sh -e combine
 ```
 
 ## Run the code
@@ -43,6 +45,30 @@ Example:
 bash run_analysis_pipeline.sh -m 0 -y 2022preEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml
 bash run_analysis_pipeline.sh -m 1 -y 2022preEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml
 ```
+
+### Stage-1 sync references
+
+The GitHub sync workflow compares stage-1 outputs against text snapshots in `test/reference`.
+To refresh those reference txt files after an intentional stage-1 change, run:
+
+```bash
+bash scripts/update_sync_references.sh
+```
+
+Or regenerate a single year:
+
+```bash
+bash scripts/update_sync_references.sh 2017
+```
+
+This script reruns the sync stage-1 samples, rebuilds the `*_eventKinematics.txt` files with
+[scripts/sync_parquet_dimuon.py](scripts/sync_parquet_dimuon.py), and copies the refreshed txt
+files into `test/reference`.
+
+The sync txt output includes the nominal event weight plus selected partial-weight branches such as
+`separate_wgt_btag_wgt`. If you add or reorder sync variables in
+[scripts/sync_parquet_dimuon.py](scripts/sync_parquet_dimuon.py), regenerate the reference txt
+files so CI compares the updated schema.
 
 ### Legacy script
 
