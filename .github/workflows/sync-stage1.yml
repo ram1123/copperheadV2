@@ -107,6 +107,46 @@ jobs:
               -o test/output/label_output/stage1_output/${{ matrix.year }}_vbf_eventKinematics.txt
           '
 
+      - name: Compare cutflow JSON against references
+        run: |
+          pixi run -e ci bash -lc '
+            set -euo pipefail
+            export PYTHONPATH="$PWD:${PYTHONPATH:-}"
+
+            case "${{ matrix.year }}" in
+              2017)
+                data_sample="data_B"
+                dy_sample="dy_M-50_aMCatNLO"
+                ;;
+              2022preEE)
+                data_sample="data_D"
+                dy_sample="dyTo2L_M-50_incl"
+                ;;
+              *)
+                echo "Unsupported sync year for cutflow comparison: ${{ matrix.year }}" >&2
+                exit 1
+                ;;
+            esac
+
+            vbf_sample="vbf_powheg_dipole"
+            year_root="test/output/label_output/stage1_output/${{ matrix.year }}/f1_0"
+
+            python scripts/sync_parquet_dimuon.py \
+              test/reference/${{ matrix.year }}_cutflow_${data_sample}_0.json \
+              "${year_root}/${data_sample}/0/cutflow_${data_sample}_0.json" \
+              -o diff_cutflow_data_${{ matrix.year }}.csv
+
+            python scripts/sync_parquet_dimuon.py \
+              test/reference/${{ matrix.year }}_cutflow_${dy_sample}_0.json \
+              "${year_root}/${dy_sample}/0/cutflow_${dy_sample}_0.json" \
+              -o diff_cutflow_dy_${{ matrix.year }}.csv
+
+            python scripts/sync_parquet_dimuon.py \
+              test/reference/${{ matrix.year }}_cutflow_${vbf_sample}_0.json \
+              "${year_root}/${vbf_sample}/0/cutflow_${vbf_sample}_0.json" \
+              -o diff_cutflow_vbf_${{ matrix.year }}.csv
+          '
+
       - name: Compare against references
         run: |
           pixi run -e ci bash -lc '
@@ -142,7 +182,10 @@ jobs:
           for f in \
             diff_data_${{ matrix.year }}.csv \
             diff_dy_${{ matrix.year }}.csv \
-            diff_vbf_${{ matrix.year }}.csv
+            diff_vbf_${{ matrix.year }}.csv \
+            diff_cutflow_data_${{ matrix.year }}.csv \
+            diff_cutflow_dy_${{ matrix.year }}.csv \
+            diff_cutflow_vbf_${{ matrix.year }}.csv
           do
             if [ ! -f "$f" ]; then
               echo "OK: $f not produced."
@@ -178,6 +221,9 @@ jobs:
             diff_data_${{ matrix.year }}.csv
             diff_dy_${{ matrix.year }}.csv
             diff_vbf_${{ matrix.year }}.csv
+            diff_cutflow_data_${{ matrix.year }}.csv
+            diff_cutflow_dy_${{ matrix.year }}.csv
+            diff_cutflow_vbf_${{ matrix.year }}.csv
             only_in_*.txt
             test/output/label_output/stage1_output/${{ matrix.year }}_data_eventKinematics.txt
             test/output/label_output/stage1_output/${{ matrix.year }}_dy_eventKinematics.txt

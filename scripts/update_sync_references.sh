@@ -29,6 +29,23 @@ mkdir -p "$reference_dir"
 for year in "${years[@]}"; do
     echo "Refreshing sync references for ${year}"
 
+    case "$year" in
+        2017)
+            data_sample="data_B"
+            dy_sample="dy_M-50_aMCatNLO"
+            ;;
+        2022preEE)
+            data_sample="data_D"
+            dy_sample="dyTo2L_M-50_incl"
+            ;;
+        *)
+            echo "Unsupported sync reference year for cutflow copy: ${year}" >&2
+            exit 1
+            ;;
+    esac
+
+    vbf_sample="vbf_powheg_dipole"
+
     bash stage1_loop_Improved.sh \
         -c "$dataset_yaml" \
         -v "$nanoaodv" \
@@ -56,4 +73,10 @@ for year in "${years[@]}"; do
     cp "${year_root}/${year}_data_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_dy_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_vbf_eventKinematics.txt" "$reference_dir/"
+    cp "${f1_root}/${data_sample}/0/cutflow_${data_sample}_0.json" \
+        "${reference_dir}/${year}_cutflow_${data_sample}_0.json"
+    cp "${f1_root}/${dy_sample}/0/cutflow_${dy_sample}_0.json" \
+        "${reference_dir}/${year}_cutflow_${dy_sample}_0.json"
+    cp "${f1_root}/${vbf_sample}/0/cutflow_${vbf_sample}_0.json" \
+        "${reference_dir}/${year}_cutflow_${vbf_sample}_0.json"
 done

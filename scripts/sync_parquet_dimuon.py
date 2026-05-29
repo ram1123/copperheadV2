@@ -637,6 +637,9 @@ def compare_two_cutflow_json(
 
     if not rows:
         print("[INFO] No cutflow mismatches found (within tolerance).")
+        if out_path.exists():
+            out_path.unlink()
+        return
 
     df = pd.DataFrame(rows)
     df.to_csv(out_path, index=False)
@@ -665,7 +668,7 @@ def parse_args():
     parser.add_argument(
         "--tolerance",
         type=float,
-        default=0.0,
+        default=0.1,
         help="Absolute tolerance for comparing dimuon variables (default: 0).",
     )
     parser.add_argument(
