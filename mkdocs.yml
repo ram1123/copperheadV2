@@ -35,6 +35,7 @@ nav:
     - Running:
           - Get Yields: GetYields.md
           - Failed Jobs Check: FailedJobsCheck.md
+          - Merge NanoAOD ROOT Files: MergeNanoAODRootFiles.md
           - Plotting Codes: PlottingCodes.md
     - Corrections:
           - Z-pT Reweighting: ZpT_reweight.md
