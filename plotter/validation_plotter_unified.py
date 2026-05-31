@@ -45,6 +45,10 @@ group_dict = {
         "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
     },
     "DY": {
+        "2016preVFP": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
+        "2016postVFP": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
+        "2017": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
+        "2018": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
         "2022preEE": ["dyTo2L_M-50_incl"],
         "2022postEE": ["dyTo2L_M-50_incl"],
         "2023": ["dyTo2L_M-50_incl"],
@@ -65,17 +69,21 @@ group_dict = {
         # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
 
         # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],        
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
     },
     "DYVBF": {
+        "2016preVFP": ["dy_VBF_filter"],
+        "2016postVFP": ["dy_VBF_filter"],
+        "2017": ["dy_VBF_filter"],
+        "2018": ["dy_VBF_filter"],
         "2022preEE": ["dy_VBF_filter"],
         "2022postEE": ["dy_VBF_filter"],
         "2023": ["dy_VBF_filter"],
         "2023BPix": ["dy_VBF_filter"],
-        "2024": ["dy_VBF_filter"],        
+        "2024": ["dy_VBF_filter"],
     },
     "EWK": {
         "2022preEE": ["ewk_mmjj_mll_105_160"],
@@ -173,7 +181,7 @@ if __name__ == "__main__":
         "--background_order",
         dest="background_samples",
         # default=["OTHER", "EWK", "VV", "TOP", "DY", "DYVBF", "DYJ01", "DYJ2"],
-        default=["EWK", "VV", "TOP", "DY", "DYVBF"],
+        default=["EWK", "VV", "TOP", "DY"],
         nargs="*",
         type=str,
         action="store",
@@ -305,7 +313,7 @@ if __name__ == "__main__":
             "'central' = |eta|<2.5, 'he' = 2.5<|eta|<3.0, "
             "'fwd25' = |eta|>2.5, 'fwd30' = |eta|>3.0. Default: all"
         ),
-    )    
+    )
     # add dnn score to the plotting variable list
     parser.add_argument(
      "--dnn-score",
@@ -382,13 +390,10 @@ if __name__ == "__main__":
             args.regions.remove("z-peak")
         else:
             logger.warning("z-peak region is not in the regions, nothing to remove!")
-    # else:
-    #     # Remove the "DYVBF" group from the group_dict if it exists
-    #     if "DYVBF" in group_dict:
-    #         logger.info("Removing DYVBF from the group_dict!")
-    #         del group_dict["DYVBF"]
-    #     else:
-    #         logger.warning("DYVBF is not in the group_dict, nothing to remove!")
+    else:
+        if "DYVBF" in group_dict:
+            logger.info("Removing DYVBF from the group_dict because --vbf_filter_study was not passed.")
+            del group_dict["DYVBF"]
 
     # If the args.regions is empty, exit the program
     if len(args.regions) == 0:
@@ -409,6 +414,9 @@ if __name__ == "__main__":
     if len(background_samples) > 0:
         for bkg_sample in background_samples:
             bkg_sample_upper = bkg_sample.upper()
+            if bkg_sample_upper == "DYVBF" and not args.do_vbf_filter_study:
+                logger.info("Skipping DYVBF because --vbf_filter_study was not passed.")
+                continue
             if bkg_sample_upper in group_dict:
                 available_processes.extend(group_dict[bkg_sample_upper])
             else:
@@ -681,6 +689,7 @@ if __name__ == "__main__":
                     args.do_vbf_filter_study,
                     jj_eta_region=args.jj_eta_region,
                     njets_selection=str(args.njets),
+                    year=args.year,
                 )
 
                 #  FOR DEBUG PURPOSES
@@ -705,7 +714,7 @@ if __name__ == "__main__":
                     # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
                     # # temporary over write
                     # # logger.info(f"events.fields: {events.fields}")
-                    
+
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
                     # weights = np.nan_to_num(weights, nan=0.0)
@@ -858,6 +867,8 @@ if __name__ == "__main__":
             if args.use_dnn_zpt_weights:
                 logger.warning("Using DNN-based zpt weights for the events!")
                 zpt_postfix = "dnn_zpt_weights"
+            if args.do_vbf_filter_study:
+                zpt_postfix += "_vbf_filter_study"
             if args.jj_eta_region != "all":
                 zpt_postfix += f"_{args.jj_eta_region}"
 

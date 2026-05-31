@@ -346,7 +346,7 @@ rule plots:
         ),
         save_path=lambda wc: (
             f"{plot_base_for_year(wc.year)}/"
-            f"{label_for_year(wc.year)}/VBFfilter_False/"
+            f"{label_for_year(wc.year)}/"
         ),
         # map wildcards -> CLI flags
         zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",
