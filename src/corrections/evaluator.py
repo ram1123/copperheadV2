@@ -975,16 +975,10 @@ def add_pdf_variations(events, config, dataset):
 
 # QGL SF-------------------------------------------------------------------------
 
-def qgl_weights_V2(jets, config, isHerwig, dnn_year):
+def qgl_weights_V2(jets, config, isHerwig, year):
     """
     source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/QuarkGluonLikelihood#Recommendation_for_13_TeV_data_a
     """
-    if isinstance(dnn_year, str):
-        year_prefix = dnn_year[:4]
-        if not year_prefix.isdigit():
-            raise ValueError(f"Unsupported year format for QGL weights: {dnn_year}")
-        dnn_year = float(year_prefix)
-
     # print(f"qgl jets: {jets.compute()}")
     # fname = config["jmar_sf_file"]
     # jmar_evaluator = get_corrset(fname)
@@ -1015,7 +1009,7 @@ def qgl_weights_V2(jets, config, isHerwig, dnn_year):
 
     # --- choose score and weight mask depending on year ---
     score_field = "qgl"
-    if dnn_year < 2022.0:  # Run 2: use QGL
+    if is_run2(year):  # Run 2: use QGL
         wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)
         score_field = "qgl"
     else:  # Run 3: use PNet QvG
