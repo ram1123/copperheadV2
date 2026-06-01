@@ -10,7 +10,6 @@ import time
 import uuid
 
 import awkward as ak
-import dask_awkward as dak
 
 import coffea
 import dask
@@ -506,9 +505,10 @@ if __name__ == "__main__":
                         logger.debug(f"events.fields: {events.fields}")
                         # if coffea version < 2025.3.0 then use the line below
                         if coffea.__version__ == "2024.11.0":
-                            preprocess_metadata["data_entries"] = int(dak.num(events, axis=0).compute())
+                            preprocess_metadata["data_entries"] = int(ak.num(events, axis=0).compute())  # convert into 32bit precision as 64 bit precision isn't json serializable
                         elif coffea.__version__ == "2025.3.0":
                             # For coffea version 2025.3.0, count the entries directly from ROOT files
+                            # FIXME: Remove for loop as it will be very slow.
                             n_events_total = 0
                             for fname_normalized in file_input.keys():
                                 with uproot.open(f"{fname_normalized}:Events") as tree:

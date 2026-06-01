@@ -38,6 +38,13 @@ np.set_printoptions(threshold=sys.maxsize)
 
 ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
 
+DATASET_ELEMENT_LIMITS = {
+    "data_": 900,  # None means no limit (use uproot's default behavior)
+    "dy": 500,
+    "ttjets_dl": 500,
+    "ttjets_sl": 500,
+}
+
 
 @contextmanager
 def optional_performance_report(filename="dask-report.html"):
@@ -128,16 +135,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     logger.debug(f"test: {test}")
     logger.debug(f"Output path: {save_path}")
 
-    # dict to hold the max_num_elements info per sample
-    dict_max_num_elements = {
-        "data_": 900,  # None means no limit (use uproot's default behavior)
-        "dy": 500,
-        "ttjets_dl": 500,
-        "ttjets_sl": 500,
-    }
     max_num_elements = 500 # default
-    if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
-        max_num_elements = dict_max_num_elements[[key for key in dict_max_num_elements.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
+    if any(key in dataset_dict["metadata"]["dataset"] for key in DATASET_ELEMENT_LIMITS.keys()):
+        max_num_elements = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
         logger.debug(f"Setting max_num_elements for {dataset_dict['metadata']['dataset']} to {max_num_elements}")
     else:
         max_num_elements = 500
@@ -392,15 +392,8 @@ if __name__ == "__main__":
                     continue
 
                 sample_step = time.time()
-                # dict to hold file lenght info per sample
-                dict_file_length = {
-                    "data_": 900,
-                    "dy": 500,
-                    "ttjets_dl": 500,
-                    "ttjets_sl": 500,
-                }
-                if any(key in dataset for key in dict_file_length.keys()):
-                    args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
+                if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
+                    args.max_file_len = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset][0]]
                     logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
                 else:
                     args.max_file_len = 500
