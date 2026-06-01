@@ -17,9 +17,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-years = args.years
-if (not years or years == ["2018"]) and args.year != "2018":
-    years = [args.year]
+years = args.years if args.years else [args.year]
 
 year = years[0]
 if "2016" in year:
