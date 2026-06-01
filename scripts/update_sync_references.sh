@@ -11,17 +11,39 @@ set -euo pipefail
 
 # Example:
 #     bash scripts/update_sync_references.sh "2017,2022preEE"
+#     bash scripts/update_sync_references.sh "2017,2022preEE" --use-reference-switches
 # """
 
 
 years_csv="${1:-2017,2022preEE}"
+switch_mode="${2:-}"
 dataset_yaml="configs/datasets/sync_dataset_nanoAODv12.yaml"
 nanoaodv="12"
 label="label_output"
 output_root="test/output"
 reference_dir="test/reference"
+switches_file="configs/parameters/switches.yaml"
+switches_backup=""
+reference_switches_file="test/reference/switches.yaml"
 
 IFS=',' read -r -a years <<< "$years_csv"
+
+restore_switches() {
+    if [[ -n "$switches_backup" && -f "$switches_backup" ]]; then
+        mv "$switches_backup" "$switches_file"
+    fi
+}
+
+if [[ "$switch_mode" == "--use-reference-switches" ]]; then
+    switches_backup="$(mktemp "${TMPDIR:-/tmp}/switches.yaml.XXXXXX")"
+    cp "$switches_file" "$switches_backup"
+    trap restore_switches EXIT
+    cp "$reference_switches_file" "$switches_file"
+    echo "Using ${reference_switches_file} for this sync refresh run."
+elif [[ -n "$switch_mode" ]]; then
+    echo "Unsupported option: ${switch_mode}" >&2
+    exit 1
+fi
 
 rm -rf "${output_root:?}/${label}"
 mkdir -p "$reference_dir"

@@ -1484,21 +1484,8 @@ class EventProcessor(processor.ProcessorABC):
         # # Apply genweights, PU weights
         # # and L1 prefiring weights
         # # ------------------------------------------------------------#
-        save_all_weight_vars = self.config["switches"].get("save_all_weight_vars", False)
+        save_all_weight_variations = self.config["switches"].get("save_all_weight_variations", False)
         do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
-        do_save_partial_weights_github_ci = self.config["switches"].get(
-            "do_save_partial_weights_github_ci", False
-        )
-        running_in_github_ci = os.environ.get("GITHUB_ACTIONS", "").lower() in {
-            "1",
-            "true",
-            "yes",
-        }
-        do_save_partial_weights = do_save_partial_weights or (
-            do_save_partial_weights_github_ci and running_in_github_ci
-        )
-        if do_save_partial_weights_github_ci and running_in_github_ci:
-            logger.info("Enabling partial-weight saving from do_save_partial_weights_github_ci under GitHub CI.")
         weights = Weights(None, storeIndividual=do_save_partial_weights) # none for dask awkward
         # weights = Weights(len(events))
         if is_mc:
@@ -2343,7 +2330,7 @@ class EventProcessor(processor.ProcessorABC):
         # add in weights
         weight_dict = {"wgt_nominal": weights.weight()}
 
-        if save_all_weight_vars:
+        if save_all_weight_variations:
             for variation in weights.variations:
                 variation_name = "wgt_" + variation.replace("Up", "_up").replace("Down", "_down") # match the naming scheme of copperhead
                 weight_dict[variation_name] = weights.weight(variation)
