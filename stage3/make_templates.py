@@ -36,12 +36,12 @@ shape_only = [
     "wgt_LHERen_down",
     "wgt_LHEFac_up",
     "wgt_LHEFac_down",
-    "wgt_qgl_wgt_up",
-    "wgt_qgl_wgt_down",
+    "wgt_qgl_up",
+    "wgt_qgl_down",
     "wgt_pdf_2rms_up",
     "wgt_pdf_2rms_down",
-    "wgt_zpt_wgt_up",
-    "wgt_zpt_wgt_down",
+    "wgt_zpt_up",
+    "wgt_zpt_down",
 ]
 
 def load_stage2_output_hists(argset, parameters, dataset):
