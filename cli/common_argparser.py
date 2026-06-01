@@ -7,6 +7,8 @@ import argparse
 import logging
 from pathlib import Path
 
+from modules.classify_year import is_run2, is_run3
+
 
 def build_common_parser() -> argparse.ArgumentParser:
     """Build and return the common ArgumentParser used by copperhead scripts."""
@@ -173,7 +175,7 @@ def resolve_dataset_yaml_file(dataset_yaml_file: str, year: str, NanoAODv: int) 
     if candidate.exists():
         return str(candidate)
 
-    run_period = "run3" if str(year).startswith("202") else "run2"
+    run_period = "run3" if is_run3(year) else "run2"
 
     fallback = Path(f"configs/datasets/dataset_nanoAODv{NanoAODv}_{run_period}.yaml")
     if fallback.exists():
