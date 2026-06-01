@@ -97,9 +97,7 @@ def fill_hist_from_parquets(th1, parquet_paths):
         masses = df["dimuon_mass"].to_numpy()
         weights = df["wgt_nominal"].fillna(0.0).to_numpy()
         for m, w in zip(masses, weights):
-        # for m in masses:
             th1.Fill(float(m), float(w))
-            # th1.Fill(float(m))
 
 
 def main():
