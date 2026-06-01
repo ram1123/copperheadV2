@@ -399,16 +399,6 @@ def _add_block(out, block):
     return out
 
 
-def _pack_selected(arr, mask):
-    """Apply a boolean event mask once and repack the resulting layout."""
-    return ak.to_packed(arr[mask])
-
-
-def _select_only(arr, mask):
-    """Apply a boolean event mask without repacking lazy event records."""
-    return arr[mask]
-
-
 def pick_vbf_pairs(jets):
     """
     Returns a dict of jet1/jet2 for different pairing criteria.
@@ -1228,19 +1218,13 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("h_sidebands_106_115_135_150", h_sidebands2)
         # ------------------- Cutflow dimuon mass window: END -----------------------
 
-        selected_events_mask = event_filter
-        # Do not repack the full NanoEvents record here: that can force unrelated
-        # lazy buffers to materialize and crash on Dask-backed
-        # placeholder arrays. A plain event slice still trims the graph without
-        # touching excluded branches.
-        events = _select_only(events, selected_events_mask)
-        muons = _pack_selected(muons, selected_events_mask)
-        nmuons = _pack_selected(nmuons, selected_events_mask)
+        events = events[event_filter == True]
+        muons = muons[event_filter == True]
+        nmuons = ak.to_packed(nmuons[event_filter == True])
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
-                pu_wgts[variation] = _pack_selected(pu_wgts[variation], selected_events_mask)
-        # pass_leading_pt = ak.to_packed(pass_leading_pt[event_filter==True])
+                pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter == True])
 
         t9 = time.perf_counter()
         logger.info(f"[timing] GEN weight and PU time: {t9 - t8:.2f} seconds")
@@ -1514,7 +1498,7 @@ class EventProcessor(processor.ProcessorABC):
             do_save_partial_weights_github_ci and running_in_github_ci
         )
         if do_save_partial_weights_github_ci and running_in_github_ci:
-            logger.info("Enabling partial-weight saving from do_save_partial_weights_github_ci under GitHub CI.")        
+            logger.info("Enabling partial-weight saving from do_save_partial_weights_github_ci under GitHub CI.")
         weights = Weights(None, storeIndividual=do_save_partial_weights) # none for dask awkward
         # weights = Weights(len(events))
         if is_mc:
@@ -1549,7 +1533,7 @@ class EventProcessor(processor.ProcessorABC):
 
             if do_pu_wgt:
                 logger.debug("adding PU wgts!")
-                weights.add("pu_wgt", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
+                weights.add("pu", weight=pu_wgts["nom"],weightUp=pu_wgts["up"],weightDown=pu_wgts["down"])
                 # logger.info(f"pu_wgts['nom']: {ak.to_numpy(pu_wgts['nom'].compute())}")
             # L1 prefiring weights
             if self.config["switches"]["do_l1prefiring_wgts"] and ("L1PreFiringWeight" in events.fields):
@@ -2175,8 +2159,8 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         if (self.config["switches"]["do_HemVeto"] and self.config["switches"]["do_HemVetoStudy"]):
             logger.info("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
-            HemVeto_filter = _pack_selected(HemVeto_filter, selected_events_mask) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
-            is_HemRegion = _pack_selected(is_HemRegion, selected_events_mask) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
+            HemVeto_filter = ak.to_packed(HemVeto_filter[event_filter==True])   # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
+            is_HemRegion = ak.to_packed(is_HemRegion[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
 
             _add_block(out_dict, {
                 "HemVeto_filter" : HemVeto_filter,
@@ -2328,20 +2312,17 @@ class EventProcessor(processor.ProcessorABC):
                 "zpt_njets_reco": njets_reco,
                 "zpt_njets_gen": njets_gen,
             })
-            if not do_save_partial_weights:
-                _add_block(out_dict, {
-                    "separate_wgt_zpt_wgt": zpt_wgt_reco,
-                })
+
             # apply reco zpt weight to event weight
             if save_zpt_variations:
                 weights.add(
-                    "zpt_wgt",
+                    "zpt",
                     weight=zpt_wgt_reco,
                     weightUp=zpt_wgt_reco_up,
                     weightDown=zpt_wgt_reco_down,
                 )
             else:
-                weights.add("zpt_wgt", weight=zpt_wgt_reco)
+                weights.add("zpt", weight=zpt_wgt_reco)
 
         t19 = time.perf_counter()
         logger.info(f"[timing] Zpt weights time: {t19 - t18:.2f} seconds")
@@ -2375,6 +2356,11 @@ class EventProcessor(processor.ProcessorABC):
             for weight_type in list(weights.weightStatistics.keys()):
                 wgt_name = "separate_wgt_" + weight_type
                 weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
+        else:
+            if "zpt_wgt_reco" in locals():
+                _add_block(out_dict, {
+                    "separate_wgt_zpt_wgt": zpt_wgt_reco,
+                })
 
         t21 = time.perf_counter()
         logger.info(f"[timing] Weights partials time: {t21 - t20:.2f} seconds")
@@ -2606,6 +2592,21 @@ class EventProcessor(processor.ProcessorABC):
         clean = ~matched_mu_pass
         clean = ak.fill_none(clean, value=True)
 
+        # INFO: Below patch is basically applying the eta selection and returns new jet
+        #       collection. As all other selections are already applied for the jets selection.
+        #       I keep the functionality to add other selection so that in near future
+        #       if ttH analysis changes anything that we can change accordingly.
+        """
+        Jet collection: AK4CHS (Run-2) or AK4PUPPI (Run-3)
+        Jet pT> 20 GeV
+        Jet |η|< 2.4 (before and including 2016) and |η|< 2.5 for 2017 onward
+        Tight jet ID
+        Loose PUID for jets with pT< 50 GeV (for CHS jets only), as recommended by JetMet
+        Reference: https://btv-wiki.docs.cern.ch/ScaleFactors/#important-notes
+        """
+        btag_selection = btag_jet_selection(jets, self.config, year, clean=clean)
+        btag_jets = ak.to_packed(jets[btag_selection])
+
         # Select particular JEC variation
         if is_mc and (variation != "nominal"):
             fields2add = [
@@ -2793,22 +2794,14 @@ class EventProcessor(processor.ProcessorABC):
             pysr_dict, pysr_region = build_pysr_pu_masks(jets, self.pysr_configs)
             jets = jets[pysr_dict["jet_pysr_pu_pass"]]
 
-        # INFO: Below patch is basically applying the eta selection and returns new jet
-        #       collection. As all other selections are already applied for the jets selection.
-        #       I keep the functionality to add other selection so that in near future
-        #       if ttH analysis changes anything that we can change accordingly.
-        btag_selection = btag_jet_selection(jets, self.config, year)
-        btag_jets = ak.to_packed(jets[btag_selection])
-
         jets = ak.to_packed(jets)
 
         # apply jetpuid if not have done already
         if is_mc and (variation=="nominal") and is_run2(year) and hasattr(jets, "puId"): # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
-            logger.info("Applying jet PUID scale factors and adding jetpuid_wgt!")
+            logger.info("Applying jet PUID scale factors and adding jetpuid wgt!")
             jetpuid_weight = get_jetpuid_weights_eta_dependent(year, jets, self.config) # FIXME
-            # now we add jetpuid_wgt
             # FIXME: we should get the weight for each jet and multiply them together.
-            weights.add("jetpuid_wgt",
+            weights.add("jetpuid",
                     weight=jetpuid_weight,
             )
         else:
@@ -3109,7 +3102,7 @@ class EventProcessor(processor.ProcessorABC):
             # qgl_wgts = qgl_weights_keepDim(jet1, jet2, njets, isHerwig)
             qgl_wgts = qgl_weights_V2(jets, self.config, isHerwig, year)
             # keep dims end -------------------------------------
-            weights.add("qgl_wgt",
+            weights.add("qgl",
                         weight=qgl_wgts["nom"],
                         weightUp=qgl_wgts["up"],
                         weightDown=qgl_wgts["down"]
@@ -3119,14 +3112,6 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # btag SF and apply btag veto
         # ------------------------------------------------------------#
-        """
-        Jet collection: AK4CHS (Run-2) or AK4PUPPI (Run-3)
-        Jet pT> 20 GeV
-        Jet |η|< 2.4 (before and including 2016) and |η|< 2.5 for 2017 onward
-        Tight jet ID
-        Loose PUID for jets with pT< 50 GeV (for CHS jets only), as recommended by JetMet
-        Reference: https://btv-wiki.docs.cern.ch/ScaleFactors/#important-notes
-        """
         do_btag_wgt = (
             is_mc
             and (variation == "nominal")
@@ -3167,13 +3152,13 @@ class EventProcessor(processor.ProcessorABC):
             btag_wgt, btag_syst = btag_weights_jsonKeepDim(
                         self, btag_systs, btag_jets, btag_eta_val, weights, bjet_sel_mask, btag_json
             )
-            weights.add("btag_wgt",
+            weights.add("btag",
                     weight=btag_wgt,
             )
             # --- Btag weights variations --- #
             for name, bs in btag_syst.items():
                 logger.info(f"{name} value: {bs}")
-                weights.add(f"btag_wgt_{name}",
+                weights.add(f"btag_{name}",
                     weight=ak.ones_like(btag_wgt),
                     weightUp=bs["up"],
                     weightDown=bs["down"]
