@@ -99,45 +99,6 @@ def columns_for_selection(category, variation, fields):
     return cols
 
 
-def resolve_vbf_training_layout(model_path: Path, model_tag: str, nfolds: int):
-    """
-    Support both layouts:
-    1) <model_path>/training_features.pkl + fold*/best_torchscript.pt
-    2) <model_path>/training_features.pkl + <model_path>/<model_tag>/fold*/best_torchscript.pt
-    3) <model_path>/<model_tag>/training_features.pkl + fold*/best_torchscript.pt
-    """
-    logger.debug(f"Model path: {model_path}")
-    feature_roots = []
-    for candidate in [model_path, model_path / model_tag]:
-        if candidate not in feature_roots:
-            feature_roots.append(candidate)
-
-    model_roots = []
-    for candidate in [model_path / model_tag, model_path]:
-        if candidate not in model_roots:
-            model_roots.append(candidate)
-
-    missing_reports = []
-    for feature_root in feature_roots:
-        tf_path = feature_root / "training_features.pkl"
-        scaler_paths = [feature_root / f"scalers_{fold}.npz" for fold in range(nfolds)]
-        if not tf_path.is_file() or not all(p.is_file() for p in scaler_paths):
-            continue
-
-        for model_root in model_roots:
-            model_paths = [
-                model_root / f"fold{fold}" / "best_torchscript.pt"
-                for fold in range(nfolds)
-            ]
-            if all(p.is_file() for p in model_paths):
-                return feature_root, model_root
-            missing_reports.extend([f"missing model: {p}" for p in model_paths if not p.is_file()])
-
-        missing_reports.extend([f"missing training feature/scaler artifact under: {feature_root}"])
-
-    details = "\n".join(missing_reports) if missing_reports else "No matching training layout found."
-    raise FileNotFoundError(details)
-
 class DNNWrapper(torch_wrapper):
     def _create_model(self):
         logger.debug(f"Loading model from {self.torch_jit}")
@@ -405,9 +366,20 @@ if __name__ == "__main__":
         logger.info(f"Discovered JES/JER variations: {jes_systs}")
 
         model_trained_path = Path(args.model_path).resolve()
-        feature_dir, training_dir = resolve_vbf_training_layout(
-            model_trained_path, args.model_tag, nfolds
-        )
+        training_dir = (model_trained_path / args.model_tag).resolve()
+        feature_dir = Path(model_trained_path).resolve()
+
+        missing = []
+        for fold in range(nfolds):
+            p = training_dir / f"fold{fold}" / "best_torchscript.pt"
+            s = model_trained_path / f"scalers_{fold}.npz"
+            if not p.is_file():
+                missing.append(f"missing model: {p}")
+            if not s.is_file():
+                missing.append(f"missing scaler: {s}")
+
+        if missing:
+            raise FileNotFoundError("\n".join(missing))
 
         # Load training features once per sample_type
         with open(feature_dir / "training_features.pkl", "rb") as f:
@@ -571,11 +543,6 @@ if __name__ == "__main__":
             if region == "h-sidebands":
                 try:
                     events["dimuon_mass"] = 125.0 * ak.ones_like(events.dimuon_mass)
-                    shifted_mass_field = feature_sources.get("dimuon_mass")
-                    if shifted_mass_field and shifted_mass_field in events.fields:
-                        events[shifted_mass_field] = 125.0 * ak.ones_like(
-                            events[shifted_mass_field]
-                        )
                     logger.debug("[sidebands] Forced dimuon_mass=125.0 for DNN inputs")
                 except Exception as _e:
                     logger.warning(f"[sidebands] Failed to fix dimuon_mass to 125.0: {_e}")
@@ -640,11 +607,8 @@ if __name__ == "__main__":
 
                 dnn_logit = ak.where(eval_filter, dnn_score_fold, dnn_logit)
 
-            valid_mask = dnn_logit != nan_val
             dnn_score = sigmoid_ak(dnn_logit)
-            dnn_score = ak.where(valid_mask, dnn_score, nan_val)
             dnn_score = np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
-            dnn_score = ak.where(valid_mask, dnn_score, nan_val)
 
             # ---------------------------------------------------
             # Now onto converting DNN score as histograms
