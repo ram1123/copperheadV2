@@ -121,7 +121,7 @@ bash stage1_loop_Improved.sh -m 9 -y Run3 -l label_for_ntuple
 2. The sync txt schema is defined by `SYNCVARLIST` in
    [scripts/sync_parquet_dimuon.py](../scripts/sync_parquet_dimuon.py). Along with kinematics, it
    includes `wgt_nominal` and selected partial-weight branches such as
-   `separate_wgt_btag_wgt`, which is useful when a nominal-weight mismatch comes from the b-tag
+   `separate_wgt_btag`, which is useful when a nominal-weight mismatch comes from the b-tag
    scale factor.
 
 3. To regenerate the sync reference txt files used by GitHub Actions, run:
