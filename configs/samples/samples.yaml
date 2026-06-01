@@ -5,15 +5,18 @@ background:
         DY:
             processes:
                 - dyTo2L_M-50_incl
+                - dy_vbf_filter
                 # - dyTo2Mu_MLL_10To50
                 # - dyTo2Mu_MLL_50To120
                 # - dyTo2Mu_MLL_120To200
             processes_per_year:
                 2024:
                     - dyTo2Mu_M-50_aMCatNLO
+                    - dy_vbf_filter
                 2017: 
                     - dy_M-50_MiNNLO
                     - dy_M-100To200_MiNNLO
+                    - dy_vbf_filter
 
         TT:
             processes:

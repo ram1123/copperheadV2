@@ -106,6 +106,7 @@ def resolve_vbf_training_layout(model_path: Path, model_tag: str, nfolds: int):
     2) <model_path>/training_features.pkl + <model_path>/<model_tag>/fold*/best_torchscript.pt
     3) <model_path>/<model_tag>/training_features.pkl + fold*/best_torchscript.pt
     """
+    logger.debug(f"Model path: {model_path}")
     feature_roots = []
     for candidate in [model_path, model_path / model_tag]:
         if candidate not in feature_roots:
@@ -226,7 +227,7 @@ def getFoldFilter(events, fold_vals, nfolds):
     return fold_filter
 
 
-def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samples=[], bkg_samples=[]):
+def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samples=[], bkg_samples=[], do_vbf_filter_study=False):
     """
     sig samples: VBF, GGH
     bkg smaples: DY, TT, ST, VV, EWK
@@ -280,6 +281,12 @@ def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samp
     logger.info(f"bkg_sample_l: {bkg_sample_l}")
 
     for sample in bkg_sample_l:
+        if "dy_vbf_filter" in sample.lower() and not do_vbf_filter_study:
+            logger.info(
+                "Skipping sample %s because --vbf_filter_study was not passed.",
+                sample,
+            )
+            continue
         sample_filelist = glob.glob(str(stage1_path / sample / "*" / "*.parquet"))
         logger.info(f"sample: {sample}, number of files: {len(sample_filelist)}")
         logger.debug(f"sample_filelist: {sample_filelist}")
@@ -354,6 +361,8 @@ if __name__ == "__main__":
         raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
 
     histDirName = f"score_{args.label}" if args.save_postfix == "" else f"score_{args.label}_{args.save_postfix}"
+    if args.do_vbf_filter_study:
+        histDirName = f"{histDirName}_vbf_filter_study"
     if args.no_variations:
         histDirName = f"{histDirName}_NoSyst"
 
@@ -361,7 +370,7 @@ if __name__ == "__main__":
     os.makedirs(hist_save_path, exist_ok=True)
     logger.info(f"Histograms will be saved to: {hist_save_path}")
 
-    full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
+    full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
 
     logger.debug(f"full_sample_dict: {full_sample_dict}")
     logger.info(f"full_sample_dict: {full_sample_dict.keys()}")
@@ -552,8 +561,9 @@ if __name__ == "__main__":
                 process=sample_type,
                 category=category,
                 region_name=region,
-                do_vbf_filter_study=False,
+                do_vbf_filter_study=args.do_vbf_filter_study,
                 variation=variation,
+                year=args.year,
             )
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
             # As DNN is trained in the h-peak region, so while evaluating for the h-sideband region
