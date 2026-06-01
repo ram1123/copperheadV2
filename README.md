@@ -66,7 +66,7 @@ This script reruns the sync stage-1 samples, rebuilds the `*_eventKinematics.txt
 files into `test/reference`.
 
 The sync txt output includes the nominal event weight plus selected partial-weight branches such as
-`separate_wgt_btag_wgt`. If you add or reorder sync variables in
+`separate_wgt_btag`. If you add or reorder sync variables in
 [scripts/sync_parquet_dimuon.py](scripts/sync_parquet_dimuon.py), regenerate the reference txt
 files so CI compares the updated schema.
 
