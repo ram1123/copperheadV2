@@ -10,9 +10,9 @@ cd copperheadV2
 git checkout main
 # If already cloned the repo, then to update the submodules run:
 git submodule update --remote --merge
-./enter_pixi.sh 
-# or 
-./enter_pixi.sh -e combine
+./enter_pixi.sh
+# or
+./enter_pixi.sh combine
 ```
 
 ## Run the code
