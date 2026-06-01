@@ -14,7 +14,7 @@ trials:
         years: 2022preEE, 2022postEE, 2023, 2023BPix, 2024
         gitSHA: 707c069c0e59c509c4e702cca11941c619dd401c
 
-    Run3_JetIDFix_pySR:
+    Run3_JetIDFix_pySR_Apr03:
         base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
         stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr03_tightPassLepVeto_NoJER_JetIDFix/stage1_output/"
         comment: Rerun 2022postEE after JetID fix, using score based on pySR
