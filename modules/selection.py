@@ -1,6 +1,7 @@
 import numpy as np
 import awkward as ak
 import pandas as pd
+from modules.classify_year import is_run3
 
 
 def filterRegion(events, region="h-peak"):
@@ -44,6 +45,7 @@ def applyRegionCatCuts(
     do_VH_veto: bool = False,
     jj_eta_region: str = "all",
     njets_selection: str = "inclusive",  # available options ["inclusive", "0", "1", "2"],
+    year: str | None = None,
 ):
     use_var = (
         "nominal"
@@ -137,11 +139,11 @@ def applyRegionCatCuts(
             )
 
     if do_vbf_filter_study:
-        if "dy_" in process:
-            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-            is_vbf_filter = ("dy_VBF_filter" in process) or (
-                process == "dy_m105_160_vbf_amc"
-            )
+        process_lower = process.lower()
+        if process_lower.startswith("dy"):
+            gjj_threshold = 300 if (year is not None and is_run3(year)) else 350
+            vbf_filter = ak.fill_none((events.gjj_mass > gjj_threshold), value=False)
+            is_vbf_filter = "dy_vbf_filter" in process_lower
             if is_vbf_filter:
                 # print(f"applying VBF filter cut on: {process}")
 
