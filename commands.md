@@ -6,8 +6,12 @@
 
 ```bash
 time bash run_analysis_pipeline.sh -y 2022preEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml -m all
-time bash run_stats_pipeline.sh -y 2022preEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml -m 8
+time bash run_stats_pipeline_VBF.sh -y 2022preEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml -m 8
+
+time bash run_stats_pipeline_VBF.sh -l Run3_nanoAODv12_FilterJets_May14_PySR07MayV2 -y 2022postEE -k -v 12 -c configs/datasets/dataset_nanoAODv12_run3.yaml -m 10
 ```
+
+
 
 # 14 March 2026
 
