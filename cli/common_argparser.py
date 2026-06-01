@@ -155,6 +155,13 @@ def build_common_parser() -> argparse.ArgumentParser:
         action="store",
         help="For zpt reweighting, choose the type of DY samples to use",
     )
+    parser.add_argument(
+        "--vbf_filter_study",
+        dest="do_vbf_filter_study",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="Enable the DY vs DY-VBF-filter study selection.",
+    )    
     return parser
 
 

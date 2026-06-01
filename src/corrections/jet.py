@@ -365,16 +365,45 @@ def jet_id(jets, config, year=None, jet_id_key="jet_id"):
     return pass_jet_id
 
 
-def btag_jet_selection(jets, config, year):
+def btag_jet_selection(jets, config, year, clean=None):
+    """Select jets passing b-tagging requirements with pt, eta, ID, and cleaning cuts.
+
+    Parameters:
+    ----------
+    jets : awkward.Array
+        Input jet collection with candidate behavior
+    config : dict
+        Configuration dictionary containing the selection criteria
+    year : str
+        Data taking year (determines eta cuts and jet ID criteria from config file)
+    clean : awkward.Array of bool, optional
+        Boolean mask to clean jets from selected muons
+
+    Returns:
+    -------
+    awkward.Array of bool
+        Boolean mask where True indicates jets passing all selection criteria
+
+    Notes:
+    -----
+    - Run 3 uses |eta| < 2.5 for b-tagging
+    - Run 2 uses |eta| < 2.4 for 2016 and |eta| < 2.5 for 2017/2018
+    - The cleaning mask is applied last in the selection chain
+    """
     if year is None:
         raise ValueError("Year must be specified for b-tag jet selection.")
     btag_pt_cut = jets.pt > config["btag_jet_pt_cut"]
+    btag_id_cut = jet_id(jets, config, year=year, jet_id_key="btag_jet_id")
+    if clean is None:
+        clean = ak.ones_like(jets.pt, dtype=bool)    
     if is_run3(year):
         btag_eta_cut = abs(jets.eta) < 2.5
     elif is_run2(year):
         btag_eta_cut = abs(jets.eta) < (2.4 if str(year).startswith("2016") else 2.5)
+    else:
+        raise ValueError(f"The year: {year} is not supported. Please use the appropriated year from Run2 or Run3")
 
-    return btag_pt_cut & btag_eta_cut
+    return btag_pt_cut & btag_eta_cut & btag_id_cut & clean
 
 
 def get_puId(jets):
@@ -1025,10 +1054,41 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"], nanoAOD_v
 
 
 def get_jet_variation(jets_orig, variation, fields2add):
+    """Generate a new jet collection with applied JEC/JER variation.
+
+    This function creates a modified jet candidate array by applying the specified
+    variation (e.g., JEC/JER up/down) to the original jets. The variation is applied
+    to the transverse momentum (pt) and mass (if applicable), while preserving the
+    original phi and eta. Additional fields from the original jets can be carried over.
+
+    Parameters:
+    ----------
+    jets_orig : awkward.Array
+        Original jet collection with candidate behavior (PtEtaPhiMCandidate)
+    variation : str
+        Name of the variation to apply (e.g., 'jec_unc1_up', 'jer1_up')
+    fields2add : list of str
+        List of additional fields to copy from original jets to the new collection
+
+    Returns:
+    -------
+    awkward.Array
+        New jet collection with candidate behavior, containing:
+        - Modified pt and mass (depending on variation type)
+        - Original phi and eta
+        - All fields from fields2add
+
+    Notes:
+    -----
+    - For 'jer' variations, mass is not modified and taken from original jets
+    - For non-JER variations (e.g., JEC), mass is modified according to the variation
+    - Uses PtEtaPhiMCandidate behavior for proper physics vector handling
+    - Fields like 'puId' are handled with special fallback logic if missing
+    """
+
     logger.debug(f"get_jet_variation variation: {variation}")
     new_jets_pt = jets_orig[f"pt_{variation}"]
     logger.debug(f"{variation} jets_orig.fields: {jets_orig.fields}")
-    # logger.debug(f"{variation} new_jets_pt: {new_jets_pt.compute()}")
     if "jer" in variation:
         new_jets_mass = jets_orig.mass
     else: # jec unc impacts mass, but jer uncs do not
