@@ -144,8 +144,8 @@ years:
                 skip_sample: True
                 datasets:
                     - /DYto2Mu-2Jets_Bin-0J-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
-                cross_section_pb: fixme
-                cross_section_source: SMP-25-013,AN2023_179_v6
+                cross_section_pb: 5387
+                cross_section_source: "using gen script"
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -157,8 +157,8 @@ years:
                 skip_sample: True
                 datasets:
                     - /DYto2Mu-2Jets_Bin-1J-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v1/NANOAODSIM
-                cross_section_pb: fixme
-                cross_section_source: SMP-25-013,AN2023_179_v6
+                cross_section_pb: 978.8
+                cross_section_source: "using gen script"
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -170,8 +170,8 @@ years:
                 skip_sample: True
                 datasets:
                     - /DYto2Mu-2Jets_Bin-2J-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
-                cross_section_pb: fixme
-                cross_section_source: SMP-25-013,AN2023_179_v6
+                cross_section_pb: 378.9
+                cross_section_source: "using gen script"
                 kfactor:
                     value: 1.0
                     source: NONE
