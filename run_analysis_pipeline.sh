@@ -3,8 +3,7 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: common_workflow.sh [options]
-
+Usage: run_analysis_pipeline.sh [options]
 Modes:
   0|prestage
   1|stage1
