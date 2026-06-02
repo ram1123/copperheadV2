@@ -5,18 +5,20 @@ background:
         DY:
             processes:
                 - dyTo2L_M-50_incl
-                - dy_VBF_filter
                 # - dyTo2Mu_MLL_10To50
                 # - dyTo2Mu_MLL_50To120
                 # - dyTo2Mu_MLL_120To200
             processes_per_year:
                 2024:
                     - dyTo2Mu_M-50_aMCatNLO
-                    - dy_VBF_filter
-                2017: 
+                2017:
                     - dy_M-50_MiNNLO
                     - dy_M-100To200_MiNNLO
-                    - dy_VBF_filter
+
+        DYVBF:
+            processes:
+                - dy_VBF_filter
+            processes_per_year: {}
 
         TT:
             processes:
@@ -61,9 +63,8 @@ background:
                 - wz_3lnu
                 - wz_2l2q
                 - wz_1l1nu2q
-                - zz_2l2u  
-                - zz_2l2nu  
-                - zz_2l2q  
+                - zz_2l2nu
+                - zz_2l2q
                 - zz_4l
                 # - zz
             processes_per_year:
@@ -80,11 +81,11 @@ background:
                 - wwz
                 - wzz
                 - zzz
-            processes_per_year: 
+            processes_per_year:
                 2022preEE: {}
                 2022postEE: {}
                 2023: {}
-                2023BPix: {}            
+                2023BPix: {}
 
 # --------------------------------------------------
 

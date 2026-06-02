@@ -239,6 +239,15 @@ def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samp
         bkg_sample = bkg_sample.upper()
         if bkg_sample in bkg_sample_dict.keys():
             bkg_sample_l += bkg_sample_dict[bkg_sample]
+            if (
+                do_vbf_filter_study
+                and bkg_sample == "DY"
+                and "DYVBF" in bkg_sample_dict
+            ):
+                logger.info(
+                    "Adding DYVBF samples because --vbf_filter_study was passed."
+                )
+                bkg_sample_l += bkg_sample_dict["DYVBF"]
     logger.info(f"bkg_sample_l: {bkg_sample_l}")
 
     for sample in bkg_sample_l:
@@ -266,7 +275,7 @@ if __name__ == "__main__":
         "-m_tag",
         "--model_tag",
         dest="model_tag",
-        default="test",
+        required=True,
         action="store",
         help="Unique training label used to identify the model. Should match the label used in training.",
     )

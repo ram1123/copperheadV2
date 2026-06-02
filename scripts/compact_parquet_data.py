@@ -12,7 +12,6 @@ from run_stage2_vbf import (
     DNNWrapper,
     getFoldFilter,
     prepare_features,
-    resolve_vbf_training_layout,
 )
 from tqdm import tqdm
 import glob
@@ -76,6 +75,41 @@ def infer_nfolds(model_trained_path, scaler_root=None):
     return fold
 
 
+def resolve_vbf_training_layout(base_path, model_tag, nfolds=4):
+    """
+    Resolve the preprocessing/scaler directory and the trained-model directory.
+
+    Current stage-2 conventions are:
+    - training features + scalers live directly under ``base_path``
+    - fold models live under ``base_path / model_tag``
+    """
+    base_path = Path(base_path).resolve()
+    feature_dir = base_path
+    training_dir = (base_path / model_tag).resolve()
+
+    feature_ok = (feature_dir / "training_features.pkl").is_file()
+    scaler_ok = any(
+        (feature_dir / f"scalers_{fold}.npz").is_file()
+        or (feature_dir / f"scalers_{fold}.npy").is_file()
+        for fold in range(nfolds)
+    )
+    model_ok = any(
+        (training_dir / f"fold{fold}" / "best_torchscript.pt").is_file()
+        or (training_dir / f"fold{fold}" / "best_model_torchJit_ver.pt").is_file()
+        for fold in range(nfolds)
+    )
+
+    if feature_ok and scaler_ok and model_ok:
+        return feature_dir, training_dir
+
+    raise FileNotFoundError(
+        "Could not resolve VBF training layout under "
+        f"base_path={base_path}, model_tag={model_tag}. "
+        f"feature_ok={feature_ok} scaler_ok={scaler_ok} model_ok={model_ok} "
+        f"(expected training_dir={training_dir})"
+    )
+
+
 def ensure_compacted(year, sample, input_path, compacted_path):
     logger.debug(f"year: {year}")
     logger.debug(f"samples: {sample}")
@@ -97,7 +131,7 @@ def ensure_compacted(year, sample, input_path, compacted_path):
 
         if len(parquet_files) == 0:
             logger.warning(f"No parquet files found under {orig_path}. Skipping.")
-            return        
+            return
 
         inFile = dak.from_parquet(orig_path)
 
@@ -250,39 +284,16 @@ def compact_and_add_dnn_score(
     # Load the DNN model
     logger.debug(f"Loading DNN model from {model_path}")
     model_path_obj = Path(model_path).resolve()
-    layout_attempts = []
-
-    if model_tag:
-        layout_attempts.append((model_path_obj, model_tag))
-
-    if model_path_obj.name:
-        layout_attempts.append((model_path_obj.parent, model_path_obj.name))
-
-    layout_attempts.append((model_path_obj, ""))
-
-    feature_dir = None
-    training_dir = None
-    last_error = None
-    for base_path, model_tag in layout_attempts:
-        try:
-            feature_dir, training_dir = resolve_vbf_training_layout(
-                base_path, model_tag, nfolds=4
-            )
-            logger.info(
-                "Resolved DNN layout with base=%s model_tag=%s -> feature_dir=%s training_dir=%s",
-                base_path,
-                model_tag,
-                feature_dir,
-                training_dir,
-            )
-            break
-        except FileNotFoundError as exc:
-            last_error = exc
-
-    if feature_dir is None or training_dir is None:
-        raise FileNotFoundError(
-            f"Could not resolve DNN layout for model_path={model_path}. Last error: {last_error}"
-        )
+    feature_dir, training_dir = resolve_vbf_training_layout(
+        model_path_obj, model_tag, nfolds=4
+    )
+    logger.info(
+        "Resolved DNN layout with base=%s model_tag=%s -> feature_dir=%s training_dir=%s",
+        model_path_obj,
+        model_tag,
+        feature_dir,
+        training_dir,
+    )
 
     with open(feature_dir / "training_features.pkl", "rb") as f:
         training_features = pickle.load(f)
@@ -323,7 +334,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_tag",
         default="",
-        help="Optional trained-model tag under --model_path, matching stage-2 conventions.",
+        help="Trained-model tag under --model_path, matching stage-2 conventions.",
     )
     parser.add_argument(
         "--fix_dimuon_mass",
@@ -338,6 +349,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
+
+    if args.add_dnn_score:
+        if not args.model_path:
+            raise ValueError("--model_path is required when --add_dnn_score is used.")
+        if not args.model_tag:
+            raise ValueError("--model_tag is required when --add_dnn_score is used.")
 
     client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
 

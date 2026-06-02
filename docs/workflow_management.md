@@ -58,7 +58,7 @@ The aggregate convenience targets are:
   Runs the nominal stage-1 production through [run_analysis_pipeline.sh](../run_analysis_pipeline.sh) with `-m 1`.
 
 - `stage1Compact`
-  Runs the compaction step through [run_analysis_pipeline.sh](../run_analysis_pipeline.sh) with `-m compact`, then validates the compacted outputs.
+  Runs the compaction step through [run_analysis_pipeline.sh](../run_analysis_pipeline.sh) with `-m compact`, then validates the compacted outputs with [compact_sanity_check.py](../scripts/compact_sanity_check.py). See also [Compact Sanity Check](CompactSanityCheck.md).
 
 - `plots`
   Runs [validation_plotter_unified.py](../plotter/validation_plotter_unified.py) on the stage-1 outputs.

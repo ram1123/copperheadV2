@@ -265,13 +265,6 @@ if __name__ == "__main__":
     help="define production mode category. optionsare ggh, vbf and nocat (no category cut)",
     )
     parser.add_argument(
-    "--vbf_filter_study",
-    dest="do_vbf_filter_study",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, apply vbf filter cut for dy samples",
-    )
-    parser.add_argument(
     "--remove_zpt_weights",
     dest="remove_zpt_weights",
     default=False,
@@ -419,6 +412,15 @@ if __name__ == "__main__":
                 continue
             if bkg_sample_upper in group_dict:
                 available_processes.extend(group_dict[bkg_sample_upper])
+                if (
+                    args.do_vbf_filter_study
+                    and bkg_sample_upper == "DY"
+                    and "DYVBF" in group_dict
+                ):
+                    logger.info(
+                        "Adding DYVBF samples because --vbf_filter_study was passed."
+                    )
+                    available_processes.extend(group_dict["DYVBF"])
             else:
                 logger.warning(f"unknown background {bkg_sample} was given!")
 
