@@ -48,3 +48,4 @@ test*.sh
 output/
 *.log.attempt*
 .pixi/
+.DS_Store

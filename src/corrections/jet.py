@@ -1,6 +1,4 @@
-from coffea.jetmet_tools import CorrectedJetsFactory, JECStack
-# from src.corrections.custom_jec import CorrectedJetsFactory, JECStack
-from coffea.lookup_tools import extractor
+from coffea.jetmet_tools import CorrectedJetsFactory, CorrectionLibJECStack
 import numpy as np
 import awkward as ak
 import os
@@ -100,77 +98,56 @@ def get_name_map(stack):
     return name_map
 
 def get_jec_factories(jec_parameters: dict, year):
+    """Build CorrectedJetsFactory instances backed by correctionlib JSON-POG files.
+
+    Uses CorrectionLibJECStack (coffea >= 2026.4) which wraps correctionlib
+    directly — no txt-file extractor needed.  Called once per year at init time.
+
+    Returns
+    -------
+    jec_factories : dict
+        {"nominal": CorrectedJetsFactory}  (MC, includes JER)
+    jec_factories_data : dict
+        {run_letter: CorrectedJetsFactory}  (data, one per run)
+    """
     jec_pars = jec_parameters
+    jerc_path  = jec_pars["jerc_load_path"]
+    jet_algo   = jec_pars["jet_algorithm"]
+    jec_tag_mc = jec_pars["jec_tags"]
+    jer_tag_mc = jec_pars["jer_tags"]
+    unc_sources = jec_pars.get("jec_unc_to_consider", [])
 
-    weight_sets, names = jec_weight_sets(jec_pars, year)
-
-    jec_factories = {}
+    jec_factories      = {}
     jec_factories_data = {}
 
-    # Prepare evaluators for JEC, JER and their systematics
-    jetext = extractor()
-    jetext.add_weight_sets(weight_sets["jec_weight_sets_mc"])
-    jetext.add_weight_sets(weight_sets["jec_weight_sets_data"])
-    jetext.finalize()
-    jet_evaluator = jetext.make_evaluator()
+    # --- MC factory (JEC + JER + uncertainties) ---
+    stack_mc = CorrectionLibJECStack.from_file(
+        jerc_path,
+        jec_tag    = jec_tag_mc,
+        data_type  = "MC",
+        jet_type   = jet_algo,
+        jec_level  = "L1L2L3Res",
+        unc_sources = unc_sources if unc_sources else None,
+        jer_tag    = jer_tag_mc,
+    )
+    jec_factories["nominal"] = CorrectedJetsFactory(get_name_map(stack_mc), stack_mc)
 
-    stacks_def = {
-        "jec_stack": ["jec_names"],
-        "jer_stack": ["jer_names", "jersf_names"],
-        "junc_stack": ["junc_names"],
-    }
-
-    stacks = {}
-    for key, vals in stacks_def.items():
-        stacks[key] = []
-        for v in vals:
-            stacks[key].extend(names[v])
-
-    jec_input_options = {}
-    jet_variations = ["jec", "junc", "jer"]
-
-    for variation in jet_variations:
-        # jec_input_options[variation] = {
-        #     name: jet_evaluator[name] for name in stacks[f"{variation}_stack"]
-        # }
-        """
-        matches names specific for jet variation with the appropriate jet evaluator
-        """
-        # jec_input_options[opt] = {
-        #     name: jet_evaluator[name] for name in stacks[f"{opt}_stack"]
-        # }
-        jec_input_options[variation] ={}
-        for name in stacks[f"{variation}_stack"]:
-            jec_input_options[variation][name] =jet_evaluator[name]
-
-    # logger.debug(f"jec_factories jec_input_options: \n {jec_input_options}")
-    for src in names["junc_sources"]:
-        for key in jet_evaluator.keys():
-            if src in key:
-                jec_input_options["junc"][key] = jet_evaluator[key]
-
-    # Create separate factories for JEC, JER, JEC variations
-    for variation in jet_variations:
-        stack = JECStack(jec_input_options[variation])
-        # logger.debug(f"jec_factories JECStack: {stack}")
-        # logger.debug(f"jec_factories get_name_map(stack): {get_name_map(stack)}")
-        jec_factories[variation] = CorrectedJetsFactory(get_name_map(stack), stack)
-
-    # Create a separate factory for each data run
-    for run in jec_pars["runs"]:
-        jec_inputs_data = {}
-        for opt in ["jec", "junc"]:
-            jec_inputs_data.update(
-                {name: jet_evaluator[name] for name in names[f"{opt}_names_data"][run]}
-            )
-        for src in names["junc_sources_data"][run]:
-            for key in jet_evaluator.keys():
-                if src in key:
-                    jec_inputs_data[key] = jet_evaluator[key]
-
-        jec_stack_data = JECStack(jec_inputs_data)
+    # --- Data factories (one per run, no JER) ---
+    for run, data_tag_dict in jec_pars["jec_data_tags"].items():
+        # jec_data_tags maps run-letter → tag string (or dict → pick first key)
+        if isinstance(data_tag_dict, dict):
+            data_tag = next(iter(data_tag_dict))
+        else:
+            data_tag = data_tag_dict
+        stack_data = CorrectionLibJECStack.from_file(
+            jerc_path,
+            jec_tag   = data_tag,
+            data_type = "DATA",
+            jet_type  = jet_algo,
+            jec_level = "L1L2L3Res",
+        )
         jec_factories_data[run] = CorrectedJetsFactory(
-            get_name_map(jec_stack_data), jec_stack_data
+            get_name_map(stack_data), stack_data
         )
 
     return jec_factories, jec_factories_data

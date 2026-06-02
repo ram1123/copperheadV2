@@ -6,11 +6,8 @@ import coffea.processor as processor
 import correctionlib
 import numpy as np
 from coffea.analysis_tools import PackedSelection, Weights
-from coffea.btag_tools import BTagScaleFactor
-from coffea.lookup_tools import extractor
+from coffea.btag_tools import BTagScaleFactor  # kept for RERECO CSV-format btag SFs only
 from coffea.lumi_tools import LumiMask
-from coffea.nanoevents.methods import vector
-import dask_awkward as dak
 
 from modules.classify_year import is_run2, is_run3
 from modules.get_sample_info import get_sample_info
@@ -25,9 +22,7 @@ from src.corrections.evaluator import (
     add_stxs_variations,
     btag_weights_jsonKeepDim,
     get_jetpuid_weights_eta_dependent,
-    get_musf_lookup,
     lhe_weights,
-    musf_evaluator,
     nnlops_weights,
     pu_evaluator,
     qgl_weights_V2,
@@ -46,7 +41,6 @@ from src.corrections.jet import (
     do_jer_smear,
     fill_softjets_HIG19006,
     getJecDataTag,
-    get_jec_factories,
     get_jet_variation,
     get_puId,
     jet_id,
@@ -71,7 +65,7 @@ ak_array = TypeVar('ak_array')
 # ---------------------------------------------------------
 # Load all region JSON configs
 # ---------------------------------------------------------
-def load_pysr_configs(base_dir="configs/pysr_best"):
+def load_pysr_configs(base_dir="configs/pysr_versions/pysr_best"):
     configs = {}
     if not os.path.isdir(base_dir):
         logger.warning(f"PySR config directory not found: {base_dir}")
@@ -1318,8 +1312,6 @@ class EventProcessor(processor.ProcessorABC):
             # logger.debug(f"gjj.mass: {ak.sum(gjj_mass,axis=None).compute()}")
             # original end -------------------------------------------------
 
-            # gjet1_Lvec = ak.zip({"pt":gjet1.pt, "eta":gjet1.eta, "phi":gjet1.phi, "mass":gjet1.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
-            # gjet2_Lvec = ak.zip({"pt":gjet2.pt, "eta":gjet2.eta, "phi":gjet2.phi, "mass":gjet2.mass}, with_name="PtEtaPhiMLorentzVector", behavior=vector.behavior)
             # gjj = gjet1_Lvec + gjet2_Lvec
 
             gjj_dEta = abs(gjet1.eta - gjet2.eta)
@@ -1486,8 +1478,7 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         save_all_weight_variations = self.config["switches"].get("save_all_weight_variations", False)
         do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
-        weights = Weights(None, storeIndividual=do_save_partial_weights) # none for dask awkward
-        # weights = Weights(len(events))
+        weights = Weights(len(events), storeIndividual=do_save_partial_weights)
         if is_mc:
             gen_weight_ones = ak.ones_like(events.genWeight)
             if "MiNNLO" in dataset: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9

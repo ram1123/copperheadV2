@@ -8,11 +8,13 @@ import os
 import subprocess
 import sys
 import time
+import uuid
 import warnings
 from itertools import islice
 from contextlib import contextmanager, nullcontext
 
 import awkward as ak
+from coffea import processor as coffea_processor_api
 import dask
 import numpy as np
 import tqdm
@@ -37,6 +39,8 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 np.set_printoptions(threshold=sys.maxsize)
 
 ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
+DEFAULT_TRACE_ENTRIES = 5000
+PRELOAD_BRANCH_CACHE = {}
 
 DATASET_ELEMENT_LIMITS = {
     "data_": 900,  # None means no limit (use uproot's default behavior)
@@ -125,7 +129,182 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
 
-def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml"):
+
+def build_trace_fileset(files_dict, trace_entries: int):
+    """
+    Build a small fileset slice for tracing branch access.
+
+    We only need enough events to exercise the processor and discover which
+    branches are actually touched, so we keep this intentionally tiny.
+    """
+    trace_files = {}
+    entries_left = trace_entries
+
+    for fname, finfo in files_dict.items():
+        if entries_left <= 0:
+            break
+
+        if not isinstance(finfo, dict):
+            trace_files[fname] = finfo
+            break
+
+        trace_info = copy.deepcopy(finfo)
+        steps = finfo.get("steps")
+        if steps:
+            trace_steps = []
+            for step in steps:
+                start = int(step[0])
+                stop = int(step[1])
+                if stop <= start:
+                    continue
+                step_size = min(stop - start, entries_left)
+                trace_steps.append([start, start + step_size])
+                entries_left -= step_size
+                if entries_left <= 0:
+                    break
+            trace_info["steps"] = trace_steps
+        trace_files[fname] = trace_info
+
+    return trace_files
+
+
+def discover_preload_branches(
+    processor_config,
+    test_mode,
+    dataset_dict,
+    dataset_yaml_file,
+    max_num_elements,
+    trace_entries,
+):
+    """
+    Trace a small event slice and cache the accessed branch names.
+
+    Virtual NanoEvents can preload an explicit branch list. Over XRootD, that
+    avoids paying a branch-by-branch RTT penalty for the main processing pass.
+    """
+    metadata = dataset_dict["metadata"]
+    cache_key = (
+        processor_config["year"],
+        metadata["dataset"],
+        bool(metadata.get("is_mc", False)),
+        dataset_yaml_file,
+    )
+    if cache_key in PRELOAD_BRANCH_CACHE:
+        return PRELOAD_BRANCH_CACHE[cache_key]
+
+    trace_files = build_trace_fileset(dataset_dict["files"], trace_entries)
+    access_log = []
+    trace_events = NanoEventsFactory.from_root(
+        trace_files,
+        mode="virtual",
+        schemaclass=NanoAODSchema,
+        metadata=metadata,
+        access_log=access_log,
+        uproot_options={
+            "timeout": 900,
+            "num_workers": 1,
+            "max_num_elements": max_num_elements,
+        },
+    ).events()
+
+    trace_processor = EventProcessor(
+        copy.deepcopy(processor_config),
+        test_mode=test_mode,
+        isCutflow=False,
+    )
+    trace_processor.process(trace_events, dataset_yaml_file=dataset_yaml_file)
+
+    preload_branches = sorted(set(access_log))
+    PRELOAD_BRANCH_CACHE[cache_key] = preload_branches
+    logger.info(
+        "Discovered %d preload branches for %s",
+        len(preload_branches),
+        metadata["dataset"],
+    )
+    return preload_branches
+
+
+def write_cutflow_outputs(cutflow, save_path, dataset_name, file_idx):
+    """
+    Persist merged cutflow outputs after runner execution.
+    """
+    logger.info("Saving cutflow information (NPZ and JSON)")
+    os.makedirs(save_path, exist_ok=True)
+
+    base_name = f"cutflow_{dataset_name}_{file_idx}"
+    npz_path = os.path.join(save_path, f"{base_name}.npz")
+    json_path = os.path.join(save_path, f"{base_name}.json")
+
+    npz_result = cutflow.to_npz(npz_path)
+    if hasattr(npz_result, "compute"):
+        npz_result.compute()
+    logger.info(f"NPZ saved: {npz_path}")
+
+    try:
+        combined_data = {}
+        for i, name in enumerate(cutflow._names):
+            cumulative = cutflow._nevcutflow[i]
+            individual = cutflow._nevonecut[i]
+            combined_data[name] = {
+                "cumulative": cumulative.item() if hasattr(cumulative, "item") else cumulative,
+                "individual": individual.item() if hasattr(individual, "item") else individual,
+            }
+
+        with open(json_path, "w") as handle:
+            json.dump(combined_data, handle, indent=4)
+
+        logger.info(f"JSON saved to {json_path}")
+    except Exception as err:
+        logger.error(f"JSON save failed: {err}")
+
+
+class RunnerStage1Processor(EventProcessor):
+    """
+    Thin runner-friendly wrapper around the analysis processor.
+
+    Each runner chunk writes its parquet shard directly to disk and returns only
+    tiny metadata so the runner can merge results efficiently.
+    """
+    def __init__(self, config, save_path, dataset_yaml_file, test_mode=False, isCutflow=False):
+        super().__init__(config, test_mode=test_mode, isCutflow=isCutflow)
+        self.save_path = save_path
+        self.dataset_yaml_file = dataset_yaml_file
+
+    def process(self, events):
+        out_collections, processed_event_count = super().process(
+            events,
+            dataset_yaml_file=self.dataset_yaml_file,
+        )
+
+        out_collections["fraction"] = (
+            events.metadata["fraction"] * ak.ones_like(out_collections["event"])
+        )
+        skim_zip = ak.zip(out_collections, depth_limit=1)
+
+        parquet_name = f"part_{uuid.uuid4().hex}.parquet"
+        parquet_path = os.path.join(self.save_path, parquet_name)
+        ak.to_parquet(skim_zip, parquet_path)
+
+        result = {
+            "processed_event_count": int(np.asarray(processed_event_count).item()),
+            "written_files": 1,
+        }
+        if self.isCutflow:
+            result["cutflow"] = self.cutflow
+        return {events.metadata["dataset"]: result}
+
+
+def dataset_loop(
+    processor,
+    dataset_dict,
+    file_idx=0,
+    test=False,
+    save_path=None,
+    isCutflow=False,
+    dataset_yaml_file="configs/datasets/dataset.yaml",
+    runner_executor=None,
+    trace_entries=DEFAULT_TRACE_ENTRIES,
+):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
         save_path = f"/depot/cms/users/{username}/results/stage1/test/" # default
@@ -143,81 +322,81 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         max_num_elements = 500
     logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
 
-    events = NanoEventsFactory.from_root(
-        dataset_dict["files"],
-        schemaclass=NanoAODSchema,
-        metadata= dataset_dict["metadata"],
+    preload_branches = discover_preload_branches(
+        processor.config,
+        processor.test_mode,
+        dataset_dict,
+        dataset_yaml_file,
+        max_num_elements,
+        trace_entries,
+    )
+
+    if isCutflow:
+        events = NanoEventsFactory.from_root(
+            dataset_dict["files"],
+            mode="virtual",
+            preload=preload_branches,
+            schemaclass=NanoAODSchema,
+            metadata=dataset_dict["metadata"],
+            uproot_options={
+                "timeout": 900,
+                "num_workers": 1,
+                "max_num_elements": max_num_elements,
+            },
+        ).events()
+
+        out_collections, processed_event_count = processor.process(
+            events,
+            dataset_yaml_file=dataset_yaml_file,
+        )
+        write_cutflow_outputs(
+            processor.cutflow,
+            save_path,
+            dataset_dict["metadata"]["dataset"],
+            file_idx,
+        )
+        out_collections["fraction"] = (
+            dataset_dict["metadata"]["fraction"] * ak.ones_like(out_collections["event"])
+        )
+        skim_zip = ak.zip(out_collections, depth_limit=1)
+        parquet_path = os.path.join(save_path, "part0.parquet")
+        ak.to_parquet(skim_zip, parquet_path)
+        return int(np.asarray(processed_event_count).item())
+
+    fileset = {
+        dataset_dict["metadata"]["dataset"]: {
+            "files": dataset_dict["files"],
+            "metadata": dataset_dict["metadata"],
+            "preload": preload_branches,
+        }
+    }
+
+    runner_processor = RunnerStage1Processor(
+        copy.deepcopy(processor.config),
+        save_path=save_path,
+        dataset_yaml_file=dataset_yaml_file,
+        test_mode=test,
+        isCutflow=isCutflow,
+    )
+    runner = coffea_processor_api.Runner(
+        executor=runner_executor,
+        schema=NanoAODSchema,
+        format="root",
+        skipbadfiles=False,
+    )
+    runner_output = runner(
+        fileset,
+        processor_instance=runner_processor,
         uproot_options={
             "timeout": 900,
-            "num_workers": 1, # needs to be 1 for dask, solves vector_read error
+            "num_workers": 1,
             "max_num_elements": max_num_elements,
-            # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
         },
-    ).events()
+    )
 
-    processed_event_count = 0
-    out_collections, processed_event_count = processor.process(events, dataset_yaml_file=dataset_yaml_file)
-
-    # Save the cutflow
-    if hasattr(processor, "cutflow") and isCutflow:
-        logger.info("Saving cutflow information (NPZ and JSON)")
-        
-        # Ensure directory exists
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-
-        base_name = f"cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}"
-        npz_path = os.path.join(save_path, f"{base_name}.npz")
-        json_path = os.path.join(save_path, f"{base_name}.json")
-
-        # 1. Save NPZ (Efficient for reloading into Coffea/Python later)
-        # The .compute() ensures Dask finishes the task before writing
-        processor.cutflow.to_npz(npz_path).compute()
-        logger.info(f"NPZ saved: {npz_path}")
-
-        # 2. Save JSON
-        logger.debug(f"processor.cutflow.logger.info(): {processor.cutflow.print()}")
-        logger.debug(f"processor.cutflow.logger.info(): {processor.cutflow.result()}")
-        try:
-            cf_res = processor.cutflow
-            
-            # Helper to safely convert numpy values to python scalars
-            def clean(val):
-                return val.item() if hasattr(val, "item") else val
-
-            # Build a structured dictionary
-            # _names: list of cut names
-            # _nevcutflow: cumulative counts
-            # _nevonecut: individual cut counts
-            combined_data = {}
-            for i, name in enumerate(cf_res._names):
-                combined_data[name] = {
-                    "cumulative": clean(cf_res._nevcutflow[i]),
-                    "individual": clean(cf_res._nevonecut[i])
-                }
-
-            with open(json_path, 'w') as f:
-                json.dump(combined_data, f, indent=4)
-                
-            logger.info(f"JSON saved to {json_path}")
-
-        except Exception as e:
-            logger.error(f"JSON save failed: {e}")
-
-
-    dataset_fraction = dataset_dict["metadata"]["fraction"]
-
-    logger.debug(f"out_collections keys: {out_collections.keys()}")
-
-    out_collections["fraction"] = dataset_fraction * (ak.ones_like(out_collections["event"]))
-    # ----------------------------------
-    skim_zip = ak.zip(out_collections, depth_limit=1)
-    logger.debug(f"skim_zip: {skim_zip}")
-    # skim_zip.persist().to_parquet(save_path)
-    to_persist = skim_zip.persist()
-    to_persist = to_persist.to_parquet(save_path, compute=False)
-    persisted, processed_event_count = dask.compute(to_persist, processed_event_count)
-    return processed_event_count
+    dataset_name = dataset_dict["metadata"]["dataset"]
+    dataset_result = runner_output[dataset_name]
+    return int(np.asarray(dataset_result["processed_event_count"]).item())
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -240,7 +419,9 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
         retries (int, optional): Number of retries in case of failure. Defaults to 3.
         sleep (float, optional): Sleep time between retries in seconds. Defaults to 2.0.
 
-    FIXME: This function currently does not handle /store paths correctly. As gfal-mkdir command does not work with coffea_latest environment.
+    FIXME: This function currently does not handle /store paths correctly. In
+    some analysis environments, `gfal-mkdir` is unavailable or incompatible,
+    so EOS directory creation still needs a more robust path.
     """
     if eos_path.startswith("/depot") or eos_path.startswith("/work") or eos_path.startswith("test"):
         os.makedirs(eos_path, exist_ok=True)
@@ -310,6 +491,18 @@ if __name__ == "__main__":
         action=argparse.BooleanOptionalAction,
         help="If true, syncs files before preprocessing",
     )
+    parser.add_argument(
+        "--runner_workers",
+        type=int,
+        default=max(1, os.cpu_count() or 1),
+        help="Number of local worker processes for coffea Runner when not using --use_gateway.",
+    )
+    parser.add_argument(
+        "--trace_entries",
+        type=int,
+        default=DEFAULT_TRACE_ENTRIES,
+        help="Number of events to trace when auto-discovering branches to preload.",
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -330,10 +523,6 @@ if __name__ == "__main__":
     time_step = time.time()
 
     warnings.filterwarnings('ignore')
-    """
-    Coffea Dask automatically uses the Dask Client that has been defined above
-    """
-
     if "2018" in args.year:
         yearForConfig = "2018" # use 2018 parameters for 2018PR as well
     else:
@@ -342,11 +531,29 @@ if __name__ == "__main__":
     config = getParametersForYr("./configs/parameters/" , yearForConfig)
     logger.debug(f"stage1 config: {config}")
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
+    runner_executor = None
+    dask_client = None
 
-    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+    if args.use_gateway:
+        dask_client = get_dask_client(
+            args.use_gateway,
+            cluster_index=args.cluster_index,
+        )
+        runner_executor = coffea_processor_api.DaskExecutor(
+            client=dask_client,
+            status=False,
+            retries=5,
+        )
+    else:
+        runner_executor = coffea_processor_api.FuturesExecutor(
+            workers=args.runner_workers,
+            status=False,
+            retries=5,
+        )
+
     if not test_mode: # full scale implementation
         t2 = time.perf_counter()
-        logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
+        logger.info(f"[Timing] Time taken to initialize stage-1 runtime: {round(t2 - t1, 3)} seconds")
         # -------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
         if args.sync:
@@ -453,7 +660,17 @@ if __name__ == "__main__":
                             eos_mkdirs(save_path)
 
                             # rebuild the events/out collections for this attempt
-                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
+                            processed_event_count = dataset_loop(
+                                coffea_processor,
+                                alt_sample,
+                                file_idx=idx,
+                                test=test_mode,
+                                save_path=save_path,
+                                isCutflow=args.isCutflow,
+                                dataset_yaml_file=args.dataset_yaml_file,
+                                runner_executor=runner_executor,
+                                trace_entries=args.trace_entries,
+                            )
 
                             logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
                             logger.info(f"Processed events: {processed_event_count}")
@@ -578,7 +795,15 @@ if __name__ == "__main__":
                     for file in filelist:
                         os.remove(file)
                 logger.debug("Directory created or cleaned")
-                dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file)
+                dataset_loop(
+                    coffea_processor,
+                    sample,
+                    test=test_mode,
+                    save_path=save_path,
+                    dataset_yaml_file=args.dataset_yaml_file,
+                    runner_executor=runner_executor,
+                    trace_entries=args.trace_entries,
+                )
 
     elapsed = round(time.time() - time_step, 3)
 
@@ -588,5 +813,6 @@ if __name__ == "__main__":
         logger=logger,
     )
 
-    close_dask_client()
+    if dask_client is not None:
+        close_dask_client()
     logger.info(f"Finished everything in {elapsed} s.")

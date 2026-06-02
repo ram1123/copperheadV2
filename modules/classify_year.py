@@ -14,7 +14,7 @@ def is_run2(year) -> bool:
         return year in (2016, 2017, 2018)
 
     if isinstance(year, str):
-        return year.startswith("2016") or year in ("2017", "2018")
+        return year.startswith(("2016", "2017", "2018"))
 
     raise TypeError(f"Unsupported year type: {year} ({type(year)})")
 

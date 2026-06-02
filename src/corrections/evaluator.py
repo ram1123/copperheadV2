@@ -1,10 +1,10 @@
 import numpy as np
 import uproot
 import json
-import coffea
+# dense_lookup kept only for legacy Run2 RERECO muon SFs and STXS lookups
+# (no correctionlib JSON-POG equivalent exists for those inputs)
 from coffea.lookup_tools import dense_lookup
 import awkward as ak
-import dask_awkward as dak
 from omegaconf import OmegaConf
 import correctionlib
 
@@ -21,35 +21,21 @@ def get_corr_inputs(input_dict, corr_obj):
     input_values = [input_dict[inp.name] for inp in corr_obj.inputs]
     return input_values
 
-# PU SF --------------------------------------------------------------------
-# def pu_lookups(parameters, mode="nom", auto=[]):
-#     lookups = {}
-#     branch = {"nom": "pileup", "up": "pileup_plus", "down": "pileup_minus"}
-#     for mode in ["nom", "up", "down"]:
-#         if len(auto) == 0:
-#             pu_hist = uproot.open(parameters["pu_file"])["pileup"].values() # returns a np array
-#             nbins = len(pu_hist)
-#             edges = [[i for i in range(nbins)]]
-#             lookup = dense_lookup.dense_lookup(pu_hist, edges)
-#         else:
-#             pu_hist_data = uproot.open(parameters["pu_file_data"])[branch[mode]].values()
 
-#             nbins = len(pu_hist_data)
-#             # print(f"pu_reweight nbins: {nbins}")
-#             edges = [[i for i in range(nbins)]]
-#             pu_hist_mc = np.histogram(auto, bins=range(nbins + 1))[0]
-#             print(f"pu_hist_mc: {pu_hist_mc}")
-#             # print(f"pu_lookups type(pu_hist_data): {type(pu_hist_data)}")
-#             # ----------------------------------------
-#             # if len(auto) == 0:
-#             #     pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
-#             # else:
-#             #     pu_hist_mc = np.histogram(auto, bins=range(nbins + 1))[0]
-#             #----------------------------------------------------
+class _NumpyPULookup:
+    """Simple 1-D bin lookup backed by a numpy array.
 
-#             lookup = dense_lookup.dense_lookup(pu_reweight(pu_hist_data, pu_hist_mc), edges)
-#         lookups[mode] = lookup
-#     return lookups
+    Replaces coffea's dense_lookup for PU weights. The bins are integer
+    nTrueInt values (0, 1, 2, …, N-1), so the index is just a clip + cast.
+    """
+    def __init__(self, weights: np.ndarray):
+        self._weights = weights.astype(np.float64)
+
+    def __call__(self, ntrueint):
+        idx = np.clip(ak.to_numpy(ak.values_astype(ntrueint, np.int32)),
+                      0, len(self._weights) - 1)
+        return ak.Array(self._weights[idx])
+
 
 def pu_lookups(parameters, mode="nom", auto=[], is_rereco=False):
     lookups = {}
@@ -58,29 +44,17 @@ def pu_lookups(parameters, mode="nom", auto=[], is_rereco=False):
         pu_hist_data = uproot.open(parameters["pu_file_data"])[branch[mode]].values()
 
         nbins = len(pu_hist_data)
-        # print(f"pu_reweight nbins: {nbins}")
-        edges = [[i for i in range(nbins)]]
-        # print(f"pu_lookups type(pu_hist_data): {type(pu_hist_data)}")
-        # ----------------------------------------
         if len(auto) == 0:
-            # pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
             if is_rereco:
                 pu_hist_mc = uproot.open(parameters["pu_file_mc"])["pu_mc"].values()
             else:
                 with open(parameters["pu_file_mc"]) as file:
-                    # config = json.loads(file.read())
-                    # print(f"pu file: {file}")
                     config = OmegaConf.load(file)
-                    # print(f"config: {config}")
                 pu_hist_mc = np.array(config["pu_mc"])
         else:
             pu_hist_mc = np.histogram(auto, bins=range(nbins + 1))[0]
-            # auto = sum_before = dak.map_partitions(ak.sum, weights, keepdims=True)
-            # pu_hist_mc = dak.map_partitions(ak.sum, weights, keepdims=True)[0]
-        #----------------------------------------------------
 
-        lookup = dense_lookup.dense_lookup(pu_reweight(pu_hist_data, pu_hist_mc), edges)
-        lookups[mode] = lookup
+        lookups[mode] = _NumpyPULookup(pu_reweight(pu_hist_data, pu_hist_mc))
     return lookups
 
 def pu_reweight(pu_hist_data, pu_hist_mc):
@@ -164,7 +138,10 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
     if Run ==2:
         if onTheSpot:
             # lookups = pu_lookups(parameters, auto=ntrueint)
-            lookups = pu_lookups(parameters, auto=ak.to_numpy(ntrueint.compute()))
+            lookups = pu_lookups(
+                parameters,
+                auto=ak.to_numpy(ak.materialize(ntrueint)),
+            )
         else:
             lookups = pu_lookups(parameters, auto=[], is_rereco=is_rereco)
         #print("Hello")
@@ -244,8 +221,7 @@ class NNLOPS_Evaluator(object):
             self.ratio_0jet[mode].member("fX"),
             self.ratio_0jet[mode].member("fY")
         )
-        njet0_interp_out = dak.map_partitions(
-            njet0_interp,
+        njet0_interp_out = njet0_interp(
             ak.where((hig_pt < 125), hig_pt, 125.0)
         )
         # njet0_interp_out =  np.interp(
@@ -259,8 +235,7 @@ class NNLOPS_Evaluator(object):
             self.ratio_1jet[mode].member("fX"),
             self.ratio_1jet[mode].member("fY")
         )
-        njet1_interp_out = dak.map_partitions(
-            njet1_interp,
+        njet1_interp_out = njet1_interp(
             ak.where((hig_pt < 625), hig_pt, 625.0)
         )
         # print(f"njet1_interp_out: {njet1_interp_out.compute()}")
@@ -275,8 +250,7 @@ class NNLOPS_Evaluator(object):
             self.ratio_2jet[mode].member("fX"),
             self.ratio_2jet[mode].member("fY")
         )
-        njet2_interp_out = dak.map_partitions(
-            njet2_interp,
+        njet2_interp_out = njet2_interp(
             ak.where((hig_pt < 800), hig_pt, 800.0)
         )
         # njet2_interp_out =  np.interp(
@@ -290,8 +264,7 @@ class NNLOPS_Evaluator(object):
             self.ratio_3jet[mode].member("fX"),
             self.ratio_3jet[mode].member("fY")
         )
-        njet3_interp_out = dak.map_partitions(
-            njet3_interp,
+        njet3_interp_out = njet3_interp(
             ak.where((hig_pt < 925), hig_pt, 925.0)
         )
         # njet3_interp_out =  np.interp(
@@ -1022,7 +995,7 @@ def qgl_weights_V2(jets, config, isHerwig, year):
     nevents_selected = (ak.sum(jets.pt,axis=1) > 0) # if there's no jets, you select nothing
     # print(f"jets: {jets.compute()}")
     # print(f"nevents_selected: {nevents_selected.compute()}")
-    nevents_selected = dak.map_partitions(np.sum, nevents_selected, keepdims=True) # needed due to "Check that the total normalization is unchanged (the scope of this sf is not to change the production cross section)"
+    nevents_selected = ak.sum(nevents_selected, axis=None)  # keep overall normalization unchanged
     # reinitialize light and gluon masks
     light = (abs(jets.partonFlavour) < 4)
     gluon = (jets.partonFlavour == 21)
@@ -1077,7 +1050,7 @@ def qgl_weights_V2(jets, config, isHerwig, year):
     qgl_wgt_applied = qgl_weights!= 1.0 # we assume if one, then the sf weren't applied
     sf_values = qgl_weights[qgl_wgt_applied]
     # print(f"sf_values: {sf_values.compute()}")
-    current_normalization = dak.map_partitions(np.sum, sf_values, keepdims=True)
+    current_normalization = ak.sum(sf_values, axis=None)
     norm_factor = ak.where(
         current_normalization != 0,
         nevents_selected / current_normalization,
@@ -1104,7 +1077,7 @@ def qgl_weights_V2(jets, config, isHerwig, year):
 
     # debug
     sf_values = qgl_weights[qgl_wgt_applied]
-    sanity_check_norm = dak.map_partitions(np.sum, sf_values, keepdims=True)
+    # sanity_check_norm = ak.sum(sf_values, axis=None)
     # print(f"sanity_check_norm: {sanity_check_norm.compute()}")
 
     # padd events with no jets with ones
@@ -1142,7 +1115,7 @@ def qgl_weights_keepDim(jet1, jet2, njets, isHerwig):
 
 
     njet_selection = njets > 2 # think this is a bug, but have to double check
-    qgl_mean = dak.map_partitions(np.mean, qgl_nom[njet_selection], keepdims=True)
+    qgl_mean = ak.mean(qgl_nom[njet_selection], axis=None)
     # print(f"qgl_mean: {ak.to_numpy(qgl_mean.compute())}")
     # print(f"qgl nom b4: {ak.to_numpy(qgl_nom[njet_selection].compute())}")
     qgl_nom = qgl_nom/ qgl_mean
@@ -1390,8 +1363,8 @@ def btag_weights_jsonKeepDim(processor, systs, jets, btag_eta_val, weights, bjet
         btag_syst[sys] = {"up": btag_wgt_up, "down": btag_wgt_down}
 
     weights = weights.weight()
-    sum_before = dak.map_partitions(ak.sum, weights, keepdims=True)
-    sum_after = dak.map_partitions(ak.sum, weights*btag_wgt, keepdims=True)
+    sum_before = ak.sum(weights, axis=None)
+    sum_after = ak.sum(weights * btag_wgt, axis=None)
     normalization = sum_before / sum_after
     btag_wgt = btag_wgt * normalization # normalize to match the cross section
     for sys in btag_syst:

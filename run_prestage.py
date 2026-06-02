@@ -11,7 +11,6 @@ import uuid
 
 import awkward as ak
 
-import coffea
 import dask
 import numpy as np
 import tqdm
@@ -30,6 +29,29 @@ from modules.dask_utils import close_dask_client, get_dask_client
 # warnings.filterwarnings("error", module="coffea.*")
 
 dask.config.set({'logging.distributed': 'error'})
+
+
+def count_event_entries(events, file_input):
+    """
+    Count entries in the Events tree for virtual NanoEvents.
+
+    If direct counting from the NanoEvents wrapper fails, fall back to ROOT metadata.
+    """
+    try:
+        return int(ak.num(events, axis=0))
+    except Exception as err:
+        logger.warning(
+            "[prestage] Falling back to uproot entry counting after NanoEvents count "
+            "failed: %s: %s",
+            type(err).__name__,
+            err,
+        )
+
+    n_events_total = 0
+    for fname_normalized in file_input.keys():
+        with uproot.open(f"{fname_normalized}:Events") as tree:
+            n_events_total += tree.num_entries
+    return int(n_events_total)
 
 def nanoevents_from_root_with_redirectors(
     file_input, host_prefix, attempt, schemaclass, uproot_options, metadata=None
@@ -470,7 +492,7 @@ if __name__ == "__main__":
                 fnames = get_Xcache_filelist(fnames)
 
             # FIXME: Below search replace is a fix for some of files that has this string (not sure why)
-            # if fnames contains `/eos/vbc/experiments/cms` remove it. 
+            # if fnames contains `/eos/vbc/experiments/cms` remove it.
             fnames = [f.replace("/eos/vbc/experiments/cms", "") if "/eos/vbc/experiments/cms" in f else f for f in fnames]
 
             logger.debug(f"sample_name: {sample_name}")
@@ -503,21 +525,9 @@ if __name__ == "__main__":
                         ).events()
                         logger.debug(f"file_input: {file_input}")
                         logger.debug(f"events.fields: {events.fields}")
-                        # if coffea version < 2025.3.0 then use the line below
-                        if coffea.__version__ == "2024.11.0":
-                            preprocess_metadata["data_entries"] = int(ak.num(events, axis=0).compute())  # convert into 32bit precision as 64 bit precision isn't json serializable
-                        elif coffea.__version__ == "2025.3.0":
-                            # For coffea version 2025.3.0, count the entries directly from ROOT files
-                            # FIXME: Remove for loop as it will be very slow.
-                            n_events_total = 0
-                            for fname_normalized in file_input.keys():
-                                with uproot.open(f"{fname_normalized}:Events") as tree:
-                                    # or: tree = uproot.open(fname_normalized)["Events"]
-                                    n_events_total += tree.num_entries
-
-                            preprocess_metadata["data_entries"] = int(n_events_total)
-                        else:
-                            raise RuntimeError(f"Unsupported coffea version: {coffea.__version__}")
+                        preprocess_metadata["data_entries"] = count_event_entries(
+                            events, file_input
+                        )
                         total_events += preprocess_metadata["data_entries"]
 
                         logger.info(
@@ -553,8 +563,8 @@ if __name__ == "__main__":
                                 uproot_options={"timeout": 4 * 2400},
                             )
                             gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
-                            preprocess_metadata["sumGenWgts"]= float(ak.sum(gen_wgt).compute())
-                            preprocess_metadata["nGenEvts"]= int(ak.num(gen_wgt, axis=0).compute())
+                            preprocess_metadata["sumGenWgts"] = float(ak.sum(gen_wgt))
+                            preprocess_metadata["nGenEvts"] = int(ak.num(gen_wgt, axis=0))
                             break  # stop trying once successful
                         else:
                             file_input = {fname: {"object_path": "Runs"} for fname in fnames}
@@ -580,12 +590,12 @@ if __name__ == "__main__":
                                 # print(f"big_gen_wgt num: {ak.sum(big_gen_wgt).compute()}")
                                 # print(f"gen_wgt_max: {gen_wgt_max}")
                                 # print(f"nevents: {nevents}")
-                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw)) # convert into 32bit precision as 64 bit precision isn't json serializable
+                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount)) # convert into 32bit precision as 64 bit precision isn't json serializable
                             else: # nanoAODv6
                                 logger.debug("genEventSumw_ found: nanoAODv6")
-                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
-                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_)) # convert into 32bit precision as 64 bit precision isn't json serializable
+                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_)) # convert into 32bit precision as 64 bit precision isn't json serializable
                             logger.info(f"[prestage] data sample {sample_name}: success on attempt {attempt} ")
                             break  # stop trying once successful
                     except Exception as e:
@@ -616,7 +626,7 @@ if __name__ == "__main__":
                         schemaclass=BaseSchema,
                         uproot_options={"timeout":2400},
                 ).events()
-                genEventCount = runs.genEventCount.compute()
+                genEventCount = ak.to_numpy(ak.materialize(runs.genEventCount))
 
                 assert len(fnames) == len(genEventCount)
                 file_dict = {}
