@@ -41,6 +41,7 @@ def get_dask_client(
             threads_per_worker=threads_per_worker,
             processes=True,
             memory_limit=memory_limit,
+            dashboard_address=None,
         )
 
     logger.info(f"Created Dask client: {client}")

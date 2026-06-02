@@ -130,42 +130,44 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     return save_path
 
 
-def build_trace_fileset(files_dict, trace_entries: int):
+def build_root_inputs(files_dict):
     """
-    Build a small fileset slice for tracing branch access.
+    Convert the prestage file dictionary into explicit ``file:tree`` inputs.
 
-    We only need enough events to exercise the processor and discover which
-    branches are actually touched, so we keep this intentionally tiny.
+    The prestage metadata keeps per-file information in a nested dictionary.
+    Direct ``NanoEventsFactory.from_root(...)`` calls in latest coffea expect
+    concrete file targets instead, so we translate each file entry here.
     """
-    trace_files = {}
-    entries_left = trace_entries
-
+    root_inputs = []
     for fname, finfo in files_dict.items():
-        if entries_left <= 0:
-            break
+        if isinstance(finfo, dict):
+            object_path = finfo.get("object_path", "Events")
+        else:
+            object_path = "Events"
+        root_inputs.append(f"{fname}:{object_path}")
 
-        if not isinstance(finfo, dict):
-            trace_files[fname] = finfo
-            break
+    if not root_inputs:
+        raise ValueError("Cannot build ROOT inputs from an empty files dict.")
 
-        trace_info = copy.deepcopy(finfo)
-        steps = finfo.get("steps")
-        if steps:
-            trace_steps = []
-            for step in steps:
-                start = int(step[0])
-                stop = int(step[1])
-                if stop <= start:
-                    continue
-                step_size = min(stop - start, entries_left)
-                trace_steps.append([start, start + step_size])
-                entries_left -= step_size
-                if entries_left <= 0:
-                    break
-            trace_info["steps"] = trace_steps
-        trace_files[fname] = trace_info
+    if len(root_inputs) == 1:
+        return root_inputs[0]
 
-    return trace_files
+    return root_inputs
+
+
+def build_trace_input(files_dict):
+    """
+    Build a representative ROOT input for branch-access tracing.
+
+    The prestage fileset stores per-file metadata dictionaries with step
+    information. For preload discovery we only need one representative file, so
+    we convert the first entry into a direct ``file:tree`` path that
+    NanoEventsFactory.from_root can open unambiguously.
+    """
+    root_inputs = build_root_inputs(files_dict)
+    if isinstance(root_inputs, list):
+        return root_inputs[0]
+    return root_inputs
 
 
 def discover_preload_branches(
@@ -192,14 +194,15 @@ def discover_preload_branches(
     if cache_key in PRELOAD_BRANCH_CACHE:
         return PRELOAD_BRANCH_CACHE[cache_key]
 
-    trace_files = build_trace_fileset(dataset_dict["files"], trace_entries)
+    trace_input = build_trace_input(dataset_dict["files"])
     access_log = []
     trace_events = NanoEventsFactory.from_root(
-        trace_files,
+        trace_input,
         mode="virtual",
         schemaclass=NanoAODSchema,
         metadata=metadata,
         access_log=access_log,
+        entry_stop=trace_entries,
         uproot_options={
             "timeout": 900,
             "num_workers": 1,
@@ -332,8 +335,9 @@ def dataset_loop(
     )
 
     if isCutflow:
+        root_inputs = build_root_inputs(dataset_dict["files"])
         events = NanoEventsFactory.from_root(
-            dataset_dict["files"],
+            root_inputs,
             mode="virtual",
             preload=preload_branches,
             schemaclass=NanoAODSchema,

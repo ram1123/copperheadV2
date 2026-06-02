@@ -1051,11 +1051,10 @@ def qgl_weights_V2(jets, config, isHerwig, year):
     sf_values = qgl_weights[qgl_wgt_applied]
     # print(f"sf_values: {sf_values.compute()}")
     current_normalization = ak.sum(sf_values, axis=None)
-    norm_factor = ak.where(
-        current_normalization != 0,
-        nevents_selected / current_normalization,
-        1.0,
-    )
+    if current_normalization != 0:
+        norm_factor = nevents_selected / current_normalization
+    else:
+        norm_factor = 1.0
 
     # print(f"nevents_selected: {nevents_selected.compute()}")
     # print(f"current_normalization: {current_normalization.compute()}")

@@ -68,7 +68,7 @@ for year in "${years[@]}"; do
 
     vbf_sample="vbf_powheg_dipole"
 
-    bash stage1_loop_Improved.sh \
+    bash run_analysis_pipeline.sh \
         -c "$dataset_yaml" \
         -v "$nanoaodv" \
         -l "$label" \
@@ -81,7 +81,7 @@ for year in "${years[@]}"; do
     f1_root="${year_root}/f1_0"
 
     python scripts/sync_parquet_dimuon.py \
-        "${f1_root}"/data_*/ \
+        "${f1_root}"/data_*/0/ \
         -o "${year_root}/${year}_data_eventKinematics.txt"
 
     python scripts/sync_parquet_dimuon.py \
