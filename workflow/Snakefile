@@ -10,6 +10,7 @@ USE_EXISTING_STAGE1 = config.get("use_existing_stage1", False)
 
 YEARS = config["years"]
 RUN_TAG = config.get("run_tag", "default")
+PLOT_VBF_FILTER_STUDY = config.get("plot_vbf_filter_study", False)
 
 LOGDIR = f"logs/{RUN_TAG}"
 STATEDIR = f"state/{RUN_TAG}"
@@ -351,6 +352,7 @@ rule plots:
         # map wildcards -> CLI flags
         zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",
         minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else "",
+        vbf_filter_flag=lambda wc: "--vbf_filter_study" if PLOT_VBF_FILTER_STUDY else "",
     # resources:
     #     gateway=1
     shell:
@@ -372,10 +374,10 @@ rule plots:
             --region h-sidebands z-peak \
             {params.minset_flag} \
             {params.zpt_flag} \
+            {params.vbf_filter_flag} \
             > {log} 2>&1
 
         #    --use_dnn_zpt_weights \
-        #    --vbf_filter_study \
 
         # ---- SUCCESS CHECK ----
         if grep -q "Plots are saved to " {log}; then

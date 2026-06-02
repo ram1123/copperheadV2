@@ -41,6 +41,9 @@ run_tag: "FilterJets_May14_PySR07MayV2"
 use_gateway: true
 cluster_index: 0
 
+# plotting workflow
+plot_vbf_filter_study: false
+
 # zpt DNN
 zpt:
   outbase: "zpt_wgt_dnn"
