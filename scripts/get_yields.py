@@ -248,6 +248,7 @@ def get_yield(
             process=process,
             variation="nominal",
             do_vbf_filter_study=do_vbf_filter_study,
+            year=year,
             do_VH_veto=do_VH_veto,
         )
     else:
@@ -355,7 +356,7 @@ def main() -> None:
 
     # Physics / config toggles
     do_VH_veto = False
-    do_vbf_filter_study = False
+    do_vbf_filter_study = args.do_vbf_filter_study
 
     # regions = ["signal", "h-sidebands"]  # "z-peak",
     # regions = ["signal"]  # "z-peak",
@@ -398,6 +399,8 @@ def main() -> None:
         print(f"Resolved load path for {year}: {load_paths_by_year[year]}")
 
     suffix = "_VHVeto" if do_VH_veto else ""
+    if do_vbf_filter_study:
+        suffix += "_vbf_filter_study"
     categorizer_tag = args.categorizer.replace("-", "_")
 
     # For legacy stage1_output inputs, keep the historical tag naming.
@@ -438,7 +441,9 @@ def main() -> None:
         )
 
         processes = set()
-        for group_samples in combined_sample_dict.values():
+        for group_name, group_samples in combined_sample_dict.items():
+            if group_name == "DYVBF" and not do_vbf_filter_study:
+                continue
             processes.update(group_samples)
         processes.add("data*")
         processes = order_processes(list(processes))

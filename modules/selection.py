@@ -231,6 +231,7 @@ def applyRegionCatCutsByScore(
     process: str,
     variation: str,
     do_vbf_filter_study: bool = False,
+    year: str | None = None,
     do_VH_veto: bool = False,
     jj_eta_region: str = "all",
     njets_selection: str = "inclusive",
@@ -329,6 +330,17 @@ def applyRegionCatCutsByScore(
             raise ValueError(
                 "Invalid category option! Valid options are: 'vbf', 'ggh', 'nocat'."
             )
+
+    if do_vbf_filter_study:
+        process_lower = process.lower()
+        if process_lower.startswith("dy"):
+            gjj_threshold = 300 if (year is not None and is_run3(year)) else 350
+            vbf_filter = ak.fill_none((events.gjj_mass > gjj_threshold), value=False)
+            is_vbf_filter = "dy_vbf_filter" in process_lower
+            if is_vbf_filter:
+                prod_cat_cut = prod_cat_cut & vbf_filter
+            else:
+                prod_cat_cut = prod_cat_cut & (~vbf_filter)
 
     category_selection = prod_cat_cut & region
     events = events[category_selection]
