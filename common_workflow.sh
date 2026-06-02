@@ -522,8 +522,16 @@ run_dnn_workflow_once() {
     fi
 }
 
+stage3_output_postfix() {
+    local postfix="${save_postfix}"
+    if [[ "${do_vbf_filter_study}" == "1" ]]; then
+        postfix="${postfix}_vbf_filter_study"
+    fi
+    printf '%s' "${postfix}"
+}
+
 vbf_card_dir() {
-    printf '%s' "${save_path}/stage3_datacards_${save_postfix}/score_${label}"
+    printf '%s' "${save_path}/stage3_datacards_$(stage3_output_postfix)/score_${label}"
 }
 
 vbf_card_stem() {

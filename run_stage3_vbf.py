@@ -30,16 +30,6 @@ if args.do_vbf_filter_study:
         if stage2_model_suffix
         else "vbf_filter_study"
     )
-if args.no_variations:
-    stage2_model_suffix = (
-        f"{stage2_model_suffix}_NoSyst"
-        if stage2_model_suffix
-        else "NoSyst"
-    )
-
-stage2_model_label = (
-    f"{args.label}_{stage2_model_suffix}" if stage2_model_suffix else args.label
-)
 
 # global parameters
 parameters = {
@@ -47,8 +37,8 @@ parameters = {
     "log_level": args.log_level,
     "years": years,
     "global_path": args.input_path,
-    "global_path_postfix": args.save_postfix,
-    "outpath_postfix": args.save_postfix,
+    "global_path_postfix": stage2_model_suffix,
+    "outpath_postfix": stage2_model_suffix,
     "label": args.label,
     "channels": ["vbf"],
     "regions": ["h-peak", "h-sidebands"],
@@ -60,7 +50,7 @@ parameters = {
     "plot_vars": [],  # "dimuon_mass"],
     # "variables_lookup": variables_lookup,
     "dnn_models": {
-        "vbf": [stage2_model_label],
+        "vbf": [args.label],
     },
     "bdt_models": {},
     #
