@@ -10,12 +10,13 @@ import sys
 import time
 import warnings
 from itertools import islice
+from contextlib import contextmanager, nullcontext
 
 import awkward as ak
 import dask
 import numpy as np
 import tqdm
-from cli.common_argparser import build_common_parser
+from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
 
@@ -34,10 +35,46 @@ dask.config.set({"distributed.scheduler.worker-saturation": 1.0})
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 np.set_printoptions(threshold=sys.maxsize)
-from contextlib import nullcontext
 
 ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
-report_ctx = performance_report(filename="dask-report.html") if ENABLE_DASK_REPORT else nullcontext()
+
+DATASET_ELEMENT_LIMITS = {
+    "data_": 900,  # None means no limit (use uproot's default behavior)
+    "dy": 500,
+    "ttjets_dl": 500,
+    "ttjets_sl": 500,
+}
+
+
+@contextmanager
+def optional_performance_report(filename="dask-report.html"):
+    """
+    Wrap Dask's performance report so dashboard/template issues never fail stage-1.
+    """
+    if not ENABLE_DASK_REPORT:
+        with nullcontext():
+            yield
+        return
+
+    report_cm = performance_report(filename=filename)
+    try:
+        report_cm.__enter__()
+    except Exception as err:
+        logger.warning("Could not start Dask performance report: %s", err)
+        yield
+        return
+
+    exc_info = (None, None, None)
+    try:
+        yield
+    except Exception as err:
+        exc_info = (type(err), err, err.__traceback__)
+        raise
+    finally:
+        try:
+            report_cm.__exit__(*exc_info)
+        except Exception as err:
+            logger.warning("Ignoring Dask performance report shutdown failure: %s", err)
 
 
 def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=None):
@@ -98,16 +135,9 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     logger.debug(f"test: {test}")
     logger.debug(f"Output path: {save_path}")
 
-    # dict to hold the max_num_elements info per sample
-    dict_max_num_elements = {
-        "data_": 900,  # None means no limit (use uproot's default behavior)
-        "dy": 250,
-        "ttjets_dl": 250,
-        "ttjets_sl": 250,
-    }
     max_num_elements = 500 # default
-    if any(key in dataset_dict["metadata"]["dataset"] for key in dict_max_num_elements.keys()):
-        max_num_elements = dict_max_num_elements[[key for key in dict_max_num_elements.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
+    if any(key in dataset_dict["metadata"]["dataset"] for key in DATASET_ELEMENT_LIMITS.keys()):
+        max_num_elements = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
         logger.debug(f"Setting max_num_elements for {dataset_dict['metadata']['dataset']} to {max_num_elements}")
     else:
         max_num_elements = 500
@@ -215,7 +245,7 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
     if eos_path.startswith("/depot") or eos_path.startswith("/work") or eos_path.startswith("test"):
         os.makedirs(eos_path, exist_ok=True)
         return
-    if not eos_path.startswith("/store") or not eos_path.startswith("davs"):
+    if not eos_path.startswith("/store") and not eos_path.startswith("davs"):
         raise RuntimeError(f"Path does not starts with /depot or /work or /store or davs. Please check path.")
     if not eos_path.startswith("davs://eos.cms.rcac.purdue.edu:9000/"):
         eos_path = f"davs://eos.cms.rcac.purdue.edu:9000/{eos_path.lstrip('/')}"
@@ -283,6 +313,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
+    args.dataset_yaml_file = resolve_dataset_yaml_file(
+        args.dataset_yaml_file, args.year, args.NanoAODv
+    )
+    logger.info(f"Using dataset YAML: {args.dataset_yaml_file}")
 
     test_mode = args.test_mode
     logger.debug(f"Test mode: {test_mode}")
@@ -345,7 +379,7 @@ if __name__ == "__main__":
         logger.info(f"git_info_path: {git_info_path}")
 
         # if True:
-        with report_ctx:
+        with optional_performance_report():
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 logger.info("{}{}".format("\n" * 2, "=" * 51))
                 logger.info(f"===         Processing dataset: {dataset}       ===")
@@ -358,15 +392,8 @@ if __name__ == "__main__":
                     continue
 
                 sample_step = time.time()
-                # dict to hold file lenght info per sample
-                dict_file_length = {
-                    "data_": 900,
-                    "dy": 250,
-                    "ttjets_dl": 250,
-                    "ttjets_sl": 250,
-                }
-                if any(key in dataset for key in dict_file_length.keys()):
-                    args.max_file_len = dict_file_length[[key for key in dict_file_length.keys() if key in dataset][0]]
+                if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
+                    args.max_file_len = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset][0]]
                     logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
                 else:
                     args.max_file_len = 500
@@ -535,7 +562,7 @@ if __name__ == "__main__":
         start_save_path = f"{args.save_path}/stage1_output_test/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
         os.makedirs(start_save_path, exist_ok=True)
-        with report_ctx:
+        with optional_performance_report():
             for dataset, sample in tqdm.tqdm(samples.items()):
                 logger.debug(f"dataset: {dataset}")
                 save_path = getSavePath(start_save_path, sample, 0)

@@ -1,6 +1,7 @@
 import os
 import sys
 from array import array
+import glob
 
 import awkward as ak
 import dask_awkward as dak
@@ -10,6 +11,7 @@ from cli.common_argparser import build_common_parser
 from modules import classify_year, selection
 from modules.dask_utils import get_dask_client
 from modules.dask_utils import close_dask_client
+from modules.sample_config import get_sample_dict
 
 def zipAndCompute(events, fields2load):
     zpt_wgt_name = "separate_wgt_zpt_wgt"
@@ -20,6 +22,40 @@ def zipAndCompute(events, fields2load):
         field : events[field] for field in fields2load
     })
     return return_zip.compute() # compute and return
+
+
+def resolve_dy_processes(year, sample_config_path):
+    bkg_dict = get_sample_dict(
+        yaml_path=sample_config_path,
+        section="background",
+        year=str(year),
+        selected_groups=["DY"],
+    )
+    dy_processes = bkg_dict.get("DY", [])
+    if not dy_processes:
+        raise ValueError(
+            f"No DY processes resolved from sample config '{sample_config_path}' for year '{year}'."
+        )
+    return dy_processes
+
+
+def collect_process_paths(base_path, process_names):
+    parquet_paths = []
+    matched_processes = []
+    missing_processes = []
+    for process in process_names:
+        pattern = f"{base_path}/{process}/*/*.parquet"
+        found = sorted(glob.glob(pattern))
+        if found:
+            parquet_paths.extend(found)
+            matched_processes.append(process)
+        else:
+            missing_processes.append(process)
+    if not parquet_paths:
+        raise RuntimeError(
+            f"No parquet files found for DY processes {process_names} under base path: {base_path}"
+        )
+    return parquet_paths, matched_processes, missing_processes
 
 if __name__ == "__main__":
     """
@@ -62,30 +98,16 @@ if __name__ == "__main__":
         print(f"base path data : {base_path}/data_*/*/*.parquet")
         data_events = dak.from_parquet(f"{base_path}/data_*/*/*.parquet")
 
-        DY_BASE_PATH = ""
-        if classify_year.is_run2(year):
-            if args.dy_sample == "MiNNLO":
-                DY_BASE_PATH = f"{base_path}/dy*MiNNLO/*/*.parquet"
-            elif args.dy_sample == "aMCatNLO":
-                DY_BASE_PATH = f"{base_path}/dy*_aMCatNLO/*/*.parquet"
-            else:
-                raise ValueError(f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, or VBF_filter.")
-        else: # run3
-            if year == "2024":
-                DY_BASE_PATH = f"{base_path}/dyTo2Mu_M-50_aMCatNLO/*/*.parquet"
-            elif args.dy_sample == "powheg":
-                DY_BASE_PATH = f"{base_path}/dyTo2Mu_MLL_*/*/*.parquet"
-            elif args.dy_sample == "INCamcatnloFXFX":
-                DY_BASE_PATH = f"{base_path}/dyTo2L_M-50_incl/*/*.parquet"
-            elif args.dy_sample == "amcatnloFXFX":
-                DY_BASE_PATH = f"{base_path}/dyTo2L_M-50_*j/*/*.parquet"
-            else:
-                raise ValueError(
-                    f"Unknown dy_sample option: {args.dy_sample}. Choose from MiNNLO, aMCatNLO, VBF_filter, powheg, or amcatnloFXFX."
-                )
-
-        print(f"base path dy: {DY_BASE_PATH}")
-        dy_events = dak.from_parquet(DY_BASE_PATH)
+        dy_processes = resolve_dy_processes(year, args.sample_config)
+        dy_paths, matched_dy_processes, missing_dy_processes = collect_process_paths(
+            base_path, dy_processes
+        )
+        print(f"Resolved DY processes from {args.sample_config}: {dy_processes}")
+        print(f"Matched DY processes: {matched_dy_processes}")
+        if missing_dy_processes:
+            print(f"WARNING: Missing DY processes under {base_path}: {missing_dy_processes}")
+        print(f"Total DY parquet files found: {len(dy_paths)}")
+        dy_events = dak.from_parquet(dy_paths)
         # apply z-peak region filter and nothing else
         _, data_events = selection.filterRegion(data_events, region="z-peak")
         _, dy_events = selection.filterRegion(dy_events, region="z-peak")
@@ -137,7 +159,15 @@ if __name__ == "__main__":
             weights = array('d', weights)
             hist_dy.FillN(len(values), values, weights)
 
-            # Step 4: Get the Scale Factor (SF) histogram, by dividing data histogram by DY histogram
+            data_integral = hist_data.Integral()
+            dy_integral = hist_dy.Integral()
+            print(
+                f"[{year} njet{njet}] Data integral={data_integral:.6g}, "
+                f"DY integral={dy_integral:.6g}, "
+                f"raw Data/DY ratio={data_integral / dy_integral if dy_integral > 0.0 else float('nan'):.6g}"
+            )
+
+            # Step 4: Get the Scale Factor (SF) histogram directly from Data / DY.
             hist_SF = hist_data.Clone("hist_SF")
             hist_SF.Divide(hist_dy)
 
@@ -147,6 +177,7 @@ if __name__ == "__main__":
             # Import the histograms into the workspace
             getattr(workspace, "import")(hist_data)  # Use getattr to call 'import' (Python keyword)
             getattr(workspace, "import")(hist_dy)
+            getattr(workspace, "import")(hist_SF)
 
             # Step 6: Save the workspace to a ROOT file
             copy_file = ROOT.TFile(f"{plot_path}/{year}_njet{njet}.root", "RECREATE")
@@ -228,16 +259,16 @@ if __name__ == "__main__":
             ratio_plot = ROOT.TRatioPlot(hist_data, hist_dy)
             ratio_plot.SetH1DrawOpt("E")  # Draw data with error bars
             ratio_plot.SetH2DrawOpt("E")  # Draw DY with error bars
-            
+
             # y-range set auto based on minimum and maximum of the ratio histogram
             min_ratio = hist_SF.GetMinimum()
             max_ratio = hist_SF.GetMaximum()
 
             ratio_plot.Draw()
-    
+
             # ---------------------------
             # LOWER PAD (ratio)
-            # ---------------------------            
+            # ---------------------------
             # NOTE: Set min/max or title should go after `ratio_plot.Draw()`
             ratio_plot.GetLowerRefYaxis().SetTitle("Data / DY")
             ratio_plot.GetLowerRefXaxis().SetTitle("Dimuon pT (GeV)")

@@ -4,12 +4,70 @@ title: Get Yields
 
 # Get yield
 
-For this there is script named [get_yields.py](../scripts/get_yields.py) in the scripts directory. This script can be used to get the yields from the stage1 output parquet files.
+The main script is [get_yields.py](../scripts/get_yields.py). It reads stage-1 parquet files and computes raw event counts and weighted yields after applying the standard category and region selections.
 
-This uses the selection defined in the `modules/selection.py` file.
+How to run:
 
+```bash
+python scripts/get_yields.py \
+   --input /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output \
+   -y 2017
+```
 
-Also, there is another script named [compare_yield_csv.py](../scripts/compare_yield_csv.py) which can be used to compare the yields obtained and saved as csv files using the script [get_yields.py](../scripts/get_yields.py). This script will compare the yields saved in two csv files and print the differences. This can be useful to check if the yields obtained from different runs are consistent or if there are any discrepancies.
+The `--input` path should point to the `stage1_output` directory. The script then resolves the per-year input automatically and will prefer `compacted` over `f1_0` when the compacted directory exists.
+
+## Sample list source
+
+The list of samples to process is read from:
+
+- [configs/samples/samples.yaml](../configs/samples/samples.yaml)
+
+Inside [get_yields.py](../scripts/get_yields.py), this is done through:
+
+```py
+get_bkg_sig_dicts(
+    yaml_path="configs/samples/samples.yaml",
+    year=year,
+)
+```
+
+## Selection source
+
+The event selection is defined in:
+
+- [modules/selection.py](../modules/selection.py)
+
+The script applies the standard category and region cuts through:
+
+```py
+def applyRegionCatCuts(
+    events,
+    category: str,
+    region_name: str,
+```
+
+This function starts at [modules/selection.py](../modules/selection.py#L37).
+
+## How ggH and VBF are split
+
+The ggH and VBF category split is also defined in [modules/selection.py](../modules/selection.py#L122-L133):
+
+```py
+if category == "vbf":
+    prod_cat_cut = prod_cat_cut & vbf_cut
+    prod_cat_cut = prod_cat_cut & (
+        ~btag_cut
+    )  # btag cut is for VH and ttH categories
+elif category == "ggh":
+    prod_cat_cut = prod_cat_cut & ~vbf_cut
+    prod_cat_cut = prod_cat_cut & (
+        ~btag_cut
+    )
+```
+
+## Comparing yields
+
+There is also [compare_yield_csv.py](../scripts/compare_yield_csv.py), which can be used to compare two CSV outputs produced by [get_yields.py](../scripts/get_yields.py). This is useful for checking whether two productions give consistent yields or for spotting regressions.
 
 This will print the summary like:
 
@@ -37,4 +95,3 @@ vbf_powheg_dipole      vbf h-sidebands 2022postEE          4611          4536   
 
 ====================================================================================================
 ```
-

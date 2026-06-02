@@ -17,19 +17,28 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+years = args.years if args.years else [args.year]
 
-year = args.years[0]
+year = years[0]
 if "2016" in year:
     year = "2016"
+
+stage2_model_suffix = args.save_postfix if args.save_postfix else ""
+if args.do_vbf_filter_study:
+    stage2_model_suffix = (
+        f"{stage2_model_suffix}_vbf_filter_study"
+        if stage2_model_suffix
+        else "vbf_filter_study"
+    )
 
 # global parameters
 parameters = {
     # < general settings >
     "log_level": args.log_level,
-    "years": args.years,
+    "years": years,
     "global_path": args.input_path,
-    "global_path_postfix": args.save_postfix,
-    "outpath_postfix": args.save_postfix,
+    "global_path_postfix": stage2_model_suffix,
+    "outpath_postfix": stage2_model_suffix,
     "label": args.label,
     "channels": ["vbf"],
     "regions": ["h-peak", "h-sidebands"],

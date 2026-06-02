@@ -392,8 +392,9 @@ VAR_SETS: Dict[str, List[str]] = {
     "ggh_training": GGH_TRAINING_VARS,
     "muon_plots": MUON_PLOT_VARS,
     "dimuon_plots": DIMUON_PLOT_VARS,
-    # "vbf_additional": VBF_ADDITIONAL_VARS,
     "met": MET_VARS,
+    "jet_kinematics": JETS_PLOT_VARS,
+    # "vbf_additional": VBF_ADDITIONAL_VARS,
     # "jet_id": JET_ID_VARIABLES,
 }
 

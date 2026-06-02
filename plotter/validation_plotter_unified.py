@@ -25,7 +25,7 @@ from scripts.compact_parquet_data import ensure_compacted
 
 # This order is for the stack plotting in the control plots
 # bkg_MC_order = ["OTHER", "VV", "EWK",  "TOP", "DY", "DYVBF","DY_MINNLO", "DY_AMCATNLO", "DY_combined", "DYJ01", "DYJ2"]
-bkg_MC_order = ["VV", "EWK",  "TOP", "DY"]
+bkg_MC_order = ["VV", "EWK",  "TOP", "DY", "DYVBF"]
 
 
 group_dict = {
@@ -45,17 +45,45 @@ group_dict = {
         "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
     },
     "DY": {
+        "2016preVFP": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
+        "2016postVFP": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
+        "2017": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
+        "2018": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
         "2022preEE": ["dyTo2L_M-50_incl"],
         "2022postEE": ["dyTo2L_M-50_incl"],
         "2023": ["dyTo2L_M-50_incl"],
         "2023BPix": ["dyTo2L_M-50_incl"],
         "2024": ["dyTo2Mu_M-50_aMCatNLO"],
 
+        # "2022preEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2022postEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2023": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2023BPix": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2024": ["dyTo2Mu_M-50_aMCatNLO", "dy_VBF_filter"],
+
+
         # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],        
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+
+        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+    },
+    "DYVBF": {
+        "2016preVFP": ["dy_VBF_filter"],
+        "2016postVFP": ["dy_VBF_filter"],
+        "2017": ["dy_VBF_filter"],
+        "2018": ["dy_VBF_filter"],
+        "2022preEE": ["dy_VBF_filter"],
+        "2022postEE": ["dy_VBF_filter"],
+        "2023": ["dy_VBF_filter"],
+        "2023BPix": ["dy_VBF_filter"],
+        "2024": ["dy_VBF_filter"],
     },
     "EWK": {
         "2022preEE": ["ewk_mmjj_mll_105_160"],
@@ -80,7 +108,6 @@ group_dict = {
         "wz_2l2q",
         "wz_1l1nu2q",
         "zz_2l2q",
-        "zz_2l2u",
         "zz_2l2nu",
         "zz_4l",
     ],
@@ -104,6 +131,10 @@ def parseGroupProcesses(group_dict, year: str):
     for group_name, processes in group_dict.items():
         logger.debug(f"Group '{group_name}' processes (original): {processes}")
         if type(processes) is dict:
+            if year not in processes:
+                raise KeyError(
+                    f"Year '{year}' is not configured for process group '{group_name}'."
+                )
             processes = processes[year]
         year_specific_group_dict[group_name] = processes
     logger.debug(f"Group dict specific to year {year}: {year_specific_group_dict}")
@@ -234,13 +265,6 @@ if __name__ == "__main__":
     help="define production mode category. optionsare ggh, vbf and nocat (no category cut)",
     )
     parser.add_argument(
-    "--vbf_filter_study",
-    dest="do_vbf_filter_study",
-    default=False,
-    action=argparse.BooleanOptionalAction,
-    help="If true, apply vbf filter cut for dy samples",
-    )
-    parser.add_argument(
     "--remove_zpt_weights",
     dest="remove_zpt_weights",
     default=False,
@@ -282,7 +306,7 @@ if __name__ == "__main__":
             "'central' = |eta|<2.5, 'he' = 2.5<|eta|<3.0, "
             "'fwd25' = |eta|>2.5, 'fwd30' = |eta|>3.0. Default: all"
         ),
-    )    
+    )
     # add dnn score to the plotting variable list
     parser.add_argument(
      "--dnn-score",
@@ -312,6 +336,11 @@ if __name__ == "__main__":
     logger.setLevel(args.log_level)
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")
+
+    if args.remove_zpt_weights and args.use_dnn_zpt_weights:
+        raise ValueError(
+            "Use either --remove_zpt_weights or --use_dnn_zpt_weights, not both."
+        )
 
     group_dict = parseGroupProcesses(group_dict, args.year)
 
@@ -354,13 +383,10 @@ if __name__ == "__main__":
             args.regions.remove("z-peak")
         else:
             logger.warning("z-peak region is not in the regions, nothing to remove!")
-    # else:
-    #     # Remove the "DYVBF" group from the group_dict if it exists
-    #     if "DYVBF" in group_dict:
-    #         logger.info("Removing DYVBF from the group_dict!")
-    #         del group_dict["DYVBF"]
-    #     else:
-    #         logger.warning("DYVBF is not in the group_dict, nothing to remove!")
+    else:
+        if "DYVBF" in group_dict:
+            logger.info("Removing DYVBF from the group_dict because --vbf_filter_study was not passed.")
+            del group_dict["DYVBF"]
 
     # If the args.regions is empty, exit the program
     if len(args.regions) == 0:
@@ -381,8 +407,20 @@ if __name__ == "__main__":
     if len(background_samples) > 0:
         for bkg_sample in background_samples:
             bkg_sample_upper = bkg_sample.upper()
+            if bkg_sample_upper == "DYVBF" and not args.do_vbf_filter_study:
+                logger.info("Skipping DYVBF because --vbf_filter_study was not passed.")
+                continue
             if bkg_sample_upper in group_dict:
                 available_processes.extend(group_dict[bkg_sample_upper])
+                if (
+                    args.do_vbf_filter_study
+                    and bkg_sample_upper == "DY"
+                    and "DYVBF" in group_dict
+                ):
+                    logger.info(
+                        "Adding DYVBF samples because --vbf_filter_study was passed."
+                    )
+                    available_processes.extend(group_dict["DYVBF"])
             else:
                 logger.warning(f"unknown background {bkg_sample} was given!")
 
@@ -435,12 +473,13 @@ if __name__ == "__main__":
         if "f1_0" not in args.load_path:
             raise ValueError("The load path should contain the string 'f1_0' to use the compacted path! Exiting the program.")
 
+        compacted_base_path = (args.load_path).replace("f1_0", args.use_compacted)
         # run compact script for each process
         for process in available_processes:
-            compacted_path_DNN = os.path.join(args.load_path, process, "0")
+            compacted_path_DNN = os.path.join(compacted_base_path, process, "0")
             ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
 
-        args.load_path = (args.load_path).replace("f1_0", args.use_compacted)
+        args.load_path = compacted_base_path
 
     logger.info(f"Using parquet files from {args.load_path}")
     # load saved parquet files. This increases memory use, but increases runtime significantly
@@ -476,7 +515,6 @@ if __name__ == "__main__":
             "dimuon_pt",
             "jet2_pt_nominal",
             "jj_pt_nominal",
-            "zeppenfeld_nominal",
         ]
 
         is_data = "data" in process.lower()
@@ -487,14 +525,14 @@ if __name__ == "__main__":
                 logger.debug("Append separate_wgt_zpt_wgt to fields2load!")
                 fields2load.append("separate_wgt_zpt_wgt")
 
-            if (
-                "zpt_wgt_reco_dnn" in events.fields
+            elif (
+                "zpt_wgt_gen" in events.fields
                 and "separate_wgt_zpt_wgt" in events.fields
                 and args.use_dnn_zpt_weights
             ):
-                logger.debug("Append separate_wgt_zpt_wgt and zpt_wgt_reco_dnn to fields2load!")
+                logger.debug("Append separate_wgt_zpt_wgt and zpt_wgt_gen to fields2load!")
                 fields2load.append("separate_wgt_zpt_wgt")
-                fields2load.append("zpt_wgt_reco_dnn")
+                fields2load.append("zpt_wgt_gen")
         # filter out redundant fields by using the set object
         fields2load = list(set(fields2load))
         logger.debug(f"fields2load: {fields2load}")
@@ -513,14 +551,14 @@ if __name__ == "__main__":
             logger.warning("removing separate_wgt_zpt_wgt!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
 
-        if (
+        elif (
             "separate_wgt_zpt_wgt" in events.fields
-            and "zpt_wgt_reco_dnn" in events.fields
+            and "zpt_wgt_gen" in events.fields
             and args.use_dnn_zpt_weights
             ):
-            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
+            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_gen!")
             events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
-            events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_reco_dnn"] # apply the weights obtained from the DNN
+            events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_gen"] # apply the weights obtained from the DNN
         # if "dy" in process.lower():
         #     # scale the weights for DY samples by 3.0
         #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
@@ -653,6 +691,7 @@ if __name__ == "__main__":
                     args.do_vbf_filter_study,
                     jj_eta_region=args.jj_eta_region,
                     njets_selection=str(args.njets),
+                    year=args.year,
                 )
 
                 #  FOR DEBUG PURPOSES
@@ -675,20 +714,8 @@ if __name__ == "__main__":
                     # weights = weights / 59830.0 # FIXME: this is hardcoded value, should be replaced with lumi value from config file
 
                     # weights = weights/events.wgt_nominal_muID/ events.wgt_nominal_muIso / events.wgt_nominal_muTrig #  quick test
-                    # temporary over write
-                    # logger.info(f"events.fields: {events.fields}")
-                    if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                        logger.debug("removing Zpt rewgt!")
-                        weights = weights/events["separate_wgt_zpt_wgt"]
-
-                    if (
-                        "separate_wgt_zpt_wgt" in events.fields
-                        and "zpt_wgt_reco_dnn" in events.fields
-                        and args.use_dnn_zpt_weights
-                    ):
-                        logger.debug("removing separate_wgt_zpt_wgt and applying zpt_wgt_reco_dnn!")
-                        weights = weights / events["separate_wgt_zpt_wgt"]
-                        weights = weights * events["zpt_wgt_reco_dnn"]  # apply the weights obtained from the DNN
+                    # # temporary over write
+                    # # logger.info(f"events.fields: {events.fields}")
 
                     # for some reason, some nan weights are still passes ak.fill_none() bc they're "nan", not None, this used to be not a problem
                     # could be an issue of copying bunching of parquet files from one directory to another, but not exactly sure
@@ -842,6 +869,8 @@ if __name__ == "__main__":
             if args.use_dnn_zpt_weights:
                 logger.warning("Using DNN-based zpt weights for the events!")
                 zpt_postfix = "dnn_zpt_weights"
+            if args.do_vbf_filter_study:
+                zpt_postfix += "_vbf_filter_study"
             if args.jj_eta_region != "all":
                 zpt_postfix += f"_{args.jj_eta_region}"
 
@@ -881,7 +910,7 @@ if __name__ == "__main__":
                 status = status,
                 log_scale = do_logscale,
                 CenterOfMass = CM_energy,
-                plot_ratio_range = "fixed", # options: "fixed" or "auto"
+                plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
             )
             plotDataMC_compare(
                 binning,
@@ -896,7 +925,7 @@ if __name__ == "__main__":
                 status = status,
                 log_scale = False,
                 CenterOfMass=CM_energy,
-                plot_ratio_range = "fixed", # options: "fixed" or "auto"
+                plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
             )
 
     close_dask_client()

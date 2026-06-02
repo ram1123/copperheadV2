@@ -1,6 +1,7 @@
 import numpy as np
 import awkward as ak
 import pandas as pd
+from modules.classify_year import is_run3
 
 
 def filterRegion(events, region="h-peak"):
@@ -44,6 +45,7 @@ def applyRegionCatCuts(
     do_VH_veto: bool = False,
     jj_eta_region: str = "all",
     njets_selection: str = "inclusive",  # available options ["inclusive", "0", "1", "2"],
+    year: str | None = None,
 ):
     use_var = (
         "nominal"
@@ -137,11 +139,11 @@ def applyRegionCatCuts(
             )
 
     if do_vbf_filter_study:
-        if "dy_" in process:
-            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-            is_vbf_filter = ("dy_VBF_filter" in process) or (
-                process == "dy_m105_160_vbf_amc"
-            )
+        process_lower = process.lower()
+        if process_lower.startswith("dy"):
+            gjj_threshold = 300 if (year is not None and is_run3(year)) else 350
+            vbf_filter = ak.fill_none((events.gjj_mass > gjj_threshold), value=False)
+            is_vbf_filter = "dy_vbf_filter" in process_lower
             if is_vbf_filter:
                 # print(f"applying VBF filter cut on: {process}")
 
@@ -216,6 +218,129 @@ def applyRegionCatCuts(
             jj_eta_mask = ak.fill_none(masks[jj_eta_region], value=False)
 
         prod_cat_cut = prod_cat_cut & jj_eta_mask
+
+    category_selection = prod_cat_cut & region
+    events = events[category_selection]
+    return events
+
+
+def applyRegionCatCutsByScore(
+    events,
+    category: str,
+    region_name: str,
+    process: str,
+    variation: str,
+    do_vbf_filter_study: bool = False,
+    year: str | None = None,
+    do_VH_veto: bool = False,
+    jj_eta_region: str = "all",
+    njets_selection: str = "inclusive",
+):
+    """
+    Apply the same region-level selection as `applyRegionCatCuts`, but assign
+    ggH/VBF categories using transformer scores instead of the cut-based VBF
+    definition.
+
+    Strategy:
+    - if transf_vbf_score > transf_ggh_score, tag as VBF
+    - otherwise tag as ggH
+    """
+    use_var = (
+        "nominal"
+        if (isinstance(variation, str) and variation.startswith("wgt"))
+        else variation
+    )
+
+    # Helper to fetch the right column, falling back to _nominal or base if needed
+    def varcol(base):
+        """
+        Fetch the appropriate column from the events object, handling variations.
+
+        Attempts to retrieve the column named '{base}_{use_var}', falling back to '{base}_nominal' and then '{base}'.
+        Raises a KeyError if none of these columns are present in events.fields.
+
+        Parameters
+        ----------
+        base : str
+            The base name of the column to retrieve.
+
+        Returns
+        -------
+        awkward.Array
+            The selected column from the events object.
+
+        Raises
+        ------
+        KeyError
+            If none of the candidate columns are found in events.fields.
+        """
+        # print(f"Fetching variable column for: {base}")
+        # print(f"Using variation: {use_var}")
+        for cand in (f"{base}_{use_var}", f"{base}_nominal", base):
+            if cand in events.fields:
+                return events[cand]
+        raise KeyError(
+            f"[selection] Missing required field for selection: tried {base}_{use_var}, {base}_nominal, {base}"
+        )
+
+    # do mass region cut
+    region, _ = filterRegion(events, region=region_name)
+
+    # --- category cuts: USE varcol(...) for JES/JER-affected columns ---
+    nbt_loose = varcol("nBtagLoose")
+    nbt_medium = varcol("nBtagMedium")
+    jj_mass = varcol("jj_mass")
+    jj_dEta = varcol("jj_dEta")
+    jet1_pt = varcol("jet1_pt")
+    njets = varcol("njets")
+
+    prod_cat_cut = ak.ones_like(region, dtype="bool")
+
+    required_fields = {"transf_vbf_score", "transf_ggh_score"}
+    missing_fields = sorted(required_fields - set(events.fields))
+    if missing_fields:
+        raise KeyError(
+            "Missing transformer score field(s) required for score-based "
+            f"categorization: {missing_fields}"
+        )
+
+    vbf_score = ak.fill_none(events["transf_vbf_score"], float("-inf"))
+    ggh_score = ak.fill_none(events["transf_ggh_score"], float("-inf"))
+    # is_vbf = ak.fill_none(vbf_score > ggh_score, value=False)
+    is_vbf = ak.fill_none((vbf_score/(vbf_score + ggh_score)) > 0.92522, value=False)
+    # is_vbf = ak.fill_none(vbf_score > 0.925, value=False)
+
+    if category == "nocat":
+        prod_cat_cut = prod_cat_cut  # no additional cut
+    else:
+        # NOTE: btag cut for VH and ttH categories
+        btagLoose_filter = ak.fill_none((nbt_loose >= 2), value=False)
+        btagMedium_filter = ak.fill_none((nbt_medium >= 1), value=False) & ak.fill_none(
+            (njets >= 2), value=False
+        )
+        btag_cut = btagLoose_filter | btagMedium_filter
+
+        if category == "vbf":
+            prod_cat_cut = prod_cat_cut & is_vbf
+            prod_cat_cut = prod_cat_cut & (~btag_cut)         
+        elif category == "ggh":
+            prod_cat_cut = prod_cat_cut & (~is_vbf)
+            prod_cat_cut = prod_cat_cut & (~btag_cut)        
+        else:
+            raise ValueError(
+                "Invalid category option! Valid options are: 'vbf', 'ggh', 'nocat'."
+            )
+
+    if do_vbf_filter_study:
+        process_lower = process.lower()
+        if process_lower.startswith("dy"):
+            gjj_threshold = 300 if (year is not None and is_run3(year)) else 350
+            vbf_filter = ak.fill_none((events.gjj_mass > gjj_threshold), value=False)
+            is_vbf_filter = "dy_vbf_filter" in process_lower
+            if is_vbf_filter:
+                prod_cat_cut = prod_cat_cut & vbf_filter
+            else:
+                prod_cat_cut = prod_cat_cut & (~vbf_filter)
 
     category_selection = prod_cat_cut & region
     events = events[category_selection]

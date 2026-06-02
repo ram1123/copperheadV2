@@ -1,0 +1,25 @@
+{
+  "region": "HFpos",
+  "equation": "log1p_abs(log_abs(x7) + (x8 + x2))",
+  "features": [
+    "hfcentralEtaStripSize",
+    "hfadjacentEtaStripsSize",
+    "hfsigmaEtaEta",
+    "hfsigmaPhiPhi",
+    "hf_ratio",
+    "hf_sigma_sum",
+    "mass",
+    "rawFactor",
+    "area"
+  ],
+  "threshold": 0.45506805181503296,
+  "direction": "keep_high",
+  "pu_rejection": 0.3395172910662824,
+  "n_region": 18482,
+  "pt_min": 25.0,
+  "pt_turnoff": 50.0,
+  "valid_pt_range": {
+    "min": 25.0,
+    "max": 50.0
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "region": "HFpos",
+  "equation": "log_abs(log1p_abs(log_abs(x6)) * log_abs(x5))",
+  "features": [
+    "hfcentralEtaStripSize",
+    "hfadjacentEtaStripsSize",
+    "hfsigmaEtaEta",
+    "hfsigmaPhiPhi",
+    "hf_ratio",
+    "hf_sigma_sum",
+    "mass"
+  ],
+  "threshold": 0.37651193141937256,
+  "direction": "keep_high",
+  "pu_rejection": 0.37217197103117,
+  "n_region": 3715731,
+  "pt_min": 25.0,
+  "pt_turnoff": 50.0,
+  "valid_pt_range": {
+    "min": 25.0,
+    "max": 50.0
+  },
+  "balance_summary": {
+    "mode": "process_balanced",
+    "equalize_processes": true,
+    "max_per_process_class": 2000,
+    "before": [
+      {
+        "process_group": "DY",
+        "label": "HS",
+        "count": 1194403
+      },
+      {
+        "process_group": "DY",
+        "label": "PU",
+        "count": 1834578
+      },
+      {
+        "process_group": "EWK",
+        "label": "HS",
+        "count": 39427
+      },
+      {
+        "process_group": "EWK",
+        "label": "PU",
+        "count": 11517
+      },
+      {
+        "process_group": "Top",
+        "label": "HS",
+        "count": 427555
+      },
+      {
+        "process_group": "Top",
+        "label": "PU",
+        "count": 208251
+      }
+    ],
+    "after": [
+      {
+        "process_group": "DY",
+        "label": "HS",
+        "count": 2000
+      },
+      {
+        "process_group": "DY",
+        "label": "PU",
+        "count": 2000
+      },
+      {
+        "process_group": "EWK",
+        "label": "HS",
+        "count": 2000
+      },
+      {
+        "process_group": "EWK",
+        "label": "PU",
+        "count": 2000
+      },
+      {
+        "process_group": "Top",
+        "label": "HS",
+        "count": 2000
+      },
+      {
+        "process_group": "Top",
+        "label": "PU",
+        "count": 2000
+      }
+    ],
+    "n_total": 12000
+  },
+  "missing_process_groups_before": [],
+  "missing_process_groups_after": []
+}

@@ -1,0 +1,382 @@
+[
+  {
+    "region": "HEpos",
+    "equation": "(log_abs(sqrt_abs(x5)) / (x3 - -1.0438409))",
+    "features": [
+      "chEmEF",
+      "chHEF",
+      "neEmEF",
+      "neHEF",
+      "muEF",
+      "nConstituents",
+      "mass"
+    ],
+    "threshold": 0.364096075296402,
+    "direction": "keep_high",
+    "pu_rejection": 0.5073658770325239,
+    "n_region": 3207365,
+    "pt_min": 25.0,
+    "pt_turnoff": 50.0,
+    "valid_pt_range": {
+      "min": 25.0,
+      "max": 50.0
+    },
+    "balance_summary": {
+      "mode": "process_balanced",
+      "equalize_processes": true,
+      "max_per_process_class": 2000,
+      "before": [
+        {
+          "process_group": "DY",
+          "label": "HS",
+          "count": 1110249
+        },
+        {
+          "process_group": "DY",
+          "label": "PU",
+          "count": 1536017
+        },
+        {
+          "process_group": "EWK",
+          "label": "HS",
+          "count": 14592
+        },
+        {
+          "process_group": "EWK",
+          "label": "PU",
+          "count": 9453
+        },
+        {
+          "process_group": "Top",
+          "label": "HS",
+          "count": 367046
+        },
+        {
+          "process_group": "Top",
+          "label": "PU",
+          "count": 170008
+        }
+      ],
+      "after": [
+        {
+          "process_group": "DY",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "DY",
+          "label": "PU",
+          "count": 2000
+        },
+        {
+          "process_group": "EWK",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "EWK",
+          "label": "PU",
+          "count": 2000
+        },
+        {
+          "process_group": "Top",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "Top",
+          "label": "PU",
+          "count": 2000
+        }
+      ],
+      "n_total": 12000
+    },
+    "missing_process_groups_before": [],
+    "missing_process_groups_after": []
+  },
+  {
+    "region": "HEneg",
+    "equation": "((log1p_abs(x5) - tanh(x3)) / 2.6145923)",
+    "features": [
+      "chEmEF",
+      "chHEF",
+      "neEmEF",
+      "neHEF",
+      "muEF",
+      "nConstituents",
+      "mass"
+    ],
+    "threshold": 0.40552061796188354,
+    "direction": "keep_high",
+    "pu_rejection": 0.5151013781439292,
+    "n_region": 3145534,
+    "pt_min": 25.0,
+    "pt_turnoff": 50.0,
+    "valid_pt_range": {
+      "min": 25.0,
+      "max": 50.0
+    },
+    "balance_summary": {
+      "mode": "process_balanced",
+      "equalize_processes": true,
+      "max_per_process_class": 2000,
+      "before": [
+        {
+          "process_group": "DY",
+          "label": "HS",
+          "count": 1186600
+        },
+        {
+          "process_group": "DY",
+          "label": "PU",
+          "count": 1388161
+        },
+        {
+          "process_group": "EWK",
+          "label": "HS",
+          "count": 15495
+        },
+        {
+          "process_group": "EWK",
+          "label": "PU",
+          "count": 8538
+        },
+        {
+          "process_group": "Top",
+          "label": "HS",
+          "count": 393746
+        },
+        {
+          "process_group": "Top",
+          "label": "PU",
+          "count": 152994
+        }
+      ],
+      "after": [
+        {
+          "process_group": "DY",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "DY",
+          "label": "PU",
+          "count": 2000
+        },
+        {
+          "process_group": "EWK",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "EWK",
+          "label": "PU",
+          "count": 2000
+        },
+        {
+          "process_group": "Top",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "Top",
+          "label": "PU",
+          "count": 2000
+        }
+      ],
+      "n_total": 12000
+    },
+    "missing_process_groups_before": [],
+    "missing_process_groups_after": []
+  },
+  {
+    "region": "HFpos",
+    "equation": "log_abs(log1p_abs(log_abs(x6)) * log_abs(x5))",
+    "features": [
+      "hfcentralEtaStripSize",
+      "hfadjacentEtaStripsSize",
+      "hfsigmaEtaEta",
+      "hfsigmaPhiPhi",
+      "hf_ratio",
+      "hf_sigma_sum",
+      "mass"
+    ],
+    "threshold": 0.37651193141937256,
+    "direction": "keep_high",
+    "pu_rejection": 0.37217197103117,
+    "n_region": 3715731,
+    "pt_min": 25.0,
+    "pt_turnoff": 50.0,
+    "valid_pt_range": {
+      "min": 25.0,
+      "max": 50.0
+    },
+    "balance_summary": {
+      "mode": "process_balanced",
+      "equalize_processes": true,
+      "max_per_process_class": 2000,
+      "before": [
+        {
+          "process_group": "DY",
+          "label": "HS",
+          "count": 1194403
+        },
+        {
+          "process_group": "DY",
+          "label": "PU",
+          "count": 1834578
+        },
+        {
+          "process_group": "EWK",
+          "label": "HS",
+          "count": 39427
+        },
+        {
+          "process_group": "EWK",
+          "label": "PU",
+          "count": 11517
+        },
+        {
+          "process_group": "Top",
+          "label": "HS",
+          "count": 427555
+        },
+        {
+          "process_group": "Top",
+          "label": "PU",
+          "count": 208251
+        }
+      ],
+      "after": [
+        {
+          "process_group": "DY",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "DY",
+          "label": "PU",
+          "count": 2000
+        },
+        {
+          "process_group": "EWK",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "EWK",
+          "label": "PU",
+          "count": 2000
+        },
+        {
+          "process_group": "Top",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "Top",
+          "label": "PU",
+          "count": 2000
+        }
+      ],
+      "n_total": 12000
+    },
+    "missing_process_groups_before": [],
+    "missing_process_groups_after": []
+  },
+  {
+    "region": "HFneg",
+    "equation": "log_abs(log_abs(x5) * log1p_abs(log_abs(x6)))",
+    "features": [
+      "hfcentralEtaStripSize",
+      "hfadjacentEtaStripsSize",
+      "hfsigmaEtaEta",
+      "hfsigmaPhiPhi",
+      "hf_ratio",
+      "hf_sigma_sum",
+      "mass"
+    ],
+    "threshold": 0.3775588572025299,
+    "direction": "keep_high",
+    "pu_rejection": 0.37189740455306114,
+    "n_region": 3679233,
+    "pt_min": 25.0,
+    "pt_turnoff": 50.0,
+    "valid_pt_range": {
+      "min": 25.0,
+      "max": 50.0
+    },
+    "balance_summary": {
+      "mode": "process_balanced",
+      "equalize_processes": true,
+      "max_per_process_class": 2000,
+      "before": [
+        {
+          "process_group": "DY",
+          "label": "HS",
+          "count": 1185382
+        },
+        {
+          "process_group": "DY",
+          "label": "PU",
+          "count": 1811731
+        },
+        {
+          "process_group": "EWK",
+          "label": "HS",
+          "count": 39128
+        },
+        {
+          "process_group": "EWK",
+          "label": "PU",
+          "count": 11371
+        },
+        {
+          "process_group": "Top",
+          "label": "HS",
+          "count": 425978
+        },
+        {
+          "process_group": "Top",
+          "label": "PU",
+          "count": 205643
+        }
+      ],
+      "after": [
+        {
+          "process_group": "DY",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "DY",
+          "label": "PU",
+          "count": 2000
+        },
+        {
+          "process_group": "EWK",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "EWK",
+          "label": "PU",
+          "count": 2000
+        },
+        {
+          "process_group": "Top",
+          "label": "HS",
+          "count": 2000
+        },
+        {
+          "process_group": "Top",
+          "label": "PU",
+          "count": 2000
+        }
+      ],
+      "n_total": 12000
+    },
+    "missing_process_groups_before": [],
+    "missing_process_groups_after": []
+  }
+]

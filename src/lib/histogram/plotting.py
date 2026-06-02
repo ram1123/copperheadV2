@@ -249,7 +249,27 @@ def plotDataMC_compare(
             # optional safety clamp (avoid insane autoscale)
             ylo = max(ylo, 0.0)
             yhi = min(yhi, 5.0)
-            set_yticks = np.linspace(ylo, yhi, 7)
+            full_range = yhi - ylo
+
+            # Percentile levels requested
+            percentiles = np.array([0.10, 0.25, 0.50, 0.75, 0.90])
+
+            # Calculate ticks: ylo + (percentile * range)
+            set_yticks = ylo + (percentiles * full_range)
+
+            set_yticks = np.round(set_yticks, 2).tolist()            
+        elif len(plot_ratio_range) == 2:
+            # fallback if ratio_hist is all-NaN or plot_ratio_range is not "auto"
+            ylo, yhi = plot_ratio_range[0], plot_ratio_range[1]
+            full_range = yhi - ylo
+
+            # Percentile levels requested
+            percentiles = np.array([0.10, 0.25, 0.50, 0.75, 0.90])
+
+            # Calculate ticks: ylo + (percentile * range)
+            set_yticks = ylo + (percentiles * full_range)
+
+            set_yticks = np.round(set_yticks, 2).tolist()
         else:
             # fallback if ratio_hist is all-NaN or plot_ratio_range is not "auto"
             ylo, yhi = 0.5, 1.5

@@ -25,10 +25,22 @@ years:
                     ppd_summary_table: "Run 3 Data-taking twiki (2022D)"
                     golden_json_official: test
         DY:
+            dy_VBF_filter:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160-VBFFilter_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 3.05
+                cross_section_source: gen script
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"        
             dyTo2L_M-50_0j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM
                 cross_section_pb: 5034.65
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -41,7 +53,7 @@ years:
             dyTo2L_M-50_1j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM
                 cross_section_pb: 952.29
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -54,7 +66,7 @@ years:
             dyTo2L_M-50_2j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM
                 cross_section_pb: 359.05
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -96,8 +108,8 @@ years:
             dyTo2L_M-50_incl:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v1/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v5/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
                 notes: njets <= 2, not njets==2;
                 cross_section_pb: 5991.00
                 notes2:  cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
@@ -312,7 +324,7 @@ years:
                 references:
                     - NONE
 
-            zz_2l2u:
+            zz_2l2nu:
                 skip_sample: False
                 datasets:
                     - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
@@ -455,7 +467,7 @@ years:
                     - "POWHEG (with dipole recoil)"
 
             vbf_aMCatNLO:
-                skip_sample: True
+                skip_sample: False
                 datasets:
                     - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
                 cross_section_pb: 0.00105742
@@ -504,10 +516,23 @@ years:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
                     golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
         DY:
+            dy_VBF_filter:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160-VBFFilter_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 3.05
+                cross_section_source: gen script
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+
             dyTo2L_M-50_0j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM
                 cross_section_pb: 5034.65
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -520,7 +545,7 @@ years:
             dyTo2L_M-50_1j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM
                 cross_section_pb: 952.29
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -533,7 +558,7 @@ years:
             dyTo2L_M-50_2j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM
                 cross_section_pb: 359.05
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -574,8 +599,8 @@ years:
             dyTo2L_M-50_incl:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
-                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v1/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v5/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
                 notes: cross-section on webpage 1997.08 for ee. So, 1997.08*3 = 5991.0
                 cross_section_pb: 5991.00
                 cross_section_source: "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
@@ -788,7 +813,7 @@ years:
                 references:
                     - NONE
 
-            zz_2l2u:
+            zz_2l2nu:
                 skip_sample: False
                 datasets:
                     - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
@@ -930,7 +955,7 @@ years:
                     - "POWHEG (with dipole recoil)"
 
             vbf_aMCatNLO:
-                skip_sample: True
+                skip_sample: False
                 datasets:
                     - /VBFH_Hto2Mu_M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
                 cross_section_pb: 0.00105742
@@ -966,10 +991,23 @@ years:
                     golden_json_official: test
 
         DY:
+            dy_VBF_filter:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160-VBFFilter_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v5/NANOAODSIM
+                cross_section_pb: 3.05
+                cross_section_source: gen script
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+        
             dyTo2L_M-50_0j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v4/NANOAODSIM
                 cross_section_pb: 5034.65
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -982,7 +1020,7 @@ years:
             dyTo2L_M-50_1j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v4/NANOAODSIM
                 cross_section_pb: 952.29
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -1022,8 +1060,9 @@ years:
                 skip_sample: True
                 datasets:
                     - None
-                cross_section_pb: 5558.0
-                cross_section_source: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8
+                cross_section_pb: 5991.0
+                cross_section_source: "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                cross_section_source_doc: https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=DAS%3DDYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -1243,7 +1282,7 @@ years:
                 references:
                     - NONE
 
-            zz_2l2u:
+            zz_2l2nu:
                 skip_sample: False
                 datasets:
                     - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v3/NANOAODSIM
@@ -1353,7 +1392,8 @@ years:
 
             ggh_amcatnlo:
                 skip_sample: True
-                datasets: []
+                datasets:
+                    - None
                 cross_section_pb: 0.0135096
                 notes: "total cross-section = cross-section TIMES branching ratio = 51.96 * 2.6*10^{-4}"
                 cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
@@ -1428,10 +1468,23 @@ years:
                     golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
 
         DY:
+            dy_VBF_filter:
+                skip_sample: False
+                datasets:
+                    - /DYto2Mu-2Jets_MLL-105To160-VBFFilter_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v4/NANOAODSIM
+                cross_section_pb: 3.05
+                cross_section_source: gen script
+                kfactor:
+                    value: 1.0
+                    source: NONE
+                filter_efficiency: 1.0
+                references:
+                    - "MG5_aMC@NLO FxFx"
+        
             dyTo2L_M-50_0j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v4/NANOAODSIM
                 cross_section_pb: 5034.65
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -1444,7 +1497,7 @@ years:
             dyTo2L_M-50_1j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v4/NANOAODSIM
                 cross_section_pb: 952.29
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -1457,7 +1510,7 @@ years:
             dyTo2L_M-50_2j:
                 skip_sample: False
                 datasets:
-                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                    - /DYto2L-2Jets_MLL-50_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v5/NANOAODSIM
                 cross_section_pb: 359.05
                 cross_section_source: SMP-25-013,AN2023_179_v6
                 kfactor:
@@ -1485,8 +1538,9 @@ years:
                 datasets:
                     - None
                 notes: cross-section on webpage 2124.08 for ee. So, 2124.08*3 = 6372.24
-                cross_section_pb: 6372.24
-                cross_section_source: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
+                cross_section_pb: 5991.0
+                cross_section_source: "DY Turbo (Filipo, Pisa): XS = 1997.0 * 3 = 5991.0"
+                cross_section_source_doc: https://cms-generators.docs.cern.ch/about-cross-sections/higher-order-calculation/fewz/
                 kfactor:
                     value: 1.0
                     source: NONE
@@ -1707,7 +1761,7 @@ years:
                 references:
                     - NONE
 
-            zz_2l2u:
+            zz_2l2nu:
                 skip_sample: False
                 datasets:
                     - /ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
@@ -1787,7 +1841,7 @@ years:
                     - NONE
 
             ewk_mmjj_mll_105_160_mjj120:
-                skip_sample: True
+                skip_sample: False
                 datasets:
                     - /EWK-2Mu2J_M2Mu-105to160_M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v3/NANOAODSIM
                 cross_section_pb: 0.06447

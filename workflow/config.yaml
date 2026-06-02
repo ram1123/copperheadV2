@@ -1,33 +1,48 @@
 # filesystem base for hmm area
 hmm_base: /work/projects/hmm
+# hmm_base: /depot/cms/hmm
 
-#  pattern of output folder: 
+#  pattern of output folder:
 # load_path=lambda wc: (
 #     f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
 #     f"{label_for_year_corr(wc.year)}/stage1_output/{wc.year}/f1_0"
-# ),          
+# )
 
 # what to run
-years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
+years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # years: ["2022preEE", "2023", "2023BPix"]
+# years: ["2022preEE", "2022postEE"]
+# years: ["2022preEE"]
 # years: ["2022postEE"]
-# years: ["2023", "2023BPix"]
-# years: ["2024", "2016preVFP", "2016postVFP", "2017"]
-# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2016preVFP", "2016postVFP", "2017"]
-# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2016preVFP", "2016postVFP", "2017"]
 # years: ["2024"]
-# run_tag: "FilterJetsHorn30GeV_JetIDMuIDFix_V2"
-# run_tag: "FilterJetsHorn30GeV_JetIDMuIDFix_V2"
-# run_tag: "FilterJetsHorn30GeV_JetIDMuIDFix_UpdateEventFilter"
-# run_tag: "FilterJetsHorn30GeV_Feb23"
-# run_tag: "FilterJetsHorn30GeV_Feb23"
-# run_tag: "FilterJetsHorn30GeV_Feb23_tightPassLepVeto"
-# run_tag: "FilterEventsHorn50GeV_Feb23_tightPassLepVeto_NoJER"
-run_tag: "FilterJetsHorn30GeV_Feb23_NoJER_v2"
+# years: ["2023", "2023BPix"]
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2016preVFP", "2016postVFP", "2017", "2018"]
+# run_tag: "FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2"
+# run_tag: "FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v3"
+
+# run_tag: "FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+# run_tag: "FilterJetsHorn25GeV_HE30GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+# run_tag: "FilterJetsHorn25GeV_nConst03_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+# run_tag: "FilterJetsHorn25GeV_pySR_Apr03_tightPassLepVeto_NoJER_JetIDFix"
+
+
+# Below tags are after JetID Fix and b-tag changes
+# run_tag: "FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2"
+# run_tag: "FilterJetsHorn25GeV_HE30GeV_Apr09_tightPassLepVeto_NoJER"
+# run_tag: "FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
+
+# run_tag: "FilterJetsHorn25GeV_Apr14_tightPassLepVeto_NoJER_pySRTraining"
+# run_tag: "test_14apr"
+
+
+run_tag: "FilterJets_May14_PySR07MayV2"
 
 # dask gateway
 use_gateway: true
 cluster_index: 0
+
+# plotting workflow
+plot_vbf_filter_study: false
 
 # zpt DNN
 zpt:

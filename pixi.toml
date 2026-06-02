@@ -9,6 +9,15 @@ version = "0.1.0"
 cuda = "12.4"
 
 [tasks]
+list-tasks = "pixi task list"
+check = "python -c 'import coffea, awkward, uproot; print(\"Stack Ready\")'"
+lint = "ruff check ."
+# format = "ruff format ."
+stage1 = "snakemake -s workflow/Snakefile all_stage1 -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 "
+stage1full = "snakemake -s workflow/Snakefile -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 "
+plot = "snakemake -s workflow/Snakefile plot_all  -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --allowed-rules plots plot_all --forceall --config use_existing_stage1=True"
+unlock = "snakemake -s workflow/Snakefile --unlock"
+stage2 = "bash stage2_sh.sh all all"
 
 # ----------------------------------------------------------------------
 # Core analysis stack: needed for stage-prestage/stage1
@@ -48,6 +57,8 @@ pytz = "*"
 # ROOT / HEP extras
 # ----------------------------------------------------------------------
 [feature.root.dependencies]
+# ROOT for the main analysis stack. Keep this separate from the Combine stack
+# because cms-combine requires a newer ROOT series.
 root = "==6.32.2"
 hepconvert = "*"
 scikit-hep-testdata = "*"
@@ -57,6 +68,7 @@ scikit-hep-testdata = "*"
 # ----------------------------------------------------------------------
 [feature.combine.dependencies]
 cms-combine = "==10.4.2"
+# Kept in its own solve group because it is not compatible with the analysis ROOT pin.
 root = "6.36.*"
 
 # ----------------------------------------------------------------------
@@ -117,12 +129,16 @@ scripts = ["scripts/pixi_activate.sh"]
 # Environments
 # ----------------------------------------------------------------------
 [environments]
-# Minimal CI environment for GitHub Actions sync tests
-ci = ["analysis"]
-default = ["analysis", "dev", "root", "workflow", "style", "local"]
+# Pixi still creates one runnable environment directory per named environment.
+# Using solve groups here reduces duplicate solving work and keeps overlapping
+# environments pinned together.
+# Reference: https://pixi.prefix.dev/v0.21.0/features/multi_environment/
 
-# Full heavy environment with ML + symbolic tools
-full = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"]
-ml = ["analysis", "ml", "dev", "style", "local"]
-symbolic = ["analysis", "symbolic", "dev", "style", "local"]
-combine = ["analysis", "combine", "ml", "local", "style"]
+# Minimal CI environment for sync checks and lightweight validation.
+ci = { features = ["analysis"], solve-group = "analysis-stack" }
+
+# Main day-to-day analysis environment, including symbolic regression and CUDA helpers.
+default = { features = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"], solve-group = "analysis-stack" }
+
+# Kept in a separate solve group because the combine stack pins a different ROOT version.
+combine = { features = ["analysis", "combine", "ml", "style", "dev", "workflow", "local"], solve-group = "combine-stack" }

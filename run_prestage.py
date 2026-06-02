@@ -4,16 +4,19 @@ import glob
 import json
 import os
 import re
+import shutil
+import subprocess
 import time
 import uuid
 
 import awkward as ak
+
 import coffea
 import dask
 import numpy as np
 import tqdm
 import uproot
-from cli.common_argparser import build_common_parser
+from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from coffea.dataset_tools import rucio_utils
 from coffea.dataset_tools.preprocess import preprocess
 from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
@@ -158,6 +161,40 @@ def removeBadFiles(filelist):
     clean_filtlist = list(set(filelist) - set(bad_filelist)) # remove bad files from the filelist
     return clean_filtlist
 
+
+def getDatasetRootFilesViaDasgoclient(single_dataset_name: str) -> list:
+    dasgoclient = shutil.which("dasgoclient")
+    if dasgoclient is None:
+        raise RuntimeError(
+            "dasgoclient is not available, so the fallback file-discovery path cannot run."
+        )
+
+    cmd = [
+        dasgoclient,
+        "--query",
+        f"file dataset={single_dataset_name}",
+    ]
+    logger.warning(
+        "[prestage] Falling back to dasgoclient for dataset discovery on %s",
+        single_dataset_name,
+    )
+    result = subprocess.run(
+        cmd,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    files = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not files:
+        raise RuntimeError(
+            f"dasgoclient returned no files for dataset {single_dataset_name}"
+        )
+
+    # Build explicit ROOT paths ourselves so downstream code does not depend on
+    # coffea's failing SITECONF/xrootd site-map parser.
+    return normalize_paths(files, AAA_REDIRECTORS[0])
+
 def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
     # logger.info(f"dataset name: {single_dataset_name}")
     # single_dataset_name = single_dataset_name["path"]
@@ -180,14 +217,23 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
             tree=True,
             scope="cms",
         )
-        outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
-            outlist[0],
-            allowlist_sites=allowlist_sites,
-            mode="full",
-            client=rucio_client,
-            # partial_allowed=True
-        )
-        fnames = [file[0] for file in outfiles if file != []]
+        try:
+            outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
+                outlist[0],
+                allowlist_sites=allowlist_sites,
+                mode="full",
+                client=rucio_client,
+                # partial_allowed=True
+            )
+            fnames = [file[0] for file in outfiles if file != []]
+        except Exception as exc:
+            logger.warning(
+                "[prestage] Rucio replica lookup failed for %s with %s: %s",
+                single_dataset_name,
+                type(exc).__name__,
+                exc,
+            )
+            fnames = getDatasetRootFilesViaDasgoclient(single_dataset_name)
 
     return fnames
 
@@ -273,6 +319,10 @@ if __name__ == "__main__":
     logger.setLevel(args.log_level)
     os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
     year = args.year
+    args.dataset_yaml_file = resolve_dataset_yaml_file(
+        args.dataset_yaml_file, year, args.NanoAODv
+    )
+    logger.info(f"Using dataset YAML: {args.dataset_yaml_file}")
     logger.info(f"year: {year}")
 
     if args.fraction is None: # do the normal prestage setup
@@ -419,8 +469,9 @@ if __name__ == "__main__":
             if args.xcache:
                 fnames = get_Xcache_filelist(fnames)
 
-            # # if fnames contains `/eos/vbc/experiments/cms` remove it.
-            # fnames = [f.replace("/eos/vbc/experiments/cms", "") if "/eos/vbc/experiments/cms" in f else f for f in fnames]
+            # FIXME: Below search replace is a fix for some of files that has this string (not sure why)
+            # if fnames contains `/eos/vbc/experiments/cms` remove it. 
+            fnames = [f.replace("/eos/vbc/experiments/cms", "") if "/eos/vbc/experiments/cms" in f else f for f in fnames]
 
             logger.debug(f"sample_name: {sample_name}")
             logger.debug(f"file names: {fnames}")
@@ -454,9 +505,10 @@ if __name__ == "__main__":
                         logger.debug(f"events.fields: {events.fields}")
                         # if coffea version < 2025.3.0 then use the line below
                         if coffea.__version__ == "2024.11.0":
-                            preprocess_metadata["data_entries"] = int(ak.num(events.Muon.pt, axis=0).compute()) # convert into 32bit precision as 64 bit precision isn't json serializable
+                            preprocess_metadata["data_entries"] = int(ak.num(events, axis=0).compute())  # convert into 32bit precision as 64 bit precision isn't json serializable
                         elif coffea.__version__ == "2025.3.0":
                             # For coffea version 2025.3.0, count the entries directly from ROOT files
+                            # FIXME: Remove for loop as it will be very slow.
                             n_events_total = 0
                             for fname_normalized in file_input.keys():
                                 with uproot.open(f"{fname_normalized}:Events") as tree:

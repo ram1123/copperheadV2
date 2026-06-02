@@ -46,3 +46,5 @@ pixi.lock
 test*.py
 test*.sh
 output/
+*.log.attempt*
+.pixi/

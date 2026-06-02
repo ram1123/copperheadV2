@@ -34,6 +34,7 @@ import os
 import random
 import sys
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -189,6 +190,7 @@ class TrainConfig:
     save_last: bool
     save_history: bool
     save_predictions: bool
+    save_torchscript: bool
 
 
 def _load_yaml(path: str) -> Dict[str, Any]:
@@ -288,6 +290,7 @@ def load_config(cfg_path: str) -> TrainConfig:
     save_last = bool(art.get("save_last_model", True))
     save_history = bool(art.get("save_history", True))
     save_predictions = bool(art.get("save_predictions", False))
+    save_torchscript = bool(art.get("save_torchscript", True))
 
     return TrainConfig(
         seed=seed,
@@ -345,6 +348,7 @@ def load_config(cfg_path: str) -> TrainConfig:
         save_last=save_last,
         save_history=save_history,
         save_predictions=save_predictions,
+        save_torchscript=save_torchscript,
     )
 
 
@@ -356,6 +360,8 @@ def set_seed(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    if torch.cuda.is_available():
+        torch.backends.cudnn.benchmark = True
     # determinism tradeoff (slower). For training stability debugging, you can enable:
     # torch.use_deterministic_algorithms(True)
 
@@ -415,6 +421,36 @@ def make_dataloader(
         kwargs["prefetch_factor"] = prefetch_factor if prefetch_factor is not None else 2
         kwargs["persistent_workers"] = True
     return DataLoader(ds, **kwargs)
+
+
+@lru_cache(maxsize=64)
+def _load_fold_data_cached(
+    train_path: str,
+    val_path: str,
+    eval_path: str,
+    training_features: Tuple[str, ...],
+    label_col: str,
+    weight_col: str,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Cache fold parquet loading across HPO trials within one Python process."""
+
+    def _read_one(path_str: str) -> pd.DataFrame:
+        path = Path(path_str)
+        df = pd.read_parquet(path)
+        for c in list(training_features) + [label_col, weight_col]:
+            if c not in df.columns:
+                raise KeyError(f"Missing column '{c}' in {path}")
+
+        df[list(training_features)] = df[list(training_features)].apply(
+            pd.to_numeric, errors="coerce"
+        )
+        return df.dropna(subset=list(training_features))
+
+    return (
+        _read_one(train_path),
+        _read_one(val_path),
+        _read_one(eval_path),
+    )
 
 
 # --------------------------------------------------------------------------------------
@@ -499,13 +535,13 @@ def bce_with_logits_loss(
     if weights is None:
         return per.mean()
 
-    w = weights
-    if normalize_in_batch:
-        # keep average weight ~1 to stabilize scale
-        denom = torch.mean(torch.abs(w)) + 1e-12
-        w = w / denom
-
-    return torch.sum(per * w) / (torch.sum(torch.abs(w)) + 1e-12)
+    # sync weigth
+    w_eff = make_loss_weights(
+        weights,
+        normalize_in_batch=normalize_in_batch,
+        clip_abs_max=None,
+    )
+    return torch.sum(per * w_eff) / (torch.sum(torch.abs(w_eff)) + 1e-12)
 
 
 def make_loss_weights(
@@ -880,11 +916,22 @@ def train_one_fold(
     out_dir: str,
     trial: "optuna.trial.Trial | None" = None,
     trial_step_offset: int = 0,
+    evaluate_train_each_epoch: bool = True,
+    run_final_evaluation: bool = True,
 ) -> float:
     fold_dir = Path(out_dir) / f"fold{fold_idx}"
     plots_dir = fold_dir / cfg.plots_subdir
     fold_dir.mkdir(parents=True, exist_ok=True)
     plots_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info(
+        "[fold %d] start epochs=%d batch_size=%d num_workers=%d device=%s",
+        fold_idx,
+        cfg.epochs,
+        cfg.batch_size,
+        cfg.num_workers,
+        cfg.device,
+    )
 
     # Load parquet
     train_path = Path(data_dir) / f"data_df_train_{fold_idx}.parquet"
@@ -898,24 +945,14 @@ def train_one_fold(
     if not eval_path.exists():
         raise FileNotFoundError(f"Missing: {eval_path}")
 
-    df_train = pd.read_parquet(train_path)
-    df_val = pd.read_parquet(val_path)
-    df_eval = pd.read_parquet(eval_path)
-
-    # sanity: required columns
-    for c in cfg.training_features + [cfg.label_col, cfg.weight_col]:
-        if c not in df_train.columns:
-            raise KeyError(f"Missing column '{c}' in {train_path}")
-
-    # ensure numeric
-    df_train[cfg.training_features] = df_train[cfg.training_features].apply(pd.to_numeric, errors="coerce")
-    df_val[cfg.training_features] = df_val[cfg.training_features].apply(pd.to_numeric, errors="coerce")
-    df_eval[cfg.training_features] = df_eval[cfg.training_features].apply(pd.to_numeric, errors="coerce")
-
-    # drop any rows with NaN in features (shouldn't happen if preprocessing is correct)
-    df_train = df_train.dropna(subset=cfg.training_features)
-    df_val = df_val.dropna(subset=cfg.training_features)
-    df_eval = df_eval.dropna(subset=cfg.training_features)
+    df_train, df_val, df_eval = _load_fold_data_cached(
+        str(train_path),
+        str(val_path),
+        str(eval_path),
+        tuple(cfg.training_features),
+        cfg.label_col,
+        cfg.weight_col,
+    )
 
     # datasets/loaders
     ds_train = ParquetDataset(df_train, cfg.training_features, cfg.label_col, cfg.weight_col, cfg.dtype)
@@ -983,9 +1020,23 @@ def train_one_fold(
     # scheduler
     scheduler = None
     if cfg.scheduler_name.lower() == "reduce_on_plateau":
+        scheduler_mode = cfg.rop_mode
+        if cfg.es_monitor == "val_auc_weighted":
+            scheduler_mode = "max"
+        elif cfg.es_monitor == "val_loss":
+            scheduler_mode = "min"
+
+        if scheduler_mode != cfg.rop_mode:
+            logger.warning(
+                "[fold %d] Overriding ReduceLROnPlateau mode from %s to %s to match monitor=%s",
+                fold_idx,
+                cfg.rop_mode,
+                scheduler_mode,
+                cfg.es_monitor,
+            )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            mode=cfg.rop_mode,
+            mode=scheduler_mode,
             factor=cfg.rop_factor,
             patience=cfg.rop_patience,
             min_lr=cfg.rop_min_lr,
@@ -1018,6 +1069,7 @@ def train_one_fold(
     }
 
     best_metric = None
+    best_epoch = None
     best_path = fold_dir / "best.pt"
     last_path = fold_dir / "last.pt"
     best_ts_path = fold_dir / "best_torchscript.pt"
@@ -1065,13 +1117,18 @@ def train_one_fold(
 
             running.append(float(loss.item()))
 
-        # evaluate
-        train_eval = evaluate(model, loader_train, device, cfg, pos_weight_t)
+        # During HPO, skip the full training-set evaluation to reduce epoch cost.
+        if evaluate_train_each_epoch:
+            train_eval = evaluate(model, loader_train, device, cfg, pos_weight_t)
+            train_loss = float(train_eval["loss"])
+            train_auc_w = float(train_eval["auc_w"])
+        else:
+            train_eval = None
+            train_loss = float(np.mean(running)) if running else float("nan")
+            train_auc_w = float("nan")
         val_eval = evaluate(model, loader_val, device, cfg, pos_weight_t)
 
-        train_loss = float(train_eval["loss"])
         val_loss = float(val_eval["loss"])
-        train_auc_w = float(train_eval["auc_w"])
         val_auc_w = float(val_eval["auc_w"])
 
         history["train_loss"].append(train_loss)
@@ -1080,18 +1137,29 @@ def train_one_fold(
         history["val_auc_w"].append(val_auc_w)
         history["lr"].append(float(optimizer.param_groups[0]["lr"]))
 
-        logger.info(
-            "[fold %d] epoch %d/%d  train_loss=%.6f val_loss=%.6f  train_auc_w=%.4f val_auc_w=%.4f lr=%.3e",
-            fold_idx, epoch, cfg.epochs - 1, train_loss, val_loss, train_auc_w, val_auc_w, history["lr"][-1]
-        )
-
-        # scheduler step
-        if scheduler is not None:
-            if cfg.es_monitor == "val_loss":
-                scheduler.step(val_loss)
-            else:
-                # for AUC monitor, you might want mode="max" and step(-auc) etc.
-                scheduler.step(val_loss)
+        if evaluate_train_each_epoch:
+            logger.info(
+                "[fold %d] epoch %d/%d  train_loss=%.6f val_loss=%.6f  train_auc_w=%.4f val_auc_w=%.4f lr=%.3e",
+                fold_idx,
+                epoch,
+                cfg.epochs - 1,
+                train_loss,
+                val_loss,
+                train_auc_w,
+                val_auc_w,
+                history["lr"][-1],
+            )
+        else:
+            logger.info(
+                "[fold %d] epoch %d/%d  train_loss(batch)=%.6f val_loss=%.6f  val_auc_w=%.4f lr=%.3e",
+                fold_idx,
+                epoch,
+                cfg.epochs - 1,
+                train_loss,
+                val_loss,
+                val_auc_w,
+                history["lr"][-1],
+            )
 
         # choose monitor value
         if cfg.es_monitor == "val_loss":
@@ -1100,6 +1168,10 @@ def train_one_fold(
             monitor_val = val_auc_w
         else:
             monitor_val = val_loss
+
+        # scheduler step
+        if scheduler is not None:
+            scheduler.step(monitor_val)
 
         # ---------------------------
         # Optuna report + prune (NEW)
@@ -1130,6 +1202,7 @@ def train_one_fold(
 
         if improved:
             best_metric = monitor_val
+            best_epoch = epoch
             if cfg.save_best:
                 torch.save(
                     {
@@ -1138,12 +1211,14 @@ def train_one_fold(
                         "epoch": epoch,
                         "cfg": cfg.__dict__,
                         "best_metric": best_metric,
+                        "best_epoch": best_epoch,
                     },
                     best_path,
                 )
 
-            # export torchscript for stage-2
-            export_torchscript(model, len(cfg.training_features), best_ts_path)
+            if cfg.save_torchscript:
+                # Export only when requested; HPO does not consume these files.
+                export_torchscript(model, len(cfg.training_features), best_ts_path)
 
         # early stopping
         if early is not None:
@@ -1161,16 +1236,21 @@ def train_one_fold(
                 "epoch": len(history["train_loss"]) - 1,
                 "cfg": cfg.__dict__,
                 "best_metric": best_metric,
+                "best_epoch": best_epoch,
             },
             last_path,
         )
-        # export torchscript for stage-2
-        export_torchscript(model, len(cfg.training_features), last_ts_path)
+        if cfg.save_torchscript:
+            # Export only when requested; HPO does not consume these files.
+            export_torchscript(model, len(cfg.training_features), last_ts_path)
 
     # load best for final evaluation if requested
     if cfg.es_enable and cfg.es_restore_best and cfg.save_best and best_path.exists():
         ckpt = torch.load(best_path, map_location=device)
         model.load_state_dict(ckpt["model_state"])
+
+    if not run_final_evaluation:
+        return float(best_metric) if best_metric is not None else float("nan")
 
     # final eval (train/val/eval)
     train_final = evaluate(model, loader_train, device, cfg, pos_weight_t)
@@ -1201,6 +1281,7 @@ def train_one_fold(
             "eval": {k: float(eval_final[k]) for k in ["loss", "auc_w", "auc", "ap_w", "ap"]},
             "ks_overtraining": ks,
             "best_monitor_value": float(best_metric) if best_metric is not None else None,
+            "best_epoch": int(best_epoch) if best_epoch is not None else None,
         }
         with open(fold_dir / "metrics_summary.json", "w") as f:
             json.dump(metrics_summary, f, indent=2)
@@ -1355,10 +1436,15 @@ def main() -> None:
 
     optuna_info = None
     optuna_applied = None
+    active_seed = cfg.seed
 
     if args.optuna_best_json is not None:
         optuna_info = load_optuna_best_json(args.optuna_best_json)
         cfg, optuna_applied = apply_optuna_best(cfg, optuna_info)
+        trial_seed = optuna_info.get("trial_seed", None)
+        if trial_seed is not None:
+            active_seed = int(trial_seed)
+            set_seed(active_seed)
 
         logger.info("[optuna] Loaded best params from: %s", args.optuna_best_json)
         logger.info("[optuna] Applied: hidden=%s activation=%s batch_norm=%s dropout=%s",
@@ -1368,6 +1454,8 @@ def main() -> None:
                     optuna_applied["lr"], optuna_applied["weight_decay"],
                     optuna_applied["batch_size"], optuna_applied["label_smoothing"],
                     optuna_applied["grad_clip_norm"])
+        if trial_seed is not None:
+            logger.info("[optuna] Reusing winning trial seed: %d", active_seed)
 
     folds = None
     if args.folds is not None:
@@ -1378,6 +1466,7 @@ def main() -> None:
     logger.info("CUDA available: %s", torch.cuda.is_available())
     if torch.cuda.is_available():
         logger.info("CUDA device: %s", torch.cuda.get_device_name(0))
+    logger.info("Active training seed: %d", active_seed)
 
     train_all_folds(cfg, data_dir=args.data_dir, out_dir=args.out_dir, folds=folds)
 
@@ -1408,6 +1497,7 @@ def main() -> None:
             "best_json": str(args.optuna_best_json) if args.optuna_best_json else None,
             "best_value": (optuna_info.get("best_value") if optuna_info else None),
             "n_trials": (optuna_info.get("n_trials") if optuna_info else None),
+            "trial_seed": (optuna_info.get("trial_seed") if optuna_info else None),
             "applied_params": optuna_applied,
         },
 

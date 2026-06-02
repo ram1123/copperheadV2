@@ -18,7 +18,7 @@ from cli.common_argparser import build_common_parser
 from coffea.ml_tools.torch_wrapper import torch_wrapper
 from modules import selection
 from modules.dask_utils import get_dask_client
-from modules.utils import fillEventNans, logger
+from modules.utils import fillEventNans, get_compacted_path, logger
 from modules.sample_config import get_bkg_sig_dicts
 from tqdm import tqdm
 
@@ -36,30 +36,24 @@ def get_variation(wgt_variation, sys_variation):
             return None
 
 
-def get_compactedPath(stage1_path):
+def discover_shape_systs(fields, prefixes=None):
     """
-    check if we have another directory, but with "compacted" in the name.
-    if so, then return that instead
-    NOTE: this is a lazy method that just looks if compacted directory exists.
-    It doesn't check if all the necessary samples are in the directory.
+    Discover available shape-variation suffixes from shifted stage1 branches.
+    This covers both jet/JEC-like variations and muon-momentum shape variations.
     """
-    compacted_stage1_path = str(stage1_path).replace("/f1_0", "/compacted")
-    logger.debug(f"compacted_stage1_path: {compacted_stage1_path}")
-    if os.path.isdir(compacted_stage1_path):
-        return Path(compacted_stage1_path)
-    elif os.path.isdir(stage1_path):
-        return Path(stage1_path)
-    else:
-        logger.critical(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
-        raise FileNotFoundError(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
-
-def discover_jes_systs(fields, jet_prefixes=None):
-    """
-    Discover available JES/JER-like up/down suffixes from any jet-related variable.
-    Returns a sorted list of strings like ['Absolute_2018_up', 'HF_down', ...].
-    """
-    if jet_prefixes is None:
-        jet_prefixes = [
+    if prefixes is None:
+        prefixes = [
+            "dimuon_mass_",
+            "dimuon_pt_",
+            "dimuon_pt_log_",
+            "dimuon_eta_",
+            "dimuon_rapidity_",
+            "dimuon_ebe_mass_res_",
+            "dimuon_ebe_mass_res_rel_",
+            "mu1_pt_",
+            "mu2_pt_",
+            "mu1_pt_over_mass_",
+            "mu2_pt_over_mass_",
             "jet1_pt_",
             "jet2_pt_",
             "jj_mass_",
@@ -72,29 +66,38 @@ def discover_jes_systs(fields, jet_prefixes=None):
     for f in fields:
         if not (f.endswith("_up") or f.endswith("_down")):
             continue
-        for p in jet_prefixes:
+        for p in prefixes:
             if f.startswith(p):
                 suffixes.add(f[len(p):])
                 break
     return sorted(suffixes)
 
-def columns_for_selection(category, variation):
-    # minimal columns for cuts; add here if your selection changes
+def resolve_variation_field(base, variation, fields):
     use_var = "nominal" if variation.startswith("wgt") else variation
-    base = [
+    candidates = [f"{base}_{use_var}", f"{base}_nominal", base]
+    for cand in candidates:
+        if cand in fields:
+            return cand
+    raise KeyError(
+        f"Selection/feature field '{base}' for variation '{variation}' is unavailable. Tried: {candidates}"
+    )
+
+
+def columns_for_selection(category, variation, fields):
+    # minimal columns for cuts; add here if your selection changes
+    base_names = [
         "dimuon_mass",
-        "event",
-        f"njets_{use_var}",
-        "gjj_mass",
-        f"nBtagLoose_{use_var}",
-        f"nBtagMedium_{use_var}",
-        f"jj_mass_{use_var}",
-        f"jj_dEta_{use_var}",
-        f"jet1_pt_{use_var}",
-        "nfatJets_drmuon",
-        "MET_pt",
+        "njets",
+        "nBtagLoose",
+        "nBtagMedium",
+        "jj_mass",
+        "jj_dEta",
+        "jet1_pt",
     ]
-    return base
+    cols = ["event", "gjj_mass", "nfatJets_drmuon", "MET_pt"]
+    cols.extend(resolve_variation_field(name, variation, fields) for name in base_names)
+    return cols
+
 
 class DNNWrapper(torch_wrapper):
     def _create_model(self):
@@ -122,6 +125,14 @@ class DNNWrapper(torch_wrapper):
         return [
             ak.values_astype(arr, "float32"), #only modification we do is is force float32
         ], {}
+
+
+def sigmoid_ak(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def clip_ak(x, min_value, max_value):
+    return ak.where(x < min_value, min_value, ak.where(x > max_value, max_value, x))
 
 
 def prepare_features(events, features, variation="nominal"):
@@ -177,7 +188,7 @@ def getFoldFilter(events, fold_vals, nfolds):
     return fold_filter
 
 
-def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samples=[], bkg_samples=[]):
+def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samples=[], bkg_samples=[], do_vbf_filter_study=False):
     """
     sig samples: VBF, GGH
     bkg smaples: DY, TT, ST, VV, EWK
@@ -228,9 +239,24 @@ def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samp
         bkg_sample = bkg_sample.upper()
         if bkg_sample in bkg_sample_dict.keys():
             bkg_sample_l += bkg_sample_dict[bkg_sample]
+            if (
+                do_vbf_filter_study
+                and bkg_sample == "DY"
+                and "DYVBF" in bkg_sample_dict
+            ):
+                logger.info(
+                    "Adding DYVBF samples because --vbf_filter_study was passed."
+                )
+                bkg_sample_l += bkg_sample_dict["DYVBF"]
     logger.info(f"bkg_sample_l: {bkg_sample_l}")
 
     for sample in bkg_sample_l:
+        if "dy_vbf_filter" in sample.lower() and not do_vbf_filter_study:
+            logger.info(
+                "Skipping sample %s because --vbf_filter_study was not passed.",
+                sample,
+            )
+            continue
         sample_filelist = glob.glob(str(stage1_path / sample / "*" / "*.parquet"))
         logger.info(f"sample: {sample}, number of files: {len(sample_filelist)}")
         logger.debug(f"sample_filelist: {sample_filelist}")
@@ -249,7 +275,7 @@ if __name__ == "__main__":
         "-m_tag",
         "--model_tag",
         dest="model_tag",
-        default="test",
+        required=True,
         action="store",
         help="Unique training label used to identify the model. Should match the label used in training.",
     )
@@ -298,13 +324,15 @@ if __name__ == "__main__":
     logger.info(f"data_samples: {data_samples}")
 
     stage1_path = base_path / "stage1_output" / args.year / "f1_0"
-    stage1_path = get_compactedPath(stage1_path) # get compacted stage1 output if they exist
+    stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
     logger.info(f"stage1 path: {stage1_path}")
     if not os.path.exists(stage1_path):
         logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
         raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
 
     histDirName = f"score_{args.label}" if args.save_postfix == "" else f"score_{args.label}_{args.save_postfix}"
+    if args.do_vbf_filter_study:
+        histDirName = f"{histDirName}_vbf_filter_study"
     if args.no_variations:
         histDirName = f"{histDirName}_NoSyst"
 
@@ -312,7 +340,7 @@ if __name__ == "__main__":
     os.makedirs(hist_save_path, exist_ok=True)
     logger.info(f"Histograms will be saved to: {hist_save_path}")
 
-    full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples)
+    full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
 
     logger.debug(f"full_sample_dict: {full_sample_dict}")
     logger.info(f"full_sample_dict: {full_sample_dict.keys()}")
@@ -341,13 +369,14 @@ if __name__ == "__main__":
         logger.debug(f"fields: {fields}")
 
         # Auto-discover JES/JER-like systematic suffixes from jet-related columns
-        jes_systs = discover_jes_systs(fields)
+        jes_systs = discover_shape_systs(fields)
         # if "log_" exists remove that element from jes_systs, as these are not variations. This log belongs to the log of a particular variable.
         jes_systs = [sys for sys in jes_systs if not sys.startswith("log_")]
         logger.info(f"Discovered JES/JER variations: {jes_systs}")
 
         model_trained_path = Path(args.model_path).resolve()
         training_dir = (model_trained_path / args.model_tag).resolve()
+        feature_dir = Path(model_trained_path).resolve()
 
         missing = []
         for fold in range(nfolds):
@@ -362,7 +391,7 @@ if __name__ == "__main__":
             raise FileNotFoundError("\n".join(missing))
 
         # Load training features once per sample_type
-        with open(model_trained_path / "training_features.pkl", "rb") as f:
+        with open(feature_dir / "training_features.pkl", "rb") as f:
             training_features = pickle.load(f)
         logger.debug(f"training_features: {training_features}")
         logger.info(f"len training_features: {len(training_features)}")
@@ -375,7 +404,7 @@ if __name__ == "__main__":
         # cache scalers
         scaler_cache = {}
         for fold in range(nfolds):
-            sp = model_trained_path / f"scalers_{fold}.npz"
+            sp = feature_dir / f"scalers_{fold}.npz"
             with np.load(sp, allow_pickle=True) as f:
                 scaler_cache[fold] = {
                     "mean": f["mean"].astype(np.float64),
@@ -479,7 +508,7 @@ if __name__ == "__main__":
                 logger.debug(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
                 continue
 
-            sel_cols = columns_for_selection(category, variation)
+            sel_cols = columns_for_selection(category, variation, fields)
             needed_cols = set(sel_cols + [wgt_variation])
 
             logger.debug(f"sel_cols: {sel_cols}")
@@ -513,8 +542,9 @@ if __name__ == "__main__":
                 process=sample_type,
                 category=category,
                 region_name=region,
-                do_vbf_filter_study=True,
+                do_vbf_filter_study=args.do_vbf_filter_study,
                 variation=variation,
+                year=args.year,
             )
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
             # As DNN is trained in the h-peak region, so while evaluating for the h-sideband region
@@ -575,7 +605,7 @@ if __name__ == "__main__":
                 ],  # np.newaxis is added so that we can concat on axis=1
                 axis=1,
             )
-            dnn_score = nan_val * ak.ones_like(events.event)
+            dnn_logit = nan_val * ak.ones_like(events.event)
 
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
@@ -584,9 +614,10 @@ if __name__ == "__main__":
                 dnn_score_fold = dnnWrap(input_arr)
                 dnn_score_fold = ak.flatten(dnn_score_fold, axis=None)
 
-                dnn_score = ak.where(eval_filter, dnn_score_fold, dnn_score)
-            # transform dnn_score
-            dnn_score = np.arctanh(dnn_score)
+                dnn_logit = ak.where(eval_filter, dnn_score_fold, dnn_logit)
+
+            dnn_score = sigmoid_ak(dnn_logit)
+            dnn_score = np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
 
             # ---------------------------------------------------
             # Now onto converting DNN score as histograms

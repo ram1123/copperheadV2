@@ -3,6 +3,7 @@ from rich.logging import RichHandler
 import os
 import sys
 import awkward as ak
+from pathlib import Path
 
 LOGGER_NAME = "CopperHead"
 NO_GIT_INFO_AVAILABLE = "No git info available"
@@ -66,6 +67,30 @@ def ifPathExists(load_path):
         sys.exit()
     else:
         logger.info(f"Path exists: {load_path}")
+
+
+def get_compacted_path(stage1_path):
+    """
+    Prefer a sibling `compacted` directory when the provided stage1 path points
+    at `.../f1_0`, otherwise fall back to the original path.
+
+    This is intentionally a light existence check only; it does not validate
+    that every expected sample exists under the chosen directory.
+    """
+    stage1_path = Path(stage1_path)
+    compacted_stage1_path = Path(str(stage1_path).replace("/f1_0", "/compacted"))
+    logger.debug(f"compacted_stage1_path: {compacted_stage1_path}")
+    if os.path.isdir(compacted_stage1_path):
+        return compacted_stage1_path
+    if os.path.isdir(stage1_path):
+        return stage1_path
+
+    logger.critical(
+        f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!"
+    )
+    raise FileNotFoundError(
+        f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!"
+    )
 
 def get_git_info():
     """Get the current git commit hash, branch name, and the difference between the current version of the code and the last commit.
