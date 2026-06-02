@@ -23,6 +23,24 @@ year = years[0]
 if "2016" in year:
     year = "2016"
 
+stage2_model_suffix = args.save_postfix if args.save_postfix else ""
+if args.do_vbf_filter_study:
+    stage2_model_suffix = (
+        f"{stage2_model_suffix}_vbf_filter_study"
+        if stage2_model_suffix
+        else "vbf_filter_study"
+    )
+if args.no_variations:
+    stage2_model_suffix = (
+        f"{stage2_model_suffix}_NoSyst"
+        if stage2_model_suffix
+        else "NoSyst"
+    )
+
+stage2_model_label = (
+    f"{args.label}_{stage2_model_suffix}" if stage2_model_suffix else args.label
+)
+
 # global parameters
 parameters = {
     # < general settings >
@@ -42,7 +60,7 @@ parameters = {
     "plot_vars": [],  # "dimuon_mass"],
     # "variables_lookup": variables_lookup,
     "dnn_models": {
-        "vbf": [args.label],
+        "vbf": [stage2_model_label],
     },
     "bdt_models": {},
     #

@@ -347,8 +347,12 @@ build_stage2_cmd() {
 build_stage2_plot_cmd() {
     local year="$1"
     local region_name="$2"
-    local load_path="${save_path}/stage2_histograms/score_${label}_${save_postfix}$(variation_suffix)"
-    local mva_name="${label}_${save_postfix}$(variation_suffix)"
+    local stage2_suffix="$(variation_suffix)"
+    if [[ "${do_vbf_filter_study}" == "1" ]]; then
+        stage2_suffix="_vbf_filter_study${stage2_suffix}"
+    fi
+    local load_path="${save_path}/stage2_histograms/score_${label}_${save_postfix}${stage2_suffix}"
+    local mva_name="${label}_${save_postfix}${stage2_suffix}"
     local cmd=(
         python plotter/plot_DNN_score.py
         --load "${load_path}"
@@ -375,6 +379,9 @@ build_stage3_cmd() {
     if [[ "${with_variations}" != "1" ]]; then
         cmd+=(--no_variations)
     fi
+    if [[ "${do_vbf_filter_study}" == "1" ]]; then
+        cmd+=(--vbf_filter_study)
+    fi    
     if [[ "${cluster_index}" != "0" ]]; then
         cmd+=(--cluster_index "${cluster_index}")
     fi

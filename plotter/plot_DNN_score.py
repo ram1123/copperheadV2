@@ -94,12 +94,12 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
                 data_dict = hist_dict
             else: # keep data blinded
                 data_dict = {key: np.zeros_like(value) for key, value in hist_dict.items()}
-        elif "ggH" in group_name or "VBF" in group_name: # signal
+        elif group_name in {"ggH", "VBF"}: # signal
             sig_MC_dict[group_name] = hist_dict
         else: # bkg MC
             bkg_MC_dict[group_name] = hist_dict
     # order bkg_MC_dict in a specific way for plotting, smallest yielding process first:
-    bkg_MC_order = ["VVV", "VV", "Ewk", "Top", "DY","DYJ01", "DYJ2"]
+    bkg_MC_order = ["VVV", "VV", "Ewk", "Top", "DYVBF", "DY","DYJ01", "DYJ2"]
     bkg_MC_dict = {process: bkg_MC_dict[process] for process in bkg_MC_order if process in bkg_MC_dict}
     logger.info(f"data_dict : {data_dict}")
     logger.info(f"bkg_MC_dict : {bkg_MC_dict}")
@@ -168,6 +168,7 @@ def arrangeHist_bySampleGroup(pickled_hist_dict):
         "data": ["data"],
         "ggH": ["ggh_"],
         "VBF": ["vbf_"],
+        "DYVBF": ["dy_VBF_filter"],
         "DY": ["dyTo2L_M-50_incl", "dyTo2Mu_M-50_aMCatNLO"],
         # "DYJ01": ["DYJ01"],
         # "DYJ2": ["DYJ2"],
@@ -253,6 +254,13 @@ if __name__ == "__main__":
     help="label",
     )
     parser.add_argument(
+    "--vbf_filter_study",
+    dest="do_vbf_filter_study",
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="Enable DY vs DY-VBF-filter study mode for grouping and output naming.",
+    )
+    parser.add_argument(
     "-reg",
     "--region",
     dest="region",
@@ -319,8 +327,10 @@ if __name__ == "__main__":
     var = "DNN_score"
     region_name = args.region
     category = args.category
-    label = args.label
-    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{label}_NoVHveto/"
+    output_tag = args.mva_name
+    if args.do_vbf_filter_study and "_vbf_filter_study" not in output_tag:
+        output_tag = f"{output_tag}_vbf_filter_study"
+    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{output_tag}_NoVHveto/"
     plotStage2DNN_score(
         hist_dict_bySampleGroup,
         var,
