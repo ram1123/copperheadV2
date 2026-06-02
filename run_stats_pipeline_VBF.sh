@@ -16,7 +16,7 @@ Modes:
   11|vbf_limit
 
 Common options:
-  -V    Enable --vbf_filter_study for stage-2 commands built by this wrapper.
+  -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 commands built by this wrapper.
 EOF
     exit 1
 }

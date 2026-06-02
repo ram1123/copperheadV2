@@ -363,6 +363,9 @@ build_stage2_plot_cmd() {
         --mva_name "${mva_name}"
         --log-level DEBUG
     )
+    if [[ "${do_vbf_filter_study}" == "1" ]]; then
+        cmd+=(--vbf_filter_study)
+    fi
     printf '%s\0' "${cmd[@]}"
 }
 

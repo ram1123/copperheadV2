@@ -18,7 +18,7 @@ Modes:
 
 Options:
   -D    Add DNN score during the compact step. Default is off.
-  -V    Enable --vbf_filter_study for stage-2.
+  -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 workflow.
 EOF
     exit 1
 }
