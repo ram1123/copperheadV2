@@ -23,13 +23,14 @@ common_defaults() {
     is_sync="0"
     compact_add_dnn_score="${COMPACT_ADD_DNN_SCORE:-0}"
     with_variations="${WITH_VARIATIONS:-0}"
+    do_vbf_filter_study="${DO_VBF_FILTER_STUDY:-0}"
     chunksize="600000"
     max_file_len="900"
     save_root="/work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean"
 }
 
 parse_common_args() {
-    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:ksfzD" opt; do
+    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:ksfzDV" opt; do
         case "${opt}" in
             h) usage ;;
             c) dataset_yaml="${OPTARG}" ;;
@@ -52,6 +53,7 @@ parse_common_args() {
             f) debug_fraction="1" ;;
             z) is_sync="1" ;;
             D) compact_add_dnn_score="1" ;;
+            V) do_vbf_filter_study="1" ;;
             *) usage ;;
         esac
     done
@@ -332,6 +334,9 @@ build_stage2_cmd() {
     )
     if [[ "${with_variations}" != "1" ]]; then
         cmd+=(--no_variations)
+    fi
+    if [[ "${do_vbf_filter_study}" == "1" ]]; then
+        cmd+=(--vbf_filter_study)
     fi
     while IFS= read -r arg; do
         [[ -n "${arg}" ]] && cmd+=("${arg}")
@@ -714,5 +719,6 @@ print_run_configuration() {
     echo "  Output append: ${save_postfix}"
     echo "  Region: ${region}"
     echo "  Category: ${category}"
+    echo "  VBF filter study: ${do_vbf_filter_study}"
     echo "  isMC: ${is_mc}"
 }

@@ -14,6 +14,9 @@ Modes:
   9|combine_vbf_all
   10|combine_vbf_summary
   11|vbf_limit
+
+Common options:
+  -V    Enable --vbf_filter_study for stage-2 commands built by this wrapper.
 EOF
     exit 1
 }
