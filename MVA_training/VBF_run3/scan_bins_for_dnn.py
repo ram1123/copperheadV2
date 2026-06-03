@@ -1,6 +1,6 @@
 import numpy as np
 
-from rich import print
+# from rich import print
 
 import logging
 
@@ -550,12 +550,13 @@ def collect_scores(process_globs, selection, category="vbf", region_name="h-peak
             ) from exc
 
     scores, weights = [], []
-    do_vbf_filter_study = False
+    # do_vbf_filter_study = False
+    do_vbf_filter_study = True
     for name, globpath in items:
-        if "dy_" in name:
-            do_vbf_filter_study = False
-        else:
-            do_vbf_filter_study = False
+        # if "dy_" in name:
+        #     do_vbf_filter_study = True
+        # else:
+        #     do_vbf_filter_study = False
         print(
             f"Processing {name} from {globpath} (do_vbf_filter_study={do_vbf_filter_study})"
         )
@@ -595,7 +596,8 @@ if __name__ == "__main__":
     # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc"
     # compacted_tag="May08_2026_FixDimuonMass"
     stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc"
-    compacted_tag="May12_2026_FixDimuonMass"
+    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc"
+    compacted_tag="Jun01_2026_FixDimuonMass"
     year="*"
     sig_globs = {
         "vbf_powheg_dipole": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/vbf_powheg_dipole/**/*.parquet",
@@ -604,12 +606,13 @@ if __name__ == "__main__":
     sig_score, sig_w = collect_scores(sig_globs, selection)
 
     bkg_globs = {
-        # "dy_VBF_filter": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_VBF_filter/**/*.parquet",
+        "dy_VBF_filter": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_VBF_filter/**/*.parquet",
         # "dy_M-100To200_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-100To200_MiNNLO/**/*.parquet",
-        "dyTo2L_M-50_aMCatNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dyTo2L_M-50_aMCatNLO/**/*.parquet",
+        "dyInclM-50_aMCatNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*M-50_aMCatNLO/**/*.parquet",
         # "dy_M-50_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-50_MiNNLO/**/*.parquet",
+        "ewk_incl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk*/**/*.parquet",
         # "ewk_lljj_mll50_mjj120": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_lljj_mll50_mjj120/**/*.parquet",
-        "ewk_zlljj": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_zlljj/**/*.parquet",
+        # "ewk_zlljj": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_zlljj/**/*.parquet",
         "ttjets_dl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_dl/**/*.parquet",
         "ttjets_sl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_sl/**/*.parquet",
         "zz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/zz*/**/*.parquet",

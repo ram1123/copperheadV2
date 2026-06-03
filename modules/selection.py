@@ -142,18 +142,16 @@ def applyRegionCatCuts(
             )
 
     if do_vbf_filter_study:
-        if "dy_" in process:
+        if process.startswith("dy"):
             vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
-            is_vbf_filter = ("dy_VBF_filter" in process) or (
-                process == "dy_m105_160_vbf_amc"
-            )
+            is_vbf_filter = ("dy_VBF_filter" in process)
             if is_vbf_filter:
                 # print(f"applying VBF filter cut on: {process}")
 
                 prod_cat_cut = prod_cat_cut & vbf_filter
             else:
                 prod_cat_cut = prod_cat_cut & (~vbf_filter)
-
+            print(f"[INFO] applying VBF filter cut for {process}!")
     # ---------------------------------------------------------
     #  Select events based on number of jets
     # ---------------------------------------------------------
@@ -377,16 +375,24 @@ binning_DNN_HIG19006 = np.array([
 
 
 
-binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May10_2026
-    0.000000,
-  0.518166,
-  1.036333,
-  1.554499,
-  2.072665,
-  2.590832,
-  (7.254329+0.1),
-])
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May10_2026
+#     0.000000,
+#   0.518166,
+#   1.036333,
+#   1.554499,
+#   2.072665,
+#   2.590832,
+#   (7.254329+0.1),
+# ])
 
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May19_2026
+#     0.000000,
+#   0.574031,
+#   1.051195,
+#   1.528359,
+#   2.005523,
+#   (7.254329+0.1),
+# ])
 
 # binning = np.array([ # Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May10_2026
 #   (-7.254329-0.1),
@@ -399,3 +405,23 @@ binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_data
 #   5.319841,
 #   (7.254329+0.1),
 # ])
+
+
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_June01_2026
+#   0.000000,
+#   0.483622,
+#   0.967244,
+#   1.450866,
+#   1.934488,
+#   (7.254329+0.1),
+# ])
+
+binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/stage3_datacards_June01_2026 NOTE: found it surprising that the results were same, but we checked the stage1 output and DNN model paths and they were correct
+  0.000000,
+  0.483622,
+  0.967244,
+  1.450866,
+  1.934488,
+  (7.254329+0.1),
+])
+

@@ -42,7 +42,7 @@ samples:
     groups:
       DY:
         # processes: ["dy_VBF_filter", "dy_M-100To200_MiNNLO", "dyTo2L_M-50_aMCatNLO"]
-        processes: ["dy_M-50_aMCatNLO", "dyTo2L_M-50_aMCatNLO"] 
+        processes: ["dy_M-50_aMCatNLO", "dyTo2L_M-50_aMCatNLO", "dy_VBF_filter"] 
         processes_per_year:
           2022preEE: ["dyTo2L_M-50_incl"]
           2022postEE: ["dyTo2L_M-50_incl"]

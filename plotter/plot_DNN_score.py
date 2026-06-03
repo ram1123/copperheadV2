@@ -62,15 +62,15 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
             "variation" : "nominal",
             # "sample_group": group_name,
         }
-        logger.info(f"to_project_setting: {to_project_setting}")
-        logger.info(f"sample_hist: {sample_hist}")
+        logger.debug(f"to_project_setting: {to_project_setting}")
+        logger.debug(f"sample_hist: {sample_hist}")
 
         #  Print/check the type of sample_hist and its keys
         logger.info(f"Type of sample_hist: {type(sample_hist)}")
         logger.info(f"Keys in sample_hist: {sample_hist.axes.name}")
 
         to_project_setting_val = to_project_setting.copy()
-        logger.info(f"to_project_setting_val: {to_project_setting_val}")
+        logger.debug(f"to_project_setting_val: {to_project_setting_val}")
         to_project_setting_val["val_sumw2"] = "value"
         logger.debug(f"to_project_setting_val: {to_project_setting_val}")
         hist_val = sample_hist[to_project_setting_val].view()
@@ -94,12 +94,12 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
                 data_dict = hist_dict
             else: # keep data blinded
                 data_dict = {key: np.zeros_like(value) for key, value in hist_dict.items()}
-        elif "ggH" in group_name or "VBF" in group_name: # signal
+        elif group_name in {"ggH", "VBF"}: # signal
             sig_MC_dict[group_name] = hist_dict
         else: # bkg MC
             bkg_MC_dict[group_name] = hist_dict
     # order bkg_MC_dict in a specific way for plotting, smallest yielding process first:
-    bkg_MC_order = ["VVV", "VV", "Ewk", "Top", "DY","DYJ01", "DYJ2"]
+    bkg_MC_order = ["VVV", "VV", "Ewk", "Top", "DYVBF", "DY","DYJ01", "DYJ2"]
     bkg_MC_dict = {process: bkg_MC_dict[process] for process in bkg_MC_order if process in bkg_MC_dict}
     logger.info(f"data_dict : {data_dict}")
     logger.info(f"bkg_MC_dict : {bkg_MC_dict}")
@@ -117,12 +117,11 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
     dnn_tag = plot_var
     full_save_fname = f"{full_save_path}/{var}_{region_name}_{dnn_tag}.pdf"
     logger.info(f"full_save_fname: {full_save_fname}")
+    # raise ValueError
 
-    logger.info(f"binning : {binning}")
     if binning is None:
         binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
 
-    log_y_range = (0.0001, 1e9)
     plotDataMC_compare(
         binning,
         data_dict,
@@ -135,8 +134,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         lumi = lumi,
         status = status,
         log_scale = do_logscale,
-        plot_ratio_range = "fixed", # options: "default" or "auto" or list with format [0.8, 1.2]
-        log_y_range=log_y_range,
+        plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
     )
     plotDataMC_compare(
         binning,
@@ -150,8 +148,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         lumi = lumi,
         status = status,
         log_scale = False,
-        plot_ratio_range = "fixed", # options: "default" or "auto" or list with format [0.8, 1.2]
-        log_y_range=log_y_range,
+        plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
     )
 
 
@@ -171,7 +168,8 @@ def arrangeHist_bySampleGroup(pickled_hist_dict):
         "data": ["data"],
         "ggH": ["ggh_"],
         "VBF": ["vbf_"],
-        "DY": ["dyTo2L_M-50_incl", "dyTo2Mu_M-50_aMCatNLO", "dyTo2L_M-50_aMCatNLO", "dy_M-100To200_MiNNLO", "dy_VBF_filter"],
+        "DYVBF": ["dy_VBF_filter"],
+        "DY": ["dyTo2L_M-50_incl", "dyTo2Mu_M-50_aMCatNLO", "dyTo2L_M-50_aMCatNLO", "dy_M-100To200_MiNNLO","dy_M-50_aMCatNLO"],
         # "DYJ01": ["DYJ01"],
         # "DYJ2": ["DYJ2"],
         "Top": ["ttjets", "top", "st"],
@@ -256,6 +254,13 @@ if __name__ == "__main__":
     help="label",
     )
     parser.add_argument(
+    "--vbf_filter_study",
+    dest="do_vbf_filter_study",
+    default=False,
+    action=argparse.BooleanOptionalAction,
+    help="Enable DY vs DY-VBF-filter study mode for grouping and output naming.",
+    )
+    parser.add_argument(
     "-reg",
     "--region",
     dest="region",
@@ -296,8 +301,6 @@ if __name__ == "__main__":
     logger.info(f"pickled_hist_dict.keys() : {pickled_hist_dict.keys()}")
     hist_dict_bySampleGroup = arrangeHist_bySampleGroup(pickled_hist_dict)
     logger.info(f"hist_dict_bySampleGroup.keys() : {hist_dict_bySampleGroup.keys()}")
-    # logger.info(f"hist_dict_bySampleGroup : {hist_dict_bySampleGroup}")
-    # raise ValueError
 
     # read lumi value from configs/parameters/lumi.yaml
     infile_lumi = os.path.join("configs", "parameters", "lumi.yaml")
@@ -312,21 +315,22 @@ if __name__ == "__main__":
         logger.error(f"lumi for year {year} is not defined!")
         raise ValueError(f"lumi for year {year} is not defined!")
 
-    lumi_val = lumi_dict[year]
+    lumi_val = lumi
 
     possible_samples = ["data", "ggh", "vbf", "dy", "ewk", "tt", "st", "ww", "wz", "zz","VVV"]
 
     plot_setting_fname = "src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
-    # # logger.info(f"plot_settings: {plot_settings}")
+    # logger.info(f"plot_settings: {plot_settings}")
     binning = selection.binning
-    logger.info(f"binning: {binning}")
     var = "DNN_score"
     region_name = args.region
     category = args.category
-    label = args.label
-    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{label}_NoVHveto/"
+    output_tag = args.mva_name
+    if args.do_vbf_filter_study and "_vbf_filter_study" not in output_tag:
+        output_tag = f"{output_tag}_vbf_filter_study"
+    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{output_tag}_NoVHveto/"
     plotStage2DNN_score(
         hist_dict_bySampleGroup,
         var,

@@ -52,8 +52,72 @@
 # # --n-trials 50 --folds 0
 
 
+# time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run2_vbf.yaml \
+# --data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/  \
+# --out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/trained_best_optuna \
+# --optuna-best-json dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/50Trials/optuna_best.json
+
+
+
+
+# python MVA_training/VBF_run3/preprocess_dnn.py --config configs/dnn_run2_vbf.yaml \
+# --base-path /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/stage1_output \
+# --tag Run2_NanoV12_forVBFChannel_May15_2026_jetUnc \
+# --year 2018,2017,2016postVFP,2016preVFP \
+# --use-dask-gateway --cluster-index 0
+
+# # time python MVA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run2_vbf.yaml \
+# # --data-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/ \
+# # --out-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/50Trials \
+# # --n-trials 50 --folds 0
+
+
+# # time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run2_vbf.yaml \
+# # --data-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/  \
+# # --out-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/trained_best_optuna \
+# # --optuna-best-json dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/50Trials/optuna_best.json
+
+
+# time python MVA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run2_vbf.yaml \
+# --data-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/ \
+# --out-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/50Trials_v2 \
+# --n-trials 50 --folds 0
+
+
+# # time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run2_vbf.yaml \
+# # --data-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/  \
+# # --out-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/trained_best_optuna \
+# # --optuna-best-json dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/50Trials_v2/optuna_best.json
+
+
+
+
+# python MVA_training/VBF_run3/preprocess_dnn.py --config configs/dnn_run2_vbf.yaml \
+# --base-path /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage1_output \
+# --tag Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc \
+# --year 2018,2017,2016postVFP,2016preVFP \
+# --use-dask-gateway --cluster-index 0
+
+# time python MVA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run2_vbf.yaml \
+# --data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/ \
+# --out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/20Trials_w_VBF_filterFold0 \
+# --n-trials 20 --folds 0
+# # --n-trials 50 --folds 0,1,2,3
+
+
+# time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run2_vbf.yaml \
+# --data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/  \
+# --out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/trained_best_optuna \
+# --optuna-best-json dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/20Trials_w_VBF_filterFold0/optuna_best.json
+
+
+time python MVA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run2_vbf.yaml \
+--data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/ \
+--out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/20Trials_w_VBF_filterFoldAll \
+--n-trials 20 --folds 0,1,2,3
+
+
 time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run2_vbf.yaml \
 --data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/  \
 --out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/trained_best_optuna \
---optuna-best-json dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/50Trials/optuna_best.json
-
+--optuna-best-json dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/20Trials_w_VBF_filterFoldAll/optuna_best.json

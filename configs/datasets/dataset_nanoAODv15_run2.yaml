@@ -82,6 +82,19 @@ years:
                     golden_json_official: null
 
         DY:
+            dy_VBF_filter:
+                skip_sample: False
+                datasets:
+                    - /eos/purdue/store/user/rasharma/customNanoAODv15/UL2017/DYJets_NanoAOD
+                cross_section_pb: 2.01
+                cross_section_source: null
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: null
+                references:
+                    - null
+                    
             dyTo2Mu_M-10to50_MiNNLO:
                 skip_sample: True
                 datasets:
@@ -686,6 +699,19 @@ years:
             golden_json_official: null
 
       DY:
+        dy_VBF_filter:
+            skip_sample: False
+            datasets:
+                - /eos/purdue/store/user/rasharma/customNanoAODv15/UL2018/DYJets_NanoAOD
+            cross_section_pb: 2.01
+            cross_section_source: null
+            kfactor:
+                value: 1.0
+                source: null
+            filter_efficiency: null
+            references:
+                - null
+                    
         dyTo2Mu_M-10to50_MiNNLO:
           skip_sample: True
           datasets:
@@ -1134,6 +1160,19 @@ years:
             golden_json_official: null
 
       DY:
+        dy_VBF_filter:
+            skip_sample: False
+            datasets:
+                - /eos/purdue/store/user/rasharma/customNanoAODv15/UL2016/DYJets_NanoAOD
+            cross_section_pb: 2.01
+            cross_section_source: null
+            kfactor:
+                value: 1.0
+                source: null
+            filter_efficiency: null
+            references:
+                - null
+                
         dyTo2Mu_M-10to50_MiNNLO:
           skip_sample: True
           datasets: []
@@ -1514,6 +1553,19 @@ years:
             golden_json_official: null
 
       DY:
+        dy_VBF_filter:
+            skip_sample: False
+            datasets:
+                - /eos/purdue/store/user/rasharma/customNanoAODv15/UL2016APV/DYJets_NanoAOD
+            cross_section_pb: 2.01
+            cross_section_source: null
+            kfactor:
+                value: 1.0
+                source: null
+            filter_efficiency: null
+            references:
+                - null
+                
         dyTo2Mu_M-10to50_MiNNLO:
           skip_sample: True
           datasets: []

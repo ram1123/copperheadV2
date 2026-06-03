@@ -250,8 +250,8 @@ if __name__ == "__main__":
     # status = "Private"
     status = "Simulation"
     if year =="all": # temporarily overwrite load paths and year to get 2018 bdt edges
-        # year="2018" # Run2
-        year="2024"
+        year="2018" # Run2
+        # year="2024"
     elif year == "2016":
         year="2016preVFP"
 

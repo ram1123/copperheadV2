@@ -1086,6 +1086,7 @@ def train_one_fold(
         )
 
         # scheduler step
+        print(f"cfg.es_monitor: {cfg.es_monitor}")
         if scheduler is not None:
             if cfg.es_monitor == "val_loss":
                 scheduler.step(val_loss)
