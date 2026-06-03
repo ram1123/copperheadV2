@@ -9,6 +9,15 @@ The default workflow trains two independent classifiers:
 The output mirrors the PySR pileup workflow where possible: one summary JSON per
 region, a global summary, threshold rescans, score plots, and pT turn-on
 efficiency/rejection plots.
+
+Example command:
+--------------------
+
+time python MVA_training/pileup_dnn/train_pu_dnn.py \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
+    --use-glob \
+    -o validation/pu_dnn/run2022postEE_dy_top_ewk_02June_DYIncl_dPhi_NoPt \
+    --regions HEpos HEneg HFpos HFneg 
 """
 
 from __future__ import annotations
@@ -71,8 +80,8 @@ BASELINE_ALIASES = {
 }
 
 MODEL_FEATURES = [
-    "logpt",
-    "minDPhiMetJet",
+    # "logpt",
+    # "minDPhiMetJet",
     "chEmEF",
     "chHEF",
     "neEmEF",
@@ -1125,9 +1134,27 @@ def plot_stacked_before_after(
         ("before", np.ones(len(values), dtype=bool), "before DNN cut"),
         ("after", pass_mask.astype(bool), "after DNN cut"),
     ]:
-        fig, ax = plt.subplots(figsize=(6, 5))
         pu_vals = values[mask & ~y & finite]
         hs_vals = values[mask & y & finite]
+        pu_counts, _ = np.histogram(pu_vals, bins=hist_bins)
+        hs_counts, _ = np.histogram(hs_vals, bins=hist_bins)
+        total_counts = pu_counts + hs_counts
+        ratio = np.divide(
+            pu_counts,
+            total_counts,
+            out=np.zeros_like(pu_counts, dtype=np.float64),
+            where=total_counts > 0,
+        )
+        centers = 0.5 * (hist_bins[:-1] + hist_bins[1:])
+        widths = np.diff(hist_bins)
+
+        fig, (ax, rax) = plt.subplots(
+            2,
+            1,
+            figsize=(6, 6.2),
+            sharex=True,
+            gridspec_kw={"height_ratios": [3.2, 1.1], "hspace": 0.05},
+        )
         ax.hist(
             [pu_vals, hs_vals],
             bins=hist_bins,
@@ -1136,11 +1163,34 @@ def plot_stacked_before_after(
             color=["#c44e52", "#4c72b0"],
             alpha=0.75,
         )
-        ax.set_xlabel(xlabel)
+        ax.errorbar(
+            centers,
+            total_counts,
+            yerr=np.sqrt(total_counts),
+            fmt="o",
+            color="black",
+            markersize=4,
+            linewidth=1,
+            label="Total jets",
+        )
         ax.set_ylabel("Jets")
         ax.set_title(f"{region} {name} {title}")
         ax.grid(alpha=0.3)
         ax.legend()
+
+        rax.errorbar(
+            centers,
+            ratio,
+            xerr=0.5 * widths,
+            fmt="o",
+            color="black",
+            markersize=3.5,
+            linewidth=1,
+        )
+        rax.set_ylim(0.0, 1.0)
+        rax.set_ylabel("Fake/Total")
+        rax.set_xlabel(xlabel)
+        rax.grid(alpha=0.3)
         save_plot(fig, outdir / f"stack_{name}_{region}_{suffix}", formats)
 
 
@@ -1399,6 +1449,8 @@ def train_region(jets: pd.DataFrame, region: str, output: Path, args: argparse.N
     if not features:
         print(f"[{region}] No usable non-constant features; skipping.")
         return None
+    
+    print(f"Input features: {features}")
 
     outdir = output / region
     outdir.mkdir(parents=True, exist_ok=True)

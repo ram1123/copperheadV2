@@ -74,6 +74,29 @@ JET_PT_RANGE = (0, 200)   # GeV
 
 PLOT_STYLE = dict(alpha=0.6, bins=50, histtype="step", linewidth=1.8)
 
+# Jet composition / ID variables  (base name without jet index or _nominal suffix)
+# Each entry: (base_name, x_axis_label, x_range, is_integer)
+#   is_integer=True  -> use integer bins (1 bin per integer value)
+#   is_integer=False -> use 60 uniform bins
+JET_ID_VARS = [
+    # Energy fractions — spike near 0, need log-y to see shape
+    ("muEF",               "Muon Energy Fraction",               (0.0,  0.5),  False),
+    ("chEmEF",             "Charged EM Energy Fraction",         (0.0,  0.6),  False),
+    ("chHEF",              "Charged Hadron Energy Fraction",     (0.0,  1.0),  False),
+    ("neEmEF",             "Neutral EM Energy Fraction",         (0.0,  1.0),  False),
+    ("neHEF",              "Neutral Hadron Energy Fraction",     (0.0,  1.0),  False),
+    # Constituent counts — integer-valued
+    ("nConstituents",      "N constituents",                     (0,   60),    True),
+    ("nElectrons",         "N electrons",                        (0,    6),    True),
+    ("nMuons",             "N muons",                            (0,    6),    True),
+    ("chMultiplicity",     "Charged multiplicity",               (0,   50),    True),
+    ("neMultiplicity",     "Neutral multiplicity",               (0,   30),    True),
+    # Muon subtraction
+    ("muonSubtrFactor",    "Muon subtraction factor",            (0.0,  1.0),  False),
+    ("muonSubtrDeltaEta",  r"$\Delta\eta$ (muon subtr.)",      (-0.3, 0.3),  False),
+    ("muonSubtrDeltaPhi",  r"$\Delta\phi$ (muon subtr.)",      (-0.3, 0.3),  False),
+]
+
 COLORS = {
     "real": "#2196F3",
     "fake": "#F44336",
@@ -910,6 +933,117 @@ def plot_met_dphi(df: pd.DataFrame, outdir: str):
         plt.close(fig)
 
 
+
+# ==============================================================================
+# Section 6 -- Jet composition / ID variables: real vs fake
+# ==============================================================================
+
+def _gather_jet_id(df, base):
+    """Stack real/fake values for base variable across jet1 and jet2."""
+    real_list, fake_list = [], []
+    for jidx in [1, 2]:
+        col = resolve_col(df, f"jet{jidx}_{base}_nominal")
+        if col is None:
+            bare = f"jet{jidx}_{base}"
+            col = bare if bare in df.columns else None
+        if col is None:
+            continue
+        pt_col = resolve_col(df, f"jet{jidx}_pt_nominal")
+        present = (df[pt_col].notna() & (df[pt_col] > 0)) if pt_col else pd.Series(True, index=df.index)
+        real_flag = df.get(f"jet{jidx}_real", pd.Series(False, index=df.index))
+        fake_flag = df.get(f"jet{jidx}_fake", pd.Series(False, index=df.index))
+        real_list.append(df.loc[real_flag & present, col].dropna().values.astype(float))
+        fake_list.append(df.loc[fake_flag & present, col].dropna().values.astype(float))
+    real_vals = np.concatenate(real_list) if real_list else np.array([])
+    fake_vals = np.concatenate(fake_list) if fake_list else np.array([])
+    return real_vals[np.isfinite(real_vals)], fake_vals[np.isfinite(fake_vals)]
+
+
+def _draw_jet_id_panel(ax, real_vals, fake_vals, xlabel, xrange, is_integer, log_y=False):
+    """Draw a single jet-ID panel onto ax."""
+    if is_integer:
+        lo, hi = int(xrange[0]), int(xrange[1])
+        bins = np.arange(lo, hi + 2) - 0.5   # centred integer bins
+    else:
+        bins = np.linspace(xrange[0], xrange[1], 61)
+
+    hist_kw = dict(bins=bins, histtype="step", linewidth=2, density=True)
+
+    if len(real_vals) >= 10:
+        ax.hist(real_vals, color=COLORS["real"],
+                label=f"Real (N={len(real_vals):,})", **hist_kw)
+    if len(fake_vals) >= 10:
+        ax.hist(fake_vals, color=COLORS["fake"],
+                label=f"Fake (N={len(fake_vals):,})", **hist_kw)
+
+    ax.set_xlim(*xrange)
+    ax.set_xlabel(xlabel, fontsize=10)
+    ax.set_ylabel("Norm. jets (log)" if log_y else "Normalised jets", fontsize=10)
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3, which="both" if log_y else "major")
+    if log_y:
+        ax.set_yscale("log")
+
+
+def plot_jet_id_vars(df: pd.DataFrame, outdir: str):
+    """
+    For each variable in JET_ID_VARS overlay real vs fake jets (jet1+jet2 stacked).
+
+    Produces four files per variable:
+      6_jet_id_overview_linear.png/.pdf  -- linear-y grid
+      6_jet_id_overview_log.png/.pdf     -- log-y grid
+      6_<var>_linear.pdf                 -- individual linear panel
+      6_<var>_log.pdf                    -- individual log-y panel
+    """
+    # Filter to variables present in data
+    available = []
+    for base, xlabel, xrange, is_int in JET_ID_VARS:
+        col = resolve_col(df, f"jet1_{base}_nominal")
+        if col is None and f"jet1_{base}" in df.columns:
+            col = f"jet1_{base}"
+        if col is not None:
+            available.append((base, xlabel, xrange, is_int))
+        else:
+            print(f"  Skipping {base} (not found in data)")
+
+    if not available:
+        print("  No jet ID variables found -- skipping section 6")
+        return
+
+    # Pre-gather all data
+    data = {base: _gather_jet_id(df, base) for base, *_ in available}
+
+    n_vars = len(available)
+    n_cols = 4
+    n_rows = (n_vars + n_cols - 1) // n_cols
+
+    for log_y in [False, True]:
+        suffix = "log" if log_y else "linear"
+        title  = f"Jet Composition Variables -- Real vs Fake Jets  ({'log' if log_y else 'linear'} scale)"
+
+        fig, axes = plt.subplots(n_rows, n_cols,
+                                 figsize=(5.5 * n_cols, 4.5 * n_rows))
+        axes_flat = axes.flatten() if n_vars > 1 else [axes]
+        fig.suptitle(title, fontsize=14, fontweight="bold", y=1.01)
+
+        for ax_idx, (base, xlabel, xrange, is_int) in enumerate(available):
+            ax = axes_flat[ax_idx]
+            real_vals, fake_vals = data[base]
+            _draw_jet_id_panel(ax, real_vals, fake_vals, xlabel, xrange, is_int, log_y=log_y)
+            ax.set_title(base, fontsize=10, fontweight="bold")
+
+        for ax in axes_flat[n_vars:]:
+            ax.set_visible(False)
+
+        plt.tight_layout()
+        save_fig(fig, outdir, f"6_jet_id_overview_{suffix}")
+
+        # Individual panel PDFs
+        for ax_idx, (base, xlabel, xrange, is_int) in enumerate(available):
+            save_panel(axes_flat[ax_idx], outdir, f"6_{base}_{suffix}")
+
+        plt.close(fig)
+
 # Print results table
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -997,6 +1131,10 @@ def main():
     print("\n[5/5] ΔΦ(MET, muons/jets) …")
     df = compute_met_dphi(df)
     plot_met_dphi(df, args.output)
+
+    # ── Section 6 ─────────────────────────────────────────────────────────────────────────────
+    print("\n[6/6] Jet composition / ID variables...")
+    plot_jet_id_vars(df, args.output)
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print_results(all_results)
