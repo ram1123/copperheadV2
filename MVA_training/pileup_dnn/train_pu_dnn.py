@@ -25,6 +25,12 @@ time python MVA_training/pileup_dnn/train_pu_dnn.py \
     -o validation/pu_dnn/ablation_scan_03June \
     --regions HEpos HEneg HFpos HFneg \
     --run-ablations
+
+python MVA_training/pileup_dnn/train_pu_dnn.py \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
+    -o validation/pu_dnn/run2022postEE_dy_top_ewk_02June_DYIncl_dPhi_NoPt \
+    --regions HEpos HEneg HFpos HFneg \
+    --replot-only    
 """
 
 from __future__ import annotations
@@ -95,7 +101,7 @@ BASELINE_ALIASES = {
 
 MODEL_FEATURES = [
     "logpt",
-    # "minDPhiMetJet",
+    "minDPhiMetJet",
     "chEmEF",
     "chHEF",
     "neEmEF",
@@ -261,11 +267,17 @@ def parse_args() -> argparse.Namespace:
         help="Train automatic feature ablation variants and write summary CSVs.",
     )
     parser.add_argument(
+        "--replot-only",
+        action="store_true",
+        help="Regenerate validation plots from saved predictions/metrics in an existing output directory.",
+    )
+    parser.add_argument(
         "--ablation-groups",
         nargs="+",
         default=[
             "pt=logpt",
             "met=minDPhiMetJet",
+            "ptMET=logpt,minDPhiMetJet",
             "neutral=neEmEF,neHEF",
             "charged=chEmEF,chHEF,nElectrons",
             "muon=muEF,nMuons,muonSubtrFactor,muonSubtrDeltaEta,muonSubtrDeltaPhi",
@@ -1544,6 +1556,75 @@ def make_validation_outputs(
     return summary
 
 
+def replot_region_from_saved_outputs(output: Path, region: str, args: argparse.Namespace) -> bool:
+    outdir = output / region
+    pred_path = outdir / "predictions_test.parquet"
+    metrics_path = outdir / "metrics.json"
+    summary_path = outdir / f"summary_{region}.json"
+    if not pred_path.exists():
+        print(f"[{region}] Missing {pred_path}; cannot replot.")
+        return False
+    if not metrics_path.exists():
+        print(f"[{region}] Missing {metrics_path}; cannot replot.")
+        return False
+
+    pred_test = pd.read_parquet(pred_path)
+    metrics = json.loads(metrics_path.read_text())
+    summary = json.loads(summary_path.read_text()) if summary_path.exists() else {}
+
+    y = pred_test["y_hs"].to_numpy(dtype=np.float32)
+    score = pred_test["score"].to_numpy(dtype=np.float32)
+    weight = (
+        pred_test["weight"].to_numpy(dtype=np.float32)
+        if "weight" in pred_test.columns
+        else np.ones(len(pred_test), dtype=np.float32)
+    )
+    threshold = float(summary.get("threshold", float("nan")))
+    direction = summary.get("direction", "keep_high")
+    hs_eff = summary.get("hs_efficiency")
+    pu_rej = summary.get("pu_rejection")
+    if not np.isfinite(threshold):
+        threshold, direction, hs_eff, pu_rej = threshold_and_direction(score, y, args.hs_eff, weight)
+    pass_mask = pass_from_threshold(score, threshold, direction)
+    wp_table = wp_vs_pt(pred_test, pass_mask, args.pt_bins, weight)
+    wp_table.to_csv(outdir / f"wp_vs_pt_{region}.csv", index=False)
+
+    plot_training_history(metrics.get("history", []), outdir, region, args.plot_format)
+    plot_roc_pr(y, score, weight, outdir, region, args.plot_format)
+    plot_score_real_fake(score, y, outdir, region, args.plot_format)
+    plot_confusion(y, pass_mask, outdir, region, args.plot_format)
+    plot_eff_rej_vs_pt(wp_table, outdir, region, args.plot_format)
+    plot_stacked_before_after(
+        score,
+        y,
+        pass_mask,
+        outdir,
+        region,
+        "score",
+        "DNN HS score",
+        args.plot_format,
+    )
+    for name, xlabel in [
+        ("pt", "Jet pT [GeV]"),
+        ("eta", "Jet eta"),
+        ("aeta", "|Jet eta|"),
+    ]:
+        if name in pred_test.columns:
+            plot_stacked_before_after(
+                pred_test[name].to_numpy(dtype=np.float32),
+                y,
+                pass_mask,
+                outdir,
+                region,
+                name,
+                xlabel,
+                args.plot_format,
+            )
+    if "puIdDisc" in pred_test.columns:
+        baseline_puid_plots(pred_test, outdir, region, args)
+    return True
+
+
 def train_region_with_features(
     df_region: pd.DataFrame,
     region: str,
@@ -1607,6 +1688,17 @@ def main() -> None:
     set_seed(args.seed)
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
+
+    if args.replot_only:
+        refreshed = 0
+        for region in args.regions:
+            print(f"[{region}] regenerating saved validation plots")
+            refreshed += int(replot_region_from_saved_outputs(output, region, args))
+        print(f"Done. Replotted {refreshed} region(s) in {output}")
+        return
+
+    if not args.input:
+        raise ValueError("--input is required unless --replot-only is used.")
 
     paths = expand_inputs(args.input, args.use_glob)
     (output / "inputs.json").write_text(
