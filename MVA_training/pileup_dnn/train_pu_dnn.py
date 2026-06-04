@@ -16,13 +16,21 @@ Example command:
 time python MVA_training/pileup_dnn/train_pu_dnn.py \
     -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
     --use-glob \
-    -o validation/pu_dnn/run2022postEE_dy_top_ewk_02June_DYIncl_dPhi_NoPt \
-    --regions HEpos HEneg HFpos HFneg 
+    -o validation/pu_dnn/run2022postEE_03June_DYIncl_OnlyJetRelatedVariables \
+    --regions HEpos HEneg HFpos HFneg
+
+time python MVA_training/pileup_dnn/train_pu_dnn.py \
+    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
+    --use-glob \
+    -o validation/pu_dnn/ablation_scan_03June \
+    --regions HEpos HEneg HFpos HFneg \
+    --run-ablations
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import random
 from dataclasses import asdict, dataclass
@@ -62,6 +70,8 @@ FEATURE_ALIASES = {
     "neEmEF": ("neEmEF",),
     "neHEF": ("neHEF",),
     "muEF": ("muEF",),
+    "hfEmEF": ("hfEmEF",),
+    "hfHEF": ("hfHEF",),
     "nConstituents": ("nConstituents",),
     "nElectrons": ("nElectrons",),
     "nMuons": ("nMuons",),
@@ -73,6 +83,10 @@ FEATURE_ALIASES = {
     "neMultiplicity": ("neMultiplicity",),
     "muonSubtrDeltaEta": ("muonSubtrDeltaEta",),
     "muonSubtrDeltaPhi": ("muonSubtrDeltaPhi",),
+    "hfadjacentEtaStripsSize": ("hfadjacentEtaStripsSize",),
+    "hfcentralEtaStripSize": ("hfcentralEtaStripSize",),
+    "hfsigmaEtaEta": ("hfsigmaEtaEta",),
+    "hfsigmaPhiPhi": ("hfsigmaPhiPhi",),
 }
 
 BASELINE_ALIASES = {
@@ -80,7 +94,7 @@ BASELINE_ALIASES = {
 }
 
 MODEL_FEATURES = [
-    # "logpt",
+    "logpt",
     # "minDPhiMetJet",
     "chEmEF",
     "chHEF",
@@ -95,6 +109,12 @@ MODEL_FEATURES = [
     "muonSubtrFactor",
     "muonSubtrDeltaEta",
     "muonSubtrDeltaPhi",
+    "hfadjacentEtaStripsSize",
+    "hfcentralEtaStripSize",
+    "hfsigmaEtaEta",
+    "hfsigmaPhiPhi",
+    "hfEmEF",
+    "hfHEF",
 ]
 
 
@@ -234,6 +254,27 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=20,
         help="Number of repeated shuffles per feature for permutation importance.",
+    )
+    parser.add_argument(
+        "--run-ablations",
+        action="store_true",
+        help="Train automatic feature ablation variants and write summary CSVs.",
+    )
+    parser.add_argument(
+        "--ablation-groups",
+        nargs="+",
+        default=[
+            "pt=logpt",
+            "met=minDPhiMetJet",
+            "neutral=neEmEF,neHEF",
+            "charged=chEmEF,chHEF,nElectrons",
+            "muon=muEF,nMuons,muonSubtrFactor,muonSubtrDeltaEta,muonSubtrDeltaPhi",
+            "multiplicity=chMultiplicity,neMultiplicity,nConstituents",
+            "hf_strips=hfadjacentEtaStripsSize,hfcentralEtaStripSize",
+            "hf_shape=hfsigmaEtaEta,hfsigmaPhiPhi",
+            "hf_energy=hfEmEF,hfHEF",
+        ],
+        help="Named feature groups for automatic group-drop ablations as NAME=feat1,feat2,...",
     )
     parser.add_argument(
         "--plot-format",
@@ -574,6 +615,75 @@ def selected_features(df: pd.DataFrame, region: str) -> list[str]:
             continue
         keep.append(feat)
     return keep
+
+
+def parse_ablation_groups(specs: list[str]) -> list[tuple[str, list[str]]]:
+    groups = []
+    for spec in specs:
+        name, sep, payload = spec.partition("=")
+        if not sep:
+            raise ValueError(
+                f"Invalid ablation group '{spec}'. Expected NAME=feat1,feat2,..."
+            )
+        features = [feat.strip() for feat in payload.split(",") if feat.strip()]
+        if not features:
+            continue
+        groups.append((name.strip(), features))
+    return groups
+
+
+def build_ablation_variants(
+    baseline_features: list[str], args: argparse.Namespace
+) -> list[tuple[str, list[str], str]]:
+    variants: list[tuple[str, list[str], str]] = []
+    seen: set[tuple[str, ...]] = set()
+
+    for feat in baseline_features:
+        feature_set = [item for item in baseline_features if item != feat]
+        key = tuple(feature_set)
+        if len(feature_set) == 0 or key in seen:
+            continue
+        seen.add(key)
+        variants.append((f"drop_{feat}", feature_set, f"drop feature {feat}"))
+
+    for group_name, group_features in parse_ablation_groups(args.ablation_groups):
+        feature_set = [feat for feat in baseline_features if feat not in set(group_features)]
+        key = tuple(feature_set)
+        if len(feature_set) == 0 or key in seen or len(feature_set) == len(baseline_features):
+            continue
+        seen.add(key)
+        dropped = [feat for feat in baseline_features if feat not in feature_set]
+        variants.append(
+            (
+                f"drop_group_{group_name}",
+                feature_set,
+                f"drop group {group_name}: {','.join(dropped)}",
+            )
+        )
+    return variants
+
+
+def summary_to_ablation_row(summary: dict, tag: str, notes: str) -> dict:
+    metrics = summary.get("metrics", {})
+    return {
+        "region": summary.get("region"),
+        "tag": tag,
+        "notes": notes,
+        "n_features": len(summary.get("features", [])),
+        "features": ",".join(summary.get("features", [])),
+        "threshold": summary.get("threshold"),
+        "direction": summary.get("direction"),
+        "hs_efficiency": summary.get("hs_efficiency"),
+        "pu_rejection": summary.get("pu_rejection"),
+        "test_auc": metrics.get("test_auc"),
+        "val_auc": metrics.get("val_auc"),
+        "train_auc": metrics.get("train_auc"),
+        "test_average_precision": metrics.get("test_average_precision"),
+        "best_epoch": metrics.get("best_epoch"),
+        "n_train": metrics.get("n_train"),
+        "n_val": metrics.get("n_val"),
+        "n_test": metrics.get("n_test"),
+    }
 
 
 def make_scaler(df_train: pd.DataFrame, features: list[str]) -> Scaler:
@@ -1434,6 +1544,21 @@ def make_validation_outputs(
     return summary
 
 
+def train_region_with_features(
+    df_region: pd.DataFrame,
+    region: str,
+    outdir: Path,
+    args: argparse.Namespace,
+    features: list[str],
+) -> dict:
+    print(
+        f"[{region}] training N={len(df_region)} HS={int((df_region['y_hs'] == 1).sum())} "
+        f"PU={int((df_region['y_hs'] == 0).sum())} features={len(features)} out={outdir}"
+    )
+    model, scaler, metrics, pred_test = train_one_model(df_region, features, outdir, args)
+    return make_validation_outputs(model, scaler, df_region, pred_test, metrics, outdir, region, args)
+
+
 def train_region(jets: pd.DataFrame, region: str, output: Path, args: argparse.Namespace) -> dict | None:
     mask = region_mask_eta(jets["eta"].to_numpy(dtype=np.float32), region)
     df_region = jets[mask].copy()
@@ -1449,17 +1574,32 @@ def train_region(jets: pd.DataFrame, region: str, output: Path, args: argparse.N
     if not features:
         print(f"[{region}] No usable non-constant features; skipping.")
         return None
-    
+
     print(f"Input features: {features}")
 
     outdir = output / region
     outdir.mkdir(parents=True, exist_ok=True)
-    print(
-        f"[{region}] training N={len(df_region)} HS={class_counts.get(1.0, class_counts.get(1, 0))} "
-        f"PU={class_counts.get(0.0, class_counts.get(0, 0))} features={len(features)}"
-    )
-    model, scaler, metrics, pred_test = train_one_model(df_region, features, outdir, args)
-    return make_validation_outputs(model, scaler, df_region, pred_test, metrics, outdir, region, args)
+    summary = train_region_with_features(df_region, region, outdir, args, features)
+
+    if args.run_ablations:
+        ablation_dir = outdir / "ablations"
+        ablation_dir.mkdir(parents=True, exist_ok=True)
+        rows = [summary_to_ablation_row(summary, "baseline", "full selected feature set")]
+        for tag, feature_set, notes in build_ablation_variants(features, args):
+            variant_outdir = ablation_dir / tag
+            variant_outdir.mkdir(parents=True, exist_ok=True)
+            variant_args = copy.deepcopy(args)
+            variant_args.no_plots = True
+            print(f"[{region}] ablation {tag}: {notes}")
+            variant_summary = train_region_with_features(
+                df_region, region, variant_outdir, variant_args, feature_set
+            )
+            rows.append(summary_to_ablation_row(variant_summary, tag, notes))
+        ablation_table = pd.DataFrame(rows).sort_values(
+            ["test_auc", "pu_rejection"], ascending=[False, False]
+        )
+        ablation_table.to_csv(outdir / f"ablation_summary_{region}.csv", index=False)
+    return summary
 
 
 def main() -> None:
@@ -1500,6 +1640,16 @@ def main() -> None:
             (output / f"summary_{region}.json").write_text(json.dumps(summary, indent=2))
 
     (output / "summary_all.json").write_text(json.dumps(summaries, indent=2))
+    if args.run_ablations:
+        ablation_frames = []
+        for region in args.regions:
+            path = output / region / f"ablation_summary_{region}.csv"
+            if path.exists():
+                ablation_frames.append(pd.read_csv(path))
+        if ablation_frames:
+            pd.concat(ablation_frames, axis=0, ignore_index=True).to_csv(
+                output / "ablation_summary_all.csv", index=False
+            )
     print(f"Done. Wrote {len(summaries)} region summaries to {output}")
 
 
