@@ -1,7 +1,39 @@
 # ------------------------------------------------------------------
 # Dask client helper
 # ------------------------------------------------------------------
+import os
+import sys
+
 from modules.utils import logger
+
+
+def configure_worker_runtime(extra_env=None, repo_root=None):
+    """
+    Ensure gateway workers can import the live checkout and inherit runtime env.
+    """
+    if extra_env:
+        os.environ.update(extra_env)
+
+    if repo_root:
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+
+        current_pythonpath = os.environ.get("PYTHONPATH", "")
+        pythonpath_parts = [part for part in current_pythonpath.split(os.pathsep) if part]
+        if repo_root not in pythonpath_parts:
+            pythonpath_parts.insert(0, repo_root)
+            os.environ["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+
+        try:
+            os.chdir(repo_root)
+        except OSError:
+            pass
+
+    return {
+        "cwd": os.getcwd(),
+        "pythonpath": os.environ.get("PYTHONPATH", ""),
+        "syspath0": sys.path[0] if sys.path else "",
+    }
 
 def get_dask_client(
     use_gateway: bool = False,
@@ -32,7 +64,12 @@ def get_dask_client(
             "XRD_CONNECTIONWINDOW": "120",
             "XRD_TIMEOUTRESOLUTION": "5",
         }
-        client.run(lambda env=xrd_env: __import__("os").environ.update(env))
+        runtime_info = client.run(
+            configure_worker_runtime,
+            extra_env=xrd_env,
+            repo_root=os.getcwd(),
+        )
+        logger.info("Configured worker runtime: %s", runtime_info)
     else:
         from distributed import Client
         logger.info("Creating new local Dask client")
