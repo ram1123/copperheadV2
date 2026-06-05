@@ -9,13 +9,13 @@ set -euo pipefail
 #   TAG=my_tag HPO_TRIALS=12 HPO_FOLDS=0,1 bash run_dnn.sh
 
 # /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2/stage1_output/2022preEE/f1_0/
-# LABEL="Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
-LABEL="Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2"
+LABEL="Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
+# LABEL="Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2"
 CONFIG="${CONFIG:-configs/dnn_run3_vbf.yaml}"
 BASE_PATH="${BASE_PATH:-/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/${LABEL}/stage1_output/}"
 TAG="${TAG:-${LABEL}}"
-# YEARS="${YEARS:-2022preEE,2022postEE,2023,2023BPix,2024}"
-YEARS="${YEARS:-2022postEE}"
+YEARS="${YEARS:-2022preEE,2022postEE,2023,2023BPix,2024}"
+# YEARS="${YEARS:-2022postEE}"
 REGION="${REGION:-h-peak}"
 CATEGORY="${CATEGORY:-vbf}"
 
@@ -28,7 +28,8 @@ CLUSTER_INDEX="${CLUSTER_INDEX:-0}"
 # HPO_FOLDS="${HPO_FOLDS:-0,1}"
 HPO_FOLDS="${HPO_FOLDS:-0,1,2,3}"
 HPO_TRIALS="${HPO_TRIALS:-50}"
-HPO_LABEL="${HPO_LABEL:-v1_multifold_050Trials}"
+# HPO_LABEL="${HPO_LABEL:-v2_multifold_100Trials_bothVBFggH}"
+HPO_LABEL="${HPO_LABEL:-v2_multifold_050Trials_MLLBinnedDY}"
 
 TRAIN_LABEL="${TRAIN_LABEL:-trained_best_optuna_${HPO_LABEL}}"
 

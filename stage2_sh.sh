@@ -82,6 +82,7 @@ stage3_baseline_variant_tag="all_core_pdfs"
 bias_run_mode="${BIAS_RUN_MODE:-local}"
 bias_local_jobs="${BIAS_LOCAL_JOBS:-32}"
 bias_fitdiag_parallel="${BIAS_FITDIAG_PARALLEL:-32}"
+bias_array_tasks="${BIAS_ARRAY_TASKS:-500}"
 bias_expect_signal="${BIAS_EXPECT_SIGNAL:-1}"
 bias_max_chi2ndf="${BIAS_MAX_CHI2NDF:-2.0}"
 
@@ -114,6 +115,7 @@ print_config() {
     echo "bias_run_mode    : ${bias_run_mode}"
     echo "bias_local_jobs  : ${bias_local_jobs}"
     echo "bias_fitdiag_par : ${bias_fitdiag_parallel}"
+    echo "bias_array_tasks : ${bias_array_tasks}"
     echo "bias_expect_sig  : ${bias_expect_signal}"
     echo "bias_max_chi2ndf : ${bias_max_chi2ndf}"
     echo "stage2_label     : ${stage2_label}"
@@ -546,13 +548,8 @@ if [[ "${step}" == "11" || "${step}" == "bias" || "${step}" == "all" ]]; then
 
         cp -f "${core_workspace_dir}/"*.root "${bias_job_dir}/corePdf_workspace/"
         cp -f "${fitfunc_workspace_dir}/"*.root "${bias_job_dir}/funcCandidate_workspace/"
-        combineCards.py \
-            "${datacard_dir}/datacard_cat0_ggh.txt" \
-            "${datacard_dir}/datacard_cat1_ggh.txt" \
-            "${datacard_dir}/datacard_cat2_ggh.txt" \
-            "${datacard_dir}/datacard_cat3_ggh.txt" \
-            "${datacard_dir}/datacard_cat4_ggh.txt" \
-            > "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt"
+        cp -f "${combined_datacard}" "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt"
+
         sed 's#my_workspace/#funcCandidate_workspace/#g' "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt" > "${bias_job_dir}/datacard_comb_sig_all_ggh_fitFuncCand.txt"
         sed -i.bak 's#my_workspace/#corePdf_workspace/#g' "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt"
         rm -f "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt.bak"
@@ -562,6 +559,7 @@ if [[ "${step}" == "11" || "${step}" == "bias" || "${step}" == "all" ]]; then
         printf '%s\n' "${bias_expect_signal}" > "${bias_job_dir}/bias_truth_r.txt"
 
         BIAS_FITDIAG_PARALLEL="${bias_fitdiag_parallel}" \
+        BIAS_ARRAY_TASKS="${bias_array_tasks}" \
         BIAS_EXPECT_SIGNAL="${bias_expect_signal}" \
         sh "${bias_template_dir}/slurm_wrapper.sh" "${bias_job_dir}" "${bias_run_mode}" "${bias_local_jobs}"
 
